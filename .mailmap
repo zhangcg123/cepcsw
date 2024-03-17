@@ -1,0 +1,60 @@
+# This is used to merge the contributions of account with different email.
+#
+# git shortlog -se
+#
+# Sorted by surfname
+
+Cao Guangjie <gjcao@lxslc605.ihep.ac.cn>
+Cao Guangjie <gjcao@lxslc605.ihep.ac.cn> Cao Guangjie <gjcao@lxslc611.ihep.ac.cn>
+Cao Guangjie <gjcao@lxslc605.ihep.ac.cn> Cao Guangjie <gjcao@lxslc614.ihep.ac.cn>
+
+Wenxing Fang <fangwx@ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> wenxingfang <fangwx@ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc608.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc609.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc613.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc614.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc703.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc705.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc706.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc708.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc709.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc711.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc712.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc713.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc714.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> Fang Wenxing <wxfang@lxslc716.ihep.ac.cn>
+Wenxing Fang <fangwx@ihep.ac.cn> wenxingfang <1473717798@qq.com>
+
+Chengdong Fu <fucd@ihep.ac.cn>
+Chengdong Fu <fucd@ihep.ac.cn> fucd <fucd@ihep.ac.cn>
+
+Tao Lin <lintao@ihep.ac.cn>
+Tao Lin <lintao@ihep.ac.cn> Tao Lin <lintao51@gmail.com>
+Tao Lin <lintao@ihep.ac.cn> lintao <lintao51@gmail.com>
+Tao Lin <lintao@ihep.ac.cn> Tao Lin <831611+mirguest@users.noreply.github.com>
+
+Mengyao Liu <myliu@ihep.ac.cn>
+Mengyao Liu <myliu@ihep.ac.cn> myliu <201916234@mail.sdu.edu.cn>
+
+Linghui Wu <wulh@ihep.ac.cn>
+Linghui Wu <wulh@ihep.ac.cn> wu linghui <wulh@lxslc716.ihep.ac.cn>
+
+Zhang Yao <zhangyao@ihep.ac.cn>
+Zhang Yao <zhangyao@ihep.ac.cn> ihepzhangyao <ihepyzhang@gmail.com>
+
+Dan Yu <danerdaner412@gmail.com>
+Dan Yu <danerdaner412@gmail.com> danerdaner412@gmail.com <yudan@lxslc703.ihep.ac.cn>
+
+Thomas Madlener <thomas.madlener@desy.de>
+Thomas Madlener <thomas.madlener@desy.de> tmadlener <thomas.madlener@desy.de>
+
+Hao Zeng <hao.zeng@cern.ch>
+Hao Zeng <hao.zeng@cern.ch> hazeng <hao.zeng@cern.ch>
+Hao Zeng <hao.zeng@cern.ch> zenghao <1251935595@qq.com>
+
+Mingrui Zhao <mingrui.zhao@mail.labz0.org>
+Mingrui Zhao <mingrui.zhao@mail.labz0.org> Mingrui <mingrui.zhao@mail.labz0.org>
+
+Zou Jiaheng <zoujh@ihep.ac.cn>
+Zou Jiaheng <zoujh@ihep.ac.cn> zoujh <zoujh@ihep.ac.cn>
