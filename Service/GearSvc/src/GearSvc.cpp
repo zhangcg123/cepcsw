@@ -87,7 +87,7 @@ StatusCode GearSvc::initialize()
     const std::map<std::string, dd4hep::DetElement>& subs = world.children();
     for(std::map<std::string, dd4hep::DetElement>::const_iterator it=subs.begin();it!=subs.end();it++){
       dd4hep::DetElement sub = it->second;
-      info() << it->first << " " << sub.path() << " " << sub.placementPath() << endmsg;
+      debug() << it->first << " " << sub.path() << " " << sub.placementPath() << endmsg;
       if(it->first=="Tube"||it->first=="BeamPipe"){
 	sc = convertBeamPipe(sub);
       }
@@ -109,38 +109,43 @@ StatusCode GearSvc::initialize()
       else if(it->first=="SET"){
 	sc = convertSET(sub);
       }
-      else{
-	info() << it->first << " will convert in future! now fake parameters" << endmsg;
-      }
-      if(sc==StatusCode::FAILURE) return sc;
-    }
-
-    gear::CalorimeterParametersImpl* barrelParam = new gear::CalorimeterParametersImpl(1847.415655, 2350., 8, 0.);
-    gear::CalorimeterParametersImpl* endcapParam = new gear::CalorimeterParametersImpl(400., 2088.8, 2450., 2, 0.);
-    for(int i=0;i<29;i++){
-      if(i<19){
-	barrelParam->layerLayout().positionLayer(0, 5.25, 1.016666667e+01, 1.016666667e+01, 2.1);
-	endcapParam->layerLayout().positionLayer(0, 5.25, 1.016666667e+01, 1.016666667e+01, 2.1);
-      }
-      else if(i<20){
-	barrelParam->layerLayout().positionLayer(0, 6.3, 1.016666667e+01, 1.016666667e+01, 2.1);
-	endcapParam->layerLayout().positionLayer(0, 6.3, 1.016666667e+01, 1.016666667e+01, 2.1);
+      else if(it->first=="EcalBarrel"||it->first=="EcalEndcap"||it->first=="EcalPlug"||
+	      it->first=="HcalBarrel"||it->first=="HcalEndcap"||it->first=="HcalRing"||
+	      it->first=="YokeBarrel"||it->first=="YokeEndcap"||it->first=="YokePlug"||
+	      it->first=="Coil"){
+        sc = convertCal(sub);
       }
       else{
-	barrelParam->layerLayout().positionLayer(0, 4.2, 1.016666667e+01, 1.016666667e+01, 4.2);
-	endcapParam->layerLayout().positionLayer(0, 4.2, 1.016666667e+01, 1.016666667e+01, 4.2);
+	info() << it->first << " will convert in future!" << endmsg;
       }
+      if (sc==StatusCode::FAILURE) return sc;
     }
-    m_gearMgr->setEcalBarrelParameters(barrelParam);
-    m_gearMgr->setEcalEndcapParameters(endcapParam);
 
-    gear::CalorimeterParametersImpl* barrelYokeParam = new gear::CalorimeterParametersImpl(4173.929932, 4072., 12, 0.0);
-    gear::CalorimeterParametersImpl* endcapYokeParam = new gear::CalorimeterParametersImpl(320., 7414.929932, 4072., 2, 0.0);
-    gear::CalorimeterParametersImpl* plugYokeParam   = new gear::CalorimeterParametersImpl(320., 2849.254326, 3781.43, 2, 0.0);
-    plugYokeParam->setDoubleVal("YokePlugThickness", 290.57) ;
-    m_gearMgr->setYokeBarrelParameters(barrelYokeParam) ;
-    m_gearMgr->setYokeEndcapParameters(endcapYokeParam) ;
-    m_gearMgr->setYokePlugParameters(plugYokeParam) ;
+    try {
+      const auto& ecalB = m_gearMgr->getEcalBarrelParameters();
+    }
+    catch (...) {
+      info() << "EcalBarrelParameters not create! create fake parameters (big size) now" << endmsg;
+      gear::CalorimeterParametersImpl* barrelParam = new gear::CalorimeterParametersImpl(2500, 4500, 8, 0.);
+      barrelParam->layerLayout().positionLayer(0, 5.25, 10, 10, 2.1);
+      m_gearMgr->setEcalBarrelParameters(barrelParam);
+    }
+    try {
+      const auto& ecalE = m_gearMgr->getEcalEndcapParameters();
+    }
+    catch (...) {
+      info() << "EcalEndcapsParameters not create! create fake parameters (big size) now" << endmsg;
+      gear::CalorimeterParametersImpl* endcapParam = new gear::CalorimeterParametersImpl(400., 3000, 4510, 2, 0.);
+      endcapParam->layerLayout().positionLayer(0, 5.25, 10, 10, 2.1);
+      m_gearMgr->setEcalEndcapParameters(endcapParam);
+    }
+    //gear::CalorimeterParametersImpl* barrelYokeParam = new gear::CalorimeterParametersImpl(4173.929932, 4072., 12, 0.0);
+    //gear::CalorimeterParametersImpl* endcapYokeParam = new gear::CalorimeterParametersImpl(320., 7414.929932, 4072., 2, 0.0);
+    //gear::CalorimeterParametersImpl* plugYokeParam   = new gear::CalorimeterParametersImpl(320., 2849.254326, 3781.43, 2, 0.0);
+    //plugYokeParam->setDoubleVal("YokePlugThickness", 290.57) ;
+    //m_gearMgr->setYokeBarrelParameters(barrelYokeParam) ;
+    //m_gearMgr->setYokeEndcapParameters(endcapYokeParam) ;
+    //m_gearMgr->setYokePlugParameters(plugYokeParam) ;
 
     gear::GearXML::createXMLFile(m_gearMgr, "test.xml");
   }
@@ -995,7 +1000,78 @@ StatusCode GearSvc::convertSET(dd4hep::DetElement& set){
   return StatusCode::SUCCESS;
 }
 
-TGeoNode* GearSvc::FindNode(TGeoNode* mother, char* name){
+StatusCode GearSvc::convertCal(dd4hep::DetElement& cal) {
+  std::string name = cal.name();
+
+  dd4hep::rec::LayeredCalorimeterData* calData = nullptr;
+  bool extensionDataValid = true;
+  try{
+    calData = cal.extension<dd4hep::rec::LayeredCalorimeterData>();
+  }
+  catch(std::runtime_error& e){
+    extensionDataValid = false;
+    info() << e.what() << " " << calData << endmsg;
+  }
+  if(calData){
+    double rmin = calData->extent[0]/dd4hep::mm;
+    double rmax = calData->extent[1]/dd4hep::mm;
+    double zmin = calData->extent[2]/dd4hep::mm;
+    double zmax = calData->extent[3]/dd4hep::mm;
+    int inner_symmetry = calData->inner_symmetry;
+    int outer_symmetry = calData->outer_symmetry;
+    double phi0 = calData->phi0;
+    gear::CalorimeterParametersImpl* param = nullptr;
+    if (calData->layoutType==dd4hep::rec::LayeredCalorimeterData::BarrelLayout) {
+      param = new gear::CalorimeterParametersImpl(rmin, zmax, inner_symmetry, phi0);
+    }
+    else if (calData->layoutType==dd4hep::rec::LayeredCalorimeterData::EndcapLayout) {
+      param = new gear::CalorimeterParametersImpl(rmin, rmax, zmin, inner_symmetry, phi0);
+    }
+    else {
+      error() << "Not BarrelLayout and EndcapLayout: " << calData->layoutType << endmsg;
+    }
+    auto layers = calData->layers;
+    for (auto layer : layers) {
+      double distance = layer.distance/dd4hep::mm;
+      double thickness = layer.sensitive_thickness/dd4hep::mm;
+      double absorberThickness = layer.absorberThickness/dd4hep::mm;
+      double cellsize0 = layer.cellSize0/dd4hep::mm;
+      double cellsize1 = layer.cellSize1/dd4hep::mm;
+      param->layerLayout().positionLayer(0, thickness, cellsize0, cellsize1, absorberThickness);
+    }
+    if (calData->layoutType==dd4hep::rec::LayeredCalorimeterData::BarrelLayout) {
+      if (name.find("Ecal")!=-1)      m_gearMgr->setEcalBarrelParameters(param);
+      else if (name.find("Hcal")!=-1) m_gearMgr->setHcalBarrelParameters(param);
+      else if (name.find("Yoke")!=-1) m_gearMgr->setYokeBarrelParameters(param);
+      else m_gearMgr->setGearParameters("CoilParameters", param);
+
+      info() << "BarrelParameters set " << name << endmsg;
+    }
+    else if (calData->layoutType==dd4hep::rec::LayeredCalorimeterData::EndcapLayout) {
+      if (name.find("Endcap")) {
+	if (name.find("Ecal")!=-1)      m_gearMgr->setEcalEndcapParameters(param);
+	else if (name.find("Hcal")!=-1) m_gearMgr->setHcalEndcapParameters(param);
+	else if (name.find("Yoke")!=-1) m_gearMgr->setYokeEndcapParameters(param);
+
+	info() << "EndcapParameters set" << name << endmsg;
+      }
+      else {
+	if (name.find("Ecal")!=-1)      m_gearMgr->setEcalPlugParameters(param);
+	else if (name.find("Hcal")!=-1) m_gearMgr->setHcalRingParameters(param);
+	else if (name.find("Yoke")!=-1) m_gearMgr->setYokePlugParameters(param);
+
+	info() << "Plug(Ring)Parameters set" << name << endmsg;
+      }
+    }
+  }
+  else{
+    info() << name << " will convert in future!" << endmsg;
+  }
+
+  return StatusCode::SUCCESS;
+}
+
+TGeoNode* GearSvc::FindNode(TGeoNode* mother, char* name) {
   TGeoNode* next = 0;
   if(mother->GetNdaughters()!=0){
     for(int i=0;i<mother->GetNdaughters();i++){
