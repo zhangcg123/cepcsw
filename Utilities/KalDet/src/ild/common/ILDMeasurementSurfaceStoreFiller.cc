@@ -138,16 +138,17 @@ void ILDMeasurementSurfaceStoreFiller::getMeasurementSurfaces( std::vector<Measu
   
   if( _paramVXD ) 
     this->storeZPlanar( _paramVXD , UTIL::ILDDetID::VXD, surface_list );
-  
+  int nvxd = surface_list.size();
   if( _paramSIT ) 
     this->storeZPlanar( _paramSIT , UTIL::ILDDetID::SIT, surface_list );
-  
+  int nsit = surface_list.size()-nvxd;
   if(_paramSET  ) 
     this->storeZPlanar( _paramSET , UTIL::ILDDetID::SET, surface_list );
-  
+  int nset = surface_list.size()-nvxd-nsit;
   if( _paramFTD ) 
     this->storeFTD( _paramFTD , surface_list);
- 
+  int nftd = surface_list.size()-nvxd-nsit-nset;
+  std::cout << "ILDMeasurementSurfaceStoreFiller::getMeasurementSurfaces " << nvxd << " " << nsit << " " << nset << " " << nftd << std::endl;
 }
 
 

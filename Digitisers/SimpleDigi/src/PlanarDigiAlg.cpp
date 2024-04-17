@@ -98,10 +98,10 @@ StatusCode PlanarDigiAlg::initialize()
     error() << "Failed to find TrackSystemSvc ..." << endmsg;
     return StatusCode::FAILURE;
   }
-  
+
   MarlinTrk::IMarlinTrkSystem* _trksystem =  _trackSystemSvc->getTrackSystem(this);
   _trksystem->init();
-  
+
   _trackSystemSvc->removeTrackSystem(this);
   
   return GaudiAlgorithm::initialize();
