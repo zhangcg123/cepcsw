@@ -17,12 +17,12 @@ namespace MarlinTrk{
   
   
   int HelixFit::fastHelixFit(int npt, double* xf, double* yf, float* rf, float* pf, double* wf, float* zf , float* wzf,int iopt, 
-                             float* vv0, float* ee0, float& ch2ph, float& ch2z){
+                             float* vv0, float* ee0, float& ch2ph, float& ch2z, float MAX_CHI2){
     
     
     
     if (npt < 3) {
-      //streamlog_out(ERROR) << "Cannot fit less than 3 points return 1" << std::endl;
+      //std::cerr << "Cannot fit less than 3 points return 1" << std::endl;
       ch2ph = 1.0e30;
       ch2z  = 1.0e30;
       return 1;
@@ -30,14 +30,23 @@ namespace MarlinTrk{
     
     double eps = 1.0e-16;
 #define ITMAX 15
-#define MPT   600
-#define MAX_CHI2 5000.0
+    //#define MPT   2500
+    //#define MAX_CHI2 5000.0
     
     
-    float sp2[MPT],
-    del[MPT],deln[MPT],delzn[MPT],sxy[MPT],ss0[MPT],eee[MPT],
-    delz[MPT],grad[5],cov[15],vv1[5],dv[5];
-    
+    //float sp2[MPT],
+    //del[MPT],deln[MPT],delzn[MPT],sxy[MPT],ss0[MPT],eee[MPT],
+    //delz[MPT],grad[5],cov[15],vv1[5],dv[5];
+    std::unique_ptr<float[], void(*)(float *)> sp2(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> del(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> deln(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> delzn(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> sxy(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> ss0(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> eee(new float[npt],[](float* p){delete p;});
+    std::unique_ptr<float[], void(*)(float *)> delz(new float[npt],[](float* p){delete p;});
+    float grad[5],cov[15],vv1[5],dv[5];
+
     //  double xf[MPT],yf[MPT],wf[MPT],zf[MPT],wzf[MPT];
     
     double alf,a0,a1,a2,a22,bet,cur,
@@ -182,15 +191,10 @@ namespace MarlinTrk{
     den2= 1.0/(x1*x1 + y1*y1 + gam*det*det);
     
     if(den2 <= 0.0) {
-      //                        streamlog_out(ERROR) << "den2 less than or equal to zero" 
-      //                        << " x1 = " << x1 
-      //                        << " y1 = " << y1
-      //                        << " gam = " << gam  
-      //                        << " det = " << det  
-      //                        << std::endl;
+      //std::cerr << "den2 less than or equal to zero x1 = " << x1 << " y1 = " << y1 << " gam = " << gam << " det = " << det << std::endl;
       ch2ph = 1.0e30;
       ch2z  = 1.0e30;
-      return 1;
+      return 2;
     }
     
     den = sqrt(den2);
@@ -216,10 +220,10 @@ namespace MarlinTrk{
     rr0 = sst*cur;
     
     if( (alf*alf+bet*bet) <= 0.0 ){
-      //                        streamlog_out(ERROR) << "(alf*alf+bet*bet) less than or equal to zero" << std::endl;
+      //std::cerr << "(alf*alf+bet*bet) less than or equal to zero" << std::endl;
       ch2ph = 1.0e30;
       ch2z  = 1.0e30;
-      return 1;
+      return 3;
     }
     
     sa2b2 = 1.0/sqrt(alf*alf+bet*bet);
@@ -343,10 +347,10 @@ namespace MarlinTrk{
     double denom = sumw*sumss - sums*sums;
     
     if (fabs(denom) < eps){
-      //                        streamlog_out(ERROR) << "fabs(denom) less than or equal to zero" << std::endl;
+      //std::cerr << "fabs(denom) less than or equal to zero" << std::endl;
       ch2ph = 1.0e30;
       ch2z  = 1.0e30;
-      return 1;
+      return 4;
     }
     
     double dzds  = (sumw*sumsz-sums*sumz) /denom;
@@ -368,10 +372,10 @@ namespace MarlinTrk{
     }
     
     if(chi2 > MAX_CHI2) {
-      //                        streamlog_out(ERROR) << "Chi2 greater than " <<  MAX_CHI2 << "return 1 " << std::endl;
+      //std::cerr << "Chi2 greater than " <<  MAX_CHI2 << "return 1 " << std::endl;
       ch2ph = 1.0e30;
       ch2z  = 1.0e30;
-      return 1;
+      return 5;
     }
     
     for (int i = 0 ; i<npt; ++i) {
@@ -464,10 +468,10 @@ namespace MarlinTrk{
     cov0.invert(error);
     
     if( error != 0 ) {
-      //streamlog_out(ERROR) << "CLHEP Matrix inversion failed" << "return 1 " << std::endl;
+      //std::cerr << "CLHEP Matrix inversion failed" << "return 1 " << std::endl;
       ch2ph = 1.0e30;
       ch2z  = 1.0e30;
-      return 1;
+      return 7;
     }
     
     icov = 0 ;
@@ -558,20 +562,3 @@ namespace MarlinTrk{
   
   
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

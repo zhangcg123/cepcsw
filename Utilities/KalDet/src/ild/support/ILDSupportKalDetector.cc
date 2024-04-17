@@ -87,7 +87,8 @@ TVKalDetector(10)
   // first check the sizes of the beam-pipe values r_in r_out and z
 
   if ( ( z.size() != rInner.size() ) || ( z.size() != rOuter.size() ) ) {
-    // streamlog_out(ERROR) << "ILDSupportKalDetector::ILDSupportKalDetector miss-match in number of double values for beam-pipe: Z = " << z.size() << " RInner = " << rInner.size() << " ROuter = " << rOuter.size()  << " exit(1) called from "<< __FILE__ << "   line " << __LINE__ << std::endl;
+    std::cout << "ILDSupportKalDetector::ILDSupportKalDetector miss-match in number of double values for beam-pipe: Z = " << z.size()
+	      << " RInner = " << rInner.size() << " ROuter = " << rOuter.size()  << " exit(1) called from "<< __FILE__ << "   line " << __LINE__ << std::endl;
     exit(1);
   }
   
@@ -127,7 +128,8 @@ TVKalDetector(10)
     if (i==0) {
       // check that z values start a zero
       if (fabs(zStart) > epsilon) {
-        // streamlog_out(ERROR) << "ILDSupportKalDetector::ILDSupportKalDetector first z value for beam-pipe must equal zero: Z = " << zStart << " exit(1) called from "<< __FILE__ << "   line " << __LINE__ << std::endl;
+	std::cout << "ILDSupportKalDetector::ILDSupportKalDetector first z value for beam-pipe must equal zero: Z = " << zStart
+		  << " exit(1) called from "<< __FILE__ << "   line " << __LINE__ << std::endl;
         exit(1);
       }
       
@@ -288,17 +290,17 @@ TVKalDetector(10)
   
   const gear::CalorimeterParameters& ecalB = gearMgr.getEcalBarrelParameters();
   const gear::CalorimeterParameters& ecalE = gearMgr.getEcalEndcapParameters();
-  
-  if (ecalB.getSymmetryOrder()!=8) {
-    // streamlog_out(ERROR) << "ILDSupportKalDetector::ILDSupportKalDetector ECal barrel is not eightfold symmetry: exit(1) called from " << __FILE__ << "   line " << __LINE__ << std::endl; 
-    exit(1);
 
+  int nside = ecalB.getSymmetryOrder();
+  if (ecalB.getSymmetryOrder()<=0) {
+    std::cout << "ILDSupportKalDetector::ILDSupportKalDetector ECal barrel zero symmetry: exit(1) called from " << __FILE__ << "   line " << __LINE__ << std::endl; 
+    exit(1);
   }
   
   double phi0  = ecalB.getPhi0();
   double r_min_ecal_bar = ecalB.getExtent()[0];
   double z_max_ecal_bar = ecalB.getExtent()[3];
-
+  //std::cout << "fucdout ILDSupportKalDetector " << phi0 << " " << r_min_ecal_bar << " " << z_max_ecal_bar << std::endl;
   UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
   encoder.reset() ;  // reset to 0
   
@@ -308,12 +310,12 @@ TVKalDetector(10)
   
   std::vector<int> module_ids;
   
-  for (int i=0; i<8; ++i) {
+  for (int i=0; i<nside; ++i) {
 
     encoder[lcio::ILDCellID0::module] = i;
     module_ids.push_back(encoder.lowWord());
 
-    double segment_dphi = 2.0*M_PI / 8; 
+    double segment_dphi = 2.0*M_PI / nside;
     double phi = i*segment_dphi+phi0;
     double width = 2.0*(r_min_ecal_bar*tan(segment_dphi*0.5));
     double length = 2.0*z_max_ecal_bar;

@@ -70,7 +70,7 @@ namespace MarlinTrk{
   
   void MarlinKalTest::init() {
     
-    std::cout << "debug: MarlinKalTest - call  this init " << std::endl ;
+    //std::cout << "debug: MarlinKalTest - call  this init " << std::endl ;
     //ILDSITKalDetector* sitdet = new ILDSITKalDetector( *_gearMgr, _geoSvc )  ;
     
     MeasurementSurfaceStore& surfstore = _gearMgr->getMeasurementSurfaceStore();
@@ -84,7 +84,7 @@ namespace MarlinTrk{
       
     }
     else {
-      std::cout << "debug: MarlinKalTest - MeasurementSurfaceStore is already full. Using store as filled by MeasurementSurfaceStoreFiller " << surfstore.getFillerName() << std::endl ;
+      //std::cout << "debug: MarlinKalTest - MeasurementSurfaceStore is already full. Using store as filled by MeasurementSurfaceStoreFiller " << surfstore.getFillerName() << std::endl ;
     }
     
     if (_gearMgr -> getDetectorName() == "LPTPC") {
