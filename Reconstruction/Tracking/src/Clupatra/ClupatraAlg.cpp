@@ -201,6 +201,9 @@ StatusCode ClupatraAlg::initialize() {
         // don't need, since Gaudi Algorithm will print all Property  
 	//printParameters() ;
 
+  // Set up the track fit tool
+  m_fitTool = ToolHandle<ITrackFitterTool>(m_fitToolName.value());
+
 	auto _trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
 	if ( !_trackSystemSvc ) {
 		error() << "Fail to find TrackSystemSvc ..." << endmsg;

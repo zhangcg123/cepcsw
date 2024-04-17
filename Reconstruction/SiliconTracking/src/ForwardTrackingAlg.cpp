@@ -4,7 +4,7 @@
 #include "DataHelper/Navigation.h"
 
 #include "edm4hep/TrackerHit.h"
-#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackerHitPlane.h"
 #include "edm4hep/Track.h"
 #if __has_include("edm4hep/EDM4hepVersion.h")
 #include "edm4hep/EDM4hepVersion.h"
@@ -74,12 +74,16 @@ StatusCode ForwardTrackingAlg::initialize(){
   // can be printed. As this is mainly used for debugging it is not a steerable parameter.
   //if( _useCED )MarlinCED::init(this) ;    //CED
 
+  // Set up the track fit tool
+  m_fitTool = ToolHandle<ITrackFitterTool>(m_fitToolName.value());
+
   if(m_dumpTime){
     NTuplePtr nt1(ntupleSvc(), "MyTuples/Time"+name());
     if ( !nt1 ) {
       m_tuple = ntupleSvc()->book("MyTuples/Time"+name(),CLID_ColumnWiseTuple,"Tracking time");
       if ( 0 != m_tuple ) {
 	m_tuple->addItem ("timeTotal",  m_timeTotal ).ignore();
+	m_tuple->addItem ("timeKalman", m_timeKalman ).ignore();
       }
       else {
 	fatal() << "Cannot book MyTuples/Time"+name() <<endmsg;
@@ -306,7 +310,9 @@ StatusCode ForwardTrackingAlg::execute(){
       _map_sector_hits[ ftdHit->getSector() ].push_back( ftdHit );         
     }
   }
-     
+
+  if(m_dumpTime&&m_tuple) m_timeKalman = 0;
+
   if( !_map_sector_hits.empty() ){
     /**********************************************************************************************/
     /*                Check if no sector is overflowing with hits                                 */
@@ -661,7 +667,7 @@ StatusCode ForwardTrackingAlg::execute(){
     debug() << "\t\t---Save Tracks---" << endmsg ;
       
     //auto trkCol = _outColHdl.createAndPut();
-    
+
     for (unsigned int i=0; i < tracks.size(); i++){
       FTDTrack* myTrack = dynamic_cast< FTDTrack* >( tracks[i] );
          
@@ -942,7 +948,7 @@ bool ForwardTrackingAlg::setCriteria( unsigned round ){
 }
 
 void ForwardTrackingAlg::finaliseTrack( edm4hep::MutableTrack* trackImpl ){
-     
+  auto stopwatch = TStopwatch();
   Fitter fitter( trackImpl , _trkSystem );
    
   //trackImpl->trackStates().clear();
@@ -1024,6 +1030,9 @@ void ForwardTrackingAlg::finaliseTrack( edm4hep::MutableTrack* trackImpl ){
   trackImpl->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SET]);
   trackImpl->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::ETD]);
 #endif
+
+  if(m_dumpTime&&m_tuple) m_timeKalman += stopwatch.RealTime()*1000;
+
   return;
 }
 

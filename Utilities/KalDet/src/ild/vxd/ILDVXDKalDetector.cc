@@ -45,7 +45,6 @@ ILDVXDKalDetector::ILDVXDKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* ge
   TMaterial & beryllium = *MaterialDataBase::Instance().getMaterial("beryllium");
 
   // needed for cryostat
-  
   TMaterial & aluminium = *MaterialDataBase::Instance().getMaterial("aluminium");
   
   _vxd_Cryostat.exists = false;
@@ -215,6 +214,12 @@ ILDVXDKalDetector::ILDVXDKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* ge
     }
   }
   
+  if (_vxd_Cryostat.shellInnerR>0&&_vxd_Cryostat.shellThickness>0) {
+    TMaterial & shell     = *MaterialDataBase::Instance().getMaterial("VXDShellMaterial");
+    Add( new ILDCylinderMeasLayer(air, shell , _vxd_Cryostat.shellInnerR, _vxd_Cryostat.shelllHalfZ, 0, 0, 0, _bZ, dummy,-1,"VXDShellInnerWall" ) );
+    Add( new ILDCylinderMeasLayer(shell, air , _vxd_Cryostat.shellInnerR+_vxd_Cryostat.shellThickness, _vxd_Cryostat.shelllHalfZ, 0, 0, 0, _bZ, dummy,-1,"VXDShellOuterWall" ) );
+  }
+
   if (_vxd_Cryostat.exists) {
     // build Cryostat according to mokka driver vxd04.cc
     
@@ -357,6 +362,11 @@ void ILDVXDKalDetector::setupGearGeom( const gear::GearMgr& gearMgr ){
     _relative_position_of_measurement_surface =  pVXDDetMain.getDoubleVal( "relative_position_of_measurement_surface"  );
   }
   catch (gear::UnknownParameterException& e) {}
+
+  _vxd_Cryostat.shellInnerR    = pVXDDetMain.getShellInnerRadius();
+  _vxd_Cryostat.shellThickness = pVXDDetMain.getShellOuterRadius() - pVXDDetMain.getShellInnerRadius();
+  _vxd_Cryostat.shelllHalfZ    = pVXDDetMain.getShellHalfLength();
+
   try {
     const gear::GearParameters& pVXDInfra = gearMgr.getGearParameters("VXDInfra");                                                                                                  
     _vxd_Cryostat.alRadius    = pVXDInfra.getDoubleVal( "CryostatAlRadius"  );
@@ -365,16 +375,16 @@ void ILDVXDKalDetector::setupGearGeom( const gear::GearMgr& gearMgr ){
     _vxd_Cryostat.alZEndCap   = pVXDInfra.getDoubleVal( "CryostatAlZEndCap"  );
     _vxd_Cryostat.alHalfZ     = pVXDInfra.getDoubleVal( "CryostatAlHalfZ"  );
 
-    _vxd_Cryostat.shellInnerR    = pVXDDetMain.getShellInnerRadius();
-    _vxd_Cryostat.shellThickness = pVXDDetMain.getShellOuterRadius() - _vxd_Cryostat.shellInnerR;
-    _vxd_Cryostat.shelllHalfZ    = pVXDDetMain.getShellHalfLength();
+    //_vxd_Cryostat.shellInnerR    = pVXDDetMain.getShellInnerRadius();
+    //_vxd_Cryostat.shellThickness = pVXDDetMain.getShellOuterRadius() - _vxd_Cryostat.shellInnerR;
+    //_vxd_Cryostat.shelllHalfZ    = pVXDDetMain.getShellHalfLength();
 
     _vxd_Cryostat.exists = true;
     //std::cout << "VXDInfra: " << _vxd_Cryostat.alRadius << " " << _vxd_Cryostat.alThickness << " " << _vxd_Cryostat.alInnerR << " " << _vxd_Cryostat.alZEndCap << " " 
     //	      << _vxd_Cryostat.alHalfZ << " " << _vxd_Cryostat.shellInnerR << " " << _vxd_Cryostat.shellThickness << " " << _vxd_Cryostat.shelllHalfZ << std::endl;
   }    
   catch (gear::UnknownParameterException& e) {
-    std::cout << e.what() << std::endl ;
+    //std::cout << "ILDVXDKalDetector: " << e.what() << ", will not be built" << std::endl ;
     _vxd_Cryostat.exists = false;
 
   }

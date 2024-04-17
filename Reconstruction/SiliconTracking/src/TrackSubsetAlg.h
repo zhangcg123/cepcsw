@@ -8,6 +8,7 @@
 #include "edm4hep/TrackerHitCollection.h"
 //#include "edm4hep/Track.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
+#include "Tracking/ITrackFitterTool.h"
 
 #include "Math/ProbFunc.h"
 
@@ -56,6 +57,7 @@ class TrackSubsetAlg : public GaudiAlgorithm {
   
  protected:
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
+  ToolHandle<ITrackFitterTool> m_fitTool;
   /* Input collection */
   std::vector<DataHandle<edm4hep::TrackCollection>* > _inTrackColHdls;
   std::vector<DataHandle<edm4hep::TrackerHitCollection>* > _inTrackerHitColHdls;
@@ -76,6 +78,7 @@ class TrackSubsetAlg : public GaudiAlgorithm {
   Gaudi::Property<double> _maxChi2PerHit{this, "MaxChi2PerHit", 1e2};
   Gaudi::Property<double> _omega{this, "Omega", 0.75};
   Gaudi::Property<bool> m_dumpTime{this, "DumpTime", true};
+  Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};
   
   float _bField;
   
@@ -84,6 +87,7 @@ class TrackSubsetAlg : public GaudiAlgorithm {
 
   NTuple::Tuple*       m_tuple;
   NTuple::Item<float>  m_timeTotal;
+  NTuple::Item<float>  m_timeKalman;
 };
 
 /** A functor to return whether two tracks are compatible: The criterion is if the share a TrackerHit or more */

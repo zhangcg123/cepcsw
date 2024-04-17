@@ -1,9 +1,12 @@
+gaudi_add_header_only_library(TrackingLib)
+
 # Modules
 gaudi_add_module(Tracking
                  SOURCES src/Clupatra/ClupatraAlg.cpp
                          src/Clupatra/clupatra_new.cpp
                          src/FullLDCTracking/FullLDCTrackingAlg.cpp
                          src/TruthTracker/TruthTrackerAlg.cpp
+                         src/FitterTool/KalTestTool.cpp
                  LINK GearSvc
                       EventSeeder
                       TrackSystemSvcLib

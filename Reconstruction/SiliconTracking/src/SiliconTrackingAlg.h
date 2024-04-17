@@ -23,6 +23,7 @@
 #include "DataHelper/HelixClass.h"
 
 #include "TrackSystemSvc/IMarlinTrack.h"
+#include "Tracking/ITrackFitterTool.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
@@ -211,6 +212,7 @@ class SiliconTrackingAlg : public GaudiAlgorithm {
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  ToolHandle<ITrackFitterTool> m_fitTool;
   //bool _runMarlinTrkDiagnostics;
   //std::string _MarlinTrkDiagnosticsName;
   typedef std::vector<int> IntVec;
@@ -238,7 +240,7 @@ class SiliconTrackingAlg : public GaudiAlgorithm {
   Gaudi::Property<float> _cutOnPt{this, "CutOnPt", 0.05};
   Gaudi::Property<int> _minimalHits{this, "MinimalHits",3};
   Gaudi::Property<int> _nHitsChi2{this, "NHitsChi2", 5};
-  Gaudi::Property<int> _max_hits_per_sector{this, "MaxHitsPerSector", 100};
+  Gaudi::Property<int> _max_hits_per_sector{this, "MaxHitsPerSector", 200};
   Gaudi::Property<int> _attachFast{this, "FastAttachment", 0};
   Gaudi::Property<bool> _useSIT{this, "UseSIT", true};
   Gaudi::Property<float> _initialTrackError_d0{this, "InitialTrackErrorD0",1e6};
@@ -253,8 +255,11 @@ class SiliconTrackingAlg : public GaudiAlgorithm {
   Gaudi::Property<bool> _ElossOn{this, "EnergyLossOn", true};
   Gaudi::Property<bool> _SmoothOn{this, "SmoothOn", true};
   Gaudi::Property<float> _helix_max_r{this, "HelixMaxR", 2000.};
-  Gaudi::Property<bool> m_dumpTime{this, "DumpTime", true}; 
+  Gaudi::Property<bool> m_dumpTime{this, "DumpTime", true};
+  Gaudi::Property<bool> m_debug{this, "Debug", false};
+
   //std::vector<int> _colours;  
+  Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};
   
   /** helper function to get collection using try catch block */
   //LCCollection* GetCollection(  LCEvent * evt, std::string colName ) ;
@@ -302,10 +307,15 @@ class SiliconTrackingAlg : public GaudiAlgorithm {
   std::vector<TrackerHitExtendedVec> _sectors;
   std::vector<TrackerHitExtendedVec> _sectorsFTD;
 
-  NTuple::Tuple*       m_tuple;
+  NTuple::Tuple*       m_tuple = nullptr;
   NTuple::Item<float>  m_timeTotal;
   NTuple::Item<float>  m_timeKalman;
 
+  NTuple::Tuple*       m_tupleDebug = nullptr;
+  NTuple::Item<int>    m_nhit;
+  NTuple::Array<int>   m_layer;
+  NTuple::Array<float> m_chi2;
+  NTuple::Array<bool>  m_used;
   /**
    * A helper class to allow good code readability by accessing tracks with N hits.
    * As the smalest valid track contains three hits, but the first index in a vector is 0,

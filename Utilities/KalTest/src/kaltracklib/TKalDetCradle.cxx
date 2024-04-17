@@ -100,8 +100,11 @@ void TKalDetCradle::Transport(const TKalTrackSite  &from,   // site from
   const TVMeasLayer& ml_to = to.GetHit().GetMeasLayer() ;
   TVector3  x0;
   this->Transport(from, ml_to, x0, sv, F, Q ) ;
-  
-  THelicalTrack hel(sv, x0, to.GetHit().GetBfield()) ;
+
+  double bfield = to.GetHit().GetBfield();
+  TVTrack* trk = 0;
+  if (bfield==0) trk = new TStraightTrack(sv, x0);
+  else           trk = new THelicalTrack(sv, x0, bfield);
   
   // ---------------------------------------------------------------------
   //  Move pivot from last expected hit to actural hit at site to
@@ -113,14 +116,14 @@ void TKalDetCradle::Transport(const TKalTrackSite  &from,   // site from
     Int_t sdim = sv.GetNrows();              // number of track parameters
     TKalMatrix DF(sdim, sdim);               // propagator matrix segment
     
-    hel.MoveTo(to.GetPivot(), fid, &DF);     // move pivot to actual hit (to)
+    trk->MoveTo(to.GetPivot(), fid, &DF);     // move pivot to actual hit (to)
     F = DF * F;                              // update F accordingly
-    hel.PutInto(sv);                         // save updated hel to sv
+    trk->PutInto(sv);                         // save updated hel to sv
     
   } else {
     to.SetPivot(x0);                         // if it is a 1-dim hit
   }
-  
+  delete trk;
 }
 
 //

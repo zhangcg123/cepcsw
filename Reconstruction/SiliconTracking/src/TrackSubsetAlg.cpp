@@ -41,12 +41,16 @@ StatusCode TrackSubsetAlg::initialize() {
   _nRun = 0 ;
   _nEvt = 0 ;
 
+  // Set up the track fit tool
+  m_fitTool = ToolHandle<ITrackFitterTool>(m_fitToolName.value());
+
   if(m_dumpTime){
     NTuplePtr nt1(ntupleSvc(), "MyTuples/Time"+name());
     if ( !nt1 ) {
       m_tuple = ntupleSvc()->book("MyTuples/Time"+name(),CLID_ColumnWiseTuple,"Tracking time");
       if ( 0 != m_tuple ) {
 	m_tuple->addItem ("timeTotal", m_timeTotal ).ignore();
+	m_tuple->addItem ("timeKalman", m_timeKalman ).ignore();
       }
       else {
 	fatal() << "Cannot book MyTuples/Time"+name() <<endmsg;
@@ -220,7 +224,7 @@ StatusCode TrackSubsetAlg::execute(){
   debug() << "Fitting and saving of the tracks" << endmsg;
 
   //auto trkCol = _outColHdl.createAndPut();
-
+  auto stopwatch_kalman = TStopwatch();
   for( unsigned i=0; i < accepted.size(); i++ ){
     edm4hep::MutableTrack trackImpl;
     
@@ -266,14 +270,15 @@ StatusCode TrackSubsetAlg::execute(){
 
     bool fit_backwards = MarlinTrk::IMarlinTrack::backward;
     
-    MarlinTrk::IMarlinTrack* marlinTrk = _trkSystem->createTrack();
+    //MarlinTrk::IMarlinTrack* marlinTrk = _trkSystem->createTrack();
     
     int error = 0;
     
     try {
       
-      error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trackerHits, &trackImpl, fit_backwards, covMatrix, _bField, _maxChi2PerHit);
-      
+      //error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trackerHits, &trackImpl, fit_backwards, covMatrix, _bField, _maxChi2PerHit);
+      error = m_fitTool->Fit(trackImpl, trackerHits, covMatrix, _maxChi2PerHit, fit_backwards);
+
     } catch (...) {
       
       //      delete Track;
@@ -288,10 +293,11 @@ StatusCode TrackSubsetAlg::execute(){
     std::vector<std::pair<edm4hep::TrackerHit , double> > hits_in_fit ;
     std::vector<std::pair<edm4hep::TrackerHit , double> > outliers ;
     std::vector<edm4hep::TrackerHit> all_hits;
-    all_hits.reserve(300);
+    //all_hits.reserve(300);
     
-    marlinTrk->getHitsInFit(hits_in_fit);
-    
+    //marlinTrk->getHitsInFit(hits_in_fit);
+    hits_in_fit = m_fitTool->GetHitsInFit();
+
     for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
       all_hits.push_back(hits_in_fit[ihit].first);
     }
@@ -300,15 +306,17 @@ StatusCode TrackSubsetAlg::execute(){
     
     MarlinTrk::addHitNumbersToTrack(&trackImpl, all_hits, true, cellID_encoder);
     
-    marlinTrk->getOutliers(outliers);
-    
+    //marlinTrk->getOutliers(outliers);
+    outliers = m_fitTool->GetOutliers();
+
     for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
       all_hits.push_back(outliers[ihit].first);
     }
     
     MarlinTrk::addHitNumbersToTrack(&trackImpl, all_hits, false, cellID_encoder);
     
-    delete marlinTrk;
+    //delete marlinTrk;
+    m_fitTool->Clear();
         
     if( error != MarlinTrk::IMarlinTrack::success ) {
       //delete trackImpl;
@@ -355,6 +363,7 @@ StatusCode TrackSubsetAlg::execute(){
 
   if(m_dumpTime&&m_tuple){
     m_timeTotal = stopwatch.RealTime()*1000;
+    m_timeKalman = stopwatch_kalman.RealTime()*1000;
     m_tuple->write();
   }
 

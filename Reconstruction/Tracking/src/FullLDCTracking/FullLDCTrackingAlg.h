@@ -19,6 +19,7 @@
 
 #include "TrackSystemSvc/MarlinTrkUtils.h"
 #include "TrackSystemSvc/IMarlinTrack.h"
+#include "Tracking/ITrackFitterTool.h"
 
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
@@ -319,6 +320,7 @@ protected:
   /** pointer to the IMarlinTrkSystem instance 
    */
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  ToolHandle<ITrackFitterTool> m_fitTool;
   
   Gaudi::Property<bool> _MSOn{this, "MultipleScatteringOn", true};
   Gaudi::Property<bool> _ElossOn{this, "EnergyLossOn", true};
@@ -397,6 +399,7 @@ protected:
   Gaudi::Property<int>   _maxAllowedSiHitRejectionsForTrackCombination{this, "MaxAllowedSiHitRejectionsForTrackCombination", 2};
   Gaudi::Property<bool>  m_dumpTime{this, "DumpTime", true};
   //float _dPCutForForcedMerging;
+  Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};
   
   bool _runMarlinTrkDiagnostics = false;
   std::string _MarlinTrkDiagnosticsName;

@@ -73,9 +73,15 @@ StatusCode GearSvc::initialize()
     info() << "Fill GEAR data from GeomSvc" << endmsg;
     m_gearMgr->setDetectorName("CRD_o1_v01");
 
-    const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
-    gear::ConstantBField* b = new gear::ConstantBField(gear::Vector3D(field.x()/dd4hep::tesla, field.y()/dd4hep::tesla, field.z()/dd4hep::tesla));
-    m_gearMgr->setBField(b);
+    if (m_field.value()==0) {
+      const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+      gear::ConstantBField* b = new gear::ConstantBField(gear::Vector3D(field.x()/dd4hep::tesla, field.y()/dd4hep::tesla, field.z()/dd4hep::tesla));
+      m_gearMgr->setBField(b);
+    }
+    else {
+      gear::ConstantBField* b = new gear::ConstantBField(gear::Vector3D(0, 0, m_field.value()));
+      m_gearMgr->setBField(b);
+    }
 
     dd4hep::DetElement world = geomSvc->getDD4HepGeo();
     const std::map<std::string, dd4hep::DetElement>& subs = world.children();
@@ -211,8 +217,11 @@ StatusCode GearSvc::convertVXD(dd4hep::DetElement& vxd){
 
     dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() ) ;
     const dd4hep::rec::ZPlanarData::LayerLayout& l = vxdData->layers[0] ;
-    dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
-    dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
+    double offset = l.offsetSupport;
+    //dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
+    //dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
+    dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, l.offsetSupport, 2.*dd4hep::mm);
+    dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   l.offsetSupport, 2.*dd4hep::mm);
     const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween( a , b  ) ;
     dd4hep::rec::MaterialData mat = ( materials.size() > 1  ? matMgr.createAveragedMaterial( materials ) : materials[0].first  ) ;
 
@@ -227,6 +236,25 @@ StatusCode GearSvc::convertVXD(dd4hep::DetElement& vxd){
 										mat.radiationLength()/dd4hep::mm,
 										mat.interactionLength()/dd4hep::mm);
     m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
+
+    if (vxdData->rOuterShell>vxdData->rInnerShell) {
+      dd4hep::rec::Vector3D a1( vxdData->rInnerShell, 0, 2.*dd4hep::mm);
+      dd4hep::rec::Vector3D b1( vxdData->rOuterShell, 0, 2.*dd4hep::mm);
+      const dd4hep::rec::MaterialVec& materials1 = matMgr.materialsBetween( a1 , b1  ) ;
+      dd4hep::rec::MaterialData mat1 = ( materials1.size() > 1  ? matMgr.createAveragedMaterial( materials1 ) : materials1[0].first  ) ;
+
+      std::cout << " ####### found materials between points : " << a1 << " and " << b1 << " : " ;
+      for( unsigned i=0,n=materials1.size();i<n;++i){
+	std::cout <<  materials1[i].first.name() << "[" <<   materials1[i].second << "], " ;
+      }
+      std::cout << std::endl ;
+      std::cout << "   averaged material : " << mat1 << std::endl ;
+      gear::SimpleMaterialImpl* VXDShellMaterial = new gear::SimpleMaterialImpl("VXDShellMaterial", mat1.A(), mat1.Z(),
+                                                                                mat1.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
+                                                                                mat1.radiationLength()/dd4hep::mm,
+                                                                                mat1.interactionLength()/dd4hep::mm);
+      m_gearMgr->registerSimpleMaterial(VXDShellMaterial);
+    }
 
     info() << vxdData->rInnerShell << " " << vxdData->rOuterShell << " " << vxdData->zHalfShell << " " << vxdData->gapShell << endmsg;
     for(int i=0,n=vxdData->layers.size(); i<n; i++){
@@ -702,7 +730,7 @@ StatusCode GearSvc::convertFTD(dd4hep::DetElement& ftd){
                        senRinner, senThickness, senLengthMin, senLengthMax, senWidth, 0);
   }
   m_gearMgr->setFTDParameters(ftdParam);
-
+  info() << "nftd = " << nLayers << endmsg;
   return StatusCode::SUCCESS;
 }
 

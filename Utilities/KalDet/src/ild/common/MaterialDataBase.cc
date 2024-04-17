@@ -202,7 +202,6 @@ void MaterialDataBase::createMaterials(const gear::GearMgr& gearMgr, IGeomSvc* g
   TMaterial &ftdsupport = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.) ;
   this->addMaterial(&ftdsupport, name);
 
-  
   // VXD Support Material
   if(geoSvc){
     //obselete
@@ -222,9 +221,18 @@ void MaterialDataBase::createMaterials(const gear::GearMgr& gearMgr, IGeomSvc* g
       name    = vxd_sup_mat.getName() ;
       TMaterial &vxdsupport = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
       this->addMaterial(&vxdsupport, name);
+
+      const gear::SimpleMaterial& vxd_shell_mat = gearMgr.getSimpleMaterial("VXDShellMaterial");
+      A       = vxd_shell_mat.getA();
+      Z       = vxd_shell_mat.getZ();
+      density = vxd_shell_mat.getDensity() * (1000.0/ 1000000.0); // kg/m^3 -> g/cm^3
+      radlen  = vxd_shell_mat.getRadLength() / 10.0 ; // mm -> cm
+      name    = vxd_shell_mat.getName() ;
+      TMaterial &vxdshell = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
+      this->addMaterial(&vxdshell, name);
     }
     catch( gear::UnknownParameterException& e){   
-      std::cout << "Error while read material from GeomSvc!" << std::endl;
+      std::cout << "Warning! cannot get material VXDSupportMaterial and VXDShellMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
     }
   }
 }

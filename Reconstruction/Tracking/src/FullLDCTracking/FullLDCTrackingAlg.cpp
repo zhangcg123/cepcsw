@@ -6,7 +6,7 @@
 #include <GearSvc/IGearSvc.h>
 
 #include <edm4hep/TrackerHit.h>
-#include <edm4hep/TrackerHit.h>
+#include <edm4hep/TrackerHitPlane.h>
 #include <edm4hep/Track.h>
 #if __has_include("edm4hep/EDM4hepVersion.h")
 #include "edm4hep/EDM4hepVersion.h"
@@ -94,7 +94,11 @@ std::string toString( int iTrk, edm4hep::Track tpcTrack, float bField=3.5 ) {
   float pzTPC = helixTPC.getMomentum()[2];
   const float ptot = sqrt(pxTPC*pxTPC+pyTPC*pyTPC+pzTPC*pzTPC);
 
+#if EDM4HEP_BUILD_VERSION > EDM4HEP_VERSION(0, 9, 0)
+  sprintf(strg,"%3i   %5i %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f %8i",iTrk,tpcTrack.id().index,
+#else
   sprintf(strg,"%3i   %5i %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f %8i",iTrk,tpcTrack.id(),
+#endif
 	  ptot, d0TPC,z0TPC,pxTPC,pyTPC,pzTPC,nHits,ndfTPC,Chi2TPC,nlinkedTracks);
 
   return std::string( strg ) ;
@@ -153,6 +157,9 @@ StatusCode FullLDCTrackingAlg::initialize() {
   PI = acos(-1.);
   PIOVER2 = 0.5*PI;
   TWOPI = 2*PI;
+
+  // Set up the track fit tool
+  m_fitTool = ToolHandle<ITrackFitterTool>(m_fitToolName.value());
 
   if(m_dumpTime){
     NTuplePtr nt1(ntupleSvc(), "MyTuples/Time"+name());
@@ -414,13 +421,14 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     debug() << "trkHits ready" << endmsg;
     bool fit_backwards = IMarlinTrack::backward;
     
-    MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
-    debug() << "marlinTrk created " << endmsg;
+    //MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
+    //debug() << "marlinTrk created " << endmsg;
     
     int error_code = 0;
     
     try {
-      error_code = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, &track, fit_backwards, &ts_initial, _bField, _maxChi2PerHit);
+      //error_code = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, &track, fit_backwards, &ts_initial, _bField, _maxChi2PerHit);
+      error_code = m_fitTool->Fit(track, trkHits, ts_initial, _maxChi2PerHit, fit_backwards);
     } catch (...) {
       
       //      delete track;
@@ -445,8 +453,9 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     std::vector<edm4hep::TrackerHit> all_hits;
     all_hits.reserve(hits_in_fit.size());
     
-    marlinTrk->getHitsInFit(hits_in_fit);
-    
+    //marlinTrk->getHitsInFit(hits_in_fit);
+    hits_in_fit = m_fitTool->GetHitsInFit();
+
     for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
       all_hits.push_back(hits_in_fit[ihit].first);
     }
@@ -455,17 +464,18 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     
     MarlinTrk::addHitNumbersToTrack(&track, all_hits, true, cellID_encoder);
     
-    marlinTrk->getOutliers(outliers);
-    
+    //marlinTrk->getOutliers(outliers);
+    outliers = m_fitTool->GetOutliers();
+
     for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
       all_hits.push_back(outliers[ihit].first);
     }
     
     MarlinTrk::addHitNumbersToTrack(&track, all_hits, false, cellID_encoder);
     
-    
-    delete marlinTrk;
-    
+    //delete marlinTrk;
+    m_fitTool->Clear();
+
     if( error_code != IMarlinTrack::success ) {
       debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit failed with error code " << error_code << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
       //delete Track;
@@ -534,6 +544,7 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     int nhits_in_tpc = track.getSubDetectorHitNumbers(3);
     int nhits_in_set = track.getSubDetectorHitNumbers(4);
 #endif
+
     //int nhits_in_vxd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
     //int nhits_in_ftd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ];
     //int nhits_in_sit = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ];
@@ -1264,7 +1275,11 @@ void FullLDCTrackingAlg::prepareVectors() {
       const float pTot = sqrt(pxSi*pxSi+pySi*pySi+pzSi*pzSi);
       const int ndfSi = trackExt->getNDF();
       float Chi2Si = trackExt->getChi2()/float(trackExt->getNDF());
+#if EDM4HEP_BUILD_VERSION > EDM4HEP_VERSION(0, 9, 0)
+      sprintf(strg,"%3i   %5i %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk, siTrack.id().index, pTot, d0Si,z0Si,pxSi,pySi,pzSi,nHits, ndfSi, Chi2Si);
+#else
       sprintf(strg,"%3i   %5i %9.3f  %9.3f  %9.3f  %7.2f  %7.2f  %7.2f %4i %4i %8.3f",iTrk, siTrack.id(), pTot, d0Si,z0Si,pxSi,pySi,pzSi,nHits, ndfSi, Chi2Si);
+#endif
       debug() << strg << endmsg;
       
       if(nHits>0){

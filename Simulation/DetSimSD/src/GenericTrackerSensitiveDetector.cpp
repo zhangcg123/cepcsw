@@ -33,10 +33,12 @@ G4bool GenericTrackerSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHis
   dd4hep::Position direction = postPos - prePos;
   dd4hep::Position position  = mean_direction(prePos,postPos);
   double   hit_len   = direction.R();
+  if (hit_len < 1E-9) return true;
   if (hit_len > 0) {
     double new_len = mean_length(h.preMom(),h.postMom())/hit_len;
     direction *= new_len/hit_len;
   }
+
   dd4hep::sim::Geant4TrackerHit* hit = nullptr;
   hit = new dd4hep::sim::Geant4TrackerHit(h.track->GetTrackID(),
 					  h.track->GetDefinition()->GetPDGEncoding(),

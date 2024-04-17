@@ -608,7 +608,16 @@ namespace MarlinTrk {
         trkStateCalo.location = MarlinTrk::Location::AtCalorimeter;
         track->addToTrackStates(trkStateCalo);
       } else {
+#ifdef DEBUG
 	std::cout << "  >>>>>>>>>>> MarlinTrk::finaliseLCIOTrack:  could not get TrackState at Calo Face "  << std::endl ;
+	if (last_constrained_hit.isAvailable()) {
+	  auto pos = last_constrained_hit.getPosition();
+	  std::cout << " last_constrained_hit = " << pos.x << "," << pos.y << "," << pos.z << std::endl;
+	}
+	else {
+	  std::cout << " last_constrained_hit not Available" << std::endl;
+	}
+#endif
         //delete trkStateCalo;
       }
     } else {

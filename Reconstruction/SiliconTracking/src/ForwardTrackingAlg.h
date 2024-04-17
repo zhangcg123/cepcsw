@@ -14,6 +14,7 @@
 
 #include "edm4hep/TrackerHit.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
+#include "Tracking/ITrackFitterTool.h"
 //#include "gear/BField.h"
 
 #include "KiTrack/Segment.h"
@@ -239,6 +240,7 @@ class ForwardTrackingAlg : public GaudiAlgorithm {
 
   NTuple::Tuple*       m_tuple;
   NTuple::Item<float>  m_timeTotal;
+  NTuple::Item<float>  m_timeKalman;
 
   /** B field in z direction */
   double _Bz;
@@ -261,6 +263,7 @@ class ForwardTrackingAlg : public GaudiAlgorithm {
   Gaudi::Property<std::vector<float> > _critMinimaInit{this, "CriteriaMin", {} };
   Gaudi::Property<std::vector<float> > _critMaximaInit{this, "CriteriaMax", {} };
   Gaudi::Property<bool>   m_dumpTime{this, "DumpTime", true};
+  Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest110"};
 
   std::map<std::string, std::vector<float> > _critMinima;
   std::map<std::string, std::vector<float> > _critMaxima;
@@ -291,6 +294,7 @@ class ForwardTrackingAlg : public GaudiAlgorithm {
   unsigned _nTrackCandidatesPlus;
      
   MarlinTrk::IMarlinTrkSystem* _trkSystem;
+  ToolHandle<ITrackFitterTool> m_fitTool;
   
   /** The quality of the output track collection */
   int _output_track_col_quality ; 

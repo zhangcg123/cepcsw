@@ -10,7 +10,7 @@ class GearSvc : public extends<Service, IGearSvc>
 {
     public:
         GearSvc(const std::string& name, ISvcLocator* svc);
-        ~GearSvc();
+        virtual ~GearSvc();
 
         gear::GearMgr* getGearMgr() override;
 
@@ -28,6 +28,7 @@ class GearSvc : public extends<Service, IGearSvc>
 	TGeoNode* FindNode(TGeoNode* mother, char* name);
 
         Gaudi::Property<std::string> m_gearFile{this, "GearXMLFile", ""};
+        Gaudi::Property<float>       m_field{this, "MagneticField", 0};
 
         gear::GearMgr* m_gearMgr;
 };

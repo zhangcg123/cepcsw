@@ -22,6 +22,7 @@
 #include "TrackSystemSvc/HelixTrack.h"
 #include "TrackSystemSvc/HelixFit.h"
 #include "TrackSystemSvc/IMarlinTrack.h"
+#include "Tracking/ITrackFitterTool.h"
 
 namespace MarlinTrk{
   class IMarlinTrkSystem ;
@@ -139,6 +140,7 @@ class ClupatraAlg : public GaudiAlgorithm {
   Gaudi::Property<bool> _MSOn{this, "MultipleScatteringOn", false};
   Gaudi::Property<bool> _ElossOn{this, "EnergyLossOn", true};
   Gaudi::Property<bool> _SmoothOn{this, "SmoothOn", false};
+  Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest010"};
 
 
   DataHandle<edm4hep::TrackerHitCollection> _TPCHitCollectionHandle{"TPCTrackerHits", Gaudi::DataHandle::Reader, this};
@@ -154,6 +156,7 @@ class ClupatraAlg : public GaudiAlgorithm {
   int _nEvt ;
 
   MarlinTrk::IMarlinTrkSystem* _trksystem ;
+  ToolHandle<ITrackFitterTool> m_fitTool;
 
   const gear::TPCParameters*  _gearTPC ;
 

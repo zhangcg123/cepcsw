@@ -7,6 +7,7 @@ gaudi_add_module(SiliconTracking
                          src/TrackSubsetAlg.cpp
                  LINK GearSvc
                       EventSeeder
+                      TrackingLib
                       TrackSystemSvcLib
                       DataHelperLib
                       KiTrackLib
