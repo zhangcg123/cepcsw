@@ -4,6 +4,7 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
+#include <Identifier/CEPCConf.h>
 #include <UTIL/BitSet32.h>
 
 ///---- GEAR ----
@@ -287,7 +288,9 @@ namespace clupatra_new{
 
 		unsigned step = 0 ;
 
-		UTIL::BitField64 encoder( UTIL::ILDCellID0::encoder_string ) ;
+		// UTIL::BitField64 encoder( UTIL::ILDCellID0::encoder_string ) ;
+		// UTIL::BitField64 encoder( "system:5,side:-2,layer:13,module:6,sensor:6" );
+		UTIL::BitField64 encoder( CEPCConf::DetEncoderString::getStringRepresentation() );
 		encoder[UTIL::ILDCellID0::subdet] = UTIL::ILDDetID::TPC ;
 
 #if PODIO_BUILD_VERSION < PODIO_VERSION(0, 17, 4)
@@ -499,7 +502,9 @@ namespace clupatra_new{
 
 		IMarlinTrack* trk =  MarTrkof(clu) ;
 
-		UTIL::BitField64 encoder( UTIL::ILDCellID0::encoder_string ) ;
+		// UTIL::BitField64 encoder( UTIL::ILDCellID0::encoder_string ) ;
+		// UTIL::BitField64 encoder( "system:5,side:-2,layer:13,module:6,sensor:6" );
+		UTIL::BitField64 encoder( CEPCConf::DetEncoderString::getStringRepresentation() );
 
 		encoder[ UTIL::ILDCellID0::subdet ] = detectorID ;
 		encoder[ UTIL::ILDCellID0::layer  ] = layer ;
@@ -1314,7 +1319,10 @@ start:
 
 	edm4hep::MutableTrack PLCIOTrackConverter::operator() (CluTrack* c) {
 	  
-		static lcio::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+		// static lcio::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ;
+		// static UTIL::BitField64 encoder( "system:5,side:-2,layer:13,module:6,sensor:6" );
+		static UTIL::BitField64 encoder( CEPCConf::DetEncoderString::getStringRepresentation() );
+		
 
 		edm4hep::MutableTrack trk;
 
