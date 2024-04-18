@@ -930,6 +930,9 @@ StatusCode ClupatraAlg::execute() {
 
 					// flag the segments so they can be ignored for final list
 					// FIXME I need to set type
+					int type = trk.getType();
+					type |= (1<<lcio::ILDTrackTypeBit::SEGMENT);
+					trk.setType(type) ;
 					// trk->setType( lcio::ILDTrackTypeBit::SEGMENT ) ;
 
 					// add old segments to new track

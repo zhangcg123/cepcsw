@@ -33,6 +33,7 @@
 #include <gear/BField.h>
 //
 #include "UTIL/ILDConf.h"
+#include "Identifier/CEPCConf.h"
 
 #define TRKHITNCOVMATRIX 6
 
@@ -512,7 +513,9 @@ StatusCode TPCDigiAlg::execute()
     return StatusCode::SUCCESS;
   }
 
-  _cellid_encoder = new UTIL::BitField64( lcio::ILDCellID0::encoder_string ) ;
+  // _cellid_encoder = new UTIL::BitField64( lcio::ILDCellID0::encoder_string ) ;
+  // _cellid_encoder = new UTIL::BitField64( "system:5,side:-2,layer:13,module:6,sensor:6" ) ;
+  _cellid_encoder = new UTIL::BitField64( CEPCConf::DetEncoderString::getStringRepresentation() ) ;
   //int det_id = 0 ;
   //if ( (STHcol != nullptr) && (STHcol->size()>0) ) {
   //  auto SimTHit = STHcol->at( 0 ) ;

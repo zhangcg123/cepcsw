@@ -6,6 +6,7 @@
 #include "UTIL/BitField64.h"
 #include "UTIL/CellIDDecoder.h"
 #include "UTIL/ILDConf.h"
+#include "Identifier/CEPCConf.h"
 #include "lcio.h"
 #include <array>
 
@@ -55,7 +56,9 @@ inline float getPhi(const edm4hep::Track &track) {
 
 
 inline int getLayer(const edm4hep::TrackerHit hit) {
-    UTIL::BitField64* _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+    // UTIL::BitField64* _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
+    // UTIL::BitField64* _encoder = new UTIL::BitField64( "system:5,side:-2,layer:13,module:6,sensor:6" );
+    UTIL::BitField64* _encoder = new UTIL::BitField64( CEPCConf::DetEncoderString::getStringRepresentation() );
     _encoder->setValue(hit.getCellID());
     int layer = (*_encoder)[lcio::ILDCellID0::layer];
     delete _encoder;

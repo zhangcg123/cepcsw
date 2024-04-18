@@ -86,7 +86,7 @@
 
  <readouts>
     <readout name="TPCCollection">
-      <id>system:5,side:-2,layer:9,module:8,sensor:8</id>
+      <id>system:5,side:-2,layer:13,module:8,sensor:8</id>
     </readout>
  </readouts>
 

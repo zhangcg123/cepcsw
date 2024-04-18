@@ -24,6 +24,7 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
+#include "../../../../../Detector/Identifier/include/Identifier/CEPCConf.h"
 
 // #include "streamlog/streamlog.h"
 
@@ -124,7 +125,9 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
   // create measurement layers
   Double_t r = rmin;
   
-  UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+  // UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
+  // UTIL::BitField64 encoder( "system:5,side:-2,layer:13,module:6,sensor:6" );
+  UTIL::BitField64 encoder( CEPCConf::DetEncoderString::getStringRepresentation() );
   
   for (Int_t layer = 0; layer < nlayers; layer++) {
     

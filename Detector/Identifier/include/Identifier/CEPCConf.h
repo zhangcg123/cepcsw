@@ -45,5 +45,19 @@ namespace CEPCConf{
     static const int DOUBLE_HIT_CANDIDATE = 28;
     static const int GOOD                 = 27;
   };
+
+  struct DetEncoderString{
+    static const int system = 5;
+    static const int side = -2;
+    static const int layer = 13;
+    static const int module = 6;
+    static const int sensor = 6;
+    static std::string getStringRepresentation() {
+        std::stringstream ss;
+        ss << "system:" << system << ",side:" << side << ",layer:" << layer << ",module:" << module << ",sensor:" << sensor;
+        return ss.str();
+    }
+  };
+
 }
 #endif
