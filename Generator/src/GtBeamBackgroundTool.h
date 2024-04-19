@@ -54,7 +54,8 @@ private:
 private:
     Gaudi::Property<std::map<std::string, std::string>> m_inputmaps{this, "InputFileMap"};
     Gaudi::Property<std::map<std::string, std::string>> m_formatmaps{this, "InputFormatMap"};
-    Gaudi::Property<std::map<std::string, double>>      m_ratemaps {this, "InputRateMap"};
+    Gaudi::Property<std::map<std::string, double>>      m_ratemaps {this, "InputRateMap"}; // unit: Hz
+    Gaudi::Property<double> m_timewindow{this, "TimeWindow", 1e-6}; // unit: s
 
     // unit of beam energy: GeV
     Gaudi::Property<std::map<std::string, double>>      m_Ebeammaps{this, "InputBeamEnergyMap"};
