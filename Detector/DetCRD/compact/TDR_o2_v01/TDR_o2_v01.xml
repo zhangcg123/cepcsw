@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd xmlns:compact="http://www.lcsim.org/schemas/compact/1.0"
+       xmlns:xs="http://www.w3.org/2001/XMLSchema"
+       xs:noNamespaceSchemaLocation="http://www.lcsim.org/schemas/compact/1.0/compact.xsd">
+  <info name="TDR_o2_v01"
+        title="CepC reference detctor for TDR"
+        author=""
+        url="http://cepc.ihep.ac.cn"
+        status="developing"
+        version="v01">
+    <comment>CepC reference detector simulation models used for TDR </comment>
+  </info>
+  
+  <includes>
+    <gdmlFile  ref="${DD4hepINSTALL}/DDDetectors/compact/elements.xml"/>
+    <gdmlFile  ref="../CRD_common_v02/materials.xml"/>
+  </includes>
+  
+  <define>
+    <constant name="world_size" value="10*m"/>
+    <constant name="world_x" value="world_size"/>
+    <constant name="world_y" value="world_size"/>
+    <constant name="world_z" value="world_size"/>
+
+    <include ref="${DD4hepINSTALL}/DDDetectors/compact/detector_types.xml"/>
+  </define>
+
+  <include ref="./TDR_Dimensions_v02_01.xml"/>
+
+  <!--old version, should be check/-->
+  <include ref="../CRD_common_v01/Beampipe_v01_02.xml"/>
+  <!--preliminary vertex and tracker, to update/-->
+  <include ref="../CRD_common_v02/VXD_StaggeredLadder_v02_01.xml"/>
+  <include ref="../CRD_common_v01/FTD_SkewRing_v01_02.xml"/>
+  <include ref="../CRD_common_v01/SIT_SimplePixel_v01_02.xml"/>
+  <!--TODO: DC/-->
+
+  <include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/>
+  <!--TODO: Ecal and Hcal/-->
+
+  <!--preliminary Magnet, to update/-->
+  <include ref="../CRD_common_v02/Coil_Simple_v01_02.xml"/>
+  <!--preliminary Muon, to update/-->
+  <include ref="../CRD_common_v02/Yoke_Polyhedra_Barrel_v01_01.xml"/>
+  <include ref="../CRD_common_v02/Yoke_Polyhedra_Endcaps_v01_01.xml"/>
+  
+  <fields>
+    <field name="InnerSolenoid" type="solenoid"
+           inner_field="Field_nominal_value"
+           outer_field="0"
+           zmax="SolenoidCoil_half_length"
+           inner_radius="SolenoidCoil_center_radius"
+           outer_radius="Solenoid_outer_radius">
+    </field>
+    <field name="OuterSolenoid" type="solenoid"
+           inner_field="0"
+           outer_field="Field_outer_nominal_value"
+           zmax="SolenoidCoil_half_length"
+           inner_radius="Solenoid_outer_radius"
+           outer_radius="Yoke_barrel_inner_radius">
+    </field>
+  </fields>
+
+</lccdd>

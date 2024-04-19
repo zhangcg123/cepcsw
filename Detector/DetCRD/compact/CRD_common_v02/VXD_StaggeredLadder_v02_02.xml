@@ -1,0 +1,137 @@
+<lccdd>
+  <info name="VXD_StaggeredLadder_v02_02"
+        title="CepC VXD with staggered ladders"
+        author=""
+        url="http://cepc.ihep.ac.cn"
+        status="developing"
+        version="v01">
+    <comment>CepC vertex detector</comment>
+  </info>
+  <define>
+    <constant name="VXD_inner_radius" value="Vertex_inner_radius"/>
+    <constant name="VXD_outer_radius" value="Vertex_outer_radius"/>
+    <constant name="VXD_half_length"  value="Vertex_half_length"/>
+    <constant name="VXDLayer1_length" value="257*mm" />
+    <constant name="VXDLayer2_length" value="257*mm" />
+    <constant name="VXDLayer3_length" value="257*mm" />
+    <constant name="VXD_sensor_length" value="20*mm" />
+  </define>
+
+  <detectors>
+    <detector id="DetID_VXD" name="VXD" type="SiTrackerStaggeredLadder_v01" vis="VXDVis" readout="VXDCollection" insideTrackingVolume="true">
+      <envelope>
+	<shape type="BooleanShape" operation="Subtraction" material="Air" >
+	  <shape type="BooleanShape" operation="Subtraction" material="Air" >
+            <shape type="Tube" rmin="VXD_inner_radius" rmax="VXD_outer_radius" dz="VXD_half_length" />
+            <shape type="Cone" rmin1="0" rmax1="BeamPipe_VertexRegion_rmax" rmin2="0" rmax2="Vertex_Side_rmin" z="(VXD_half_length-BeamPipe_CentralAl_zmax)/2." />
+            <position x="0" y="0" z="VXD_half_length-(VXD_half_length-BeamPipe_CentralAl_zmax)/2."/>
+          </shape>
+	  <shape type="Cone" rmin1="0" rmax1="BeamPipe_VertexRegion_rmax" rmin2="0" rmax2="Vertex_Side_rmin" z="(VXD_half_length-BeamPipe_CentralAl_zmax)/2." />
+          <position x="0" y="0" z="-(VXD_half_length-(VXD_half_length-BeamPipe_CentralAl_zmax)/2.)"/>
+          <rotation x="0" y="180.*deg" z="0" />
+	</shape>
+      </envelope>
+
+      <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_PIXEL "/>
+
+      <global sensitive_thickness="VXD_sensitive_thickness" support_thickness="VXD_support_thickness" sensor_length="VXD_sensor_length"
+              sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV"  />
+      <display ladder="SeeThrough" support="VXDSupportVis" flex="VXDFlexVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis" deadwire="RedVis"/>
+
+      <layer layer_id="0" ladder_radius="12.0*mm" ladder_offset="(8.4+0.231123)*mm" n_ladders="8" n_sensors_per_side="0">
+        <ladder isDoubleSided="true">
+          <ladderSupport height="2*mm" length="VXDLayer1_length+1*mm" thickness="250*um" width="16.8*mm" mat="CFRP_CMS"/>
+          <flex>
+	    <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer1_length" thickness=" 8.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer1_length" thickness="13.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer1_length" thickness="12.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer1_length" thickness="25.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer1_length" thickness="12.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer1_length" thickness="13.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer1_length" thickness=" 8.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer1_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+          </flex>
+          <sensor n_sensors="10" gap="0.1*mm" thickness="50*um" active_length="25.6*mm" active_width="12.8*mm" dead_width="2*mm" sensor_mat="G4_Si"
+                  deadwire_length="(10*(25.6+0.1)-0.1)*mm" deadwire_width="2*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
+        </ladder>
+      </layer>
+      <layer layer_id="1" ladder_radius="30*mm" ladder_offset="(8.4+7.041272)*mm" n_ladders="16" n_sensors_per_side="0">
+        <ladder isDoubleSided="true">
+          <ladderSupport height="2*mm" length="VXDLayer2_length+1*mm" thickness="250*um" width="16.8*mm" mat="CFRP_CMS"/>
+          <flex>
+	    <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer2_length" thickness=" 8.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer2_length" thickness="13.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer2_length" thickness="12.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer2_length" thickness="25.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer2_length" thickness="12.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer2_length" thickness="13.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer2_length" thickness=" 8.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+          </flex>
+          <sensor n_sensors="10" gap="0.1*mm" thickness="50*um" active_length="25.6*mm" active_width="12.8*mm" dead_width="2*mm" sensor_mat="G4_Si"
+                  deadwire_length="(19*(25.6+0.1)-0.1)*mm" deadwire_width="2*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
+        </ladder>
+      </layer>
+      <layer layer_id="2" ladder_radius="48*mm" ladder_offset="(8.4+10.213840)*mm" n_ladders="24" n_sensors_per_side="0">
+        <ladder isDoubleSided="true">
+          <ladderSupport height="3*mm" length="VXDLayer3_length+1*mm" thickness="250*um" width="16.8*mm" mat="CFRP_CMS"/>
+          <flex>
+	    <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer3_length" thickness=" 8.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer3_length" thickness="13.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer3_length" thickness="12.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer3_length" thickness="25.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer3_length" thickness="12.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer3_length" thickness="13.0*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer3_length" thickness=" 8.0*um" width="16.8*mm" mat="G4_Al"/>
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/>
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Kapton"/>
+            <slice length="VXDLayer3_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+          </flex>
+          <sensor n_sensors="10" gap="0.1*mm" thickness="50*um" active_length="25.6*mm" active_width="12.8*mm" dead_width="2*mm" sensor_mat="G4_Si"
+                  deadwire_length="(10*(25.6+0.1)-0.1)*mm" deadwire_width="2*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
+        </ladder>
+      </layer>
+    </detector>
+
+    <!--TODO: move into SiTrackerStaggeredLadder_v01/-->
+    <detector name="VXDShell" type="DD4hep_Solenoid_o1_v01" id="DetID_NOTUSED" insideTrackingVolume="true">
+      <envelope>
+        <shape type="Tube" rmin="70*mm" rmax="72.5*mm" dz="210*mm" material="Air"/>
+	<position x="0" y="0" z="0*mm"/>
+      </envelope>
+
+      <type_flags type="DetType_SUPPORT"/>
+
+      <layer id="0" inner_r="70*mm" outer_z="210*mm" vis="SeeThrough">
+        <slice material="CFRP_CMS" thickness="2.5*mm" vis="ShellVis"/>
+      </layer>
+    </detector>
+  </detectors>
+  
+  <readouts>
+    <readout name="VXDCollection">
+      <!--segmentation type="CartesianGridYZ" grid_size_y="0.016*mm" grid_size_z="0.016*mm"/>
+      <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8,y:-12,z:-12</id-->
+      <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8</id>
+    </readout>
+  </readouts>
+</lccdd>

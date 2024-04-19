@@ -1,0 +1,58 @@
+<lccdd>
+  <define>
+    <constant name="Hcal_Yoke_plug_gap"      value="25*mm"/>
+    <constant name="YokeEndcapPlug_symmetry" value="Yoke_endcap_outer_symmetry"/>
+  </define>
+  <detectors>
+    <detector name="YokeEndcap" type="DD4hep_PolyhedraEndcapCalorimeter2" id="DetID_YOKE_ENDCAP" readout="MuonEndcapsCollection" vis="YOKEVis" insideTrackingVolume="false" >
+      <envelope>
+	<shape type="Assembly"/>
+      </envelope>
+
+      <type_flags type=" DetType_CALORIMETER + DetType_ENDCAP + DetType_MUON " />
+
+      <dimensions numsides="Yoke_endcap_outer_symmetry" rmin="Yoke_endcap_inner_radius" rmax="Yoke_endcap_outer_radius/cos(pi/Yoke_endcap_outer_symmetry)" zmin="Yoke_endcap_zmin" />
+      <layer repeat="1" vis="SeeThrough">
+	<slice material="stainless_steel" thickness="100.0*mm"                  vis="YOKEVis"   />
+      </layer>
+      <layer repeat="5" vis="SeeThrough">
+        <slice material="Air"             thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="1.0*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="Air"             thickness="7.5*mm"                    vis="SeeThrough" />
+        <slice material="stainless_steel" thickness="100*mm"                    vis="YOKEVis"/>
+      </layer>
+      <layer repeat="1" vis="SeeThrough">
+        <slice material="Air"             thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="1.0*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="Air"             thickness="7.5*mm"                    vis="SeeThrough" />
+        <slice material="stainless_steel" thickness="150*mm"                    vis="YOKEVis"/>
+      </layer>
+      <layer repeat="2" vis="SeeThrough">
+        <slice material="Air"             thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="1.0*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="Air"             thickness="7.5*mm"                    vis="SeeThrough" />
+        <slice material="stainless_steel" thickness="300*mm"                    vis="YOKEVis"/>
+      </layer>
+    </detector>
+  </detectors>
+
+  <readouts>
+    <readout name="MuonEndcapsCollection">
+      <segmentation type="CartesianGridXY" grid_size_x="Yoke_cells_size" grid_size_y="Yoke_cells_size"/>
+      <id>system:5,side:2,module:3,stave:4,barrel:3,layer:6,slice:4,x:32:-16,y:-16</id>
+    </readout>
+  </readouts>
+
+</lccdd>
