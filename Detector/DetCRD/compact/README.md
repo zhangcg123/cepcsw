@@ -8,6 +8,7 @@ The following CRD detector models are available in CEPCSW
 | CRD_o1_v02    | strip SET                    | SIT+DC+SET  | crystal | RPC  | developing     |
 | CRD_o1_v03    | MOST2 vertex                 | SIT+DC+SET  | crystal | RPC  | developing     |
 | CRD_o1_v04    | smaller center beam pipe     | SIT+DC+SET  | crystal | RPC  | developing     |
+| CRD_o1_v05    | Use Ref-Det ECAL and HCAL    | SIT+TPC+SET | crystal | Glass| developing     |
 | ------------- | -----------------------------|-------------|---------|------|----------------|
  
 ## Details
@@ -61,3 +62,15 @@ The following CRD detector models are available in CEPCSW
  - smaller center beam pipe & new MDI: inner radius = 10mm, flat at y direction
  - compact files:
          - [./CRD_o1_v04/CRD_o1_v04.xml](./CRD_o1_v04/CRD_o1_v04.xml)
+
+
+### CRD_o1_v05 (towarding TDR Ref-Detector)
+  - based on CRD_o1_v01  
+  - Main tracker: Replace DC with CEPC_v4 TPC for preliminary performance study.  
+  - ECAL barrel: 32-polygon crystal bar ECAL.  
+  - HCAL barrel: 16-polygon glass HCAL, based on SHcalSc04_barrel geometry.   
+  - compact files: 
+        - [./CRD_o1_v05/CRD_o1_v05.xml]
+
+
+
