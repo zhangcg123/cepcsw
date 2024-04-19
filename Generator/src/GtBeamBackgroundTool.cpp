@@ -4,6 +4,8 @@
 #include "BeamBackgroundFileParserV0.h"
 #include "GuineaPigPairsFileParser.h"
 
+#include "CLHEP/Random/RandPoisson.h"
+
 #include "TVector3.h" // for rotation
 DECLARE_COMPONENT(GtBeamBackgroundTool)
 
@@ -51,37 +53,47 @@ bool GtBeamBackgroundTool::mutate(MyHepMC::GenEvent& event) {
     // TODO: should sample according to the rates
     // dummy: get one and stop to generate
     for (auto& [label, parser]: m_beaminputs) {
-        IBeamBackgroundFileParser::BeamBackgroundData beamdata;
-        auto isok = parser->load(beamdata);
-        if (not isok) {
-            error() << "Failed to load beam background data from the parser " << label << endmsg;
-            return false;
-        }
-        // fill the value
-        float charge = beamdata.pdgid == 11 ? -1: 1;
+        int nparticles = 1; // by default, only one particle
 
-        TVector3 pos(beamdata.x,beamdata.y,beamdata.z);
-        TVector3 mom(beamdata.px,beamdata.py,beamdata.pz);
+        if (auto itRate = m_ratemaps.find(label); itRate != m_ratemaps.end()) {
+            nparticles = itRate->second * m_timewindow;
 
-        auto itrot = m_rotYmaps.find(label);
-        if (itrot  != m_rotYmaps.end() ) {
-            info() << "Apply rotation along Y " << itrot->second << endmsg;
-
-            pos.RotateY(itrot->second);
-            mom.RotateY(itrot->second);
+            // now sampling the number of particles
+            nparticles = CLHEP::RandPoisson::shoot(nparticles);
         }
 
-        // create the MC particle
-        auto mcp = event.m_mc_vec.create();
-        mcp.setPDG(beamdata.pdgid);
-        mcp.setGeneratorStatus(1);
-        mcp.setSimulatorStatus(1);
-        mcp.setCharge(static_cast<float>(charge));
-        mcp.setTime(beamdata.t);
-        mcp.setMass(beamdata.mass);
-        mcp.setVertex(edm4hep::Vector3d(pos.X(), pos.Y(), pos.Z())); 
-        mcp.setMomentum(edm4hep::Vector3f(mom.X(), mom.Y(), mom.Z()));
+        for (auto iparticle = 0; iparticle < nparticles; ++iparticle) {
+            IBeamBackgroundFileParser::BeamBackgroundData beamdata;
+            auto isok = parser->load(beamdata);
+            if (not isok) {
+                error() << "Failed to load beam background data from the parser " << label << endmsg;
+                return false;
+            }
+            // fill the value
+            float charge = beamdata.pdgid == 11 ? -1: 1;
 
+            TVector3 pos(beamdata.x,beamdata.y,beamdata.z);
+            TVector3 mom(beamdata.px,beamdata.py,beamdata.pz);
+
+            auto itrot = m_rotYmaps.find(label);
+            if (itrot  != m_rotYmaps.end() ) {
+                info() << "Apply rotation along Y " << itrot->second << endmsg;
+
+                pos.RotateY(itrot->second);
+                mom.RotateY(itrot->second);
+            }
+
+            // create the MC particle
+            auto mcp = event.m_mc_vec.create();
+            mcp.setPDG(beamdata.pdgid);
+            mcp.setGeneratorStatus(1);
+            mcp.setSimulatorStatus(1);
+            mcp.setCharge(static_cast<float>(charge));
+            mcp.setTime(beamdata.t);
+            mcp.setMass(beamdata.mass);
+            mcp.setVertex(edm4hep::Vector3d(pos.X(), pos.Y(), pos.Z())); 
+            mcp.setMomentum(edm4hep::Vector3f(mom.X(), mom.Y(), mom.Z()));
+        }
     }
     
     return true;
