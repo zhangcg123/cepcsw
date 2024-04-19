@@ -1,0 +1,60 @@
+<lccdd>
+  <define>
+    <constant name="Yoke_cells_size" value="30*mm"/> 
+  </define>
+
+  <detectors>
+    <detector name="YokeBarrel" type="DD4hep_PolyhedraBarrelCalorimeter2" id="DetID_YOKE" readout="MuonBarrelCollection" vis="SeeThrough" gap="10*mm" >
+      <comment>Yoke Barrel</comment>
+      <type_flags type=" DetType_CALORIMETER + DetType_BARREL + DetType_MUON " />
+
+      <dimensions numsides="Yoke_barrel_symmetry" z="Yoke_barrel_half_length*2" rmin="Yoke_barrel_inner_radius"/>
+
+      <staves vis="YOKEVis"/>
+
+      <layer repeat="1" vis="SeeThrough">
+        <slice material="stainless_steel" thickness="100*mm"                    vis="YOKEVis"/>
+      </layer>
+      <layer repeat="5" vis="SeeThrough">
+	<slice material="Air"             thickness="0.5*mm"                    vis="SeeThrough" />
+	<slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+	<slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+	<slice material="G4_Al"           thickness="1.0*mm"                    vis="SeeThrough" />
+	<slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+	<slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+	<slice material="Air"             thickness="7.5*mm"                    vis="SeeThrough" />
+        <slice material="stainless_steel" thickness="100*mm"                    vis="YOKEVis"/>
+      </layer>
+      <layer repeat="1" vis="SeeThrough">
+	<slice material="Air"             thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="1.0*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="Air"             thickness="7.5*mm"                    vis="SeeThrough" />
+        <slice material="stainless_steel" thickness="150*mm"                    vis="YOKEVis"/>
+      </layer>
+      <layer repeat="2" vis="SeeThrough">
+	<slice material="Air"             thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="1.0*mm"                    vis="SeeThrough" />
+        <slice material="FloatGlass"      thickness="20*mm"                     vis="GrayVis" />
+        <slice material="G4_Al"           thickness="0.5*mm"                    vis="SeeThrough" />
+        <slice material="Air"             thickness="7.5*mm"                    vis="SeeThrough" />
+        <slice material="stainless_steel" thickness="300*mm"                    vis="YOKEVis"/>
+      </layer>
+    </detector>
+  </detectors>
+
+  <readouts>
+    <readout name="MuonBarrelCollection">
+      <!--segmentation type="TiledLayerGridXY" grid_size_x="Yoke_cells_size" grid_size_y="Yoke_cells_size"/-->
+      <!--id>system:5,module:3,stave:4,tower:5,layer:6,slice:4,x:32:-16,y:-16</id-->
+      <segmentation type="CartesianGridXY" grid_size_x="Yoke_cells_size" grid_size_y="Yoke_cells_size"/>
+      <id>system:5,barrel:1,module:3,stave:4,layer:6,slice:4,x:32:-16,y:-16</id>
+    </readout>
+  </readouts>
+
+</lccdd>

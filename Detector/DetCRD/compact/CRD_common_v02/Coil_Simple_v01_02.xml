@@ -1,0 +1,76 @@
+<lccdd>
+  <detectors>
+    <!--detector name="Coil" type="DD4hep_Solenoid_o1_v01" id="DetID_COIL" insideTrackingVolume="false" readout="COILCollection">
+      <envelope>
+	<shape type="Tube" rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" dz="Solenoid_half_length-15*mm" material="Vacuum"/>
+      </envelope>
+  
+      <type_flags type=" DetType_SUPPORT + DetType_COIL " />
+      
+      <layer id="0" inner_r="Solenoid_inner_radius" outer_z="Solenoid_half_length-15*mm" vis="ShellVis">
+	<slice material="g10" thickness="3*mm" vis="ShellVis"/>
+	<slice material="Vacuum" thickness="6*mm" vis="Invisible"/>
+	<slice material="G4_Al" thickness="6*mm" vis="ShellVis"/>
+      </layer>
+
+      <layer id="1" inner_r="SolenoidCoil_radius" outer_z="SolenoidCoil_half_length" vis="SOLVis">
+	<slice material="G4_Al" thickness="260*mm" vis="SOLVis"/>
+      </layer>
+
+      <layer id="2" inner_r="Solenoid_outer_radius-27*mm" outer_z="Solenoid_half_length-15*mm" vis="OrangeVis">
+        <slice material="G4_Al" thickness="6*mm" vis="OrangeVis"/>
+        <slice material="Vacuum" thickness="6*mm" vis="Invisible"/>
+        <slice material="G4_Al" thickness="15*mm" vis="OrangeVis"/>
+      </layer>
+    </detector-->
+
+    <detector name="CoilInnerShell" type="DD4hep_TubeSegment" material="G4_Al" vis="ShellVis">
+      <material name="Iron" />
+      <tubs rmin="Solenoid_inner_radius" rmax="Solenoid_inner_radius+15*mm" zhalf="Solenoid_half_length-15*mm"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilOuterShell" type="DD4hep_TubeSegment" material="G4_Al" vis="ShellVis">
+      <material name="Iron" />
+      <tubs rmin="Solenoid_outer_radius-27*mm" rmax="Solenoid_outer_radius" zhalf="Solenoid_half_length-15*mm"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="Coil" type="DD4hep_TubeSegment" material="G4_Al" vis="SOLVis">
+      <material name="Iron" />
+      <tubs rmin="SolenoidCoil_radius" rmax="SolenoidCoil_radius+260*mm" zhalf="SolenoidCoil_half_length"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilLeftShell" type="DD4hep_TubeSegment" material="G4_Al" vis="ShellVis">
+      <material name="Iron" />
+      <tubs rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" zhalf="15*mm"/>
+      <position x="0" y="0" z="Solenoid_half_length"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilRightShell" type="DD4hep_TubeSegment" material="G4_Al" vis="ShellVis">
+      <material name="Iron" />
+      <tubs rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" zhalf="15*mm"/>
+      <position x="0" y="0" z="-Solenoid_half_length"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+    <!--detector name="CoilShell" type="DD4hep_CylinderShell" id="DetID_COIL" material="G4_Al" vis="ShellVis">
+      <type_flags type=" DetType_SUPPORT + DetType_COIL " />
+
+      <module>
+	<zplane rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" z="Solenoid_half_length*2-30*mm"/>
+	<zplane rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" z="Solenoid_half_length*2"/>
+      </module>
+    </detector-->
+  </detectors>
+
+  <!--readouts>
+    <readout name="COILCollection">
+      <id>system:5,side:-2,layer:9,slice:8,sensor:8,barrelside:-2</id>
+    </readout>
+  </readouts-->
+</lccdd>
