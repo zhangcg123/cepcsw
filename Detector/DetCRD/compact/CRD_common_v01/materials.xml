@@ -384,14 +384,14 @@
       <fraction n="1" ref="Al27"/>
     </element>
 
-<!-- 
+  <!-- 
     <material name="TPC_endplate_mix">
       <! D value="1.7" unit="g/cm3"/    >
       <composite n="74" ref="G4_AIR"/>
       <composite n="12" ref="g10"/>
       <composite n="14" ref="G4_Al"/>
     </material>
--->
+  -->
  
     <material name="TPC_endplate_mix" state="solid">
       <MEE unit="eV" value="97.0754229107761"/>
@@ -483,7 +483,7 @@
     </material>
 
     <material name="FloatGlass" >
-<!--      <D value="2.44" unit="g/cm3" /> -->
+  <!--      <D value="2.44" unit="g/cm3" /> -->
       <D value="2.49" unit="g/cm3" />
       <fraction n="0.46645" ref="O"/>
       <fraction n="0.34125" ref="Si"/>
@@ -501,7 +501,7 @@
 
     <material name="Nylon" >
     <!-- Nylon-6-6 -->
-<!--      <MEE unit="eV" value="63.9"/> -->
+  <!--      <MEE unit="eV" value="63.9"/> -->
       <D value="1.14" unit="g/cm3" />
       <fraction n="0.097976" ref="H"/>
       <fraction n="0.636856" ref="C"/>
@@ -518,7 +518,7 @@
     </material>
 
     <material name="g10-RPC">
-<!--      <MEE unit="eV" value="114.378463512112"/> -->
+  <!--      <MEE unit="eV" value="114.378463512112"/> -->
       <D value="1.80" unit="g/cm3" />
       <fraction n="0.07868" ref="C"/>
       <fraction n="0.46056" ref="O"/>
@@ -562,6 +562,39 @@
       <fraction n="0.671054" ref="Bi" />
     </material>
 
+    <material name="G4_GlassHCAL" state="solid">
+      <!-- <MEE unit="eV" value="534.1"/> -->
+      <D value="6." unit="g/cm3" />
+      <fraction n="0.0270234" ref="B"/>
+      <fraction n="0.00700559" ref="Ce" />
+      <fraction n="0.0883374" ref="F" />
+      <fraction n="0.69186" ref="Gd" />
+      <fraction n="0.0181464" ref="Ge" />
+      <fraction n="0.153585" ref="O" />
+      <fraction n="0.0140419" ref="Si" />
+    </material>
+
+  <!-- // VM2000
+  G4Material* C10H8O4 = new G4Material("C10H8O4", 1.38*g/cm3, 3);
+  C10H8O4->AddElement(elements->getElement("C"), 10);
+  C10H8O4->AddElement(elements->getElement("H"), 8);
+  C10H8O4->AddElement(elements->getElement("O"), 4);
+  fMaterialsList.push_back(C10H8O4); -->
+
+
+    <material name="G4_ESR" state="solid">
+      <D value="0.90" unit="g/cm3" />
+      <composite n="2" ref="C"/>
+      <composite n="4" ref="H" /> 
+    </material>
+
+    <material name="G4_ECAL_electronics" state="solid">
+      <D value="3.5537349300000005" unit="g/cm3" />
+      <fraction n="0.1595" ref="PCB"/>
+      <fraction n="0.0001" ref="G4_AIR"/>
+      <fraction n="0.8404" ref="G4_Cu"/>
+    </material>
+
     <!-- Driftchamber: material for the drift chamber -->
    <material name="GasHe_90Isob_10">
      <D value="0.0003983999999999999" unit="g/cm3" />
@@ -581,4 +614,6 @@
        <fraction n="1" ref="N" />
     </material>
 
-  </materials>
+</materials>
+
+  
