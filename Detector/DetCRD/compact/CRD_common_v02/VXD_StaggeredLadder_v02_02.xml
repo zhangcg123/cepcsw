@@ -83,7 +83,7 @@
             <slice length="VXDLayer2_length" thickness="12.5*um" width="16.8*mm" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
           </flex>
           <sensor n_sensors="10" gap="0.1*mm" thickness="50*um" active_length="25.6*mm" active_width="12.8*mm" dead_width="2*mm" sensor_mat="G4_Si"
-                  deadwire_length="(19*(25.6+0.1)-0.1)*mm" deadwire_width="2*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
+                  deadwire_length="(10*(25.6+0.1)-0.1)*mm" deadwire_width="2*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
         </ladder>
       </layer>
       <layer layer_id="2" ladder_radius="48*mm" ladder_offset="(8.4+10.213840)*mm" n_ladders="24" n_sensors_per_side="0">

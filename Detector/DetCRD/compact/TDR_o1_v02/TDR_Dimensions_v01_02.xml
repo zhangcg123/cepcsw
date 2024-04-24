@@ -84,7 +84,7 @@
 
     <constant name="Vertex_inner_radius" value="BeamPipe_Central_inner_radius+BeamPipe_Be_total_thickness"/>
     <constant name="Vertex_outer_radius" value="70*mm"/>
-    <constant name="Vertex_half_length"  value="430*mm"/>
+    <constant name="Vertex_half_length"  value="210*mm"/>
 
     <constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_Central_inner_radius+BeamPipe_Al_thickness
 	   +(BeamPipe_FirstExpand_width/2-BeamPipe_Central_inner_radius)/(BeamPipe_ExpandAl_zmax-BeamPipe_CentralAl_zmax)*(Vertex_half_length-BeamPipe_CentralAl_zmax)"/>
