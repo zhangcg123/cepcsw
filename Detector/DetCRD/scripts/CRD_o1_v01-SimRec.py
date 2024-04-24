@@ -19,8 +19,8 @@ rndmgensvc = RndmGenSvc("RndmGenSvc")
 rndmgensvc.Engine = rndmengine.name()
 
 # option for standalone tracker study 
-geometry_option = "CRD_o1_v01/CRD_o1_v01-onlyTracker.xml"
-#geometry_option = "CRD_o1_v01/CRD_o1_v01.xml"
+#geometry_option = "CRD_o1_v01/CRD_o1_v01-onlyTracker.xml"
+geometry_option = "CRD_o1_v01/CRD_o1_v01.xml"
 
 if not os.getenv("DETCRDROOT"):
     print("Can't find the geometry. Please setup envvar DETCRDROOT." )
