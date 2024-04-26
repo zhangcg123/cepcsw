@@ -545,7 +545,7 @@ StatusCode ClupatraAlg::execute() {
 
 
 				MarlinTrk::IMarlinTrack* mTrk = fitter( *icv ) ;
-				debug() << "before add hits and filter" << endmsg;
+				debug() << "before add hits and filter, mTrk = " << mTrk << endmsg;
                 // std::vector<std::pair<edm4hep::TrackerHit, double> > hitsInFit ;
                 // mTrk->getHitsInFit( hitsInFit ) ;
                 // for (auto hit : hitsInFit) std::cout << hit.first << std::endl;

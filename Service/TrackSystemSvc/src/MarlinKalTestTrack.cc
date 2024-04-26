@@ -1412,7 +1412,8 @@ namespace MarlinTrk {
   }
   
   int MarlinKalTestTrack::intersectionWithLayer( int layerID, edm4hep::Vector3d& point, int& detElementID, int mode ) {
-    
+    //std::cout << "debug: intersectionWithLayer" << std::endl;
+    //std::cout << "debug: layer=" << layerID << " pos=" << point.x << " " << point.y << " " << point.z << " det=" << detElementID << std::endl;
     const TKalTrackSite& site = *(dynamic_cast<const TKalTrackSite*>(_kaltrack->Last())) ;
     const ILDVMeasLayer* ml = 0;
     return this->intersectionWithLayer( layerID, site, point, detElementID, ml,  mode ) ;
@@ -1421,7 +1422,9 @@ namespace MarlinTrk {
   
   
   int MarlinKalTestTrack::intersectionWithLayer( int layerID,  edm4hep::TrackerHit& trkhit, edm4hep::Vector3d& point, int& detElementID, int mode ) {
-    
+    //std::cout << "debug: intersectionWithLayer" << std::endl;
+    //std::cout << "debug: layer=" << layerID << " pos=" << point.x << " " << point.y << " " << point.z << " det=" << detElementID
+    //	      << " from first hit " << trkhit.getPosition().x << " " << trkhit.getPosition().y << trkhit.getPosition().z << std::endl;
     TKalTrackSite* site = 0;
     int error_code = getSiteFromLCIOHit(trkhit, site);
     
