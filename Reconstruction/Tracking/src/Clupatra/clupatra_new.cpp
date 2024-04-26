@@ -294,7 +294,7 @@ namespace clupatra_new{
 		encoder[UTIL::ILDCellID0::subdet] = UTIL::ILDDetID::TPC ;
 
 #if PODIO_BUILD_VERSION < PODIO_VERSION(0, 17, 4)
-		edm4hep::TrackerHit firstHit = 0;
+		edm4hep::TrackerHit firstHit(0);
 #else
 		auto firstHit = edm4hep::TrackerHit::makeEmpty();
 #endif
@@ -353,7 +353,6 @@ namespace clupatra_new{
 
 		IMarlinTrack* theTrk  = ( bwTrk ? bwTrk : trk )  ;
 
-
 		while( step < maxStep + 1 ) {
 
 			layer += ( backward ?  +1 : -1 )  ;
@@ -379,27 +378,16 @@ namespace clupatra_new{
 
 			int intersects = -1  ;
 
-			if( firstHit.isAvailable() )  { // FIXME Mingrui:: Important!! need to check whether firstHit is OK or not.
-// std::cout << "available" << std::endl;
-// std::cout << layerID << std::endl;
-// std::cout << firstHit << std::endl;
-// std::cout << xv << std::endl;
-// std::cout << elementID << std::endl;
-// std::cout << mode << std::endl;
-			intersects  = theTrk->intersectionWithLayer( layerID, firstHit, xv, elementID , mode )   ;
-
+			if( firstHit.isAvailable() ) {
+			  intersects  = theTrk->intersectionWithLayer( layerID, firstHit, xv, elementID , mode );
 			} else {
-
-			 	intersects  = theTrk->intersectionWithLayer( layerID, xv, elementID , mode )  ;
+			  intersects  = theTrk->intersectionWithLayer( layerID, xv, elementID , mode );
 			}
-
-
-
-			   // std::cout <<  "  -- addHitsAndFilter(): looked for intersection - "
-			   // <<  "  Step : " << step
-			   // <<  "  at layer: "   << layer
-			   // <<  "   intersects: " << MarlinTrk::errorCode( intersects )
-			   // <<  "  next xing point : " <<  xv  ;
+			//std::cout <<  "  -- addHitsAndFilter(): looked for intersection - "
+			//	  <<  "  Step : " << step
+			//	  <<  "  at layer: "   << layer
+			//	  <<  "   intersects: " << MarlinTrk::errorCode( intersects )
+			//	  <<  "  next xing point : " <<  xv  ;
 
 
 			if( intersects == IMarlinTrack::success ) { // found a crossing point
@@ -465,7 +453,7 @@ namespace clupatra_new{
 							hLL.remove(  bestHit ) ;
 							clu->addElement( bestHit ) ;
 
-							// firstHit = 0 ; // after we added a hit, the next intersection search should use this last hit...
+							// after we added a hit, the next intersection search should use this last hit...
 							firstHit.unlink();
 
 							++nHitsAdded ;
@@ -520,13 +508,11 @@ namespace clupatra_new{
 
 		//  IMarlinTrack::modeBackward , IMarlinTrack::modeForward
 
-		/*
-		   streamlog_out( DEBUG2 ) <<  "  ============ addHitAndFilter(): looked for intersection - "
-		   <<  "  detector : " <<  detectorID
-		   <<  "  at layer: "   << layer
-		   <<  "  intersects: " << MarlinTrk::errorCode( intersects )
-		   <<  "  next xing point : " <<  xv  ;
-		   */
+		//std::cout <<  "  ============ addHitAndFilter(): looked for intersection - "
+		//	  <<  "  detector : " <<  detectorID
+		//	  <<  "  at layer: "   << layer
+		//	  <<  "  intersects: " << MarlinTrk::errorCode( intersects )
+		//	  <<  "  next xing point : " <<  xv  ;
 
 		bool hitAdded = false ;
 
@@ -1283,12 +1269,15 @@ start:
                 // for (auto hit : hitsInFit) std::cout << hit.first << std::endl;
 
 		if( code != MarlinTrk::IMarlinTrack::success ){
-
-			std::cout << "  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> IMarlinTrkFitter :  problem fitting track "
-		          << " error code : " << MarlinTrk::errorCode( code )
-		          << std::endl ;
-			delete trk;
-			return 0;
+		  if (!isFirstFit) {
+		    // only report while repeat
+		    std::cout << "  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> IMarlinTrkFitter :  problem fitting track "
+			      << " error code : " << MarlinTrk::errorCode( code )
+			      << std::endl ;
+		  }
+		  // don't return, will repeat for double _maxChi2Increment, if found still after repeat, TODO
+		  //delete trk;
+		  //return 0;
 		}
 
 
