@@ -29,6 +29,7 @@ endif()
 
 list(PREPEND CMAKE_MODULE_PATH $ENV{PANDORAPFA}/cmakemodules)
 list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake") # (Find*.cmake)
+include(cmake/CEPCSWOptions.cmake)
 include(cmake/CEPCSWDependencies.cmake)
 
 add_subdirectory(Analysis)
