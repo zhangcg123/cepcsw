@@ -34,6 +34,7 @@
     <constant name="DetID_TPC"          value="  4"/>
     <constant name="DetID_SET"          value="  5"/>
     <constant name="DetID_ETD"          value="  6"/>
+    <constant name="DetID_DC"          value="   4"/>
     
     <constant name="DetID_ECAL"         value=" 20"/>
     <constant name="DetID_ECAL_PLUG"    value=" 21"/>
@@ -94,6 +95,22 @@
     <constant name="TPC_outer_radius" value="1800*mm"/>
     <constant name="TPC_half_length"  value="2905*mm"/>
     <constant name="OuterTracker_half_length" value="TPC_half_length"/>
+
+    <!-- Parameters of single drift chamber  -->
+    <constant name="DC_rbegin" value="600*mm"/>
+    <constant name="DC_rend" value="1800*mm"/>
+
+    <constant name="DC_Endcap_dz" value="0.1*mm"/>
+    <constant name="DC_half_length"  value="2900*mm" />
+    <constant name="DC_safe_distance" value="0.02*mm"/>
+    <constant name="DC_inner_wall_thickness" value="0.2*mm"/>
+    <constant name="DC_outer_wall_thickness" value="0.3*mm"/>
+    <constant name="MainTracker_half_length"  value="DC_half_length"/>
+
+    <!--obselete for single drift chamber-->
+    <constant name="OuterTracker_half_length"  value="DC_half_length"/>
+    <constant name="OuterTracker_inner_radius" value="1082.18*mm"/>
+    <constant name="OuterTracker_outer_radius" value="1723*mm"/>
 
     <constant name="SIT1_inner_radius"   value="100*mm"/>
     <constant name="SIT2_inner_radius"   value="300*mm"/>

@@ -12,6 +12,7 @@ gaudi_add_library(DetSegmentation
                   LINK Gaudi::GaudiKernel
                        ${DD4hep_COMPONENT_LIBRARIES}
                        ${ROOT_LIBRARIES}
+                       BelleIICKF::CKFDataobjects
 )
 
 gaudi_add_module(DetSegmentationPlugin
