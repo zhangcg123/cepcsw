@@ -397,7 +397,7 @@ protected:
   Gaudi::Property<float> _vetoMergeMomentumCut{this, "VetoMergeMomentumCut", 2.5};
   Gaudi::Property<float> _maxAllowedPercentageOfOutliersForTrackCombination{this, "MaxAllowedPercentageOfOutliersForTrackCombination", 0.3};
   Gaudi::Property<int>   _maxAllowedSiHitRejectionsForTrackCombination{this, "MaxAllowedSiHitRejectionsForTrackCombination", 2};
-  Gaudi::Property<bool>  m_dumpTime{this, "DumpTime", true};
+  Gaudi::Property<bool>  m_dumpTime{this, "DumpTime", false};
   //float _dPCutForForcedMerging;
   Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};
   
@@ -517,9 +517,9 @@ protected:
   DataHandle<edm4hep::TrackCollection> _TPCTrackColHdl{"ClupatraTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection> _SiTrackColHdl{"SiTracks", Gaudi::DataHandle::Reader, this};
 
-  DataHandle<edm4hep::TrackCollection> _OutputTrackColHdl{"MarlinTrkTracks", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> _OutputTrackColHdl{"CompleteTracks", Gaudi::DataHandle::Writer, this};
 
-  NTuple::Tuple*       m_tuple;
+  NTuple::Tuple*       m_tuple = nullptr;
   NTuple::Item<float>  m_timeTotal;
   NTuple::Item<float>  m_timeKalman;
 };
