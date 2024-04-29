@@ -85,14 +85,14 @@
     <constant name="Vertex_Side_rmin"    value="BeamPipe_VertexRegion_rmax"/>
 
     <!-- Parameters of single drift chamber  -->
-    <constant name="DC_rbegin" value="800*mm"/>
+    <constant name="DC_rbegin" value="600*mm"/>
     <constant name="DC_rend" value="1800*mm"/>
 
     <constant name="DC_Endcap_dz" value="0.1*mm"/>
-    <constant name="DC_half_length"  value="2980*mm" />
+    <constant name="DC_half_length"  value="2900*mm" />
     <constant name="DC_safe_distance" value="0.02*mm"/>
     <constant name="DC_inner_wall_thickness" value="0.2*mm"/>
-    <constant name="DC_outer_wall_thickness" value="2.8*mm"/>
+    <constant name="DC_outer_wall_thickness" value="0.3*mm"/>
     <constant name="MainTracker_half_length"  value="DC_half_length"/>
 
     <!--obselete for single drift chamber-->
