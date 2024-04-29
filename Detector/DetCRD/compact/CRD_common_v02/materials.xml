@@ -409,6 +409,10 @@
       <fraction n="0.0433592706" ref="Si"/>
       <fraction n="0.00232484085105981" ref="H"/>
     </material>
+    <material name="Carbon" state="solid">
+      <D unit="g/cm3" value="2.0"/>
+      <fraction n="1.0" ref="C"/>
+    </material>
     <material name="CarbonFiber" state="solid">
       <MEE unit="eV" value="70.7270877537631"/>
       <D unit="g/cm3" value="1.46666666666667"/>
@@ -568,6 +572,31 @@
       <fraction n="0.154126" ref="O"/>
       <fraction n="0.174820" ref="Ge" />
       <fraction n="0.671054" ref="Bi" />
+    </material>
+
+    <material name="G4_GlassHCAL" state="solid">
+      <!-- <MEE unit="eV" value="534.1"/> -->
+      <D value="6." unit="g/cm3" />
+      <fraction n="0.0270234" ref="B"/>
+      <fraction n="0.00700559" ref="Ce" />
+      <fraction n="0.0883374" ref="F" />
+      <fraction n="0.69186" ref="Gd" />
+      <fraction n="0.0181464" ref="Ge" />
+      <fraction n="0.153585" ref="O" />
+      <fraction n="0.0140419" ref="Si" />
+    </material>
+
+    <material name="G4_ESR" state="solid">
+      <D value="0.90" unit="g/cm3" />
+      <composite n="2" ref="C"/>
+      <composite n="4" ref="H" />
+    </material>
+
+    <material name="G4_ECAL_electronics" state="solid">
+      <D value="3.5537349300000005" unit="g/cm3" />
+      <fraction n="0.1595" ref="PCB"/>
+      <fraction n="0.0001" ref="G4_AIR"/>
+      <fraction n="0.8404" ref="G4_Cu"/>
     </material>
 
     <!-- Driftchamber: material for the drift chamber -->

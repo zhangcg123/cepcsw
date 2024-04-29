@@ -77,7 +77,7 @@ class TrackSubsetAlg : public GaudiAlgorithm {
   Gaudi::Property<float> _initialTrackError_tanL{this, "InitialTrackErrorTanL",1e2};
   Gaudi::Property<double> _maxChi2PerHit{this, "MaxChi2PerHit", 1e2};
   Gaudi::Property<double> _omega{this, "Omega", 0.75};
-  Gaudi::Property<bool> m_dumpTime{this, "DumpTime", true};
+  Gaudi::Property<bool> m_dumpTime{this, "DumpTime", false};
   Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};
   
   float _bField;

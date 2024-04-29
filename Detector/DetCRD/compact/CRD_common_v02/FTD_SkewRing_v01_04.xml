@@ -1,7 +1,7 @@
 <lccdd>
   <define>
-    <constant name="SiliconThickness" value="1.0*mm"/>
-    <constant name="SupportThickness" value="2.0*mm"/>
+    <constant name="SiliconThickness" value="0.2*mm"/>
+    <constant name="SupportThickness" value="1.4925*mm"/> <!--equivalent from 2mm carbon fiber to carbon/-->
     <constant name="ModuleZGap"       value="2.0*mm"/>
     <constant name="ModuleRPhiGap"    value="-10*mm"/>
     <constant name="FTDPetalNumber"   value="16"/>
@@ -19,38 +19,38 @@
 
       <layer id="0" z="SiTracker_endcap_z1" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z1*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius1"
 	     phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
-	<component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-	<component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+	<component material="G4_Si"       thickness="SiliconThickness/2" vis="FTDSensitiveVis" sensitive="yes"/>
+	<component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
       <layer id="1" z="SiTracker_endcap_z2" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z2*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius2"
 	     phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
-        <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-        <component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+        <component material="G4_Si"       thickness="SiliconThickness/2" vis="FTDSensitiveVis" sensitive="yes"/>
+        <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
       <layer id="2" z="SiTracker_endcap_z3" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z3*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius3"
              phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
         <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-        <component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+        <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
       <layer id="3" z="SiTracker_endcap_z4" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z4*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius4"
              phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
         <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-        <component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+        <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
-      <layer id="4" z="SiTracker_endcap_z5" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z4*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius5"
+      <layer id="4" z="SiTracker_endcap_z5" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z5*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius5"
 	     phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
         <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-        <component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+        <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
-      <layer id="5" z="SiTracker_endcap_z6" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z4*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius6"
+      <layer id="5" z="SiTracker_endcap_z6" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_z6*tan(acos(Global_endcap_costheta))*cos(pi/FTDPetalNumber)" outer_r="SiTracker_endcap_outer_radius6"
              phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
         <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-        <component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+        <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
       <layer id="6" z="SiTracker_endcap_z7" dz="0.5*ModuleZGap" inner_r="Ecal_endcap_inner_radius" outer_r="SiTracker_endcap_outer_radius7"
 	     phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
         <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
-        <component material="CarbonFiber" thickness="SupportThickness" vis="FTDSupportVis"/>
+        <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>
 
     </detector>
