@@ -81,6 +81,14 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
         newparticle.setMomentumAtEndpoint(mcGenParticle.getMomentumAtEndpoint());
         newparticle.setSpin           (mcGenParticle.getSpin());
         newparticle.setColorFlow      (mcGenParticle.getColorFlow());
+
+        // Add parent-daughter relation
+        for(auto imc = 0; imc<mcGenParticle.parents_size(); imc++){
+            newparticle.addToParents(mcGenParticle.getParents(imc));
+        }
+        for(auto imc = 0; imc<mcGenParticle.daughters_size(); imc++){
+            newparticle.addToDaughters(mcGenParticle.getDaughters(imc));
+        }
     }
     
     msg() << "mcCol size (original) : " << mcCol->size() << endmsg;
