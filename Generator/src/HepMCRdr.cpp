@@ -20,7 +20,7 @@
 
 
 using namespace edm4hep;
-using namespace std;
+//using namespace std;
 
 DECLARE_COMPONENT(HepMCRdr)
 

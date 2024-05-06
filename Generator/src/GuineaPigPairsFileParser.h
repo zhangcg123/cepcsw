@@ -24,6 +24,8 @@ public:
     GuineaPigPairsFileParser(const std::string& filename);
 
     bool load(IBeamBackgroundFileParser::BeamBackgroundData&);
+    bool load(IBeamBackgroundFileParser::BeamBackgroundData&, int) { return 0; }
+    bool SampleParticleNum(int&, int&) { return true; }
 
 private:
     std::ifstream m_input;

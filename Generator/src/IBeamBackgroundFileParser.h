@@ -20,6 +20,7 @@ public:
     // Internal used Data
     struct BeamBackgroundData {
         int pdgid;
+        int charge;
 
         double x; // unit: mm
         double y; // unit: mm
@@ -32,13 +33,16 @@ public:
         double mass; // unit: GeV
 
         BeamBackgroundData() 
-          : pdgid(11), x(0), y(0), z(0), t(0), 
+          : pdgid(11), charge(-1), x(0), y(0), z(0), t(0), 
             px(0), py(0), pz(0), mass(0) {}
         
     };
 
     // return false if failed to load the data
     virtual bool load(BeamBackgroundData&) = 0;
+    virtual bool load(BeamBackgroundData&, int) = 0;
+    virtual bool SampleParticleNum(int&, int&) = 0;
+    //virtual int totalEnteries() = 0;
 };
 
 #endif

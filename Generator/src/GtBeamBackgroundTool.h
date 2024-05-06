@@ -49,19 +49,23 @@ public:
 
 private:
     bool init_BeamBackgroundFileParserV0(const std::string& label, const std::string& inputfn);
+    bool init_BeamBackgroundFileParserV1(const std::string& label, const std::string& inputfn);
+    bool init_BeamBackgroundFileParserV2(const std::string& label, const std::string& inputfn);
     bool init_GuineaPigPairsFileParser(const std::string& label, const std::string& inputfn);
 
 private:
     Gaudi::Property<std::map<std::string, std::string>> m_inputmaps{this, "InputFileMap"};
     Gaudi::Property<std::map<std::string, std::string>> m_formatmaps{this, "InputFormatMap"};
     Gaudi::Property<std::map<std::string, double>>      m_ratemaps {this, "InputRateMap"}; // unit: Hz
-    Gaudi::Property<double> m_timewindow{this, "TimeWindow", 1e-6}; // unit: s
+
+    // Detector time window. Should be different for different sub-Det. Unit: s
+    Gaudi::Property<double>      m_timewindow{this, "TimeWindow"}; 
 
     // unit of beam energy: GeV
-    Gaudi::Property<std::map<std::string, double>>      m_Ebeammaps{this, "InputBeamEnergyMap"};
+    Gaudi::Property<double>      m_Ebeam{this, "InputBeamEnergy"};
 
-    // unit of the rotation along Y: rad
-    Gaudi::Property<std::map<std::string, double>>      m_rotYmaps {this, "RotationAlongYMap"};
+    // Rotation along Y for single beam background. Unit: rad
+    Gaudi::Property<std::map<std::string, double>>      m_rotYMap {this, "RotationAlongYMap"};
 
 private:
     std::map<std::string, std::shared_ptr<IBeamBackgroundFileParser>> m_beaminputs;
