@@ -17,7 +17,7 @@ Find all the dependencies here, so in each package user don't need to find the p
 - PandoraSDK
 - podio
 - ROOT
-- BelleIICKF
+- CKF
 #]]
 
 find_package(CLHEP REQUIRED;CONFIG)
@@ -39,7 +39,7 @@ find_package(GenFit)
 
 if (CEPCSW_USE_SYSTEM_CKF_BELLE)
   message("Try to use an existing installation of CKF BELLE")
-  find_package(BelleIICKF)
+  find_package(CKF)
 else()
   message("Try to use an internal installation of CKF BELLE")
   include("${CMAKE_CURRENT_LIST_DIR}/internal_ckf.cmake")

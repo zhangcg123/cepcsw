@@ -25,9 +25,9 @@ gaudi_add_module(RecGenfitAlg
              EDM4HEP::edm4hepDict
              k4FWCore::k4FWCore
              GenFit::genfit2
-             BelleIICKF::CKFDataobjects
-             BelleIICKF::CKFFramework
-             BelleIICKF::CKFTracking
+             CKF::CKFDataobjects
+             CKF::CKFFramework
+             CKF::CKFTracking
 )
 
 target_include_directories(RecGenfitAlg PUBLIC
