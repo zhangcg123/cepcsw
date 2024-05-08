@@ -166,9 +166,9 @@ StatusCode DCTrackFinding::initialize()
         return StatusCode::FAILURE;
     }
 
-    //set BelleII segmentation
-    Belle2::TrackFindingCDC::CDCWireTopology::getInstance(m_gridDriftChamber);
-    Belle2::CDCWireGeo::getInstance(m_gridDriftChamber);
+    //set CKF segmentation
+    CKF::TrackFindingCDC::CDCWireTopology::getInstance(m_gridDriftChamber);
+    CKF::CDCWireGeo::getInstance(m_gridDriftChamber);
 
     ///Get Decoder
     m_decoder = m_geomSvc->getDecoder(m_readout_name);
@@ -346,8 +346,8 @@ StatusCode DCTrackFinding::execute()
         int charge = (int) charge_double;
         int pdg = mcParticle.getPDG();
 
-        Belle2::RecoTrack *newRecoTrack = new Belle2::RecoTrack(seedPos,seedMom,charge);
-        Belle2::RecoTrackGenfitAccess *recoTrackGenfitAccess = new Belle2::RecoTrackGenfitAccess();
+        CKF::RecoTrack *newRecoTrack = new CKF::RecoTrack(seedPos,seedMom,charge);
+        CKF::RecoTrackGenfitAccess *recoTrackGenfitAccess = new CKF::RecoTrackGenfitAccess();
         genfit::AbsTrackRep* RecoRep = recoTrackGenfitAccess->createOrReturnRKTrackRep(*newRecoTrack,pdg);
 
         genfit::AbsTrackRep* rep;
@@ -366,7 +366,7 @@ StatusCode DCTrackFinding::execute()
             std::cerr << e.what();
         }
 
-        std::vector<Belle2::TrackFindingCDC::CDCWireHit> bestElement2;
+        std::vector<CKF::TrackFindingCDC::CDCWireHit> bestElement2;
 
         if(m_tuple) m_n_Digi = dCDigiCol->size();
 
@@ -425,20 +425,20 @@ StatusCode DCTrackFinding::execute()
 
             ndigi++;
 
-            Belle2::CDCHit * cdchit = new Belle2::CDCHit(tdcCount,adcCount,
+            CKF::CDCHit * cdchit = new CKF::CDCHit(tdcCount,adcCount,
                     iSuperLayer,iLayer,iWire);
 
-            Belle2::TrackFindingCDC::CDCWireHit cdcWireHit(cdchit,
+            CKF::TrackFindingCDC::CDCWireHit cdcWireHit(cdchit,
                 driftDistance,m_sigma,0,dcDigi.getTime());
 
             bestElement2.push_back(cdcWireHit);
         }
         if(ndigi<1e-5) return StatusCode::SUCCESS;
 
-        Belle2::CKFToCDCFindlet::clearSeedRecoTrack();
-        Belle2::CKFToCDCFindlet::addSeedRecoTrack(newRecoTrack);
+        CKF::CKFToCDCFindlet::clearSeedRecoTrack();
+        CKF::CKFToCDCFindlet::addSeedRecoTrack(newRecoTrack);
 
-        Belle2::CKFToCDCFindlet m_CKFToCDC;
+        CKF::CKFToCDCFindlet m_CKFToCDC;
         std::vector< std::vector<unsigned short> > output;
         std::vector<double> radius;
         std::vector<double> arcLength;

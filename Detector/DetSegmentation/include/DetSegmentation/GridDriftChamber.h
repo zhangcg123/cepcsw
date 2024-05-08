@@ -46,7 +46,7 @@ inline bool operator < (const struct CID &c1, const struct CID &c2) {
 
 namespace dd4hep {
 namespace DDSegmentation {
-class GridDriftChamber : public Belle2::IDCSegmentation,public Segmentation {
+class GridDriftChamber : public CKF::IDCSegmentation,public Segmentation {
 public:
   /// default constructor using an arbitrary type
   GridDriftChamber(const std::string& aCellEncoding);
