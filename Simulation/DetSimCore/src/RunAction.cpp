@@ -12,6 +12,7 @@ RunAction::~RunAction() {
 
 }
 
+
 void 
 RunAction::BeginOfRunAction(const G4Run* aRun)
 {
