@@ -21,7 +21,7 @@
 
 #include "PandoraPFAlg.h"
 #include "CaloHitCreator.h"
-
+#include "DecoderHelper/DD4hep2Lcio.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -322,7 +322,8 @@ pandora::StatusCode CaloHitCreator::CreateECalCaloHits(const CollectionMaps& col
                     }
                     else{
                         Stave = m_decoder->get(pCaloHit->getCellID(), "stave");
-                        Stave = Stave <=2 ? Stave+5 : Stave-3 ;//change to correct style
+                        Stave = DD4hep2Lcio::CEPCv4::getEcalStave(Stave);
+                        //Stave = Stave <=2 ? Stave+5 : Stave-3 ;//change to correct style
                     }
                     //std::cout<<"0Stave="<<Stave<<",0layer="<<caloHitParameters.m_layer.Get()<<std::endl;
                     if (Stave<0) throw "wrong Stave";
@@ -449,7 +450,8 @@ pandora::StatusCode CaloHitCreator::CreateHCalCaloHits(const CollectionMaps& col
                     }
                     else{
                         Stave = m_decoder->get(pCaloHit->getCellID(), "stave");
-                        Stave = Stave ==0 ? Stave+7 : Stave-1 ;//correct, same with LCIO  
+                        Stave = DD4hep2Lcio::CEPCv4::getHcalStave(Stave);
+                        //Stave = Stave ==0 ? Stave+7 : Stave-1 ;//correct, same with LCIO  
                         /*
                                     1                     0
                                    ****                  ****
@@ -583,7 +585,8 @@ pandora::StatusCode CaloHitCreator::CreateMuonCaloHits(const CollectionMaps& col
                     }
                     else{
                         Stave = m_decoder->get(pCaloHit->getCellID(), "stave");
-                        Stave = 12 - Stave ;//correct to be same with LCIO
+                        Stave = DD4hep2Lcio::CEPCv4::getMuonStave(Stave);
+                        //Stave = 12 - Stave ;//correct to be same with LCIO
                         if(Stave<0) throw("throw wrong stave number?");
                     }
 
