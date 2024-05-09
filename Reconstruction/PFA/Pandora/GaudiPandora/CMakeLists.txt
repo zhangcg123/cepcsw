@@ -11,6 +11,7 @@ gaudi_add_module(GaudiPandora
                  LINK EventSeeder
                       GearSvc
                       DataHelperLib
+                      DecoderHelperLib
                       DetInterface
                       Gaudi::GaudiKernel
                       k4FWCore::k4FWCore
