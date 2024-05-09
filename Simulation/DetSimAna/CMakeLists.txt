@@ -4,6 +4,7 @@ include(${Geant4_USE_FILE})
 
 gaudi_add_module(DetSimAna
                  SOURCES src/Edm4hepWriterAnaElemTool.cpp
+		 SOURCES src/ExampleAnaDoseElemTool.cpp
                  LINK DetSimInterface
                       DetSimSDLib
                       ${DD4hep_COMPONENT_LIBRARIES} 
