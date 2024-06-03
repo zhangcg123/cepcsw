@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd xmlns:compact="http://www.lcsim.org/schemas/compact/1.0"
+       xmlns:xs="http://www.w3.org/2001/XMLSchema"
+       xs:noNamespaceSchemaLocation="http://www.lcsim.org/schemas/compact/1.0/compact.xsd">
+  <info name="TDR_o1_v01"
+        title="CepC reference detctor with coil inside Hcal, pixel SIT/SET"
+        author="C.D.Fu, "
+        url="http://cepc.ihep.ac.cn"
+        status="developing"
+        version="v01">
+    <comment>CepC reference detector simulation models used for detector study </comment>
+  </info>
+
+  <includes>
+    <gdmlFile  ref="${DD4hepINSTALL}/DDDetectors/compact/elements.xml"/>
+    <gdmlFile  ref="../materials_muon.xml"/>
+  </includes>
+
+  
+  <define>
+    <constant name="world_size" value="25*m"/>
+    <constant name="world_x" value="world_size"/>
+    <constant name="world_y" value="world_size"/>
+    <constant name="world_z" value="world_size"/>
+
+    <constant name="strip_x" value="4*cm"/>
+    <constant name="strip_y" value="1*cm"/>
+    <constant name="strip_z" value="4*m"/>
+    <constant name="surf" value="1*mm"/>
+
+    <constant name="Fe_gap" value="2.5*cm"/>
+    <constant name="Fe_x1" value="105*cm"/>
+
+    <constant name="surface_x" value="strip_x"/>
+    <constant name="surface_y" value="strip_y"/>
+    <constant name="surface_z" value="strip_z"/>
+
+    <constant name="BC420_x" value="strip_x-2*surf"/>
+    <constant name="BC420_y" value="strip_y-2*surf"/>
+    <constant name="BC420_z" value="strip_z"/>
+
+    <constant name="SiPM_x" value="6*mm"/>
+    <constant name="SiPM_y" value="6*mm"/>
+    <constant name="SiPM_z" value="surf"/>
+    <constant name="SiPM_posx" value="0"/>
+    <constant name="SiPM_posy" value="0"/>
+    <constant name="SiPM_posz" value="0.5*strip_z+0.5*SiPM_z"/>
+
+    <constant name="core_rmax" value="0.95*mm"/>
+    <constant name="core_z" value="strip_z"/>
+
+    <constant name="cladding_rmin" value="core_rmax"/>
+    <constant name="cladding_rmax" value="1*mm"/>
+    <constant name="cladding_z" value="strip_z"/>
+
+    <constant name="deviation" value="0.1*mm"/>
+    <constant name="cut3_rmax" value="cladding_rmax+deviation"/>
+    <constant name="cut3_z" value="strip_z"/>
+    <constant name="cut3_posx" value="0"/>
+    <constant name="cut3_posy" value="cut3_rmax-cladding_rmax"/>
+    <constant name="cut3_posz" value="0"/>
+
+    <constant name="cut1_x" value="2*cut3_rmax"/>
+    <constant name="cut1_y" value="surf"/>
+    <constant name="cut1_z" value="strip_z"/>
+    <constant name="cut1_posx" value="0"/>
+    <constant name="cut1_posy" value="0.5*strip_y-0.5*cut1_y"/>
+    <constant name="cut1_posz" value="0"/>
+
+    <constant name="cut2_x" value="cut1_x"/>
+    <constant name="cut2_y" value="0.5*BC420_y-cut3_rmax+cladding_rmax"/>
+    <constant name="cut2_z" value="strip_z"/>
+    <constant name="cut2_posx" value="0"/>
+    <constant name="cut2_posy" value="0.5*BC420_y-0.5*cut2_y"/>
+    <constant name="cut2_posz" value="0"/>
+
+    <include ref="${DD4hepINSTALL}/DDDetectors/compact/detector_types.xml"/>
+  </define>
+
+  <display>
+    <vis name="Invisible_Muon" showDaughters="false" visible="false"/>
+    <vis name="InvisibleWithChildren_Muon" showDaughters="true" visible="false"/>
+    <vis name="VisibleRed_Muon"  r="1.0" g="0.0" b="0.0" showDaughters="true" visible="true"/>
+    <vis name="VisibleBlue_Muon" alpha="0.5" r="0.0" g="0.0" b="1.0" showDaughters="false" visible="true"/>
+    <vis name="VisibleGreen_Muon" alpha="0.3" r="0.0" g="1.0" b="0.0" drawingStyle="solid" lineStyle="solid" showDaughters="true" visible="true"/>
+    <vis name="VisibleMental_Muon" alpha="0.1" r="0.5" g="0.5" b="0.5" showDaughters="true" visible="true"/>
+    <vis name="VisibleBlank_Muon" alpha="0.0" r="0.0" g="0.0" b="0.0" showDaughters="true" visible="true"/>
+  </display>
+
+  <include ref="./TDR_Dimensions_v01_01.xml"/>
+
+  <!--include ref="../CRD_common_v01/Beampipe_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/VXD_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/FTD_SkewRing_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/SIT_SimplePixel_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/DC_Simple_v01_05.xml"/-->
+  <!--include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/Ecal_Crystal_Endcap_v01_01.xml"/-->
+  <include ref="../CRD_common_v01/Muon_Endcap_v01.xml"/>
+  <include ref="../CRD_common_v01/Muon_Barrel_v01.xml"/>
+ 
+  <fields>
+    <field name="InnerSolenoid" type="solenoid"
+           inner_field="Field_nominal_value"
+           outer_field="0"
+           zmax="SolenoidCoil_half_length"
+           inner_radius="SolenoidCoil_center_radius"
+           outer_radius="Solenoid_outer_radius">
+    </field>
+    <field name="OuterSolenoid" type="solenoid"
+           inner_field="0"
+           outer_field="Field_outer_nominal_value"
+           zmax="SolenoidCoil_half_length"
+           inner_radius="Solenoid_outer_radius"
+           outer_radius="Yoke_barrel_inner_radius">
+    </field>
+  </fields>
+
+</lccdd>

@@ -38,7 +38,9 @@
   <include ref="../CRD_common_v01/Coil_Simple_v01_01.xml"/>
   <include ref="../CRD_common_v01/Hcal_Rpc_Barrel_v01_01.xml"/>
   <include ref="../CRD_common_v01/Hcal_Rpc_Endcaps_v01_01.xml"/>
-  <include ref="../CRD_common_v01/Yoke_Barrel_v01_01.xml"/>
+  <!--include ref="../CRD_common_v01/Muon_Barrel_v01.xml"/-->
+  <!--include ref="../CRD_common_v01/Muon_Endcap_v01.xml"/-->
+  <include ref="../CRD_common_v01/Yoke_Barrel_v01_01.xml"/-->
   <include ref="../CRD_common_v01/Yoke_Endcaps_v01_01.xml"/>
   <!--include ref="../CRD_common_v01/Lcal_v01_01.xml"/-->
   
