@@ -1,3 +1,17 @@
+
+# CRD detector models - Overview
+
+The following CRD detector models are available in CEPCSW
+
+| Model         |  Description                 | MainTracker |  Ecal   | Hcal | Muon  | Status         |
+| ------------- | -----------------------------|------------ |---------|------|-------|----------------|
+| CRD_o1_v01    | coil inside simulation model | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v02    | strip SET                    | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v03    | MOST2 vertex                 | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v04    | smaller center beam pipe     | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v05    | Use Ref-Det ECAL and HCAL    | SIT+TPC+SET | crystal | Glass| Scint | developing     |
+| ------------- | -----------------------------|-------------|---------|------|-------|----------------|
+
 # CRD detector models - Overview
 
 The following CRD detector models are available in CEPCSW

@@ -21,6 +21,8 @@ gaudi_add_module(DetCRD
                          src/Calorimeter/RotatedPolyhedraBarrelCalorimeter_v01_geo.cpp
                          src/Calorimeter/RotatedCrystalCalorimeter_v01_geo.cpp
                          src/Other/CRDBeamPipe_v01_geo.cpp
+                         src/Muon/Muon_Barrel_v01.cpp
+                         src/Muon/Muon_Endcap_v01.cpp
                          src/Tracker/SiTrackerSkewRing_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v01_geo.cpp
 

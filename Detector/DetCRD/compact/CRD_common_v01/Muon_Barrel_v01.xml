@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+ 
+  <info name="Muon_Barrel"
+	title="Test with A Single Muon Barrel"
+	author="Zibing Bai"
+	url="http://cepcgit.ihep.ac.cn"
+	status="development"
+	version="v01">
+    <comment>Test with A Single Muon Barrel</comment>        
+  </info>
+  <define>
+    <constant name="env_num" value="2"/>
+    <constant name="Fe_num" value="12"/>
+    <constant name="superlayer_num" value="6"/>
+    <constant name="strip_num_0" value="40"/>
+    <constant name="strip_num_1" value="48"/>
+    <constant name="strip_num_2" value="62"/>
+    <constant name="strip_num_3" value="74"/>
+    <constant name="strip_num_4" value="84"/>
+    <constant name="strip_num_5" value="96"/>
+    <constant name="strip_num" value="100"/>
+
+    <constant name="Fe_y" value="strip_z+2*surf+Fe_gap"/>
+    <constant name="Fe_z" value="Fe_x1"/>
+    <constant name="Fe_posx" value="-1*Fe_x1"/>
+
+    <constant name="env_y" value="Fe_y"/>
+    <constant name="env_posy" value="0.5*env_y"/>
+
+    <constant name="layer_init" value="-21.5*cm"/>
+    <constant name="layer_gap" value="12.5*cm"/>
+    <constant name="superlayer_air" value="0.1*cm"/>
+    <constant name="superlayer_Al" value="0.5*superlayer_air"/>
+
+    <constant name="superlayer_y" value="2*strip_y+2*superlayer_air"/>
+    <constant name="superlayer_z" value="strip_z+2*surf+2*superlayer_air"/>
+
+    <constant name="Al_posx" value="0"/>
+    <constant name="Al_posy" value="0"/>
+    <constant name="Al_posz" value="0"/>
+
+  </define>
+
+  <detectors>
+    <detector id="0" name="Muon_Barrel_v01" type="Muon_Barrel_v01" readout="MuonBarrelCollection" vis="VisibleBlank_Muon" material="Air">
+      <material name="Air"/>
+      <position x="0" y="0" z="0"/>
+      <dimensions dx="0.5*world_x" dy="0.5*world_y" dz="0.5*world_z"/>
+      <module id="Fe_num" name="env" type="env" vis="InvisibleWithChildren_Muon" material="Air">
+        <position x="0" y="env_posy" z="0"/>
+        <dimensions dy="0.5*env_y"/>
+        <module id="0" name="Fe" type="Fe" vis="VisibleMental_Muon" material="Iron">
+          <material name="Iron"/>
+          <position x="Fe_posx" y="0"/>
+          <dimensions x1="0.5*Fe_x1" y1="0.5*Fe_y" y2="0.5*Fe_y" dz="0.5*Fe_z"/>
+          <module id="superlayer_num" name="Superlayer" type="Superlayer" vis="VisibleBlank_Muon" material="Air">
+            <module id="0" name="Layer_Al" type="Layer_Al" vis="VisibleMental_Muon" material="Aluminum">
+              <material name="Aluminum"/>
+              <position x="0" y="0" z="0"/>
+              <module id="0" name="Stripe" type="Stripe" vis="VisibleBlank_Muon" material="Air">
+                <material name="Air"/>
+                <dimensions dx="0.5*strip_x"  dy="0.5*strip_y"  dz="0.5*strip_z+SiPM_z"/>
+                <module id="0" type="surface" name="surface" vis="VisibleGreen_Muon" material="BC420">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions dx="0.5*surface_x" dy="0.5*surface_y" dz="0.5*surface_z"/>
+                  <section name="cut1" vis="VisibleBlank_Muon" material="Air">
+                    <position x="cut1_posx" y="cut1_posy" z="cut1_posz"/>
+                    <dimensions dx="0.5*cut1_x" dy="0.5*cut1_y" dz="0.5*cut1_z"/>
+                  </section>
+                </module>
+                <module id="1" type="BC420" name="BC420" vis="VisibleGreen_Muon" material="BC420">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions dx="0.5*BC420_x" dy="0.5*BC420_y" dz="0.5*BC420_z"/>
+                  <section name="cut3" vis="VisibleBlank_Muon" material="Air">
+                    <position x="cut3_posx" y="cut3_posy" z="cut3_posz"/>
+                    <dimensions rmin="0" rmax="cut3_rmax" dz="0.5*cut3_z"/>
+                    <section name="cut2" vis="VisibleBlank_Muon" material="Air">
+                      <position x="cut2_posx" y="cut2_posy" z="cut2_posz"/>
+                      <dimensions dx="0.5*cut2_x" dy="0.5*cut2_y" dz="0.5*cut2_z"/>
+                    </section>
+                  </section>
+                </module>
+                <section id="0" type="cladding" name="cladding" vis="VisibleBlue_Muon" material="Pethylene1">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions rmin="cladding_rmin" rmax="cladding_rmax" dz="0.5*cladding_z"/>
+                </section>
+                <section id="1" type="core" name="core" vis="VisibleRed_Muon" material="Pethylene2">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions rmin="0" rmax="core_rmax" dz="0.5*core_z"/>
+                </section>
+                <module id="2" type="SiPM" name="SiPM" vis="VisibleBlue_Muon" material="Air">
+                  <position x="SiPM_posx" y="SiPM_posy" z="SiPM_posz"/>
+                  <dimensions dx="0.5*SiPM_x" dy="0.5*SiPM_y" dz="0.5*SiPM_z"/>
+                </module>
+              </module>
+            </module>
+          </module>
+        </module>
+      </module>
+    </detector>
+  </detectors>
+
+  <readouts>
+    <readout name="MuonBarrelCollection">
+      <id>Env:2,Fe:2,Superlayer:2,Layer:2,Stripe:10:3,SiPM:2</id>
+    </readout>
+  </readouts>
+
+</lccdd>

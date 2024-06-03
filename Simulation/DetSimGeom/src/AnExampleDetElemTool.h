@@ -38,6 +38,8 @@ private:
     ToolHandle<ISensDetTool> m_driftchamber_sdtool;
     ToolHandle<ISensDetTool> m_tpc_sdtool;
     ToolHandle<ISensDetTool> m_tracker_sdtool;
+    ToolHandle<ISensDetTool> m_muonbarrel_sdtool;
+    ToolHandle<ISensDetTool> m_muonendcap_sdtool;
 };
 
 #endif

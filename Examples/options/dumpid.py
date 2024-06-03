@@ -28,7 +28,7 @@ geosvc.compact = geometry_path
 ##############################################################################
 
 from Configurables import k4DataSvc
-dsvc = k4DataSvc("EventDataSvc", input="test-detsim10.root")
+dsvc = k4DataSvc("EventDataSvc", input="CRD-o1-v01-SimRec00.root")
 
 ##############################################################################
 # NTuple Svc

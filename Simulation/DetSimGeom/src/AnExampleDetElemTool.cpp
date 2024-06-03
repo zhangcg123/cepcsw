@@ -149,6 +149,22 @@ AnExampleDetElemTool::ConstructSDandField() {
 		  }
 		}
             }
+            if (typ=="muonbarrel") {
+              m_muonbarrel_sdtool = ToolHandle<ISensDetTool>("MuonBarrelSensDetTool");
+              if (m_muonbarrel_sdtool) {
+                info() << "Find the MuonBarrelSensDetTool." << endmsg;
+                g4sd = m_muonbarrel_sdtool->createSD(nam);
+                info() << "create g4SD: " << g4sd << endmsg;
+              }
+            }
+            if (typ=="muonendcap") {
+              m_muonendcap_sdtool = ToolHandle<ISensDetTool>("MuonEndcapSensDetTool");
+              if (m_muonendcap_sdtool) {
+                info() << "Find the MuonEndcapSensDetTool." << endmsg;
+                g4sd = m_muonendcap_sdtool->createSD(nam);
+                info() << "create g4SD: " << g4sd << endmsg;
+              }
+            }
         }
         
         if (!g4sd) {
@@ -229,6 +245,8 @@ AnExampleDetElemTool::initialize() {
     m_calo_sdtool = ToolHandle<ISensDetTool>("CalorimeterSensDetTool");
     m_driftchamber_sdtool = ToolHandle<ISensDetTool>("DriftChamberSensDetTool");
     m_tpc_sdtool = ToolHandle<ISensDetTool>("TimeProjectionChamberSensDetTool");
+    m_muonbarrel_sdtool = ToolHandle<ISensDetTool>("MuonBarrelSensDetTool");
+    m_muonendcap_sdtool = ToolHandle<ISensDetTool>("MuonEndcapSensDetTool");
 
     return sc;
 }
