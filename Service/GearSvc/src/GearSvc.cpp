@@ -807,6 +807,64 @@ StatusCode GearSvc::convertTPC(dd4hep::DetElement& tpc){
   tpcParameters->setDoubleVal( "tpcInnerWallThickness",  tpcData->innerWallThickness*CLHEP::cm ) ;
   tpcParameters->setDoubleVal( "tpcOuterWallThickness",  tpcData->outerWallThickness*CLHEP::cm ) ;
 
+  dd4hep::rec::ConicalSupportData* supportData = nullptr;
+  try{
+    supportData = tpc.extension<dd4hep::rec::ConicalSupportData>();
+  }
+  catch(std::runtime_error& e){
+    warning() << e.what() << " " << supportData << endmsg;
+    return StatusCode::FAILURE;
+  }
+  tpcParameters->setDoubleVal( "tpcReadoutInnerRadius",  supportData->sections[0].rInner*CLHEP::cm );
+  tpcParameters->setDoubleVal( "tpcReadoutOuterRadius",  supportData->sections[0].rOuter*CLHEP::cm );
+  tpcParameters->setDoubleVal( "tpcReadoutZmin",         supportData->sections[0].zPos*CLHEP::cm );
+  tpcParameters->setDoubleVal( "tpcReadoutZmax",         supportData->sections[1].zPos*CLHEP::cm );
+  tpcParameters->setDoubleVal( "tpcEndplateInnerRadius", supportData->sections[2].rInner*CLHEP::cm );
+  tpcParameters->setDoubleVal( "tpcEndplateOuterRadius", supportData->sections[2].rOuter*CLHEP::cm );
+  tpcParameters->setDoubleVal( "tpcEndplateZmin",        supportData->sections[1].zPos*CLHEP::cm + 1*CLHEP::um );
+  tpcParameters->setDoubleVal( "tpcEndplateZmax",        supportData->sections[2].zPos*CLHEP::cm );
+
+  dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() );
+  double x = (supportData->sections[0].rInner + supportData->sections[0].rOuter)/2.;
+  // Readout
+  {
+    dd4hep::rec::Vector3D a(x, 0, supportData->sections[0].zPos);
+    dd4hep::rec::Vector3D b(x, 0, supportData->sections[1].zPos);
+    const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a, b);
+    dd4hep::rec::MaterialData mat = (materials.size()>1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
+
+    std::cout << " ####### found materials between points : " << a << " and " << b << " : " ;
+    for( unsigned i=0,n=materials.size();i<n;++i){
+      std::cout <<  materials[i].first.name() << "[" <<   materials[i].second << "], " ;
+    }
+    std::cout << std::endl ;
+    std::cout << "   averaged material : " << mat << std::endl ;
+    gear::SimpleMaterialImpl* TPCReadoutMaterial = new gear::SimpleMaterialImpl("TPCReadoutMaterial", mat.A(), mat.Z(),
+										mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
+										mat.radiationLength()/dd4hep::mm,
+										mat.interactionLength()/dd4hep::mm);
+    m_gearMgr->registerSimpleMaterial(TPCReadoutMaterial);
+  }
+  // Endplate
+  {
+    dd4hep::rec::Vector3D a(x, 0, supportData->sections[1].zPos);
+    dd4hep::rec::Vector3D b(x, 0, supportData->sections[2].zPos);
+    const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a, b);
+    dd4hep::rec::MaterialData mat = (materials.size()>1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
+
+    std::cout << " ####### found materials between points : " << a << " and " << b << " : " ;
+    for( unsigned i=0,n=materials.size();i<n;++i){
+      std::cout <<  materials[i].first.name() << "[" <<   materials[i].second << "], " ;
+    }
+    std::cout << std::endl ;
+    std::cout << "   averaged material : " << mat << std::endl ;
+    gear::SimpleMaterialImpl* TPCEndplateMaterial = new gear::SimpleMaterialImpl("TPCEndplateMaterial", mat.A(), mat.Z(),
+										mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
+										mat.radiationLength()/dd4hep::mm,
+										mat.interactionLength()/dd4hep::mm);
+    m_gearMgr->registerSimpleMaterial(TPCEndplateMaterial);
+  }
+
   m_gearMgr->setTPCParameters(tpcParameters);
 
   return StatusCode::SUCCESS;

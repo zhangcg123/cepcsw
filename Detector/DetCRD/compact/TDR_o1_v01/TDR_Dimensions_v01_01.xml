@@ -58,7 +58,8 @@
     <constant name="BeamPipe_Be_outer_thickness"   value="0.15*mm"/>
     <constant name="BeamPipe_Be_total_thickness"   value="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness"/>
     <constant name="BeamPipe_Al_thickness"         value="BeamPipe_Be_total_thickness"/>
-    <constant name="BeamPipe_Cu_thickness"         value="1.0*mm"/>
+    <constant name="BeamPipe_ThinCu_thickness"     value="2.0*mm"/>
+    <constant name="BeamPipe_Cu_thickness"         value="3.0*mm"/>
 
     <constant name="BeamPipe_CentralBe_zmax"       value="85*mm"/>
     <constant name="BeamPipe_CentralAl_zmax"       value="180*mm"/>
@@ -70,7 +71,12 @@
     <constant name="BeamPipe_FirstSeparated_zmax"  value="1110*mm"/>
     <constant name="BeamPipe_Mask_zmin"            value="1210*mm"/>
     <constant name="BeamPipe_Mask_zmax"            value="1230*mm"/>
-    <constant name="BeamPipe_SecondSeparated_zmax" value="2200*mm"/>
+    <constant name="BeamPipe_Q1a_zmin"             value="1900*mm"/>
+    <constant name="BeamPipe_Q1a_zmax"             value="3110*mm"/>
+    <constant name="BeamPipe_Q1b_zmin"             value="3190*mm"/>
+    <constant name="BeamPipe_Q1b_zmax"             value="4400*mm"/>
+    <constant name="BeamPipe_QF1_zmin"             value="4700*mm"/>
+    <constant name="BeamPipe_QF1_zmax"             value="6200*mm"/>
     <constant name="BeamPipe_end_z"                value="7050*mm"/>
 
     <constant name="BeamPipe_Central_inner_radius"  value="10*mm"/>
@@ -78,97 +84,114 @@
     <constant name="BeamPipe_FirstExpand_width"     value="35*mm"/>
     <constant name="BeamPipe_SecondExpand_width"    value="39*mm"/>
     <constant name="BeamPipe_Mask_inner_radius"     value="6*mm"/>
+    <constant name="BeamPipe_Q1a_inner_radius"      value="BeamPipe_Fork_inner_radius"/>
+    <constant name="BeamPipe_Q1b_inner_radius"      value="11.5*mm"/>
+    <constant name="BeamPipe_QF1_inner_radius"      value="16*mm"/>
 
     <constant name="BeamPipe_FrontLinker_rmax"      value="BeamPipe_FirstExpand_width/2+BeamPipe_Al_thickness"/>
     <constant name="BeamPipe_ForwardRegion_rmax"    value="BeamPipe_SecondExpand_width/2+BeamPipe_Cu_thickness"/>
 
     <constant name="Vertex_inner_radius" value="BeamPipe_Central_inner_radius+BeamPipe_Be_total_thickness"/>
-    <constant name="Vertex_outer_radius" value="70*mm"/>
-    <constant name="Vertex_half_length"  value="430*mm"/>
+    <constant name="Vertex_outer_radius" value="72.5*mm"/>
+    <constant name="Vertex_half_length"  value="750*mm"/>
 
-    <constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_Central_inner_radius+BeamPipe_Al_thickness
-	   +(BeamPipe_FirstExpand_width/2-BeamPipe_Central_inner_radius)/(BeamPipe_ExpandAl_zmax-BeamPipe_CentralAl_zmax)*(Vertex_half_length-BeamPipe_CentralAl_zmax)"/>
+    <!--constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_Central_inner_radius+BeamPipe_Al_thickness
+	   +(BeamPipe_FirstExpand_width/2-BeamPipe_Central_inner_radius)/(BeamPipe_ExpandAl_zmax-BeamPipe_CentralAl_zmax)*(Vertex_half_length-BeamPipe_CentralAl_zmax)"/-->
+    <constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_FirstExpand_width
+							   +(BeamPipe_SecondExpand_width-BeamPipe_FirstExpand_width)/(BeamPipe_Linker_zmax-BeamPipe_Linker_zmin)*(Vertex_half_length-BeamPipe_Linker_zmin)"/>
     <constant name="Vertex_Side_rmin"    value="BeamPipe_VertexRegion_rmax"/>
 
     <constant name="TPC_inner_radius" value="600*mm"/>
     <constant name="TPC_outer_radius" value="1800*mm"/>
-    <constant name="TPC_half_length"  value="2905*mm"/>
+    <constant name="TPC_half_length"  value="2900*mm"/>
     <constant name="OuterTracker_half_length" value="TPC_half_length"/>
 
     <constant name="SIT1_inner_radius"   value="150*mm"/>
-    <constant name="SIT2_inner_radius"   value="360*mm"/>
-    <constant name="SIT3_inner_radius"   value="580*mm"/>
-    <constant name="SIT1_half_length"    value="690*mm"/>
-    <constant name="SIT2_half_length"    value="1334*mm"/>
-    <constant name="SIT3_half_length"    value="1978*mm"/>
+    <constant name="SIT2_inner_radius"   value="250*mm"/>
+    <constant name="SIT3_inner_radius"   value="500*mm"/>
+    <constant name="SIT1_half_length"    value="243*mm"/>
+    <constant name="SIT2_half_length"    value="405*mm"/>
+    <constant name="SIT3_half_length"    value="810*mm"/>
 
-    <constant name="SET_inner_radius"    value="1815*mm"/>
+    <constant name="SET_inner_radius"    value="1800*mm"/>
 
+    <constant name="SiTracker_region1_costheta"   value="0.85"/>
+    <constant name="SiTracker_region2_costheta"   value="0.9"/>
+    <constant name="SiTracker_region3_costheta"   value="0.95"/>
     <constant name="SiTracker_endcap_barrel_zgap" value="5*mm"/>
     <constant name="SiTracker_endcap_barrel_rgap" value="10*mm"/>
-    <constant name="SiTracker_endcap_gas_zgap"    value="70*mm"/>
-    <constant name="SiTracker_endcap_gas_rgap"    value="50*mm"/>
-    <constant name="SiTracker_endcap_z1" value="SIT1_half_length+SiTracker_endcap_barrel_zgap"/>
-    <constant name="SiTracker_endcap_z2" value="SIT2_half_length+SiTracker_endcap_barrel_zgap"/>
-    <constant name="SiTracker_endcap_z3" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
-    <constant name="SiTracker_endcap_z4" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
-    <constant name="SiTracker_endcap_outer_radius1" value="SIT1_inner_radius+SiTracker_endcap_barrel_rgap"/>
-    <constant name="SiTracker_endcap_outer_radius2" value="SIT2_inner_radius+SiTracker_endcap_barrel_rgap"/>
+    <constant name="SiTracker_endcap_gas_zgap"    value="2*mm"/>
+    <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
+    <constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
+    <constant name="SiTracker_endcap_z2" value="SIT3_half_length/SiTracker_region1_costheta
+						*cos(acos(SiTracker_region1_costheta)-acos(Global_endcap_costheta))*Global_endcap_costheta"/>
+    <constant name="SiTracker_endcap_z3" value="TPC_inner_radius/sin(acos(SiTracker_region2_costheta))
+						*cos(acos(SiTracker_region2_costheta)-acos(Global_endcap_costheta))*Global_endcap_costheta"/>
+    <constant name="SiTracker_endcap_z4" value="TPC_inner_radius/sin(acos(SiTracker_region3_costheta))
+                                                *cos(acos(SiTracker_region3_costheta)-acos(Global_endcap_costheta))*Global_endcap_costheta"/>
+    <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
+    <constant name="SiTracker_endcap_outer_radius1" value="SiTracker_endcap_z1/Global_endcap_costheta
+							   /cos(acos(SiTracker_region1_costheta)-acos(Global_endcap_costheta))
+							   *sin(acos(SiTracker_region1_costheta))"/>
+    <constant name="SiTracker_endcap_outer_radius2" value="SIT3_inner_radius"/>
     <constant name="SiTracker_endcap_outer_radius3" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
-    <constant name="SiTracker_endcap_outer_radius4" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap*2"/>
+    <constant name="SiTracker_endcap_outer_radius4" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/>
 
     <!--obseleted constance, used by old construct, should be removed while creating new constrcut-->
     <constant name="TPC_Ecal_Hcal_barrel_halfZ"   value="TPC_half_length"/>
 
-    <constant name="Ecal_barrel_inner_radius" value="1900*mm"/>
+    <constant name="Ecal_barrel_inner_radius" value="1830*mm"/>
     <constant name="Ecal_barrel_thickness"    value="300*mm"/>
     <constant name="Ecal_barrel_outer_radius" value="Ecal_barrel_inner_radius+Ecal_barrel_thickness"/>
-    <constant name="Ecal_barrel_half_length"  value="2950*mm"/>
+    <constant name="Ecal_barrel_half_length"  value="2900*mm"/>
     <constant name="Ecal_barrel_symmetry"     value="32"/>
     <constant name="Ecal_Tpc_gap"             value="Ecal_barrel_inner_radius-TPC_outer_radius"/>
 
-    <constant name="Ecal_endcap_inner_radius" value="350*mm"/>
+    <constant name="Ecal_endcap_inner_radius" value="400*mm"/>
     <constant name="Ecal_endcap_outer_radius" value="Ecal_barrel_outer_radius"/>
-    <constant name="Ecal_endcap_zmin"         value="3050*mm"/>
-    <constant name="Ecal_endcap_zmax"         value="3350*mm"/>
+    <constant name="Ecal_endcap_zmin"         value="2930*mm"/>
+    <constant name="Ecal_endcap_thickness"    value="Ecal_barrel_thickness"/>
+    <constant name="Ecal_endcap_zmax"         value="Ecal_endcap_zmin+Ecal_endcap_thickness"/>
     <constant name="Ecal_endcap_symmetry"     value="32"/>
 
-    <constant name="Hcal_barrel_inner_radius" value="2215*mm"/>
-    <constant name="Hcal_barrel_outer_radius" value="3685*mm"/>
-    <constant name="Hcal_barrel_half_length"  value="3340*mm"/>
+    <constant name="Hcal_barrel_inner_radius" value="2140*mm"/>
+    <constant name="Hcal_barrel_outer_radius" value="3455*mm"/>
+    <constant name="Hcal_barrel_half_length"  value="3230*mm"/>
     <constant name="Hcal_barrel_symmetry"    value="16"/>
     
-    <constant name="Hcal_endcap_inner_radius" value="400*mm"/>
+    <constant name="Hcal_endcap_inner_radius" value="450*mm"/>
     <constant name="Hcal_endcap_outer_radius" value="Hcal_barrel_outer_radius"/>
-    <constant name="Hcal_endcap_zmin" value="3360*mm"/>
-    <constant name="Hcal_endcap_zmax" value="4830*mm"/>
+    <constant name="Hcal_endcap_zmin" value="3260*mm"/>
+    <constant name="Hcal_endcap_thickness" value="Hcal_barrel_outer_radius-Hcal_barrel_inner_radius"/>
+    <constant name="Hcal_endcap_zmax" value="Hcal_endcap_zmin+Hcal_endcap_thickness"/>
     <constant name="Hcal_endcap_symmetry" value="16"/>
 
-    <constant name="Solenoid_inner_radius" value="3775*mm"/>
-    <constant name="Solenoid_outer_radius" value="4575*mm"/>
-    <constant name="Solenoid_half_length" value="4780*mm"/>
-    <constant name="SolenoidCoil_half_length" value="4167*mm"/>
-    <constant name="SolenoidCoil_radius" value="3905*mm"/>
+    <constant name="Solenoid_inner_radius" value="3535*mm"/>
+    <constant name="Solenoid_outer_radius" value="4235*mm"/>
+    <constant name="Solenoid_half_length" value="4575*mm"/>
+    <constant name="SolenoidCoil_half_length" value="4075*mm"/>
+    <constant name="SolenoidCoil_radius" value="3650*mm"/>
     <constant name="SolenoidCoil_center_radius" value="(Solenoid_inner_radius+Solenoid_outer_radius)/2"/>
         
-    <constant name="Yoke_barrel_inner_radius" value="4590*mm"/>
-    <constant name="Yoke_barrel_outer_radius" value="6340*mm"/>
-    <constant name="Yoke_barrel_half_length" value="4880*mm"/>
+    <constant name="Yoke_barrel_inner_radius" value="4235*mm"/>
+    <constant name="Yoke_barrel_outer_radius" value="5485*mm"/>
+    <constant name="Yoke_barrel_half_length" value="4525*mm"/>
     <constant name="Yoke_barrel_symmetry" value="12"/>
     
-    <constant name="Yoke_endcap_inner_radius" value="400*mm"/>
+    <constant name="Yoke_endcap_inner_radius" value="650*mm"/>
     <constant name="Yoke_endcap_outer_radius" value="Yoke_barrel_outer_radius"/>
-    <constant name="Yoke_endcap_zmin" value="5130*mm"/>
-    <constant name="Yoke_endcap_zmax" value="6880*mm"/>
+    <constant name="Yoke_endcap_zmin" value="4635*mm"/>
+    <constant name="Yoke_endcap_zmax" value="5875*mm"/>
     <constant name="Yoke_endcap_outer_symmetry" value="Yoke_barrel_symmetry"/>
     <constant name="Yoke_endcap_inner_symmetry" value="0"/>
 
     <!-- FIXME:need to check/--> 
-    <constant name="LumiCal_inner_radius" value="35.0*mm"/>
-    <constant name="LumiCal_outer_radius" value="100.0*mm"/>
-    <constant name="LumiCal_zmax" value="805*mm" />
-    <constant name="LumiCal_zmin" value="700*mm"/>
-    <constant name="LumiCal_thickness" value="(LumiCal_zmax-LumiCal_zmin)/2.0"/>
+    <constant name="Lumical_inner_radius" value="BeamPipe_Fork_inner_radius+BeamPipe_ThinCu_thickness"/>
+    <constant name="Lumical_outer_radius" value="100.0*mm"/>
+    <constant name="Lumical_zmax" value="BeamPipe_FirstSeparated_zmax" />
+    <constant name="Lumical_zmin" value="700*mm"/>
+    <constant name="Lumical_thickness" value="(Lumical_zmax-Lumical_zmin)/2.0"/>
         
     <constant name="tracker_region_zmax" value="Ecal_endcap_zmin"/>
     <constant name="tracker_region_rmax" value="Ecal_barrel_inner_radius"/>
@@ -179,7 +202,7 @@
     <limitset name="cal_limits">
       <limit name="step_length_max" particles="*" value="5.0" unit="mm" />
     </limitset>
-    <limitset name="dc_limits">
+    <limitset name="tpc_limits">
       <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
     </limitset>
     <limitset name="tracker_limits">
@@ -190,6 +213,13 @@
     </limitset>
     <limitset name="support_limits">
       <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
+    </limitset>
+    <limitset name="yoke_limits">
+      <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
+      <!--limit name="track_length_max" particles="*" value="5.0" unit="mm" /-->
+      <!--limit name="time_max" particles="*" value="5.0" unit="ns" /-->
+      <limit name="ekin_min" particles="*" value="10" unit="MeV" />
+      <limit name="range_min" particles="*" value="10.0" unit="mm" />
     </limitset>
   </limits>
 

@@ -1177,14 +1177,14 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     // ###########################
 
     for(int iz=0; iz<Nblock_z; iz=iz+1){  //1 Nblock_z
-        dd4hep::PlacedVolume plv = trap_positive_vol.placeVolume(subtrap_positive_vol, Position(0, 0.5*length_z-(2*iz-1)*pZ/2,0) );
+        dd4hep::PlacedVolume plv = trap_positive_vol.placeVolume(subtrap_positive_vol, Position(0, 0.5*length_z-(2*iz+1)*pZ/2,0) );
         plv.addPhysVolID("stave", iz);
         DetElement sd(stavedet, _toString(iz,"stave_posi_%3d"), detid);
         sd.setPlacement(plv);    
     }
 
     for(int iz=0; iz<Nblock_z; iz=iz+1){
-        dd4hep::PlacedVolume plv = trap_negative_vol.placeVolume(subtrap_negative_vol, Position(0, 0.5*length_z-(2*iz-1)*pZ/2,0) );
+        dd4hep::PlacedVolume plv = trap_negative_vol.placeVolume(subtrap_negative_vol, Position(0, 0.5*length_z-(2*iz+1)*pZ/2,0) );
         plv.addPhysVolID("stave", iz);
         DetElement sd(stavedet, _toString(iz,"stave_nega_%3d"), detid);
         sd.setPlacement(plv);    
