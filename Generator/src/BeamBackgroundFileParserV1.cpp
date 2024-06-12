@@ -27,6 +27,10 @@ BeamBackgroundFileParserV1::BeamBackgroundFileParserV1(const std::string& filena
     m_readTree->SetBranchAddress("cosy", &cosy);
     m_readTree->SetBranchAddress("dp", &dp);
     m_readTree->SetBranchAddress("dz", &dz);
+    m_readTree->SetBranchAddress("pid", &pid);
+    if(m_readTree->GetBranch("cosz")){
+      m_readTree->SetBranchAddress("cosz", &cosz);
+    }
 
     m_rate = rate;
     m_timewindow = timewindow;
@@ -46,14 +50,17 @@ bool BeamBackgroundFileParserV1::load(IBeamBackgroundFileParser::BeamBackgroundD
 
         // Now, we get a almost valid data
         const double m2mm = 1e3; // convert from m to mm
-        result.pdgid = 11;
+        result.pdgid = pid;
         result.x     = x * m2mm;
         result.y     = y * m2mm;
         result.z     = (z+dz) * m2mm;
 
         result.px    = p * cosx;
         result.py    = p * cosy;
-        result.pz    = p * std::sqrt(1-cosx*cosx-cosy*cosy);
+        if(m_readTree->GetBranch("cosz")){
+        result.pz    = p * cosz;}
+        else{
+        result.pz    = p * std::sqrt(1-cosx*cosx-cosy*cosy);}
 
         result.mass  = 0.000511; // assume e-/e+, mass is 0.511 MeV
 
