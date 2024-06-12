@@ -398,8 +398,9 @@
 -->
  
     <material name="TPC_endplate_mix" state="solid">
-      <MEE unit="eV" value="97.0754229107761"/>
+      <!--MEE unit="eV" value="97.0754229107761"/-->
       <D unit="g/cm3" value="0.5827515446"/>
+      <!--D unit="g/cm3" value="0.05827515446"/-->
       <fraction n="0.00953598760814401" ref="C"/>
       <fraction n="0.558898138898139" ref="N"/>
       <fraction n="0.226789772550668" ref="O"/>
@@ -611,6 +612,18 @@
      <D type="density" value="6.78" unit="g/cm3" />
      <fraction n="0.56" ref="Ni" />
      <fraction n="0.44" ref="Ti" />
+   </material>
+
+   <material name="CrZrCu18150">
+     <D type="density" value="8.6" unit="g/cm3" />
+     <fraction n="0.01"  ref="Cr" />
+     <fraction n="0.001" ref="Zr" />
+     <fraction n="0.989" ref="Cu" />
+   </material>
+
+   <material name="lHe">
+     <D type="density" value="0.125" unit="g/cm3" />
+     <fraction n="1" ref="He" />
    </material>
 
    <material name="lN2">

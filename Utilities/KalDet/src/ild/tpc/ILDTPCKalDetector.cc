@@ -2,6 +2,7 @@
 #include "ILDTPCKalDetector.h"
 #include "ILDCylinderMeasLayer.h"
 #include "ILDCylinderHit.h"
+#include "ILDDiscMeasLayer.h"
 
 #include "TMath.h"
 #include "TTUBE.h"
@@ -35,6 +36,8 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
   Double_t bz;
   Int_t    nlayers;
   Double_t lhalf, rstep, rmin, rtub, outerr, inthick, outthick;
+  Double_t rminReadout, rmaxReadout, zminReadout, zmaxReadout;
+  Double_t rminEndplate, rmaxEndplate, zminEndplate, zmaxEndplate;
   // streamlog_out(DEBUG1) << "ILDTPCKalDetector building TPC detector using GEAR " << std::endl ;
   if(geoSvc){
     dd4hep::DetElement world = geoSvc->getDD4HepGeo();
@@ -63,6 +66,23 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
     outerr = tpcData->rMax*CLHEP::cm;
     inthick = tpcData->innerWallThickness*CLHEP::cm;
     outthick = tpcData->outerWallThickness*CLHEP::cm;
+
+    dd4hep::rec::ConicalSupportData* supportData = nullptr;
+    try{
+      supportData = tpc.extension<dd4hep::rec::ConicalSupportData>();
+    }
+    catch(std::runtime_error& e){
+      std::cout << e.what() << " " << supportData << std::endl;
+      throw GaudiException(e.what(), "FATAL", StatusCode::FAILURE);
+    }
+    rminReadout = supportData->sections[0].rInner*CLHEP::cm;
+    rmaxReadout = supportData->sections[0].rOuter*CLHEP::cm;
+    zminReadout = supportData->sections[0].zPos*CLHEP::cm;
+    zmaxReadout = supportData->sections[1].zPos*CLHEP::cm;
+    rminEndplate = supportData->sections[2].rInner*CLHEP::cm;
+    rmaxEndplate = supportData->sections[2].rOuter*CLHEP::cm;
+    zminEndplate = supportData->sections[1].zPos*CLHEP::cm + 1*CLHEP::um;
+    zmaxEndplate = supportData->sections[2].zPos*CLHEP::cm;
     //std::cout << "TPC: " << nlayers << " " << lhalf << " " << rstep << " " << rmin << " " << rtub << " " << outerr << " " << inthick << " " << outthick << std::endl;
   }
   else{
@@ -88,6 +108,15 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
     
     inthick   =  tpcParams.getDoubleVal("tpcInnerWallThickness")  ;   // thickness of inner shell
     outthick  =  tpcParams.getDoubleVal("tpcOuterWallThickness")  ;   // thickness of outer shell
+
+    rminReadout = tpcParams.getDoubleVal("tpcReadoutInnerRadius");
+    rmaxReadout = tpcParams.getDoubleVal("tpcReadoutOuterRadius");
+    zminReadout = tpcParams.getDoubleVal("tpcReadoutZmin");
+    zmaxReadout = tpcParams.getDoubleVal("tpcReadoutZmax");
+    rminEndplate = tpcParams.getDoubleVal("tpcEndplateInnerRadius");
+    rmaxEndplate = tpcParams.getDoubleVal("tpcEndplateOuterRadius");
+    zminEndplate = tpcParams.getDoubleVal("tpcEndplateZmin");
+    zmaxEndplate = tpcParams.getDoubleVal("tpcEndplateZmax");
     //std::cout << "TPC: " << nlayers << " " << lhalf << " " << rstep << " " << rmin << " " << rtub << " " << outerr << " " << inthick << " " << outthick << std::endl;
   }    
 
@@ -97,6 +126,8 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
   //  TMaterial & aluminium    = *MaterialDataBase::Instance().getMaterial("aluminium");
   TMaterial & tpcinnerfieldcage = *MaterialDataBase::Instance().getMaterial("tpcinnerfieldcage");
   TMaterial & tpcouterfieldcage = *MaterialDataBase::Instance().getMaterial("tpcouterfieldcage");
+  TMaterial & tpcreadout   = *MaterialDataBase::Instance().getMaterial("TPCReadoutMaterial");
+  TMaterial & tpcendplate  = *MaterialDataBase::Instance().getMaterial("TPCEndplateMaterial");
   
   Bool_t active = true;
   Bool_t dummy  = false;
@@ -170,7 +201,16 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
   // << std::endl ;  
   
   // streamlog_out( DEBUG0 )   << " *** Outer Field Cage =  " << int( (outthick/(tpcouterfieldcage.GetRadLength()*10.0) /*cm*/ )*1000) / 10.0  << "% of a radiation length " << std::endl ; 
-  
+
+  Add(new ILDDiscMeasLayer(tpcgas, tpcreadout, TVector3(0,0,zminReadout), TVector3(0,0,1), bz, zminReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace+Z1"));
+  Add(new ILDDiscMeasLayer(tpcreadout, air, TVector3(0,0,zmaxReadout), TVector3(0,0,1), bz, zmaxReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace+Z2"));
+  Add(new ILDDiscMeasLayer(air, tpcendplate, TVector3(0,0,zminEndplate), TVector3(0,0,1), bz, zminEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace+Z1"));
+  Add(new ILDDiscMeasLayer(tpcendplate, air, TVector3(0,0,zmaxEndplate), TVector3(0,0,1), bz, zmaxEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace+Z2"));
+
+  Add(new ILDDiscMeasLayer(tpcgas, tpcreadout, TVector3(0,0,-zminReadout), TVector3(0,0,-1), bz, -zminReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace-Z1"));
+  Add(new ILDDiscMeasLayer(tpcreadout, air, TVector3(0,0,-zmaxReadout), TVector3(0,0,-1), bz, -zmaxReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace-Z2"));
+  Add(new ILDDiscMeasLayer(air, tpcendplate, TVector3(0,0,-zminEndplate), TVector3(0,0,-1), bz, -zminEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace-Z1"));
+  Add(new ILDDiscMeasLayer(tpcendplate, air, TVector3(0,0,-zmaxEndplate), TVector3(0,0,-1), bz, -zmaxEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace-Z2"));
   
   SetOwner();
 }

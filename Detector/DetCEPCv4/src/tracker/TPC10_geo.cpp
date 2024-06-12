@@ -26,7 +26,7 @@ using dd4hep::rec::SurfaceType;
 using dd4hep::rec::volSurfaceList;
 using dd4hep::rec::VolPlane;
 using dd4hep::rec::FixedPadSizeTPCData;
-
+using dd4hep::rec::ConicalSupportData;
 /** Construction of TPC detector, ported from Mokka driver TPC10.cc
  * Mokka History:
  * - modified version of TPC driver by Ties Behnke
@@ -620,9 +620,27 @@ Material endplate_MaterialMix = theDetector.material( "TPC_endplate_mix" ) ;
   tpcData->driftLength = dz_Sensitive + dz_Cathode/2.0; // SJA: cathode has to be added as the sensitive region does not start at 0.00    
   tpcData->zMinReadout = dz_Cathode/2.0; 
   //  tpcData.z_anode = dzTotal - dz_Endplate; // the edge of the readout terminating the drift volume
-  
-  tpc.addExtension< FixedPadSizeTPCData >( tpcData )   ; 
+  ConicalSupportData* supportData = new ConicalSupportData;
+  ConicalSupportData::Section section0;
+  section0.rInner = rMin_GasVolume;
+  section0.rOuter = rMax_GasVolume;
+  section0.zPos   = dz_GasVolume - dz_Readout;
 
+  ConicalSupportData::Section section1;
+  section1.rInner = rMin_GasVolume;
+  section1.rOuter = rMax_GasVolume;
+  section1.zPos   = dz_GasVolume;
+
+  ConicalSupportData::Section section2;
+  section2.rInner = rInner;
+  section2.rOuter = rOuter;
+  section2.zPos   = dz_GasVolume + dz_Endplate;
+  supportData->sections.push_back(section0);
+  supportData->sections.push_back(section1);
+  supportData->sections.push_back(section2);
+
+  tpc.addExtension< FixedPadSizeTPCData >( tpcData )   ;
+  tpc.addExtension< ConicalSupportData > (supportData);
   //######################################################################################################################################################################
   
   

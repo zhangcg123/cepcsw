@@ -1,0 +1,39 @@
+<lccdd>
+  <define>
+    <!--repeat in barrel and endcap-->
+    <constant name="Hcal_cell_size" value="40*mm"/>
+    <constant name="Hcal_nlayers" value="48"/>
+    <constant name="Hcal_radiator_thickness" value="9.9*mm"/>
+    <constant name="Hcal_scintillator_thickness" value="10.*mm"/>
+    <constant name="Hcal_pcb_thickness" value="3.2*mm"/>
+    <constant name="Hcal_esr_thickness" value="0.2*mm"/>
+    <constant name="Hcal_cassette_thickness" value="2.0*mm"/>
+    <constant name="Hcal_endcap_nlayers" value="Hcal_nlayers"/>
+  </define>
+
+  <detectors>
+    <detector name="HcalEndcap" type="DD4hep_PolyhedraEndcapCalorimeter2" id="DetID_HCAL_ENDCAP" readout="HcalEndcapsCollection" vis="SeeThrough">
+      <type_flags type=" DetType_CALORIMETER + DetType_ENDCAP + DetType_MUON " />
+
+      <dimensions numsides="Hcal_endcap_symmetry" rmin="Hcal_endcap_inner_radius" rmax="Hcal_endcap_outer_radius/cos(pi/Hcal_endcap_symmetry)"
+		  zmin="Hcal_endcap_zmin" />
+      <layer repeat="Hcal_endcap_nlayers" vis="GrayVis">
+	<slice material="Steel235"        thickness = "Hcal_radiator_thickness" vis="LightGrayVis" />
+	<slice material="stainless_steel" thickness = "Hcal_cassette_thickness" vis="CyanVis" />
+        <slice material="G4_ESR"          thickness = "Hcal_esr_thickness" vis="CyanVis" />
+        <slice material="G4_GlassHCAL"    thickness = "Hcal_scintillator_thickness" sensitive = "yes"   limits="cal_limits"  vis="CyanVis"   />
+        <slice material="PCB"             thickness = "Hcal_pcb_thickness" vis="CyanVis" />
+        <slice material="stainless_steel" thickness = "Hcal_cassette_thickness" vis="CyanVis" />
+      </layer>
+    </detector>
+  </detectors>
+  
+  <readouts>
+    <readout name="HcalEndcapsCollection">
+      <segmentation type="CartesianGridXY" grid_size_x="Hcal_cell_size" grid_size_y="Hcal_cell_size" offset_x="Hcal_cell_size/2.0" offset_y="Hcal_cell_size/2.0" />
+      <!--id>system:5,module:3,stave:3,tower:5,layer:6,x:32:-16,y:-16</id-->
+      <id>system:5,side:2,module:3,stave:4,barrel:3,layer:6,slice:4,x:32:-16,y:-16</id>
+    </readout>
+  </readouts>
+  
+</lccdd>

@@ -221,7 +221,11 @@ void MaterialDataBase::createMaterials(const gear::GearMgr& gearMgr, IGeomSvc* g
       name    = vxd_sup_mat.getName() ;
       TMaterial &vxdsupport = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
       this->addMaterial(&vxdsupport, name);
-
+    }
+    catch( gear::UnknownParameterException& e){
+      std::cout << "Warning! cannot get material VXDSupportMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+    }
+    try {
       const gear::SimpleMaterial& vxd_shell_mat = gearMgr.getSimpleMaterial("VXDShellMaterial");
       A       = vxd_shell_mat.getA();
       Z       = vxd_shell_mat.getZ();
@@ -232,7 +236,33 @@ void MaterialDataBase::createMaterials(const gear::GearMgr& gearMgr, IGeomSvc* g
       this->addMaterial(&vxdshell, name);
     }
     catch( gear::UnknownParameterException& e){   
-      std::cout << "Warning! cannot get material VXDSupportMaterial and VXDShellMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+      std::cout << "Warning! cannot get material VXDShellMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+    }
+    try {
+      const gear::SimpleMaterial& tpc_readout_mat = gearMgr.getSimpleMaterial("TPCReadoutMaterial");
+      A       = tpc_readout_mat.getA();
+      Z       = tpc_readout_mat.getZ();
+      density = tpc_readout_mat.getDensity() * (1000.0/ 1000000.0); // kg/m^3 -> g/cm^3
+      radlen  = tpc_readout_mat.getRadLength() / 10.0 ; // mm -> cm
+      name    = tpc_readout_mat.getName() ;
+      TMaterial &tpcreadout = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
+      this->addMaterial(&tpcreadout, name);
+    }
+    catch( gear::UnknownParameterException& e){
+      std::cout << "Warning! cannot get material TPCReadoutMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+    }
+    try {
+      const gear::SimpleMaterial& tpc_endplate_mat = gearMgr.getSimpleMaterial("TPCEndplateMaterial");
+      A       = tpc_endplate_mat.getA();
+      Z       = tpc_endplate_mat.getZ();
+      density = tpc_endplate_mat.getDensity() * (1000.0/ 1000000.0); // kg/m^3 -> g/cm^3
+      radlen  = tpc_endplate_mat.getRadLength() / 10.0 ; // mm -> cm
+      name    = tpc_endplate_mat.getName() ;
+      TMaterial &tpcendplate = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
+      this->addMaterial(&tpcendplate, name);
+    }
+    catch( gear::UnknownParameterException& e){
+      std::cout << "Warning! cannot get material TPCEndplateMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
     }
   }
 }
