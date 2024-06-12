@@ -34,7 +34,7 @@ rndmgensvc.Engine = rndmengine.name()
 dsvc = k4DataSvc("EventDataSvc")
 #geometry_option = "CepC_v4-onlyVXD.xml"
 geometry_option = "CepC_v4_onlyTracker.xml"
-#geometry_option = "CepC_v4.xml"
+# geometry_option = "CepC_v4.xml"
 
 geometry_path = os.path.join(os.getenv("DETCEPCV4ROOT"), "compact", geometry_option)
 geosvc = GeomSvc("GeomSvc")
