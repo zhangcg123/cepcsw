@@ -123,16 +123,11 @@
     <constant name="SiTracker_endcap_gas_zgap"    value="2*mm"/>
     <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
     <constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
-    <constant name="SiTracker_endcap_z2" value="SIT3_half_length/SiTracker_region1_costheta
-						*cos(acos(SiTracker_region1_costheta)-acos(Global_endcap_costheta))*Global_endcap_costheta"/>
-    <constant name="SiTracker_endcap_z3" value="TPC_inner_radius/sin(acos(SiTracker_region2_costheta))
-						*cos(acos(SiTracker_region2_costheta)-acos(Global_endcap_costheta))*Global_endcap_costheta"/>
-    <constant name="SiTracker_endcap_z4" value="TPC_inner_radius/sin(acos(SiTracker_region3_costheta))
-                                                *cos(acos(SiTracker_region3_costheta)-acos(Global_endcap_costheta))*Global_endcap_costheta"/>
+    <constant name="SiTracker_endcap_z2" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_z3" value="TPC_inner_radius/tan(acos(SiTracker_region2_costheta))"/>
+    <constant name="SiTracker_endcap_z4" value="TPC_inner_radius/tan(acos(SiTracker_region3_costheta))"/>
     <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
-    <constant name="SiTracker_endcap_outer_radius1" value="SiTracker_endcap_z1/Global_endcap_costheta
-							   /cos(acos(SiTracker_region1_costheta)-acos(Global_endcap_costheta))
-							   *sin(acos(SiTracker_region1_costheta))"/>
+    <constant name="SiTracker_endcap_outer_radius1" value="SiTracker_endcap_z1*tan(acos(SiTracker_region1_costheta))"/>
     <constant name="SiTracker_endcap_outer_radius2" value="SIT3_inner_radius"/>
     <constant name="SiTracker_endcap_outer_radius3" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
     <constant name="SiTracker_endcap_outer_radius4" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
