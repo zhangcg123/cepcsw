@@ -41,6 +41,8 @@
   <!--include ref="../CRD_common_v01/SHcalGlass_Barrel_v04_01.xml"/-->
   <!--include ref="../CRD_common_v02/HcalEndcaps_Polyhedra_v01_01.xml"/-->
 
+  <!--Lumical，to update-->
+  <include ref="../CRD_common_v01/Lumical_o1_v01.xml"/>
   <!--preliminary Magnet, to update/-->
   <include ref="../CRD_common_v02/Coil_Simple_v01_02.xml"/>
   <!--preliminary Muon, to update/-->

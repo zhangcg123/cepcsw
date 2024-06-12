@@ -58,7 +58,7 @@
     <constant name="BeamPipe_Be_outer_thickness"   value="0.15*mm"/>
     <constant name="BeamPipe_Be_total_thickness"   value="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness"/>
     <constant name="BeamPipe_Al_thickness"         value="BeamPipe_Be_total_thickness"/>
-    <constant name="BeamPipe_Cu_thickness"         value="4.0*mm"/>
+    <constant name="BeamPipe_Cu_thickness"         value="1.0*mm"/>
 
     <constant name="BeamPipe_CentralBe_zmax"       value="85*mm"/>
     <constant name="BeamPipe_CentralAl_zmax"       value="180*mm"/>

@@ -671,4 +671,13 @@
      <composite n="2" ref="H" />
      <composite n="1"  ref="O" />
    </material>
+
+   <material name="LYSO" state="solid">
+      <MEE unit="eV" value="9.5"/>
+      <D value="7.15" unit="g/cm3" />
+      <fraction n="0.714" ref="Lu"/>
+      <fraction n="0.056" ref="Y" />
+      <fraction n="0.56" ref="Si" />
+      <fraction n="1.428" ref="O" />
+    </material>
   </materials>

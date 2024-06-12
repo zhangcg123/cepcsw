@@ -89,7 +89,12 @@ private:
     DataHandle<edm4hep::CaloHitContributionCollection> m_EcalEndcapRingContributionCol{
             "EcalEndcapRingContributionCollection", 
             Gaudi::DataHandle::Writer, this};
-
+    // Lumical
+    DataHandle<edm4hep::SimCalorimeterHitCollection> m_LumicalCol{"LumicalCollection",
+            Gaudi::DataHandle::Writer, this};
+    DataHandle<edm4hep::CaloHitContributionCollection> m_LumicalContributionCol{
+            "LumicalContributionCollection",
+            Gaudi::DataHandle::Writer, this};
     // Hcal
     DataHandle<edm4hep::SimCalorimeterHitCollection> m_HcalBarrelCol{"HcalBarrelCollection", 
             Gaudi::DataHandle::Writer, this};
