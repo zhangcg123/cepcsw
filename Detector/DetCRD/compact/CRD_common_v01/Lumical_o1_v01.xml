@@ -1,0 +1,121 @@
+<lccdd>
+    
+    <define>
+        <constant name="Lumical_cell_size" value="3*mm"/>
+        <include ref="${DD4hepINSTALL}/DDDetectors/compact/detector_types.xml"/>
+        
+    </define>
+
+  <display>
+    <vis name="SeeThroughit"       alpha="0.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="false"/>
+    <vis name="Gray_Vis"          alpha="1.0" r="0.5" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
+    <vis name="DiskVis"          alpha="1.0" r="0" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
+    <vis name="beamVis_Al"          alpha="1.0" r="1.0" g="1"  b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="beamVis_Be"          alpha="1.0" r="0" g="1"  b="0"   showDaughters="true"  visible="true"/>
+    <vis name="FlangeVis"           alpha="1.0" r="1.0" g="1.0" b="1.0" showDaughters="true" visible="true"/>
+    <vis name="CuVis"               alpha="1.0" r="1.0" g="1.0" b="0" showDaughters="true" visible="true"/>
+  </display>
+
+
+    <detectors>
+        <detector name="Lumical" id="DetID_LCAL" type="Lumical_v01" readout="LumicalCollection" vis="SeeThroughit" insideTrackingVolume="false">
+            <envelope> 
+                <shape type = "Assembly"/>
+            </envelope>
+            <type_flags type=" DetType_CALORIMETER + DetType_BARREL + DetType_HADRONIC " />
+
+            <sensitive type="calorimeter"/>
+            
+            <subsegmentation key="module" value="1"/>
+            <subsegmentation key="module" value="2"/>
+            <subsegmentation key="module" value="3"/>
+            <subsegmentation key="module" value="5"/>
+            
+            <layer name = "Disk_Si_1st">
+                <slice type = "Box" dx = "12*mm" dy="29.5*mm" dz = "6*mm" material = "G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                    <position x="0" y="26.75*mm" z="560*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="0" rmax="29.5*mm" z="6*mm" phi1="0*deg" phi2="90*deg" material="G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                    <position x="6*mm" y="12*mm" z="560*mm"/>
+                </slice>
+            </layer>
+            <layer name = "Disk_Si_2nd">
+                <slice type ="Box" dx = "24*mm" dy="39*mm" dz = "7.263*mm" material = "G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                    <position x="0" y="31.5*mm" z="640*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="0" rmax="39*mm" z="6*mm" phi1="0*deg" phi2="90*deg" material="G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                    <position x="12*mm" y="12*mm" z="640*mm"/>
+                </slice>
+            </layer>
+            <layer name = "Flange">
+                <slice type="Tubs" rmin="17.5*mm" rmax="100*mm" z="30*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="685*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="710*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="98*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="730*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="750*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="755*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="760*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="765*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="770*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                    <position x="0" y="0*mm" z="775*mm"/>
+                </slice>
+            </layer>
+            <layer name = "LYSO_1st">
+                <slice  dx="3*mm" dy="3*mm" dz="23*mm" material="LYSO" vis="Gray_Vis" sensitive="yes" limits="5*mm">
+	            <position x="0" y="-12*mm" z="658.5*mm"/>
+	            <rotation x="0" y="0" z="0" />
+                </slice>
+            </layer>
+            <layer name = "LYSO_2nd">
+                <slice  dx="10*mm" dy="10*mm" dz="200*mm" material="LYSO" vis="Gray_Vis" sensitive="yes" limits="5*mm">
+	            <position x="0" y="-12*mm" z="1000*mm"/>
+	            <rotation x="0" y="0" z="0" />
+                </slice>
+            </layer>
+            
+        
+            
+        </detector>
+    </detectors>
+
+  <readouts>
+    <readout name="LumicalCollection">
+        
+        <segmentation   type="MultiSegmentation"  key="module">
+             <segmentation name="RPCgrid_Si_1st" type="CartesianGridXY"   key_value="1"  grid_size_x="0.1*mm" grid_size_y="0.1*mm"  />
+            <segmentation name="RPCgrid_Si_2nd" type="CartesianGridXY"   key_value="2"  grid_size_x="0.1*mm" grid_size_y="0.1*mm"  />
+            <segmentation name="RPCgrid_LYSO_1st" type="CartesianGridXY"   key_value="3"  grid_size_x="3*mm" grid_size_y="3*mm"  />
+            <segmentation name="RPCgrid_LYSO_2nd" type="CartesianGridXY"   key_value="5"  grid_size_x="10*mm" grid_size_y="10*mm"  />
+            
+        </segmentation>
+            
+      
+        <hits_collections>
+            <hits_collection name="LumicalCollection"  key="module" key_value="1"/>
+            <hits_collection name="LumicalCollection"  key="module" key_value="2"/>
+            <hits_collection name="LumicalCollection"  key="module" key_value="3"/>
+            <hits_collection name="LumicalCollection"  key="module" key_value="5"/>
+            
+        </hits_collections>
+
+        <id>system:5,side:-2,stave:-2,module:6,layer:8,slice:8,x:32:-16,y:-16</id>
+    </readout>
+  </readouts>
+
+</lccdd>

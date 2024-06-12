@@ -121,6 +121,9 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
     auto ecalendcapringcol        = m_EcalEndcapRingCol.createAndPut();
     auto ecalendcapringcontribcol = m_EcalEndcapRingContributionCol.createAndPut();
 
+    auto lumicalcol               = m_LumicalCol.createAndPut();
+    auto lumicalconribcols        = m_LumicalContributionCol.createAndPut();
+
     auto hcalbarrelcol            = m_HcalBarrelCol.createAndPut();
     auto hcalbarrelcontribcols    = m_HcalBarrelContributionCol.createAndPut();
     auto hcalendcapscol           = m_HcalEndcapsCol.createAndPut();
@@ -197,6 +200,9 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
         } else if (collect->GetName() == "EcalEndcapRingCollection") {
             calo_col_ptr = ecalendcapringcol;
             calo_contrib_col_ptr = ecalendcapringcontribcol;
+        } else if (collect->GetName() == "LumicalCollection"){
+            calo_col_ptr = lumicalcol;
+            calo_contrib_col_ptr = lumicalconribcols;
         } else if (collect->GetName() == "HcalBarrelCollection") {
             calo_col_ptr = hcalbarrelcol;
             calo_contrib_col_ptr = hcalbarrelcontribcols;

@@ -101,9 +101,10 @@
       <section type="CenterSide" name="Magnet_3" zStart="3970*mm" zEnd="7000*mm" rStart="185*mm">
         <layer material="superconductor" thickness="10*mm" vis="MagentaVis"/>
       </section>
-      <section type="CenterSide" name="MagnetShell_1" zStart="970*mm" zEnd="1110*mm" rStart="33*mm">
+      <!--TO DO: overlap with Lumical-->
+      <!--section type="CenterSide" name="MagnetShell_1" zStart="970*mm" zEnd="1110*mm" rStart="33*mm">
         <layer material="stainless_steel" thickness="1.5*mm" vis="ShellVis"/>
-      </section>
+      </section-->
       <section type="CenterSide" name="MagnetShell_2" zStart="1110*mm" zEnd="1115*mm" rStart="50.0*mm">
         <layer material="stainless_steel" thickness="91.25*mm" vis="ShellVis"/>
       </section>
