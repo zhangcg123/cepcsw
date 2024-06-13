@@ -4,6 +4,7 @@
 gaudi_add_module(ParticleID
                  SOURCES src/TPCDndxAlg.cpp
                          src/DCHDndxAlg.cpp
+			 src/TofRecAlg.cpp
                  LINK SimplePIDSvc
                       Gaudi::GaudiAlgLib
                       Gaudi::GaudiKernel
