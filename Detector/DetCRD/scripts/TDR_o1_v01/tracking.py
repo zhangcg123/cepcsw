@@ -39,6 +39,10 @@ gearsvc = GearSvc("GearSvc")
 from Configurables import TrackSystemSvc
 tracksystemsvc = TrackSystemSvc("TrackSystemSvc")
 
+from Configurables import SimplePIDSvc
+pidsvc = SimplePIDSvc("SimplePIDSvc")
+pidsvc.ParFile = "/cefs/higgs/zhaog/dndx_files/dNdx_TPC.root"
+
 from Configurables import PodioInput
 podioinput = PodioInput("PodioReader", collections=[
 #    "EventHeader",
@@ -207,10 +211,15 @@ full.SETHitToTrackDistance = 5.
 full.MinChi2ProbForSiliconTracks = 0
 #full.OutputLevel = DEBUG
 
+from Configurables import TPCDndxAlg
+tpc_dndx = TPCDndxAlg("TPCDndxAlg")
+tpc_dndx.Method = "Simple"
+
 from Configurables import TrackParticleRelationAlg
 tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
-tpr.TrackList = ["CompleteTracks"]
+tpr.TrackList = ["CompleteTracks", "ClupatraTracks"]
+tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 #tpr.OutputLevel = DEBUG
 
 # output
@@ -222,10 +231,10 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, out],
     EvtSel = 'NONE',
     EvtMax = 5,
-    ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc],
+    ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
     HistogramPersistency = 'ROOT',
     OutputLevel = ERROR
 )
