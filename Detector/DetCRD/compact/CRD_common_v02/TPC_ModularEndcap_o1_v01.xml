@@ -1,0 +1,220 @@
+<lccdd>
+    <info
+        name   ="TPC_ModularEndcap_TDR_o1_v01"
+        status ="developing"
+        version = "TPC_ModularEndcap_TDR_o1_v01"
+        author = "Xin She">
+        <comment> The compact format for the CEPC TPC used for the TDR </comment>
+    </info>
+
+    <define> 
+        <!--from CDR baseline-->
+        <!--Readout pad size-->
+        <constant name="TPC_pad_height"              value="0.5*mm"      />
+        <constant name="TPC_pad_width"               value="0.5*mm"      />
+        <constant name="TPC_max_step_length"         value="5*mm"      />
+        <constant name="TPC_sensitive_threshold_eV"      value="32*eV"     />
+        <!--Wall/Cathode/Readout/Endplate-->
+        <constant name="TPC_dr_InnerWall"            value="25.*mm"     />
+        <constant name="TPC_dr_InnerServiceArea"     value="10*mm"     />
+        <constant name="TPC_dr_OuterServiceArea"     value="23*mm"     />
+        <constant name="TPC_dr_OuterWall"            value="25.*mm"     />
+        <constant name="TPC_dz_Cathode"              value="0.06*mm"   />
+        <constant name="TPC_dz_Readout"              value="3.50*mm"     />
+        <constant name="TPC_dz_Endplate"             value="135*mm"    />
+        <constant name="TPC_dz_Cathode_Insulator"    value="0.0275*mm" />
+        <constant name="TPC_dz_Cathode_Conductor"    value="0.0025*mm" />
+        <constant name="TPC_dr_Cathode_Grip"         value="10.*mm"     />
+        <constant name="TPC_dz_Cathode_Grip"         value="15*mm"     />
+        <!-- Inermeidate variables                                --> 
+        <constant name="TPC_rMin_GasVolume"          value="TPC_inner_radius+TPC_dr_InnerWall"/>
+        <constant name="TPC_rMax_GasVolume"          value="TPC_outer_radius-TPC_dr_OuterWall"/>
+        <constant name="TPC_dz_GasVolume"            value="TPC_half_length-TPC_dz_Endplate"/>
+        <constant name="TPC_rMin_Sensitive"          value="TPC_rMin_GasVolume+TPC_dr_InnerServiceArea"/>
+        <constant name="TPC_rMax_Sensitive"          value="TPC_rMax_GasVolume-TPC_dr_OuterServiceArea"/>
+        <constant name="TPC_dz_Wall"                 value="2*TPC_dz_GasVolume"/>
+        <constant name="TPC_dz_Sensitive"            value="TPC_dz_GasVolume-TPC_dz_Readout-TPC_dz_Cathode/2."/>
+        <constant name="TPC_numberOfPadrows"         value="int((TPC_rMax_Sensitive-TPC_rMin_Sensitive)/TPC_pad_height)"/>
+    </define>
+
+    <display>
+      <vis name="CuVis"   alpha="1.0" r="0.5" g=".5"  b=".5"   showDaughters="true"  visible="true"/>
+      <vis name="KaptonVis"   alpha="0.8" r="1" g="0."  b="0."   showDaughters="true"  visible="true"/>
+      <vis name="gasVis" alpha="0.2" r="0.0" g="1.0" b="0.0"  showDaughters="true"  visible="true"/>
+      <vis name="transVis" alpha="0.1" r="1.0" g="1.0" b="1.0"  showDaughters="true"  visible="true"/>
+      <vis name="readoutVis" alpha="0.8" r="1.0" g=".0" b=".0"  showDaughters="true"  visible="true"/>
+      <vis name="aramidVis" alpha="1.0" r="0.0" g="0.3" b="0.7"  showDaughters="true"  visible="true"/>
+      <vis name="epoxyVis" alpha="0.2" r="0.0" g="0.3" b="0.3"  showDaughters="true"  visible="true"/>
+      <vis name="TPCMotherVis1"     alpha="0.5" r="0.96"  g="0.64"    b="0.90"  showDaughters="true"  visible="true"/>
+    </display>
+
+    <detectors>
+      <detector name="TPC" type="TPC_ModularEndcap_o1_v01" vis="TPCVis" id="DetID_TPC" limits="tracker_limits" readout="TPCCollection" insideTrackingVolume="true">
+
+      <envelope vis="TPCVis">
+        <shape type="Tube" rmin="TPC_inner_radius" rmax="TPC_outer_radius" dz="TPC_half_length" material="Air"/>
+      </envelope>
+      
+      <type_flags type="DetType_TRACKER +  DetType_BARREL + DetType_GASEOUS "/>
+    
+       <component name="TPCinnerWall" type="TPCinnerWall" R_start="TPC_inner_radius" R_end="TPC_rMin_GasVolume" Z_fulllength="TPC_dz_Wall"> 
+           <!--HoneyComb wall  -->
+           <!--layer material="G4_Cu"           thickness = "0.01*mm"  vis="CuVis" />
+           <layer material="Kapton"          thickness = "0.05*mm"  vis="KaptonVis" />
+           <layer material="g10-TPC"         thickness = "0.3*mm"  vis="gasVis" />
+           <layer material="Aramid"          thickness = "0.07*mm"  vis="aramidVis" />
+           <layer material="AramidHoneycomb" thickness = "23.5*mm"  vis="aramidVis" />
+           <layer material="g10-TPC"         thickness = "0.3*mm"  vis="gasVis" />
+           <layer material="Kapton"          thickness = "0.0125*mm"  vis="KaptonVis" />
+           <layer material="Copper80P"       thickness = "0.035*mm"  vis="CuVis" />
+           <layer material="Kapton"          thickness = "0.05*mm"  vis="KaptonVis" />
+           <layer material="Copper80P"       thickness = "0.035*mm"  vis="CuVis" />
+           <layer material="epoxy"           thickness = "0.042*mm"  vis="epoxy" /-->
+           <!--CF wall  -->
+           <layer material="G4_Cu"           thickness = "0.010*mm"  vis="CuVis"/>
+           <layer material="CarbonFiber"     thickness = "0.1*mm"    vis="aramidVis"/>
+           <layer material="G4_Cu"           thickness = "0.03*mm"  vis="CuVis"/>
+           <layer material="Polyimide"       thickness = "0.05*mm"  vis="KaptonVis"/>
+           <layer material="G4_Cu"           thickness = "0.03*mm"  vis="CuVis"/>
+           <layer material="CarbonFiber"     thickness = "0.1*mm"    vis="aramidVis"/>
+       </component>
+       <component name="TPCouterWall" type="TPCouterWall" R_start="TPC_rMax_GasVolume" R_end="TPC_outer_radius" Z_fulllength="TPC_dz_Wall"> 
+           <!--HoneyComb wall  -->
+           <!--layer material="Copper80P"       thickness = "0.01*mm"  vis="CuVis" />
+           <layer material="Kapton"          thickness = "0.05*mm"  vis="KaptonVis" />
+           <layer material="Copper80P"       thickness = "0.03*mm"  vis="CuVis" />
+           <layer material="Kapton"          thickness = "0.07*mm"  vis="KaptonVis" />
+           <layer material="g10-TPC"         thickness = "0.3*mm"  vis="gasVis" />
+           <layer material="AramidHoneycomb" thickness = "23.5*mm"  vis="aramidVis" />
+           <layer material="Aramid"          thickness = "0.07*mm"  vis="aramidVis" />
+           <layer material="g10-TPC"         thickness = "0.3*mm"  vis="gasVis" />
+           <layer material="Kapton"          thickness = "0.05*mm"  vis="KaptonVis" />
+           <layer material="G4_Cu"           thickness = "0.01*mm"  vis="CuVis" />
+           <layer material="epoxy"           thickness = "0.042*mm"  vis="epoxy" /-->
+           <!--CF wall  -->
+           <layer material="CarbonFiber"     thickness = "0.1*mm"    vis="aramidVis"/>
+           <layer material="G4_Cu"           thickness = "0.03*mm"   vis="CuVis"/>
+           <layer material="Polyimide"       thickness = "0.05*mm"   vis="KaptonVis"/>
+           <layer material="G4_Cu"           thickness = "0.03*mm"   vis="CuVis"/>
+           <layer material="CarbonFiber"     thickness = "0.1*mm"    vis="aramidVis"/>
+           <layer material="G4_Cu"           thickness = "0.010*mm"  vis="CuVis"/>
+       </component>
+       <component name="Grip" type="TPCGrip" material="SiC_foam">
+           <layer name="TPCinnerGrip" rmin="TPC_rMin_GasVolume"  rmax="TPC_rMin_GasVolume+TPC_dr_InnerServiceArea" z_length="TPC_dz_Cathode_Grip" vis="KaptonVis"/> 
+            <layer name="TPCouterGrip" rmin="TPC_rMax_GasVolume-TPC_dr_OuterServiceArea"  rmax="TPC_rMax_GasVolume" z_length="TPC_dz_Cathode_Grip" vis="KaptonVis"/> 
+       </component>
+       <component name="Cathode" type="TPCCathode">
+           <layer name="Cathodeinsulator" material= "Kapton" rmin="TPC_rMin_Sensitive"  rmax="TPC_rMax_Sensitive" z_length="TPC_dz_Cathode_Insulator" vis="KaptonVis">
+                  <position x="0.*mm" y="0.*mm" z="+ TPC_dz_Cathode_Insulator/2."/>
+                  <position x="0.*mm" y="0.*mm" z="- TPC_dz_Cathode_Insulator/2."/>
+           </layer>
+           <layer name="Cathodeconductor" material= "G4_Cu" rmin="TPC_rMin_Sensitive" rmax="TPC_rMax_Sensitive" z_length="TPC_dz_Cathode_Conductor" vis="CuVis">
+                  <position x="0.*mm" y="0.*mm" z="+ (TPC_dz_Cathode_Insulator+ (TPC_dz_Cathode_Conductor/2.))"/>
+                  <position x="0.*mm" y="0.*mm" z="- (TPC_dz_Cathode_Insulator+ (TPC_dz_Cathode_Conductor/2.))"/>
+           </layer>
+       </component>
+       <component name="TPCreadout" type="TPCreadout" material="T2KGas1">
+           <dimensions rmin = "TPC_rMin_GasVolume" rmax = "TPC_rMax_GasVolume" z_length = "TPC_dz_Readout"/>
+           <position x="0.*mm" y="0.*mm" z="+(TPC_half_length-TPC_dz_Endplate-TPC_dz_Readout/2.)"/>
+           <!--Triple Gem readout structure from CEPCV4-->
+           <!--layer material="G4_Cu"       dz="0.003*mm"  comment="gating" vis="CuVis" />
+           <layer material="G4_KAPTON"   dz="0.030*mm"  comment="gating" vis="KaptonVis"  />
+           <layer material="G4_Cu"       dz="0.003*mm"  comment="gating"    vis="CuVis"/>
+           <layer material="T2KGas1"     dz="4.447*mm"  comment="gating"  vis="gasVis"/>
+           <layer material="G4_Cu"       dz="0.003*mm"  comment="mpgd"      vis="CuVis"/>
+           <layer material="G4_KAPTON"   dz="0.030*mm"  comment="mpgd"   vis="Kapton"/>
+           <layer material="G4_Cu"       dz="0.003*mm"  comment="mpgd"      vis="CuVis"/>
+           <layer material="T2KGas1"     dz="4.447*mm"  comment="mpgd"    vis="gasVis"/>
+           <layer material="G4_Cu"       dz="0.003*mm"  comment="mpgd"      vis="CuVis"/>
+           <layer material="G4_KAPTON"   dz="0.030*mm"  comment="mpgd"   vis="KaptonVis"/>
+           <layer material="G4_Cu"       dz="0.003*mm"  comment="mpgd"      vis="CuVis"/>
+           <layer material="T2KGas1"     dz="4.447*mm"  comment="mpgd"    vis="gasVis"/>
+           <layer material="G4_Cu"       dz="0.050*mm"  comment="pads"       vis="CuVis"/>
+           <layer material="g10"         dz="2.000*mm"  comment="structural"      vis="gasVis"/>
+           <layer material="G4_Si"       dz="0.500*mm"  comment="electronics" vis="epoxyVis" />
+           <layer material="epoxy"       dz="2*mm"      comment="structural"    vis="epoxyVis"/>
+           <layer material="G4_KAPTON"   dz="1*mm"      comment="structural" vis="KaptonVis"  />
+           <layer material="G4_Al"       dz="2*mm"      comment="Cooling"       vis="GrayVis"/>
+           <layer material="G4_KAPTON"   dz="1*mm"      comment="structural"  vis="KaptonVis"/>
+           <layer material="CarbonFiber" dz="3*mm"      comment="structural" vis="GrayVis"  /-->
+           <!--MicroMegas readout structure-->
+           <layer material="G4_Fe"       dz="0.025*mm"  comment="Mesh"           vis="GrayVis"/>
+           <layer material="T2KGas1"     dz="0.128*mm"  comment="GasAmpRegion"   vis="gasVis"/>
+           <layer material="G4_KAPTON"   dz="0.050*mm"  comment="Kaptonfoil"     vis="KaptonVis"/>
+           <layer material="Acrylicglue" dz="0.008*mm"  comment="gule"           vis="BlueVis"/>
+           <layer material="G4_Cu"       dz="0.017*mm"  comment="ReadoutPad"     vis="CuVis"/>
+           <layer material="PCB"         dz="1.000*mm"  comment="PCBboard"       vis="GreenVis"/>
+           <layer material="G4_Si"       dz="0.500*mm"  comment="electronics"    vis="BlackVis"/>
+           <layer material="epoxy"       dz="1.500*mm"  comment="structural"     vis="epoxyVis"/>
+       </component>
+       <component name="TPCSensitiveVol" type="TPCSensitiveVol" material="T2KGas1">
+           <dimensions rmin = "TPC_rMin_Sensitive" rmax = "TPC_rMax_Sensitive" z_length = "TPC_dz_Sensitive"/>
+           <layer      repeat="TPC_numberOfPadrows" thickness="TPC_pad_height"/>
+       </component>
+       <component name="TPCEndplate" type="TPCEndplate" z_frame="20.*mm" s_frame="20.*mm" >
+           <dimensions rmin = "TPC_inner_radius" rmax = "TPC_outer_radius" z_length = "TPC_dz_Endplate"/>
+           <layer name="InnerPlate" type="Frame" thickness="25.*mm"/>
+           <layer name="ring1"      type="Frame" thickness="10.*mm"/>
+           <layer name="module1"    type="Module" thickness="151.*mm" repeat="23" phi0_offset="0.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+           </layer>
+           <layer name="ring2"      type="Frame" thickness="20.*mm"/>
+           <layer name="module2"    type="Module" thickness="141.*mm" repeat="27" phi0_offset="+10.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+             <slice material="PCB"   dz="10.0*mm" comment="cooling"/>
+           </layer>
+           <layer name="ring3"      type="Frame" thickness="20.*mm"/>
+           <layer name="module3"    type="Module" thickness="141.*mm" repeat="32" phi0_offset="-5.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+           </layer> 
+           <layer name="ring4"      type="Frame" thickness="20.*mm"/>
+           <layer name="module4"    type="Module" thickness="141.*mm" repeat="34" phi0_offset="0.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+           </layer>
+           <layer name="ring5"      type="Frame" thickness="20.*mm"/>
+           <layer name="module5"    type="Module" thickness="141.*mm" repeat="39" phi0_offset="+5.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+           </layer>
+           <layer name="ring6"      type="Frame" thickness="20.*mm"/>
+           <layer name="module6"    type="Module" thickness="141.*mm" repeat="44" phi0_offset="-5.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+           </layer>
+           <layer name="ring7"      type="Frame" thickness="20.*mm"/>
+           <layer name="module7"    type="Module" thickness="141.*mm" repeat="49" phi0_offset="0.*deg">
+             <slice material="PCB"              dz="5.0*mm"  comment="FEE_BEEPCB"/>
+             <slice material="G4_Al"            dz="1.5*mm"  comment="cooling"/>
+             <slice material="TPC_endplate_mix" dz="50.0*mm" comment="MonitorMix"/>
+             <slice material="CarbonFiber"      dz="3.0*mm"  comment="structural"/>
+           </layer>
+           <layer name="ring8"      type="Frame" thickness="23.*mm"/>
+           <layer name="Outerplate" type="Frame" thickness="25.*mm"/>
+       </component>
+    
+    </detector>
+  </detectors>
+
+  <readouts>
+    <readout name="TPCCollection">
+      <id>system:5,side:-2,layer:13,module:6,sensor:6</id>
+    </readout>
+  </readouts>
+
+</lccdd>
