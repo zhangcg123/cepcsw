@@ -9,6 +9,8 @@
 #include "DD4hep/IDDescriptor.h"
 #include "DD4hep/Plugins.h"
 
+#include "DecoderHelper/DD4hep2Lcio.h"
+
 
 #include <values.h>
 #include <string>
@@ -33,23 +35,23 @@ DECLARE_COMPONENT( G2CDArborAlg )
 // const double pi = acos(-1.0);
 
 struct DigiHit {
-     int   digihitCellID0; 
+     int   digihitCellID0;
      int   digihitCellID1;
-     float digihitCharge; 
-     float digihitEnergyDepo; 
-     int   digihitNum1mmCell; 
+     float digihitCharge;
+     float digihitEnergyDepo;
+     int   digihitNum1mmCell;
      float PosX;
      float PosY;
-     float PosZ; 
-     float LeadChargeDepo; 
-     float ChargeShare; 
-     edm4hep::SimCalorimeterHit * LeadSimCaloHit; 
+     float PosZ;
+     float LeadChargeDepo;
+     float ChargeShare;
+     edm4hep::SimCalorimeterHit * LeadSimCaloHit;
 } ;
 
 //std::map <int, std::pair<float, float> >WeightVector;
 
 float ChanceOfKink = 0.1;
-float KinkHitChargeBoost = 2.2; 
+float KinkHitChargeBoost = 2.2;
 
 // G2CDArborAlg aG2CDArborAlg ;
 
@@ -138,7 +140,7 @@ G2CDArborAlg::G2CDArborAlg(const std::string& name, ISvcLocator* svcLoc)
      // 				_caloTruthLinkCollection,
      // 				caloTruthLinkCollection);
 
-     // std::vector<float> ChargeSpatialDistri; 
+     // std::vector<float> ChargeSpatialDistri;
      // ChargeSpatialDistri.push_back(0.1);
      // ChargeSpatialDistri.push_back(0.2);
      // ChargeSpatialDistri.push_back(0.4);
@@ -149,7 +151,7 @@ G2CDArborAlg::G2CDArborAlg(const std::string& name, ISvcLocator* svcLoc)
      // 				_ChargeSpatialDistri,
      // 				ChargeSpatialDistri);
 
-     // std::vector<float> ShowerPositionShiftID; 
+     // std::vector<float> ShowerPositionShiftID;
      // ShowerPositionShiftID.push_back(0);
      // ShowerPositionShiftID.push_back(0);
      // ShowerPositionShiftID.push_back(0);
@@ -186,7 +188,7 @@ G2CDArborAlg::G2CDArborAlg(const std::string& name, ISvcLocator* svcLoc)
      // registerProcessorParameter( "PolyaParaC" ,
      // 				 "Polya: x^a*exp(-b*x) + C" ,
      // 				 _PolyaParaC,
-     // 				 float(0.03) );	
+     // 				 float(0.03) );
 
      // registerProcessorParameter( "ChanceOfKink" ,
      // 				 "Chance of one boundary hit to create a multiple hit with boosted charge" ,
@@ -317,7 +319,7 @@ StatusCode G2CDArborAlg::initialize() {
      else
      {
      	  ChanceOfKink = _ChanceOfKink;
-     	  KinkHitChargeBoost = _KinkHitChargeBoost; 
+     	  KinkHitChargeBoost = _KinkHitChargeBoost;
      }
 
      float PolyaDomain = 100;
@@ -341,10 +343,10 @@ StatusCode G2CDArborAlg::initialize() {
      int tmpIndex = 0;
      float NormalWeightFactor = 0;
      float NormalWeight[SizeCSD];
-     int IndexA = 0; 
+     int IndexA = 0;
      int IndexB = 0;		//Used to denote charge distributions...
-     float WeightA = 0; 
-     float WeightB = 0; 
+     float WeightA = 0;
+     float WeightB = 0;
 
      for( int i0 = 0; i0 < SizeCSD; i0++ )
      {
@@ -370,37 +372,37 @@ StatusCode G2CDArborAlg::initialize() {
      	       WeightA = 0;
      	       WeightB = 0;
 
-     	       if( i2 < CoverAreaLength ) 
+     	       if( i2 < CoverAreaLength )
      	       {
      		    IndexA = CoverAreaLength - i2;
-     		    SignX = -1; 
+     		    SignX = -1;
      	       }
      	       else if( i2 > _DigiCellSize - CoverAreaLength - 1)
      	       {
      		    IndexA = CoverAreaLength + i2 - _DigiCellSize + 1;
-     		    SignX = 1; 
+     		    SignX = 1;
      	       }
 
-     	       if( j2 < CoverAreaLength ) 
+     	       if( j2 < CoverAreaLength )
      	       {
      		    IndexB = CoverAreaLength - j2;
-     		    SignY = -1; 
+     		    SignY = -1;
      	       }
      	       else if( j2 > _DigiCellSize - CoverAreaLength - 1)
      	       {
      		    IndexB = CoverAreaLength + j2 - _DigiCellSize + 1;
-     		    SignY = 1; 
+     		    SignY = 1;
      	       }
 
-     	       for(int i3 = 0; i3 < CoverAreaLength; i3 ++)        
+     	       for(int i3 = 0; i3 < CoverAreaLength; i3 ++)
      	       {
      		    if(i3 < IndexA) WeightA += NormalWeight[i3];
      		    if(i3 < IndexB) WeightB += NormalWeight[i3];
      	       }
 
-     	       WMatrix.first = SignX*WeightA; 
-     	       WMatrix.second = SignY*WeightB; 
-     	       WeightVector[tmpIndex] = WMatrix;	
+     	       WMatrix.first = SignX*WeightA;
+     	       WMatrix.second = SignY*WeightB;
+     	       WeightVector[tmpIndex] = WMatrix;
 
      	       cout<<WMatrix.first<<"/"<<WMatrix.second<<", ";
      	  }
@@ -419,41 +421,41 @@ StatusCode G2CDArborAlg::execute()
      _eventNr++;
 
      float HitEn = 0;
-     float DigiHitEn = 0; 
+     float DigiHitEn = 0;
      int LayerNum = 0;
      // TVector3 HitPos;   //to be solved
      int tmpM, tmpS, tmpI, tmpJ, tmpK;
-     int CurrI = 0; 
-     int CurrJ = 0; 
+     int CurrI = 0;
+     int CurrJ = 0;
      int DHIndexI = 0;
-     int DHIndexJ = 0; 
+     int DHIndexJ = 0;
      float DHChargeWeight = 0;
-     int DHCellID0 = 0; 
+     int DHCellID0 = 0;
      float RndCharge = 0;
-     int SingleMCPPID = 0; 
-     //float SingleMCPPEn = 0; 
+     int SingleMCPPID = 0;
+     //float SingleMCPPEn = 0;
      float RefPosX = 0;
      float RefPosY = 0;
      float RefPosZ = 0;
      float DeltaPosI = 0;
      float DeltaPosJ = 0;
-     std::vector<float> CurrWeightVec;			
-     float WeiI = 0; 
+     std::vector<float> CurrWeightVec;
+     float WeiI = 0;
      float WeiJ = 0;
      int DeltaI = 0;
-     int DeltaJ = 0; 
-     int MapI = 0; 
-     int MapJ = 0; 
-     int MapIndex = 0; 
+     int DeltaJ = 0;
+     int MapI = 0;
+     int MapJ = 0;
+     int MapIndex = 0;
      float FHitPos[3] = {0, 0, 0};
      float currTime = 0;
      float HitStepEn = 0;
      float EmaxStep = 0;
 
      // LCCollectionVec *relcol = new LCCollectionVec(LCIO::LCRELATION);
-     // LCFlagImpl linkflag; 
+     // LCFlagImpl linkflag;
      // linkflag.setBit(LCIO::CHBIT_LONG);
-     // relcol->setFlag(linkflag.getFlag());	
+     // relcol->setFlag(linkflag.getFlag());
      edm4hep::MCRecoCaloAssociationCollection* relcol = _caloTruthLinkCollection.createAndPut();
 
      // LCCollection * MCPCol = evtP->getCollection("MCParticle");
@@ -464,7 +466,7 @@ StatusCode G2CDArborAlg::execute()
      // 	    {
      // 		 SingleMCPPID = a_MCP->getPDG();
      // 		 //SingleMCPPEn = a_MCP->getEnergy();
-     // 		 break; 
+     // 		 break;
      // 	    }
      // }
 
@@ -485,99 +487,142 @@ StatusCode G2CDArborAlg::execute()
 	  // LCCollectionVec *ecalcol = new LCCollectionVec(LCIO::CALORIMETERHIT);
 	  // ecalcol->setFlag(flag.getFlag());
 	  // string EcalinitString = Ecalcol->getParameters().getStringVal(LCIO::CellIDEncoding);
-	  // ecalcol->parameters().setValue(LCIO::CellIDEncoding, EcalinitString);	
+	  // ecalcol->parameters().setValue(LCIO::CellIDEncoding, EcalinitString);
 
 	  // for(int k1 = 0; k1 < NumEcalhit; k1++)
-	  // {	
-	  if(m_readLCIO==false){
-	      std::string tmp_readout = m_col_readout_map[m_ecalColNames.value().at(k0)];
-              // get the DD4hep readout
-              m_decoder = m_geosvc->getDecoder(tmp_readout);
-              if (!m_decoder) {
-                error() << "Failed to get the decoder. Skip this collection:"<<m_ecalColNames.value().at(k0)<< endmsg;
-                continue;
-              }
-          }
+	  // {
+    if(m_readLCIO==false){
+        std::string tmp_readout = m_col_readout_map[m_ecalColNames.value().at(k0)];
+        // get the DD4hep readout
+        m_decoder = m_geosvc->getDecoder(tmp_readout);
+        if (!m_decoder) {
+            error() << "Failed to get the decoder. Skip this collection:"<<m_ecalColNames.value().at(k0)<< endmsg;
+            continue;
+        }
+    }
 
-	  edm4hep::CalorimeterHitCollection* ecalcol = _outputEcalCollections[k0]->createAndPut();
-	  auto Ecalcol = _ecalCollections[k0]->get();
-	  for (auto SimEcalhit: *Ecalcol){
-		   auto cellid = SimEcalhit.getCellID();
-	       // SimCalorimeterHit * SimEcalhit = dynamic_cast<SimCalorimeterHit*>( Ecalcol->getElementAt( k1 ) ) ;
-	       // HitEn = SimEcalhit->getEnergy();
-	       // LayerNum = idDecoder(SimEcalhit)["K-1"];
+    edm4hep::CalorimeterHitCollection* ecalcol = _outputEcalCollections[k0]->createAndPut();
+    auto Ecalcol = _ecalCollections[k0]->get();
 
-	       // edm4hep::SimCalorimeterHit aa(SimEcalhit.getCellID(), SimEcalhit.getEnergy(), SimEcalhit.getPosition());
-               ID_UTIL::CellIDDecoder< decltype(SimEcalhit) > cellIdDecoder(m_encoder_str);
-	       const std::string layerCodingString(m_encoder_str);
-	       const std::string layerCoding(this->GetLayerCoding(layerCodingString));
-	       if(m_readLCIO==false) LayerNum = m_decoder->get(cellid, "layer");//from 0 - 29, 0 is preshower
-	       else LayerNum = cellIdDecoder(&SimEcalhit)[layerCoding.c_str()] + 1 ;//now it is 0 - 29, 0 is preshower
-	       //cout << "LayerNum = " << LayerNum << endl;
+    int iHit = 0;
+    double ESum_ECALSimu = 0;
+    double ESum_ECALDigi = 0;
+    cout<<"[YX debug - G2CD] ECAL Collection Simu "<<k0<<", nSimuHit = "<<Ecalcol->size()<<", "<<m_ecalColNames.value().at(k0)<<endl;
 
-	       HitEn = SimEcalhit.getEnergy();
-	       unsigned long long cellID = SimEcalhit.getCellID();
+    for (auto SimEcalhit: *Ecalcol){
+        auto cellid = SimEcalhit.getCellID();
+        // SimCalorimeterHit * SimEcalhit = dynamic_cast<SimCalorimeterHit*>( Ecalcol->getElementAt( k1 ) ) ;
+        // HitEn = SimEcalhit->getEnergy();
+        // LayerNum = idDecoder(SimEcalhit)["K-1"];
 
-	       currTime = 0;
-	       EmaxStep = 0;
-	       HitStepEn = 0;
-	       // for(int k=0; k<SimEcalhit->getNMCContributions(); k++)
-	       // {
-	       for(int k=0; k<SimEcalhit.contributions_size(); k++){
-		    edm4hep::CaloHitContribution hitContribution = SimEcalhit.getContributions(k);
-	  	    // HitStepEn = SimEcalhit->getEnergyCont(k);
-		    HitStepEn = hitContribution.getEnergy();
-	  	    if(HitStepEn > EmaxStep)
-	  	    {
-	  		 EmaxStep = HitStepEn;
-	  		 // currTime = SimEcalhit->getTimeCont(k);
-			 currTime = hitContribution.getTime();
-	  	    }
-	       }
+        // edm4hep::SimCalorimeterHit aa(SimEcalhit.getCellID(), SimEcalhit.getEnergy(), SimEcalhit.getPosition());
 
-	       // _calibCoeffEcal[0] = 48.16;
-	       // _calibCoeffEcal[1] = 96.32;
-	       //if(LayerNum < _NEcalThinLayer) 
-	       if(LayerNum <= _NEcalThinLayer) //layer from 0 - 20 should be thin, total 21 thin layers, _NEcalThinLayer should be 20
-	  	    DigiHitEn = HitEn * _calibCoeffEcal[0];
-	       else 	
-	  	    DigiHitEn = HitEn * _calibCoeffEcal[1];
-	       if( LayerNum==0) DigiHitEn = HitEn; // 0 is preshower layer
+        ID_UTIL::CellIDDecoder< decltype(SimEcalhit) > cellIdDecoder(m_encoder_str);
+        const std::string layerCodingString(m_encoder_str);
+        const std::string layerCoding(this->GetLayerCoding(layerCodingString));
+        if(m_readLCIO){
+            // LayerNum = cellIdDecoder(&SimEcalhit)[layerCoding.c_str()] + 1 ;//now it is 0 - 29, 0 is preshower
+            // actually 1-30
 
-	       totalEnergy += DigiHitEn;
-	       if(HitEn > _thresholdEcal)
-	       {
-	  	    // CalorimeterHitImpl * DigiEcalhit = new CalorimeterHitImpl();
-	  	    // FHitPos[0] = SimEcalhit->getPosition()[0] + _ShowerPositionShiftID[0]*10.0;
-	  	    // FHitPos[1] = SimEcalhit->getPosition()[1] + _ShowerPositionShiftID[1]*10.0;
-	  	    // FHitPos[2] = SimEcalhit->getPosition()[2] + _ShowerPositionShiftID[2]*10.0;
+            LayerNum = cellIdDecoder(&SimEcalhit)[layerCoding.c_str()];  // 0 - 29
 
-		    edm4hep::Vector3f hitPos = SimEcalhit.getPosition();
-	  	    FHitPos[0] = hitPos.x + _ShowerPositionShiftID[0]*10.0;
-	  	    FHitPos[1] = hitPos.y + _ShowerPositionShiftID[1]*10.0;
-	  	    FHitPos[2] = hitPos.z + _ShowerPositionShiftID[2]*10.0;
-		    edm4hep::Vector3f FHitPosition(FHitPos[0], FHitPos[1], FHitPos[2]);
+        }else{
+            // LayerNum = m_decoder->get(cellid, "layer");  //from 0 - 29, 0 is preshower
 
-	  	    // DigiEcalhit->setTime(currTime);
-	  	    // DigiEcalhit->setPosition( FHitPos );
-	  	    // DigiEcalhit->setCellID0(SimEcalhit->getCellID0());
-	  	    // DigiEcalhit->setCellID1(SimEcalhit->getCellID1());
-	  	    // DigiEcalhit->setEnergy(DigiHitEn);
-	  	    // ecalcol->addElement(DigiEcalhit);
-		    auto DigiEcalhit = ecalcol->create();
-		    DigiEcalhit.setTime(currTime);
-		    DigiEcalhit.setPosition(FHitPosition);
-		    DigiEcalhit.setCellID(cellID);
-		    DigiEcalhit.setEnergy(DigiHitEn);
+            int Raw_Layer = m_decoder->get(cellid, "layer");  // 0 - 29
+            LayerNum = DD4hep2Lcio::CEPCv4::getEcalLayer(Raw_Layer);  // -1 - 28, -1 is preshower
+        }
 
-	  	    // LCRelationImpl *rel = new LCRelationImpl(DigiEcalhit, SimEcalhit, 1.0);    //only keep the leading contribution
-	  	    // relcol->addElement(rel);
-		    auto rel = relcol->create();
-		    rel.setRec(DigiEcalhit);
-		    rel.setSim(SimEcalhit);
-		    rel.setWeight(1.0);
-	       }
-	  }
+
+        HitEn = SimEcalhit.getEnergy();
+        unsigned long long cellID = SimEcalhit.getCellID();
+
+        currTime = 0;
+        EmaxStep = 0;
+        HitStepEn = 0;
+        // for(int k=0; k<SimEcalhit->getNMCContributions(); k++)
+        // {
+        for(int k=0; k<SimEcalhit.contributions_size(); k++){
+            edm4hep::CaloHitContribution hitContribution = SimEcalhit.getContributions(k);
+            // HitStepEn = SimEcalhit->getEnergyCont(k);
+            HitStepEn = hitContribution.getEnergy();
+            if(HitStepEn > EmaxStep)
+            {
+                EmaxStep = HitStepEn;
+                // currTime = SimEcalhit->getTimeCont(k);
+                currTime = hitContribution.getTime();
+            }
+        }
+
+        // _calibCoeffEcal[0] = 48.16;
+        // _calibCoeffEcal[1] = 96.32;
+        // if(LayerNum <= _NEcalThinLayer) //layer from 0 - 20 should be thin, total 21 thin layers, _NEcalThinLayer should be 20
+        if(LayerNum < _NEcalThinLayer)  // _NEcalThinLayer = 20
+            DigiHitEn = HitEn * _calibCoeffEcal[0];
+        else
+            DigiHitEn = HitEn * _calibCoeffEcal[1];
+
+        if(LayerNum==-1) DigiHitEn = HitEn; // -1 is preshower layer
+
+        totalEnergy += DigiHitEn;
+
+        // TVector3 HitPos = SimEcalhit.getPosition();
+        edm4hep::Vector3f HitPos = SimEcalhit.getPosition();
+        double HitDis = sqrt(HitPos.x*HitPos.x + HitPos.y*HitPos.y + HitPos.z*HitPos.z);
+        double HitTime = currTime - HitDis / 300;
+
+
+        if(0){
+            cout<<"Hit Pos(x,y,z,perp) = ("<<HitPos.x<<", "<<HitPos.y<<", "<<HitPos.z<<", "<<sqrt(HitPos.x*HitPos.x+HitPos.y*HitPos.y)<<")"<<endl;
+            cout<<"---> LayerNum = "<<LayerNum<<endl;
+        }
+
+        //    if(HitEn > _thresholdEcal)
+        if(HitEn > _thresholdEcal && HitTime < _TimeThreshold)
+        {
+            // CalorimeterHitImpl * DigiEcalhit = new CalorimeterHitImpl();
+            // FHitPos[0] = SimEcalhit->getPosition()[0] + _ShowerPositionShiftID[0]*10.0;
+            // FHitPos[1] = SimEcalhit->getPosition()[1] + _ShowerPositionShiftID[1]*10.0;
+            // FHitPos[2] = SimEcalhit->getPosition()[2] + _ShowerPositionShiftID[2]*10.0;
+
+            edm4hep::Vector3f hitPos = SimEcalhit.getPosition();
+            FHitPos[0] = hitPos.x + _ShowerPositionShiftID[0]*10.0;
+            FHitPos[1] = hitPos.y + _ShowerPositionShiftID[1]*10.0;
+            FHitPos[2] = hitPos.z + _ShowerPositionShiftID[2]*10.0;
+            edm4hep::Vector3f FHitPosition(FHitPos[0], FHitPos[1], FHitPos[2]);
+
+            // DigiEcalhit->setTime(currTime);
+            // DigiEcalhit->setPosition( FHitPos );
+            // DigiEcalhit->setCellID0(SimEcalhit->getCellID0());
+            // DigiEcalhit->setCellID1(SimEcalhit->getCellID1());
+            // DigiEcalhit->setEnergy(DigiHitEn);
+            // ecalcol->addElement(DigiEcalhit);
+            auto DigiEcalhit = ecalcol->create();
+            DigiEcalhit.setTime(currTime);
+            DigiEcalhit.setPosition(FHitPosition);
+            DigiEcalhit.setCellID(cellID);
+            DigiEcalhit.setEnergy(DigiHitEn);
+
+            // LCRelationImpl *rel = new LCRelationImpl(DigiEcalhit, SimEcalhit, 1.0);    //only keep the leading contribution
+            // relcol->addElement(rel);
+            auto rel = relcol->create();
+            rel.setRec(DigiEcalhit);
+            rel.setSim(SimEcalhit);
+            rel.setWeight(1.0);
+
+            ESum_ECALSimu += SimEcalhit.getEnergy();
+            ESum_ECALDigi += DigiEcalhit.getEnergy();
+            // cout<<"[YX debug - G2CD] ECAL DigiHit "<<iHit<<", E = "<<DigiEcalhit.getEnergy()<<", T = "<<DigiEcalhit.getTime()<<", Pos ("<<FHitPos[0]<<", "<<FHitPos[1]<<", "<<FHitPos[2]<<")"<<endl;
+
+        }
+
+        iHit+=1;
+    }
+
+
+        int nDigiHit_ECAL = ecalcol->size();
+        cout<<"[YX debug - G2CD] ECAL Collection Digi "<<k0<<", nDigiHit = "<<nDigiHit_ECAL<<", "<<m_ecalOutputColNames.value().at(k0)<<", DigiESum= "<<ESum_ECALSimu<<", SimuESum = "<<ESum_ECALDigi<<endl;
+
 
 	  // evtP->addCollection(ecalcol,_outputEcalCollections[k0].c_str());
 
@@ -598,7 +643,7 @@ StatusCode G2CDArborAlg::execute()
      // 	    //if(k=="CEPC_v1"  || k=="ild_o2_v05")	// 1cm cell simulation...
      // {
 
-     // 	  cout<<"Detector Tpype: "<<k<<endl; 
+     // 	  cout<<"Detector Tpype: "<<k<<endl;
 
      for (unsigned int k3 = 0; k3 < _hcalCollections.size(); ++k3)
      {
@@ -609,12 +654,20 @@ StatusCode G2CDArborAlg::execute()
      	  // hcalcol->setFlag(flag.getFlag());
      	  // string HcalinitString = Hcalcol->getParameters().getStringVal(LCIO::CellIDEncoding);
      	  // hcalcol->parameters().setValue(LCIO::CellIDEncoding, HcalinitString);
-				
+
      	  // for(int k4 = 0; k4 < NumHcalhit; k4++)
      	  // {
 
+
+
      	  edm4hep::CalorimeterHitCollection* hcalcol = _outputHcalCollections[k3]->createAndPut();
      	  auto Hcalcol = _hcalCollections[k3]->get();
+
+            int iHit = 0;
+            double ESum_HCALSimu = 0;
+            double ESum_HCALDigi = 0;
+            cout<<"[YX debug - G2CD] HCAL Collection Simu "<<k3<<", nSimuHit = "<<Hcalcol->size()<<", "<<m_hcalColNames.value().at(k3)<<endl;
+
      	  for(auto SimHcalhit: *Hcalcol){
      	  //      SimCalorimeterHit * SimHcalhit = dynamic_cast<SimCalorimeterHit*>( Hcalcol->getElementAt( k4 ) ) ;
 
@@ -638,8 +691,12 @@ StatusCode G2CDArborAlg::execute()
      	  	    }
      	       }
 
-     	       // if(SimHcalhit->getEnergy() > 0)	//some threshold can be added.
-     	       if(SimHcalhit.getEnergy() > 0)	//some threshold can be added.
+     	       edm4hep::Vector3f HitPos = SimHcalhit.getPosition();
+            double HitDis = sqrt(HitPos.x*HitPos.x + HitPos.y*HitPos.y + HitPos.z*HitPos.z);
+            double HitTime = currTime - HitDis / 300;
+
+     	    //    if(SimHcalhit.getEnergy() > 0)	//some threshold can be added.
+     	       if(SimHcalhit.getEnergy() > 0 && HitTime < _TimeThreshold)	//some threshold can be added.
      	       {
      	  	    // CalorimeterHitImpl * DigiHcalhit = new CalorimeterHitImpl();
 
@@ -672,8 +729,22 @@ StatusCode G2CDArborAlg::execute()
      		    rel.setRec(DigiHcalhit);
      		    rel.setSim(SimHcalhit);
      		    rel.setWeight(1.0);
+
+
+                ESum_HCALSimu += SimHcalhit.getEnergy();
+                ESum_HCALDigi += DigiHcalhit.getEnergy();
+                // cout<<"[YX debug - G2CD] HCAL DigiHit "<<iHit<<", E = "<<DigiHcalhit.getEnergy()<<", T = "<<DigiHcalhit.getTime()<<", Pos ("<<FHitPos[0]<<", "<<FHitPos[1]<<", "<<FHitPos[2]<<")"<<endl;
+
      	       }
+
+                iHit+=1;
+
      	  }
+
+            int nDigiHit_HCAL = hcalcol->size();
+            cout<<"[YX debug - G2CD] HCAL Collection Digi "<<k3<<", nDigiHit = "<<nDigiHit_HCAL<<", "<<m_hcalOutputColNames.value().at(k3)<<", DigiESum= "<<ESum_HCALSimu<<", SimuESum = "<<ESum_HCALDigi<<endl;
+
+
 
      	  // evtP->addCollection(hcalcol,_outputHcalCollections[k3].c_str());
 
@@ -685,7 +756,7 @@ StatusCode G2CDArborAlg::execute()
      // 	    string EcalPSinitString = "M:3,S-1:3,I:9,J:9,K-1:6";
      // 	    ecalPScol->parameters().setValue(LCIO::CellIDEncoding, EcalPSinitString);
 
-     // 	    //  parameter CellIDEncoding [string]: M:3,S-1:3,I:9,J:9,K-1:6, 
+     // 	    //  parameter CellIDEncoding [string]: M:3,S-1:3,I:9,J:9,K-1:6,
 
      // 	    for(unsigned int s0 = 0; s0 < _EcalPreShowerCollections.size(); s0++)   //I think should digitize and give a very small energy; even a new collection called PS Hits
      // 	    {
@@ -708,7 +779,7 @@ StatusCode G2CDArborAlg::execute()
      // 				     EmaxStep = HitStepEn;
      // 				     currTime = a_hit->getTimeCont(k);
      // 				}
-     // 			   }                                                               
+     // 			   }
 
      // 			   CalorimeterHitImpl * PShit = new CalorimeterHitImpl();
 
@@ -732,16 +803,16 @@ StatusCode G2CDArborAlg::execute()
      // }
      // else
      // {
-     // 	    for (unsigned int i(0); i < _hcalCollections.size(); ++i) 
+     // 	    for (unsigned int i(0); i < _hcalCollections.size(); ++i)
      // 	    {		//strictly follow barrel, endcap, ring order
 
-     // 		 std::map <int, DigiHit> IDtoDigiHit; 
+     // 		 std::map <int, DigiHit> IDtoDigiHit;
      // 		 IDtoDigiHit.clear();
-     // 		 std::map <int, TVector3> IDtoPos; 
+     // 		 std::map <int, TVector3> IDtoPos;
      // 		 IDtoPos.clear();
      // 		 std::map <int, float> IDtoTime;
      // 		 IDtoTime.clear();
-					
+
 
      // 		 try{
      // 		      LCCollection * col = evtP->getCollection( _hcalCollections[i].c_str() ) ;
@@ -782,12 +853,12 @@ StatusCode G2CDArborAlg::execute()
      // 			   RefPosY = hit->getPosition()[1];
      // 			   RefPosZ = hit->getPosition()[2];
 
-     // 			   CurrI = tmpI/_DigiCellSize; 
+     // 			   CurrI = tmpI/_DigiCellSize;
      // 			   CurrJ = tmpJ/_DigiCellSize;
      // 			   MapI = tmpI % _DigiCellSize;
      // 			   MapJ = tmpJ % _DigiCellSize;
-     // 			   MapIndex = MapI * _DigiCellSize + MapJ; 
-     // 			   WeiI = WeightVector[MapIndex].first; 
+     // 			   MapIndex = MapI * _DigiCellSize + MapJ;
+     // 			   WeiI = WeightVector[MapIndex].first;
      // 			   WeiJ = WeightVector[MapIndex].second;
 
      // 			   DeltaPosI = (float(_DigiCellSize) - 1.0)/2 - MapI;
@@ -795,11 +866,11 @@ StatusCode G2CDArborAlg::execute()
 
      // 			   // cout<<"DeltaI "<<DeltaPosI<<", "<<DeltaPosJ<<endl;
 
-     // 			   DeltaI = 0; 
-     // 			   DeltaJ = 0; 
+     // 			   DeltaI = 0;
+     // 			   DeltaJ = 0;
 
-     // 			   if(fabs(WeiI) > 1E-9) 
-     // 			   {	
+     // 			   if(fabs(WeiI) > 1E-9)
+     // 			   {
      // 				DeltaI = ((WeiI > 0) ? 1: -1);
      // 			   }
      // 			   if(fabs(WeiJ) > 1E-9)
@@ -840,7 +911,7 @@ StatusCode G2CDArborAlg::execute()
      // 				     if(DeltaI)
      // 				     {
      // 					  DHIndexI = CurrI + DeltaI;
-     // 					  DHIndexJ = CurrJ; 
+     // 					  DHIndexJ = CurrJ;
      // 				     }
      // 				     if(DeltaJ)
      // 				     {
@@ -876,9 +947,9 @@ StatusCode G2CDArborAlg::execute()
      // 				     {
      // 					  IDtoDigiHit[DHCellID0].PosX = RefPosX + (DeltaPosI + int(DHIndexI - CurrI)*_DigiCellSize) * cos(tmpS*pi/4.0) + _ShowerPositionShiftID[0]*_DigiCellSize; //(mm in unit)
      // 					  IDtoDigiHit[DHCellID0].PosY = RefPosY + (DeltaPosI + int(DHIndexI - CurrI)*_DigiCellSize)* sin(tmpS*pi/4.0) + _ShowerPositionShiftID[1]*_DigiCellSize;
-     // 					  IDtoDigiHit[DHCellID0].PosZ = RefPosZ + DeltaPosJ + int(DHIndexJ - CurrJ)*_DigiCellSize + _ShowerPositionShiftID[2]*_DigiCellSize;	//Rotation is needed, based on S; 
+     // 					  IDtoDigiHit[DHCellID0].PosZ = RefPosZ + DeltaPosJ + int(DHIndexJ - CurrJ)*_DigiCellSize + _ShowerPositionShiftID[2]*_DigiCellSize;	//Rotation is needed, based on S;
      // 				     }
-     // 				     else	//endcap or ring;  
+     // 				     else	//endcap or ring;
      // 				     {
      // 					  IDtoDigiHit[DHCellID0].PosX = RefPosX + DeltaPosI + (DHIndexI - CurrI)*_DigiCellSize + _ShowerPositionShiftID[0]*_DigiCellSize; //(mm in unit)
      // 					  IDtoDigiHit[DHCellID0].PosY = RefPosY + DeltaPosJ + (DHIndexJ - CurrJ)*_DigiCellSize + _ShowerPositionShiftID[1]*_DigiCellSize;
@@ -888,7 +959,7 @@ StatusCode G2CDArborAlg::execute()
      // 				     HitPos.SetXYZ(IDtoDigiHit[DHCellID0].PosX, IDtoDigiHit[DHCellID0].PosY, IDtoDigiHit[DHCellID0].PosZ);
 
      // 				     IDtoPos[DHCellID0] = HitPos;
-     // 				     IDtoTime[DHCellID0] = currTime;	
+     // 				     IDtoTime[DHCellID0] = currTime;
      // 				}
      // 				else
      // 				{
@@ -898,7 +969,7 @@ StatusCode G2CDArborAlg::execute()
      // 				     if(RndCharge * DHChargeWeight > IDtoDigiHit[DHCellID0].LeadChargeDepo)
      // 				     {
      // 					  IDtoDigiHit[DHCellID0].LeadChargeDepo = RndCharge * DHChargeWeight;
-     // 					  IDtoDigiHit[DHCellID0].LeadSimCaloHit = hit; 
+     // 					  IDtoDigiHit[DHCellID0].LeadSimCaloHit = hit;
      // 					  IDtoDigiHit[DHCellID0].ChargeShare = DHChargeWeight;
      // 				     }
 
@@ -917,14 +988,14 @@ StatusCode G2CDArborAlg::execute()
      // 			   CalorimeterHitImpl * calhit = new CalorimeterHitImpl();
      // 			   LCRelationImpl *rel = new LCRelationImpl(calhit, ff->second.LeadSimCaloHit, ff->second.ChargeShare);	//only keep the leading contribution
      // 			   relcol->addElement(rel);
-							
+
      // 			   calhit->setCellID0( ff->first );	//Assume 100% efficiency
      // 			   //calhit->setEnergy( DHCALCalibrationConstant );		//Charge
      // 			   calhit->setEnergy( _thresholdHcal );		//Charge
      // 			   calhit->setCellID1(SingleMCPPID);	//Use ID1 & Energy Error to denote the MCP info...
      // 			   calhit->setEnergyError(ff->second.digihitCharge); // (SingleMCPPEn);
      // 			   /*
-     // 			     DigiHitPos[0] = ff->second.PosX; 
+     // 			     DigiHitPos[0] = ff->second.PosX;
      // 			     DigiHitPos[1] = ff->second.PosY;
      // 			     DigiHitPos[2] = ff->second.PosZ;
      // 			   */
@@ -933,7 +1004,7 @@ StatusCode G2CDArborAlg::execute()
      // 			   DigiHitPos[2] = IDtoPos[ff->first].Z();
 
      // 			   calhit->setTime(IDtoTime[ff->first]);
-     // 			   calhit->setPosition(DigiHitPos);		
+     // 			   calhit->setPosition(DigiHitPos);
      // 			   hcalcol->addElement(calhit);
      // 		      }
 

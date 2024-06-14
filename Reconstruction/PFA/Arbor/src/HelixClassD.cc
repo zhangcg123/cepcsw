@@ -40,7 +40,7 @@ void HelixClassD::Initialize_VP(float * pos, float * mom, float q, float B) {
     double radius = pxy/double(_FCT*B);
     double xCentre = double(pos[0]) + radius*double(cos(_phiMomRefPoint-_const_pi2*q));
     double yCentre = double(pos[1]) + radius*double(sin(_phiMomRefPoint-_const_pi2*q));
-    
+
     double d0;
 
     if (q>0) {
@@ -54,17 +54,17 @@ void HelixClassD::Initialize_VP(float * pos, float * mom, float q, float B) {
 
 //     if (fabs(_d0)>0.001 ) {
 //       std::cout << "New helix : " << std::endl;
-//       std::cout << " Position : " << pos[0] 
+//       std::cout << " Position : " << pos[0]
 // 		<< " " << pos[1]
 // 		<< " " << pos[2] << std::endl;
 //       std::cout << " Radius = " << _radius << std::endl;
-//       std::cout << " RC = " << sqrt(_xCentre*_xCentre+_yCentre*_yCentre) << std::endl;  
+//       std::cout << " RC = " << sqrt(_xCentre*_xCentre+_yCentre*_yCentre) << std::endl;
 //       std::cout << " D0 = " << _d0 << std::endl;
 //     }
 
     _pxAtPCA = _pxy*cos(_phi0);
     _pyAtPCA = _pxy*sin(_phi0);
-    float deltaPhi = _phiRefPoint - _phiAtPCA;    
+    float deltaPhi = _phiRefPoint - _phiAtPCA;
     float xCircles = -pos[2]*q/(_radius*_tanLambda) - deltaPhi;
     xCircles = xCircles/_const_2pi;
     int nCircles;
@@ -78,7 +78,7 @@ void HelixClassD::Initialize_VP(float * pos, float * mom, float q, float B) {
 	n1 = int(xCircles) - 1;
 	n2 = n1 + 1;
     }
-    
+
     if (fabs(n1-xCircles) < fabs(n2-xCircles)) {
 	nCircles = n1;
     }
@@ -89,7 +89,7 @@ void HelixClassD::Initialize_VP(float * pos, float * mom, float q, float B) {
 
 }
 
-void HelixClassD::Initialize_Canonical(float phi0, float d0, float z0, 
+void HelixClassD::Initialize_Canonical(float phi0, float d0, float z0,
 				      float omega, float tanLambda, float B) {
     _omega = omega;
     _d0 = d0;
@@ -99,20 +99,20 @@ void HelixClassD::Initialize_Canonical(float phi0, float d0, float z0,
     _charge = omega/fabs(omega);
     _radius = 1./fabs(omega);
     _xAtPCA = -_d0*sin(_phi0);
-    _yAtPCA = _d0*cos(_phi0);    
+    _yAtPCA = _d0*cos(_phi0);
     _referencePoint[0] = _xAtPCA;
     _referencePoint[1] = _yAtPCA;
     _referencePoint[2] = _z0;
     _pxy = _FCT*B*_radius;
     _momentum[0] = _pxy*cos(_phi0);
     _momentum[1] = _pxy*sin(_phi0);
-    _momentum[2] = _tanLambda * _pxy;    
+    _momentum[2] = _tanLambda * _pxy;
     _pxAtPCA = _momentum[0];
     _pyAtPCA = _momentum[1];
     _phiMomRefPoint = atan2(_momentum[1],_momentum[0]);
-    _xCentre = _referencePoint[0] + 
+    _xCentre = _referencePoint[0] +
       _radius*cos(_phi0-_const_pi2*_charge);
-    _yCentre = _referencePoint[1] + 
+    _yCentre = _referencePoint[1] +
       _radius*sin(_phi0-_const_pi2*_charge);
     _phiAtPCA = atan2(-_yCentre,-_xCentre);
     _phiRefPoint =  _phiAtPCA ;
@@ -120,7 +120,7 @@ void HelixClassD::Initialize_Canonical(float phi0, float d0, float z0,
 }
 
 
-void HelixClassD::Initialize_BZ(float xCentre, float yCentre, float radius, 
+void HelixClassD::Initialize_BZ(float xCentre, float yCentre, float radius,
 			       float bZ, float phi0, float B, float signPz,
 			       float zBegin) {
 
@@ -148,8 +148,8 @@ void HelixClassD::Initialize_BZ(float xCentre, float yCentre, float radius,
   _tanLambda = _momentum[2]/_pxy;
   _momentum[0] = _pxy*cos(_phiMomRefPoint);
   _momentum[1] = _pxy*sin(_phiMomRefPoint);
-  
-  float deltaPhi = _phiRefPoint - _phiAtPCA;    
+
+  float deltaPhi = _phiRefPoint - _phiAtPCA;
   float xCircles = bZ*_referencePoint[2] - deltaPhi;
   xCircles = xCircles/_const_2pi;
   int nCircles;
@@ -163,14 +163,14 @@ void HelixClassD::Initialize_BZ(float xCentre, float yCentre, float radius,
     n1 = int(xCircles) - 1;
     n2 = n1 + 1;
   }
-  
+
   if (fabs(n1-xCircles) < fabs(n2-xCircles)) {
     nCircles = n1;
   }
   else {
     nCircles = n2;
-  }  
-  _z0 = _referencePoint[2] - (deltaPhi + _const_2pi*nCircles)/bZ;  
+  }
+  _z0 = _referencePoint[2] - (deltaPhi + _const_2pi*nCircles)/bZ;
   _bField = B;
 
 }
@@ -225,7 +225,7 @@ float HelixClassD::getCharge() {
     return _charge;
 }
 
-float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay, 
+float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
 			      float * ref , float * point) {
 
   float time;
@@ -234,7 +234,7 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
 
 
   if (AA <= 0) {
-    time = -1.0e+20; 
+    time = -1.0e+20;
     return time;
   }
 
@@ -242,7 +242,7 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
   float BB = ax*(x0-_xCentre) + ay*(y0-_yCentre);
   BB = BB / AA;
 
-  float CC = (x0-_xCentre)*(x0-_xCentre) 
+  float CC = (x0-_xCentre)*(x0-_xCentre)
     + (y0-_yCentre)*(y0-_yCentre) - _radius*_radius;
 
   CC = CC / AA;
@@ -250,7 +250,7 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
   float DET = BB*BB - CC;
   float tt1 = 0.;
   float tt2 = 0.;
-  float xx1,xx2,yy1,yy2; 
+  float xx1,xx2,yy1,yy2;
 
 
   if (DET < 0 ) {
@@ -260,8 +260,8 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
     point[2]=0.0;
     return time;
   }
-  
-  
+
+
   tt1 = - BB + sqrt(DET);
   tt2 = - BB - sqrt(DET);
 
@@ -269,7 +269,7 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
   yy1 = y0 + tt1*ay;
   xx2 = x0 + tt2*ax;
   yy2 = y0 + tt2*ay;
-  
+
   float phi1 = atan2(yy1-_yCentre,xx1-_xCentre);
   float phi2 = atan2(yy2-_yCentre,xx2-_xCentre);
   float phi0 = atan2(ref[1]-_yCentre,ref[0]-_xCentre);
@@ -280,14 +280,14 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
   if (dphi1 < 0 && _charge < 0) {
     dphi1 = dphi1 + _const_2pi;
   }
-  else if (dphi1 > 0 && _charge > 0) { 
+  else if (dphi1 > 0 && _charge > 0) {
     dphi1 = dphi1 - _const_2pi;
   }
 
   if (dphi2 < 0 && _charge < 0) {
     dphi2 = dphi2 + _const_2pi;
   }
-  else if (dphi2 > 0 && _charge > 0) { 
+  else if (dphi2 > 0 && _charge > 0) {
     dphi2 = dphi2 - _const_2pi;
   }
 
@@ -299,7 +299,7 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
     std::cout << "WARNING " << tt1 << std::endl;
   if (tt2 < 0. )
     std::cout << "WARNING " << tt2 << std::endl;
-  
+
 
   if (tt1 < tt2) {
     point[0] = xx1;
@@ -314,7 +314,7 @@ float HelixClassD::getPointInXY(float x0, float y0, float ax, float ay,
 
   point[2] = ref[2]+time*_momentum[2];
 
-  
+
 
   return time;
 
@@ -340,17 +340,17 @@ float HelixClassD::getPointOnCircle(float Radius, float * ref, float * point) {
   }
 
   float phiCentre = atan2(_yCentre,_xCentre);
-  float phiStar   = Radius*Radius + distCenterToIP*distCenterToIP 
+  float phiStar   = Radius*Radius + distCenterToIP*distCenterToIP
                                     - _radius*_radius;
 
   phiStar = 0.5*phiStar/fmax(1.0e-20,Radius*distCenterToIP);
-  
-  if (phiStar > 1.0) 
+
+  if (phiStar > 1.0)
     phiStar = 0.9999999;
-  
+
   if (phiStar < -1.0)
     phiStar = -0.9999999;
-  
+
   phiStar = acos(phiStar);
 
   float tt1,tt2,time;
@@ -372,14 +372,14 @@ float HelixClassD::getPointOnCircle(float Radius, float * ref, float * point) {
   if (dphi1 < 0 && _charge < 0) {
     dphi1 = dphi1 + _const_2pi;
   }
-  else if (dphi1 > 0 && _charge > 0) { 
+  else if (dphi1 > 0 && _charge > 0) {
     dphi1 = dphi1 - _const_2pi;
   }
 
   if (dphi2 < 0 && _charge < 0) {
     dphi2 = dphi2 + _const_2pi;
   }
-  else if (dphi2 > 0 && _charge > 0) { 
+  else if (dphi2 > 0 && _charge > 0) {
     dphi2 = dphi2 - _const_2pi;
   }
 
@@ -391,7 +391,7 @@ float HelixClassD::getPointOnCircle(float Radius, float * ref, float * point) {
     std::cout << "WARNING " << tt1 << std::endl;
   if (tt2 < 0. )
     std::cout << "WARNING " << tt2 << std::endl;
-  
+
 
   float time2;
   if (tt1 < tt2) {
@@ -413,7 +413,7 @@ float HelixClassD::getPointOnCircle(float Radius, float * ref, float * point) {
 
   point[2] = ref[2]+time*_momentum[2];
   point[5] = ref[2]+time2*_momentum[2];
-  
+
 
   return time;
 
@@ -490,7 +490,7 @@ float HelixClassD::getDistanceToPoint(float * xPoint, float * Distance) {
   float DistXY = (_xCentre-xPoint[0])*(_xCentre-xPoint[0]) + (_yCentre-xPoint[1])*(_yCentre-xPoint[1]);
   DistXY = sqrt(DistXY);
   DistXY = fabs(DistXY - _radius);
-  
+
   int nCircles = 0;
 
   if (fabs(_tanLambda*_radius)>1.0e-20) {
@@ -506,7 +506,7 @@ float HelixClassD::getDistanceToPoint(float * xPoint, float * Distance) {
 	n1 = int(xCircles) - 1;
 	n2 = n1 + 1;
     }
-    
+
     if (fabs(n1-xCircles) < fabs(n2-xCircles)) {
 	nCircles = n1;
     }
@@ -515,7 +515,7 @@ float HelixClassD::getDistanceToPoint(float * xPoint, float * Distance) {
     }
 
   }
-  
+
   float DPhi = _const_2pi*((float)nCircles) + phi - phi0;
 
   zOnHelix = _referencePoint[2] - _charge*_radius*_tanLambda*DPhi;
@@ -601,10 +601,10 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
 
   float x01 = getXC();
   float y01 = getYC();
-  
+
   float x02 = helix->getXC();
   float y02 = helix->getYC();
-  
+
   float rad1 = getRadius();
   float rad2 = helix->getRadius();
 
@@ -635,7 +635,7 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
     phi1 = phi0 + alpha;
     phi2 = phi0 - alpha;
   }
-  
+
 
   float ref1[3];
   float ref2[3];
@@ -643,7 +643,7 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
     ref1[i]=_referencePoint[i];
     ref2[i]=helix->getReferencePoint()[i];
   }
-  
+
   float pos1[3];
   float pos2[3];
   float mom1[3];
@@ -661,9 +661,9 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
 
     getPointOnCircle(R1,ref1,pos1);
     helix->getPointOnCircle(R2,ref2,pos2);
-    
+
   }
-  else {    
+  else {
 
     float xSect1 = x02 + rad2*cos(phi1);
     float ySect1 = y02 + rad2*sin(phi1);
@@ -676,7 +676,7 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
     float temp21[3];
     float temp22[3];
 
-    float phiI2  = atan2(ref2[1]-y02,ref2[0]-x02); 
+    float phiI2  = atan2(ref2[1]-y02,ref2[0]-x02);
     float phiF21 = atan2(ySect1-y02,xSect1-x02);
     float phiF22 = atan2(ySect2-y02,xSect2-x02);
     float deltaPhi21 = phiF21 - phiI2;
@@ -687,14 +687,14 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
     if (deltaPhi21 < 0 && charge2 < 0) {
       deltaPhi21 += _const_2pi;
     }
-    else if (deltaPhi21 > 0 && charge2 > 0) { 
+    else if (deltaPhi21 > 0 && charge2 > 0) {
       deltaPhi21 -= _const_2pi;
     }
 
     if (deltaPhi22 < 0 && charge2 < 0) {
       deltaPhi22 += _const_2pi;
     }
-    else if (deltaPhi22 > 0 && charge2 > 0) { 
+    else if (deltaPhi22 > 0 && charge2 > 0) {
       deltaPhi22 -= _const_2pi;
     }
 
@@ -706,7 +706,7 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
 
     temp21[0] = xSect1; temp21[1] = ySect1; temp21[2] = Z21;
     temp22[0] = xSect2; temp22[1] = ySect2; temp22[2] = Z22;
-    
+
 
 //     std::cout << "temp21 = " << temp21[0] << " " << temp21[1] << " " << temp21[2] << std::endl;
 //     std::cout << "temp22 = " << temp22[0] << " " << temp22[1] << " " << temp22[2] << std::endl;
@@ -715,7 +715,7 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
     float temp11[3];
     float temp12[3];
 
-    float phiI1  = atan2(ref1[1]-y01,ref1[0]-x01); 
+    float phiI1  = atan2(ref1[1]-y01,ref1[0]-x01);
     float phiF11 = atan2(ySect1-y01,xSect1-x01);
     float phiF12 = atan2(ySect2-y01,xSect2-x01);
     float deltaPhi11 = phiF11 - phiI1;
@@ -726,14 +726,14 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
     if (deltaPhi11 < 0 && charge1 < 0) {
       deltaPhi11 += _const_2pi;
     }
-    else if (deltaPhi11 > 0 && charge1 > 0) { 
+    else if (deltaPhi11 > 0 && charge1 > 0) {
       deltaPhi11 -= _const_2pi;
     }
 
     if (deltaPhi12 < 0 && charge1 < 0) {
       deltaPhi12 += _const_2pi;
     }
-    else if (deltaPhi12 > 0 && charge1 > 0) { 
+    else if (deltaPhi12 > 0 && charge1 > 0) {
       deltaPhi12 -= _const_2pi;
     }
 
@@ -745,7 +745,7 @@ float HelixClassD::getDistanceToHelix(HelixClassD * helix, float * pos, float * 
 
     temp11[0] = xSect1; temp11[1] = ySect1; temp11[2] = Z11;
     temp12[0] = xSect2; temp12[1] = ySect2; temp12[2] = Z12;
-    
+
 //     std::cout << "temp11 = " << temp11[0] << " " << temp11[1] << " " << temp11[2] << std::endl;
 //     std::cout << "temp12 = " << temp12[0] << " " << temp12[1] << " " << temp12[2] << std::endl;
 

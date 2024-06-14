@@ -4,20 +4,21 @@ gaudi_add_module(Arbor
                  SOURCES src/Arbor.cc
 		 	src/ArborHit.cc
 		 	src/ArborTool.cc
-		 	src/ArborToolLCIO.cc 
-		 	src/ClusterAna.cc 
-		 	src/DetectorPos.cc 
-		 	src/HelixClassD.cc 
+		 	src/ArborToolLCIO.cc
+		 	src/ClusterAna.cc
+		 	src/DetectorPos.cc
+		 	src/HelixClassD.cc
 			 src/MarlinArbor.cc
 		 	src/BushConnect.cc
                  LINK EventSeeder
                       GearSvc
                       DataHelperLib
+                      DecoderHelperLib
                       DetInterface
                       Gaudi::GaudiKernel
                       k4FWCore::k4FWCore
                       ${LCContent_LIBRARIES}
-                      ${CLHEP_LIBRARIES} 
+                      ${CLHEP_LIBRARIES}
                       ${ROOT_LIBRARIES}
                       ${LCIO_LIBRARIES}
                       ${GEAR_LIBRARIES}

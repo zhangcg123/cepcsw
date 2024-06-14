@@ -1,5 +1,5 @@
 
-gaudi_add_library(DecoderHelperLib 
+gaudi_add_library(DecoderHelperLib
                   SOURCES src/DD4hep2Lcio.cc
 )
 

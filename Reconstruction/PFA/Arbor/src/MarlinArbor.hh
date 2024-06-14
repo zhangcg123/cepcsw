@@ -66,7 +66,7 @@ class MarlinArbor  : public GaudiAlgorithm
 		std::vector<std::string> _EcalPreShowerCollections;
 		std::vector<std::string> _EcalCalCollections;
 		std::vector<std::string> _HcalCalCollections;
-		std::vector<float> _cepc_thresholds; 
+		std::vector<float> _cepc_thresholds;
 
 
 	     typedef DataHandle<edm4hep::CalorimeterHitCollection>  CaloType;
@@ -76,6 +76,7 @@ class MarlinArbor  : public GaudiAlgorithm
 
      Gaudi::Property<std::vector<std::string>> m_ecalReadoutNames{this, "ECALReadOutNames", {"EcalBarrelCollection", "EcalEndcapsCollection","EcalEndcapRingCollection"}, "Name of readouts"};
      Gaudi::Property<std::vector<std::string>> m_hcalReadoutNames{this, "HCALReadOutNames", {"HcalBarrelCollection", "HcalEndcapsCollection","HcalEndcapRingCollection"}, "Name of readouts"};
+    Gaudi::Property<bool>   m_readLCIO{this, "ReadLCIO", true, "Read sim file with LCIO"};
      std::map<std::string, std::string> m_col_readout_map;
 
 	     std::vector<CaloType*> _ecalCollections;
@@ -83,34 +84,34 @@ class MarlinArbor  : public GaudiAlgorithm
 	     std::vector<CaloType*> _calCollections;
 
 		TTree *_outputTree;
-		std::string _treeFileName; 
-		int _EH; 
+		std::string _treeFileName;
+		int _EH;
 		float _HitPos[3];
 		float _BushP[3];
-		float _CloseDis; 
+		float _CloseDis;
 		float _HitEnergy;
 
-		int _CellSize; 
+		int _CellSize;
 		int _CaloTrackLengthCut;
 
 		int _Num, _Seg, _eventNr;
 		int numElements;
 
-		float _DHCALFirstThreshold; 
+		float _DHCALFirstThreshold;
 		float _InitLinkDisThreshold;
 
-		bool _DHCALSimuDigiMode; 
+		bool _DHCALSimuDigiMode;
 		bool _FlagInputSimHit;
 		bool _FlagMutePhoton;
 		bool _FlagMuteChargeParticle;
 		bool _FlagMuteGarlicHits;
-		bool _FlagUseTrackerEndHit; 
+		bool _FlagUseTrackerEndHit;
 		std::string m_encoder_str;
 
 		DataHandle<edm4hep::ClusterCollection>   branchCol{"EHBushes",Gaudi::DataHandle::Writer, this};
 		DataHandle<edm4hep::CalorimeterHitCollection>   m_isohitcol{"IsoHits",Gaudi::DataHandle::Writer, this};
-		TH2F *_h1, *_h2, *_h7; 
-		TH1F *_h3, *_h4, *_h5, *_h6; 
+		TH2F *_h1, *_h2, *_h7;
+		TH1F *_h3, *_h4, *_h5, *_h6;
 		std::ostream _output;
 		float _HLayerCut;
 

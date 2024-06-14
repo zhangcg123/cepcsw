@@ -8,19 +8,19 @@
 
 //#define DEBUG
 
-using namespace std; 
+using namespace std;
 
 typedef std::unordered_multimap<unsigned,unsigned> HitLinkMap;
 
 std::vector<ArborHit> cleanedHits;
 
-std::vector<int> LeafHitsIndex; 
-std::vector<int> JointHitsIndex; 
-std::vector<int> StarJointHitsIndex; 
+std::vector<int> LeafHitsIndex;
+std::vector<int> JointHitsIndex;
+std::vector<int> StarJointHitsIndex;
 std::vector<int> IsoHitsIndex;
 std::vector<int> SimpleSeedHitsIndex;
 std::vector<int> StarSeedHitsIndex;
-std::map<int, int> HitsFlag; 	// Tell Hits type; 
+std::map<int, int> HitsFlag; 	// Tell Hits type;
 
 /*
 HitLinkMap BackLinksMap;
@@ -30,15 +30,15 @@ HitLinkMap IterBackLinks;
 
 linkcoll Links;
 linkcoll InitLinks;
-linkcoll IterInputLinks; 
+linkcoll IterInputLinks;
 linkcoll alliterlinks;
-linkcoll links_debug; 
-linkcoll IterLinks; 
-linkcoll IterLinks_1; 
+linkcoll links_debug;
+linkcoll IterLinks;
+linkcoll IterLinks_1;
 branchcoll LengthSortBranchCollection;
-branchcoll Trees; 
+branchcoll Trees;
 
-int NHits = 0; 
+int NHits = 0;
 
 void init() {
 	cleanedHits.clear();
@@ -71,7 +71,7 @@ void HitsCleaning( std::vector<ArborHit> inputHits )
 void HitsClassification( linkcoll inputLinks )
 {
 	int NLinks =  inputLinks.size();
-	
+
 	LeafHitsIndex.clear();
         JointHitsIndex.clear();
 	StarJointHitsIndex.clear();
@@ -106,7 +106,7 @@ void HitsClassification( linkcoll inputLinks )
 		else if(BeginIndex[i1] == 1 && EndIndex[i1] == 1)
 		{
 			JointHitsIndex.push_back(i1);
-			HitsFlag[i1] = 4; 
+			HitsFlag[i1] = 4;
 		}
 		else if(BeginIndex[i1] > 1 && EndIndex[i1] == 1)
 		{
@@ -130,7 +130,7 @@ void HitsClassification( linkcoll inputLinks )
 		}
 		else
 		{
-			cout<<"WARNING: UNCLASSIFIED HITS, Begin Index: "<<BeginIndex[i1]<<",  End Index:  "<<EndIndex[i1]<<endl; 
+			cout<<"WARNING: UNCLASSIFIED HITS, Begin Index: "<<BeginIndex[i1]<<",  End Index:  "<<EndIndex[i1]<<endl;
 		}
         }
 
@@ -139,14 +139,14 @@ void HitsClassification( linkcoll inputLinks )
 	cout<<"Seed - Simple/Star: "<<SimpleSeedHitsIndex.size()<<" : "<<StarSeedHitsIndex.size()<<endl;
 	cout<<"Joint - Simple/Star: "<<JointHitsIndex.size()<<" : "<<StarJointHitsIndex.size()<<endl;
 	cout<<"Leaves: "<<LeafHitsIndex.size()<<endl;
-	cout<<"IsoHits: "<<IsoHitsIndex.size()<<endl; 
-	cout<<"TotalHits: "<<NHits<<endl; 
+	cout<<"IsoHits: "<<IsoHitsIndex.size()<<endl;
+	cout<<"TotalHits: "<<NHits<<endl;
 #endif
 }
 
 linkcoll LinkClean( std::vector<ArborHit> allhits, linkcoll alllinks )
 {
-	linkcoll cleanedlinks; 
+	linkcoll cleanedlinks;
 
 	int NLinks = alllinks.size();
         int Ncurrhitlinks = 0;
@@ -158,7 +158,9 @@ linkcoll LinkClean( std::vector<ArborHit> allhits, linkcoll alllinks )
         std::pair<int, int> SelectedPair;
 
         TVector3 PosA, PosB, PosDiffAB;
-	
+
+        cout<<"[YX debug - LinkClean] Input NLinks = "<<NLinks<<endl;
+
         std::vector< std::vector<int> > LinkHits;
         LinkHits.clear();
         for(int s1 = 0; s1 < NHits; s1++)
@@ -212,10 +214,14 @@ linkcoll LinkClean( std::vector<ArborHit> allhits, linkcoll alllinks )
 
 void BuildInitLink( std::vector<float>Thresholds )
 {
+    cout<<"[YX debug - BuildInitLink] Thresholds = "<<Thresholds[0]<<", "<<Thresholds[1]<<", "<<Thresholds[2]<<", "<<Thresholds[3]<<endl;
+
 	KDTreeLinkerAlgo<unsigned,3> kdtree;
         typedef KDTreeNodeInfoT<unsigned,3> KDTreeNodeInfo;
 	std::array<float,3> minpos{ {0.0f,0.0f,0.0f} }, maxpos{ {0.0f,0.0f,0.0f} };
         std::vector<KDTreeNodeInfo> nodes, found;
+
+    cout<<"[YX debug - BuildInitLink] Input NHits = "<<NHits<<endl;
 
 	for(int i0 = 0; i0 < NHits; ++i0 )
         {
@@ -243,26 +249,26 @@ void BuildInitLink( std::vector<float>Thresholds )
         nodes.clear();
 
 	Links.clear();	//all tmp links
-	
-	TVector3 PosA, PosB, PosDiffAB, PosDiffBA; 
+
+	TVector3 PosA, PosB, PosDiffAB, PosDiffBA;
 	int NLayer_A = 0;
-	int NLayer_B = 0; 
-	int NStave_A = 0; 
+	int NLayer_B = 0;
+	int NStave_A = 0;
 	int NStave_B = 0;
 	int SubD_A = 0;
 	int SubD_B = 0;
 	float Depth_A = 0;
-	float Depth_B = 0; 
-	float DisAB = 0; 
-	float MagA = 0; 
+	float Depth_B = 0;
+	float DisAB = 0;
+	float MagA = 0;
 	float MagB = 0;
 	float ECCorr = 0;
 	int FlagTrkPS = 0;
-	int FlagPSEE = 0;	
+	int FlagPSEE = 0;
 	int FlagEH = 0;
 	int FlagHH = 0;
-	int FlagStaveSame = 0; 
-	int FlagStaveDiff = 0; 
+	int FlagStaveSame = 0;
+	int FlagStaveDiff = 0;
 
 	for(int i0 = 0; i0 < NHits; i0++)
 	{
@@ -274,6 +280,11 @@ void BuildInitLink( std::vector<float>Thresholds )
 		NStave_A = cleanedHits[i0].GetStave();
 		SubD_A = cleanedHits[i0].GetSubD();	//SubD_Index, 0 = track endpoint, 1 = Ecal, 2 = Hcal, 3 = EcalPS
 		Depth_A = cleanedHits[i0].GetDepth();
+
+        // cout<<"[YX debug - BuildInitLink] Hit "<<i0<<", NLayer_A = "<<NLayer_A<<", NStave_A = "<<NStave_A<<", SubD_A = "<<SubD_A<<", Depth_A = "<<Depth_A
+            // <<", Pos = ("<<PosA.X()<<", "<<PosA.Y()<<", "<<PosA.Z()<<")"<<endl;
+
+
 
 		const float side = 200;	//could also be sub detector dependent
                 const float xplus(PosA.X() + side), xminus(PosA.X() - side);
@@ -287,33 +298,40 @@ void BuildInitLink( std::vector<float>Thresholds )
                                 zmin, zmax );
                 kdtree.search(searchcube,found);
 
+        // cout<<"[YX debug - BuildInitLink] Hit "<<i0<<", found.size() = "<<found.size()<<endl;
+
+        int nLink_pushback = 0;
+
 		for(unsigned int j0 = 0; j0 < found.size(); j0++)
 		{
 			if( found[j0].data <= (unsigned)i0 ) continue;
 			PosB = cleanedHits[found[j0].data].GetPosition();
 			NLayer_B = cleanedHits[found[j0].data].GetLayer();
-			NStave_B = cleanedHits[found[j0].data].GetStave();	
+			NStave_B = cleanedHits[found[j0].data].GetStave();
 			SubD_B = cleanedHits[found[j0].data].GetSubD();
 			Depth_B = cleanedHits[found[j0].data].GetDepth();
 
 			PosDiffAB = PosA - PosB;
-			PosDiffBA = PosB - PosA; 
-			DisAB = PosDiffAB.Mag();		
-			ECCorr = 0; 
+			PosDiffBA = PosB - PosA;
+			DisAB = PosDiffAB.Mag();
+			ECCorr = 0;
 			if( (fabs(PosA.Z()) - 2600 )*(fabs(PosB.Z()) - 2600) < 0 )
 				ECCorr = 40;
+
+            // cout<<"[YX debug - BuildInitLink] ---> Hit "<<j0<<", NLayer_B = "<<NLayer_B<<", NStave_B = "<<NStave_B<<", SubD_B = "<<SubD_B<<", Depth_B = "<<Depth_B
+            //     <<", Pos = ("<<PosB.X()<<", "<<PosB.Y()<<", "<<PosB.Z()<<"), DisAB = "<<DisAB<<endl;
 
 			// For the XX seed, using triangle method...
 			FlagTrkPS = 0; FlagPSEE = 0; FlagEH = 0; FlagHH = 0; FlagStaveSame = 0; FlagStaveDiff = 0;
 
 			if( SubD_A*SubD_B == 0 && SubD_A + SubD_B == 3 && DisAB < 180 && (PosDiffAB.Angle(PosA) < 0.1 || PosDiffBA.Angle(PosA) < 0.1) )
 				FlagTrkPS = 1;
-			else if( (SubD_A == 1 || SubD_A == 3) && (SubD_B == 1 || SubD_B == 3) && DisAB < Thresholds[0] + 0.05*(Depth_A + Depth_B) )	
-				FlagPSEE = 1; 
+			else if( (SubD_A == 1 || SubD_A == 3) && (SubD_B == 1 || SubD_B == 3) && DisAB < Thresholds[0] + 0.05*(Depth_A + Depth_B) )
+				FlagPSEE = 1;
 			else if( (SubD_A * SubD_B == 2 && DisAB < Thresholds[1] + ECCorr) )
 				FlagEH = 1;
 			else if( SubD_A == 2 && SubD_B == 2 && DisAB < Thresholds[2] + 0.03*(Depth_A + Depth_B) )
-				FlagHH = 1; 
+				FlagHH = 1;
 
 			if( FlagTrkPS || FlagPSEE || FlagEH || FlagHH )
 			{
@@ -343,7 +361,10 @@ void BuildInitLink( std::vector<float>Thresholds )
 			}
 		}
 	}
-	links_debug = Links; 
+	links_debug = Links;
+
+    cout<<"[YX debug - BuildInitLink] Output Links.size() = "<<Links.size()<<endl;
+
 }
 
 void LinkIteration( int time )	//Energy corrections, semi-local correction
@@ -402,25 +423,25 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 	}
 	int NcurrLinks = alliterlinks.size();
 
-	TVector3 hitPos, PosA, PosB, PosDiffAB, PosDiffBA, linkDir; 
-	int NLayer_A = 0; 
-	int NLayer_B = 0; 
+	TVector3 hitPos, PosA, PosB, PosDiffAB, PosDiffBA, linkDir;
+	int NLayer_A = 0;
+	int NLayer_B = 0;
 	int NStave_A = 0;
-	int NStave_B = 0; 
-	int SubD_A = 0; 
+	int NStave_B = 0;
+	int SubD_A = 0;
 	int SubD_B = 0;
 	int FlagEE = 0;
         int FlagHH = 0;
-	int AngleAccIndex = 0; 
+	int AngleAccIndex = 0;
         float DisAB = 0;
-	float MagA = 0; 
+	float MagA = 0;
 	float MagB = 0;
-	std::pair<int, int> currlink; 
-	std::pair<int, int> a_Link; 
+	std::pair<int, int> currlink;
+	std::pair<int, int> a_Link;
 	std::pair<int, int> a_tmpLink, b_tmpLink;
 	int FlagNoJoint = 0;
 	int FlagNoIso = 0;
-//	int FlagNoExisting = 0; 
+//	int FlagNoExisting = 0;
 
 	for(int i = 0; i < NHits; i++)
 	{
@@ -432,16 +453,16 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 
 	// std::vector<int> ---> all the hits linked to this hit
 	std::vector< std::vector<int> > hitLinksArray;
-	hitLinksArray.resize(NHits); 
+	hitLinksArray.resize(NHits);
 	for(int j = 0; j < NcurrLinks; j++)
 	{
 		currlink = alliterlinks[j];
 		PosA = cleanedHits[ currlink.first ].GetPosition();
 		PosB = cleanedHits[ currlink.second ].GetPosition();
 		linkDir = (PosA - PosB);		//Links are always from first point to second - verify
-		linkDir *= 1.0/linkDir.Mag(); 
+		linkDir *= 1.0/linkDir.Mag();
 		RefDir[currlink.first] += 4*linkDir; 	//Weights... might be optimized...
-		RefDir[currlink.second] += 6*linkDir; 
+		RefDir[currlink.second] += 6*linkDir;
 		Nin_hit[currlink.first] ++;
 		Nout_hit[currlink.second] ++;
 		hitLinksArray[currlink.first].push_back(currlink.second);
@@ -469,16 +490,16 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
                                 zmin, zmax );
                 kdtree.search(searchcube,found);
 
-		for(unsigned int j1 = 0; j1 < found.size(); j1++)	
+		for(unsigned int j1 = 0; j1 < found.size(); j1++)
 		{
 			if( found[j1].data <= (unsigned)i1 ) continue;
 
 			FlagNoJoint = Nout_hit[j1] * Nin_hit[i1] * Nout_hit[i1] * Nin_hit[j1];
 			FlagNoIso = Nout_hit[j1] + Nin_hit[i1] + Nout_hit[i1] + Nin_hit[j1];
-			a_tmpLink.first = i1; 
-			a_tmpLink.second = j1; 
-			b_tmpLink.first = j1; 
-			b_tmpLink.second = i1; 
+			a_tmpLink.first = i1;
+			a_tmpLink.second = j1;
+			b_tmpLink.first = j1;
+			b_tmpLink.second = i1;
 
 			bool isConnected = false;
 
@@ -510,24 +531,24 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 
 			if( FlagNoJoint == 0 && FlagNoIso != 0 )
 			{
-				if(!isConnected) 
-				{	
+				if(!isConnected)
+				{
 					PosB = cleanedHits[found[j1].data].GetPosition();
 					NLayer_B = cleanedHits[found[j1].data].GetLayer();
 					NStave_B = cleanedHits[found[j1].data].GetStave();
 					SubD_B = cleanedHits[found[j1].data].GetSubD();
-					PosDiffAB = PosB - PosA; 
-					PosDiffBA = PosA - PosB; 
-					DisAB = PosDiffAB.Mag();			
+					PosDiffAB = PosB - PosA;
+					PosDiffBA = PosA - PosB;
+					DisAB = PosDiffAB.Mag();
 
-					FlagEE = 0; 
-					FlagHH = 0; 
+					FlagEE = 0;
+					FlagHH = 0;
 					AngleAccIndex = 0;
 
 					if( PosDiffAB.Angle(RefDir[i1]) < 0.6/time )
 						AngleAccIndex = 1;
 					else if( PosDiffAB.Angle(RefDir[j1]) < 0.6/time )
-						AngleAccIndex = 2; 
+						AngleAccIndex = 2;
 					else if( PosDiffBA.Angle(RefDir[i1]) < 0.6/time )
 						AngleAccIndex = 3;
 					else if( PosDiffBA.Angle(RefDir[j1]) < 0.6/time )
@@ -547,7 +568,7 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 						MagB = PosB.Mag();
 
 					//	if(NLayer_A != NLayer_B)
-					//	{	
+					//	{
 							if( NStave_A != NStave_B || ( NLayer_A == 0 && NLayer_B != 0 ) || ( NLayer_B == 0 && NLayer_A != 0 ) )
 							{
 								if( MagA > MagB && AngleAccIndex < 3 )
@@ -581,7 +602,7 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 					//	}
 					}
 				}
-			} 
+			}
 		}
 	}
 
@@ -589,11 +610,11 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 
 	int NLinks = alliterlinks.size();
 	int MinAngleIndex = -10;
-	int Ncurrhitlinks = 0; 
-	float MinAngle = 1E6; 
+	int Ncurrhitlinks = 0;
+	float MinAngle = 1E6;
 	float tmpOrder = 0;
-	float DirAngle = 0; 
-	std::pair<int, int> SelectedPair; 
+	float DirAngle = 0;
+	std::pair<int, int> SelectedPair;
 
 	std::vector< std::vector<int> > LinkHits;
 	LinkHits.clear();
@@ -639,7 +660,7 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 			if(SelectedPair.first == SelectedPair.second)
 			{
 				cout<<"WTTTTTTTTFFFFFFFFFFFFFF"<<endl;
-				continue; 
+				continue;
 			}
 			if(time == 1)
 			{
@@ -651,7 +672,7 @@ void LinkIteration( int time )	//Energy corrections, semi-local correction
 				IterBackLinks.emplace(SelectedPair.second,SelectedPair.first);
 			}
 		}
-	}	
+	}
 
 #ifdef DEBUG
 	cout<<"Init-Iter Size "<<InitLinks.size()<<" : "<<IterLinks.size()<<endl;
@@ -693,7 +714,7 @@ void BranchBuilding(float SeedThreshold)
 		if(HitBeginIndex[i2] == 0 && HitEndIndex[i2] == 1)        //EndPoint
 		{
 			NBranches ++;
-			std::vector<int> currBranchhits;      //array of indexes 
+			std::vector<int> currBranchhits;      //array of indexes
 
 			iterhitindex = i2;
 			currBranchhits.push_back(i2);
@@ -711,7 +732,7 @@ void BranchBuilding(float SeedThreshold)
 						iterhitindex = PairIterator.first;
 						break;
 					}
-				}  
+				}
 				*/
 				auto iterlink_range = IterBackLinks.equal_range(iterhitindex);
 				assert( std::distance(iterlink_range.first,iterlink_range.second) == 1 );
@@ -902,22 +923,22 @@ void BushMerging()
 std::vector< std::vector<int> > Arbor( std::vector<ArborHit> inputHits, std::vector<float>Thresholds )
 {
 	//cout<<"Thresholds"<<Thresholds[0]<<" "<<Thresholds[1]<<" "<<Thresholds[2]<<endl;
-	
+
 	if(Thresholds.size() != 4)
 	{
-		cout<<"Threshold Set Wrong, Threshold Size is "<<Thresholds.size()<<" Should be 4"<<endl; 
-		exit(2); 
+		cout<<"Threshold Set Wrong, Threshold Size is "<<Thresholds.size()<<" Should be 4"<<endl;
+		exit(2);
 	}
 
-	init();	
+	init();
 	HitsCleaning(inputHits);
 	BuildInitLink(Thresholds);
 	InitLinks = LinkClean( cleanedHits, Links );
 
 	LinkIteration(1);
 	LinkIteration(2);
-	HitsClassification(IterLinks);	
-	BranchBuilding(Thresholds[3]);	
+	HitsClassification(IterLinks);
+	BranchBuilding(Thresholds[3]);
 
 	return LengthSortBranchCollection;
 }
