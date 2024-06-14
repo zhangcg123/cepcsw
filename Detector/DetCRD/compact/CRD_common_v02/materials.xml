@@ -685,6 +685,27 @@
      <composite n="1"  ref="O" />
    </material>
 
+   <material name="T2KGas1" state="gas">
+       <MEE unit="eV" value="177.374841770826"/>
+       <D value="0.0017357" unit="g/cm3"/>
+       <fraction n="0.908928"    ref="Ar"/>
+       <fraction n="0.031643"    ref="C"/>
+       <fraction n="0.004828"    ref="H"/>
+       <fraction n="0.054601"    ref="F"/>
+   </material>      
+
+   <material name="Polyimide" state="solide">
+       <D value="1.38"   unit="g/cm3"/>
+       <composite n="22" ref="C"/>
+       <composite n="10" ref="H"/>
+       <composite n="2"  ref="N"/>
+       <composite n="5"  ref="O"/>
+   </material>
+   <material name="TPC_Alframe" state="solid">
+       <D value="1.8" unit="g/cm3"/>
+       <fraction n="1." ref="Al" />
+   </material>
+
    <material name="LYSO" state="solid">
       <MEE unit="eV" value="9.5"/>
       <D value="7.15" unit="g/cm3" />
