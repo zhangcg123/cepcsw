@@ -9,6 +9,9 @@
 #include <stdexcept>
 #include <sstream>
 
+#include "DDSegmentation/MegatileLayerGridXY.h"
+#include "DecoderHelper/DD4hep2Lcio.h"
+
 #include "TVector3.h"
 #include <string>
 #include <iostream>
@@ -31,6 +34,7 @@
 #include "DD4hep/IDDescriptor.h"
 #include "DD4hep/Plugins.h"
 
+#include "cellIDDecoder.h"
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
 #include "DetInterface/IGeomSvc.h"
@@ -38,7 +42,61 @@
 #include "podio/podioVersion.h"
 
 using namespace std;
-/* 
+// bool _USE_LCIO=0;
+
+// struct segInfo;
+struct segInfo {
+    double megaTileSizeX = 0;
+    double megaTileSizeY = 0;
+    double megaTileOffsetX = 0;
+    double megaTileOffsetY = 0;
+    unsigned int nCellsX = 0;
+    unsigned int nCellsY = 0;
+    segInfo() = default;
+};
+
+struct SegParameters {
+//   unsigned int layer;
+//   unsigned int tile;
+  double sizex;
+  double sizey;
+  double offsetx;
+  double offsety;
+  unsigned int ncellsx;
+  unsigned int ncellsy;
+};
+
+class MyMegatileLayerGridXY: public dd4hep::DDSegmentation::MegatileLayerGridXY {
+public:
+    int get_nCellsX(){
+        return _unif_nCellsX;
+    }
+
+    SegParameters getSegParameters(){
+        SegParameters Pars;
+        // Pars.layer = 1;
+        // Pars.tile = 2;
+        Pars.sizex = _megaTileSizeX;
+        Pars.sizey = _megaTileSizeY;
+        Pars.offsetx = _megaTileOffsetX;
+        Pars.offsety = _megaTileOffsetY;
+        Pars.ncellsx = _unif_nCellsX;
+        Pars.ncellsy = _unif_nCellsY;
+        return Pars;
+    }
+
+    std::map < std::pair < unsigned int, unsigned int > , segInfo > get_specialMegaTiles_layerWafer(){
+        return specialMegaTiles_layerWafer;
+    }
+    // void setSpecialMegaTile( unsigned int layer, unsigned int tile,
+    //                         double sizex, double sizey,
+    //                         double offsetx, double offsety,
+    //                         unsigned int ncellsx, unsigned int ncellsy );
+
+
+};
+
+/*
 void ClusterBuilding( LCEvent * evtPP, std::string Name, std::vector<CalorimeterHit*> Hits, std::vector< std::vector<int> > BranchOrder, int DHCALFlag )
 {
 	LCCollection *currbranchcoll = new LCCollectionVec(LCIO::CLUSTER);
@@ -51,8 +109,8 @@ void ClusterBuilding( LCEvent * evtPP, std::string Name, std::vector<Calorimeter
 	float currBranchEnergy = 0;
 	TVector3 SeedPos, currPos;
 	float MinMag = 1E9;
-	float currMag = 0; 
-	float ECALTotalEn = 0; 
+	float currMag = 0;
+	float ECALTotalEn = 0;
 	float HCALTotalEn = 0;
 
 	for(int i0 = 0; i0 < NBranch; i0++)
@@ -113,12 +171,14 @@ void ClusterBuilding( LCEvent * evtPP, std::string Name, std::vector<Calorimeter
 */
 
 
-ArborToolLCIO::ArborToolLCIO(const std::string& name,ISvcLocator* svcLoc)
+ArborToolLCIO::ArborToolLCIO(const std::string& name,ISvcLocator* svcLoc, bool m_readLCIO)
      : GaudiAlgorithm(name, svcLoc)
 {
 	m_geosvc=service<IGeomSvc>("GeomSvc");
+    m_encoder_str = "M:3,S-1:3,I:9,J:9,K-1:6";
+    _USE_LCIO = m_readLCIO;
 }
-	
+
 
 ArborToolLCIO::~ArborToolLCIO()
 {
@@ -135,9 +195,11 @@ void ArborToolLCIO::ClusterBuilding( DataHandle<edm4hep::ClusterCollection>& _cu
 	TVector3 SeedPos, currPos;
 
 	float MinMag = 1E9;
-	float currMag = 0; 
-	float ECALTotalEn = 0; 
+	float currMag = 0;
+	float ECALTotalEn = 0;
 	float HCALTotalEn = 0;
+
+    cout<<"[YX debug - ClusterBuilding] NBranch = "<<NBranch<<endl;
 
 	for(int i0 = 0; i0 < NBranch; i0++)
 	{
@@ -148,6 +210,10 @@ void ArborToolLCIO::ClusterBuilding( DataHandle<edm4hep::ClusterCollection>& _cu
 		ECALTotalEn = 0;
 		HCALTotalEn = 0;
 		MinMag = 1E9;
+
+
+        // cout<<"[YX debug - ClusterBuilding] Branch "<<i0<<", BranchSize = "<<BranchSize<<endl;
+
 
 		for(int j = 0; j < BranchSize; j++)
 		{
@@ -189,6 +255,10 @@ void ArborToolLCIO::ClusterBuilding( DataHandle<edm4hep::ClusterCollection>& _cu
 
 	}
 
+
+	int nBranch_out = currbranchcoll->size();
+    cout<<"[YX debug - ClusterBuilding] nBranch_out = "<<nBranch_out<<endl;
+
 }
 
 
@@ -215,10 +285,25 @@ int ArborToolLCIO::NHScaleV2( std::vector<edm4hep::CalorimeterHit> clu0, int Rat
 		auto hit = clu0[i];
 		auto cellid = hit.getCellID();
 
+        if(_USE_LCIO){
+	      		ID_UTIL::CellIDDecoder<edm4hep::CalorimeterHit> cellIdDecoder(m_encoder_str);
+	      		const std::string idCodingString(m_encoder_str);
+	      		const std::string layerCoding(GetLayerCoding(idCodingString));
+	      		const std::string cellICoding(GetCellICoding(idCodingString));
+	      		const std::string cellJCoding(GetCellJCoding(idCodingString));
 
+			tmpI=cellIdDecoder(&hit)[cellICoding.c_str()]/RatioX;
+			tmpJ=cellIdDecoder(&hit)[cellJCoding.c_str()]/RatioY;
+			tmpK=(cellIdDecoder(&hit)[layerCoding.c_str()]+1)/RatioZ;
+		}
+
+		else{
 		tmpI = m_decoder->get(cellid, "cellX")/RatioX;
 		tmpJ = m_decoder->get(cellid, "cellY")/RatioY;
 		tmpK = (m_decoder->get(cellid, "layer")+1)/RatioZ;
+
+
+        }
 		tmpEn = hit.getEnergy();
 
 		NewCellID0 = (tmpK<<24) + (tmpJ<<12) + tmpI;
@@ -251,8 +336,8 @@ float ArborToolLCIO::FDV2( std::vector<edm4hep::CalorimeterHit> clu)
 		FractalDim += 0.1 * TMath::Log(float(OriNHit)/NReSizeHit[j])/TMath::Log(float(Scale[j]));
 	}
 
-	if(clu.size() == 0) 
-		FractalDim = -1; 
+	if(clu.size() == 0)
+		FractalDim = -1;
 
 	return FractalDim;
 }
@@ -269,23 +354,168 @@ int ArborToolLCIO::NHScaleV3( edm4hep::Cluster clu0, int RatioX, int RatioY, int
 	float tmpEn = 0;
 	int NewCellID0 = 0;
 	int NewCellID1 = 0;
-	//m_geosvc=service<IGeomSvc>("GeomSvc");	
+	//m_geosvc=service<IGeomSvc>("GeomSvc");
 
-	m_decoder = m_geosvc->getDecoder("EcalBarrelCollection");
-	if(!m_decoder) m_decoder = m_geosvc->getDecoder("EcalEndcapsCollection");
+	m_decoder = m_geosvc->getDecoder("EcalBarrelCollection");  // raw_system==20
+	// if(!m_decoder) m_decoder = m_geosvc->getDecoder("EcalEndcapsCollection");
+
+
+    // ----------------------------------------------------------------------------
+    dd4hep::Detector* m_dd4hep = m_geosvc->lcdd();
+    if ( !m_dd4hep ) throw "ArborToolLCIO: Failed to get dd4hep::Detector ...";
+    dd4hep::Readout readout = m_dd4hep->readout("EcalBarrelCollection");
+
+    // auto m_segmentation = dynamic_cast<dd4hep::DDSegmentation::MegatileLayerGridXY*>(readout.segmentation().segmentation());
+    auto m_segmentation = static_cast<MyMegatileLayerGridXY*>(readout.segmentation().segmentation());
+    auto m_segPars = m_segmentation->getSegParameters();
+    auto m_seg = m_segmentation->get_specialMegaTiles_layerWafer();
+
+    // std::cout<<m_segmentation<<std::endl;
+    if(0) std::cout<<"get_nCellsX = "<<m_segmentation->get_nCellsX()<<std::endl;
+    if(0) std::cout<<"m_segPars->ncellsx = "<<m_segPars.ncellsx<<std::endl;
+    // ----------------------------------------------------------------------------
 
 	std::map <double, float> testIDtoEnergy;
 	double testlongID = 0;
-	
+
 	for(int i = 0; i < NumHit; i++)
 	{
 		auto hit = clu0.getHits(i);
 		auto cellid = hit.getCellID();
-
-		tmpI = m_decoder->get(cellid, "cellX")/RatioX;
-		tmpJ = m_decoder->get(cellid, "cellY")/RatioY;
-		tmpK = (m_decoder->get(cellid, "layer")+1)/RatioZ;
 		tmpEn = hit.getEnergy();
+
+        if(_USE_LCIO){
+            ID_UTIL::CellIDDecoder<edm4hep::CalorimeterHit> cellIdDecoder(m_encoder_str);
+            const std::string idCodingString(m_encoder_str);
+            const std::string layerCoding(GetLayerCoding(idCodingString));
+            const std::string cellICoding(GetCellICoding(idCodingString));
+            const std::string cellJCoding(GetCellJCoding(idCodingString));
+
+			tmpI=cellIdDecoder(&hit)[cellICoding.c_str()]/RatioX;
+			tmpJ=cellIdDecoder(&hit)[cellJCoding.c_str()]/RatioY;
+			tmpK=(cellIdDecoder(&hit)[layerCoding.c_str()]+1)/RatioZ;
+		}
+		else{
+            // initial decoder: ECAL barrel
+            // <id>system:5,module:3,stave:4,tower:5,layer:6,wafer:6,cellX:32:-16,cellY:-16</id>
+	        m_decoder = m_geosvc->getDecoder("EcalBarrelCollection");  // raw_system==20
+            int raw_system = m_decoder->get(cellid, "system");
+            int raw_module = m_decoder->get(cellid, "module");
+            int raw_stave = m_decoder->get(cellid, "stave");
+            int raw_layer = m_decoder->get(cellid, "layer");
+            int raw_cellX = m_decoder->get(cellid, "cellX");
+            int raw_cellY = m_decoder->get(cellid, "cellY");
+            int raw_tower = m_decoder->get(cellid, "tower");
+            int raw_wafer = m_decoder->get(cellid, "wafer");
+
+        	if(raw_system==29){  // ECAL endcap
+                // <id>system:5,module:3,stave:4,tower:5,layer:6,wafer:6,x:32:-16,y:-16</id>
+                m_decoder = m_geosvc->getDecoder("EcalEndcapsCollection");
+                raw_stave = m_decoder->get(cellid, "stave");
+                raw_layer = m_decoder->get(cellid, "layer");
+                raw_cellX = m_decoder->get(cellid, "x");
+                raw_cellY = m_decoder->get(cellid, "y");
+                raw_tower = m_decoder->get(cellid, "tower");
+                raw_wafer = m_decoder->get(cellid, "wafer");
+            }else if(raw_system==22){  // HCAL barrel
+                // <id>system:5,module:3,stave:3,tower:5,layer:6,slice:4,x:32:-16,y:-16</id>
+                m_decoder = m_geosvc->getDecoder("HcalBarrelCollection");
+                raw_stave = m_decoder->get(cellid, "stave");
+                raw_layer = m_decoder->get(cellid, "layer");
+                raw_cellX = m_decoder->get(cellid, "x");
+                raw_cellY = m_decoder->get(cellid, "y");
+            }else if(raw_system==30){  // HCAL endcap
+                // <id>system:5,module:3,stave:3,tower:5,layer:6,y:32:-16,x:-16</id>
+                m_decoder = m_geosvc->getDecoder("HcalEndcapsCollection");
+                raw_stave = m_decoder->get(cellid, "stave");
+                raw_layer = m_decoder->get(cellid, "layer");
+                raw_cellX = m_decoder->get(cellid, "y");
+                raw_cellY = m_decoder->get(cellid, "x");
+            }
+
+
+
+            // ---------------------------------------------
+            std::pair<unsigned int, unsigned int> layer_wafer = std::make_pair(raw_layer, raw_wafer);
+            // segInfo seginfo = m_seg.find(layer_wafer);
+            // ---------------------------------------------
+
+            TVector3 currHitPos =  TVector3(hit.getPosition().x, hit.getPosition().y, hit.getPosition().z);
+            double hitposx = currHitPos.X();
+            double hitposy = currHitPos.Y();
+            double hitposz = currHitPos.Z();
+            double hitposp = currHitPos.Perp();
+
+            // ---------------------------------------------
+
+            int new_layer = DD4hep2Lcio::CEPCv4::getEcalLayer(raw_layer);
+            int new_stave = DD4hep2Lcio::CEPCv4::getEcalBarrelStave(raw_stave);
+            if(raw_system==29){// ECAL endcap
+                new_stave = DD4hep2Lcio::CEPCv4::getEcalEndcapStave(raw_stave);
+            }
+            if(raw_system==22 || raw_system==30){  // HCAL, barrel 22, endcap 30
+                new_layer = DD4hep2Lcio::CEPCv4::getHcalLayer(raw_layer);
+                new_stave = DD4hep2Lcio::CEPCv4::getHcalStave(raw_stave);
+            }
+
+            int new_I = raw_cellX;
+            int new_J = raw_cellY;
+            int new_K = new_layer;
+
+            int nwaferx = (raw_wafer-1)/2;
+            int nwafery = raw_wafer%2 ==0 ? 1 : 0;
+            int ncellsx = 9;
+            int ncellsy = 9;
+            // int cellX_constant = raw_cellX<0 ? 4 : 0;
+            // int cellY_constant = raw_cellY<0 ? 4 : 0;
+            int cellX_constant = 0;
+            int cellY_constant = 0;
+
+
+            // if(raw_system==20 || raw_system==22){  // barrel, ECAL 20, HCAL 22
+            if(raw_system==20){  // barrel, ECAL 20
+                new_I = raw_cellX + nwaferx * 9 + cellX_constant;
+                new_J = (8-raw_cellY) + (4-raw_tower) * 2 * 9 + (1-nwafery) * 9 + cellY_constant;
+
+            // }else if(raw_system==29 || raw_system==30){  // endcap, ECAL 29, HCAL 30
+            }else if(raw_system==29){  // endcap, ECAL 29
+                // new_I = raw_cellX + raw_tower * 2 * 9 + nwaferx * 9 + 4;
+                // new_J = raw_cellY + nwafery * 9 + 4;
+
+                new_I = raw_cellY + raw_tower * 2 * 9 + nwafery * 9 + 4;
+                new_J = raw_cellX + nwaferx * 9 + 4;
+            }
+
+            if(0){
+
+                cout<<"\n[ArborToolLCIO::NHScaleV3] Hit Pos ("<<hitposx<<", "<<hitposy<<", "<<hitposz<<", "<<hitposp<<")mm:"<<endl;
+
+                cout<<"[ArborToolLCIO::NHScaleV3] ---> Raw M = "<<raw_module<<", stave = "<<raw_stave<<", layer = "<<raw_layer<<", I(x) = "<<raw_cellX<<", J(y) = "<<raw_cellY<<", wafer = "<<raw_wafer<<", tower = "<<raw_tower<<", system = "<<raw_system<<endl;
+
+                cout<<"[ArborToolLCIO::NHScaleV3] ------> system = "<<raw_system<<", layer = "<<raw_layer<<", tower = "<<raw_tower<<", wafer = "<<raw_wafer<<", nwaferx = "<<nwaferx<<", nwafery = "<<nwafery<<", ncellsx = "<<ncellsx<<", ncellsy = "<<ncellsx<<", const x = "<<cellX_constant<<", y = "<<cellY_constant<<endl;
+
+                cout<<"[ArborToolLCIO::NHScaleV3] ---> New M = "<<raw_module<<", stave = "<<new_stave<<", layer = "<<new_layer<<", I(x) = "<<new_I<<", J(y) = "<<new_J<<", wafer = "<<raw_wafer<<", tower = "<<raw_tower<<", system = "<<raw_system<<endl;
+
+
+                // cout<<"[ArborToolLCIO::NHScaleV3] ---> megaTileSizeX = "<<seginfo.megaTileSizeX<<", megaTileSizeY = "<<seginfo.megaTileSizeY<<", megaTileOffsetX = "<<seginfo.megaTileOffsetX<<", megaTileOffsetY = "<<seginfo.megaTileOffsetY<<", nCellsX = "<<seginfo.nCellsX<<", nCellsY = "<<seginfo.nCellsY<<endl;
+                // cout<<"[ArborToolLCIO::NHScaleV3] ---> sizex = "<<m_segPars.sizex<<", sizey = "<<m_segPars.sizey<<", offsetx = "<<m_segPars.offsetx<<", offsety = "<<m_segPars.offsety<<", ncellsx = "<<m_segPars.ncellsx<<", ncellsy = "<<m_segPars.ncellsy<<endl;
+            }
+
+            // ----------------------------------------------------------------------------
+            // tmpI = m_decoder->get(cellid, "cellX")/RatioX;
+            // tmpJ = m_decoder->get(cellid, "cellY")/RatioY;
+            // tmpK = (m_decoder->get(cellid, "layer")+1)/RatioZ;
+
+            tmpI = new_I/RatioX;
+            tmpJ = new_J/RatioY;
+            tmpK = (new_K+1)/RatioZ;
+
+        }
+
+        if(0) cout<<"[ArborToolLCIO::NHScaleV3] ---> RatioX = "<<RatioX<<", RatioY = "<<RatioY<<", RatioZ = "<<RatioZ<<endl;
+        if(0) cout<<"[ArborToolLCIO::NHScaleV3] ---> tmpI = "<<tmpI<<", tmpJ = "<<tmpJ<<", tmpK = "<<tmpK<<endl;
+
+
 
 		NewCellID0 = (tmpK<<24) + (tmpJ<<12) + tmpI;
 
@@ -327,14 +557,14 @@ float ArborToolLCIO::FDV3( edm4hep::Cluster clu ){
 
 float ArborToolLCIO::BushDis( edm4hep::Cluster clu1, edm4hep::Cluster clu2)
 {
-	float DisBetweenBush = 1.0E10; 
+	float DisBetweenBush = 1.0E10;
 
 	int cluSize1 = clu1.hits_size();
 	int cluSize2 = clu2.hits_size();
 
-	TVector3 HitPos1, HitPos2; 
-	TVector3 PosDiff; 
-	// TVector3 XXXPos; 
+	TVector3 HitPos1, HitPos2;
+	TVector3 PosDiff;
+	// TVector3 XXXPos;
 
 	for(int i = 0; i < cluSize1; i++)
 	{
@@ -352,41 +582,41 @@ float ArborToolLCIO::BushDis( edm4hep::Cluster clu1, edm4hep::Cluster clu2)
 	}
 
 
-	return DisBetweenBush; 
+	return DisBetweenBush;
 }
 
 
 float ArborToolLCIO::DisPointToBush(TVector3 Pos1, edm4hep::Cluster clu1)
 {
-	float Dis = 1.0E9; 
+	float Dis = 1.0E9;
 	float HitDis = 1.0E8;
 	int clusize = clu1.hits_size();
 
-	TVector3 HitPos; 
+	TVector3 HitPos;
 
 	for(int s = 0; s < clusize; s++)
 	{
 		HitPos = TVector3((clu1.getHits(s)).getPosition().x,(clu1.getHits(s)).getPosition().y,(clu1.getHits(s)).getPosition().z);
 		HitDis = (HitPos - Pos1).Mag();
-		if(HitDis < Dis) 
+		if(HitDis < Dis)
 		{
-			Dis = HitDis; 
+			Dis = HitDis;
 		}
 	}
 
-	return Dis; 
+	return Dis;
 }
 
 
 TVector3 ArborToolLCIO::ClusterCoG(edm4hep::Cluster inputCluster)
 {
-	TVector3 CenterOfGravity; 
+	TVector3 CenterOfGravity;
 
 	int inputClusterSize = inputCluster.hits_size();
 
-	TVector3 tmphitPos; 
+	TVector3 tmphitPos;
 	float tmphitEnergy;
-	float sumhitEnergy = 0; 
+	float sumhitEnergy = 0;
 
 	for(int i = 0; i < inputClusterSize; i++)
 	{
@@ -395,12 +625,12 @@ TVector3 ArborToolLCIO::ClusterCoG(edm4hep::Cluster inputCluster)
 		tmphitEnergy = tmpHit.getEnergy();
 
 		CenterOfGravity += tmphitPos*tmphitEnergy;
-		sumhitEnergy += tmphitEnergy; 
+		sumhitEnergy += tmphitEnergy;
 	}
 
-	CenterOfGravity = 1.0/sumhitEnergy * CenterOfGravity; 
+	CenterOfGravity = 1.0/sumhitEnergy * CenterOfGravity;
 
-	return CenterOfGravity; 
+	return CenterOfGravity;
 }
 
 
@@ -410,10 +640,10 @@ edm4hep::ClusterCollection* ArborToolLCIO::ClusterVecColl( std::vector<edm4hep::
 	edm4hep::ClusterCollection* vec_coll_Clusters = m_clucol.createAndPut();
 
 	int NClu = inputClusters.size();
-	int CurrBranchSize = 0; 
-	TVector3 SeedPos; 
-	std::vector<float> CluEn; 
-	std::vector<int> CluIndex; 
+	int CurrBranchSize = 0;
+	TVector3 SeedPos;
+	std::vector<float> CluEn;
+	std::vector<int> CluIndex;
 
 	for(int i0 = 0; i0 < NClu; i0++)
 	{
@@ -448,7 +678,7 @@ edm4hep::ClusterCollection* ArborToolLCIO::ClusterVecColl( std::vector<edm4hep::
 
 std::vector<edm4hep::Cluster> ArborToolLCIO::CollClusterVec(const edm4hep::ClusterCollection * input_coll )
 {
-	std::vector<edm4hep::Cluster> outputClusterVec; 
+	std::vector<edm4hep::Cluster> outputClusterVec;
 
 
 	outputClusterVec.clear();
@@ -459,7 +689,7 @@ std::vector<edm4hep::Cluster> ArborToolLCIO::CollClusterVec(const edm4hep::Clust
 		outputClusterVec.push_back(a_clu);
 	}
 
-	return outputClusterVec; 
+	return outputClusterVec;
 }
 
 
@@ -468,7 +698,7 @@ void ArborToolLCIO::NaiveCluConst(edm4hep::MutableCluster a0_clu,edm4hep::Mutabl
 	b0_clu.setPosition(a0_clu.getPosition());
 	b0_clu.setEnergy(a0_clu.getEnergy());
 	int NCaloHit = a0_clu.hits_size();
-	float HitEn = 0; 
+	float HitEn = 0;
 	float SubDEn[6] = {0, 0, 0, 0, 0, 0};
 
 	for(int t0 = 0; t0 < NCaloHit; t0++)
@@ -481,7 +711,7 @@ void ArborToolLCIO::NaiveCluConst(edm4hep::MutableCluster a0_clu,edm4hep::Mutabl
 			SubDEn[1] += HitEn;
 		}
 		else
-		{	
+		{
 			SubDEn[0] += HitEn;
 		}
 	}
@@ -490,7 +720,7 @@ void ArborToolLCIO::NaiveCluConst(edm4hep::MutableCluster a0_clu,edm4hep::Mutabl
 	{
 		b0_clu.addToSubdetectorEnergies(SubDEn[i]);
 	}
-	
+
 }
 
 
@@ -500,7 +730,7 @@ edm4hep::Cluster ArborToolLCIO::NaiveCluImpl(edm4hep::MutableCluster a0_clu)
 	b0_clu.setPosition(a0_clu.getPosition());
 	b0_clu.setEnergy(a0_clu.getEnergy());
 	int NCaloHit = a0_clu.hits_size();
-	float HitEn = 0; 
+	float HitEn = 0;
 	float SubDEn[6] = {0, 0, 0, 0, 0, 0};
 
 	for(int t0 = 0; t0 < NCaloHit; t0++)
@@ -513,7 +743,7 @@ edm4hep::Cluster ArborToolLCIO::NaiveCluImpl(edm4hep::MutableCluster a0_clu)
 			SubDEn[1] += HitEn;
 		}
 		else
-		{	
+		{
 			SubDEn[0] += HitEn;
 		}
 	}
@@ -522,8 +752,8 @@ edm4hep::Cluster ArborToolLCIO::NaiveCluImpl(edm4hep::MutableCluster a0_clu)
 	{
 		b0_clu.addToSubdetectorEnergies(SubDEn[i]);
 	}
-	
-	return b0_clu; 
+
+	return b0_clu;
 }
 
 std::vector<edm4hep::CalorimeterHit> ArborToolLCIO::CollHitVec(const edm4hep::CalorimeterHitCollection * input_coll, float EnergyThreshold)
@@ -545,23 +775,28 @@ std::vector<edm4hep::CalorimeterHit> ArborToolLCIO::CollHitVec(const edm4hep::Ca
 }
 
 
-std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterHitAbsorbtion( std::vector<edm4hep::Cluster> MainClusters, std::vector<edm4hep::CalorimeterHit> IsoHits, float DisThreshold )	// Projective Distance + Hit Depth correlation; 
+std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterHitAbsorbtion( std::vector<edm4hep::Cluster> MainClusters, std::vector<edm4hep::CalorimeterHit> IsoHits, float DisThreshold )	// Projective Distance + Hit Depth correlation;
 {
 	std::vector<edm4hep::MutableCluster> outputClusterVec;
 
 	int N_Core = MainClusters.size();
 	int N_Hit = IsoHits.size();
 	TVector3 HitPos, MBSeedPos;
-	float currHitCoreDis = 0;  
-	float MinHitCoreDis = 1.0E10; 
-	int MinDisIndex = -1; 
+	float currHitCoreDis = 0;
+	float MinHitCoreDis = 1.0E10;
+	int MinDisIndex = -1;
 	std::vector<std::pair<int, int> > Frag_Core_Links;
 	std::pair<int, int> a_frag_core_link;
+
+
+    double ESum_IsoHit = 0;
+    double ESum_Core = 0;
+
 
 	for(int i0 = 0; i0 < N_Hit; i0++)
 	{
 		auto a_hit = IsoHits[i0];
-		HitPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);		
+		HitPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 		MinHitCoreDis = 1.0E10;
 
 		for(int j0 = 0; j0 < N_Core; j0++)
@@ -570,7 +805,7 @@ std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterHitAbsorbtion( std::v
 			currHitCoreDis = DisPointToBush(HitPos, a_core);
 			if(currHitCoreDis < MinHitCoreDis)
 			{
-				MinHitCoreDis = currHitCoreDis; 
+				MinHitCoreDis = currHitCoreDis;
 				MinDisIndex = j0;
 			}
 		}
@@ -580,11 +815,14 @@ std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterHitAbsorbtion( std::v
 			a_frag_core_link.second = MinDisIndex;
 			Frag_Core_Links.push_back(a_frag_core_link);
 		}
+
+        ESum_IsoHit += a_hit.getEnergy();
+
 	}
 
 	int N_frag_core_links = Frag_Core_Links.size();
 	std::vector<edm4hep::CalorimeterHit> tomerge_hits;
-	float ClusterEn = 0; 
+	float ClusterEn = 0;
 
 	for(int i2 = 0; i2 < N_Core; i2 ++)
 	{
@@ -601,7 +839,7 @@ std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterHitAbsorbtion( std::v
 			}
 		}
 		edm4hep::MutableCluster a_mergedfrag_core;
-		ClusterEn = 0; 
+		ClusterEn = 0;
 
 		for(unsigned int j2 = 0; j2 < a_core.hits_size(); j2++)
 		{
@@ -624,9 +862,17 @@ std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterHitAbsorbtion( std::v
 		a_mergedfrag_core.setPhi( MBSeedPos.Phi()  );
 
 		outputClusterVec.push_back(a_mergedfrag_core);
+
+
+        ESum_Core += ClusterEn;
+        // cout<<"[YX debug - ClusterHitAbsorbtion] Core "<<i2<<", merged E = "<<ClusterEn<<endl;
+
 	}
 
-	return outputClusterVec; 
+    cout<<"[YX debug - ClusterHitAbsorbtion] N_Core = "<<N_Core<<", N_IsoHit = "<<N_Hit<<", ESum_IsoHit = "<<ESum_IsoHit<<", ESum_Core = "<<ESum_Core<<endl;
+
+
+	return outputClusterVec;
 }
 
 
@@ -634,10 +880,10 @@ void ArborToolLCIO::NaiveMergeCluConst(std::vector<edm4hep::Cluster> inputCluVec
 {
 
 	int NClu = inputCluVec.size();
-	float SeedDis = 1E9; 
-	float MaxDis = 0; 
-	float MergedCluEnergy = 0; 
-	float HitEn = 0; 
+	float SeedDis = 1E9;
+	float MaxDis = 0;
+	float MergedCluEnergy = 0;
+	float HitEn = 0;
 	float SubDEn[6] = {0, 0, 0, 0, 0, 0};
 
 	TVector3 CurrSeedPos, SeedPos, CurrHitPos, CluEndPos, CluRefDir;	//Seed Depth... CoG Comp...
@@ -650,7 +896,7 @@ void ArborToolLCIO::NaiveMergeCluConst(std::vector<edm4hep::Cluster> inputCluVec
 
 		if(CurrSeedPos.Mag() < SeedDis)
 		{
-			SeedPos = CurrSeedPos; 
+			SeedPos = CurrSeedPos;
 			SeedDis = CurrSeedPos.Mag();
 		}
 
@@ -662,19 +908,19 @@ void ArborToolLCIO::NaiveMergeCluConst(std::vector<edm4hep::Cluster> inputCluVec
 			MergedClu.addToHits(a_hit);
 			CurrHitPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 			HitEn = a_hit.getEnergy();
-			if(fabs(HitEn - DHCALCalibrationConstant) < 1.0E-6)	// ECAL, HCAL, Should use better criteria. 
+			if(fabs(HitEn - DHCALCalibrationConstant) < 1.0E-6)	// ECAL, HCAL, Should use better criteria.
 			{
-				SubDEn[1] += HitEn; 
+				SubDEn[1] += HitEn;
 			}
 			else
 			{
-				SubDEn[0] += HitEn; 
+				SubDEn[0] += HitEn;
 			}
 
 			if(CurrHitPos.Mag() > MaxDis)
 			{
 				MaxDis = CurrHitPos.Mag();
-				CluEndPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);	
+				CluEndPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 			}
 		}
 	}
@@ -699,10 +945,10 @@ edm4hep::MutableCluster ArborToolLCIO::NaiveMergeClu(std::vector<edm4hep::Cluste
 	edm4hep::MutableCluster MergedClu;
 
 	int NClu = inputCluVec.size();
-	float SeedDis = 1E9; 
-	float MaxDis = 0; 
-	float MergedCluEnergy = 0; 
-	float HitEn = 0; 
+	float SeedDis = 1E9;
+	float MaxDis = 0;
+	float MergedCluEnergy = 0;
+	float HitEn = 0;
 	float SubDEn[6] = {0, 0, 0, 0, 0, 0};
 
 	TVector3 CurrSeedPos, SeedPos, CurrHitPos, CluEndPos, CluRefDir;	//Seed Depth... CoG Comp...
@@ -715,7 +961,7 @@ edm4hep::MutableCluster ArborToolLCIO::NaiveMergeClu(std::vector<edm4hep::Cluste
 
 		if(CurrSeedPos.Mag() < SeedDis)
 		{
-			SeedPos = CurrSeedPos; 
+			SeedPos = CurrSeedPos;
 			SeedDis = CurrSeedPos.Mag();
 		}
 
@@ -727,19 +973,19 @@ edm4hep::MutableCluster ArborToolLCIO::NaiveMergeClu(std::vector<edm4hep::Cluste
 			MergedClu.addToHits(a_hit);
 			CurrHitPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 			HitEn = a_hit.getEnergy();
-			if(fabs(HitEn - DHCALCalibrationConstant) < 1.0E-6)	// ECAL, HCAL, Should use better criteria. 
+			if(fabs(HitEn - DHCALCalibrationConstant) < 1.0E-6)	// ECAL, HCAL, Should use better criteria.
 			{
-				SubDEn[1] += HitEn; 
+				SubDEn[1] += HitEn;
 			}
 			else
 			{
-				SubDEn[0] += HitEn; 
+				SubDEn[0] += HitEn;
 			}
 
 			if(CurrHitPos.Mag() > MaxDis)
 			{
 				MaxDis = CurrHitPos.Mag();
-				CluEndPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);	
+				CluEndPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 			}
 		}
 	}
@@ -772,14 +1018,14 @@ std::vector<edm4hep::MutableCluster> ArborToolLCIO::ClusterAbsorbtion( std::vect
 
 	//tag minimal distance
 
-	float MinFragCoreDis = 1.0E10; 
+	float MinFragCoreDis = 1.0E10;
 	float CurrFragCoreDis = 0;
-	int MinDisIndex = -1;  
+	int MinDisIndex = -1;
 	std::vector<std::pair<int, int> > Frag_Core_Links;
 	std::pair<int, int> a_frag_core_link;
 	std::map<int, int> TouchedFrag;
 	TouchedFrag.clear();
-	TVector3 fragPos; 
+	TVector3 fragPos;
 
 	for(int i0 = 0; i0 < N_frag; i0 ++)
 	{
@@ -868,7 +1114,7 @@ edm4hep::ClusterCollection* ArborToolLCIO::ClusterVecMerge( std::vector<edm4hep:
 #endif
 
 
-	TVector3 tmpClusterSeedPos, MBSeedPos;	
+	TVector3 tmpClusterSeedPos, MBSeedPos;
 
 	int CurrBranchSize = 0;
 	float SeedPosMin = 1.0E10;
@@ -925,7 +1171,7 @@ edm4hep::ClusterCollection* ArborToolLCIO::ClusterVecMerge( std::vector<edm4hep:
 					auto tmpHit = tmpMergebranch.getHits(j1);
 					branchtmp.addToHits(tmpHit);
 				}
-				
+
 			}
 			branchtmp.setPosition( Mainbranch.getPosition() );
 			branchtmp.setEnergy(BranchEnergy);
@@ -942,10 +1188,10 @@ edm4hep::ClusterCollection* ArborToolLCIO::ClusterVecMerge( std::vector<edm4hep:
 }
 int ArborToolLCIO::JointsBetweenBush(edm4hep::Cluster a_Clu, edm4hep::Cluster b_Clu, float CellSize)
 {
-	int NJoint = 0; 
+	int NJoint = 0;
 	int a_CluSize = a_Clu.hits_size();
 	int b_CluSize = b_Clu.hits_size();
-	TVector3 aHitPos, bHitPos, PosDiff, aCluPos, bCluPos; 	
+	TVector3 aHitPos, bHitPos, PosDiff, aCluPos, bCluPos;
 	aCluPos = TVector3(a_Clu.getPosition().x,a_Clu.getPosition().y,a_Clu.getPosition().z);
 	bCluPos = TVector3(b_Clu.getPosition().x,b_Clu.getPosition().y,b_Clu.getPosition().z);
 
@@ -957,7 +1203,7 @@ int ArborToolLCIO::JointsBetweenBush(edm4hep::Cluster a_Clu, edm4hep::Cluster b_
 		{
 			auto bhit = b_Clu.getHits(j);
 			bHitPos = TVector3(bhit.getPosition().x,bhit.getPosition().y,bhit.getPosition().z);
-			PosDiff = aHitPos - bHitPos; 
+			PosDiff = aHitPos - bHitPos;
 			if(PosDiff.Mag() < 1.5*CellSize)	//allow Diag connect... else use 1.2
 			{
 				// if((aCluPos - bHitPos).Mag() < 60 || (bCluPos - aHitPos).Mag() < 60)
@@ -966,7 +1212,7 @@ int ArborToolLCIO::JointsBetweenBush(edm4hep::Cluster a_Clu, edm4hep::Cluster b_
 		}
 	}
 
-	return NJoint; 
+	return NJoint;
 }
 
 
@@ -1029,7 +1275,7 @@ float ArborToolLCIO::SimpleBushTimeTrackClu(edm4hep::Track a_trk, edm4hep::Clust
 int ArborToolLCIO::SimpleBushNC(edm4hep::Track  a_trk, edm4hep::Cluster  a_clu)
 {
 	float Distance = 1.0E9;
-	//float Time = 0; 
+	//float Time = 0;
 	int NC = 0;
 	float BushDist[3] = {0, 0 ,0};
 	HelixClassD * a_Helix = new HelixClassD();
@@ -1065,7 +1311,7 @@ int ArborToolLCIO::ClusterFlag(edm4hep::Cluster a_tree, edm4hep::Track a_trk)
 	//       non-matched     111
 	//  HAD: matched         211
 	//       non-matched     212
-	
+
 	int CluIDFlag = 999;
 	int ClusterID = 211;
 	int EcalNHit, HcalNHit, NLEcal, NLHcal, NH[16];
@@ -1220,7 +1466,19 @@ int ArborToolLCIO::ClusterFlag(edm4hep::Cluster a_tree, edm4hep::Track a_trk)
 			auto a_hit = a_tree.getHits(s1);
 			allhits.push_back(a_hit);
 			auto cellid= a_hit.getCellID();
-			int NLayer =  m_decoder->get(cellid, "layer");
+			// int NLayer =  m_decoder->get(cellid, "layer");
+            int NLayer;
+
+			if(_USE_LCIO){
+		      		ID_UTIL::CellIDDecoder<edm4hep::CalorimeterHit> cellIdDecoder(m_encoder_str);
+		      		const std::string idCodingString(m_encoder_str);
+		      		const std::string layerCoding(GetLayerCoding(idCodingString));
+				NLayer=cellIdDecoder(&a_hit)[layerCoding.c_str()]+1;
+			}
+
+			else{
+				NLayer =  m_decoder->get(cellid, "layer");
+			}
 
 			HitPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 
@@ -1307,11 +1565,11 @@ int ArborToolLCIO::ClusterFlag(edm4hep::Cluster a_tree, edm4hep::Track a_trk)
 				else if(NLayer < 15)
 				{
 					EH_3.push_back(a_hit);
-				} 
+				}
 				else if(NLayer < 20)
 				{
 					EH_4.push_back(a_hit);
-				} 
+				}
 				else if(NLayer < 25)
 				{
 					EH_5.push_back(a_hit);
@@ -1378,7 +1636,7 @@ int ArborToolLCIO::ClusterFlag(edm4hep::Cluster a_tree, edm4hep::Track a_trk)
 
 		NLEcal = ActiveLayers(Ecalhits);
 		NLHcal = ActiveLayers(Hcalhits);
-		cout<<"NLEcal "<<NLEcal<<" "<<Ecalhits.size()<<" "<<endl;
+		if(0) cout<<"NLEcal "<<NLEcal<<" "<<Ecalhits.size()<<" "<<endl;
 
 
 		float sum_NHE = 0, sum_NHH = 0;
@@ -1408,7 +1666,7 @@ int ArborToolLCIO::ClusterFlag(edm4hep::Cluster a_tree, edm4hep::Track a_trk)
 		rms_Ecal = 0;
 		rms_Hcal = 0;
 		rms_Ecal2 = 0;
-		rms_Hcal2 = 0;	
+		rms_Hcal2 = 0;
 		for(int r0 = 0; r0 < 16; r0++)
 		{
 			if(r0 < 6)
@@ -1539,21 +1797,36 @@ int ArborToolLCIO::ClusterFlag(edm4hep::Cluster a_tree, edm4hep::Track a_trk)
 
 int ArborToolLCIO::ActiveLayers(  std::vector<edm4hep::CalorimeterHit> clu )
 {
-	std::vector<int> hitlayers; 
+	std::vector<int> hitlayers;
 	hitlayers.clear();
 
-	int NHits = clu.size();	
+	int NHits = clu.size();
 	int tmpK = 0;	//Layer Number
-	int tmpS = 0; 
+	int tmpS = 0;
 	int tmpID = 0;
-	
+
 	for(int i = 0; i < NHits; i++)
 	{
 		auto hit = clu[i];
 		auto cellid= hit.getCellID();
+
+
+		if(_USE_LCIO){
+	      		ID_UTIL::CellIDDecoder<edm4hep::CalorimeterHit> cellIdDecoder(m_encoder_str);
+	      		const std::string idCodingString(m_encoder_str);
+	      		const std::string layerCoding(GetLayerCoding(idCodingString));
+	      		const std::string staveCoding(GetStaveCoding(idCodingString));
+
+
+			tmpK=cellIdDecoder(&hit)[layerCoding.c_str()]+1;
+			tmpS=cellIdDecoder(&hit)[staveCoding.c_str()]+1;
+		}
+
+		else{
 		tmpK = m_decoder->get(cellid, "layer")+1 ;
 		tmpS = m_decoder->get(cellid, "stave")+1 ;
-		// cout<<"tmpK "<<tmpK<<endl; 
+        }
+		// cout<<"tmpK "<<tmpK<<endl;
 		tmpID = tmpS * 50 + tmpK;
 
 		if( std::find(hitlayers.begin(), hitlayers.end(), tmpID) == hitlayers.end() )
@@ -1568,9 +1841,9 @@ int ArborToolLCIO::ActiveLayers(  std::vector<edm4hep::CalorimeterHit> clu )
 
 float ArborToolLCIO::ClusterT0(edm4hep::Cluster a_Clu)
 {
-	float T0 = 1E9; 
-	float tmpTime = 0; 
-	TVector3 CluHitPos; 
+	float T0 = 1E9;
+	float tmpTime = 0;
+	TVector3 CluHitPos;
 	for(unsigned int i = 0; i < a_Clu.hits_size(); i++)
 	{
 		auto a_hit = a_Clu.getHits(i);
@@ -1579,7 +1852,7 @@ float ArborToolLCIO::ClusterT0(edm4hep::Cluster a_Clu)
 		tmpTime = a_hit.getTime() - 1.0/300*CluHitPos.Mag();
 		if(tmpTime < T0 && tmpTime > 0)
 		{
-			T0 = tmpTime; 
+			T0 = tmpTime;
 		}
 	}
 	return T0;
@@ -1591,19 +1864,21 @@ int ArborToolLCIO::newPhotonTag(edm4hep::Cluster a_clu)
 	int flag=0;
 
 	TVector3 PosClu = TVector3(a_clu.getPosition().x,a_clu.getPosition().y,a_clu.getPosition().z);
-	float Depth = 0; 
+	float Depth = 0;
 	Depth = DisSeedSurface(PosClu);
 
 	int CluSize= a_clu.hits_size();
 	float ClusFD=FDV3(a_clu);
 	float ClusT0=ClusterT0(a_clu);
 
-	
+    // cout<<"[YX debug - newPhotonTag] CluSize = "<<CluSize<<", ClusFD = "<<ClusFD<<", ClusT0 = "<<ClusT0<<", Depth = "<<Depth<<endl;
+
+
 	if(ClusFD>0.18*TMath::Log((float)CluSize)-0.53&&ClusFD<0.16*TMath::Log((float)CluSize)+0.025&&ClusFD>-0.2*TMath::Log((float)CluSize)+0.4&&((log10(ClusT0)<-2&&log10(Depth)<2&&log10(CluSize)>2)||(log10(ClusT0)<-1.5&&log10(CluSize)<2)))
 	{
 		flag=1;
 	}
-	
+
 
 	return flag;
 
@@ -1619,7 +1894,7 @@ int ArborToolLCIO::ClusterFlag1st(edm4hep::Cluster a_tree)
 	float avEnDisHtoL;
 	float EcalEn, HcalEn, EClu, cluDepth, maxDepth, minDepth, FD_all, FD_ECAL, FD_HCAL;
 	float FD_ECALF10;
-	
+
 
 	TVector3 CluPos;
 	CluPos = TVector3(a_tree.getPosition().x,a_tree.getPosition().y,a_tree.getPosition().z);
@@ -1686,7 +1961,18 @@ int ArborToolLCIO::ClusterFlag1st(edm4hep::Cluster a_tree)
 		auto a_hit = a_tree.getHits(s1);
 		allhits.push_back(a_hit);
 		auto cellid = a_hit.getCellID();
-		int NLayer = m_decoder->get(cellid, "layer");
+		// int NLayer = m_decoder->get(cellid, "layer");
+        int NLayer;
+		if(_USE_LCIO){
+	      		ID_UTIL::CellIDDecoder<edm4hep::CalorimeterHit> cellIdDecoder(m_encoder_str);
+	      		const std::string idCodingString(m_encoder_str);
+	      		const std::string layerCoding(GetLayerCoding(idCodingString));
+			NLayer=cellIdDecoder(&a_hit)[layerCoding.c_str()]+1;
+		}
+
+		else{
+			NLayer = m_decoder->get(cellid, "layer");
+		}
 		float tmpHitEn = a_hit.getEnergy();
 		HitPos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 
@@ -1762,7 +2048,7 @@ int ArborToolLCIO::ClusterFlag1st(edm4hep::Cluster a_tree)
 	bool cute3;
 	if (x < 0.9)  cute3 = FD_ECALF10 > 0.3/sqrt(sqrt(0.9))*sqrt(sqrt(0.9-x));
 	else cute3 = 1;
-	bool cute4 = HcalNHit/EClu < 0.3;                
+	bool cute4 = HcalNHit/EClu < 0.3;
 	bool cute;
 	cute = cute1 && cute2 && cute3 && cute4;
 
@@ -1777,7 +2063,7 @@ int ArborToolLCIO::ClusterFlag1st(edm4hep::Cluster a_tree)
 	if(currCluNHits <= 4) ClusterID = 1;
 	else if(cute) ClusterID = 11;
 	else if (cutmu)  ClusterID = 13;
-	else 
+	else
 	{
 		bool cutef1 = FD_HCAL == -1;
 		bool cutef2 = minDepth < 50;
@@ -1793,7 +2079,7 @@ int ArborToolLCIO::ClusterFlag1st(edm4hep::Cluster a_tree)
 		bool cutef;
 
 		cutef = (cutef1 && cutef2 && cutef3 && cutef3b && cutef4) || cutef5;
-		if(cutef) ClusterID = 11;  
+		if(cutef) ClusterID = 11;
 	}
 
 	if(ClusterID == 211)
@@ -1804,7 +2090,7 @@ int ArborToolLCIO::ClusterFlag1st(edm4hep::Cluster a_tree)
 		bool cutmuf = cutmuf1 || (cutmuf2 && cutmuf3);
 		if(cutmuf) ClusterID = 13;
 		else if(minDepth < 0.77+0.23*EClu) ClusterID = 211;
-		else ClusterID = 2; 
+		else ClusterID = 2;
 	}
 
 	return ClusterID;
@@ -1849,11 +2135,11 @@ float ArborToolLCIO::ClusterEE(edm4hep::Cluster inputCluster)
 				tmpCluEn += hitEn;
 			}
 		}
-		
+
 		EnCorrector = 1;
 		if(tmpCluEn > 1.5 && tmpCluEn < 22 && 1 == 0)
 		{
-			EnCorrector = 0.6*(1 + 1.0/log10(tmpCluEn)); 
+			EnCorrector = 0.6*(1 + 1.0/log10(tmpCluEn));
 		}
 		ClusterEnergy = tmpCluEn*EnCorrector;
 		//ClusterEnergy = HADClusterEE(tmpCluEn,inputCluster);
@@ -1876,17 +2162,29 @@ float ArborToolLCIO::EMClusterEE( edm4hep::Cluster inputCluster )
 	float _costheta = 0;
 	float Ethetacorr = 1;
 	float Ephicorr = 1;
-	float EMC = inputCluster.getEnergy(); 
-	TVector3 CluPos = TVector3(inputCluster.getPosition().x,inputCluster.getPosition().y,inputCluster.getPosition().z); 
+	float EMC = inputCluster.getEnergy();
+	TVector3 CluPos = TVector3(inputCluster.getPosition().x,inputCluster.getPosition().y,inputCluster.getPosition().z);
 	float CluTheta = CluPos.Theta();
-	float CluPhi = CluPos.Phi()*5.72957795130823229e+01;	
-	
+	float CluPhi = CluPos.Phi()*5.72957795130823229e+01;
+
 	int NCluHits = inputCluster.hits_size();
 	for(int s1 = 0; s1 < NCluHits; s1++)
 	{
 		auto a_hit = inputCluster.getHits(s1);
 		auto cellid=a_hit.getCellID();
-		int NLayer = m_decoder->get(cellid, "layer");
+		// int NLayer = m_decoder->get(cellid, "layer");
+
+        int NLayer;
+		if(_USE_LCIO){
+	      		ID_UTIL::CellIDDecoder<edm4hep::CalorimeterHit> cellIdDecoder(m_encoder_str);
+	      		const std::string idCodingString(m_encoder_str);
+	      		const std::string layerCoding(GetLayerCoding(idCodingString));
+			NLayer=cellIdDecoder(&a_hit)[layerCoding.c_str()]+1;
+		}
+
+		else{
+			NLayer = m_decoder->get(cellid, "layer");
+		}
 		if(NLayer > 20){
 			if (NLayer%2 ==0){
 				ArNhite10 ++;
@@ -1953,16 +2251,16 @@ float ArborToolLCIO::EMClusterEE( edm4hep::Cluster inputCluster )
 
 std::vector<float> ArborToolLCIO::ClusterTime(edm4hep::Cluster inputCluster)
 {
-	std::vector<float> CluTimeVector; 
+	std::vector<float> CluTimeVector;
 	CluTimeVector.clear();
 
 	int NHit = inputCluster.hits_size();
 	float currhitTime = 0;
-	float currhitoriTime = 0; 
-	TVector3 hitpos; 
+	float currhitoriTime = 0;
+	TVector3 hitpos;
 
 	std::vector<float> Time;
-	Time.clear(); 
+	Time.clear();
 	std::map<int, float> CluHitToTime;
 	CluHitToTime.clear();
 	std::vector<float> OriginalTime;
@@ -1976,8 +2274,8 @@ std::vector<float> ArborToolLCIO::ClusterTime(edm4hep::Cluster inputCluster)
 		hitpos = TVector3(a_hit.getPosition().x,a_hit.getPosition().y,a_hit.getPosition().z);
 		if(a_hit.getTime() == 0)
 		{
-			currhitTime = 1001;	
-			currhitoriTime = 1001; 
+			currhitTime = 1001;
+			currhitoriTime = 1001;
 		}
 		else
 		{
@@ -1987,17 +2285,17 @@ std::vector<float> ArborToolLCIO::ClusterTime(edm4hep::Cluster inputCluster)
 		}
 		Time.push_back( currhitTime );
 		OriginalTime.push_back( currhitoriTime );
-		CluHitToTime[i] = currhitTime;			
+		CluHitToTime[i] = currhitTime;
 	}
 
 	std::vector<int> TimeOrder = SortMeasure(Time, 0);
 	std::vector<int> OriTimeOrder = SortMeasure(OriginalTime, 0);
 	float PeakTime = 0;
-	float AverageTime = 0; 
-	int NCount = 0; 
-	float ptime = 0; 
-	int Break = 0; 
-	TVector3 StartP, EndP, hitP; 
+	float AverageTime = 0;
+	int NCount = 0;
+	float ptime = 0;
+	int Break = 0;
+	TVector3 StartP, EndP, hitP;
 
 	for(int j0= 0; j0 < N_PropTimeHit; j0++)
 	{
@@ -2037,22 +2335,22 @@ std::vector<float> ArborToolLCIO::ClusterTime(edm4hep::Cluster inputCluster)
 			{
 				if( Break == 0 )
 				{
-					PeakTime += ptime; 
-					NCount ++; 
+					PeakTime += ptime;
+					NCount ++;
 				}
-			}	
+			}
 			else
 			{
 				Break = 1;
 			}
 		}
 
-		AverageTime += ptime; 
+		AverageTime += ptime;
 	}
 	if(NCount)
-		PeakTime = float(PeakTime)/NCount; 
+		PeakTime = float(PeakTime)/NCount;
 
-	CluTimeVector.push_back(float(AverageTime)/NHit);	
+	CluTimeVector.push_back(float(AverageTime)/NHit);
 	CluTimeVector.push_back(PeakTime);
 	CluTimeVector.push_back(NCount);
 	if( N_PropTimeHit > 1 )	// Direction: Cos Theta Between Time Flow And Position
@@ -2060,9 +2358,65 @@ std::vector<float> ArborToolLCIO::ClusterTime(edm4hep::Cluster inputCluster)
 	else
 		CluTimeVector.push_back(1001);
 
-	return CluTimeVector; 
+	return CluTimeVector;
 }
 
 
+std::string ArborToolLCIO::GetStaveCoding(const std::string &encodingString) const
+{
+     if (encodingString.find("stave") != std::string::npos)
+	  return std::string("stave");
+
+     if (encodingString.find("S-1") != std::string::npos)
+	  return std::string("S-1");
+
+     if (encodingString.find("S") != std::string::npos)
+	  return std::string("S");
+
+     return std::string("unknown_stave_encoding");
+}
+
+std::string ArborToolLCIO::GetLayerCoding(const std::string &encodingString) const
+{
+     if (encodingString.find("layer") != std::string::npos)
+	  return std::string("layer");
+
+     if (encodingString.find("K-1") != std::string::npos)
+	  return std::string("K-1");
+
+     if (encodingString.find("K") != std::string::npos)
+	  return std::string("K");
+
+     return std::string("unknown_layer_encoding");
+}
+
+
+std::string ArborToolLCIO::GetCellICoding(const std::string &encodingString) const
+{
+     if (encodingString.find("cell_x") != std::string::npos)
+	  return std::string("cell_x");
+
+     if (encodingString.find("I-1") != std::string::npos)
+	  return std::string("I-1");
+
+     if (encodingString.find("I") != std::string::npos)
+	  return std::string("I");
+
+     return std::string("unknown_cellI_encoding");
+}
+
+std::string ArborToolLCIO::GetCellJCoding(const std::string &encodingString) const
+{
+     if (encodingString.find("cell_y") != std::string::npos)
+	  return std::string("cell_y");
+
+     if (encodingString.find("J-1") != std::string::npos)
+	  return std::string("J-1");
+
+     if (encodingString.find("J") != std::string::npos)
+	  return std::string("J");
+
+     return std::string("unknown_cellJ_encoding");
+}
 
 

@@ -2,6 +2,7 @@
 #include "ArborTool.h"
 #include "ArborToolLCIO.hh"
 #include "DetectorPos.hh"
+#include "HelixClassD.hh"
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiAlg/GaudiAlgorithm.h"
@@ -45,7 +46,6 @@
 #include <vector>
 #include <algorithm>
 
-#include "HelixClassD.hh"		
 
 using namespace std;
 
@@ -63,13 +63,16 @@ BushConnect::BushConnect(const std::string& name, ISvcLocator* svcLoc)
 StatusCode BushConnect::initialize() {
 
       ISvcLocator* svcloc = serviceLocator();
-      m_ArborToolLCIO=new ArborToolLCIO("arborTools",svcloc);
+      m_ArborToolLCIO=new ArborToolLCIO("arborTools",svcloc, m_readLCIO);
+    //   m_ArborToolLCIO->_USE_LCIO = m_readLCIO;
 //printParameters();
 	//Cluflag.setBit(LCIO::CHBIT_LONG);
 	return GaudiAlgorithm::initialize();
 }
 
 void BushConnect::Clean(){
+    cout<<"[YX debug] BushConnect::Clean Begin:"<<endl;
+
 	MCPTrack_Type.clear();
 	Track_Energy.clear();
 	Track_Type.clear();
@@ -87,38 +90,43 @@ void BushConnect::Clean(){
 	CluT0.clear();
 	CluCoG.clear();
 	Clu_Depth.clear();
+
+    cout<<"[YX debug] BushConnect::Clean End."<<endl;
+
 }
 
 void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Track*, float> Track_Energy)
 {
+    // cout<<"[YX debug] TrackSort Begin:"<<endl;
 	try{
 		auto TrackColl = m_trkcol.get();
 
 
 		int NTrk = TrackColl->size();
-		cout<<NTrk<<endl;
+		// cout<<"[YX debug] NTrk = "<<NTrk<<endl;
+
 		float D0 = 0;
 		float Z0 = 0;
 		int NTrkHit = 0;
 		const float mass = 0.139;	//Pion Mass
-		TVector3 EndPointPos, StartPointPos; 
-		int TrackType = 0; 
+		TVector3 EndPointPos, StartPointPos;
+		int TrackType = 0;
 
-		std::vector<edm4hep::Track> tracks_HQ_Barrel; 
+		std::vector<edm4hep::Track> tracks_HQ_Barrel;
 		std::vector<edm4hep::Track> tracks_HQ_Endcap;
 		std::vector<edm4hep::Track> tracks_HQ_Shoulder;
-		std::vector<edm4hep::Track> tracks_HQ_Forward; 
+		std::vector<edm4hep::Track> tracks_HQ_Forward;
 		std::vector<edm4hep::Track> tracks_MQ_Barrel;
 		std::vector<edm4hep::Track> tracks_MQ_Endcap;
 		std::vector<edm4hep::Track> tracks_MQ_Shoulder;
 		std::vector<edm4hep::Track> tracks_MQ_Forward;
-		std::vector<edm4hep::Track> tracks_Vtx; 
-		std::vector<edm4hep::Track> tracks_LQ; 
-		std::vector<edm4hep::Track> tracks_LE; 
+		std::vector<edm4hep::Track> tracks_Vtx;
+		std::vector<edm4hep::Track> tracks_LQ;
+		std::vector<edm4hep::Track> tracks_LE;
 		std::vector<edm4hep::Track> curr_tracks;
-	
+
 		Track_EndPoint.clear();
-	
+
 		tracks_HQ_Barrel.clear();
 		tracks_HQ_Endcap.clear();
 		tracks_HQ_Shoulder.clear();
@@ -137,57 +145,71 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 		tracks_preInteraction.clear();	//Used to denote pion and electron interaction inside TPC/Tracker. Simply vetoed for avoid double counting... but muon may still be problematic. Better way of treating would be find the cascade photons & tracks - clusters, and veto all the daughters instead of mother. Similar can done for Kshort...
 	// Condition, tracks_head to others tail. head position far from boundary. and, track energy >= sum of cascade
 
-		std::vector<int> TrackOrder; 
-		TrackOrder.clear();	
-		std::map<edm4hep::Track, int> Track_Index; 
+		std::vector<int> TrackOrder;
+		TrackOrder.clear();
+		std::map<edm4hep::Track, int> Track_Index;
 		Track_Index.clear();
 		Track_Energy.clear();
 		Track_Type.clear();
 		Track_P3.clear();
 		Track_EndPoint.clear();
 		TrackStartPoint.clear();
-	
+
+        // cout<<"[YX debug] i0 for loop begin."<<endl;
+
 		for(int i0 = 0; i0 < NTrk; i0++)
 		{
 			auto a_Trk = (*TrackColl)[i0];
-			NTrkHit = a_Trk.getTrackerHits().size();		
-			EndPointPos = TVector3((a_Trk.getTrackerHits(NTrkHit - 1)).getPosition().x,(a_Trk.getTrackerHits(NTrkHit - 1)).getPosition().y,(a_Trk.getTrackerHits(NTrkHit - 1)).getPosition().z);	
+			NTrkHit = a_Trk.getTrackerHits().size();
+
+            // cout<<"[YX debug] Trk "<<i0<<", NTrkHit = "<<NTrkHit<<", a_Trk = "<<a_Trk<<endl;
+
+            // if(NTrkHit==0) continue;
+
+			EndPointPos = TVector3((a_Trk.getTrackerHits(NTrkHit - 1)).getPosition().x,(a_Trk.getTrackerHits(NTrkHit - 1)).getPosition().y,(a_Trk.getTrackerHits(NTrkHit - 1)).getPosition().z);
 			StartPointPos = TVector3((a_Trk.getTrackerHits(0)).getPosition().x,(a_Trk.getTrackerHits(0)).getPosition().y,(a_Trk.getTrackerHits(0)).getPosition().z);
 			Track_EndPoint[a_Trk] = EndPointPos;
 			TrackStartPoint[a_Trk] = StartPointPos;
-	
+
 			HelixClassD * TrkInit_Helix = new HelixClassD();
 			TrkInit_Helix->Initialize_Canonical(a_Trk.getTrackStates(0).phi, a_Trk.getTrackStates(0).D0, a_Trk.getTrackStates(0).Z0, a_Trk.getTrackStates(0).omega, a_Trk.getTrackStates(0).tanLambda, BField);
 			float TrackEn = mass*mass;
-	
+
 			for (int q3 = 0; q3 < 3; q3 ++)
 			{
 				TrackEn += (TrkInit_Helix->getMomentum()[q3])*(TrkInit_Helix->getMomentum()[q3]);
 			}
 			TVector3 TrkMom(TrkInit_Helix->getMomentum()[0],TrkInit_Helix->getMomentum()[1],TrkInit_Helix->getMomentum()[2]);
-	
+
 			TrackEn = sqrt(TrackEn);
 			Track_Energy[a_Trk] = TrackEn;
 			Track_Theta[a_Trk] = TrkMom.Theta();
 			// Track_Phi[a_Trk] = TrkMom.Phi();
-			Track_P3[a_Trk] = TrkMom;		
-	
+			Track_P3[a_Trk] = TrkMom;
+
+            // cout<<"[YX debug - TrackSort] Input Trk "<<i0<<", PMag = "<<TrkMom.Mag()<<", NTrkHit = "<<NTrkHit<<endl;  // 能对上
+
+
 			delete TrkInit_Helix;
 		}
-	
+        // cout<<"[YX debug] i0 for loop end."<<endl;
+
 		TVector3 currEp, currSp;
 		float currMotherEn = 0;
-		float sumDauEn = 0; 
-	
+		float sumDauEn = 0;
+
 		for(int i1 = 0; i1 < NTrk; i1++)
 		{
 			auto a_Trk = (*TrackColl)[i1];
 			currEp = Track_EndPoint[a_Trk];
-	
-			if( currEp.Perp() < 1600 && currEp.Perp() > 400 && abs(currEp.Z()) < 2000 )	//Only check 
+
+            // cout<<"[YX debug - TrackSort] if_preInteraction Trk "<<i1<<", PMag = "<<Track_P3[a_Trk].Mag()<<", NTrkHit = "<<a_Trk.getTrackerHits().size()<<endl;
+
+
+			if( currEp.Perp() < 1600 && currEp.Perp() > 400 && abs(currEp.Z()) < 2000 )	//Only check
 			{
 				currMotherEn = Track_Energy[a_Trk];
-				sumDauEn = 0;	
+				sumDauEn = 0;
 				for(int i2 = 0; i2 < NTrk; i2++)
 				{
 					auto b_Trk = (*TrackColl)[i2];
@@ -201,10 +223,18 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 				if(currMotherEn + 0.1 > 0.9*sumDauEn && currMotherEn > 3 && sumDauEn > 0 )	//Some protection is always needed...
 				{
 					tracks_preInteraction.push_back(a_Trk);
+
+                    // cout<<"[YX debug - TrackSort] ---> is preInteraction push back!!!"<<endl;
+
 				}
 			}
 		}
-	
+
+        cout<<"[YX debug - TrackSort] tracks_preInteraction.size() = "<<tracks_preInteraction.size()<<endl;
+
+        cout<<"[YX debug - TrackSort] Geo TPCInnerRadius = "<<TPCInnerRadius<<", TPCOuterRadius = "<<TPCOuterRadius<<", ECALHalfZ = "<<ECALHalfZ<<", LStar = "<<LStar<<endl;
+        // cout<<"[YX debug] i1 for loop end."<<endl;
+
 		for(int t0 = 0; t0 < NTrk; t0++)
 		{
 			auto a_Trk = (*TrackColl)[t0];
@@ -216,18 +246,18 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 			Track_EndPoint[a_Trk] = EndPointPos;
 			StartPointPos = TVector3((a_Trk.getTrackerHits(0)).getPosition().x,(a_Trk.getTrackerHits(0)).getPosition().y,(a_Trk.getTrackerHits(0)).getPosition().z);
 			Track_Index[a_Trk] = t0;
-	
+
 			if( NTrkHit > 9 || (fabs(EndPointPos.Z()) > LStar - 500 && EndPointPos.Perp() < TPCInnerRadius ) || fabs(EndPointPos.Z()) > ECALHalfZ - 200  )		// Min requirement for track quality
 			{	// LStar - 500, suppose to be the last Disk Position
-	
+
 				if( find(tracks_preInteraction.begin(), tracks_preInteraction.end(), a_Trk ) != tracks_preInteraction.end() )
 				{
-					cout<<"So We Drop it! "<<Track_Energy[a_Trk]<<endl; 
-					continue; 
+					cout<<"So We Drop it! "<<Track_Energy[a_Trk]<<endl;
+					continue;
 				}
-	
+
 				TrackType = 0;
-	
+
 				if((Track_Energy[a_Trk] < 1.0 && fabs(Track_Theta[a_Trk]-1.57)< 0.4) || (fabs(Track_Theta[a_Trk]-1.57) >= 0.4 && log10(Track_Energy[a_Trk]) < -(fabs(Track_Theta[a_Trk]-1.57)-0.4)*0.2/0.3 ))
 				{
 					TrackType = 100;
@@ -246,16 +276,16 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 				}
 				else if( fabs(EndPointPos.Z()) > ECALHalfZ - 200 )		//Endcap
 				{
-					TrackType = 20; 
+					TrackType = 20;
 				}
-	
+
 				if( fabs(D0) < 1 && fabs(Z0) < 1 )
 				{
 					TrackType += 1;
 				}
-	
-				Track_Type[a_Trk] = TrackType; 
-	
+
+				Track_Type[a_Trk] = TrackType;
+
 				if(TrackType == 11)
 					tracks_HQ_Barrel.push_back(a_Trk);
 				else if(TrackType == 21)
@@ -282,12 +312,18 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 				else
 					tracks_LQ.push_back(a_Trk);
 			}
+
+
+            // cout<<"[YX debug - TrackSort] TrackType Trk "<<t0<<", TrackType = "<<TrackType<<", NTrkHit = "<<a_Trk.getTrackerHits().size()<<", PMag = "<<Track_P3[a_Trk].Mag()<<", E = "<<Track_Energy[a_Trk]<<", Theta = "<<Track_Theta[a_Trk]<<", EndPointPos (Perp, Z) = ("<<EndPointPos.Perp()<<", "<<EndPointPos.Z()<<"), D0 = "<<D0<<", Z0 = "<<Z0<<endl;  //  只是有些 TrackType 对不上，但好像不是后面 TagCore 里对不上的
+
 		}
-		cout<<"LQ"<<tracks_LQ.size()<<" "<<tracks_ILL.size()<<endl;
-	
+		if(1) cout<<"LQ "<<tracks_LQ.size()<<" "<<tracks_ILL.size()<<endl;
+
+        // cout<<"[YX debug] t0 for loop end."<<endl;
+
 		std::vector<float > currTrkMomentum;
 		std::vector<int> currTrkIndex;
-	
+
 		for(int t1 = 0; t1 < 11; t1++)
 		{
 			currTrkMomentum.clear();
@@ -311,22 +347,22 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 				curr_tracks = tracks_MQ_Forward;
 			else if(t1 == 8)
 				curr_tracks = tracks_Vtx;
-			else if(t1 == 9)			
-				curr_tracks = tracks_LQ; 
-			else if(t1 == 10)			
-				curr_tracks = tracks_LE; 
-	
-	
+			else if(t1 == 9)
+				curr_tracks = tracks_LQ;
+			else if(t1 == 10)
+				curr_tracks = tracks_LE;
+
+
 			int N_currTrack = curr_tracks.size();
-	
+
 			for(int t2 = 0; t2 < N_currTrack; t2++)
 			{
 				auto tmpTrk = curr_tracks[t2];
 				currTrkMomentum.push_back(Track_Energy[tmpTrk]);
 			}
-	
+
 			currTrkIndex = SortMeasure(currTrkMomentum, 1);
-	
+
 			for(int t3 = 0; t3 < N_currTrack; t3++)
 			{
 				auto b_tmpTrk = curr_tracks[currTrkIndex[t3]];
@@ -334,40 +370,54 @@ void BushConnect::TrackSort() //, &std::map<Track*, int>Track_Tpye, &std::map<Tr
 					TrackOrder.push_back(Track_Index[b_tmpTrk]);
 			}
 		}
-	
+        // cout<<"[YX debug] 11 for loop end."<<endl;
+
+
 		for(unsigned int t4 = 0; t4 < TrackOrder.size(); t4++)
 		{
-			auto b_Trk =  (*TrackColl)[t4];
+			// auto b_Trk =  (*TrackColl)[t4];  /// !!!
+			auto b_Trk =  (*TrackColl)[TrackOrder[t4]];
 			SortedTracks.push_back(b_Trk);
 		}
+
+        // cout<<"[YX debug] TrackOrder for loop end."<<endl;
+
 	}catch(GaudiException &e){}
+
+    // cout<<"[YX debug] TrackSort End."<<endl;
+
 }
 
 void BushConnect::BushSelfMerge()
 {
+    // cout<<"[YX debug] BushSelfMerge Begin:"<<endl;
+
 	auto CaloClu = m_clucol.get();
 	int NClu = CaloClu->size();
 
-	std::vector<edm4hep::Cluster > Core_1st; 
+    cout<<"[YX debug - BushSelfMerge] Input EHBushes nClu = "<<NClu<<endl;
+
+	std::vector<edm4hep::Cluster > Core_1st;
 	std::vector<edm4hep::MutableCluster > Frag_1st;
-	std::vector<edm4hep::Cluster > UnId_1st; 
+	std::vector<edm4hep::Cluster > UnId_1st;
 	Core_1st.clear();
 	Frag_1st.clear();
 	UnId_1st.clear();
 
-	float CluDepth = 0; 
+	float CluDepth = 0;
 	float CluEn = 0;
-	int CluSize = 0; 
-	TVector3 PosCluSeed, PosSeedDiff, PosCoGDiff, PosSeedA, PosSeedB; 
+	int CluSize = 0;
+	TVector3 PosCluSeed, PosSeedDiff, PosCoGDiff, PosSeedA, PosSeedB;
 
-	int NJoints = 0; 	
-	int SmallCluSize = 0; float DeeperDepth = 0; float LaterT0 = 0; 
+	int NJoints = 0;
+	int SmallCluSize = 0; float DeeperDepth = 0; float LaterT0 = 0;
 	float Depth_A = 0; float Depth_B = 0;
-	int Size_A = 0; int Size_B = 0; 
+	int Size_A = 0; int Size_B = 0;
 
 	TMatrixF FlagMerge(NClu, NClu);
 
-	cout<<NClu<<" clusters"<<endl;
+	double ESum_Clu_Input = 0;
+	// cout<<NClu<<" clusters"<<endl;
 	for(int i0 = 0; i0 < NClu; i0++)
 	{
 		auto a_clu = (*CaloClu)[i0];
@@ -376,8 +426,15 @@ void BushConnect::BushSelfMerge()
 		CluCoG[a_clu] = m_ArborToolLCIO->ClusterCoG(a_clu);
 		PosCluSeed = TVector3(a_clu.getPosition().x,a_clu.getPosition().y,a_clu.getPosition().z);
 		Clu_Depth[a_clu] = DisSeedSurface(PosCluSeed);
+
+        ESum_Clu_Input += a_clu.getEnergy();
+        // cout<<"[YX debug - BushSelfMerge] Input EHBushes Clu "<<i0<<", E = "<<a_clu.getEnergy()<<", Pos = ("<<PosCluSeed.X()<<", "<<PosCluSeed.Y()<<", "<<PosCluSeed.Z()<<")"<<endl;
+
 	}
 	// CluCoG_Top20Percent Might be used to improve Photon Split Remerge performance
+    cout<<"[YX debug - BushSelfMerge] Input EHBushes ESum_Clu_Input =  "<<ESum_Clu_Input<<endl;
+
+
 
 	for(int s0 = 0; s0 < NClu; s0++)
 	{
@@ -407,7 +464,7 @@ void BushConnect::BushSelfMerge()
 				if( SmallCluSize < 10 || LaterT0 > 10 || DeeperDepth > 40 || (NJoints > 8 && PosCoGDiff.Mag()*PosCoGDiff.Angle(PosSeedB) < 15 ) || NJoints>16)
 
 					//if( SmallCluSize < 10 || LaterT0 > 10 || DeeperDepth > 40 || (NJoints > 8 ) )
-				{	
+				{
 					FlagMerge[s0][s1] = 1.0;
 					FlagMerge[s1][s0] = 1.0;
 				}
@@ -440,8 +497,8 @@ void BushConnect::BushSelfMerge()
 			auto b_clu = (*CloseMergedCaloClu)[i1];
 			if(i1 != i0)
 			{
-				if(m_ArborToolLCIO->DisPointToBush(PosCluSeed,b_clu) < tmpmindis) 
-					tmpmindis = m_ArborToolLCIO->DisPointToBush(PosCluSeed,b_clu);  
+				if(m_ArborToolLCIO->DisPointToBush(PosCluSeed,b_clu) < tmpmindis)
+					tmpmindis = m_ArborToolLCIO->DisPointToBush(PosCluSeed,b_clu);
 			}
 		}
 		MinDisSeedToBush[a_clu] = tmpmindis;
@@ -476,10 +533,17 @@ void BushConnect::BushSelfMerge()
 	std::vector<edm4hep::MutableCluster > UndefFrag_1stAB = m_ArborToolLCIO->ClusterAbsorbtion(UnId_1st, Frag_1st, 50, 0.02);
 	selfmergedcluster = m_ArborToolLCIO->ClusterAbsorbtion(Core_1st, UndefFrag_1stAB, 50, 0.02);
 	auto CluAB_1st=m_ArborToolLCIO->ClusterVecColl(selfmergedcluster,m_1stclucol);
+
+    cout<<"[YX debug - BushSelfMerge] Output CluAB_1st nClu = "<<selfmergedcluster.size()<<endl;
+
+    // cout<<"[YX debug] BushSelfMerge End."<<endl;
+
 }
 
-void BushConnect::TagCore() 
+void BushConnect::TagCore()
 {
+    // cout<<"[YX debug] TagCore Begin:"<<endl;
+
 	int NTrk = SortedTracks.size();
 	int NClu = selfmergedcluster.size();
 	int currTrackType = 0;
@@ -489,9 +553,13 @@ void BushConnect::TagCore()
 	float CluDepth = 0;
 	float CoreMergeDistanceDepthCorrector = 0;
 
-	TVector3 TrkEndPoint(0, 0, 0);	
+
+    cout<<"[YX debug - TagCore] Input NTrk = "<<NTrk<<", nClu = "<<NClu<<endl;
+
+
+	TVector3 TrkEndPoint(0, 0, 0);
 	TVector3 CluPos(0, 0, 0);
-	std::map<edm4hep::Cluster, int> BushTouchFlag; 
+	std::map<edm4hep::Cluster, int> BushTouchFlag;
 	std::map<edm4hep::Track, edm4hep::MutableCluster> FCMap_Track_CHCore;
 	std::map<edm4hep::Track, std::vector<edm4hep::Cluster>> FCMap_Track_CHCore_new;
 	std::map<int, int> Closest_Trk_Clu_Map;
@@ -509,30 +577,39 @@ void BushConnect::TagCore()
 		for(int s1 = 0; s1 < NClu; s1++)
 		{
 			DisMatrix_Track_Clu_E[s0][s1] = 1.0E10;
-			TimeMatrix_Track_Clu_E[s0][s1] = 1.0E10; 
+			TimeMatrix_Track_Clu_E[s0][s1] = 1.0E10;
 		}
 	}
 
+    double ESum_Clu_Input =0;
 	for(int t0 = 0; t0 < NClu; t0++)
 	{
 		auto a_clu = selfmergedcluster[t0];
 		TVector3 PosCluSeed = TVector3(a_clu.getPosition().x,a_clu.getPosition().y,a_clu.getPosition().z);
 		Clu_Depth[a_clu] = DisSeedSurface(PosCluSeed);
+
+        ESum_Clu_Input += a_clu.getEnergy();
+        // cout<<"[YX debug - TagCore] Input AB_1st Clu "<<t0<<", E = "<<a_clu.getEnergy()<<", Pos = ("<<a_clu.getPosition().x<<", "<<a_clu.getPosition().y<<", "<<a_clu.getPosition().z<<")"<<endl;
+
 	}
+
+    cout<<"[YX debug - TagCore] Input AB_1st ESum_Clu_Input =  "<<ESum_Clu_Input<<endl;
 
 	//~~~~~~~ find the closest cluster first...
 
 	for(int g0 = 0; g0 < NTrk; g0++)
 	{
 		auto a_trk = SortedTracks[g0];
-		float ClosestDis = 1.0E9;  
-		int ClosestCluIndex = -1; 
+		float ClosestDis = 1.0E9;
+		int ClosestCluIndex = -1;
 		int ClosestNC = 1E9;
 		float TrackEn = Track_Energy[a_trk];
 		TrkEndPoint = Track_EndPoint[a_trk];
 
 		currTrackType = Track_Type[a_trk];
 		TVector3 TrkP3 = Track_P3[a_trk];
+
+        // cout<<"[YX debug - TagCore] SortedTrack "<<g0<<", PMag = "<<TrkP3.Mag()<<", TrackEn = "<<TrackEn<<endl;
 
 		for(int g1 = 0; g1 < NClu; g1++)
 		{
@@ -546,7 +623,7 @@ void BushConnect::TagCore()
 				TimeMatrix_Track_Clu_E[g0][g1] = Time;
 				if( Dis[2] < ClosestDis ) // && ThetaDiff < 0.05 + 0.1/Track_Energy[a_trk] )
 				{
-					ClosestDis = Dis[2]; 
+					ClosestDis = Dis[2];
 					ClosestCluIndex = g1;
 					ClosestNC = NC;
 				}
@@ -554,10 +631,10 @@ void BushConnect::TagCore()
 		}
 
 		//Diag for mimic
-		cout<<" Z R "<<TrkEndPoint.Z()<<" MM "<<TrkEndPoint.Perp()<< " ClosestCluIndex "<<ClosestCluIndex<<" ClosestDis "<<ClosestDis <<endl; 
+		if(0) cout<<" Z R "<<TrkEndPoint.Z()<<" MM "<<TrkEndPoint.Perp()<< " ClosestCluIndex "<<ClosestCluIndex<<" ClosestDis "<<ClosestDis <<endl;
 		//End Diag
 
-		if( ClosestDis < 15 + 15./TrackEn && ClosestCluIndex > -0.1 && (ClosestNC < 3 || abs(TrkP3.Theta() - 1.57) < 0.01 ) ) 
+		if( ClosestDis < 15 + 15./TrackEn && ClosestCluIndex > -0.1 && (ClosestNC < 3 || abs(TrkP3.Theta() - 1.57) < 0.01 ) )
 		{
 			auto candiclu= selfmergedcluster[ClosestCluIndex];
 			CluPos = TVector3(candiclu.getPosition().x,candiclu.getPosition().y,candiclu.getPosition().z);
@@ -570,7 +647,7 @@ void BushConnect::TagCore()
 		}
 	}	//~~~~~~~ end of finding closest cluster
 
-	cout<<"NTrk "<<NTrk<<endl;
+	// cout<<"NTrk "<<NTrk<<endl;
 	for(int i0 = 0; i0 < NTrk; i0++)  //Dropped Size can exist
 	{
 		auto a_trk = SortedTracks[i0];
@@ -587,7 +664,7 @@ void BushConnect::TagCore()
 
 		for(int j0 = 0; j0 < NClu; j0++)
 		{
-			auto fccand_bush = selfmergedcluster[j0]; 
+			auto fccand_bush = selfmergedcluster[j0];
 			float Dis = DisMatrix_Track_Clu_E[i0][j0]; //SimpleDisTrackClu(a_trk, fccand_bush);
 			float BushTime = TimeMatrix_Track_Clu_E[i0][j0];
 			CluDepth = Clu_Depth[fccand_bush];
@@ -670,6 +747,11 @@ void BushConnect::TagCore()
 
 	edm4hep::ReconstructedParticleCollection* chargeparticleCol = m_chargeparticleCol.createAndPut();
 	edm4hep::ClusterCollection* chargedcoreclusterCol = m_chargedcoreclusterCol.createAndPut();
+
+    cout<<"[YX debug - TagCore] NTrk = "<<NTrk<<endl;
+    double ESum_ChCore_All = 0;
+    double ESum_ChCore_in = 0;
+
 	for(int j5 = 0; j5 < NTrk; j5++)
 	{
 		auto a_trk = SortedTracks[j5];
@@ -680,9 +762,16 @@ void BushConnect::TagCore()
 		chargeparticle.setCharge(a_trk.getTrackStates(0).omega/fabs(a_trk.getTrackStates(0).omega));
 		TVector3 Ptrack = Track_P3[a_trk];
 		edm4hep::Vector3f currTrkP = edm4hep::Vector3f( Ptrack.X(), Ptrack.Y(), Ptrack.Z() );
-		chargeparticle.setMomentum(currTrkP); 
+		chargeparticle.setMomentum(currTrkP);
 		chargeparticle.addToTracks( a_trk );
 		auto a_clu = FCMap_Track_CHCore[a_trk];
+
+        double Clu_ChCore_E = a_clu.getEnergy();
+        int nCluHit = a_clu.hits_size();
+        if(0) cout<<"[YX debug - TagCore] Trk "<<j5<<", PMag = "<<Ptrack.Mag()<<", CluCore E = "<<Clu_ChCore_E<<", nHit = "<<nCluHit<<endl;
+        ESum_ChCore_All += Clu_ChCore_E;
+
+
 		if( FCMap_Track_CHCore[a_trk].hits_size()>0 )		// No really need to pertect, as quality will be controled in Part.Reco
 		{
 			auto chargedcorecluster = chargedcoreclusterCol->create();
@@ -691,16 +780,43 @@ void BushConnect::TagCore()
 			edm4hep::Cluster chargedcoreclusterCon=chargedcorecluster;
 			chargeparticle.addToClusters(chargedcoreclusterCon);
 			Track_Core_ID = m_ArborToolLCIO->ClusterFlag(a_clu, a_trk);
+
+            if(0) cout<<"[YX debug - TagCore] ---> ChCore in"<<endl;
+            ESum_ChCore_in += Clu_ChCore_E;
+
 		}
 		chargeparticle.setType(Track_Core_ID);
 		ChCoreID[chargeparticle] = Track_Core_ID;
 	}
 
+//  auto ChCoreCluCol = m_chargedcoreclusterCol.get();
+
+
+
+    int nPFO_ChCore = chargeparticleCol->size();
+    int nClu_ChCore = chargedcoreclusterCol->size();
+    // int nClu_NeCore = arborneutralcorecluster.size();
+    // int nPFO_NeCore = arborrecoparticle_ne.size();
+
+    int nClu_NonChCore = non_chargedclustercore.size();
+
+    cout<<"[YX debug - TagCore] Output nPFO_ChCore = "<<nPFO_ChCore<<endl;
+    cout<<"[YX debug - TagCore] Output nClu_ChCore = "<<nClu_ChCore<<", ESum_ChCore_All = "<<ESum_ChCore_All<<", ESum_ChCore_in = "<<ESum_ChCore_in<<endl;
+    cout<<"[YX debug - TagCore] Output nClu_NonChCore = "<<nClu_NonChCore<<endl;
+    // cout<<"[YX debug - TagCore] Output nClu_NeCore = "<<nClu_NeCore<<endl;
+    // cout<<"[YX debug - TagCore] Output nPFO_NeCore = "<<nPFO_NeCore<<endl;
+
+
+
+
+
+    // cout<<"[YX debug] TagCore End."<<endl;
 
 }
 
 void BushConnect::ParticleReco()
 {
+    // cout<<"[YX debug] ParticleReco Begin:"<<endl;
 
 	auto col_IsoHit = m_col_IsoHit.get();
 	std::vector<edm4hep::CalorimeterHit> IsoHits = m_ArborToolLCIO->CollHitVec(col_IsoHit, 0);
@@ -710,30 +826,71 @@ void BushConnect::ParticleReco()
 	edm4hep::ClusterCollection* mergedclu_chCol = m_mergedclu_chCol.createAndPut();
 	edm4hep::ClusterCollection* mergedclu_neCol = m_mergedclu_neCol.createAndPut();
 
-	auto ChargedCore = m_chargeparticleCol.get(); 
+	auto ChargedCore = m_chargeparticleCol.get();
 	int NChargedObj = ChargedCore->size();
 	int NNeutralCluster = non_chargedclustercore.size();
-	double DisMatrix_Core_Neutral[NChargedObj][NNeutralCluster][2];		//Define different types of distances; 
+	double DisMatrix_Core_Neutral[NChargedObj][NNeutralCluster][2];		//Define different types of distances;
+
+
+    // ------------------------------------------------------------------------------------------
+    double ESum_ChCore = 0;
+    double ESum_NeClu = 0;
+	for(int i = 0; i < NChargedObj; i++)
+	{
+		auto a_recoP_ch = (*ChargedCore)[i];
+		auto aTrk = a_recoP_ch.getTracks()[0];
+		float Trk_E = Track_Energy[aTrk];
+        float Clu_E = 0;
+		if(a_recoP_ch.clusters_size() != 0)
+		{
+			edm4hep::Cluster aClu = a_recoP_ch.getClusters()[0];
+			Clu_E = aClu.getEnergy();
+		}
+        ESum_ChCore+=Trk_E;
+
+        // cout<<"[YX debug - ParticleReco] Input Trk "<<i<<", E = "<<Trk_E<<", Clu_E = "<<Clu_E<<endl;
+
+    }
+
+    for(int j = 0; j < NNeutralCluster; j++)
+    {
+        auto aClu = non_chargedclustercore[j];
+        int Clu_nHit = aClu.hits_size();
+        float Clu_E = aClu.getEnergy();
+        TVector3 Clu_Pos = TVector3(aClu.getPosition().x,aClu.getPosition().y,aClu.getPosition().z);
+        double Clu_Depth = DisSeedSurface(Clu_Pos);
+
+        ESum_NeClu+=Clu_E;
+
+        // cout<<"[YX debug - ParticleReco] Input NeClu "<<j<<", E = "<<Clu_E<<", nHit = "<<Clu_nHit<<", Depth = "<<Clu_Depth<<endl;
+
+    }
+
+    cout<<"[YX debug - ParticleReco] NChargedObj = "<<NChargedObj<<", ESum_ChCore = "<<ESum_ChCore<<endl;
+    cout<<"[YX debug - ParticleReco] NNeutralCluster = "<<NNeutralCluster<<", ESum_NeClu = "<<ESum_NeClu<<endl;
+    // ------------------------------------------------------------------------------------------
+
+
 
 	float CluDepth = 0;
-	std::map<edm4hep::Cluster, double> CluDepthMap; 
+	std::map<edm4hep::Cluster, double> CluDepthMap;
 	CluDepthMap.clear();
-	int currChargeCoreType = 0;  
-	TVector3 CluPos; 
+	int currChargeCoreType = 0;
+	TVector3 CluPos;
 
-	std::vector<edm4hep::Cluster> loosecandicluster; 
+	std::vector<edm4hep::Cluster> loosecandicluster;
 	std::vector<edm4hep::Cluster> tightcandicluster;		//Muon potential candi?
 	std::vector<edm4hep::Cluster> mergedcluster; 			//tmp for each charged P
 	std::vector<edm4hep::Cluster> chargedclustercore_merged; 	//overall
 	chargedclustercore_merged.clear();
 
-	std::vector<double> reftightdis; 
-	std::vector<double> refloosedis; 
-	std::map<edm4hep::Cluster, int> NNCTouchFlag; 
+	std::vector<double> reftightdis;
+	std::vector<double> refloosedis;
+	std::map<edm4hep::Cluster, int> NNCTouchFlag;
 	std::vector<edm4hep::Track> SecondIterTracks;
 	SecondIterTracks.clear();
 
-	TVector3 currTrkEnd, neighbourTrkEnd, LeadP; 
+	TVector3 currTrkEnd, neighbourTrkEnd, LeadP;
 
 	for(int i = 0; i < NChargedObj; i++)
 	{
@@ -759,7 +916,7 @@ void BushConnect::ParticleReco()
 			mergedcluster.push_back(a_chargedClu);		//Actually can use this chance to question if previous energy are balance...
 		}
 
-		float MinDisToNoClusterTrk = 1.0E10; 
+		float MinDisToNoClusterTrk = 1.0E10;
 		float MinDisToOtherTrack = 1.0E10;
 
 		for( int is = 0; is < NChargedObj; is++ )
@@ -780,12 +937,12 @@ void BushConnect::ParticleReco()
 		for(int j = 0; j < NNeutralCluster; j++)
 		{
 			auto a_NeCandiClu = non_chargedclustercore[j];
-			float NeCandEn = a_NeCandiClu.getEnergy(); 
+			float NeCandEn = a_NeCandiClu.getEnergy();
 			CluPos = TVector3(a_NeCandiClu.getPosition().x,a_NeCandiClu.getPosition().y,a_NeCandiClu.getPosition().z);
 			CluDepth = DisSeedSurface(CluPos);
-			CluDepthMap[a_NeCandiClu] = CluDepth; 	
+			CluDepthMap[a_NeCandiClu] = CluDepth;
 
-			if( ClusterType_1stID[a_NeCandiClu] == 22)   continue; 
+			if( ClusterType_1stID[a_NeCandiClu] == 22)   continue;
 
 			for(int k = 0; k < 2; k++)
 			{
@@ -800,7 +957,7 @@ void BushConnect::ParticleReco()
 			DisMatrix_Core_Neutral[i][j][1] = Dis[2];
 
 			if( NNCTouchFlag.find(a_NeCandiClu) == NNCTouchFlag.end() && ( currChargeCoreType == 0 || DisMatrix_Core_Neutral[i][j][0] < 1000 ) && currTrkType != 101)
-			{			
+			{
 				if( currChargeCoreType == 130 )			//Matched Muon, should ignore
 				{
 					if( DisMatrix_Core_Neutral[i][j][1] < 0.2*CluDepth && CluDepth > 200  )	//&& FD?
@@ -814,14 +971,14 @@ void BushConnect::ParticleReco()
 					if( DisMatrix_Core_Neutral[i][j][1] < 0.3*CluDepth && CluDepth > 150 )
 					{
 						tightcandicluster.push_back(a_NeCandiClu);
-						reftightdis.push_back( DisMatrix_Core_Neutral[i][j][1] );	
+						reftightdis.push_back( DisMatrix_Core_Neutral[i][j][1] );
 					}
 					else if( DisMatrix_Core_Neutral[i][j][1] < 0.5*CluDepth && CluDepth > 100 )
 					{
 						loosecandicluster.push_back(a_NeCandiClu);
 						refloosedis.push_back( DisMatrix_Core_Neutral[i][j][1] );
 					}
-				}	
+				}
 				else if( currChargeCoreType == 110  )		// Electron
 				{
 					if( DisMatrix_Core_Neutral[i][j][0] < 0.15*CluDepth + 15 )
@@ -829,7 +986,7 @@ void BushConnect::ParticleReco()
 						tightcandicluster.push_back(a_NeCandiClu);
 						reftightdis.push_back( DisMatrix_Core_Neutral[i][j][0] );
 					}
-				}			
+				}
 				else if( currChargeCoreType == 111 )		// look behind... might be pion...
 				{
 					if( DisMatrix_Core_Neutral[i][j][0] < 0.1*CluDepth + 15 && DisMatrix_Core_Neutral[i][j][1] < 0.1*CluDepth + 10 )	//Define Brems Photon region for correct
@@ -845,7 +1002,7 @@ void BushConnect::ParticleReco()
 						}
 					}
 					else if( DisMatrix_Core_Neutral[i][j][0] < 0.2*CluDepth + 15 || DisMatrix_Core_Neutral[i][j][1] < 0.2*CluDepth + 15  )
-					{	
+					{
 						loosecandicluster.push_back(a_NeCandiClu);
 
 						if(DisMatrix_Core_Neutral[i][j][0] < DisMatrix_Core_Neutral[i][j][1])   // not fully adequate.
@@ -896,13 +1053,13 @@ void BushConnect::ParticleReco()
 				}
 				else
 				{
-					cout<<"Over balanced/Un matched/defined case: "<<a_recoP_ch.getEnergy()<<" ??? "<<currChargeCoreType<<endl; 
+					cout<<"Over balanced/Un matched/defined case: "<<a_recoP_ch.getEnergy()<<" ??? "<<currChargeCoreType<<endl;
 				}
 			}
 		}
 
-		float totaltightcandiEn = 0; 
-		float totalloosecandiEn = 0; 
+		float totaltightcandiEn = 0;
+		float totalloosecandiEn = 0;
 		for(unsigned int s = 0; s < tightcandicluster.size(); s++)
 		{
 			totaltightcandiEn += tightcandicluster[s].getEnergy();
@@ -954,7 +1111,7 @@ void BushConnect::ParticleReco()
 			for(unsigned int i1 = 0; i1 < tightcandicluster.size(); i1++)
 			{
 				auto a_clu = tightcandicluster[i1];
-				if(  CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 0.5*sqrt(CurrTrackEnergy))  
+				if(  CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 0.5*sqrt(CurrTrackEnergy))
 				{
 					mergedcluster.push_back( a_clu );
 					CurrClusterEnergy += a_clu.getEnergy();
@@ -967,7 +1124,7 @@ void BushConnect::ParticleReco()
 			{
 				auto a_clu = tightcandicluster[i1];
 
-				if(  CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 0.5*sqrt(CurrTrackEnergy))  
+				if(  CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 0.5*sqrt(CurrTrackEnergy))
 				{
 					mergedcluster.push_back( a_clu );
 					CurrClusterEnergy += a_clu.getEnergy();
@@ -982,7 +1139,7 @@ void BushConnect::ParticleReco()
 					mergedcluster.push_back( a_clu );
 					CurrClusterEnergy += a_clu.getEnergy();
 				}
-			}	
+			}
 		}
 		else if( currChargeCoreType == 211 )	// Matched
 		{
@@ -990,7 +1147,7 @@ void BushConnect::ParticleReco()
 			{
 				auto a_clu = tightcandicluster[i1];
 
-				if( CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 1.5*sqrt(CurrTrackEnergy))  
+				if( CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 1.5*sqrt(CurrTrackEnergy))
 				{
 					mergedcluster.push_back( a_clu );
 					CurrClusterEnergy += a_clu.getEnergy();
@@ -1002,7 +1159,7 @@ void BushConnect::ParticleReco()
 			for(unsigned int i1 = 0; i1 < tightcandicluster.size(); i1++)
 			{
 				auto a_clu = tightcandicluster[i1];
-				if(  CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 1.5*sqrt(CurrTrackEnergy))  
+				if(  CurrClusterEnergy + a_clu.getEnergy() < CurrTrackEnergy + 1.5*sqrt(CurrTrackEnergy))
 				{
 					mergedcluster.push_back( a_clu );
 					CurrClusterEnergy += a_clu.getEnergy();
@@ -1024,14 +1181,14 @@ void BushConnect::ParticleReco()
 		else if( currChargeCoreType == 0 && reftightdis.size() > 0)
 		{
 			float mindis = 1.0E10;
-			int minindex = 0; 
+			int minindex = 0;
 
 			for(unsigned int i1 = 0; i1 < reftightdis.size(); i1 ++)
 			{
 				if(reftightdis[i1] < mindis)
 				{
 					mindis = reftightdis[i1];
-					minindex = i1; 
+					minindex = i1;
 				}
 			}
 
@@ -1041,13 +1198,13 @@ void BushConnect::ParticleReco()
 		}
 		else
 		{
-			cout<<"No_match, currChargeCoreType "<<currChargeCoreType<<endl; 
+			cout<<"No_match, currChargeCoreType "<<currChargeCoreType<<endl;
 		}
 
 		float CHCluEnergy = 0;
 
 		for(int is = 0; is < int(mergedcluster.size()); is++)
-		{       
+		{
 			auto a_TBM_clu = mergedcluster[is];
 			CHCluEnergy +=a_TBM_clu.getEnergy();
 		}
@@ -1079,16 +1236,16 @@ void BushConnect::ParticleReco()
 			chargedclustercore_merged.push_back(chclustermerged);
 			currChargeCoreType2 = m_ArborToolLCIO->ClusterFlag(chclustermerged, a_chargedTrk);
 
-			if( currChargeCoreType2 == 130 || currChargeCoreType2 == 131 ) 
+			if( currChargeCoreType2 == 130 || currChargeCoreType2 == 131 )
 			{
 				chargeparticle.setType( int(-13*charge) );
 			}
-			else if( currChargeCoreType2 == 110 || currChargeCoreType2 == 111 ) 
+			else if( currChargeCoreType2 == 110 || currChargeCoreType2 == 111 )
 			{
 				chargeparticle.setType( int(-11*charge) );
 				if(CHCluEnergy > CurrTrackEnergy + 0.5*sqrt(CurrTrackEnergy) + 1)
 				{
-					flagEnergyFlow = 1; 
+					flagEnergyFlow = 1;
 				}
 			}
 			else
@@ -1100,10 +1257,10 @@ void BushConnect::ParticleReco()
 				}
 			}
 
-			if( (currChargeCoreType2 != 130 && currChargeCoreType2 != 131 &&  CurrTrackEnergy > 15 && CHCluEnergy > 0.5 && CurrTrackEnergy > CHCluEnergy + 2.5*sqrt(CHCluEnergy) )  || (( currChargeCoreType2 == 130 || currChargeCoreType2 == 131 ) && CurrTrackEnergy > 100 && CHCluEnergy < 3 && chclustermerged.hits_size() < 20 ) ) 
+			if( (currChargeCoreType2 != 130 && currChargeCoreType2 != 131 &&  CurrTrackEnergy > 15 && CHCluEnergy > 0.5 && CurrTrackEnergy > CHCluEnergy + 2.5*sqrt(CHCluEnergy) )  || (( currChargeCoreType2 == 130 || currChargeCoreType2 == 131 ) && CurrTrackEnergy > 100 && CHCluEnergy < 3 && chclustermerged.hits_size() < 20 ) )
 			{
 				chargeparticle.setEnergy( CHCluEnergy );
-				edm4hep::Vector3f CorrMom = edm4hep::Vector3f(CHCluEnergy/CurrTrackEnergy*currTrkP[0], CHCluEnergy/CurrTrackEnergy*currTrkP[1], CHCluEnergy/CurrTrackEnergy*currTrkP[2] ); 
+				edm4hep::Vector3f CorrMom = edm4hep::Vector3f(CHCluEnergy/CurrTrackEnergy*currTrkP[0], CHCluEnergy/CurrTrackEnergy*currTrkP[1], CHCluEnergy/CurrTrackEnergy*currTrkP[2] );
 				chargeparticle.setMomentum( CorrMom );
 			}
 			else
@@ -1117,49 +1274,67 @@ void BushConnect::ParticleReco()
 				auto a_Ef_Ne_particle = arborrecoparticleCol->create();
 				a_Ef_Ne_particle.setEnergy( CHCluEnergy - CurrTrackEnergy );
 				TVector3 corePos = TVector3(chclustermerged.getPosition().x,chclustermerged.getPosition().y,chclustermerged.getPosition().z);
-				float WFactor = (CHCluEnergy - CurrTrackEnergy)/corePos.Mag(); 
+				float WFactor = (CHCluEnergy - CurrTrackEnergy)/corePos.Mag();
 				edm4hep::Vector3f PFNEMom = edm4hep::Vector3f(WFactor*float(corePos.X()), WFactor*float(corePos.Y()), WFactor*float(corePos.Z()));
 				a_Ef_Ne_particle.setMomentum(PFNEMom);
 				a_Ef_Ne_particle.setMass( 0.0 );
 				a_Ef_Ne_particle.setCharge( 0.0 );
 				a_Ef_Ne_particle.setType(501);
 
-				cout<<"Energy Flow Neutral Tagged "<<CHCluEnergy - CurrTrackEnergy<<endl; 
+				cout<<"Energy Flow Neutral Tagged "<<CHCluEnergy - CurrTrackEnergy<<endl;
+
+                cout<<"[YX debug - ParticleReco] EfPFO E = "<<a_Ef_Ne_particle.getEnergy()<<endl;
+
 			}
-			cout<<"a charged particle reconstructed with en:"<<chargeparticle.getEnergy()<<endl;
+			if(0) cout<<"a charged particle reconstructed with en:"<<chargeparticle.getEnergy()<<endl;
+
+            if(0) cout<<"[YX debug - ParticleReco] ChPFO E = "<<chargeparticle.getEnergy()<<endl;
 
 		}
 		else	// push non valid tracks, etc to second iteration, as those for PreInteracting ones
 		{
 			SecondIterTracks.push_back(a_chargedTrk);
-			cout<<"Second Iter Track Found"<<endl; 
-		}	
+			cout<<"Second Iter Track Found"<<endl;
+		}
 	}
 
-	std::vector<edm4hep::MutableCluster> BBCore; 
+	std::vector<edm4hep::MutableCluster> BBCore;
 	BBCore.clear();
 	for(int p6 = 0; p6 < NNeutralCluster; p6 ++)
 	{
 		auto c_clu = non_chargedclustercore[p6];
+
+
 		if( NNCTouchFlag.find(c_clu) == NNCTouchFlag.end() )
 		{
 			BBCore.push_back(c_clu);
-		} 
+
+            if(0) cout<<"[YX debug - BBCore] Clu "<<p6<<" push back"<<endl;
+
+		}
+
+        if(0) cout<<"[YX debug - BBCore] Clu "<<p6<<", NNCTouchFlag = "<<NNCTouchFlag[c_clu]<<", CluE = "<<c_clu.getEnergy()<<endl;
+
 	}
 
 	float NAMom[3] = {0, 0, 0};
 
 	//Final Re-absorption
-	std::vector<edm4hep::Cluster> NBBNeutral; 
+	std::vector<edm4hep::Cluster> NBBNeutral;
 	NBBNeutral.clear();
 
 	for(int s = 0; s < int (BBCore.size()); s++)
 	{
 		auto a_clu = BBCore[s];
 		TVector3 PosClu = TVector3(a_clu.getPosition().x,a_clu.getPosition().y,a_clu.getPosition().z);
-		float Depth = 0; 
+		float Depth = 0;
 		Depth = DisSeedSurface(PosClu);
 		float CoreEnCorr = m_ArborToolLCIO->ClusterEE(a_clu);
+
+        int PhotonTag = m_ArborToolLCIO->newPhotonTag(a_clu);
+        double CluE = a_clu.getEnergy();
+        if(0) cout<<"[YX debug - BBCore] Clu "<<s<<", newPhotonTag = "<<PhotonTag<<", CluE = "<<CluE<<", CoreEnCorr = "<<CoreEnCorr<<endl;
+
 
 		if(m_ArborToolLCIO->newPhotonTag(a_clu)==1)
 		{
@@ -1179,13 +1354,18 @@ void BushConnect::ParticleReco()
 			a_neclu.setEnergy( CoreEnCorr );	//Reset...
 			edm4hep::Cluster a_necluCon=a_neclu;
 			neutralparticle.addToClusters(a_neclu);
+
+            cout<<"[YX debug - BBCore] ---> Is photon "<<endl;
+
+            cout<<"[YX debug - ParticleReco] Photon E = "<<neutralparticle.getEnergy()<<endl;
+
 		}
 		else	// Distance to Charged Core > sth;
 		{
 			float MinDisToChCore = 1.0E9;
-			float currDis = 0; 
+			float currDis = 0;
 			int NChCore = mergedclu_chCol->size();
-			float closestChCluEn = 0; 			
+			float closestChCluEn = 0;
 			for(int t = 0; t < NChCore; t++)
 			{
 				auto a_chclu = (*mergedclu_chCol)[t];
@@ -1196,30 +1376,50 @@ void BushConnect::ParticleReco()
 					closestChCluEn = a_chclu.getEnergy();	// Or the Trk En??
 				}
 			}
+
+            if(0) cout<<"[YX debug - BBCore] ---> Is others: NChCore = "<<NChCore<<", MinDisToChCore = "<<MinDisToChCore<<", closestChCluEn = "<<closestChCluEn<<endl;
+
 			if( MinDisToChCore > 0.4*(15 + closestChCluEn + Depth*0.01) || a_clu.getEnergy() > 2.0 )	//Joint Depth??
 			{
 				NBBNeutral.push_back(a_clu);
+
+                if(0) cout<<"[YX debug - BBCore] ---|---> NBBNeutral push back "<<endl;
+
 			}
 		}
+
+
 	}
+
+
+    cout<<"[YX debug - ParticleReco] BBCore.size() = "<<BBCore.size()<<", NBBNeutral.size() = "<<NBBNeutral.size()<<", IsoHits.size() = "<<IsoHits.size()<<endl;
+
 
 	// Add: Neural Core Remerge & Energy Scale Recalculate, IsoHit Abso
 	std::vector<edm4hep::MutableCluster> NBBAbs = m_ArborToolLCIO->ClusterHitAbsorbtion(NBBNeutral, IsoHits, 100); //_HitAbsCut);	// Huge??
 
-	std::vector<float> BBAbsEn; 
+	std::vector<float> BBAbsEn;
 	BBAbsEn.clear();
+
+    // double ESum_NBBAbs = 0;
 
 	for(unsigned s1 = 0; s1 < NBBAbs.size(); s1++)
 	{
 		BBAbsEn.push_back(NBBAbs[s1].getEnergy());
+
+        // ESum_NBBAbs+=NBBAbs[s1].getEnergy();
+
 	}
+
+    // cout<<"[YX debug - ParticleReco] NBBAbs.size() = "<<NBBAbs.size()<<", ESum_NBBAbs = "<<ESum_NBBAbs<<endl;
+
 
 	std::vector<int> BBAbsIndex = SortMeasure(BBAbsEn, 1);
 
 	std::vector<edm4hep::Cluster > NeutronCore;
 	std::vector<edm4hep::MutableCluster > NeutronFlag;
 	NeutronCore.clear();
-	NeutronFlag.clear();	
+	NeutronFlag.clear();
 
 	for(unsigned int s2 = 0; s2 < NBBAbs.size(); s2++)	//Sort it; the first one must be a neutral core?
 	{
@@ -1238,6 +1438,10 @@ void BushConnect::ParticleReco()
 
 	std::vector<edm4hep::MutableCluster > Neutrons = m_ArborToolLCIO->ClusterAbsorbtion(NeutronCore, NeutronFlag, 200, 0.01);
 
+
+    cout<<"[YX debug - ParticleReco] NeutronCore.size() = "<<NeutronCore.size()<<", NeutronFlag.size() = "<<NeutronFlag.size()<<endl;
+
+
 	for(unsigned int s3 = 0; s3 < Neutrons.size(); s3++)
 	{
 		auto a_clu = Neutrons[s3];
@@ -1245,7 +1449,7 @@ void BushConnect::ParticleReco()
 		TVector3 PosClu = TVector3(a_clu.getPosition().x,a_clu.getPosition().y,a_clu.getPosition().z);
 		float MinDisToChCore = 1.0E9;
 		float RecoT0 = m_ArborToolLCIO->ClusterT0(a_clu);
-		float currDis = 0; 
+		float currDis = 0;
 		int NChCore = mergedclu_chCol->size();
 		for(int t = 0; t < NChCore; t++)
 		{
@@ -1257,10 +1461,14 @@ void BushConnect::ParticleReco()
 			}
 		}
 
+
+        if(0) cout<<"[YX debug - Neutrons] Clu "<<s3<<", MinDisToChCore = "<<MinDisToChCore<<", CluE = "<<a_clu.getEnergy()<<", CoreEnCorr = "<<CoreEnCorr<<endl;
+
+
 		if( !(RecoT0>0.1 && RecoT0<1E8 && MinDisToChCore <12) )
 		{
 			if(m_ArborToolLCIO->newPhotonTag(a_clu)==1)
-				cout<<"WARNING... Photons after neutron merge merged"<<endl; 
+				cout<<"WARNING... Photons after neutron merge merged"<<endl;
 			auto neutralparticle = arborrecoparticleCol->create();
 			neutralparticle.setType(21120);
 			TVector3 PP = m_ArborToolLCIO->ClusterCoG(a_clu);
@@ -1301,27 +1509,34 @@ void BushConnect::ParticleReco()
 			a_neclu.setEnergy( CoreEnCorr );       //Reset...
 			edm4hep::Cluster a_necluCon=a_neclu;
 			neutralparticle.addToClusters(a_necluCon);
+
+            if(0) cout<<"[YX debug - ParticleReco] NePFO E = "<<neutralparticle.getEnergy()<<endl;
+
 		}
 	}
-	
+
+// cout<<"[YX debug] ParticleReco End."<<endl;
 
 }
 
 StatusCode BushConnect::execute()
 {
 		try{
-		BushConnect::Clean();	
+		cout<<"[YX debug - BushConnect] Begin:"<<endl;
 		BushConnect::TrackSort(  );
-		BushConnect::BushSelfMerge(  ); 	
-		BushConnect::TagCore(  );		
+		BushConnect::BushSelfMerge(  );
+		BushConnect::TagCore(  );
 		BushConnect::ParticleReco(  );
+
+        BushConnect::Clean();
+
 		}catch(GaudiException &e){}
 	return StatusCode::SUCCESS;
 }
 
 StatusCode BushConnect::finalize()
 {
-	std::cout<<"Bush Connection Finished, ArborObject Formed"<<std::endl;	
+	std::cout<<"Bush Connection Finished, ArborObject Formed"<<std::endl;
 	return GaudiAlgorithm::finalize();
 }
 

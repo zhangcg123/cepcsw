@@ -1,22 +1,23 @@
 #include <TMath.h>
 #include "DetectorPos.hh"
+// #include "Arbor/DetectorPos.hh"
 
 using namespace std;
 
-const double pi = acos(-1.0); 
+const double pi = acos(-1.0);
 
 //Geometric Parameter - ... need to be changed for different detector models
 
 int BarrelFlag( TVector3 inputPos)
 {
-	int isBarrel = 0;	
+	int isBarrel = 0;
 
 	if(fabs(inputPos[2]) < ECALHalfZ)
 	{
-		isBarrel = 1; 
+		isBarrel = 1;
 	}
 
-	return isBarrel; 
+	return isBarrel;
 }
 
 int DepthFlag( TVector3 inputPos )      //Used to calculate depth of given position...
@@ -79,7 +80,7 @@ TVector3 CalVertex( TVector3 Pos1, TVector3 Dir1, TVector3 Pos2, TVector3 Dir2 )
 
 int TPCPosition( TVector3 inputPos )
 {
-	int flagPos(-1); // == 0 means inside TPC, == 1 means outside; 
+	int flagPos(-1); // == 0 means inside TPC, == 1 means outside;
 
 	if( fabs(inputPos[2]) > ECALHalfZ || sqrt( inputPos[0]*inputPos[0] + inputPos[1]*inputPos[1] ) > TPCRadius ) flagPos = 1;
 	else flagPos = 0;
@@ -135,7 +136,7 @@ float DisSeedSurfaceSimple( TVector3 SeedPos )        //ECAL, HCAL, EndCapRing..
 	float DisR = SeedPos.Perp() - ECALRadius;
 	if(DisR < 0 && DisZ > 0)
 	{
-		DisSS = DisZ; 
+		DisSS = DisZ;
 	}
 	else if(DisZ < 0 && DisR > 0)
 	{
@@ -167,25 +168,25 @@ float DisSeedSurfaceClu( Cluster * a_clu )        //ECAL, HCAL, EndCapRing...
 float DisTPCBoundary( TVector3 Pos )
 {
 	float DisZ = TMath::Min( fabs(ECALHalfZ-Pos.Z()),fabs(ECALHalfZ+Pos.Z()) );
-	float DisR = ECALRadius - Pos.Perp();  
+	float DisR = ECALRadius - Pos.Perp();
 	float Dis = TMath::Min(DisZ, DisR);
 
-	return Dis; 
+	return Dis;
 }
 
 float DistanceChargedParticleToCluster(TVector3 CPRefPos, TVector3 CPRefMom, TVector3 CluPosition)	//Extend to Track/MCP
 {
 	// Line extrapolation from RefPos with RefMom, calculate the minimal distance to Cluster
 
-	float DisCPClu = 0; 
-	TVector3 Diff_Clu_CPRef, NormCPRefMom; 
+	float DisCPClu = 0;
+	TVector3 Diff_Clu_CPRef, NormCPRefMom;
 
-	Diff_Clu_CPRef = CluPosition - CPRefPos; 
+	Diff_Clu_CPRef = CluPosition - CPRefPos;
 	NormCPRefMom = 1.0/CPRefMom.Mag()*CPRefMom;
-	float ProDis = Diff_Clu_CPRef.Dot(NormCPRefMom);	
+	float ProDis = Diff_Clu_CPRef.Dot(NormCPRefMom);
 
 	DisCPClu = sqrt(Diff_Clu_CPRef.Mag()*Diff_Clu_CPRef.Mag() - ProDis*ProDis);
 
-	return DisCPClu; 
+	return DisCPClu;
 }
 

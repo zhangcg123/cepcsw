@@ -38,7 +38,7 @@ public:
      /* G2CDArborAlg(); */
      /* ~G2CDArborAlg() {}; */
 
-     /** Called at the begin of the job before anything is read.    
+     /** Called at the begin of the job before anything is read.
       * Use to initialize the processor, e.g. book histograms.
       */
      virtual StatusCode initialize() ;
@@ -98,6 +98,7 @@ protected:
      Gaudi::Property<int>    _NEcalThinLayer{this, "NumThinEcalLayer", 20, "Num of thiner Ecal layers"};
      Gaudi::Property<float>  _thresholdEcal{this, "ECALThreshold", (float)5.0e-5, "Threshold for ECAL Hits in GeV"};
      Gaudi::Property<float>  _thresholdHcal{this, "HCALThreshold", (float)0.11, "Threshold for HCAL Hits in GeV"};
+     Gaudi::Property<float>  _TimeThreshold{this, "TimeThreshold", (float)1000, "Time Threshold for both ECAL and HCAL Hits in ns"};
      Gaudi::Property<int>    _DigiCellSize{this, "DigiCellSize", 10, "Size of Digitized Cell (in mm)"};
      Gaudi::Property<float>  _ShiftInX{this, "ShiftInX", (float)0.0, "Shift Distance in X directoin (in mm) NP only"};
      Gaudi::Property<int>    _UsingDefaultDetector{this, "UsingDefaultDetector", 0, "Flag Parameter Setting (0 ~ self definition, 1 ~ MircoMegas, 2 ~ GRPC_PS, 3 ~ GRPC_SPS)"};
@@ -133,18 +134,18 @@ protected:
      /* float _PolyaParaA, _PolyaParaB, _PolyaParaC;  */
      /* float _ChanceOfKink, _KinkHitChargeBoost;  */
      TTree *_outputTree;
-     TH1F *_NH1stLayer, *_NH8thLayer; 
-     TF1 * _QPolya; 
+     TH1F *_NH1stLayer, *_NH8thLayer;
+     TF1 * _QPolya;
 
      int _Num;
-     int _eventNr; 
+     int _eventNr;
 
      int _M, _S, _I, _J, _K, _Seg;
-     float _PosX, _PosY, _PosZ; 
+     float _PosX, _PosY, _PosZ;
      /* float _EDepo, _Charge, _ShiftInX;  */
      int _NHit1mm, _NHit1mmCenter, _NHit1mmCorner, _NHit1mmSide;
-     int _TotalNHit1mm, _TotalNHit, _TotalMultiHit; 
-     int _N1, _N2, _N3; 
+     int _TotalNHit1mm, _TotalNHit, _TotalMultiHit;
+     int _N1, _N2, _N3;
 
      std::string _fileName;
      std::ostream *_output;

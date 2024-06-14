@@ -17,7 +17,7 @@ gaudi_add_module(GaudiPandora
                       k4FWCore::k4FWCore
                       ${PandoraSDK_LIBRARIES}
                       ${LCContent_LIBRARIES}
-                      ${CLHEP_LIBRARIES} 
+                      ${CLHEP_LIBRARIES}
                       ${ROOT_LIBRARIES}
                       ${LCIO_LIBRARIES}
                       ${GEAR_LIBRARIES}

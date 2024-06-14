@@ -41,11 +41,11 @@ class BushConnect  : public GaudiAlgorithm
 		virtual StatusCode execute() ;
 
 		virtual StatusCode finalize() ;
-		void Clean(); 
-		void TrackSort(); 
-		void BushSelfMerge(); 
-		void TagCore(); 
-		void ParticleReco(); 
+		void Clean();
+		void TrackSort();
+		void BushSelfMerge();
+		void TagCore();
+		void ParticleReco();
 
 
 	protected:
@@ -56,10 +56,10 @@ class BushConnect  : public GaudiAlgorithm
 		std::map<edm4hep::Track, TVector3> Track_P3;
 		std::map<edm4hep::Track, int> Track_Type;
 		std::map<edm4hep::Track, float> Track_Theta;
-		std::map<edm4hep::Track, float> Track_Phi;	
+		std::map<edm4hep::Track, float> Track_Phi;
 
 		std::map<edm4hep::Cluster, int> ClusterType_1stID;
-		std::map<edm4hep::ReconstructedParticle, int> ChCoreID; 
+		std::map<edm4hep::ReconstructedParticle, int> ChCoreID;
 
 		std::vector<edm4hep::Cluster> ecalchcore_tight;         //TightCores
 		std::vector<edm4hep::Cluster> ecalchcore_medium;
@@ -79,7 +79,7 @@ class BushConnect  : public GaudiAlgorithm
 		std::vector<edm4hep::Cluster> chargedclustercore;
 		std::vector<edm4hep::Cluster> chargedclustercore_abs;
 
-		std::vector<edm4hep::MutableCluster> selfmergedcluster; 
+		std::vector<edm4hep::MutableCluster> selfmergedcluster;
 		std::vector<edm4hep::MutableCluster> non_chargedclustercore;
 		std::vector<edm4hep::Cluster> onlyNeutralCore;
 
@@ -89,9 +89,9 @@ class BushConnect  : public GaudiAlgorithm
 		std::map<edm4hep::Track, int>MCPTrack_Type;
 		std::map<edm4hep::Track, TVector3> Track_EndPoint;       //Last hit
 		std::map<edm4hep::Track, TVector3> TrackStartPoint;
-		std::map<edm4hep::Cluster, float> CluFD; 
+		std::map<edm4hep::Cluster, float> CluFD;
 		std::map<edm4hep::Cluster, float> CluT0;
-		std::map<edm4hep::Cluster, float> Clu_Depth; 
+		std::map<edm4hep::Cluster, float> Clu_Depth;
 		std::map<edm4hep::Cluster, TVector3> CluCoG;
 	typedef DataHandle<edm4hep::MCParticleCollection> MCParticleColHandler;
 	MCParticleColHandler m_mcParticle{"MCParticle", Gaudi::DataHandle::Reader, this};
@@ -113,8 +113,10 @@ class BushConnect  : public GaudiAlgorithm
 	DataHandle<edm4hep::ReconstructedParticleCollection> m_chargeparticleCol{"ArborCharged",Gaudi::DataHandle::Writer, this};
 	DataHandle<edm4hep::ReconstructedParticleCollection> nerecoparticleCol{"ArborNeutral",Gaudi::DataHandle::Writer, this};
 	DataHandle<edm4hep::ReconstructedParticleCollection> m_arborrecoparticleCol{"ArborPFO",Gaudi::DataHandle::Writer, this};
-     ArborToolLCIO * m_ArborToolLCIO;
-	
+    ArborToolLCIO * m_ArborToolLCIO;
+
+    Gaudi::Property<bool>   m_readLCIO{this, "ReadLCIO", true, "Read sim file with LCIO"};
+
 };
 
 
