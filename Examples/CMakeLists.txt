@@ -8,12 +8,14 @@ gaudi_add_module(Examples
                          src/Edm4hepTest/Edm4hepReadAlg.cpp
                          src/Edm4hepTest/Edm4hepReadDCAlg.cpp
                          src/Edm4hepTest/Edm4hepWriteAlg.cpp
+                         src/Edm4hepTest/Edm4cepcWriteAlg.cpp
                          src/DumpIDAlg/DumpIDAlg.cpp
                  LINK DetInterface
                       k4FWCore::k4FWCore
                       Gaudi::GaudiAlgLib Gaudi::GaudiKernel
                       ${LCIO_LIBRARIES} 
                       ${DD4hep_COMPONENT_LIBRARIES}
+                      EDM4CEPC::edm4cepc EDM4CEPC::edm4cepcDict
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
                       ${podio_LIBRARIES} podio::podioRootIO
 )
