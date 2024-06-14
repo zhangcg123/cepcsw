@@ -14,6 +14,7 @@ gaudi_add_module(ParticleID
                       ${GSL_LIBRARIES}
                       ${GEAR_LIBRARIES}
                       ${LCIO_LIBRARIES}
+		      EDM4CEPC::edm4cepc EDM4CEPC::edm4cepcDict
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
                       k4FWCore::k4FWCore
 )
