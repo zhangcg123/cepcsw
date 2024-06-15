@@ -42,3 +42,19 @@ install(TARGETS DetCRD
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
   COMPONENT dev)
+
+################################################################################
+# Add tests
+################################################################################
+
+add_test(
+  NAME Test_TDR_o1_v01_Sim
+  COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/sim.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+
+add_test(
+  NAME Test_TDR_o1_v01_Rec
+  COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/tracking.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)

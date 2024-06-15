@@ -96,8 +96,8 @@ function run-install() {
 ##############################################################################
 
 # The current default platform
-lcg_platform=x86_64-centos7-gcc11-opt
-lcg_version=103.0.2
+lcg_platform=${CEPCSW_LCG_PLATFORM:-x86_64-centos7-gcc11-opt}
+lcg_version=${CEPCSW_LCG_VERSION:-103.0.2}
 
 bldtool=${CEPCSW_BLDTOOL} # make, ninja # set in env var
 

@@ -26,19 +26,23 @@ workflow:
 
 stages:
   - build
-  # - test
 
 ##############################################################################
-# Build Template
+# Template for Build and Test
 ##############################################################################
+# Due to cmake/ctest will hardcode the path in build directory,
+# the test job will be failed if it is executed on a different nodes.
+# Therefore, put the build script and test script together.
+
 .build_template:
   stage: build
   variables:
-    LCG_RELEASE:
-    CEPCSW_BLDTOOL: ninja
+    CEPCSW_LCG_RELEASE:
+    CEPCSW_LCG_PLATFORM:
+    CEPCSW_LCG_VERSION:
   script:
     - bash ./.build.ci.sh
-
+    - bash ./.test.ci.sh
 
 ##############################################################################
 # Build CentOS 7 (LCG)
@@ -46,17 +50,13 @@ stages:
 build:lcg:el7:
   extends: .build_template
   variables:
-    LCG_RELEASE: LCG
+    CEPCSW_LCG_RELEASE: LCG
+    CEPCSW_LCG_PLATFORM: x86_64-centos7-gcc11-opt
+    CEPCSW_LCG_VERSION: 103.0.2
   tags:
     - centos7
-
-##############################################################################
-# Build CentOS 7 (KEY4HEP)
-##############################################################################
-# build:k4:el7:
-#   extends: .build_template
-#   variables:
-#     LCG_RELEASE: KEY4HEP_STACK
-#   tags:
-#     - centos7
-
+  artifacts:
+    paths:
+      - InstallArea
+    reports:
+      junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml

@@ -41,7 +41,8 @@ tracksystemsvc = TrackSystemSvc("TrackSystemSvc")
 
 from Configurables import SimplePIDSvc
 pidsvc = SimplePIDSvc("SimplePIDSvc")
-pidsvc.ParFile = "/cefs/higgs/zhaog/dndx_files/dNdx_TPC.root"
+cepcswdatatop = "/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
+pidsvc.ParFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Service/SimplePIDSvc/data/dNdx_TPC.root")
 
 from Configurables import PodioInput
 podioinput = PodioInput("PodioReader", collections=[
