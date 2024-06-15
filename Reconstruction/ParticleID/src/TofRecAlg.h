@@ -10,6 +10,7 @@
 #include "edm4hep/TrackerHitCollection.h"
 #include <random>
 #include "GaudiKernel/NTuple.h"
+#include "edm4cepc/RecTofCollection.h"
 
 class TofRecAlg : public Algorithm {
  public:
@@ -24,6 +25,7 @@ class TofRecAlg : public Algorithm {
  private:
   DataHandle<edm4hep::MCParticleCollection> _inMCColHdl{"MCParticle", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection> _inTrackColHdl{"CompleteTracks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::RecTofCollection> m_rectofCol{"RecTofCollection", Gaudi::DataHandle::Writer, this};
 
   Gaudi::Property<double> m_field{this, "Field", 3.0};
 

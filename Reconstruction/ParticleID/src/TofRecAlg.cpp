@@ -83,6 +83,7 @@ StatusCode TofRecAlg::initialize(){
 StatusCode TofRecAlg::execute(){
   
   const edm4hep::TrackCollection* trackCols = nullptr;
+  auto rectofCol = m_rectofCol.createAndPut();
   
   try {
     trackCols = _inTrackColHdl.get();
@@ -143,12 +144,15 @@ StatusCode TofRecAlg::execute(){
       }//end track hits
       if ( !hasSETHit && !hasFTDHit ) continue;
 
+      auto rectof = rectofCol->create();
+      std::array<float, 5> tmp_timeExp_list{ -99.9, -99.9, -99.9, -99.9, -99.9 };
+
       // smearing the measured time by gaussian 0.05 for intrinsic and 0.02 for bunchcrossing, giving the measured terr a constant
       m_ToFterr[m_nTracks] = std::sqrt(tof_resolution*tof_resolution + bunchcrossing*bunchcrossing);
       m_ToFt[m_nTracks] += normal_distribution_tof(generator_tof);
       m_ToFt[m_nTracks] += normal_distribution_bunch(generator_bunch);
 
-	    // found ToF hit, then to evaluate trajectory length
+      // found ToF hit, then to evaluate trajectory length
       for( std::vector<edm4hep::TrackState>::const_iterator it = track.trackStates_begin(); it != track.trackStates_end(); it++ ){
         
         edm4hep::TrackState trackState = *it;
@@ -211,6 +215,9 @@ StatusCode TofRecAlg::execute(){
         float totz1err    = (*trackStateMap[3])[m_nTracks][13];
         float tanL1       = (*trackStateMap[3])[m_nTracks][5];
         float tanL1err    = (*trackStateMap[3])[m_nTracks][14];
+	float positionx   = (*trackStateMap[3])[m_nTracks][7];
+	float positiony   = (*trackStateMap[3])[m_nTracks][8];
+	float positionz   = (*trackStateMap[3])[m_nTracks][9];
 
         float radius1     = 1./std::abs(omega1);
         float radius1err  = omega1err/(omega1*omega1);
@@ -228,7 +235,7 @@ StatusCode TofRecAlg::execute(){
 	float deltaphi = phi1 -phi0;
 	if ( omega0 * deltaphi > 0.0 ){
 	    deltaphi = 2. * M_PI - std::abs( deltaphi );
-	 }
+	}
 
         // calculate the length
         float _length             = std::sqrt( radius0*radius0 * (deltaphi)*(deltaphi) + (totz1-totz0)*(totz1-totz0) );//in mm
@@ -250,8 +257,8 @@ StatusCode TofRecAlg::execute(){
         //momenta to kg m/s
         float p_tmp = p_atIP * GeV2kgms;
         float perr_tmp = perr_atIP * GeV2kgms;
-
-        for (auto it = masses.begin(); it != masses.end(); ++it){//expected times and errors for e, mu, pi, k, proton
+        
+	for (auto it = masses.begin(); it != masses.end(); ++it){//expected times and errors for e, mu, pi, k, proton
             int idx = it->first;
             double assum = it->second;
             double m_tmp = assum * GeV2kg;
@@ -261,9 +268,15 @@ StatusCode TofRecAlg::execute(){
             double t_tmp = 10e5 * _length / v_tmp;
             double terr_tmp = 10e5 * std::sqrt( (_lengtherr/v_tmp)*(_lengtherr/v_tmp) + ( (_length*_length)/(v_tmp*v_tmp*v_tmp*v_tmp) )*verr_tmp*verr_tmp );
             m_exp_time[m_nTracks][idx]  	= t_tmp;
-            m_exp_timeerr[m_nTracks][idx] = terr_tmp;
+            m_exp_timeerr[m_nTracks][idx] 	= terr_tmp;
+	    tmp_timeExp_list[idx]		= (float) t_tmp;
             debug()<<"idx : "<< idx <<" assum: "<< assum <<" omega: "<<omega0<<" length: "<<_length<<" phi1: "<<phi1<<" phi0: "<<phi0<<" phi1-phi0: "<<deltaphi<<" exp_t: "<<t_tmp<<" obs_t: "<<m_ToFt[m_nTracks]<<endmsg;
         }
+	rectof.setTimeExp( tmp_timeExp_list );
+	rectof.setTime( m_ToFt[m_nTracks] );
+	rectof.setSigma( m_ToFterr[m_nTracks] );
+	rectof.setPosition( { positionx, positiony, positionz } );
+	rectof.setPathLength( { _length, _length, _length, _length, _length } );
 
         }else{
           m_length[m_nTracks] = -999;
@@ -277,6 +290,11 @@ StatusCode TofRecAlg::execute(){
             m_exp_time[m_nTracks][idx] = -999;
             m_exp_timeerr[m_nTracks][idx] = -999;
           }
+	  rectof.setTimeExp( tmp_timeExp_list );
+	  rectof.setTime( -999 );
+	  rectof.setSigma( -999 );
+	  rectof.setPosition( { -999, -999, -999 } );
+	  rectof.setPathLength( { -999, -999, -999, -999, -999 } );
       }
       m_nTracks++;
 
