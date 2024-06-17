@@ -223,6 +223,14 @@ tpr.TrackList = ["CompleteTracks", "ClupatraTracks"]
 tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 #tpr.OutputLevel = DEBUG
 
+from Configurables import TrueMuonTagAlg
+tmt = TrueMuonTagAlg("TrueMuonTag")
+tmt.MCParticleCollection = "MCParticle"
+tmt.TrackList = ["CompleteTracks"]
+tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
+tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
+#tmt.OutputLevel = DEBUG
+
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
@@ -232,7 +240,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 5,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],

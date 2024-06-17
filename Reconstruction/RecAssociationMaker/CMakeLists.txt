@@ -1,6 +1,7 @@
 # Modules
 gaudi_add_module(RecAssociationMaker
                  SOURCES src/TrackParticleRelationAlg.cpp
+                         src/TrueMuonTagAlg.cpp
 
                  LINK GearSvc
                       EventSeeder
