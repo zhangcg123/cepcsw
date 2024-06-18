@@ -7,18 +7,14 @@
     </define>
 
   <display>
-    <vis name="SeeThroughit"       alpha="0.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="false"/>
-    <vis name="Gray_Vis"          alpha="1.0" r="0.5" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
-    <vis name="DiskVis"          alpha="1.0" r="0" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
-    <vis name="beamVis_Al"          alpha="1.0" r="1.0" g="1"  b="1.0"   showDaughters="true"  visible="true"/>
-    <vis name="beamVis_Be"          alpha="1.0" r="0" g="1"  b="0"   showDaughters="true"  visible="true"/>
-    <vis name="FlangeVis"           alpha="1.0" r="1.0" g="1.0" b="1.0" showDaughters="true" visible="true"/>
-    <vis name="CuVis"               alpha="1.0" r="1.0" g="1.0" b="0" showDaughters="true" visible="true"/>
+    <vis name="LumicalDiskVis"     alpha="1.0" r="0" g="0.5"  b="0.5"  showDaughters="true"  visible="true"/>
+    <vis name="LumicalFlangeVis"   alpha="1.0" r="1.0" g="1.0" b="1.0" showDaughters="true" visible="true"/>
+    <vis name="LumicalCuVis"       alpha="1.0" r="1.0" g="1.0" b="0"   showDaughters="true" visible="true"/>
   </display>
 
 
     <detectors>
-        <detector name="Lumical" id="DetID_LCAL" type="Lumical_v01" readout="LumicalCollection" vis="SeeThroughit" insideTrackingVolume="false">
+        <detector name="Lumical" id="DetID_LCAL" type="Lumical_v01" readout="LumicalCollection" vis="SeeThrough" insideTrackingVolume="false">
             <envelope> 
                 <shape type = "Assembly"/>
             </envelope>
@@ -32,58 +28,58 @@
             <subsegmentation key="module" value="5"/>
             
             <layer name = "Disk_Si_1st">
-                <slice type = "Box" dx = "12*mm" dy="29.5*mm" dz = "6*mm" material = "G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                <slice type = "Box" dx = "12*mm" dy="29.5*mm" dz = "6*mm" material = "G4_Si" vis="LumicalDiskVis" sensitive="yes" limits="5*mm">
                     <position x="0" y="26.75*mm" z="560*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="0" rmax="29.5*mm" z="6*mm" phi1="0*deg" phi2="90*deg" material="G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                <slice type="Tubs" rmin="0" rmax="29.5*mm" z="6*mm" phi1="0*deg" phi2="90*deg" material="G4_Si" vis="LumicalDiskVis" sensitive="yes" limits="5*mm">
                     <position x="6*mm" y="12*mm" z="560*mm"/>
                 </slice>
             </layer>
             <layer name = "Disk_Si_2nd">
-                <slice type ="Box" dx = "24*mm" dy="39*mm" dz = "7.263*mm" material = "G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                <slice type ="Box" dx = "24*mm" dy="39*mm" dz = "7.263*mm" material = "G4_Si" vis="LumicalDiskVis" sensitive="yes" limits="5*mm">
                     <position x="0" y="31.5*mm" z="640*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="0" rmax="39*mm" z="6*mm" phi1="0*deg" phi2="90*deg" material="G4_Si" vis="DiskVis" sensitive="yes" limits="5*mm">
+                <slice type="Tubs" rmin="0" rmax="39*mm" z="6*mm" phi1="0*deg" phi2="90*deg" material="G4_Si" vis="LumicalDiskVis" sensitive="yes" limits="5*mm">
                     <position x="12*mm" y="12*mm" z="640*mm"/>
                 </slice>
             </layer>
             <layer name = "Flange">
-                <slice type="Tubs" rmin="17.5*mm" rmax="100*mm" z="30*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="18.2*mm" rmax="100*mm" z="30*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="685*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="710*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="98*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="98*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="730*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="750*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="755*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="760*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="765*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="770*mm"/>
                 </slice>
-                <slice type="Tubs" rmin="17.5*mm" rmax="95*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="FlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="90*mm" z="1*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="775*mm"/>
                 </slice>
             </layer>
             <layer name = "LYSO_1st">
-                <slice  dx="3*mm" dy="3*mm" dz="23*mm" material="LYSO" vis="Gray_Vis" sensitive="yes" limits="5*mm">
+                <slice  dx="3*mm" dy="3*mm" dz="23*mm" material="LYSO" vis="GrayVis" sensitive="yes" limits="5*mm">
 	            <position x="0" y="-12*mm" z="658.5*mm"/>
 	            <rotation x="0" y="0" z="0" />
                 </slice>
             </layer>
             <layer name = "LYSO_2nd">
-                <slice  dx="10*mm" dy="10*mm" dz="200*mm" material="LYSO" vis="Gray_Vis" sensitive="yes" limits="5*mm">
+                <slice  dx="10*mm" dy="10*mm" dz="200*mm" material="LYSO" vis="GrayVis" sensitive="yes" limits="5*mm">
 	            <position x="0" y="-12*mm" z="1000*mm"/>
 	            <rotation x="0" y="0" z="0" />
                 </slice>

@@ -288,7 +288,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
             cellSizeVector = seg.segmentation()->cellDimensions( encoder.getValue() ); 
             int num = 0;//calculate the number of crystals allowed to be placed in each line
             crystal_id=0;//stand for the id of LYSO crystals
-            double yc = 12.0 + dy * (i + 1);
+            double yc = 12.0 + dy / mm * (i + 1);
             double xc = dx / mm;
             num = (int) 2 * ((std::sqrt(56 * 56 - yc * yc) / xc) - 1);
           
