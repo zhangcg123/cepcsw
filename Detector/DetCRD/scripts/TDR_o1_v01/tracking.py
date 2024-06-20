@@ -227,6 +227,7 @@ from Configurables import TrueMuonTagAlg
 tmt = TrueMuonTagAlg("TrueMuonTag")
 tmt.MCParticleCollection = "MCParticle"
 tmt.TrackList = ["CompleteTracks"]
+tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
