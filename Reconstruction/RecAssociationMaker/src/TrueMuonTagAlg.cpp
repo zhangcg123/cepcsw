@@ -135,29 +135,32 @@ StatusCode TrueMuonTagAlg::execute() {
 	//  ass.setSim(it->first);
 	//}
 
-        // tore to new track collection
-        edm4hep::MutableTrack new_track = track.clone();
+        // fill a new track collection only if one found a mc particle above
+        if (!mapParticleNHits.empty()) {
 
-        // find the max nhits mcparticle 
-        auto max_nhits_iter = std::max_element(mapParticleNHits.begin(), mapParticleNHits.end(),
-                                     [](const auto& lhs, const auto& rhs) {return lhs.second < rhs.second;} );
-        // calculate the barrel/endcap theta
-        auto a_particle = max_nhits_iter->first;
-        auto p_pdg_id = a_particle.getPDG();
-        auto p_status = a_particle.getGeneratorStatus();
-        auto p_px = a_particle.getMomentum()[0];
-        auto p_py = a_particle.getMomentum()[1];
-        auto p_pz = a_particle.getMomentum()[2];
-        auto p_tantheta = sqrt(p_px*p_px+p_py*p_py)/fabs(p_pz);
-      
+          // store to new track collection
+          edm4hep::MutableTrack new_track = track.clone();
+
+          // find the max nhits mcparticle 
+          auto max_nhits_iter = std::max_element(mapParticleNHits.begin(), mapParticleNHits.end(),
+                                       [](const auto& lhs, const auto& rhs) {return lhs.second < rhs.second;} );
+          // calculate the barrel/endcap theta
+          auto a_particle = max_nhits_iter->first;
+          auto p_pdg_id = a_particle.getPDG();
+          auto p_status = a_particle.getGeneratorStatus();
+          auto p_px = a_particle.getMomentum()[0];
+          auto p_py = a_particle.getMomentum()[1];
+          auto p_pz = a_particle.getMomentum()[2];
+          auto p_tantheta = sqrt(p_px*p_px+p_py*p_py)/fabs(p_pz);
+        
        
-        if (abs(p_pdg_id)==13 && fRandom.Rndm()<_m_muonTagEff ) {
-          debug() << " particle PDG = " << p_pdg_id << "; status = " << p_status << endmsg;
-          if (p_tantheta>_m_muonDetTanTheta) new_track.setType( new_track.getType()| (1<<lcio::ILDDetID::YOKE) ) ;
-          else new_track.setType( new_track.getType()| (1<<lcio::ILDDetID::YOKE_ENDCAP) ) ;
+          if (abs(p_pdg_id)==13 && fRandom.Rndm()<_m_muonTagEff ) {
+            debug() << " particle PDG = " << p_pdg_id << "; status = " << p_status << endmsg;
+            if (p_tantheta>_m_muonDetTanTheta) new_track.setType( new_track.getType()| (1<<lcio::ILDDetID::YOKE) ) ;
+            else new_track.setType( new_track.getType()| (1<<lcio::ILDDetID::YOKE_ENDCAP) ) ;
+          }
+          outTrackCol->push_back(new_track);
         }
-        outTrackCol->push_back(new_track);
-
       }
       
       if (msgLevel(MSG::DEBUG)) {

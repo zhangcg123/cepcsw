@@ -33,7 +33,7 @@ class TrueMuonTagAlg : public GaudiAlgorithm {
   // input TrackerAssociation to link TrackerHit and SimTrackerHit
   std::vector<DataHandle<edm4hep::MCRecoTrackerAssociationCollection>* > m_inAssociationColHdls;
   Gaudi::Property<std::vector<std::string> >                             m_inAssociationCollectionNames{this, "TrackerAssociationList", {"VXDTrackerHitAssociation",
-        "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation"}};
+        "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"}};
 
   // output TrackParticleAssociation
   //std::vector<DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection>* > m_outColHdls;
