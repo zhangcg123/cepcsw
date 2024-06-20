@@ -6,11 +6,6 @@ project(CEPCSW)
 include(cmake/CEPCSWEnv.cmake)
 #
 
-find_package(ROOT COMPONENTS RIO Tree)
-
-find_package(Gaudi)
-find_package(Eigen3)
-
 include(GNUInstallDirs)
 include(CTest)
 
@@ -18,6 +13,17 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/InstallArea/ CACHE PATH
     "Install path prefix, prepended onto install directories." FORCE )
 endif()
+
+set(CMAKE_SKIP_BUILD_RPATH TRUE)
+set(CMAKE_EXECUTABLE_SUFFIX .exe)
+
+# Put bin/lib/include under CMAKE_BINARY_DIR
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+include_directories(${CMAKE_BINARY_DIR}/include)
+
+# set Install/lib
+set(CMAKE_INSTALL_LIBDIR lib)
 
 # Set up C++ Standard
 # ``-DCMAKE_CXX_STANDARD=<standard>`` when invoking CMake

@@ -1,10 +1,4 @@
 
-find_package(Geant4 REQUIRED ui_all vis_all)
-include(${Geant4_USE_FILE})
-
-
-message(" Geant4_LIBRARIES: ${Geant4_LIBRARIES}")
-
 gaudi_add_module(DetSimCore 
                  SOURCES src/DetSimAlg.cpp
                          src/DetSimSvc.cpp

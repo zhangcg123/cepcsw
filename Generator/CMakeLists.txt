@@ -1,8 +1,5 @@
 ########################################
 
-find_package(Geant4 REQUIRED)
-include(${Geant4_USE_FILE})
-
 gaudi_add_module(GenAlgo
                  SOURCES src/IGenTool.cpp 
                          src/GenAlgo.cpp 
