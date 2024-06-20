@@ -4,18 +4,6 @@
 # Based on package: lcgeo
 ################################################################################
 
-find_package(DD4hep COMPONENTS DDRec DDG4 DDParsers REQUIRED)
-# find_package(DD4hep)
-find_package(Geant4)
-include(${Geant4_USE_FILE})
-
-set(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH}  ${DD4hep_ROOT}/cmake )
-include( DD4hep )
-
-find_package(ROOT COMPONENTS MathCore GenVector Geom REQUIRED)
-
-# install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/compact DESTINATION Detector/DetCEPCv4)
-
 gaudi_add_module(DetCEPCv4
                  SOURCES src/tracker/VXD04_geo.cpp
                          src/tracker/FTD_Simple_Staggered_geo.cpp

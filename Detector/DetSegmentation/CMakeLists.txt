@@ -2,11 +2,6 @@
 ##Package : DetSegmentation
 #################################################################################
 
-find_package(DD4hep COMPONENTS DDRec DDG4 DDParsers REQUIRED)
-set(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH}  ${DD4hep_ROOT}/cmake )
-
-include(DD4hep)
-
 gaudi_add_library(DetSegmentation
                   SOURCES src/GridDriftChamber.cpp
                   LINK Gaudi::GaudiKernel

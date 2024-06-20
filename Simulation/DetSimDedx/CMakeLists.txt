@@ -1,13 +1,4 @@
 
-find_package(Geant4 REQUIRED ui_all vis_all)
-include(${Geant4_USE_FILE})
-find_package(Garfield REQUIRED)
-message(Garfield::Garfield)
-message("libonnxruntime ${OnnxRuntime_LIBRARY}")
-message("libonnxruntime include ${OnnxRuntime_INCLUDE_DIR}")
-find_package(OnnxRuntime REQUIRED)
-
-message("libonnxruntime ${OnnxRuntime_LIBRARY}")
 gaudi_add_module(DetSimDedx
                  SOURCES src/DummyDedxSimTool.cpp
                          src/BetheBlochEquationDedxSimTool.cpp
@@ -23,8 +14,6 @@ gaudi_add_module(DetSimDedx
                       k4FWCore::k4FWCore
                       Garfield::Garfield
                       OnnxRuntime
-                      #${OnnxRuntime_LIBRARY}
-                      #/cvmfs/sft.cern.ch/lcg/views/LCG_103/x86_64-centos7-gcc11-opt/lib/libonnxruntime.so
                       ${CLHEP_LIBRARIES}
  
 )

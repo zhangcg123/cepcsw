@@ -1,5 +1,3 @@
-find_package(Geant4 REQUIRED ui_all vis_all)
-include(${Geant4_USE_FILE})
 
 gaudi_add_module(DetSimAna
                  SOURCES src/Edm4hepWriterAnaElemTool.cpp

@@ -3,18 +3,6 @@
 #   CEPC Reference Detector (CRD)
 ################################################################################
 
-find_package(DD4hep COMPONENTS DDRec DDG4 DDParsers REQUIRED)
-# find_package(DD4hep)
-find_package(Geant4)
-include(${Geant4_USE_FILE})
-
-set(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH}  ${DD4hep_ROOT}/cmake )
-include( DD4hep )
-
-find_package(ROOT COMPONENTS MathCore GenVector Geom REQUIRED)
-
-# install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/compact DESTINATION Detector/DetCRD)
-
 gaudi_add_module(DetCRD
                  SOURCES src/Calorimeter/CRDEcal_v01.cpp
                          src/Calorimeter/LongCrystalBarBarrelCalorimeter32Polygon_v01.cpp
