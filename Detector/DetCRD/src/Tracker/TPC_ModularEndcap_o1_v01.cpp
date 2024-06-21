@@ -28,6 +28,7 @@ using dd4hep::rec::SurfaceType;
 using dd4hep::rec::volSurfaceList;
 using dd4hep::rec::VolPlane;
 using dd4hep::rec::FixedPadSizeTPCData;
+using dd4hep::rec::ConicalSupportData;
 
 /** Construction of TPC detector, ported from Mokka driver TPC10.cc
  * Mokka History:
@@ -506,6 +507,31 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     tpcData->padWidth =  tpcpadwidth;
     tpcData->driftLength = dzTotal/2.- dz_Endplate - dz_Readout - dz_Cathode/2.0; // SJA: cathode has to be added as the sensitive region does not start at 0.00    
     tpcData->zMinReadout = dz_Cathode/2.0; 
+
+    ConicalSupportData* supportData = new ConicalSupportData;
+
+    ConicalSupportData::Section section0;
+    section0.rInner = rInner + drInnerWall; 
+    section0.rOuter = rOuter - drOuterWall;
+    section0.zPos   = dzTotal/2. - dz_Endplate - dz_Readout; 
+
+    ConicalSupportData::Section section1;
+    section1.rInner = rInner + drInnerWall; 
+    section1.rOuter = rOuter - drOuterWall;
+    section1.zPos   = dzTotal/2. - dz_Endplate; 
+
+    ConicalSupportData::Section section2;
+    section2.rInner = rInner ; 
+    section2.rOuter = rOuter ;
+    section2.zPos   = dzTotal/2.; 
+
+    supportData->sections.push_back(section0);
+    supportData->sections.push_back(section1);
+    supportData->sections.push_back(section2);
+
+
+    tpc.addExtension< FixedPadSizeTPCData >(tpcData);
+    tpc.addExtension< ConicalSupportData >(supportData);
 
     //tpc.setVisAttributes( theDetector, x_det.visStr(), envelope );
     tpc.setVisAttributes( theDetector, "TPCMotherVis1", envelope );
