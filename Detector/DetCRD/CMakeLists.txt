@@ -35,14 +35,24 @@ install(TARGETS DetCRD
 # Add tests
 ################################################################################
 
-add_test(
-  NAME Test_TDR_o1_v01_Sim
-  COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/sim.py
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+foreach(detoption TDR_o1_v01 TDR_o1_v02)
+  add_test(
+    NAME Test_${detoption}_Sim
+    COMMAND gaudirun.py Detector/DetCRD/scripts/${detoption}/sim.py
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
 
-add_test(
-  NAME Test_TDR_o1_v01_Rec
-  COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/tracking.py
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+  add_test(
+    NAME Test_${detoption}_Rec
+    COMMAND gaudirun.py Detector/DetCRD/scripts/${detoption}/tracking.py
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+
+  add_test(
+    NAME Test_${detoption}_DD4hep2TGeo
+    COMMAND geoConverter -compact2tgeo 
+                         -input Detector/DetCRD/compact/${detoption}/${detoption}.xml 
+                         -output ${detoption}.tgeo.root
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+endforeach()
