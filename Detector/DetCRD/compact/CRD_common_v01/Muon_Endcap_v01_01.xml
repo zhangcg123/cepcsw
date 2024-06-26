@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+ 
+  <info name="Muon_Endcap"
+	title="Test with Two Single Muon Endcaps"
+	author="Zibing Bai"
+	url="http://cepcgit.ihep.ac.cn"
+	status="development"
+	version="v01">
+    <comment>Test with Two Single Muon Endcaps</comment>        
+  </info>
+
+  <define>
+    <!--Muon Endcap-->
+    <constant name="Muon_endcap_part_num" value="4"/>
+    <constant name="Muon_endcap_superlayer_num" value="6"/>
+    <constant name="Muon_endcap_iron_gap_num" value="Muon_endcap_superlayer_num+1"/>
+    <constant name="Muon_endcap_layer_num" value="2"/>
+    <constant name="Muon_endcap_strip_num" value="146"/>
+    <constant name="Muon_endcap_strip_num_cut" value="13"/>
+    <constant name="Muon_endcap_endcap_rmin" value="52*cm"/>
+    <constant name="Muon_endcap_magnification" value="1.02"/>
+
+    <constant name="Muon_endcap_iron_gap" value="12.5*cm"/>
+    <constant name="Muon_endcap_endcap_z" value="Muon_endcap_iron_gap_num*Muon_endcap_iron_gap+2*Muon_endcap_superlayer_num*Muon_strip_y"/>
+    <constant name="Muon_endcap_endcap_posy" value="Muon_strip_z+2*Muon_strip_surf+Muon_Iron_gap_z+0.5*Muon_endcap_endcap_z"/>
+  </define>
+
+  <detectors>
+    <detector id="202" name="Muon_Endcap_v01_01" type="Muon_Endcap_v01_01" readout="MuonEndcapCollection" vis="GrayVis" material="Iron">
+      <material name="Iron"/>
+      <position x="0" y="Muon_endcap_endcap_posy" z="0"/>
+      <dimensions rmin="Muon_endcap_endcap_rmin" dz="0.5*Muon_endcap_endcap_z"/>
+      <stripe id="0" name="Muon_stripe" type="Muon_stripe" vis="GreenVis" material="Air">
+        <material name="Air"/>
+        <dimensions dx="0.5*Muon_strip_x"  dy="0.5*Muon_strip_y"  dz="0.5*Muon_strip_z+Muon_strip_SiPM_z"/>
+        <component id="0" type="Muon_strip_surface" name="Muon_strip_surface" vis="GreenVis" material="BC420">
+          <position x="0" y="0" z="0"/>
+          <dimensions dx="0.5*Muon_strip_surface_x" dy="0.5*Muon_strip_surface_y" dz="0.5*Muon_strip_surface_z"/>
+          <cut name="Muon_strip_cut1" vis="GreenVis" material="Air">
+            <position x="Muon_strip_cut1_posx" y="Muon_strip_cut1_posy" z="Muon_strip_cut1_posz"/>
+            <dimensions dx="0.5*Muon_strip_cut1_x" dy="0.5*Muon_strip_cut1_y" dz="0.5*Muon_strip_cut1_z"/>
+          </cut>
+        </component>
+        <component id="1" type="Muon_strip_scintillator" name="Muon_strip_scintillator" vis="GreenVis" material="BC420">
+          <position x="0" y="0" z="0"/>
+          <dimensions dx="0.5*Muon_strip_scintillator_x" dy="0.5*Muon_strip_scintillator_y" dz="0.5*Muon_strip_scintillator_z"/>
+          <cut name="Muon_strip_cut3" vis="GreenVis" material="Air">
+            <position x="Muon_strip_cut3_posx" y="Muon_strip_cut3_posy" z="Muon_strip_cut3_posz"/>
+            <dimensions rmin="0" rmax="Muon_strip_cut3_rmax" dz="0.5*Muon_strip_cut3_z"/>
+            <comb name="Muon_strip_cut2" vis="GreenVis" material="Air">
+              <position x="Muon_strip_cut2_posx" y="Muon_strip_cut2_posy" z="Muon_strip_cut2_posz"/>
+              <dimensions dx="0.5*Muon_strip_cut2_x" dy="0.5*Muon_strip_cut2_y" dz="0.5*Muon_strip_cut2_z"/>
+            </comb>
+          </cut>
+        </component>
+        <fiber id="0" type="Muon_fiber_cladding" name="Muon_fiber_cladding" vis="GreenVis" material="Pethylene1">
+          <position x="0" y="0" z="0"/>
+          <dimensions rmin="Muon_fiber_cladding_rmin" rmax="Muon_fiber_cladding_rmax" dz="0.5*Muon_fiber_cladding_z"/>
+        </fiber>
+        <fiber id="1" type="Muon_fiber_core" name="Muon_fiber_core" vis="GreenVis" material="Pethylene2">
+          <position x="0" y="0" z="0"/>
+          <dimensions rmin="0" rmax="Muon_fiber_core_rmax" dz="0.5*Muon_fiber_core_z"/>
+        </fiber>
+        <component id="2" type="Muon_strip_SiPM" name="Muon_strip_SiPM" vis="GreenVis" material="Air">
+          <position x="Muon_strip_SiPM_posx" y="Muon_strip_SiPM_posy" z="Muon_strip_SiPM_posz"/>
+          <dimensions dx="0.5*Muon_strip_SiPM_x" dy="0.5*Muon_strip_SiPM_y" dz="0.5*Muon_strip_SiPM_z"/>
+        </component>
+      </stripe>
+    </detector>
+  </detectors>
+
+
+  <readouts>
+    <readout name="MuonEndcapCollection">
+      <id>system:5,Env:5,Endcap:2,Superlayer:15:4,Layer:2,Stripe:9,SiPM:2</id>
+      <!--id>Endcap:2,Superlayer:2,Env:2,Layer:2,Stripe:10:3,SiPM:2</id-->
+    </readout>
+  </readouts>
+
+</lccdd>

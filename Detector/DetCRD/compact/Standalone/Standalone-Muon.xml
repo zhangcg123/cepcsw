@@ -24,7 +24,7 @@
     <constant name="world_z" value="Muon_world_size"/>
   </define>
 
-  <include ref="./TDR_Dimensions_v01_01.xml"/>
+  <include ref="./Muon_Dimensions_v01_01.xml"/>
 
   <!--include ref="../CRD_common_v01/Beampipe_v01_01.xml"/-->
   <!--include ref="../CRD_common_v01/VXD_v01_01.xml"/-->
@@ -37,7 +37,7 @@
   <include ref="../CRD_common_v01/Muon_Endcap_v01_01.xml"/>
   <include ref="../CRD_common_v01/Muon_Barrel_v01_01.xml"/>
  
-  <fields>
+  <!--fields>
     <field name="InnerSolenoid" type="solenoid"
            inner_field="Field_nominal_value"
            outer_field="0"
@@ -52,6 +52,6 @@
            inner_radius="Solenoid_outer_radius"
            outer_radius="Yoke_barrel_inner_radius">
     </field>
-  </fields>
+  </fields-->
 
 </lccdd>

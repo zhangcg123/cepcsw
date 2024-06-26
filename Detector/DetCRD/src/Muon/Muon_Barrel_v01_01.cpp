@@ -29,13 +29,10 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     MYDEBUGVAL(det_name);
     MYDEBUGVAL(det_type);
     xml_dim_t   pos    (x_det.child(_U(position)));
-    xml_dim_t   dim    (x_det.child(_U(dimensions)));
-
-    dd4hep::Material det_mat(theDetector.material(x_det.materialStr()));
 
     dd4hep::DetElement sdet(det_name, x_det.id());
 
-    dd4hep::Volume envelope(det_name,dd4hep::Box(dim.dx(),dim.dy(),dim.dz()),det_mat);
+    dd4hep::Assembly envelope(det_name);
 
     dd4hep::xml::setDetectorTypeFlag( e, sdet ) ;
 
@@ -45,31 +42,28 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
 
 //    dd4hep::Readout readout = sens.readout();
 //    dd4hep::Segmentation seg = readout.segmentation();
-    xml_coll_t dcEnv(x_det,_U(module));
+    xml_coll_t dcEnv(x_det,Unicode("barrel"));
     xml_comp_t x_env = dcEnv;
-    for(int i0 = 0; i0 < theDetector.constant<int>("env_num"); i0++)
+    for(int i0 = 0; i0 < theDetector.constant<int>("Muon_barrel_barrel_num"); i0++)
     {
       for(int i1 = 0; i1 < x_env.id(); i1++ )
       {
         std::string env_name = x_env.nameStr() + dd4hep::_toString(i1,"_%d");
-        dd4hep::Material env_mat(theDetector.material(x_env.materialStr()));
         xml_dim_t env_pos(x_env.child(_U(position)));
-        xml_dim_t env_dim(x_env.child(_U(dimensions)));
 
-        xml_coll_t dcFe(x_env,_U(module));
+        xml_coll_t dcFe(x_env,Unicode("iron"));
         xml_comp_t x_Fe = dcFe;
         std::string Fe_name = x_Fe.nameStr() + dd4hep::_toString(i1,"_%d");
         dd4hep::Material Fe_mat(theDetector.material(x_Fe.materialStr()));
         xml_dim_t Fe_pos(x_Fe.child(_U(position)));
         xml_dim_t Fe_dim(x_Fe.child(_U(dimensions)));
 
-        double Fe_halfX2 = theDetector.constant<double>("Fe_x1") * ( 0.5 + std::sqrt(3));
-        double Fe_posZ = -1 * theDetector.constant<double>("Fe_x1") * ( 2.5 + 1.5 * std::sqrt(3) );
-        double env_halfX = 2 * theDetector.constant<double>("Fe_x1") * ( 1 + std::sqrt(3) );
-        double env_halfZ = 2 * theDetector.constant<double>("Fe_x1") * ( 3 + 1.5 * std::sqrt(3) );
-        dd4hep::Box env_solid(env_halfX,env_dim.dy(),env_halfZ);
-        dd4hep::Volume env_vol(env_name, env_solid, env_mat);
-        env_vol.setVisAttributes(theDetector.visAttributes(x_env.visStr()));
+        double Fe_halfX2 = theDetector.constant<double>("Muon_barrel_iron_x1") * ( 0.5 + std::sqrt(3));
+        //double Fe_posZ = -1 * theDetector.constant<double>("Muon_barrel_iron_x1") * ( 2.5 + 1.5 * std::sqrt(3) );
+        double Fe_posZ = -1 * ( theDetector.constant<double>("Muon_barrel_inner_radius") + 0.5 * theDetector.constant<double>("Muon_barrel_iron_z") );
+        double env_halfX = 2 * theDetector.constant<double>("Muon_barrel_iron_x1") * ( 1 + std::sqrt(3) );
+        double env_halfZ = 2 * theDetector.constant<double>("Muon_barrel_iron_x1") * ( 3 + 1.5 * std::sqrt(3) );
+        dd4hep::Assembly env_vol(env_name);
         double env_rot = i1 * 360 * dd4hep::degree / x_env.id();
         dd4hep::Transform3D env_transform(dd4hep::Rotation3D(dd4hep::RotationY(env_rot)),dd4hep::Position(env_pos.x(), ( 2 * i0 - 1 ) * env_pos.y(),env_pos.z()));
 
@@ -78,19 +72,19 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
         Fe_vol.setVisAttributes(theDetector.visAttributes(x_Fe.visStr()));
         dd4hep::Transform3D Fe_transform(dd4hep::Rotation3D(),dd4hep::Position(Fe_pos.x(),Fe_pos.y(),Fe_posZ));
 
-        xml_coll_t dcSuperlayer(x_Fe,_U(module));
+        xml_coll_t dcSuperlayer(x_Fe,Unicode("superlayer"));
         xml_comp_t x_superlayer = dcSuperlayer;
         for(int i2 = 0; i2 < x_superlayer.id(); i2++)
         {
           std::string superlayer_name = x_superlayer.nameStr() + dd4hep::_toString(i2,"_%d");
-          std::string num_name = "strip_num" + dd4hep::_toString(i2,"_%d");
+          std::string num_name = "Muon_barrel_strip_num" + dd4hep::_toString(i2,"_%d");
 
           int strip_num = theDetector.constant<int>(num_name);
-          double superlayer_halfX = 0.5 * strip_num * theDetector.constant<double>("strip_x") + theDetector.constant<double>("superlayer_air");
-          double superlayer_halfY = 0.5 * theDetector.constant<double>("superlayer_y");
-          double superlayer_halfZ = 0.5 * theDetector.constant<double>("superlayer_z"); 
+          double superlayer_halfX = 0.5 * strip_num * theDetector.constant<double>("Muon_strip_x") + theDetector.constant<double>("Muon_barrel_superlayer_air_gap");
+          double superlayer_halfY = 0.5 * theDetector.constant<double>("Muon_barrel_superlayer_y");
+          double superlayer_halfZ = 0.5 * theDetector.constant<double>("Muon_barrel_superlayer_z"); 
 
-          double superlayer_posZ = i2 * theDetector.constant<double>("layer_gap") + theDetector.constant<double>("layer_init");
+          double superlayer_posZ = i2 * theDetector.constant<double>("Muon_barrel_superlayer_gap") + theDetector.constant<double>("Muon_barrel_superlayer_init");
 
           dd4hep::Material superlayer_mat(theDetector.material(x_superlayer.materialStr()));
           dd4hep::Box superlayer_solid(superlayer_halfX, superlayer_halfY, superlayer_halfZ); 
@@ -98,15 +92,15 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
           superlayer_vol.setVisAttributes(theDetector.visAttributes(x_superlayer.visStr()));
           dd4hep::Transform3D superlayer_transform(dd4hep::Rotation3D(dd4hep::RotationX(90*dd4hep::degree)),dd4hep::Position(0, 0, superlayer_posZ));
 
-          xml_coll_t dcAl(x_superlayer,_U(module));
+          xml_coll_t dcAl(x_superlayer,Unicode("aluminum"));
           xml_comp_t x_Al = dcAl;
           std::string Al_name = x_Al.nameStr();
           dd4hep::Material Al_mat(theDetector.material(x_Al.materialStr()));
           xml_dim_t Al_pos(x_Al.child(_U(position)));
 
-          double Al_halfX = superlayer_halfX - theDetector.constant<double>("superlayer_Al");
-          double Al_halfY = superlayer_halfY - theDetector.constant<double>("superlayer_Al");
-          double Al_halfZ = superlayer_halfZ - theDetector.constant<double>("superlayer_Al");
+          double Al_halfX = superlayer_halfX - theDetector.constant<double>("Muon_barrel_superlayer_aluminum_gap");
+          double Al_halfY = superlayer_halfY - theDetector.constant<double>("Muon_barrel_superlayer_aluminum_gap");
+          double Al_halfZ = superlayer_halfZ - theDetector.constant<double>("Muon_barrel_superlayer_aluminum_gap");
           dd4hep::Box Al_solid(Al_halfX, Al_halfY, Al_halfZ);
           dd4hep::Volume Al_vol(Al_name, Al_solid, Al_mat);
           Al_vol.setVisAttributes(theDetector.visAttributes(x_Al.visStr()));
@@ -120,7 +114,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
             }
             if ( i3 == 1 )
             {
-              num = theDetector.constant<int>("strip_num");
+              num = theDetector.constant<int>("Muon_barrel_strip_num");
             }
             for ( int i4 = 0; i4 < num; i4++ )
             {
@@ -128,23 +122,23 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
               dd4hep::Rotation3D strip_rot;
               if ( i3 == 0 )
               {
-                strip_halfZ = 0.5 * theDetector.constant<double>("strip_z") + theDetector.constant<double>("surf");
-                strip_posX = theDetector.constant<double>("strip_x") * ( i4 + 0.5 * (1 - strip_num));
-                strip_posY = 0.5 * theDetector.constant<double>("strip_y");
+                strip_halfZ = 0.5 * theDetector.constant<double>("Muon_strip_z") + theDetector.constant<double>("Muon_strip_surf");
+                strip_posX = theDetector.constant<double>("Muon_strip_x") * ( i4 + 0.5 * (1 - strip_num));
+                strip_posY = 0.5 * theDetector.constant<double>("Muon_strip_y");
                 strip_posZ = 0;
               }
               if ( i3 == 1 )
               {
                 strip_rot = dd4hep::Rotation3D(dd4hep::RotationY( 90 * dd4hep::degree ));
-                strip_halfZ = 0.5 * strip_num * theDetector.constant<double>("strip_x") + theDetector.constant<double>("surf");
+                strip_halfZ = 0.5 * strip_num * theDetector.constant<double>("Muon_strip_x") + theDetector.constant<double>("Muon_strip_surf");
                 strip_posX = 0;
-                strip_posY = -0.5 * theDetector.constant<double>("strip_y");
-                strip_posZ = theDetector.constant<double>("strip_x") * ( i4 + 0.5 ) - 0.5 * theDetector.constant<double>("strip_z");
+                strip_posY = -0.5 * theDetector.constant<double>("Muon_strip_y");
+                strip_posZ = theDetector.constant<double>("Muon_strip_x") * ( i4 + 0.5 ) - 0.5 * theDetector.constant<double>("Muon_strip_z");
               }
               double surface_halfZ, BC420_halfZ, fiber_halfZ, cut_halfZ;
-              double SiPM_posZ = strip_halfZ + theDetector.constant<double>("surf");
-              surface_halfZ = BC420_halfZ = fiber_halfZ = cut_halfZ = strip_halfZ - theDetector.constant<double>("surf"); 
-              xml_coll_t dcStrip(x_Al,_U(module));
+              double SiPM_posZ = strip_halfZ - 0.5 * theDetector.constant<double>("Muon_strip_surf");
+              surface_halfZ = BC420_halfZ = fiber_halfZ = cut_halfZ = strip_halfZ - theDetector.constant<double>("Muon_strip_surf"); 
+              xml_coll_t dcStrip(x_Al,Unicode("stripe"));
               xml_comp_t x_strip = dcStrip;
               std::string strip_name = x_strip.nameStr() + dd4hep::_toString(i0,"_%d") + dd4hep::_toString(i1,"_%d") + dd4hep::_toString(i2,"_%d") + dd4hep::_toString(i3,"_%d") + dd4hep::_toString(i4,"_%d");
               dd4hep::Material strip_mat(theDetector.material(x_strip.materialStr()));
@@ -160,7 +154,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
               dd4hep::Material surface_mat, BC420_mat, cut1_mat, cut2_mat, cut3_mat, SiPM_mat; 
               xml_dim_t surface_pos, cut1_pos, BC420_pos, cut3_pos, cut2_pos, SiPM_pos;
               xml_dim_t surface_dim, cut1_dim, BC420_dim, cut3_dim, cut2_dim, SiPM_dim;
-              for(xml_coll_t dcModule(x_strip,_U(module)); dcModule; dcModule++)
+              for(xml_coll_t dcModule(x_strip,Unicode("component")); dcModule; dcModule++)
               {
                 xml_comp_t x_module = dcModule;
 
@@ -178,7 +172,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   surface_pos = s_pos;
                   surface_dim = s_dim;
 
-                  xml_coll_t dcCut1(x_module,_U(section));
+                  xml_coll_t dcCut1(x_module,Unicode("cut"));
                   xml_comp_t x_cut1 = dcCut1;
                   cut1_name = x_cut1.nameStr();
                   cut1_vis = x_cut1.visStr();
@@ -198,7 +192,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   BC420_pos = b_pos;
                   BC420_dim = b_dim;
 
-                  xml_coll_t dcCut3(x_module,_U(section));
+                  xml_coll_t dcCut3(x_module,Unicode("cut"));
                   xml_comp_t x_cut3 = dcCut3;
                   cut3_name = x_cut3.nameStr();
                   cut3_vis = x_cut3.visStr();
@@ -208,7 +202,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   cut3_pos = c3_pos;
                   cut3_dim = c3_dim;
 
-                  xml_coll_t dcCut2(x_cut3,_U(section));
+                  xml_coll_t dcCut2(x_cut3,Unicode("comb"));
                   xml_comp_t x_cut2 = dcCut2;
                   cut2_name = x_cut2.nameStr();
                   cut2_vis = x_cut2.visStr();
@@ -246,7 +240,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
 
               dd4hep::Volume surface_vol(surface_name, surface_solid, surface_mat);
               surface_vol.setVisAttributes(theDetector.visAttributes(surface_vis));
-              surface_vol.setSensitiveDetector(sens);
+              //surface_vol.setSensitiveDetector(sens);
 
               dd4hep::Volume cut1_vol(cut1_name, cut1_solid, cut1_mat);
               cut1_vol.setVisAttributes(theDetector.visAttributes(cut1_vis));
@@ -267,7 +261,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
               BC420_vol.placeVolume(cut2_vol,cut2_transform);
               BC420_vol.placeVolume(cut3_vol,cut3_transform);
               dd4hep::PlacedVolume cladding_place, core_place;
-              for(xml_coll_t dcSection(x_strip,_U(section)); dcSection; dcSection++)
+              for(xml_coll_t dcSection(x_strip,Unicode("fiber")); dcSection; dcSection++)
               {
                 xml_comp_t x_section = dcSection;
                 std::string section_name = x_section.nameStr();
@@ -292,21 +286,22 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
               }
               surface_vol.placeVolume(cut1_vol,cut1_transform);
               dd4hep::PlacedVolume BC420_place = surface_vol.placeVolume(BC420_vol,BC420_transform);
-              BC420_place.addPhysVolID("Stripe",i4+1);
+              //BC420_place.addPhysVolID("Stripe",i4+1);
               dd4hep::PlacedVolume surf_place = strip_vol.placeVolume(surface_vol,surface_transform);
-              surf_place.addPhysVolID("Layer",i3+1);
-              surf_place.addPhysVolID("SiPM",0);
+              //surf_place.addPhysVolID("Layer",i3+1);
+              //surf_place.addPhysVolID("SiPM",0);
               dd4hep::PlacedVolume SiPM_place0 = strip_vol.placeVolume(SiPM_vol,SiPM_transform0);
               SiPM_place0.addPhysVolID("SiPM",1);
 
               dd4hep::PlacedVolume SiPM_place1 = strip_vol.placeVolume(SiPM_vol,SiPM_transform1);
               SiPM_place1.addPhysVolID("SiPM",2);
-              Al_vol.placeVolume(strip_vol,strip_transform);
+	      dd4hep::PlacedVolume strip_place = Al_vol.placeVolume(strip_vol,strip_transform);
+	      strip_place.addPhysVolID("Stripe",i4+1).addPhysVolID("Layer",i3+1);
               dd4hep::OpticalSurfaceManager surfMgr = theDetector.surfaceManager();
               std::string optical_surf = strip_name + "_surf";
               std::string optical_fiber = strip_name + "_fiber";
-              dd4hep::OpticalSurface Surf_stripe = surfMgr.opticalSurface("Surf__stripe");
-              dd4hep::OpticalSurface Surf_fiber = surfMgr.opticalSurface("Surf__fiber");
+              dd4hep::OpticalSurface Surf_stripe = surfMgr.opticalSurface("Muon_surf_stripe");
+              dd4hep::OpticalSurface Surf_fiber = surfMgr.opticalSurface("Muon_surf_fiber");
               dd4hep::BorderSurface surface_stripe( theDetector, sdet, optical_surf, Surf_stripe, BC420_place, surf_place);
               dd4hep::BorderSurface surface_fiber( theDetector, sdet, optical_fiber, Surf_fiber, core_place, cladding_place);
             }
@@ -321,7 +316,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
         env_place.addPhysVolID("Env",i0+1);
       }
     }
-    dd4hep::Transform3D pv(dd4hep::Rotation3D(),dd4hep::Position(0,0,0));
+    dd4hep::Transform3D pv(dd4hep::Rotation3D(dd4hep::RotationX(90*dd4hep::degree)),dd4hep::Position(0,0,0));
     dd4hep::PlacedVolume phv = motherVol.placeVolume(envelope,pv);
     sdet.setPlacement(phv);
 
@@ -329,4 +324,4 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     return sdet;
 }
 
-DECLARE_DETELEMENT(Muon_Barrel_v01, create_detector)
+DECLARE_DETELEMENT(Muon_Barrel_v01_01, create_detector)

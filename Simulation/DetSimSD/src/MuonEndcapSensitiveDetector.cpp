@@ -29,7 +29,7 @@ G4bool MuonEndcapSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory
   auto pname = currentTrack->GetParticleDefinition()->GetParticleName();
   auto touchable = step->GetPreStepPoint()->GetTouchable();
   auto physical = touchable->GetVolume();
-  if ( physical->GetName() == "surface" )
+/*  if ( physical->GetName() == "surface" )
   {
       if ( pname == "opticalphoton" )
       {
@@ -39,7 +39,7 @@ G4bool MuonEndcapSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory
           currentTrack->SetTrackStatus(fStopAndKill);
         }
       }
-  } 
+  }*/ 
   dd4hep::sim::Geant4StepHandler h(step);
   if (fabs(h.trackDef()->GetPDGCharge()) < 0.01) return true;
 
@@ -61,12 +61,7 @@ G4bool MuonEndcapSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory
 					  h.track->GetGlobalTime());
 
   if ( hit )  {
-    int i = 0;
-    if ( pname == "opticalphoton" && physical->GetName() == "SiPM")
-    {
-      i = 1;
-    }
-    hit->cellID  = i * getCellID( step ) ;
+    hit->cellID  = getCellID( step ) ;
     hit->energyDeposit =  step->GetTotalEnergyDeposit();
     hit->position = position;
     hit->momentum = direction;
