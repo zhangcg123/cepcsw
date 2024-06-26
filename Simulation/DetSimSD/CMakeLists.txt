@@ -7,6 +7,8 @@ gaudi_add_library(DetSimSDLib
                           src/TimeProjectionChamberSensitiveDetector.cpp
                           src/GenericTrackerSensitiveDetector.cpp
                           src/TrackerCombineSensitiveDetector.cpp
+                          src/MuonBarrelSensitiveDetector.cpp
+                          src/MuonEndcapSensitiveDetector.cpp
                   LINK DetSimInterface
                        DetInterface
                        ${DD4hep_COMPONENT_LIBRARIES}
@@ -25,6 +27,8 @@ gaudi_add_module(DetSimSD
                          src/DriftChamberSensDetTool.cpp
                          src/TimeProjectionChamberSensDetTool.cpp
                          src/GenericTrackerSensDetTool.cpp
+                         src/MuonBarrelSensDetTool.cpp
+                         src/MuonEndcapSensDetTool.cpp
                  LINK DetSimInterface
                       DetSimSDLib
                       DetInterface

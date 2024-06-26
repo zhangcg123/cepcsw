@@ -191,6 +191,102 @@
     <constant name="tracker_region_zmax" value="Ecal_endcap_zmin"/>
     <constant name="tracker_region_rmax" value="Ecal_barrel_inner_radius"/>
 
+    <!--Muon Detector-->
+    <!--strip & fiber dimensions-->
+    <constant name="Muon_strip_x" value="4*cm"/>
+    <constant name="Muon_strip_y" value="1*cm"/>
+    <constant name="Muon_strip_z" value="4*m"/>
+    <constant name="Muon_strip_surf" value="1*mm"/>
+
+    <constant name="Muon_strip_surface_x" value="Muon_strip_x"/>
+    <constant name="Muon_strip_surface_y" value="Muon_strip_y"/>
+    <constant name="Muon_strip_surface_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_strip_scintillator_x" value="Muon_strip_x-2*Muon_strip_surf"/>
+    <constant name="Muon_strip_scintillator_y" value="Muon_strip_y-2*Muon_strip_surf"/>
+    <constant name="Muon_strip_scintillator_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_strip_SiPM_x" value="6*mm"/>
+    <constant name="Muon_strip_SiPM_y" value="6*mm"/>
+    <constant name="Muon_strip_SiPM_z" value="Muon_strip_surf"/>
+    <constant name="Muon_strip_SiPM_posx" value="0"/>
+    <constant name="Muon_strip_SiPM_posy" value="0"/>
+    <constant name="Muon_strip_SiPM_posz" value="0.5*Muon_strip_z+0.5*Muon_strip_SiPM_z"/>
+
+    <constant name="Muon_fiber_core_rmax" value="0.95*mm"/>
+    <constant name="Muon_fiber_core_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_fiber_cladding_rmin" value="Muon_fiber_core_rmax"/>
+    <constant name="Muon_fiber_cladding_rmax" value="1*mm"/>
+    <constant name="Muon_fiber_cladding_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_strip_cut_gap" value="0.1*mm"/>
+    <constant name="Muon_strip_cut3_rmax" value="Muon_fiber_cladding_rmax+Muon_strip_cut_gap"/>
+    <constant name="Muon_strip_cut3_z" value="Muon_strip_z"/>
+    <constant name="Muon_strip_cut3_posx" value="0"/>
+    <constant name="Muon_strip_cut3_posy" value="Muon_strip_cut3_rmax-Muon_fiber_cladding_rmax"/>
+    <constant name="Muon_strip_cut3_posz" value="0"/>
+
+    <constant name="Muon_strip_cut1_x" value="2*Muon_strip_cut3_rmax"/>
+    <constant name="Muon_strip_cut1_y" value="Muon_strip_surf"/>
+    <constant name="Muon_strip_cut1_z" value="Muon_strip_z"/>
+    <constant name="Muon_strip_cut1_posx" value="0"/>
+    <constant name="Muon_strip_cut1_posy" value="0.5*Muon_strip_y-0.5*Muon_strip_cut1_y"/>
+    <constant name="Muon_strip_cut1_posz" value="0"/>
+
+    <constant name="Muon_strip_cut2_x" value="Muon_strip_cut1_x"/>
+    <constant name="Muon_strip_cut2_y" value="0.5*Muon_strip_scintillator_y-Muon_strip_cut3_rmax+Muon_fiber_cladding_rmax"/>
+    <constant name="Muon_strip_cut2_z" value="Muon_strip_z"/>
+    <constant name="Muon_strip_cut2_posx" value="0"/>
+    <constant name="Muon_strip_cut2_posy" value="0.5*Muon_strip_scintillator_y-0.5*Muon_strip_cut2_y"/>
+    <constant name="Muon_strip_cut2_posz" value="0"/>
+
+    <!--standard scale-->
+    <constant name="Muon_standard_scale" value="105*cm"/>    
+    <constant name="Muon_Iron_gap_z" value="50*cm"/>
+
+    <!--Muon Barrel>
+    <constant name="Muon_barrel_barrel_num" value="2"/>
+    <constant name="Muon_barrel_iron_part_num" value="12"/>
+    <constant name="Muon_barrel_superlayer_num" value="6"/>
+    <constant name="Muon_barrel_strip_num_0" value="40"/>
+    <constant name="Muon_barrel_strip_num_1" value="48"/>
+    <constant name="Muon_barrel_strip_num_2" value="62"/>
+    <constant name="Muon_barrel_strip_num_3" value="74"/>
+    <constant name="Muon_barrel_strip_num_4" value="84"/>
+    <constant name="Muon_barrel_strip_num_5" value="96"/>
+    <constant name="Muon_barrel_strip_num" value="100"/>
+
+    <constant name="Muon_barrel_iron_x1" value="Muon_standard_scale"/>
+    <constant name="Muon_barrel_iron_y" value="Muon_strip_z+2*Muon_strip_surf+Muon_Iron_gap_z"/>
+    <constant name="Muon_barrel_iron_z" value="Muon_standard_scale"/>
+    <constant name="Muon_barrel_iron_posx" value="-1*Muon_standard_scale"/>
+
+    <constant name="Muon_barrel_barrel_y" value="Muon_barrel_iron_y"/>
+    <constant name="Muon_barrel_barrel_posy" value="0.5*Muon_barrel_barrel_y"/>
+
+    <constant name="Muon_barrel_superlayer_init" value="-21.5*cm"/>
+    <constant name="Muon_barrel_superlayer_gap" value="12.5*cm"/>
+    <constant name="Muon_barrel_superlayer_air_gap" value="0.1*cm"/>
+    <constant name="Muon_barrel_superlayer_aluminum_gap" value="0.5*Muon_barrel_superlayer_air_gap"/>
+
+    <constant name="Muon_barrel_superlayer_y" value="2*Muon_strip_y+2*Muon_barrel_superlayer_air_gap"/>
+    <constant name="Muon_barrel_superlayer_z" value="Muon_strip_z+2*Muon_strip_surf+2*Muon_barrel_superlayer_air_gap"/> 
+
+    <Muon Endcap>
+    <constant name="Muon_endcap_part_num" value="4"/>
+    <constant name="Muon_endcap_superlayer_num" value="6"/>
+    <constant name="Muon_endcap_iron_gap_num" value="Muon_endcap_superlayer_num+1"/>
+    <constant name="Muon_endcap_layer_num" value="2"/>
+    <constant name="Muon_endcap_strip_num" value="146"/>
+    <constant name="Muon_endcap_strip_num_cut" value="13"/>
+    <constant name="Muon_endcap_endcap_rmin" value="52*cm"/>
+    <constant name="Muon_endcap_magnification" value="1.02"/>
+
+    <constant name="Muon_endcap_iron_gap" value="12.5*cm"/>
+    <constant name="Muon_endcap_endcap_z" value="Muon_endcap_iron_gap_num*Muon_endcap_iron_gap+2*Muon_endcap_superlayer_num*Muon_strip_y"/>
+    <constant name="Muon_endcap_endcap_posy" value="Muon_strip_z+2*Muon_strip_surf+Muon_Iron_gap_z+0.5*Muon_endcap_endcap_z"/-->
+
   </define>
   
   <limits>

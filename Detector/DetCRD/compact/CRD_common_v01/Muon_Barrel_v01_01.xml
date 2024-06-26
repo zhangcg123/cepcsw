@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+ 
+  <info name="Muon_Barrel"
+	title="Test with A Single Muon Barrel"
+	author="Zibing Bai"
+	url="http://cepcgit.ihep.ac.cn"
+	status="development"
+	version="v01">
+    <comment>Test with A Single Muon Barrel</comment>        
+  </info>
+
+  <define>
+    <!--Muon Barrel-->
+    <constant name="Muon_barrel_superlayer_num" value="6"/>
+    <constant name="Muon_barrel_strip_num_0" value="40"/>
+    <constant name="Muon_barrel_strip_num_1" value="48"/>
+    <constant name="Muon_barrel_strip_num_2" value="62"/>
+    <constant name="Muon_barrel_strip_num_3" value="74"/>
+    <constant name="Muon_barrel_strip_num_4" value="84"/>
+    <constant name="Muon_barrel_strip_num_5" value="96"/>
+    <constant name="Muon_barrel_strip_num" value="100"/>
+
+    <constant name="Muon_barrel_iron_x1" value="Muon_standard_scale"/>
+    <constant name="Muon_barrel_iron_y" value="Muon_strip_z+2*Muon_strip_surf+Muon_Iron_gap_z"/>
+    <constant name="Muon_barrel_iron_z" value="Muon_standard_scale"/>
+    <constant name="Muon_barrel_iron_posx" value="-1*Muon_standard_scale"/>
+
+    <constant name="Muon_barrel_barrel_y" value="Muon_barrel_iron_y"/>
+    <constant name="Muon_barrel_barrel_posy" value="0.5*Muon_barrel_barrel_y"/>
+
+    <constant name="Muon_barrel_superlayer_init" value="-21.5*cm"/>
+    <constant name="Muon_barrel_superlayer_gap" value="12.5*cm"/>
+    <constant name="Muon_barrel_superlayer_air_gap" value="0.1*cm"/>
+    <constant name="Muon_barrel_superlayer_aluminum_gap" value="0.5*Muon_barrel_superlayer_air_gap"/>
+
+    <constant name="Muon_barrel_superlayer_y" value="2*Muon_strip_y+2*Muon_barrel_superlayer_air_gap"/>
+    <constant name="Muon_barrel_superlayer_z" value="Muon_strip_z+2*Muon_strip_surf+2*Muon_barrel_superlayer_air_gap"/> 
+    <!--Checkout-->
+    <constant name="Muon_barrel_inner_radius" value="483*cm"/>
+    <constant name="Muon_barrel_barrel_num" value="2"/>
+    <constant name="Muon_barrel_iron_part_num" value="12"/>
+
+  </define>
+
+  <detectors>
+    <detector id="201" name="Muon_Barrel_v01_01" type="Muon_Barrel_v01_01" readout="MuonBarrelCollection" vis="WhiteVis">
+      <position x="0" y="0" z="0"/>
+      <barrel id="Muon_barrel_iron_part_num" name="Muon_barrel_barrel" type="Muon_barrel_barrel" vis="SeeThrough">
+        <position x="0" y="Muon_barrel_barrel_posy" z="0"/>
+        <iron id="0" name="Muon_barrel_iron_part" type="Muon_barrel_iron_part" vis="GrayVis" material="Iron">
+          <material name="Iron"/>
+          <position x="Muon_barrel_iron_posx" y="0"/>
+          <dimensions x1="0.5*Muon_barrel_iron_x1" y1="0.5*Muon_barrel_iron_y" y2="0.5*Muon_barrel_iron_y" dz="0.5*Muon_barrel_iron_z"/>
+          <superlayer id="Muon_barrel_superlayer_num" name="Muon_barrel_superlayer" type="Muon_barrel_superlayer" vis="GreenVis" material="Air">
+            <aluminum id="0" name="Muon_barrel_superlayer_aluminum" type="Muon_barrel_superlayer_aluminum" vis="GrayVis" material="Aluminum">
+              <material name="Aluminum"/>
+              <position x="0" y="0" z="0"/>
+              <stripe id="0" name="Muon_stripe" type="Muon_stripe" vis="GreenVis" material="Air">
+                <material name="Air"/>
+                <dimensions dx="0.5*Muon_strip_x"  dy="0.5*Muon_strip_y"  dz="0.5*Muon_strip_z+Muon_strip_SiPM_z"/>
+                <component id="0" type="Muon_strip_surface" name="Muon_strip_surface" vis="GreenVis" material="BC420">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions dx="0.5*Muon_strip_surface_x" dy="0.5*Muon_strip_surface_y" dz="0.5*Muon_strip_surface_z"/>
+                  <cut name="Muon_strip_cut1" vis="GreenVis" material="Air">
+                    <position x="Muon_strip_cut1_posx" y="Muon_strip_cut1_posy" z="Muon_strip_cut1_posz"/>
+                    <dimensions dx="0.5*Muon_strip_cut1_x" dy="0.5*Muon_strip_cut1_y" dz="0.5*Muon_strip_cut1_z"/>
+                  </cut>
+                </component>
+                <component id="1" type="Muon_strip_scintillator" name="Muon_strip_scintillator" vis="GreenVis" material="BC420">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions dx="0.5*Muon_strip_scintillator_x" dy="0.5*Muon_strip_scintillator_y" dz="0.5*Muon_strip_scintillator_z"/>
+                  <cut name="Muon_strip_cut3" vis="GreenVis" material="Air">
+                    <position x="Muon_strip_cut3_posx" y="Muon_strip_cut3_posy" z="Muon_strip_cut3_posz"/>
+                    <dimensions rmin="0" rmax="Muon_strip_cut3_rmax" dz="0.5*Muon_strip_cut3_z"/>
+                    <comb name="Muon_strip_cut2" vis="GreenVis" material="Air">
+                      <position x="Muon_strip_cut2_posx" y="Muon_strip_cut2_posy" z="Muon_strip_cut2_posz"/>
+                      <dimensions dx="0.5*Muon_strip_cut2_x" dy="0.5*Muon_strip_cut2_y" dz="0.5*Muon_strip_cut2_z"/>
+                    </comb>
+                  </cut>
+                </component>
+                <fiber id="0" type="Muon_fiber_cladding" name="Muon_fiber_cladding" vis="GreenVis" material="Pethylene1">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions rmin="Muon_fiber_cladding_rmin" rmax="Muon_fiber_cladding_rmax" dz="0.5*Muon_fiber_cladding_z"/>
+                </fiber>
+                <fiber id="1" type="Muon_fiber_core" name="Muon_fiber_core" vis="GreenVis" material="Pethylene2">
+                  <position x="0" y="0" z="0"/>
+                  <dimensions rmin="0" rmax="Muon_fiber_core_rmax" dz="0.5*Muon_fiber_core_z"/>
+                </fiber>
+                <component id="2" type="Muon_strip_SiPM" name="Muon_strip_SiPM" vis="GreenVis" material="Air">
+                  <position x="Muon_strip_SiPM_posx" y="Muon_strip_SiPM_posy" z="Muon_strip_SiPM_posz"/>
+                  <dimensions dx="0.5*Muon_strip_SiPM_x" dy="0.5*Muon_strip_SiPM_y" dz="0.5*Muon_strip_SiPM_z"/>
+                </component>
+              </stripe>
+            </aluminum>
+          </superlayer>
+        </iron>
+      </barrel>
+    </detector>
+  </detectors>
+
+  <readouts>
+    <readout name="MuonBarrelCollection">
+      <id>system:5,Env:5,Fe:5,Superlayer:4,Layer:2,Stripe:9,SiPM:2</id>
+    </readout>
+  </readouts>
+
+</lccdd>
