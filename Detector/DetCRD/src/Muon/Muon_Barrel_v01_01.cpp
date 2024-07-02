@@ -171,7 +171,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   xml_dim_t s_dim(x_module.child(_U(dimensions)));
                   surface_pos = s_pos;
                   surface_dim = s_dim;
-
+/*
                   xml_coll_t dcCut1(x_module,Unicode("cut"));
                   xml_comp_t x_cut1 = dcCut1;
                   cut1_name = x_cut1.nameStr();
@@ -180,7 +180,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   xml_dim_t c1_pos(x_cut1.child(_U(position)));
                   xml_dim_t c1_dim(x_cut1.child(_U(dimensions)));
                   cut1_pos = c1_pos;
-                  cut1_dim = c1_dim;
+                  cut1_dim = c1_dim;*/
                 }
                 if(x_module.id()==1)
                 {
@@ -201,7 +201,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   xml_dim_t c3_dim(x_cut3.child(_U(dimensions)));
                   cut3_pos = c3_pos;
                   cut3_dim = c3_dim;
-
+/*
                   xml_coll_t dcCut2(x_cut3,Unicode("comb"));
                   xml_comp_t x_cut2 = dcCut2;
                   cut2_name = x_cut2.nameStr();
@@ -210,7 +210,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                   xml_dim_t c2_pos(x_cut2.child(_U(position)));
                   xml_dim_t c2_dim(x_cut2.child(_U(dimensions)));
                   cut2_pos = c2_pos;
-                  cut2_dim = c2_dim; 
+                  cut2_dim = c2_dim;*/ 
                 }
                 if(x_module.id()==2)
                 {
@@ -224,16 +224,16 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                 }
               }
               dd4hep::Box surface_solid(surface_dim.dx(),surface_dim.dy(),surface_halfZ);
-              dd4hep::Box cut1_solid(cut1_dim.dx(),cut1_dim.dy(),cut_halfZ);
+              //dd4hep::Box cut1_solid(cut1_dim.dx(),cut1_dim.dy(),cut_halfZ);
               dd4hep::Box BC420_solid(BC420_dim.dx(),BC420_dim.dy(),BC420_halfZ);
               dd4hep::Tube cut3_solid(cut3_dim.rmin(),cut3_dim.rmax(),cut_halfZ);
-              dd4hep::Box cut2_solid(cut2_dim.dx(),cut2_dim.dy(),cut_halfZ);
+              //dd4hep::Box cut2_solid(cut2_dim.dx(),cut2_dim.dy(),cut_halfZ);
               dd4hep::Box SiPM_solid(SiPM_dim.dx(),SiPM_dim.dy(),SiPM_dim.dz());
 
               dd4hep::Transform3D surface_transform(dd4hep::Rotation3D(),dd4hep::Position(surface_pos.x(),surface_pos.y(),surface_pos.z()));
-              dd4hep::Transform3D cut1_transform(dd4hep::Rotation3D(),dd4hep::Position(cut1_pos.x(),cut1_pos.y(),cut1_pos.z()));
+              //dd4hep::Transform3D cut1_transform(dd4hep::Rotation3D(),dd4hep::Position(cut1_pos.x(),cut1_pos.y(),cut1_pos.z()));
               dd4hep::Transform3D BC420_transform(dd4hep::Rotation3D(),dd4hep::Position(BC420_pos.x(),BC420_pos.y(),BC420_pos.z()));
-              dd4hep::Transform3D cut2_transform(dd4hep::Rotation3D(),dd4hep::Position(cut2_pos.x(),cut2_pos.y(),cut2_pos.z()));
+              //dd4hep::Transform3D cut2_transform(dd4hep::Rotation3D(),dd4hep::Position(cut2_pos.x(),cut2_pos.y(),cut2_pos.z()));
               dd4hep::Transform3D cut3_transform(dd4hep::Rotation3D(),dd4hep::Position(cut3_pos.x(),cut3_pos.y(),cut3_pos.z()));
               dd4hep::Transform3D SiPM_transform0(dd4hep::Rotation3D(),dd4hep::Position(SiPM_pos.x(),SiPM_pos.y(),SiPM_posZ));
               dd4hep::Transform3D SiPM_transform1(dd4hep::Rotation3D(),dd4hep::Position(SiPM_pos.x(),SiPM_pos.y(), -1 * SiPM_posZ));
@@ -241,13 +241,13 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
               dd4hep::Volume surface_vol(surface_name, surface_solid, surface_mat);
               surface_vol.setVisAttributes(theDetector.visAttributes(surface_vis));
               //surface_vol.setSensitiveDetector(sens);
-
+/*
               dd4hep::Volume cut1_vol(cut1_name, cut1_solid, cut1_mat);
               cut1_vol.setVisAttributes(theDetector.visAttributes(cut1_vis));
 
               dd4hep::Volume cut2_vol(cut2_name, cut2_solid, cut2_mat);
               cut2_vol.setVisAttributes(theDetector.visAttributes(cut2_vis));
-
+*/
               dd4hep::Volume cut3_vol(cut3_name, cut3_solid, cut3_mat);
               cut3_vol.setVisAttributes(theDetector.visAttributes(cut3_vis));
 
@@ -258,7 +258,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
               SiPM_vol.setVisAttributes(theDetector.visAttributes(SiPM_vis));
               SiPM_vol.setSensitiveDetector(sens);
 
-              BC420_vol.placeVolume(cut2_vol,cut2_transform);
+              //BC420_vol.placeVolume(cut2_vol,cut2_transform);
               BC420_vol.placeVolume(cut3_vol,cut3_transform);
               dd4hep::PlacedVolume cladding_place, core_place;
               for(xml_coll_t dcSection(x_strip,Unicode("fiber")); dcSection; dcSection++)
@@ -277,14 +277,16 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
                 dd4hep::Transform3D section_transform(dd4hep::Rotation3D(),dd4hep::Position(section_pos.x(),section_pos.y(),section_pos.z()));
                 if (x_section.id() == 0)
                 {
-                  cladding_place = BC420_vol.placeVolume(section_vol,section_transform);
+                  cladding_place = cut3_vol.placeVolume(section_vol,section_transform);
+                  //cladding_place = BC420_vol.placeVolume(section_vol,section_transform);
                 }
                 if (x_section.id() == 1)
                 {
-                  core_place = BC420_vol.placeVolume(section_vol,section_transform);
+                  core_place = cut3_vol.placeVolume(section_vol,section_transform);
+                  //core_place = BC420_vol.placeVolume(section_vol,section_transform);
                 }
               }
-              surface_vol.placeVolume(cut1_vol,cut1_transform);
+              //surface_vol.placeVolume(cut1_vol,cut1_transform);
               dd4hep::PlacedVolume BC420_place = surface_vol.placeVolume(BC420_vol,BC420_transform);
               //BC420_place.addPhysVolID("Stripe",i4+1);
               dd4hep::PlacedVolume surf_place = strip_vol.placeVolume(surface_vol,surface_transform);

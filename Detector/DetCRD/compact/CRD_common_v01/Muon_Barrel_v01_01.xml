@@ -31,11 +31,11 @@
 
     <constant name="Muon_barrel_superlayer_init" value="-21.5*cm"/>
     <constant name="Muon_barrel_superlayer_gap" value="12.5*cm"/>
-    <constant name="Muon_barrel_superlayer_air_gap" value="0.1*cm"/>
+    <constant name="Muon_barrel_superlayer_air_gap" value="0.5*cm"/>
     <constant name="Muon_barrel_superlayer_aluminum_gap" value="0.5*Muon_barrel_superlayer_air_gap"/>
 
     <constant name="Muon_barrel_superlayer_y" value="2*Muon_strip_y+2*Muon_barrel_superlayer_air_gap"/>
-    <constant name="Muon_barrel_superlayer_z" value="Muon_strip_z+2*Muon_strip_surf+2*Muon_barrel_superlayer_air_gap"/> 
+    <constant name="Muon_barrel_superlayer_z" value="Muon_strip_z+2*Muon_strip_surf+2*Muon_barrel_superlayer_air_gap"/>
     <!--Checkout-->
     <constant name="Muon_barrel_inner_radius" value="483*cm"/>
     <constant name="Muon_barrel_barrel_num" value="2"/>
@@ -62,21 +62,22 @@
                 <component id="0" type="Muon_strip_surface" name="Muon_strip_surface" vis="GreenVis" material="BC420">
                   <position x="0" y="0" z="0"/>
                   <dimensions dx="0.5*Muon_strip_surface_x" dy="0.5*Muon_strip_surface_y" dz="0.5*Muon_strip_surface_z"/>
-                  <cut name="Muon_strip_cut1" vis="GreenVis" material="Air">
+                  <!--cut name="Muon_strip_cut1" vis="GreenVis" material="Air">
                     <position x="Muon_strip_cut1_posx" y="Muon_strip_cut1_posy" z="Muon_strip_cut1_posz"/>
                     <dimensions dx="0.5*Muon_strip_cut1_x" dy="0.5*Muon_strip_cut1_y" dz="0.5*Muon_strip_cut1_z"/>
-                  </cut>
+                  </cut-->
                 </component>
                 <component id="1" type="Muon_strip_scintillator" name="Muon_strip_scintillator" vis="GreenVis" material="BC420">
                   <position x="0" y="0" z="0"/>
                   <dimensions dx="0.5*Muon_strip_scintillator_x" dy="0.5*Muon_strip_scintillator_y" dz="0.5*Muon_strip_scintillator_z"/>
                   <cut name="Muon_strip_cut3" vis="GreenVis" material="Air">
-                    <position x="Muon_strip_cut3_posx" y="Muon_strip_cut3_posy" z="Muon_strip_cut3_posz"/>
+                    <!--position x="Muon_strip_cut3_posx" y="Muon_strip_cut3_posy" z="Muon_strip_cut3_posz"/-->
+                    <position x="0" y="0" z="0"/>
                     <dimensions rmin="0" rmax="Muon_strip_cut3_rmax" dz="0.5*Muon_strip_cut3_z"/>
-                    <comb name="Muon_strip_cut2" vis="GreenVis" material="Air">
+                    <!--comb name="Muon_strip_cut2" vis="GreenVis" material="Air">
                       <position x="Muon_strip_cut2_posx" y="Muon_strip_cut2_posy" z="Muon_strip_cut2_posz"/>
                       <dimensions dx="0.5*Muon_strip_cut2_x" dy="0.5*Muon_strip_cut2_y" dz="0.5*Muon_strip_cut2_z"/>
-                    </comb>
+                    </comb-->
                   </cut>
                 </component>
                 <fiber id="0" type="Muon_fiber_cladding" name="Muon_fiber_cladding" vis="GreenVis" material="Pethylene1">

@@ -243,7 +243,7 @@
 
     <!--standard scale-->
     <constant name="Muon_standard_scale" value="105*cm"/>    
-    <constant name="Muon_Iron_gap_z" value="50*cm"/>
+    <constant name="Muon_Iron_gap_z" value="100*cm"/>
 
     <!--Muon Barrel>
     <constant name="Muon_barrel_barrel_num" value="2"/>
