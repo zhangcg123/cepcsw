@@ -56,3 +56,11 @@ foreach(detoption TDR_o1_v01 TDR_o1_v02)
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     )
 endforeach()
+
+foreach(detoption TDR_o1_v01)
+  add_test(
+    NAME Test_${detoption}_Geo
+    COMMAND checkOverlaps -c Detector/DetCRD/compact/${detoption}/${detoption}.xml -t 0.001
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+endforeach()

@@ -120,7 +120,7 @@
     <constant name="SiTracker_region3_costheta"   value="0.95"/>
     <constant name="SiTracker_endcap_barrel_zgap" value="5*mm"/>
     <constant name="SiTracker_endcap_barrel_rgap" value="10*mm"/>
-    <constant name="SiTracker_endcap_gas_zgap"    value="2*mm"/>
+    <constant name="SiTracker_endcap_gas_zgap"    value="3*mm"/>
     <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
     <constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
     <constant name="SiTracker_endcap_z2" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
