@@ -371,7 +371,7 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
                     double phi_end   = 2*M_PI;
                     Tube   ringSolid(rCursor, r_end, dz_Alframe/2., phi_start,  phi_end) ;
                     Volume ringLog( layerName+"Log", ringSolid, materialAlframe) ;
-                    pv = endcapLog.placeVolume( ringLog, Position(0., 0., -dz_Endpaltelength/2. + dz_Alframe) ) ;
+                    pv = endcapLog.placeVolume( ringLog, Position(0., 0., -dz_Endpaltelength/2. + dz_Alframe/2.) ) ;
                     tpc.setVisAttributes(theDetector,"GrayVis",ringLog);
                 }
                 if(layerType == "Module")
