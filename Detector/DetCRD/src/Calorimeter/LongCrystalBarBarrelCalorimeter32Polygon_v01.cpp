@@ -160,6 +160,21 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
 
     dd4hep::DetElement stavedet(ECAL, "trap",detid);
     
+
+    // Create extension objects for reconstruction
+    LayeredCalorimeterData* caloData = new LayeredCalorimeterData ;
+    caloData->layoutType = LayeredCalorimeterData::BarrelLayout ;
+    caloData->inner_symmetry = n_module;
+    caloData->outer_symmetry = n_module;
+    caloData->phi0 = 0 ; // hardcoded
+
+    // extent of the calorimeter in the r-z-plane [ rmin, rmax, zmin, zmax ] in mm.
+    caloData->extent[0] = radius_inner;
+    caloData->extent[1] = radius_outer;
+    caloData->extent[2] = 0.;
+    caloData->extent[3] = length_z;
+
+
     // ##################################
     // ### SiPM PCB ASIC Cable Carbon ###
     // ##################################
@@ -1220,6 +1235,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     }
 
     sens.setType("calorimeter");
+    ECAL.addExtension< LayeredCalorimeterData >( caloData ) ; 
 
     MYDEBUG("create_detector DONE. ");
     return ECAL;
