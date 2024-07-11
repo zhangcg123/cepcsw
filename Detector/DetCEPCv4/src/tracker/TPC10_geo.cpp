@@ -68,7 +68,13 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
 
   PlacedVolume pv;  
 
-  sens.setType("tracker");
+  if (x_det.hasAttr(_U(sensitive))) {
+    xml_dim_t sd_typ = x_det.child(_U(sensitive));
+    sens.setType(sd_typ.typeStr());
+  }
+  else {
+    sens.setType("tracker");
+  }
 
   std::cout << " ** building TPC10_geo in lcgeo " << lcgeo::versionString() << std::endl ;
 
