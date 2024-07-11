@@ -39,6 +39,8 @@
               sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV"  />
       <display ladder="SeeThrough" support="VXDSupportVis" flex="VXDFlexVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis" deadwire="RedVis"/>
 
+      <shell rmin="70*mm" rmax="72.5*mm" zhalf="510*mm" material="CFRP_CMS" vis="LightGrayVis"/>
+
       <layer layer_id="0" ladder_radius="12.459*mm" ladder_offset="(8.7+0.235607)*mm" n_ladders="8" n_sensors_per_side="0">
         <ladder isDoubleSided="true">
           <ladderSupport height="1.7*mm" length="VXDLayer1_length" thickness="334*um" width="17.4*mm" mat="CFRP_CMS"/>
@@ -125,7 +127,7 @@
       </layer>
     </detector>
 
-    <detector name="VXDShell" type="DD4hep_Solenoid_o1_v01" id="DetID_NOTUSED" insideTrackingVolume="true">
+    <!--detector name="VXDShell" type="DD4hep_Solenoid_o1_v01" id="DetID_NOTUSED" insideTrackingVolume="true">
       <envelope>
         <shape type="Tube" rmin="70*mm" rmax="72.5*mm" dz="510*mm" material="Air"/>
 	<position x="0" y="0" z="0*mm"/>
@@ -136,7 +138,7 @@
       <layer id="0" inner_r="70*mm" outer_z="510*mm" vis="SeeThrough">
         <slice material="CFRP_CMS" thickness="2.5*mm" vis="ShellVis"/>
       </layer>
-    </detector>
+    </detector-->
   </detectors>
   
   <readouts>

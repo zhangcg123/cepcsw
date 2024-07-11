@@ -16,6 +16,7 @@
 using namespace std;
 
 using dd4hep::Box;
+using dd4hep::Tube;
 using dd4hep::DetElement;
 using dd4hep::Material;
 using dd4hep::Position;
@@ -76,26 +77,47 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   if(theDetector.buildType()==dd4hep::BUILD_ENVELOPE) return vxd;
   envelope.setVisAttributes(theDetector.visAttributes("SeeThrough"));
 
-  sens.setType("tracker");
+  if (x_det.hasAttr(_U(sensitive))) {
+    xml_dim_t sd_typ = x_det.child(_U(sensitive));
+    sens.setType(sd_typ.typeStr());
+  }
+  else {
+    sens.setType("tracker");
+  }
   std::cout << " ** building SiTrackerSkewBarrel_v01 ..." << std::endl ;
 
   dd4hep::rec::ZPlanarData* zPlanarData = new dd4hep::rec::ZPlanarData;
 
-   // fetch the global parameters
-   
-   //fetch the display parameters
-   xml_comp_t x_display(x_det.child(_Unicode(display)));
-   std::string ladderVis      = x_display.attr<string>(_Unicode(ladder));
-   std::string supportVis     = x_display.attr<string>(_Unicode(support));
-   std::string flexVis        = x_display.attr<string>(_Unicode(flex));
-   std::string sensEnvVis     = x_display.attr<string>(_Unicode(sens_env));
-   std::string sensVis        = x_display.attr<string>(_Unicode(sens));
-   std::string deadsensVis    = x_display.attr<string>(_Unicode(deadsensor));
-   std::string deadwireVis    = x_display.attr<string>(_Unicode(deadwire));
+  // fetch the global parameters
 
+  //fetch the display parameters
+  xml_comp_t x_display(x_det.child(_Unicode(display)));
+  std::string ladderVis      = x_display.attr<string>(_Unicode(ladder));
+  std::string supportVis     = x_display.attr<string>(_Unicode(support));
+  std::string flexVis        = x_display.attr<string>(_Unicode(flex));
+  std::string sensEnvVis     = x_display.attr<string>(_Unicode(sens_env));
+  std::string sensVis        = x_display.attr<string>(_Unicode(sens));
+  std::string deadsensVis    = x_display.attr<string>(_Unicode(deadsensor));
+  std::string deadwireVis    = x_display.attr<string>(_Unicode(deadwire));
 
- for(xml_coll_t layer_i(x_det,_U(layer)); layer_i; ++layer_i){
-   xml_comp_t x_layer(layer_i);
+  //fetch the shell parameters
+  if (x_det.hasAttr(_Unicode(shell))) {
+    xml_comp_t x_shell(x_det.child(_Unicode(shell)));
+    double rmin_shell = x_shell.rmin();
+    double rmax_shell = x_shell.rmax();
+    double zhalf_shell = x_shell.zhalf();
+    Tube shellSolid(rmin_shell, rmax_shell, zhalf_shell);
+    Volume shellLogical(name + "_ShellLogical", shellSolid, theDetector.material(x_shell.materialStr()));
+    shellLogical.setVisAttributes(theDetector.visAttributes(x_shell.visStr()));
+    envelope.placeVolume(shellLogical);
+
+    zPlanarData->zHalfShell  = zhalf_shell;
+    zPlanarData->rInnerShell = rmin_shell;
+    zPlanarData->rOuterShell = rmax_shell;
+  }
+
+  for(xml_coll_t layer_i(x_det,_U(layer)); layer_i; ++layer_i){
+    xml_comp_t x_layer(layer_i);
    
    dd4hep::PlacedVolume pv;
    int layer_id                 = x_layer.attr<int>(_Unicode(layer_id));
@@ -353,7 +375,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     std::cout << ladder_enum.str() << " done." << endl;
     if(i==0) std::cout << "xy=" << ladder_radius*cos(ladder_phi0) << " " << ladder_radius*sin(ladder_phi0) << std::endl;
   }
-  
+
   // package the reconstruction data
   dd4hep::rec::ZPlanarData::LayerLayout topLayer;
   dd4hep::rec::ZPlanarData::LayerLayout bottomLayer;
