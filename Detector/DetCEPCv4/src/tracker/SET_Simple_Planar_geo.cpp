@@ -77,9 +77,13 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   
   //PlacedVolume pv;
   
-  
-  sens.setType("tracker");
-
+  if (x_det.hasAttr(_U(sensitive))) {
+    xml_dim_t sd_typ = x_det.child(_U(sensitive));
+    sens.setType(sd_typ.typeStr());
+  }
+  else {
+    sens.setType("tracker");
+  }
   
   dd4hep::rec::ZPlanarData*  zPlanarData = new ZPlanarData ;
 
