@@ -77,14 +77,14 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   if(theDetector.buildType()==dd4hep::BUILD_ENVELOPE) return vxd;
   envelope.setVisAttributes(theDetector.visAttributes("SeeThrough"));
 
-  if (x_det.hasAttr(_U(sensitive))) {
+  if (x_det.hasChild(_U(sensitive))) {
     xml_dim_t sd_typ = x_det.child(_U(sensitive));
     sens.setType(sd_typ.typeStr());
   }
   else {
     sens.setType("tracker");
   }
-  std::cout << " ** building SiTrackerSkewBarrel_v01 ..." << std::endl ;
+  std::cout << " ** building SiTrackerSkewBarrel_v01 ... " << sens.type() << std::endl ;
 
   dd4hep::rec::ZPlanarData* zPlanarData = new dd4hep::rec::ZPlanarData;
 
