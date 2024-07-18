@@ -482,7 +482,10 @@ Material endplate_MaterialMix = theDetector.material( "TPC_endplate_mix" ) ;
 
     lowerlayerLog.setSensitiveDetector(sens);
     upperlayerLog.setSensitiveDetector(sens);
-
+    if (x_det.hasAttr(_U(limits))) {
+      lowerlayerLog.setLimitSet(theDetector, x_det.limitsStr());
+      upperlayerLog.setLimitSet(theDetector, x_det.limitsStr());
+    }
 #else
     // create just one volume per pad ring
     
@@ -512,7 +515,9 @@ Material endplate_MaterialMix = theDetector.material( "TPC_endplate_mix" ) ;
     layerDEbwd.setPlacement( pv ) ;
 
     layerLog.setSensitiveDetector(sens);
-
+    if (x_det.hasAttr(_U(limits))) {
+      layerLog.setLimitSet(theDetector, x_det.limitsStr());
+    }
 #endif
   }
 

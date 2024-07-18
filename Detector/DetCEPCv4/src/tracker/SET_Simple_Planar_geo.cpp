@@ -301,7 +301,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     dd4hep::Volume setSenLogical( dd4hep:: _toString( layer_id,"SET_SenLogical_%02d"), setSenSolid,sensitiveMat ) ; 
     
     setSenLogical.setSensitiveDetector(sens);
-    
+    if (x_det.hasAttr(_U(limits))) setSenLogical.setLimitSet(theDetector, x_det.limitsStr());
     
     
     //====== create the meassurement surface ===================

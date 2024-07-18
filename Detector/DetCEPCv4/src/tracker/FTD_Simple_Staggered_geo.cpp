@@ -1022,7 +1022,11 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     petalSupport(theDetector, ftd, valuesDict, FTDPetalAirLogical ) ; 
 
     VolVec volV = petalSensor( theDetector, ftd, sens, valuesDict, FTDPetalAirLogical );
-
+    if (x_det.hasAttr(_U(limits))) {
+      for (auto vol : volV) {
+        vol.first.setLimitSet(theDetector, x_det.limitsStr());
+      }
+    }
 
     //---- meassurement surface vectors 
 
