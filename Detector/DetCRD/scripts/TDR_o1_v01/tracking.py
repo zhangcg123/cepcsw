@@ -122,6 +122,13 @@ digiTPC.TPCLowPtCollection = "TPCLowPtCollection"
 digiTPC.TPCTrackerHitsCol = gashitname
 #digiTPC.OutputLevel = DEBUG
 
+from Configurables import TPCPixelClusteringDigiAlg
+digiTPC2 = TPCPixelClusteringDigiAlg("TPCDigi2")
+digiTPC2.TPCCollection = "TPCCollection"
+digiTPC2.TPCLowPtCollection = "TPCLowPtCollection"
+digiTPC2.TPCTrackerHitsCol = gashitname
+#digiTPC2.OutputLevel = DEBUG
+
 # tracking
 from Configurables import KalTestTool
 # Close multiple scattering and smooth, used by clupatra
@@ -241,7 +248,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC2, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 5,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
