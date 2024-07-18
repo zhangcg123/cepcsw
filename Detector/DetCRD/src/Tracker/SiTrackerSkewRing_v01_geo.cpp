@@ -149,6 +149,7 @@ static dd4hep::Ref_t create_detector(Detector& description, xml_h e, SensitiveDe
         tracker.check(sensor_id > 2," fromCompact: "+c_name+" Max of 2 modules allowed!");
         pv.addPhysVolID("sensor", sensor_id);
         c_vol.setSensitiveDetector(sens);
+	if (x_det.hasAttr(_U(limits))) c_vol.setLimitSet(description, x_det.limitsStr());
 	sensitives.push_back(pv);
 
 	dd4hep::rec::Vector3D u(-1., 0.,  0.);

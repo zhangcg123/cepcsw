@@ -266,7 +266,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   Box SensorSolid(sensor_thickness / 2.0, sensor_active_width / 2.0, sensor_active_len / 2.0);
   Volume SensorLogical(name + dd4hep::_toString( layer_id, "_SensorLogical_%02d"), SensorSolid, sensor_mat);
   SensorLogical.setSensitiveDetector(sens);
-  //vxd.setVisAttributes(theDetector, deadsensVis, SensorDeadLogical);
+  if (x_det.hasAttr(_U(limits))) SensorLogical.setLimitSet(theDetector, x_det.limitsStr());
   SensorLogical.setVisAttributes(theDetector.visAttributes(sensVis));
 
   //create dead sensor logical volume

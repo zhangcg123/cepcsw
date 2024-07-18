@@ -1077,7 +1077,7 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     vxd.setVisAttributes(theDetector,  "BlueVis" , SiActiveLayerLogical ) ;
 
     SiActiveLayerLogical.setSensitiveDetector(sens);
-   
+    if (x_det.hasAttr(_U(limits))) SiActiveLayerLogical.setLimitSet(theDetector, x_det.limitsStr());
 
     //====== create the meassurement surface ===================
     Vector3D u( 1. , 0. , 0. ) ;

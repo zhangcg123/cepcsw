@@ -308,6 +308,10 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
 
                 lowerlayerLog.setSensitiveDetector(sens);
                 upperlayerLog.setSensitiveDetector(sens);
+		if (x_det.hasAttr(_U(limits))) {
+		  lowerlayerLog.setLimitSet(theDetector, x_det.limitsStr());
+		  upperlayerLog.setLimitSet(theDetector, x_det.limitsStr());
+		}
             }
 
         }
