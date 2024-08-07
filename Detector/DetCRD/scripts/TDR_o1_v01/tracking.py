@@ -120,14 +120,14 @@ digiTPC = TPCDigiAlg("TPCDigi")
 digiTPC.TPCCollection = "TPCCollection"
 digiTPC.TPCLowPtCollection = "TPCLowPtCollection"
 digiTPC.TPCTrackerHitsCol = gashitname
+#default value, modify them according to future Garfield simulation results
+#digiTPC.PixelClustering = True
+#digiTPC.PointResolutionRPhi = 0.144
+#digiTPC.DiffusionCoeffRPhi = 0.0323
+#digiTPC.PointResolutionZ = 0.4
+#digiTPC.DiffusionCoeffZ = 0.23
+#digiTPC.N_eff = 30
 #digiTPC.OutputLevel = DEBUG
-
-from Configurables import TPCPixelClusteringDigiAlg
-digiTPC2 = TPCPixelClusteringDigiAlg("TPCDigi2")
-digiTPC2.TPCCollection = "TPCCollection"
-digiTPC2.TPCLowPtCollection = "TPCLowPtCollection"
-digiTPC2.TPCTrackerHitsCol = gashitname
-#digiTPC2.OutputLevel = DEBUG
 
 # tracking
 from Configurables import KalTestTool
@@ -248,7 +248,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC2, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 5,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
