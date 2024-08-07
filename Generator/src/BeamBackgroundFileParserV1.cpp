@@ -51,6 +51,7 @@ bool BeamBackgroundFileParserV1::load(IBeamBackgroundFileParser::BeamBackgroundD
         // Now, we get a almost valid data
         const double m2mm = 1e3; // convert from m to mm
         result.pdgid = pid;
+        result.charge = (pid == 11) ? -1 : (pid == -11) ? 1 : -1;
         result.x     = x * m2mm;
         result.y     = y * m2mm;
         result.z     = (z+dz) * m2mm;
