@@ -1,18 +1,21 @@
 # [CEPCSW](https://cepc.github.io/CEPCSW/)
 
-[![Build Status](https://www.travis-ci.com/cepc/CEPCSW.svg?branch=master)](https://www.travis-ci.com/cepc/CEPCSW)
-[![CI](https://github.com/cepc/CEPCSW/workflows/CI/badge.svg?branch=master)](https://github.com/cepc/CEPCSW/actions)
+[![pipeline status at GitLab](https://code.ihep.ac.cn/cepc/CEPCSW/badges/master/pipeline.svg)](https://code.ihep.ac.cn/cepc/CEPCSW/-/commits/master)
+[![CI at GitHub](https://github.com/cepc/CEPCSW/workflows/CI/badge.svg?branch=master)](https://github.com/cepc/CEPCSW/actions)
 
 CEPC offline software prototype based on [Key4hep](https://github.com/key4hep).
 
 ## Quick start
 
-SSH to lxslc7 (CentOS 7).
+SSH to lxlogin (Alma Linux 9) and start the container CentOS 7:
+```
+$ /cvmfs/container.ihep.ac.cn/bin/hep_container shell CentOS7
+```
 
 Before run following commands, please make sure you setup the CVMFS:
 
 ```
-$ git clone git@github.com:cepc/CEPCSW.git
+$ git clone git@code.ihep.ac.cn:cepc/CEPCSW.git
 $ cd CEPCSW
 $ git checkout master # branch name
 $ source setup.sh
@@ -35,11 +38,3 @@ $ ./run.sh Examples/options/helloalg.py
 * Reconstruction: Reconstruction
 
 
-## Conventions for collections
-Keep the collection names compatible between the prototype and the existing CEPC software.
-
-* MCParticle
-* VXDCollection
-* SITCollection
-* TPCCollection
-* SETCollection
