@@ -255,6 +255,7 @@ class SiliconTrackingAlg : public GaudiAlgorithm {
   Gaudi::Property<bool> _ElossOn{this, "EnergyLossOn", true};
   Gaudi::Property<bool> _SmoothOn{this, "SmoothOn", true};
   Gaudi::Property<float> _helix_max_r{this, "HelixMaxR", 2000.};
+  Gaudi::Property<float> _helix_max_chi2{this, "HelixMaxChi2", 5000.};
   Gaudi::Property<bool> m_dumpTime{this, "DumpTime", false};
   Gaudi::Property<bool> m_debug{this, "Debug", false};
 

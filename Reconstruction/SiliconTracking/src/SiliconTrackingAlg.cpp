@@ -1239,7 +1239,7 @@ TrackExtended * SiliconTrackingAlg::TestTriplet(TrackerHitExtended * outerHit,
   
   debug() << " TestTriplet: Use fastHelixFit " << endmsg ;  
   
-  _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+  _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z, _helix_max_chi2);
   par[3] = par[3]*par[0]/fabs(par[0]);
 
   // get helix parameters
@@ -1606,7 +1606,7 @@ int SiliconTrackingAlg::BuildTrack(TrackerHitExtended * outerHit,
       
       //debug() << "######## number of hits to fit with _fastfitter = " << NPT << endmsg;
       
-      _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+      _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z, _helix_max_chi2);
       par[3] = par[3]*par[0]/fabs(par[0]);
       
       
@@ -1770,7 +1770,7 @@ void SiliconTrackingAlg::CreateTrack(TrackExtended * trackAR ) {
       float chi2Z;
       int ndf = 2*NPT - 5;
       
-      _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+      _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z, _helix_max_chi2);
       par[3] = par[3]*par[0]/fabs(par[0]);
       
       float omega = par[0];
@@ -1816,7 +1816,7 @@ void SiliconTrackingAlg::CreateTrack(TrackExtended * trackAR ) {
             }
           }
           
-          _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+          _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z, _helix_max_chi2);
           par[3] = par[3]*par[0]/fabs(par[0]);
           
           float chi2Cur = chi2RPhi*_chi2WRPhiSeptet+chi2Z*_chi2WZSeptet;
@@ -2570,7 +2570,7 @@ int SiliconTrackingAlg::AttachHitToTrack(TrackExtended * trackAR, TrackerHitExte
   float chi2Z = 0 ;
   
   
-  int error = _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z);
+  int error = _fastfitter->fastHelixFit(NPT, xh, yh, rh, ph, wrh, zh, wzh,iopt, par, epar, chi2RPhi, chi2Z, _helix_max_chi2);
   par[3] = par[3]*par[0]/fabs(par[0]);
   
   
