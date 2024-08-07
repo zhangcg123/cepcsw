@@ -62,6 +62,7 @@
 #include <bitset>
 
 #include <TStopwatch.h>
+#include "TMath.h"
 
 typedef std::vector<edm4hep::TrackerHit> TrackerHitVec;
 
@@ -285,7 +286,8 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
   float pxTot = 0.0;
   float pyTot = 0.0;
   float pzTot = 0.0;
-  
+
+  bool fit_backwards = _backward ? (IMarlinTrack::backward) : (!IMarlinTrack::backward);
   //SJA:FIXME: So here we are going to do one final refit. This can certainly be optimised, but rather than worry about the mememory management right now lets make it work, and optimise it later ...
   
   debug() << "Total " << nTrkCand << " trkCand to deal" << endmsg;
@@ -327,8 +329,6 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
       continue ;
     }
     
-    edm4hep::MutableTrack track;// = new edm4hep::Track;
-    
     // setup initial dummy covariance matrix
     decltype(edm4hep::TrackState::covMatrix) covMatrix;
     
@@ -341,6 +341,8 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
     covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
     covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+
+    bool fit_backwards = _backward ? (IMarlinTrack::backward) : (!IMarlinTrack::backward);
     
     // get the track state at the last hit at the outer most hit
     
@@ -362,14 +364,32 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
       
       if(group->getTrackExtendedVec().size()==1) {
         te = group->getTrackExtendedVec()[0];
+	fit_backwards = IMarlinTrack::backward;
       } else {
-        te = group->getTrackExtendedVec()[1];
+        //te = group->getTrackExtendedVec()[1];
+	auto trk0 = group->getTrackExtendedVec()[0]->getTrack();
+	auto trk1 = group->getTrackExtendedVec()[1]->getTrack();
+	int nhit0 = trk0.trackerHits_size();
+	int nhit1 = trk0.trackerHits_size();
+	if (nhit0>=_lowestTrackerHitNumberSi) {
+	  te = group->getTrackExtendedVec()[0];
+	}
+	else if (nhit1>=_lowestTrackerHitNumberTPC) {
+	  te = group->getTrackExtendedVec()[1];
+	}
+	else {
+	  double prob0 = TMath::Prob(trk0.getChi2(), trk0.getNdf());
+	  double prob1 = TMath::Prob(trk1.getChi2(), trk1.getNdf());
+	  te = (prob0>prob1) ? group->getTrackExtendedVec()[0] : group->getTrackExtendedVec()[1];
+	}
       }
-      
-      if(hasTrackStateAt(te->getTrack(), 3/*lcio::TrackState::AtLastHit*/)){
-        debug() << "Initialise Fit with trackstate from last hit " << group << " " << te << " " << te->getTrack().id() << endmsg;
+
+      int location = (fit_backwards==IMarlinTrack::backward) ? edm4hep::TrackState::AtLastHit : edm4hep::TrackState::AtIP;
+
+      if(hasTrackStateAt(te->getTrack(), location)){
+        debug() << "Initialise Fit with trackstate from location " << location << " " << group << " " << te << " " << te->getTrack().id() << endmsg;
 	if(te->getTrack().trackStates_size()>4) warning() << "TrackState size > 4" << endmsg;
-        ts_initial = getTrackStateAt(te->getTrack(), 3/*lcio::TrackState::AtLastHit*/);
+        ts_initial = getTrackStateAt(te->getTrack(), location);
         prefit_set = true;
 	debug() << "ts_initial " << ts_initial << endmsg;
       }
@@ -388,7 +408,7 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
       
       ts_initial.referencePoint = ref;
       
-      ts_initial.location = 1/*lcio::TrackState::AtIP*/;
+      ts_initial.location = edm4hep::TrackState::AtIP;
       debug() << "ts_initial " << ts_initial << endmsg;
     }
     
@@ -419,23 +439,30 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     //}
 
     debug() << "trkHits ready" << endmsg;
-    bool fit_backwards = IMarlinTrack::backward;
+    //bool fit_backwards = _backward ? (IMarlinTrack::backward) : (!IMarlinTrack::backward);
+    int  fit_count = 0;
     
-    //MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
-    //debug() << "marlinTrk created " << endmsg;
-    
+fitstart:
+
     int error_code = 0;
-    
+    edm4hep::MutableTrack track;
+    fit_count++;
+
     try {
-      //error_code = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, &track, fit_backwards, &ts_initial, _bField, _maxChi2PerHit);
-      error_code = m_fitTool->Fit(track, trkHits, ts_initial, _maxChi2PerHit, fit_backwards);
+      debug() << "initial TrackState: " << ts_initial << endmsg;
+      debug() << "fir direction: " << ((fit_backwards==IMarlinTrack::backward) ? "backward" : "forward") << endmsg;
+      debug() << "MaxChi2PerHit: " << _maxChi2PerHit << endmsg;
+      if (fit_count==1) {
+	error_code = m_fitTool->Fit(track, trkHits, ts_initial, _maxChi2PerHit, fit_backwards);
+      }
+      else {
+	error_code = m_fitTool->Fit(track, trkHits, covMatrix, _maxChi2PerHit, fit_backwards);
+      }
     } catch (...) {
-      
       //      delete track;
       //      delete marlinTrk;
       error() << "exception happened while createFinalisedLCIOTrack!" << endmsg;
       throw std::runtime_error("Need more check");
-      
     }
     debug() << "createFinalisedLCIOTrack finished" << endmsg;
     
@@ -446,7 +473,16 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
       dc->skip_current_track();
     }
 #endif
-    
+
+    if (error_code != IMarlinTrack::success) {
+      debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit failed with error code " << error_code << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
+      m_fitTool->Clear();
+      if (fit_count==1) {
+	goto fitstart;
+      }
+      // TODO: to pick up old tracks
+      continue ;
+    }
     
     std::vector<std::pair<edm4hep::TrackerHit , double> > hits_in_fit ;
     std::vector<std::pair<edm4hep::TrackerHit , double> > outliers ;
@@ -475,12 +511,6 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     
     //delete marlinTrk;
     m_fitTool->Clear();
-
-    if( error_code != IMarlinTrack::success ) {
-      debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit failed with error code " << error_code << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
-      //delete Track;
-      continue ;
-    }
     
     if( track.getNdf() < 0) {
       debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit returns " << track.getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << endmsg;
@@ -491,10 +521,10 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     edm4hep::TrackState trkStateIP;
     for(int i=0;i<track.trackStates_size();i++){
       trkStateIP = track.getTrackStates(i);
-      if(trkStateIP.location ==1/*lcio::TrackState::AtIP*/) break;
+      if(trkStateIP.location == edm4hep::TrackState::AtIP) break;
     }
     
-    if (trkStateIP.location != 1/*lcio::TrackState::AtIP*/) {
+    if (trkStateIP.location != edm4hep::TrackState::AtIP) {
       debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit returns " << track.getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << endmsg;
       throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: trkStateIP pointer == NULL ")  ) ;
     }
@@ -568,48 +598,90 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     if (nhits_in_set > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::SET) ) ;
     
     bool rejectTrack_onTPCHits = (nhits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
-    
+    bool rejectTrack_onITKHits = ( (nhits_in_tpc<=0) && (nhits_in_sit<1 && nhits_in_ftd<1) );
     bool rejectTrackonSiliconHits = ( (nhits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
     bool rejectTrackonImpactParameters =  ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
     
-    if ( rejectTrack_onTPCHits || rejectTrackonSiliconHits  || rejectTrackonImpactParameters) {
+    edm4hep::TrackState trkState;
+
+    if ( rejectTrack_onTPCHits || rejectTrack_onITKHits || rejectTrackonSiliconHits  || rejectTrackonImpactParameters) {
 
       debug() << " Track " << trkCand
 	      << " rejected : rejectTrack_onTPCHits = " << rejectTrack_onTPCHits
+	      << " rejectTrackonITKHits " << rejectTrack_onITKHits
 	      << " rejectTrackonSiliconHits " << rejectTrackonSiliconHits
 	      << " rejectTrackonImpactParameters " << rejectTrackonImpactParameters
 	      << endmsg;
-      //delete Track;
+
+      if (fit_count==1) {
+	//fit_backwards = !fit_backwards;
+	goto fitstart;
+      }
+      warning() << "twice failed, select one of old tracks as output, others as subtrack" << endmsg;
+      auto oldtrk = group->getTrackExtendedVec()[0]->getTrack().clone();
+      if (group != NULL) {
+	TrackExtendedVec trkVecGrp = group->getTrackExtendedVec();
+	int nGrTRK = int(trkVecGrp.size());
+	for (int iGr=0;iGr<nGrTRK;++iGr) {
+	  TrackExtended * subTrack = trkVecGrp[iGr];
+	  oldtrk.addToTracks(subTrack->getTrack());
+
+	  // check if it is a tpc looper ...
+	  if( UTIL::BitSet32( subTrack->getTrack().getType() )[  lcio::ILDDetID::TPC   ] )  {
+	    int nseg = subTrack->getTrack().tracks_size();
+	    for(unsigned iSeg=0;iSeg<nseg;iSeg++){
+	      oldtrk.addToTracks(subTrack->getTrack().getTracks(iSeg));
+	    }
+	  }
+	}
+      }
+
+      edm4hep::TrackState trkStateOld;
+      for(int i=0;i<oldtrk.trackStates_size();i++){
+	trkStateOld = oldtrk.getTrackStates(i);
+	if(trkStateOld.location == edm4hep::TrackState::AtIP) break;
+      }
+
+      if (trkStateOld.location != edm4hep::TrackState::AtIP) {
+	debug() << "AddTrackColToEvt: old track has not TrackState::AtIP" << endmsg;
+	throw EVENT::Exception( std::string("FullLDCTracking_MarlinTrk::AddTrackColToEvt: trkStateIP pointer == NULL "));
+      }
+      trkState = trkStateOld;
+
+      colTRK->push_back(oldtrk);
+      debug() << " Add Track to final Collection: ID = " << oldtrk.id() << " for trkCand "<< trkCand << " old" << endmsg;
     }
     else {
-      float omega = trkStateIP.omega;
-      float tanLambda = trkStateIP.tanLambda;
-      float phi0 = trkStateIP.phi;
-      float d0 = trkStateIP.D0;
-      float z0 = trkStateIP.Z0;
-      
-      HelixClass helix;
-      helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
-      
-      float trkPx = helix.getMomentum()[0];
-      float trkPy = helix.getMomentum()[1];
-      float trkPz = helix.getMomentum()[2];
-      float trkP = sqrt(trkPx*trkPx+trkPy*trkPy+trkPz*trkPz);
-      
-      eTot += trkP;
-      pxTot += trkPx;
-      pyTot += trkPy;
-      pzTot += trkPz;
-      nTotTracks++;
-   
+      trkState = trkStateIP;
+
       colTRK->push_back(track);
       debug() << " Add Track to final Collection: ID = " << track.id() << " for trkCand "<< trkCand << endmsg;
     }
+
+    float omega = trkState.omega;
+    float tanLambda = trkState.tanLambda;
+    float phi0 = trkState.phi;
+    float d0 = trkState.D0;
+    float z0 = trkState.Z0;
+
+    HelixClass helix;
+    helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
+
+    float trkPx = helix.getMomentum()[0];
+    float trkPy = helix.getMomentum()[1];
+    float trkPz = helix.getMomentum()[2];
+    float trkP = sqrt(trkPx*trkPx+trkPy*trkPy+trkPz*trkPz);
+
+    eTot += trkP;
+    pxTot += trkPx;
+    pyTot += trkPy;
+    pzTot += trkPz;
+    nTotTracks++;
   }
   if(m_tuple) m_timeKalman = stopwatch.RealTime()*1000;
   // streamlog_out(DEBUG5) << endmsg;
-  debug() << "Number of accepted " << _OutputTrackColHdl.fullKey() << " = " << nTotTracks << endmsg;
-  debug() << "Total 4-momentum of " << _OutputTrackColHdl.fullKey() << " : E = " << eTot
+  info() << "Number of accepted " << _OutputTrackColHdl.fullKey() << " = " << nTotTracks << endmsg;
+  info() << "Total 4-momentum of " << _OutputTrackColHdl.fullKey() << " : E = " << eTot
 	  << " Px = " << pxTot
 	  << " Py = " << pyTot
 	  << " Pz = " << pzTot << endmsg;
@@ -1628,12 +1700,12 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
   int errorCode = IMarlinTrack::success;
 
   try{
-    pre_fit = getTrackStateAt(tpcTrack->getTrack(), 3/*lcio::TrackState::AtLastHit*/);
+    pre_fit = getTrackStateAt(tpcTrack->getTrack(), edm4hep::TrackState::AtLastHit);
   }
   catch(std::runtime_error& e){
     error() << e.what() << " should be checked (TPC track) " << tpcTrack << endmsg;
     try{
-      pre_fit = getTrackStateAt(siTrack->getTrack(), 3/*lcio::TrackState::AtLastHit*/);
+      pre_fit = getTrackStateAt(siTrack->getTrack(), edm4hep::TrackState::AtLastHit);
     }
     catch(std::runtime_error& e){
       error() << e.what() << " should be checked (Si track)" << endmsg;
@@ -3696,7 +3768,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           
           pre_fit.referencePoint = ref;
           
-          pre_fit.location = 1/*lcio::TrackState::AtIP*/;
+          pre_fit.location = edm4hep::TrackState::AtIP;
           // setup initial dummy covariance matrix
           decltype(edm4hep::TrackState::covMatrix) covMatrix;
           
@@ -3823,15 +3895,15 @@ HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
     if (trk_lcio.isAvailable()) {
   
       // use the tracks state at the calorimeter because that will have accounted for energy loss already
-      if (hasTrackStateAt(trk_lcio, 4/*lcio::TrackState::AtCalorimeter*/)) {
+      if (hasTrackStateAt(trk_lcio, edm4hep::TrackState::AtCalorimeter)) {
         
-        TrackState ts_at_last_hit = getTrackStateAt(trk_lcio, 3/*lcio::TrackState::AtLastHit*/);
+        TrackState ts_at_last_hit = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtLastHit);
         float z_ref = ts_at_last_hit.referencePoint[2];
 
         // make sure we use the one closest to the calo face
         if ( fabs(z_ref) >  z_ref_max) {
           z_ref_max = fabs(z_ref);
-          ts_at_calo = getTrackStateAt(trk_lcio, 4/*lcio::TrackState::AtCalorimeter*/);
+          ts_at_calo = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtCalorimeter);
 
           debug() << "FullLDCTrackingAlg::GetExtrapolationHelix set ts_at_calo with ref_z = " << z_ref << endmsg;
 	}
@@ -3845,7 +3917,7 @@ HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
         
     LCIOTrackPropagators::PropagateLCIOToNewRef(ts_at_calo_forIP,0.0,0.0,0.0);
     
-    ts_at_calo_forIP.location = 1/*lcio::TrackState::AtIP*/;
+    ts_at_calo_forIP.location = edm4hep::TrackState::AtIP;
     
     helix = new HelixClass();
     
@@ -4205,7 +4277,7 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
         
         pre_fit.referencePoint = ref;
         
-        pre_fit.location = 1/*lcio::TrackState::AtIP*/;
+        pre_fit.location = edm4hep::TrackState::AtIP;
         
         // setup initial dummy covariance matrix
         decltype(edm4hep::TrackState::covMatrix) covMatrix;
@@ -5017,13 +5089,13 @@ void FullLDCTrackingAlg::setupGearGeom(){
   }
 }
 
-void FullLDCTrackingAlg::checkTrackState(int type){
+void FullLDCTrackingAlg::checkTrackState(int location){
   debug() << "check TrackState " << endmsg;
   for(int i=0;i<_allTPCTracks.size();i++){
     TrackExtended* tpcTrack=_allTPCTracks[i];
-    if(hasTrackStateAt(tpcTrack->getTrack(), type/*lcio::TrackState::AtLastHit*/)){
+    if(hasTrackStateAt(tpcTrack->getTrack(), location)){
       //info() << tpcTrack->getTrack().id() << endmsg;
-      edm4hep::TrackState ts = getTrackStateAt(tpcTrack->getTrack(), type/*lcio::TrackState::AtLastHit*/);
+      edm4hep::TrackState ts = getTrackStateAt(tpcTrack->getTrack(), location);
       debug() << i << " " << tpcTrack->getTrack().id() << ": ts " << ts << endmsg;
     }
   }

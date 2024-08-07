@@ -310,7 +310,7 @@ protected:
   int SegmentRadialOverlap(TrackExtended* pTracki, TrackExtended* pTrackj);
   bool VetoMerge(TrackExtended* firstTrackExt, TrackExtended* secondTrackExt);
 
-  void checkTrackState(int type=0);
+  void checkTrackState(int location=0);
   
   int _nRun ;
   int _nEvt ;
@@ -397,6 +397,9 @@ protected:
   Gaudi::Property<float> _vetoMergeMomentumCut{this, "VetoMergeMomentumCut", 2.5};
   Gaudi::Property<float> _maxAllowedPercentageOfOutliersForTrackCombination{this, "MaxAllowedPercentageOfOutliersForTrackCombination", 0.3};
   Gaudi::Property<int>   _maxAllowedSiHitRejectionsForTrackCombination{this, "MaxAllowedSiHitRejectionsForTrackCombination", 2};
+  Gaudi::Property<int>   _lowestTrackerHitNumberSi{this, "LowestSiHitsNumberForInitial", 7};
+  Gaudi::Property<int>   _lowestTrackerHitNumberTPC{this, "LowestTPCHitsNumberForInitial", 200};
+  Gaudi::Property<bool>  _backward{this, "FitBackward", false};
   Gaudi::Property<bool>  m_dumpTime{this, "DumpTime", false};
   //float _dPCutForForcedMerging;
   Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};
