@@ -174,6 +174,7 @@ StatusCode PlanarDigiAlg::execute()
   int i = 0;
   for( auto SimTHit : *STHcol ) {
     if (SimTHit.getEDep()<=_eThreshold) continue;
+    if (gsl_ran_flat(_rng, 0, 1)>_efficiency) continue;
     debug() << "MCParticle id " << SimTHit.getMCParticle().id() << endmsg;
 
     const int celId = SimTHit.getCellID() ;
