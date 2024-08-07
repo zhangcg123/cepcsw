@@ -23,7 +23,7 @@ private:
     double m_timewindow; 
 
     double x, y, z, cosx, cosy, dz, dp, cosz;
-    int pid;
+    int pid, charge;
 
 };
 
