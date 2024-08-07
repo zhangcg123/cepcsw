@@ -169,6 +169,8 @@ protected:
   edm4hep::TrackerHitCollection* _trkhitVec;
   edm4hep::MCRecoTrackerAssociationCollection* _relCol;
 
+  bool _pixelClustering;
+
   bool _use_raw_hits_to_store_simhit_pointer;
 
   int _rejectCellID0;

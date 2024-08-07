@@ -110,8 +110,8 @@ TPCDigiAlg::TPCDigiAlg(const std::string& name, ISvcLocator* svcLoc)
   //                           "Store the pointer to the SimTrackerHits in RawHits (deprecated) ",
   //                           _use_raw_hits_to_store_simhit_pointer,
   //                           bool(false));
-
-  declareProperty("PointResolutionPadPhi",_pointResoPadPhi=0.900,
+  // not used in pixel clustering mode
+  declareProperty("PointResolutionPadPhi",_pointResoPadPhi=0.9,
                   "Pad Phi Resolution constant in TPC");
   //registerProcessorParameter( "PointResolutionPadPhi" ,
   //                           "Pad Phi Resolution constant in TPC"  ,
@@ -125,21 +125,21 @@ TPCDigiAlg::TPCDigiAlg(const std::string& name, ISvcLocator* svcLoc)
   //                           _rejectCellID0 ,
   //                           (int)1) ;
 
-  declareProperty("PointResolutionRPhi",_pointResoRPhi0=0.050,
+  declareProperty("PointResolutionRPhi",_pointResoRPhi0=0.144,
                   "R-Phi Resolution constant in TPC");
   //registerProcessorParameter( "PointResolutionRPhi" ,
   //                           "R-Phi Resolution constant in TPC"  ,
   //                           _pointResoRPhi0 ,
   //                           (float)0.050) ;
 
-  declareProperty("DiffusionCoeffRPhi",_diffRPhi=0.025,
+  declareProperty("DiffusionCoeffRPhi",_diffRPhi=0.0323,
                   "R-Phi Diffusion Coefficent in TPC");
   //registerProcessorParameter( "DiffusionCoeffRPhi" ,
   //                           "R-Phi Diffusion Coefficent in TPC"  ,
   //                           _diffRPhi ,
   //                           (float)0.025) ;
-
-  declareProperty("N_eff",_nEff=22,
+  // CDR: 22, relative with gas
+  declareProperty("N_eff",_nEff=30,
                   "Number of Effective electrons per pad in TPC");
   //registerProcessorParameter( "N_eff" ,
   //                           "Number of Effective electrons per pad in TPC"  ,
@@ -153,7 +153,7 @@ TPCDigiAlg::TPCDigiAlg(const std::string& name, ISvcLocator* svcLoc)
   //                           _pointResoZ0 ,
   //                           (float)0.4) ;
 
-  declareProperty("DiffusionCoeffZ",_diffZ=0.08,
+  declareProperty("DiffusionCoeffZ",_diffZ=0.23,
                   "Z Diffusion Coefficent in TPC");
   //registerProcessorParameter( "DiffusionCoeffZ" ,
   //                           "Z Diffusion Coefficent in TPC"  ,
@@ -195,6 +195,8 @@ TPCDigiAlg::TPCDigiAlg(const std::string& name, ISvcLocator* svcLoc)
   //                           "Defines the maximum number of adjacent hits which can be merged"  ,
   //                           _maxMerge ,
   //                           (int)3) ;
+
+  declareProperty("PixelClustering", _pixelClustering=bool(true), "pixel clustering mode or pad readout mode");
 }
 
 
@@ -764,20 +766,7 @@ StatusCode TPCDigiAlg::execute()
 
       edep = SimTHit.getEDep();
 
-      // Calculate Point Resolutions according to Ron's Formula
-
-      // sigma_{RPhi}^2 = sigma_0^2 + Cd^2/N_{eff} * L_{drift}
-
-      // sigma_0^2 = (50micron)^2 + (900micron*sin(phi))^2
-      // Cd^2/N_{eff}} = 25^2/(22/sin(theta)*h/6mm)
-      // Cd = 25 ( microns / cm^(1/2) )
-      // (this is for B=4T, h is the pad height = pad-row pitch in mm,
-      // theta is the polar angle)
-
-      // sigma_{z}^2 = (400microns)^2 + L_{drift}cm * (80micron/sqrt(cm))^2
-
-      double aReso =_pointResoRPhi0*_pointResoRPhi0 + (_pointResoPadPhi*_pointResoPadPhi * sin(padPhi)*sin(padPhi)) ;
-      double driftLength = gearTPC.getMaxDriftLength() - (fabs(thisPoint.z()));
+      double driftLength = gearTPC.getMaxDriftLength() - (fabs(thisPoint.z())); // mm unit
 
       if (driftLength <0) {
         debug() << " TPCDigiAlg : Warning! driftLength < 0 " << driftLength << " --> Check out your GEAR file!!!!" << endmsg;
@@ -785,16 +774,45 @@ StatusCode TPCDigiAlg::execute()
         debug() << "gearTPC.getMaxDriftLength() = " << gearTPC.getMaxDriftLength() << endmsg;
         driftLength = 0.10;
       }
+      driftLength /= 10; // to cm unit
 
       padheight = padLayout.getPadHeight(padLayout.getNearestPad(thisPoint.perp(),thisPoint.phi()));
+      double ne = _nEff * (padheight/6.0);
 
-      double bReso = ( (_diffRPhi * _diffRPhi) / _nEff ) * sin(padTheta) * ( 6.0 / (padheight) )  * ( 4.0 / bField  ) ;
+      double tpcRPhiRes, tpcZRes;
+      if (_pixelClustering) {
+        // Calculate Point Resolutions according to Chang Yue and ZHAO Guang's work
 
-      double tpcRPhiRes = sqrt( aReso + bReso * (driftLength / 10.0) ); // driftLength in cm
+        // sigma_{RPhi}^2 = (sigma_0^2 + Cd^2 * L_{drift})/N_{eff}
 
-      double tpcZRes  = sqrt(( _pointResoZ0 * _pointResoZ0 )
-                             +
-                             ( _diffZ * _diffZ ) * (driftLength / 10.0) ); // driftLength in cm
+        // sigma_0 = 0.5mm/sqrt(12)
+        // N_{eff} = 30*h/6mm
+        // Cd = 32.3 ( microns / cm^(1/2) )
+        // (this is for B=3T, h is the pad height = pad-row pitch in mm)
+
+        // sigma_{z}^2 = (400microns)^2 + L_{drift}cm * (80micron/sqrt(cm))^2
+        double aReso = _pointResoRPhi0*_pointResoRPhi0 ;
+        double bReso = _diffRPhi * _diffRPhi ;
+        tpcRPhiRes   = sqrt(aReso + bReso * driftLength) / sqrt(ne); // driftLength in cm
+        tpcZRes      = sqrt( _pointResoZ0 * _pointResoZ0 + _diffZ * _diffZ * driftLength ) / sqrt(ne); // driftLength in cm
+      }
+      else {
+        // Calculate Point Resolutions according to Ron's Formula
+
+        // sigma_{RPhi}^2 = sigma_0^2 + Cd^2/N_{eff} * L_{drift}
+
+        // sigma_0^2 = (50micron)^2 + (900micron*sin(phi))^2
+        // Cd^2/N_{eff}} = 25^2/(22/sin(theta)*h/6mm)
+        // Cd = 25 ( microns / cm^(1/2) )
+        // (this is for B=4T, h is the pad height = pad-row pitch in mm,
+        // theta is the polar angle)
+
+        // sigma_{z}^2 = (400microns)^2 + L_{drift}cm * (80micron/sqrt(cm))^2
+        double aReso = _pointResoRPhi0*_pointResoRPhi0 + (_pointResoPadPhi*_pointResoPadPhi * sin(padPhi)*sin(padPhi)) ;
+        double bReso = ( (_diffRPhi * _diffRPhi) / ne ) * sin(padTheta) * ( 4.0 / bField  ) ;
+        tpcRPhiRes   = sqrt( aReso + bReso * driftLength ); // driftLength in cm
+        tpcZRes      = sqrt( _pointResoZ0 * _pointResoZ0 + _diffZ * _diffZ * driftLength ); // driftLength in cm
+      }
 
       int padIndex = padLayout.getNearestPad(thisPoint.perp(),thisPoint.phi());
 
