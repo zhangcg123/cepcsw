@@ -83,6 +83,7 @@ protected:
   // cov[0]=thetaU, cov[1]=phiU, cov[2]=resU, cov[0]=thetaV, cov[1]=phiV, cov[2]=resV
   Gaudi::Property<bool> _usePlanarTag{ this, "UsePlanarTag", true };
   Gaudi::Property<float> _eThreshold{ this, "EnergyThreshold", 0 };
+  Gaudi::Property<float> _efficiency{ this, "Efficiency", 1 };
   Gaudi::Property<float> _maxPull{ this, "PullCutToRetry", 1000. };
   Gaudi::Property<bool> _parameterize{ this, "ParameterizeResolution", false};
   Gaudi::Property<FloatVec> _parU{ this, "ParametersU", {0} };
