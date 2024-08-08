@@ -320,6 +320,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     }
     dd4hep::Transform3D pv(dd4hep::Rotation3D(dd4hep::RotationX(90*dd4hep::degree)),dd4hep::Position(0,0,0));
     dd4hep::PlacedVolume phv = motherVol.placeVolume(envelope,pv);
+    phv.addPhysVolID("system",x_det.id());
     sdet.setPlacement(phv);
 
     MYDEBUG("create_detector DONE. ");
