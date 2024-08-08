@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd xmlns:compact="http://www.lcsim.org/schemas/compact/1.0"
+       xmlns:xs="http://www.w3.org/2001/XMLSchema"
+       xs:noNamespaceSchemaLocation="http://www.lcsim.org/schemas/compact/1.0/compact.xsd">
+
+  <info name="CRDDimensions"
+       title="master file with includes and world dimension"
+       author=""
+       url="no"
+       status="development"
+       version="1.0">
+    <comment>
+      undeterminded parameters
+    </comment>
+  </info>
+
+  <define>
+    <constant name="CrossingAngle" value="0.033*rad"/>  
+
+    <constant name="Global_endcap_costheta" value="0.99"/>
+
+    <constant name="GlobalTrackerReadoutID_DCH" type="string" value="system:8,chamber:1,layer:7,phi:16"/>
+    <constant name="GlobalTrackerReadoutID" type="string" value="system:5,side:-2,layer:9,module:8,sensor:8,barrelside:-2"/>
+
+    <constant name="Field_nominal_value" value="3*tesla"/>
+    <constant name="Field_outer_nominal_value" value="-1.3*tesla"/>
+
+    <constant name="env_safety" value="0.1*mm"/>
+
+    <constant name="DetID_NOTUSED"      value="  0"/>
+    <constant name="DetID_VXD"          value="  1"/>
+    <constant name="DetID_SIT"          value="  2"/>
+    <constant name="DetID_FTD"          value="  3"/>
+    <constant name="DetID_TPC"          value="  4"/>
+    <constant name="DetID_SET"          value="  5"/>
+    <constant name="DetID_ETD"          value="  6"/>
+    
+    <constant name="DetID_ECAL"         value=" 20"/>
+    <constant name="DetID_ECAL_PLUG"    value=" 21"/>
+    <constant name="DetID_HCAL"         value=" 22"/>
+    <constant name="DetID_HCAL_RING"    value=" 23"/>
+    <constant name="DetID_LCAL"         value=" 24"/>
+    <constant name="DetID_BCAL"         value=" 25"/>
+    <constant name="DetID_LHCAL"        value=" 26"/>
+    <constant name="DetID_YOKE"         value=" 27"/>
+    <constant name="DetID_COIL"         value=" 28"/>
+    <constant name="DetID_ECAL_ENDCAP"  value=" 29"/>
+    <constant name="DetID_HCAL_ENDCAP"  value=" 30"/>
+    <constant name="DetID_YOKE_ENDCAP"  value=" 31"/>
+    
+    <constant name="DetID_bwd"       value="-1"/>
+    <constant name="DetID_barrel"    value=" 0"/>
+    <constant name="DetID_fwd"       value="+1"/>
+
+    <!-- FIXME:need to check/-->
+    <constant name="BeamPipe_Be_inner_thickness"   value="0.2*mm"/>
+    <constant name="BeamPipe_Cooling_thickness"    value="0.3*mm"/>
+    <constant name="BeamPipe_Be_outer_thickness"   value="0.15*mm"/>
+    <constant name="BeamPipe_Be_total_thickness"   value="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness"/>
+    <constant name="BeamPipe_Al_thickness"         value="BeamPipe_Be_total_thickness"/>
+    <constant name="BeamPipe_ThinCu_thickness"     value="2.0*mm"/>
+    <constant name="BeamPipe_Cu_thickness"         value="3.0*mm"/>
+
+    <constant name="BeamPipe_CentralBe_zmax"       value="85*mm"/>
+    <constant name="BeamPipe_CentralAl_zmax"       value="180*mm"/>
+    <constant name="BeamPipe_ExpandAl_zmax"        value="655*mm"/>
+    <constant name="BeamPipe_Linker_zmin"          value="700*mm"/>
+    <constant name="BeamPipe_Linker_zmax"          value="780*mm"/>
+    <constant name="BeamPipe_Waist_zmax"           value="805*mm"/>
+    <constant name="BeamPipe_Crotch_zmax"          value="855*mm"/>
+    <constant name="BeamPipe_FirstSeparated_zmax"  value="1110*mm"/>
+    <constant name="BeamPipe_Mask_zmin"            value="1210*mm"/>
+    <constant name="BeamPipe_Mask_zmax"            value="1230*mm"/>
+    <constant name="BeamPipe_Q1a_zmin"             value="1900*mm"/>
+    <constant name="BeamPipe_Q1a_zmax"             value="3110*mm"/>
+    <constant name="BeamPipe_Q1b_zmin"             value="3190*mm"/>
+    <constant name="BeamPipe_Q1b_zmax"             value="4400*mm"/>
+    <constant name="BeamPipe_QF1_zmin"             value="4700*mm"/>
+    <constant name="BeamPipe_QF1_zmax"             value="6200*mm"/>
+    <constant name="BeamPipe_end_z"                value="7050*mm"/>
+
+    <constant name="BeamPipe_Central_inner_radius"  value="10*mm"/>
+    <constant name="BeamPipe_Fork_inner_radius"     value="10*mm"/>
+    <constant name="BeamPipe_FirstExpand_width"     value="35*mm"/>
+    <constant name="BeamPipe_SecondExpand_width"    value="39*mm"/>
+    <constant name="BeamPipe_Mask_inner_radius"     value="6*mm"/>
+    <constant name="BeamPipe_Q1a_inner_radius"      value="BeamPipe_Fork_inner_radius"/>
+    <constant name="BeamPipe_Q1b_inner_radius"      value="11.5*mm"/>
+    <constant name="BeamPipe_QF1_inner_radius"      value="16*mm"/>
+
+    <constant name="BeamPipe_FrontLinker_rmax"      value="BeamPipe_FirstExpand_width/2+BeamPipe_Al_thickness"/>
+    <constant name="BeamPipe_ForwardRegion_rmax"    value="BeamPipe_SecondExpand_width/2+BeamPipe_Cu_thickness"/>
+
+    <constant name="Vertex_inner_radius" value="BeamPipe_Central_inner_radius+BeamPipe_Be_total_thickness"/>
+    <constant name="Vertex_outer_radius" value="72.5*mm"/>
+    <constant name="Vertex_half_length"  value="750*mm"/>
+
+    <!--constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_Central_inner_radius+BeamPipe_Al_thickness
+	   +(BeamPipe_FirstExpand_width/2-BeamPipe_Central_inner_radius)/(BeamPipe_ExpandAl_zmax-BeamPipe_CentralAl_zmax)*(Vertex_half_length-BeamPipe_CentralAl_zmax)"/-->
+    <constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_FirstExpand_width
+							   +(BeamPipe_SecondExpand_width-BeamPipe_FirstExpand_width)/(BeamPipe_Linker_zmax-BeamPipe_Linker_zmin)*(Vertex_half_length-BeamPipe_Linker_zmin)"/>
+    <constant name="Vertex_Side_rmin"    value="BeamPipe_VertexRegion_rmax"/>
+
+    <constant name="TPC_inner_radius" value="600*mm"/>
+    <constant name="TPC_outer_radius" value="1800*mm"/>
+    <constant name="TPC_half_length"  value="2900*mm"/>
+    <constant name="OuterTracker_half_length" value="TPC_half_length"/>
+
+    <constant name="SIT1_inner_radius"   value="150*mm"/>
+    <constant name="SIT2_inner_radius"   value="250*mm"/>
+    <constant name="SIT3_inner_radius"   value="500*mm"/>
+    <constant name="SIT1_half_length"    value="243*mm"/>
+    <constant name="SIT2_half_length"    value="405*mm"/>
+    <constant name="SIT3_half_length"    value="810*mm"/>
+
+    <constant name="SET_inner_radius"    value="1800*mm"/>
+
+    <constant name="SiTracker_region1_costheta"   value="0.85"/>
+    <constant name="SiTracker_region2_costheta"   value="0.9"/>
+    <constant name="SiTracker_region3_costheta"   value="0.95"/>
+    <constant name="SiTracker_endcap_barrel_zgap" value="5*mm"/>
+    <constant name="SiTracker_endcap_barrel_rgap" value="10*mm"/>
+    <constant name="SiTracker_endcap_gas_zgap"    value="3*mm"/>
+    <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
+    <constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
+    <constant name="SiTracker_endcap_z2" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_z3" value="TPC_inner_radius/tan(acos(SiTracker_region2_costheta))"/>
+    <constant name="SiTracker_endcap_z4" value="TPC_inner_radius/tan(acos(SiTracker_region3_costheta))"/>
+    <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
+    <constant name="SiTracker_endcap_outer_radius1" value="SiTracker_endcap_z1*tan(acos(SiTracker_region1_costheta))"/>
+    <constant name="SiTracker_endcap_outer_radius2" value="SIT3_inner_radius"/>
+    <constant name="SiTracker_endcap_outer_radius3" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius4" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/>
+
+    <!--obseleted constance, used by old construct, should be removed while creating new constrcut-->
+    <constant name="TPC_Ecal_Hcal_barrel_halfZ"   value="TPC_half_length"/>
+
+    <constant name="Ecal_barrel_inner_radius" value="1830*mm"/>
+    <constant name="Ecal_barrel_thickness"    value="300*mm"/>
+    <constant name="Ecal_barrel_outer_radius" value="Ecal_barrel_inner_radius+Ecal_barrel_thickness"/>
+    <constant name="Ecal_barrel_half_length"  value="2900*mm"/>
+    <constant name="Ecal_barrel_symmetry"     value="32"/>
+    <constant name="Ecal_Tpc_gap"             value="Ecal_barrel_inner_radius-TPC_outer_radius"/>
+
+    <constant name="Ecal_endcap_inner_radius" value="350*mm"/>
+    <constant name="Ecal_endcap_outer_radius" value="Ecal_barrel_outer_radius"/>
+    <constant name="Ecal_endcap_zmin"         value="2930*mm"/>
+    <constant name="Ecal_endcap_thickness"    value="Ecal_barrel_thickness"/>
+    <constant name="Ecal_endcap_zmax"         value="Ecal_endcap_zmin+Ecal_endcap_thickness"/>
+    <constant name="Ecal_endcap_symmetry"     value="32"/>
+
+    <constant name="Hcal_barrel_inner_radius" value="2140*mm"/>
+    <constant name="Hcal_barrel_outer_radius" value="3455*mm"/>
+    <constant name="Hcal_barrel_half_length"  value="3230*mm"/>
+    <constant name="Hcal_barrel_symmetry"    value="16"/>
+    
+    <constant name="Hcal_endcap_inner_radius" value="450*mm"/>
+    <constant name="Hcal_endcap_outer_radius" value="Hcal_barrel_outer_radius"/>
+    <constant name="Hcal_endcap_zmin" value="3260*mm"/>
+    <constant name="Hcal_endcap_thickness" value="Hcal_barrel_outer_radius-Hcal_barrel_inner_radius"/>
+    <constant name="Hcal_endcap_zmax" value="Hcal_endcap_zmin+Hcal_endcap_thickness"/>
+    <constant name="Hcal_endcap_symmetry" value="16"/>
+
+    <constant name="Solenoid_inner_radius" value="3535*mm"/>
+    <constant name="Solenoid_outer_radius" value="4235*mm"/>
+    <constant name="Solenoid_half_length" value="4575*mm"/>
+    <constant name="SolenoidCoil_half_length" value="4075*mm"/>
+    <constant name="SolenoidCoil_radius" value="3650*mm"/>
+    <constant name="SolenoidCoil_center_radius" value="(Solenoid_inner_radius+Solenoid_outer_radius)/2"/>
+        
+    <constant name="Yoke_barrel_inner_radius" value="4235*mm"/>
+    <constant name="Yoke_barrel_outer_radius" value="5485*mm"/>
+    <constant name="Yoke_barrel_half_length" value="4525*mm"/>
+    <constant name="Yoke_barrel_symmetry" value="12"/>
+    
+    <constant name="Yoke_endcap_inner_radius" value="650*mm"/>
+    <constant name="Yoke_endcap_outer_radius" value="Yoke_barrel_outer_radius"/>
+    <constant name="Yoke_endcap_zmin" value="4635*mm"/>
+    <constant name="Yoke_endcap_zmax" value="5875*mm"/>
+    <constant name="Yoke_endcap_outer_symmetry" value="Yoke_barrel_symmetry"/>
+    <constant name="Yoke_endcap_inner_symmetry" value="0"/>
+
+    <!-- FIXME:need to check/--> 
+    <constant name="Lumical_inner_radius" value="BeamPipe_Fork_inner_radius+BeamPipe_ThinCu_thickness"/>
+    <constant name="Lumical_outer_radius" value="100.0*mm"/>
+    <constant name="Lumical_zmax" value="BeamPipe_FirstSeparated_zmax" />
+    <constant name="Lumical_zmin" value="700*mm"/>
+    <constant name="Lumical_thickness" value="(Lumical_zmax-Lumical_zmin)/2.0"/>
+        
+    <constant name="tracker_region_zmax" value="Ecal_endcap_zmin"/>
+    <constant name="tracker_region_rmax" value="Ecal_barrel_inner_radius"/>
+
+    <!--Muon Detector-->
+    <!--strip & fiber dimensions-->
+    <constant name="Muon_strip_x" value="4*cm"/>
+    <constant name="Muon_strip_y" value="1*cm"/>
+    <constant name="Muon_strip_z" value="4*m"/>
+    <constant name="Muon_strip_surf" value="1*mm"/>
+
+    <constant name="Muon_strip_surface_x" value="Muon_strip_x"/>
+    <constant name="Muon_strip_surface_y" value="Muon_strip_y"/>
+    <constant name="Muon_strip_surface_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_strip_scintillator_x" value="Muon_strip_x-2*Muon_strip_surf"/>
+    <constant name="Muon_strip_scintillator_y" value="Muon_strip_y-2*Muon_strip_surf"/>
+    <constant name="Muon_strip_scintillator_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_strip_SiPM_x" value="6*mm"/>
+    <constant name="Muon_strip_SiPM_y" value="6*mm"/>
+    <constant name="Muon_strip_SiPM_z" value="Muon_strip_surf"/>
+    <constant name="Muon_strip_SiPM_posx" value="0"/>
+    <constant name="Muon_strip_SiPM_posy" value="0"/>
+    <constant name="Muon_strip_SiPM_posz" value="0.5*Muon_strip_z+0.5*Muon_strip_SiPM_z"/>
+
+    <constant name="Muon_fiber_core_rmax" value="0.95*mm"/>
+    <constant name="Muon_fiber_core_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_fiber_cladding_rmin" value="Muon_fiber_core_rmax"/>
+    <constant name="Muon_fiber_cladding_rmax" value="1*mm"/>
+    <constant name="Muon_fiber_cladding_z" value="Muon_strip_z"/>
+
+    <constant name="Muon_strip_cut_gap" value="0.1*mm"/>
+    <constant name="Muon_strip_cut3_rmax" value="Muon_fiber_cladding_rmax+Muon_strip_cut_gap"/>
+    <constant name="Muon_strip_cut3_z" value="Muon_strip_z"/>
+    <constant name="Muon_strip_cut3_posx" value="0"/>
+    <constant name="Muon_strip_cut3_posy" value="Muon_strip_cut3_rmax-Muon_fiber_cladding_rmax"/>
+    <constant name="Muon_strip_cut3_posz" value="0"/>
+
+    <constant name="Muon_strip_cut1_x" value="2*Muon_strip_cut3_rmax"/>
+    <constant name="Muon_strip_cut1_y" value="Muon_strip_surf"/>
+    <constant name="Muon_strip_cut1_z" value="Muon_strip_z"/>
+    <constant name="Muon_strip_cut1_posx" value="0"/>
+    <constant name="Muon_strip_cut1_posy" value="0.5*Muon_strip_y-0.5*Muon_strip_cut1_y"/>
+    <constant name="Muon_strip_cut1_posz" value="0"/>
+
+    <constant name="Muon_strip_cut2_x" value="Muon_strip_cut1_x"/>
+    <constant name="Muon_strip_cut2_y" value="0.5*Muon_strip_scintillator_y-Muon_strip_cut3_rmax+Muon_fiber_cladding_rmax"/>
+    <constant name="Muon_strip_cut2_z" value="Muon_strip_z"/>
+    <constant name="Muon_strip_cut2_posx" value="0"/>
+    <constant name="Muon_strip_cut2_posy" value="0.5*Muon_strip_scintillator_y-0.5*Muon_strip_cut2_y"/>
+    <constant name="Muon_strip_cut2_posz" value="0"/>
+
+    <!--standard scale-->
+    <constant name="Muon_standard_scale" value="105*cm"/>    
+    <constant name="Muon_Iron_gap_z" value="100*cm"/>
+
+    <!--Muon Barrel>
+    <constant name="Muon_barrel_barrel_num" value="2"/>
+    <constant name="Muon_barrel_iron_part_num" value="12"/>
+    <constant name="Muon_barrel_superlayer_num" value="6"/>
+    <constant name="Muon_barrel_strip_num_0" value="40"/>
+    <constant name="Muon_barrel_strip_num_1" value="48"/>
+    <constant name="Muon_barrel_strip_num_2" value="62"/>
+    <constant name="Muon_barrel_strip_num_3" value="74"/>
+    <constant name="Muon_barrel_strip_num_4" value="84"/>
+    <constant name="Muon_barrel_strip_num_5" value="96"/>
+    <constant name="Muon_barrel_strip_num" value="100"/>
+
+    <constant name="Muon_barrel_iron_x1" value="Muon_standard_scale"/>
+    <constant name="Muon_barrel_iron_y" value="Muon_strip_z+2*Muon_strip_surf+Muon_Iron_gap_z"/>
+    <constant name="Muon_barrel_iron_z" value="Muon_standard_scale"/>
+    <constant name="Muon_barrel_iron_posx" value="-1*Muon_standard_scale"/>
+
+    <constant name="Muon_barrel_barrel_y" value="Muon_barrel_iron_y"/>
+    <constant name="Muon_barrel_barrel_posy" value="0.5*Muon_barrel_barrel_y"/>
+
+    <constant name="Muon_barrel_superlayer_init" value="-21.5*cm"/>
+    <constant name="Muon_barrel_superlayer_gap" value="12.5*cm"/>
+    <constant name="Muon_barrel_superlayer_air_gap" value="0.1*cm"/>
+    <constant name="Muon_barrel_superlayer_aluminum_gap" value="0.5*Muon_barrel_superlayer_air_gap"/>
+
+    <constant name="Muon_barrel_superlayer_y" value="2*Muon_strip_y+2*Muon_barrel_superlayer_air_gap"/>
+    <constant name="Muon_barrel_superlayer_z" value="Muon_strip_z+2*Muon_strip_surf+2*Muon_barrel_superlayer_air_gap"/> 
+
+    <Muon Endcap>
+    <constant name="Muon_endcap_part_num" value="4"/>
+    <constant name="Muon_endcap_superlayer_num" value="6"/>
+    <constant name="Muon_endcap_iron_gap_num" value="Muon_endcap_superlayer_num+1"/>
+    <constant name="Muon_endcap_layer_num" value="2"/>
+    <constant name="Muon_endcap_strip_num" value="146"/>
+    <constant name="Muon_endcap_strip_num_cut" value="13"/>
+    <constant name="Muon_endcap_endcap_rmin" value="52*cm"/>
+    <constant name="Muon_endcap_magnification" value="1.02"/>
+
+    <constant name="Muon_endcap_iron_gap" value="12.5*cm"/>
+    <constant name="Muon_endcap_endcap_z" value="Muon_endcap_iron_gap_num*Muon_endcap_iron_gap+2*Muon_endcap_superlayer_num*Muon_strip_y"/>
+    <constant name="Muon_endcap_endcap_posy" value="Muon_strip_z+2*Muon_strip_surf+Muon_Iron_gap_z+0.5*Muon_endcap_endcap_z"/-->
+
+  </define>
+  
+  <limits>
+    <limitset name="cal_limits">
+      <limit name="step_length_max" particles="*" value="5.0" unit="mm" />
+    </limitset>
+    <limitset name="tpc_limits">
+      <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
+    </limitset>
+    <limitset name="tracker_limits">
+      <limit name="step_length_max" particles="*" value="5.0" unit="mm" />
+    </limitset>
+    <limitset name="detail_limits">
+      <limit name="step_length_max" particles="*" value="1.0" unit="mm" />
+    </limitset>
+    <limitset name="support_limits">
+      <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
+    </limitset>
+    <limitset name="yoke_limits">
+      <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
+      <!--limit name="track_length_max" particles="*" value="5.0" unit="mm" /-->
+      <!--limit name="time_max" particles="*" value="5.0" unit="ns" /-->
+      <limit name="ekin_min" particles="*" value="10" unit="MeV" />
+      <limit name="range_min" particles="*" value="10.0" unit="mm" />
+    </limitset>
+  </limits>
+
+  <regions>
+    <region name="BeampipeRegion"/>
+    <region name="VertexRegion"/>
+    <region name="ForwardRegion"/>
+  </regions>
+
+  <display>
+    <vis name="VXDVis"           alpha="0.1" r="0.1"   g=".5"      b=".5"    showDaughters="true"  visible="true"/>
+    <vis name="VXDLayerVis"      alpha="1.0" r="0.1"   g=".5"      b=".5"    showDaughters="true"  visible="true"/>
+    <vis name="VXDSupportVis"    alpha="1.0" r="0.0"   g="1.0"     b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="FTDVis"           alpha="1.0" r="0.5"   g="0.87"    b="0.11"  showDaughters="true"  visible="true"/>
+    <vis name="FTDSupportVis"    alpha="1.0" r="0.3"   g="0.3"     b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="FTDSensitiveVis"  alpha="1.0" r="0.3"   g="0.5"     b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="DCVis"            alpha="1.0" r="0.96"  g="0.64"    b="0.90"  showDaughters="true"  visible="true"/>
+    <vis name="DCLayerVis"       alpha="1.0" r="0.96"  g="0.64"    b="0.90"  showDaughters="false" visible="true"/>
+    <vis name="TPCVis"           alpha="1.0" r="0.96"  g="0.64"    b="0.90"  showDaughters="true"  visible="true"/>
+    <vis name="TPCMotherVis"     alpha="1.0" r="0.96"  g="0.64"    b="0.90"  showDaughters="true"  visible="true"/>
+    <vis name="TPCGasVis"        alpha="1.0" r="0.96"  g="0.64"    b="0.90"  showDaughters="true"  visible="false"/>
+    <vis name="TPCCathodeVis"    alpha="1.0" r="0.6"   g="1.0"     b="0.80"  showDaughters="true"  visible="true"/>
+    <vis name="TPCCathodeGripVis" alpha="1." r="0.7"   g="0.7"     b="0.70"  showDaughters="true"  visible="true"/>
+    <vis name="TPCShellVis"      alpha="1.0" r="0.5"   g="0.5"     b="0.5"   showDaughters="true"  visible="true"/>
+    <vis name="SITVis"           alpha="0.0" r="0.54"  g="0.59"    b="0.93"  showDaughters="true"  visible="false"/>
+    <vis name="SITSupportVis"    alpha="1.0" r="0.0"   g="0.0"     b="1.0"   showDaughters="false" visible="true"/>
+    <vis name="SITSensitiveVis"  alpha="1.0" r="0.67"  g="0.99"    b="0.78"  showDaughters="false" visible="true"/>
+    <vis name="SETVis"           alpha="0.0" r="0.8"   g="0.8"     b="0.4"   showDaughters="true"  visible="false"/>
+    <vis name="SETSupportVis"    alpha="1.0" r="0.5"   g="0.3"     b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="SETSensitiveVis"  alpha="1.0" r="0.0"   g="0.60"    b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="ECALVis"          alpha="1.0" r="0.2"   g="0.6"     b="0"     showDaughters="true"  visible="true"/>
+    <vis name="HCALVis"          alpha="1.0" r="0.95"  g="0.78"    b="0.69"  showDaughters="true"  visible="true"/>
+    <vis name="SOLVis"           alpha="1.0" r="0.0"   g="0.0"     b="0.8"   showDaughters="true"  visible="true"/>
+    <vis name="YOKEVis"          alpha="1.0" r="0.64"  g="0.75"    b="0.99"  showDaughters="true" visible="true"/>
+    <vis name="LCALVis"          alpha="1.0" r="0.25"  g="0.88"    b="0.81"  showDaughters="true"  visible="true"/>
+    <vis name="SupportVis"       alpha="1.0" r="0.2"   g="0.2"     b="0.2"   showDaughters="true"  visible="true"/>
+    <vis name="ShellVis"         alpha="1.0" r="1.0"   g="1.0"     b="0.8"   showDaughters="false" visible="true"/>
+
+    <vis name="WhiteVis"         alpha="0.0" r=".96" g=".96"  b=".96"   showDaughters="true"  visible="true"/>
+    <vis name="LightGrayVis"     alpha="0.0" r=".75" g=".75"  b=".75"   showDaughters="true"  visible="true"/>
+    <vis name="Invisible"        alpha="0.0" r="0.0" g="0.0"  b="0.0"   showDaughters="false" visible="false"/>
+    <vis name="SeeThrough"       alpha="0.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="false"/>
+    <vis name="RedVis"           alpha="1.0" r="1.0" g="0.0"  b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="GreenVis"         alpha="1.0" r="0.0" g="1.0"  b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="BlueVis"          alpha="1.0" r="0.0" g="0.0"  b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="CyanVis"          alpha="1.0" r="0.0" g="1.0"  b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="MagentaVis"       alpha="1.0" r="1.0" g="0.0"  b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="VioletVis"        alpha="1.0" r=".83" g=".55"  b=".89"   showDaughters="true" visible="true"/>
+    <vis name="BlueVioletVis"    alpha="1.0" r=".55" g=".36"  b="1.0"   showDaughters="true"  visible="true"/>
+    <vis name="OrangeVis"        alpha="1.0" r="1.0" g="0.6"  b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="YellowVis"        alpha="1.0" r="1.0" g="1.0"  b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="BlackVis"         alpha="1.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="GrayVis"          alpha="1.0" r="0.5" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
+  </display>
+
+</lccdd>

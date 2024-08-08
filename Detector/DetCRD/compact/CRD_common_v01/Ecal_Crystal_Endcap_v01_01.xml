@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<lccdd> 
+  <define>
+    <constant name="ecalendcap_inner_radius"        value="Ecal_endcap_inner_radius"/>
+    <constant name="ecalendcap_outer_radius"        value="Ecal_endcap_outer_radius"/>
+    <constant name="ecalendcap_zmin"             value="Ecal_endcap_zmin"/>
+    <constant name="ecalendcap_depth"             value="Ecal_endcap_thickness"/>
+
+    <constant name="ecalendcap_layer"               value="28" />
+    <constant name="ecalendcap_x_width"               value="350*mm" />
+    <constant name="ecalendcap_y_width"               value="350*mm" />
+    <constant name="ecalendcap_width_crystal"    value="10.2*mm"/>
+
+    <constant name="ecalendcap_crystal_wrapping"    value="0.1*mm"/>
+    <constant name="ecalendcap_length_photoelectronic"    value="0.7*mm"/> 
+    <constant name="ecalendcap_width_photoelectronic"    value="3*mm"/> 
+
+    <constant name="ecalendcap_length_carbon"    value="2.5*mm"/> 
+    <constant name="ecalendcap_length_cable"    value="0.*mm"/> 
+    <constant name="ecalendcap_length_cooling"    value="1.*mm"/> 
+    <constant name="ecalendcap_length_pcb"    value="1.2*mm"/> 
+    <constant name="ecalendcap_length_asic"    value="1.*mm"/>
+    <constant name="ecalendcap_length_back"    value="10.*mm"/>
+
+  </define> 
+
+  <regions>
+    <region name="EcalendcapRegion">
+    </region>
+  </regions>
+
+  <detectors>
+    <detector id="DetID_ECAL_ENDCAP" name="CaloDetectorEndcap" type="LongCrystalBarEndcapCalorimeter_v01" readout="EcalEndcapsCollection" vis="Invisible" sensitive="true" region="EcalendcapRegion">
+      <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+    </detector>
+  </detectors>
+  
+  <readouts>
+    <readout name="EcalEndcapsCollection">
+      <segmentation type="NoSegmentation"/>
+      <!--segmentation type="CartesianGridXYZ"
+                    grid_size_x="1*cm"
+                    grid_size_y="1*cm"
+                    grid_size_z="1*cm"/-->
+      <id>system:5,module:1,stave:15,dlayer:5,slayer:1,bar:15</id>
+    </readout>
+  </readouts>
+
+</lccdd>
