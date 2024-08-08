@@ -28,34 +28,32 @@
   <include ref="./TDR_Dimensions_v01_01.xml"/>
 
   <!--TODO: vertex cooling-->
-  <include ref="../CRD_common_v02/Beampipe_v01_03.xml"/>
+  <!--include ref="../CRD_common_v02/Beampipe_v01_03.xml"/-->
   <!--preliminary vertex and tracker, to update/-->
-  <include ref="../CRD_common_v02/VXD_StaggeredLadder_v02_01.xml"/>
+  <!--include ref="../CRD_common_v02/VXD_StaggeredLadder_v02_01.xml"/>
   <include ref="../CRD_common_v02/FTD_SkewRing_v01_05.xml"/>
-  <include ref="../CRD_common_v02/SIT_SimplePixel_v01_03.xml"/>
+  <include ref="../CRD_common_v02/SIT_SimplePixel_v01_03.xml"/-->
   <!--include ref="../CRD_common_v01/TPC_Simple_v10_02.xml"/-->
   <!--use 10 rows clustering version/-->
-  <include ref="../CRD_common_v02/TPC_ModularEndcap_o1_v02.xml"/>
-  <include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/>
+  <!--include ref="../CRD_common_v02/TPC_ModularEndcap_o1_v02.xml"/>
+  <include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/-->
 
-  <include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v01_02.xml"/>
-  <!--preliminary EcalEndcaps/-->
-  <include ref="../CRD_common_v02/EcalEndcaps_Polyhedra_v01_01.xml"/>
-  <include ref="../CRD_common_v01/SHcalGlass_Barrel_v05.xml"/>
-  <!--preliminary HcalEndcaps/-->
-  <include ref="../CRD_common_v02/HcalEndcaps_Polyhedra_v01_01.xml"/>
+  <!--include ref="../CRD_common_v01/Ecal_Crystal_Barrel_Short_v02.xml"/-->
+  <!--include ref="../CRD_common_v01/Ecal_Crystal_Endcap_Short_v01.xml"/-->
+  <include ref="../CRD_common_v01/SHcalSc04_Barrel_v04_01.xml"/>
+  <include ref="../CRD_common_v01/SHcalSc04_Endcaps_v02.xml"/>
 
   <!--Lumical to update-->
-  <include ref="../CRD_common_v01/Lumical_o1_v01.xml"/>
+  <!--include ref="../CRD_common_v01/Lumical_o1_v01.xml"/-->
   <!--preliminary Magnet, to update/-->
-  <include ref="../CRD_common_v02/Coil_Simple_v01_02.xml"/>
+  <!--include ref="../CRD_common_v02/Coil_Simple_v01_02.xml"/-->
   <!--preliminary Muon, obselete/-->
   <!--include ref="../CRD_common_v02/Yoke_Polyhedra_Barrel_v01_01.xml"/>
   <include ref="../CRD_common_v02/Yoke_Polyhedra_Endcaps_v01_01.xml"/-->
  
   <!--muon detector-->
-  <include ref="../CRD_common_v01/Muon_Barrel_v01_01.xml"/>
-  <include ref="../CRD_common_v01/Muon_Endcap_v01_01.xml"/>
+  <!--include ref="../CRD_common_v01/Muon_Barrel_v01_01.xml"/-->
+  <!--include ref="../CRD_common_v01/Muon_Endcap_v01_01.xml"/-->
  
   <fields>
     <field name="InnerSolenoid" type="solenoid"

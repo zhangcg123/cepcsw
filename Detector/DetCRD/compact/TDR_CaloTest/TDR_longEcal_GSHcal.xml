@@ -39,11 +39,9 @@
   <include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/>
 
   <include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v01_02.xml"/>
-  <!--preliminary EcalEndcaps/-->
-  <include ref="../CRD_common_v02/EcalEndcaps_Polyhedra_v01_01.xml"/>
+  <include ref="../CRD_common_v01/Ecal_Crystal_Endcap_v01_01.xml"/>
   <include ref="../CRD_common_v01/SHcalGlass_Barrel_v05.xml"/>
-  <!--preliminary HcalEndcaps/-->
-  <include ref="../CRD_common_v02/HcalEndcaps_Polyhedra_v01_01.xml"/>
+  <include ref="../CRD_common_v01/SHcalGlass_Endcaps_v01.xml"/>
 
   <!--Lumical to update-->
   <include ref="../CRD_common_v01/Lumical_o1_v01.xml"/>

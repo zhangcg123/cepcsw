@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+    <define>
+        <constant name="ecalendcap_inner_radius" value="Ecal_endcap_inner_radius"/>
+        <constant name="ecalendcap_outer_radius" value="Ecal_endcap_outer_radius"/>
+        <constant name="ecalendcap_block_xy" value="350*mm"/>
+        <constant name="ecalendcap_thickness" value="Ecal_endcap_zmax-Ecal_endcap_zmin"/>
+        <constant name="ecalendcap_z" value="0.5*(Ecal_endcap_zmin+Ecal_endcap_zmax)"/>
+        <constant name="Nblock_xy" value="6"/>
+        <constant name="Nsectors" value="4"/>
+
+        <!-- Fill in the space at the corner-->
+        <constant name="ecalendcap_block_fill_rect_short" value="260*mm"/>
+        <constant name="ecalendcap_block_fill_sq1" value="180*mm"/>
+        <constant name="ecalendcap_block_fill_sq2" value="270*mm"/>
+
+        <constant name="Ncell_rect_short" value="26"/>
+        <constant name="Ncell_sq1_xy" value="18"/>
+        <constant name="Ncell_sq2_xy" value="27"/>
+
+        <constant name="gap_narrow" value="2*mm"/>
+        <constant name="gap_wide" value="10*mm"/>
+
+        <!-- CrystalXY = CellXY - 2 * BoundarySafety - 2 * ESRThickness-->
+        <!-- CrystalZ = CellZ - 2 * BoundarySafety - 2 * ESRThickness-->
+        <constant name="Ncell_xy" value="35"/>
+        <constant name="crystal_z" value="4.1*cm"/>
+
+        <constant name="esr_thickness" value="0.1*mm"/>
+        <constant name="sipm_x" value="3*mm"/>
+        <constant name="sipm_y" value="3*mm"/>
+        <constant name="sipm_z" value="0.8*mm"/>
+        <constant name="pcb_thickness" value="2.2*mm"/>
+        <constant name="cu_thickness" value="1*mm"/>
+        <constant name="fibre_thickness" value="0.1*mm"/>
+        <constant name="boundary_safety" value="1*nm"/>
+    </define>
+
+    <regions>
+        <region name="EcalEndcapsRegion">
+        </region>
+    </regions>
+
+    <detectors>
+        <detector id="DetID_ECAL_ENDCAP"
+                  name="EcalEndcaps"
+                  type="CRDEcalEndcap_Short_v01"
+                  readout="EcalEndcapsCollection"
+                  vis="Invisible"
+                  sensitive="true"
+                  region="EcalEndcapsRegion">
+            <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+        <material name="G4_BGO"/>
+        </detector>
+    </detectors>
+
+    <readouts>
+        <readout name="EcalEndcapsCollection">
+            <segmentation type="NoSegmentation"/>
+            <!--segmentation type="CartesianGridXYZ"
+                          grid_size_x="1*cm"
+                          grid_size_y="1*cm"
+                          grid_size_z="1*cm"/-->
+            <id>system:5,module:3,stave:5,layer:5,x:6,y:6</id>
+        </readout>
+    </readouts>
+
+</lccdd>

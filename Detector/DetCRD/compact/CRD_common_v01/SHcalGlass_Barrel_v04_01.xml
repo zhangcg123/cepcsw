@@ -38,7 +38,7 @@
 
       <envelope vis="CyanVis">
         <shape type="BooleanShape" operation="Subtraction" material="Air" >
-          <shape type="Cone" rmin1="0.0" rmax1="Hcal_outer_radius + env_safety" rmin2="0.0" rmax2="Hcal_outer_radius + env_safety" z="Hcal_half_length + env_safety/2.0"/>
+          <shape type="Cone" rmin1="0.0" rmax1="Hcal_barrel_outer_radius + env_safety" rmin2="0.0" rmax2="Hcal_barrel_outer_radius + env_safety" z="Hcal_half_length + env_safety/2.0"/>
           <shape type="PolyhedraRegular"  numsides="Hcal_inner_symmetry" rmin="0.0"
                  rmax="Hcal_inner_radius - env_safety" dz="2*(Hcal_half_length + env_safety)"/>
         </shape>
