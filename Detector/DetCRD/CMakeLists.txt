@@ -57,6 +57,12 @@ foreach(detoption TDR_o1_v01 TDR_o1_v02)
     )
 endforeach()
 
+add_test(
+  NAME Test_TDR_o1_v01_CaloDigi
+  COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/calodigi.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  )
+
 foreach(detoption TDR_o1_v01)
   add_test(
     NAME Test_${detoption}_Geo

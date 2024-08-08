@@ -294,7 +294,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     sdetB.setPlacement(pv);
 
     pv = motherVol.placeVolume(assembly);
-//    pv.addPhysVolID("system",x_det.id());
+    pv.addPhysVolID("system",x_det.id());
     both_endcaps.setPlacement(pv);
     both_endcaps.add(sdetA);
     both_endcaps.add(sdetB);
