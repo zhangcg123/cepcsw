@@ -90,6 +90,7 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     const double rOuter             = theDetector.constant<double>("TPC_outer_radius") ;
     const double drInnerWall        = theDetector.constant<double>("TPC_dr_InnerWall");
     const double drOuterWall        = theDetector.constant<double>("TPC_dr_OuterWall");
+    const double drInnerServiceArea = theDetector.constant<double>("TPC_dr_InnerServiceArea");
     const double dz_Cathode         = theDetector.constant<double>("TPC_dz_Cathode");
     const double dz_Endplate        = theDetector.constant<double>("TPC_dz_Endplate");
     const double dz_Readout         = theDetector.constant<double>("TPC_dz_Readout");
@@ -454,8 +455,8 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     tpcData->rMax  = rOuter;
     tpcData->innerWallThickness = drInnerWall;
     tpcData->outerWallThickness = drOuterWall;
-    tpcData->rMinReadout = rInner + drInnerWall;
-    tpcData->rMaxReadout = rInner + drInnerWall + tpcnumberOfPadRows*tpcpadheight;
+    tpcData->rMinReadout = rInner + drInnerWall + drInnerServiceArea;
+    tpcData->rMaxReadout = rInner + drInnerWall + drInnerServiceArea + tpcnumberOfPadRows*tpcpadheight;
     tpcData->maxRow = tpcnumberOfPadRows;
     tpcData->padHeight = tpcpadheight;
     tpcData->padWidth =  tpcpadwidth;
