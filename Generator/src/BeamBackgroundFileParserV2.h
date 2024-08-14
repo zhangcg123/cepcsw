@@ -10,7 +10,7 @@
 
 class BeamBackgroundFileParserV2: public IBeamBackgroundFileParser {
 public:
-    BeamBackgroundFileParserV2(const std::string& dirname, const std::string& treename, double beam_energy);
+    BeamBackgroundFileParserV2(const std::string& dirname, const std::string& treename, double beam_energy, double beam_time, int Nmcp);
 
     bool load(IBeamBackgroundFileParser::BeamBackgroundData&) { return 0; }
     bool load(IBeamBackgroundFileParser::BeamBackgroundData&, int iEntry);
@@ -20,9 +20,11 @@ public:
 private:
     std::unique_ptr<TFile> m_inputFile;
     TTree* m_readTree;
-    double m_beam_energy;
+    double m_beam_energy, m_beam_time;;
+    int m_Nmcp;
 
-    float x, y, z, px, py, dp, pid;
+    double x, y, z, cosx, cosy, dz, dp, cosz;
+    int pid, charge;
 
 };
 

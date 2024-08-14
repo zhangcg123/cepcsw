@@ -95,6 +95,15 @@ GtGunTool::initialize() {
         return StatusCode::FAILURE;
     }
 
+    // Time
+    if (m_times.value().size()==0){
+      for(int i=0; i<m_particles.value().size(); i++) m_times.value().push_back(0);
+    }
+    else if (m_times.value().size() != m_particles.value().size()) {
+        error() << "Mismatched times and particles." << endmsg;
+        return StatusCode::FAILURE;
+    }
+
     return sc;
 }
 
@@ -163,7 +172,9 @@ GtGunTool::mutate(MyHepMC::GenEvent& event) {
         mcp.setGeneratorStatus(1);
         mcp.setSimulatorStatus(1);
         mcp.setCharge(static_cast<float>(charge));
-        mcp.setTime(0.0);
+        mcp.setTime(m_times.value()[i]);
+        //if (i<m_times.value().size()) { mcp.setTime(m_times.value()[i]); }
+        //else { mcp.setTime(0.0); }
         mcp.setMass(mass);
 
         // Unit is mm

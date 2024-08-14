@@ -136,8 +136,12 @@ bool GtBeamBackgroundTool::init_BeamBackgroundFileParserV1(const std::string& la
       error() << "Did not find the beam process rate for: " << label << endmsg;
       return false;
     }
-
-    m_beaminputs[label] = std::make_shared<BeamBackgroundFileParserV1>(inputfn, "BeamTree", m_Ebeam, itRate->second, m_timewindow);
+    auto itNmcp = m_Nmcpmaps.find(label);
+    if(itNmcp == m_Nmcpmaps.end()){ 
+      error() << "Did not find the beam process Nmcp for: " << label << endmsg;
+      return false;
+    }
+    m_beaminputs[label] = std::make_shared<BeamBackgroundFileParserV1>(inputfn, "BeamTree", m_Ebeam, itRate->second, m_timewindow, itNmcp->second);
 
     return true;
 }
@@ -146,7 +150,17 @@ bool GtBeamBackgroundTool::init_BeamBackgroundFileParserV2(const std::string& la
                                                            const std::string& inputfn) {
 
     info() << "Initializing beam background ... " << label << inputfn <<endmsg;
-    m_beaminputs[label] = std::make_shared<BeamBackgroundFileParserV2>(inputfn, "RBBG", m_Ebeam);
+    auto itTime = m_timebkgmaps.find(label);
+    if(itTime == m_timebkgmaps.end()){ 
+      error() << "Did not find the beam process time for: " << label << endmsg;
+      return false;
+    }
+    auto itNmcp = m_Nmcpmaps.find(label);
+    if(itNmcp == m_Nmcpmaps.end()){ 
+      error() << "Did not find the beam process Nmcp for: " << label << endmsg;
+      return false;
+    }
+    m_beaminputs[label] = std::make_shared<BeamBackgroundFileParserV2>(inputfn, "BeamTree", m_Ebeam, itTime->second, itNmcp->second);
 
     return true;
 }

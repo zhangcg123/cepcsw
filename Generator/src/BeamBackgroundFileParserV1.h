@@ -8,7 +8,7 @@
 
 class BeamBackgroundFileParserV1: public IBeamBackgroundFileParser {
 public:
-    BeamBackgroundFileParserV1(const std::string& filename, const std::string& treename, double beam_energy, double rate, double timewindow);
+    BeamBackgroundFileParserV1(const std::string& filename, const std::string& treename, double beam_energy, double rate, double timewindow, int Nmcp);
 
     bool load(IBeamBackgroundFileParser::BeamBackgroundData&) { return 0; }
     bool load(IBeamBackgroundFileParser::BeamBackgroundData&, int iEntry);
@@ -21,6 +21,7 @@ private:
     double m_beam_energy;
     double m_rate;
     double m_timewindow; 
+    int m_Nmcp;
 
     double x, y, z, cosx, cosy, dz, dp, cosz;
     int pid, charge;

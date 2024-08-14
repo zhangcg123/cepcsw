@@ -67,6 +67,12 @@ private:
     // Rotation along Y for single beam background. Unit: rad
     Gaudi::Property<std::map<std::string, double>>      m_rotYMap {this, "RotationAlongYMap"};
 
+    // Time of bunch crossing. Unit: ns, consistent with simulation
+    Gaudi::Property<std::map<std::string, double>>      m_timebkgmaps{this, "TimeBkgMap"};
+
+    // Number of McParticles in different beambkg. -1: pair use one file and single beam use rate*time; >=0: fixed number
+    Gaudi::Property<std::map<std::string, int>>      m_Nmcpmaps{this, "NumberMcParticle"};
+
 private:
     std::map<std::string, std::shared_ptr<IBeamBackgroundFileParser>> m_beaminputs;
 
