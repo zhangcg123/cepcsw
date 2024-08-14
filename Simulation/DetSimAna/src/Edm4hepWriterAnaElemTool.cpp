@@ -113,6 +113,7 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
     auto sitcols = m_SITCol.createAndPut();
     auto tpccols = m_TPCCol.createAndPut();
     auto setcols = m_SETCol.createAndPut();
+    auto otkbarrelcols = m_OTKBarrelCol.createAndPut();
 
     auto ecalbarrelcol            = m_EcalBarrelCol.createAndPut();
     auto ecalbarrelcontribcols    = m_EcalBarrelContributionCol.createAndPut();
@@ -188,6 +189,8 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
             tracker_col_ptr = setcols;
         } else if (collect->GetName() == "SETCollection") {
             tracker_col_ptr = setcols;
+        } else if (collect->GetName() == "OTKBarrelCollection") {
+            tracker_col_ptr = otkbarrelcols;
         } else if (collect->GetName() == "CaloHitsCollection") {
             calo_col_ptr = calorimetercols;
             calo_contrib_col_ptr = calocontribcols;
