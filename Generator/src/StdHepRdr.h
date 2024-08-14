@@ -34,6 +34,7 @@ private:
 
     // input file name
     Gaudi::Property<std::string> m_filename{this, "Input"};
+    Gaudi::Property<double> m_starttime{this, "StartTime", 0, "Default start time"};    
 
 };
 

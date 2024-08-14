@@ -48,7 +48,7 @@ bool StdHepRdr::mutate(MyHepMC::GenEvent& event){
         mcp.setGeneratorStatus    (mc->getGeneratorStatus());
         mcp.setSimulatorStatus    (mc->getSimulatorStatus());
         mcp.setCharge             (mc->getCharge());
-        mcp.setTime               (mc->getTime());
+        mcp.setTime               (m_starttime + mc->getTime());
         mcp.setMass               (mc->getMass());
         mcp.setVertex             (mc->getVertex()); 
         mcp.setEndpoint           (mc->getEndpoint());
