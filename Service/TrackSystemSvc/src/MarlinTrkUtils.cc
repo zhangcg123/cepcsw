@@ -212,7 +212,16 @@ namespace MarlinTrk {
     ///////////////////////////////////////////////////////
     // add hits to IMarlinTrk  
     ///////////////////////////////////////////////////////
-    
+    std::vector<edm4hep::TrackerHit> hit_list_copy;
+    if (fit_backwards) {
+      std::reverse_copy(hit_list.begin(), hit_list.end(), std::back_inserter(hit_list_copy));
+    }
+    else {
+      hit_list_copy.reserve(hit_list.size());
+      hit_list_copy.insert(hit_list_copy.end(), hit_list.begin(), hit_list.end());
+    }
+
+    hit_list_copy.swap(hit_list);
     std::vector<edm4hep::TrackerHit>::iterator it = hit_list.begin();
     
     //  start by trying to add the hits to the track we want to finally use. 
@@ -262,9 +271,8 @@ namespace MarlinTrk {
       //std::cout << "ERROR<<<<<MarlinTrk::createFit : Cannot fit less with less than " << MIN_NDF << " degrees of freedom. Number of hits =  " << added_hits.size() << " ndof = " << ndof_added << std::endl;
       return IMarlinTrack::bad_intputs;
     }
-      
-    
-    
+
+    hit_list_copy.swap(hit_list);
     ///////////////////////////////////////////////////////
     // set the initial track parameters  
     ///////////////////////////////////////////////////////
@@ -346,7 +354,6 @@ namespace MarlinTrk {
       pre_fit->location = MarlinTrk::Location::AtFirstHit;
       helixTrack.moveRefPoint(hit_list.front().getPosition()[0], hit_list.front().getPosition()[1], hit_list.front().getPosition()[2]);
     }
-    
     
     const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
     

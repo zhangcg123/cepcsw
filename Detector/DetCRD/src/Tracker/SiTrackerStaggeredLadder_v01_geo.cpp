@@ -101,7 +101,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   std::string deadwireVis    = x_display.attr<string>(_Unicode(deadwire));
 
   //fetch the shell parameters
-  if (x_det.hasAttr(_Unicode(shell))) {
+  if (x_det.hasChild(_Unicode(shell))) {
     xml_comp_t x_shell(x_det.child(_Unicode(shell)));
     double rmin_shell = x_shell.rmin();
     double rmax_shell = x_shell.rmax();

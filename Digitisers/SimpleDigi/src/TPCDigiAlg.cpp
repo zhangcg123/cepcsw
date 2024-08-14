@@ -850,7 +850,8 @@ StatusCode TPCDigiAlg::execute()
 
       // create a tpc voxel hit and store it for this row
       Voxel_tpc * atpcVoxel = new Voxel_tpc(iRowHit,iPhiHit,iZHit, thisPoint, edep, tpcRPhiRes, tpcZRes);
-
+      debug() << "to seed hit position: " << atpcVoxel->getX() << "," << atpcVoxel->getY() << "," << atpcVoxel->getZ()
+              << " iRow=" << iRowHit << " iPhi=" << iPhiHit << " padIndex=" << padIndex << endmsg;
       _tpcRowHits.at(iRowHit).push_back(atpcVoxel);
       ++numberOfVoxelsCreated;
 
@@ -1007,7 +1008,8 @@ StatusCode TPCDigiAlg::execute()
             if( momentum_set ){
 
               const edm4hep::Vector3f Momentum1 = Hit1.getMomentum() ;
-              const edm4hep::Vector3f Momentum2 = Hit1.getMomentum() ;
+              //fucd: Hit1.getMomentum() -> Hit2.getMomentum()
+              const edm4hep::Vector3f Momentum2 = Hit2.getMomentum() ;
 
               CLHEP::Hep3Vector mom1(Momentum1[0],Momentum1[1],Momentum1[2]);
               CLHEP::Hep3Vector mom2(Momentum2[0],Momentum2[1],Momentum2[2]);
@@ -1185,7 +1187,7 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
   Voxel_tpc* seed_hit  = aVoxel;
 
   //  if( seed_hit->getRowIndex() > 5 ) return ;
-  debug() << "==============" << endmsg;
+
   //store hit variables
   edm4hep::MutableTrackerHit trkHit;// = _trkhitVec->create();
   //now the hit pos has to be smeared
@@ -1205,7 +1207,7 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
 
   // make sure the hit is not smeared beyond the TPC Max DriftLength
   if( fabs(point.z()) > gearTPC.getMaxDriftLength() ) point.setZ( (fabs(point.z()) / point.z() ) * gearTPC.getMaxDriftLength() );
-  debug() << "==============" << endmsg;
+  debug() << seed_hit->getX() << "," << seed_hit->getY() << "," << seed_hit->getZ() << " -> " << point << endmsg;
   edm4hep::Vector3d pos(point.x(),point.y(),point.z());
   trkHit.setPosition(pos);
   trkHit.setEDep(seed_hit->getEDep());
@@ -1256,7 +1258,7 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
     << "\n" ;
     throw errorMsg.str();
   }
-  debug() << "==============" << endmsg;
+
   // For no error in R
   std::array<float,TRKHITNCOVMATRIX> covMat={sin(unsmearedPhi)*sin(unsmearedPhi)*tpcRPhiRes*tpcRPhiRes,
     -cos(unsmearedPhi)*sin(unsmearedPhi)*tpcRPhiRes*tpcRPhiRes,
@@ -1274,7 +1276,7 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
     << "\n" ;
     throw errorMsg.str();
   }
-  debug() << "==============" << endmsg;
+
   if(pos[0]*pos[0]+pos[1]*pos[1]>0.0){
     //    push back the SimTHit for this TrackerHit
 
@@ -1291,7 +1293,7 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
     _NRecTPCHits++;
   }
 
-  debug() << "==============" << endmsg;
+
 #ifdef DIGIPLOTS
 //  edm4hep::SimTrackerHit* theSimHit = _tpcHitMap[seed_hit];
 //  double rSimSqrd = theSimHit->getPosition()[0]*theSimHit->getPosition()[0] + theSimHit->getPosition()[1]*theSimHit->getPosition()[1];
@@ -1333,7 +1335,7 @@ void TPCDigiAlg::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge){
 
   unsigned number_of_hits_to_merge = hitsToMerge->size();
 
-
+  debug() << "number_of_hits_to_merge = " << number_of_hits_to_merge << endmsg;
   for(unsigned int ihitCluster = 0; ihitCluster < number_of_hits_to_merge; ++ihitCluster){
 
     sumZ += hitsToMerge->at(ihitCluster)->getZ();
@@ -1345,6 +1347,7 @@ void TPCDigiAlg::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge){
     if (_use_raw_hits_to_store_simhit_pointer) {
       trkHit.addToRawHits(_tpcHitMap[hitsToMerge->at(ihitCluster)].getObjectID());
     }
+    debug() << "raw hit: " << _tpcHitMap[hitsToMerge->at(ihitCluster)].getPosition() << endmsg;
 
     auto rel = _relCol->create();
     rel.setRec (trkHit);
@@ -1384,7 +1387,7 @@ void TPCDigiAlg::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge){
   if( fabs(point.z()) > gearTPC.getMaxDriftLength() ) point.setZ( (fabs(point.z()) / point.z() ) * gearTPC.getMaxDriftLength() );
 
   double pos[3] = {point.x(),point.y(),point.z()};
-
+  debug() << "to hit: " << pos[0] << "," << pos[1] << "," << pos[2] << endmsg;
   //---------------------------------------------------------------------------------
   trkHit.setPosition(pos);
   trkHit.setEDep(sumEDep);

@@ -46,7 +46,7 @@
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/TrackCollection.h"
 // #include "edm4hep/TrackerHitPlane.h"
-
+#include <TStopwatch.h>
 
 using namespace edm4hep ;
 using namespace MarlinTrk ;
@@ -227,6 +227,23 @@ StatusCode ClupatraAlg::initialize() {
         //tree->Branch("omega", &omega, "omega/D");
         //tree->Branch("totalCandidates", &totalCandidates, "totalCandidates/I");
         //tree->Branch("eventNumber", &_nEvt, "eventNumber/I");
+	if(_DumpTime){
+	  NTuplePtr nt1(ntupleSvc(), "MyTuples/Time"+name());
+	  if ( !nt1 ) {
+	    m_tuple = ntupleSvc()->book("MyTuples/Time"+name(),CLID_ColumnWiseTuple,"Tracking time");
+	    if ( 0 != m_tuple ) {
+	      m_tuple->addItem ("timeTotal", m_timeTotal ).ignore();
+	      m_tuple->addItem ("timeKalman", m_timeKalman ).ignore();
+	    }
+	    else {
+	      fatal() << "Cannot book MyTuples/Time"+name() <<endmsg;
+	      return StatusCode::FAILURE;
+	    }
+	  }
+	  else{
+	    m_tuple = nt1;
+	  }
+	}
 
 	return GaudiAlgorithm::initialize();
 
@@ -237,7 +254,7 @@ StatusCode ClupatraAlg::execute() {
 
 
   info() << "Clupatra Algorithm started" << endmsg;
-
+  auto stopwatch = TStopwatch();
 	//  clock_t start =  clock() ;
 	Timer timer ;
 	unsigned t_init       = timer.registerTimer(" initialization      " ) ;
@@ -1263,6 +1280,11 @@ StatusCode ClupatraAlg::execute() {
         for (auto t : tsCol_tmp) {
             delete t;
         }
+
+	if(m_tuple){
+	  m_timeTotal = stopwatch.RealTime()*1000;
+	  m_tuple->write();
+	}
 
 	_nEvt++ ;
 
