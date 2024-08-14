@@ -24,6 +24,8 @@
 #include "TrackSystemSvc/IMarlinTrack.h"
 #include "Tracking/ITrackFitterTool.h"
 
+#include "GaudiKernel/NTuple.h"
+
 namespace MarlinTrk{
   class IMarlinTrkSystem ;
 }
@@ -141,7 +143,7 @@ class ClupatraAlg : public GaudiAlgorithm {
   Gaudi::Property<bool> _ElossOn{this, "EnergyLossOn", true};
   Gaudi::Property<bool> _SmoothOn{this, "SmoothOn", false};
   Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest010"};
-
+  Gaudi::Property<bool> _DumpTime{this, "DumpTime", false};
 
   DataHandle<edm4hep::TrackerHitCollection> _TPCHitCollectionHandle{"TPCTrackerHits", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackerHitCollection> _SITHitCollectionHandle{"SIDTrackerHits", Gaudi::DataHandle::Reader, this};
@@ -165,6 +167,9 @@ class ClupatraAlg : public GaudiAlgorithm {
   double pt;
   int totalCandidates;
 
+  NTuple::Tuple*       m_tuple = nullptr;
+  NTuple::Item<float>  m_timeTotal;
+  NTuple::Item<float>  m_timeKalman;
 //   NNClusterer* _clusterer ;
 
 } ;
