@@ -61,6 +61,8 @@ private:
             Gaudi::DataHandle::Writer, this};
     DataHandle<plcio::SimTrackerHitCollection> m_SETCol{"SETCollection", 
             Gaudi::DataHandle::Writer, this};
+    DataHandle<plcio::SimTrackerHitCollection> m_OTKBarrelCol{"OTKBarrelCollection",
+            Gaudi::DataHandle::Writer, this};
 
 };
 

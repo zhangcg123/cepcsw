@@ -72,6 +72,8 @@ private:
             Gaudi::DataHandle::Writer, this};
     DataHandle<edm4hep::SimTrackerHitCollection> m_SETCol{"SETCollection", 
             Gaudi::DataHandle::Writer, this};
+    DataHandle<edm4hep::SimTrackerHitCollection> m_OTKBarrelCol{"OTKBarrelCollection",
+            Gaudi::DataHandle::Writer, this};
 
     // Ecal
     DataHandle<edm4hep::SimCalorimeterHitCollection> m_EcalBarrelCol{"EcalBarrelCollection", 
