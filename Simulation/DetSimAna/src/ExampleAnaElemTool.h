@@ -63,6 +63,8 @@ private:
             Gaudi::DataHandle::Writer, this};
     DataHandle<plcio::SimTrackerHitCollection> m_OTKBarrelCol{"OTKBarrelCollection",
             Gaudi::DataHandle::Writer, this};
+    DataHandle<edm4hep::SimTrackerHitCollection> m_OTKEndCapCol{"OTKEndCapCollection",
+            Gaudi::DataHandle::Writer, this};
 
 };
 

@@ -1,0 +1,96 @@
+<lccdd>
+    <info name="OTKEndCap_v01_01"
+          title="CepC OTKEndCap"
+          author="D.Yu, "
+          url="http://cepc.ihep.ac.cn"
+          contact="yudian2002@sjtu.edu.cn"
+          status="developing"
+          version="v01">
+        <!-- OTKEndCap stands for outer tracker endcap, OTK_EndCap -->
+    </info>
+    <define>
+        <constant name="OTKEndCap_total_sections" value="10" />
+        <constant name="OTKEndCap_r0" value="400*mm" />
+        <constant name="OTKEndCap_r1" value="540*mm" />
+        <constant name="OTKEndCap_r2" value="680*mm" />
+        <constant name="OTKEndCap_r3" value="820*mm" />
+        <constant name="OTKEndCap_r4" value="960*mm" />
+        <constant name="OTKEndCap_r5" value="1100*mm" />
+        <constant name="OTKEndCap_r6" value="1240*mm" />
+        <constant name="OTKEndCap_r7" value="1380*mm" />
+        <constant name="OTKEndCap_r8" value="1520*mm" />
+        <constant name="OTKEndCap_r9" value="1660*mm" />
+        <constant name="OTKEndCap_r10" value="1800*mm" />
+        <constant name="OTKEndCap_inner_radius" value="OTKEndCap_r0" />
+        <constant name="OTKEndCap_outer_radius" value="OTKEndCap_r10" />
+        <constant name="OTKEndCap_half_length" value="2900*mm" />
+        <constant name="OTKEndCap_piece_deg" value="8" /><!-- variable OTKEndCap_piece_deg needs no dimension -->
+        <constant name="OTKEndCap_piece_num" value="24" />
+        <constant name="OTKEndCap_asic_num_0" value="5" />
+        <constant name="OTKEndCap_asic_num_1" value="7" />
+        <constant name="OTKEndCap_asic_num_2" value="9" />
+        <constant name="OTKEndCap_asic_num_3" value="11" />
+        <constant name="OTKEndCap_asic_num_4" value="13" />
+        <constant name="OTKEndCap_asic_num_5" value="15" />
+        <constant name="OTKEndCap_asic_num_6" value="17" />
+        <constant name="OTKEndCap_asic_num_7" value="19" />
+        <constant name="OTKEndCap_asic_num_8" value="21" />
+        <constant name="OTKEndCap_asic_num_9" value="23" />
+        <constant name="OTKEndCap_module_num_0" value="1" />
+        <constant name="OTKEndCap_module_num_1" value="1" />
+        <constant name="OTKEndCap_module_num_2" value="1" />
+        <constant name="OTKEndCap_module_num_3" value="1" />
+        <constant name="OTKEndCap_module_num_4" value="1" />
+        <constant name="OTKEndCap_module_num_5" value="2" />
+        <constant name="OTKEndCap_module_num_6" value="2" />
+        <constant name="OTKEndCap_module_num_7" value="2" />
+        <constant name="OTKEndCap_module_num_8" value="2" />
+        <constant name="OTKEndCap_module_num_9" value="2" />
+        <constant name="OTKEndCap_layer_thickness" value="25*mm" />
+        <constant name="OTKEndCap_layer0_zpos" value="2850*mm" />
+        <constant name="OTKEndCap_layer1_zpos" value="2875*mm" />
+        <constant name="OTKEndCap_support_thickness" value="1*mm" />
+        <constant name="OTKEndCap_sensor_thickness" value="500*um" />
+        <constant name="OTKEndCap_sensor_gap" value="0.1*mm" />
+        <constant name="OTKEndCap_sensor_dead_width" value="0.001*mm" /><!-- do not set it to 0 -->
+        <constant name="OTKEndCap_pcb_thickness" value="500*um" />
+        <constant name="OTKEndCap_pcb_rlength" value="10*mm" />
+        <constant name="OTKEndCap_pcb_rgap" value="10*mm" />
+        <constant name="OTKEndCap_asic_thickness" value="500*um" />
+        <constant name="OTKEndCap_asic_width" value="6*mm" />
+        <constant name="OTKEndCap_asic_rlength" value="6*mm" />
+        <constant name="OTKEndCap_asic_rgap" value="12*mm" />
+
+    </define>
+
+    <detectors>
+        <detector id="DetID_OTKEndCap" name="OTKEndCap" type="SiTracker_otkendcap_v01" vis="OTKEndCapVis" readout="OTKEndCapCollection" insideTrackingVolume="true">
+            <envelope>
+                <shape type="BooleanShape" operation="Union" material="Air" >
+                    <shape type="Tube" rmin="OTKEndCap_inner_radius" rmax="OTKEndCap_outer_radius" dz="OTKEndCap_half_length" />
+                </shape>
+            </envelope>
+            <display support="WhiteVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis"
+                     pcb="GreenVis" asic="YellowVis"/>
+            <type_flags type="DetType_TRACKER + DetType_ENDCAP + DetType_STRIP "/>
+            <global sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV"/>
+            <support thickness="OTKEndCap_support_thickness" inner_radius="OTKEndCap_inner_radius" outer_radius="OTKEndCap_outer_radius" mat="CarbonFiber"/>
+            <layer id="0" thickness="OTKEndCap_layer_thickness" zpos="OTKEndCap_layer0_zpos">
+                <sensor gap="OTKEndCap_sensor_gap" thickness="OTKEndCap_sensor_thickness" dead_width="OTKEndCap_sensor_dead_width" mat="G4_Si"/>
+                <pcb thickness="OTKEndCap_pcb_thickness" rlength="OTKEndCap_pcb_rlength" rgap="OTKEndCap_pcb_rgap" mat="epoxy"/>
+                <asic thickness="OTKEndCap_asic_thickness" width="OTKEndCap_asic_width" rlength="OTKEndCap_asic_rlength" rgap="OTKEndCap_asic_rgap" mat="G4_Si"/>
+            </layer>
+            <layer id="1" thickness="OTKEndCap_layer_thickness" zpos="OTKEndCap_layer1_zpos">
+                <sensor gap="OTKEndCap_sensor_gap" thickness="OTKEndCap_sensor_thickness" dead_width="OTKEndCap_sensor_dead_width" mat="G4_Si"/>
+                <pcb thickness="OTKEndCap_pcb_thickness" rlength="OTKEndCap_pcb_rlength" rgap="OTKEndCap_pcb_rgap" mat="epoxy"/>
+                <asic thickness="OTKEndCap_asic_thickness" width="OTKEndCap_asic_width" rlength="OTKEndCap_asic_rlength" rgap="OTKEndCap_asic_rgap" mat="G4_Si"/>
+            </layer>
+        </detector>
+    </detectors>
+
+    <readouts>
+        <readout name="OTKEndCapCollection">
+            <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8</id>
+        </readout>
+    </readouts>
+</lccdd>
