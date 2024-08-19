@@ -37,6 +37,7 @@ Contents
    :caption: Generator
 
    generator/overview.md
+   generator/gentools.md
 
 .. toctree::
    :maxdepth: 2
