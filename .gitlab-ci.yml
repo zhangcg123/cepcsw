@@ -62,3 +62,16 @@ build:lcg:el7:
       - TDR_o1_v02.tgeo.root
     reports:
       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
+
+##############################################################################
+# Build the docs
+##############################################################################
+build:docs:
+  stage: build 
+  tags:
+    - centos7
+  script:
+    - bash ./.build.ci.sh docs
+  artifacts:
+    paths:
+      - docs/build/html/
