@@ -23,6 +23,15 @@ from Configurables import k4DataSvc
 podioevent = k4DataSvc("EventDataSvc", input="CaloDigi_TDR_o1_v01_Pi-_10GeV.root")
 ##########################################
 
+########## CEPCSWData ################# 
+cepcswdatatop ="/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
+#######################################
+
+########## CrystalEcalEnergyCorrectionSvc ########
+from Configurables import CrystalEcalEnergyCorrectionSvc
+crystalecalcorr = CrystalEcalEnergyCorrectionSvc("CrystalEcalEnergyCorrectionSvc")
+crystalecalcorr.CorrectionFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Service/CrystalEcalSvc/data/CrackRegionEnergyCorrection.root")
+##################################################
 
 ########## Podio Input ###################
 from Configurables import PodioInput
