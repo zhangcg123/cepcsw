@@ -53,7 +53,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     //*****************************************************************//
 
     //fetch the geometry parameters
-    const double inner_radius   = theDetector.constant<double>("OTKEndCapBarrel_inner_radius");
+    const double inner_radius   = theDetector.constant<double>("OTKEndCap_inner_radius");
     const double outer_radius   = theDetector.constant<double>("OTKEndCap_outer_radius");
     const double total_length   = theDetector.constant<double>("OTKEndCap_half_length")*2.;
     const int total_sections    = theDetector.constant<int>("OTKEndCap_total_sections");
@@ -455,7 +455,10 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 
             //create the meassurement surface
             // int sensor_num = std::accumulate(module_num_v.begin(), module_num_v.end(), 0);
-            int sensor_num = 15;
+            int sensor_num = 0;
+            for(int iring=0;iring<10;iring++){
+                sensor_num = sensor_num + module_num[iring];
+            }
             for(int isensor=0;isensor<sensor_num;++isensor){
                 std::stringstream sensor_str;
                 sensor_str << piece_enum.str() << "_" << isensor;
