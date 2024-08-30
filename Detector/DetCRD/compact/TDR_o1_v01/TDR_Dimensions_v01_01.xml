@@ -323,6 +323,9 @@
       <limit name="ekin_min" particles="*" value="10" unit="MeV" />
       <limit name="range_min" particles="*" value="10.0" unit="mm" />
     </limitset>
+    <limitset name="otk_limits">
+      <limit name="step_length_max" particles="*" value="50" unit="um" />
+    </limitset>
   </limits>
 
   <regions>

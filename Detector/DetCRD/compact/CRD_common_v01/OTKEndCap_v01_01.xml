@@ -24,7 +24,9 @@
         <constant name="OTKEndCap_inner_radius" value="OTKEndCap_r0" />
         <constant name="OTKEndCap_outer_radius" value="OTKEndCap_r10" />
         <constant name="OTKEndCap_half_length" value="2900*mm" />
-        <constant name="OTKEndCap_piece_deg" value="8" /><!-- variable OTKEndCap_piece_deg needs no dimension -->
+        <constant name="OTKEndCap_piece_deg" value="7.5" /><!-- variable OTKEndCap_piece_deg needs no dimension -->
+        <constant name="OTKEndCap_dead_deg" value="0.5" />
+        <constant name="OTKEndCap_dead_thickness" value="1*mm" />
         <constant name="OTKEndCap_piece_num" value="24" />
         <constant name="OTKEndCap_asic_num_0" value="5" />
         <constant name="OTKEndCap_asic_num_1" value="7" />
@@ -51,8 +53,8 @@
         <constant name="OTKEndCap_layer1_zpos" value="2875*mm" />
         <constant name="OTKEndCap_support_thickness" value="1*mm" />
         <constant name="OTKEndCap_sensor_thickness" value="500*um" />
-        <constant name="OTKEndCap_sensor_gap" value="0.1*mm" />
-        <constant name="OTKEndCap_sensor_dead_width" value="0.001*mm" /><!-- do not set it to 0 -->
+        <constant name="OTKEndCap_sensor_gap" value="0.5*mm" />
+        <constant name="OTKEndCap_sensor_dead_width" value="0.5*mm" /><!-- do not set it to 0 -->
         <constant name="OTKEndCap_pcb_thickness" value="500*um" />
         <constant name="OTKEndCap_pcb_rlength" value="10*mm" />
         <constant name="OTKEndCap_pcb_rgap" value="10*mm" />
@@ -64,17 +66,17 @@
     </define>
 
     <detectors>
-        <detector id="DetID_OTKEndCap" name="OTKEndCap" type="SiTracker_otkendcap_v01" vis="OTKEndCapVis" readout="OTKEndCapCollection" insideTrackingVolume="true">
+        <detector id="DetID_OTKEndCap" limits="otk_limits" name="OTKEndCap" type="SiTracker_otkendcap_v01" vis="OTKEndCapVis" readout="OTKEndCapCollection" insideTrackingVolume="true">
             <envelope>
                 <shape type="BooleanShape" operation="Union" material="Air" >
                     <shape type="Tube" rmin="OTKEndCap_inner_radius" rmax="OTKEndCap_outer_radius" dz="OTKEndCap_half_length" />
                 </shape>
             </envelope>
             <display support="WhiteVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis"
-                     pcb="GreenVis" asic="YellowVis"/>
+                     pcb="GreenVis" asic="YellowVis" dead="BlackVis"/>
             <type_flags type="DetType_TRACKER + DetType_ENDCAP + DetType_STRIP "/>
             <global sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV"/>
-            <support thickness="OTKEndCap_support_thickness" inner_radius="OTKEndCap_inner_radius" outer_radius="OTKEndCap_outer_radius" mat="CarbonFiber"/>
+            <support thickness="OTKEndCap_support_thickness" inner_radius="OTKEndCap_inner_radius" outer_radius="OTKEndCap_outer_radius" mat="CarbonFiber" dead_mat="epoxy"/>
             <layer id="0" thickness="OTKEndCap_layer_thickness" zpos="OTKEndCap_layer0_zpos">
                 <sensor gap="OTKEndCap_sensor_gap" thickness="OTKEndCap_sensor_thickness" dead_width="OTKEndCap_sensor_dead_width" mat="G4_Si"/>
                 <pcb thickness="OTKEndCap_pcb_thickness" rlength="OTKEndCap_pcb_rlength" rgap="OTKEndCap_pcb_rgap" mat="epoxy"/>

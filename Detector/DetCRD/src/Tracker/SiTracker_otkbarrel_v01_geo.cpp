@@ -343,7 +343,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
                 volSurfaceList(sensorDE)->push_back(surfSens);
                 // std::cout << "\t" << sensor_str.str() << " done." << endl;
             }
-            Transform3D tr (RotationZYX(ladder_dphi*(i+rot),0.,0.),Position(ladder_radius*cos(ladder_phi0+ladder_dphi*(i+rot)), ladder_radius*sin(ladder_phi0+ladder_dphi*(i+rot)), 0.));
+            Transform3D tr (RotationZYX(ladder_dphi*(i+rot)+dd4hep::twopi/2,0.,0.),Position(ladder_radius*cos(ladder_phi0+ladder_dphi*(i+rot)), ladder_radius*sin(ladder_phi0+ladder_dphi*(i+rot)), 0.));
             pv = layer_assembly.placeVolume(LadderLogical,tr);
             pv.addPhysVolID("module", i ) ;
             ladderDE.setPlacement(pv);

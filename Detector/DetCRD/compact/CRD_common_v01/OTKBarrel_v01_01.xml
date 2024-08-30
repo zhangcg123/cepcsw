@@ -20,10 +20,11 @@
     <constant name="OTKBarrel_flex_width" value="15*mm" />
     <constant name="OTKBarrel_sensor_length" value="140*mm" />
     <constant name="OTKBarrel_sensor_thickness" value="500*um" />
-    <constant name="OTKBarrel_sensor_active_width" value="132*mm" />
-    <constant name="OTKBarrel_sensor_dead_width" value="28*mm" />
+    <constant name="OTKBarrel_sensor_active_width" value="159.5*mm" />
+    <constant name="OTKBarrel_sensor_dead_width" value="0.5*mm" />
     <constant name="OTKBarrel_pcb_thickness" value="500*um" />
-    <constant name="OTKBarrel_pcb_width" value="130*mm" />
+    <constant name="OTKBarrel_pcb_width" value="28*mm" />
+    <constant name="OTKBarrel_port_pcb_width" value="28*mm" />
     <constant name="OTKBarrel_pcb_length" value="10*mm" />
     <constant name="OTKBarrel_pcb_zgap" value="1*mm" />
     <constant name="OTKBarrel_asic_thickness" value="500*um" />
@@ -34,7 +35,7 @@
   </define>
 
   <detectors>
-    <detector id="DetID_OTKBarrel" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true">
+    <detector id="DetID_OTKBarrel" limits="otk_limits" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true">
       <envelope>
       <shape type="BooleanShape" operation="Union" material="Air" >
         <shape type="Tube" rmin="OTKBarrel_inner_radius" rmax="OTKBarrel_outer_radius" dz="OTKBarrel_half_length" />
@@ -44,7 +45,7 @@
       <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_STRIP "/>
 
       <global sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV" ladder_offset="0*mm"/>
-      <display ladder="SeeThrough" support="VXDSupportVis" flex="VXDFlexVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis"
+      <display ladder="SeeThrough" support="WhiteVis" flex="VXDFlexVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis"
       pcb="GreenVis" asic="yellowVis"/>
 
       <layer layer_id="0" ladder_radius="OTKBarrel1_inner_radius" n_ladders="45" ladder_offset="0*mm" ladder_thickness="OTKBarrel_ladder_total_thickness"
@@ -59,7 +60,7 @@
           </flex>
           <sensor n_sensors="42" gap="0*mm" thickness="OTKBarrel_sensor_thickness" length="OTKBarrel_sensor_length" active_width="OTKBarrel_sensor_active_width" sensor_mat="G4_Si"
           dead_width="OTKBarrel_sensor_dead_width"/>
-          <other pcb_thickness="OTKBarrel_pcb_thickness" pcb_width="OTKBarrel_pcb_width" pcb_length="OTKBarrel_pcb_length" pcb_zgap="OTKBarrel_pcb_zgap" pcb_mat="epoxy"
+          <other pcb_thickness="OTKBarrel_pcb_thickness" pcb_width="OTKBarrel_pcb_width" pcb_length="OTKBarrel_pcb_length" pcb_zgap="OTKBarrel_pcb_zgap"  port_pcb_width="OTKBarrel_port_pcb_width" pcb_mat="epoxy"
           asic_thickness="OTKBarrel_asic_thickness" asic_width="OTKBarrel_asic_width" asic_length="OTKBarrel_asic_length" asic_zgap="OTKBarrel_asic_zgap" asic_mat="G4_Si"/>
         </ladder>
       </layer>
@@ -75,7 +76,7 @@
           </flex>
           <sensor n_sensors="42" gap="0*mm" thickness="OTKBarrel_sensor_thickness" length="OTKBarrel_sensor_length" active_width="OTKBarrel_sensor_active_width" sensor_mat="G4_Si"
           dead_width="OTKBarrel_sensor_dead_width"/>
-          <other pcb_thickness="OTKBarrel_pcb_thickness" pcb_width="OTKBarrel_pcb_width" pcb_length="OTKBarrel_pcb_length" pcb_zgap="OTKBarrel_pcb_zgap" pcb_mat="epoxy"
+          <other pcb_thickness="OTKBarrel_pcb_thickness" pcb_width="OTKBarrel_pcb_width" pcb_length="OTKBarrel_pcb_length" pcb_zgap="OTKBarrel_pcb_zgap"  port_pcb_width="OTKBarrel_port_pcb_width" pcb_mat="epoxy"
           asic_thickness="OTKBarrel_asic_thickness" asic_width="OTKBarrel_asic_width" asic_length="OTKBarrel_asic_length" asic_zgap="OTKBarrel_asic_zgap" asic_mat="G4_Si"/>
         </ladder>
       </layer>
