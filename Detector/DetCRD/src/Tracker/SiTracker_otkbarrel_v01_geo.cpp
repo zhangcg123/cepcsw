@@ -165,6 +165,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         double pcb_width                   = x_other.attr<double>(_Unicode(pcb_width));
         double pcb_length                  = x_other.attr<double>(_Unicode(pcb_length));
         double pcb_zgap                    = x_other.attr<double>(_Unicode(pcb_zgap));
+        double port_pcb_width              = x_other.attr<double>(_Unicode(port_pcb_width));
         double asic_thickness              = x_other.attr<double>(_Unicode(asic_thickness));
         double asic_width                  = x_other.attr<double>(_Unicode(asic_width));
         double asic_length                 = x_other.attr<double>(_Unicode(asic_length));
@@ -176,6 +177,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         std::cout << "pcb_width: " << pcb_width/mm << " mm" << endl;
         std::cout << "pcb_length: " << pcb_length/mm << " mm" << endl;
         std::cout << "pcb_zgap: " << pcb_zgap/mm << " mm" << endl;
+        std::cout << "port_pcb_width: " << port_pcb_width/mm << " mm" << endl;
         std::cout << "asic_thickness: " << asic_thickness/mm << " mm" << endl;    std::cout << "asic_width: " << asic_width/mm << " mm" << endl;
         std::cout << "asic_length: " << asic_length/mm << " mm" << endl;
         std::cout << "asic_zgap: " << asic_zgap/mm << " mm" << endl;
@@ -256,6 +258,10 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         Volume PcbLogical(name + dd4hep::_toString( layer_id, "_PcbLogical_%02d"), PcbSolid, pcb_mat);
         PcbLogical.setVisAttributes(theDetector.visAttributes(pcbVis));
 
+        Box PortPcbSolid(pcb_thickness / 2.0, port_pcb_width / 2.0, sensor_length / 2.0);
+        Volume PortPcbLogical(name + dd4hep::_toString( layer_id, "_PortPcbLogical_%02d"), PortPcbSolid, pcb_mat);
+        PortPcbLogical.setVisAttributes(theDetector.visAttributes(pcbVis));
+
         //create asic sensor logical volume
         Box AsicSolid(asic_thickness / 2.0, asic_width / 2.0, asic_length / 2.0);
         Volume AsicLogical(name + dd4hep::_toString( layer_id, "_AsicLogical_%02d"), AsicSolid, asic_mat);
@@ -267,12 +273,14 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             double sensor_total_z = n_sensors_per_side*sensor_length + dead_gap*n_sensors_per_side;
             double sensor_xpos = -(pcb_thickness+asic_thickness)/2.0;
             double sensor_ypos_active = (sensor_total_width-sensor_active_width)/2.0;
-            double sensor_ypos_dead = (-sensor_total_width+sensor_dead_width)/ 2.0;
+            double sensor_ypos_dead = (sensor_total_width-sensor_active_width*2-sensor_dead_width)/ 2.0;
             double sensor_zpos = -sensor_total_z/2.0 + (sensor_length + dead_gap)/2.0 + isensor*(sensor_length + dead_gap);
             double pcb_xpos = (sensor_thickness-asic_thickness)/2.0;
-            double pcb_ypos = sensor_ypos_active;
+            double pcb_ypos =  -(sensor_total_width-port_pcb_width*2-pcb_width)/2.0;
             double pcb_zpos_0 = sensor_zpos-(sensor_length/2.0-pcb_zgap-pcb_length/2.0);
             double pcb_zpos_1 = sensor_zpos+(sensor_length/2.0-pcb_zgap-pcb_length/2.0);
+            double port_pcb_ypos = -(sensor_total_width-port_pcb_width)/2.0;
+            double port_pcb_zpos = sensor_zpos;
             double asic_xpos = (sensor_thickness+pcb_thickness)/2.0;
             double asic_ypos = pcb_ypos;
             double asic_zpos_0 = sensor_zpos-(sensor_length/2.0-asic_zgap-asic_length/2.0);
@@ -283,6 +291,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             pv = SensorEnvelopeLogical.placeVolume(SensorDeadLogical, Position(sensor_xpos,sensor_ypos_dead,sensor_zpos));
             pv = SensorEnvelopeLogical.placeVolume(PcbLogical, Position(pcb_xpos,pcb_ypos,pcb_zpos_0));
             pv = SensorEnvelopeLogical.placeVolume(PcbLogical, Position(pcb_xpos,pcb_ypos,pcb_zpos_1));
+            pv = SensorEnvelopeLogical.placeVolume(PortPcbLogical, Position(pcb_xpos,port_pcb_ypos,port_pcb_zpos));
             pv = SensorEnvelopeLogical.placeVolume(AsicLogical, Position(asic_xpos,asic_ypos,asic_zpos_0));
             pv = SensorEnvelopeLogical.placeVolume(AsicLogical, Position(asic_xpos,asic_ypos,asic_zpos_1));
         }

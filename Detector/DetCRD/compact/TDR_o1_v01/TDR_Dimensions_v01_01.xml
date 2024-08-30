@@ -118,9 +118,9 @@
     <!-- Parameters of time of flight tracker -->
     <constant name="OTKBarrel_inner_radius" value="1800*mm"/>
     <constant name="OTKBarrel_outer_radius" value="1860*mm"/>
-    <constant name="OTKBarrel_half_length" value="TPC_half_length"/>
-    <constant name="OTKBarrelLayer1_half_length" value="TPC_half_length"/>
-    <constant name="OTKBarrelLayer2_half_length" value="TPC_half_length"/>
+    <constant name="OTKBarrel_half_length" value="2940*mm"/>
+    <constant name="OTKBarrelLayer1_half_length" value="OTKBarrel_half_length"/>
+    <constant name="OTKBarrelLayer2_half_length" value="OTKBarrel_half_length"/>
     <constant name="OTKBarrel1_inner_radius" value="1825*mm"/>
     <constant name="OTKBarrel2_inner_radius" value="1845*mm"/>
 
