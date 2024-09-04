@@ -35,7 +35,7 @@
   <!--include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v01_01.xml"/-->
   <!--include ref="../CRD_common_v01/Ecal_Crystal_Endcap_v01_01.xml"/-->
   <include ref="../CRD_common_v01/Muon_Endcap_v01_01.xml"/>
-  <include ref="../CRD_common_v01/Muon_Barrel_v01_01.xml"/>
+  <include ref="../CRD_common_v01/Muon_Barrel_v01_02.xml"/>
  
   <fields>
     <field name="InnerSolenoid" type="solenoid"

@@ -206,7 +206,7 @@
     <!--strip & fiber dimensions-->
     <constant name="Muon_strip_x" value="4*cm"/>
     <constant name="Muon_strip_y" value="1*cm"/>
-    <constant name="Muon_strip_z" value="4*m"/>
+    <constant name="Muon_strip_z" value="4.4*m"/>
     <constant name="Muon_strip_surf" value="1*mm"/>
 
     <constant name="Muon_strip_surface_x" value="Muon_strip_x"/>
@@ -253,8 +253,8 @@
     <constant name="Muon_strip_cut2_posz" value="0"/>
 
     <!--standard scale-->
-    <constant name="Muon_standard_scale" value="105*cm"/>    
-    <constant name="Muon_Iron_gap_z" value="100*cm"/>
+    <constant name="Muon_standard_scale" value="124*cm"/>    
+    <constant name="Muon_total_length" value="8950*mm"/>
 
     <!--Muon Barrel>
     <constant name="Muon_barrel_barrel_num" value="2"/>

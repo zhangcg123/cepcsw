@@ -7,6 +7,7 @@
 //#include "UserTrackInformation.hh"
 #include "DD4hep/DD4hepUnits.h"
 
+
 MuonEndcapSensitiveDetector::MuonEndcapSensitiveDetector(const std::string& name,
 								 dd4hep::Detector& description)
   : DDG4SensitiveDetector(name, description),
@@ -24,31 +25,16 @@ void MuonEndcapSensitiveDetector::Initialize(G4HCofThisEvent* HCE){
 
 G4bool MuonEndcapSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory*){
   G4TouchableHandle touchPost = step->GetPostStepPoint()->GetTouchableHandle(); 
-  G4TouchableHandle touchPre  = step->GetPreStepPoint()->GetTouchableHandle();
-  auto currentTrack = step->GetTrack();
-  auto pname = currentTrack->GetParticleDefinition()->GetParticleName();
-  auto touchable = step->GetPreStepPoint()->GetTouchable();
-  auto physical = touchable->GetVolume();
-/*  if ( physical->GetName() == "surface" )
-  {
-      if ( pname == "opticalphoton" )
-      {
-        G4double random = G4UniformRand();
-        if(random < 0.1)
-        {
-          currentTrack->SetTrackStatus(fStopAndKill);
-        }
-      }
-  }*/ 
+  G4TouchableHandle touchPre  = step->GetPreStepPoint()->GetTouchableHandle(); 
   dd4hep::sim::Geant4StepHandler h(step);
-  if (fabs(h.trackDef()->GetPDGCharge()) < 0.01) return true;
+  //if (fabs(h.trackDef()->GetPDGCharge()) < 0.01) return true;
 
   dd4hep::Position prePos    = h.prePos();
   dd4hep::Position postPos   = h.postPos();
   dd4hep::Position direction = postPos - prePos;
   dd4hep::Position position  = mean_direction(prePos,postPos);
   double   hit_len   = direction.R();
-  if (hit_len < 1E-9) return true;
+  //if (hit_len < 1E-9) return true;
   if (hit_len > 0) {
     double new_len = mean_length(h.preMom(),h.postMom())/hit_len;
     direction *= new_len/hit_len;
@@ -67,10 +53,6 @@ G4bool MuonEndcapSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory
     hit->momentum = direction;
     hit->length   = hit_len;
     m_hc->insert(hit);
-    if ( physical->GetName() == "SiPM" )
-    {
-      currentTrack->SetTrackStatus(fStopAndKill);
-    }
     return true;
   }
   throw std::runtime_error("new() failed: Cannot allocate hit object");
