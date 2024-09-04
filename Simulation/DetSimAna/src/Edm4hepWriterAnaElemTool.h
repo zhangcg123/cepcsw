@@ -121,15 +121,15 @@ private:
 	Gaudi::DataHandle::Writer, this};
 
     // Muon
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_MuonBarrelCol{"MuonBarrelCollection",
+    DataHandle<edm4hep::SimTrackerHitCollection> m_MuonBarrelCol{"MuonBarrelCollection",
 	Gaudi::DataHandle::Writer, this};
     DataHandle<edm4hep::CaloHitContributionCollection> m_MuonBarrelContributionCol{
       "MuonBarrelContributionCollection",
 	Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_MuonEndcapsCol{"MuonEndcapsCollection",
+    DataHandle<edm4hep::SimTrackerHitCollection> m_MuonEndcapCol{"MuonEndcapCollection",
 	Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_MuonEndcapsContributionCol{
-      "MuonEndcapsContributionCollection",
+    DataHandle<edm4hep::CaloHitContributionCollection> m_MuonEndcapContributionCol{
+      "MuonEndcapContributionCollection",
 	Gaudi::DataHandle::Writer, this};
 
     // Drift Chamber

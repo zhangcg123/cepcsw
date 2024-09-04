@@ -137,8 +137,8 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
 
     auto muonbarrelcol            = m_MuonBarrelCol.createAndPut();
     auto muonbarrelcontribcols    = m_MuonBarrelContributionCol.createAndPut();
-    auto muonendcapscol           = m_MuonEndcapsCol.createAndPut();
-    auto muonendcapscontribcols   = m_MuonEndcapsContributionCol.createAndPut();
+    auto muonendcapcol           = m_MuonEndcapCol.createAndPut();
+    auto muonendcapcontribcols   = m_MuonEndcapContributionCol.createAndPut();
 
     auto driftchamberhitscol = m_DriftChamberHitsCol.createAndPut();
 
@@ -221,11 +221,11 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
 	} else if (collect->GetName() == "COILCollection") {
 	    tracker_col_ptr = coilcols;
 	} else if (collect->GetName() == "MuonBarrelCollection") {
-	    calo_col_ptr = muonbarrelcol;
+	    tracker_col_ptr = muonbarrelcol;
 	    calo_contrib_col_ptr = muonbarrelcontribcols;
-        } else if (collect->GetName() == "MuonEndcapsCollection") {
-	    calo_col_ptr = muonendcapscol;
-	    calo_contrib_col_ptr = muonendcapscontribcols;
+        } else if (collect->GetName() == "MuonEndcapCollection") {
+	    tracker_col_ptr = muonendcapcol;
+	    calo_contrib_col_ptr = muonendcapcontribcols;
         } else if (collect->GetName() == "DriftChamberHitsCollection") {
             tracker_col_ptr = driftchamberhitscol;
         } else {

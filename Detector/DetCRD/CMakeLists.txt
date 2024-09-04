@@ -15,7 +15,7 @@ gaudi_add_module(DetCRD
                          src/Other/Lumical_v01_geo_beampipe.cpp
                          src/Other/CRDBeamPipe_v01_geo.cpp
                          src/Muon/Muon_Barrel_v01_01.cpp
-                         src/Muon/Muon_Endcap_v01_01.cpp
+                         src/Muon/Muon_Endcap_v01_02.cpp
                          src/Tracker/SiTrackerSkewRing_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v01_geo.cpp
                          src/Tracker/TPC_Simple_o1_v01.cpp

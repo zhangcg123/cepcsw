@@ -2,32 +2,37 @@
 <lccdd>
  
   <info name="Muon_Endcap"
-	title="Test with Two Single Muon Endcaps"
+	title="Test with Two Single Muon Endcap"
 	author="Zibing Bai"
 	url="http://cepcgit.ihep.ac.cn"
 	status="development"
-	version="v01">
-    <comment>Test with Two Single Muon Endcaps</comment>        
+	version="v01_02">
+    <comment>Test with Two Single Muon Endcap</comment>        
   </info>
 
   <define>
     <!--Muon Endcap-->
     <constant name="Muon_endcap_part_num" value="4"/>
     <constant name="Muon_endcap_superlayer_num" value="6"/>
-    <constant name="Muon_endcap_iron_gap_num" value="Muon_endcap_superlayer_num+1"/>
     <constant name="Muon_endcap_layer_num" value="2"/>
-    <constant name="Muon_endcap_strip_num" value="146"/>
-    <constant name="Muon_endcap_strip_num_cut" value="13"/>
-    <constant name="Muon_endcap_endcap_rmin" value="52*cm"/>
-    <constant name="Muon_endcap_magnification" value="1.02"/>
+    <constant name="Muon_endcap_strip_num_1" value="72"/>
+    <constant name="Muon_endcap_strip_num_2" value="128"/>
+    <constant name="Muon_endcap_strip_num_cut_1" value="17"/>
+    <constant name="Muon_endcap_strip_num_cut_2" value="74"/>
+    <constant name="Muon_endcap_endcap_rmin" value="68*cm"/>
+    <constant name="Muon_endcap_length_cut_1" value="288*cm"/>
+    <constant name="Muon_endcap_length_cut_gap" value="296*cm"/>
+    <constant name="Muon_endcap_length_cut_2" value="512*cm"/>
+    <constant name="Muon_endcap_gap" value="5*cm"/>
 
-    <constant name="Muon_endcap_iron_gap" value="12.5*cm"/>
-    <constant name="Muon_endcap_endcap_z" value="Muon_endcap_iron_gap_num*Muon_endcap_iron_gap+2*Muon_endcap_superlayer_num*Muon_strip_y"/>
+    <constant name="Muon_endcap_iron_gap" value="14*cm"/>
+    <constant name="Muon_endcap_iron_init" value="-60*cm"/>
+    <constant name="Muon_endcap_endcap_z" value="Muon_standard_scale"/>
     <constant name="Muon_endcap_endcap_posy" value="0.5*Muon_total_length+0.5*Muon_endcap_endcap_z"/>
   </define>
 
   <detectors>
-    <detector id="202" name="Muon_Endcap_v01_01" type="Muon_Endcap_v01_01" readout="MuonEndcapCollection" vis="GrayVis" material="Iron">
+    <detector id="20211" name="MuonEndcap" type="Muon_Endcap_v01_02" readout="MuonEndcapCollection" vis="GrayVis" material="Iron">
       <material name="Iron"/>
       <position x="0" y="Muon_endcap_endcap_posy" z="0"/>
       <dimensions rmin="Muon_endcap_endcap_rmin" dz="0.5*Muon_endcap_endcap_z"/>
