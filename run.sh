@@ -56,9 +56,10 @@ function check-working-builddir() {
 }
 
 function run-job() {
-    local blddir=$(build-dir)
+    # local blddir=$(build-dir)
 
-    $blddir/run gaudirun.py $*
+    # $blddir/run gaudirun.py $*
+    gaudirun.py $*
 }
 
 ##############################################################################
