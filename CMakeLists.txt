@@ -33,6 +33,20 @@ if(NOT CMAKE_CXX_STANDARD MATCHES "17|20")
   message(FATAL_ERROR "Unsupported C++ standard: ${CMAKE_CXX_STANDARD}")
 endif()
 
+# Build type
+#   Use ``-DCMAKE_BUILD_TYPE=Debug`` when invoking CMake.
+#   By default, it is RelWithDebInfo since Sept 6th, 2024.
+if (NOT CMAKE_CONFIGURATION_TYPES)
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo
+      CACHE STRING "Choose the type of build, options are: None|Release|MinSizeRel|Debug|RelWithDebInfo" FORCE)
+  else()
+    set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}
+      CACHE STRING "Choose the type of build, options are: None|Release|MinSizeRel|Debug|RelWithDebInfo" FORCE)
+  endif()
+endif()
+
+
 list(PREPEND CMAKE_MODULE_PATH $ENV{PANDORAPFA}/cmakemodules)
 list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake") # (Find*.cmake)
 include(cmake/CEPCSWOptions.cmake)
