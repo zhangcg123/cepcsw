@@ -38,7 +38,7 @@ endif()
 #   By default, it is RelWithDebInfo since Sept 6th, 2024.
 if (NOT CMAKE_CONFIGURATION_TYPES)
   if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RelWithDebInfo
+    set(CMAKE_BUILD_TYPE Release
       CACHE STRING "Choose the type of build, options are: None|Release|MinSizeRel|Debug|RelWithDebInfo" FORCE)
   else()
     set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}

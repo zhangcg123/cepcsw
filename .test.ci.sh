@@ -43,4 +43,9 @@ echo "CEPCSW_BLDTOOL: ${CEPCSW_BLDTOOL}"
 
 source setup.sh
 
+# reconfigure if directory change
+pushd $(build-dir)
+cmake ..
+popd
+
 ctest --output-junit $(junit-output) --test-dir $(build-dir)

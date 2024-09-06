@@ -26,6 +26,7 @@ workflow:
 
 stages:
   - build
+  - test
 
 ##############################################################################
 # Template for Build and Test
@@ -34,14 +35,22 @@ stages:
 # the test job will be failed if it is executed on a different nodes.
 # Therefore, put the build script and test script together.
 
-.build_template:
-  stage: build
+.envvar_template:
   variables:
-    CEPCSW_LCG_RELEASE:
-    CEPCSW_LCG_PLATFORM:
-    CEPCSW_LCG_VERSION:
+    CEPCSW_LCG_RELEASE: LCG
+    CEPCSW_LCG_PLATFORM: x86_64-centos7-gcc11-opt
+    CEPCSW_LCG_VERSION: 103.0.2
+
+.build_template:
+  extends: .envvar_template
+  stage: build
   script:
     - bash ./.build.ci.sh
+
+.test_template:
+  extends: .envvar_template
+  stage: test
+  script:
     - bash ./.test.ci.sh
 
 ##############################################################################
@@ -49,19 +58,28 @@ stages:
 ##############################################################################
 build:lcg:el7:
   extends: .build_template
-  variables:
-    CEPCSW_LCG_RELEASE: LCG
-    CEPCSW_LCG_PLATFORM: x86_64-centos7-gcc11-opt
-    CEPCSW_LCG_VERSION: 103.0.2
   tags:
     - centos7
   artifacts:
     paths:
       - InstallArea
+      - build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}
+
+##############################################################################
+# Test CentOS 7 (LCG)
+##############################################################################
+test:lcg:el7:
+  extends: .test_template
+  tags:
+    - centos7
+  artifacts:
+    paths:
       - TDR_o1_v01.tgeo.root
       - TDR_o1_v02.tgeo.root
     reports:
       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
+  dependencies:
+    - build:lcg:el7
 
 ##############################################################################
 # Build the docs
