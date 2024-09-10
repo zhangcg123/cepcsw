@@ -35,7 +35,8 @@ G4bool GenericTrackerSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHis
   double   hit_len   = direction.R();
   if (hit_len < 1E-9) return true;
   if (hit_len > 0) {
-    double new_len = mean_length(h.preMom(),h.postMom())/hit_len;
+    //*2, mean_length divided 2 twice, which inherited the mistakes from $DD4hep/Object.cpp mean_length function
+    double new_len = mean_length(h.preMom(),h.postMom())*2;
     direction *= new_len/hit_len;
   }
 

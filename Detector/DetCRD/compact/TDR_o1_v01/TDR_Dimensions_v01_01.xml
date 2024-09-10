@@ -108,12 +108,20 @@
     <constant name="TPC_half_length"  value="2900*mm"/>
     <constant name="OuterTracker_half_length" value="TPC_half_length"/>
 
-    <constant name="SIT1_inner_radius"   value="150*mm"/>
+    <!--constant name="SIT1_inner_radius"   value="150*mm"/>
     <constant name="SIT2_inner_radius"   value="250*mm"/>
     <constant name="SIT3_inner_radius"   value="500*mm"/>
     <constant name="SIT1_half_length"    value="243*mm"/>
     <constant name="SIT2_half_length"    value="405*mm"/>
-    <constant name="SIT3_half_length"    value="810*mm"/>
+    <constant name="SIT3_half_length"    value="810*mm"/-->
+
+    <!-- <constant name="SIT_sensor_length"       value="81*mm"/>  <!-\-There should be something call for this!!!-\-> -->
+    <constant name="SIT1_inner_radius"   value="240*mm"/>
+    <constant name="SIT2_inner_radius"   value="350*mm"/>
+    <constant name="SIT3_inner_radius"   value="(600-30)*mm"/>
+    <constant name="SIT1_half_length"    value="500.5*mm"/>
+    <constant name="SIT2_half_length"    value="715*mm"/>
+    <constant name="SIT3_half_length"    value="1001*mm"/>
 
     <!-- Parameters of time of flight tracker -->
     <constant name="OTKBarrel_inner_radius" value="1800*mm"/>
@@ -133,7 +141,7 @@
     <constant name="SiTracker_endcap_barrel_rgap" value="10*mm"/>
     <constant name="SiTracker_endcap_gas_zgap"    value="3*mm"/>
     <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
-    <constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
+    <!--constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
     <constant name="SiTracker_endcap_z2" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
     <constant name="SiTracker_endcap_z3" value="TPC_inner_radius/tan(acos(SiTracker_region2_costheta))"/>
     <constant name="SiTracker_endcap_z4" value="TPC_inner_radius/tan(acos(SiTracker_region3_costheta))"/>
@@ -142,8 +150,18 @@
     <constant name="SiTracker_endcap_outer_radius2" value="SIT3_inner_radius"/>
     <constant name="SiTracker_endcap_outer_radius3" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
     <constant name="SiTracker_endcap_outer_radius4" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
-    <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/-->
 
+    <constant name="SiTracker_endcap_z1" value="500.5*mm"/>
+    <constant name="SiTracker_endcap_z2" value="715*mm"/>
+    <constant name="SiTracker_endcap_z3" value="1001*mm"/>
+    <constant name="SiTracker_endcap_z4" value="1500*mm"/>
+    <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
+    <constant name="SiTracker_endcap_outer_radius1" value="240*mm"/>
+    <constant name="SiTracker_endcap_outer_radius2" value="350*mm"/>
+    <constant name="SiTracker_endcap_outer_radius3" value="(600-30.0)*mm"/>
+    <constant name="SiTracker_endcap_outer_radius4" value="(600)*mm"/>
+    <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/>
     <!--obseleted constance, used by old construct, should be removed while creating new constrcut-->
     <constant name="TPC_Ecal_Hcal_barrel_halfZ"   value="TPC_half_length"/>
 
@@ -361,7 +379,10 @@
     <vis name="ShellVis"         alpha="1.0" r="1.0"   g="1.0"     b="0.8"   showDaughters="false" visible="true"/>
 
     <vis name="WhiteVis"         alpha="0.0" r=".96" g=".96"  b=".96"   showDaughters="true"  visible="true"/>
+    <vis name="SilverWhiteVis"   alpha="1.0" r="0.9" g="0.9" b="0.9"    showDaughters="true"  visible="true"/>
+    <vis name="DarkGrayVis"      alpha="1.0" r="0.2" g="0.2"  b="0.2"   showDaughters="true"  visible="true"/>
     <vis name="LightGrayVis"     alpha="0.0" r=".75" g=".75"  b=".75"   showDaughters="true"  visible="true"/>
+    <vis name="SilverGrayVis"    alpha="1.0" r="0.75" g="0.75" b="0.75" showDaughters="true"  visible="true"/>
     <vis name="Invisible"        alpha="0.0" r="0.0" g="0.0"  b="0.0"   showDaughters="false" visible="false"/>
     <vis name="SeeThrough"       alpha="0.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="false"/>
     <vis name="RedVis"           alpha="1.0" r="1.0" g="0.0"  b="0.0"   showDaughters="true"  visible="true"/>
@@ -372,9 +393,11 @@
     <vis name="VioletVis"        alpha="1.0" r=".83" g=".55"  b=".89"   showDaughters="true" visible="true"/>
     <vis name="BlueVioletVis"    alpha="1.0" r=".55" g=".36"  b="1.0"   showDaughters="true"  visible="true"/>
     <vis name="OrangeVis"        alpha="1.0" r="1.0" g="0.6"  b="0.0"   showDaughters="true"  visible="true"/>
+    <vis name="OrangeRedVis"     alpha="1.0" r="1.0" g="0.5"  b="0.2"   showDaughters="true"  visible="true"/>
     <vis name="YellowVis"        alpha="1.0" r="1.0" g="1.0"  b="0.0"   showDaughters="true"  visible="true"/>
     <vis name="BlackVis"         alpha="1.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="true"/>
     <vis name="GrayVis"          alpha="1.0" r="0.5" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
+    <vis name="TurquoiseVis"     alpha="1.0" r="0.0" g="0.5"  b="0.5"   showDaughters="true"  visible="true"/>
   </display>
 
 </lccdd>
