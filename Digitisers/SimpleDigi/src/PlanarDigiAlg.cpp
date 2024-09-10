@@ -232,7 +232,7 @@ StatusCode PlanarDigiAlg::execute()
             << " V[0] = "<< v_direction[0] << " V[1] = "<< v_direction[1]
             << endmsg ;
     
-    float resU(0), resV(0);
+    float resU(0), resV(0), resT(0);
 
     if (!_parameterize) {
       if( (_resU.size() > 1 && layer > _resU.size()-1) || (_resV.size() > 1 && layer > _resV.size()-1) ) {
@@ -260,6 +260,10 @@ StatusCode PlanarDigiAlg::execute()
       resV = _parV[0] + _parV[1] * y + _parV[2] * exp(-_parV[9] * y) * cos(_parV[3] * y + _parV[4])
         + _parV[5] * exp(-0.5 * pow(((y - _parV[6]) / _parV[7]), 2)) + _parV[8] * pow(y, 0.5);
     }
+    // parameterize only for position now, todo
+    resT = ( _resT.size() > 1 ? _resT.value().at(layer) : _resT.value().at(0) );
+    // from ps (input unit) to ns (record unit, Geant4)
+    resT *= CLHEP::ps/CLHEP::ns;
 
     debug() << " --- will smear hit with resU = " << resU << " and resV = " << resV << endmsg;
 
@@ -380,7 +384,8 @@ StatusCode PlanarDigiAlg::execute()
         trkHit.setType( UTIL::set_bit( trkHit.getType() , UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ) ) ;
     }
     trkHit.setEDep( SimTHit.getEDep() );
-    trkHit.setTime( SimTHit.getTime() );
+    trkHit.setTime( SimTHit.getTime() + gsl_ran_gaussian(_rng, resT) );
+
     // make the relation
     auto rel = relCol->create();
 

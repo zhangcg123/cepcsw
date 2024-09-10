@@ -77,6 +77,8 @@ protected:
   Gaudi::Property<FloatVec> _resU{ this, "ResolutionU", {0.0040} };
   // resolution in direction of v - either one per layer or one for all layers
   Gaudi::Property<FloatVec> _resV{ this, "ResolutionV", {0.0040} };
+  // resolution of t - either one per layer or one for all layers, unit - ps
+  Gaudi::Property<FloatVec> _resT{ this, "ResolutionT", {0.} };
   // whether hits are 1D strip hits
   Gaudi::Property<bool> _isStrip{ this, "IsStrip", false };
   // whether use Planar tag for type and cov, if true, CEPCConf::TrkHitTypeBit::PLANAR bit is set as true
