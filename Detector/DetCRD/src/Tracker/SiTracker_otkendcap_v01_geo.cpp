@@ -58,6 +58,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     const double total_length   = theDetector.constant<double>("OTKEndCap_half_length")*2.;
     const int total_sections    = theDetector.constant<int>("OTKEndCap_total_sections");
     const double deg            = theDetector.constant<double>("OTKEndCap_piece_deg")*dd4hep::degree;
+    const double dead_deg       = theDetector.constant<double>("OTKEndCap_dead_deg")*dd4hep::degree;
+    const double dead_thickness = theDetector.constant<double>("OTKEndCap_dead_thickness");
     const double piece_number   = theDetector.constant<double>("OTKEndCap_piece_num");
     const double deg_interval   = 360  / piece_number * dd4hep::degree;
     const double r0             = theDetector.constant<double>("OTKEndCap_r0");
@@ -97,8 +99,10 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     std::cout << "total_length: "   << total_length/mm      << "mm"     << std::endl;
     std::cout << "total_sections: " << total_sections                   << std::endl;
     std::cout << "deg: "            << deg/dd4hep::degree   << "deg"    << std::endl;
+    std::cout << "dead_deg: "       << dead_deg/dd4hep::degree          << "deg" << std::endl;
+    std::cout << "dead_thickness"   << dead_thickness/mm    << "mm"     << std::endl;
     std::cout << "piece_number: "   << piece_number                     << std::endl;
-    std::cout << "deg interval: "   << deg_interval/dd4hep::degree  << "deg"    << std::endl;
+    std::cout << "deg interval: "   << deg_interval/dd4hep::degree      << "deg" << std::endl;
     std::cout << "r0: "             << r0/mm                << "mm"     << std::endl;
     std::cout << "r1: "             << r1/mm                << "mm"     << std::endl;
     std::cout << "r2: "             << r2/mm                << "mm"     << std::endl;
@@ -171,6 +175,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     std::string deadsensVis         = x_display.attr<string>(_Unicode(deadsensor));
     std::string pcbVis              = x_display.attr<string>(_Unicode(pcb));
     std::string asicVis             = x_display.attr<string>(_Unicode(asic));
+    std::string deadVis             = x_display.attr<string>(_Unicode(dead));
 
     //fetch the support parameters
     xml_comp_t x_support(x_det.child(_Unicode(support)));
@@ -178,6 +183,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     double support_inner_radius     = x_support.attr<double>(_Unicode(inner_radius));
     double support_outer_radius     = x_support.attr<double>(_Unicode(outer_radius));
     Material support_mat            = theDetector.material(x_support.attr<string>(_Unicode(mat)));
+    Material dead_mat               = theDetector.material(x_support.attr<string>(_Unicode(dead_mat)));
     std::cout << "support_thickness: "      << support_thickness/mm     << " mm" << std::endl;
     std::cout << "support_inner_radius: "   << support_inner_radius/mm  << " mm" << std::endl;
     std::cout << "support_outer_radius: "   << support_outer_radius/mm  << " mm" << std::endl;
@@ -243,7 +249,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
                                             outer_radius,
                                             layer_thickness / 2.0,
                                             0.,
-                                            deg);
+                                            deg+dead_deg);
         Volume PieceEnvLogical(             name + dd4hep::_toString(layer_id, "_PieceEnvLogical_%02d"),
                                             PieceEnvSolid,
                                             air);
@@ -253,13 +259,25 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
                                             support_outer_radius,
                                             support_thickness / 2.0,
                                             0.,
-                                            deg);
+                                            deg+dead_deg);
         Volume SupportLogical(              name + dd4hep::_toString(layer_id, "_SupportLogical_%02d"),
                                             SupportSolid,
                                             support_mat);
 
         SupportLogical.setVisAttributes(theDetector.visAttributes(supportVis));
         pv = PieceEnvLogical.placeVolume(SupportLogical, Position(0, 0, (-layer_thickness + support_thickness) / 2.0));
+
+        //create and place electronic logical volume
+        dd4hep::Tube ElectronicSolid(       support_inner_radius,
+                                            support_outer_radius,
+                                            dead_thickness / 2.0,
+                                            deg,
+                                            deg + dead_deg);
+        Volume ElectronicLogical(           name + dd4hep::_toString(layer_id, "_ElectronicLogical_%02d"),
+                                            ElectronicSolid,
+                                            dead_mat);
+        ElectronicLogical.setVisAttributes(theDetector.visAttributes(deadVis));
+        pv = PieceEnvLogical.placeVolume(ElectronicLogical, Position(0, 0, (-layer_thickness + support_thickness*2 + dead_thickness) / 2.0));
 
         //create sensor envelope logical volume
         dd4hep::Tube SensorEnvSolid(        inner_radius,
@@ -326,6 +344,22 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             Volume DeadSensorLogicalB(      name + dd4hep::_toString(layer_id, "_DeadSensorLogicalB_%02d_") + std::to_string(i),
                                             DeadSensorSolidB,
                                             sensor_mat);
+            dd4hep::Tube DeadSensorSolidC(  ring_inner_radius - sensor_dead_gap,
+                                            ring_inner_radius,
+                                            sensor_thickness/2.0,
+                                            0.,
+                                            deg);
+            Volume DeadSensorLogicalC(      name + dd4hep::_toString(layer_id, "_DeadSensorLogicalC_%02d_") + std::to_string(i),
+                                            DeadSensorSolidC,
+                                            sensor_mat);
+            dd4hep::Tube DeadSensorSolidD(  ring_outer_radius,
+                                            ring_outer_radius + sensor_dead_gap,
+                                            sensor_thickness/2.0,
+                                            0.,
+                                            deg);
+            Volume DeadSensorLogicalD(      name + dd4hep::_toString(layer_id, "_DeadSensorLogicalD_%02d_") + std::to_string(i),
+                                            DeadSensorSolidD,
+                                            sensor_mat);
 
             SensorLogical.setSensitiveDetector(sens);
             SensorLogical.setVisAttributes(theDetector.visAttributes(sensVis));
@@ -338,11 +372,15 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             sensor_surf.push_back(surfsens);
             DeadSensorLogicalA.setVisAttributes(theDetector.visAttributes(deadsensVis));
             DeadSensorLogicalB.setVisAttributes(theDetector.visAttributes(deadsensVis));
+            DeadSensorLogicalC.setVisAttributes(theDetector.visAttributes(deadsensVis));
+            DeadSensorLogicalD.setVisAttributes(theDetector.visAttributes(deadsensVis));
             pv = SensorEnvLogical.placeVolume(SensorLogical,        Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
             pv.addPhysVolID("layer", layer_id).addPhysVolID("active", 0).addPhysVolID("sensor", i);
             sensor_pv.push_back(pv);
             pv = SensorEnvLogical.placeVolume(DeadSensorLogicalA,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
             pv = SensorEnvLogical.placeVolume(DeadSensorLogicalB,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
+            pv = SensorEnvLogical.placeVolume(DeadSensorLogicalC,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
+            pv = SensorEnvLogical.placeVolume(DeadSensorLogicalD,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
 
             if(ring_module_number==2){
                 dd4hep::Tube SensorSolid(   ring_inner_radius,
