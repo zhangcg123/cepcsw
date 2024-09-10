@@ -20,6 +20,8 @@ gaudi_add_module(DetCRD
                          src/Tracker/SiTrackerStaggeredLadder_v01_geo.cpp
                          src/Tracker/TPC_Simple_o1_v01.cpp
                          src/Tracker/TPC_ModularEndcap_o1_v01.cpp
+			 src/Tracker/SiTracker_itkbarrel_v01_geo.cpp
+			 src/Tracker/SiTracker_itkbarrel_v02_geo.cpp
                          src/Tracker/SiTracker_otkbarrel_v01_geo.cpp
                          src/Tracker/SiTracker_otkendcap_v01_geo.cpp
 
