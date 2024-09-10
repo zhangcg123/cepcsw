@@ -65,7 +65,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     MYDEBUGVAL(det_id)
 
     // To prevent overlapping
-    const double boundary_safety = theDetector.constant<double>("boundary_safety");
+    const double boundary_safety_endcap = theDetector.constant<double>("boundary_safety_endcap");
 
     // Global geometry
     const double r_in = theDetector.constant<double>("ecalendcap_inner_radius");
@@ -95,21 +95,21 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
 
     // Unit size
     const int Ncell_xy = theDetector.constant<int>("Ncell_xy");
-    const double crystal_z = theDetector.constant<double>("crystal_z");
+    const double crystal_z_endcap = theDetector.constant<double>("crystal_z_endcap");
     const double cell_xy = block_xy_in / Ncell_xy;
 
-    const double esr_thickness = theDetector.constant<double>("esr_thickness");    // Wrapper
+    const double esr_thickness_endcap = theDetector.constant<double>("esr_thickness_endcap");    // Wrapper
     const double sipm_x = theDetector.constant<double>("sipm_x");
     const double sipm_y = theDetector.constant<double>("sipm_y");
-    const double sipm_z = theDetector.constant<double>("sipm_z");
-    const double pcb_thickness = theDetector.constant<double>("pcb_thickness");
-    const double cu_thickness = theDetector.constant<double>("cu_thickness");    // Cooling material: Cu
-    const double fibre_thickness = theDetector.constant<double>("fibre_thickness");    // Mechanical structure: carbon fibre
+    const double sipm_z_endcap = theDetector.constant<double>("sipm_z_endcap");
+    const double pcb_thickness_endcap = theDetector.constant<double>("pcb_thickness_endcap");
+    const double cu_thickness_endcap = theDetector.constant<double>("cu_thickness_endcap");    // Cooling material: Cu
+    const double fibre_thickness_endcap = theDetector.constant<double>("fibre_thickness_endcap");    // Mechanical structure: carbon fibre
 
-    const double crystal_xy = cell_xy - 4 * boundary_safety - 2 * esr_thickness - fibre_thickness;
-    const double cell_z = crystal_z + 4 * boundary_safety + 2 * esr_thickness + fibre_thickness;
+    const double crystal_xy = cell_xy - 4 * boundary_safety_endcap - 2 * esr_thickness_endcap - fibre_thickness_endcap;
+    const double cell_z = crystal_z_endcap + 4 * boundary_safety_endcap + 2 * esr_thickness_endcap + fibre_thickness_endcap;
 
-    const double layer_thickness = cell_z + sipm_z + pcb_thickness + cu_thickness + 4 * boundary_safety;
+    const double layer_thickness = cell_z + sipm_z_endcap + pcb_thickness_endcap + cu_thickness_endcap + 4 * boundary_safety_endcap;
     const int Nlayers = (int) (block_z / layer_thickness);
 
     MYDEBUGVAL(layer_thickness)
@@ -129,7 +129,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     Volume motherVol = theDetector.pickMotherVolume(ECAL);
 
     // Create two tube-like envelopes to represent the end-cap volumes
-    Tube envelope_tube(0, r_out, 0.5 * block_z + boundary_safety);
+    Tube envelope_tube(0, r_out, 0.5 * block_z + boundary_safety_endcap);
     Box envelope_box(r_in, r_in, block_z);
     SubtractionSolid envelope_side(envelope_tube, envelope_box, Position(0, 0, 0));
     UnionSolid envelope(envelope_side, envelope_side, Position(0, 0, 2 * pos_z));
@@ -141,13 +141,13 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     DetElement blockdet(ECAL, "box", det_id);
 
     // Sector
-    Tube sector_tube(0, r_out, 0.5 * block_z + boundary_safety, 0, 0.5 * pi);
+    Tube sector_tube(0, r_out, 0.5 * block_z + boundary_safety_endcap, 0, 0.5 * pi);
     SubtractionSolid sector(sector_tube, envelope_box, Position(0, 0, 0));
     Volume sector_vol("sector_vol", sector, mat_air);
     sector_vol.setVisAttributes(theDetector, "GreenVis");
 
     // Main block
-    Box block(0.5 * block_xy_out, 0.5 * block_xy_out, 0.5 * block_z + boundary_safety);
+    Box block(0.5 * block_xy_out, 0.5 * block_xy_out, 0.5 * block_z + boundary_safety_endcap);
     Volume block_vol("block_vol", block, mat_air);
     block_vol.setVisAttributes(theDetector, "GreenVis");
 
@@ -156,7 +156,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     block_cf.setVisAttributes(theDetector, "GreenVis");
 
     // Rectangle block for filling the space
-    Box block_rect(0.5 * block_xy_out, 0.5 * block_rect_short_out, 0.5 * block_z + boundary_safety);
+    Box block_rect(0.5 * block_xy_out, 0.5 * block_rect_short_out, 0.5 * block_z + boundary_safety_endcap);
     Volume block_rect_vol("block_rect_vol", block_rect, mat_air);
     block_rect_vol.setVisAttributes(theDetector, "GreenVis");
 
@@ -166,7 +166,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
 
     // Square blocks for filling the space
     // Square 1
-    Box block_sq1(0.5 * block_sq1_width, 0.5 * block_sq1_width, 0.5 * block_z + boundary_safety);
+    Box block_sq1(0.5 * block_sq1_width, 0.5 * block_sq1_width, 0.5 * block_z + boundary_safety_endcap);
     Volume block_sq1_vol("block_sq1_vol", block_sq1, mat_air);
     block_sq1_vol.setVisAttributes(theDetector, "GreenVis");
 
@@ -175,7 +175,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     block_cf_sq1.setVisAttributes(theDetector, "GreenVis");
 
     // Square 2
-    Box block_sq2(0.5 * block_sq2_width, 0.5 * block_sq2_width, 0.5 * block_z + boundary_safety);
+    Box block_sq2(0.5 * block_sq2_width, 0.5 * block_sq2_width, 0.5 * block_z + boundary_safety_endcap);
     Volume block_sq2_vol("block_sq2_vol", block_sq2, mat_air);
     block_sq2_vol.setVisAttributes(theDetector, "GreenVis");
 
@@ -184,20 +184,20 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     block_cf_sq2.setVisAttributes(theDetector, "GreenVis");
 
     // Crystal, SiPM, ESR, and carbon fibre
-    Volume crystal("crystal", Box(0.5 * crystal_xy, 0.5 * crystal_xy, 0.5 * crystal_z), mat_sensitive);
+    Volume crystal("crystal", Box(0.5 * crystal_xy, 0.5 * crystal_xy, 0.5 * crystal_z_endcap), mat_sensitive);
     crystal.setVisAttributes(theDetector, "SeeThrough");
     crystal.setSensitiveDetector(sens);
 
-    Volume sipm("SiPM", Box(0.5 * sipm_x, 0.5 * sipm_y, 0.5 * sipm_z), mat_SiPM);
+    Volume sipm("SiPM", Box(0.5 * sipm_x, 0.5 * sipm_y, 0.5 * sipm_z_endcap), mat_SiPM);
     sipm.setVisAttributes(theDetector, "SeeThrough");
 
-    Box esr_out(0.5 * crystal_xy + esr_thickness + boundary_safety, 0.5 * crystal_xy + esr_thickness + boundary_safety, 0.5 * crystal_z + esr_thickness + boundary_safety);
-    Box esr_in(0.5 * crystal_xy + boundary_safety, 0.5 * crystal_xy + boundary_safety, 0.5 * crystal_z + boundary_safety);
+    Box esr_out(0.5 * crystal_xy + esr_thickness_endcap + boundary_safety_endcap, 0.5 * crystal_xy + esr_thickness_endcap + boundary_safety_endcap, 0.5 * crystal_z_endcap + esr_thickness_endcap + boundary_safety_endcap);
+    Box esr_in(0.5 * crystal_xy + boundary_safety_endcap, 0.5 * crystal_xy + boundary_safety_endcap, 0.5 * crystal_z_endcap + boundary_safety_endcap);
     Volume esr("esr", SubtractionSolid(esr_out, esr_in, Position(0, 0, 0)), mat_ESR);
     esr.setVisAttributes(theDetector, "SeeThrough");
 
     Box cf_out(0.5 * cell_xy, 0.5 * cell_xy, 0.5 * cell_z);
-    Box cf_in(0.5 * (cell_xy - fibre_thickness), 0.5 * (cell_xy - fibre_thickness), 0.5 * (cell_z - fibre_thickness));
+    Box cf_in(0.5 * (cell_xy - fibre_thickness_endcap), 0.5 * (cell_xy - fibre_thickness_endcap), 0.5 * (cell_z - fibre_thickness_endcap));
     Volume cf("cf", SubtractionSolid(cf_out, cf_in, Position(0, 0, 0)), mat_CF);
     cf.setVisAttributes(theDetector, "SeeThrough");
 
@@ -205,9 +205,9 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     const double crystal_pos_z = -0.5 * layer_thickness + 0.5 * cell_z;
     const double esr_pos_z = crystal_pos_z;
     const double cf_pos_z = esr_pos_z;
-    const double sipm_pos_z = cf_pos_z + 0.5 * cell_z + boundary_safety + 0.5 * sipm_z;
-    const double pcb_pos_z = sipm_pos_z + 0.5 * sipm_z + boundary_safety + 0.5 * pcb_thickness;
-    const double cu_pos_z = pcb_pos_z + 0.5 * (pcb_thickness + cu_thickness);
+    const double sipm_pos_z = cf_pos_z + 0.5 * cell_z + boundary_safety_endcap + 0.5 * sipm_z_endcap;
+    const double pcb_pos_z = sipm_pos_z + 0.5 * sipm_z_endcap + boundary_safety_endcap + 0.5 * pcb_thickness_endcap;
+    const double cu_pos_z = pcb_pos_z + 0.5 * (pcb_thickness_endcap + cu_thickness_endcap);
 
     // Loop for placing the units in a block
     // Normal block
@@ -218,10 +218,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
         string slicename = "Slice_" + to_string(ilayer);
         DetElement sd(blockdet, slicename, det_id);
 
-        Volume slice_pcb("slice_pcb", Box(0.5 * block_xy_in, 0.5 * block_xy_in, 0.5 * pcb_thickness), mat_PCB);
+        Volume slice_pcb("slice_pcb", Box(0.5 * block_xy_in, 0.5 * block_xy_in, 0.5 * pcb_thickness_endcap), mat_PCB);
         slice_pcb.setVisAttributes(theDetector, "SeeThrough");
 
-        Volume slice_cu("slice_cu", Box(0.5 * block_xy_in, 0.5 * block_xy_in, 0.5 * cu_thickness), mat_Cu);
+        Volume slice_cu("slice_cu", Box(0.5 * block_xy_in, 0.5 * block_xy_in, 0.5 * cu_thickness_endcap), mat_Cu);
         slice_cu.setVisAttributes(theDetector, "SeeThrough");
 
         PlacedVolume pcb_unit = slice.placeVolume(slice_pcb, Position(0, 0, pcb_pos_z));
@@ -260,7 +260,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
                 unit.setPlacement(crystal_unit);
             }
 
-        PlacedVolume plv = block_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety));
+        PlacedVolume plv = block_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety_endcap));
         plv.addPhysVolID("layer", ilayer);
         sd.setPlacement(plv);
     }
@@ -273,10 +273,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
         string slicename = "Rect_Slice_" + to_string(ilayer);
         DetElement sd(blockdet, slicename, det_id);
 
-        Volume slice_pcb("slice_pcb", Box(0.5 * block_xy_in, 0.5 * block_rect_short_in, 0.5 * pcb_thickness), mat_PCB);
+        Volume slice_pcb("slice_pcb", Box(0.5 * block_xy_in, 0.5 * block_rect_short_in, 0.5 * pcb_thickness_endcap), mat_PCB);
         slice_pcb.setVisAttributes(theDetector, "SeeThrough");
 
-        Volume slice_cu("slice_cu", Box(0.5 * block_xy_in, 0.5 * block_rect_short_in, 0.5 * cu_thickness), mat_Cu);
+        Volume slice_cu("slice_cu", Box(0.5 * block_xy_in, 0.5 * block_rect_short_in, 0.5 * cu_thickness_endcap), mat_Cu);
         slice_cu.setVisAttributes(theDetector, "SeeThrough");
 
         PlacedVolume pcb_unit = slice.placeVolume(slice_pcb, Position(0, 0, pcb_pos_z));
@@ -315,7 +315,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
                 unit.setPlacement(crystal_unit);
             }
 
-        PlacedVolume plv = block_rect_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety));
+        PlacedVolume plv = block_rect_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety_endcap));
         plv.addPhysVolID("layer", ilayer);
         sd.setPlacement(plv);
     }
@@ -328,10 +328,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
         string slicename = "Sq1_Slice_" + to_string(ilayer);
         DetElement sd(blockdet, slicename, det_id);
 
-        Volume slice_pcb("slice_pcb", Box(0.5 * block_sq1_width, 0.5 * block_sq1_width, 0.5 * pcb_thickness), mat_PCB);
+        Volume slice_pcb("slice_pcb", Box(0.5 * block_sq1_width, 0.5 * block_sq1_width, 0.5 * pcb_thickness_endcap), mat_PCB);
         slice_pcb.setVisAttributes(theDetector, "SeeThrough");
 
-        Volume slice_cu("slice_cu", Box(0.5 * block_sq1_width, 0.5 * block_sq1_width, 0.5 * cu_thickness), mat_Cu);
+        Volume slice_cu("slice_cu", Box(0.5 * block_sq1_width, 0.5 * block_sq1_width, 0.5 * cu_thickness_endcap), mat_Cu);
         slice_cu.setVisAttributes(theDetector, "SeeThrough");
 
         PlacedVolume pcb_unit = slice.placeVolume(slice_pcb, Position(0, 0, pcb_pos_z));
@@ -370,7 +370,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
                 unit.setPlacement(crystal_unit);
             }
 
-        PlacedVolume plv = block_sq1_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety));
+        PlacedVolume plv = block_sq1_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety_endcap));
         plv.addPhysVolID("layer", ilayer);
         sd.setPlacement(plv);
     }
@@ -383,10 +383,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
         string slicename = "Sq2_Slice_" + to_string(ilayer);
         DetElement sd(blockdet, slicename, det_id);
 
-        Volume slice_pcb("slice_pcb", Box(0.5 * block_sq2_width, 0.5 * block_sq2_width, 0.5 * pcb_thickness), mat_PCB);
+        Volume slice_pcb("slice_pcb", Box(0.5 * block_sq2_width, 0.5 * block_sq2_width, 0.5 * pcb_thickness_endcap), mat_PCB);
         slice_pcb.setVisAttributes(theDetector, "SeeThrough");
 
-        Volume slice_cu("slice_cu", Box(0.5 * block_sq2_width, 0.5 * block_sq2_width, 0.5 * cu_thickness), mat_Cu);
+        Volume slice_cu("slice_cu", Box(0.5 * block_sq2_width, 0.5 * block_sq2_width, 0.5 * cu_thickness_endcap), mat_Cu);
         slice_cu.setVisAttributes(theDetector, "SeeThrough");
 
         PlacedVolume pcb_unit = slice.placeVolume(slice_pcb, Position(0, 0, pcb_pos_z));
@@ -425,7 +425,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
                 unit.setPlacement(crystal_unit);
             }
 
-        PlacedVolume plv = block_sq2_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety));
+        PlacedVolume plv = block_sq2_vol.placeVolume(slice, Position(0, 0, (ilayer - 0.5) * layer_thickness - 0.5 * block_z + boundary_safety_endcap));
         plv.addPhysVolID("layer", ilayer);
         sd.setPlacement(plv);
     }

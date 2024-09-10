@@ -24,16 +24,16 @@
         <!-- CrystalXY = CellXY - 2 * BoundarySafety - 2 * ESRThickness-->
         <!-- CrystalZ = CellZ - 2 * BoundarySafety - 2 * ESRThickness-->
         <constant name="Ncell_xy" value="35"/>
-        <constant name="crystal_z" value="4.1*cm"/>
+        <constant name="crystal_z_endcap" value="4.1*cm"/>
 
-        <constant name="esr_thickness" value="0.1*mm"/>
+        <constant name="esr_thickness_endcap" value="0.1*mm"/>
         <constant name="sipm_x" value="3*mm"/>
         <constant name="sipm_y" value="3*mm"/>
-        <constant name="sipm_z" value="0.8*mm"/>
-        <constant name="pcb_thickness" value="2.2*mm"/>
-        <constant name="cu_thickness" value="1*mm"/>
-        <constant name="fibre_thickness" value="0.1*mm"/>
-        <constant name="boundary_safety" value="1*nm"/>
+        <constant name="sipm_z_endcap" value="0.8*mm"/>
+        <constant name="pcb_thickness_endcap" value="2.2*mm"/>
+        <constant name="cu_thickness_endcap" value="1*mm"/>
+        <constant name="fibre_thickness_endcap" value="0.1*mm"/>
+        <constant name="boundary_safety_endcap" value="1*nm"/>
     </define>
 
     <regions>

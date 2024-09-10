@@ -315,7 +315,6 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
                 }
                 else if (single_elongation >= short_elongation_esr_out.at(0))
                 {
-//                    scintillator_unit = slice.placeVolume(odd_0_scintillator, transform_scintillator);
                     scintillator_unit = slice.placeVolume(odd_0_scintillator, Transform3D(RotationZ(pi),
                                 Position((-0.5 * (Ncells_phi + 1) + iphi) * wrapped_scintillator_xy - 0.5 * short_elongation_esr_in.at(0),
                                          scintillator_pos_z,
@@ -347,7 +346,6 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
                 }
                 else if (single_elongation >= short_elongation_esr_out.at(0))
                 {
-//                    scintillator_unit = slice.placeVolume(odd_0_scintillator, position_scintillator);
                     scintillator_unit = slice.placeVolume(odd_0_scintillator,
                                 Position((-0.5 * (Ncells_phi + 1) + iphi) * wrapped_scintillator_xy + 0.5 * short_elongation_esr_in.at(0),
                                          scintillator_pos_z,

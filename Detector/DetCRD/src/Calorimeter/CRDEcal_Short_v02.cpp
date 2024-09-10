@@ -68,7 +68,7 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     MYDEBUGVAL(detid)
 
     // To prevent overlapping
-    const double boundary_safety = theDetector.constant<double>("boundary_safety");
+    const double boundary_safety_barrel = theDetector.constant<double>("boundary_safety_barrel");
 
     // Global geometry
     const double r_in = theDetector.constant<double>("ecalbarrel_inner_radius");
@@ -83,26 +83,26 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     // Unit size
     const double crystal_r = theDetector.constant<double>("crystal_r");
     const double crystal_phi = theDetector.constant<double>("crystal_phi");
-    const double crystal_z = theDetector.constant<double>("crystal_z");
+    const double crystal_z_barrel = theDetector.constant<double>("crystal_z_barrel");
     const double block_z = Z0 / Nblock_z;    // Length of a block in z direction
 
     MYDEBUGVAL(block_z)
 
-    const double esr_thickness = theDetector.constant<double>("esr_thickness");    // Wrapper
+    const double esr_thickness_barrel = theDetector.constant<double>("esr_thickness_barrel");    // Wrapper
     const double sipm_r = theDetector.constant<double>("sipm_r");
     const double sipm_phi = theDetector.constant<double>("sipm_phi");
-    const double sipm_z = theDetector.constant<double>("sipm_z");
-    const double pcb_thickness = theDetector.constant<double>("pcb_thickness");
-    const double cu_thickness = theDetector.constant<double>("cu_thickness");    // Cooling material: Cu
-    const double fibre_thickness = theDetector.constant<double>("fibre_thickness");    // Mechanical structure: carbon fibre
+    const double sipm_z_barrel = theDetector.constant<double>("sipm_z_barrel");
+    const double pcb_thickness_barrel = theDetector.constant<double>("pcb_thickness_barrel");
+    const double cu_thickness_barrel = theDetector.constant<double>("cu_thickness_barrel");    // Cooling material: Cu
+    const double fibre_thickness_barrel = theDetector.constant<double>("fibre_thickness_barrel");    // Mechanical structure: carbon fibre
     const double collection_width = theDetector.constant<double>("collection_width");
     const double collection_thickness = theDetector.constant<double>("collection_thickness");
 
-    const double cell_r = crystal_r + 4 * boundary_safety + 2 * esr_thickness + fibre_thickness;
-    const double cell_phi = crystal_phi + 4 * boundary_safety + 2 * esr_thickness + fibre_thickness;
-    const double cell_z = crystal_z + 4 * boundary_safety + 2 * esr_thickness + fibre_thickness;
+    const double cell_r = crystal_r + 4 * boundary_safety_barrel + 2 * esr_thickness_barrel + fibre_thickness_barrel;
+    const double cell_phi = crystal_phi + 4 * boundary_safety_barrel + 2 * esr_thickness_barrel + fibre_thickness_barrel;
+    const double cell_z = crystal_z_barrel + 4 * boundary_safety_barrel + 2 * esr_thickness_barrel + fibre_thickness_barrel;
 
-    const double layer_thickness = cell_r + sipm_r + pcb_thickness + cu_thickness + 4 * boundary_safety;
+    const double layer_thickness = cell_r + sipm_r + pcb_thickness_barrel + cu_thickness_barrel + 4 * boundary_safety_barrel;
     MYDEBUGVAL(layer_thickness)
 
     // Adjustments for the positive trapezia
@@ -184,20 +184,20 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     block_neg_vol.setVisAttributes(theDetector, "CyanVis");
 
     // Crystal, ESR, SiPM, carbon fibre and collection board
-    Volume crystal("crystal", Box(0.5 * crystal_phi, 0.5 * crystal_z, 0.5 * crystal_r), mat_sensitive);    // Order: phi → z → R.
+    Volume crystal("crystal", Box(0.5 * crystal_phi, 0.5 * crystal_z_barrel, 0.5 * crystal_r), mat_sensitive);    // Order: phi → z → R.
     crystal.setVisAttributes(theDetector, "SeeThrough");
     crystal.setSensitiveDetector(sens);
 
-    Box esr_out(0.5 * crystal_phi + esr_thickness + boundary_safety, 0.5 * crystal_z + esr_thickness + boundary_safety, 0.5 * crystal_r + esr_thickness + boundary_safety);
-    Box esr_in(0.5 * crystal_phi + boundary_safety, 0.5 * crystal_z + boundary_safety, 0.5 * crystal_r + boundary_safety);
+    Box esr_out(0.5 * crystal_phi + esr_thickness_barrel + boundary_safety_barrel, 0.5 * crystal_z_barrel + esr_thickness_barrel + boundary_safety_barrel, 0.5 * crystal_r + esr_thickness_barrel + boundary_safety_barrel);
+    Box esr_in(0.5 * crystal_phi + boundary_safety_barrel, 0.5 * crystal_z_barrel + boundary_safety_barrel, 0.5 * crystal_r + boundary_safety_barrel);
     Volume esr("esr", SubtractionSolid(esr_out, esr_in, Position(0, 0, 0)), mat_ESR);
     esr.setVisAttributes(theDetector, "SeeThrough");
 
-    Volume SiPM("SiPM", Box(0.5 * sipm_phi, 0.5 * sipm_z, 0.5 * sipm_r), mat_SiPM);
+    Volume SiPM("SiPM", Box(0.5 * sipm_phi, 0.5 * sipm_z_barrel, 0.5 * sipm_r), mat_SiPM);
     SiPM.setVisAttributes(theDetector, "SeeThrough");
 
     Box cf_out(0.5 * cell_phi, 0.5 * cell_z, 0.5 * cell_r);
-    Box cf_in(0.5 * (cell_phi - fibre_thickness), 0.5 * (cell_z - fibre_thickness), 0.5 * (cell_r - fibre_thickness));
+    Box cf_in(0.5 * (cell_phi - fibre_thickness_barrel), 0.5 * (cell_z - fibre_thickness_barrel), 0.5 * (cell_r - fibre_thickness_barrel));
     Volume cf("cf", SubtractionSolid(cf_out, cf_in, Position(0, 0, 0)), mat_CF);
     cf.setVisAttributes(theDetector, "SeeThrough");
 
@@ -208,9 +208,9 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
     const double crystal_pos_r = -0.5 * layer_thickness + 0.5 * cell_r;
     const double esr_pos_r = crystal_pos_r;
     const double cf_pos_r = esr_pos_r;
-    const double sipm_pos_r = cf_pos_r + 0.5 * cell_r + boundary_safety + 0.5 * sipm_r;
-    const double pcb_pos_r = sipm_pos_r + 0.5 * sipm_r + boundary_safety + 0.5 * pcb_thickness;
-    const double cu_pos_r = pcb_pos_r + 0.5 * (pcb_thickness + cu_thickness);
+    const double sipm_pos_r = cf_pos_r + 0.5 * cell_r + boundary_safety_barrel + 0.5 * sipm_r;
+    const double pcb_pos_r = sipm_pos_r + 0.5 * sipm_r + boundary_safety_barrel + 0.5 * pcb_thickness_barrel;
+    const double cu_pos_r = pcb_pos_r + 0.5 * (pcb_thickness_barrel + cu_thickness_barrel);
 
     // Loop for placing the crystals in one positive trapezium block
     for (int ilayer = 1; ilayer <= Nlayers; ++ilayer)
@@ -224,10 +224,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
         string slicename_pos = "Slice_pos_" + to_string(ilayer);
         DetElement sd_pos(blockdet, slicename_pos, detid);
 
-        Volume slice_pcb_pos("slice_pcb_pos", Box(0.5 * layer_phi_pos, 0.5 * block_z, 0.5 * pcb_thickness), mat_PCB);
+        Volume slice_pcb_pos("slice_pcb_pos", Box(0.5 * layer_phi_pos, 0.5 * block_z, 0.5 * pcb_thickness_barrel), mat_PCB);
         slice_pcb_pos.setVisAttributes(theDetector, "SeeThrough");
 
-        Volume slice_cu_pos("slice_cu_pos", Box(0.5 * layer_phi_pos, 0.5 * block_z, 0.5 * cu_thickness), mat_Cu);
+        Volume slice_cu_pos("slice_cu_pos", Box(0.5 * layer_phi_pos, 0.5 * block_z, 0.5 * cu_thickness_barrel), mat_Cu);
         slice_cu_pos.setVisAttributes(theDetector, "SeeThrough");
 
         PlacedVolume pcb_unit_pos = slice_pos.placeVolume(slice_pcb_pos, Position(0, 0, pcb_pos_r));
@@ -283,10 +283,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h e, SensitiveDetector s
         string slicename_neg = "Slice_neg_" + to_string(ilayer);
         DetElement sd_neg(blockdet, slicename_neg, detid);
 
-        Volume slice_pcb_neg("slice_pcb_neg", Box(0.5 * layer_phi_neg, 0.5 * block_z, 0.5 * pcb_thickness), mat_PCB);
+        Volume slice_pcb_neg("slice_pcb_neg", Box(0.5 * layer_phi_neg, 0.5 * block_z, 0.5 * pcb_thickness_barrel), mat_PCB);
         slice_pcb_neg.setVisAttributes(theDetector, "SeeThrough");
 
-        Volume slice_cu_neg("slice_cu_neg", Box(0.5 * layer_phi_neg, 0.5 * block_z, 0.5 * cu_thickness), mat_Cu);
+        Volume slice_cu_neg("slice_cu_neg", Box(0.5 * layer_phi_neg, 0.5 * block_z, 0.5 * cu_thickness_barrel), mat_Cu);
         slice_cu_neg.setVisAttributes(theDetector, "SeeThrough");
 
         PlacedVolume pcb_unit_neg = slice_neg.placeVolume(slice_pcb_neg, Position(0, 0, pcb_pos_r));
