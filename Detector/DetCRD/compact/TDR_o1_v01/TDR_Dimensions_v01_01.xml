@@ -95,7 +95,7 @@
 
     <constant name="Vertex_inner_radius" value="BeamPipe_Central_inner_radius+BeamPipe_Be_total_thickness"/>
     <constant name="Vertex_outer_radius" value="72.5*mm"/>
-    <constant name="Vertex_half_length"  value="750*mm"/>
+    <constant name="Vertex_half_length"  value="510*mm"/>
 
     <!--constant name="BeamPipe_VertexRegion_rmax"     value="BeamPipe_Central_inner_radius+BeamPipe_Al_thickness
 	   +(BeamPipe_FirstExpand_width/2-BeamPipe_Central_inner_radius)/(BeamPipe_ExpandAl_zmax-BeamPipe_CentralAl_zmax)*(Vertex_half_length-BeamPipe_CentralAl_zmax)"/-->
@@ -108,14 +108,6 @@
     <constant name="TPC_half_length"  value="2900*mm"/>
     <constant name="OuterTracker_half_length" value="TPC_half_length"/>
 
-    <!--constant name="SIT1_inner_radius"   value="150*mm"/>
-    <constant name="SIT2_inner_radius"   value="250*mm"/>
-    <constant name="SIT3_inner_radius"   value="500*mm"/>
-    <constant name="SIT1_half_length"    value="243*mm"/>
-    <constant name="SIT2_half_length"    value="405*mm"/>
-    <constant name="SIT3_half_length"    value="810*mm"/-->
-
-    <!-- <constant name="SIT_sensor_length"       value="81*mm"/>  <!-\-There should be something call for this!!!-\-> -->
     <constant name="SIT1_inner_radius"   value="240*mm"/>
     <constant name="SIT2_inner_radius"   value="350*mm"/>
     <constant name="SIT3_inner_radius"   value="(600-30)*mm"/>
@@ -134,34 +126,26 @@
 
     <constant name="SET_inner_radius"    value="1800*mm"/>
 
-    <constant name="SiTracker_region1_costheta"   value="0.85"/>
-    <constant name="SiTracker_region2_costheta"   value="0.9"/>
-    <constant name="SiTracker_region3_costheta"   value="0.95"/>
     <constant name="SiTracker_endcap_barrel_zgap" value="5*mm"/>
     <constant name="SiTracker_endcap_barrel_rgap" value="10*mm"/>
     <constant name="SiTracker_endcap_gas_zgap"    value="3*mm"/>
     <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
-    <!--constant name="SiTracker_endcap_z1" value="Vertex_half_length"/>
-    <constant name="SiTracker_endcap_z2" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
-    <constant name="SiTracker_endcap_z3" value="TPC_inner_radius/tan(acos(SiTracker_region2_costheta))"/>
-    <constant name="SiTracker_endcap_z4" value="TPC_inner_radius/tan(acos(SiTracker_region3_costheta))"/>
-    <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
-    <constant name="SiTracker_endcap_outer_radius1" value="SiTracker_endcap_z1*tan(acos(SiTracker_region1_costheta))"/>
-    <constant name="SiTracker_endcap_outer_radius2" value="SIT3_inner_radius"/>
-    <constant name="SiTracker_endcap_outer_radius3" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
-    <constant name="SiTracker_endcap_outer_radius4" value="TPC_inner_radius-SiTracker_endcap_gas_rgap"/>
-    <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/-->
-
-    <constant name="SiTracker_endcap_z1" value="500.5*mm"/>
-    <constant name="SiTracker_endcap_z2" value="715*mm"/>
-    <constant name="SiTracker_endcap_z3" value="1001*mm"/>
+    <constant name="SiTracker_endcap_z1" value="SIT1_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_z2" value="SIT2_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_z3" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
     <constant name="SiTracker_endcap_z4" value="1500*mm"/>
     <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
-    <constant name="SiTracker_endcap_outer_radius1" value="240*mm"/>
-    <constant name="SiTracker_endcap_outer_radius2" value="350*mm"/>
-    <constant name="SiTracker_endcap_outer_radius3" value="(600-30.0)*mm"/>
-    <constant name="SiTracker_endcap_outer_radius4" value="(600)*mm"/>
+    <constant name="SiTracker_endcap_outer_radius1" value="SIT1_inner_radius"/>
+    <constant name="SiTracker_endcap_outer_radius2" value="SIT2_inner_radius"/>
+    <constant name="SiTracker_endcap_outer_radius3" value="SIT3_inner_radius-SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius4" value="SIT3_inner_radius-SiTracker_endcap_gas_rgap"/>
     <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/>
+    <constant name="SiTracker_endcap_inner_radius1" value="75*mm"/>
+    <constant name="SiTracker_endcap_inner_radius2" value="101.9*mm"/>
+    <constant name="SiTracker_endcap_inner_radius3" value="142.6*mm"/>
+    <constant name="SiTracker_endcap_inner_radius4" value="214*mm"/>
+    <constant name="SiTracker_endcap_inner_radius5" value="350*mm"/>
+
     <!--obseleted constance, used by old construct, should be removed while creating new constrcut-->
     <constant name="TPC_Ecal_Hcal_barrel_halfZ"   value="TPC_half_length"/>
 
@@ -172,7 +156,7 @@
     <constant name="Ecal_barrel_symmetry"     value="32"/>
     <constant name="Ecal_Tpc_gap"             value="Ecal_barrel_inner_radius-TPC_outer_radius"/>
 
-    <constant name="Ecal_endcap_inner_radius" value="400*mm"/>
+    <constant name="Ecal_endcap_inner_radius" value="350*mm"/>
     <constant name="Ecal_endcap_outer_radius" value="Ecal_barrel_outer_radius"/>
     <constant name="Ecal_endcap_zmin"         value="2930*mm"/>
     <constant name="Ecal_endcap_thickness"    value="Ecal_barrel_thickness"/>
@@ -329,7 +313,7 @@
       <limit name="step_length_max" particles="*" value="5.0" unit="mm" />
     </limitset>
     <limitset name="detail_limits">
-      <limit name="step_length_max" particles="*" value="1.0" unit="mm" />
+      <limit name="step_length_max" particles="*" value="0.005" unit="mm" />
     </limitset>
     <limitset name="support_limits">
       <limit name="step_length_max" particles="*" value="10.0" unit="mm" />
