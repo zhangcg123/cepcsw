@@ -15,6 +15,9 @@ FROM centos:7
 
 ARG CVMFSMOD
 
+# Due to CentOS 7 is EOL, need to change the repo URL:
+RUN sed -i 's|^mirrorlist=|#mirrorlist=|g; s|^#baseurl=http://mirror.centos.org|baseurl=https://vault.centos.org|g' /etc/yum.repos.d/CentOS-Base.repo
+
 # Basic
 RUN yum install -y sudo
 RUN sudo yum install -y redhat-lsb wget
@@ -23,7 +26,7 @@ RUN sudo yum install -y redhat-lsb wget
 RUN sudo yum update -y && \
     sudo yum install -y epel-release && \
     sudo yum update -y && \
-    sudo yum install -y singularity
+    sudo yum install -y apptainer # singularity
 
 # If the CVMFS is installed in the host, just mount the corresonding /CVMFS directories
 # $ docker run --privileged --rm -i -t \

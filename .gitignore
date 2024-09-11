@@ -5,3 +5,4 @@ spack*
 ./Generator/options/
 
 InstallArea/
+venv
