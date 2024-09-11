@@ -292,7 +292,7 @@ StatusCode EcalDigiAlg::execute()
 			}
 		}
 
-    if(_UseRelDigi){		
+    if(_UseRelDigi){
 		// #############################################
 		// ####### Realistic Charge Digitization #######
 		// #############################################
@@ -301,7 +301,10 @@ StatusCode EcalDigiAlg::execute()
 		double sEcalCryMipLY = fEcalCryMipLY;
 
     //TODO: fEcalMIPEnergy should depends on crystal size. 
-		int ScinGen = std::round(gRandom->Poisson((totQ1_Truth+totQ2_Truth)*1000 / fEcalMIPEnergy * sEcalCryMipLY));
+		int ScinGen; 
+    if(fUseDigiScint)
+      ScinGen = std::round(gRandom->Poisson((totQ1_Truth+totQ2_Truth)*1000 / fEcalMIPEnergy * sEcalCryMipLY));
+    else ScinGen = (totQ1_Truth+totQ2_Truth)*1000 / fEcalMIPEnergy * sEcalCryMipLY;
 
 		totQ1_Digi = EnergyDigi(ScinGen*totQ1_Truth/(totQ1_Truth+totQ2_Truth), sEcalCryMipLY)/1000;
 		totQ2_Digi = EnergyDigi(ScinGen*totQ2_Truth/(totQ1_Truth+totQ2_Truth), sEcalCryMipLY)/1000;
@@ -443,15 +446,14 @@ StatusCode EcalDigiAlg::finalize()
 }
 
 double EcalDigiAlg::EnergyDigi(double ScinGen, double sEcalCryMipLY){
-    Int_t sPix = int(ScinGen);
 
-	// if(sPix/sEcalCryMipLY < fEcalMIP_Thre) return 0;
-	// return sPix/sEcalCryMipLY*fEcalMIPEnergy;
+    Int_t sPix; 
 
-	// return sPix/sEcalCryMipLY*fEcalMIPEnergy;
+  // ####### SiPM Saturation  #######
+    if(fUseDigiSaturation)
+      sPix = std::round(fEcalSiPMPixels * (1 - TMath::Exp(-sPix / fEcalSiPMPixels)));
+    else sPix = int(ScinGen);
 
-	// ####### SiPM Saturation  #######
-    // sPix = std::round(fEcalSiPMPixels * (1 - TMath::Exp(-sPix / fEcalSiPMPixels)));
 	
 	// ################################
 	// ####### ADC Digitization #######
@@ -464,35 +466,44 @@ double EcalDigiAlg::EnergyDigi(double ScinGen, double sEcalCryMipLY){
     Double_t sADCMean = sPix * fEcalChargeADCMean;
     Double_t sADCSigma = std::sqrt(sPix * fEcalChargeADCSigma * fEcalChargeADCSigma + fEcalNoiseADCSigma * fEcalNoiseADCSigma);
     Int_t sADC = -1;
-    sADC = std::round(gRandom->Gaus(sADCMean, sADCSigma));
+    if(fUseDigiADC){
+        sADC = std::round(gRandom->Gaus(sADCMean, sADCSigma));
+   
+      if(sADC <= fADCSwitch){
+          Use_G1 = kTRUE;
+          sADC = std::round(gRandom->Gaus(sADC, fEcalADCError * sADC));
+          Double_t sMIP = sADC / fEcalChargeADCMean / sEcalCryMipLY;
+          if(sMIP < fEcalMIP_Thre) return 0;
+          return sMIP * fEcalMIPEnergy;
+      }
+      else if(sADC > fADCSwitch && int(sADC/fGainRatio_12) <= fADCSwitch){
+          Use_G2 = kTRUE;
+          sADCMean = sPix * fEcalChargeADCMean / fGainRatio_12;
+          sADCSigma = std::sqrt(sPix * fEcalChargeADCSigma / fGainRatio_12 * fEcalChargeADCSigma / fGainRatio_12 + fEcalNoiseADCSigma * fEcalNoiseADCSigma);
+          sADC = std::round(gRandom->Gaus(sADCMean, sADCSigma));
+          sADC = std::round(gRandom->Gaus(sADC, fEcalADCError * sADC));
+          Double_t sMIP = sADC / fEcalChargeADCMean * fGainRatio_12 / sEcalCryMipLY;
+          if(sMIP < fEcalMIP_Thre) return 0;
+          return sMIP * fEcalMIPEnergy;
+      }
+      else if(int(sADC/fGainRatio_12) > fADCSwitch){
+          Use_G3 = kTRUE;
+          sADCMean = sPix * fEcalChargeADCMean / fGainRatio_12 / fGainRatio_23;
+          sADCSigma = std::sqrt(sPix * fEcalChargeADCSigma / fGainRatio_12 / fGainRatio_23 * fEcalChargeADCSigma / fGainRatio_12 / fGainRatio_23 + fEcalNoiseADCSigma * fEcalNoiseADCSigma);
+          sADC = std::round(gRandom->Gaus(sADCMean, sADCSigma));
+          sADC = std::round(gRandom->Gaus(sADC, fEcalADCError * sADC));
+    	if (sADC > fADC-1) sADC = fADC-1;
+          Double_t sMIP = sADC / fEcalChargeADCMean * fGainRatio_12 * fGainRatio_23 / sEcalCryMipLY;
+    	if(sMIP < fEcalMIP_Thre) return 0;
+          return sMIP * fEcalMIPEnergy;
+      }
 
-    if(sADC <= fADCSwitch){
-        Use_G1 = kTRUE;
-        sADC = std::round(gRandom->Gaus(sADC, fEcalADCError * sADC));
-        Double_t sMIP = sADC / fEcalChargeADCMean / sEcalCryMipLY;
-        if(sMIP < fEcalMIP_Thre) return 0;
-        return sMIP * fEcalMIPEnergy;
     }
-    else if(sADC > fADCSwitch && int(sADC/fGainRatio_12) <= fADCSwitch){
-        Use_G2 = kTRUE;
-        sADCMean = sPix * fEcalChargeADCMean / fGainRatio_12;
-        sADCSigma = std::sqrt(sPix * fEcalChargeADCSigma / fGainRatio_12 * fEcalChargeADCSigma / fGainRatio_12 + fEcalNoiseADCSigma * fEcalNoiseADCSigma);
-        sADC = std::round(gRandom->Gaus(sADCMean, sADCSigma));
-        sADC = std::round(gRandom->Gaus(sADC, fEcalADCError * sADC));
-        Double_t sMIP = sADC / fEcalChargeADCMean * fGainRatio_12 / sEcalCryMipLY;
-        if(sMIP < fEcalMIP_Thre) return 0;
-        return sMIP * fEcalMIPEnergy;
-    }
-    else if(int(sADC/fGainRatio_12) > fADCSwitch){
-        Use_G3 = kTRUE;
-        sADCMean = sPix * fEcalChargeADCMean / fGainRatio_12 / fGainRatio_23;
-        sADCSigma = std::sqrt(sPix * fEcalChargeADCSigma / fGainRatio_12 / fGainRatio_23 * fEcalChargeADCSigma / fGainRatio_12 / fGainRatio_23 + fEcalNoiseADCSigma * fEcalNoiseADCSigma);
-        sADC = std::round(gRandom->Gaus(sADCMean, sADCSigma));
-        sADC = std::round(gRandom->Gaus(sADC, fEcalADCError * sADC));
-		if (sADC > fADC-1) sADC = fADC-1;
-        Double_t sMIP = sADC / fEcalChargeADCMean * fGainRatio_12 * fGainRatio_23 / sEcalCryMipLY;
-		if(sMIP < fEcalMIP_Thre) return 0;
-        return sMIP * fEcalMIPEnergy;
+    else{
+      sADC = sADCMean; 
+      Double_t sMIP = sADC / fEcalChargeADCMean / sEcalCryMipLY;
+      if(sMIP < fEcalMIP_Thre) return 0;
+      return sMIP * fEcalMIPEnergy;
     }
 }
 
@@ -535,13 +546,13 @@ StatusCode EcalDigiAlg::MergeHits( const edm4hep::SimCalorimeterHitCollection& m
 
 double EcalDigiAlg::GetBarLength(CaloBar& bar){
     //TODO: reading bar length from geosvc. 
-    if(bar.getSlayer()==1) return 375.133;
+    if(bar.getSlayer()==1) return 374.667;
     else{
         if(bar.getModule()%2 == 0){
-            return 295.905 + (bar.getDlayer()-1)* 6.13231;
+            return 288 + (bar.getDlayer()-1)*12.7080;
         }
         else{
-            return 416.843 - (bar.getDlayer()+1)* 2.25221;
+            return 409 - (bar.getDlayer()-1)*4.6670;
         }
         
     }

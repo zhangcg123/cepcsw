@@ -57,6 +57,8 @@
 
   <readouts>
     <readout name="HcalBarrelCollection">
+      <!--id>system:5,stave:4,layer:6,tile:16,x:32:-16,y:-16</id-->
+      <segmentation type="TiledLayerGridXY" grid_size_x="Hcal_cell_size" grid_size_y="Hcal_cell_size"/>
       <id>system:5,stave:4,layer:6,tile:16,x:32:-16,y:-16</id>
     </readout>
   </readouts>

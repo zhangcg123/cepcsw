@@ -49,12 +49,18 @@ StatusCode HcalDigiAlg::initialize()
     std::string s_outfile = _filename;
     m_wfile = new TFile(s_outfile.c_str(), "recreate");
     t_simHit = new TTree("simHit", "simHit");
+
     
     t_simHit->Branch("totE", &m_totE);
     t_simHit->Branch("simHit_x", &m_simHit_x);
     t_simHit->Branch("simHit_y", &m_simHit_y);
     t_simHit->Branch("simHit_z", &m_simHit_z);
     t_simHit->Branch("simHit_E", &m_simHit_E);
+    t_simHit->Branch("simHit_Etruth", &m_simHit_Etruth);
+    t_simHit->Branch("simHit_Eatt", &m_simHit_Eatt);
+    t_simHit->Branch("simHit_Npe_scint", &m_simHit_Npe_scint);
+    t_simHit->Branch("simHit_Npe_sipm", &m_simHit_Npe_sipm);
+    t_simHit->Branch("simHit_rawQ", &m_simHit_rawQ);
     t_simHit->Branch("simHit_HG", &m_simHit_HG);
     t_simHit->Branch("simHit_LG", &m_simHit_LG);
     t_simHit->Branch("simHit_steps", &m_simHit_steps);
@@ -96,6 +102,7 @@ StatusCode HcalDigiAlg::execute()
 	Clear();
   m_totE = 0.;
  	const edm4hep::SimCalorimeterHitCollection* SimHitCol =  r_SimCaloCol.get();
+  std::vector<edm4hep::SimCalorimeterHit> m_simhitCol; m_simhitCol.clear();
 
 	edm4hep::CalorimeterHitCollection* caloVec = w_DigiCaloCol.createAndPut();
 	edm4hep::MCRecoCaloAssociationCollection* caloAssoVec = w_CaloAssociationCol.createAndPut();
@@ -108,30 +115,51 @@ StatusCode HcalDigiAlg::execute()
 	}
   if(_Debug>=1) std::cout<<"digi, input sim hit size="<< SimHitCol->size() <<std::endl;
 
+  MergeHits(*SimHitCol, m_simhitCol);
 
-  for(int isim=0; isim<SimHitCol->size(); isim++){
+  for(int isim=0; isim<m_simhitCol.size(); isim++){
 
-    auto simhit = SimHitCol->at(isim);
+    auto simhit = m_simhitCol.at(isim);
     if(!simhit.isAvailable()) continue;
     if(simhit.getEnergy()==0) continue;
 
     unsigned long long id = simhit.getCellID();
-    double Ehit = simhit.getEnergy();
+    edm4hep::Vector3f hitpos = simhit.getPosition();
+    TVector3 tilepos(hitpos.x, hitpos.y, hitpos.z); //cm to mm.    
 
+    //Loop G4 steps to get the attenuated light yield.
+    double Ehit_truth = 0.;
+    double Ehit = 0.;
+    for(int iCont=0; iCont < simhit.contributions_size(); ++iCont){
+      auto conb = simhit.getContributions(iCont);
+      if( !conb.isAvailable() ) { std::cout<<" Can not get SimHitContribution: "<<iCont<<std::endl; continue;}
+      TVector3 steppos(conb.getStepPosition().x, conb.getStepPosition().y, conb.getStepPosition().z);
+
+      double _distance = (tilepos-steppos).Mag(); //Simplified: use R(step-center) not R(step-SiPM) as distance. 
+      Ehit_truth += conb.getEnergy();
+      Ehit += conb.getEnergy()*exp(-1.*_distance/_EffAttenLength);
+    }
+    double Ehit_att = Ehit;
+
+    double sChargeOut = 0;
     double sChargeOutHG = 0;
     double sChargeOutLG = 0;
+    double Npe_scint = 0;
+    double Npe_SiPM = 0;
     //Digitization
     if(_UseRelDigi){
       // -- Scintillation (Energy -> MIP -> Np.e.)
       int sPix = gRandom->Poisson(Ehit / _MIPCali * (_MIPADC / _PeADCMean));
+      Npe_scint = sPix;
       // -- Tile non-uniformity 
       sPix = sPix * (1.0 + gRandom->Uniform(-_TileRes, _TileRes));
       // -- SiPM Saturation (Np.e. -> Npixel)
       sPix = std::round(_Pixel * (1.0 - TMath::Exp(-sPix * 1.0 / _Pixel)));
+      Npe_SiPM = sPix;
       // -- ADC response (Npixel -> ADC)
       double sChargeMean = sPix * _PeADCMean;
       double sChargeSigma = sqrt(sPix * _PeADCSigma * _PeADCSigma);
-      double sChargeOut = gRandom->Gaus(sChargeMean, sChargeSigma);
+      sChargeOut = gRandom->Gaus(sChargeMean, sChargeSigma);
       // -- (ADC->MIP)
       sChargeOutHG = sChargeOut + gRandom->Gaus(_BaselineHG, _BaselineSigmaHG);
       sChargeOutLG = sChargeOut / _HLRatio + gRandom->Gaus(_BaselineLG, _BaselineSigmaLG);
@@ -200,14 +228,19 @@ StatusCode HcalDigiAlg::execute()
       m_simHit_y.push_back(digiHit.getPosition().y);
       m_simHit_z.push_back(digiHit.getPosition().z);
       m_simHit_E.push_back(digiHit.getEnergy());
+      m_simHit_Etruth.push_back(Ehit_truth);
+      m_simHit_Eatt.push_back(Ehit_att);
+      m_simHit_rawQ.push_back(sChargeOut);
       m_simHit_HG.push_back(sChargeOutHG);
       m_simHit_LG.push_back(sChargeOutLG);
+      m_simHit_Npe_scint.push_back(Npe_scint);
+      m_simHit_Npe_sipm.push_back(Npe_SiPM);
       m_simHit_steps.push_back(simhit.contributions_size());
-      m_simHit_module.push_back(m_decoder->get(id, "module"));
-      m_simHit_stave.push_back(m_decoder->get(id, "stave"));
-      m_simHit_layer.push_back(m_decoder->get(id, "layer"));
-      m_simHit_slice.push_back(m_decoder->get(id, "slice"));
-      m_simHit_tower.push_back(m_decoder->get(id, "tower"));
+      //m_simHit_module.push_back(m_decoder->get(id, "stave"));
+      //m_simHit_stave.push_back(m_decoder->get(id, "layer"));
+      //m_simHit_layer.push_back(m_decoder->get(id, "tile"));
+      //m_simHit_slice.push_back(m_decoder->get(id, "x"));
+      //m_simHit_tower.push_back(m_decoder->get(id, "y"));
       m_simHit_cellID.push_back(id);
     }
   }
@@ -233,20 +266,75 @@ StatusCode HcalDigiAlg::finalize()
 }
 
 
+StatusCode HcalDigiAlg::MergeHits( const edm4hep::SimCalorimeterHitCollection& m_col, std::vector<edm4hep::SimCalorimeterHit>& m_hits ){
+
+  m_hits.clear();
+  std::vector<edm4hep::MutableSimCalorimeterHit> m_mergedhit;
+  m_mergedhit.clear();
+
+  for(int iter=0; iter<m_col.size(); iter++){
+    edm4hep::SimCalorimeterHit m_step = m_col[iter];
+    if(!m_step.isAvailable()){ cout<<"ERROR HIT!"<<endl; continue;}
+    if(m_step.getEnergy()==0 || m_step.contributions_size()<1) continue;
+    unsigned long long cellid = m_step.getCellID();
+    //edm4hep::Vector3f pos = m_step.getPosition();;
+    dd4hep::Position hitpos = m_cellIDConverter->position(cellid);
+    edm4hep::Vector3f pos(hitpos.x()*10, hitpos.y()*10, hitpos.z()*10);
+
+
+    edm4hep::MutableCaloHitContribution conb;
+    conb.setEnergy(m_step.getEnergy());
+    conb.setStepPosition(m_step.getPosition());
+    conb.setParticle( m_step.getContributions(0).getParticle() );
+    conb.setTime(m_step.getContributions(0).getTime());
+
+    edm4hep::MutableSimCalorimeterHit m_hit = find(m_mergedhit, cellid);
+    if(m_hit.getCellID()==0){
+      m_hit.setCellID(cellid);
+      m_hit.setPosition(pos);
+      m_mergedhit.push_back(m_hit);
+    }
+    m_hit.addToContributions(conb);
+    m_hit.setEnergy(m_hit.getEnergy()+m_step.getEnergy());
+  }
+
+  for(auto iter = m_mergedhit.begin(); iter!=m_mergedhit.end(); iter++){
+    edm4hep::SimCalorimeterHit constsimhit = *iter;
+    m_hits.push_back( constsimhit );
+  }
+  return StatusCode::SUCCESS;
+}
+
+
+edm4hep::MutableSimCalorimeterHit HcalDigiAlg::find(const std::vector<edm4hep::MutableSimCalorimeterHit>& m_col, unsigned long long& cellid) const{
+  for(int i=0;i<m_col.size();i++){
+    edm4hep::MutableSimCalorimeterHit hit=m_col.at(i);
+    if(hit.getCellID() == cellid) return hit;
+  }
+  edm4hep::MutableSimCalorimeterHit hit ;
+  hit.setCellID(0);
+  return hit;
+}
+
 void HcalDigiAlg::Clear(){
   m_totE = -99;
-	m_simHit_x.clear();
-	m_simHit_y.clear();
-	m_simHit_z.clear();
-	m_simHit_E.clear();
-	m_simHit_HG.clear();
-	m_simHit_LG.clear();
-	m_simHit_steps.clear();
-	m_simHit_module.clear();
-	m_simHit_stave.clear();
-	m_simHit_layer.clear();
-	m_simHit_slice.clear();
-	m_simHit_tower.clear();
+  m_simHit_x.clear();
+  m_simHit_y.clear();
+  m_simHit_z.clear();
+  m_simHit_E.clear();
+  m_simHit_Eatt.clear();
+  m_simHit_Etruth.clear();
+  m_simHit_rawQ.clear();
+  m_simHit_HG.clear();
+  m_simHit_LG.clear();
+  m_simHit_Npe_scint.clear();
+  m_simHit_Npe_sipm.clear();
+  m_simHit_steps.clear();
+  m_simHit_module.clear();
+  m_simHit_stave.clear();
+  m_simHit_layer.clear();
+  m_simHit_slice.clear();
+  m_simHit_tower.clear();
   m_simHit_cellID.clear();
 }
 

@@ -96,7 +96,7 @@ from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
     TopAlg = [genalg, detsimalg, out],
     EvtSel = 'NONE',
-    EvtMax = 10,
+    EvtMax = 5,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, geosvc],
     HistogramPersistency = 'ROOT',
     OutputLevel = ERROR
