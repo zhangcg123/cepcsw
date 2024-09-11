@@ -46,14 +46,19 @@ CalorimeterSensDetTool::createSD(const std::string& name) {
     CaloSensitiveDetector* sd = new CaloSensitiveDetector(name, *dd4hep_geo, is_merge_enabled);
     warning() << name << " set to merge true/false = " << is_merge_enabled << endmsg;
 
-    for(auto cal_name : m_listCalsApplyBirks){
-      if(cal_name==name){
-	info() << name << " will apply Birks law" << endmsg;
-	sd->ApplyBirksLaw();
-	break;
+
+    if(m_listCalsApplyBirks.size()!=m_listCalsBirksConst.size()){
+      info() << name << " is set to apply Birks law, but Hit collection and Birks constant collection can not match! " << endmsg;
+    }
+    else{
+      for(int i=0; i<m_listCalsApplyBirks.size(); i++){
+        if(m_listCalsApplyBirks[i]==name){
+          info() << name << " will apply Birks law" << endmsg;
+          sd->ApplyBirksLaw(m_listCalsBirksConst[i]);
+          break;
+        }
       }
     }
-
 
     return sd;
 }

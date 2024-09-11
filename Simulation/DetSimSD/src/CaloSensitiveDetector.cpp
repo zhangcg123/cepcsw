@@ -63,9 +63,17 @@ CaloSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory*) {
         m_hc->insert(hit);
     }
     hit->truth.push_back(contrib);
-    //hit->energyDeposit += contrib.deposit;
-    hit->energyDeposit += h.totalEnergy();
-    //std::cout << "Apply Birk law: before = " << contrib.deposit << " after = " << h.totalEnergy() << std::endl;
+    double depEnergy = step->GetTotalEnergyDeposit();
+    double stepl = step->GetStepLength();
+    double charge = step->GetTrack()->GetDefinition()->GetPDGCharge();
+    double visEnergy = depEnergy;
+    if( m_applyBirksLaw * m_BirksConst * depEnergy * stepl * charge !=0 ){
+      visEnergy = depEnergy/(1 + m_BirksConst*depEnergy/stepl);
+    }
+    hit->energyDeposit += visEnergy;
+
+    //std::cout << "Birk constant " << m_BirksConst << ", step length: "<< stepl << ", charge "<<charge; 
+    //std::cout << ". before = " << depEnergy << " after = " << visEnergy << std::endl;
     
     return true;
 }

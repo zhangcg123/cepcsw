@@ -89,10 +89,23 @@ HcalDigi.CaloMCPAssociationCollection = "HCALBarrelParticleAssoCol"
 HcalDigi.SkipEvt = 0
 HcalDigi.Seed = 2079
 #Digitalization parameters
-HcalDigi.MIPResponse = 0.01  # 0.5 MeV / MIP
-HcalDigi.MIPThreshold = 0.5    # Unit: MIP
+HcalDigi.MIPResponse = 0.007126  # MeV / MIP
+HcalDigi.MIPThreshold = 0.1    # Unit: MIP
 HcalDigi.CalibrHCAL = 1.
-HcalDigi.Debug=0
+HcalDigi.UseRealisticDigi = 1    # Flag to use digitization model.
+HcalDigi.SiPMPixel = 57600       # 57600 for 6025PE (6*6 mm, 25 um pixel pitch)
+HcalDigi.TileNonUniformity = 0.0
+HcalDigi.ADCError = 0.0
+HcalDigi.MIPADCMean = 80.*30.0   # Light yield 80 pe/mip
+HcalDigi.PeADCMean = 30.0
+HcalDigi.PeADCSigma = 0.
+HcalDigi.ADCBaselineHG = 0
+HcalDigi.ADCBaselineSigmaHG = 0.
+HcalDigi.ADCBaselineLG = 0
+HcalDigi.ADCBaselineSigmaLG = 0.
+HcalDigi.ADCHLRatio = 1
+HcalDigi.ADCSwitch = 1e7
+HcalDigi.ADCLimit = 1e7
 HcalDigi.WriteNtuple = 0
 HcalDigi.OutFileName = "Digi_HCAL.root"
 

@@ -109,6 +109,10 @@ protected:
   
   mutable Gaudi::Property<float> _Qthfrac  {this, 	"ChargeThresholdFrac", 0.05, "Charge threshold fraction"};
 
+  mutable Gaudi::Property<int> fUseDigiScint{this, "UseDigiScint", 1, "Add scintillation effect in digitization"};
+  mutable Gaudi::Property<int> fUseDigiSaturation{this, "UseDigiSaturation", 0, "Add SiPM saturation effect in digitization"};
+  mutable Gaudi::Property<int> fUseDigiADC{this, "UseDigiADC", 1, "Add ADC precision effect in digitization"};
+
   mutable Gaudi::Property<int> fADC{this, 	"ADC", 4096, "Total ADC conuts"};
   mutable Gaudi::Property<int> fNofGain{this, 	"NofGain", 3, "Number of gain modes"};
   mutable Gaudi::Property<int> fADCSwitch{this, 	"ADCSwitch", 4000, "switching point of different gain mode"};

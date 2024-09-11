@@ -52,6 +52,9 @@ public:
    */
   virtual StatusCode finalize() ;
 
+  StatusCode MergeHits(const edm4hep::SimCalorimeterHitCollection& m_col, std::vector<edm4hep::SimCalorimeterHit>& m_hits);
+  edm4hep::MutableSimCalorimeterHit find(const std::vector<edm4hep::MutableSimCalorimeterHit>& m_col, unsigned long long& cellid) const;
+
 	void Clear();
 
 protected:
@@ -66,7 +69,7 @@ protected:
 	TTree* t_simHit;
 
   double m_totE;
-	FloatVec m_simHit_x, m_simHit_y, m_simHit_z, m_simHit_E, m_simHit_slice, m_simHit_layer, m_simHit_tower, m_simHit_stave, m_simHit_module, m_simHit_HG, m_simHit_LG;
+	FloatVec m_simHit_x, m_simHit_y, m_simHit_z, m_simHit_E, m_simHit_Etruth, m_simHit_Eatt, m_simHit_slice, m_simHit_layer, m_simHit_tower, m_simHit_stave, m_simHit_module, m_simHit_HG, m_simHit_LG, m_simHit_rawQ, m_simHit_Npe_scint, m_simHit_Npe_sipm;
   std::vector<unsigned long long> m_simHit_cellID;
   std::vector<int> m_simHit_steps;
 
@@ -96,6 +99,7 @@ protected:
   mutable Gaudi::Property<float> _ADCError{this,   "ADCError",  0.0002, "ADC Error (/ADC)"};
   mutable Gaudi::Property<float> _MIPADC{this,   "MIPADCMean",  345.7, "Mean value of MIP response adc (/ADC)"};
   mutable Gaudi::Property<float> _TileRes{this,   "TileNonUniformity",  0.05, "Non-uniformity level of one tile response"};
+  mutable Gaudi::Property<float> _EffAttenLength{this,   "EffAttenLength",  20., "Effictive attenuation length (mm)"};
   mutable Gaudi::Property<float> _PeADCMean{this,   "PeADCMean",  30.0, "Mean value of single photons adc (/ADC)"};
   mutable Gaudi::Property<float> _PeADCSigma{this,   "PeADCSigma",  3.5, "Sigma of single photons adc (/ADC)"};
   mutable Gaudi::Property<float> _BaselineHG{this,   "ADCBaselineHG",  377.4, "Mean value of HG baseline adc (/ADC)"};
