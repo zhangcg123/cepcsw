@@ -419,7 +419,8 @@ protected:
 
   
   void setupGearGeom() ;
-  
+
+  double _tpc_max_drift_length;
   double _tpc_inner_r;
   double _tpc_outer_r;
   double _tpc_pad_height;
