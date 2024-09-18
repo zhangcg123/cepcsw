@@ -670,6 +670,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     pv = StaveLogical.placeVolume(TitubeLogical, Position(-stave_thickness/2.0 + tube_outer_radius, -support_width / 4.0, 0.));
     pv = StaveLogical.placeVolume(TitubeLogical, Position(-stave_thickness/2.0 + tube_outer_radius, support_width / 4.0, 0.));
 
+    double stave_radius = stave_sens_radius - stave_thickness/2 + (max_connector_thickness + flex_thickness + sensor_thickness/2);
     for(int i = 0; i < n_staves; i++){
       std::stringstream stave_enum; 
       stave_enum << "sit_stave_" << layer_id << "_" << i;
@@ -706,7 +707,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 	}
       }
 
-      double stave_radius = stave_sens_radius - stave_thickness/2 + (max_connector_thickness + flex_thickness + sensor_thickness/2);  
+      //double stave_radius = stave_sens_radius - stave_thickness/2 + (max_connector_thickness + flex_thickness + sensor_thickness/2);  
       Transform3D tr (RotationZYX(stave_dphi*i,0.,0.),Position(stave_radius*cos(stave_phi0+stave_dphi*i), stave_radius*sin(stave_phi0+stave_dphi*i), 0.));
       //std::cout << "1st Test!!!" << endl;
       pv = layer_assembly.placeVolume(StaveLogical,tr);
@@ -725,17 +726,19 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     Layer.ladderNumber         = n_staves;
     Layer.phi0                 = 0.;
     //Layer.modulesPerStave     = n_modules_per_stave;
-    Layer.sensorsPerLadder     = n_modules_per_stave*n_sensors_per_module;
+    Layer.sensorsPerLadder     = n_modules_per_stave;
+    //Layer.sensorsPerLadder     = n_modules_per_stave*n_sensors_per_module;
     //Layer.lengthModule         = module_active_length;
-    Layer.lengthSensor         = sensor_active_length;
-    Layer.distanceSupport      = sensitive_radius;
+    Layer.lengthSensor         = module_length;//sensor_active_length;
+    Layer.distanceSupport      = stave_radius*cos(stave_phi0) + StaveSupportenv_start_height; //sensitive_radius;
     Layer.thicknessSupport     = support_thickness / 2.0;
-    Layer.offsetSupport        = -stave_offset;
+    Layer.offsetSupport        = stave_radius*sin(stave_phi0);//-stave_offset;
     Layer.widthSupport         = support_width;
     Layer.zHalfSupport         = support_half_length;
-    Layer.distanceSensitive    = sensitive_radius + tube_outer_radius*2. + support_thickness;
-    Layer.thicknessSensitive   = module_thickness;
-    Layer.offsetSensitive      = -stave_offset/2.0;
+    Layer.distanceSensitive    = stave_radius*cos(stave_phi0) + StaveSupportenv_start_height + support_thickness;
+                               //sensitive_radius + tube_outer_radius*2. + support_thickness;
+    Layer.thicknessSensitive   = sensor_thickness;//module_thickness;
+    Layer.offsetSensitive      = stave_radius*sin(stave_phi0);//-stave_offset;//stave_offset/2.0;
     Layer.widthSensitive       = module_width;
     Layer.zHalfSensitive       = support_half_length;
 

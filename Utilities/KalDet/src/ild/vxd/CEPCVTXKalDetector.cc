@@ -1,5 +1,5 @@
 
-#include "CEPCVTXKalDetector.h"
+#include "kaldet/CEPCVTXKalDetector.h"
 
 #include "MaterialDataBase.h"
 

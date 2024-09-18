@@ -16,6 +16,7 @@ rndmgensvc = RndmGenSvc("RndmGenSvc")
 rndmgensvc.Engine = rndmengine.name()
 
 # option for standalone tracker study
+#geometry_option = "TDR_o1_v01/TDR_o1_v01-oldVersion.xml"
 geometry_option = "TDR_o1_v01/TDR_o1_v01.xml"
 
 if not os.getenv("DETCRDROOT"):

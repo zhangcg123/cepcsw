@@ -10,7 +10,7 @@
   </info>
   <define>
     <constant name="OTKBarrel_total_length" value="2*OTKBarrel_half_length" />
-    <constant name="OTKBarrel_ladder_total_thickness" value="15*mm" />
+    <constant name="OTKBarrel_ladder_total_thickness" value="10*mm" />
     <constant name="OTKBarrel_ladder_total_width" value="160*mm" />
     <constant name="OTKBarrel_ladder_total_length" value="OTKBarrel_total_length" />
     <constant name="OTKBarrel_ladder_support_thickness" value="1*mm" />
@@ -28,18 +28,17 @@
     <constant name="OTKBarrel_pcb_length" value="10*mm" />
     <constant name="OTKBarrel_pcb_zgap" value="1*mm" />
     <constant name="OTKBarrel_asic_thickness" value="500*um" />
-    <constant name="OTKBarrel_asic_width" value="130*mm" />
-    <constant name="OTKBarrel_asic_length" value="5*mm" />
+    <constant name="OTKBarrel_asic_width" value="80*mm" />
+    <constant name="OTKBarrel_asic_length" value="10*mm" />
     <constant name="OTKBarrel_asic_zgap" value="1*mm" />
     
   </define>
 
   <detectors>
-    <detector id="DetID_OTKBarrel" limits="otk_limits" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true">
+    <!--detector id="DetID_OTKBarrel" limits="otk_limits" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true"-->
+    <detector id="DetID_OTKBarrel" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true">
       <envelope>
-      <shape type="BooleanShape" operation="Union" material="Air" >
-        <shape type="Tube" rmin="OTKBarrel_inner_radius" rmax="OTKBarrel_outer_radius" dz="OTKBarrel_half_length" />
-      </shape>
+        <shape type="Tube" rmin="OTKBarrel_inner_radius" rmax="OTKBarrel_outer_radius" dz="OTKBarrel_half_length" material="Air"/>
       </envelope>
 
       <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_STRIP "/>
@@ -85,7 +84,7 @@
   
   <readouts>
     <readout name="OTKBarrelCollection">
-      <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8</id>
+      <id>system:5,side:-2,layer:9,module:8,sensor:8,active:8</id>
     </readout>
   </readouts>
 </lccdd>

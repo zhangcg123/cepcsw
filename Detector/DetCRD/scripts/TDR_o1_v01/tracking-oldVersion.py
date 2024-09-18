@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# option for old version of TDR_o1_v01 before frozen, to obsolete after testing new geometry
 import os
 from Gaudi.Configuration import *
 
@@ -15,7 +16,7 @@ rndmengine.Seeds = seed
 rndmgensvc = RndmGenSvc("RndmGenSvc")
 rndmgensvc.Engine = rndmengine.name()
 
-geometry_option = "TDR_o1_v01/TDR_o1_v01.xml"
+geometry_option = "TDR_o1_v01/TDR_o1_v01.xml-oldVersion"
 
 if not os.getenv("DETCRDROOT"):
     print("Can't find the geometry. Please setup envvar DETCRDROOT." )
@@ -51,8 +52,7 @@ podioinput = PodioInput("PodioReader", collections=[
     "VXDCollection",
     "SITCollection",
     "TPCCollection",
-#    "SETCollection",
-    "OTKBarrelCollection",
+    "SETCollection",
     "FTDCollection"
     ])
 
@@ -60,29 +60,23 @@ podioinput = PodioInput("PodioReader", collections=[
 vxdhitname  = "VXDTrackerHits"
 sithitname  = "SITTrackerHits"
 gashitname  = "TPCTrackerHits"
-sethitname  = "OTKBarrelTrackerHits"
-setspname   = "OTKBarrelSpacePoints"
+sethitname  = "SETTrackerHits"
+setspname   = "SETSpacePoints"
 ftdhitname  = "FTDTrackerHits"
 ftdspname   = "FTDSpacePoints"
-from Configurables import SmearDigiTool
-vxdtool = SmearDigiTool("VXD")
-vxdtool.ResolutionU = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
-vxdtool.ResolutionV = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
-vxdtool.UsePlanarTag = True
-vxdtool.ParameterizeResolution = False
-vxdtool.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
-vxdtool.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
-#vxdtool.OutputLevel = DEBUG
-
-from Configurables import SiTrackerDigiAlg
-digiVXD = SiTrackerDigiAlg("VXDDigi")
+from Configurables import PlanarDigiAlg
+digiVXD = PlanarDigiAlg("VXDDigi")
 digiVXD.SimTrackHitCollection = "VXDCollection"
 digiVXD.TrackerHitCollection = vxdhitname
 digiVXD.TrackerHitAssociationCollection = "VXDTrackerHitAssociation"
-digiVXD.DigiTool = "SmearDigiTool/VXD"
+digiVXD.ResolutionU = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
+digiVXD.ResolutionV = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
+digiVXD.UsePlanarTag = True
+digiVXD.ParameterizeResolution = False
+digiVXD.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
+digiVXD.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
 #digiVXD.OutputLevel = DEBUG
 
-from Configurables import PlanarDigiAlg
 digiSIT = PlanarDigiAlg("SITDigi")
 digiSIT.IsStrip = False
 digiSIT.SimTrackHitCollection = "SITCollection"
@@ -98,9 +92,9 @@ digiSIT.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.296
 
 digiSET = PlanarDigiAlg("SETDigi")
 digiSET.IsStrip = False
-digiSET.SimTrackHitCollection = "OTKBarrelCollection"
+digiSET.SimTrackHitCollection = "SETCollection"
 digiSET.TrackerHitCollection = sethitname
-digiSET.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
+digiSET.TrackerHitAssociationCollection = "SETTrackerHitAssociation"
 digiSET.ResolutionU = [0.005]
 digiSET.ResolutionV = [0.021]
 digiSET.UsePlanarTag = True
@@ -237,14 +231,14 @@ from Configurables import TrackParticleRelationAlg
 tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
 tpr.TrackList = ["CompleteTracks", "ClupatraTracks"]
-tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 #tpr.OutputLevel = DEBUG
 
 from Configurables import TrueMuonTagAlg
 tmt = TrueMuonTagAlg("TrueMuonTag")
 tmt.MCParticleCollection = "MCParticle"
 tmt.TrackList = ["CompleteTracks"]
-tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
