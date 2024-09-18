@@ -35,9 +35,13 @@ GeomSvc::initialize() {
   StatusCode sc = Service::initialize();
 
   m_dd4hep_geo = &(dd4hep::Detector::getInstance());
+  // if DEBUG, set
+  //dd4hep::PrintLevel level = msgLevel(MSG::INFO) ? dd4hep::printLevel() : dd4hep::setPrintLevel(dd4hep::DEBUG);
   // if failed to load the compact, a runtime error will be thrown.
   m_dd4hep_geo->fromCompact(m_dd4hep_xmls.value());
-  
+  // recover to old level, if not, too many DD4hep print
+  //dd4hep::setPrintLevel(level);
+
   return sc;
 }
 
@@ -45,6 +49,8 @@ StatusCode
 GeomSvc::finalize() {
   StatusCode sc;
 
+  // m_surface_manager has added as extension of Detector, so not delete?
+  //if (m_surface_manager != nullptr) delete m_surface_manager;
   dd4hep::Detector::destroyInstance();
 
   return sc;
@@ -94,4 +100,27 @@ GeomSvc::getDecoder(const std::string& readout_name) {
 
     return decoder;
 
+}
+
+const dd4hep::rec::SurfaceMap*
+GeomSvc::getSurfaceMap(const std::string& det_name) {
+  if (m_surface_manager == nullptr) {
+    dd4hep::rec::SurfaceManager* surfaceMgr = nullptr;
+    // first check whether exist
+    try {
+      surfaceMgr = m_dd4hep_geo->extension<dd4hep::rec::SurfaceManager>();
+    }
+    catch (std::runtime_error& e) {
+      info() << e.what() << " " << surfaceMgr << endmsg;
+      surfaceMgr = nullptr;
+    }
+
+    if (surfaceMgr) {
+      m_surface_manager = surfaceMgr;
+    }
+    else {
+      m_dd4hep_geo->addExtension<dd4hep::rec::SurfaceManager>(m_surface_manager = new dd4hep::rec::SurfaceManager(*m_dd4hep_geo));
+    }
+  }
+  return m_surface_manager->map(det_name);
 }

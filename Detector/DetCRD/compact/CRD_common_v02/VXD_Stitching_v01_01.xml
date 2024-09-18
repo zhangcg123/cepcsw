@@ -1,0 +1,207 @@
+<lccdd>
+  <info name="VXD_Stitching_v01_01"
+        title="CepC VXD with stitch module"
+        author=""
+        url="http://cepc.ihep.ac.cn"
+        status="developing"
+        version="v01">
+    <comment>CepC vertex detector</comment>
+  </info>
+  <define>
+    <constant name="VXD_inner_radius" value="Vertex_inner_radius"/>
+    <constant name="VXD_outer_radius" value="Vertex_outer_radius"/>
+    <constant name="VXD_half_length"  value="Vertex_half_length"/>
+    <!--constant name="VXDLayer1_length" value="260*mm" />
+    <constant name="VXDLayer2_length" value="494*mm" />
+    <constant name="VXDLayer3_length" value="749*mm" /-->
+    <constant name="VXD_sensor_length" value="20*mm" />
+    <constant name="VXD_sensor_xgap"   value="0.01*mm"/>
+    <constant name="VXD_sensor_ygap"   value="0.1*mm"/>
+  </define>
+
+  <detectors>
+    <detector id="DetID_VXD" name="VXD" type="SiTrackerStitching_v01" vis="VXDVis" readout="VXDCollection" insideTrackingVolume="true">
+      <envelope>
+	<shape type="Assembly"/>
+      </envelope>
+
+      <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_PIXEL "/>
+
+      <shell rmin="70*mm" rmax="VXD_outer_radius" zhalf="VXD_half_length" material="CFRP_CMS" vis="LightGrayVis"/>
+
+      <modules>
+	<module type="Module1A" radius="12.2*mm" nx="10" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+	  <sensor thickness="50*um" width="20*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+	  <flex vis="GrayVis">
+	    <slice thickness="12.5*um" material="Kapton"/>
+	    <slice thickness="10.0*um" material="G4_Al"/>
+	  </flex>
+	  <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+	  <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+	  <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+	</module>
+
+	<module type="Module1B" radius="12.7*mm" nx="10" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="20*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+	</module>
+
+	<module type="Module2A" radius="13.2*mm" nx="10" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="21*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module type="Module2B" radius="13.7*mm" nx="10" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="21*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+	<module type="Module3A" radius="25.9*mm" nx="20" ny="4" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="21*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module type="Module3B" radius="26.4*mm" nx="20" ny="4" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="21*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+	<module type="Module4A" radius="26.9*mm" nx="20" ny="4" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="22*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module type="Module4B" radius="27.4*mm" nx="20" ny="4" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="22*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+	<module type="Module5A" radius="39.6*mm" nx="30" ny="6" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="22*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module type="Module5B" radius="40.1*mm" nx="30" ny="6" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="22*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+	<module type="Module6A" radius="40.6*mm" nx="30" ny="6" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="23*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module type="Module6B" radius="41.1*mm" nx="30" ny="6" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="23*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <slice thickness="12.5*um" material="Kapton"/>
+            <slice thickness="10.0*um" material="G4_Al"/>
+          </flex>
+          <electronics thickness="100*um" width="5*mm" material="Kapton" vis="RedVis"/>
+          <readout     thickness="100*um" width="5*mm" material="Kapton" vis="GreenVis"/>
+          <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+      </modules>
+
+      <layer id="0" phi0="0">
+	<module type="Module1A" offset="0" phi="0" z="0"/>
+	<module type="Module1B" offset="0" phi="180*degree" z="0"/>
+      </layer>
+
+      <layer id="1" phi0="30*degree" length="0">
+        <module type="Module2A" offset="0" phi="0" z="0"/>
+        <module type="Module2B" offset="0" phi="180*degree" z="0"/>
+      </layer>
+
+      <layer id="2" phi0="60*degree" length="0">
+	<module type="Module3A" offset="0" phi="0" z="0"/>
+        <module type="Module3B" offset="0" phi="180*degree" z="0"/>
+      </layer>
+
+      <layer id="3" phi0="90*degree" length="0">
+	<module type="Module4A" offset="0" phi="0" z="0"/>
+        <module type="Module4B" offset="0" phi="180*degree" z="0"/>
+      </layer>
+
+      <layer id="4" phi0="120*degree" length="0">
+	<module type="Module5A" offset="0" phi="0" z="0"/>
+        <module type="Module5B" offset="0" phi="180*degree" z="0"/>
+      </layer>
+
+      <layer id="5" phi0="150*degree" length="0">
+	<module type="Module6A" offset="0" phi="0" z="0"/>
+        <module type="Module6B" offset="0" phi="180*degree" z="0"/>
+      </layer>
+
+    </detector>
+
+  </detectors>
+  
+  <readouts>
+    <readout name="VXDCollection">
+      <!--segmentation type="CartesianGridYZ" grid_size_y="0.016*mm" grid_size_z="0.016*mm"/>
+      <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8,y:-12,z:-12</id-->
+      <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8</id>
+    </readout>
+  </readouts>
+</lccdd>

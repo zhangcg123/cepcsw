@@ -12,6 +12,7 @@
 
 #include "GaudiKernel/IService.h"
 #include "DDRec/DetectorData.h"
+#include "DDRec/SurfaceManager.h"
 #include <map>
 
 namespace dd4hep {
@@ -43,6 +44,7 @@ public:
 
   // short cut to retrieve the Decoder according to the Readout name
   virtual Decoder* getDecoder(const std::string& readout_name) = 0;
+  virtual const dd4hep::rec::SurfaceMap* getSurfaceMap(const std::string& det_name) = 0;
 
   virtual ~IGeomSvc() {}
 };

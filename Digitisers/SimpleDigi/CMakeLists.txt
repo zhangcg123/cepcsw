@@ -4,7 +4,10 @@ gaudi_add_module(SimpleDigi
                          src/TPCDigiAlg.cpp
                          src/voxel.cpp
                          src/CylinderDigiAlg.cpp
+                         src/SiTrackerDigiAlg.cpp
+                         src/SmearDigiTool.cpp
                  LINK GearSvc
+                      DigiTool
                       EventSeeder
                       TrackSystemSvcLib
                       DataHelperLib

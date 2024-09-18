@@ -36,6 +36,7 @@ class GeomSvc: public extends<Service, IGeomSvc> {
   
  private:
   Decoder* getDecoder(const std::string& readout_name) override;
+  const dd4hep::rec::SurfaceMap* getSurfaceMap(const std::string& det_name) override;
     
 private:
   // DD4hep XML compact file path
@@ -43,6 +44,7 @@ private:
   
   // 
   dd4hep::Detector* m_dd4hep_geo;
+  dd4hep::rec::SurfaceManager* m_surface_manager = nullptr;
 };
 
 #endif // GeomSvc_h
