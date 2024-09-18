@@ -11,8 +11,10 @@
 #include "kaldet/ILDVXDKalDetector.h"
 #include "kaldet/CEPCVTXKalDetector.h"
 #include "kaldet/ILDSITKalDetector.h"
+#include "kaldet/CEPCITKKalDetector.h"
 #include "kaldet/ILDSITCylinderKalDetector.h"
 #include "kaldet/ILDSETKalDetector.h"
+#include "kaldet/CEPCOTKKalDetector.h"
 #include "kaldet/ILDFTDKalDetector.h"
 #include "kaldet/ILDFTDDiscBasedKalDetector.h"
 #include "kaldet/ILDTPCKalDetector.h"
@@ -127,7 +129,8 @@ namespace MarlinTrk{
       
       bool SIT_found = false ;
       try{
-        ILDSITKalDetector* sitdet = new ILDSITKalDetector( *_gearMgr, _geoSvc )  ;
+        //ILDSITKalDetector* sitdet = new ILDSITKalDetector( *_gearMgr, _geoSvc )  ;
+	CEPCITKKalDetector* sitdet = new CEPCITKKalDetector(*_gearMgr, _geoSvc);
         // store the measurement layer id's for the active layers 
         this->storeActiveMeasurementModuleIDs(sitdet);
         _det->Install( *sitdet ) ;
@@ -150,7 +153,8 @@ namespace MarlinTrk{
       }
 
       try{
-        ILDSETKalDetector* setdet = new ILDSETKalDetector( *_gearMgr, _geoSvc )  ;
+        //ILDSETKalDetector* setdet = new ILDSETKalDetector( *_gearMgr, _geoSvc );
+	CEPCOTKKalDetector* setdet = new CEPCOTKKalDetector(*_gearMgr, _geoSvc);
         // store the measurement layer id's for the active layers
         this->storeActiveMeasurementModuleIDs(setdet);
         _det->Install( *setdet ) ;

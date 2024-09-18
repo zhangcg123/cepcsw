@@ -71,7 +71,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         dd4hep::PlacedVolume pv;
         int layer_id                 = x_layer.attr<int>(_Unicode(layer_id));
 
-        std::cout << "layer_id: " << layer_id << endl;
+        std::cout << "layer_id: " << layer_id << " ......." << endl;
 
         double sensitive_radius      = x_layer.attr<double>(_Unicode(ladder_radius));
         int n_ladders                = x_layer.attr<int>(_Unicode(n_ladders)) ;
@@ -233,7 +233,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         }
 
         //place the flex envelope inside the ladder envelope
-        pv = LadderLogical.placeVolume(FlexEnvelopeLogical, Position((support_height+flex_thickness)/2.0+sensor_thickness, (-support_width+flex_width)/2.0, 0.));
+        pv = LadderLogical.placeVolume(FlexEnvelopeLogical, Position((support_height+flex_thickness)/2.0+sensor_thickness+pcb_thickness+asic_thickness, (-support_width+flex_width)/2.0, 0.));
 
         //create sensor envelope logical volume
         Box SensorEnvelopeSolid((sensor_thickness+pcb_thickness+asic_thickness) / 2.0, sensor_total_width / 2.0, support_length / 2.0);
@@ -313,8 +313,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         pv = LadderSupportEnvelopeLogical.placeVolume(LadderSupportLogical);
         pv = LadderLogical.placeVolume(LadderSupportEnvelopeLogical);
 
+	float rot = layer_id*0.5;
         for(int i = 0; i < n_ladders; i++){
-            float rot = layer_id*0.5;
             std::stringstream ladder_enum;
             ladder_enum << "otkbarrel_ladder_" << layer_id << "_" << i;
             DetElement ladderDE(layerDE, ladder_enum.str(), x_det.id());
@@ -347,7 +347,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             pv = layer_assembly.placeVolume(LadderLogical,tr);
             pv.addPhysVolID("module", i ) ;
             ladderDE.setPlacement(pv);
-            std::cout << ladder_enum.str() << " done." << endl;
+            //std::cout << ladder_enum.str() << " done." << endl;
             if(i==0) std::cout << "xy=" << ladder_radius*cos(ladder_phi0) << " " << ladder_radius*sin(ladder_phi0) << std::endl;
         }
 
@@ -355,19 +355,21 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         dd4hep::rec::ZPlanarData::LayerLayout otkbarrelLayer;
 
         otkbarrelLayer.ladderNumber         = n_ladders;
-        otkbarrelLayer.phi0                 = ladder_phi0;
+        otkbarrelLayer.phi0                 = ladder_phi0 + ladder_dphi*rot;
         otkbarrelLayer.sensorsPerLadder     = n_sensors_per_side;
-        otkbarrelLayer.lengthSensor         = sensor_length;
-        otkbarrelLayer.distanceSupport      = sensitive_radius;
+        otkbarrelLayer.lengthSensor         = sensor_length + dead_gap; // dead region also has silicon material
+        otkbarrelLayer.distanceSupport      = ladder_radius*cos(ladder_phi0) - support_thickness/2.0; //sensitive_radius;
         otkbarrelLayer.thicknessSupport     = support_thickness / 2.0;
         otkbarrelLayer.offsetSupport        = -ladder_offset;
         otkbarrelLayer.widthSupport         = support_width;
         otkbarrelLayer.zHalfSupport         = support_length / 2.0;
-        otkbarrelLayer.distanceSensitive    = sensitive_radius + support_height / 2.0 + flex_thickness;
+        otkbarrelLayer.distanceSensitive    = ladder_radius*cos(ladder_phi0) - support_thickness/2.0
+                                            - sensor_thickness; //sensitive_radius + support_height / 2.0 + flex_thickness;
         otkbarrelLayer.thicknessSensitive   = sensor_thickness;
         otkbarrelLayer.offsetSensitive      = -ladder_offset + (support_width/2.0 - sensor_active_width/2.0);
         otkbarrelLayer.widthSensitive       = sensor_active_width;
-        otkbarrelLayer.zHalfSensitive       = (n_sensors_per_side*(sensor_length + dead_gap) - dead_gap) / 2.0;
+        //otkbarrelLayer.zHalfSensitive       = (n_sensors_per_side*(sensor_length + dead_gap) - dead_gap) / 2.0;
+	otkbarrelLayer.zHalfSensitive       = n_sensors_per_side*(sensor_length + dead_gap) / 2.0; // add dead_gap to same sensor, little effect?
 
         zPlanarData->layers.push_back(otkbarrelLayer);
     }

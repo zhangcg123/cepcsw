@@ -712,8 +712,8 @@ StatusCode GearSvc::convertSET(dd4hep::DetElement& set){
     n_sensors_per_ladder.push_back(nSensorsPerLadder);
     setParams->addLayer(nLadders, phi0, supRMin, supOffset, supThickness, supHalfLength, supWidth, 0, senRMin, senOffset, senThickness, senHalfLength, senWidth, 0);
   }
-  setParams->setIntVals("n_sensors_per_ladder",n_sensors_per_ladder);
-  m_gearMgr->setSETParameters( setParams ) ;
+  setParams->setIntVals("n_sensors_per_ladder", n_sensors_per_ladder);
+  m_gearMgr->setSETParameters(setParams);
 
   return StatusCode::SUCCESS;
 }

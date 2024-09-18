@@ -117,7 +117,7 @@ FullLDCTrackingAlg::FullLDCTrackingAlg(const std::string& name, ISvcLocator* svc
   declareProperty("VTXTrackerHits", _VTXTrackerHitColHdl, "VTX Hit Collection");
   declareProperty("SITTrackerHits", _SITTrackerHitColHdl, "SIT Hit Collection");
   declareProperty("SETTrackerHits", _SETTrackerHitColHdl, "SET Hit Collection");
-  //declareProperty("ETDTrackerHits", _ETDTrackerHitColHdl, "ETD Hit Collection");
+  declareProperty("ETDTrackerHits", _ETDTrackerHitColHdl, "ETD Hit Collection");
   declareProperty("TPCTrackerHits", _TPCTrackerHitColHdl, "TPC Hit Collection");
   declareProperty("SITRawHits", _inSITRawColHdl, "SIT Raw Hit Collection of SpacePoints");
   declareProperty("SETRawHits", _inSETRawColHdl, "SET Raw Hit Collection of SpacePoints");
@@ -449,12 +449,16 @@ fitstart:
       trkHits.push_back(it->second);
     }
 
-    //for(int iHit=0;iHit<trkHits.size();iHit++){
-    //const edm4hep::Vector3d& pos = trkHits[iHit].getPosition();
-    //debug() << "Hit " << iHit << ": r= " << sqrt(pos.x*pos.x+pos.y*pos.y) << " id = " << trkHits[iHit].id() << endmsg;
-    //}
-
-    debug() << "trkHits ready " << trkHits.size() << endmsg;
+    if (msgLevel(MSG::DEBUG)) {
+      debug() << "trkHits ready " << trkHits.size() << endmsg;
+      for (unsigned iHit=0; iHit<trkHits.size(); iHit++) {
+	const edm4hep::TrackerHit hit = trkHits[iHit];
+	unsigned long cellID = hit.getCellID();
+	const edm4hep::Vector3d& pos = hit.getPosition();
+	double r = sqrt(pos.x*pos.x+pos.y*pos.y);
+	debug() << "Hit " << iHit << ": r= " << r << " id = " << hit.id() << " cellID = " << cellID << " det = " << (cellID&0x1F) << endmsg;
+      }
+    }
 
     int error_code = 0;
     edm4hep::MutableTrack track;
@@ -1170,7 +1174,6 @@ void FullLDCTrackingAlg::prepareVectors() {
       _allSETHits.push_back( hitExt );
       mapTrackerHits[trkhit] = hitExt;
       
-      
       double pos[3];
       
       for (int i=0; i<3; ++i) {
@@ -1180,7 +1183,139 @@ void FullLDCTrackingAlg::prepareVectors() {
       debug() << " SET Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
     }
   }
-    
+
+  const edm4hep::TrackerHitCollection* hitETDCol = nullptr;
+  try {
+    hitETDCol = _ETDTrackerHitColHdl.get();
+  }
+  catch ( GaudiException &e ) {
+    debug() << "Collection " << _ETDTrackerHitColHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
+  }
+
+  const edm4hep::TrackerHitCollection* rawETDCol = nullptr;
+  if(hitETDCol){
+    try{
+      rawETDCol = _inETDRawColHdl.get();
+    }
+    catch ( GaudiException &e ) {
+      warning() << "Collection " << _inETDRawColHdl.fullKey() << " is unavailable in event " << _nEvt << ", if SIT is Space Point, it needed " << endmsg;
+    }
+  }
+
+  if(hitETDCol){
+    if(rawETDCol) Navigation::Instance()->AddTrackerHitCollection(rawETDCol);
+
+    int nelem = hitETDCol->size();
+
+    debug() << "Number of ETD hits = " << nelem << endmsg;
+
+    double drphi(NAN);
+    double dz(NAN);
+
+    for(edm4hep::TrackerHit trkhit : *hitETDCol){
+      // hit could be of the following type
+      // 1) TrackerHit, either ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT or just standard TrackerHit
+      // 2) TrackerHitPlane, either 1D or 2D
+      // 3) TrackerHitZCylinder, if coming from a simple cylinder design as in the LOI
+
+      // Establish which of these it is in the following order of likelyhood
+      //    i)   ILDTrkHitTypeBit::ONE_DIMENSIONAL (TrackerHitPlane) Should Never Happen: SpacePoints Must be Used Instead
+      //    ii)  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT (TrackerHit)
+      //    iii) TrackerHitPlane (Two dimentional)
+      //    iv)  TrackerHitZCylinder
+      //    v)   Must be standard TrackerHit
+      int layer = getLayerID(trkhit);
+
+      if (layer < 0 || (unsigned)layer >= _nLayersETD) {
+        fatal() << "FullLDCTrackingAlg => fatal error in ETD : layer is outside allowed range : " << layer << endmsg;
+        exit(1);
+      }
+
+      // first check that we have not been given 1D hits by mistake, as they won't work here
+      if ( UTIL::BitSet32( trkhit.getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
+        fatal() << "SiliconTrackingAlg => fatal error in SIT : layer is outside allowed range : " << layer << endmsg;
+        exit(1);
+      }
+      // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
+      else if ( UTIL::BitSet32( trkhit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
+        // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+        drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
+        dz    =      sqrt(trkhit.getCovMatrix()[5]);
+      }
+      // or a PIXEL based SET, using 2D TrackerHitPlane like the VXD above
+      else if ( UTIL::BitSet32( trkhit.getType() )[3] )  {
+	// FIXME should consider this carefully
+
+        // first we need to check if the measurement vectors are aligned with the global coordinates
+        // gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
+        // gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
+        // FIXME Should calculate it correctly
+	gear::Vector3D U(1.0,trkhit.getCovMatrix()[1],trkhit.getCovMatrix()[0],gear::Vector3D::spherical);
+	gear::Vector3D V(1.0,trkhit.getCovMatrix()[4],trkhit.getCovMatrix()[3],gear::Vector3D::spherical);
+	gear::Vector3D Z(0.0,0.0,1.0);
+
+        const float eps = 1.0e-07;
+        // V must be the global z axis
+        if( fabs(1.0 - V.dot(Z)) > eps ) {
+          fatal() << "PIXEL ETD Hit measurment vectors V is not equal to the global Z axis. \n exit(1) called from file " << __FILE__ << " : " << __LINE__ << endmsg;
+          exit(1);
+        }
+
+        // U must be normal to the global z axis
+        if( fabs(U.dot(Z)) > eps ) {
+          fatal() << "PIXEL ETD Hit measurment vectors U is not in the global X-Y plane. \n exit(1) called from file " << __FILE__ << " : " << __LINE__ << endmsg;
+          exit(1);
+        }
+
+	// FIXME should use the correct
+        // drphi = trkhit_P->getdU();
+        // dz    = trkhit_P->getdV();
+        drphi = trkhit.getCovMatrix()[2];
+        dz    = trkhit.getCovMatrix()[5];
+      }
+      // or a simple cylindrical design, as used in the LOI
+      /*FIXME, fucd
+      else if ( true ) {
+        trkhit_C = hitCollection->at( ielem );
+        // FIXME
+        // drphi = trkhit_C->getdRPhi();
+        // dz    = trkhit_C->getdZ();
+        drphi = 1.0;
+        dz = 1.0;
+      }
+      */
+      // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
+      else {
+        // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+        drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
+        dz =     sqrt(trkhit.getCovMatrix()[5]);
+      }
+      
+      // now that the hit type has been established carry on and create a
+
+      TrackerHitExtended * hitExt = new TrackerHitExtended( trkhit );
+
+      // SJA:FIXME: just use planar res for now
+      hitExt->setResolutionRPhi(drphi);
+      hitExt->setResolutionZ(dz);
+
+      // set type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
+      hitExt->setType(int(INT_MAX));
+      // det is no longer used set to INT_MAX to try and catch any missuse
+      hitExt->setDet(int(INT_MAX));
+
+      _allETDHits.push_back( hitExt );
+      mapTrackerHits[trkhit] = hitExt;
+
+      double pos[3];
+      for (int i=0; i<3; ++i) {
+        pos[i] = trkhit.getPosition()[i];
+      }
+
+      debug() << " ETD Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
+    }
+  }
+
   // Reading VTX Hits
   const edm4hep::TrackerHitCollection* hitVTXCol = nullptr;
   try {
@@ -3348,94 +3483,56 @@ void FullLDCTrackingAlg::AddNotAssignedHits() {
   // currently any non-combined Silicon or TPC tracks are added to the list of tracks meaning their hits will not be available to be picked up.
   // it might be preferable to drop these tracks, at least for track in Silicon with very bad Chi2 probabilities, and allow their hits to be re-used here ...
 
-  
-  
-  // Creating helix extrapolations
-  //  if (_assignSETHits>0||_assignETDHits>0)
-  //    CreateExtrapolations();
-  
-  //  if (_assignSETHits>0) { // Assignment of SET Hits
-  //    
-  //    const gear::GearParameters& pSETDet = Global::GEAR->getGearParameters("SET");
-  //    int nLayersSET = int(pSETDet.getDoubleVals("SETLayerRadius").size());
-  //    
-  //    int nSETHits = _allSETHits.size();
-  //    std::vector<TrackerHitExtendedVec> SETHits;
-  //    SETHits.resize(nLayersSET);
-  //    
-  //    for (int iSET=0;iSET<nSETHits;++iSET) {
-  //      TrackerHitExtended * trkHit = _allSETHits[iSET];
-  //      edm4hep::TrackerHit hit = trkHit->getTrackerHit();
-  //      int layer = getLayerID(trkHit);
-  //      if (layer>=0&&layer<nLayersSET) 
-  //        SETHits[layer].push_back(trkHit);
-  //    }
-  //    for (int iL=0; iL<nLayersSET; ++iL) { // loop over SET layers
-  //      TrackerHitExtendedVec hitVec = SETHits[iL];
-  //      int refit = 1;
-  //      AssignOuterHitsToTracks(hitVec,_distCutForSETHits,refit);
-  //    }
-  //  }
-  
-  //  if (_assignETDHits>0) { // Assignment of ETD Hits
-  //    
-  //    const gear::GearParameters& pETDDet = Global::GEAR->getGearParameters("ETD");
-  //    int nLayersETD = int(pETDDet.getDoubleVals("ETDLayerZ").size());
-  //    
-  //    int nETDHits = _allETDHits.size();
-  //    std::vector<TrackerHitExtendedVec> ETDHits;
-  //    ETDHits.resize(nLayersETD);
-  //    
-  //    for (int iETD=0;iETD<nETDHits;++iETD) {
-  //      TrackerHitExtended * trkHit = _allETDHits[iETD];
-  //      edm4hep::TrackerHit hit = trkHit->getTrackerHit();
-  //      int layer = getLayerID(trkHit);
-  //      if (layer>=0 && layer < nLayersETD) 
-  //        ETDHits[layer].push_back(trkHit);
-  //    }
-  //    for (int iL=0; iL<nLayersETD; ++iL) { // loop over ETD layers
-  //      TrackerHitExtendedVec hitVec = ETDHits[iL];
-  //      int refit = 0;
-  //      AssignOuterHitsToTracks( hitVec, _distCutForETDHits, refit );
-  //    }
-  //    
-  //  }
-  
-  //  // Cleaning up helix extrapolations
-  //  if (_assignSETHits>0||_assignETDHits>0)
-  //    CleanUpExtrapolations();
-  
-  
-  
-  
-  
-   if (_assignSETHits>0) { // Assignment of SET Hits
-     debug() << "Assign SET hits *********************************" << endmsg;
-     
-     // Creating helix extrapolations
-     CreateExtrapolations();
-     
-     int nSETHits = _allSETHits.size();
-     std::vector<TrackerHitExtendedVec> SETHits;
+  if (_assignSETHits>0 || _assignETDHits>0) {
+    // Creating helix extrapolations
+    CreateExtrapolations();
 
-     SETHits.resize(_nLayersSET);
+    if (_assignETDHits>0) { // Assignment of ETD Hits
+      debug() << "Assign ETD/OTKEndcap hits *********************************" << endmsg;
+
+      int nETDHits = _allETDHits.size();
+      std::vector<TrackerHitExtendedVec> ETDHits;
+      ETDHits.resize(_nLayersETD);
+      
+      for (int iETD=0;iETD<nETDHits;++iETD) {
+        TrackerHitExtended * trkHitExt = _allETDHits[iETD];
+        edm4hep::TrackerHit trkHit = trkHitExt->getTrackerHit();
+        int layer = getLayerID(trkHit);
+        if (layer >= 0 && layer < _nLayersETD) 
+          ETDHits[layer].push_back(trkHitExt);
+      }
+      for (int iL=0; iL<_nLayersETD; ++iL) { // loop over ETD layers
+        TrackerHitExtendedVec hitVec = ETDHits[iL];
+        int refit = 0;
+        if (hitVec.empty() == false) AssignOuterHitsToTracks(hitVec, _distCutForETDHits, refit);
+      }
+    }
+  
+    if (_assignSETHits>0) { // Assignment of SET Hits
+      debug() << "Assign SET hits *********************************" << endmsg;
+     
+      int nSETHits = _allSETHits.size();
+      std::vector<TrackerHitExtendedVec> SETHits;
+
+      SETHits.resize(_nLayersSET);
  
-     for (int iSET=0;iSET<nSETHits;++iSET) {
-       TrackerHitExtended * trkHitExt = _allSETHits[iSET];
-       edm4hep::TrackerHit trkHit = trkHitExt->getTrackerHit();
-       int layer = getLayerID(trkHit);
-       if (layer>=0 && (unsigned)layer < _nLayersSET)
-         SETHits[layer].push_back(trkHitExt);
-     }
-     for (unsigned iL=0; iL< _nLayersSET; ++iL) { // loop over SET layers
-       TrackerHitExtendedVec hitVec = SETHits[iL];
-       int refit = 1;
-       if(hitVec.empty() == false) AssignOuterHitsToTracks(hitVec,_distCutForSETHits,refit);
-     }
-   }
+      for (int iSET=0;iSET<nSETHits;++iSET) {
+	TrackerHitExtended * trkHitExt = _allSETHits[iSET];
+	edm4hep::TrackerHit trkHit = trkHitExt->getTrackerHit();
+	int layer = getLayerID(trkHit);
+	if (layer>=0 && (unsigned)layer < _nLayersSET)
+	  SETHits[layer].push_back(trkHitExt);
+      }
+      for (unsigned iL=0; iL< _nLayersSET; ++iL) { // loop over SET layers
+	TrackerHitExtendedVec hitVec = SETHits[iL];
+	int refit = 1;
+	if (hitVec.empty() == false) AssignOuterHitsToTracks(hitVec, _distCutForSETHits, refit);
+      }
+    }
 
-  
-  CleanUpExtrapolations();
+    // Cleaning up helix extrapolations
+    CleanUpExtrapolations();
+  }
   
   
   if (_assignSITHits>0) { // Treatment of left-over SIT hits 
@@ -5076,7 +5173,18 @@ void FullLDCTrackingAlg::setupGearGeom(){
       debug() << " ### gear::SET Parameters from as defined in SSet02 Not Present in GEAR FILE" << endmsg;
     }
   }
-    
+
+  _nLayersETD = 0;
+  try {
+    debug() << " filling ETD parameters from gear::ETDParameters " << endmsg;
+
+    const gear::GearParameters& pETDDet = gearMgr->getGearParameters("ETD");
+    _nLayersETD = int(pETDDet.getDoubleVals("ETDLayerZ").size());
+  }
+  catch (...) {
+    debug() << " ### gear::GearParameters ETD Not Present in GEAR FILE" << endmsg;
+  }
+
   //-- FTD Parameters--
   _petalBasedFTDWithOverlaps = false;
   _nLayersFTD = 0;
@@ -5084,7 +5192,7 @@ void FullLDCTrackingAlg::setupGearGeom(){
   try{
     debug() << " filling FTD parameters from gear::FTDParameters " << endmsg;
     
-    const gear::FTDParameters&   pFTD      =gearMgr->getFTDParameters();
+    const gear::FTDParameters&   pFTD      = gearMgr->getFTDParameters();
     const gear::FTDLayerLayout&  ftdlayers = pFTD.getFTDLayerLayout() ;
     
     _nLayersFTD = ftdlayers.getNLayers() ;

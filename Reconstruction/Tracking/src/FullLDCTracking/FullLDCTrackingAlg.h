@@ -460,7 +460,7 @@ protected:
   
   unsigned int _nLayersSET;
 
-  
+  unsigned int _nLayersETD;
 //  struct FTD_Disk {
 //    int nPetals;
 //    double phi0;
@@ -511,10 +511,12 @@ protected:
   DataHandle<edm4hep::TrackerHitCollection> _FTDPixelTrackerHitColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackerHitCollection> _SITTrackerHitColHdl{"SITSpacePoints", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackerHitCollection> _SETTrackerHitColHdl{"SETSpacePoints", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::TrackerHitCollection> _ETDTrackerHitColHdl{"ETDSpacePoints", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackerHitCollection> _VTXTrackerHitColHdl{"VTXTrackerHits", Gaudi::DataHandle::Reader, this};
  
   DataHandle<edm4hep::TrackerHitCollection> _inSITRawColHdl{"SITTrackerHits", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackerHitCollection> _inSETRawColHdl{"SETTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::TrackerHitCollection> _inETDRawColHdl{"SETTrackerHits", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackerHitCollection> _inFTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
   //DataHandle<edm4hep::SimTrackerHitCollection> _inVTXRawColHdl{"VXDCollection", Gaudi::DataHandle::Reader, this};
 
