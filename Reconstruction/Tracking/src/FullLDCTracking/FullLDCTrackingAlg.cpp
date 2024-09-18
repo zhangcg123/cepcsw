@@ -287,7 +287,6 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
   float pyTot = 0.0;
   float pzTot = 0.0;
 
-  bool fit_backwards = _backward ? (IMarlinTrack::backward) : (!IMarlinTrack::backward);
   //SJA:FIXME: So here we are going to do one final refit. This can certainly be optimised, but rather than worry about the mememory management right now lets make it work, and optimise it later ...
   
   debug() << "Total " << nTrkCand << " trkCand to deal" << endmsg;
@@ -364,8 +363,8 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
       
       if(group->getTrackExtendedVec().size()==1) {
         te = group->getTrackExtendedVec()[0];
-	fit_backwards = IMarlinTrack::backward;
-      } else {
+      }
+      else {
         //te = group->getTrackExtendedVec()[1];
 	auto trk0 = group->getTrackExtendedVec()[0]->getTrack();
 	auto trk1 = group->getTrackExtendedVec()[1]->getTrack();
@@ -413,23 +412,40 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     }
     
     ts_initial.covMatrix = covMatrix;
-        
+
+    int  fit_count = 0;
+    bool sort_by_r = false;
+    bool use_ts_initial = false;
+
+fitstart:
+
     // sort hits in R
-    std::vector< std::pair<float, edm4hep::TrackerHit> > r2_values;
-    r2_values.reserve(trkHits.size());
+    std::vector< std::pair<float, edm4hep::TrackerHit> > sort_values;
+    sort_values.reserve(trkHits.size());
     
     for (std::vector<edm4hep::TrackerHit>::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
       edm4hep::TrackerHit h = *it;
-      float r2 = h.getPosition()[0]*h.getPosition()[0]+h.getPosition()[1]*h.getPosition()[1];
-      r2_values.push_back(std::make_pair(r2, *it));
+      //float value = sort_by_z ? h.getPosition()[2] : h.getPosition()[0]*h.getPosition()[0]+h.getPosition()[1]*h.getPosition()[1];
+      //float r2 = h.getPosition()[2];
+      float value = sqrt(h.getPosition()[0]*h.getPosition()[0]+h.getPosition()[1]*h.getPosition()[1]);
+      float z     = fabs(h.getPosition()[2]);
+      if (!sort_by_r) {
+	// TPC
+	if (value>_tpc_inner_r && value<=_tpc_outer_r && z<=_tpc_max_drift_length) value = _tpc_inner_r + z;
+	// OTKBarrel: always larger than TPC's
+	else if (value>_tpc_outer_r) value = _tpc_max_drift_length + value;
+	// OTKEndcap:
+	else if (z>_tpc_max_drift_length) value = _tpc_max_drift_length + value;
+      }
+      sort_values.push_back(std::make_pair(value, *it));
     }
     
-    sort(r2_values.begin(),r2_values.end());
+    sort(sort_values.begin(),sort_values.end());
     
     trkHits.clear();
-    trkHits.reserve(r2_values.size());
+    trkHits.reserve(sort_values.size());
     
-    for (std::vector< std::pair<float, edm4hep::TrackerHit> >::iterator it=r2_values.begin(); it!=r2_values.end(); ++it) {
+    for (std::vector< std::pair<float, edm4hep::TrackerHit> >::iterator it=sort_values.begin(); it!=sort_values.end(); ++it) {
       trkHits.push_back(it->second);
     }
 
@@ -438,21 +454,17 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     //debug() << "Hit " << iHit << ": r= " << sqrt(pos.x*pos.x+pos.y*pos.y) << " id = " << trkHits[iHit].id() << endmsg;
     //}
 
-    debug() << "trkHits ready" << endmsg;
-    //bool fit_backwards = _backward ? (IMarlinTrack::backward) : (!IMarlinTrack::backward);
-    int  fit_count = 0;
-    
-fitstart:
+    debug() << "trkHits ready " << trkHits.size() << endmsg;
 
     int error_code = 0;
     edm4hep::MutableTrack track;
     fit_count++;
 
     try {
-      debug() << "initial TrackState: " << ts_initial << endmsg;
-      debug() << "fir direction: " << ((fit_backwards==IMarlinTrack::backward) ? "backward" : "forward") << endmsg;
-      debug() << "MaxChi2PerHit: " << _maxChi2PerHit << endmsg;
-      if (fit_count==1) {
+      //debug() << "initial TrackState: " << ts_initial << endmsg;
+      debug() << "fit direction: " << ((fit_backwards==IMarlinTrack::backward) ? "backward" : "forward") << endmsg;
+      //debug() << "MaxChi2PerHit: " << _maxChi2PerHit << endmsg;
+      if (use_ts_initial) {
 	error_code = m_fitTool->Fit(track, trkHits, ts_initial, _maxChi2PerHit, fit_backwards);
       }
       else {
@@ -478,6 +490,7 @@ fitstart:
       debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit failed with error code " << error_code << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
       m_fitTool->Clear();
       if (fit_count==1) {
+	sort_by_r = !sort_by_r;
 	goto fitstart;
       }
       // TODO: to pick up old tracks
@@ -518,11 +531,17 @@ fitstart:
       continue ;
     }
 
-    edm4hep::TrackState trkStateIP;
+    edm4hep::TrackState trkStateIP,trkStateFirst,trkStateLast;
     for(int i=0;i<track.trackStates_size();i++){
-      trkStateIP = track.getTrackStates(i);
-      if(trkStateIP.location == edm4hep::TrackState::AtIP) break;
+      edm4hep::TrackState trkState = track.getTrackStates(i);
+      if (trkState.location == edm4hep::TrackState::AtIP) trkStateIP = track.getTrackStates(i);
+      else if (trkState.location == edm4hep::TrackState::AtFirstHit) trkStateFirst = track.getTrackStates(i);
+      else if (trkState.location == edm4hep::TrackState::AtLastHit) trkStateLast = track.getTrackStates(i);
+      //if(trkStateIP.location == edm4hep::TrackState::AtIP) break;
     }
+    debug() << "AtIP:    " << trkStateIP << endmsg;
+    debug() << "AtFirst: " << trkStateFirst << endmsg;
+    debug() << "AtLast:  " << trkStateLast << endmsg;
     
     if (trkStateIP.location != edm4hep::TrackState::AtIP) {
       debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit returns " << track.getNdf() << " degress of freedom track dropped. Number of hits = "<< trkHits.size() << endmsg;
@@ -598,23 +617,23 @@ fitstart:
     if (nhits_in_set > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::SET) ) ;
     
     bool rejectTrack_onTPCHits = (nhits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
-    bool rejectTrack_onITKHits = ( (nhits_in_tpc<=0) && (nhits_in_sit<1 && nhits_in_ftd<1) );
+    //bool rejectTrack_onITKHits = ( (nhits_in_tpc<=0) && (nhits_in_sit<1 && nhits_in_ftd<1) );
     bool rejectTrackonSiliconHits = ( (nhits_in_tpc<=0) && (nHitsSi<_cutOnSiHits) );
     bool rejectTrackonImpactParameters =  ( fabs(d0TrkCand) > _d0TrkCut ) || ( fabs(z0TrkCand) > _z0TrkCut );
     
     edm4hep::TrackState trkState;
 
-    if ( rejectTrack_onTPCHits || rejectTrack_onITKHits || rejectTrackonSiliconHits  || rejectTrackonImpactParameters) {
+    if ( rejectTrack_onTPCHits /*|| rejectTrack_onITKHits*/ || rejectTrackonSiliconHits  || rejectTrackonImpactParameters) {
 
       debug() << " Track " << trkCand
 	      << " rejected : rejectTrack_onTPCHits = " << rejectTrack_onTPCHits
-	      << " rejectTrackonITKHits " << rejectTrack_onITKHits
+	//<< " rejectTrackonITKHits " << rejectTrack_onITKHits
 	      << " rejectTrackonSiliconHits " << rejectTrackonSiliconHits
 	      << " rejectTrackonImpactParameters " << rejectTrackonImpactParameters
 	      << endmsg;
-
+      /*
       if (fit_count==1) {
-	//fit_backwards = !fit_backwards;
+	fit_backwards = !fit_backwards;
 	goto fitstart;
       }
       warning() << "twice failed, select one of old tracks as output, others as subtrack" << endmsg;
@@ -650,6 +669,7 @@ fitstart:
 
       colTRK->push_back(oldtrk);
       debug() << " Add Track to final Collection: ID = " << oldtrk.id() << " for trkCand "<< trkCand << " old" << endmsg;
+      */
     }
     else {
       trkState = trkStateIP;
@@ -4845,6 +4865,7 @@ int FullLDCTrackingAlg::SegmentRadialOverlap(TrackExtended* first, TrackExtended
     float xi = (float)hitvecFirst[i].getPosition()[0];
     float yi = (float)hitvecFirst[i].getPosition()[1];
     float ri = sqrt(xi*xi+yi*yi);
+    debug() << "ri = " << ri << " _tpc_inner_r = " << _tpc_inner_r << " _tpc_pad_height = " << _tpc_pad_height << endmsg;
     if(ri < _tpc_inner_r || ri > _tpc_pad_height)continue;
     for(int j =0;j<nhitsSecond;++j){
       float xj = (float)hitvecSecond[j].getPosition()[0];
@@ -4994,6 +5015,27 @@ void FullLDCTrackingAlg::setupGearGeom(){
     catch( ... ){
       debug() << " ### gear::SIT Parameters from as defined in SSit03 Not Present in GEAR FILE" << endmsg;
     }
+  }
+
+  //-- TPC Parameters, if no TPC, default huge inner radius, deal same as all in TPC
+  _tpc_inner_r = 10000;
+  _tpc_max_drift_length = 10000;
+  const gear::TPCParameters* pTPCDetMain = 0;
+  const gear::PadRowLayout2D* pTPCPadLayout = 0;
+
+  try{
+    debug() << " filling TPC parameters from gear::TPCParameters " << endmsg;
+
+    pTPCDetMain = &(gearMgr->getTPCParameters());
+    pTPCPadLayout = &(pTPCDetMain->getPadLayout());
+    _tpc_max_drift_length = pTPCDetMain->getMaxDriftLength();
+    _tpc_inner_r = pTPCDetMain->getDoubleVal("tpcInnerRadius");
+    _tpc_outer_r = pTPCDetMain->getDoubleVal("tpcOuterRadius");
+    _tpc_pad_height = pTPCPadLayout->getPadHeight(0);
+    _tpc_nrows = pTPCPadLayout->getNRows();
+  }
+  catch( ... ){
+    debug() << " ### gear::TPCParameters Not Present in GEAR FILE" << endmsg;
   }
   
   //-- SET Parameters--
