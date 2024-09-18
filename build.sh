@@ -83,7 +83,23 @@ function run-cmake() {
 }
 
 function run-make() {
-    local njobs=-j$(nproc)
+    # User can limit the number of cores by setting NJOBS envvar.
+    # For example: NJOBS=8 ./build.sh
+    local njobs=${NJOBS}
+    if [ -z "$njobs" ]; then
+        njobs=$(nproc)
+    fi
+
+    # following is IHEP specific hack due to the limitation of nthreads 150.
+    local nthreads=$(ulimit -u)
+    local factor=16
+    nthreads=$((nthreads/factor)) # assume it is safe to divide by scale factor.
+    
+    # min(njobs, nthreads)
+    njobs=$((njobs<nthreads ?  njobs: nthreads))
+
+    njobs=-j${njobs}
+    echo "njobs: $njobs"
     cmake --build . $njobs
 }
 
