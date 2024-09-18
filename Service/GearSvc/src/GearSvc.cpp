@@ -1,6 +1,7 @@
 #include "GearSvc.h"
 #include "DetInterface/IGeomSvc.h"
 #include "DetSegmentation/GridDriftChamber.h"
+#include "Identifier/CEPCDetectorData.h"
 
 #include "gearxml/GearXML.h"
 #include "gearimpl/GearMgrImpl.h"
@@ -21,17 +22,6 @@
 #include "DDRec/MaterialManager.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "CLHEP/Units/SystemOfUnits.h"
-
-struct helpLayer {
-  double distance =0;
-  double offset =0;
-  double thickness =0;
-  double length =0;
-  double width =0;
-  double radLength =0;
-  double z =0;
-  double foam_spacer_radLength =0;
-};
 
 static const double deg_to_rad = dd4hep::degree/CLHEP::rad;
 static const double rad_to_deg = dd4hep::rad/CLHEP::degree;
@@ -91,13 +81,18 @@ StatusCode GearSvc::initialize()
       if(it->first=="Tube"||it->first=="BeamPipe"){
 	sc = convertBeamPipe(sub);
       }
-      else if(it->first=="VXD"){
+      else if(it->first=="VXD" || it->first=="VTX"){
 	sc = convertVXD(sub);
+	if (sc.isRecoverable()) sc = convertStitching(sub);
+	if (sc.isRecoverable()) sc = convertComposite(sub);
+	if (!sc.isSuccess()) {
+	  error() << it->first << " extension not read" << endmsg;
+	}
       }
-      else if(it->first=="FTD"){
+      else if(it->first=="FTD" || it->first=="ITKEndcap"){
         sc = convertFTD(sub);
       }
-      else if(it->first=="SIT"){
+      else if(it->first=="SIT" || it->first=="ITKBarrel"){
 	sc = convertSIT(sub);
       }
       else if(it->first=="TPC"){
@@ -106,7 +101,7 @@ StatusCode GearSvc::initialize()
       else if(it->first=="DriftChamber"){
         sc = convertDC(sub);
       }
-      else if(it->first=="SET"){
+      else if(it->first=="SET" || it->first=="OTKBarrel"){
 	sc = convertSET(sub);
       }
       else if(it->first=="EcalBarrel"||it->first=="EcalEndcap"||it->first=="EcalPlug"||
@@ -197,67 +192,41 @@ StatusCode GearSvc::convertBeamPipe(dd4hep::DetElement& pipe){
 
 StatusCode GearSvc::convertVXD(dd4hep::DetElement& vxd){
   StatusCode sc;
-  //fucd: another method to obtain parameters, but not fully for KalDet
+  // always use extension data
   dd4hep::rec::ZPlanarData* vxdData = nullptr;
-  bool extensionDataValid = true;
   try{
     vxdData = vxd.extension<dd4hep::rec::ZPlanarData>();
   }
   catch(std::runtime_error& e){
-    extensionDataValid = false;
     info() << e.what() << " " << vxdData << endmsg;
+    return StatusCode::RECOVERABLE;
   }
   if(vxdData){
     int vxdType =  gear::ZPlanarParameters::CMOS;
-    gear::ZPlanarParametersImpl* gearVXD = new gear::ZPlanarParametersImpl( vxdType, vxdData->rInnerShell/dd4hep::mm,  vxdData->rOuterShell/dd4hep::mm,
-									    vxdData->zHalfShell/dd4hep::mm , vxdData->gapShell/dd4hep::mm , 0.  ) ;
+    gear::ZPlanarParametersImpl* gearVXD = new gear::ZPlanarParametersImpl(vxdType, vxdData->rInnerShell/dd4hep::mm, vxdData->rOuterShell/dd4hep::mm,
+									   vxdData->zHalfShell/dd4hep::mm, vxdData->gapShell/dd4hep::mm, 0.);
     for(unsigned i=0,n=vxdData->layers.size() ; i<n; ++i){
       const dd4hep::rec::ZPlanarData::LayerLayout& l = vxdData->layers[i];
       // FIXME set rad lengths to 0 -> need to get from dd4hep ....
       gearVXD->addLayer(l.ladderNumber, l.phi0,
-			l.distanceSupport/dd4hep::mm, l.offsetSupport/dd4hep::mm, l.thicknessSupport/dd4hep::mm, l.zHalfSupport/dd4hep::mm, l.widthSupport/dd4hep::mm, 0.,
-			l.distanceSensitive/dd4hep::mm, l.offsetSensitive/dd4hep::mm, l.thicknessSensitive/dd4hep::mm, l.zHalfSensitive/dd4hep::mm, l.widthSensitive/dd4hep::mm, 0.);
+			l.distanceSupport/dd4hep::mm, l.offsetSupport/dd4hep::mm, l.thicknessSupport/dd4hep::mm,
+			l.zHalfSupport/dd4hep::mm, l.widthSupport/dd4hep::mm, 0.,
+			l.distanceSensitive/dd4hep::mm, l.offsetSensitive/dd4hep::mm, l.thicknessSensitive/dd4hep::mm,
+			l.zHalfSensitive/dd4hep::mm, l.widthSensitive/dd4hep::mm, 0.);
     }
     m_gearMgr->setVXDParameters(gearVXD);
 
-    dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() ) ;
     const dd4hep::rec::ZPlanarData::LayerLayout& l = vxdData->layers[0] ;
     double offset = l.offsetSupport;
-    //dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
-    //dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
-    dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, l.offsetSupport, 2.*dd4hep::mm);
-    dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   l.offsetSupport, 2.*dd4hep::mm);
-    const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween( a , b  ) ;
-    dd4hep::rec::MaterialData mat = ( materials.size() > 1  ? matMgr.createAveragedMaterial( materials ) : materials[0].first  ) ;
-
-    std::cout << " ####### found materials between points : " << a << " and " << b << " : " ;
-    for( unsigned i=0,n=materials.size();i<n;++i){
-      std::cout <<  materials[i].first.name() << "[" <<   materials[i].second << "], " ;
-    }
-    std::cout << std::endl ;
-    std::cout << "   averaged material : " << mat << std::endl ;
-    gear::SimpleMaterialImpl* VXDSupportMaterial = new gear::SimpleMaterialImpl("VXDSupportMaterial", mat.A(), mat.Z(),
-										mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
-										mat.radiationLength()/dd4hep::mm,
-										mat.interactionLength()/dd4hep::mm);
+    dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, offset, 2.*dd4hep::mm);
+    dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   offset, 2.*dd4hep::mm);
+    gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
     m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
 
     if (vxdData->rOuterShell>vxdData->rInnerShell) {
       dd4hep::rec::Vector3D a1( vxdData->rInnerShell, 0, 2.*dd4hep::mm);
       dd4hep::rec::Vector3D b1( vxdData->rOuterShell, 0, 2.*dd4hep::mm);
-      const dd4hep::rec::MaterialVec& materials1 = matMgr.materialsBetween( a1 , b1  ) ;
-      dd4hep::rec::MaterialData mat1 = ( materials1.size() > 1  ? matMgr.createAveragedMaterial( materials1 ) : materials1[0].first  ) ;
-
-      std::cout << " ####### found materials between points : " << a1 << " and " << b1 << " : " ;
-      for( unsigned i=0,n=materials1.size();i<n;++i){
-	std::cout <<  materials1[i].first.name() << "[" <<   materials1[i].second << "], " ;
-      }
-      std::cout << std::endl ;
-      std::cout << "   averaged material : " << mat1 << std::endl ;
-      gear::SimpleMaterialImpl* VXDShellMaterial = new gear::SimpleMaterialImpl("VXDShellMaterial", mat1.A(), mat1.Z(),
-                                                                                mat1.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
-                                                                                mat1.radiationLength()/dd4hep::mm,
-                                                                                mat1.interactionLength()/dd4hep::mm);
+      gear::SimpleMaterialImpl* VXDShellMaterial = CreateGearMaterial(a1, b1, "VXDShellMaterial");
       m_gearMgr->registerSimpleMaterial(VXDShellMaterial);
     }
 
@@ -270,418 +239,133 @@ StatusCode GearSvc::convertVXD(dd4hep::DetElement& vxd){
              << thisLayer.distanceSensitive/dd4hep::mm << "," << thisLayer.offsetSensitive/dd4hep::mm << "," << thisLayer.thicknessSensitive/dd4hep::mm << ","
 	     << thisLayer.zHalfSensitive/dd4hep::mm << "," << thisLayer.widthSensitive/dd4hep::mm << ",NULL" << endmsg;
     }
-    return sc;
   }
+  return StatusCode::SUCCESS;
+}
 
-  std::vector<helpLayer> helpSensitives;
-  std::vector<helpLayer> helpLadders;
-  std::vector<int>       helpNumberLadders;
-  std::vector<double>    helpPhi0;
-  int                    helpCount=0;
-  int                    type=0;
-  double shellInnerRadius, shellOuterRadius, shellHalfLength, gap, shellRadLength;
-  int    nLadders=0;
-  double phi0=0;
-  helpLayer thisLadder;
-  double beryllium_ladder_block_length=0,end_electronics_half_z=0,side_band_electronics_width=0;
-  double rAlu=0, drAlu=0, rSty=0, drSty=0, dzSty=0, rInner=0, aluEndcapZ=0, aluHalfZ=0, alu_RadLen=0, Cryostat_dEdx=0;
-  double VXDSupportDensity=0, VXDSupportZeff=0, VXDSupportAeff=0, VXDSupportRadLen=0, VXDSupportIntLen=0;
-  double styDensity=0, styZeff=0, styAeff=0, styRadLen=0, styIntLen=0; 
-  dd4hep::Volume vxd_vol = vxd.volume();
-  for(int i=0;i<vxd_vol->GetNdaughters();i++){
-    TGeoNode* daughter = vxd_vol->GetNode(i);
-    std::string nodeName = daughter->GetName();
-    if(nodeName=="VXD_support_assembly_0"){
-      TGeoNode* shell = FindNode(daughter, "SupportShell");
-      if(shell){
-        const TGeoShape* shape_shell = shell->GetVolume()->GetShape();
-        //fucd: IsA() method does not always work for TGeoTube, sometimes, strange?
-        //if(shape_shell->IsA()==TGeoTube::Class()){
-        if(shape_shell->TestShapeBit(TGeoTube::kGeoTube)){
-          const TGeoTube* tube = (const TGeoTube*) shape_shell;
-          shellInnerRadius = tube->GetRmin()*CLHEP::cm;
-          shellOuterRadius = tube->GetRmax()*CLHEP::cm;
-          shellHalfLength  = tube->GetDz()*CLHEP::cm;
-        }
-        else{
-          error() << shell->GetName() << " is not a TGeoTube!  Shape bits = " << shape_shell->TestShapeBits(0xFFFFFFFF) << endmsg;
-        }
-        TGeoMaterial* mat = shell->GetMedium()->GetMaterial();
-        shellRadLength = mat->GetRadLen()*CLHEP::cm;
-      }
-      TGeoNode* block = FindNode(daughter, "BerylliumAnnulusBlock");
-      if(block){
-        const TGeoShape* shape_block = block->GetVolume()->GetShape();
-        if(shape_block->IsA()==TGeoBBox::Class()){
-          const TGeoBBox* box = (const TGeoBBox*) shape_block;
-          beryllium_ladder_block_length = box->GetDY()*CLHEP::cm;
-        }
-	else{
-          error() << block->GetName() << " is not a TGeoTube!  Shape bits = " << shape_block->TestShapeBits(0xFFFFFFFF) << endmsg;
-        }
-      }
-      TGeoNode* skin = FindNode(daughter, "CryostatAluSkinBarrel");
-      if(skin){
-        const TGeoShape* shape_skin = skin->GetVolume()->GetShape();
-        if(shape_skin->TestShapeBit(TGeoTube::kGeoTube)){
-          const TGeoTube* tube = (const TGeoTube*) shape_skin;
-          rAlu  = tube->GetRmin()*CLHEP::cm;
-          drAlu = tube->GetRmax()*CLHEP::cm - rAlu;
-          aluHalfZ = tube->GetDz()*CLHEP::cm;
-        }
-        else{
-          error() << skin->GetName() << " is not a TGeoTube! Shape bits = " <<  shape_skin->TestShapeBits(0xFFFFFFFF) << endmsg;
-        }
-      }
-      TGeoNode* foam = FindNode(daughter, "CryostatFoamBarrel");
-      if(foam){
-        const TGeoShape* shape_foam = foam->GetVolume()->GetShape();
-        if(shape_foam->TestShapeBit(TGeoTube::kGeoTube)){
-          const TGeoTube* tube = (const TGeoTube*) shape_foam;
-          rSty = tube->GetRmin()*CLHEP::cm;
-          drSty = tube->GetRmax()*CLHEP::cm - rSty;
-          dzSty = tube->GetDz()*CLHEP::cm;
-        }
-        else{
-          error() << foam->GetName() << " is not a TGeoTube! Shape bits = " << shape_foam->TestShapeBits(0xFFFFFFFF) << endmsg;
-        }
-	TGeoMaterial* mat = foam->GetMedium()->GetMaterial();
-	double Zeff = 0, ZAeff = 0;
-	for(int iEle = 0; iEle<mat->GetNelements(); iEle++){
-	  double A, Z, w;
-	  mat->GetElementProp(A,Z,w,iEle);
-	  Zeff  += Z*w;
-	  ZAeff += Z/A*w;
-	  //std::cout << std::setprecision(16) << Z << " " << A << " " << w << std::endl;
-	}
-	styZeff    = Zeff;
-	styAeff    = Zeff/ZAeff;
-	styRadLen  = mat->GetRadLen()*CLHEP::cm;
-	styIntLen  = mat->GetIntLen()*CLHEP::cm;
-	styDensity = mat->GetDensity();
-      }
-      TGeoNode* skinEnd = FindNode(daughter, "CryostatAluSkinEndPlateInner");
-      if(skinEnd){
-        const TGeoShape* shape_skinEnd = skinEnd->GetVolume()->GetShape();
-        if(shape_skinEnd->TestShapeBit(TGeoTube::kGeoTube)){
-          const TGeoTube* tube = (const TGeoTube*) shape_skinEnd;
-          rInner = tube->GetRmin()*CLHEP::cm;
-          double rmax = tube->GetRmax()*CLHEP::cm;
-          drAlu = tube->GetDz()*CLHEP::cm*2;
-        }
-        else{
-          error() << skinEnd->GetName() << " is not a TGeoTube! Shape bits = " << shape_skinEnd->TestShapeBits(0xFFFFFFFF) << endmsg;
-        }
-      }
-      TGeoNode* shellEnd = FindNode(daughter, "EndPlateShell_outer");
-      if(shellEnd){
-        const TGeoShape* shape_shellEnd = shellEnd->GetVolume()->GetShape();
-        if(shape_shellEnd->TestShapeBit(TGeoTube::kGeoTube)){
-          const TGeoTube* tube = (const TGeoTube*) shape_shellEnd;
-          double rmin = tube->GetRmin()*CLHEP::cm;
-          double rmax = tube->GetRmax()*CLHEP::cm;
-          double zhalf = tube->GetDz()*CLHEP::cm;
-        }
-        else{
-          error() << shellEnd->GetName() << " is not a TGeoTube! Shape bits = " << shape_shellEnd->TestShapeBits(0xFFFFFFFF) << endmsg;
-        }
-      }
+StatusCode GearSvc::convertStitching(dd4hep::DetElement& vtx){
+  dd4hep::rec::CylindricalData* vtxData = nullptr;
+  try{
+    vtxData = vtx.extension<dd4hep::rec::CylindricalData>();
+  }
+  catch(std::runtime_error& e){
+    warning() << e.what() << " " << vtxData << endmsg;
+    return StatusCode::RECOVERABLE;
+  }
+  if(vtxData){
+    int vtxType =  gear::ZPlanarParameters::CMOS;
+    gear::ZPlanarParametersImpl* gearVTX = new gear::ZPlanarParametersImpl(vtxType, vtxData->rInnerShell/dd4hep::mm, vtxData->rOuterShell/dd4hep::mm,
+									   vtxData->zHalfShell/dd4hep::mm, vtxData->gapShell/dd4hep::mm, 0.);
+    std::vector<int> ids;
+    std::vector<double> zhalfs, rsens, tsens, rsups, tsups, phi0s, rgaps, dphis;
 
+    for (unsigned i=0,n=vtxData->layers.size(); i<n; ++i) {
+      const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layers[i];
+
+      ids.push_back(l.id);
+      zhalfs.push_back(l.zHalf/dd4hep::mm);
+      rsens.push_back(l.radiusSensitive/dd4hep::mm);
+      tsens.push_back(l.thicknessSensitive/dd4hep::mm);
+      rsups.push_back(l.radiusSupport/dd4hep::mm);
+      tsups.push_back(l.thicknessSupport/dd4hep::mm);
+      phi0s.push_back(l.phi0);
+      rgaps.push_back(l.rgap/dd4hep::mm);
+      dphis.push_back(l.dphi);
     }
-    else if(nodeName=="layer_assembly_0_1"){
-      if(TGeoNode* side_band = FindNode(daughter, "ElectronicsBand")){
-        const TGeoShape* shape_band = side_band->GetVolume()->GetShape();
-        if(shape_band->IsA()==TGeoBBox::Class()){
-          const TGeoBBox* box = (const TGeoBBox*) shape_band;
-          side_band_electronics_width = box->GetDX()*CLHEP::cm*2;
-          //info() << "fucd: "<< box->GetDX() << " " << box->GetDY() << " " << box->GetDZ() <<endmsg;
-        }
-        else{
-	  error() << "ElectronicsBand is not a TGeoBBox!!!"<< endmsg;
-        }
-      }
-      if(TGeoNode* end = FindNode(daughter, "ElectronicsEnd")){
-        const TGeoShape* shape_end = end->GetVolume()->GetShape();
-        if(shape_end->IsA()==TGeoBBox::Class()){
-          const TGeoBBox* box = (const TGeoBBox*) shape_end;
-          end_electronics_half_z = box->GetDY()*CLHEP::cm;
-          //info() << "fucd: " << box->GetDX() << " " << box->GetDY() << " " << box->GetDZ() << endmsg;
-        }
-        else{
-          error() << "ElectronicsEnd is not a TGeoBBox!!!"<< endmsg;
-        }
-      }
+    gearVTX->setIntVals("VTXLayerIds", ids);
+    gearVTX->setDoubleVals("VTXLayerHalfLengths", zhalfs);
+    gearVTX->setDoubleVals("VTXLayerSensitiveRadius", rsens);
+    gearVTX->setDoubleVals("VTXLayerSensitiveThickness", tsens);
+    gearVTX->setDoubleVals("VTXLayerSupperRadius", rsups);
+    gearVTX->setDoubleVals("VTXLayerSupperThickness", tsups);
+    gearVTX->setDoubleVals("VTXLayerPhi0", phi0s);
+    gearVTX->setDoubleVals("VTXLayerRadialGap", rgaps);
+    gearVTX->setDoubleVals("VTXLayerDeltaPhi", dphis);
+
+    m_gearMgr->setVXDParameters(gearVTX);
+
+    const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layers[0] ;
+    dd4hep::rec::Vector3D a( l.radiusSupport, l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
+    dd4hep::rec::Vector3D b( l.radiusSupport + l.thicknessSupport,   l.phi0 , 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
+    gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
+    m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
+
+    if (vtxData->rOuterShell>vtxData->rInnerShell) {
+      dd4hep::rec::Vector3D a1( vtxData->rInnerShell, 0, 2.*dd4hep::mm);
+      dd4hep::rec::Vector3D b1( vtxData->rOuterShell, 0, 2.*dd4hep::mm);
+      gear::SimpleMaterialImpl* VXDShellMaterial = CreateGearMaterial(a1, b1, "VXDShellMaterial");
+      m_gearMgr->registerSimpleMaterial(VXDShellMaterial);
     }
   }
+  return StatusCode::SUCCESS;
+}
 
-  const std::map<std::string, dd4hep::DetElement>& components = vxd.children();
-  for(std::map<std::string, dd4hep::DetElement>::const_iterator it=components.begin();it!=components.end();it++){
-    dd4hep::DetElement component = it->second;
-    dd4hep::Volume vol = component.volume();
-    dd4hep::PlacedVolume phys = component.placement();
-    TGeoMaterial* mat = vol->GetMaterial();
-    const TGeoShape* shape = vol->GetShape();
-    const dd4hep::PlacedVolumeExtension::VolIDs& ids = phys.volIDs();
-    if(vol.isSensitive()&&shape->IsA()==TGeoBBox::Class()){
-      int iLayer  = ids.find("layer")->second;
-      int iModule = ids.find("module")->second;
-      int iSide   = ids.find("side")->second;
-      if(iModule==0&&iLayer==helpCount+1){
-	helpCount++;
-        helpSensitives.push_back(thisLadder);
-        helpLadders.push_back(thisLadder);
-        helpNumberLadders.push_back(nLadders);
-        helpPhi0.push_back(phi0);
-        nLadders = 0;
-        thisLadder.length = 0;
-      }
-      if(iLayer == helpCount){
-        if(iModule == 0){
-	  const TGeoBBox* box = (const TGeoBBox*) shape;
-          double width     = box->GetDX()*CLHEP::cm;
-          double length    = box->GetDY()*CLHEP::cm;
-          double thickness = box->GetDZ()*CLHEP::cm;
-          TGeoMatrix* matrix = phys->GetMatrix();
-          const double* pos = matrix->GetTranslation();
-          const double* rot_data = matrix->GetRotationMatrix();
-          TGeoRotation rot;
-          rot.SetMatrix(rot_data);
-          double theta,phi,psi;
-          rot.GetAngles(phi,theta,psi);
-          phi *= deg_to_rad;
-          theta *= deg_to_rad;
-          psi *= deg_to_rad;
-          phi0 = -dd4hep::halfpi+phi;
-          double distance = fabs(cos(phi0)*sin(theta)*pos[0]+sin(phi0)*sin(theta)*pos[1]+cos(theta)*pos[2]);
-          double offset = sqrt(pos[0]*pos[0]+pos[1]*pos[1]-distance*distance)*pos[0]/fabs(pos[0])*CLHEP::cm;
-          distance *= CLHEP::cm;
-          distance -= thickness;
-          double radL = mat->GetRadLen()*CLHEP::cm;
-          //info() << " ->   " << helpCount << ": " << distance << " " << cos(atan2(pos[1],pos[0])-phi)*sqrt(pos[0]*pos[0]+pos[1]*pos[1]) << endmsg;
-          thisLadder.distance  = distance;
-          thisLadder.offset    = offset;
-          thisLadder.thickness = thickness;
-          thisLadder.length   += length;
-          thisLadder.width     = width;
-          thisLadder.radLength = radL;
-          thisLadder.z         = pos[2]*CLHEP::cm;
-        }
-        if(iModule==nLadders) nLadders++;
-      }
+StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
+  dd4hep::rec::CompositeData* vtxData = nullptr;
+  try{
+    vtxData = vtx.extension<dd4hep::rec::CompositeData>();
+  }
+  catch(std::runtime_error& e){
+    warning() << e.what() << " " << vtxData << endmsg;
+    return StatusCode::RECOVERABLE;
+  }
+  if(vtxData){
+    int vtxType =  gear::ZPlanarParameters::CMOS;
+    gear::ZPlanarParametersImpl* gearVTX = new gear::ZPlanarParametersImpl(vtxType, vtxData->rInnerShell/dd4hep::mm, vtxData->rOuterShell/dd4hep::mm,
+									   vtxData->zHalfShell/dd4hep::mm, vtxData->gapShell/dd4hep::mm, 0.);
+    for (unsigned i=0,n=vtxData->layersPlanar.size(); i<n; ++i) {
+      const dd4hep::rec::ZPlanarData::LayerLayout& l = vtxData->layersPlanar[i];
+      // FIXME set rad lengths to 0 -> need to get from dd4hep ....
+      gearVTX->addLayer(l.ladderNumber, l.phi0,
+                        l.distanceSupport/dd4hep::mm, l.offsetSupport/dd4hep::mm, l.thicknessSupport/dd4hep::mm,
+			l.zHalfSupport/dd4hep::mm, l.widthSupport/dd4hep::mm, 0.,
+                        l.distanceSensitive/dd4hep::mm, l.offsetSensitive/dd4hep::mm, l.thicknessSensitive/dd4hep::mm,
+			l.zHalfSensitive/dd4hep::mm, l.widthSensitive/dd4hep::mm, 0.);
     }
-    else if(it->first=="VXD_support"){
-      helpCount++;
-      helpSensitives.push_back(thisLadder);
-      helpLadders.push_back(thisLadder);
-      helpNumberLadders.push_back(nLadders);
-      helpPhi0.push_back(phi0);
-      nLadders = 0;
-      if(vol->GetNdaughters()==0) error() << "!!!!!!!!!" << endmsg;
 
-      int nFlexCable = 0, nFoamSpacer=0, nMetalTraces=0;
-      int currentLayer = -1;
-      double tFlexCable=0, tFoamSpacer=0, tMetalTraces=0;
-      double radLFlexCable=0, radLFoamSpacer=0, radLMetalTraces=0;
-      double intLFlexCable=0, intLFoamSpacer=0, intLMetalTraces=0;
-      double dFlexCable=0, dFoamSpacer=0, dMetalTraces=0;
-      double metalZeff=0, metalZAeff=0, foamZeff=0, foamZAeff=0, flexZeff=0, flexZAeff=0;
-      for(int i=0;i<vol->GetNdaughters();i++){
-	TGeoNode* daughter = vol->GetNode(i);
-        TGeoMaterial* matDaughter = daughter->GetMedium()->GetMaterial();
-        const TGeoShape* shape_sup = daughter->GetVolume()->GetShape();
-        TGeoMatrix* matrix = daughter->GetMatrix();
-        const double* pos = matrix->GetTranslation();
-        const double* rot_data = matrix->GetRotationMatrix();
-        TGeoRotation rot;
-        rot.SetMatrix(rot_data);
-        double theta,phi,psi;
-        rot.GetAngles(phi,theta,psi);
-        phi *= deg_to_rad;
-        theta *= deg_to_rad;
-        psi *= deg_to_rad;
-        phi0 = -CLHEP::halfpi+phi;
-	std::string phy_name = daughter->GetName();
-        if(phy_name.find("FoamSpacer")==-1&&phy_name.find("FlexCable")==-1&&phy_name.find("MetalTraces")==-1){
-          //info() << phy_name <<endmsg;
-          continue;
-        }
-        int iLayer = atoi(phy_name.substr(phy_name.find("_")+1,2).c_str());
-        if(iLayer!=currentLayer){
-          //info() << tFoamSpacer << "," << tFlexCable << "," << tMetalTraces << endmsg;
-          helpLadders[currentLayer].thickness = tFoamSpacer+tFlexCable+tMetalTraces;
-          helpLadders[currentLayer].radLength = helpLadders[currentLayer].thickness / (tFoamSpacer/radLFoamSpacer+tFlexCable/radLFlexCable+tMetalTraces/radLMetalTraces);
-          nFlexCable = 0;
-          nFoamSpacer=0;
-          nMetalTraces=0;
-          currentLayer=iLayer;
-        }
-	if(shape_sup->IsA()==TGeoBBox::Class()&&(nFoamSpacer==0||nFlexCable==0||nMetalTraces==0)){
-          const TGeoBBox* box = (const TGeoBBox*) shape_sup;
-	  double distance = fabs(cos(phi0)*sin(theta)*pos[0]+sin(phi0)*sin(theta)*pos[1]+cos(theta)*pos[2]);
-          double offset = sqrt(pos[0]*pos[0]+pos[1]*pos[1]-distance*distance)*pos[0]/fabs(pos[0])*CLHEP::cm;
-          distance -= box->GetDZ();
-          distance *= CLHEP::cm;
-          if(helpLadders[iLayer].distance == helpSensitives[iLayer].distance) helpLadders[iLayer].distance = distance;
-          else helpLadders[iLayer].distance = TMath::Min(helpLadders[iLayer].distance, distance);
-          if(phy_name.find("FoamSpacer")!=-1&&nFoamSpacer==0){
-            helpLadders[iLayer].offset    = offset;
-            tFoamSpacer = box->GetDZ()*CLHEP::cm;
-            radLFoamSpacer = matDaughter->GetRadLen()*CLHEP::cm;
-            intLFoamSpacer = matDaughter->GetIntLen()*CLHEP::cm;
-            dFoamSpacer = matDaughter->GetDensity();
-	    double totalA = 0, Zeff = 0, ZAeff = 0;
-            for(int iEle = 0; iEle<matDaughter->GetNelements(); iEle++){
-              totalA += matDaughter->GetElement(iEle)->A();
-            }
-            for(int iEle = 0; iEle<matDaughter->GetNelements(); iEle++){
-              double A, Z, w;
-              // by fucd: w!=A/totalA, strange! to fix
-              matDaughter->GetElementProp(A,Z,w,iEle);
-              Zeff  += Z*w;
-              ZAeff += Z/A*w;
-              //info() << std::setprecision(16) << Z << " " << A << " " << A/totalA << " " << w << endmsg;
-            }
-            foamZeff = Zeff;
-            foamZAeff = ZAeff;
-            nFoamSpacer++;
-          }
-	  if(phy_name.find("FlexCable")!=-1&&nFlexCable==0){
-            helpLadders[iLayer].width     = box->GetDX()*CLHEP::cm;
-            helpLadders[iLayer].length    = box->GetDY()*CLHEP::cm-beryllium_ladder_block_length*2-end_electronics_half_z*2;
-            tFlexCable = box->GetDZ()*CLHEP::cm;
-            radLFlexCable = matDaughter->GetRadLen()*CLHEP::cm;
-            intLFlexCable = matDaughter->GetIntLen()*CLHEP::cm;
-            dFlexCable = matDaughter->GetDensity();
-            double Zeff = 0, ZAeff = 0;
-            for(int iEle = 0; iEle<matDaughter->GetNelements(); iEle++){
-              double A, Z, w;
-              matDaughter->GetElementProp(A,Z,w,iEle);
-              Zeff  += Z*w;
-              ZAeff += Z/A*w;
-              //std::cout << std::setprecision(16) << Z << " " << A << " " << w << std::endl;
-            }
-            flexZeff  = Zeff;
-            flexZAeff = ZAeff;
-            nFlexCable++;
-          }
-          if(phy_name.find("MetalTraces")!=-1&&nMetalTraces==0){
-            tMetalTraces = box->GetDZ()*CLHEP::cm;
-            radLMetalTraces = matDaughter->GetRadLen()*CLHEP::cm;
-            intLMetalTraces = matDaughter->GetIntLen()*CLHEP::cm;
-            dMetalTraces = matDaughter->GetDensity();
-            double totalA = 0, Zeff = 0, ZAeff = 0;
-            for(int iEle = 0; iEle<matDaughter->GetNelements(); iEle++){
-              totalA += matDaughter->GetElement(iEle)->A();
-            }
-            for(int iEle = 0; iEle<matDaughter->GetNelements(); iEle++){
-              double A, Z, w;
-              matDaughter->GetElementProp(A,Z,w,iEle);
-              Zeff  += Z*w;
-              ZAeff += Z/A*w;
-              //info() << Z << " " << A << " " << w << endmsg;
-            }
-            metalZeff  = Zeff;
-            metalZAeff = ZAeff;
-            nMetalTraces++;
-          }
-        }
-      }
-      {
-        //info() << tFoamSpacer << "," << tFlexCable << "," << tMetalTraces << endmsg;
-        double tSupport = tMetalTraces + tFoamSpacer + tFlexCable;
-        helpLadders[currentLayer].thickness = tSupport;
-        helpLadders[currentLayer].radLength = helpLadders[currentLayer].thickness / (tFoamSpacer/radLFoamSpacer+tFlexCable/radLFlexCable+tMetalTraces/radLMetalTraces);
-        nFlexCable = 0;
-        nFoamSpacer=0;
-        nMetalTraces=0;
+    std::vector<int> ids;
+    std::vector<double> zhalfs, rsens, tsens, rsups, tsups, phi0s, rgaps, dphis;
 
-        //calculations of thickness fractions of each layer of the support
-        double metalTF = tMetalTraces / tSupport;
-        double foamTF = tFoamSpacer / tSupport;
-        double flexTF = tFlexCable / tSupport;
-        //info() << foamTF << "," << flexTF << "," << metalTF << endmsg;
-        //info() << dFoamSpacer/(CLHEP::kg/CLHEP::cm3) << "," << dFlexCable/(CLHEP::kg/CLHEP::cm3) << "," << dMetalTraces/(CLHEP::kg/CLHEP::cm3) << endmsg;
-        //info() << foamZeff << " " << flexZeff << " " << metalZeff << endmsg;
-        //info() << foamZAeff << " " << flexZAeff << " " << metalZAeff << endmsg;
-        double elemVol = 1*CLHEP::cm3;
-        double VXDSupportMass = (foamTF*dFoamSpacer + flexTF*dFlexCable + metalTF*dMetalTraces)*elemVol;
-        VXDSupportDensity = VXDSupportMass/elemVol;
-	double foamFM = 100. * ((foamTF*(elemVol)*dFoamSpacer) / VXDSupportMass) ;
-        double kaptonFM = 100. * ((flexTF*(elemVol)*dFlexCable) / VXDSupportMass) ;
-        double metalFM = 100. * ((metalTF*(elemVol)*dMetalTraces) / VXDSupportMass) ;
+    for (unsigned i=0,n=vtxData->layersBent.size(); i<n; ++i) {
+      const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[i];
 
-        VXDSupportRadLen = helpLadders[currentLayer].radLength;
-
-        VXDSupportZeff = (metalFM/100.)*metalZeff + (kaptonFM/100.)*flexZeff + (foamFM/100.)*foamZeff;
-        double VXDSupportZAeff = (metalFM/100.)*metalZAeff + (kaptonFM/100.)*flexZAeff + (foamFM/100.)*foamZAeff;
-        VXDSupportAeff = VXDSupportZeff / VXDSupportZAeff;
-        double VXDSupportIntLength = 1. / ((metalTF/intLMetalTraces) + (flexTF/intLFlexCable) + (foamTF/intLFoamSpacer));
-        VXDSupportDensity = VXDSupportDensity*(CLHEP::g/CLHEP::cm3)/(CLHEP::kg/CLHEP::m3);
-        //info() << "fucd: " << VXDSupportZeff << " " << VXDSupportAeff << " " << VXDSupportRadLen << " " << VXDSupportIntLength << " " << VXDSupportDensity << endmsg;
-        //info() << intLMetalTraces << " " << intLFlexCable << " " << intLFoamSpacer <<endmsg;
-      }
+      ids.push_back(l.id);
+      zhalfs.push_back(l.zHalf/dd4hep::mm);
+      rsens.push_back(l.radiusSensitive/dd4hep::mm);
+      tsens.push_back(l.thicknessSensitive/dd4hep::mm);
+      rsups.push_back(l.radiusSupport/dd4hep::mm);
+      tsups.push_back(l.thicknessSupport/dd4hep::mm);
+      phi0s.push_back(l.phi0);
+      rgaps.push_back(l.rgap/dd4hep::mm);
+      dphis.push_back(l.dphi);
     }
-    //info() << it->first << endmsg;
-  }
-  if(end_electronics_half_z>0 && side_band_electronics_width==0) type = gear::ZPlanarParametersImpl::CCD  ;
-  if(side_band_electronics_width>0 && end_electronics_half_z==0 ) type = gear::ZPlanarParametersImpl::CMOS ;
-  if(side_band_electronics_width>0 && end_electronics_half_z>0) type = gear::ZPlanarParametersImpl::HYBRID ;
-  gear::ZPlanarParametersImpl* vxdParameters = new gear::ZPlanarParametersImpl(type, shellInnerRadius, shellOuterRadius, shellHalfLength, gap, shellRadLength);
-  // by fucd: debug info, if validated enough, merge them in future
-  info() << "=====================from convertor==============================" << endmsg;
-  info() << type << " " << shellInnerRadius << " " << shellOuterRadius << " " << shellHalfLength << " " << gap << " " << shellRadLength << endmsg;
-  for(int i=0;i<helpCount;i++){
-    vxdParameters->addLayer(helpNumberLadders[i] , helpPhi0[i] ,
-                            helpLadders[i].distance , helpLadders[i].offset, helpLadders[i].thickness*2 ,
-                            helpLadders[i].length , helpLadders[i].width*2 , helpLadders[i].radLength ,
-                            helpSensitives[i].distance, helpSensitives[i].offset , helpSensitives[i].thickness*2 ,
-                            helpSensitives[i].length , helpSensitives[i].width*2 , helpSensitives[i].radLength ) ;
-    info() << "fucd " << i << ": " << helpNumberLadders[i] << ", " << helpPhi0[i] << ", "
-           << helpLadders[i].distance << ", " << helpLadders[i].offset << ", " << helpLadders[i].thickness*2 << ", " << helpLadders[i].length << ", "
-           << helpLadders[i].width*2 << ", " << helpLadders[i].radLength << ", " << helpSensitives[i].distance << ", " << helpSensitives[i].offset << ", "
-           << helpSensitives[i].thickness*2 << ", " << helpSensitives[i].length << ", " << helpSensitives[i].width*2 << ", " << helpSensitives[i].radLength << endmsg;
-  }
-  m_gearMgr->setVXDParameters(vxdParameters) ;
-  if(rAlu!=0){
-    // rAlu=0, denote no cryostat 
-    gear::GearParametersImpl* gearParameters = new gear::GearParametersImpl;
-    //CryostatAlRadius, CryostatAlThickness, CryostatAlInnerR, CryostatAlZEndCap, CryostatAlHalfZ
-    gearParameters->setDoubleVal("CryostatAlRadius",    rAlu);
-    gearParameters->setDoubleVal("CryostatAlThickness", drAlu);
-    gearParameters->setDoubleVal("CryostatAlInnerR",    rInner);
-    gearParameters->setDoubleVal("CryostatAlZEndCap",   aluEndcapZ = dzSty+drSty+drAlu/2);
-    gearParameters->setDoubleVal("CryostatAlHalfZ",     dzSty+drSty);
-    m_gearMgr->setGearParameters("VXDInfra", gearParameters);
-  }
 
-  dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() ) ;
-  const gear::VXDLayerLayout& l = m_gearMgr->getVXDParameters().getVXDLayerLayout();
-  dd4hep::rec::Vector3D a( l.getSensitiveDistance(0)+l.getSensitiveThickness(0), l.getPhi0(0), 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
-  dd4hep::rec::Vector3D b( l.getLadderDistance(0)+l.getLadderThickness(0), l.getPhi0(0), 0. ,  dd4hep::rec::Vector3D::cylindrical ) ;
-  const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween( a , b  ) ;
-  dd4hep::rec::MaterialData mat = ( materials.size() > 1  ? matMgr.createAveragedMaterial( materials ) : materials[0].first  ) ;
+    gearVTX->setIntVals("VTXLayerIds", ids);
+    gearVTX->setDoubleVals("VTXLayerHalfLengths", zhalfs);
+    gearVTX->setDoubleVals("VTXLayerSensitiveRadius", rsens);
+    gearVTX->setDoubleVals("VTXLayerSensitiveThickness", tsens);
+    gearVTX->setDoubleVals("VTXLayerSupperRadius", rsups);
+    gearVTX->setDoubleVals("VTXLayerSupperThickness", tsups);
+    gearVTX->setDoubleVals("VTXLayerPhi0", phi0s);
+    gearVTX->setDoubleVals("VTXLayerRadialGap", rgaps);
+    gearVTX->setDoubleVals("VTXLayerDeltaPhi", dphis);
 
-  std::cout << " ####### found materials between points : " << a << " and " << b << " : " ;
-  for( unsigned i=0,n=materials.size();i<n;++i){
-    std::cout <<  materials[i].first.name() << "[" <<   materials[i].second << "], " ;
+    m_gearMgr->setVXDParameters(gearVTX);
+
+    const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[0] ;
+    dd4hep::rec::Vector3D a(l.radiusSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+    dd4hep::rec::Vector3D b(l.radiusSupport + l.thicknessSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+    gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
+    m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
+
+    if (vtxData->rOuterShell>vtxData->rInnerShell) {
+      dd4hep::rec::Vector3D a1( vtxData->rInnerShell, 0, 2.*dd4hep::mm);
+      dd4hep::rec::Vector3D b1( vtxData->rOuterShell, 0, 2.*dd4hep::mm);
+      gear::SimpleMaterialImpl* VXDShellMaterial = CreateGearMaterial(a1, b1, "VXDShellMaterial");
+      m_gearMgr->registerSimpleMaterial(VXDShellMaterial);
+    }
   }
-  std::cout << std::endl ;
-  std::cout << "   averaged material : " << mat << std::endl ;
-  gear::SimpleMaterialImpl* VXDSupportMaterial = new gear::SimpleMaterialImpl("VXDSupportMaterial", mat.A(), mat.Z(),
-									      mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
-									      mat.radiationLength()/dd4hep::mm,
-									      mat.interactionLength()/dd4hep::mm);
-
-  //effective A different with what in Mokka, fix them as Mokka's
-  gear::SimpleMaterialImpl* VXDFoamShellMaterial_old = new gear::SimpleMaterialImpl("VXDFoamShellMaterial_old", 1.043890843e+01, 5.612886646e+00, 2.500000000e+01, 1.751650267e+04, 0);
-  m_gearMgr->registerSimpleMaterial(VXDFoamShellMaterial_old);
-  gear::SimpleMaterialImpl* VXDFoamShellMaterial = new gear::SimpleMaterialImpl("VXDFoamShellMaterial", styAeff, styZeff, styDensity*(CLHEP::g/CLHEP::cm3)/(CLHEP::kg/CLHEP::m3),
-										styRadLen, styIntLen);
-  m_gearMgr->registerSimpleMaterial(VXDFoamShellMaterial);
-  m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
-  info() << "cryostat parameters: " << rAlu << " " << drAlu << " " << rInner << " " << aluEndcapZ << " " << aluHalfZ << endmsg;
-
-  return sc;
+  return StatusCode::SUCCESS;
 }
 
 StatusCode GearSvc::convertFTD(dd4hep::DetElement& ftd){
@@ -799,8 +483,9 @@ StatusCode GearSvc::convertTPC(dd4hep::DetElement& tpc){
   gear::PadRowLayout2D *padLayout = new gear::FixedPadSizeDiskLayout(tpcData->rMinReadout*CLHEP::cm, tpcData->rMaxReadout*CLHEP::cm,
                                                                      tpcData->padHeight*CLHEP::cm, tpcData->padWidth*CLHEP::cm, tpcData->maxRow, 0.0);
   tpcParameters->setPadLayout(padLayout);
+  always() << tpcParameters->getPlaneExtent()[0] << " " << tpcParameters->getPlaneExtent()[1] << " " << tpcData->rMinReadout*CLHEP::cm << endmsg;
   tpcParameters->setMaxDriftLength(tpcData->driftLength*CLHEP::cm);
-  tpcParameters->setDriftVelocity(    0.0); // SJA: not set in Mokka so set to 0.0                                                                                                          
+  tpcParameters->setDriftVelocity(    0.0); // SJA: not set in Mokka so set to 0.0
   tpcParameters->setReadoutFrequency( 0.0);
   tpcParameters->setDoubleVal( "tpcOuterRadius" , tpcData->rMax*CLHEP::cm ) ;
   tpcParameters->setDoubleVal( "tpcInnerRadius",  tpcData->rMin*CLHEP::cm ) ;
@@ -824,44 +509,19 @@ StatusCode GearSvc::convertTPC(dd4hep::DetElement& tpc){
   tpcParameters->setDoubleVal( "tpcEndplateZmin",        supportData->sections[1].zPos*CLHEP::cm + 1*CLHEP::um );
   tpcParameters->setDoubleVal( "tpcEndplateZmax",        supportData->sections[2].zPos*CLHEP::cm );
 
-  dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() );
   double x = (supportData->sections[0].rInner + supportData->sections[0].rOuter)/2.;
   // Readout
   {
     dd4hep::rec::Vector3D a(x, 0, supportData->sections[0].zPos);
     dd4hep::rec::Vector3D b(x, 0, supportData->sections[1].zPos);
-    const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a, b);
-    dd4hep::rec::MaterialData mat = (materials.size()>1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
-
-    std::cout << " ####### found materials between points : " << a << " and " << b << " : " ;
-    for( unsigned i=0,n=materials.size();i<n;++i){
-      std::cout <<  materials[i].first.name() << "[" <<   materials[i].second << "], " ;
-    }
-    std::cout << std::endl ;
-    std::cout << "   averaged material : " << mat << std::endl ;
-    gear::SimpleMaterialImpl* TPCReadoutMaterial = new gear::SimpleMaterialImpl("TPCReadoutMaterial", mat.A(), mat.Z(),
-										mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
-										mat.radiationLength()/dd4hep::mm,
-										mat.interactionLength()/dd4hep::mm);
+    gear::SimpleMaterialImpl* TPCReadoutMaterial = CreateGearMaterial(a, b, "TPCReadoutMaterial");
     m_gearMgr->registerSimpleMaterial(TPCReadoutMaterial);
   }
   // Endplate
   {
     dd4hep::rec::Vector3D a(x, 0, supportData->sections[1].zPos);
     dd4hep::rec::Vector3D b(x, 0, supportData->sections[2].zPos);
-    const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a, b);
-    dd4hep::rec::MaterialData mat = (materials.size()>1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
-
-    std::cout << " ####### found materials between points : " << a << " and " << b << " : " ;
-    for( unsigned i=0,n=materials.size();i<n;++i){
-      std::cout <<  materials[i].first.name() << "[" <<   materials[i].second << "], " ;
-    }
-    std::cout << std::endl ;
-    std::cout << "   averaged material : " << mat << std::endl ;
-    gear::SimpleMaterialImpl* TPCEndplateMaterial = new gear::SimpleMaterialImpl("TPCEndplateMaterial", mat.A(), mat.Z(),
-										mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
-										mat.radiationLength()/dd4hep::mm,
-										mat.interactionLength()/dd4hep::mm);
+    gear::SimpleMaterialImpl* TPCEndplateMaterial = CreateGearMaterial(a, b, "TPCEndplateMaterial");
     m_gearMgr->registerSimpleMaterial(TPCEndplateMaterial);
   }
 
@@ -1062,12 +722,10 @@ StatusCode GearSvc::convertCal(dd4hep::DetElement& cal) {
   std::string name = cal.name();
 
   dd4hep::rec::LayeredCalorimeterData* calData = nullptr;
-  bool extensionDataValid = true;
   try{
     calData = cal.extension<dd4hep::rec::LayeredCalorimeterData>();
   }
   catch(std::runtime_error& e){
-    extensionDataValid = false;
     info() << e.what() << " " << calData << endmsg;
   }
   if(calData){
@@ -1146,4 +804,24 @@ TGeoNode* GearSvc::FindNode(TGeoNode* mother, char* name) {
     }
   }
   return next;
+}
+
+gear::SimpleMaterialImpl* GearSvc::CreateGearMaterial(const dd4hep::rec::Vector3D& a, const dd4hep::rec::Vector3D& b,
+						      const std::string name) {
+  // TODO: move to GeomSvc
+  dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() );
+
+  const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a, b);
+  dd4hep::rec::MaterialData mat = (materials.size() > 1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
+  
+  debug() << " ####### found materials between points : " << a << " and " << b << " ######" << endmsg;
+  for (unsigned i=0,n=materials.size(); i<n; ++i) {
+    debug() <<  materials[i].first.name() << " [" <<   materials[i].second << "]" << endmsg;
+  }
+  debug() << "   averaged material : " << mat << endmsg;
+  gear::SimpleMaterialImpl* gearMaterial = new gear::SimpleMaterialImpl(name.c_str(), mat.A(), mat.Z(),
+									mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
+									mat.radiationLength()/dd4hep::mm,
+									mat.interactionLength()/dd4hep::mm);
+  return gearMaterial;
 }

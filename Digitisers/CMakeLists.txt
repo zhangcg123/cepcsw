@@ -1,3 +1,4 @@
+add_subdirectory(DigiTool)
 add_subdirectory(DCHDigi)
 add_subdirectory(G2CDArbor)
 add_subdirectory(SimHitMerge)

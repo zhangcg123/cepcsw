@@ -17,7 +17,10 @@ gaudi_add_module(DetCRD
                          src/Muon/Muon_Barrel_v01_01.cpp
                          src/Muon/Muon_Endcap_v01_02.cpp
                          src/Tracker/SiTrackerSkewRing_v01_geo.cpp
+                         src/Tracker/SiTrackerStitching_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v01_geo.cpp
+                         src/Tracker/SiTrackerStaggeredLadder_v02_geo.cpp
+                         src/Tracker/SiTrackerComposite_v01_geo.cpp
                          src/Tracker/TPC_Simple_o1_v01.cpp
                          src/Tracker/TPC_ModularEndcap_o1_v01.cpp
 			 src/Tracker/SiTracker_itkbarrel_v01_geo.cpp
@@ -26,6 +29,7 @@ gaudi_add_module(DetCRD
                          src/Tracker/SiTracker_otkendcap_v01_geo.cpp
 
 		 LINK ${DD4hep_COMPONENT_LIBRARIES}
+                      Identifier
 )
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})

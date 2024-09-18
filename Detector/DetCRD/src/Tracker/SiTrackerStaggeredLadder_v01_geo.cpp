@@ -84,7 +84,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   else {
     sens.setType("tracker");
   }
-  std::cout << " ** building SiTrackerSkewBarrel_v01 ... " << sens.type() << std::endl ;
+  std::cout << " ** building SiTrackerStaggeredLadder_v01 ... " << sens.type() << std::endl ;
 
   dd4hep::rec::ZPlanarData* zPlanarData = new dd4hep::rec::ZPlanarData;
 
@@ -264,10 +264,16 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 
   //create sensor logical volume
   Box SensorSolid(sensor_thickness / 2.0, sensor_active_width / 2.0, sensor_active_len / 2.0);
-  Volume SensorLogical(name + dd4hep::_toString( layer_id, "_SensorLogical_%02d"), SensorSolid, sensor_mat);
-  SensorLogical.setSensitiveDetector(sens);
-  if (x_det.hasAttr(_U(limits))) SensorLogical.setLimitSet(theDetector, x_det.limitsStr());
-  SensorLogical.setVisAttributes(theDetector.visAttributes(sensVis));
+  Volume SensorTopLogical(name + dd4hep::_toString(layer_id*2+1, "_SensorLogical_%02d"), SensorSolid, sensor_mat);
+  Volume SensorBottomLogical(name + dd4hep::_toString(layer_id*2, "_SensorLogical_%02d"), SensorSolid, sensor_mat);
+  SensorTopLogical.setSensitiveDetector(sens);
+  SensorBottomLogical.setSensitiveDetector(sens);
+  if (x_det.hasAttr(_U(limits))) {
+    SensorTopLogical.setLimitSet(theDetector, x_det.limitsStr());
+    SensorBottomLogical.setLimitSet(theDetector, x_det.limitsStr());
+  }
+  SensorTopLogical.setVisAttributes(theDetector.visAttributes(sensVis));
+  SensorBottomLogical.setVisAttributes(theDetector.visAttributes(sensVis));
 
   //create dead sensor logical volume
   Box SensorDeadSolid(sensor_thickness / 2.0, sensor_dead_width / 2.0, sensor_active_len / 2.0);
@@ -294,11 +300,11 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
      double ypos_active = (support_width/2.0) - (sensor_active_width/2.0);
      double ypos_dead = (-support_width/2.0) + sensor_deadwire_width + (sensor_dead_width/2.0);
      double zpos = -sensor_total_z/2.0 + sensor_active_len/2.0 + isensor*(sensor_active_len + dead_gap);
-     pv = SensorTopEnvelopeLogical.placeVolume(SensorLogical, Position(xpos,ypos_active,zpos));
+     pv = SensorTopEnvelopeLogical.placeVolume(SensorTopLogical, Position(xpos,ypos_active,zpos));
      //pv.addPhysVolID("topsensor",  isensor ) ;
      pv.addPhysVolID("layer", layer_id*2+1).addPhysVolID("active", 0).addPhysVolID("sensor", isensor) ;
      TopSensor_pv.push_back(pv);
-     pv = SensorBottomEnvelopeLogical.placeVolume(SensorLogical, Position(xpos,ypos_active,zpos));
+     pv = SensorBottomEnvelopeLogical.placeVolume(SensorBottomLogical, Position(xpos,ypos_active,zpos));
      //pv.addPhysVolID("bottomsensor",  isensor ) ;
      pv.addPhysVolID("layer", layer_id*2  ).addPhysVolID("active", 0).addPhysVolID("sensor", isensor) ;
      BottomSensor_pv.push_back(pv);
@@ -309,7 +315,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   //place the sensor envelope inside the ladder envelope
   pv = LadderLogical.placeVolume(SensorTopEnvelopeLogical,
                                 Position(support_height/2.0 + flex_thickness + sensor_thickness/2.0, 0., 0.));//top-side sensors
-  Transform3D tran_sen(RotationZYX(0., dd4hep::twopi/2.0, 0.), Position(-(support_height/2.0 + flex_thickness + sensor_thickness/2.0), 0., 0.));
+  //Transform3D tran_sen(RotationZYX(0., dd4hep::twopi/2.0, 0.), Position(-(support_height/2.0 + flex_thickness + sensor_thickness/2.0), 0., 0.));
+  Transform3D tran_sen(RotationZYX(0., 0, 0.), Position(-(support_height/2.0 + flex_thickness + sensor_thickness/2.0), 0., 0.));
   pv = LadderLogical.placeVolume(SensorBottomEnvelopeLogical,tran_sen);//bottom-side sensors
 
   //create the ladder support envelope
@@ -321,11 +328,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   Box LadderSupportSolid(support_thickness / 2.0 , support_width / 2.0 , support_length / 2.0);
   Volume LadderSupportLogical(name + _toString( layer_id,"_SupLogical_%02d"), LadderSupportSolid, support_mat);
   LadderSupportLogical.setVisAttributes(theDetector.visAttributes(supportVis));
-  
-  //vxd.setVisAttributes(theDetector, sensVis, SensorLogical);
-  // vxd.setVisAttributes(theDetector, sensEnvVis, SensorBottomEnvelopeLogical);
-  // vxd.setVisAttributes(theDetector, ladderVis, LadderLogical);
- 
+
   pv = LadderSupportEnvelopeLogical.placeVolume(LadderSupportLogical);
   pv = LadderLogical.placeVolume(LadderSupportEnvelopeLogical);
 
@@ -335,21 +338,28 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     DetElement ladderDE(layerDE, ladder_enum.str(), x_det.id());
     std::cout << "start building " << ladder_enum.str() << ":" << endl;
 
+    //Transform3D tr (RotationZYX(ladder_dphi*i,0.,0.),Position(ladder_radius*cos(ladder_phi0+ladder_dphi*i), ladder_radius*sin(ladder_phi0+ladder_dphi*i), 0.));
+    //pv = layer_assembly.placeVolume(LadderLogical,tr);
+    //pv.addPhysVolID("module", i);
+    //ladderDE.setPlacement(pv);
+    //std::cout << ladder_enum.str() << " done." << endl;
+    //if(i==0) std::cout << "xy=" << ladder_radius*cos(ladder_phi0) << " " << ladder_radius*sin(ladder_phi0) << std::endl;
+
     //====== create the meassurement surface ===================
     dd4hep::rec::Vector3D o(0,0,0);
-	  dd4hep::rec::Vector3D u( 0., 0., 1.);
-	  dd4hep::rec::Vector3D v( 0., 1., 0.);
-	  dd4hep::rec::Vector3D n( 1., 0., 0.);
+    dd4hep::rec::Vector3D u(0., 1., 0.);
+    dd4hep::rec::Vector3D v(0., 0., 1.);
+    dd4hep::rec::Vector3D n(1., 0., 0.);
     double inner_thick_top = sensor_thickness/2.0;
     double outer_thick_top = support_height/2.0 + flex_thickness + sensor_thickness/2.0;
     double inner_thick_bottom = support_height/2.0 + flex_thickness + sensor_thickness/2.0;
     double outer_thick_bottom = sensor_thickness/2.0;
-    dd4hep::rec::VolPlane surfTop( SensorLogical ,
-                                dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
-                                inner_thick_top, outer_thick_top , u,v,n,o ) ;
-    dd4hep::rec::VolPlane surfBottom( SensorLogical ,
-                                dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
-                                inner_thick_bottom, outer_thick_bottom, u,v,n,o ) ;
+    dd4hep::rec::VolPlane surfTop(SensorTopLogical,
+				  dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
+				  inner_thick_top, outer_thick_top, u, v, n, o);
+    dd4hep::rec::VolPlane surfBottom(SensorBottomLogical,
+				     dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
+				     inner_thick_bottom, outer_thick_bottom, u, v, n, o);
 
 
     for(int isensor=0; isensor < n_sensors_per_side; ++isensor){

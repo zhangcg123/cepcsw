@@ -9,6 +9,7 @@
 
 #include "kaldet/ILDSupportKalDetector.h"
 #include "kaldet/ILDVXDKalDetector.h"
+#include "kaldet/CEPCVTXKalDetector.h"
 #include "kaldet/ILDSITKalDetector.h"
 #include "kaldet/ILDSITCylinderKalDetector.h"
 #include "kaldet/ILDSETKalDetector.h"
@@ -114,7 +115,8 @@ namespace MarlinTrk{
       }
 
       try{
-        ILDVXDKalDetector* vxddet = new ILDVXDKalDetector( *_gearMgr, _geoSvc )  ;
+        //ILDVXDKalDetector* vxddet = new ILDVXDKalDetector( *_gearMgr, _geoSvc )  ;
+	CEPCVTXKalDetector* vxddet = new CEPCVTXKalDetector(*_gearMgr, _geoSvc);
         // store the measurement layer id's for the active layers
         this->storeActiveMeasurementModuleIDs(vxddet);
         _det->Install( *vxddet ) ;

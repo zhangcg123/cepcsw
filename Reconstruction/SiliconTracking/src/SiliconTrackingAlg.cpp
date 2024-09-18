@@ -1,4 +1,6 @@
 #include "SiliconTrackingAlg.h"
+
+#include "Identifier/CEPCConf.h"
 #include "GearSvc/IGearSvc.h"
 #include "EventSeeder/IEventSeeder.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
@@ -506,12 +508,12 @@ int SiliconTrackingAlg::InitialiseFTD() {
       gear::Vector3D Z(0.0,0.0,1.0);
       
       const float eps = 1.0e-07;
-      // V must be the global z axis 
+      // V must be the global z axis
       if( fabs(V.dot(Z)) > eps ) {
 	error() << "SiliconTrackingAlg: FTD Hit measurment vectors V is not in the global X-Y plane. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << endmsg;
 	exit(1);
       }
-      
+
       if( fabs(U.dot(Z)) > eps ) {
 	error() << "SiliconTrackingAlg: FTD Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << endmsg;
 	exit(1);
@@ -720,29 +722,41 @@ int SiliconTrackingAlg::InitialiseVTX() {
     for (int ielem=0; ielem<nelem; ++ielem) {
     //for(auto hit : *hitVTXCol){ 
       auto hit = hitVTXCol->at(ielem);
-      //gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
-      //gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D U(1.0,hit.getCovMatrix()[1],hit.getCovMatrix()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit.getCovMatrix()[4],hit.getCovMatrix()[3],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
-      //debug() << "covMatrix : " << hit->getCovMatrix()[0] << " " << hit->getCovMatrix()[1] << endmsg;
-      const float eps = 1.0e-07;
-      // V must be the global z axis 
-      if( fabs(1.0 - V.dot(Z)) > eps ) {
-        error() << "SiliconTrackingAlg: VXD Hit measurment vectors V is not equal to the global Z axis. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << endmsg;
-        exit(1);
+
+      int type = hit.getType();
+      debug() << "type = " << type << endmsg;
+      double resRPhi, resZ;
+      if (UTIL::BitSet32(type)[CEPCConf::TrkHitTypeBit::PLANAR]) {
+	//gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
+	//gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
+	gear::Vector3D U(1.0,hit.getCovMatrix()[1],hit.getCovMatrix()[0],gear::Vector3D::spherical);
+	gear::Vector3D V(1.0,hit.getCovMatrix()[4],hit.getCovMatrix()[3],gear::Vector3D::spherical);
+	gear::Vector3D Z(0.0,0.0,1.0);
+	//debug() << "covMatrix : " << hit->getCovMatrix()[0] << " " << hit->getCovMatrix()[1] << endmsg;
+	const float eps = 1.0e-07;
+	// V must be the global z axis
+	if( fabs(1.0 - V.dot(Z)) > eps ) {
+	  error() << "SiliconTrackingAlg: VXD Hit measurment vectors V is not equal to the global Z axis. \n\n  exit(1) called from file " << __FILE__ << " and line " << __LINE__ << endmsg;
+	  exit(1);
+	}
+
+	if( fabs(U.dot(Z)) > eps ) {
+	  error() << "SiliconTrackingAlg: VXD Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << endmsg;
+	  exit(1);
+	}
+	// SJA:FIXME: just use planar res for now
+	resRPhi = hit.getCovMatrix()[2];
+	resZ    = hit.getCovMatrix()[5];
       }
-      
-      if( fabs(U.dot(Z)) > eps ) {
-        error() << "SiliconTrackingAlg: VXD Hit measurment vectors U is not in the global X-Y plane. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << endmsg;
-        exit(1);
+      else {
+	resRPhi = sqrt(hit.getCovMatrix()[0]+hit.getCovMatrix()[2]);
+	resZ    = sqrt(hit.getCovMatrix()[5]);
       }
       TrackerHitExtended * hitExt = new TrackerHitExtended(hit);
       //debug() << "Saved TrackerHit id in TrackerHitExtended " << ielem << ": " << hitExt->getTrackerHit().id() << std::endl;
-            
-      // SJA:FIXME: just use planar res for now
-      hitExt->setResolutionRPhi(hit.getCovMatrix()[2]);
-      hitExt->setResolutionZ(hit.getCovMatrix()[5]);
+
+      hitExt->setResolutionRPhi(resRPhi);
+      hitExt->setResolutionZ(resZ);
 
       // set type is now only used in one place where it is set to 0 to reject hits from a fit, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));
@@ -3004,6 +3018,9 @@ StatusCode SiliconTrackingAlg::setupGearGeom(){
     pVXDDetMain = &gearMgr->getVXDParameters();
     pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());
     _nLayersVTX = pVXDLayerLayout->getNLayers();
+
+    const std::vector<int> ids = pVXDDetMain->getIntVals("VTXLayerIds");
+    _nLayersVTX += ids.size();
   }
   catch( gear::UnknownParameterException& e){
     

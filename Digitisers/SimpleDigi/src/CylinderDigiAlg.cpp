@@ -1,5 +1,7 @@
 #include "CylinderDigiAlg.h"
 
+#include "Identifier/CEPCConf.h"
+
 #include "edm4hep/Vector3f.h"
 
 #include "DD4hep/Detector.h"
@@ -18,10 +20,10 @@ DECLARE_COMPONENT( CylinderDigiAlg )
 CylinderDigiAlg::CylinderDigiAlg(const std::string& name, ISvcLocator* svcLoc)
 : GaudiAlgorithm(name, svcLoc){
   // Input collections
-  declareProperty("InputSimTrackerHitCollection", m_inputColHdls, "Handle of the Input SimTrackerHit collection");
+  declareProperty("SimTrackHitCollection", m_inputColHdls, "Handle of the Input SimTrackerHit collection");
 
   // Output collections
-  declareProperty("OutputTrackerHitCollection", m_outputColHdls, "Handle of the output TrackerHit collection");
+  declareProperty("TrackerHitCollection", m_outputColHdls, "Handle of the output TrackerHit collection");
   declareProperty("TrackerHitAssociationCollection", m_assColHdls, "Handle of the Association collection between SimTrackerHit and TrackerHit");
 }
 
@@ -74,8 +76,9 @@ StatusCode CylinderDigiAlg::execute(){
 
     auto cellId = simhit.getCellID();
     int system  = m_decoder->get(cellId, "system");
-    int chamber = m_decoder->get(cellId, "chamber");
     int layer   = m_decoder->get(cellId, "layer"  );
+    int module  = m_decoder->get(cellId, "module");
+    int sensor  = m_decoder->get(cellId, "sensor"  );
     auto& pos   = simhit.getPosition();
     auto& mom   = simhit.getMomentum();
     
@@ -93,9 +96,9 @@ StatusCode CylinderDigiAlg::execute(){
     trkHit.setEDep(simhit.getEDep());
     trkHit.setPosition (edm4hep::Vector3d(smearedX, smearedY, smearedZ));
     trkHit.setCovMatrix(std::array<float, 6>{m_resRPhi*m_resRPhi/2, 0, m_resRPhi*m_resRPhi/2, 0, 0, m_resZ*m_resZ});
-    //trkHit.setType(CEPC::CYLINDER);
+    trkHit.setType(1<<CEPCConf::TrkHitTypeBit::CYLINDER);
     trkHit.addToRawHits(simhit.getObjectID());
-    debug() << "Hit " << simhit.id() << ": " << pos << " -> " << trkHit.getPosition() << "s:" << system << " c:" << chamber << " l:" << layer
+    debug() << "Hit " << simhit.id() << ": " << pos << " -> " << trkHit.getPosition() << "s:" << system << " l:" << layer << " m:" << module << " s:" << sensor
 	    << " pt = " << pt << " " << mom.x << " " << mom.y << " " << mom.z << endmsg;
 
     auto ass = assVec->create();

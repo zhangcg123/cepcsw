@@ -37,6 +37,7 @@ namespace CEPCConf{
     static const int ONE_DIMENSIONAL      = 29;
     static const int COMPOSITE_SPACEPOINT = 30;
     static const int PLANAR               = 3; // 3 is compatible with old tracking codes, 31 or 28 is better in future to modify uniformly
+    static const int CYLINDER             = 28;
   };
   
   struct TrkHitQualityBit{
