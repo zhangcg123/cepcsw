@@ -1,9 +1,11 @@
 # This variable will be used by GaudiToolbox.cmake to generate the cepcswenv.sh
 
 set(RUN_SCRIPT_EXTRA_COMMANDS "${RUN_SCRIPT_EXTRA_COMMANDS}
-export CEPCSW_ROOT=${CMAKE_SOURCE_DIR}
 
-export DETCEPCV4ROOT=${CMAKE_SOURCE_DIR}/Detector/DetCEPCv4
-export DETCRDROOT=${CMAKE_SOURCE_DIR}/Detector/DetCRD
-export DETDRIFTCHAMBERROOT=${CMAKE_SOURCE_DIR}/Detector/DetDriftChamber
+CEPCSW_PROJECT_SOURCE_DIR=${CMAKE_SOURCE_DIR} # this is hardcode
+export CEPCSW_ROOT=\${CEPCSW_ROOT:-\${CEPCSW_PROJECT_SOURCE_DIR}} # allow user to override the default
+
+export DETCEPCV4ROOT=\${CEPCSW_ROOT}/Detector/DetCEPCv4
+export DETCRDROOT=\${CEPCSW_ROOT}/Detector/DetCRD
+export DETDRIFTCHAMBERROOT=\${CEPCSW_ROOT}/Detector/DetDriftChamber
 ")

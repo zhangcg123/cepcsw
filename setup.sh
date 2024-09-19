@@ -46,6 +46,7 @@ function setup-external() {
 function setup-install-area() {
     local installarea=$THISSCRITDIR/InstallArea
     if [ ! -d "$installarea" ]; then
+        info: "The InstallArea is not created yet. Please run ./build.sh first, then source setup.sh again."
         return
     fi
 
