@@ -46,7 +46,7 @@
 	<component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
       </layer>
       <layer id="4" z="SiTracker_endcap_z5" dz="0.5*ModuleZGap" inner_r="SiTracker_endcap_inner_radius5" outer_r="SiTracker_endcap_outer_radius5"
-             phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="FTDPetalNumber" vis="SeeThrough">
+             phi0="0" gap="ModuleRPhiGap" is_pixel="true" nmodules="48" vis="SeeThrough">
         <component material="G4_Si"       thickness="SiliconThickness" vis="FTDSensitiveVis" sensitive="yes"/>
         <component material="Carbon" thickness="SupportThickness" vis="FTDSupportVis"/>
       </layer>

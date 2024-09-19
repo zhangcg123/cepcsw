@@ -366,8 +366,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         otkbarrelLayer.distanceSensitive    = ladder_radius*cos(ladder_phi0) - support_thickness/2.0
                                             - sensor_thickness; //sensitive_radius + support_height / 2.0 + flex_thickness;
         otkbarrelLayer.thicknessSensitive   = sensor_thickness;
-        otkbarrelLayer.offsetSensitive      = -ladder_offset + (support_width/2.0 - sensor_active_width/2.0);
-        otkbarrelLayer.widthSensitive       = sensor_active_width;
+        otkbarrelLayer.offsetSensitive      = -ladder_offset + (support_width/2.0 - sensor_total_width/2.0);
+        otkbarrelLayer.widthSensitive       = sensor_total_width;
         //otkbarrelLayer.zHalfSensitive       = (n_sensors_per_side*(sensor_length + dead_gap) - dead_gap) / 2.0;
 	otkbarrelLayer.zHalfSensitive       = n_sensors_per_side*(sensor_length + dead_gap) / 2.0; // add dead_gap to same sensor, little effect?
 

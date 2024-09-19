@@ -11,10 +11,10 @@
     <constant name="VXD_inner_radius" value="Vertex_inner_radius"/>
     <constant name="VXD_outer_radius" value="Vertex_outer_radius"/>
     <constant name="VXD_half_length"  value="Vertex_half_length"/>
-    <constant name="VXDLayer1_length" value="260*mm" />
-    <constant name="VXDLayer2_length" value="494*mm" />
-    <constant name="VXDLayer3_length" value="749*mm" />
-    <constant name="VXD_sensor_length" value="20*mm" />
+    <constant name="VXDLayer1_length" value="260*mm"/>
+    <constant name="VXDLayer2_length" value="494*mm"/>
+    <constant name="VXDLayer3_length" value="761*mm"/>
+    <constant name="VXD_sensor_length" value="20*mm"/>
     <constant name="VXD_sensor_xgap"   value="0.01*mm"/>
     <constant name="VXD_sensor_ygap"   value="0.1*mm"/>
   </define>
@@ -34,8 +34,8 @@
       <shell rmin="70*mm" rmax="72.5*mm" zhalf="510*mm" material="CFRP_CMS" vis="LightGrayVis"/>
 
       <layer id="0" phi0="0" isBent="true">
-	<module offset="0" phi="0" radius="12.2*mm" nx="10" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
-          <sensor thickness="50*um" width="20*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+	<module offset="0" phi="0" radius="12.2*mm" nx="9" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="20*mm" length="20.0*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <slice thickness="10.0*um" material="G4_Si"/>
           </flex>
@@ -44,8 +44,8 @@
           <driver      thickness="100*um" width="8*mm" material="Kapton" vis="BlueVis"/>
         </module>
 
-	<module offset="0" phi="180*degree" radius="12.7*mm" nx="10" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
-          <sensor thickness="50*um" width="20*mm" length="20*mm" material="G4_Si" vis="VXDVis"/>
+	<module offset="0" phi="180*degree" radius="12.7*mm" nx="9" ny="2" xdead="VXD_sensor_xgap" ydead="VXD_sensor_ygap" material="G4_Si">
+          <sensor thickness="50*um" width="20*mm" length="20.0*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <slice thickness="10.0*um" material="G4_Si"/>
           </flex>
@@ -121,7 +121,7 @@
         </module>
       </layer>
 
-      <layer id="4" ladder_radius="43.792*mm" ladder_offset="(8.7+11.7)*mm" n_ladders="25" n_sensors_per_side="0">
+      <layer id="4" ladder_radius="44.4*mm" ladder_offset="(8.7+11.7)*mm" n_ladders="25" n_sensors_per_side="0">
         <ladder isDoubleSided="true">
           <ladderSupport height="3.2*mm" length="VXDLayer3_length" thickness="370*um" width="17.4*mm" mat="CFRP_CMS"/>
           <flex>
