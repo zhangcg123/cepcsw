@@ -18,7 +18,8 @@
     <constant name="OTKBarrel_ladder_support_length" value="OTKBarrel_total_length" />
     <constant name="OTKBarrel_ladder_support_height" value="OTKBarrel_ladder_support_thickness" />
     <constant name="OTKBarrel_flex_width" value="15*mm" />
-    <constant name="OTKBarrel_sensor_length" value="140*mm" />
+    <!--constant name="OTKBarrel_sensor_length" value="140*mm"/--><!--reach Ecal edge-->
+    <constant name="OTKBarrel_sensor_length" value="139.5*mm" />
     <constant name="OTKBarrel_sensor_thickness" value="500*um" />
     <constant name="OTKBarrel_sensor_active_width" value="159.5*mm" />
     <constant name="OTKBarrel_sensor_dead_width" value="0.5*mm" />

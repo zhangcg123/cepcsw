@@ -44,7 +44,7 @@
                 </slice>
             </layer>
             <layer name = "Flange">
-                <slice type="Tubs" rmin="18.2*mm" rmax="100*mm" z="30*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
+                <slice type="Tubs" rmin="19.5*mm" rmax="100*mm" z="30*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
                     <position x="0" y="0*mm" z="685*mm"/>
                 </slice>
                 <slice type="Tubs" rmin="19.5*mm" rmax="95*mm" z="20*mm" phi1="0*deg" phi2="360*deg" material="stainless_steel" vis="LumicalFlangeVis">
