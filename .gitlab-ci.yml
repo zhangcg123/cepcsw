@@ -26,7 +26,6 @@ workflow:
 
 stages:
   - build
-  - test
 
 ##############################################################################
 # Template for Build and Test
@@ -46,15 +45,10 @@ stages:
   stage: build
   script:
     - bash ./.build.ci.sh
-
-.test_template:
-  extends: .envvar_template
-  stage: test
-  script:
     - bash ./.test.ci.sh
 
 ##############################################################################
-# Build CentOS 7 (LCG)
+# Build & Test in CentOS 7 (LCG)
 ##############################################################################
 build:lcg:el7:
   extends: .build_template
@@ -63,23 +57,10 @@ build:lcg:el7:
   artifacts:
     paths:
       - InstallArea
-      - build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}
-
-##############################################################################
-# Test CentOS 7 (LCG)
-##############################################################################
-test:lcg:el7:
-  extends: .test_template
-  tags:
-    - centos7
-  artifacts:
-    paths:
       - TDR_o1_v01.tgeo.root
       - TDR_o1_v02.tgeo.root
     reports:
       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
-  dependencies:
-    - build:lcg:el7
 
 ##############################################################################
 # Build the docs
