@@ -231,11 +231,11 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
 
     double last_bar = length_crystal - (Nbar-1)*width_crystal;
 
-    dd4hep::Volume bar_s0("bar_s0", dd4hep::Box(length_crystal/2, width_crystal/2-crystal_wrapping, width_crystal/2-crystal_wrapping), mat_BGO); 
+    dd4hep::Volume bar_s0("bar_s0", dd4hep::Box(length_crystal/2-photoelectronic-crystal_wrapping, width_crystal/2-crystal_wrapping, width_crystal/2-crystal_wrapping), mat_BGO); 
     bar_s0.setVisAttributes(theDetector, "EcalBarrelVis");
     bar_s0.setSensitiveDetector(sens);
 
-    dd4hep::Volume bar_s1("bar_s1", dd4hep::Box(length_crystal/2, last_bar/2-crystal_wrapping, width_crystal/2-crystal_wrapping), mat_BGO); 
+    dd4hep::Volume bar_s1("bar_s1", dd4hep::Box(length_crystal/2-photoelectronic-crystal_wrapping, last_bar/2-crystal_wrapping, width_crystal/2-crystal_wrapping), mat_BGO); 
     bar_s1.setVisAttributes(theDetector, "EcalBarrelVis");
     bar_s1.setSensitiveDetector(sens);
 
