@@ -54,7 +54,7 @@ include(cmake/CEPCSWDependencies.cmake)
 
 add_subdirectory(Analysis)
 add_subdirectory(Detector)
-add_subdirectory(Digitisers)
+add_subdirectory(Digitization)
 add_subdirectory(Examples)
 add_subdirectory(Generator)
 add_subdirectory(Reconstruction)
