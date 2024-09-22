@@ -13,7 +13,7 @@
 #include "XML/Utilities.h"
 #include <cmath>
 
-#include "Identifier/CEPCDetectorData.h"
+#include "DetIdentifier/CEPCDetectorData.h"
 
 using namespace std;
 

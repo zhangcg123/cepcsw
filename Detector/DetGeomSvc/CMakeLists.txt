@@ -4,8 +4,8 @@
 #    Desc: implement the IGeomSvc interface.
 ##############################################################################
 
-gaudi_add_module(GeomSvc
-                 SOURCES src/GeomSvc.cpp
+gaudi_add_module(DetGeomSvc
+                 SOURCES src/DetGeomSvc.cpp
                  LINK
                    DetInterface
                    ${DD4hep_COMPONENT_LIBRARIES} 
@@ -14,11 +14,11 @@ gaudi_add_module(GeomSvc
                    ${ROOT_LIBRARIES}
 )
 
-target_include_directories(GeomSvc
+target_include_directories(DetGeomSvc
   PUBLIC ${GEAR_INCLUDE_DIRS}
 )
 
-install(TARGETS GeomSvc
+install(TARGETS DetGeomSvc
   EXPORT CEPCSWTargets
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib

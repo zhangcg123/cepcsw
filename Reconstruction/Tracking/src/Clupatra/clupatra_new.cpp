@@ -4,7 +4,7 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
-#include <Identifier/CEPCConf.h>
+#include <DetIdentifier/CEPCConf.h>
 #include <UTIL/BitSet32.h>
 
 ///---- GEAR ----

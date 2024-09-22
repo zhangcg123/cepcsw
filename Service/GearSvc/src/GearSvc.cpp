@@ -1,7 +1,7 @@
 #include "GearSvc.h"
 #include "DetInterface/IGeomSvc.h"
 #include "DetSegmentation/GridDriftChamber.h"
-#include "Identifier/CEPCDetectorData.h"
+#include "DetIdentifier/CEPCDetectorData.h"
 
 #include "gearxml/GearXML.h"
 #include "gearimpl/GearMgrImpl.h"

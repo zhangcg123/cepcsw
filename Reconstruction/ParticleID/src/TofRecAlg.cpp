@@ -13,7 +13,7 @@
 #include "CLHEP/Units/SystemOfUnits.h"
 #include <math.h>
 #include "UTIL/ILDConf.h"
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 #include "UTIL/CellIDEncoder.h"
 
 DECLARE_COMPONENT( TofRecAlg )

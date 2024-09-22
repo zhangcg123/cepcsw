@@ -1,4 +1,4 @@
-#include "GeomSvc.h"
+#include "DetGeomSvc.h"
 #include "gearimpl/GearParametersImpl.h"
 #include "TMath.h"
 #include "TMaterial.h"
@@ -19,19 +19,19 @@
 #include <iomanip>
 #include <iostream>
 
-DECLARE_COMPONENT(GeomSvc)
+DECLARE_COMPONENT(DetGeomSvc)
 
-GeomSvc::GeomSvc(const std::string& name, ISvcLocator* svc)
+DetGeomSvc::DetGeomSvc(const std::string& name, ISvcLocator* svc)
 : base_class(name, svc), m_dd4hep_geo(nullptr){
 
 }
 
-GeomSvc::~GeomSvc() {
+DetGeomSvc::~DetGeomSvc() {
 
 }
 
 StatusCode
-GeomSvc::initialize() {
+DetGeomSvc::initialize() {
   StatusCode sc = Service::initialize();
 
   m_dd4hep_geo = &(dd4hep::Detector::getInstance());
@@ -46,7 +46,7 @@ GeomSvc::initialize() {
 }
 
 StatusCode
-GeomSvc::finalize() {
+DetGeomSvc::finalize() {
   StatusCode sc;
 
   // m_surface_manager has added as extension of Detector, so not delete?
@@ -57,7 +57,7 @@ GeomSvc::finalize() {
 }
 
 dd4hep::DetElement
-GeomSvc::getDD4HepGeo() {
+DetGeomSvc::getDD4HepGeo() {
     if (lcdd()) {
         return lcdd()->world();
     }
@@ -65,13 +65,13 @@ GeomSvc::getDD4HepGeo() {
 }
 
 dd4hep::Detector*
-GeomSvc::lcdd() {
+DetGeomSvc::lcdd() {
     return m_dd4hep_geo;
 }
 
 
 IGeomSvc::Decoder*
-GeomSvc::getDecoder(const std::string& readout_name) {
+DetGeomSvc::getDecoder(const std::string& readout_name) {
 
     IGeomSvc::Decoder* decoder = nullptr;
 
@@ -103,7 +103,7 @@ GeomSvc::getDecoder(const std::string& readout_name) {
 }
 
 const dd4hep::rec::SurfaceMap*
-GeomSvc::getSurfaceMap(const std::string& det_name) {
+DetGeomSvc::getSurfaceMap(const std::string& det_name) {
   if (m_surface_manager == nullptr) {
     dd4hep::rec::SurfaceManager* surfaceMgr = nullptr;
     // first check whether exist

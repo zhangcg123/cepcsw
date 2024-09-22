@@ -13,8 +13,8 @@ if not os.path.exists(geometry_path):
     print("Can't find the compact geometry file: %s"%geometry_path)
     sys.exit(-1)
 
-from Configurables import GeomSvc
-geomsvc = GeomSvc("GeomSvc")
+from Configurables import DetGeomSvc
+geomsvc = DetGeomSvc("GeomSvc")
 geomsvc.compact = geometry_path
 #######################################
 

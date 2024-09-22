@@ -1,7 +1,7 @@
 #include "SmearDigiTool.h"
 
 #include "DataHelper/TrackerHitHelper.h"
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 #include "DetInterface/IGeomSvc.h"
 
 #include "edm4hep/Vector3f.h"

@@ -1,5 +1,5 @@
 #include "DataHelper/TrackerHitHelper.h"
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 
 #include "TMatrixF.h"
 #include "CLHEP/Matrix/SymMatrix.h"

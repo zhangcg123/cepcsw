@@ -33,7 +33,7 @@
 #include <gear/BField.h>
 //
 #include "UTIL/ILDConf.h"
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 
 #define TRKHITNCOVMATRIX 6
 

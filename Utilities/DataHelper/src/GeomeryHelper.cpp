@@ -1,5 +1,5 @@
 #include "DataHelper/GeomeryHelper.h"
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 
 
 //Externals

@@ -17,7 +17,7 @@
 #include "UTIL/CellIDEncoder.h"
 #include <UTIL/Operators.h>
 */
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 #include "UTIL/ILDConf.h"
 
 // STUFF needed for GEAR

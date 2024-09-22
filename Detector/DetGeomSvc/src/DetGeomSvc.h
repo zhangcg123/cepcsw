@@ -1,5 +1,5 @@
-#ifndef GeomSvc_h
-#define GeomSvc_h
+#ifndef DetGeomSvc_h
+#define DetGeomSvc_h
 
 // Interface
 #include "DetInterface/IGeomSvc.h"
@@ -21,10 +21,10 @@
 
 class TGeoNode;
 
-class GeomSvc: public extends<Service, IGeomSvc> {
+class DetGeomSvc: public extends<Service, IGeomSvc> {
  public:
-  GeomSvc(const std::string& name, ISvcLocator* svc);
-  ~GeomSvc();
+  DetGeomSvc(const std::string& name, ISvcLocator* svc);
+  ~DetGeomSvc();
   
   // Service
   StatusCode initialize() override;

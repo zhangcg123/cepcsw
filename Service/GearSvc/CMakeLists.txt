@@ -9,7 +9,7 @@ gaudi_add_module(GearSvcPlugins
                       ${DD4hep_COMPONENT_LIBRARIES}
                       DetInterface
                       DetSegmentation
-                      Identifier
+                      DetIdentifier
 )
 
 target_include_directories(GearSvcPlugins

@@ -1,6 +1,6 @@
 #include "SiliconTrackingAlg.h"
 
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 #include "GearSvc/IGearSvc.h"
 #include "EventSeeder/IEventSeeder.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"

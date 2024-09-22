@@ -9,5 +9,5 @@ find_dependency(ROOT REQUIRED)
 # link to (libraries) or execute (programs)
 include("${CMAKE_CURRENT_LIST_DIR}/CEPCSWTargets.cmake")
 
-get_property(TEST_CEPCSW_LIBRARY TARGET CEPCSW::GeomSvc PROPERTY LOCATION)
+get_property(TEST_CEPCSW_LIBRARY TARGET CEPCSW::DetGeomSvc PROPERTY LOCATION)
 find_package_handle_standard_args(CEPCSW DEFAULT_MSG CMAKE_CURRENT_LIST_FILE TEST_CEPCSW_LIBRARY)
