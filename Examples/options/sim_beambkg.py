@@ -31,8 +31,8 @@ if not os.path.exists(geometry_path):
     print("Can't find the compact geometry file: %s"%geometry_path)
     sys.exit(-1)
 
-from Configurables import GeomSvc
-geosvc = GeomSvc("GeomSvc")
+from Configurables import DetGeomSvc
+geosvc = DetGeomSvc("GeomSvc")
 geosvc.compact = geometry_path
 
 from Configurables import NTupleSvc

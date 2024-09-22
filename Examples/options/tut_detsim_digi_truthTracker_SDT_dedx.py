@@ -46,8 +46,8 @@ if not os.path.exists(geometry_path):
     print("Can't find the compact geometry file: %s"%geometry_path)
     sys.exit(-1)
 
-from Configurables import GeomSvc
-geosvc = GeomSvc("GeomSvc")
+from Configurables import DetGeomSvc
+geosvc = DetGeomSvc("GeomSvc")
 geosvc.compact = geometry_path
 #geosvc.compact = "/workfs/higgs/fangwx/fork_DedxAlg_20201217/CEPCSW/Detector/DetCRD/compact/CRD_o1_v01/CRD_o1_v01.xml"
 #geosvc.compact = "/workfs/higgs/fangwx/fork_DedxAlg_20201217/CEPCSW/Detector/DetCRD/compact/CRD_o1_v01/CRD_o1_v01_DCH.xml"

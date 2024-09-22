@@ -64,6 +64,7 @@ set( KalDetLib_srcs ${LIB_SOURCES} ${COMMON_SOURCES} )
 gaudi_add_library(KalDetLib
                   SOURCES ${KalDetLib_srcs}
                   LINK DetInterface
+                       DetIdentifier
                        KalTestLib
                        Gaudi::GaudiKernel
                        ${ROOT_LIBRARIES}

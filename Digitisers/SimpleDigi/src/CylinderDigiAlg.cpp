@@ -1,6 +1,6 @@
 #include "CylinderDigiAlg.h"
 
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 
 #include "edm4hep/Vector3f.h"
 

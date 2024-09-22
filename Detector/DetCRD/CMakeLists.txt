@@ -29,7 +29,7 @@ gaudi_add_module(DetCRD
                          src/Tracker/SiTracker_otkendcap_v01_geo.cpp
 
 		 LINK ${DD4hep_COMPONENT_LIBRARIES}
-                      Identifier
+                      DetIdentifier
 )
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})

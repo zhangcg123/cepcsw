@@ -25,7 +25,7 @@
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
-#include "../../../../../Detector/Identifier/include/Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 
 // #include "streamlog/streamlog.h"
 

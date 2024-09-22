@@ -25,10 +25,9 @@ gaudi_add_library(DataHelperLib
                              Gaudi::GaudiKernel
                              ${GSL_LIBRARIES}
                              ${CLHEP_LIBRARIES}
-                             Identifier
+                             DetIdentifier
                              DetSegmentation
                              DetInterface
-                             Identifier
 )
 
 install(TARGETS DataHelperLib

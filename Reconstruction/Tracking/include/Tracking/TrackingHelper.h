@@ -6,7 +6,7 @@
 #include "UTIL/BitField64.h"
 #include "UTIL/CellIDDecoder.h"
 #include "UTIL/ILDConf.h"
-#include "Identifier/CEPCConf.h"
+#include "DetIdentifier/CEPCConf.h"
 #include "lcio.h"
 #include <array>
 
