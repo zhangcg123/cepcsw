@@ -30,9 +30,13 @@ Edm4hepWriterAnaElemTool::BeginOfRunAction(const G4Run*) {
     m_geosvc = service<IGeomSvc>("GeomSvc");
     if (m_geosvc) {
         dd4hep::Detector* dd4hep_geo = m_geosvc->lcdd();
-        // try to get the constants
-        R = dd4hep_geo->constant<double>("tracker_region_rmax")/dd4hep::mm*CLHEP::mm;
-        Z = dd4hep_geo->constant<double>("tracker_region_zmax")/dd4hep::mm*CLHEP::mm;
+        try {
+            // try to get the constants
+            R = dd4hep_geo->constant<double>("tracker_region_rmax")/dd4hep::mm*CLHEP::mm;
+            Z = dd4hep_geo->constant<double>("tracker_region_zmax")/dd4hep::mm*CLHEP::mm;
+        } catch (std::runtime_error&e) {
+            warning() << "constant tracker_region_rmax and tracker_region_zmax is not defined. " << endmsg;
+        }
 
         info() << "Tracker Region "
                << " R: " << R
