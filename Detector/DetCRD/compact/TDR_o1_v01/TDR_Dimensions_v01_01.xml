@@ -37,7 +37,7 @@
     <constant name="DetID_ITKBarrel"    value="  2"/>
     <constant name="DetID_ITKEndCap"    value="  3"/>
     <constant name="DetID_OTKBarrel"    value="  5"/>
-    <constant name="DetID_OTKEndCap"    value="  6"/>
+    <constant name="DetID_OTKEndcap"    value="  6"/>
     
     <constant name="DetID_ECAL"         value=" 20"/>
     <constant name="DetID_ECAL_PLUG"    value=" 21"/>
