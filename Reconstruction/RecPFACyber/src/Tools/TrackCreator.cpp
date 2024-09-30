@@ -24,6 +24,7 @@ namespace Cyber{
       std::vector<edm4hep::Track> m_TrkCol; m_TrkCol.clear();
       for(unsigned int icol=0; icol<const_TrkCol->size(); icol++){
         edm4hep::Track m_trk = const_TrkCol->at(icol);
+        if(!m_trk.isAvailable() || m_trk.getType()==0) continue;
         m_TrkCol.push_back(m_trk);
       }
 
@@ -38,6 +39,7 @@ namespace Cyber{
     for(auto iter : m_DataCol.collectionMap_Track){
       auto const_TrkCol = iter.second; 
       for(int itrk=0; itrk<const_TrkCol.size(); itrk++){
+
         //Cyber::Track* m_trk = new Cyber::Track();
         std::shared_ptr<Cyber::Track> m_trk = std::make_shared<Cyber::Track>();
         std::vector<Cyber::TrackState> m_trkstates;
@@ -49,7 +51,7 @@ namespace Cyber{
           m_trkst.phi0 = const_TrkCol[itrk].getTrackStates(its).phi;
           m_trkst.tanLambda = const_TrkCol[itrk].getTrackStates(its).tanLambda;
           m_trkst.Omega = const_TrkCol[itrk].getTrackStates(its).omega;
-          m_trkst.Kappa = m_trkst.Omega*1000./(0.3*settings.map_floatPars.at("BField"));   
+          m_trkst.Kappa = m_trkst.Omega*1000./(0.299792458*settings.map_floatPars.at("BField"));   
           m_trkst.location = const_TrkCol[itrk].getTrackStates(its).location;
           m_trkst.referencePoint.SetXYZ( const_TrkCol[itrk].getTrackStates(its).referencePoint[0],
                                          const_TrkCol[itrk].getTrackStates(its).referencePoint[1],
@@ -68,9 +70,12 @@ namespace Cyber{
           }
         }
 
+
         m_trkCol.push_back(m_trk);
       }
     }
+
+    //SelectGoodTrack(m_trkCol);
     m_DataCol.TrackCol = m_trkCol;
 
 
@@ -146,6 +151,59 @@ namespace Cyber{
     m_TrkExtraAlg->ClearAlgorithm();
     delete m_TrkExtraAlg;
     m_TrkExtraAlg = nullptr;
+
+    return StatusCode::SUCCESS;
+  }
+
+
+  StatusCode TrackCreator::SelectGoodTrack(std::vector<std::shared_ptr<Cyber::Track>>& trkCol){
+    if(trkCol.size()<2) return StatusCode::SUCCESS;
+
+    for(int itrk=0; itrk<trkCol.size(); itrk++){
+      //Endpoint cut
+      if( fabs( trkCol[itrk]->getEndPoint().z() )<settings.map_floatPars.at("TrkEndZCut") && 
+          trkCol[itrk]->getEndPoint().Perp()>settings.map_floatPars.at("TrkEndRCutMin") &&  
+          trkCol[itrk]->getEndPoint().Perp()<settings.map_floatPars.at("TrkEndRCutMax") ){  
+
+        trkCol.erase(trkCol.begin() + itrk);
+        itrk--;
+        continue;
+      }
+      //Start point cut
+      if( trkCol[itrk]->getStartPoint().Perp()>settings.map_floatPars.at("TrkStartRCutMin") &&
+          trkCol[itrk]->getStartPoint().Perp()<settings.map_floatPars.at("TrkStartRCutMax") ){ 
+
+        trkCol.erase(trkCol.begin() + itrk);
+        itrk--;
+        continue;
+      }
+      //Track length cut
+      if( (trkCol[itrk]->getEndPoint().Perp()-trkCol[itrk]->getStartPoint().Perp() )<settings.map_floatPars.at("TrkLengthCut") ){
+
+        trkCol.erase(trkCol.begin() + itrk);
+        itrk--;
+        continue;
+      }
+    }
+
+    if(trkCol.size()<2) return StatusCode::SUCCESS;
+
+    //Remove the broken tracks
+    std::sort(trkCol.begin(), trkCol.end(),  compTrkIP);
+    for(int itrk=0; itrk<trkCol.size()-1; itrk++){
+      for(int jtrk=itrk+1; jtrk<trkCol.size(); jtrk++){
+        double deltaP = (trkCol[itrk]->getP3() - trkCol[jtrk]->getP3()).Mag();
+        if( trkCol[jtrk]->getP3().Perp() < settings.map_floatPars.at("BrokenTrkMinP") &&
+            ( deltaP/max(trkCol[itrk]->getMomentum(), trkCol[jtrk]->getMomentum()) < settings.map_floatPars.at("BrokenTrkDeltaPCut") ||
+            (trkCol[itrk]->getEndPoint()-trkCol[jtrk]->getStartPoint()).Mag() < settings.map_floatPars.at("BrokenTrkDistance") ) ){
+          trkCol.erase(trkCol.begin() + jtrk);
+          jtrk--;
+          if(itrk>jtrk+1) itrk--;
+        }
+      }
+    }
+
+    std::sort(trkCol.begin(), trkCol.end(),  compTrkP);
 
     return StatusCode::SUCCESS;
   }

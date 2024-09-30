@@ -13,7 +13,7 @@ StatusCode TrackClusterConnectingAlg::ReadSettings(Settings& m_settings){
   if(settings.map_floatPars.find("th_ChFragEn")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragEn"] = 2.;
   if(settings.map_floatPars.find("th_ChFragDepth")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragDepth"] = 100.;
   if(settings.map_floatPars.find("th_ChFragMinR")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragMinR"] = 200.;
-  if(settings.map_floatPars.find("th_HcalMatchingaR")==settings.map_floatPars.end()) settings.map_floatPars["th_HcalMatchingR"] = 100.;
+  if(settings.map_floatPars.find("th_HcalMatchingR")==settings.map_floatPars.end()) settings.map_floatPars["th_HcalMatchingR"] = 150.;
 
   if(settings.map_floatPars.find("th_MIPEnergy")==settings.map_floatPars.end()) settings.map_floatPars["th_MIPEnergy"] = 0.5;
   if(settings.map_floatPars.find("th_AbsorbCone")==settings.map_floatPars.end()) settings.map_floatPars["th_AbsorbCone"] = 0.8;
@@ -44,6 +44,9 @@ StatusCode TrackClusterConnectingAlg::Initialize( CyberDataCol& m_datacol ){
   }
 
 //cout<<"Readin Track size: "<<m_tracks.size()<<", ECAL cluster size: "<<m_EcalClusters.size()<<", HCAL cluster size "<<m_HcalClusters.size()<<endl;
+//cout<<"Print track"<<endl;
+//for(int i=0; i<m_tracks.size(); i++)
+//  cout<<"Track #"<<i<<": P = "<<m_tracks[i]->getMomentum()<<", Pt = "<<m_tracks[i]->getPt()<<endl;
 //cout<<"Print all ECAL cluster "<<endl;
 //for(int ic=0; ic<m_EcalClusters.size(); ic++){
 //  cout<<"    ECAL Cluster #"<<ic<<": En = "<<m_EcalClusters[ic]->getLongiE()<<", track size "<<m_EcalClusters[ic]->getAssociatedTracks().size();
@@ -64,6 +67,12 @@ StatusCode TrackClusterConnectingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   m_absorbedEcal.clear();
   EcalChFragAbsorption(m_EcalClusters, m_tracks, m_absorbedEcal);
 //cout<<"  TrackClusterConnectingAlg: After ECAL charged fragment absorption: cluster size "<<m_absorbedEcal.size()<<endl;
+//cout<<"Print merged ECAL cluster "<<endl;
+//for(int ic=0; ic<m_absorbedEcal.size(); ic++){
+//  cout<<"    ECAL Cluster #"<<ic<<": En = "<<m_absorbedEcal[ic]->getLongiE()<<", track size "<<m_absorbedEcal[ic]->getAssociatedTracks().size();
+//  if(m_absorbedEcal[ic]->getAssociatedTracks().size()>0) cout<<", Leading track P = "<<m_absorbedEcal[ic]->getAssociatedTracks()[0]->getMomentum()<<endl;
+//  else cout<<endl;
+//}
 
   //2. Create PFObject with ECAL cluster and track
   std::vector<const Cyber::Calo3DCluster*> tmp_constClus; 
@@ -76,6 +85,18 @@ StatusCode TrackClusterConnectingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
 //  cout<<", ECAL cluster size "<<m_PFObjects[i]->getECALClusters().size()<<", totE "<<m_PFObjects[i]->getECALClusterEnergy();
 //  cout<<", HCAL cluster size "<<m_PFObjects[i]->getHCALClusters().size()<<", totE "<<m_PFObjects[i]->getHCALClusterEnergy()<<endl;
 //}
+
+//cout<<"Print all HCAL cluster"<<endl;
+//double totE_Hcal = 0;
+//for(int i=0; i<m_HcalClusters.size(); i++){
+//  printf("  HCAL Cluster #%d: En = %.6f, position (%.3f, %.3f, %.3f) \n", i, 
+//            m_HcalClusters[i]->getHitsE(), 
+//            m_HcalClusters[i]->getHitCenter().x(), 
+//            m_HcalClusters[i]->getHitCenter().y(), 
+//            m_HcalClusters[i]->getHitCenter().z() );
+//  totE_Hcal += m_HcalClusters[i]->getHitsE();
+//}
+//cout<<"Hcal cluster total E "<<totE_Hcal<<endl;
 
   //3. Add HCAL clusters into the PFObject. 
   std::sort(m_PFObjects.begin(), m_PFObjects.end(), compTrkP);

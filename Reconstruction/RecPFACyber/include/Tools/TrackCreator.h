@@ -22,7 +22,7 @@ namespace Cyber{
     StatusCode CreateTracksFromMCParticle(CyberDataCol& m_DataCol, 
                                           DataHandle<edm4hep::MCParticleCollection>& r_MCParticleCol);
 
-
+    StatusCode SelectGoodTrack(std::vector<std::shared_ptr<Cyber::Track>>& trkCol);
     StatusCode Reset(){};
 
   private: 
@@ -30,6 +30,15 @@ namespace Cyber{
     Cyber::Algorithm*      m_TrkExtraAlg; 
     Cyber::Settings        m_TrkExtraSettings;  
 
+    static bool compTrkIP( std::shared_ptr<Cyber::Track> trk1, std::shared_ptr<Cyber::Track> trk2 ){ 
+      float IP1 = sqrt(trk1->getD0()*trk1->getD0() + trk1->getZ0()*trk1->getZ0() );
+      float IP2 = sqrt(trk2->getD0()*trk2->getD0() + trk2->getZ0()*trk2->getZ0() );
+      return IP1<IP2;
+    }
+
+    static bool compTrkP( std::shared_ptr<Cyber::Track> trk1, std::shared_ptr<Cyber::Track> trk2 ){
+      return trk1->getMomentum() > trk2->getMomentum();
+    }
 
   };
 };

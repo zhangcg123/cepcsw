@@ -52,6 +52,15 @@ StatusCode CyberPFAlg::initialize()
 
   m_pTrackCreatorSettings.map_stringVecPars["trackCollections"] = name_TrackCol.value();
   m_pTrackCreatorSettings.map_floatPars["BField"] = m_BField; 
+  m_pTrackCreatorSettings.map_floatPars["TrkEndZCut"] = 200.;
+  m_pTrackCreatorSettings.map_floatPars["TrkEndRCutMin"] = 700.;
+  m_pTrackCreatorSettings.map_floatPars["TrkEndRCutMax"] = 1600.;
+  m_pTrackCreatorSettings.map_floatPars["TrkStartRCutMin"] = 635.;
+  m_pTrackCreatorSettings.map_floatPars["TrkStartRCutMax"] = 640.;
+  m_pTrackCreatorSettings.map_floatPars["TrkLengthCut"] = 130.;
+  m_pTrackCreatorSettings.map_floatPars["BrokenTrkMinP"] = 0.5;
+  m_pTrackCreatorSettings.map_floatPars["BrokenTrkDeltaPCut"] = 0.15;
+  m_pTrackCreatorSettings.map_floatPars["BrokenTrkDistance"] = 10.;
 
   std::vector<std::string> name_CaloHits = name_EcalHits; 
   std::vector<std::string> name_CaloReadout = name_EcalReadout;
@@ -659,7 +668,7 @@ StatusCode CyberPFAlg::execute()
   if(_nEvt==0) std::cout<<"CyberPFAlg::execute Start"<<std::endl;
   std::cout<<"Processing event: "<<_nEvt<<std::endl;
 
-  if(_nEvt<m_Nskip){ _nEvt++;  return GaudiAlgorithm::initialize(); }
+  if(_nEvt<m_Nskip){ _nEvt++;  return StatusCode::SUCCESS; }
 
   //InitializeForNewEvent(); 
   CyberDataCol     m_DataCol;
@@ -669,10 +678,8 @@ StatusCode CyberPFAlg::execute()
 
   //Readin collections 
   m_pMCParticleCreator->CreateMCParticle( m_DataCol, *r_MCParticleCol );
-
   if(m_useTruthTrk) m_pTrackCreator->CreateTracksFromMCParticle(m_DataCol, *r_MCParticleCol);
   else m_pTrackCreator->CreateTracks( m_DataCol, r_TrackCols, r_MCPTrkAssoCol );
-
   m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols );
 
   //Perform PFA algorithm
@@ -688,912 +695,915 @@ StatusCode CyberPFAlg::execute()
 
 // yyy_endrec = clock();  // 重建结束的时间
 
-cout<<"Write tuples"<<endl;
-  //---------------------Write Ana tuples-------------------------
-  // MC particles  
-  ClearMCParticle();
-  std::vector<edm4hep::MCParticle> m_MCPCol = m_DataCol.collectionMap_MC[name_MCParticleCol.value()];
-  for(int imc=0; imc<m_MCPCol.size(); imc++){
-    m_mcPdgid.push_back( m_MCPCol[imc].getPDG() );
-    m_mcStatus.push_back( m_MCPCol[imc].getGeneratorStatus() );
-    m_mcPx.push_back( m_MCPCol[imc].getMomentum()[0] );
-    m_mcPy.push_back( m_MCPCol[imc].getMomentum()[1] );
-    m_mcPz.push_back( m_MCPCol[imc].getMomentum()[2] );
-    m_mcEn.push_back( m_MCPCol[imc].getEnergy() );
-    m_mcMass.push_back( m_MCPCol[imc].getMass() );
-    m_mcCharge.push_back( m_MCPCol[imc].getCharge() );
-    m_mcEPx.push_back( m_MCPCol[imc].getEndpoint()[0] );
-    m_mcEPy.push_back( m_MCPCol[imc].getEndpoint()[1] );
-    m_mcEPz.push_back( m_MCPCol[imc].getEndpoint()[2] );
-    //double tmp_phi = std::atan2(m_MCPCol[imc].getMomentum()[1], m_MCPCol[imc].getMomentum()[0])* 180.0 / M_PI;
-    //if (tmp_phi < 0) tmp_phi += 360.0;
-    //double tmp_theta = std::atan2(m_MCPCol[imc].getMomentum()[2], sqrt(m_MCPCol[imc].getMomentum()[1]*m_MCPCol[imc].getMomentum()[1]+m_MCPCol[imc].getMomentum()[0]*m_MCPCol[imc].getMomentum()[0]))* 180.0 / M_PI + 90; 
-    //cout<<"MCParticle: "<<imc<<" PDG: "<<m_MCPCol[imc].getPDG()<<" Theta: "<<tmp_theta<<" Phi: "<<tmp_phi<<endl;
-
-    double EnDep_ecal = GetParticleDepEnergy(m_MCPCol[imc], m_DataCol.map_BarCol["BarCol"]);
-    double EnDep_hcal = GetParticleDepEnergy(m_MCPCol[imc], m_DataCol.map_CaloHit["HCALBarrel"]);
-    m_depEn_ecal.push_back(EnDep_ecal);
-    m_depEn_hcal.push_back(EnDep_hcal);
-  }
-  t_MCParticle->Fill();
-
-
-  //Save Raw bars information
-  ClearBar();
-  m_totE_EcalSim = 0.;
-  for(int ibar=0;ibar<m_DataCol.map_BarCol["BarCol"].size();ibar++){
-    auto p_hitbar = m_DataCol.map_BarCol["BarCol"][ibar].get();
-    m_simBar_x.push_back(p_hitbar->getPosition().x());
-    m_simBar_y.push_back(p_hitbar->getPosition().y());
-    m_simBar_z.push_back(p_hitbar->getPosition().z());
-    m_simBar_Q1.push_back(p_hitbar->getQ1());
-    m_simBar_Q2.push_back(p_hitbar->getQ2());
-    m_simBar_T1.push_back(p_hitbar->getT1());
-    m_simBar_T2.push_back(p_hitbar->getT2());
-    m_simBar_module.push_back(p_hitbar->getModule());
-    m_simBar_dlayer.push_back(p_hitbar->getDlayer());
-    m_simBar_stave.push_back(p_hitbar->getStave());
-    m_simBar_slayer.push_back(p_hitbar->getSlayer());
-    m_simBar_bar.push_back(p_hitbar->getBar());
-    m_totE_EcalSim += (p_hitbar->getQ1()+p_hitbar->getQ2())/2.; 
-
-    auto truthMap = p_hitbar->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_simBar_truthMC_tag.push_back(ibar);
-      m_simBar_truthMC_pid.push_back(iter.first.getPDG());
-      m_simBar_truthMC_px.push_back(iter.first.getMomentum().x);
-      m_simBar_truthMC_py.push_back(iter.first.getMomentum().y);
-      m_simBar_truthMC_pz.push_back(iter.first.getMomentum().z);
-      m_simBar_truthMC_E.push_back(iter.first.getEnergy());
-      m_simBar_truthMC_EPx.push_back(iter.first.getEndpoint().x);
-      m_simBar_truthMC_EPy.push_back(iter.first.getEndpoint().y);
-      m_simBar_truthMC_EPz.push_back(iter.first.getEndpoint().z);
-      m_simBar_truthMC_weight.push_back(iter.second);
+  if(m_WriteAna){
+    cout<<"Write tuples"<<endl;
+    //---------------------Write Ana tuples-------------------------
+    // MC particles  
+    ClearMCParticle();
+    std::vector<edm4hep::MCParticle> m_MCPCol = m_DataCol.collectionMap_MC[name_MCParticleCol.value()];
+    for(int imc=0; imc<m_MCPCol.size(); imc++){
+      m_mcPdgid.push_back( m_MCPCol[imc].getPDG() );
+      m_mcStatus.push_back( m_MCPCol[imc].getGeneratorStatus() );
+      m_mcPx.push_back( m_MCPCol[imc].getMomentum()[0] );
+      m_mcPy.push_back( m_MCPCol[imc].getMomentum()[1] );
+      m_mcPz.push_back( m_MCPCol[imc].getMomentum()[2] );
+      m_mcEn.push_back( m_MCPCol[imc].getEnergy() );
+      m_mcMass.push_back( m_MCPCol[imc].getMass() );
+      m_mcCharge.push_back( m_MCPCol[imc].getCharge() );
+      m_mcEPx.push_back( m_MCPCol[imc].getEndpoint()[0] );
+      m_mcEPy.push_back( m_MCPCol[imc].getEndpoint()[1] );
+      m_mcEPz.push_back( m_MCPCol[imc].getEndpoint()[2] );
+      //double tmp_phi = std::atan2(m_MCPCol[imc].getMomentum()[1], m_MCPCol[imc].getMomentum()[0])* 180.0 / M_PI;
+      //if (tmp_phi < 0) tmp_phi += 360.0;
+      //double tmp_theta = std::atan2(m_MCPCol[imc].getMomentum()[2], sqrt(m_MCPCol[imc].getMomentum()[1]*m_MCPCol[imc].getMomentum()[1]+m_MCPCol[imc].getMomentum()[0]*m_MCPCol[imc].getMomentum()[0]))* 180.0 / M_PI + 90; 
+      //cout<<"MCParticle: "<<imc<<" PDG: "<<m_MCPCol[imc].getPDG()<<" Theta: "<<tmp_theta<<" Phi: "<<tmp_phi<<endl;
+   
+      double EnDep_ecal = GetParticleDepEnergy(m_MCPCol[imc], m_DataCol.map_BarCol["BarCol"]);
+      double EnDep_hcal = GetParticleDepEnergy(m_MCPCol[imc], m_DataCol.map_CaloHit["HCALBarrel"]);
+      m_depEn_ecal.push_back(EnDep_ecal);
+      m_depEn_hcal.push_back(EnDep_hcal);
     }
-  }
-
-  std::vector<Cyber::CaloHit*> m_hcalHitsCol; m_hcalHitsCol.clear();
-  for(int ih=0; ih<m_DataCol.map_CaloHit["HCALBarrel"].size(); ih++)
-    m_hcalHitsCol.push_back( m_DataCol.map_CaloHit["HCALBarrel"][ih].get() );
-
-  m_totE_HcalSim = 0.;
-  for(int ihit=0; ihit<m_hcalHitsCol.size(); ihit++){
-    m_HcalHit_x.push_back( m_hcalHitsCol[ihit]->getPosition().x() );
-    m_HcalHit_y.push_back( m_hcalHitsCol[ihit]->getPosition().y() );
-    m_HcalHit_z.push_back( m_hcalHitsCol[ihit]->getPosition().z() );
-    m_HcalHit_E.push_back( m_hcalHitsCol[ihit]->getEnergy() );
-    m_HcalHit_layer.push_back( m_hcalHitsCol[ihit]->getLayer() );
-    m_totE_HcalSim += m_hcalHitsCol[ihit]->getEnergy(); 
-
-    auto truthMap = m_hcalHitsCol[ihit]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_HcalHit_truthMC_tag.push_back(ihit);
-      m_HcalHit_truthMC_pid.push_back(iter.first.getPDG());
-      m_HcalHit_truthMC_px.push_back(iter.first.getMomentum().x);
-      m_HcalHit_truthMC_py.push_back(iter.first.getMomentum().y);
-      m_HcalHit_truthMC_pz.push_back(iter.first.getMomentum().z);
-      m_HcalHit_truthMC_E.push_back(iter.first.getEnergy());
-      m_HcalHit_truthMC_EPx.push_back(iter.first.getEndpoint().x);
-      m_HcalHit_truthMC_EPy.push_back(iter.first.getEndpoint().y);
-      m_HcalHit_truthMC_EPz.push_back(iter.first.getEndpoint().z);
-      m_HcalHit_truthMC_weight.push_back(iter.second);
-    }    
-
-  }
-  t_SimBar->Fill();
-
-  //Save localMax
-  ClearLocalMax();
-  std::vector<Cyber::CaloHalfCluster*> m_halfclusters; m_halfclusters.clear();
-  for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColU"].size(); i++)
-    m_halfclusters.push_back( m_DataCol.map_HalfCluster["HalfClusterColU"][i].get() );
-
-  std::vector<const Calo1DCluster*> m_local_max; m_local_max.clear();
-  for(int ic=0;ic<m_halfclusters.size(); ic++){
-    std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
-    m_local_max.insert(m_local_max.end(), tmp_shower.begin(), tmp_shower.end());
-  }
-  for(int il=0; il<m_local_max.size(); il++){
-    m_localMaxU_tag.push_back( il );
-    m_localMaxU_x.push_back( m_local_max[il]->getPos().x() );
-    m_localMaxU_y.push_back( m_local_max[il]->getPos().y() );
-    m_localMaxU_z.push_back( m_local_max[il]->getPos().z() );
-    m_localMaxU_E.push_back( m_local_max[il]->getEnergy() );
-
-    auto truthMap = m_local_max[il]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_localMaxU_mc_tag.push_back(il);
-      m_localMaxU_mc_pdg.push_back(iter.first.getPDG());
-      m_localMaxU_mc_px.push_back(iter.first.getMomentum().x);
-      m_localMaxU_mc_py.push_back(iter.first.getMomentum().y);
-      m_localMaxU_mc_pz.push_back(iter.first.getMomentum().z);
-      m_localMaxU_mc_weight.push_back(iter.second);
+    t_MCParticle->Fill();
+   
+   
+    //Save Raw bars information
+    ClearBar();
+    m_totE_EcalSim = 0.;
+    for(int ibar=0;ibar<m_DataCol.map_BarCol["BarCol"].size();ibar++){
+      auto p_hitbar = m_DataCol.map_BarCol["BarCol"][ibar].get();
+      m_simBar_x.push_back(p_hitbar->getPosition().x());
+      m_simBar_y.push_back(p_hitbar->getPosition().y());
+      m_simBar_z.push_back(p_hitbar->getPosition().z());
+      m_simBar_Q1.push_back(p_hitbar->getQ1());
+      m_simBar_Q2.push_back(p_hitbar->getQ2());
+      m_simBar_T1.push_back(p_hitbar->getT1());
+      m_simBar_T2.push_back(p_hitbar->getT2());
+      m_simBar_module.push_back(p_hitbar->getModule());
+      m_simBar_dlayer.push_back(p_hitbar->getDlayer());
+      m_simBar_stave.push_back(p_hitbar->getStave());
+      m_simBar_slayer.push_back(p_hitbar->getSlayer());
+      m_simBar_bar.push_back(p_hitbar->getBar());
+      m_totE_EcalSim += (p_hitbar->getQ1()+p_hitbar->getQ2())/2.; 
+   
+      auto truthMap = p_hitbar->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_simBar_truthMC_tag.push_back(ibar);
+        m_simBar_truthMC_pid.push_back(iter.first.getPDG());
+        m_simBar_truthMC_px.push_back(iter.first.getMomentum().x);
+        m_simBar_truthMC_py.push_back(iter.first.getMomentum().y);
+        m_simBar_truthMC_pz.push_back(iter.first.getMomentum().z);
+        m_simBar_truthMC_E.push_back(iter.first.getEnergy());
+        m_simBar_truthMC_EPx.push_back(iter.first.getEndpoint().x);
+        m_simBar_truthMC_EPy.push_back(iter.first.getEndpoint().y);
+        m_simBar_truthMC_EPz.push_back(iter.first.getEndpoint().z);
+        m_simBar_truthMC_weight.push_back(iter.second);
+      }
     }
-  }
-  m_halfclusters.clear();
-  m_local_max.clear(); 
-  for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColV"].size(); i++)
-    m_halfclusters.push_back( m_DataCol.map_HalfCluster["HalfClusterColV"][i].get() );
-
-  for(int ic=0;ic<m_halfclusters.size(); ic++){
-    std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
-    m_local_max.insert(m_local_max.end(), tmp_shower.begin(), tmp_shower.end());
-  }
-  for(int il=0; il<m_local_max.size(); il++){
-    m_localMaxV_tag.push_back( il );
-    m_localMaxV_x.push_back( m_local_max[il]->getPos().x() );
-    m_localMaxV_y.push_back( m_local_max[il]->getPos().y() );
-    m_localMaxV_z.push_back( m_local_max[il]->getPos().z() );
-    m_localMaxV_E.push_back( m_local_max[il]->getEnergy() );
-
-    auto truthMap = m_local_max[il]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_localMaxV_mc_tag.push_back(il);
-      m_localMaxV_mc_pdg.push_back(iter.first.getPDG());
-      m_localMaxV_mc_px.push_back(iter.first.getMomentum().x);
-      m_localMaxV_mc_py.push_back(iter.first.getMomentum().y);
-      m_localMaxV_mc_pz.push_back(iter.first.getMomentum().z);
-      m_localMaxV_mc_weight.push_back(iter.second);
+   
+    std::vector<Cyber::CaloHit*> m_hcalHitsCol; m_hcalHitsCol.clear();
+    for(int ih=0; ih<m_DataCol.map_CaloHit["HCALBarrel"].size(); ih++)
+      m_hcalHitsCol.push_back( m_DataCol.map_CaloHit["HCALBarrel"][ih].get() );
+   
+    m_totE_HcalSim = 0.;
+    for(int ihit=0; ihit<m_hcalHitsCol.size(); ihit++){
+      m_HcalHit_x.push_back( m_hcalHitsCol[ihit]->getPosition().x() );
+      m_HcalHit_y.push_back( m_hcalHitsCol[ihit]->getPosition().y() );
+      m_HcalHit_z.push_back( m_hcalHitsCol[ihit]->getPosition().z() );
+      m_HcalHit_E.push_back( m_hcalHitsCol[ihit]->getEnergy() );
+      m_HcalHit_layer.push_back( m_hcalHitsCol[ihit]->getLayer() );
+      m_totE_HcalSim += m_hcalHitsCol[ihit]->getEnergy(); 
+   
+      auto truthMap = m_hcalHitsCol[ihit]->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_HcalHit_truthMC_tag.push_back(ihit);
+        m_HcalHit_truthMC_pid.push_back(iter.first.getPDG());
+        m_HcalHit_truthMC_px.push_back(iter.first.getMomentum().x);
+        m_HcalHit_truthMC_py.push_back(iter.first.getMomentum().y);
+        m_HcalHit_truthMC_pz.push_back(iter.first.getMomentum().z);
+        m_HcalHit_truthMC_E.push_back(iter.first.getEnergy());
+        m_HcalHit_truthMC_EPx.push_back(iter.first.getEndpoint().x);
+        m_HcalHit_truthMC_EPy.push_back(iter.first.getEndpoint().y);
+        m_HcalHit_truthMC_EPz.push_back(iter.first.getEndpoint().z);
+        m_HcalHit_truthMC_weight.push_back(iter.second);
+      }    
+   
     }
-  }
-  t_LocalMax->Fill();
-
-  //Save 1DCluster
-  ClearLayer();
-  m_halfclusters.clear();
-  for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterU"].size(); i++)
-    m_halfclusters.push_back( m_DataCol.map_HalfCluster["ESHalfClusterU"][i].get() );
-
-  m_local_max.clear();
-  for(int ic=0;ic<m_halfclusters.size(); ic++){
-    //std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
-    std::vector<const CaloHalfCluster*> m_axis = m_halfclusters[ic]->getHalfClusterCol("MergedAxis");
-    if(m_axis.size()>0){
-      std::vector<const Calo1DCluster*> tmp_shower = m_axis[0]->getCluster();
+    t_SimBar->Fill();
+   
+    //Save localMax
+    ClearLocalMax();
+    std::vector<Cyber::CaloHalfCluster*> m_halfclusters; m_halfclusters.clear();
+    for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColU"].size(); i++)
+      m_halfclusters.push_back( m_DataCol.map_HalfCluster["HalfClusterColU"][i].get() );
+   
+    std::vector<const Calo1DCluster*> m_local_max; m_local_max.clear();
+    for(int ic=0;ic<m_halfclusters.size(); ic++){
+      std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
       m_local_max.insert(m_local_max.end(), tmp_shower.begin(), tmp_shower.end());
     }
-  }
-  for(int il=0; il<m_local_max.size(); il++){
-    m_barShowerU_tag.push_back( il );
-    m_barShowerU_x.push_back( m_local_max[il]->getPos().x() );
-    m_barShowerU_y.push_back( m_local_max[il]->getPos().y() );
-    m_barShowerU_z.push_back( m_local_max[il]->getPos().z() );
-    m_barShowerU_E.push_back( m_local_max[il]->getEnergy() );  
-
-    auto truthMap = m_local_max[il]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_barShowerU_mc_tag.push_back(il);
-      m_barShowerU_mc_pdg.push_back(iter.first.getPDG());
-      m_barShowerU_mc_px.push_back(iter.first.getMomentum().x);
-      m_barShowerU_mc_py.push_back(iter.first.getMomentum().y);
-      m_barShowerU_mc_pz.push_back(iter.first.getMomentum().z);
-      m_barShowerU_mc_weight.push_back(iter.second);
+    for(int il=0; il<m_local_max.size(); il++){
+      m_localMaxU_tag.push_back( il );
+      m_localMaxU_x.push_back( m_local_max[il]->getPos().x() );
+      m_localMaxU_y.push_back( m_local_max[il]->getPos().y() );
+      m_localMaxU_z.push_back( m_local_max[il]->getPos().z() );
+      m_localMaxU_E.push_back( m_local_max[il]->getEnergy() );
+   
+      auto truthMap = m_local_max[il]->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_localMaxU_mc_tag.push_back(il);
+        m_localMaxU_mc_pdg.push_back(iter.first.getPDG());
+        m_localMaxU_mc_px.push_back(iter.first.getMomentum().x);
+        m_localMaxU_mc_py.push_back(iter.first.getMomentum().y);
+        m_localMaxU_mc_pz.push_back(iter.first.getMomentum().z);
+        m_localMaxU_mc_weight.push_back(iter.second);
+      }
     }
-  }
-  m_halfclusters.clear();
-  m_local_max.clear();
-  for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterV"].size(); i++)
-    m_halfclusters.push_back( m_DataCol.map_HalfCluster["ESHalfClusterV"][i].get() );
-
-  for(int ic=0;ic<m_halfclusters.size(); ic++){
-    //std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
-    std::vector<const CaloHalfCluster*> m_axis = m_halfclusters[ic]->getHalfClusterCol("MergedAxis");
-    if(m_axis.size()>0){
-      std::vector<const Calo1DCluster*> tmp_shower = m_axis[0]->getCluster();
+    m_halfclusters.clear();
+    m_local_max.clear(); 
+    for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColV"].size(); i++)
+      m_halfclusters.push_back( m_DataCol.map_HalfCluster["HalfClusterColV"][i].get() );
+   
+    for(int ic=0;ic<m_halfclusters.size(); ic++){
+      std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
       m_local_max.insert(m_local_max.end(), tmp_shower.begin(), tmp_shower.end());
     }
-  }
-  for(int il=0; il<m_local_max.size(); il++){
-    m_barShowerV_tag.push_back( il );
-    m_barShowerV_x.push_back( m_local_max[il]->getPos().x() );
-    m_barShowerV_y.push_back( m_local_max[il]->getPos().y() );
-    m_barShowerV_z.push_back( m_local_max[il]->getPos().z() );
-    m_barShowerV_E.push_back( m_local_max[il]->getEnergy() );
-
-    auto truthMap = m_local_max[il]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_barShowerV_mc_tag.push_back(il);
-      m_barShowerV_mc_pdg.push_back(iter.first.getPDG());
-      m_barShowerV_mc_px.push_back(iter.first.getMomentum().x);
-      m_barShowerV_mc_py.push_back(iter.first.getMomentum().y);
-      m_barShowerV_mc_pz.push_back(iter.first.getMomentum().z);
-      m_barShowerV_mc_weight.push_back(iter.second);
+    for(int il=0; il<m_local_max.size(); il++){
+      m_localMaxV_tag.push_back( il );
+      m_localMaxV_x.push_back( m_local_max[il]->getPos().x() );
+      m_localMaxV_y.push_back( m_local_max[il]->getPos().y() );
+      m_localMaxV_z.push_back( m_local_max[il]->getPos().z() );
+      m_localMaxV_E.push_back( m_local_max[il]->getEnergy() );
+   
+      auto truthMap = m_local_max[il]->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_localMaxV_mc_tag.push_back(il);
+        m_localMaxV_mc_pdg.push_back(iter.first.getPDG());
+        m_localMaxV_mc_px.push_back(iter.first.getMomentum().x);
+        m_localMaxV_mc_py.push_back(iter.first.getMomentum().y);
+        m_localMaxV_mc_pz.push_back(iter.first.getMomentum().z);
+        m_localMaxV_mc_weight.push_back(iter.second);
+      }
     }
-  }
-  t_Layers->Fill();
-
-  std::vector<const Cyber::CaloHalfCluster*> m_halfclusterV; m_halfclusterV.clear();
-  std::vector<const Cyber::CaloHalfCluster*> m_halfclusterU; m_halfclusterU.clear();
-  for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColU"].size(); i++){
-    m_halfclusterU.push_back( m_DataCol.map_HalfCluster["HalfClusterColU"][i].get() );
-  }
-  for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColV"].size(); i++){
-    m_halfclusterV.push_back( m_DataCol.map_HalfCluster["HalfClusterColV"][i].get() );
-  }
-  // Hough
-  ClearHough();
-  int houghU_index=0;
-  int houghV_index=0;
-  for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("HoughAxis");
-    for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
-      // General information of the axis
-      m_houghU_tag.push_back(houghU_index);
-      m_houghU_type.push_back(m_mergedaxisU[ita]->getType());
-      m_houghU_x.push_back(m_mergedaxisU[ita]->getPos().x());
-      m_houghU_y.push_back(m_mergedaxisU[ita]->getPos().y());
-      m_houghU_z.push_back(m_mergedaxisU[ita]->getPos().z());
-      m_houghU_E.push_back(m_mergedaxisU[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_houghU_truth_tag.push_back(houghU_index);
-        m_houghU_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_houghU_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_houghU_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_houghU_truth_MC_E.push_back(iter.first.getEnergy());
-        m_houghU_truth_MC_weight.push_back(iter.second);
+    t_LocalMax->Fill();
+   
+    //Save 1DCluster
+    ClearLayer();
+    m_halfclusters.clear();
+    for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterU"].size(); i++)
+      m_halfclusters.push_back( m_DataCol.map_HalfCluster["ESHalfClusterU"][i].get() );
+   
+    m_local_max.clear();
+    for(int ic=0;ic<m_halfclusters.size(); ic++){
+      //std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
+      std::vector<const CaloHalfCluster*> m_axis = m_halfclusters[ic]->getHalfClusterCol("MergedAxis");
+      if(m_axis.size()>0){
+        std::vector<const Calo1DCluster*> tmp_shower = m_axis[0]->getCluster();
+        m_local_max.insert(m_local_max.end(), tmp_shower.begin(), tmp_shower.end());
       }
-
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
-        m_houghU_hit_tag.push_back(houghU_index);
-        m_houghU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
-        m_houghU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
-        m_houghU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
-        m_houghU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
-      }
-
-      houghU_index++;
     }
-  }
-  for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("HoughAxis");
-    for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
-      // General information of the axis
-      m_houghV_tag.push_back(houghV_index);
-      m_houghV_type.push_back(m_mergedaxisV[ita]->getType());
-      m_houghV_x.push_back(m_mergedaxisV[ita]->getPos().x());
-      m_houghV_y.push_back(m_mergedaxisV[ita]->getPos().y());
-      m_houghV_z.push_back(m_mergedaxisV[ita]->getPos().z());
-      m_houghV_E.push_back(m_mergedaxisV[ita]->getEnergy());
-      m_houghV_alpha.push_back(m_mergedaxisV[ita]->getHoughAlpha());
-      m_houghV_rho.push_back(m_mergedaxisV[ita]->getHoughRho());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
+    for(int il=0; il<m_local_max.size(); il++){
+      m_barShowerU_tag.push_back( il );
+      m_barShowerU_x.push_back( m_local_max[il]->getPos().x() );
+      m_barShowerU_y.push_back( m_local_max[il]->getPos().y() );
+      m_barShowerU_z.push_back( m_local_max[il]->getPos().z() );
+      m_barShowerU_E.push_back( m_local_max[il]->getEnergy() );  
+   
+      auto truthMap = m_local_max[il]->getLinkedMCP();
       for(auto iter: truthMap){
-        m_houghV_truth_tag.push_back(houghV_index);
-        m_houghV_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_houghV_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_houghV_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_houghV_truth_MC_E.push_back(iter.first.getEnergy());
-        m_houghV_truth_MC_weight.push_back(iter.second);
+        m_barShowerU_mc_tag.push_back(il);
+        m_barShowerU_mc_pdg.push_back(iter.first.getPDG());
+        m_barShowerU_mc_px.push_back(iter.first.getMomentum().x);
+        m_barShowerU_mc_py.push_back(iter.first.getMomentum().y);
+        m_barShowerU_mc_pz.push_back(iter.first.getMomentum().z);
+        m_barShowerU_mc_weight.push_back(iter.second);
       }
-
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
-        m_houghV_hit_tag.push_back(houghV_index);
-        m_houghV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
-        m_houghV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
-        m_houghV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
-        m_houghV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
-      }
-
-      houghV_index++;
     }
-  }
-  t_Hough->Fill();
-  // Cone
-  ClearCone();
-  int coneU_index=0;
-  int coneV_index=0;
-  for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("ConeAxis");
-    for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
-      // General information of the axis
-      m_coneU_tag.push_back(coneU_index);
-      m_coneU_type.push_back(m_mergedaxisU[ita]->getType());
-      m_coneU_x.push_back(m_mergedaxisU[ita]->getPos().x());
-      m_coneU_y.push_back(m_mergedaxisU[ita]->getPos().y());
-      m_coneU_z.push_back(m_mergedaxisU[ita]->getPos().z());
-      m_coneU_E.push_back(m_mergedaxisU[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_coneU_truth_tag.push_back(coneU_index);
-        m_coneU_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_coneU_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_coneU_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_coneU_truth_MC_E.push_back(iter.first.getEnergy());
-        m_coneU_truth_MC_weight.push_back(iter.second);
+    m_halfclusters.clear();
+    m_local_max.clear();
+    for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterV"].size(); i++)
+      m_halfclusters.push_back( m_DataCol.map_HalfCluster["ESHalfClusterV"][i].get() );
+   
+    for(int ic=0;ic<m_halfclusters.size(); ic++){
+      //std::vector<const Calo1DCluster*> tmp_shower = m_halfclusters[ic]->getLocalMaxCol("AllLocalMax");
+      std::vector<const CaloHalfCluster*> m_axis = m_halfclusters[ic]->getHalfClusterCol("MergedAxis");
+      if(m_axis.size()>0){
+        std::vector<const Calo1DCluster*> tmp_shower = m_axis[0]->getCluster();
+        m_local_max.insert(m_local_max.end(), tmp_shower.begin(), tmp_shower.end());
       }
-
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
-        m_coneU_hit_tag.push_back(coneU_index);
-        m_coneU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
-        m_coneU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
-        m_coneU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
-        m_coneU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
-      }
-
-      coneU_index++;
     }
-  }
-  for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("ConeAxis");
-    for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
-      // General information of the axis
-      m_coneV_tag.push_back(coneV_index);
-      m_coneV_type.push_back(m_mergedaxisV[ita]->getType());
-      m_coneV_x.push_back(m_mergedaxisV[ita]->getPos().x());
-      m_coneV_y.push_back(m_mergedaxisV[ita]->getPos().y());
-      m_coneV_z.push_back(m_mergedaxisV[ita]->getPos().z());
-      m_coneV_E.push_back(m_mergedaxisV[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
+    for(int il=0; il<m_local_max.size(); il++){
+      m_barShowerV_tag.push_back( il );
+      m_barShowerV_x.push_back( m_local_max[il]->getPos().x() );
+      m_barShowerV_y.push_back( m_local_max[il]->getPos().y() );
+      m_barShowerV_z.push_back( m_local_max[il]->getPos().z() );
+      m_barShowerV_E.push_back( m_local_max[il]->getEnergy() );
+   
+      auto truthMap = m_local_max[il]->getLinkedMCP();
       for(auto iter: truthMap){
-        m_coneV_truth_tag.push_back(coneV_index);
-        m_coneV_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_coneV_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_coneV_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_coneV_truth_MC_E.push_back(iter.first.getEnergy());
-        m_coneV_truth_MC_weight.push_back(iter.second);
+        m_barShowerV_mc_tag.push_back(il);
+        m_barShowerV_mc_pdg.push_back(iter.first.getPDG());
+        m_barShowerV_mc_px.push_back(iter.first.getMomentum().x);
+        m_barShowerV_mc_py.push_back(iter.first.getMomentum().y);
+        m_barShowerV_mc_pz.push_back(iter.first.getMomentum().z);
+        m_barShowerV_mc_weight.push_back(iter.second);
       }
-
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
-        m_coneV_hit_tag.push_back(coneV_index);
-        m_coneV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
-        m_coneV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
-        m_coneV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
-        m_coneV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
-      }
-
-      coneV_index++;
     }
-  }
-  t_Cone->Fill();
-  // Track axis
-  ClearTrackAxis();
-  int trackU_index=0;
-  int trackV_index=0;
-  for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("TrackAxis");
-    for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
-      // General information of the axis
-      m_trackU_tag.push_back(trackU_index);
-      m_trackU_type.push_back(m_mergedaxisU[ita]->getType());
-      m_trackU_x.push_back(m_mergedaxisU[ita]->getPos().x());
-      m_trackU_y.push_back(m_mergedaxisU[ita]->getPos().y());
-      m_trackU_z.push_back(m_mergedaxisU[ita]->getPos().z());
-      m_trackU_E.push_back(m_mergedaxisU[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_trackU_truth_tag.push_back(trackU_index);
-        m_trackU_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_trackU_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_trackU_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_trackU_truth_MC_E.push_back(iter.first.getEnergy());
-        m_trackU_truth_MC_weight.push_back(iter.second);
-      }
-
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
-        m_trackU_hit_tag.push_back(trackU_index);
-        m_trackU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
-        m_trackU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
-        m_trackU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
-        m_trackU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
-      }
-
-      trackU_index++;
+    t_Layers->Fill();
+   
+    std::vector<const Cyber::CaloHalfCluster*> m_halfclusterV; m_halfclusterV.clear();
+    std::vector<const Cyber::CaloHalfCluster*> m_halfclusterU; m_halfclusterU.clear();
+    for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColU"].size(); i++){
+      m_halfclusterU.push_back( m_DataCol.map_HalfCluster["HalfClusterColU"][i].get() );
     }
-  }
-  for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("TrackAxis");
-    for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
-      // General information of the axis
-      m_trackV_tag.push_back(trackV_index);
-      m_trackV_type.push_back(m_mergedaxisV[ita]->getType());
-      m_trackV_x.push_back(m_mergedaxisV[ita]->getPos().x());
-      m_trackV_y.push_back(m_mergedaxisV[ita]->getPos().y());
-      m_trackV_z.push_back(m_mergedaxisV[ita]->getPos().z());
-      m_trackV_E.push_back(m_mergedaxisV[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_trackV_truth_tag.push_back(trackV_index);
-        m_trackV_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_trackV_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_trackV_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_trackV_truth_MC_E.push_back(iter.first.getEnergy());
-        m_trackV_truth_MC_weight.push_back(iter.second);
-      }
-
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
-        m_trackV_hit_tag.push_back(trackV_index);
-        m_trackV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
-        m_trackV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
-        m_trackV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
-        m_trackV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
-      }
-
-      trackV_index++;
+    for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColV"].size(); i++){
+      m_halfclusterV.push_back( m_DataCol.map_HalfCluster["HalfClusterColV"][i].get() );
     }
-  }
-  t_TrackAxis->Fill();
-  //Axis
-  ClearAxis();
-  int axisU_index=0;
-  int axisV_index=0;
-  for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("MergedAxis");
-    for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
-      // General information of the axis
-      m_axisU_tag.push_back(axisU_index);
-      m_axisU_type.push_back(m_mergedaxisU[ita]->getType());
-      m_axisU_x.push_back(m_mergedaxisU[ita]->getPos().x());
-      m_axisU_y.push_back(m_mergedaxisU[ita]->getPos().y());
-      m_axisU_z.push_back(m_mergedaxisU[ita]->getPos().z());
-      m_axisU_E.push_back(m_mergedaxisU[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_axisU_truth_tag.push_back(axisU_index);
-        m_axisU_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_axisU_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_axisU_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_axisU_truth_MC_E.push_back(iter.first.getEnergy());
-        m_axisU_truth_MC_weight.push_back(iter.second);
+    // Hough
+    ClearHough();
+    int houghU_index=0;
+    int houghV_index=0;
+    for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("HoughAxis");
+      for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
+        // General information of the axis
+        m_houghU_tag.push_back(houghU_index);
+        m_houghU_type.push_back(m_mergedaxisU[ita]->getType());
+        m_houghU_x.push_back(m_mergedaxisU[ita]->getPos().x());
+        m_houghU_y.push_back(m_mergedaxisU[ita]->getPos().y());
+        m_houghU_z.push_back(m_mergedaxisU[ita]->getPos().z());
+        m_houghU_E.push_back(m_mergedaxisU[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_houghU_truth_tag.push_back(houghU_index);
+          m_houghU_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_houghU_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_houghU_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_houghU_truth_MC_E.push_back(iter.first.getEnergy());
+          m_houghU_truth_MC_weight.push_back(iter.second);
+        }
+   
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
+          m_houghU_hit_tag.push_back(houghU_index);
+          m_houghU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
+          m_houghU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
+          m_houghU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
+          m_houghU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
+        }
+   
+        houghU_index++;
       }
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
-        m_axisU_hit_tag.push_back(axisU_index);
-        m_axisU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
-        m_axisU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
-        m_axisU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
-        m_axisU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
-      }
-
-      axisU_index++;
     }
-  }
-  for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
-    std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("MergedAxis");
-    for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
-      // General information of the axis
-      m_axisV_tag.push_back(axisV_index);
-      m_axisV_type.push_back(m_mergedaxisV[ita]->getType());
-      m_axisV_x.push_back(m_mergedaxisV[ita]->getPos().x());
-      m_axisV_y.push_back(m_mergedaxisV[ita]->getPos().y());
-      m_axisV_z.push_back(m_mergedaxisV[ita]->getPos().z());
-      m_axisV_E.push_back(m_mergedaxisV[ita]->getEnergy());
-
-      // MC truth information of the Axis
-      auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_axisV_truth_tag.push_back(axisV_index);
-        m_axisV_truth_MC_px.push_back(iter.first.getMomentum().x);
-        m_axisV_truth_MC_py.push_back(iter.first.getMomentum().y);
-        m_axisV_truth_MC_pz.push_back(iter.first.getMomentum().z);
-        m_axisV_truth_MC_E.push_back(iter.first.getEnergy());
-        m_axisV_truth_MC_weight.push_back(iter.second);
+    for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("HoughAxis");
+      for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
+        // General information of the axis
+        m_houghV_tag.push_back(houghV_index);
+        m_houghV_type.push_back(m_mergedaxisV[ita]->getType());
+        m_houghV_x.push_back(m_mergedaxisV[ita]->getPos().x());
+        m_houghV_y.push_back(m_mergedaxisV[ita]->getPos().y());
+        m_houghV_z.push_back(m_mergedaxisV[ita]->getPos().z());
+        m_houghV_E.push_back(m_mergedaxisV[ita]->getEnergy());
+        m_houghV_alpha.push_back(m_mergedaxisV[ita]->getHoughAlpha());
+        m_houghV_rho.push_back(m_mergedaxisV[ita]->getHoughRho());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_houghV_truth_tag.push_back(houghV_index);
+          m_houghV_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_houghV_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_houghV_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_houghV_truth_MC_E.push_back(iter.first.getEnergy());
+          m_houghV_truth_MC_weight.push_back(iter.second);
+        }
+   
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
+          m_houghV_hit_tag.push_back(houghV_index);
+          m_houghV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
+          m_houghV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
+          m_houghV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
+          m_houghV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
+        }
+   
+        houghV_index++;
       }
-      // Hits on axis
-      for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
-        m_axisV_hit_tag.push_back(axisV_index);
-        m_axisV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
-        m_axisV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
-        m_axisV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
-        m_axisV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
-      }
-
-      axisV_index++;
     }
-  }
-  m_halfclusterU.clear();
-  m_halfclusterV.clear();
-  for(int i=0; i<m_DataCol.map_HalfCluster["emptyHalfClusterU"].size(); i++){
-    m_halfclusterU.push_back( m_DataCol.map_HalfCluster["emptyHalfClusterU"][i].get() );
-  }
-  for(int i=0; i<m_DataCol.map_HalfCluster["emptyHalfClusterV"].size(); i++){
-    m_halfclusterV.push_back( m_DataCol.map_HalfCluster["emptyHalfClusterV"][i].get() );
-  }
-  for(int i=0; i<m_halfclusterU.size(); i++){
-    m_emptyAxisU_tag.push_back(m_halfclusterU[i]->getType());
-    m_emptyAxisU_x.push_back(m_halfclusterU[i]->getPos().x());
-    m_emptyAxisU_y.push_back(m_halfclusterU[i]->getPos().y());
-    m_emptyAxisU_z.push_back(m_halfclusterU[i]->getPos().z());
-    m_emptyAxisU_E.push_back(m_halfclusterU[i]->getEnergy());
-  }
-  for(int i=0; i<m_halfclusterV.size(); i++){
-    m_emptyAxisV_tag.push_back(m_halfclusterV[i]->getType());
-    m_emptyAxisV_x.push_back(m_halfclusterV[i]->getPos().x());
-    m_emptyAxisV_y.push_back(m_halfclusterV[i]->getPos().y());
-    m_emptyAxisV_z.push_back(m_halfclusterV[i]->getPos().z());
-    m_emptyAxisV_E.push_back(m_halfclusterV[i]->getEnergy());
-  }
-  
-  t_Axis->Fill();
-
-
-  //Half cluster
-  ClearHalfCluster();
-  m_halfclusterV.clear();
-  m_halfclusterU.clear();
-  m_totE_HFClusV = 0;
-  m_totE_HFClusU = 0;
-  //for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterU"].size(); i++){
-  //  m_halfclusterU.push_back( m_DataCol.map_HalfCluster["ESHalfClusterU"][i]->getHalfClusterCol("MergedAxis")[0] );
-  //}
-  //for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterV"].size(); i++){
-  //  m_halfclusterV.push_back( m_DataCol.map_HalfCluster["ESHalfClusterV"][i]->getHalfClusterCol("MergedAxis")[0] );
-  //}
-  for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColU"].size(); i++){
-    m_halfclusterU.push_back( m_DataCol.map_HalfCluster["HalfClusterColU"][i].get() );
-  }
-  for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColV"].size(); i++){
-    m_halfclusterV.push_back( m_DataCol.map_HalfCluster["HalfClusterColV"][i].get() );
-  }
-  for(int i=0; i<m_halfclusterV.size(); i++){
-    m_HalfClusterV_x.push_back(m_halfclusterV[i]->getPos().x());
-    m_HalfClusterV_y.push_back(m_halfclusterV[i]->getPos().y());
-    m_HalfClusterV_z.push_back(m_halfclusterV[i]->getPos().z());
-    m_HalfClusterV_E.push_back(m_halfclusterV[i]->getEnergy());
-    m_HalfClusterV_tag.push_back(i);
-    m_HalfClusterV_type.push_back(m_halfclusterV[i]->getType());
-    m_totE_HFClusV += m_halfclusterV[i]->getEnergy();    
-
-      // MC truth information of the HFCluster
-      auto truthMap = m_halfclusterV[i]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_HalfClusterV_truth_tag.push_back(i);
-        m_HalfClusterV_truthMC_px.push_back(iter.first.getMomentum().x);
-        m_HalfClusterV_truthMC_py.push_back(iter.first.getMomentum().y);
-        m_HalfClusterV_truthMC_pz.push_back(iter.first.getMomentum().z);
-        m_HalfClusterV_truthMC_E.push_back(iter.first.getEnergy());
-        m_HalfClusterV_truthMC_weight.push_back(iter.second);
+    t_Hough->Fill();
+    // Cone
+    ClearCone();
+    int coneU_index=0;
+    int coneV_index=0;
+    for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("ConeAxis");
+      for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
+        // General information of the axis
+        m_coneU_tag.push_back(coneU_index);
+        m_coneU_type.push_back(m_mergedaxisU[ita]->getType());
+        m_coneU_x.push_back(m_mergedaxisU[ita]->getPos().x());
+        m_coneU_y.push_back(m_mergedaxisU[ita]->getPos().y());
+        m_coneU_z.push_back(m_mergedaxisU[ita]->getPos().z());
+        m_coneU_E.push_back(m_mergedaxisU[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_coneU_truth_tag.push_back(coneU_index);
+          m_coneU_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_coneU_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_coneU_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_coneU_truth_MC_E.push_back(iter.first.getEnergy());
+          m_coneU_truth_MC_weight.push_back(iter.second);
+        }
+   
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
+          m_coneU_hit_tag.push_back(coneU_index);
+          m_coneU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
+          m_coneU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
+          m_coneU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
+          m_coneU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
+        }
+   
+        coneU_index++;
       }
-
-      // 1DClusters (hits)
-      for(int ilm=0; ilm<m_halfclusterV[i]->getCluster().size(); ilm++){ 
-        m_HalfClusterV_hit_tag.push_back(i);
-        m_HalfClusterV_hit_x.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().x() );
-        m_HalfClusterV_hit_y.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().y() );
-        m_HalfClusterV_hit_z.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().z() );
-        m_HalfClusterV_hit_E.push_back( m_halfclusterV[i]->getCluster()[ilm]->getEnergy()  );
+    }
+    for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("ConeAxis");
+      for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
+        // General information of the axis
+        m_coneV_tag.push_back(coneV_index);
+        m_coneV_type.push_back(m_mergedaxisV[ita]->getType());
+        m_coneV_x.push_back(m_mergedaxisV[ita]->getPos().x());
+        m_coneV_y.push_back(m_mergedaxisV[ita]->getPos().y());
+        m_coneV_z.push_back(m_mergedaxisV[ita]->getPos().z());
+        m_coneV_E.push_back(m_mergedaxisV[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_coneV_truth_tag.push_back(coneV_index);
+          m_coneV_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_coneV_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_coneV_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_coneV_truth_MC_E.push_back(iter.first.getEnergy());
+          m_coneV_truth_MC_weight.push_back(iter.second);
+        }
+   
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
+          m_coneV_hit_tag.push_back(coneV_index);
+          m_coneV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
+          m_coneV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
+          m_coneV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
+          m_coneV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
+        }
+   
+        coneV_index++;
       }
-  }
-  for(int i=0; i<m_halfclusterU.size(); i++){
-    m_HalfClusterU_x.push_back(m_halfclusterU[i]->getPos().x());
-    m_HalfClusterU_y.push_back(m_halfclusterU[i]->getPos().y());
-    m_HalfClusterU_z.push_back(m_halfclusterU[i]->getPos().z());
-    m_HalfClusterU_E.push_back(m_halfclusterU[i]->getEnergy());
-    m_HalfClusterU_tag.push_back(i);
-    m_HalfClusterU_type.push_back(m_halfclusterU[i]->getType());
-    m_totE_HFClusU += m_halfclusterU[i]->getEnergy();
-
-      // MC truth information of the HFCluster
-      auto truthMap = m_halfclusterU[i]->getLinkedMCP();
-      for(auto iter: truthMap){
-        m_HalfClusterU_truth_tag.push_back(i);
-        m_HalfClusterU_truthMC_px.push_back(iter.first.getMomentum().x);
-        m_HalfClusterU_truthMC_py.push_back(iter.first.getMomentum().y);
-        m_HalfClusterU_truthMC_pz.push_back(iter.first.getMomentum().z);
-        m_HalfClusterU_truthMC_E.push_back(iter.first.getEnergy());
-        m_HalfClusterU_truthMC_weight.push_back(iter.second);
+    }
+    t_Cone->Fill();
+    // Track axis
+    ClearTrackAxis();
+    int trackU_index=0;
+    int trackV_index=0;
+    for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("TrackAxis");
+      for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
+        // General information of the axis
+        m_trackU_tag.push_back(trackU_index);
+        m_trackU_type.push_back(m_mergedaxisU[ita]->getType());
+        m_trackU_x.push_back(m_mergedaxisU[ita]->getPos().x());
+        m_trackU_y.push_back(m_mergedaxisU[ita]->getPos().y());
+        m_trackU_z.push_back(m_mergedaxisU[ita]->getPos().z());
+        m_trackU_E.push_back(m_mergedaxisU[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_trackU_truth_tag.push_back(trackU_index);
+          m_trackU_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_trackU_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_trackU_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_trackU_truth_MC_E.push_back(iter.first.getEnergy());
+          m_trackU_truth_MC_weight.push_back(iter.second);
+        }
+   
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
+          m_trackU_hit_tag.push_back(trackU_index);
+          m_trackU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
+          m_trackU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
+          m_trackU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
+          m_trackU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
+        }
+   
+        trackU_index++;
       }
-
-      // 1DClusters (hits)
-      for(int ilm=0; ilm<m_halfclusterU[i]->getCluster().size(); ilm++){
-        m_HalfClusterU_hit_tag.push_back(i);
-        m_HalfClusterU_hit_x.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().x() );
-        m_HalfClusterU_hit_y.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().y() );
-        m_HalfClusterU_hit_z.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().z() );
-        m_HalfClusterU_hit_E.push_back( m_halfclusterU[i]->getCluster()[ilm]->getEnergy()  );
+    }
+    for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("TrackAxis");
+      for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
+        // General information of the axis
+        m_trackV_tag.push_back(trackV_index);
+        m_trackV_type.push_back(m_mergedaxisV[ita]->getType());
+        m_trackV_x.push_back(m_mergedaxisV[ita]->getPos().x());
+        m_trackV_y.push_back(m_mergedaxisV[ita]->getPos().y());
+        m_trackV_z.push_back(m_mergedaxisV[ita]->getPos().z());
+        m_trackV_E.push_back(m_mergedaxisV[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_trackV_truth_tag.push_back(trackV_index);
+          m_trackV_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_trackV_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_trackV_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_trackV_truth_MC_E.push_back(iter.first.getEnergy());
+          m_trackV_truth_MC_weight.push_back(iter.second);
+        }
+   
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
+          m_trackV_hit_tag.push_back(trackV_index);
+          m_trackV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
+          m_trackV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
+          m_trackV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
+          m_trackV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
+        }
+   
+        trackV_index++;
       }
-  }
-  t_HalfCluster->Fill();
-
-
-  //Tower
-  ClearTower();
-  std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_tower = m_DataCol.map_CaloCluster["ESTower"];
-  for(int it=0; it<m_tower.size(); it++){
+    }
+    t_TrackAxis->Fill();
+    //Axis
+    ClearAxis();
+    int axisU_index=0;
+    int axisV_index=0;
+    for(int i=0; i<m_halfclusterU.size(); i++){  // loop half cluster U
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisU = m_halfclusterU[i]->getHalfClusterCol("MergedAxis");
+      for(int ita=0; ita<m_mergedaxisU.size(); ita++){ // loop  axis U
+        // General information of the axis
+        m_axisU_tag.push_back(axisU_index);
+        m_axisU_type.push_back(m_mergedaxisU[ita]->getType());
+        m_axisU_x.push_back(m_mergedaxisU[ita]->getPos().x());
+        m_axisU_y.push_back(m_mergedaxisU[ita]->getPos().y());
+        m_axisU_z.push_back(m_mergedaxisU[ita]->getPos().z());
+        m_axisU_E.push_back(m_mergedaxisU[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisU[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_axisU_truth_tag.push_back(axisU_index);
+          m_axisU_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_axisU_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_axisU_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_axisU_truth_MC_E.push_back(iter.first.getEnergy());
+          m_axisU_truth_MC_weight.push_back(iter.second);
+        }
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisU[ita]->getCluster().size(); ilm++){ // loop local max
+          m_axisU_hit_tag.push_back(axisU_index);
+          m_axisU_hit_x.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().x() );
+          m_axisU_hit_y.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().y() );
+          m_axisU_hit_z.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getPos().z() );
+          m_axisU_hit_E.push_back( m_mergedaxisU[ita]->getCluster()[ilm]->getEnergy()  );
+        }
+   
+        axisU_index++;
+      }
+    }
+    for(int i=0; i<m_halfclusterV.size(); i++){  // loop half cluster V
+      std::vector<const Cyber::CaloHalfCluster*> m_mergedaxisV = m_halfclusterV[i]->getHalfClusterCol("MergedAxis");
+      for(int ita=0; ita<m_mergedaxisV.size(); ita++){ // loop  axis V
+        // General information of the axis
+        m_axisV_tag.push_back(axisV_index);
+        m_axisV_type.push_back(m_mergedaxisV[ita]->getType());
+        m_axisV_x.push_back(m_mergedaxisV[ita]->getPos().x());
+        m_axisV_y.push_back(m_mergedaxisV[ita]->getPos().y());
+        m_axisV_z.push_back(m_mergedaxisV[ita]->getPos().z());
+        m_axisV_E.push_back(m_mergedaxisV[ita]->getEnergy());
+   
+        // MC truth information of the Axis
+        auto truthMap = m_mergedaxisV[ita]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_axisV_truth_tag.push_back(axisV_index);
+          m_axisV_truth_MC_px.push_back(iter.first.getMomentum().x);
+          m_axisV_truth_MC_py.push_back(iter.first.getMomentum().y);
+          m_axisV_truth_MC_pz.push_back(iter.first.getMomentum().z);
+          m_axisV_truth_MC_E.push_back(iter.first.getEnergy());
+          m_axisV_truth_MC_weight.push_back(iter.second);
+        }
+        // Hits on axis
+        for(int ilm=0; ilm<m_mergedaxisV[ita]->getCluster().size(); ilm++){
+          m_axisV_hit_tag.push_back(axisV_index);
+          m_axisV_hit_x.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().x());
+          m_axisV_hit_y.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().y());
+          m_axisV_hit_z.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getPos().z());
+          m_axisV_hit_E.push_back(m_mergedaxisV[ita]->getCluster()[ilm]->getEnergy());
+        }
+   
+        axisV_index++;
+      }
+    }
+    m_halfclusterU.clear();
+    m_halfclusterV.clear();
+    for(int i=0; i<m_DataCol.map_HalfCluster["emptyHalfClusterU"].size(); i++){
+      m_halfclusterU.push_back( m_DataCol.map_HalfCluster["emptyHalfClusterU"][i].get() );
+    }
+    for(int i=0; i<m_DataCol.map_HalfCluster["emptyHalfClusterV"].size(); i++){
+      m_halfclusterV.push_back( m_DataCol.map_HalfCluster["emptyHalfClusterV"][i].get() );
+    }
+    for(int i=0; i<m_halfclusterU.size(); i++){
+      m_emptyAxisU_tag.push_back(m_halfclusterU[i]->getType());
+      m_emptyAxisU_x.push_back(m_halfclusterU[i]->getPos().x());
+      m_emptyAxisU_y.push_back(m_halfclusterU[i]->getPos().y());
+      m_emptyAxisU_z.push_back(m_halfclusterU[i]->getPos().z());
+      m_emptyAxisU_E.push_back(m_halfclusterU[i]->getEnergy());
+    }
+    for(int i=0; i<m_halfclusterV.size(); i++){
+      m_emptyAxisV_tag.push_back(m_halfclusterV[i]->getType());
+      m_emptyAxisV_x.push_back(m_halfclusterV[i]->getPos().x());
+      m_emptyAxisV_y.push_back(m_halfclusterV[i]->getPos().y());
+      m_emptyAxisV_z.push_back(m_halfclusterV[i]->getPos().z());
+      m_emptyAxisV_E.push_back(m_halfclusterV[i]->getEnergy());
+    }
+    
+    t_Axis->Fill();
+   
+   
+    //Half cluster
+    ClearHalfCluster();
+    m_halfclusterV.clear();
+    m_halfclusterU.clear();
+    m_totE_HFClusV = 0;
+    m_totE_HFClusU = 0;
+    //for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterU"].size(); i++){
+    //  m_halfclusterU.push_back( m_DataCol.map_HalfCluster["ESHalfClusterU"][i]->getHalfClusterCol("MergedAxis")[0] );
+    //}
+    //for(int i=0; i<m_DataCol.map_HalfCluster["ESHalfClusterV"].size(); i++){
+    //  m_halfclusterV.push_back( m_DataCol.map_HalfCluster["ESHalfClusterV"][i]->getHalfClusterCol("MergedAxis")[0] );
+    //}
+    for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColU"].size(); i++){
+      m_halfclusterU.push_back( m_DataCol.map_HalfCluster["HalfClusterColU"][i].get() );
+    }
+    for(int i=0; i<m_DataCol.map_HalfCluster["HalfClusterColV"].size(); i++){
+      m_halfclusterV.push_back( m_DataCol.map_HalfCluster["HalfClusterColV"][i].get() );
+    }
+    for(int i=0; i<m_halfclusterV.size(); i++){
+      m_HalfClusterV_x.push_back(m_halfclusterV[i]->getPos().x());
+      m_HalfClusterV_y.push_back(m_halfclusterV[i]->getPos().y());
+      m_HalfClusterV_z.push_back(m_halfclusterV[i]->getPos().z());
+      m_HalfClusterV_E.push_back(m_halfclusterV[i]->getEnergy());
+      m_HalfClusterV_tag.push_back(i);
+      m_HalfClusterV_type.push_back(m_halfclusterV[i]->getType());
+      m_totE_HFClusV += m_halfclusterV[i]->getEnergy();    
+   
+        // MC truth information of the HFCluster
+        auto truthMap = m_halfclusterV[i]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_HalfClusterV_truth_tag.push_back(i);
+          m_HalfClusterV_truthMC_px.push_back(iter.first.getMomentum().x);
+          m_HalfClusterV_truthMC_py.push_back(iter.first.getMomentum().y);
+          m_HalfClusterV_truthMC_pz.push_back(iter.first.getMomentum().z);
+          m_HalfClusterV_truthMC_E.push_back(iter.first.getEnergy());
+          m_HalfClusterV_truthMC_weight.push_back(iter.second);
+        }
+   
+        // 1DClusters (hits)
+        for(int ilm=0; ilm<m_halfclusterV[i]->getCluster().size(); ilm++){ 
+          m_HalfClusterV_hit_tag.push_back(i);
+          m_HalfClusterV_hit_x.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().x() );
+          m_HalfClusterV_hit_y.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().y() );
+          m_HalfClusterV_hit_z.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().z() );
+          m_HalfClusterV_hit_E.push_back( m_halfclusterV[i]->getCluster()[ilm]->getEnergy()  );
+        }
+    }
+    for(int i=0; i<m_halfclusterU.size(); i++){
+      m_HalfClusterU_x.push_back(m_halfclusterU[i]->getPos().x());
+      m_HalfClusterU_y.push_back(m_halfclusterU[i]->getPos().y());
+      m_HalfClusterU_z.push_back(m_halfclusterU[i]->getPos().z());
+      m_HalfClusterU_E.push_back(m_halfclusterU[i]->getEnergy());
+      m_HalfClusterU_tag.push_back(i);
+      m_HalfClusterU_type.push_back(m_halfclusterU[i]->getType());
+      m_totE_HFClusU += m_halfclusterU[i]->getEnergy();
+   
+        // MC truth information of the HFCluster
+        auto truthMap = m_halfclusterU[i]->getLinkedMCP();
+        for(auto iter: truthMap){
+          m_HalfClusterU_truth_tag.push_back(i);
+          m_HalfClusterU_truthMC_px.push_back(iter.first.getMomentum().x);
+          m_HalfClusterU_truthMC_py.push_back(iter.first.getMomentum().y);
+          m_HalfClusterU_truthMC_pz.push_back(iter.first.getMomentum().z);
+          m_HalfClusterU_truthMC_E.push_back(iter.first.getEnergy());
+          m_HalfClusterU_truthMC_weight.push_back(iter.second);
+        }
+   
+        // 1DClusters (hits)
+        for(int ilm=0; ilm<m_halfclusterU[i]->getCluster().size(); ilm++){
+          m_HalfClusterU_hit_tag.push_back(i);
+          m_HalfClusterU_hit_x.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().x() );
+          m_HalfClusterU_hit_y.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().y() );
+          m_HalfClusterU_hit_z.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().z() );
+          m_HalfClusterU_hit_E.push_back( m_halfclusterU[i]->getCluster()[ilm]->getEnergy()  );
+        }
+    }
+    t_HalfCluster->Fill();
+   
+   
+    //Tower
     ClearTower();
-    towerID[0] = m_tower[it]->getTowerID()[0][0];
-    towerID[1] = m_tower[it]->getTowerID()[0][1];
-    towerID[2] = m_tower[it]->getTowerID()[0][2];
-
-    std::vector<const CaloHalfCluster*> m_HFClusU = m_tower[it]->getHalfClusterUCol("ESHalfClusterU");
-    std::vector<const CaloHalfCluster*> m_HFClusV = m_tower[it]->getHalfClusterVCol("ESHalfClusterV");
-
-    m_NclusU = m_HFClusU.size();
-    m_NclusV = m_HFClusV.size();
-    m_totEn = m_tower[it]->getEnergy();
-    m_totEn_U = 0.;
-    m_totEn_V = 0.;
-    for(int ic=0; ic<m_NclusU; ic++){
-      m_HalfClusterU_tag.push_back(it);
-      m_HalfClusterU_x.push_back(m_HFClusU[ic]->getPos().x());
-      m_HalfClusterU_y.push_back(m_HFClusU[ic]->getPos().y());
-      m_HalfClusterU_z.push_back(m_HFClusU[ic]->getPos().z());
-      m_HalfClusterU_E.push_back(m_HFClusU[ic]->getEnergy());
-      m_HalfClusterU_type.push_back(m_HFClusU[ic]->getType());
-      m_HalfClusterU_nTrk.push_back(m_HFClusU[ic]->getAssociatedTracks().size());
-      m_totEn_U += m_HFClusU[ic]->getEnergy();
-    }
-
-    for(int ic=0; ic<m_NclusV; ic++){
-      m_HalfClusterV_tag.push_back(it);
-      m_HalfClusterV_x.push_back(m_HFClusV[ic]->getPos().x());
-      m_HalfClusterV_y.push_back(m_HFClusV[ic]->getPos().y());
-      m_HalfClusterV_z.push_back(m_HFClusV[ic]->getPos().z());
-      m_HalfClusterV_E.push_back(m_HFClusV[ic]->getEnergy());
-      m_HalfClusterV_type.push_back(m_HFClusV[ic]->getType());
-      m_HalfClusterV_nTrk.push_back(m_HFClusV[ic]->getAssociatedTracks().size());
-      m_totEn_V += m_HFClusV[ic]->getEnergy();
-    }
-
-    t_Tower->Fill();
-  }
-
-cout<<"  Write 3D cluster"<<endl;
-  //3D cluster
-  ClearCluster();
-  std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_EcalClusterCol = m_DataCol.map_CaloCluster["TrkMergedECAL"];
-  std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_HcalClusterCol = m_DataCol.map_CaloCluster["HCALCluster"];
-  std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_SimpleHcalClusterCol = m_DataCol.map_CaloCluster["SimpleHCALCluster"];
-  m_totE_Ecal = 0.;
-  m_totE_Hcal = 0.;
-  m_Nclus_Ecal = m_EcalClusterCol.size();
-  m_Nclus_Hcal = m_HcalClusterCol.size();
-  for(int icl=0; icl<m_EcalClusterCol.size(); icl++){
-    m_EcalClus_x.push_back(m_EcalClusterCol[icl]->getShowerCenter().x());
-    m_EcalClus_y.push_back(m_EcalClusterCol[icl]->getShowerCenter().y());
-    m_EcalClus_z.push_back(m_EcalClusterCol[icl]->getShowerCenter().z());
-    m_EcalClus_E.push_back(m_EcalClusterCol[icl]->getLongiE());
-    m_EcalClus_nTrk.push_back(m_EcalClusterCol[icl]->getAssociatedTracks().size());
-
-    double tmp_phi = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().y(), m_EcalClusterCol[icl]->getShowerCenter().x())* 180.0 / M_PI;
-    if (tmp_phi < 0) tmp_phi += 360.0;
-    double tmp_theta = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().z(), m_EcalClusterCol[icl]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
-    //cout<<" Theta: "<<tmp_theta<<" Phi: "<<tmp_phi<<endl;
-    m_EcalClus_Escale.push_back(m_energycorsvc->energyCorrection(m_EcalClusterCol[icl]->getLongiE(), tmp_phi, tmp_theta));
-
-
-    if(m_EcalClusterCol[icl]->getAssociatedTracks().size()==1){
-      const Track* trk = m_EcalClusterCol[icl]->getAssociatedTracks()[0];
-      m_EcalClus_pTrk.push_back(trk->getMomentum());
-
-      std::vector<TrackState> AllTrackStates = trk->getAllTrackStates();
-      for(int istate=0; istate<AllTrackStates.size(); istate++){
-        m_EcalClus_trk_tag.push_back(icl);
-        m_EcalClus_trk_d0.push_back(AllTrackStates[istate].D0);
-        m_EcalClus_trk_z0.push_back(AllTrackStates[istate].Z0);
-        m_EcalClus_trk_phi.push_back(AllTrackStates[istate].phi0);
-        m_EcalClus_trk_tanL.push_back( AllTrackStates[istate].tanLambda );
-        m_EcalClus_trk_kappa.push_back( AllTrackStates[istate].Kappa);
-        m_EcalClus_trk_omega.push_back( AllTrackStates[istate].Omega );
-        m_EcalClus_trk_location.push_back( AllTrackStates[istate].location );
+    std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_tower = m_DataCol.map_CaloCluster["ESTower"];
+    for(int it=0; it<m_tower.size(); it++){
+      ClearTower();
+      towerID[0] = m_tower[it]->getTowerID()[0][0];
+      towerID[1] = m_tower[it]->getTowerID()[0][1];
+      towerID[2] = m_tower[it]->getTowerID()[0][2];
+   
+      std::vector<const CaloHalfCluster*> m_HFClusU = m_tower[it]->getHalfClusterUCol("ESHalfClusterU");
+      std::vector<const CaloHalfCluster*> m_HFClusV = m_tower[it]->getHalfClusterVCol("ESHalfClusterV");
+   
+      m_NclusU = m_HFClusU.size();
+      m_NclusV = m_HFClusV.size();
+      m_totEn = m_tower[it]->getEnergy();
+      m_totEn_U = 0.;
+      m_totEn_V = 0.;
+      for(int ic=0; ic<m_NclusU; ic++){
+        m_HalfClusterU_tag.push_back(it);
+        m_HalfClusterU_x.push_back(m_HFClusU[ic]->getPos().x());
+        m_HalfClusterU_y.push_back(m_HFClusU[ic]->getPos().y());
+        m_HalfClusterU_z.push_back(m_HFClusU[ic]->getPos().z());
+        m_HalfClusterU_E.push_back(m_HFClusU[ic]->getEnergy());
+        m_HalfClusterU_type.push_back(m_HFClusU[ic]->getType());
+        m_HalfClusterU_nTrk.push_back(m_HFClusU[ic]->getAssociatedTracks().size());
+        m_totEn_U += m_HFClusU[ic]->getEnergy();
       }
-
-    }
-    else
-      m_EcalClus_pTrk.push_back(-99);
-
-    m_EcalClus_typeU.push_back(m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster")[0]->getType());
-    m_EcalClus_typeV.push_back(m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster")[0]->getType());
-    for(int ii=0; ii<m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster").size(); ii++){
-      for(int ihit=0; ihit<m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster")[ii]->getBars().size(); ihit++){
-        auto shower = m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster")[ii]->getBars()[ihit];
-        m_EcalClus_hitU_tag.push_back(icl);
-        m_EcalClus_hitU_x.push_back(shower->getPosition().x());
-        m_EcalClus_hitU_y.push_back(shower->getPosition().y());
-        m_EcalClus_hitU_z.push_back(shower->getPosition().z());
-        m_EcalClus_hitU_E.push_back(shower->getEnergy());
+   
+      for(int ic=0; ic<m_NclusV; ic++){
+        m_HalfClusterV_tag.push_back(it);
+        m_HalfClusterV_x.push_back(m_HFClusV[ic]->getPos().x());
+        m_HalfClusterV_y.push_back(m_HFClusV[ic]->getPos().y());
+        m_HalfClusterV_z.push_back(m_HFClusV[ic]->getPos().z());
+        m_HalfClusterV_E.push_back(m_HFClusV[ic]->getEnergy());
+        m_HalfClusterV_type.push_back(m_HFClusV[ic]->getType());
+        m_HalfClusterV_nTrk.push_back(m_HFClusV[ic]->getAssociatedTracks().size());
+        m_totEn_V += m_HFClusV[ic]->getEnergy();
       }
-    }
-    for(int ii=0; ii<m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster").size(); ii++){
-      for(int ihit=0; ihit<m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster")[ii]->getBars().size(); ihit++){
-        auto shower = m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster")[ii]->getBars()[ihit];
-        m_EcalClus_hitV_tag.push_back(icl);
-        m_EcalClus_hitV_x.push_back(shower->getPosition().x());
-        m_EcalClus_hitV_y.push_back(shower->getPosition().y());
-        m_EcalClus_hitV_z.push_back(shower->getPosition().z());
-        m_EcalClus_hitV_E.push_back(shower->getEnergy());
-      }
+   
+      t_Tower->Fill();
     }
 
-    m_totE_Ecal += m_EcalClusterCol[icl]->getLongiE();
-    auto truthMap = m_EcalClusterCol[icl]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_EcalClus_truthMC_tag.push_back(icl);
-      m_EcalClus_truthMC_pid.push_back(iter.first.getPDG() );
-      m_EcalClus_truthMC_px.push_back(iter.first.getMomentum().x);
-      m_EcalClus_truthMC_py.push_back(iter.first.getMomentum().y);
-      m_EcalClus_truthMC_pz.push_back(iter.first.getMomentum().z);
-      m_EcalClus_truthMC_E.push_back(iter.first.getEnergy());
-      m_EcalClus_truthMC_EPx.push_back(iter.first.getEndpoint().x);
-      m_EcalClus_truthMC_EPy.push_back(iter.first.getEndpoint().y);
-      m_EcalClus_truthMC_EPz.push_back(iter.first.getEndpoint().z);
-      m_EcalClus_truthMC_weight.push_back(iter.second);
-    }
-  }
-
-  for(int icl=0; icl<m_HcalClusterCol.size(); icl++){
-    m_HcalClus_x.push_back(m_HcalClusterCol[icl]->getHitCenter().x());
-    m_HcalClus_y.push_back(m_HcalClusterCol[icl]->getHitCenter().y());
-    m_HcalClus_z.push_back(m_HcalClusterCol[icl]->getHitCenter().z());
-    m_HcalClus_E.push_back(m_HcalClusterCol[icl]->getHitsE());
-    m_HcalClus_nTrk.push_back(m_HcalClusterCol[icl]->getAssociatedTracks().size());
-    if(m_HcalClusterCol[icl]->getAssociatedTracks().size()==1)
-      m_HcalClus_pTrk.push_back(m_HcalClusterCol[icl]->getAssociatedTracks()[0]->getMomentum());
-    else
-      m_HcalClus_pTrk.push_back(-99);
-
-    for(int ih=0; ih<m_HcalClusterCol[icl]->getCaloHits().size(); ih++){
-      m_HcalClus_hit_tag.push_back(icl);
-      m_HcalClus_hit_x.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getPosition().x());
-      m_HcalClus_hit_y.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getPosition().y());
-      m_HcalClus_hit_z.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getPosition().z());
-      m_HcalClus_hit_E.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getEnergy());
-    }
-
-    m_totE_Hcal += m_HcalClusterCol[icl]->getHitsE();
-    auto truthMap = m_HcalClusterCol[icl]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_HcalClus_truthMC_tag.push_back(icl);
-      m_HcalClus_truthMC_pid.push_back(iter.first.getPDG() );
-      m_HcalClus_truthMC_px.push_back(iter.first.getMomentum().x);
-      m_HcalClus_truthMC_py.push_back(iter.first.getMomentum().y);
-      m_HcalClus_truthMC_pz.push_back(iter.first.getMomentum().z);
-      m_HcalClus_truthMC_E.push_back(iter.first.getEnergy());
-      m_HcalClus_truthMC_EPx.push_back(iter.first.getEndpoint().x);
-      m_HcalClus_truthMC_EPy.push_back(iter.first.getEndpoint().y);
-      m_HcalClus_truthMC_EPz.push_back(iter.first.getEndpoint().z);
-      m_HcalClus_truthMC_weight.push_back(iter.second);
-    }
-  }
-
-  for(int icl=0; icl<m_SimpleHcalClusterCol.size(); icl++){
-    m_SimpleHcalClus_x.push_back(m_SimpleHcalClusterCol[icl]->getHitCenter().x());
-    m_SimpleHcalClus_y.push_back(m_SimpleHcalClusterCol[icl]->getHitCenter().y());
-    m_SimpleHcalClus_z.push_back(m_SimpleHcalClusterCol[icl]->getHitCenter().z());
-    m_SimpleHcalClus_E.push_back(m_SimpleHcalClusterCol[icl]->getHitsE());
-    m_SimpleHcalClus_nTrk.push_back(m_SimpleHcalClusterCol[icl]->getAssociatedTracks().size());
-    if(m_SimpleHcalClusterCol[icl]->getAssociatedTracks().size()==1)
-      m_SimpleHcalClus_pTrk.push_back(m_SimpleHcalClusterCol[icl]->getAssociatedTracks()[0]->getMomentum());
-    else
-      m_SimpleHcalClus_pTrk.push_back(-99);
-
-    for(int ih=0; ih<m_SimpleHcalClusterCol[icl]->getCaloHits().size(); ih++){
-      m_SimpleHcalClus_hit_tag.push_back(icl);
-      m_SimpleHcalClus_hit_x.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getPosition().x());
-      m_SimpleHcalClus_hit_y.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getPosition().y());
-      m_SimpleHcalClus_hit_z.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getPosition().z());
-      m_SimpleHcalClus_hit_E.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getEnergy());
-    }
-
-    auto truthMap = m_SimpleHcalClusterCol[icl]->getLinkedMCP();
-    for(auto iter: truthMap){
-      m_SimpleHcalClus_truthMC_tag.push_back(icl);
-      m_SimpleHcalClus_truthMC_pid.push_back(iter.first.getPDG() );
-      m_SimpleHcalClus_truthMC_px.push_back(iter.first.getMomentum().x);
-      m_SimpleHcalClus_truthMC_py.push_back(iter.first.getMomentum().y);
-      m_SimpleHcalClus_truthMC_pz.push_back(iter.first.getMomentum().z);
-      m_SimpleHcalClus_truthMC_E.push_back(iter.first.getEnergy());
-      m_SimpleHcalClus_truthMC_EPx.push_back(iter.first.getEndpoint().x);
-      m_SimpleHcalClus_truthMC_EPy.push_back(iter.first.getEndpoint().y);
-      m_SimpleHcalClus_truthMC_EPz.push_back(iter.first.getEndpoint().z);
-      m_SimpleHcalClus_truthMC_weight.push_back(iter.second);
-    }
-  }
-  t_Cluster->Fill();
-
-  // Save Track info
-  ClearTrack();
-  std::vector<Cyber::Track*> m_trkCol; 
-  for(int it=0; it<m_DataCol.TrackCol.size(); it++)
-    m_trkCol.push_back( m_DataCol.TrackCol[it].get() );
-
-  m_Ntrk = m_trkCol.size();
-  for(int itrk=0; itrk<m_Ntrk; itrk++){
-    m_type.push_back(m_trkCol[itrk]->getType());
-    std::vector<TrackState> AllTrackStates = m_trkCol[itrk]->getAllTrackStates();
-    for(int istate=0; istate<AllTrackStates.size(); istate++){
-      m_trkstate_d0.push_back( AllTrackStates[istate].D0 );
-      m_trkstate_z0.push_back( AllTrackStates[istate].Z0 );
-      m_trkstate_phi.push_back( AllTrackStates[istate].phi0 );
-      m_trkstate_tanL.push_back( AllTrackStates[istate].tanLambda );
-      m_trkstate_kappa.push_back( AllTrackStates[istate].Kappa);
-      m_trkstate_omega.push_back( AllTrackStates[istate].Omega );
-      m_trkstate_refx.push_back( AllTrackStates[istate].referencePoint.X() );
-      m_trkstate_refy.push_back( AllTrackStates[istate].referencePoint.Y() );
-      m_trkstate_refz.push_back( AllTrackStates[istate].referencePoint.Z() );
-      m_trkstate_location.push_back( AllTrackStates[istate].location );
-      m_trkstate_tag.push_back(itrk);
-    }
-    std::vector<TrackState> EcalTrackStates = m_trkCol[itrk]->getTrackStates("Ecal");
-    for(int istate=0; istate<EcalTrackStates.size(); istate++){
-      m_trkstate_x_ECAL.push_back(EcalTrackStates[istate].referencePoint.X());
-      m_trkstate_y_ECAL.push_back(EcalTrackStates[istate].referencePoint.Y());
-      m_trkstate_z_ECAL.push_back(EcalTrackStates[istate].referencePoint.Z());
-      m_trkstate_tag_ECAL.push_back(itrk);
-    }
-    std::vector<TrackState> HcalTrackStates = m_trkCol[itrk]->getTrackStates("Hcal");
-    for(int istate=0; istate<HcalTrackStates.size(); istate++){
-      m_trkstate_x_ECAL.push_back(HcalTrackStates[istate].referencePoint.X());
-      m_trkstate_y_ECAL.push_back(HcalTrackStates[istate].referencePoint.Y());
-      m_trkstate_z_ECAL.push_back(HcalTrackStates[istate].referencePoint.Z());
-      m_trkstate_tag_HCAL.push_back(itrk);
-    }
-  }
-  t_Track->Fill();
-
-  // yyy: pfo
-  ClearPFO();
-  std::vector<Cyber::PFObject*> m_pfobjects; m_pfobjects.clear();
-  for(int ip=0; ip<m_DataCol.map_PFObjects["outputPFO"].size(); ip++)
-    m_pfobjects.push_back(m_DataCol.map_PFObjects["outputPFO"][ip].get());
-
-
-  for(int ip=0; ip<m_pfobjects.size(); ip++){
-    std::vector<const Track*> t_tracks = m_pfobjects[ip]->getTracks();
-    std::vector<const Calo3DCluster*> t_ecal_clusters = m_pfobjects[ip]->getECALClusters();
-    std::vector<const Calo3DCluster*> t_hcal_clusters =  m_pfobjects[ip]->getHCALClusters();
-
-    pfo_tag.push_back(ip);
-    pfo_n_track.push_back(t_tracks.size());
-    pfo_n_ecal_clus.push_back(t_ecal_clusters.size());
-    pfo_n_hcal_clus.push_back(t_hcal_clusters.size());
-
-    for(int it=0; it<t_tracks.size(); it++){
-      std::vector<TrackState> AllTrackStates = t_tracks[it]->getAllTrackStates();
-      for(int istate=0; istate<AllTrackStates.size(); istate++){
-        pfo_trk_tag.push_back(ip);
-        pfo_trk_d0.push_back( AllTrackStates[istate].D0 );
-        pfo_trk_z0.push_back( AllTrackStates[istate].Z0 );
-        pfo_trk_phi.push_back( AllTrackStates[istate].phi0 );
-        pfo_trk_tanL.push_back( AllTrackStates[istate].tanLambda );
-        pfo_trk_kappa.push_back( AllTrackStates[istate].Kappa);
-        pfo_trk_omega.push_back( AllTrackStates[istate].Omega );
-        pfo_trk_location.push_back( AllTrackStates[istate].location );
-      }
-    }
-
-    for(int ie=0; ie<t_ecal_clusters.size(); ie++){
-      pfo_ecal_tag.push_back(ip);
-      pfo_ecal_clus_x.push_back(t_ecal_clusters[ie]->getShowerCenter().x());
-      pfo_ecal_clus_y.push_back(t_ecal_clusters[ie]->getShowerCenter().y());
-      pfo_ecal_clus_z.push_back(t_ecal_clusters[ie]->getShowerCenter().z());
-      pfo_ecal_clus_E.push_back(t_ecal_clusters[ie]->getLongiE());
-
-      double tmp_phi = std::atan2(t_ecal_clusters[ie]->getShowerCenter().y(), t_ecal_clusters[ie]->getShowerCenter().x())* 180.0 / M_PI;
+    cout<<"  Write 3D cluster"<<endl;
+    //3D cluster
+    ClearCluster();
+    std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_EcalClusterCol = m_DataCol.map_CaloCluster["TrkMergedECAL"];
+    std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_HcalClusterCol = m_DataCol.map_CaloCluster["HCALCluster"];
+    std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_SimpleHcalClusterCol = m_DataCol.map_CaloCluster["SimpleHCALCluster"];
+    m_totE_Ecal = 0.;
+    m_totE_Hcal = 0.;
+    m_Nclus_Ecal = m_EcalClusterCol.size();
+    m_Nclus_Hcal = m_HcalClusterCol.size();
+    for(int icl=0; icl<m_EcalClusterCol.size(); icl++){
+      m_EcalClus_x.push_back(m_EcalClusterCol[icl]->getShowerCenter().x());
+      m_EcalClus_y.push_back(m_EcalClusterCol[icl]->getShowerCenter().y());
+      m_EcalClus_z.push_back(m_EcalClusterCol[icl]->getShowerCenter().z());
+      m_EcalClus_E.push_back(m_EcalClusterCol[icl]->getLongiE());
+      m_EcalClus_nTrk.push_back(m_EcalClusterCol[icl]->getAssociatedTracks().size());
+   
+      double tmp_phi = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().y(), m_EcalClusterCol[icl]->getShowerCenter().x())* 180.0 / M_PI;
       if (tmp_phi < 0) tmp_phi += 360.0;
-      double tmp_theta = std::atan2(t_ecal_clusters[ie]->getShowerCenter().z(), t_ecal_clusters[ie]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
-      pfo_ecal_clus_Escale.push_back(m_energycorsvc->energyCorrection(t_ecal_clusters[ie]->getLongiE(), tmp_phi, tmp_theta));
+      double tmp_theta = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().z(), m_EcalClusterCol[icl]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
+      //cout<<" Theta: "<<tmp_theta<<" Phi: "<<tmp_phi<<endl;
+      m_EcalClus_Escale.push_back(m_energycorsvc->energyCorrection(m_EcalClusterCol[icl]->getLongiE(), tmp_phi, tmp_theta));
+   
+   
+      if(m_EcalClusterCol[icl]->getAssociatedTracks().size()==1){
+        const Track* trk = m_EcalClusterCol[icl]->getAssociatedTracks()[0];
+        m_EcalClus_pTrk.push_back(trk->getMomentum());
+   
+        std::vector<TrackState> AllTrackStates = trk->getAllTrackStates();
+        for(int istate=0; istate<AllTrackStates.size(); istate++){
+          m_EcalClus_trk_tag.push_back(icl);
+          m_EcalClus_trk_d0.push_back(AllTrackStates[istate].D0);
+          m_EcalClus_trk_z0.push_back(AllTrackStates[istate].Z0);
+          m_EcalClus_trk_phi.push_back(AllTrackStates[istate].phi0);
+          m_EcalClus_trk_tanL.push_back( AllTrackStates[istate].tanLambda );
+          m_EcalClus_trk_kappa.push_back( AllTrackStates[istate].Kappa);
+          m_EcalClus_trk_omega.push_back( AllTrackStates[istate].Omega );
+          m_EcalClus_trk_location.push_back( AllTrackStates[istate].location );
+        }
+   
+      }
+      else
+        m_EcalClus_pTrk.push_back(-99);
+   
+      m_EcalClus_typeU.push_back(m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster")[0]->getType());
+      m_EcalClus_typeV.push_back(m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster")[0]->getType());
+      for(int ii=0; ii<m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster").size(); ii++){
+        for(int ihit=0; ihit<m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster")[ii]->getBars().size(); ihit++){
+          auto shower = m_EcalClusterCol[icl]->getHalfClusterUCol("LinkedLongiCluster")[ii]->getBars()[ihit];
+          m_EcalClus_hitU_tag.push_back(icl);
+          m_EcalClus_hitU_x.push_back(shower->getPosition().x());
+          m_EcalClus_hitU_y.push_back(shower->getPosition().y());
+          m_EcalClus_hitU_z.push_back(shower->getPosition().z());
+          m_EcalClus_hitU_E.push_back(shower->getEnergy());
+        }
+      }
+      for(int ii=0; ii<m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster").size(); ii++){
+        for(int ihit=0; ihit<m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster")[ii]->getBars().size(); ihit++){
+          auto shower = m_EcalClusterCol[icl]->getHalfClusterVCol("LinkedLongiCluster")[ii]->getBars()[ihit];
+          m_EcalClus_hitV_tag.push_back(icl);
+          m_EcalClus_hitV_x.push_back(shower->getPosition().x());
+          m_EcalClus_hitV_y.push_back(shower->getPosition().y());
+          m_EcalClus_hitV_z.push_back(shower->getPosition().z());
+          m_EcalClus_hitV_E.push_back(shower->getEnergy());
+        }
+      }
+   
+      m_totE_Ecal += m_EcalClusterCol[icl]->getLongiE();
+      auto truthMap = m_EcalClusterCol[icl]->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_EcalClus_truthMC_tag.push_back(icl);
+        m_EcalClus_truthMC_pid.push_back(iter.first.getPDG() );
+        m_EcalClus_truthMC_px.push_back(iter.first.getMomentum().x);
+        m_EcalClus_truthMC_py.push_back(iter.first.getMomentum().y);
+        m_EcalClus_truthMC_pz.push_back(iter.first.getMomentum().z);
+        m_EcalClus_truthMC_E.push_back(iter.first.getEnergy());
+        m_EcalClus_truthMC_EPx.push_back(iter.first.getEndpoint().x);
+        m_EcalClus_truthMC_EPy.push_back(iter.first.getEndpoint().y);
+        m_EcalClus_truthMC_EPz.push_back(iter.first.getEndpoint().z);
+        m_EcalClus_truthMC_weight.push_back(iter.second);
+      }
+    }
+   
+    for(int icl=0; icl<m_HcalClusterCol.size(); icl++){
+      m_HcalClus_x.push_back(m_HcalClusterCol[icl]->getHitCenter().x());
+      m_HcalClus_y.push_back(m_HcalClusterCol[icl]->getHitCenter().y());
+      m_HcalClus_z.push_back(m_HcalClusterCol[icl]->getHitCenter().z());
+      m_HcalClus_E.push_back(m_HcalClusterCol[icl]->getHitsE());
+      m_HcalClus_nTrk.push_back(m_HcalClusterCol[icl]->getAssociatedTracks().size());
+      if(m_HcalClusterCol[icl]->getAssociatedTracks().size()==1)
+        m_HcalClus_pTrk.push_back(m_HcalClusterCol[icl]->getAssociatedTracks()[0]->getMomentum());
+      else
+        m_HcalClus_pTrk.push_back(-99);
+   
+      for(int ih=0; ih<m_HcalClusterCol[icl]->getCaloHits().size(); ih++){
+        m_HcalClus_hit_tag.push_back(icl);
+        m_HcalClus_hit_x.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getPosition().x());
+        m_HcalClus_hit_y.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getPosition().y());
+        m_HcalClus_hit_z.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getPosition().z());
+        m_HcalClus_hit_E.push_back(m_HcalClusterCol[icl]->getCaloHits()[ih]->getEnergy());
+      }
+   
+      m_totE_Hcal += m_HcalClusterCol[icl]->getHitsE();
+      auto truthMap = m_HcalClusterCol[icl]->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_HcalClus_truthMC_tag.push_back(icl);
+        m_HcalClus_truthMC_pid.push_back(iter.first.getPDG() );
+        m_HcalClus_truthMC_px.push_back(iter.first.getMomentum().x);
+        m_HcalClus_truthMC_py.push_back(iter.first.getMomentum().y);
+        m_HcalClus_truthMC_pz.push_back(iter.first.getMomentum().z);
+        m_HcalClus_truthMC_E.push_back(iter.first.getEnergy());
+        m_HcalClus_truthMC_EPx.push_back(iter.first.getEndpoint().x);
+        m_HcalClus_truthMC_EPy.push_back(iter.first.getEndpoint().y);
+        m_HcalClus_truthMC_EPz.push_back(iter.first.getEndpoint().z);
+        m_HcalClus_truthMC_weight.push_back(iter.second);
+      }
+    }
+   
+    for(int icl=0; icl<m_SimpleHcalClusterCol.size(); icl++){
+      m_SimpleHcalClus_x.push_back(m_SimpleHcalClusterCol[icl]->getHitCenter().x());
+      m_SimpleHcalClus_y.push_back(m_SimpleHcalClusterCol[icl]->getHitCenter().y());
+      m_SimpleHcalClus_z.push_back(m_SimpleHcalClusterCol[icl]->getHitCenter().z());
+      m_SimpleHcalClus_E.push_back(m_SimpleHcalClusterCol[icl]->getHitsE());
+      m_SimpleHcalClus_nTrk.push_back(m_SimpleHcalClusterCol[icl]->getAssociatedTracks().size());
+      if(m_SimpleHcalClusterCol[icl]->getAssociatedTracks().size()==1)
+        m_SimpleHcalClus_pTrk.push_back(m_SimpleHcalClusterCol[icl]->getAssociatedTracks()[0]->getMomentum());
+      else
+        m_SimpleHcalClus_pTrk.push_back(-99);
+   
+      for(int ih=0; ih<m_SimpleHcalClusterCol[icl]->getCaloHits().size(); ih++){
+        m_SimpleHcalClus_hit_tag.push_back(icl);
+        m_SimpleHcalClus_hit_x.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getPosition().x());
+        m_SimpleHcalClus_hit_y.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getPosition().y());
+        m_SimpleHcalClus_hit_z.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getPosition().z());
+        m_SimpleHcalClus_hit_E.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits()[ih]->getEnergy());
+      }
+   
+      auto truthMap = m_SimpleHcalClusterCol[icl]->getLinkedMCP();
+      for(auto iter: truthMap){
+        m_SimpleHcalClus_truthMC_tag.push_back(icl);
+        m_SimpleHcalClus_truthMC_pid.push_back(iter.first.getPDG() );
+        m_SimpleHcalClus_truthMC_px.push_back(iter.first.getMomentum().x);
+        m_SimpleHcalClus_truthMC_py.push_back(iter.first.getMomentum().y);
+        m_SimpleHcalClus_truthMC_pz.push_back(iter.first.getMomentum().z);
+        m_SimpleHcalClus_truthMC_E.push_back(iter.first.getEnergy());
+        m_SimpleHcalClus_truthMC_EPx.push_back(iter.first.getEndpoint().x);
+        m_SimpleHcalClus_truthMC_EPy.push_back(iter.first.getEndpoint().y);
+        m_SimpleHcalClus_truthMC_EPz.push_back(iter.first.getEndpoint().z);
+        m_SimpleHcalClus_truthMC_weight.push_back(iter.second);
+      }
+    }
+    t_Cluster->Fill();
+   
+    // Save Track info
+    ClearTrack();
+    std::vector<Cyber::Track*> m_trkCol; 
+    for(int it=0; it<m_DataCol.TrackCol.size(); it++)
+      m_trkCol.push_back( m_DataCol.TrackCol[it].get() );
+   
+    m_Ntrk = m_trkCol.size();
+    for(int itrk=0; itrk<m_Ntrk; itrk++){
+      m_type.push_back(m_trkCol[itrk]->getType());
+      std::vector<TrackState> AllTrackStates = m_trkCol[itrk]->getAllTrackStates();
+      for(int istate=0; istate<AllTrackStates.size(); istate++){
+        m_trkstate_d0.push_back( AllTrackStates[istate].D0 );
+        m_trkstate_z0.push_back( AllTrackStates[istate].Z0 );
+        m_trkstate_phi.push_back( AllTrackStates[istate].phi0 );
+        m_trkstate_tanL.push_back( AllTrackStates[istate].tanLambda );
+        m_trkstate_kappa.push_back( AllTrackStates[istate].Kappa);
+        m_trkstate_omega.push_back( AllTrackStates[istate].Omega );
+        m_trkstate_refx.push_back( AllTrackStates[istate].referencePoint.X() );
+        m_trkstate_refy.push_back( AllTrackStates[istate].referencePoint.Y() );
+        m_trkstate_refz.push_back( AllTrackStates[istate].referencePoint.Z() );
+        m_trkstate_location.push_back( AllTrackStates[istate].location );
+        m_trkstate_tag.push_back(itrk);
+      }
+      std::vector<TrackState> EcalTrackStates = m_trkCol[itrk]->getTrackStates("Ecal");
+      for(int istate=0; istate<EcalTrackStates.size(); istate++){
+        m_trkstate_x_ECAL.push_back(EcalTrackStates[istate].referencePoint.X());
+        m_trkstate_y_ECAL.push_back(EcalTrackStates[istate].referencePoint.Y());
+        m_trkstate_z_ECAL.push_back(EcalTrackStates[istate].referencePoint.Z());
+        m_trkstate_tag_ECAL.push_back(itrk);
+      }
+      std::vector<TrackState> HcalTrackStates = m_trkCol[itrk]->getTrackStates("Hcal");
+      for(int istate=0; istate<HcalTrackStates.size(); istate++){
+        m_trkstate_x_ECAL.push_back(HcalTrackStates[istate].referencePoint.X());
+        m_trkstate_y_ECAL.push_back(HcalTrackStates[istate].referencePoint.Y());
+        m_trkstate_z_ECAL.push_back(HcalTrackStates[istate].referencePoint.Z());
+        m_trkstate_tag_HCAL.push_back(itrk);
+      }
+    }
+    t_Track->Fill();
+   
+    // yyy: pfo
+    ClearPFO();
+    std::vector<Cyber::PFObject*> m_pfobjects; m_pfobjects.clear();
+    for(int ip=0; ip<m_DataCol.map_PFObjects["outputPFO"].size(); ip++)
+      m_pfobjects.push_back(m_DataCol.map_PFObjects["outputPFO"][ip].get());
+   
+   
+    for(int ip=0; ip<m_pfobjects.size(); ip++){
+      std::vector<const Track*> t_tracks = m_pfobjects[ip]->getTracks();
+      std::vector<const Calo3DCluster*> t_ecal_clusters = m_pfobjects[ip]->getECALClusters();
+      std::vector<const Calo3DCluster*> t_hcal_clusters =  m_pfobjects[ip]->getHCALClusters();
+   
+      pfo_tag.push_back(ip);
+      pfo_n_track.push_back(t_tracks.size());
+      pfo_n_ecal_clus.push_back(t_ecal_clusters.size());
+      pfo_n_hcal_clus.push_back(t_hcal_clusters.size());
+   
+      for(int it=0; it<t_tracks.size(); it++){
+        std::vector<TrackState> AllTrackStates = t_tracks[it]->getAllTrackStates();
+        for(int istate=0; istate<AllTrackStates.size(); istate++){
+          pfo_trk_tag.push_back(ip);
+          pfo_trk_d0.push_back( AllTrackStates[istate].D0 );
+          pfo_trk_z0.push_back( AllTrackStates[istate].Z0 );
+          pfo_trk_phi.push_back( AllTrackStates[istate].phi0 );
+          pfo_trk_tanL.push_back( AllTrackStates[istate].tanLambda );
+          pfo_trk_kappa.push_back( AllTrackStates[istate].Kappa);
+          pfo_trk_omega.push_back( AllTrackStates[istate].Omega );
+          pfo_trk_location.push_back( AllTrackStates[istate].location );
+        }
+      }
+   
+      for(int ie=0; ie<t_ecal_clusters.size(); ie++){
+        pfo_ecal_tag.push_back(ip);
+        pfo_ecal_clus_x.push_back(t_ecal_clusters[ie]->getShowerCenter().x());
+        pfo_ecal_clus_y.push_back(t_ecal_clusters[ie]->getShowerCenter().y());
+        pfo_ecal_clus_z.push_back(t_ecal_clusters[ie]->getShowerCenter().z());
+        pfo_ecal_clus_E.push_back(t_ecal_clusters[ie]->getLongiE());
+   
+        double tmp_phi = std::atan2(t_ecal_clusters[ie]->getShowerCenter().y(), t_ecal_clusters[ie]->getShowerCenter().x())* 180.0 / M_PI;
+        if (tmp_phi < 0) tmp_phi += 360.0;
+        double tmp_theta = std::atan2(t_ecal_clusters[ie]->getShowerCenter().z(), t_ecal_clusters[ie]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
+        pfo_ecal_clus_Escale.push_back(m_energycorsvc->energyCorrection(t_ecal_clusters[ie]->getLongiE(), tmp_phi, tmp_theta));
+   
+      }
+      for(int ih=0; ih<t_hcal_clusters.size(); ih++){
+        pfo_hcal_tag.push_back(ip);
+        pfo_hcal_clus_x.push_back(t_hcal_clusters[ih]->getHitCenter().x());
+        pfo_hcal_clus_y.push_back(t_hcal_clusters[ih]->getHitCenter().y());
+        pfo_hcal_clus_z.push_back(t_hcal_clusters[ih]->getHitCenter().z());
+        pfo_hcal_clus_E.push_back(t_hcal_clusters[ih]->getHitsE());
+      }
+    }
+    t_PFO->Fill();
 
-    }
-    for(int ih=0; ih<t_hcal_clusters.size(); ih++){
-      pfo_hcal_tag.push_back(ip);
-      pfo_hcal_clus_x.push_back(t_hcal_clusters[ih]->getHitCenter().x());
-      pfo_hcal_clus_y.push_back(t_hcal_clusters[ih]->getHitCenter().y());
-      pfo_hcal_clus_z.push_back(t_hcal_clusters[ih]->getHitCenter().z());
-      pfo_hcal_clus_E.push_back(t_hcal_clusters[ih]->getHitsE());
-    }
   }
-  t_PFO->Fill();
 
   //Clean Events
   //system("/cefs/higgs/songwz/winter22/CEPCSW/workarea/memory/memory_test.sh before_clean");
@@ -1608,22 +1618,24 @@ cout<<"  Write 3D cluster"<<endl;
 
 StatusCode CyberPFAlg::finalize()
 {
-  m_wfile->cd();
-  t_MCParticle->Write();
-  t_SimBar->Write();
-  t_LocalMax->Write();
-  t_Layers->Write();
-  t_Hough->Write();
-  t_Cone->Write();
-  t_TrackAxis->Write();
-  t_Axis->Write();
-  t_HalfCluster->Write();
-  t_Tower->Write();
-  t_Cluster->Write();
-  t_Track->Write();
-  t_PFO->Write();
-  m_wfile->Close();
-  delete m_wfile, t_MCParticle, t_SimBar, t_LocalMax, t_Layers, t_Hough, t_Cone, t_TrackAxis, t_Axis, t_HalfCluster, t_Tower, t_Cluster, t_Track, t_PFO; 
+  if(m_WriteAna){
+    m_wfile->cd();
+    t_MCParticle->Write();
+    t_SimBar->Write();
+    t_LocalMax->Write();
+    t_Layers->Write();
+    t_Hough->Write();
+    t_Cone->Write();
+    t_TrackAxis->Write();
+    t_Axis->Write();
+    t_HalfCluster->Write();
+    t_Tower->Write();
+    t_Cluster->Write();
+    t_Track->Write();
+    t_PFO->Write();
+    m_wfile->Close();
+    delete m_wfile, t_MCParticle, t_SimBar, t_LocalMax, t_Layers, t_Hough, t_Cone, t_TrackAxis, t_Axis, t_HalfCluster, t_Tower, t_Cluster, t_Track, t_PFO; 
+  }
 
   delete m_pMCParticleCreator;
   delete m_pTrackCreator; 

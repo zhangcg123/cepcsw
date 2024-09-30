@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <set>
-#include "TCanvas.h"
+
 using namespace std;
 
 StatusCode HoughClusteringAlg::ReadSettings(Cyber::Settings& m_settings){
@@ -104,7 +104,6 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   if(p_HalfClusterV.size()==0){ std::cout<<"  HoughClusteringAlg: No HalfClusterV in present data collection! "<<std::endl; }
   if(p_HalfClusterU.size()==0){ std::cout<<"  HoughClusteringAlg: No HalfClusterU in present data collection! "<<std::endl; }
 
-//cout<<"Readin HalfCluster size: "<<p_HalfClusterV.size()<<", "<<p_HalfClusterU.size()<<endl;
 
   //std::vector<const Cyber::CaloHalfCluster*> m_refHFClusVCol; m_refHFClusVCol.clear();
   // Processing V(xy) plane
@@ -122,17 +121,13 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       continue; 
     } 
 
-//cout<<"  HoughClusteringAlg: Find Hough axis in HalfCluster "<<it<<". Local maximum size V = "<<m_localMaxVCol.size()<<endl;
     
-    // cout<<"  HoughClusteringAlg: Creating m_HoughObjectsV"<<endl;
     std::vector<Cyber::HoughObject> m_HoughObjectsV; m_HoughObjectsV.clear(); 
     for(int il=0; il<m_localMaxVCol.size(); il++){
       Cyber::HoughObject m_obj(m_localMaxVCol[il], Cyber::CaloUnit::barsize, Cyber::CaloUnit::ecal_innerR);
       m_HoughObjectsV.push_back(m_obj);
     }
-//cout<<"  HoughClusteringAlg: HoughObjectV size "<<m_HoughObjectsV.size()<<endl;
 
-    // cout<<"  HoughClusteringAlg: Hough transformation"<<endl;
     HoughTransformation(m_HoughObjectsV);
 
     // cout<<"  HoughClusteringAlg: Creating hough_spaceV"<<endl;
@@ -141,16 +136,13 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
                                          settings.map_floatPars["rho_low"], settings.map_floatPars["rho_high"], 
                                          settings.map_floatPars["bin_width_rho"], settings.map_intPars["Nbins_rho"]);
 
-//cout<<"  HoughClusteringAlg: Filling hough_spaceV"<<endl;
     FillHoughSpace(m_HoughObjectsV, hough_spaceV);
-
-//cout<<"  HoughClusteringAlg: Finding clusters from Hough space"<<endl;
 
     //Create output HoughClusters
     m_longiClusVCol.clear(); 
     ClusterFinding(m_HoughObjectsV, hough_spaceV, m_longiClusVCol  );
+
     CleanClusters(m_longiClusVCol);
-//cout << "  HoughClusteringAlg: final output m_longiClusVCol.size() = " << m_longiClusVCol.size() << endl;
     m_datacol.map_HalfCluster["bkHalfCluster"].insert( m_datacol.map_HalfCluster["bkHalfCluster"].end(), m_longiClusVCol.begin(), m_longiClusVCol.end() );
 
     std::vector<const Cyber::CaloHalfCluster*> m_constHoughCluster; m_constHoughCluster.clear();
@@ -168,7 +160,6 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
     for(int ic=0; ic<m_longiClusVCol.size(); ic++)
       m_constHoughCluster.push_back(m_longiClusVCol[ic].get());
 
-    //m_refHFClusVCol.insert(m_refHFClusVCol.end(), m_constHoughCluster.begin(), m_constHoughCluster.end());
 
     p_HalfClusterV[it]->setLocalMax("HoughLocalMax", m_houghMax);
     p_HalfClusterV[it]->setLocalMax(settings.map_stringPars["LeftLocalMaxName"], left_localMaxVCol);
@@ -177,7 +168,6 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
     left_localMaxVCol.clear();
 
   }  // end of V plane
-//cout<<"Finish Hough in V. Reference HFClusterV size "<<m_refHFClusVCol.size()<<endl;
 
 
   // Processing U(r-phi) plane
@@ -191,21 +181,16 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
     }
 
     if(m_localMaxUCol.size()<settings.map_intPars["th_peak"]){
-      //std::cout << "    yyy: m_localMaxUCol.size()<th_peak, continue" << std::endl;
       continue;
     }
 
-//cout<<"  HoughClusteringAlg: Find Hough axis in HalfCluster "<<it<<". Local maximum size U = "<<m_localMaxUCol.size()<<endl;
 
-    // cout<<"  HoughClusteringAlg: Creating m_HoughObjectsU"<<endl;
     std::vector<Cyber::HoughObject> m_HoughObjectsU; m_HoughObjectsU.clear();
     for(int il=0; il<m_localMaxUCol.size(); il++){
       Cyber::HoughObject m_obj(m_localMaxUCol[il], Cyber::CaloUnit::barsize, Cyber::CaloUnit::ecal_innerR);
       m_HoughObjectsU.push_back(m_obj);
     }
-//cout<<"  HoughClusteringAlg: HoughObjectU size "<<m_HoughObjectsU.size()<<endl;
 
-    // cout<<"  HoughClusteringAlg: Hough transformation"<<endl;
     HoughTransformation(m_HoughObjectsU);
 
     // cout<<"  HoughClusteringAlg: Creating hough_spaceU"<<endl;
@@ -213,16 +198,13 @@ StatusCode HoughClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
                                          settings.map_floatPars["bin_width_alphaU"], settings.map_intPars["Nbins_alphaU"],
                                          settings.map_floatPars["rho_low"], settings.map_floatPars["rho_high"],
                                          settings.map_floatPars["bin_width_rho"], settings.map_intPars["Nbins_rho"]);
-
-//cout<<"  HoughClusteringAlg: Filling hough_spaceU"<<endl;
     FillHoughSpace(m_HoughObjectsU, hough_spaceU);
 
-//cout<<"  HoughClusteringAlg: Finding clusters from Hough space"<<endl;
     //Create output HoughClusters
     m_longiClusUCol.clear();
     ClusterFinding(m_HoughObjectsU, hough_spaceU, m_longiClusUCol  );
     CleanClusters(m_longiClusUCol);
-//cout << "  HoughClusteringAlg: final output m_longiClusUCol.size() = " << m_longiClusUCol.size() << endl;
+
     m_datacol.map_HalfCluster["bkHalfCluster"].insert( m_datacol.map_HalfCluster["bkHalfCluster"].end(), m_longiClusUCol.begin(), m_longiClusUCol.end() );
 
     std::vector<const Cyber::CaloHalfCluster*> m_constHoughCluster; m_constHoughCluster.clear();

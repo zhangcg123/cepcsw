@@ -23,7 +23,7 @@ public:
   StatusCode RunAlgorithm( CyberDataCol& m_datacol );
   StatusCode ClearAlgorithm();
 
-
+  StatusCode GetGoodTracks(std::vector<std::shared_ptr<Cyber::Track>>& rawTracks, std::vector<std::shared_ptr<Cyber::Track>>& goodTracks);
   StatusCode GetExtrpoECALPoints(const Cyber::Track* track, std::vector<TVector3>& extrapo_points);
   StatusCode CreateTrackAxis(vector<TVector3>& extrapo_points, std::vector<const Cyber::Calo1DCluster*>& localMaxVCol,
                              Cyber::CaloHalfCluster* t_track_axis);
@@ -48,7 +48,8 @@ private:
 
   // std::vector<const Cyber::CaloHalfCluster*> m_trackAxisVCol;
   // std::vector<const Cyber::CaloHalfCluster*> m_trackAxisUCol;
-
-
+  static bool compTrkP( std::shared_ptr<Cyber::Track> trk1, std::shared_ptr<Cyber::Track> trk2 ){
+    return trk1->getMomentum() > trk2->getMomentum();
+  }
 };
 #endif

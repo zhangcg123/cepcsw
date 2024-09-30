@@ -27,7 +27,7 @@ namespace Cyber {
 
     double getEnergy() const; 
     TVector3 getPos() const; 
-    TVector3 getAxis() const { return axis; }
+    TVector3 getAxis() const;
     TVector3 getEnergyCenter() const;
     std::vector<int> getEnergyCenterTower() const;
     int getSlayer() const { return slayer; }
@@ -59,7 +59,7 @@ namespace Cyber {
     bool isSubset(const CaloHalfCluster* clus) const;
     double OverlapRatioE( const CaloHalfCluster* clus ) const;
 
-    void fitAxis( std::string name );
+    void fitAxis( std::string name ) const;
     void setType( int _type ) { type = _type; }
     void sortBarShowersByLayer() { std::sort(m_1dclusters.begin(), m_1dclusters.end(), compLayer); }
     void addUnit(const Calo1DCluster* _1dcluster);
@@ -85,9 +85,9 @@ namespace Cyber {
     int type; // yyy: new definition: track: 10000, Hough: 100, cone: 1, merge: sum them
     std::vector< std::vector<int> > towerID; //[module, part, stave]
     int slayer;
-    TVector3 axis;
-    double trk_dr;
-    double trk_dz;
+    mutable TVector3 axis = TVector3(99999., 99999., 99999.);
+    mutable double trk_dr;
+    mutable double trk_dz;
     double Hough_alpha;
     double Hough_rho;
     double Hough_intercept;

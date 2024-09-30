@@ -33,7 +33,20 @@ namespace Cyber{
 
     //PFO
     std::vector<std::shared_ptr<Cyber::PFObject>> p_pfos = m_DataCol.map_PFObjects[settings.map_stringPars.at("OutputPFO")];
+/*
 std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;    
+ double totE_Ecal = 0;
+ double totE_Hcal = 0;
+ for(int i=0; i<p_pfos.size(); i++){
+   cout<<"    PFO #"<<i<<": track size "<<p_pfos[i]->getTracks().size()<<", leading P "<<p_pfos[i]->getTrackMomentum();
+   cout<<", ECAL cluster size "<<p_pfos[i]->getECALClusters().size()<<", totE "<<p_pfos[i]->getECALClusterEnergy();
+   cout<<", HCAL cluster size "<<p_pfos[i]->getHCALClusters().size()<<", totE "<<p_pfos[i]->getHCALClusterEnergy()<<endl;
+   totE_Ecal += p_pfos[i]->getECALClusterEnergy();
+   totE_Hcal += p_pfos[i]->getHCALClusterEnergy();
+ }
+ cout<<"-----Neutral cluster Ecal total energy: "<<totE_Ecal<<", Hcal total energy: "<<totE_Hcal<<endl;
+*/
+
     for(int ip=0; ip<p_pfos.size(); ip++){
       auto m_pfo = m_pfocol->create();
       std::vector<const Track*> vec_trks = p_pfos[ip]->getTracks();
@@ -118,7 +131,7 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
           m_clus.addToHits(_hit);
         }
    
-        double tmp_clusE = p_clus->getEnergy()*settings.map_floatPars.at("HCALCalib");
+        double tmp_clusE = p_clus->getHitsE()*settings.map_floatPars.at("HCALCalib");
         m_clus.setEnergy( tmp_clusE );
         edm4hep::Vector3f pos( p_clus->getHitCenter().x(), p_clus->getHitCenter().y(), p_clus->getHitCenter().z() );
         m_clus.setPosition( pos );
@@ -172,9 +185,26 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
       }
 
     }
+/*
+double totE = 0;
+for(int i=0; i<m_pfocol->size(); i++){
+  auto m_pfo = m_pfocol->at(i);
+  if(m_pfo.getCharge()!=0) continue;
+   cout<<"    PFO #"<<i<<": track size "<<m_pfo.tracks_size()<<", cluster size "<<m_pfo.clusters_size()<<", energy "<<m_pfo.getEnergy()<<endl;
+   totE += m_pfo.getEnergy();
+}
+cout<<"-----Neutral cluster total energy: "<<totE<<endl;
+totE = 0;
+for(int i=0; i<m_pfocol->size(); i++){
+  auto m_pfo = m_pfocol->at(i);
+  if(m_pfo.getCharge()==0) continue;
+   cout<<"    PFO #"<<i<<": track size "<<m_pfo.tracks_size()<<", cluster size "<<m_pfo.clusters_size()<<", energy "<<m_pfo.getEnergy()<<endl;
+   totE += m_pfo.getEnergy();
+}
+cout<<"-----Charged cluster Ecal total energy: "<<totE<<endl;
 
 std::cout<<"  Created PFO size: "<<m_pfocol->size()<<std::endl;
-
+*/
     return StatusCode::SUCCESS;
   }
 

@@ -9,6 +9,11 @@ namespace Cyber{
 
   const double Track::B = 3.;
 
+  int Track::getTrackerHits() const {
+    if(m_track.isAvailable()) return m_track.trackerHits_size(); 
+    else return 0;
+  }
+
   int Track::trackStates_size(std::string name) const{
     std::vector<TrackState> emptyCol; emptyCol.clear(); 
     if(m_trackStates.find(name)!=m_trackStates.end()) emptyCol = m_trackStates.at(name);
@@ -33,12 +38,37 @@ namespace Cyber{
     return emptyCol;
   }
 
+  float Track::getD0() const{
+    std::vector<TrackState> trkStates = getTrackStates("Input");
+    float d0 = -99.;
+    for(auto it: trkStates){
+      if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
+        d0 = it.D0;
+      }
+    }
+
+    return d0;
+  }  
+
+  float Track::getZ0() const{
+    std::vector<TrackState> trkStates = getTrackStates("Input");
+    float z0 = -99.;
+    for(auto it: trkStates){
+      if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
+        z0 = it.Z0;
+      }
+    }
+
+    return z0;
+  }
+
+
   float Track::getPt() const{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float pt = -99.;
     for(auto it: trkStates){
       if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
-        pt = 1./it.Kappa;
+        pt = 1./fabs(it.Kappa);
       }
     }
 
@@ -49,8 +79,8 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float pz = -99.;
     for(auto it: trkStates){
-      if(it.location==4 || it.location==1){ //Calorimeter(for real track) or IP (for truth track)
-        pz = it.tanLambda/it.Kappa;
+      if( (m_type!=0 && it.location==4) || (m_type==0 && it.location==1)){ //Calorimeter(for real track) or IP (for truth track)
+        pz = it.tanLambda/fabs(it.Kappa);
       }
     }
 
@@ -63,10 +93,10 @@ namespace Cyber{
     float pt = -99.;
     float pz = -99.;
     for(auto it: trkStates){
-      if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
-        pt = 1./it.Kappa;
+      if((m_type!=0 && it.location==4) || (m_type==0 && it.location==1)){  //Calorimeter(for real track) or IP (for truth track)
+        pt = 1./fabs(it.Kappa);
         phi = it.phi0;
-        pz = it.tanLambda/it.Kappa;
+        pz = it.tanLambda/fabs(it.Kappa);
       }
     }
   
@@ -78,12 +108,30 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float omega = -99.;
     for(auto it: trkStates){
-      if(it.location==4 || it.location==1){ //Calorimeter(for real track) or IP (for truth track)
+      if((m_type!=0 && it.location==4) || (m_type==0 && it.location==1)){ //Calorimeter(for real track) or IP (for truth track)
         omega = it.Omega;
       }
     }
 
     return omega/fabs(omega);
+  }
+
+  TVector3 Track::getStartPoint() const{
+    std::vector<TrackState> trkStates = getTrackStates("Input");
+    TVector3 startpoint (0.,0.,0.);
+    for(auto it: trkStates)
+      if(it.location==2) startpoint = it.referencePoint;
+
+    return startpoint;
+  }
+
+  TVector3 Track::getEndPoint() const{
+    std::vector<TrackState> trkStates = getTrackStates("Input");
+    TVector3 endpoint (0.,0.,0.);
+    for(auto it: trkStates)
+      if(it.location==3) endpoint = it.referencePoint;
+
+    return endpoint;
   }
 
   edm4hep::MCParticle Track::getLeadingMCP() const{
