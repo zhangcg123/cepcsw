@@ -62,3 +62,5 @@ else()
   message("Try to use an internal installation of EDM4CEPC")
   include("${CMAKE_CURRENT_LIST_DIR}/internal_edm4cepc.cmake")
 endif()
+
+find_package(FastJet)
