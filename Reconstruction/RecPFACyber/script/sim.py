@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os
+import os,sys
 from Gaudi.Configuration import *
 
 from Configurables import k4DataSvc
@@ -91,8 +91,8 @@ from Configurables import CalorimeterSensDetTool
 from Configurables import DriftChamberSensDetTool
 cal_sensdettool = CalorimeterSensDetTool("CalorimeterSensDetTool")
 cal_sensdettool.CalNamesMergeDisable = ["EcalBarrel", "CaloDetectorEndcap", "HcalBarrel", "HcalEndcaps"]
-cal_sensdettool.CalNamesApplyBirks = ["EcalBarrel", "CaloDetectorEndcap", "HcalBarrel","HcalEndcaps"]
-cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.126, 0.126] # BGO and Glass scintillator
+#cal_sensdettool.CalNamesApplyBirks = ["EcalBarrel", "CaloDetectorEndcap", "HcalBarrel","HcalEndcaps"]
+#cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.01, 0.01] # BGO and Glass scintillator
 
 # output
 from Configurables import PodioOutput

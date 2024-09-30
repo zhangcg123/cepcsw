@@ -7,8 +7,8 @@ dsvc = k4DataSvc("EventDataSvc", input="Sim_TDR_o1_v01_E240_nnHgg.root")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
 seed = [12340]
-# rndmengine = HepRndm__Engine_CLHEP__RanluxEngine_() # The default engine in Gaudi                                                                                                                                            
-rndmengine = HepRndm__Engine_CLHEP__HepJamesRandom_("RndmGenSvc.Engine") # The default engine in Geant4                                                                                                                        
+# rndmengine = HepRndm__Engine_CLHEP__RanluxEngine_() # The default engine in Gaudi
+rndmengine = HepRndm__Engine_CLHEP__HepJamesRandom_("RndmGenSvc.Engine") # The default engine in Geant4
 rndmengine.SetSingleton = True
 rndmengine.Seeds = seed
 
@@ -51,7 +51,8 @@ podioinput = PodioInput("PodioReader", collections=[
     "VXDCollection",
     "SITCollection",
     "TPCCollection",
-    "SETCollection",
+#    "SETCollection",
+    "OTKBarrelCollection",
     "FTDCollection"
     ])
 
@@ -59,23 +60,29 @@ podioinput = PodioInput("PodioReader", collections=[
 vxdhitname  = "VXDTrackerHits"
 sithitname  = "SITTrackerHits"
 gashitname  = "TPCTrackerHits"
-sethitname  = "SETTrackerHits"
-setspname   = "SETSpacePoints"
+sethitname  = "OTKBarrelTrackerHits"
+setspname   = "OTKBarrelSpacePoints"
 ftdhitname  = "FTDTrackerHits"
 ftdspname   = "FTDSpacePoints"
-from Configurables import PlanarDigiAlg
-digiVXD = PlanarDigiAlg("VXDDigi")
+from Configurables import SmearDigiTool
+vxdtool = SmearDigiTool("VXD")
+vxdtool.ResolutionU = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
+vxdtool.ResolutionV = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
+vxdtool.UsePlanarTag = True
+vxdtool.ParameterizeResolution = False
+vxdtool.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
+vxdtool.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
+#vxdtool.OutputLevel = DEBUG
+
+from Configurables import SiTrackerDigiAlg
+digiVXD = SiTrackerDigiAlg("VXDDigi")
 digiVXD.SimTrackHitCollection = "VXDCollection"
 digiVXD.TrackerHitCollection = vxdhitname
 digiVXD.TrackerHitAssociationCollection = "VXDTrackerHitAssociation"
-digiVXD.ResolutionU = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
-digiVXD.ResolutionV = [0.004, 0.004, 0.004, 0.004, 0.004, 0.004]
-digiVXD.UsePlanarTag = True
-digiVXD.ParameterizeResolution = False
-digiVXD.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
-digiVXD.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
+digiVXD.DigiTool = "SmearDigiTool/VXD"
 #digiVXD.OutputLevel = DEBUG
 
+from Configurables import PlanarDigiAlg
 digiSIT = PlanarDigiAlg("SITDigi")
 digiSIT.IsStrip = False
 digiSIT.SimTrackHitCollection = "SITCollection"
@@ -91,9 +98,9 @@ digiSIT.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.296
 
 digiSET = PlanarDigiAlg("SETDigi")
 digiSET.IsStrip = False
-digiSET.SimTrackHitCollection = "SETCollection"
+digiSET.SimTrackHitCollection = "OTKBarrelCollection"
 digiSET.TrackerHitCollection = sethitname
-digiSET.TrackerHitAssociationCollection = "SETTrackerHitAssociation"
+digiSET.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
 digiSET.ResolutionU = [0.005]
 digiSET.ResolutionV = [0.021]
 digiSET.UsePlanarTag = True
@@ -120,6 +127,13 @@ digiTPC = TPCDigiAlg("TPCDigi")
 digiTPC.TPCCollection = "TPCCollection"
 digiTPC.TPCLowPtCollection = "TPCLowPtCollection"
 digiTPC.TPCTrackerHitsCol = gashitname
+#default value, modify them according to future Garfield simulation results
+#digiTPC.PixelClustering = True
+#digiTPC.PointResolutionRPhi = 0.144
+#digiTPC.DiffusionCoeffRPhi = 0.0323
+#digiTPC.PointResolutionZ = 0.4
+#digiTPC.DiffusionCoeffZ = 0.23
+#digiTPC.N_eff = 30
 #digiTPC.OutputLevel = DEBUG
 
 # tracking
@@ -223,14 +237,14 @@ from Configurables import TrackParticleRelationAlg
 tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
 tpr.TrackList = ["CompleteTracks", "ClupatraTracks"]
-tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 #tpr.OutputLevel = DEBUG
 
 from Configurables import TrueMuonTagAlg
 tmt = TrueMuonTagAlg("TrueMuonTag")
 tmt.MCParticleCollection = "MCParticle"
 tmt.TrackList = ["CompleteTracks"]
-tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
@@ -248,6 +262,6 @@ mgr = ApplicationMgr(
     EvtSel = 'NONE',
     EvtMax = 3,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
-    HistogramPersistency = 'ROOT',
+    #HistogramPersistency = 'ROOT',
     OutputLevel = INFO
 )

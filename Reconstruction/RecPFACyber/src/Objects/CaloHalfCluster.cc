@@ -80,7 +80,6 @@ namespace Cyber{
       for(int ii=0; ii<id.size(); ii++)
         if( find(towerID.begin(), towerID.end(), id[ii])==towerID.end() ) towerID.push_back(id[ii]);    
    
-      fitAxis("");
     }
   }
   
@@ -90,7 +89,6 @@ namespace Cyber{
     auto iter = find( m_1dclusters.begin(), m_1dclusters.end(), _1dcluster); 
     if( iter != m_1dclusters.end() ){
       m_1dclusters.erase(iter);
-      fitAxis("");
     }
   }
 
@@ -127,6 +125,11 @@ namespace Cyber{
       pos += m_pos * (m_1dclusters[i]->getEnergy()/Etot);
     }
     return pos;
+  }
+
+  TVector3 CaloHalfCluster::getAxis() const{
+    if (axis.Mag() > 10.) fitAxis("");
+    return axis;
   }
 
   TVector3 CaloHalfCluster::getEnergyCenter() const{
@@ -267,7 +270,7 @@ namespace Cyber{
   }
 
 
-  void CaloHalfCluster::fitAxis( std::string name ){
+  void CaloHalfCluster::fitAxis( std::string name ) const{
     std::vector<const Cyber::Calo1DCluster*> barShowerCol; barShowerCol.clear();
     if(!name.empty() && map_localMax.find(name)!=map_localMax.end() ) barShowerCol = map_localMax.at(name);
     else barShowerCol = m_1dclusters; 
@@ -337,7 +340,6 @@ namespace Cyber{
       }
     }
 
-    fitAxis("");
   }
 
 

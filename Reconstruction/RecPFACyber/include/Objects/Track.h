@@ -16,6 +16,7 @@ namespace Cyber {
   void Clear() { m_trackStates.clear(); m_halfClusterUCol.clear(); m_halfClusterVCol.clear(); }
 
   void setOriginTrack(edm4hep::Track& _trk) { m_track = _trk; }
+  int getTrackerHits() const;
   int trackStates_size(std::string name) const;
   int trackStates_size() const ;
   edm4hep::Track getOriginTrack() const { return m_track; }
@@ -26,12 +27,16 @@ namespace Cyber {
   std::vector<Cyber::CaloHalfCluster*> getAssociatedHalfClustersV() const { return m_halfClusterVCol; }  
   std::vector< std::pair<edm4hep::MCParticle, float> > getLinkedMCP() const { return MCParticleWeight; }
   edm4hep::MCParticle getLeadingMCP() const;
+  float getD0() const;
+  float getZ0() const;
   float getLeadingMCPweight() const;
   float getPt() const;
   float getPz() const;
   float getMomentum() const { return sqrt( getPt()*getPt() + getPz()*getPz() ); } 
   TVector3 getP3() const; 
   float getCharge() const;
+  TVector3 getStartPoint() const;
+  TVector3 getEndPoint() const;
 
   void setTrackStates( std::string name, std::vector<TrackState>& _states ) { m_trackStates[name]=_states; }
   void addAssociatedHalfClusterU( Cyber::CaloHalfCluster* _cl ) { m_halfClusterUCol.push_back(_cl); }

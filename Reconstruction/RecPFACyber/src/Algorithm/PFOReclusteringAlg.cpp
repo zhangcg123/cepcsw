@@ -14,8 +14,8 @@ StatusCode PFOReclusteringAlg::ReadSettings(Settings& m_settings){
   if(settings.map_floatPars.find("EnergyRes")==settings.map_floatPars.end()) settings.map_floatPars["EnergyRes"] = 0.4;
   if(settings.map_floatPars.find("SplitSigma")==settings.map_floatPars.end()) settings.map_floatPars["SplitSigma"] = 0.;
   if(settings.map_floatPars.find("NeutralMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["NeutralMergeSigma"] = 0.;
-  if(settings.map_floatPars.find("VirtualMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["VirtualMergeSigma"] = 0.6;
-  if(settings.map_floatPars.find("MinAngleForNeuMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForNeuMerge"] = 0.18;
+  if(settings.map_floatPars.find("VirtualMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["VirtualMergeSigma"] = 0.5;
+  if(settings.map_floatPars.find("MinAngleForNeuMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForNeuMerge"] = 0.12;
   if(settings.map_floatPars.find("MinAngleForVirMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForVirMerge"] = 0.12;
 
 
@@ -66,7 +66,9 @@ StatusCode PFOReclusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
 
   //If P_trk < E_cluster, create a virtual neutral PFO. 
   ReCluster_SplitFromChg(m_chargedPFOs, m_neutralPFOs);
+
 /*
+  cout<<" PFO after ReCluster_SplitFromChg: "<<p_PFObjects->size()<<", charged "<<m_chargedPFOs.size()<<", neutral "<<m_neutralPFOs.size()<<endl;
  totE_Ecal = 0;
  totE_Hcal = 0;
  cout<<"After split from Ch: charged "<<m_chargedPFOs.size()<<", neutral "<<m_neutralPFOs.size()<<", total "<<p_PFObjects->size()<<endl;
@@ -96,9 +98,10 @@ StatusCode PFOReclusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   m_datacol.map_CaloHit["bkHit"].insert( m_datacol.map_CaloHit["bkHit"].end(), m_bkCol.map_CaloHit["bkHit"].begin(), m_bkCol.map_CaloHit["bkHit"].end() );
   m_datacol.map_CaloCluster["bk3DCluster"].insert( m_datacol.map_CaloCluster["bk3DCluster"].end(), m_bkCol.map_CaloCluster["bk3DCluster"].begin(), m_bkCol.map_CaloCluster["bk3DCluster"].end() );
   m_datacol.map_PFObjects["bkPFO"].insert( m_datacol.map_PFObjects["bkPFO"].end(), m_bkCol.map_PFObjects["bkPFO"].begin(), m_bkCol.map_PFObjects["bkPFO"].end() );
+
 /*
- totE_Ecal = 0;
- totE_Hcal = 0;
+ double totE_Ecal = 0;
+ double totE_Hcal = 0;
  cout<<"After merge all virtual to Ch: charged "<<m_chargedPFOs.size()<<", neutral "<<m_neutralPFOs.size()<<", total "<<p_PFObjects->size()<<endl;
  for(int i=0; i<m_neutralPFOs.size(); i++){
    cout<<"    PFO #"<<i<<": track size "<<m_neutralPFOs[i]->getTracks().size()<<", leading P "<<m_neutralPFOs[i]->getTrackMomentum();
@@ -365,10 +368,11 @@ StatusCode PFOReclusteringAlg::ReCluster_MergeToChg(std::vector< std::shared_ptr
 
       double tmp_delta_E = delta_energy + settings.map_floatPars["HCALCalib"]*all_neutral_HCAL_clus[clus_index]->getHitsE();
 // cout<<"    If include this cluster: new deltaE "<<tmp_delta_E<<", merge = "<<(tmp_delta_E > sigmaE * settings.map_floatPars["VirtualMergeSigma"])<<endl;
+
       if(tmp_delta_E > sigmaE * settings.map_floatPars["VirtualMergeSigma"]){
         double absorbed_energy = sigmaE*settings.map_floatPars["VirtualMergeSigma"] - delta_energy;
         delta_energy = delta_energy + absorbed_energy;
-
+// cout<<"      Absorberd energy: "<<absorbed_energy<<", current delta energy "<<delta_energy<<endl;
 
         //Create a new virtual neutral cluster with energy = absorbed_energy. 
 
@@ -396,7 +400,6 @@ StatusCode PFOReclusteringAlg::ReCluster_MergeToChg(std::vector< std::shared_ptr
           if(tmp_HCAL_clus[0]==all_neutral_HCAL_clus[clus_index]){
             std::shared_ptr<Cyber::CaloHit> m_newhit = all_neutral_HCAL_clus[clus_index]->getCaloHits()[0]->Clone();
             m_newhit->setEnergy(all_neutral_HCAL_clus[clus_index]->getHitsE() - absorbed_energy/settings.map_floatPars["HCALCalib"] );
-
             std::shared_ptr<Cyber::Calo3DCluster> m_newclus = std::make_shared<Cyber::Calo3DCluster>();
             m_newclus->addHit(m_newhit.get());
             m_newclus->setType(-1);            
@@ -405,7 +408,7 @@ StatusCode PFOReclusteringAlg::ReCluster_MergeToChg(std::vector< std::shared_ptr
             m_bkCol.map_CaloCluster["bk3DCluster"].push_back(m_newclus);
 
             std::vector<const Calo3DCluster*> tmp_clusters; tmp_clusters.clear();
-            tmp_clusters.push_back(m_clus.get());
+            tmp_clusters.push_back(m_newclus.get());
             m_neutralPFOs[ip]->setHCALCluster( tmp_clusters );
 
             is_found = true;

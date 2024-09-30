@@ -75,6 +75,7 @@ CyberPFAlg.HCalMCPAssociationName = ["HCALBarrelParticleAssoCol"]
 
 ##--- Output collections ---
 CyberPFAlg.OutputPFO = "outputPFO";
+CyberPFAlg.RecoPFOCollection = "CyberPFO"
 
 #----Algorithms----
 CyberPFAlg.AlgList = ["GlobalClusteringAlg",      #1
