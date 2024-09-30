@@ -53,10 +53,16 @@ podioinput = PodioInput("PodioReader", collections=[
     "TPCCollection",
 #    "SETCollection",
     "OTKBarrelCollection",
-    "FTDCollection"
+    "FTDCollection",
+    "MuonBarrelCollection"
     ])
 
-# digitization
+
+##################
+# Digitization
+##################
+
+## Config ##
 vxdhitname  = "VXDTrackerHits"
 sithitname  = "SITTrackerHits"
 gashitname  = "TPCTrackerHits"
@@ -74,6 +80,8 @@ vxdtool.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952,
 vxdtool.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
 #vxdtool.OutputLevel = DEBUG
 
+
+## VXD ##
 from Configurables import SiTrackerDigiAlg
 digiVXD = SiTrackerDigiAlg("VXDDigi")
 digiVXD.SimTrackHitCollection = "VXDCollection"
@@ -82,6 +90,8 @@ digiVXD.TrackerHitAssociationCollection = "VXDTrackerHitAssociation"
 digiVXD.DigiTool = "SmearDigiTool/VXD"
 #digiVXD.OutputLevel = DEBUG
 
+
+## SIT ##
 from Configurables import PlanarDigiAlg
 digiSIT = PlanarDigiAlg("SITDigi")
 digiSIT.IsStrip = False
@@ -96,6 +106,8 @@ digiSIT.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566,
 digiSIT.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
 #digiSIT.OutputLevel = DEBUG
 
+
+## SET ##
 digiSET = PlanarDigiAlg("SETDigi")
 digiSET.IsStrip = False
 digiSET.SimTrackHitCollection = "OTKBarrelCollection"
@@ -109,6 +121,8 @@ digiSET.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566,
 digiSET.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
 #digiSET.OutputLevel = DEBUG
 
+
+## FTD ##
 digiFTD = PlanarDigiAlg("FTDDigi")
 digiFTD.IsStrip = False
 digiFTD.SimTrackHitCollection = "FTDCollection"
@@ -122,6 +136,7 @@ digiFTD.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566,
 digiFTD.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
 #digiFTD.OutputLevel = DEBUG
 
+## TPC ##
 from Configurables import TPCDigiAlg
 digiTPC = TPCDigiAlg("TPCDigi")
 digiTPC.TPCCollection = "TPCCollection"
@@ -136,7 +151,19 @@ digiTPC.TPCTrackerHitsCol = gashitname
 #digiTPC.N_eff = 30
 #digiTPC.OutputLevel = DEBUG
 
-# tracking
+
+## Muon Detector ##
+from Configurables import MuonDigiAlg
+digiMuon = MuonDigiAlg("MuonDigiAlg")
+digiMuon.MuonBarrelHitsCollection = "MuonBarrelCollection"
+digiMuon.MuonBarrelTrackerHits = "MuonBarrelTrackerHits"
+digiMuon.WriteNtuple = 0
+digiMuon.OutFileName = "Digi_MUON.root"
+#########################################
+
+################
+# Tracking
+################
 from Configurables import KalTestTool
 # Close multiple scattering and smooth, used by clupatra
 kt010 = KalTestTool("KalTest010")
@@ -258,7 +285,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 5,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
