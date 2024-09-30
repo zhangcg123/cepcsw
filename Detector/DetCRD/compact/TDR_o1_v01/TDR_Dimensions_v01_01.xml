@@ -51,6 +51,8 @@
     <constant name="DetID_ECAL_ENDCAP"  value=" 29"/>
     <constant name="DetID_HCAL_ENDCAP"  value=" 30"/>
     <constant name="DetID_YOKE_ENDCAP"  value=" 31"/>
+    <constant name="DetID_MUON"         value=" 10"/>
+    <constant name="DetID_MUON_ENDCAP"  value=" 11"/>
     
     <constant name="DetID_bwd"       value="-1"/>
     <constant name="DetID_barrel"    value=" 0"/>

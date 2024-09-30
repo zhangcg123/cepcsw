@@ -32,7 +32,7 @@
   </define>
 
   <detectors>
-    <detector id="20211" name="MuonEndcap" type="Muon_Endcap_v01_02" readout="MuonEndcapCollection" vis="GrayVis" material="Iron">
+    <detector id="DetID_MUON_ENDCAP" name="MuonEndcap" type="Muon_Endcap_v01_02" readout="MuonEndcapCollection" vis="GrayVis" material="Iron">
       <material name="Iron"/>
       <position x="0" y="Muon_endcap_endcap_posy" z="0"/>
       <dimensions rmin="Muon_endcap_endcap_rmin" dz="0.5*Muon_endcap_endcap_z"/>
@@ -79,6 +79,7 @@
 
   <readouts>
     <readout name="MuonEndcapCollection">
+      <segmentation type="NoSegmentation"/>
       <id>system:5,Env:5,Endcap:2,Superlayer:15:4,Layer:2,Stripe:9,SiPM:2</id>
       <!--id>Endcap:2,Superlayer:2,Env:2,Layer:2,Stripe:10:3,SiPM:2</id-->
     </readout>

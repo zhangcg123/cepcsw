@@ -49,7 +49,7 @@
   </define>
 
   <detectors>
-    <detector id="201" name="MuonBarrel" type="Muon_Barrel_v01_01" readout="MuonBarrelCollection" vis="WhiteVis">
+    <detector id="DetID_MUON" name="MuonBarrel" type="Muon_Barrel_v01_01" readout="MuonBarrelCollection" vis="WhiteVis">
       <position x="0" y="0" z="0"/>
       <barrel id="Muon_barrel_iron_part_num" name="Muon_barrel_barrel" type="Muon_barrel_barrel" vis="SeeThrough">
         <position x="0" y="Muon_barrel_barrel_posy" z="0"/>
@@ -107,6 +107,7 @@
 
   <readouts>
     <readout name="MuonBarrelCollection">
+      <segmentation type="NoSegmentation"/>
       <id>system:5,Env:5,Fe:5,Superlayer:4,Layer:2,Stripe:9,SiPM:2</id>
     </readout>
   </readouts>
