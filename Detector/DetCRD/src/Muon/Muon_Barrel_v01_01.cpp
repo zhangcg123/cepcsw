@@ -74,7 +74,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
       {
         xml_coll_t dcSuperlayer(x_Fe,Unicode("superlayer"));
         xml_comp_t x_superlayer = dcSuperlayer;
-        for(int i2 = 0; i2 < x_superlayer.id(); i2++)
+        for(int i2 = 0; i2 < x_superlayer.id(); i2++)  // FIXME:: 8 layers start from 0
         {
           std::string superlayer_name = x_superlayer.nameStr() + dd4hep::_toString(i1,"_%d") + dd4hep::_toString(i2,"_%d");
           std::string num_name = "Muon_barrel_strip_num" + dd4hep::_toString(i2,"_%d");

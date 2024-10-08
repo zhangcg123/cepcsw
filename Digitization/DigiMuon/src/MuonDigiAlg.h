@@ -38,7 +38,6 @@
 #include <TTimeStamp.h> 
 #include <ctime>
 #include <iostream>
-//#include <TRandom.h>
 #include <TMath.h>
 #define PI 3.141592653
 class MuonDigiAlg : public GaudiAlgorithm
@@ -53,27 +52,12 @@ class MuonDigiAlg : public GaudiAlgorithm
   void Clear();
 
 
-  // double EDepConvertADC(double edep){
-  //   rand.SetSeed(0);
-  //   randGen.SetSeed(0);
-  //   double adc = 0;
-  //   Double_t random_num = rand.Uniform(0, 1);
-  //   if(random_num>0.1){
-  //     double LandauRandom = randGen.Landau(47.09,7.922);
-  //     adc = LandauRandom * edep / 0.00141;
-  //   }
-  //   return random_num;
-  // }
-
-
-
  protected:
 
 
   TRandom3 rand_muon;
 
-  TTree* hitloop;
-  TTree* eventloop;
+  TTree* m_tree;
   TFile* m_wfile;
     
   SmartIF<IGeomSvc> m_geosvc;
@@ -81,22 +65,49 @@ class MuonDigiAlg : public GaudiAlgorithm
   dd4hep::rec::CellIDPositionConverter* m_cellIDConverter;
   dd4hep::Detector* m_dd4hep;
 
-  std::vector<unsigned long long> MuonBarrel_cellid;
-  std::vector<double> MuonBarrel_posx;
-  std::vector<double> MuonBarrel_posy;
-  std::vector<double> MuonBarrel_posz;
-  std::vector<unsigned long long> cellidtemp;
-  std::vector<double> edeptemp;
-  std::vector<double> ADCtemp;
-  std::vector<unsigned long long> MuonBarrel_stripcellid;
-  std::vector<double> MuonBarrel_stripedep;
+  std::map<unsigned long long, double> map_cell_edep;
+  std::map<unsigned long long, double> map_cell_adc;
+  std::map<unsigned long long, int> map_cell_layer;
+  std::map<unsigned long long, int> map_cell_slayer;
+  std::map<unsigned long long, int> map_cell_strip;
+  std::map<unsigned long long, int> map_cell_fe;
+  std::map<unsigned long long, int> map_cell_env;
 
 
+ 
+#define MAX_SIZE 10000 
+
+  int n_hit, n_cell;
+
+  unsigned long long hit_cellid[MAX_SIZE];
+  double hit_posx[MAX_SIZE];
+  double hit_posy[MAX_SIZE];
+  double hit_posz[MAX_SIZE];
+  double hit_edep[MAX_SIZE];
+  int hit_layer[MAX_SIZE];
+  int hit_slayer[MAX_SIZE];
+  int hit_strip[MAX_SIZE];
+  int hit_fe[MAX_SIZE];
+  int hit_env[MAX_SIZE];
+
+  unsigned long long cell_cellid[MAX_SIZE];
+  double cell_edep[MAX_SIZE];
+  double cell_adc[MAX_SIZE];
+  double cell_posx[MAX_SIZE];
+  double cell_posy[MAX_SIZE];
+  double cell_posz[MAX_SIZE];
+  int cell_layer[MAX_SIZE];
+  int cell_slayer[MAX_SIZE];
+  int cell_strip[MAX_SIZE];
+  int cell_fe[MAX_SIZE];
+  int cell_env[MAX_SIZE];
 
 
+  Gaudi::Property<int>   _writeNtuple{this,  "WriteNtuple", 1, "Write ntuple"};
+  Gaudi::Property<std::string> _filename{this, "OutFileName", "testout.root", "Output file name"};
 
-  mutable Gaudi::Property<int>   _writeNtuple{this,  "WriteNtuple", 1, "Write ntuple"};
-  mutable Gaudi::Property<std::string> _filename{this, "OutFileName", "testout.root", "Output file name"};
+  Gaudi::Property<double>  m_hitEff{ this, "hitEff", 0.9, "Efficiency of a single hit on a Strip" };
+
 
   // Input collections
   DataHandle<edm4hep::SimTrackerHitCollection>            m_inputMuonBarrel{"MuonBarrelHitsCollection", Gaudi::DataHandle::Reader, this};
