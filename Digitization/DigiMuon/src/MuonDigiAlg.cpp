@@ -23,8 +23,6 @@
 #include <DDRec/CellIDPositionConverter.h>
 
 #include "TVector3.h"
-//#include "TRandom3.h"
-//#include <TRandom.h>
 #include <math.h>
 #include <cmath>
 #include <iostream>
@@ -61,14 +59,30 @@ StatusCode MuonDigiAlg::initialize()
   {
     std::string s_outfile = _filename;
     m_wfile = new TFile(s_outfile.c_str(), "recreate");
-    hitloop = new TTree("h1", "muonbarreldigi_hitloop");
-    eventloop = new TTree("e1", "muonbarreldigi_eventloop");
-    hitloop->Branch("MuonBarrel_cellid", &MuonBarrel_cellid);
-    hitloop->Branch("MuonBarrel_posx", &MuonBarrel_posx);
-    hitloop->Branch("MuonBarrel_posy", &MuonBarrel_posy);
-    hitloop->Branch("MuonBarrel_posz", &MuonBarrel_posz);
-    eventloop->Branch("MuonBarrel_stripcellid", &MuonBarrel_stripcellid);
-    eventloop->Branch("MuonBarrel_stripedep", &MuonBarrel_stripedep);
+    m_tree = new TTree("tree", "muon digi tree");
+    m_tree->Branch("n_hit", &n_hit, "n_hit/I");
+    m_tree->Branch("hit_cellid", hit_cellid, "hit_cellid[n_hit]/l");
+    m_tree->Branch("hit_posx", hit_posx, "hit_posx[n_hit]/D");
+    m_tree->Branch("hit_posy", hit_posy, "hit_posy[n_hit]/D");
+    m_tree->Branch("hit_posz", hit_posz, "hit_posz[n_hit]/D");
+    m_tree->Branch("hit_edep", hit_edep, "hit_edep[n_hit]/D");
+    m_tree->Branch("hit_layer", hit_layer, "hit_layer[n_hit]/I");
+    m_tree->Branch("hit_slayer", hit_slayer, "hit_slayer[n_hit]/I");
+    m_tree->Branch("hit_strip", hit_strip, "hit_strip[n_hit]/I");
+    m_tree->Branch("hit_fe", hit_fe, "hit_fe[n_hit]/I");
+    m_tree->Branch("hit_env", hit_env, "hit_env[n_hit]/I");
+    m_tree->Branch("n_cell", &n_cell, "n_cell/I");
+    m_tree->Branch("cell_cellid", cell_cellid, "cell_cellid[n_cell]/l");
+    m_tree->Branch("cell_edep", cell_edep, "cell_edep[n_cell]/D");
+    m_tree->Branch("cell_adc", cell_adc, "cell_adc[n_cell]/D");
+    m_tree->Branch("cell_posx", cell_posx, "cell_posx[n_cell]/D");
+    m_tree->Branch("cell_posy", cell_posy, "cell_posy[n_cell]/D");
+    m_tree->Branch("cell_posz", cell_posz, "cell_posz[n_cell]/D");
+    m_tree->Branch("cell_layer", cell_layer, "cell_layer[n_cell]/I");
+    m_tree->Branch("cell_slayer", cell_slayer, "cell_slayer[n_cell]/I");
+    m_tree->Branch("cell_strip", cell_strip, "cell_strip[n_cell]/I");
+    m_tree->Branch("cell_fe", cell_fe, "cell_fe[n_cell]/I");
+    m_tree->Branch("cell_env", cell_env, "cell_env[n_cell]/I");
   }
 
 
@@ -100,6 +114,8 @@ StatusCode MuonDigiAlg::initialize()
     return StatusCode::FAILURE;
   }
 
+  debug() << "m_hitEff: " << m_hitEff << endmsg;
+ 
   info() << "MuonDigiAlg::initialized" << endmsg;
   return GaudiAlgorithm::initialize();
 }
@@ -112,7 +128,6 @@ StatusCode MuonDigiAlg::execute()
   Clear();
   trkhitVec = m_outputMuonBarrel.createAndPut();
   //auto assVec = m_assMuonBarrel.createAndPut();
-
 
   const edm4hep::SimTrackerHitCollection* STHCol = nullptr;
   try 
@@ -130,111 +145,141 @@ StatusCode MuonDigiAlg::execute()
 
   int strip_length[8] = {17, 29, 41, 53, 65, 77, 89, 101};
 
+  // define variables to be repeatedly used later
+  unsigned long long cellid; 
+  double Edep, ADC, ADCmean;
+  int layer, slayer, strip, Fe, Env;
+  edm4hep::Vector3d pos;
+  dd4hep::Position ddpos;
+  // loop over all hits
   for(auto simhit : *STHCol)
   {
-    auto cellid = simhit.getCellID();
-    auto Edep   = simhit.getEDep();//GeV
-    int  layer  = m_decoder->get(cellid, "Layer");
-    int  slayer = m_decoder->get(cellid, "Superlayer");
-    int  strip  = m_decoder->get(cellid, "Stripe");
-    int  Fe     = m_decoder->get(cellid, "Fe");
-    int  Env    = m_decoder->get(cellid, "Env");
-    auto& pos = simhit.getPosition();
+    cellid = simhit.getCellID();
+    Edep   = simhit.getEDep();//GeV
+    layer  = m_decoder->get(cellid, "Layer");
+    slayer = m_decoder->get(cellid, "Superlayer");
+    strip  = m_decoder->get(cellid, "Stripe");
+    Fe     = m_decoder->get(cellid, "Fe");
+    Env    = m_decoder->get(cellid, "Env");
+    pos = simhit.getPosition();
 
-    dd4hep::Position hitpos = m_cellIDConverter->position(cellid);
-    debug() << "Position::   " << hitpos.x() << " " << hitpos.y() << " " << hitpos.z() << endmsg;
+    ddpos = m_cellIDConverter->position(cellid);
+    debug() << "Position::   " << ddpos.x() << " " << ddpos.y() << " " << ddpos.z() << endmsg;
 
-    int testtemp = 0;
-    if(Edep<0.01&&Edep>0.0001)
+    // if not satisfy energy requirement, skip this hit
+    if ( Edep>0.01 || Edep<0.0001 ) continue;
+    
+    //calculate hit strip length
+    double hit_strip_length = std::sqrt((ddpos.x()-pos[0]*0.1)*(ddpos.x()-pos[0]*0.1)+(ddpos.y()-pos[1]*0.1)*(ddpos.y()-pos[1]*0.1)+(ddpos.z()-pos[2]*0.1)*(ddpos.z()-pos[2]*0.1));
+    double hit_sipm_length;
+    
+    if(layer == 1)
     {
-      double hit_strip_length = std::sqrt((hitpos.x()-pos[0]*0.1)*(hitpos.x()-pos[0]*0.1)+(hitpos.y()-pos[1]*0.1)*(hitpos.y()-pos[1]*0.1)+(hitpos.z()-pos[2]*0.1)*(hitpos.z()-pos[2]*0.1));
-      double hit_sipm_length;
-      if(layer == 1)
+      int tempnum = Env + slayer;
+      if(tempnum%2 == 0)
       {
-        int tempnum = Env + slayer;
-        if(tempnum%2 == 0)
-        {
-          hit_sipm_length = 115 * 2 - hit_strip_length;
-        }
-        else
-        {
-          hit_sipm_length = 106 * 2 - hit_strip_length;
-        }
-      } 
-      if(layer == 2)
-      {
-        hit_sipm_length = strip_length[slayer-1] * 2 - hit_strip_length;
+        hit_sipm_length = 115 * 2 - hit_strip_length;
       }
-
-      double ADCmean = 34*Edep*47.09/(23*0.00141);//mV
-      if(hit_sipm_length>10)
+      else
       {
-        ADCmean = (16.0813*std::exp(-1*hit_sipm_length/50.8147)+19.5474)*Edep*47.09/(23*0.00141);//mV
+        hit_sipm_length = 106 * 2 - hit_strip_length;
       }
-      double ADC = rand_muon.Landau(ADCmean,7.922);
-      if(ADC<0)
-      {
-        ADC = 0;
-      }
-      //std::cout<<hit_sipm_length<<" "<<Edep<<" "<<ADCmean<<" "<<ADC<<std::endl;
-
-      if(cellidtemp.size()>0)
-      {
-        for(int i=0; i<cellidtemp.size(); i++)
-        {
-          if(cellid == cellidtemp[i])
-          {
-            edeptemp[i]+=Edep;
-            ADCtemp[i]+=ADC;
-            testtemp++;
-            break;
-          }
-        }
-      }
-      if(testtemp==0)
-      {
-        cellidtemp.push_back(cellid);
-        edeptemp.push_back(Edep);
-        ADCtemp.push_back(ADC);
-      }
-      if(_writeNtuple)
-      {
-        MuonBarrel_cellid.push_back(cellid);
-        MuonBarrel_posx.push_back(pos[0]);
-        MuonBarrel_posy.push_back(pos[1]);
-        MuonBarrel_posz.push_back(pos[2]);
-      }
+    } 
+    if(layer == 2)
+    {
+      hit_sipm_length = strip_length[slayer-1] * 2 - hit_strip_length;
     }
+
+    // digitize to ADC 
+    ADCmean = 34*Edep*47.09/(23*0.00141);//mV
+    if(hit_sipm_length>10)
+    {
+      ADCmean = (16.0813*std::exp(-1*hit_sipm_length/50.8147)+19.5474)*Edep*47.09/(23*0.00141);//mV
+    }
+    ADC = rand_muon.Landau(ADCmean,7.922);
+    if(ADC<0)
+    {
+      ADC = 0;
+    }
+
+    // fill the cell loop
+    map_cell_edep[cellid] += Edep;
+    map_cell_adc[cellid] += ADC;
+    map_cell_layer[cellid] = layer;
+    map_cell_slayer[cellid] = slayer;
+    map_cell_strip[cellid] = strip;
+    map_cell_fe[cellid] = Fe;
+    map_cell_env[cellid] = Env;
+
+    // write to tree
+    if(_writeNtuple)
+    {
+      hit_cellid[n_hit] = cellid;
+      hit_posx[n_hit] = pos[0];
+      hit_posy[n_hit] = pos[1];
+      hit_posz[n_hit] = pos[2];
+      hit_edep[n_hit] = Edep;
+      hit_layer[n_hit] = layer;
+      hit_slayer[n_hit] = slayer;
+      hit_strip[n_hit] = strip;
+      hit_fe[n_hit] = Fe;
+      hit_env[n_hit] = Env;
+      n_hit++;
+    }
+    
   }
 
-  for(int i=0; i<cellidtemp.size(); i++)
+  // loop over all cells 
+  for (const auto& item : map_cell_edep) 
   {
-    if(edeptemp[i]>0.0005&&edeptemp[i]<0.005&&ADCtemp[i]<1000)
+    cellid = item.first;
+    Edep = map_cell_edep[cellid];
+    ADC = map_cell_adc[cellid];
+    layer = map_cell_layer[cellid];
+    slayer = map_cell_slayer[cellid];
+    strip = map_cell_strip[cellid];
+    Fe = map_cell_fe[cellid];
+    Env = map_cell_env[cellid];
+  
+    if ( Edep < 0.0005 ) continue;  // skip cell energy < 50 MeV ?? Why?
+    //if ( Edep > 0.005 ) continue; // skip cell energy > 500 MeV ?? Why?
+    //if ( ADC > 10000 ) continue;  // skip cell energy > 1000 ADC counts? why?
+
+    // simulate hit efficiency: random > hiteff, skip the hit
+    if( rand_muon.Uniform(0, 1) > m_hitEff) continue;
+
+    // store to raw hit
+    edm4hep::MutableTrackerHit trkHit;
+    ddpos = m_cellIDConverter->position(cellid);
+    pos = edm4hep::Vector3d(ddpos.x(),ddpos.y(),ddpos.z());
+    trkHit.setEDep(ADC);
+    trkHit.setCellID(cellid);
+    trkHit.setPosition(pos);
+    trkhitVec->push_back( trkHit );
+
+
+    // write for out ntuple
+    if(_writeNtuple)
     {
-      double random_num = rand_muon.Uniform(0, 1);
-      if(random_num>0.1)
-      {
-        if(_writeNtuple)
-        {
-          MuonBarrel_stripcellid.push_back(cellidtemp[i]);
-          MuonBarrel_stripedep.push_back(edeptemp[i]);
-        }
-        edm4hep::MutableTrackerHit trkHit;
-        dd4hep::Position hitpos1 = m_cellIDConverter->position(cellidtemp[i]);
-        edm4hep::Vector3d position_strip(hitpos1.x(),hitpos1.y(),hitpos1.z());
-        //std::cout<<"Position::   "<<hitpos.x()<<" "<<hitpos.y()<<" "<<hitpos.z()<<std::endl;
-        trkHit.setEDep(ADCtemp[i]);
-        trkHit.setCellID(cellidtemp[i]);
-        trkHit.setPosition(position_strip);
-        trkhitVec->push_back( trkHit );
-      }
+      cell_cellid[n_cell] = cellid;
+      cell_edep[n_cell] = Edep;
+      cell_adc[n_cell] = ADC;
+      cell_posx[n_cell] = pos[0];
+      cell_posy[n_cell] = pos[1];
+      cell_posz[n_cell] = pos[2];
+      cell_layer[n_cell] = layer;
+      cell_slayer[n_cell] = slayer;
+      cell_strip[n_cell] = strip;
+      cell_fe[n_cell] = Fe;
+      cell_env[n_cell] = Env;
+      n_cell++;
     }
+
   }
 
   if(_writeNtuple)
   {
-    hitloop->Fill();
-    eventloop->Fill();
+    m_tree->Fill();
   }
 
   m_nEvt++;
@@ -247,10 +292,9 @@ StatusCode MuonDigiAlg::finalize()
   if(_writeNtuple)
   {
     m_wfile->cd();
-    hitloop->Write();
-    eventloop->Write();
+    m_tree->Write();
     m_wfile->Close();
-    delete m_wfile, hitloop, eventloop; 
+    delete m_wfile, m_tree;
   } 
   info() << "Processed " << m_nEvt << " events " << endmsg;
   return GaudiAlgorithm::finalize();
@@ -258,13 +302,14 @@ StatusCode MuonDigiAlg::finalize()
 
 void MuonDigiAlg::Clear()
 {
-  MuonBarrel_cellid.clear();
-  MuonBarrel_posx.clear();
-  MuonBarrel_posy.clear();
-  MuonBarrel_posz.clear();
-  MuonBarrel_stripcellid.clear();
-  MuonBarrel_stripedep.clear();
-  cellidtemp.clear();
-  edeptemp.clear();
-  ADCtemp.clear();
+  n_hit = 0;
+  n_cell = 0;
+  map_cell_edep.clear();
+  map_cell_adc.clear();
+  map_cell_layer.clear();
+  map_cell_slayer.clear();
+  map_cell_strip.clear();
+  map_cell_fe.clear();
+  map_cell_env.clear();
+
 }
