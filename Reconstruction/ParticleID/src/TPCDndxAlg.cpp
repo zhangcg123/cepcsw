@@ -1,6 +1,7 @@
 #include "TPCDndxAlg.h"
 #include "DataHelper/HelixClass.h"
 #include "DataHelper/Navigation.h"
+#include "DetIdentifier/CEPCConf.h"
 
 #include "edm4hep/Hypothesis.h"
 #include "edm4hep/MCParticle.h"
@@ -16,8 +17,8 @@ DECLARE_COMPONENT(TPCDndxAlg)
 
 TPCDndxAlg::TPCDndxAlg(const std::string& name, ISvcLocator* svcLoc) : GaudiAlgorithm(name, svcLoc) {
     // Input
-    declareProperty("ClupatraTracks", _trackCol, "handler of the input track collection");
-    declareProperty("ClupatraTracksParticleAssociation", _trkParAssCol, "handler of the input track particle association collection");
+    declareProperty("CompleteTracks", _trackCol, "handler of the input track collection");
+    declareProperty("CompleteTracksParticleAssociation", _trkParAssCol, "handler of the input track particle association collection");
 
     // Output
     declareProperty("DndxTracks", _dndxCol, "handler of the collection of dN/dx tracks");
@@ -31,6 +32,18 @@ StatusCode TPCDndxAlg::initialize() {
     }
     else {
         m_pid_svc = nullptr;
+    }
+
+    m_geosvc = service<IGeomSvc>("GeomSvc");
+    if (!m_geosvc) {
+        error() << "Could not find GeomSvc!" << endmsg;
+        return StatusCode::FAILURE;
+    }
+
+    m_decoder = m_geosvc->getDecoder("TPCCollection");
+    if (!m_decoder) {
+        error() << "Could not find TPC decoder!" << endmsg;
+        return StatusCode::FAILURE;
     }
 
     return GaudiAlgorithm::initialize();
@@ -99,8 +112,7 @@ StatusCode TPCDndxAlg::execute() {
             }
         }
         if (trk_par.tanLambda > 0.1) {
-            ihit_first = 0;
-            ihit_last = nhits - 1;
+            getFirstAndLastHitsByZ(hitcol, ihit_first, ihit_last);
         }
         else {
             getFirstAndLastHitsByRadius(hitcol, ihit_first, ihit_last);
@@ -162,15 +174,18 @@ StatusCode TPCDndxAlg::finalize() {
 
 void TPCDndxAlg::getFirstAndLastHitsByRadius(const podio::RelationRange<edm4hep::TrackerHit>& hitcol, int& first, int& last) {
     bool first_hit = true;
-    double rmin, rmax;
+    double rmin(-999.), rmax(-999.);
     for (size_t ihit = 0; ihit < hitcol.size(); ihit++) {
         auto hit = hitcol[ihit];
+        auto cellid = hit.getCellID();
+        auto sysid = m_decoder->get(cellid, "system");
+        if (sysid != CEPCConf::DetID::TPC) {
+            continue;
+        }
+
         double x = hit.getPosition()[0];
         double y = hit.getPosition()[1];
         double r = sqrt(x*x + y*y);
-        // if (!isCDCHit(&hit)) {
-        //     continue;
-        // }
         if (first_hit) {
             rmin = r;
             rmax = r;
@@ -185,6 +200,38 @@ void TPCDndxAlg::getFirstAndLastHitsByRadius(const podio::RelationRange<edm4hep:
             }
             if (r > rmax) {
                 rmax = r;
+                last = ihit;
+            }
+        }
+    }
+}
+
+void TPCDndxAlg::getFirstAndLastHitsByZ(const podio::RelationRange<edm4hep::TrackerHit>& hitcol, int& first, int& last) {
+    bool first_hit = true;
+    double zmin(-999.), zmax(-999.);
+    for (size_t ihit = 0; ihit < hitcol.size(); ihit++) {
+        auto hit = hitcol[ihit];
+        auto cellid = hit.getCellID();
+        auto sysid = m_decoder->get(cellid, "system");
+        if (sysid != CEPCConf::DetID::TPC) {
+            continue;
+        }
+
+        double z = hit.getPosition()[2];
+        if (first_hit) {
+            zmin = z;
+            zmax = z;
+            first = ihit;
+            last = ihit;
+            first_hit = false;
+        }
+        else {
+            if (z < zmin) {
+                zmin = z;
+                first = ihit;
+            }
+            if (z > zmax) {
+                zmax = z;
                 last = ihit;
             }
         }

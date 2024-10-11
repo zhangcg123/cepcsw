@@ -13,6 +13,7 @@
 
 #include "GaudiAlg/GaudiAlgorithm.h"
 
+#include "DetInterface/IGeomSvc.h"
 #include "SimplePIDSvc/ISimplePIDSvc.h"
 
 /**
@@ -31,14 +32,17 @@ public:
 
 protected:
     Gaudi::Property<std::string> m_method{this, "Method", "Simple"};
+    SmartIF<IGeomSvc> m_geosvc;
+    dd4hep::DDSegmentation::BitFieldCoder* m_decoder;
 
-    DataHandle<edm4hep::TrackCollection> _trackCol{"ClupatraTracks", Gaudi::DataHandle::Reader, this};
-    DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> _trkParAssCol{"ClupatraTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
+    DataHandle<edm4hep::TrackCollection> _trackCol{"CompleteTracks", Gaudi::DataHandle::Reader, this};
+    DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> _trkParAssCol{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
     DataHandle<edm4hep::RecDqdxCollection> _dndxCol{"DndxTracks", Gaudi::DataHandle::Writer, this};
 
 private:
     SmartIF<ISimplePIDSvc> m_pid_svc;
     void getFirstAndLastHitsByRadius(const podio::RelationRange<edm4hep::TrackerHit>& hitcol, int& first, int& last);
+    void getFirstAndLastHitsByZ(const podio::RelationRange<edm4hep::TrackerHit>& hitcol, int& first, int& last);
 };
 
 #endif
