@@ -15,14 +15,14 @@
     <constant name="Muon_endcap_part_num" value="4"/>
     <constant name="Muon_endcap_superlayer_num" value="6"/>
     <constant name="Muon_endcap_layer_num" value="2"/>
-    <constant name="Muon_endcap_strip_num_1" value="72"/>
-    <constant name="Muon_endcap_strip_num_2" value="128"/>
-    <constant name="Muon_endcap_strip_num_cut_1" value="17"/>
-    <constant name="Muon_endcap_strip_num_cut_2" value="74"/>
-    <constant name="Muon_endcap_endcap_rmin" value="68*cm"/>
-    <constant name="Muon_endcap_length_cut_1" value="288*cm"/>
-    <constant name="Muon_endcap_length_cut_gap" value="296*cm"/>
-    <constant name="Muon_endcap_length_cut_2" value="512*cm"/>
+    <constant name="Muon_endcap_strip_num_1" value="68"/>
+    <constant name="Muon_endcap_strip_num_2" value="125"/>
+    <constant name="Muon_endcap_strip_num_cut_1" value="15"/>
+    <constant name="Muon_endcap_strip_num_cut_2" value="70"/>
+    <constant name="Muon_endcap_endcap_rmin" value="60*cm"/>
+    <constant name="Muon_endcap_length_cut_1" value="272*cm"/>
+    <constant name="Muon_endcap_length_cut_gap" value="280*cm"/>
+    <constant name="Muon_endcap_length_cut_2" value="500*cm"/>
     <constant name="Muon_endcap_gap" value="5*cm"/>
 
     <constant name="Muon_endcap_iron_gap" value="14*cm"/>
