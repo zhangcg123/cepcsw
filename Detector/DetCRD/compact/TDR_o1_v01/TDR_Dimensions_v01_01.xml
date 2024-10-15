@@ -260,7 +260,7 @@
     <constant name="Muon_strip_cut2_posz" value="0"/>
 
     <!--standard scale-->
-    <constant name="Muon_standard_scale" value="124*cm"/>    
+    <constant name="Muon_standard_scale" value="94*cm"/>    
     <!--constant name="Muon_total_length" value="8950*mm"/--><!--overlap with coil and hcal-->
     <constant name="Muon_total_length" value="Yoke_endcap_zmin*2"/>
 

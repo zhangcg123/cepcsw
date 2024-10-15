@@ -12,15 +12,15 @@
 
   <define>
     <!--Muon Barrel-->
-    <constant name="Muon_barrel_superlayer_num" value="8"/>
-    <constant name="Muon_barrel_strip_num_0" value="17"/>
-    <constant name="Muon_barrel_strip_num_1" value="29"/>
-    <constant name="Muon_barrel_strip_num_2" value="41"/>
-    <constant name="Muon_barrel_strip_num_3" value="53"/>
-    <constant name="Muon_barrel_strip_num_4" value="65"/>
-    <constant name="Muon_barrel_strip_num_5" value="77"/>
-    <constant name="Muon_barrel_strip_num_6" value="89"/>
-    <constant name="Muon_barrel_strip_num_7" value="101"/>
+    <constant name="Muon_barrel_superlayer_num" value="6"/>
+    <constant name="Muon_barrel_strip_num_0" value="26"/>
+    <constant name="Muon_barrel_strip_num_1" value="38"/>
+    <constant name="Muon_barrel_strip_num_2" value="50"/>
+    <constant name="Muon_barrel_strip_num_3" value="62"/>
+    <constant name="Muon_barrel_strip_num_4" value="74"/>
+    <constant name="Muon_barrel_strip_num_5" value="86"/>
+    <!--constant name="Muon_barrel_strip_num_6" value="89"/>
+    <constant name="Muon_barrel_strip_num_7" value="101"/-->
     <constant name="Muon_barrel_strip_num_fixed_0" value="106"/>
     <constant name="Muon_barrel_strip_num_fixed_1" value="115"/>
 
@@ -32,7 +32,7 @@
     <constant name="Muon_barrel_barrel_y" value="Muon_barrel_iron_y"/>
     <constant name="Muon_barrel_barrel_posy" value="0.5*Muon_barrel_barrel_y"/>
 
-    <constant name="Muon_barrel_superlayer_init" value="-48*cm"/>
+    <constant name="Muon_barrel_superlayer_init" value="-35*cm"/>
     <constant name="Muon_barrel_superlayer_gap" value="14*cm"/>
     <constant name="Muon_barrel_superlayer_endcap_gap" value="10*cm"/>
     <constant name="Muon_barrel_superlayer_air_gap" value="1*cm"/>
@@ -42,7 +42,7 @@
     <!--constant name="Muon_barrel_superlayer_z" value="Muon_strip_z+2*Muon_strip_surf+2*Muon_barrel_superlayer_air_gap"/-->
 
     <!--Checkout-->
-    <constant name="Muon_barrel_inner_radius" value="4245*mm"/>
+    <!--constant name="Muon_barrel_inner_radius" value="4245*mm"/-->
     <constant name="Muon_barrel_barrel_num" value="2"/>
     <constant name="Muon_barrel_iron_part_num" value="12"/>
 

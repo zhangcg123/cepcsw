@@ -143,7 +143,9 @@ StatusCode MuonDigiAlg::execute()
   debug() << m_inputMuonBarrel.fullKey() << " has SimTrackerHit "<< STHCol->size() << endmsg;
   
 
-  int strip_length[8] = {17, 29, 41, 53, 65, 77, 89, 101};
+  // number of strips parallel to beam direction 
+  // in each slayer, each strip width=4cm, so 
+  int strip_length[6] = {26, 38, 50, 62, 74, 86};
 
   // define variables to be repeatedly used later
   unsigned long long cellid; 
@@ -167,7 +169,7 @@ StatusCode MuonDigiAlg::execute()
     debug() << "Position::   " << ddpos.x() << " " << ddpos.y() << " " << ddpos.z() << endmsg;
 
     // if not satisfy energy requirement, skip this hit
-    if ( Edep>0.01 || Edep<0.0001 ) continue;
+    //if ( Edep>0.01 || Edep<0.0001 ) continue;
     
     //calculate hit strip length
     double hit_strip_length = std::sqrt((ddpos.x()-pos[0]*0.1)*(ddpos.x()-pos[0]*0.1)+(ddpos.y()-pos[1]*0.1)*(ddpos.y()-pos[1]*0.1)+(ddpos.z()-pos[2]*0.1)*(ddpos.z()-pos[2]*0.1));
@@ -178,16 +180,24 @@ StatusCode MuonDigiAlg::execute()
       int tempnum = Env + slayer;
       if(tempnum%2 == 0)
       {
-        hit_sipm_length = 115 * 2 - hit_strip_length;
+        // 115 is the number of strips parpendicular 
+        // to the beam axis in long-half-barrel
+        hit_sipm_length = (115 * 4.0)/2 - hit_strip_length;
       }
       else
       {
-        hit_sipm_length = 106 * 2 - hit_strip_length;
+        // 106 is the number of strips parpendicular 
+        // to the beam axis in short-half-barrel
+        hit_sipm_length = (106 * 4.0)/2 - hit_strip_length;
       }
     } 
     if(layer == 2)
     {
-      hit_sipm_length = strip_length[slayer-1] * 2 - hit_strip_length;
+      // number of strips parallel to beam direction 
+      // in each slayer, each strip width=4cm, so 
+      // the number * 4 cm gives the length of strips 
+      // in each slayer parpendicular to the beam axis
+      hit_sipm_length = (strip_length[slayer-1] * 4)/2 - hit_strip_length;
     }
 
     // digitize to ADC 

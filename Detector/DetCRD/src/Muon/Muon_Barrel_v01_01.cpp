@@ -56,12 +56,13 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
       xml_dim_t Fe_pos(x_Fe.child(_U(position)));
       xml_dim_t Fe_dim(x_Fe.child(_U(dimensions)));
 
-      double Fe_halfX1 =  (theDetector.constant<double>("Muon_barrel_inner_radius") + theDetector.constant<double>("Muon_barrel_iron_z")) / ( 2 + std::sqrt(3) ) - theDetector.constant<double>("Muon_barrel_iron_z");
+      //double Fe_halfX1 =  (theDetector.constant<double>("Muon_barrel_inner_radius") + theDetector.constant<double>("Muon_barrel_iron_z")) / ( 2 + std::sqrt(3) ) - theDetector.constant<double>("Muon_barrel_iron_z");
+      double Fe_halfX1 = 0.5 * theDetector.constant<double>("Muon_standard_scale");
       double Fe_halfX2 = Fe_halfX1 + theDetector.constant<double>("Muon_barrel_iron_z") * std::sqrt(3);
       //double Fe_halfX1 = 0.5 * 459.403*dd4hep::mm;
       //double Fe_halfX2 = 0.5 * 4754.889 * dd4hep::mm;
-      //double Fe_posZ = -1 * theDetector.constant<double>("Muon_barrel_iron_x1") * ( 2.5 + 1.5 * std::sqrt(3) );
-      double Fe_posZ = -1 * ( theDetector.constant<double>("Muon_barrel_inner_radius") + 0.5 * theDetector.constant<double>("Muon_barrel_iron_z") );
+      double Fe_posZ = -1 * theDetector.constant<double>("Muon_standard_scale") * ( 2.5 + 1.5 * std::sqrt(3) );
+      //double Fe_posZ = -1 * ( theDetector.constant<double>("Muon_barrel_inner_radius") + 0.5 * theDetector.constant<double>("Muon_barrel_iron_z") );
       dd4hep::Assembly env_vol(env_name);
       double env_rot = i0 * 360 * dd4hep::degree / x_env.id();
       dd4hep::Transform3D env_transform(dd4hep::Rotation3D(dd4hep::RotationY(env_rot)),dd4hep::Position(env_pos.x(), 0,env_pos.z()));
