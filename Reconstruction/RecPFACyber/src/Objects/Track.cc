@@ -42,7 +42,7 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float d0 = -99.;
     for(auto it: trkStates){
-      if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
+      if(it.location==Cyber::TrackState::AtIP){
         d0 = it.D0;
       }
     }
@@ -54,7 +54,7 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float z0 = -99.;
     for(auto it: trkStates){
-      if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
+      if(it.location==Cyber::TrackState::AtIP){
         z0 = it.Z0;
       }
     }
@@ -67,7 +67,7 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float pt = -99.;
     for(auto it: trkStates){
-      if(it.location==4 || it.location==1){  //Calorimeter(for real track) or IP (for truth track)
+      if(it.location==Cyber::TrackState::AtIP){ 
         pt = 1./fabs(it.Kappa);
       }
     }
@@ -79,7 +79,7 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float pz = -99.;
     for(auto it: trkStates){
-      if( (m_type!=0 && it.location==4) || (m_type==0 && it.location==1)){ //Calorimeter(for real track) or IP (for truth track)
+      if( it.location==Cyber::TrackState::AtIP ){
         pz = it.tanLambda/fabs(it.Kappa);
       }
     }
@@ -93,7 +93,7 @@ namespace Cyber{
     float pt = -99.;
     float pz = -99.;
     for(auto it: trkStates){
-      if((m_type!=0 && it.location==4) || (m_type==0 && it.location==1)){  //Calorimeter(for real track) or IP (for truth track)
+      if(it.location==Cyber::TrackState::AtIP){ 
         pt = 1./fabs(it.Kappa);
         phi = it.phi0;
         pz = it.tanLambda/fabs(it.Kappa);
@@ -108,7 +108,7 @@ namespace Cyber{
     std::vector<TrackState> trkStates = getTrackStates("Input");
     float omega = -99.;
     for(auto it: trkStates){
-      if((m_type!=0 && it.location==4) || (m_type==0 && it.location==1)){ //Calorimeter(for real track) or IP (for truth track)
+      if(it.location==Cyber::TrackState::AtIP){ 
         omega = it.Omega;
       }
     }

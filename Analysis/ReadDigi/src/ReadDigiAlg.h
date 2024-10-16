@@ -9,6 +9,7 @@
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
 #include "HelixClassD.hh"
 
 #include "TFile.h"
@@ -32,20 +33,23 @@ public :
 private :
   DataHandle<edm4hep::MCParticleCollection> m_MCParticleCol{"MCParticle", Gaudi::DataHandle::Reader, this};
 
-  DataHandle<edm4hep::TrackerHitCollection> m_SITRawColHdl{"SITTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_SETRawColHdl{"SETTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_FTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};  
+  //DataHandle<edm4hep::TrackerHitCollection> m_SITRawColHdl{"SITTrackerHits", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_SETRawColHdl{"SETTrackerHits", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_FTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};  
 
-  DataHandle<edm4hep::TrackerHitCollection> m_VTXTrackerHitColHdl{"VTXTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_SITTrackerHitColHdl{"SITSpacePoints", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_TPCTrackerHitColHdl{"TPCTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_SETTrackerHitColHdl{"SETSpacePoints", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_FTDSpacePointColHdl{"FTDSpacePoints", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_FTDPixelTrackerHitColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_VTXTrackerHitColHdl{"VTXTrackerHits", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_SITTrackerHitColHdl{"SITSpacePoints", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_TPCTrackerHitColHdl{"TPCTrackerHits", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_SETTrackerHitColHdl{"SETSpacePoints", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_FTDSpacePointColHdl{"FTDSpacePoints", Gaudi::DataHandle::Reader, this};
+  //DataHandle<edm4hep::TrackerHitCollection> m_FTDPixelTrackerHitColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
 
   DataHandle<edm4hep::TrackCollection>      m_SiTrk{"SiTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>      m_TPCTrk{"ClupatraTracks", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackCollection>      m_fullTrk{"MarlinTrkTracks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::TrackCollection>      m_fullTrk{"CompleteTracks", Gaudi::DataHandle::Reader, this};
+
+  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_TPCTrkAssoHdl{"ClupatraTracksParticleAssociation",  Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_fullTrkAssoHdl{"CompleteTracksParticleAssociation",  Gaudi::DataHandle::Reader, this};
 
   //DataHandle<edm4hep::SimCalorimeterHitCollection> m_ECalBarrelHitCol{"EcalBarrelCollection", Gaudi::DataHandle::Reader, this};
   //DataHandle<edm4hep::SimCalorimeterHitCollection> m_ECalEndcapHitCol{"EcalEndcapCollection", Gaudi::DataHandle::Reader, this};
@@ -62,7 +66,7 @@ private :
 
   int _nEvt; 
   TFile *m_wfile;
-  TTree *m_mctree, *m_trktree;
+  TTree *m_mctree, *m_sitrktree, *m_tpctrktree, *m_fulltrktree;
 
   //MCParticle
   int N_MCP;
@@ -71,10 +75,13 @@ private :
 
   //Tracker 
   int N_SiTrk, N_TPCTrk, N_fullTrk;
-  int N_VTXhit, N_SIThit, N_TPChit, N_SEThit, N_FTDhit, N_SITrawhit, N_SETrawhit;
+  //int N_VTXhit, N_SIThit, N_TPChit, N_SEThit, N_FTDhit, N_SITrawhit, N_SETrawhit;
   FloatVec m_trk_px, m_trk_py, m_trk_pz, m_trk_p;
-  FloatVec m_trk_endpoint_x, m_trk_endpoint_y, m_trk_endpoint_z, m_trk_startpoint_x, m_trk_startpoint_y, m_trk_startpoint_z;
-  IntVec m_trk_type, m_trk_Nhit; 
+  FloatVec m_trkstate_d0, m_trkstate_z0, m_trkstate_phi, m_trkstate_tanL, m_trkstate_omega, m_trkstate_kappa;
+  FloatVec m_trkstate_refx, m_trkstate_refy, m_trkstate_refz;
+  IntVec m_trkstate_tag, m_trkstate_location, m_trk_Nhit, m_trk_type;
+  FloatVec m_truthMC_tag, m_truthMC_pid, m_truthMC_px, m_truthMC_py, m_truthMC_pz, m_truthMC_E;
+  FloatVec m_truthMC_EPx, m_truthMC_EPy, m_truthMC_EPz, m_truthMC_weight;
 
 
   //ECal

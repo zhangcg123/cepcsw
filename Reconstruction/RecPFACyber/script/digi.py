@@ -3,7 +3,7 @@ import os
 from Gaudi.Configuration import *
 
 from Configurables import k4DataSvc
-dsvc = k4DataSvc("EventDataSvc", input="Tracking_TDR_o1_v01_E240_nnHgg.root")
+dsvc = k4DataSvc("EventDataSvc", input="Sim_TDR_o1_v01.root")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
 seed = [12340]
@@ -52,8 +52,6 @@ podioinput = PodioInput("PodioReader", collections=[
     "EcalBarrelContributionCollection", 
     "HcalBarrelCollection", 
     "HcalBarrelContributionCollection", 
-    "CompleteTracks", 
-    "CompleteTracksParticleAssociation"
     ])
 
 ########## Digitalization ################
@@ -75,7 +73,7 @@ EcalDigi.TimeResolution = 0.5        #unit: ns
 EcalDigi.ChargeThresholdFrac = 0.05
 EcalDigi.EcalMIP_Thre = 0.05
 EcalDigi.Debug=1
-EcalDigi.WriteNtuple = 1
+EcalDigi.WriteNtuple = 0
 EcalDigi.OutFileName = "Digi_ECAL.root"
 #########################################
 
@@ -108,22 +106,33 @@ HcalDigi.ADCBaselineSigmaLG = 0.
 HcalDigi.ADCHLRatio = 1
 HcalDigi.ADCSwitch = 1e7
 HcalDigi.ADCLimit = 1e7
-HcalDigi.WriteNtuple = 1
+HcalDigi.WriteNtuple = 0
 HcalDigi.OutFileName = "Digi_HCAL.root"
 
 
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "CaloDigi_TDR_o1_v01_E240_nnHgg.root"
-out.outputCommands = ["keep *"]
+out.filename = "CaloDigi_TDR_o1_v01.root"
+out.outputCommands = ["drop *", 
+    "keep MCParticle",
+    "keep VXDCollection",
+    "keep SITCollection",
+    "keep TPCCollection",
+    "keep OTKBarrelCollection",
+    "keep FTDCollection",
+    "keep ECALBarrel",
+    "keep HCALBarrel",
+    "keep ECALBarrelParticleAssoCol",
+    "keep HCALBarrelParticleAssoCol" ]
+
 
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
     TopAlg = [podioinput, EcalDigi, HcalDigi, out],
     EvtSel = 'NONE',
-    EvtMax = 3,
+    EvtMax = 10,
     ExtSvc = [dsvc, rndmengine, rndmgensvc, geosvc],
     HistogramPersistency = 'ROOT',
     OutputLevel = ERROR
