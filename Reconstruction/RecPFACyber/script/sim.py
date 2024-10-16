@@ -42,16 +42,16 @@ from Configurables import HepMCRdr
 from Configurables import GenPrinter
 
 #gun = GtGunTool("GtGunTool")
-#gun.PositionXs = [0]
-#gun.PositionYs = [0]
-#gun.PositionZs = [0]
-#gun.Particles = ["pi-"]
-#gun.EnergyMins = [10]
-#gun.EnergyMaxs = [10]
-#gun.ThetaMins  = [60]
-#gun.ThetaMaxs  = [120]
-#gun.PhiMins    = [0]
-#gun.PhiMaxs    = [360]
+#gun.PositionXs = [0, 0]
+#gun.PositionYs = [0, 0]
+#gun.PositionZs = [0, 0]
+#gun.Particles = ["mu-", "mu+"]
+#gun.EnergyMins = [5, 10]
+#gun.EnergyMaxs = [5, 10]
+#gun.ThetaMins  = [60, 60]
+#gun.ThetaMaxs  = [120, 120]
+#gun.PhiMins    = [0, 0]
+#gun.PhiMaxs    = [360, 360]
 #genprinter = GenPrinter("GenPrinter")
 
 stdheprdr = StdHepRdr("StdHepRdr")
@@ -97,7 +97,7 @@ cal_sensdettool.CalNamesMergeDisable = ["EcalBarrel", "CaloDetectorEndcap", "Hca
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "Sim_TDR_o1_v01_E240_nnHgg.root"
+out.filename = "Sim_TDR_o1_v01.root"
 out.outputCommands = ["keep *"]
 
 # ApplicationMgr
@@ -105,7 +105,7 @@ from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
     TopAlg = [genalg, detsimalg, out],
     EvtSel = 'NONE',
-    EvtMax = 3,
+    EvtMax = 10,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, geosvc],
     HistogramPersistency = 'ROOT',
     OutputLevel = INFO

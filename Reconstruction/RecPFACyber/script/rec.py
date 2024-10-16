@@ -20,7 +20,7 @@ geomsvc.compact = geometry_path
 
 ########### k4DataSvc ####################
 from Configurables import k4DataSvc
-podioevent = k4DataSvc("EventDataSvc", input="CaloDigi_TDR_o1_v01_E240_nnHgg.root")
+podioevent = k4DataSvc("EventDataSvc", input="Tracking_TDR_o1_v01.root")
 ##########################################
 
 ########## CEPCSWData ################# 
@@ -36,12 +36,8 @@ crystalecalcorr.CorrectionFile = os.path.join(cepcswdatatop, "CEPCSWData/offline
 ########## Podio Input ###################
 from Configurables import PodioInput
 inp = PodioInput("InputReader")
-inp.collections = [ "EcalBarrelCollection",
-                    "EcalBarrelContributionCollection",  
-                    "ECALBarrel", 
+inp.collections = [ "ECALBarrel", 
                     "ECALBarrelParticleAssoCol",
-                    "HcalBarrelCollection", 
-                    "HcalBarrelContributionCollection", 
                     "HCALBarrel",
                     "HCALBarrelParticleAssoCol",
                     "MCParticle", 
@@ -58,7 +54,7 @@ CyberPFAlg.BField = 3.
 CyberPFAlg.Debug = 0
 CyberPFAlg.SkipEvt = 0
 CyberPFAlg.WriteAna = 1
-CyberPFAlg.AnaFileName = "RecAnaTuple_TDR_o1_v01_E240_nnHgg.root"
+CyberPFAlg.AnaFileName = "RecAnaTuple_TDR_o1_v01_mu.root"
 CyberPFAlg.UseTruthTrack = 0
 CyberPFAlg.EcalGlobalCalib = 1.05
 CyberPFAlg.HcalGlobalCalib = 4.5
@@ -133,7 +129,7 @@ CyberPFAlg.AlgParValues = [ ["BarCol","Cluster1DCol","HalfClusterCol"],#1
 ##############################################################################
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "Rec_TDR_o1_v01_E240_nnHgg.root"
+out.filename = "Rec_TDR_o1_v01.root"
 out.outputCommands = ["keep *"]
 
 
@@ -143,7 +139,7 @@ from Configurables import ApplicationMgr
 ApplicationMgr( 
     TopAlg=[inp, CyberPFAlg, out ],
     EvtSel="NONE",
-    EvtMax=3,
+    EvtMax=10,
     ExtSvc=[podioevent, geomsvc],
     #OutputLevel=DEBUG
 )
