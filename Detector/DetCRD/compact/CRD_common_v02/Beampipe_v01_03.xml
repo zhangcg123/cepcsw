@@ -19,6 +19,8 @@
 	<shape type="Assembly"/>
       </envelope>
 
+      <type_flags type="DetType_BEAMPIPE"/>
+
       <section type ="Center" name="IPInnerTube" zStart="0" zEnd="BeamPipe_CentralBe_zmax" rStart="0">
 	<layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
 	<layer material="G4_Be" thickness="BeamPipe_Be_inner_thickness" vis="TubeVis"/>

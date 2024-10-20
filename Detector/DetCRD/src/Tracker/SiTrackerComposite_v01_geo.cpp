@@ -56,12 +56,11 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
   if(theDetector.buildType()==dd4hep::BUILD_ENVELOPE) return det;
   envelope.setVisAttributes(theDetector.visAttributes("SeeThrough"));
 
-  dd4hep::PrintLevel oldLevel = dd4hep::printLevel();
+  dd4hep::PrintLevel printLevel = dd4hep::ERROR;
   if (x_det.hasAttr(_Unicode(printLevel))) {
-    dd4hep::PrintLevel printLevel = dd4hep::printLevel(x_det.attr<string>(_Unicode(printLevel)));
-    // global level alway larger than local
-    if (printLevel<oldLevel) dd4hep::setPrintLevel(printLevel);
+    printLevel = dd4hep::printLevel(x_det.attr<string>(_Unicode(printLevel)));
   }
+  dd4hep::PrintLevel oldLevel = dd4hep::setPrintLevel(printLevel);
 
   if (x_det.hasChild(_U(sensitive))) {
     xml_dim_t sd_typ = x_det.child(_U(sensitive));
@@ -541,7 +540,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
       compositeData->layersPlanar.push_back(topLayer);
     }
   }
-  if (dd4hep::printLevel()<=dd4hep::INFO) std::cout << (*compositeData) << endl;
+  if (dd4hep::printLevel()<=dd4hep::WARNING) std::cout << (*compositeData) << endl;
   det.addExtension<dd4hep::rec::CompositeData>(compositeData);
 
   if (x_det.hasAttr(_U(combineHits))) det.setCombineHits(x_det.attr<bool>(_U(combineHits)),sens);
