@@ -23,6 +23,7 @@ Contents
    :caption: Development Process
 
    development/overview.md
+   development/doc.md
 
 .. toctree::
    :maxdepth: 2
