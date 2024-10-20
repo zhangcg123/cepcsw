@@ -1,5 +1,5 @@
 
-#include "MaterialDataBase.h"
+#include "kaldet/MaterialDataBase.h"
 
 #include <stdexcept>
 #include <vector>
@@ -237,6 +237,19 @@ void MaterialDataBase::createMaterials(const gear::GearMgr& gearMgr, IGeomSvc* g
     }
     catch( gear::UnknownParameterException& e){   
       std::cout << "Warning! cannot get material VXDShellMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+    }
+    try {
+      const gear::SimpleMaterial& etd_sup_mat = gearMgr.getSimpleMaterial("OTKEndcapSupportMaterial");
+      A       = etd_sup_mat.getA();
+      Z       = etd_sup_mat.getZ();
+      density = etd_sup_mat.getDensity() * (1000.0/ 1000000.0); // kg/m^3 -> g/cm^3
+      radlen  = etd_sup_mat.getRadLength() / 10.0 ; // mm -> cm
+      name    = etd_sup_mat.getName() ;
+      TMaterial &etdsupport = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
+      this->addMaterial(&etdsupport, name);
+    }
+    catch( gear::UnknownParameterException& e){
+      std::cout << "Warning! cannot get material OTKEndcapSupportMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
     }
     try {
       const gear::SimpleMaterial& tpc_readout_mat = gearMgr.getSimpleMaterial("TPCReadoutMaterial");

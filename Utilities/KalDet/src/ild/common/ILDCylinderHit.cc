@@ -1,6 +1,6 @@
 
-#include "ILDCylinderHit.h"
-#include "ILDCylinderMeasLayer.h"
+#include "kaldet/ILDCylinderHit.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
 #include "TMath.h"
 
 #include <iostream>

@@ -17,6 +17,7 @@ rndmgensvc.Engine = rndmengine.name()
 
 # option for standalone tracker study
 #geometry_option = "TDR_o1_v01/TDR_o1_v01-oldVersion.xml"
+#geometry_option = "TDR_o1_v01/TDR_o1_v01-patchOTK.xml"
 geometry_option = "TDR_o1_v01/TDR_o1_v01.xml"
 
 if not os.getenv("DETCRDROOT"):
@@ -97,7 +98,7 @@ from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
     TopAlg = [genalg, detsimalg, out],
     EvtSel = 'NONE',
-    EvtMax = 5,
+    EvtMax = 50,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, geosvc],
     HistogramPersistency = 'ROOT',
     OutputLevel = ERROR

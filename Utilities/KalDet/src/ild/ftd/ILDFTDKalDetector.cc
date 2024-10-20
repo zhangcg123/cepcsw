@@ -1,6 +1,5 @@
 
-#include "ILDFTDKalDetector.h"
-
+#include "kaldet/ILDFTDKalDetector.h"
 #include "kaldet/MaterialDataBase.h"
 
 #include <sstream>

@@ -21,13 +21,13 @@
         <constant name="OTKEndcap_r8" value="1520*mm" />
         <constant name="OTKEndcap_r9" value="1660*mm" />
         <constant name="OTKEndcap_r10" value="1800*mm" />
+	<constant name="OTKEndcap_piece_num" value="24" />
         <constant name="OTKEndcap_inner_radius" value="OTKEndcap_r0" />
         <constant name="OTKEndcap_outer_radius" value="OTKEndcap_r10" />
         <constant name="OTKEndcap_half_length" value="2900*mm" />
         <constant name="OTKEndcap_piece_deg" value="7.5" /><!-- variable OTKEndcap_piece_deg needs no dimension -->
         <constant name="OTKEndcap_dead_deg" value="0.5" />
         <constant name="OTKEndcap_dead_thickness" value="1*mm" />
-        <constant name="OTKEndcap_piece_num" value="24" />
         <constant name="OTKEndcap_asic_num_0" value="5" />
         <constant name="OTKEndcap_asic_num_1" value="7" />
         <constant name="OTKEndcap_asic_num_2" value="9" />
@@ -48,9 +48,9 @@
         <constant name="OTKEndcap_module_num_7" value="2" />
         <constant name="OTKEndcap_module_num_8" value="2" />
         <constant name="OTKEndcap_module_num_9" value="2" />
-        <constant name="OTKEndcap_layer_thickness" value="25*mm" />
-        <constant name="OTKEndcap_layer0_zpos" value="2850*mm" />
-        <constant name="OTKEndcap_layer1_zpos" value="2875*mm" />
+        <constant name="OTKEndcap_layer_thickness" value="15*mm" />
+        <constant name="OTKEndcap_layer0_zpos" value="OTKEndcap_half_length+OTKEndcap_layer_thickness/2" />
+        <constant name="OTKEndcap_layer1_zpos" value="OTKEndcap_layer0_zpos+OTKEndcap_layer_thickness" />
         <constant name="OTKEndcap_support_thickness" value="1*mm" />
         <constant name="OTKEndcap_sensor_thickness" value="500*um" />
         <constant name="OTKEndcap_sensor_gap" value="0.5*mm" />
@@ -66,14 +66,16 @@
     </define>
 
     <detectors>
-        <detector id="DetID_OTKEndcap" limits="otk_limits" name="OTKEndcap" type="SiTracker_otkendcap_v01" vis="OTKEndcapVis" readout="OTKEndcapCollection" insideTrackingVolume="true">
+        <detector id="DetID_OTKEndcap" name="OTKEndcap" type="SiTracker_otkendcap_v01" vis="OTKEndcapVis" readout="OTKEndcapCollection" insideTrackingVolume="true"
+		  limits="otk_limits" combineHits="true">
             <envelope>
-                <shape type="BooleanShape" operation="Union" material="Air" >
-                    <shape type="Tube" rmin="OTKEndcap_inner_radius" rmax="OTKEndcap_outer_radius" dz="OTKEndcap_half_length" />
-                </shape>
+	      <shape type="BooleanShape" operation="Subtraction" material="Air" >
+		<shape type="Tube" rmin="OTKEndcap_inner_radius" rmax="OTKEndcap_outer_radius" dz="Ecal_endcap_zmin"/>
+		<shape type="Tube" rmin="OTKEndcap_inner_radius-env_safety" rmax="OTKEndcap_outer_radius+env_safety" dz="OTKEndcap_half_length"/>
+	      </shape>
             </envelope>
-            <display support="WhiteVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis"
-                     pcb="GreenVis" asic="YellowVis" dead="BlackVis"/>
+            <display support="GrayVis" sens_env="SeeThrough" sens="MagentaVis" deadsensor="CyanVis"
+                     pcb="RedVis" asic="OrangeVis" dead="BlackVis"/>
             <type_flags type="DetType_TRACKER + DetType_ENDCAP + DetType_STRIP "/>
             <global sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV"/>
             <support thickness="OTKEndcap_support_thickness" inner_radius="OTKEndcap_inner_radius" outer_radius="OTKEndcap_outer_radius" mat="CarbonFiber" dead_mat="epoxy"/>
@@ -92,7 +94,7 @@
 
     <readouts>
         <readout name="OTKEndcapCollection">
-            <id>system:5,side:-2,layer:9,module:8,active:8,sensor:8</id>
+            <id>system:5,side:-2,layer:9,module:8,sensor:8,active:8</id>
         </readout>
     </readouts>
 </lccdd>

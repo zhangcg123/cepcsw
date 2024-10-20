@@ -41,7 +41,21 @@ public:
   _sortingPolicy(SortingPolicy), _rMin(rMin), _rMax(rMax)
   { /* no op */ }
   
-  
+  ILDDiscMeasLayer(TMaterial &min,
+                   TMaterial &mout,
+                   const TVector3  &center,
+                   const TVector3  &normal,
+                   double   Bz,
+                   double   SortingPolicy,
+                   double   rMin,
+                   double   rMax,
+		   const std::vector<int>& CellIDs,
+                   Bool_t     is_active,
+                   const Char_t    *name = "ILDDiscMeasL")
+    : ILDVMeasLayer(min, mout, Bz, CellIDs, is_active, name),
+    TPlane(center, normal),
+    _sortingPolicy(SortingPolicy), _rMin(rMin), _rMax(rMax)
+  { /* no op */ }
   
   // Parrent's pure virtuals that must be implemented
   

@@ -1,6 +1,6 @@
 
-#include "ILDSegmentedDiscMeasLayer.h"
-#include "ILDPlanarHit.h"
+#include "kaldet/ILDSegmentedDiscMeasLayer.h"
+#include "kaldet/ILDPlanarHit.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>

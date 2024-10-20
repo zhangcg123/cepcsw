@@ -590,12 +590,14 @@ fitstart:
     int nhits_in_sit = track.getSubdetectorHitNumbers(2);
     int nhits_in_tpc = track.getSubdetectorHitNumbers(3);
     int nhits_in_set = track.getSubdetectorHitNumbers(4);
+    int nhits_in_etd = track.getSubdetectorHitNumbers(5);
 #else
     int nhits_in_vxd = track.getSubDetectorHitNumbers(0);
     int nhits_in_ftd = track.getSubDetectorHitNumbers(1);
     int nhits_in_sit = track.getSubDetectorHitNumbers(2);
     int nhits_in_tpc = track.getSubDetectorHitNumbers(3);
     int nhits_in_set = track.getSubDetectorHitNumbers(4);
+    int nhits_in_etd = track.getSubDetectorHitNumbers(5);
 #endif
 
     //int nhits_in_vxd = Track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ];
@@ -612,6 +614,7 @@ fitstart:
 	    << " sit hits = " << nhits_in_sit
 	    << " tpc hits = " << nhits_in_tpc
 	    << " set hits = " << nhits_in_set
+	    << " etd hits = " << nhits_in_etd
 	    << endmsg;
     
     if (nhits_in_vxd > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::VXD) ) ;
@@ -619,6 +622,7 @@ fitstart:
     if (nhits_in_sit > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::SIT) ) ;
     if (nhits_in_tpc > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::TPC) ) ;
     if (nhits_in_set > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::SET) ) ;
+    if (nhits_in_etd > 0) track.setType( track.getType()| (1<<lcio::ILDDetID::ETD) ) ;
     
     bool rejectTrack_onTPCHits = (nhits_in_tpc < _cutOnTPCHits) && (nHitsSi<=0);
     //bool rejectTrack_onITKHits = ( (nhits_in_tpc<=0) && (nhits_in_sit<1 && nhits_in_ftd<1) );
@@ -682,25 +686,27 @@ fitstart:
       debug() << " Add Track to final Collection: ID = " << track.id() << " for trkCand "<< trkCand << endmsg;
     }
 
-    float omega = trkState.omega;
-    float tanLambda = trkState.tanLambda;
-    float phi0 = trkState.phi;
-    float d0 = trkState.D0;
-    float z0 = trkState.Z0;
+    if (trkState.location == edm4hep::TrackState::AtIP) {
+      float omega = trkState.omega;
+      float tanLambda = trkState.tanLambda;
+      float phi0 = trkState.phi;
+      float d0 = trkState.D0;
+      float z0 = trkState.Z0;
 
-    HelixClass helix;
-    helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
+      HelixClass helix;
+      helix.Initialize_Canonical(phi0,d0,z0,omega,tanLambda,_bField);
 
-    float trkPx = helix.getMomentum()[0];
-    float trkPy = helix.getMomentum()[1];
-    float trkPz = helix.getMomentum()[2];
-    float trkP = sqrt(trkPx*trkPx+trkPy*trkPy+trkPz*trkPz);
+      float trkPx = helix.getMomentum()[0];
+      float trkPy = helix.getMomentum()[1];
+      float trkPz = helix.getMomentum()[2];
+      float trkP = sqrt(trkPx*trkPx+trkPy*trkPy+trkPz*trkPz);
 
-    eTot += trkP;
-    pxTot += trkPx;
-    pyTot += trkPy;
-    pzTot += trkPz;
-    nTotTracks++;
+      eTot += trkP;
+      pxTot += trkPx;
+      pyTot += trkPy;
+      pzTot += trkPz;
+      nTotTracks++;
+    }
   }
   if(m_tuple) m_timeKalman = stopwatch.RealTime()*1000;
   // streamlog_out(DEBUG5) << endmsg;
@@ -834,8 +840,7 @@ void FullLDCTrackingAlg::prepareVectors() {
         pos[i] = hit.getPosition()[i];
       }
       
-      debug() << " FTD Pixel Hit added : @ " << pos[0] << " " << pos[1] << " " << pos[2]  << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
-      
+      debug() << " FTD Pixel Hit added : @ " << pos[0] << " " << pos[1] << " " << pos[2]  << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << " layer = " << layer << endmsg;
     }
   }
   
@@ -910,9 +915,7 @@ void FullLDCTrackingAlg::prepareVectors() {
         pos[i] = hit.getPosition()[i];
       }
       
-      debug() << " FTD SpacePoint Hit added : @ " << pos[0] << " " << pos[1] << " " << pos[2]  << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
-      
-      
+      debug() << " FTD SpacePoint Hit added : @ " << pos[0] << " " << pos[1] << " " << pos[2]  << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << " layer = " << layer << endmsg;
     }
   }
   
@@ -1046,7 +1049,7 @@ void FullLDCTrackingAlg::prepareVectors() {
         pos[i] = trkhit.getPosition()[i];
       }
       
-      debug() << " SIT Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
+      debug() << " SIT Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << " layer = " << layer << endmsg;
     }
   }
   
@@ -1180,7 +1183,7 @@ void FullLDCTrackingAlg::prepareVectors() {
         pos[i] = trkhit.getPosition()[i];
       }
       
-      debug() << " SET Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
+      debug() << " SET Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << " layer = " << layer << endmsg;
     }
   }
 
@@ -1213,17 +1216,6 @@ void FullLDCTrackingAlg::prepareVectors() {
     double dz(NAN);
 
     for(edm4hep::TrackerHit trkhit : *hitETDCol){
-      // hit could be of the following type
-      // 1) TrackerHit, either ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT or just standard TrackerHit
-      // 2) TrackerHitPlane, either 1D or 2D
-      // 3) TrackerHitZCylinder, if coming from a simple cylinder design as in the LOI
-
-      // Establish which of these it is in the following order of likelyhood
-      //    i)   ILDTrkHitTypeBit::ONE_DIMENSIONAL (TrackerHitPlane) Should Never Happen: SpacePoints Must be Used Instead
-      //    ii)  ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT (TrackerHit)
-      //    iii) TrackerHitPlane (Two dimentional)
-      //    iv)  TrackerHitZCylinder
-      //    v)   Must be standard TrackerHit
       int layer = getLayerID(trkhit);
 
       if (layer < 0 || (unsigned)layer >= _nLayersETD) {
@@ -1233,7 +1225,7 @@ void FullLDCTrackingAlg::prepareVectors() {
 
       // first check that we have not been given 1D hits by mistake, as they won't work here
       if ( UTIL::BitSet32( trkhit.getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] ) {
-        fatal() << "SiliconTrackingAlg => fatal error in SIT : layer is outside allowed range : " << layer << endmsg;
+        fatal() << "SiliconTrackingAlg => fatal error in ETD : layer is outside allowed range : " << layer << endmsg;
         exit(1);
       }
       // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
@@ -1256,13 +1248,13 @@ void FullLDCTrackingAlg::prepareVectors() {
 
         const float eps = 1.0e-07;
         // V must be the global z axis
-        if( fabs(1.0 - V.dot(Z)) > eps ) {
-          fatal() << "PIXEL ETD Hit measurment vectors V is not equal to the global Z axis. \n exit(1) called from file " << __FILE__ << " : " << __LINE__ << endmsg;
+        if (fabs(V.dot(Z)) > eps) {
+          fatal() << "PIXEL ETD Hit measurment vectors V is not int the global X-Y plane. \n exit(1) called from file " << __FILE__ << " : " << __LINE__ << endmsg;
           exit(1);
         }
 
         // U must be normal to the global z axis
-        if( fabs(U.dot(Z)) > eps ) {
+        if (fabs(U.dot(Z)) > eps) {
           fatal() << "PIXEL ETD Hit measurment vectors U is not in the global X-Y plane. \n exit(1) called from file " << __FILE__ << " : " << __LINE__ << endmsg;
           exit(1);
         }
@@ -1270,20 +1262,9 @@ void FullLDCTrackingAlg::prepareVectors() {
 	// FIXME should use the correct
         // drphi = trkhit_P->getdU();
         // dz    = trkhit_P->getdV();
-        drphi = trkhit.getCovMatrix()[2];
-        dz    = trkhit.getCovMatrix()[5];
+        drphi = sqrt(trkhit.getCovMatrix()[2]*trkhit.getCovMatrix()[2]+trkhit.getCovMatrix()[5]*trkhit.getCovMatrix()[5]);
+        dz    = 0.1;
       }
-      // or a simple cylindrical design, as used in the LOI
-      /*FIXME, fucd
-      else if ( true ) {
-        trkhit_C = hitCollection->at( ielem );
-        // FIXME
-        // drphi = trkhit_C->getdRPhi();
-        // dz    = trkhit_C->getdZ();
-        drphi = 1.0;
-        dz = 1.0;
-      }
-      */
       // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
       else {
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
@@ -1312,7 +1293,7 @@ void FullLDCTrackingAlg::prepareVectors() {
         pos[i] = trkhit.getPosition()[i];
       }
 
-      debug() << " ETD Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << "  layer = " << layer << endmsg;
+      debug() << " ETD Hit " <<  trkhit.id() << " added : @ " << pos[0] << " " << pos[1] << " " << pos[2] << " drphi " << hitExt->getResolutionRPhi() << " dz " << hitExt->getResolutionZ() << " layer = " << layer << endmsg;
     }
   }
 
@@ -1849,7 +1830,7 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
   
   std::auto_ptr<MarlinTrk::IMarlinTrack> marlin_trk_autop(_trksystem->createTrack());
   MarlinTrk::IMarlinTrack& marlin_trk = *marlin_trk_autop.get();
-  
+
   edm4hep::TrackState pre_fit ;
 
   int errorCode = IMarlinTrack::success;
@@ -3786,16 +3767,14 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
 
       TrackHitPair * trkHitPair = pairs[iP];
       TrackExtended * trkExt = trkHitPair->getTrackExtended();
-      TrackerHitExtended * trkHitExt = 
-
-      trkHitPair->getTrackerHitExtended();
+      TrackerHitExtended * trkHitExt = trkHitPair->getTrackerHitExtended();
 
       // check if the track or hit is still free to be combined
       if (flagTrack[trkExt] && flagHit[trkHitExt]) {
 
         if (refit==0) { // just set the association
           trkExt->addTrackerHitExtended( trkHitExt );
-          trkHitExt->setUsedInFit( false );
+          trkHitExt->setUsedInFit( true );
           trkHitExt->setTrackExtended( trkExt );
         }
 
@@ -3870,8 +3849,10 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           }
                     
           debug() << "AssignOuterHitsToTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << endmsg;
-                    
+
           MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
+	  //std::auto_ptr<MarlinTrk::IMarlinTrack> marlin_trk_autop(_trksystem->createTrack());
+	  //MarlinTrk::IMarlinTrack* marlin_trk = marlin_trk_autop.get();
           
 	  edm4hep::TrackState pre_fit ;
 	  pre_fit.D0 = trkExt->getD0();
@@ -3900,16 +3881,16 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
           
           pre_fit.covMatrix = covMatrix;
-          
-          int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
-          
+	  debug() << "AssignOuterHitsToTracks: before createFit" << endmsg;
+          int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::forward/*backward*/, _maxChi2PerHit );
+          debug() << "AssignOuterHitsToTracks: after createFit" << endmsg;
           if ( error != IMarlinTrack::success ) {
 	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: creation of fit fails with error " << error << endmsg;
             
             delete marlin_trk ;
             continue ;
 	  }
-         
+
           std::vector<std::pair<edm4hep::TrackerHit , double> > outliers ;
           marlin_trk->getOutliers(outliers);
           
@@ -3922,7 +3903,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
             delete marlin_trk ;
             continue ;
           }
-          
+	  debug() << "AssignOuterHitsToTracks: before propagate" << endmsg;
           edm4hep::Vector3d point(0.,0.,0.); // nominal IP
           int return_code = 0;
           
@@ -3930,7 +3911,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
           
           delete marlin_trk ;
-          
+          debug() << "AssignOuterHitsToTracks: after delete" << endmsg;
           if ( error != IMarlinTrack::success ) {
 	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: propagate to IP fails with error " << error << endmsg;
 	    continue ;
@@ -4162,9 +4143,10 @@ void FullLDCTrackingAlg::AssignTPCHitsToTracks(TrackerHitExtendedVec hitVec,
     if (tracksToAttach[iH]!=NULL) {
       tracksToAttach[iH]->addTrackerHitExtended(trkHitExt);
       trkHitExt->setTrackExtended( tracksToAttach[iH] );
-      //by fucd
+      //by fucd: if set true, too much TPC hit added for those swirl tracks will cause silicon tracker hits lost
+      // only set true while no TPC track input and assign TPC hits into silicon tracks
       //trkHitExt->setUsedInFit( false );
-      trkHitExt->setUsedInFit( true );
+      trkHitExt->setUsedInFit(_assignTPCHits==2);
     }
   }
   
@@ -4419,7 +4401,7 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
           delete marlin_trk ;
           continue ;
 	}
-        
+
         std::vector<std::pair<edm4hep::TrackerHit , double> > outliers ;
         marlin_trk->getOutliers(outliers);
         
@@ -5178,8 +5160,8 @@ void FullLDCTrackingAlg::setupGearGeom(){
   try {
     debug() << " filling ETD parameters from gear::ETDParameters " << endmsg;
 
-    const gear::GearParameters& pETDDet = gearMgr->getGearParameters("ETD");
-    _nLayersETD = int(pETDDet.getDoubleVals("ETDLayerZ").size());
+    const gear::GearParameters& pETDDet = gearMgr->getGearParameters("ETDParameters");
+    _nLayersETD = int(pETDDet.getIntVals("ETDPetalNumber").size());
   }
   catch (...) {
     debug() << " ### gear::GearParameters ETD Not Present in GEAR FILE" << endmsg;

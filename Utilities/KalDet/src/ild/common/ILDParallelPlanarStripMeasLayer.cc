@@ -1,6 +1,6 @@
 
-#include "ILDParallelPlanarStripMeasLayer.h"
-#include "ILDPlanarStripHit.h"
+#include "kaldet/ILDParallelPlanarStripMeasLayer.h"
+#include "kaldet/ILDPlanarStripHit.h"
 #include "kaltest/TVTrack.h"
 #include "kaltest/TVTrackHit.h"
 

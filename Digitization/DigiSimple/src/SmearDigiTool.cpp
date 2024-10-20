@@ -89,7 +89,7 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
 
   auto cellId = simhit.getCellID();
   int system  = m_decoder->get(cellId, "system");
-  int side    = m_decoder->get(cellId,   "side"  );
+  int side    = m_decoder->get(cellId, "side"  );
   int layer   = m_decoder->get(cellId, "layer" );
   int module  = m_decoder->get(cellId, "module");
   int sensor  = m_decoder->get(cellId, "sensor");
@@ -176,10 +176,11 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
     dd4hep::rec::Vector2D localPoint = surface->globalToLocal(oldPos);
     dd4hep::rec::Vector3D local3D(localPoint.u(), localPoint.v(), 0);
     // A small check, if the hit is in the boundaries:
-    if (!surface->insideBounds(oldPos, 1e100)) {
-      error() << " global: (" << oldPos.x() << " " << oldPos.y() << " " << oldPos.z()
-	      << ") local: (" << localPoint.u() << ", " << localPoint.v() << " )"
-              << " is not within boundaries. Hit is skipped." << endmsg;
+    if (!surface->insideBounds(oldPos)) {
+      warning() << " global: (" << oldPos.x() << " " << oldPos.y() << " " << oldPos.z()
+		<< ") local: (" << localPoint.u() << ", " << localPoint.v() << " )"
+		<< " step: " << simhit.getPathLength()
+		<< " is not within boundaries. Hit is skipped." << endmsg;
       return StatusCode::SUCCESS;
     }
     dd4hep::rec::Vector3D globalPointSmeared;//CLHEP::Hep3Vector globalPoint(pos[0],pos[1],pos[2]);

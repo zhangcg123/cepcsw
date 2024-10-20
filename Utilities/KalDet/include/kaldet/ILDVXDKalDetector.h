@@ -27,7 +27,8 @@ public:
   
 private:
   
-  void setupGearGeom( const gear::GearMgr& gearMgr, IGeomSvc* geoSvc) ;
+  void setupGearGeom( const gear::GearMgr& gearMgr );
+  void setupGearGeom( IGeomSvc* geoSvc) ;
   
   int _nLayers ;
   double _bZ ;

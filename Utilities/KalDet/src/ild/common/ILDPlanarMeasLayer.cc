@@ -15,8 +15,8 @@
 #include <iostream>
 #include <cmath>
 
-#include "ILDPlanarMeasLayer.h"
-#include "ILDPlanarHit.h"
+#include "kaldet/ILDPlanarMeasLayer.h"
+#include "kaldet/ILDPlanarHit.h"
 
 #include "kaltest/TVTrack.h"
 #include "TVector3.h"

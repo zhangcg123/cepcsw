@@ -1,10 +1,10 @@
-#ifndef __ILDSEGMENTEDDISCMEASLAYER_H__
-#define __ILDSEGMENTEDDISCMEASLAYER_H__
+#ifndef __CEPCSEGMENTEDDISCMEASLAYER_H__
+#define __CEPCSEGMENTEDDISCMEASLAYER_H__
 
-/** ILDSegmentedDiscMeasLayer: User defined Segemented Disk Planar KalTest measurement layer class used with ILDPLanarTrackHit. Segments are isosolese trapezoids whose axis of symmetry points to the origin 
+/** CEPCSegmentedDiscMeasLayer: User defined Segemented Disk Planar KalTest measurement layer class used with ILDPLanarTrackHit. Following ILDSegmentedDiscMeasLayer
  * WARNING: ONLY IMPLEMENTED FOR X AND Y COORDINATES AT FIXED Z
  *
- * @author S.Aplin DESY
+ * @author C.Fu CEPC
  */
 
 #include "TVector3.h"
@@ -22,38 +22,37 @@
 
 class TVTrackHit;
 
-class ILDSegmentedDiscMeasLayer : public ILDVMeasLayer, public TPlane {
+class CEPCSegmentedDiscMeasLayer : public ILDVMeasLayer, public TPlane {
 public:
   // Ctors and Dtor
   
-  ILDSegmentedDiscMeasLayer(TMaterial &min,
-                            TMaterial &mout,
-                            double   Bz,
-                            double   SortingPolicy,
-                            int      nsegments,
-                            double   zpos,
-                            double   phi0, // defined by the axis of symmerty of the first petal
-                            double   trap_rmin,
-                            double   trap_height,
-                            double   trap_innerBaseLength,
-                            double   trap_outerBaseLength,
-                            bool     is_active,
-                            std::vector<int>      CellIDs,
-                            const Char_t    *name = "ILDDiscMeasL");
+  CEPCSegmentedDiscMeasLayer(TMaterial &min,
+			     TMaterial &mout,
+			     double   Bz,
+			     double   SortingPolicy,
+			     int      nsegments,
+			     double   zpos,
+			     double   phi0, // defined by the axis of symmerty of the first petal
+			     double   rmin,
+			     double   rmax,
+			     double   halfPetal,
+			     std::vector<int> nsensors,
+			     bool     is_active,
+			     std::vector<int>      CellIDs,
+			     const Char_t    *name = "CEPCDiscMeasL");
   
-  ILDSegmentedDiscMeasLayer(TMaterial &min,
-                            TMaterial &mout,
-                            double   Bz,
-                            double   SortingPolicy,
-                            int      nsegments,
-                            double   zpos,
-                            double   phi0, // defined by the axis of symmerty of the first petal
-                            double   trap_rmin,
-                            double   trap_height,
-                            double   trap_innerBaseLength,
-                            double   trap_outerBaseLength,
-                            bool     is_active,
-                            const Char_t    *name = "ILDDiscMeasL");
+  CEPCSegmentedDiscMeasLayer(TMaterial &min,
+			     TMaterial &mout,
+			     double   Bz,
+			     double   SortingPolicy,
+			     int      nsegments,
+			     double   zpos,
+			     double   phi0, // defined by the axis of symmerty of the first petal
+			     double   rmin,
+			     double   rmax,
+			     double   halfPetal,
+			     bool     is_active,
+			     const Char_t    *name = "CEPCDiscMeasL");
   
   
   // Parrent's pure virtuals that must be implemented
@@ -62,7 +61,6 @@ public:
   virtual TKalMatrix XvToMv    (const TVTrackHit &ht,
                                 const TVector3   &xv) const
   { return this->XvToMv(xv); }
-  
   
   /** Global to Local coordinates */
   virtual TKalMatrix XvToMv    (const TVector3   &xv) const;
@@ -93,10 +91,7 @@ public:
                                      Double_t  eps = 1.e-8) const{
     
     return CalcXingPointWith(hel,xx,phi,0,eps);
-    
   }
-  
-  
   
   /** Get the intersection and the CellID, needed for multilayers */
   virtual int getIntersectionAndCellID(const TVTrack  &hel,
@@ -105,8 +100,6 @@ public:
                                        Int_t    &CellID,
                                        Int_t     mode,
                                        Double_t  eps = 1.e-8) const ;
-
-  
   
   /** Check if global point is on surface  */
   virtual Bool_t   IsOnSurface (const TVector3 &xx) const;
@@ -118,6 +111,7 @@ protected:
   
   double          angular_range_2PI( double phi ) const;
   unsigned int    get_segment_index(double phi) const;
+  unsigned int    get_sensor_index(double r, double phi) const;
   double          get_segment_phi(unsigned int index) const;
   TVector3        get_segment_centre(unsigned int index) const;
   
@@ -125,20 +119,13 @@ private:
   
   double _sortingPolicy;
   int    _nsegments;
-  double _trap_rmin;
-  double _trap_height;
-  double _trap_inner_base_length;
-  double _trap_outer_base_length;
-  double _trap_tan_beta; // tan of the openning angle of the petal
-
+  double _rmin;
   double _rmax;
+  double _halfPetal;
+  std::vector<int> _nsensors;
+
   double _start_phi; // trailing edge of the first sector
   double _segment_dphi;
-  
-  
-  
+  int    _nrow;
 };
-
-
-
 #endif
