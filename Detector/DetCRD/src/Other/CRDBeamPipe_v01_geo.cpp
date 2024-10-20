@@ -6,6 +6,7 @@
 #include "DD4hep/DetFactoryHelper.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DD4hep/DetType.h"
+#include "DD4hep/Printout.h"
 #include "DDRec/DetectorData.h"
 #include "DDRec/Surface.h"
 #include "XML/Utilities.h"
@@ -33,9 +34,6 @@ using dd4hep::rec::volSurfaceList;
 static Ref_t create_detector(Detector& theDetector,
 			     xml_h element,
 			     SensitiveDetector /*sens*/) {
-
-  std::cout << "This is the Beampipe:"  << std::endl;
-
   //Access to the XML File
   xml_det_t x_beampipe = element;
   const std::string name = x_beampipe.nameStr();
@@ -48,6 +46,14 @@ static Ref_t create_detector(Detector& theDetector,
   dd4hep::xml::setDetectorTypeFlag( element, tube ) ;
 
   if( theDetector.buildType() == BUILD_ENVELOPE ) return tube ;
+
+  dd4hep::PrintLevel printLevel = dd4hep::ERROR;
+  if (x_beampipe.hasAttr(_Unicode(printLevel))) {
+    printLevel = dd4hep::printLevel(x_beampipe.attr<std::string>(_Unicode(printLevel)));
+  }
+  dd4hep::PrintLevel oldLevel = dd4hep::setPrintLevel(printLevel);
+
+  dd4hep::printout(dd4hep::INFO, "Construct", "** building CRDBeamPipe_v01 ...");
   
   //-----------------------------------------------------------------------------------
   ConicalSupportData* beampipeData = new ConicalSupportData ;
@@ -58,8 +64,8 @@ static Ref_t create_detector(Detector& theDetector,
   //Parameters we have to know about
   dd4hep::xml::Component xmlParameter = x_beampipe.child(_Unicode(parameter));
   const double crossingAngle  = xmlParameter.attr< double >(_Unicode(crossingangle));
-  std::cout << "Crossing angle = " << crossingAngle << std::endl;
-  std::cout << "Section:                           Zstart  Zend    RiStart RiEnd   size    shift   type" << std::endl;
+  dd4hep::printout(dd4hep::INFO, "Construct", "Crossing angle = %f", crossingAngle);
+  dd4hep::printout(dd4hep::INFO, "Construct", "Section:                           Zstart  Zend    RiStart RiEnd   size    shift   type");
   for(xml_coll_t si( x_beampipe ,Unicode("section")); si; ++si) {
     xml_comp_t x_section(si);
     
@@ -80,7 +86,7 @@ static Ref_t create_detector(Detector& theDetector,
 	size = x_section.attr< double > (_Unicode(size));
       }
       catch(std::runtime_error& e){
-	std::cout << "The maximum distance of runway is not set, will be calculated automatically by crossing angle" <<std::endl;
+	dd4hep::printout(dd4hep::WARNING, "Construct", "The maximum distance of runway is not set, will be calculated automatically by crossing angle");
       }
       try{
         shift = x_section.attr< double > (_Unicode(shift));
@@ -91,16 +97,8 @@ static Ref_t create_detector(Detector& theDetector,
     }
     
     const std::string volName      = "BeamPipe_" + x_section.nameStr();
-    std::cout << std::setiosflags(std::ios::left)
-	      << std::setw(35) << volName
-	      << std::setw(8) << zstart      /dd4hep::mm
-	      << std::setw(8) << zend	     /dd4hep::mm
-	      << std::setw(8) << rInnerStart /dd4hep::mm
-	      << std::setw(8) << rInnerEnd   /dd4hep::mm
-	      << std::setw(8) << size        /dd4hep::mm
-	      << std::setw(8) << shift       /dd4hep::mm
-	      << std::setw(8) << type
-	      << std::endl;    
+    dd4hep::printout(dd4hep::INFO, "Construct", "%s %f %f %f %f %f %f %d", volName, zstart/dd4hep::mm, zend/dd4hep::mm, rInnerStart/dd4hep::mm,
+		     rInnerEnd/dd4hep::mm, size/dd4hep::mm, shift/dd4hep::mm, type);
 
     const double angle   = crossingAngle;
     const double zHalf   = fabs(zend - zstart) * 0.5;
@@ -146,7 +144,7 @@ static Ref_t create_detector(Detector& theDetector,
       catch(std::runtime_error& e){
 	thicknessEnd = thickness;
       }
-      std::cout << "->layer: " << std::setw(6) << thickness/dd4hep::mm << std::setw(6) << thicknessEnd/dd4hep::mm << std::setw(15) << material.name() << std::endl;
+      dd4hep::printout(dd4hep::INFO, "Construct", " ->layer: r0 = %f r1 = %f mat = %s", thickness/dd4hep::mm, thicknessEnd/dd4hep::mm, material.name());
       
       char suffix[20];
       sprintf(suffix,"_%d",ilayer);
@@ -227,7 +225,8 @@ static Ref_t create_detector(Detector& theDetector,
         double y2 = y1;
         double axisAngle = atan((x2-x1)/zHalf/2);
         if(fabs(beamAngle-axisAngle)>1e-12){
-	  std::cout << "Warning! axis angle not equal to beam angle. beam=" << beamAngle << " VS axis=" << axisAngle << ", user defined design and workable" << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "axis angle not equal to beam angle. beam=%f VS axis=%f, user defined design and workable",
+			   beamAngle, axisAngle);
         }
         double zSide = 2*zHalf/cos(axisAngle)+y1*tan(axisAngle)+y2*tan(axisAngle);
         double xshift = 0.5*(x1+x2);
@@ -285,7 +284,7 @@ static Ref_t create_detector(Detector& theDetector,
         double edge1ToCAngle = asin(sin(90*dd4hep::degree+edge1ToZAngle)/(xC2/sin(expandAngle))*(rOuter-rOuterEnd));
         double CToEConeAxisAngle = edge1ToCAngle-0.5*(edge2ToZAngle-edge1ToZAngle);
         if(fabs(rotateAngle-(expandAngle-CToEConeAxisAngle))>1e-12){
-	  std::cout << "Warning! rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case." << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case.");
         }
 	double a1 = rOuter/sin(bottomAngle)*sin(90*dd4hep::degree-edge1ToZAngle);
         double a2 = rOuterEnd/sin(180*dd4hep::degree-bottomAngle)*sin(90*dd4hep::degree-edge2ToZAngle);
@@ -300,7 +299,7 @@ static Ref_t create_detector(Detector& theDetector,
         double bC2 = sqrt(rOuterEnd*rOuterEnd/(1-xC2InECone*xC2InECone/aC2/aC2));
         double b1 = bC1/zC1*zBottom;
         if(fabs(bC1/zC1-bC2/zC2)>1e-12){
-	  std::cout << "Warning! bC1/zC1 not equal to bC2/zC2. Please tell Chengdong(fucd@ihep.ac.cn)." << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "bC1/zC1 not equal to bC2/zC2. Please tell Chengdong(fucd@ihep.ac.cn).");
         }
         double pzTopCut = 0.5*(a1-a2)*tan(bottomAngle);
         double thetaCut1 = atan((0.5*(xC2+rOuterEnd)-0.5*rOuter)/(2*zHalf));
@@ -334,7 +333,7 @@ static Ref_t create_detector(Detector& theDetector,
         double edge1ToC = asin(sin(90*dd4hep::degree+edge1ToZ)/(xC2/sin(expandAngle))*(radius-radiusEnd));
         double CToEConeAxis = edge1ToC-0.5*(edge2ToZ-edge1ToZ);
         if(fabs(rotate-(expandAngle-CToEConeAxis))>1e-12){
-	  std::cout << "Warning! rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case." << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case.");
         }
 	double a1Hole = radius/sin(bottom)*sin(90*dd4hep::degree-edge1ToZ);
         double a2Hole = radiusEnd/sin(180*dd4hep::degree-bottom)*sin(90*dd4hep::degree-edge2ToZ);
@@ -349,7 +348,7 @@ static Ref_t create_detector(Detector& theDetector,
         double bC2Hole = sqrt(radiusEnd*radiusEnd/(1-xC2InEConeHole*xC2InEConeHole/aC2Hole/aC2Hole));
         double b1Hole = bC1Hole/zC1Hole*zBottomHole;
         if(fabs(bC1Hole/zC1Hole-bC2Hole/zC2Hole)>1e-12){
-	  std::cout << "Warning! bC1/zC1 not equal to bC2/zC2 for Hole. Please tell Chengdong(fucd@ihep.ac.cn)." << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "bC1/zC1 not equal to bC2/zC2 for Hole. Please tell Chengdong(fucd@ihep.ac.cn).");
         }
 	double pzTopCutHole = 0.5*(a1Hole-a2Hole)*tan(bottom);
 	dd4hep::Trd2 body2(0, xC2, yMax-thickness, radiusEnd, zHalf);
@@ -387,9 +386,10 @@ static Ref_t create_detector(Detector& theDetector,
 	double rotateAngle = 0.5*(edge1ToZAngle+edge2ToZAngle);
 	double edge1ToCAngle = asin(sin(90*dd4hep::degree+edge1ToZAngle)/(xC2/sin(expandAngle))*(rOuter-rOuterEnd));
 	double CToEConeAxisAngle = edge1ToCAngle-0.5*(edge2ToZAngle-edge1ToZAngle);
-	std::cout << expandAngle/dd4hep::degree << " " << edge1ToZAngle/dd4hep::degree << " " << edge2ToZAngle/dd4hep::degree << " " << bottomAngle/dd4hep::degree << " " << rotateAngle/dd4hep::degree << " " << edge1ToCAngle/dd4hep::degree << " " << CToEConeAxisAngle/dd4hep::degree << std::endl;
+	dd4hep::printout(dd4hep::INFO, "Construct", "edge angle: %f %f %f %f %f %f %f", expandAngle/dd4hep::degree, edge1ToZAngle/dd4hep::degree, edge2ToZAngle/dd4hep::degree,
+			 bottomAngle/dd4hep::degree, rotateAngle/dd4hep::degree, edge1ToCAngle/dd4hep::degree, CToEConeAxisAngle/dd4hep::degree);
 	if(fabs(rotateAngle-(expandAngle-CToEConeAxisAngle))>1e-12){
-	  std::cout << "Warning! rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case." << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case.");
 	}
 	double a1 = rOuter/sin(bottomAngle)*sin(90*dd4hep::degree-edge1ToZAngle);
 	double a2 = rOuterEnd/sin(180*dd4hep::degree-bottomAngle)*sin(90*dd4hep::degree-edge2ToZAngle);
@@ -405,11 +405,11 @@ static Ref_t create_detector(Detector& theDetector,
 	  double bC1 = sqrt(rOuter*rOuter/(1-xC1InECone*xC1InECone/aC1/aC1));
 	  double bC2 = sqrt(rOuterEnd*rOuterEnd/(1-xC2InECone*xC2InECone/aC2/aC2));
 	  b1 = bC1/zC1*zBottom;
-	  std::cout << a1 << " " << a2 << " " << zC1 << " " << zC2 << std::endl;
+	  dd4hep::printout(dd4hep::DEBUG, "Construct", "a1 = %f a2 = %f zC1 = %f zC2 = %f", a1, a2, zC1, zC2);
 	  if(fabs(bC1/zC1-bC2/zC2)>1e-12){
-	    std::cout << "Warning! bC1/zC1 not equal to bC2/zC2." << std::endl;
+	    dd4hep::printout(dd4hep::WARNING, "Construct", "bC1/zC1 not equal to bC2/zC2.");
 	  }
-	  std::cout << "b1/a1=" << b1/a1 << std::endl;
+	  dd4hep::printout(dd4hep::DEBUG, "Construct", "b1/a1 = %f", b1/a1);
 	  pzTopCut = 0.5*(a1-a2)*tan(bottomAngle);
 	}
 	dd4hep::Cone cone1(pzTopCut, 0, a1, 0, a2);
@@ -437,7 +437,7 @@ static Ref_t create_detector(Detector& theDetector,
         double edge1ToC = asin(sin(90*dd4hep::degree+edge1ToZ)/(xC2/sin(expandAngle))*(radius-radiusEnd));
         double CToEConeAxis = edge1ToC-0.5*(edge2ToZ-edge1ToZ);
         if(fabs(rotate-(expandAngle-CToEConeAxis))>1e-12){
-	  std::cout << "Warning! rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case." << std::endl;
+	  dd4hep::printout(dd4hep::WARNING, "Construct", "rotate angle was not calculated rightly. Please check input parameters whether satisfy the Waist case.");
         }
 	double a1Hole = radius/sin(bottom)*sin(90*dd4hep::degree-edge1ToZ);
         double a2Hole = radiusEnd/sin(180*dd4hep::degree-bottom)*sin(90*dd4hep::degree-edge2ToZ);
@@ -454,7 +454,7 @@ static Ref_t create_detector(Detector& theDetector,
 	  double bC2Hole = sqrt(radiusEnd*radiusEnd/(1-xC2InEConeHole*xC2InEConeHole/aC2Hole/aC2Hole));
 	  b1Hole = bC1Hole/zC1Hole*zBottomHole;
 	  if(fabs(bC1Hole/zC1Hole-bC2Hole/zC2Hole)>1e-12){
-	    std::cout << "Warning! bC1/zC1 not equal to bC2/zC2 for Hole." << std::endl;
+	    dd4hep::printout(dd4hep::WARNING, "Construct", "bC1/zC1 not equal to bC2/zC2 for Hole.");
 	  }
 	  pzTopCutHole = 0.5*(a1Hole-a2Hole)*tan(bottom);
 	}
@@ -578,13 +578,9 @@ static Ref_t create_detector(Detector& theDetector,
   tube.setVisAttributes( theDetector, "SeeThrough", envelope );
   
   //debug
-  std::cout << "============ConicalSupportData============" << std::endl;
-  for(unsigned int i=0;i<beampipeData->sections.size();i++){
-    std::cout << std::setw(8) << beampipeData->sections[i].zPos    /dd4hep::mm
-              << std::setw(8) << beampipeData->sections[i].rInner  /dd4hep::mm
-	      << std::setw(8) << beampipeData->sections[i].rOuter  /dd4hep::mm
-	      << std::endl;
-  }
+  if (dd4hep::printLevel()<=dd4hep::WARNING) std::cout << (*beampipeData) << std::endl;
+
+  dd4hep::setPrintLevel(oldLevel);
 
   return tube;
 }

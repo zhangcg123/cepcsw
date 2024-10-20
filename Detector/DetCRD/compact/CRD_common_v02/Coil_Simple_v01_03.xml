@@ -1,0 +1,96 @@
+<lccdd>
+  <define>
+    <constant name="CoilShellInnerThickness" value="15*mm"/>
+    <constant name="CoilShellOuterThickness" value="25*mm"/>
+    <constant name="CoilShellSideThickness"  value="60*mm"/>
+    <constant name="CoilTSBarrelThickness"   value="10*mm"/>
+    <constant name="CoilTSSideThickness"     value="15*mm"/>
+    <constant name="CoilShellTSInnerGap"     value="50*mm"/>
+    <constant name="CoilShellTSOuterGap"     value="100*mm"/>
+    <constant name="CoilShellTSSideGap"      value="165*mm"/>
+    <constant name="CoilTSInnerRadius"       value="Solenoid_inner_radius+CoilShellInnerThickness+CoilShellTSInnerGap"/>
+    <constant name="CoilTSOuterRadius"       value="Solenoid_outer_radius-CoilShellInnerThickness-CoilShellTSOuterGap"/>
+    <constant name="CoilTSHalfLength"        value="Solenoid_half_length-CoilShellSideThickness-CoilShellTSSideGap"/>
+    <constant name="CoilTSCoilInnerGap"      value="40*mm"/>
+    <constant name="CoilThickness"           value="230*mm"/>
+    <constant name="CoilCoolingThickness"    value="30*mm"/>
+  </define>
+
+  <detectors>
+    <detector name="CoilInnerShell" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="Solenoid_inner_radius" rmax="Solenoid_inner_radius+CoilShellInnerThickness" zhalf="Solenoid_half_length-CoilShellSideThickness"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilOuterShell" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="Solenoid_outer_radius-CoilShellOuterThickness" rmax="Solenoid_outer_radius" zhalf="Solenoid_half_length-CoilShellSideThickness"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilInnerThermalShield" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="CoilTSInnerRadius" rmax="CoilTSInnerRadius+CoilTSBarrelThickness" zhalf="CoilTSHalfLength-CoilTSSideThickness"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilOuterThermalShield" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="CoilTSOuterRadius-CoilTSBarrelThickness" rmax="CoilTSOuterRadius" zhalf="CoilTSHalfLength-CoilTSSideThickness"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="Coil" type="DD4hep_TubeSegment" vis="SOLVis">
+      <material name="NbTi-Cu-Al" />
+      <tubs rmin="SolenoidCoil_radius" rmax="SolenoidCoil_radius+CoilThickness" zhalf="SolenoidCoil_half_length"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilCooliing" type="DD4hep_TubeSegment" vis="SOLVis">
+      <material name="TiNMixture" />
+      <tubs rmin="SolenoidCoil_radius+CoilThickness" rmax="SolenoidCoil_radius+CoilThickness+CoilCoolingThickness" zhalf="SolenoidCoil_half_length"/>
+      <position x="0" y="0" z="0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilLeftShell" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" zhalf="CoilShellSideThickness/2.0"/>
+      <position x="0" y="0" z="Solenoid_half_length-CoilShellSideThickness/2.0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilRightShell" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="Solenoid_inner_radius" rmax="Solenoid_outer_radius" zhalf="CoilShellSideThickness/2.0"/>
+      <position x="0" y="0" z="-Solenoid_half_length+CoilShellSideThickness/2.0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilLeftThermalShield" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="CoilTSInnerRadius" rmax="CoilTSOuterRadius" zhalf="CoilTSSideThickness/2.0"/>
+      <position x="0" y="0" z="CoilTSHalfLength-CoilTSSideThickness/2.0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+
+    <detector name="CoilRightThermalShield" type="DD4hep_TubeSegment" vis="ShellVis">
+      <material name="G4_Al" />
+      <tubs rmin="CoilTSInnerRadius" rmax="CoilTSOuterRadius" zhalf="CoilTSSideThickness/2.0"/>
+      <position x="0" y="0" z="-CoilTSHalfLength+CoilTSSideThickness/2.0"/>
+      <rotation x="0" y="0" z="0"/>
+    </detector>
+  </detectors>
+  
+  <!--readouts>
+    <readout name="COILCollection">
+      <id>system:5,side:-2,layer:9,slice:8,sensor:8,barrelside:-2</id>
+    </readout>
+  </readouts-->
+</lccdd>

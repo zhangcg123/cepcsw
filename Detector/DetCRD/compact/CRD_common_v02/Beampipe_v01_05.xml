@@ -51,7 +51,7 @@
   </define>
 
   <detectors>        
-    <detector name="BeamPipe" type="CRDBeamPipe_v01" vis="VacVis">
+    <detector name="BeamPipe" type="CRDBeamPipe_v01" vis="VacVis" printLevel="ERROR">
       <parameter crossingangle="CrossingAngle" />
       <envelope>
 	<shape type="Assembly"/>
@@ -62,7 +62,7 @@
       <section type ="Center" name="IPInnerTube" zStart="0" zEnd="BeamPipe_BeAl_zmin" rStart="0">
 	<layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
 	<layer material="G4_Be" thickness="BeamPipe_Be_inner_thickness" vis="TubeVis"/>
-	<layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
+	<layer material="G4_WATER" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
 	<layer material="G4_Be" thickness="BeamPipe_Be_outer_thickness" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeAlLinker" zStart="BeamPipe_BeAl_zmin" zEnd="BeamPipe_CentralBe_zmax" rStart="0">

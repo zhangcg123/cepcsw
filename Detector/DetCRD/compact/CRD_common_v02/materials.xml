@@ -811,6 +811,22 @@
       <constant name="WLSTIMECONSTANT" value="0.5*ns"/>
     </material>
 
+    <!-- approximation of coil cooling pipe to average plane, pipe area about 5.2%, to update-->
+    <material name="TiNMixture">
+      <D type="density" value="0.067" unit="g/cm3"/>
+      <fraction n="0.45" ref="Ti"/>
+      <fraction n="0.55" ref="N" />
+    </material>
+
+    <!-- coil moxture, determined by NbTi ratio-->
+    <material name="NbTi-Cu-Al">
+      <D type="density" value="2.876" unit="g/cm3"/>
+      <fraction n="0.033" ref="Nb"/>
+      <fraction n="0.041" ref="Ti"/>
+      <fraction n="0.031" ref="Cu"/>
+      <fraction n="0.895" ref="Al"/>
+    </material>
+
   </materials>
 
   <surfaces>

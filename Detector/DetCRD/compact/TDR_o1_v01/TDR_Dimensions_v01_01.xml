@@ -60,8 +60,8 @@
 
     <!-- FIXME:need to check/-->
     <constant name="BeamPipe_Be_inner_thickness"   value="0.2*mm"/>
-    <constant name="BeamPipe_Cooling_thickness"    value="0.3*mm"/>
-    <constant name="BeamPipe_Be_outer_thickness"   value="0.2*mm"/>
+    <constant name="BeamPipe_Cooling_thickness"    value="0.2*mm"/>
+    <constant name="BeamPipe_Be_outer_thickness"   value="0.15*mm"/>
     <constant name="BeamPipe_Be_total_thickness"   value="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness"/>
     <constant name="BeamPipe_Al_thickness"         value="2.0*mm"/>
     <constant name="BeamPipe_ThinCu_thickness"     value="2.0*mm"/>
@@ -182,7 +182,7 @@
 
     <constant name="Solenoid_inner_radius" value="3535*mm"/>
     <constant name="Solenoid_outer_radius" value="4235*mm"/>
-    <constant name="Solenoid_half_length" value="4575*mm"/>
+    <constant name="Solenoid_half_length" value="4525*mm"/>
     <constant name="SolenoidCoil_half_length" value="4075*mm"/>
     <constant name="SolenoidCoil_radius" value="3650*mm"/>
     <constant name="SolenoidCoil_center_radius" value="(Solenoid_inner_radius+Solenoid_outer_radius)/2"/>
@@ -192,7 +192,7 @@
     <constant name="Yoke_barrel_half_length" value="4525*mm"/>
     <constant name="Yoke_barrel_symmetry" value="12"/>
     
-    <constant name="Yoke_endcap_inner_radius" value="650*mm"/>
+    <constant name="Yoke_endcap_inner_radius" value="600*mm"/>
     <constant name="Yoke_endcap_outer_radius" value="Yoke_barrel_outer_radius"/>
     <constant name="Yoke_endcap_zmin" value="4635*mm"/>
     <constant name="Yoke_endcap_zmax" value="5875*mm"/>
