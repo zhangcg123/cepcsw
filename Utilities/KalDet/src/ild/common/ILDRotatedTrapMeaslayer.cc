@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "ILDRotatedTrapMeaslayer.h"
-#include "ILDPlanarHit.h"
+#include "kaldet/ILDRotatedTrapMeaslayer.h"
+#include "kaldet/ILDPlanarHit.h"
 
 #include "kaltest/TVTrack.h"
 #include "TVector3.h"

@@ -1,8 +1,8 @@
 
 #include <iostream>
 
-#include "ILDDiscMeasLayer.h"
-#include "ILDPlanarHit.h"
+#include "kaldet/ILDDiscMeasLayer.h"
+#include "kaldet/ILDPlanarHit.h"
 
 #include "kaltest/TVTrack.h"
 #include "TVector3.h"
@@ -16,6 +16,8 @@
 
 #include "gearimpl/Vector3D.h"
 
+#include "DetIdentifier/CEPCConf.h"
+#include <bitset>
 // #include "streamlog/streamlog.h"
 
 
@@ -191,15 +193,20 @@ Bool_t ILDDiscMeasLayer::IsOnSurface(const TVector3 &xx) const
   TKalMatrix mv = XvToMv(xx);
   
   // check whether the hit lies in the same plane as the surface
-  if( TMath::Abs((xx.X()-GetXc().X())*GetNormal().X() + (xx.Y()-GetXc().Y())*GetNormal().Y() + (xx.Z()-GetXc().Z())*GetNormal().Z()) < 1e-4){
+  if (TMath::Abs((xx.X()-GetXc().X())*GetNormal().X() + (xx.Y()-GetXc().Y())*GetNormal().Y() + (xx.Z()-GetXc().Z())*GetNormal().Z()) < 1e-4) {
     // check whether the hit lies within the boundary of the surface 
     
     double r2 = mv(0,0) * mv(0,0) + mv(1,0) * mv(1,0) ;
     
-    if(  r2 <= _rMax*_rMax && r2 >= _rMin*_rMin )
-        { 
-          onSurface = true ;
-        }    
+    if (r2 <= _rMax*_rMax && r2 >= _rMin*_rMin) {
+      onSurface = true ;
+    }
+    else {
+      //std::cout << "r2: " << r2 << " r2min: " << _rMin*_rMin << " r2max: " << _rMax*_rMax << std::endl;
+    }
+  }
+  else {
+    //std::cout << "Xc: " << GetXc().X() << " " << GetXc().Y() << " " << GetXc().Z() << " Normal: " << GetNormal().X() << " " << GetNormal().Y() << " " << GetNormal().Z() << std::endl;
   }
   
   return onSurface;
@@ -211,31 +218,46 @@ ILDVTrackHit* ILDDiscMeasLayer::ConvertLCIOTrkHit(edm4hep::TrackerHit trkhit) co
   
   //edm4hep::TrackerHitPlane* plane_hit = dynamic_cast<EVENT::TrackerHitPlane*>( trkhit ) ;
   //edm4hep::TrackerHitPlane* plane_hit = trkhit;
-  if((trkhit.getType()&8)!=8) return NULL;
+  std::cout << "ILDDiscMeasLayer::ConvertLCIOTrkHit type = " << trkhit.getType() << std::endl;
+  std::bitset<32> type(trkhit.getType());
+  //if (!type[CEPCConf::TrkHitTypeBit::PLANAR]) return NULL;
   
   //edm4hep::TrackerHit plane_hit = trkhit;
   //if( plane_hit == NULL )  return NULL; // SJA:FIXME: should be replaced with an exception  
   
   //gear::Vector3D U(1.0,plane_hit.getU()[1],plane_hit.getU()[0],gear::Vector3D::spherical);
   //gear::Vector3D V(1.0,plane_hit.getV()[1],plane_hit.getV()[0],gear::Vector3D::spherical);
-  gear::Vector3D U(1.0,trkhit.getCovMatrix(1),trkhit.getCovMatrix(0),gear::Vector3D::spherical);
-  gear::Vector3D V(1.0,trkhit.getCovMatrix(5),trkhit.getCovMatrix(4),gear::Vector3D::spherical);
-  gear::Vector3D X(1.0,0.0,0.0);
-  gear::Vector3D Y(0.0,1.0,0.0);
-  
-  const float eps = 1.0e-07;
+  if (type[CEPCConf::TrkHitTypeBit::PLANAR]) {
+    gear::Vector3D U(1.0,trkhit.getCovMatrix(1),trkhit.getCovMatrix(0),gear::Vector3D::spherical);
+    gear::Vector3D V(1.0,trkhit.getCovMatrix(4),trkhit.getCovMatrix(3),gear::Vector3D::spherical);
+    gear::Vector3D X(1.0,0.0,0.0);
+    gear::Vector3D Y(0.0,1.0,0.0);
+    gear::Vector3D Z(0.0,0.0,1.0);
+
+    const float eps = 1.0e-07;
+    // only require vertical to Z axis
+    if (U.dot(Z) > eps) {
+      std::cout << "ILDDiscMeasLayer: TrackerHit measurment vectors U is not vertical to the global Z axis. \n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+      exit(1);
+    }
+    if (V.dot(Z) > eps) {
+      std::cout << "ILDDiscMeasLayer: TrackerHit measurment vectors V is not vertical to the global Z axis. \n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+      exit(1);
+    }
+  }
+  /*
   // U must be the global X axis 
-  if( fabs(1.0 - U.dot(X)) > eps ) {
-    // streamlog_out(ERROR) << "ILDDiscMeasLayer: TrackerHitPlane measurment vectors U is not equal to the global X axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+  if( fabs(1.0 - U.dot(Y)) > eps ) {
+    std::cout << "ILDDiscMeasLayer: TrackerHitPlane measurment vectors U is not equal to the global Y axis. \n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
     exit(1);
   }
   
   // V must be the global X axis 
-  if( fabs(1.0 - V.dot(Y)) > eps ) {
-    // streamlog_out(ERROR) << "ILDDiscMeasLayer: TrackerHitPlane measurment vectors V is not equal to the global Y axis. \n\n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
+  if( fabs(1.0 - V.dot(X)) > eps ) {
+    std::cout << "ILDDiscMeasLayer: TrackerHitPlane measurment vectors V is not equal to the global X axis. \n exit(1) called from file " << __FILE__ << " and line " << __LINE__ << std::endl;
     exit(1);
   }
-  
+  */
   const edm4hep::Vector3d& pos=trkhit.getPosition();
   const TVector3 hit(pos.x, pos.y, pos.z);
   
@@ -247,25 +269,33 @@ ILDVTrackHit* ILDDiscMeasLayer::ConvertLCIOTrkHit(edm4hep::TrackerHit trkhit) co
   
   x[0] = h(0, 0);
   x[1] = h(1, 0);
-  
-  //dx[0] = plane_hit.getdU() ;
-  //dx[1] = plane_hit.getdV() ;
-  dx[0] = trkhit.getCovMatrix(2);
-  dx[1] = trkhit.getCovMatrix(5);
+
+  if (type[CEPCConf::TrkHitTypeBit::PLANAR]) {
+    dx[0] = trkhit.getCovMatrix(2);
+    dx[1] = trkhit.getCovMatrix(5);
+  }
+  else if (type[CEPCConf::TrkHitTypeBit::CYLINDER]) {
+    dx[0] = sqrt(trkhit.getCovMatrix(0)+trkhit.getCovMatrix(2));
+    dx[1] = sqrt(trkhit.getCovMatrix(5));
+  }
+  else {
+    dx[0] = sqrt(trkhit.getCovMatrix(0)+trkhit.getCovMatrix(2));
+    dx[1] = sqrt(trkhit.getCovMatrix(5));
+  }
 
   bool hit_on_surface = IsOnSurface(hit);
-  
-  // streamlog_out(DEBUG1) << "ILDDiscMeasLayer::ConvertLCIOTrkHit ILDPlanarHit created" 
-  //       		<< " u = "  <<  x[0]
-  //       		<< " v = "  <<  x[1]
-  //       		<< " du = " << dx[0]
-  //       		<< " dv = " << dx[1]
-  //       		<< " x = " << pos.x
-  //       		<< " y = " << pos.y
-  //       		<< " z = " << pos.z
-  //       		<< " onSurface = " << hit_on_surface
-  //       		<< std::endl ;
-  
+//#define DEBUG_CONVERT 1
+#ifdef  DEBUG_CONVERT
+  std::cout << "ILDDiscMeasLayer::ConvertLCIOTrkHit ILDPlanarHit created"
+	    << " u = "  <<  x[0]
+	    << " v = "  <<  x[1]
+	    << " du = " << dx[0]
+	    << " dv = " << dx[1]
+	    << " x = " << pos.x
+	    << " y = " << pos.y
+	    << " z = " << pos.z
+	    << " onSurface = " << hit_on_surface
+	    << std::endl ;
+#endif
   return hit_on_surface ? new ILDPlanarHit( *this , x, dx, this->GetBz(), trkhit) : NULL; 
-  
 }

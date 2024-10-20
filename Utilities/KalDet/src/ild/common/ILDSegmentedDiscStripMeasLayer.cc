@@ -1,7 +1,6 @@
 
-#include "ILDSegmentedDiscStripMeasLayer.h"
-
-#include "ILDPlanarStripHit.h"
+#include "kaldet/ILDSegmentedDiscStripMeasLayer.h"
+#include "kaldet/ILDPlanarStripHit.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>

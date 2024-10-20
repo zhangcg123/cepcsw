@@ -116,19 +116,20 @@ namespace MarlinTrk {
   
   
   int MarlinKalTestTrack::addHit( edm4hep::TrackerHit& trkhit) {
-    
+    //std::cout << "MarlinKalTestTrack::addHit: trkhit = "  << trkhit.id() << " cell: " << trkhit.getCellID() << std::endl;
     return this->addHit( trkhit, _ktest->findMeasLayer( trkhit )) ;
     
   } 
   
   int MarlinKalTestTrack::addHit( edm4hep::TrackerHit& trkhit, const ILDVMeasLayer* ml) {
-    //std::cout << "MarlinKalTestTrack::addHit: trkhit = "  << trkhit.id() << " addr: " << trkhit << " ml = " << ml << std::endl ;
+    //std::cout << "MarlinKalTestTrack::addHit: trkhit = "  << trkhit.id() << " cell: " << trkhit.getCellID() << " ml = " << ml << std::endl ;
     if( trkhit.isAvailable() && ml ) {
       //if(ml){
+      //std::cout << "in ILDVMeasLayer " << ml->GetName() << std::endl;
       return this->addHit( trkhit, ml->ConvertLCIOTrkHit(trkhit), ml) ;
     }
     else {
-      //std::cout << "MarlinKalTestTrack::addHit: - bad inputs trkhit = "  << trkhit.id() << " addr: " << trkhit << " ml = " << ml << std::endl ;
+      //std::cout << "MarlinKalTestTrack::addHit: - bad inputs trkhit = "  << trkhit.id() << " addr: " << trkhit.getCellID() << " ml = " << ml << std::endl ;
       return bad_intputs ;
     }
     return bad_intputs ;

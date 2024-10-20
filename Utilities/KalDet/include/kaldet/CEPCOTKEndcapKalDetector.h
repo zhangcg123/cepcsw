@@ -1,10 +1,10 @@
-#ifndef __ILDFTDDETECTOR__
-#define __ILDFTDDETECTOR__
+#ifndef __CEPCOTKEndcapDETECTOR__
+#define __CEPCOTKEndcapDETECTOR__
 
-/** Petal based FTD to be used for ILD DBD studies 
+/** Petal based OTKEndcap to be used for CEPC TDR studies 
  * WARNING: Still very experimental
  *
- * @author S.Aplin DESY, Robin Glattauer HEPHY
+ * @author
  */
 
 #include "kaltest/TVKalDetector.h"
@@ -17,17 +17,14 @@ namespace gear{
   class GearMgr ;
 }
 
-class ILDFTDKalDetector : public TVKalDetector {
+class CEPCOTKEndcapKalDetector : public TVKalDetector {
 public:
-  
-  /** Initialize the FTD from GEAR */
-  ILDFTDKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* geoSvc  );
-  
-  
+  /** Initialize the OTKEndcap from GEAR */
+  CEPCOTKEndcapKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* geoSvc  );
+
 private:
   
-  struct FTD_Petal {
-    
+  struct OTKEndcap_Petal {
     int    ipetal;
     double phi;
     double alpha;
@@ -39,11 +36,9 @@ private:
     double supThickness;
     double senZPos;
     bool faces_ip;
-    
   };
   
-  
-  struct FTD_Disk {
+  struct OTKEndcap_Disk {
     int nPetals;
     double phi0;
     double dphi;
@@ -65,29 +60,22 @@ private:
     bool isStripReadout;
     
     int nSensors;
-    
-    
   };
-  
  
   void build_staggered_design();
   
-  //void create_petal(TVector3 measurement_plane_centre, FTD_Petal petal, int CellID);
+  //void create_petal(TVector3 measurement_plane_centre, OTKEndcap_Petal petal, int CellID);
   /**
    * @param zpos the z position of the front measurement surface (middle of front sensitive)
    */
   void create_segmented_disk_layers(int idisk, int nsegments, bool even_petals, double phi0, double zpos );
   
+  void setupGearGeom(const gear::GearMgr& gearMgr);
+  void setupGearGeom(IGeomSvc* geoSvc);
   
-  void setupGearGeom( const gear::GearMgr& gearMgr ) ;
-  void setupGearGeom( IGeomSvc* geoSvc );
-  
-  int _nDisks ;
-  double _bZ ;
-  
+  int _nDisks;
+  double _bZ;
    
-  std::vector<FTD_Disk> _FTDgeo;
-  
+  std::vector<OTKEndcap_Disk> _OTKEndcapgeo;
 };
-
 #endif

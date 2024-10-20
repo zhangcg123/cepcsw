@@ -15,6 +15,7 @@
 #include "kaldet/ILDSITCylinderKalDetector.h"
 #include "kaldet/ILDSETKalDetector.h"
 #include "kaldet/CEPCOTKKalDetector.h"
+#include "kaldet/CEPCOTKEndcapKalDetector.h"
 #include "kaldet/ILDFTDKalDetector.h"
 #include "kaldet/ILDFTDDiscBasedKalDetector.h"
 #include "kaldet/ILDTPCKalDetector.h"
@@ -186,6 +187,16 @@ namespace MarlinTrk{
 	  std::cout << "Warning: " << "  MarlinKalTest - Simple Disc Based FTD missing in gear file: Simple Disc Based FTD Not Built " << std::endl ;
         }
       }
+
+      try{
+        CEPCOTKEndcapKalDetector* etddet = new CEPCOTKEndcapKalDetector(*_gearMgr, _geoSvc);
+        // store the measurement layer id's for the active layers
+        this->storeActiveMeasurementModuleIDs(etddet);
+        _det->Install(*etddet);
+      }
+      catch( gear::UnknownParameterException& e){
+	std::cout << "Warning: " << "  MarlinKalTest - ETD missing in gear file: Petal Based ETD Not Built " << std::endl;
+      }
       
       try{
         ILDTPCKalDetector* tpcdet = new ILDTPCKalDetector( *_gearMgr, _geoSvc )  ;
@@ -333,31 +344,23 @@ namespace MarlinTrk{
           int sensitive_element_id = *it;
           this->_active_measurement_modules.insert(std::pair<int,const ILDVMeasLayer*>( sensitive_element_id, ml ));        
           ++it;
-          
+
         }
         
         int subdet_layer_id = ml->getLayerID() ;
         
         this->_active_measurement_modules_by_layer.insert(std::pair<int ,const ILDVMeasLayer*>(subdet_layer_id,ml));
-        
-        //streamlog_out(DEBUG0) << "MarlinKalTest::storeActiveMeasurementLayerIDs added active layer with "
-        //<< " LayerID = " << subdet_layer_id << " and DetElementIDs  " ;
-        
-        for (it = ml->getCellIDs().begin(); it!=ml->getCellIDs().end(); ++it) {
-          
-          //streamlog_out(DEBUG0) << " : " << *it ;
-          
-        }
-        
-        //streamlog_out(DEBUG0) << std::endl;
-        
-        
-        
-        
+//#define DEBUG_CELLID 1
+#ifdef  DEBUG_CELLID
+	std::cout << "MarlinKalTest::storeActiveMeasurementLayerIDs added active layer with "
+		  << " LayerID = " << subdet_layer_id << " and DetElementIDs  " ;
+	for (it = ml->getCellIDs().begin(); it!=ml->getCellIDs().end(); ++it) {
+	  std::cout << " : " << *it ;
+	}
+	std::cout << std::endl;
+#endif
       }
-      
     }
-    
   }
   
   const ILDVMeasLayer*  MarlinKalTest::getLastMeasLayer(THelicalTrack const& hel, TVector3 const& point) const {

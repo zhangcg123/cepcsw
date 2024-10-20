@@ -1,8 +1,8 @@
 
-#include "ILDPlanarHit.h"
-#include "ILDPlanarMeasLayer.h"
-#include "ILDSegmentedDiscMeasLayer.h"
-#include "ILDDiscMeasLayer.h"
+#include "kaldet/ILDPlanarHit.h"
+#include "kaldet/ILDPlanarMeasLayer.h"
+#include "kaldet/ILDSegmentedDiscMeasLayer.h"
+#include "kaldet/ILDDiscMeasLayer.h"
 #include "TMath.h"
 
 #include <iostream>

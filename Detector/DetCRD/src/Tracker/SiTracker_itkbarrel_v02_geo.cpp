@@ -734,13 +734,13 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     Layer.thicknessSupport     = support_thickness / 2.0;
     Layer.offsetSupport        = stave_radius*sin(stave_phi0);//-stave_offset;
     Layer.widthSupport         = support_width;
-    Layer.zHalfSupport         = support_half_length;
+    Layer.zHalfSupport         = module_length*n_modules_per_stave/2.0;//support_half_length;
     Layer.distanceSensitive    = stave_radius*cos(stave_phi0) + StaveSupportenv_start_height + support_thickness;
                                //sensitive_radius + tube_outer_radius*2. + support_thickness;
     Layer.thicknessSensitive   = sensor_thickness;//module_thickness;
     Layer.offsetSensitive      = stave_radius*sin(stave_phi0);//-stave_offset;//stave_offset/2.0;
     Layer.widthSensitive       = module_width;
-    Layer.zHalfSensitive       = support_half_length;
+    Layer.zHalfSensitive       = module_length*n_modules_per_stave/2.0;//support_half_length;
 
     zPlanarData->layers.push_back(Layer);
  }

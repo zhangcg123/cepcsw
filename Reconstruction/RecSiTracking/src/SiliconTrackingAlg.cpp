@@ -3013,7 +3013,7 @@ StatusCode SiliconTrackingAlg::setupGearGeom(){
   
   try{
     
-    debug() << " filling VXD parameters from gear::SITParameters " << endmsg ;
+    debug() << " filling VXD parameters from gear::VXDParameters " << endmsg ;
     
     pVXDDetMain = &gearMgr->getVXDParameters();
     pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());

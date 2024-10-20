@@ -1,10 +1,7 @@
 
-#include "ILDSITKalDetector.h"
-
-#include "MaterialDataBase.h"
-
-#include "ILDParallelPlanarStripMeasLayer.h"
-
+#include "kaldet/ILDSITKalDetector.h"
+#include "kaldet/MaterialDataBase.h"
+#include "kaldet/ILDParallelPlanarStripMeasLayer.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>

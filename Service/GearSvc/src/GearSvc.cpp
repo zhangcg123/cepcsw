@@ -6,6 +6,7 @@
 #include "gearxml/GearXML.h"
 #include "gearimpl/GearMgrImpl.h"
 #include "gearimpl/ConstantBField.h"
+#include "gearimpl/GearParametersImpl.h"
 #include "gearimpl/ZPlanarParametersImpl.h"
 #include "gearimpl/ZPlanarLayerLayoutImpl.h"
 #include "gearimpl/FTDParametersImpl.h"
@@ -103,6 +104,9 @@ StatusCode GearSvc::initialize()
       }
       else if(it->first=="SET" || it->first=="OTKBarrel"){
 	sc = convertSET(sub);
+      }
+      else if(it->first=="ETD" || it->first=="OTKEndcap"){
+        sc = convertETD(sub);
       }
       else if(it->first=="EcalBarrel"||it->first=="EcalEndcap"||it->first=="EcalPlug"||
 	      it->first=="HcalBarrel"||it->first=="HcalEndcap"||it->first=="HcalRing"||
@@ -323,6 +327,15 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
 			l.zHalfSensitive/dd4hep::mm, l.widthSensitive/dd4hep::mm, 0.);
     }
 
+    {
+      const dd4hep::rec::ZPlanarData::LayerLayout& l = vtxData->layersPlanar[0] ;
+      double offset = l.offsetSupport;
+      dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, offset, 2.*dd4hep::mm);
+      dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   offset, 2.*dd4hep::mm);
+      gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
+      m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
+    }
+
     std::vector<int> ids;
     std::vector<double> zhalfs, rsens, tsens, rsups, tsups, phi0s, rgaps, dphis;
 
@@ -352,11 +365,13 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
 
     m_gearMgr->setVXDParameters(gearVTX);
 
-    const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[0] ;
-    dd4hep::rec::Vector3D a(l.radiusSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
-    dd4hep::rec::Vector3D b(l.radiusSupport + l.thicknessSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
-    gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
-    m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
+    {
+      const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[0] ;
+      dd4hep::rec::Vector3D a(l.radiusSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+      dd4hep::rec::Vector3D b(l.radiusSupport + l.thicknessSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+      gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDBentSupportMaterial");
+      m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
+    }
 
     if (vtxData->rOuterShell>vtxData->rInnerShell) {
       dd4hep::rec::Vector3D a1( vtxData->rInnerShell, 0, 2.*dd4hep::mm);
@@ -419,6 +434,71 @@ StatusCode GearSvc::convertFTD(dd4hep::DetElement& ftd){
                        senRinner, senThickness, senLengthMin, senLengthMax, senWidth, 0);
   }
   m_gearMgr->setFTDParameters(ftdParam);
+  info() << "nftd = " << nLayers << endmsg;
+  return StatusCode::SUCCESS;
+}
+
+StatusCode GearSvc::convertETD(dd4hep::DetElement& etd){
+  dd4hep::rec::ZDiskPetalsData* etdData = nullptr;
+  try{
+    etdData = etd.extension<dd4hep::rec::ZDiskPetalsData>();
+  }
+  catch(std::runtime_error& e){
+    warning() << e.what() << " " << etdData << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  std::vector<dd4hep::rec::ZDiskPetalsData::LayerLayout>& etdlayers = etdData->layers;
+  int nLayers = etdlayers.size();
+
+  gear::GearParametersImpl* etdParam = new gear::GearParametersImpl();
+  etdParam->setDoubleVal("strip_width_mm", etdData->widthStrip*CLHEP::cm);
+  etdParam->setDoubleVal("strip_length_mm", etdData->lengthStrip*CLHEP::cm);
+  etdParam->setDoubleVal("strip_pitch_mm", etdData->pitchStrip*CLHEP::cm);
+  etdParam->setDoubleVal("strip_angle_deg", etdData->angleStrip*rad_to_deg);
+
+  std::vector<int> nPetals, nSensors;
+  std::vector<double> petalangles, phi0s, alphas, zpositions, zoffsets, supRinners, supThicknesss, supHeights, senRinners, senThicknesss, senHeights;
+  for(int layer = 0; layer < nLayers; layer++){
+    dd4hep::rec::ZDiskPetalsData::LayerLayout& etdlayer = etdlayers[layer];
+    nPetals.push_back(etdlayer.petalNumber);
+    petalangles.push_back(etdlayer.petalHalfAngle*2);
+    phi0s.push_back(etdlayer.phi0);
+    alphas.push_back(etdlayer.alphaPetal);
+    zpositions.push_back(etdlayer.zPosition*CLHEP::cm);
+    zoffsets.push_back(etdlayer.zOffsetSupport*CLHEP::cm);
+
+    supRinners.push_back(etdlayer.distanceSupport*CLHEP::cm);
+    supThicknesss.push_back(etdlayer.thicknessSupport*CLHEP::cm);
+    supHeights.push_back(etdlayer.lengthSupport*CLHEP::cm);
+    senRinners.push_back(etdlayer.distanceSensitive*CLHEP::cm);
+    senThicknesss.push_back(etdlayer.thicknessSensitive*CLHEP::cm);
+    senHeights.push_back(etdlayer.lengthSensitive*CLHEP::cm);
+
+    nSensors.push_back(etdlayer.sensorsPerPetal);
+  }
+  etdParam->setIntVals("ETDPetalNumber", nPetals);
+  etdParam->setIntVals("ETDSensorNumber", nSensors);
+  etdParam->setDoubleVals("ETDPetalAngle", petalangles);
+  etdParam->setDoubleVals("ETDDiskPhi0", phi0s);
+  etdParam->setDoubleVals("ETDDiskAlpha", alphas);
+  etdParam->setDoubleVals("ETDDiskPosition", zpositions);
+  etdParam->setDoubleVals("ETDDiskOffset", zoffsets);
+  etdParam->setDoubleVals("ETDSupportRmin", supRinners);
+  etdParam->setDoubleVals("ETDSupportThickness", supThicknesss);
+  etdParam->setDoubleVals("ETDSupportHeight", supHeights);
+  etdParam->setDoubleVals("ETDSensitiveRmin", senRinners);
+  etdParam->setDoubleVals("ETDSensitiveThickness", senThicknesss);
+  etdParam->setDoubleVals("ETDSensitiveHeight", senHeights);
+
+  const dd4hep::rec::ZDiskPetalsData::LayerLayout& l = etdData->layers[0];
+  double z = l.zPosition;
+  dd4hep::rec::Vector3D a(l.distanceSupport+0.5*l.lengthSupport, l.phi0, z-l.thicknessSupport, dd4hep::rec::Vector3D::cylindrical);
+  dd4hep::rec::Vector3D b(l.distanceSupport+0.5*l.lengthSupport, l.phi0, z, dd4hep::rec::Vector3D::cylindrical);
+  gear::SimpleMaterialImpl* ETDSupportMaterial = CreateGearMaterial(a, b, "OTKEndcapSupportMaterial");
+  m_gearMgr->registerSimpleMaterial(ETDSupportMaterial);
+
+  m_gearMgr->setGearParameters("ETDParameters", etdParam);
   info() << "nftd = " << nLayers << endmsg;
   return StatusCode::SUCCESS;
 }

@@ -1,9 +1,9 @@
 
-#include "ILDSupportKalDetector.h"
-#include "ILDCylinderMeasLayer.h"
-#include "ILDConeMeasLayer.h"
-#include "ILDPolygonBarrelMeasLayer.h"
-#include "ILDDiscMeasLayer.h"
+#include "kaldet/ILDSupportKalDetector.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
+#include "kaldet/ILDConeMeasLayer.h"
+#include "kaldet/ILDPolygonBarrelMeasLayer.h"
+#include "kaldet/ILDDiscMeasLayer.h"
 
 #include "TMath.h"
 #include "TTUBE.h"
@@ -11,7 +11,7 @@
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
 
-#include "MaterialDataBase.h"
+#include "kaldet/MaterialDataBase.h"
 
 #include <sstream>
 #include <cmath>

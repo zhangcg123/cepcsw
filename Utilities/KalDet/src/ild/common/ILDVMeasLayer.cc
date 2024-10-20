@@ -1,5 +1,5 @@
 
-#include "ILDVMeasLayer.h"
+#include "kaldet/ILDVMeasLayer.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
@@ -46,7 +46,7 @@ _isMultiLayer(true)
 {
   
   if (cellIDs.size() == 0 ) {
-    // streamlog_out(ERROR) << __FILE__ << " line " << __LINE__ << " size of cellIDs == 0" << std::endl;
+    std::cout << __FILE__ << " line " << __LINE__ << " size of cellIDs == 0" << std::endl;
   }
 
   UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 

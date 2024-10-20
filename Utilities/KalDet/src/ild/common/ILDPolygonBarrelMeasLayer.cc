@@ -1,5 +1,5 @@
 
-#include "ILDPolygonBarrelMeasLayer.h"
+#include "kaldet/ILDPolygonBarrelMeasLayer.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>

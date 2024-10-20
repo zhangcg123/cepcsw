@@ -4,6 +4,7 @@
 #include "DDRec/Surface.h"
 #include "DDRec/DetectorData.h"
 #include "XML/Utilities.h"
+#include "Math/AxisAngle.h"
 #include <cmath>
 
 using namespace std;
@@ -19,9 +20,89 @@ using dd4hep::Rotation3D;
 using dd4hep::Volume;
 using dd4hep::_toString;
 using dd4hep::rec::volSurfaceList;
-using dd4hep::rec::ZPlanarData;
+using dd4hep::rec::ZDiskPetalsData;
 using dd4hep::mm;
 
+namespace dd4hep {
+  namespace rec {
+    class VolPlectaneImpl : public VolSurfaceBase {
+      
+    public:
+      /// default c'tor
+      VolPlectaneImpl() : VolSurfaceBase() { }
+      
+      /** The standard constructor. The origin vector points to the origin of the coordinate system on the cylinder,
+       *  its rho defining the radius of the cylinder. The measurement direction v is set to be (0,0,1), the normal is
+       *  chosen to be parallel to the origin vector and u = n X v.
+       */
+      VolPlectaneImpl(Volume vol, SurfaceType type, double thickness_inner, double thickness_outer, Vector3D n, Vector3D o) :
+	VolSurfaceBase(type, thickness_inner, thickness_outer, Vector3D(), Vector3D(), n, o, vol, 0) {
+	Vector3D o_rphi(o.x(), o.y(), 0.);
+	Vector3D v_val = o_rphi.unit();
+	Vector3D u_val = v_val.cross(n);
+	
+	setU(u_val);
+	setV(v_val);
+
+	_type.setProperty(SurfaceType::Plane    , false);
+	_type.setProperty(SurfaceType::Cylinder , true);
+	_type.setProperty(SurfaceType::Cone     , false);
+	_type.checkParallelToZ(*this);
+	_type.checkOrthogonalToZ(*this);
+      }
+      
+      /** First direction of measurement U - rotated to point projected onto the plectane.
+       *  No check is done whether the point actually is on the surface
+       */
+      virtual Vector3D u(const Vector3D& point = Vector3D()) const {
+	Vector3D o_rphi(point.x(), point.y(), 0.);
+        Vector3D v_val = o_rphi.unit();
+        Vector3D u_val = v_val.cross(normal());
+	return u_val;
+      }
+
+      /** First direction of measurement V - rotated to point projected onto the plectane.
+       *  No check is done whether the point actually is on the surface
+       */
+      virtual Vector3D v(const Vector3D& point = Vector3D()) const {
+        Vector3D o_rphi(point.x(), point.y(), 0.);
+        Vector3D v_val = o_rphi.unit();
+        return v_val;
+      }
+      
+      /** Distance to surface */
+      virtual double distance(const Vector3D& point) const {
+	return (point - origin()) * normal();
+      }
+      
+      /** Convert the global position to the local position (u,v) on the surface - v runs along the axis of radial, u is r*phi */
+      virtual Vector2D globalToLocal(const Vector3D& point) const {
+	double phi = point.phi() - origin().phi() ;
+	while( phi < -M_PI ) phi += 2.*M_PI;
+	while( phi >  M_PI ) phi -= 2.*M_PI;
+
+	return  Vector2D(point.rho()*phi, point.rho() - origin().rho());
+      }
+      
+      /** Convert the local position (u,v) on the surface to the global position  - v runs along the axis of radial, u is r*phi*/
+      virtual Vector3D localToGlobal(const Vector2D& point) const {
+	double z = origin().z();
+	double rho = point.v() + origin().rho();
+	double phi = point.u()/rho + origin().phi();
+	while( phi < -M_PI ) phi += 2.*M_PI;
+	while( phi >  M_PI ) phi -= 2.*M_PI;
+
+	return Vector3D(rho, phi, z, Vector3D::cylindrical);
+      }
+    };
+    
+    class VolPlectane : public VolSurface {
+    public:
+      VolPlectane(Volume vol, SurfaceType typ_val, double thickness_inner, double thickness_outer, Vector3D n, Vector3D o) :
+	VolSurface(new VolPlectaneImpl(vol, typ_val, thickness_inner, thickness_outer, n, o)) {}
+    };
+  }
+}
 
 static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4hep::SensitiveDetector sens)  {
 
@@ -45,13 +126,13 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     }
     std::cout << " ** building SiTracker_otkendcap ..." << std::endl ;
 
-    dd4hep::rec::ZPlanarData* zPlanarData = new dd4hep::rec::ZPlanarData;
+    dd4hep::rec::ZDiskPetalsData* zDiskPetalsData = new dd4hep::rec::ZDiskPetalsData;
     //*****************************************************************//
 
     // Reading parameters from the .xml file
 
     //*****************************************************************//
-
+    bool        reflect = x_det.reflect(true);
     //fetch the geometry parameters
     const double inner_radius   = theDetector.constant<double>("OTKEndcap_inner_radius");
     const double outer_radius   = theDetector.constant<double>("OTKEndcap_outer_radius");
@@ -292,7 +373,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 
         //create and place utilities in each ring
         std::vector<dd4hep::PlacedVolume> sensor_pv;
-        std::vector<dd4hep::rec::VolPlane> sensor_surf;
+        //std::vector<dd4hep::rec::VolPlane> sensor_surf;
+	std::vector<dd4hep::rec::VolPlectane> sensor_surf;
         dd4hep::rec::Vector3D o(0., 0., 0.);
         dd4hep::rec::Vector3D u(0., 1., 0.);
         dd4hep::rec::Vector3D v(1., 0., 0.);
@@ -309,6 +391,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         double ring_asic_angle;
         double ring_asic_interval;
         double asic_mid_angle;
+	int    sensor_number_per_piece(0);
         for(int i=0;i<10;i++){
             ring_inner_radius               = ring_outer_radius + sensor_dead_gap * 2;
             ring_outer_radius               = r[i+1] - sensor_dead_gap;
@@ -364,11 +447,17 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             SensorLogical.setSensitiveDetector(sens);
             SensorLogical.setVisAttributes(theDetector.visAttributes(sensVis));
             if (x_det.hasAttr(_U(limits))) SensorLogical.setLimitSet(theDetector, x_det.limitsStr());
-            dd4hep::rec::VolPlane surfsens( SensorLogical,
+	    /*            dd4hep::rec::VolPlane surfsens( SensorLogical,
                                             dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
                                             inner_thick,
                                             outer_thick,
-                                            u,v,n,o);
+                                            u,v,n,o);*/
+	    dd4hep::rec::Vector3D ocyl((ring_inner_radius+ring_outer_radius)/2.0, 0., 0.);
+	    dd4hep::rec::VolPlectane surfsens(SensorLogical, dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
+					      0.5*sensor_thickness, 0.5*sensor_thickness, n, ocyl);
+	    //surfsens.setU(u);
+	    //surfsens.setV(v);
+	    //surfsens.setNormal(n);
             sensor_surf.push_back(surfsens);
             DeadSensorLogicalA.setVisAttributes(theDetector.visAttributes(deadsensVis));
             DeadSensorLogicalB.setVisAttributes(theDetector.visAttributes(deadsensVis));
@@ -381,6 +470,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             pv = SensorEnvLogical.placeVolume(DeadSensorLogicalB,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
             pv = SensorEnvLogical.placeVolume(DeadSensorLogicalC,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
             pv = SensorEnvLogical.placeVolume(DeadSensorLogicalD,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
+
+	    sensor_number_per_piece++;
 
             if(ring_module_number==2){
                 dd4hep::Tube SensorSolid(   ring_inner_radius,
@@ -411,11 +502,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
                 SensorLogical.setSensitiveDetector(sens);
                 SensorLogical.setVisAttributes(theDetector.visAttributes(sensVis));
                 if (x_det.hasAttr(_U(limits))) SensorLogical.setLimitSet(theDetector, x_det.limitsStr());
-                dd4hep::rec::VolPlane surfsens( SensorLogical ,
-                                                dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
-                                                inner_thick,
-                                                outer_thick,
-                                                u,v,n,o);
+		dd4hep::rec::VolPlectane surfsens(SensorLogical, dd4hep::rec::SurfaceType(dd4hep::rec::SurfaceType::Sensitive),
+						  0.5*sensor_thickness, 0.5*sensor_thickness, n, ocyl);
                 sensor_surf.push_back(surfsens);
                 DeadSensorLogicalA.setVisAttributes(theDetector.visAttributes(sensVis));
                 DeadSensorLogicalB.setVisAttributes(theDetector.visAttributes(sensVis));
@@ -424,6 +512,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
                 sensor_pv.push_back(pv);
                 pv = SensorEnvLogical.placeVolume(DeadSensorLogicalA,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
                 pv = SensorEnvLogical.placeVolume(DeadSensorLogicalB,   Position(0, 0, -(pcb_thickness + asic_thickness) / 2.0));
+
+		sensor_number_per_piece++;
             }
 
             //create and place pcb logical volume
@@ -484,9 +574,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         // Assembling
 
         //*****************************************************************//
-
+	float rot = layer_id*0.5;
         for(int i=0;i<piece_number; i++){
-            float rot = layer_id*0.5;
             std::stringstream piece_enum;
             piece_enum << "otkendcap_piece_" << layer_id << "_" << i;
             DetElement pieceDE(layerDE, piece_enum.str(), x_det.id());
@@ -497,14 +586,14 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             for(int iring=0;iring<10;iring++){
                 sensor_num = sensor_num + module_num[iring];
             }
-            for(int isensor=0;isensor<sensor_num;++isensor){
+            for(int isensor=0;isensor<sensor_number_per_piece;++isensor){
                 std::stringstream sensor_str;
                 sensor_str << piece_enum.str() << "_" << isensor;
                 DetElement sensorDE(pieceDE, sensor_str.str(), x_det.id());
                 sensorDE.setPlacement(sensor_pv[isensor]);
                 volSurfaceList(sensorDE)->push_back(sensor_surf[isensor]);
             }
-            Transform3D trA (               RotationZYX(deg_interval*(i+rot),
+            Transform3D trA (               RotationZYX(-deg_interval*(i+rot)+180*dd4hep::degree-deg-dead_deg,
                                                         180*dd4hep::degree,
                                                         0.),
                                             Position(0.,
@@ -516,37 +605,53 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
                                             Position(0.,
                                                      0.,
                                                      -layer_zpos));
+	    
             pv = layer_assembly.placeVolume(PieceEnvLogical,trA);
-            pv.addPhysVolID("module", i*2);
+	    pv.addPhysVolID("module", i).addPhysVolID("side", +1);
             pieceDE.setPlacement(pv);
-            pv = layer_assembly.placeVolume(PieceEnvLogical,trB);
-            pv.addPhysVolID("module", i*2+1);
-            pieceDE.setPlacement(pv);
-            std::cout << piece_enum.str() << " done." << std::endl;
+
+	    if(reflect){
+	      pv = layer_assembly.placeVolume(PieceEnvLogical,trB);
+	      pv.addPhysVolID("module", i).addPhysVolID("side", -1);
+	      DetElement r_pieceDE(layerDE, piece_enum.str()+"_neg", x_det.id());
+	      r_pieceDE.setPlacement(pv);
+	      for(int isensor=0;isensor<sensor_number_per_piece;++isensor){
+		std::stringstream sensor_str;
+                sensor_str << piece_enum.str() << "_" << isensor;
+                DetElement r_sensorDE(r_pieceDE, sensor_str.str(), x_det.id());
+                r_sensorDE.setPlacement(sensor_pv[isensor]);
+                volSurfaceList(r_sensorDE)->push_back(sensor_surf[isensor]);
+	      }
+	    }
         }
 
         // package the reconstruction data
-        dd4hep::rec::ZPlanarData::LayerLayout otkendcapLayer;
+	dd4hep::rec::ZDiskPetalsData::LayerLayout thisLayer;
+	thisLayer.typeFlags[ dd4hep::rec::ZDiskPetalsData::SensorType::DoubleSided ] = false;
+	thisLayer.typeFlags[ dd4hep::rec::ZDiskPetalsData::SensorType::Pixel ]       = true;
+	thisLayer.petalHalfAngle      = (deg+dead_deg)/2;
+	thisLayer.alphaPetal          = 0;
+	thisLayer.zPosition           = layer_zpos + layer_thickness/2.0 - support_thickness - sensor_thickness/2.0;
+	thisLayer.petalNumber         = piece_number;
+	thisLayer.sensorsPerPetal     = sensor_number_per_piece;
+	thisLayer.phi0                = 0.5*(deg+dead_deg) + deg_interval*rot;
+	thisLayer.zOffsetSupport      = 0;
+	thisLayer.distanceSupport     = r0;
+	thisLayer.thicknessSupport    = support_thickness;
+	thisLayer.widthInnerSupport   = 0;
+	thisLayer.widthOuterSupport   = 0;
+	thisLayer.lengthSupport       = r10 - r0;
+	thisLayer.zOffsetSensitive    = 0;
+	thisLayer.distanceSensitive   = r0;
+	thisLayer.thicknessSensitive  = sensor_thickness;
+	thisLayer.widthInnerSensitive = 0;
+	thisLayer.widthOuterSensitive = 0;
+	thisLayer.lengthSensitive     = r10 - r0;
 
-        otkendcapLayer.ladderNumber         = piece_number;
-        otkendcapLayer.phi0                 = 0.;
-        otkendcapLayer.sensorsPerLadder     = 15;
-        otkendcapLayer.lengthSensor         = r1-r0-sensor_dead_gap*2;
-        otkendcapLayer.distanceSupport      = support_thickness/2.0;
-        otkendcapLayer.thicknessSupport     = support_thickness/2.0;
-        otkendcapLayer.offsetSupport        = 0.;
-        otkendcapLayer.widthSupport         = support_inner_radius;
-        otkendcapLayer.zHalfSupport         = support_outer_radius;
-        otkendcapLayer.distanceSensitive    = support_thickness;
-        otkendcapLayer.thicknessSensitive   = sensor_thickness;
-        otkendcapLayer.offsetSensitive      = 0.;
-        otkendcapLayer.widthSensitive       = 0.;
-        otkendcapLayer.zHalfSensitive       = 0.;
-
-        zPlanarData->layers.push_back(otkendcapLayer);
+	zDiskPetalsData->layers.push_back(thisLayer);
     }
-    std::cout << (*zPlanarData) << endl;
-    otkendcap.addExtension< ZPlanarData >(zPlanarData);
+    std::cout << (*zDiskPetalsData) << endl;
+    otkendcap.addExtension< ZDiskPetalsData >(zDiskPetalsData);
     if ( x_det.hasAttr(_U(combineHits)) ) {
         otkendcap.setCombineHits(x_det.attr<bool>(_U(combineHits)),sens);
     }

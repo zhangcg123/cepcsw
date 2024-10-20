@@ -29,6 +29,7 @@ class GearSvc : public extends<Service, IGearSvc>
 	StatusCode convertDC (dd4hep::DetElement& dc);
 	StatusCode convertSET(dd4hep::DetElement& set);
 	StatusCode convertFTD(dd4hep::DetElement& ftd);
+	StatusCode convertETD(dd4hep::DetElement& etd);
 	StatusCode convertCal(dd4hep::DetElement& cal);
 	TGeoNode* FindNode(TGeoNode* mother, char* name);
 	gear::SimpleMaterialImpl* CreateGearMaterial(const dd4hep::rec::Vector3D& a, const dd4hep::rec::Vector3D& b, const std::string name);

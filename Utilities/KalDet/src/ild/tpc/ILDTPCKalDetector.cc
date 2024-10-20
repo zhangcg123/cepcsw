@@ -1,13 +1,13 @@
 
-#include "ILDTPCKalDetector.h"
-#include "ILDCylinderMeasLayer.h"
-#include "ILDCylinderHit.h"
-#include "ILDDiscMeasLayer.h"
+#include "kaldet/ILDTPCKalDetector.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
+#include "kaldet/ILDCylinderHit.h"
+#include "kaldet/ILDDiscMeasLayer.h"
 
 #include "TMath.h"
 #include "TTUBE.h"
 
-#include "MaterialDataBase.h"
+#include "kaldet/MaterialDataBase.h"
 
 #include <sstream>
 
@@ -28,7 +28,6 @@
 #include "DetIdentifier/CEPCConf.h"
 
 // #include "streamlog/streamlog.h"
-
 
 ILDTPCKalDetector::ILDTPCKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* geoSvc ) : 
 TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, though this would be better stored as a const somewhere

@@ -1,11 +1,10 @@
 
 #include "kaldet/CEPCVTXKalDetector.h"
+#include "kaldet/MaterialDataBase.h"
 
-#include "MaterialDataBase.h"
-
-#include "ILDParallelPlanarMeasLayer.h"
-#include "ILDCylinderMeasLayer.h"
-#include "ILDDiscMeasLayer.h"
+#include "kaldet/ILDParallelPlanarMeasLayer.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
+#include "kaldet/ILDDiscMeasLayer.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>

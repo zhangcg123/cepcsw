@@ -155,10 +155,11 @@ StatusCode PlanarDigiAlg::execute()
     encoder.setValue(SimTHit.getCellID()) ;
     det_id  = encoder[lcio::ILDCellID0::subdet] ;
   
-    if     ( det_id == lcio::ILDDetID::VXD ){}
-    else if( det_id == lcio::ILDDetID::SIT ){}
-    else if( det_id == lcio::ILDDetID::SET ){}
-    else if( det_id == lcio::ILDDetID::FTD ){}
+    if     ( det_id == CEPCConf::DetID::VXD ){}
+    else if( det_id == CEPCConf::DetID::SIT ){}
+    else if( det_id == CEPCConf::DetID::SET ){}
+    else if( det_id == CEPCConf::DetID::FTD ){}
+    else if( det_id == CEPCConf::DetID::ETD ){}
     else {
       fatal() << "unsupported detector ID = " << det_id << " CellID = " << SimTHit.getCellID()
               << ": file " << __FILE__ << " line " << __LINE__
@@ -381,7 +382,7 @@ StatusCode PlanarDigiAlg::execute()
     }
 
     if( _isStrip || (resU!=0&&resV==0) ){
-        trkHit.setType( UTIL::set_bit( trkHit.getType() , UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ) ) ;
+        trkHit.setType( UTIL::set_bit( trkHit.getType() , CEPCConf::TrkHitTypeBit::ONE_DIMENSIONAL ) ) ;
     }
     trkHit.setEDep( SimTHit.getEDep() );
     trkHit.setTime( SimTHit.getTime() + gsl_ran_gaussian(_rng, resT) );
