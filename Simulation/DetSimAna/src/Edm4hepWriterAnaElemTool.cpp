@@ -415,6 +415,7 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
     int curparid = track->GetParentID();
     int idxedm4hep = -1;
 
+    // note: only the primary track can get the idxedm4hep from Event level User Info.
     if (m_userinfo) {
         idxedm4hep =  m_userinfo->idxG4Track2Edm4hep(curtrkid);
     }
@@ -544,6 +545,28 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
 
     } else {
         // TODO: select other interested tracks
+
+        // extract the track level user info
+        auto trackinfo = dynamic_cast<CommonUserTrackInfo*>(track->GetUserInformation());
+        if (trackinfo) {
+            idxedm4hep = trackinfo->idxEdm4hep();
+
+            auto mc_particle = mcCol->at(idxedm4hep);
+
+            const G4ThreeVector& stop_pos  = track->GetPosition();
+            edm4hep::Vector3d endpoint(stop_pos.x()/CLHEP::mm,
+                                       stop_pos.y()/CLHEP::mm,
+                                       stop_pos.z()/CLHEP::mm);
+            mc_particle.setEndpoint(endpoint);
+
+            const G4ThreeVector& stop_mom = track->GetMomentum();
+
+            edm4hep::Vector3f mom_endpoint(stop_mom.x()/CLHEP::GeV,
+                                           stop_mom.y()/CLHEP::GeV,
+                                           stop_mom.z()/CLHEP::GeV);
+            mc_particle.setMomentumAtEndpoint(mom_endpoint);
+
+        }
     }
 
 }
