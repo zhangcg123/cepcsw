@@ -30,6 +30,8 @@ class SLCIORdr: public extends<AlgTool, GenReader> {
         bool mutate(MyHepMC::GenEvent& event) override;    
         bool finish() override;
         bool isEnd() override;
+
+        int startIndex() override;
     private:
         IO::LCReader* m_slcio_rdr{nullptr};
         long m_total_event{-1};
@@ -37,6 +39,7 @@ class SLCIORdr: public extends<AlgTool, GenReader> {
 
         // input file name
         Gaudi::Property<std::string> m_filename{this, "Input"};
+        Gaudi::Property<int> m_startIndex{this, "StartIndex", 0, "Default start index"};
 
 };
 
