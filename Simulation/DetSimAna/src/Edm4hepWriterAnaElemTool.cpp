@@ -106,54 +106,50 @@ void
 Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
 
     msg() << "mcCol size (after simulation) : " << mcCol->size() << endmsg;
-    // save all data
-    // create collections.
-    auto trackercols = m_trackerCol.createAndPut();
-    auto calorimetercols = m_calorimeterCol.createAndPut();
-    auto calocontribcols = m_caloContribCol.createAndPut();
 
-    auto vxdcols = m_VXDCol.createAndPut();
-    auto ftdcols = m_FTDCol.createAndPut();
-    auto sitcols = m_SITCol.createAndPut();
-    auto tpccols = m_TPCCol.createAndPut();
-    auto tpclowptcols = m_TPCLowPtCol.createAndPut();
-    auto tpcspcols = m_TPCSpacePointCol.createAndPut();
-    auto setcols = m_SETCol.createAndPut();
-    auto otkbarrelcols = m_OTKBarrelCol.createAndPut();
-    auto otkendcapcols = m_OTKEndcapCol.createAndPut();
-
-    auto ecalbarrelcol            = m_EcalBarrelCol.createAndPut();
-    auto ecalbarrelcontribcols    = m_EcalBarrelContributionCol.createAndPut();
-    auto ecalendcapscol           = m_EcalEndcapsCol.createAndPut();
-    auto ecalendcapscontribcols   = m_EcalEndcapsContributionCol.createAndPut();
-    auto ecalendcapringcol        = m_EcalEndcapRingCol.createAndPut();
-    auto ecalendcapringcontribcol = m_EcalEndcapRingContributionCol.createAndPut();
-
-    auto lumicalcol               = m_LumicalCol.createAndPut();
-    auto lumicalconribcols        = m_LumicalContributionCol.createAndPut();
-
-    auto hcalbarrelcol            = m_HcalBarrelCol.createAndPut();
-    auto hcalbarrelcontribcols    = m_HcalBarrelContributionCol.createAndPut();
-    auto hcalendcapscol           = m_HcalEndcapsCol.createAndPut();
-    auto hcalendcapscontribcols   = m_HcalEndcapsContributionCol.createAndPut();
-    auto hcalendcapringcol        = m_HcalEndcapRingCol.createAndPut();
-    auto hcalendcapringcontribcol = m_HcalEndcapRingContributionCol.createAndPut();
-
-    auto coilcols = m_COILCol.createAndPut();
-
-    auto muonbarrelcol            = m_MuonBarrelCol.createAndPut();
-    auto muonbarrelcontribcols    = m_MuonBarrelContributionCol.createAndPut();
-    auto muonendcapcol           = m_MuonEndcapCol.createAndPut();
-    auto muonendcapcontribcols   = m_MuonEndcapContributionCol.createAndPut();
-
-    auto driftchamberhitscol = m_DriftChamberHitsCol.createAndPut();
+    // Note about this part: DD4hep readout name is same to the collection name in Geant4.
+    // However, some collections are created in Geant4 only, which should be also saved into EDM4hep.
+    // When save the collections to EDM4hep, we keep the same name as Geant4.
 
     // readout defined in DD4hep
     auto lcdd = &(dd4hep::Detector::getInstance());
     auto allReadouts = lcdd->readouts();
 
+    std::map<std::string, edm4hep::SimTrackerHitCollection*> _simTrackerHitColMap;
+    std::map<std::string, edm4hep::SimCalorimeterHitCollection*> _simCalorimeterHitColMap;
+    std::map<std::string, edm4hep::CaloHitContributionCollection*> _caloHitContribColMap;
+
+    // Need to create all the collections defined in DD4hep
     for (auto& readout : allReadouts) {
-        info() << "Readout " << readout.first << endmsg;
+        const std::string& current_collection_name = readout.first;
+        info() << "Readout " << current_collection_name << endmsg;
+
+        if (m_trackerColMap.find(current_collection_name) != m_trackerColMap.end()) {
+            _simTrackerHitColMap[current_collection_name] = m_trackerColMap[current_collection_name]->createAndPut();
+        } else if (m_calorimeterColMap.find(current_collection_name) != m_calorimeterColMap.end()) {
+            _simCalorimeterHitColMap[current_collection_name] = m_calorimeterColMap[current_collection_name]->createAndPut();
+            _caloHitContribColMap[current_collection_name] = m_caloContribColMap[current_collection_name]->createAndPut();
+        } else {
+            warning() << "Readout " << current_collection_name << " is defined in DD4hep, but not registered in Edm4hepWriterAnaElemTool. "
+                      << "Please register it in m_trackerColNames or m_calorimeterColNames. " << endmsg;
+            continue;
+        }
+    }
+    // Also need to create the collections only defined in Geant4
+    for (auto& _name: m_trackerColNames) {
+        std::string col_name = _name + "Collection";
+        if (_simTrackerHitColMap.find(col_name) == _simTrackerHitColMap.end()) {
+            info() << "Additional Readout " << col_name << endmsg;
+            _simTrackerHitColMap[col_name] = m_trackerColMap[col_name]->createAndPut();
+        }
+    }
+    for (auto& _name: m_calorimeterColNames) {
+        std::string col_name = _name + "Collection";
+        if (_simCalorimeterHitColMap.find(col_name) == _simCalorimeterHitColMap.end()) {
+            info() << "Additional Readout " << col_name << endmsg;
+            _simCalorimeterHitColMap[col_name] = m_calorimeterColMap[col_name]->createAndPut();
+            _caloHitContribColMap[col_name] = m_caloContribColMap[col_name]->createAndPut();
+        }
     }
 
     // retrieve the hit collections
@@ -183,66 +179,18 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
         edm4hep::SimCalorimeterHitCollection* calo_col_ptr = nullptr;
         edm4hep::CaloHitContributionCollection* calo_contrib_col_ptr = nullptr;
 
+        const std::string& current_collection_name = collect->GetName();
         // the mapping between hit collection and the data handler
-        if (collect->GetName() == "VXDCollection") {
-            tracker_col_ptr = vxdcols;
-        } else if (collect->GetName() == "FTDCollection") {
-            tracker_col_ptr = ftdcols;
-        } else if (collect->GetName() == "SITCollection") {
-            tracker_col_ptr = sitcols;
-        } else if (collect->GetName() == "TPCCollection") {
-            tracker_col_ptr = tpccols;
-        } else if (collect->GetName() == "TPCLowPtCollection") {
-            tracker_col_ptr = tpclowptcols;
-        } else if (collect->GetName() == "TPCSpacePointCollection") {
-	    tracker_col_ptr = tpcspcols;
-	} else if (collect->GetName() == "SETCollection") {
-            tracker_col_ptr = setcols;
-        } else if (collect->GetName() == "OTKBarrelCollection") {
-            tracker_col_ptr = otkbarrelcols;
-        } else if (collect->GetName() == "OTKEndcapCollection") {
-            tracker_col_ptr = otkendcapcols;
-        } else if (collect->GetName() == "CaloHitsCollection") {
-            calo_col_ptr = calorimetercols;
-            calo_contrib_col_ptr = calocontribcols;
-        } else if (collect->GetName() == "EcalBarrelCollection") {
-            calo_col_ptr = ecalbarrelcol;
-            calo_contrib_col_ptr = ecalbarrelcontribcols;
-        } else if (collect->GetName() == "EcalEndcapsCollection") {
-            calo_col_ptr = ecalendcapscol;
-            calo_contrib_col_ptr = ecalendcapscontribcols;
-        } else if (collect->GetName() == "EcalEndcapRingCollection") {
-            calo_col_ptr = ecalendcapringcol;
-            calo_contrib_col_ptr = ecalendcapringcontribcol;
-        } else if (collect->GetName() == "LumicalCollection"){
-            calo_col_ptr = lumicalcol;
-            calo_contrib_col_ptr = lumicalconribcols;
-        } else if (collect->GetName() == "HcalBarrelCollection") {
-            calo_col_ptr = hcalbarrelcol;
-            calo_contrib_col_ptr = hcalbarrelcontribcols;
-        } else if (collect->GetName() == "HcalEndcapsCollection") {
-            calo_col_ptr = hcalendcapscol;
-            calo_contrib_col_ptr = hcalendcapscontribcols;
-        } else if (collect->GetName() == "HcalEndcapRingCollection") {
-            calo_col_ptr = hcalendcapringcol;
-            calo_contrib_col_ptr = hcalendcapringcontribcol;
-	} else if (collect->GetName() == "COILCollection") {
-	    tracker_col_ptr = coilcols;
-	} else if (collect->GetName() == "MuonBarrelCollection") {
-	    tracker_col_ptr = muonbarrelcol;
-	    calo_contrib_col_ptr = muonbarrelcontribcols;
-        } else if (collect->GetName() == "MuonEndcapCollection") {
-	    tracker_col_ptr = muonendcapcol;
-	    calo_contrib_col_ptr = muonendcapcontribcols;
-        } else if (collect->GetName() == "DriftChamberHitsCollection") {
-            tracker_col_ptr = driftchamberhitscol;
+        if (_simTrackerHitColMap.find(current_collection_name) != _simTrackerHitColMap.end()) {
+            tracker_col_ptr = _simTrackerHitColMap[current_collection_name];
+        } else if (_simCalorimeterHitColMap.find(current_collection_name) != _simCalorimeterHitColMap.end()) {
+            calo_col_ptr = _simCalorimeterHitColMap[current_collection_name];
+            calo_contrib_col_ptr = _caloHitContribColMap[current_collection_name];
         } else {
-            warning() << "Unknown collection name: " << collect->GetName()
-                      << ". Please register in Edm4hepWriterAnaElemTool. " << endmsg;
+            warning() << "Collection name: " << current_collection_name << " is in Geant4, but not registered in Edm4hepWriterAnaElemTool. " 
+                      << "Please register in Edm4hepWriterAnaElemTool. " << endmsg;
             continue;
         }
-
-
 
         // There are different types (new and old)
 
@@ -611,6 +559,29 @@ Edm4hepWriterAnaElemTool::UserSteppingAction(const G4Step* aStep) {
 StatusCode
 Edm4hepWriterAnaElemTool::initialize() {
     StatusCode sc;
+
+    // note: 
+    // the name is without the collection suffix
+    // Convention:
+    // - VXD: VXDCollection
+    // - EcalBarrel: EcalBarrelCollection + EcalBarrelContributionCollection
+
+    // SimTrackerHitCollections
+    for (const auto& name : m_trackerColNames) {
+        std::string name_col = name + "Collection";
+        auto col = new DataHandle<edm4hep::SimTrackerHitCollection>(name_col, Gaudi::DataHandle::Writer, this);
+        m_trackerColMap[name_col] = col;
+    }
+
+    // SimCalorimeterHitCollections
+    for (const auto& name : m_calorimeterColNames) {
+        std::string name_col = name + "Collection";
+        std::string name_contrib_col = name + "ContributionCollection";
+        auto col = new DataHandle<edm4hep::SimCalorimeterHitCollection>(name_col, Gaudi::DataHandle::Writer, this);
+        m_calorimeterColMap[name_col] = col;
+        auto col_contrib = new DataHandle<edm4hep::CaloHitContributionCollection>(name_contrib_col, Gaudi::DataHandle::Writer, this);
+        m_caloContribColMap[name_col] = col_contrib;
+    }
 
     return sc;
 }
