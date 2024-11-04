@@ -22,7 +22,6 @@
 using namespace lcio;
 using namespace IMPL;
 using namespace edm4hep;
-using namespace std;
 
 typedef enum HEPFILEFORMATS
 {
@@ -44,6 +43,19 @@ StatusCode HepevtRdr::initialize() {
     if (not configure_gentool()) {
         error() << "failed to initialize." << endmsg;
         return StatusCode::FAILURE;
+    }
+
+    // skip the first n events if startIndex is not 0.
+    if (startIndex() > 0) {
+        for (int i=0; i<startIndex(); ++i) {
+            ++m_processed_event;
+            LCCollectionVec* mc_vec = m_hepevt_rdr->readEvent();
+            if(mc_vec==nullptr) {
+                break;
+            }
+            delete mc_vec;
+        }
+        info() << "Skip the first " << startIndex() << " events." << endmsg;
     }
 
     return sc;
@@ -68,17 +80,17 @@ bool HepevtRdr::configure_gentool(){
     }
 
     m_hepevt_rdr = new UTIL::LCAscHepRdr(m_filename.value().c_str(), format);
-    m_processed_event=0;
+    m_processed_event=-1;
     std::cout<<"initial hepevt_rdr"<<std::endl;
     return true;
 }
 
 bool HepevtRdr::mutate(MyHepMC::GenEvent& event){
+    ++m_processed_event;
     LCCollectionVec* mc_vec = m_hepevt_rdr->readEvent();
     if(mc_vec==nullptr) return false;
-    m_processed_event ++;
     int n_mc = mc_vec->size();
-    std::cout<<"Read event :"<< m_processed_event <<", mc size :"<< n_mc <<std::endl;
+    info()<<"Read event :"<< m_processed_event <<", mc size :"<< n_mc <<endmsg;
     std::map<int, int> pmcid_lmcid;
     for (int i=0; i < n_mc; i++){
         MCParticleImpl* mc = (MCParticleImpl*) mc_vec->getElementAt(i);
@@ -108,19 +120,22 @@ bool HepevtRdr::mutate(MyHepMC::GenEvent& event){
         const MCParticleVec & mc_daughters = mc->getDaughters();
         auto pmc = event.m_mc_vec.at(i);
         //std::cout<<"mc at "<< i<<", parent size "<<mc_parents.size() <<std::endl;
-        for(unsigned int j=0; j< mc_parents.size(); j++){int p_id = mc_parents.at(j)->id();
-                                                 //std::cout<<"parent id "<<p_id<<std::endl;
-                                                 pmc.addToParents( event.m_mc_vec.at( pmcid_lmcid.at(p_id) ) );
-                                                }
+        for(unsigned int j=0; j< mc_parents.size(); j++){
+            int p_id = mc_parents.at(j)->id();
+            //std::cout<<"parent id "<<p_id<<std::endl;
+            pmc.addToParents( event.m_mc_vec.at( pmcid_lmcid.at(p_id) ) );
+        }
         //std::cout<<"mc at "<< i<<", daughter size "<<mc_daughters.size() <<std::endl;
-        for(unsigned int j=0; j< mc_daughters.size(); j++){int d_id = mc_daughters.at(j)->id();
-                                                 //std::cout<<"daughter id "<<d_id<<std::endl;
-                                                 pmc.addToDaughters( event.m_mc_vec.at( pmcid_lmcid.at(d_id) ) );
-                                                }
+        for(unsigned int j=0; j< mc_daughters.size(); j++){
+            int d_id = mc_daughters.at(j)->id();
+            //std::cout<<"daughter id "<<d_id<<std::endl;
+            pmc.addToDaughters( event.m_mc_vec.at( pmcid_lmcid.at(d_id) ) );
+        }
     }
      
     event.SetEventHeader( m_processed_event, -99, 9999, "Generator");
     //std::cout<<"end event :"<< m_processed_event <<std::endl;
+    delete mc_vec;
     return true;
 }
 
@@ -130,4 +145,8 @@ bool HepevtRdr::isEnd(){
 
 bool HepevtRdr::finish(){
     return true;
+}
+
+int HepevtRdr::startIndex(){
+    return m_startIndex.value();
 }
