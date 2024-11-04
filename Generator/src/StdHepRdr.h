@@ -27,6 +27,8 @@ public:
     bool mutate(MyHepMC::GenEvent& event) override;    
     bool finish() override;
     bool isEnd() override;
+
+    int startIndex() override;
 private:
     lcio::LCStdHepRdrNew* m_stdhep_rdr{nullptr};
     long m_total_event{-1};
@@ -34,7 +36,8 @@ private:
 
     // input file name
     Gaudi::Property<std::string> m_filename{this, "Input"};
-    Gaudi::Property<double> m_starttime{this, "StartTime", 0, "Default start time"};    
+    Gaudi::Property<double> m_starttime{this, "StartTime", 0, "Default start time"};
+    Gaudi::Property<int> m_startIndex{this, "StartIndex", 0, "Default start index"};
 
 };
 
