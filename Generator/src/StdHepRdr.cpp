@@ -31,9 +31,9 @@ StdHepRdr::~StdHepRdr(){
 }
 
 bool StdHepRdr::mutate(MyHepMC::GenEvent& event){
+    ++m_processed_event;
     if(isEnd()) return false;
     LCCollectionVec* mc_vec = m_stdhep_rdr->readEvent();
-    m_processed_event ++;
     int n_mc = mc_vec->getNumberOfElements();
     //std::cout<<"Debug: Read event :"<< m_processed_event <<", mc size :"<< n_mc <<std::endl;
     std::map<int, int> pmcid_lmcid; // mapping between the obj idx in edm4hep and the idx in stdhep
@@ -85,8 +85,12 @@ bool StdHepRdr::mutate(MyHepMC::GenEvent& event){
 }
 
 bool StdHepRdr::isEnd(){
-if(m_processed_event == m_total_event) {std::cout<<"Have read all events, end now."<<std::endl; return true;}
-else return false;
+    if(m_processed_event == m_total_event) {
+        std::cout<<"Have read all events, end now."<<std::endl; 
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool StdHepRdr::configure_gentool(){
@@ -96,8 +100,8 @@ bool StdHepRdr::configure_gentool(){
         return false;
     }
 
-    m_total_event = m_stdhep_rdr->getNumberOfEvents() - 1 ;
-    m_processed_event=0;
+    m_total_event = m_stdhep_rdr->getNumberOfEvents();
+    m_processed_event=-1;
 
     return true;
 }
@@ -114,6 +118,18 @@ StdHepRdr::initialize() {
         return StatusCode::FAILURE;
     }
 
+    // skip the first n events if startIndex is not 0.
+    if (startIndex() != 0) {
+        for (int i=0; i<startIndex(); ++i) {
+            ++m_processed_event;
+            if(isEnd()) return StatusCode::FAILURE;
+            LCCollectionVec* mc_vec = m_stdhep_rdr->readEvent();
+            delete mc_vec;
+        }
+        info() << "Skip the first " << startIndex() << " events." << endmsg;
+    }
+
+
     return sc;
 }
 
@@ -125,4 +141,8 @@ StdHepRdr::finalize() {
         return StatusCode::FAILURE;
     }
     return sc;
+}
+
+int StdHepRdr::startIndex(){
+    return m_startIndex.value();
 }
