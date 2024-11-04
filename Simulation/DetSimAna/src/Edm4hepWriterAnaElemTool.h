@@ -70,6 +70,10 @@ private:
             Gaudi::DataHandle::Writer, this};
     DataHandle<edm4hep::SimTrackerHitCollection> m_TPCCol{"TPCCollection", 
             Gaudi::DataHandle::Writer, this};
+    DataHandle<edm4hep::SimTrackerHitCollection> m_TPCLowPtCol{"TPCLowPtCollection",
+	    Gaudi::DataHandle::Writer, this};
+    DataHandle<edm4hep::SimTrackerHitCollection> m_TPCSpacePointCol{"TPCSpacePointCollection",
+	    Gaudi::DataHandle::Writer, this};
     DataHandle<edm4hep::SimTrackerHitCollection> m_SETCol{"SETCollection", 
             Gaudi::DataHandle::Writer, this};
     DataHandle<edm4hep::SimTrackerHitCollection> m_OTKBarrelCol{"OTKBarrelCollection",
