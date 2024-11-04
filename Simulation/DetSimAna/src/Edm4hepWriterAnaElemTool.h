@@ -53,95 +53,25 @@ private:
             Gaudi::DataHandle::Writer, this};
     edm4hep::MCParticleCollection* mcCol;
 
-    // Generic collections for Tracker and Calorimeter
-    DataHandle<edm4hep::SimTrackerHitCollection> m_trackerCol{"SimTrackerCol", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_calorimeterCol{"SimCalorimeterCol", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_caloContribCol{"SimCaloContributionCol", 
-            Gaudi::DataHandle::Writer, this};
+    // Maintain the collections in a map, avoid to define a new collection in the header.
+    // Key is the collection name with "Collection".
+    // For calo hit contrib collection, the key is same as sim calo hit collection.
+    std::map<std::string, DataHandle<edm4hep::SimTrackerHitCollection>*> m_trackerColMap;
+    std::map<std::string, DataHandle<edm4hep::SimCalorimeterHitCollection>*> m_calorimeterColMap;
+    std::map<std::string, DataHandle<edm4hep::CaloHitContributionCollection>*> m_caloContribColMap;
 
-    // Dedicated collections for CEPC
-    DataHandle<edm4hep::SimTrackerHitCollection> m_VXDCol{"VXDCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_FTDCol{"FTDCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_SITCol{"SITCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_TPCCol{"TPCCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_TPCLowPtCol{"TPCLowPtCollection",
-	    Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_TPCSpacePointCol{"TPCSpacePointCollection",
-	    Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_SETCol{"SETCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_OTKBarrelCol{"OTKBarrelCollection",
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_OTKEndcapCol{"OTKEndcapCollection",
-            Gaudi::DataHandle::Writer, this};
-
-    // Ecal
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_EcalBarrelCol{"EcalBarrelCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_EcalBarrelContributionCol{
-            "EcalBarrelContributionCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_EcalEndcapsCol{"EcalEndcapsCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_EcalEndcapsContributionCol{
-            "EcalEndcapsContributionCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_EcalEndcapRingCol{"EcalEndcapRingCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_EcalEndcapRingContributionCol{
-            "EcalEndcapRingContributionCollection", 
-            Gaudi::DataHandle::Writer, this};
-    // Lumical
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_LumicalCol{"LumicalCollection",
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_LumicalContributionCol{
-            "LumicalContributionCollection",
-            Gaudi::DataHandle::Writer, this};
-    // Hcal
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_HcalBarrelCol{"HcalBarrelCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_HcalBarrelContributionCol{
-            "HcalBarrelContributionCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_HcalEndcapsCol{"HcalEndcapsCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_HcalEndcapsContributionCol{
-            "HcalEndcapsContributionCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimCalorimeterHitCollection> m_HcalEndcapRingCol{"HcalEndcapRingCollection", 
-            Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_HcalEndcapRingContributionCol{
-            "HcalEndcapRingContributionCollection", 
-            Gaudi::DataHandle::Writer, this};
-
-    // Coil
-    DataHandle<edm4hep::SimTrackerHitCollection> m_COILCol{"COILCollection",
-	Gaudi::DataHandle::Writer, this};
-
-    // Muon
-    DataHandle<edm4hep::SimTrackerHitCollection> m_MuonBarrelCol{"MuonBarrelCollection",
-	Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_MuonBarrelContributionCol{
-      "MuonBarrelContributionCollection",
-	Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::SimTrackerHitCollection> m_MuonEndcapCol{"MuonEndcapCollection",
-	Gaudi::DataHandle::Writer, this};
-    DataHandle<edm4hep::CaloHitContributionCollection> m_MuonEndcapContributionCol{
-      "MuonEndcapContributionCollection",
-	Gaudi::DataHandle::Writer, this};
-
-    // Drift Chamber
-    // - DriftChamberHitsCollection
-    DataHandle<edm4hep::SimTrackerHitCollection> m_DriftChamberHitsCol{
-            "DriftChamberHitsCollection", 
-            Gaudi::DataHandle::Writer, this};
-
+    // the name here is without suffix "Collection"
+    Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
+        "TrackerCollections",
+        {"VXD", "FTD", "SIT", "TPC", "TPCLowPt", "TPCSpacePoint", "SET", 
+         "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"}, 
+        "Names of the Tracker collections (without suffix Collection)"};
+    Gaudi::Property<std::vector<std::string>> m_calorimeterColNames{this, 
+        "CalorimeterCollections",
+        {"Lumical", 
+         "EcalBarrel", "EcalEndcaps", "EcalEndcapRing", 
+         "HcalBarrel", "HcalEndcaps", "HcalEndcapRing"}, 
+        "Names of the Calorimeter collections (without suffix Collection)"};
 
 private:
     // in order to associate the hit contribution with the primary track,
