@@ -25,14 +25,14 @@ using namespace edm4hep;
 DECLARE_COMPONENT(HepMCRdr)
 
 HepMCRdr::~HepMCRdr(){
-delete ascii_in;
+    delete ascii_in;
 }
 
 bool HepMCRdr::mutate(MyHepMC::GenEvent& event){
 
+    ++m_processed_event;
     HepMC::GenEvent* evt = ascii_in->read_next_event();
     if(!evt) return false;
-    m_processed_event ++;
     int n_mc = evt->particles_size();
     //std::cout<<"Read event :"<< m_processed_event <<", mc size :"<< n_mc <<std::endl;
     std::map<int, int> pmcid_lmcid;
@@ -93,13 +93,13 @@ bool HepMCRdr::mutate(MyHepMC::GenEvent& event){
 }
 
 bool HepMCRdr::isEnd(){
-return false;
+    return false;
 }
 
 bool HepMCRdr::configure_gentool(){
     ascii_in = new HepMC::IO_GenEvent(m_filename.value().c_str(),std::ios::in);
 
-    m_processed_event=0;
+    m_processed_event=-1;
     return true;
 }
 
@@ -115,6 +115,17 @@ HepMCRdr::initialize() {
         return StatusCode::FAILURE;
     }
 
+    // skip the first n events if startIndex is not 0.
+    if (startIndex() > 0) {
+        for (int i=0; i<startIndex(); ++i) {
+            ++m_processed_event;
+            HepMC::GenEvent* evt = ascii_in->read_next_event();
+            if(!evt) break;
+            delete evt;
+        }
+        info() << "Skip the first " << startIndex() << " events." << endmsg;
+    }
+
     return sc;
 }
 
@@ -126,4 +137,8 @@ HepMCRdr::finalize() {
         return StatusCode::FAILURE;
     }
     return sc;
+}
+
+int HepMCRdr::startIndex(){
+    return m_startIndex.value();
 }

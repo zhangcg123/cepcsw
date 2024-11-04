@@ -23,6 +23,8 @@ class HepMCRdr: public extends<AlgTool, GenReader> {
         bool mutate(MyHepMC::GenEvent& event);    
         bool finish();
         bool isEnd();
+
+        int startIndex() override;
     private:
         HepMC::IO_GenEvent *ascii_in{nullptr};
         long m_total_event{-1};
@@ -30,6 +32,7 @@ class HepMCRdr: public extends<AlgTool, GenReader> {
 
         // input file name
         Gaudi::Property<std::string> m_filename{this, "Input"};
+        Gaudi::Property<int> m_startIndex{this, "StartIndex", 0, "Default start index"};
 
 };
 
