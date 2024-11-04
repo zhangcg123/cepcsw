@@ -116,6 +116,8 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
     auto ftdcols = m_FTDCol.createAndPut();
     auto sitcols = m_SITCol.createAndPut();
     auto tpccols = m_TPCCol.createAndPut();
+    auto tpclowptcols = m_TPCLowPtCol.createAndPut();
+    auto tpcspcols = m_TPCSpacePointCol.createAndPut();
     auto setcols = m_SETCol.createAndPut();
     auto otkbarrelcols = m_OTKBarrelCol.createAndPut();
     auto otkendcapcols = m_OTKEndcapCol.createAndPut();
@@ -190,9 +192,11 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
             tracker_col_ptr = sitcols;
         } else if (collect->GetName() == "TPCCollection") {
             tracker_col_ptr = tpccols;
-        } else if (collect->GetName() == "SETCollection") {
-            tracker_col_ptr = setcols;
-        } else if (collect->GetName() == "SETCollection") {
+        } else if (collect->GetName() == "TPCLowPtCollection") {
+            tracker_col_ptr = tpclowptcols;
+        } else if (collect->GetName() == "TPCSpacePointCollection") {
+	    tracker_col_ptr = tpcspcols;
+	} else if (collect->GetName() == "SETCollection") {
             tracker_col_ptr = setcols;
         } else if (collect->GetName() == "OTKBarrelCollection") {
             tracker_col_ptr = otkbarrelcols;
