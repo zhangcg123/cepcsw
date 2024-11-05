@@ -107,9 +107,6 @@ detsimalg.AnaElems = [
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
 
-from Configurables import AnExampleDetElemTool
-example_dettool = AnExampleDetElemTool("AnExampleDetElemTool")
-
 ############################################################
 from Configurables import SimHitMergeAlg
 simHitMerge = SimHitMergeAlg("SimHitMergeAlg")

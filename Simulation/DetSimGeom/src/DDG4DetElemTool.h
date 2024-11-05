@@ -1,5 +1,5 @@
-#ifndef AnExampleDetElemTool_h
-#define AnExampleDetElemTool_h
+#ifndef DDG4DetElemTool_h
+#define DDG4DetElemTool_h
 
 #include "GaudiKernel/AlgTool.h"
 #include <Gaudi/Property.h>
@@ -13,7 +13,7 @@
 #include "DetSimInterface/ISensDetTool.h"
 
 
-class AnExampleDetElemTool: public extends<AlgTool, IDetElemTool> {
+class DDG4DetElemTool: public extends<AlgTool, IDetElemTool> {
 
 public:
     using extends::extends;

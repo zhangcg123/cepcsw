@@ -91,9 +91,6 @@ detsimalg.AnaElems = [
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
 
-from Configurables import AnExampleDetElemTool
-example_dettool = AnExampleDetElemTool("AnExampleDetElemTool")
-
 dedxoption = "BetheBlochEquationDedxSimTool"
 from Configurables import DriftChamberSensDetTool
 dc_sensdettool = DriftChamberSensDetTool("DriftChamberSensDetTool")
