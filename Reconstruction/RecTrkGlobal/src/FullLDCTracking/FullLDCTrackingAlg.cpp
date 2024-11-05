@@ -701,6 +701,8 @@ fitstart:
       float trkPz = helix.getMomentum()[2];
       float trkP = sqrt(trkPx*trkPx+trkPy*trkPy+trkPz*trkPz);
 
+      debug() << "momentum of Track " << iTRK << ": P = " << trkP << " Px = " << trkPx << " Py = " << trkPy << " Pz = " << trkPz << endmsg;
+
       eTot += trkP;
       pxTot += trkPx;
       pyTot += trkPy;
@@ -708,6 +710,7 @@ fitstart:
       nTotTracks++;
     }
   }
+
   if(m_tuple) m_timeKalman = stopwatch.RealTime()*1000;
   // streamlog_out(DEBUG5) << endmsg;
   info() << "Number of accepted " << _OutputTrackColHdl.fullKey() << " = " << nTotTracks << endmsg;
@@ -3009,9 +3012,10 @@ float FullLDCTrackingAlg::CompareTrkII(TrackExtended * first, TrackExtended * se
   float qFirst = PIOVER2 - atan(tanLFirst);
   float qSecond = PIOVER2 - atan(tanLSecond);
   
-  Angle = (cos(phiFirst)*cos(phiSecond)+sin(phiFirst)*sin(phiSecond))*
-  sin(qFirst)*sin(qSecond)+cos(qFirst)*cos(qSecond);
-  Angle = acos(Angle);
+  Angle = (cos(phiFirst)*cos(phiSecond)+sin(phiFirst)*sin(phiSecond))*sin(qFirst)*sin(qSecond)
+        + cos(qFirst)*cos(qSecond);
+  // fucd: possible Angle > 1, because of float precision, acos(Angle) -> NaN
+  Angle = (Angle<1) ? acos(Angle) : 0;
   
   result = deltaOmega;
   
@@ -3049,14 +3053,12 @@ float FullLDCTrackingAlg::CompareTrkIII(TrackExtended * first, TrackExtended * s
   float phiFirst = first->getPhi();
   float qFirst = PIOVER2 - atan(tanLFirst);
   
-  
   float d0Second = second->getD0();
   float z0Second = second->getZ0();
   float omegaSecond = second->getOmega();
   float tanLSecond = second->getTanLambda();
   float phiSecond = second->getPhi();
   float qSecond = PIOVER2 - atan(tanLSecond);
-  
   
   //MB 2010 03
   float d0ErrFirst = sqrt(first->getCovMatrix()[0]);
@@ -3127,17 +3129,18 @@ float FullLDCTrackingAlg::CompareTrkIII(TrackExtended * first, TrackExtended * s
   cos(phiSecond)*cos(phiSecond)*phiErrSecond*phiErrSecond*(sin(phiFirst)*sin(qFirst)*sin(qSecond))*(sin(phiFirst)*sin(qFirst)*sin(qSecond))+
   cos(qFirst)*cos(qFirst)*qErrFirst*qErrFirst*(sin(phiFirst)*sin(phiSecond)*sin(qSecond))*(sin(phiFirst)*sin(phiSecond)*sin(qSecond))+
   cos(qSecond)*cos(qSecond)*qErrSecond*qErrSecond*(sin(phiFirst)*sin(phiSecond)*sin(qFirst))*(sin(phiFirst)*sin(phiSecond)*sin(qFirst));
-  
+
   if(Angle<1.){
     errorAngle = sqrt(1./(1.-Angle*Angle)*errorAngle);
   }else{
     errorAngle = sqrt(errorAngle);
   }
-  
+
   if(errorAngle<1.e-6)errorAngle=1.e-6;
-  
-  AngleSignificance = fabs(acos(Angle)/errorAngle);
-    
+
+  // fucd: possible Angle > 1, because float precision, acos(Angle)->NaN
+  AngleSignificance = (Angle<1.) ? fabs(acos(Angle)/errorAngle) : 0;
+
   return significance;
   
 }
