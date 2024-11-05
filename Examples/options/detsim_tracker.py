@@ -17,7 +17,6 @@ from Configurables import GenPrinter
 from Configurables import GtBeamBackgroundTool
 from Configurables import DetSimSvc
 from Configurables import DetSimAlg
-from Configurables import AnExampleDetElemTool
 from Configurables import PodioOutput
 from Configurables import ApplicationMgr
 
@@ -70,7 +69,6 @@ detsimalg.AnaElems = [
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
 
-example_dettool = AnExampleDetElemTool("AnExampleDetElemTool")
 
 
 # POD I/O

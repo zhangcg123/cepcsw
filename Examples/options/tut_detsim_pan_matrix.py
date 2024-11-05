@@ -102,8 +102,6 @@ detsimalg.AnaElems = [
     "Edm4hepWriterAnaElemTool"
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
-from Configurables import AnExampleDetElemTool
-example_dettool = AnExampleDetElemTool("AnExampleDetElemTool")
 ##############################################################################
 # Detector digitization
 ##############################################################################

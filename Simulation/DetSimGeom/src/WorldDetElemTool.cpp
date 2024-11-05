@@ -33,7 +33,7 @@ WorldDetElemTool::getLV() {
     // G4LogicalVolume* logicWorld= new G4LogicalVolume( solidWorld, Galactic, "lWorld", 0, 0, 0);
 
     // An example, get a detelem first, then place the detector components inside world.
-    ToolHandle<IDetElemTool> inner_detelem_tool("AnExampleDetElemTool");
+    ToolHandle<IDetElemTool> inner_detelem_tool("DDG4DetElemTool");
     G4LogicalVolume* inner_lv = inner_detelem_tool->getLV();
 
     if (inner_lv) {
@@ -55,7 +55,7 @@ void
 WorldDetElemTool::ConstructSDandField() {
     // After the whole detector volumes are constructed,
     // now start the construction of SD.
-   ToolHandle<IDetElemTool> inner_detelem_tool("AnExampleDetElemTool");
+   ToolHandle<IDetElemTool> inner_detelem_tool("DDG4DetElemTool");
    inner_detelem_tool->ConstructSDandField();
 }
 

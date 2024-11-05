@@ -1,4 +1,4 @@
-#include "AnExampleDetElemTool.h"
+#include "DDG4DetElemTool.h"
 
 #include "G4SystemOfUnits.hh"
 #include "G4PhysicalConstants.hh"
@@ -30,10 +30,10 @@
 #include "DDG4/Geant4Mapping.h"
 #include "DDG4/Geant4Field.h"
 
-DECLARE_COMPONENT(AnExampleDetElemTool)
+DECLARE_COMPONENT(DDG4DetElemTool)
 
 G4LogicalVolume*
-AnExampleDetElemTool::getLV() {
+DDG4DetElemTool::getLV() {
 
     // G4Material* Galactic = G4Material::GetMaterial("Galactic");
 
@@ -75,7 +75,7 @@ AnExampleDetElemTool::getLV() {
 }
 
 void
-AnExampleDetElemTool::ConstructSDandField() {
+DDG4DetElemTool::ConstructSDandField() {
 
     // DEBUG ONLY: turn off all the SD.
     if (not m_SD_enabled) {
@@ -127,43 +127,39 @@ AnExampleDetElemTool::ConstructSDandField() {
                     } else {
                         warning() << "DriftChamberSensDetTool is not found. " << endmsg;
                     }
+                } else if (nam == "TPC") {
+                    m_tpc_sdtool = ToolHandle<ISensDetTool>("TimeProjectionChamberSensDetTool");
+                    if (m_tpc_sdtool) {
+                        info() << "Find the TimeProjectionChamberSensDetTool" << endmsg;
+                        g4sd = m_tpc_sdtool->createSD(nam);
+                    }
+                    else {
+                        warning() << "TimeProjectionChamberSensDetTool is not found, and default tracker SD will be used" << endmsg;
+                    }
+                } else {
+                    m_tracker_sdtool = ToolHandle<ISensDetTool>("GenericTrackerSensDetTool");
+                    if (m_tracker_sdtool) {
+                        info() << "Find the GenericTrackerSensDetTool" << endmsg;
+                        g4sd = m_tracker_sdtool->createSD(nam);
+                    }
+                    else {
+                        warning() << "GenericTrackerSensDetTool is not found. " << endmsg;
+                    }
                 }
-		else if (nam == "TPC") {
-		  m_tpc_sdtool = ToolHandle<ISensDetTool>("TimeProjectionChamberSensDetTool");
-		  if (m_tpc_sdtool) {
-		    info() << "Find the TimeProjectionChamberSensDetTool" << endmsg;
-		    g4sd = m_tpc_sdtool->createSD(nam);
-		  }
-		  else {
-		    warning() << "TimeProjectionChamberSensDetTool is not found, and default tracker SD will be used" << endmsg;
-		  }
-		}
-		else {
-		  m_tracker_sdtool = ToolHandle<ISensDetTool>("GenericTrackerSensDetTool");
-		  if (m_tracker_sdtool) {
-		    info() << "Find the GenericTrackerSensDetTool" << endmsg;
-		    g4sd = m_tracker_sdtool->createSD(nam);
-		  }
-		  else {
-		    warning() << "GenericTrackerSensDetTool is not found. " << endmsg;
-		  }
-		}
-            }
-            if (typ=="muonbarrel") {
-              m_muonbarrel_sdtool = ToolHandle<ISensDetTool>("MuonBarrelSensDetTool");
-              if (m_muonbarrel_sdtool) {
-                info() << "Find the MuonBarrelSensDetTool." << endmsg;
-                g4sd = m_muonbarrel_sdtool->createSD(nam);
-                info() << "create g4SD: " << g4sd << endmsg;
-              }
-            }
-            if (typ=="muonendcap") {
-              m_muonendcap_sdtool = ToolHandle<ISensDetTool>("MuonEndcapSensDetTool");
-              if (m_muonendcap_sdtool) {
-                info() << "Find the MuonEndcapSensDetTool." << endmsg;
-                g4sd = m_muonendcap_sdtool->createSD(nam);
-                info() << "create g4SD: " << g4sd << endmsg;
-              }
+            } else if (typ=="muonbarrel") {
+                m_muonbarrel_sdtool = ToolHandle<ISensDetTool>("MuonBarrelSensDetTool");
+                if (m_muonbarrel_sdtool) {
+                    info() << "Find the MuonBarrelSensDetTool." << endmsg;
+                    g4sd = m_muonbarrel_sdtool->createSD(nam);
+                    info() << "create g4SD: " << g4sd << endmsg;
+                }
+            } else if (typ=="muonendcap") {
+                m_muonendcap_sdtool = ToolHandle<ISensDetTool>("MuonEndcapSensDetTool");
+                if (m_muonendcap_sdtool) {
+                    info() << "Find the MuonEndcapSensDetTool." << endmsg;
+                    g4sd = m_muonendcap_sdtool->createSD(nam);
+                    info() << "create g4SD: " << g4sd << endmsg;
+                }
             }
         }
         
@@ -233,7 +229,7 @@ AnExampleDetElemTool::ConstructSDandField() {
 }
 
 StatusCode
-AnExampleDetElemTool::initialize() {
+DDG4DetElemTool::initialize() {
     StatusCode sc;
 
     m_geosvc = service<IGeomSvc>("GeomSvc");
@@ -252,7 +248,7 @@ AnExampleDetElemTool::initialize() {
 }
 
 StatusCode
-AnExampleDetElemTool::finalize() {
+DDG4DetElemTool::finalize() {
     StatusCode sc;
     return sc;
 }

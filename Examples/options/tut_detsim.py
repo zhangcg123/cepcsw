@@ -115,9 +115,6 @@ detsimalg.AnaElems = [
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
 
-from Configurables import AnExampleDetElemTool
-example_dettool = AnExampleDetElemTool("AnExampleDetElemTool")
-
 
 ##############################################################################
 # POD I/O

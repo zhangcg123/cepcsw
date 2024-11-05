@@ -1,7 +1,7 @@
 
 gaudi_add_module(DetSimGeom 
                  SOURCES src/WorldDetElemTool.cpp
-                         src/AnExampleDetElemTool.cpp
+                         src/DDG4DetElemTool.cpp
                  LINK DetSimInterface
                       DetInterface
                       ${DD4hep_COMPONENT_LIBRARIES} 

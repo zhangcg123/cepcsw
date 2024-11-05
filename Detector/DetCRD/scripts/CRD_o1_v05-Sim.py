@@ -109,8 +109,6 @@ gearsvc = GearSvc("GearSvc")
 from Configurables import TrackSystemSvc
 tracksystemsvc = TrackSystemSvc("TrackSystemSvc")
 
-from Configurables import AnExampleDetElemTool
-example_dettool = AnExampleDetElemTool("AnExampleDetElemTool")
 
 from Configurables import TimeProjectionChamberSensDetTool
 tpc_sensdettool = TimeProjectionChamberSensDetTool("TimeProjectionChamberSensDetTool")
