@@ -1,11 +1,11 @@
 #ifndef GenEvent_h 
 #define GenEvent_h 1
 
-#include "edm4hep/MCParticleCollection.h"//plico
+#include "edm4hep/MCParticleCollection.h"
 
-namespace MyHepMC {
+namespace Gen {
 
-class GenEvent{
+class GenEvent {
     public: 
         //GenEvent();
         GenEvent(edm4hep::MCParticleCollection& mcCol);

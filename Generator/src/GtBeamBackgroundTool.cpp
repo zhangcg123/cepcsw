@@ -57,7 +57,7 @@ StatusCode GtBeamBackgroundTool::finalize() {
 }
 
 
-bool GtBeamBackgroundTool::mutate(MyHepMC::GenEvent& event) {
+bool GtBeamBackgroundTool::mutate(Gen::GenEvent& event) {
     if (m_beaminputs.empty()) {
         return false;
     }

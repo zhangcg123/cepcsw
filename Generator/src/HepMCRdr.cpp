@@ -28,7 +28,7 @@ HepMCRdr::~HepMCRdr(){
     delete ascii_in;
 }
 
-bool HepMCRdr::mutate(MyHepMC::GenEvent& event){
+bool HepMCRdr::mutate(Gen::GenEvent& event){
 
     ++m_processed_event;
     HepMC::GenEvent* evt = ascii_in->read_next_event();

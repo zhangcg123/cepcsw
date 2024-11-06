@@ -3,7 +3,7 @@
 
 DECLARE_COMPONENT(GenPrinter)
 
-bool GenPrinter::mutate(MyHepMC::GenEvent& event){
+bool GenPrinter::mutate(Gen::GenEvent& event){
     auto msglevel = msgLevel();
 
     // only print when current msglevel is MSG::DEBUG/VERBOSE

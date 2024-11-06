@@ -5,8 +5,6 @@
 #include "GenEvent.h"
 #include "IGenTool.h"
 
-using namespace std;
-
 class GenPrinter: public extends<AlgTool, IGenTool> {
 public:
     using extends::extends;
@@ -17,7 +15,7 @@ public:
 
 public:
     bool configure_gentool() override;               
-    bool mutate(MyHepMC::GenEvent& event) override;    
+    bool mutate(Gen::GenEvent& event) override;    
     bool finish() override;
 };
 

@@ -43,7 +43,7 @@ StatusCode
 GenAlgo::execute() {
     m_evtid++;
     auto mcCol = m_hdl.createAndPut();
-    MyHepMC::GenEvent m_event(*mcCol);
+    Gen::GenEvent m_event(*mcCol);
 
     for(auto gentool: m_genTools) {
         if (gentool->mutate(m_event)) {} 
