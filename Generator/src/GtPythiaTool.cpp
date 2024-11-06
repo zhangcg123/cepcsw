@@ -44,11 +44,35 @@ bool GtPythiaTool::mutate(Gen::GenEvent& event) {
         }
         mcp.setGeneratorStatus(status);
         mcp.setCharge(p.charge());
-        mcp.setTime(p.tau());
+        mcp.setTime(p.tProd());
         mcp.setMass(p.m());
         mcp.setVertex(edm4hep::Vector3d(p.xProd(), p.yProd(), p.zProd()));
-        mcp.setEndpoint(edm4hep::Vector3d(p.xDec(), p.yDec(), p.zDec()));
+        // update the endpoint later
+        mcp.setEndpoint(edm4hep::Vector3d(p.xProd(), p.yProd(), p.zProd()));
         mcp.setMomentum(edm4hep::Vector3f(p.px(), p.py(), p.pz()));
+    }
+    // setup the relationships (mother and daughter)
+    for (int i = 0; i < pythia_particles.size(); ++i) {
+        auto& p = pythia_particles[i];
+        auto mcp = event.getMCVec()[i];
+
+        auto mother_list = p.motherList();
+        for (auto idx: mother_list) {
+            auto mother = event.getMCVec()[idx];
+            mcp.addToParents(mother);
+        }
+
+        auto daughter_list = p.daughterList();
+        bool need_endpoint = true;
+        for (auto idx: daughter_list) {
+            auto daughter = event.getMCVec()[idx];
+            mcp.addToDaughters(daughter);
+            // Update the endpoint to the daughter's vertex
+            if (need_endpoint) {
+                mcp.setEndpoint(daughter.getVertex());
+                need_endpoint = false;
+            }
+        }
     }
     return true;
 }
