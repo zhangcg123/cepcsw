@@ -4,14 +4,17 @@ gaudi_add_module(GenAlgo
                  SOURCES src/IGenTool.cpp 
                          src/GenAlgo.cpp 
                          src/GenEvent.cpp 
+                         src/GenPrinter.cpp
+                         # ------- Readers -------
                          src/GenReader.cpp 
                          src/StdHepRdr.cpp 
-                         src/GenPrinter.cpp
                          src/LCAscHepRdr.cc
                          src/HepevtRdr.cpp
                          src/SLCIORdr.cpp
                          src/HepMCRdr.cpp
+                         # ------- Signals -------
                          src/GtGunTool.cpp
+                         src/GtPythiaTool.cpp
                          # ------- Beam Background -------
                          src/GtBeamBackgroundTool.cpp
                          src/BeamBackgroundFileParserV0.cpp
@@ -25,6 +28,7 @@ gaudi_add_module(GenAlgo
                       ${HEPMC_LIBRARIES}
                       ${CLHEP_LIBRARIES}
                       ${LCIO_LIBRARIES}
+                      ${PYTHIA8_LIBRARY}
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
                       ROOT::EG
 )
