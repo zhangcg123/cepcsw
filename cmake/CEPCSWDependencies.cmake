@@ -44,6 +44,7 @@ find_package(LCIO REQUIRED)
 find_package(OnnxRuntime REQUIRED)
 find_package(PandoraSDK REQUIRED)
 find_package(podio REQUIRED)
+find_package(Pythia8 REQUIRED)
 find_package(ROOT COMPONENTS EG Geom GenVector Graf Graf3d Gpad MathCore Net RIO Tree TreePlayer REQUIRED)
 
 if (CEPCSW_USE_SYSTEM_CKF_BELLE)
