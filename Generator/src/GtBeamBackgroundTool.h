@@ -42,7 +42,7 @@ public:
     StatusCode finalize() override;
 
     // IGenTool
-    bool mutate(MyHepMC::GenEvent& event) override;
+    bool mutate(Gen::GenEvent& event) override;
     bool finish() override;
     bool configure_gentool() override;
 

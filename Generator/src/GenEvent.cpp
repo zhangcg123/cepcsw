@@ -3,7 +3,7 @@
 
 // using namespace std;
 
-namespace MyHepMC{
+namespace Gen {
 
 //GenEvent::GenEvent(){
 GenEvent::GenEvent(edm4hep::MCParticleCollection& mcCol)

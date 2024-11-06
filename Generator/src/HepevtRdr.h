@@ -20,7 +20,7 @@ class HepevtRdr: public extends<AlgTool, GenReader> {
         StatusCode finalize() override;    
 
         bool configure_gentool();               
-        bool mutate(MyHepMC::GenEvent& event);    
+        bool mutate(Gen::GenEvent& event);    
         bool finish();
         bool isEnd();
 

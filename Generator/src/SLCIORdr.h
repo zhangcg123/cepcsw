@@ -27,7 +27,7 @@ class SLCIORdr: public extends<AlgTool, GenReader> {
         StatusCode finalize() override;    
 
         bool configure_gentool() override;
-        bool mutate(MyHepMC::GenEvent& event) override;    
+        bool mutate(Gen::GenEvent& event) override;    
         bool finish() override;
         bool isEnd() override;
 

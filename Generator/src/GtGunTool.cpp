@@ -114,7 +114,7 @@ GtGunTool::finalize() {
 }
 
 bool
-GtGunTool::mutate(MyHepMC::GenEvent& event) {
+GtGunTool::mutate(Gen::GenEvent& event) {
 
     TDatabasePDG* db_pdg = TDatabasePDG::Instance();
 

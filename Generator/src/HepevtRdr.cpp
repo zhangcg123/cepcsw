@@ -85,7 +85,7 @@ bool HepevtRdr::configure_gentool(){
     return true;
 }
 
-bool HepevtRdr::mutate(MyHepMC::GenEvent& event){
+bool HepevtRdr::mutate(Gen::GenEvent& event){
     ++m_processed_event;
     LCCollectionVec* mc_vec = m_hepevt_rdr->readEvent();
     if(mc_vec==nullptr) return false;

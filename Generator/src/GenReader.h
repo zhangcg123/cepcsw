@@ -13,7 +13,7 @@ class GenReader: virtual public IGenTool{
     public:
         virtual ~GenReader() = 0;
         virtual bool configure_gentool()=0;               
-        virtual bool mutate(MyHepMC::GenEvent& event)=0;    
+        virtual bool mutate(Gen::GenEvent& event)=0;    
         virtual bool finish()=0;
         virtual bool isEnd()=0;
 

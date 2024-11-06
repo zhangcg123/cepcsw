@@ -30,7 +30,7 @@ StdHepRdr::~StdHepRdr(){
     delete m_stdhep_rdr;
 }
 
-bool StdHepRdr::mutate(MyHepMC::GenEvent& event){
+bool StdHepRdr::mutate(Gen::GenEvent& event){
     ++m_processed_event;
     if(isEnd()) return false;
     LCCollectionVec* mc_vec = m_stdhep_rdr->readEvent();

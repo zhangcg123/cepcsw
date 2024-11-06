@@ -34,7 +34,7 @@ SLCIORdr::~SLCIORdr(){
   delete m_slcio_rdr;
 }
 
-bool SLCIORdr::mutate(MyHepMC::GenEvent& event){
+bool SLCIORdr::mutate(Gen::GenEvent& event){
   ++m_processed_event;
   IMPL::LCCollectionVec* lcMCVec = new IMPL::LCCollectionVec(LCIO::MCPARTICLE);
   EVENT::LCEvent *lcEvent = m_slcio_rdr->readNextEvent(LCIO::UPDATE);
