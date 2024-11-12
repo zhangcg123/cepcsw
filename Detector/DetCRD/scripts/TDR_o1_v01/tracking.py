@@ -54,7 +54,8 @@ podioinput = PodioInput("PodioReader", collections=[
 #    "SETCollection",
     "OTKBarrelCollection",
     "FTDCollection",
-    "MuonBarrelCollection"
+    "MuonBarrelCollection",
+    "MuonEndcapCollection"
     ])
 
 
@@ -156,7 +157,9 @@ digiTPC.TPCTrackerHitsCol = gashitname
 from Configurables import MuonDigiAlg
 digiMuon = MuonDigiAlg("MuonDigiAlg")
 digiMuon.MuonBarrelHitsCollection = "MuonBarrelCollection"
+digiMuon.MuonEndcapHitsCollection = "MuonEndcapCollection"
 digiMuon.MuonBarrelTrackerHits = "MuonBarrelTrackerHits"
+digiMuon.MuonEndcapTrackerHits = "MuonEndcapTrackerHits"
 digiMuon.WriteNtuple = 0
 digiMuon.OutFileName = "Digi_MUON.root"
 #########################################
