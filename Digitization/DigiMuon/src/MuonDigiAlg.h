@@ -61,18 +61,22 @@ class MuonDigiAlg : public GaudiAlgorithm
   TFile* m_wfile;
     
   SmartIF<IGeomSvc> m_geosvc;
-  dd4hep::DDSegmentation::BitFieldCoder* m_decoder;
+  dd4hep::DDSegmentation::BitFieldCoder* m_decoder1;
+  dd4hep::DDSegmentation::BitFieldCoder* m_decoder2;
   dd4hep::rec::CellIDPositionConverter* m_cellIDConverter;
   dd4hep::Detector* m_dd4hep;
 
-  std::map<unsigned long long, double> map_cell_edep;
-  std::map<unsigned long long, double> map_cell_adc;
-  std::map<unsigned long long, int> map_cell_layer;
-  std::map<unsigned long long, int> map_cell_slayer;
-  std::map<unsigned long long, int> map_cell_strip;
-  std::map<unsigned long long, int> map_cell_fe;
-  std::map<unsigned long long, int> map_cell_env;
-
+  std::map<std::array<unsigned long long, 2>, double> map_cell_edep;
+  std::map<std::array<unsigned long long, 2>, double> map_cell_adc;
+  std::map<std::array<unsigned long long, 2>, int> map_cell_layer;
+  std::map<std::array<unsigned long long, 2>, int> map_cell_slayer;
+  std::map<std::array<unsigned long long, 2>, int> map_cell_strip;
+  std::map<std::array<unsigned long long, 2>, int> map_cell_fe;
+  std::map<std::array<unsigned long long, 2>, int> map_cell_env;
+  std::map<std::array<unsigned long long, 2>, int> map_cell_pdgid;
+  std::map<std::array<unsigned long long, 2>, edm4hep::Vector3d> map_cell_pos;
+  std::map<int, double> map_muonhit;
+  std::map<int, int> map_pdgid;
 
  
 #define MAX_SIZE 10000 
@@ -106,17 +110,21 @@ class MuonDigiAlg : public GaudiAlgorithm
   Gaudi::Property<int>   _writeNtuple{this,  "WriteNtuple", 1, "Write ntuple"};
   Gaudi::Property<std::string> _filename{this, "OutFileName", "testout.root", "Output file name"};
 
-  Gaudi::Property<double>  m_hitEff{ this, "hitEff", 0.9, "Efficiency of a single hit on a Strip" };
+  Gaudi::Property<double>  m_MuonMode{ this, "MuonMode", 0, "Control the Muon section used in Digi" };// 1->Barrel; 2->Endcap; 0->Both;
+  Gaudi::Property<double>  m_hitEff{ this, "SiPMEff", 0.95, "Efficiency of a single hit on a Strip" };
+  Gaudi::Property<double>  m_EdepMin{ this, "EdepMin", 0.0001, "Minimum Edep of a mip" };
 
 
   // Input collections
   DataHandle<edm4hep::SimTrackerHitCollection>            m_inputMuonBarrel{"MuonBarrelHitsCollection", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::SimTrackerHitCollection>            m_inputMuonEndcap{"MuonEndcapHitsCollection", Gaudi::DataHandle::Reader, this};
   // Output collections
   DataHandle<edm4hep::TrackerHitCollection>               m_outputMuonBarrel{"MuonBarrelTrackerHits", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackerHitCollection>               m_outputMuonEndcap{"MuonEndcapTrackerHits", Gaudi::DataHandle::Writer, this};
+
   //DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_assMuonBarrel{"MuonBarrelTrackerHitAssociationCollection", Gaudi::DataHandle::Writer, this};
 
   edm4hep::TrackerHitCollection* trkhitVec;
-
   int m_nEvt=0;
 };
 #endif
