@@ -1,12 +1,3 @@
-//====================================================================
-//  Detector description implementation for Chunxiu Liu's EcalMatrix
-//--------------------------------------------------------------------
-//
-//  Author     : Tao Lin
-//               Examples from lcgeo
-//                   lcgeo/detector/calorimeter/
-//
-//====================================================================
 #include "DD4hep/DetFactoryHelper.h"
 #include "DD4hep/OpticalSurfaces.h"
 #include "XML/Utilities.h"
