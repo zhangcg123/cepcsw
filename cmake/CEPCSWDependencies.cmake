@@ -18,6 +18,7 @@ Find all the dependencies here, so in each package user don't need to find the p
 - podio
 - ROOT
 - CKF
+- RDAnalysis
 #]]
 
 ##############################################################################
@@ -65,3 +66,12 @@ else()
 endif()
 
 find_package(FastJet)
+
+
+if (CEPCSW_USE_SYSTEM_RDANALYSIS)
+  message("Try to use an existing installation of RDAnalysis")
+  find_package(RDAnalysis)
+else()
+  message("Try to use an internal installation of RDAnalysis")
+  include("${CMAKE_CURRENT_LIST_DIR}/internal_rdana.cmake")
+endif()
