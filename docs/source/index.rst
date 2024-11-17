@@ -75,7 +75,7 @@ Contents
    :caption: Analysis tools
 
    analysis/overview.md
-
+   analysis/RDAnalysis_overview.md
 .. toctree::
    :maxdepth: 2
    :numbered:
