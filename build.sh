@@ -92,8 +92,12 @@ function run-make() {
 
     # following is IHEP specific hack due to the limitation of nthreads 150.
     local nthreads=$(ulimit -u)
-    local factor=16
-    nthreads=$((nthreads/factor)) # assume it is safe to divide by scale factor.
+    if [ "$nthreads" = "unlimited" ]; then
+        nthreads=$njobs
+    else
+        local factor=16
+        nthreads=$((nthreads/factor)) # assume it is safe to divide by scale factor.
+    fi
     
     # min(njobs, nthreads)
     njobs=$((njobs<nthreads ?  njobs: nthreads))
