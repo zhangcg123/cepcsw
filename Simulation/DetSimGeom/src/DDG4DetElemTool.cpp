@@ -224,7 +224,10 @@ DDG4DetElemTool::ConstructSDandField() {
 
     fieldManager->SetDetectorField(mag_field);
     fieldManager->CreateChordFinder(mag_field);
-
+    fieldManager->SetDeltaIntersection(m_DeltaIntersection.value());
+    fieldManager->SetDeltaOneStep(m_DeltaOneStep.value());
+    fieldManager->SetMinimumEpsilonStep(m_MinimumEpsilonStep.value());
+    fieldManager->SetMaximumEpsilonStep(m_MaximumEpsilonStep.value());
 
 }
 
