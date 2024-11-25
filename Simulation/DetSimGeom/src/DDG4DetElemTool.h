@@ -28,6 +28,11 @@ private:
     Gaudi::Property<double> m_x{this, "X", 30.*m};
     Gaudi::Property<double> m_y{this, "Y", 30.*m};
     Gaudi::Property<double> m_z{this, "Z", 30.*m};
+    Gaudi::Property<double> m_DeltaIntersection{this, "DeltaIntersection", 1.0e-8*mm};
+    Gaudi::Property<double> m_DeltaOneStep{this, "DeltaOneStep",1.0e-7 * mm};
+    Gaudi::Property<double> m_MinimumEpsilonStep{this, "MinimumEpsilonStep",1.0e-10 * mm};
+    Gaudi::Property<double> m_MaximumEpsilonStep{this, "MaximumEpsilonStep",1.0e-8 * mm};
+
     // DD4hep XML compact file path
     Gaudi::Property<std::string> m_dd4hep_xmls{this, "detxml"};
 
