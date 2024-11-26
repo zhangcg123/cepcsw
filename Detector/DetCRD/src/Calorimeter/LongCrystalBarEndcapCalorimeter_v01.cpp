@@ -90,7 +90,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     // dd4hep::Volume envelopeVolZminus("envelopeVolZminus", boolean, vacuum); 
 
     
-    dd4hep::Volume envelopeVol("envelopeVol", unionean, vacuum); 
+    dd4hep::Volume envelopeVol(det_name, unionean, vacuum); 
     dd4hep::Transform3D transform(dd4hep::RotationZ(90*degree), dd4hep::Position(0.0, 0.0, -z_min-z_depth/2)); 
     dd4hep::PlacedVolume envelopePlv = motherVol.placeVolume(envelopeVol, transform);
 

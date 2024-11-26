@@ -30,7 +30,7 @@
   </regions>
 
   <detectors>
-    <detector id="DetID_ECAL_ENDCAP" name="CaloDetectorEndcap" type="LongCrystalBarEndcapCalorimeter_v01" readout="EcalEndcapsCollection" vis="Invisible" sensitive="true" region="EcalendcapRegion">
+    <detector id="DetID_ECAL_ENDCAP" name="EcalEndcaps" type="LongCrystalBarEndcapCalorimeter_v01" readout="EcalEndcapsCollection" vis="Invisible" sensitive="true" region="EcalendcapRegion">
       <!-- Use cm as unit if you want to use Pandora for reconstruction -->
     </detector>
   </detectors>
