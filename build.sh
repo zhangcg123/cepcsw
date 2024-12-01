@@ -11,6 +11,8 @@
 # Author: Tao Lin <lintao@ihep.ac.cn>
 ##############################################################################
 
+THISSCRITDIR=$(dirname $(readlink -e "${BASH_SOURCE[0]}" 2>/dev/null) 2>/dev/null) # Darwin readlink doesnt accept -e
+
 function info:() {
     echo "INFO: $*" 1>&2
 }
@@ -74,8 +76,9 @@ function run-cmake() {
     fi
 
     cd $blddir
+    local installarea=$THISSCRITDIR/InstallArea/$CEPCSW_LCG_PLATFORM
 
-    cmake .. -DHOST_BINARY_TAG=${lcg_platform} ${bldgen} || {
+    cmake .. -DCMAKE_INSTALL_PREFIX=$installarea -DHOST_BINARY_TAG=${lcg_platform} ${bldgen} || {
         error: "Failed to cmake"
         return 1
     }
@@ -115,6 +118,7 @@ function run-install() {
 # Parse the command line options
 ##############################################################################
 
+# The following envvars should be defined after source setup scripts
 # The current default platform
 lcg_platform=${CEPCSW_LCG_PLATFORM:-x86_64-centos7-gcc11-opt}
 lcg_version=${CEPCSW_LCG_VERSION:-103.0.2}
