@@ -827,6 +827,12 @@
       <fraction n="0.895" ref="Al"/>
     </material>
 
+  <material name="ParaffinWax">
+    <D value="0.9" unit="g/cm3"/>
+    <composite n="25" ref="C"/>
+    <composite n="52" ref="H"/>
+  </material>
+
   </materials>
 
   <surfaces>

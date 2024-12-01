@@ -29,6 +29,7 @@ namespace CEPCConf{
     static const int YOKE_ENDCAP = 31;
     static const int MUON        = 10;
     static const int MUON_ENDCAP = 11;
+    static const int WAX_ENDCAP  = 12;
     
     static const int bwd    = -1;
     static const int barrel =  0;

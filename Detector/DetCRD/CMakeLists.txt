@@ -27,6 +27,7 @@ gaudi_add_module(DetCRD
 			 src/Tracker/SiTracker_itkbarrel_v02_geo.cpp
                          src/Tracker/SiTracker_otkbarrel_v01_geo.cpp
                          src/Tracker/SiTracker_otkendcap_v01_geo.cpp
+                         src/Other/ParaffinEndcap_v01.cpp
 
 		 LINK ${DD4hep_COMPONENT_LIBRARIES}
                       DetIdentifier
