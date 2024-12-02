@@ -9,6 +9,8 @@
 
 #include "DetSimSD/DDG4SensitiveDetector.h"
 #include "DDG4/Defs.h"
+#include "DetSimInterface/IDedxSimTool.h"
+#include "GaudiKernel/ToolHandle.h"
 
 class TimeProjectionChamberSensitiveDetector: public DDG4SensitiveDetector {
  public:
@@ -33,6 +35,8 @@ class TimeProjectionChamberSensitiveDetector: public DDG4SensitiveDetector {
   /// helper function to avoid code duplication,
   /// adds energy, track length and momentum of a low pt step to the cumulative variables
   void CumulateLowPtStep(dd4hep::sim::Geant4StepHandler& h);
+  bool setDedxSimTool(ToolHandle<IDedxSimTool>);
+  void setDoHeedSim(bool doHeedSim){m_doHeedSim=doHeedSim;};
   
  protected:
 
@@ -63,6 +67,8 @@ class TimeProjectionChamberSensitiveDetector: public DDG4SensitiveDetector {
   int    CurrentTrackID; //< the TrackID of the particle causing the cumulative energy deposit
   double CurrentGlobalTime; ///< the global time of the track causing the cumulative energy deposit
   int    CurrentCopyNumber; ///< copy number of the preStepPoint's TouchableHandle for the cumulative energy deposit
+  ToolHandle<IDedxSimTool> m_dedx_simtool;
+  bool m_doHeedSim = false;
   
 };
 #endif

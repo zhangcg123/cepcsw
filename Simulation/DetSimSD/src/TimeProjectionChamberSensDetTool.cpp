@@ -20,6 +20,14 @@ StatusCode TimeProjectionChamberSensDetTool::initialize() {
     error() << "Failed to find GeomSvc." << endmsg;
     return StatusCode::FAILURE;
   }
+
+  if(m_do_heed_sim){
+      m_dedx_simtool = ToolHandle<IDedxSimTool>(m_dedx_sim_option.value());
+      if (!m_dedx_simtool) {
+          error() << "Failed to find dedx simtoo." << endmsg;
+          return StatusCode::FAILURE;
+      }
+  }
   
   return AlgTool::initialize();
 }
@@ -45,6 +53,8 @@ G4VSensitiveDetector* TimeProjectionChamberSensDetTool::createSD(const std::stri
       tpcsd->setWriteMCTruthForLowPtHits(m_writeMCTruthForLowPtHits);
       tpcsd->setLowPtCut(m_lowPtCut/dd4hep::MeV*CLHEP::MeV);
       tpcsd->setLowPtMaxHitSeparation(m_lowPtMaxHitSeparation/dd4hep::mm*CLHEP::mm);
+      tpcsd->setDedxSimTool(m_dedx_simtool);
+      tpcsd->setDoHeedSim(m_do_heed_sim);
       sd = tpcsd;
       info() << "TPC will use TimeProjectionChamberSensitiveDetector" << endmsg;
     }

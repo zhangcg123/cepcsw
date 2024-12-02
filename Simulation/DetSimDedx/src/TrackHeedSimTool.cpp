@@ -142,19 +142,17 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
         else return m_eps;
     }
 
-    float init_x = 10;//cm
-    float init_y = -10;//cm
     /*
     if(pdg_code == 11 && track_KE/CLHEP::keV < m_delta_threshold.value()){
         int nc = 0, ni=0;
-        m_track->TransportDeltaElectron(init_x, init_y, 0, track_time/CLHEP::ns, track_KE/CLHEP::eV, track_dx, track_dy, track_dz, nc, ni);
+        m_track->TransportDeltaElectron(m_init_x, m_init_y, 0, track_time/CLHEP::ns, track_KE/CLHEP::eV, track_dx, track_dy, track_dz, nc, ni);
         for (int j = 0; j < nc; ++j) {
             double xe = 0., ye = 0., ze = 0., te = 0., ee = 0.;
             double dx = 0., dy = 0., dz = 0.;
             m_track->GetElectron(j, xe, ye, ze, te, ee, dx, dy, dz);
             auto ehit  = SimIonizationCol->create();
             ehit.setTime(te);
-            double epos[3] = { cm_to_mm*( (xe - init_x)+position_x/CLHEP::cm) , cm_to_mm*((ye - init_y)+position_y/CLHEP::cm), cm_to_mm*(ze + position_z/CLHEP::cm)};
+            double epos[3] = { cm_to_mm*( (xe - m_init_x)+position_x/CLHEP::cm) , cm_to_mm*((ye - m_init_y)+position_y/CLHEP::cm), cm_to_mm*(ze + position_z/CLHEP::cm)};
             ehit.setPosition(edm4hep::Vector3d(epos));
             ehit.setType(11);
         }
@@ -186,7 +184,13 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
     m_track->EnableOneStepFly(true);
     m_track->SetSteppingLimits( track_length/CLHEP::cm, 1000, 0.1, 0.2);
     clock_t t012 = clock();
-    m_track->NewTrack(init_x, init_y, 0, track_time/CLHEP::ns, track_dx, track_dy, track_dz);//cm
+    m_tv3.SetX(track_dx);
+    m_tv3.SetY(track_dy);
+    m_tv3.SetZ(track_dz);
+    if(m_det=="TPC"){
+        doXRotation(false, position_z, m_tv3);
+    }
+    m_track->NewTrack(m_init_x, m_init_y, 0, track_time/CLHEP::ns, m_tv3.X(), m_tv3.Y(), m_tv3.Z());//cm
     double xc = 0., yc = 0., zc = 0., tc = 0., ec = 0., extra = 0.;
     int nc = 0;
     int ic = 0;
@@ -197,12 +201,18 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
         //auto chit = SimPrimaryIonizationCol->create();
         auto chit = m_SimPrimaryIonizationCol->create();
         chit.setTime(tc);
-        double cpos[3] = { cm_to_mm*( (xc - init_x)+position_x/CLHEP::cm) , cm_to_mm*((yc - init_y)+position_y/CLHEP::cm), cm_to_mm*(zc + position_z/CLHEP::cm)};
+        m_tv3.SetX(xc - m_init_x);
+        m_tv3.SetY(yc - m_init_y);
+        m_tv3.SetZ(zc);
+        if(m_det=="TPC"){
+            doXRotation(true, position_z, m_tv3);
+        }
+        double cpos[3] = { cm_to_mm*( m_tv3.X()+position_x/CLHEP::cm) , cm_to_mm*(m_tv3.Y()+position_y/CLHEP::cm), cm_to_mm*(m_tv3.Z() + position_z/CLHEP::cm)};
         chit.setPosition(edm4hep::Vector3d(cpos));
         //float cmom[3]  = {0,0,0};
         //getMom(ec, 1, 0, 0, cmom);//FIXME direction is not important?
         chit.setType(0);//default
-        if(m_save_cellID) chit.setCellID( getCellID(cpos[0], cpos[1], cpos[2]) );
+        if(m_save_cellID && m_det=="DC") chit.setCellID( getCellID(cpos[0], cpos[1], cpos[2]) );
         if(m_save_mc && Parent_ID == 0 && track_ID <= mcCol->size() && mcCol ){ 
             chit.setMCParticle(  mcCol->at(track_ID-1) );
             //std::cout<<"mc obj index="<<mcCol->at(track_ID-1).getObjectID().index<<std::endl;
@@ -217,8 +227,14 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
             //auto ehit = SimIonizationCol->create();
             //ehit.setPrimaryIonization(chit);
             chit.addToElectronTime(te);
+            m_tv3.SetX(xe - m_init_x);
+            m_tv3.SetY(ye - m_init_y);
+            m_tv3.SetZ(ze);
+            if(m_det=="TPC"){
+                doXRotation(true, position_z, m_tv3);
+            }
             //ehit.setTime(te);
-            double epos[3] = { cm_to_mm*( (xe - init_x)+position_x/CLHEP::cm) , cm_to_mm*((ye - init_y)+position_y/CLHEP::cm), cm_to_mm*(ze + position_z/CLHEP::cm)};
+            double epos[3] = { cm_to_mm*( m_tv3.X()+position_x/CLHEP::cm) , cm_to_mm*(m_tv3.Y()+position_y/CLHEP::cm), cm_to_mm*(m_tv3.Z() + position_z/CLHEP::cm)};
             //ehit.setPosition(edm4hep::Vector3d(epos));
             //ehit.setPosition(edm4hep::Vector3d(epos));
             chit.addToElectronPosition(edm4hep::Vector3d(epos));
@@ -233,7 +249,7 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
             ehit.setMomentum(edm4hep::Vector3f(emom));
             */
             //if(m_save_cellID) ehit.setCellID( getCellID(epos[0], epos[1], epos[2]) );
-            if(m_save_cellID) chit.addToElectronCellID( getCellID(epos[0], epos[1], epos[2]) );
+            if(m_save_cellID && m_det=="DC") chit.addToElectronCellID( getCellID(epos[0], epos[1], epos[2]) );
             //ehit.setQuality(2);
             //ehit.setType(0);//default
         }
@@ -300,15 +316,16 @@ void TrackHeedSimTool::getMom(float ee, float dx, float dy,float dz, float mom[3
 
 StatusCode TrackHeedSimTool::initialize()
 {
-
-  m_geosvc = service<IGeomSvc>("GeomSvc");
-  if ( !m_geosvc )  throw "TrackHeedSimTool :Failed to find GeomSvc ...";
-  m_dd4hep = m_geosvc->lcdd();
-  if ( !m_dd4hep )  throw "TrackHeedSimTool :Failed to get dd4hep::Detector ...";
-  m_readout = new dd4hep::Readout( m_dd4hep->readout(m_readout_name) );
-  if ( !m_readout )  throw "TrackHeedSimTool :Failed to get readout ...";
-  m_segmentation = dynamic_cast<dd4hep::DDSegmentation::GridDriftChamber*>(m_readout->segmentation().segmentation());
-  if ( !m_segmentation )  throw "TrackHeedSimTool :Failed to get segmentation ...";
+  if(m_det=="DC"){
+      m_geosvc = service<IGeomSvc>("GeomSvc");
+      if ( !m_geosvc )  throw "TrackHeedSimTool :Failed to find GeomSvc ...";
+      m_dd4hep = m_geosvc->lcdd();
+      if ( !m_dd4hep )  throw "TrackHeedSimTool :Failed to get dd4hep::Detector ...";
+      m_readout = new dd4hep::Readout( m_dd4hep->readout(m_readout_name) );
+      if ( !m_readout )  throw "TrackHeedSimTool :Failed to get readout ...";
+      m_segmentation = dynamic_cast<dd4hep::DDSegmentation::GridDriftChamber*>(m_readout->segmentation().segmentation());
+      if ( !m_segmentation )  throw "TrackHeedSimTool :Failed to get segmentation ...";
+  }
 
   m_particle_map[ 11] = "e-";
   m_particle_map[-11] = "e+";
@@ -323,62 +340,85 @@ StatusCode TrackHeedSimTool::initialize()
   m_particle_map[700201] = "d";
   m_particle_map[700202] = "alpha";
 
-  m_gas.SetComposition("he", m_he,"isobutane", m_isob);
-  m_gas.SetTemperature(293.15);
-  m_gas.SetPressure(760.0);
-  m_gas.SetMaxElectronEnergy(200.);
-  m_gas.EnablePenningTransfer(0.44, 0.0, "He");
-  m_gas.LoadGasFile(m_gas_file.value());
-  m_gas.LoadIonMobility(m_IonMobility.value());
-  //std::this_thread::sleep_for(std::chrono::milliseconds(m_delay_time));
-  //m_gas.LoadGasFile("/junofs/users/wxfang/MyGit/tmp/check_G4FastSim_20210121/CEPCSW/Digitisers/DigiGarfield/He_50_isobutane_50.gas");
-  //m_gas.LoadIonMobility("/junofs/users/wxfang/MyGit/tmp/check_G4FastSim_20210121/CEPCSW/Digitisers/DigiGarfield/IonMobility_He+_He.txt");
-  /*
-  m_gas.SetComposition("he", 90.,"isobutane", 10.);  // cepc gas
-  m_gas.SetPressure(760.0);
-  m_gas.SetTemperature(293.15);
-  m_gas.SetFieldGrid(100., 100000., 20, true);
-  m_gas.GenerateGasTable(10);
-  m_gas.WriteGasFile("he_90_isobutane_10.gas");
-  */
+  
+  if(m_det=="DC"){
+      m_gas.SetComposition("he", m_he,"isobutane", m_isob);
+      m_gas.SetTemperature(293.15);
+      m_gas.SetPressure(760.0);
+      m_gas.SetMaxElectronEnergy(200.);
+      m_gas.EnablePenningTransfer(0.44, 0.0, "He");
+      m_gas.LoadGasFile(m_gas_file.value());
+      m_gas.LoadIonMobility(m_IonMobility.value());
+      //std::this_thread::sleep_for(std::chrono::milliseconds(m_delay_time));
+      //m_gas.LoadGasFile("/junofs/users/wxfang/MyGit/tmp/check_G4FastSim_20210121/CEPCSW/Digitisers/DigiGarfield/He_50_isobutane_50.gas");
+      //m_gas.LoadIonMobility("/junofs/users/wxfang/MyGit/tmp/check_G4FastSim_20210121/CEPCSW/Digitisers/DigiGarfield/IonMobility_He+_He.txt");
+      /*
+      m_gas.SetComposition("he", 90.,"isobutane", 10.);  // cepc gas
+      m_gas.SetPressure(760.0);
+      m_gas.SetTemperature(293.15);
+      m_gas.SetFieldGrid(100., 100000., 20, true);
+      m_gas.GenerateGasTable(10);
+      m_gas.WriteGasFile("he_90_isobutane_10.gas");
+      */
+  }
+  else if(m_det=="TPC"){
+      m_gas.SetTemperature(293.15);
+      m_gas.SetPressure(750.);
+      m_gas.SetComposition("Ar", 95., "isobutane", 2., "CF4", 3.);
+  }
 
   cmp.SetMedium(&m_gas);
-  // Field Wire radius [cm]
-  const double rFWire = 110.e-4;
-  // Signa Wire radius [cm]
-  const double rSWire = 25.e-4;
-  // Cell radius [cm]
-  float rCell = 50;//As the ionization process is almost not effected by cell geometry and wire voltage. Here the radius is to make sure the ionization process is completed.
-  // Voltages
-  const double vSWire = 2000.;
-  const double vFWire = 0.;
-  // Add the signal wire in the centre.
-  cmp.AddWire(0, 0, 2 * rSWire, vSWire, "s");
-  // Add the field wire around the signal wire.
-  cmp.AddWire(-rCell, -rCell, 2 * rFWire, vFWire, "f");
-  cmp.AddWire(    0., -rCell, 2 * rFWire, vFWire, "f");
-  cmp.AddWire( rCell, -rCell, 2 * rFWire, vFWire, "f");
-  cmp.AddWire(-rCell,     0., 2 * rFWire, vFWire, "f");
-  cmp.AddWire( rCell,     0., 2 * rFWire, vFWire, "f");
-  cmp.AddWire(-rCell,  rCell, 2 * rFWire, vFWire, "f");
-  cmp.AddWire(    0.,  rCell, 2 * rFWire, vFWire, "f");
-  cmp.AddWire( rCell,  rCell, 2 * rFWire, vFWire, "f");
-  if(m_BField !=0 ) cmp.SetMagneticField(0., 0., m_BField);
-  cmp.AddReadout("s");
-
+  
+  if(m_det=="DC"){
+      m_init_x = 10;//cm
+      m_init_y = -10;//cm
+      // Field Wire radius [cm]
+      const double rFWire = 110.e-4;
+      // Signa Wire radius [cm]
+      const double rSWire = 25.e-4;
+      // Cell radius [cm]
+      float rCell = 50;//As the ionization process is almost not effected by cell geometry and wire voltage. Here the radius is to make sure the ionization process is completed.
+      // Voltages
+      const double vSWire = 2000.;
+      const double vFWire = 0.;
+      // Add the signal wire in the centre.
+      cmp.AddWire(0, 0, 2 * rSWire, vSWire, "s");
+      // Add the field wire around the signal wire.
+      cmp.AddWire(-rCell, -rCell, 2 * rFWire, vFWire, "f");
+      cmp.AddWire(    0., -rCell, 2 * rFWire, vFWire, "f");
+      cmp.AddWire( rCell, -rCell, 2 * rFWire, vFWire, "f");
+      cmp.AddWire(-rCell,     0., 2 * rFWire, vFWire, "f");
+      cmp.AddWire( rCell,     0., 2 * rFWire, vFWire, "f");
+      cmp.AddWire(-rCell,  rCell, 2 * rFWire, vFWire, "f");
+      cmp.AddWire(    0.,  rCell, 2 * rFWire, vFWire, "f");
+      cmp.AddWire( rCell,  rCell, 2 * rFWire, vFWire, "f");
+      if(m_BField !=0 ) cmp.SetMagneticField(0., 0., m_BField);
+      cmp.AddReadout("s");
+  }
+  else if(m_det=="TPC"){
+      //在Garfield中没有AddPlaneZ这一选项，因此当前的Y坐标为全局中的Z坐标
+      //即为束流方向(后面会进行坐标变换)
+      cmp.AddPlaneY(0, -60000., "pad_plane");
+      cmp.AddPlaneY(300, 0., "HV");
+      cmp.SetMagneticField(0, m_BField, 0);
+      m_init_x = 0;//cm
+      m_init_y = 150;//cm
+  }
   
   ///
   /// Make a sensor.
   ///
   m_sensor = new Sensor(); 
   m_sensor->AddComponent(&cmp);
-  m_sensor->AddElectrode(&cmp, "s");
-  // Set the signal time window. [ns]
-  const double tstep = 0.5;
-  const double tmin = -0.5 * 0.5;
-  const unsigned int nbins = 1000;
-  m_sensor->SetTimeWindow(tmin, tstep, nbins);
-  m_sensor->ClearSignal();
+  if(m_det=="DC"){
+      m_sensor->AddElectrode(&cmp, "s");
+      // Set the signal time window. [ns]
+      const double tstep = 0.5;
+      const double tmin = -0.5 * 0.5;
+      const unsigned int nbins = 1000;
+      m_sensor->SetTimeWindow(tmin, tstep, nbins);
+      m_sensor->ClearSignal();
+  }
 
 
 
@@ -411,82 +451,103 @@ StatusCode TrackHeedSimTool::initialize()
   m_pre_t  = 0;
 
 
-   // for NN pulse simulation//
-   m_env = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ENV");
-   m_seesion_options = std::make_shared<Ort::SessionOptions>();
-   m_seesion_options->SetIntraOpNumThreads(m_intra_op_nthreads);
-   m_seesion_options->SetInterOpNumThreads(m_inter_op_nthreads);
-   if(m_debug) std::cout << "before load model " << m_model_file.value() << std::endl;
-   m_session = std::make_shared<Ort::Session>(*m_env, m_model_file.value().c_str(), *m_seesion_options);
-   if(m_debug) std::cout << "after load model " << m_model_file.value() << std::endl;
-   // lambda function to print the dims.
-   auto dims_str = [&](const auto& dims) {
-      return std::accumulate(dims.begin(), dims.end(), std::to_string(dims[0]),
-                             [](const std::string& a, int64_t b){
-                                 return a + "x" + std::to_string(b);
-                             });
-   };
-   // prepare the input
-   auto num_input_nodes = m_session->GetInputCount();
-   if(m_debug) std::cout << "num_input_nodes: " << num_input_nodes << std::endl;
-   for (size_t i = 0; i < num_input_nodes; ++i) {
-      #if (ORT_API_VERSION >=13)
-      auto name = m_session->GetInputNameAllocated(i, m_allocator);
-      m_inputNodeNameAllocatedStrings.push_back(std::move(name));
-      m_input_node_names.push_back(m_inputNodeNameAllocatedStrings.back().get());
-      #else
-      auto name = m_session->GetInputName(i, m_allocator);
-      m_inputNodeNameAllocatedStrings.push_back(name);
-      m_input_node_names.push_back(m_inputNodeNameAllocatedStrings.back());
-      #endif
+  if(m_det=="DC" && m_sim_pulse){
+      // for NN pulse simulation//
+      m_env = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ENV");
+      m_seesion_options = std::make_shared<Ort::SessionOptions>();
+      m_seesion_options->SetIntraOpNumThreads(m_intra_op_nthreads);
+      m_seesion_options->SetInterOpNumThreads(m_inter_op_nthreads);
+      if(m_debug) std::cout << "before load model " << m_model_file.value() << std::endl;
+      m_session = std::make_shared<Ort::Session>(*m_env, m_model_file.value().c_str(), *m_seesion_options);
+      if(m_debug) std::cout << "after load model " << m_model_file.value() << std::endl;
+      // lambda function to print the dims.
+      auto dims_str = [&](const auto& dims) {
+         return std::accumulate(dims.begin(), dims.end(), std::to_string(dims[0]),
+                                [](const std::string& a, int64_t b){
+                                    return a + "x" + std::to_string(b);
+                                });
+      };
+      // prepare the input
+      auto num_input_nodes = m_session->GetInputCount();
+      if(m_debug) std::cout << "num_input_nodes: " << num_input_nodes << std::endl;
+      for (size_t i = 0; i < num_input_nodes; ++i) {
+         #if (ORT_API_VERSION >=13)
+         auto name = m_session->GetInputNameAllocated(i, m_allocator);
+         m_inputNodeNameAllocatedStrings.push_back(std::move(name));
+         m_input_node_names.push_back(m_inputNodeNameAllocatedStrings.back().get());
+         #else
+         auto name = m_session->GetInputName(i, m_allocator);
+         m_inputNodeNameAllocatedStrings.push_back(name);
+         m_input_node_names.push_back(m_inputNodeNameAllocatedStrings.back());
+         #endif
 
-      Ort::TypeInfo type_info  = m_session->GetInputTypeInfo(i);
-      auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
-      auto dims = tensor_info.GetShape();
-      //dims[0] = 1; //wxfang, FIXME, if it is -1 (dynamic axis), need overwrite it manually
-      dims[0] = 10; //wxfang, FIXME, if it is -1 (dynamic axis), need overwrite it manually
-      m_input_node_dims.push_back(dims);
+         Ort::TypeInfo type_info  = m_session->GetInputTypeInfo(i);
+         auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
+         auto dims = tensor_info.GetShape();
+         //dims[0] = 1; //wxfang, FIXME, if it is -1 (dynamic axis), need overwrite it manually
+         dims[0] = 10; //wxfang, FIXME, if it is -1 (dynamic axis), need overwrite it manually
+         m_input_node_dims.push_back(dims);
 
 
-      if(m_debug) std::cout<< "[" << i << "]"
-      #if (ORT_API_VERSION >=13)
-              << " input_name: " << m_inputNodeNameAllocatedStrings.back().get()
-      #else
-              << " input_name: " << m_inputNodeNameAllocatedStrings.back()
-      #endif
-              << " ndims: " << dims.size()
-              << " dims: " << dims_str(dims)
-              << std::endl;
-   }
-   // prepare the output
-   size_t num_output_nodes = m_session->GetOutputCount();
-   for(std::size_t i = 0; i < num_output_nodes; i++) {
-       #if (ORT_API_VERSION >=13)
-       auto output_name = m_session->GetOutputNameAllocated(i, m_allocator);
-       m_outputNodeNameAllocatedStrings.push_back(std::move(output_name));
-       m_output_node_names.push_back(m_outputNodeNameAllocatedStrings.back().get());
-       #else
-       auto output_name = m_session->GetOutputName(i, m_allocator);
-       m_outputNodeNameAllocatedStrings.push_back(output_name);
-       m_output_node_names.push_back(m_outputNodeNameAllocatedStrings.back());
-       #endif
-       Ort::TypeInfo type_info        = m_session->GetOutputTypeInfo(i);
-       auto tensor_info               = type_info.GetTensorTypeAndShapeInfo();
-       ONNXTensorElementDataType type = tensor_info.GetElementType();
-       m_output_node_dims               = tensor_info.GetShape();
-       if(m_debug) std::cout << "[" << i << "]"
-      #if (ORT_API_VERSION >=13)
-               << " output_name: " << m_outputNodeNameAllocatedStrings.back().get()
-      #else
-               << " output_name: " << m_outputNodeNameAllocatedStrings.back()
-      #endif
-               << " ndims: " << m_output_node_dims.size()
-               << " dims: " << dims_str(m_output_node_dims)
-               << std::endl;
+         if(m_debug) std::cout<< "[" << i << "]"
+         #if (ORT_API_VERSION >=13)
+                 << " input_name: " << m_inputNodeNameAllocatedStrings.back().get()
+         #else
+                 << " input_name: " << m_inputNodeNameAllocatedStrings.back()
+         #endif
+                 << " ndims: " << dims.size()
+                 << " dims: " << dims_str(dims)
+                 << std::endl;
+      }
+      // prepare the output
+      size_t num_output_nodes = m_session->GetOutputCount();
+      for(std::size_t i = 0; i < num_output_nodes; i++) {
+          #if (ORT_API_VERSION >=13)
+          auto output_name = m_session->GetOutputNameAllocated(i, m_allocator);
+          m_outputNodeNameAllocatedStrings.push_back(std::move(output_name));
+          m_output_node_names.push_back(m_outputNodeNameAllocatedStrings.back().get());
+          #else
+          auto output_name = m_session->GetOutputName(i, m_allocator);
+          m_outputNodeNameAllocatedStrings.push_back(output_name);
+          m_output_node_names.push_back(m_outputNodeNameAllocatedStrings.back());
+          #endif
+          Ort::TypeInfo type_info        = m_session->GetOutputTypeInfo(i);
+          auto tensor_info               = type_info.GetTensorTypeAndShapeInfo();
+          ONNXTensorElementDataType type = tensor_info.GetElementType();
+          m_output_node_dims               = tensor_info.GetShape();
+          if(m_debug) std::cout << "[" << i << "]"
+         #if (ORT_API_VERSION >=13)
+                  << " output_name: " << m_outputNodeNameAllocatedStrings.back().get()
+         #else
+                  << " output_name: " << m_outputNodeNameAllocatedStrings.back()
+         #endif
+                  << " ndims: " << m_output_node_dims.size()
+                  << " dims: " << dims_str(m_output_node_dims)
+                  << std::endl;
 
-   }
+      }
+  }
 
   return StatusCode::SUCCESS;
+}
+
+void TrackHeedSimTool::doXRotation(bool transfer_back, float z_real, TVector3& v3){
+    if(transfer_back){
+        if(z_real>0){
+           v3.RotateX(-TMath::Pi()/2);
+        }
+        else{
+           v3.RotateX(TMath::Pi()/2);
+        }
+    }
+    else{
+        if(z_real>0){
+           v3.RotateX(TMath::Pi()/2);
+        }
+        else{
+           v3.RotateX(-TMath::Pi()/2);
+        }
+    }
 }
 
 void TrackHeedSimTool::wire_xy(float x1, float y1, float z1, float x2, float y2, float z2, float z, float &x, float &y){
@@ -556,7 +617,7 @@ float* TrackHeedSimTool::NNPred(std::vector<float>& inputs)
 
 
 void TrackHeedSimTool::endOfEvent() {
-    if(m_sim_pulse){
+    if(m_sim_pulse && m_det=="DC"){
         if(m_debug) G4cout<<"SimPrimaryIonizationCol size="<<m_SimPrimaryIonizationCol->size()<<G4endl;
         clock_t t01 = clock();
         std::vector<float> inputs;
