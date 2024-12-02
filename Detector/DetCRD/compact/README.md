@@ -24,7 +24,7 @@ The following CRD detector models are available in CEPCSW
 | CRD_o1_v04    | smaller center beam pipe     | SIT+DC+SET  | crystal | RPC  | developing     |
 | CRD_o1_v05    | Use Ref-Det ECAL and HCAL    | SIT+TPC+SET | crystal | Glass| developing     |
 | ------------- | -----------------------------|-------------|---------|------|----------------|
-| TDR_o1_v01    | long barrel vertex,  TPC     | SIT+TPC+SET | crystal | Glass| developing     |
+| TDR_o1_v01    | stitching and planar VXD, TPC| ITK+TPC+OTK | crystal | Glass| developing     |
 | TDR_o1_v02    | short barrel vertex, TPC     | SIT+TPC+SET | crystal | Glass| developing     |
 | TDR_o2_v01    | long barrel vertex,  DC      | SIT+DC +SET | crystal | Glass| developing     |
 | TDR_o2_v02    | short barrel vertex, DC      | SIT+DC +SET | crystal | Glass| developing     |
