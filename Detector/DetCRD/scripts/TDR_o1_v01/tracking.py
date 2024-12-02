@@ -257,8 +257,8 @@ full.SITHitToTrackDistance = 3.
 full.SETHitToTrackDistance = 5.
 full.MinChi2ProbForSiliconTracks = 0
 full.MaxChi2PerHit = 200
-#full.ForceSiTPCMerging = True
-#full.ForceTPCSegmentsMerging = True
+full.ForceSiTPCMerging = True
+full.ForceTPCSegmentsMerging = True
 #full.OutputLevel = DEBUG
 
 from Configurables import TPCDndxAlg

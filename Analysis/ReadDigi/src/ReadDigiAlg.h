@@ -70,7 +70,7 @@ private :
 
   //MCParticle
   int N_MCP;
-  FloatVec MCP_px, MCP_py, MCP_pz, MCP_E, MCP_endPoint_x, MCP_endPoint_y, MCP_endPoint_z;
+  FloatVec MCP_px, MCP_py, MCP_pz, MCP_E, MCP_VTX_x, MCP_VTX_y, MCP_VTX_z, MCP_endPoint_x, MCP_endPoint_y, MCP_endPoint_z;
   IntVec MCP_pdgid, MCP_gStatus; 
 
   //Tracker 
