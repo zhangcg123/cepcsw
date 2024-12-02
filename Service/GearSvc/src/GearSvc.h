@@ -35,6 +35,7 @@ class GearSvc : public extends<Service, IGearSvc>
 	gear::SimpleMaterialImpl* CreateGearMaterial(const dd4hep::rec::Vector3D& a, const dd4hep::rec::Vector3D& b, const std::string name);
 
         Gaudi::Property<std::string> m_gearFile{this, "GearXMLFile", ""};
+	Gaudi::Property<std::string> m_outputFile{this, "GearOutput", ""};
         Gaudi::Property<float>       m_field{this, "MagneticField", 0};
 
         gear::GearMgr* m_gearMgr;

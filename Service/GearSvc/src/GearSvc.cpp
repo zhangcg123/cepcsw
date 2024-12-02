@@ -146,7 +146,7 @@ StatusCode GearSvc::initialize()
     //m_gearMgr->setYokeEndcapParameters(endcapYokeParam) ;
     //m_gearMgr->setYokePlugParameters(plugYokeParam) ;
 
-    gear::GearXML::createXMLFile(m_gearMgr, "test.xml");
+    if (m_outputFile.value()!="") gear::GearXML::createXMLFile(m_gearMgr, m_outputFile.value());
   }
   
   return StatusCode::SUCCESS;
