@@ -1,0 +1,348 @@
+<lccdd>
+  <info name="CRD" title="CRD Beam pipe" author="Chengdong Fu" url="no" status="development" version="1.0">
+    <comment>A beampipe for CRD</comment>
+  </info>
+
+  <display>
+    <vis name="TubeVis"   alpha="0.1" r="1.0" g="0.7"  b="0.5"   showDaughters="true"  visible="true"/>
+    <vis name="VacVis"   alpha="1.0" r="0.0" g="0.0"  b="0.0"   showDaughters="true"  visible="false"/>
+  </display>
+
+  <define>
+    <constant name="BeamPipe_Iron_thickness"        value="2.5*mm"/>
+    <constant name="BeamPipe_BeAl_zmin"             value="BeamPipe_CentralBe_zmax-2.5*mm"/>
+    <constant name="BeamPipe_BeAl_thickness1"       value="0.3*mm"/>
+    <constant name="BeamPipe_BeAl_thickness2"       value="0.5*mm"/>
+    <constant name="BeamPipe_Al_thickness3"         value="1.3*mm"/>
+    <constant name="BeamPipe_Cooling_zpos1"         value="96.0*mm"/>
+    <constant name="BeamPipe_Cooling_outer_radius1" value="11.2*mm"/>
+    <constant name="BeamPipe_Cooling_zpos2"         value="118.25*mm"/>
+    <constant name="BeamPipe_Cooling_zpos3"         value="162.8*mm"/>
+    <constant name="BeamPipe_Cooling_outer_radius3" value="13.5*mm"/>
+    <constant name="BeamPipe_Cooling_zpos4"         value="168.4*mm"/>
+    <constant name="BeamPipe_Al_thickness4"         value="1.5*mm"/>
+    <constant name="BeamPipe_Cooling_zpos5"         value="177.35*mm"/>
+    <constant name="BeamPipe_Cooling_outer_radius5" value="19.0*mm"/>
+    <constant name="BeamPipe_Cooling_zpos6"         value="BeamPipe_CentralAl_zmax"/>
+    <constant name="BeamPipe_CablePipe_thickness1"  value="1.5*mm"/>
+    <constant name="BeamPipe_CablePipe_thickness2"  value="1.6*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos0"          value="219.8*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos1"          value="222.8*mm"/>
+    <constant name="BeamPipe_CablePipe_inner_radius1"  value="12.8*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius1"  value="17.4*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos2"          value="240.0*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius2"  value="27.0*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos3"          value="250.0*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos4"          value="259.8*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius4"  value="27.4*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos5"          value="262.0*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos6"          value="372.5*mm"/>
+    <constant name="BeamPipe_CablePipe_inner_radius6"  value="27.9*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius6"  value="43.4*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos7"          value="386.5*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius7"  value="44.4*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos8"          value="388.5*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos9"          value="465.0*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius9"  value="65.0*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos10"         value="470.0*mm"/>
+    <constant name="BeamPipe_CablePipe_inner_radius9"  value="45.5*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos11"         value="495.0*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos12"         value="500.0*mm"/>
+  </define>
+
+  <detectors>        
+    <detector name="BeamPipe" type="CRDBeamPipe_v01" vis="VacVis" printLevel="ERROR">
+      <parameter crossingangle="CrossingAngle" />
+      <envelope>
+	<shape type="Assembly"/>
+      </envelope>
+
+      <type_flags type="DetType_BEAMPIPE"/>
+
+      <section type ="Center" name="IPInnerTube" zStart="0" zEnd="BeamPipe_BeAl_zmin" rStart="0">
+	<layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+	<layer material="G4_Be" thickness="BeamPipe_Be_inner_thickness" vis="TubeVis"/>
+	<layer material="G4_WATER" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
+	<layer material="G4_Be" thickness="BeamPipe_Be_outer_thickness" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeAlLinker" zStart="BeamPipe_BeAl_zmin" zEnd="BeamPipe_CentralBe_zmax" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Be" thickness="BeamPipe_Be_inner_thickness/2" vis="TubeVis"/>
+	<layer material="G4_Al" thickness="BeamPipe_Be_inner_thickness/2" vis="TubeVis"/>
+        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
+        <layer material="G4_Be" thickness="BeamPipe_Be_outer_thickness" vis="TubeVis"/>
+	<layer material="G4_Al" thickness="BeamPipe_BeAl_thickness1" thicknessEnd="BeamPipe_BeAl_thickness2" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeCooling1" zStart="BeamPipe_CentralBe_zmax" zEnd="BeamPipe_Cooling_zpos1" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Be_inner_thickness" thicknessEnd="BeamPipe_BeAl_thickness2" vis="TubeVis"/>
+        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_thickness" thicknessEnd="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness-BeamPipe_BeAl_thickness2" vis="GrayVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Be_outer_thickness+BeamPipe_BeAl_thickness2" thicknessEnd="BeamPipe_BeAl_thickness2" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeCooling2" zStart="BeamPipe_Cooling_zpos1" zEnd="BeamPipe_Cooling_zpos2" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_BeAl_thickness2" thicknessEnd="BeamPipe_Al_thickness3" vis="TubeVis"/>
+        <layer material="G4_PARAFFIN" thickness="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness-BeamPipe_BeAl_thickness2"
+	       thicknessEnd="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3" vis="GrayVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" thicknessEnd="BeamPipe_Al_thickness3" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeCooling3" zStart="BeamPipe_Cooling_zpos2" zEnd="BeamPipe_Cooling_zpos3" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
+	<layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3" vis="GrayVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeCooling4" zStart="BeamPipe_Cooling_zpos3" zEnd="BeamPipe_Cooling_zpos4" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
+        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3"
+	       thicknessEnd="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" vis="GrayVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" thicknessEnd="BeamPipe_Al_thickness4" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeCooling5" zStart="BeamPipe_Cooling_zpos4" zEnd="BeamPipe_Cooling_zpos5" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
+        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" vis="GrayVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness4" vis="TubeVis"/>
+      </section>
+      <section type ="Center" name="IPBeCooling6" zStart="BeamPipe_Cooling_zpos5" zEnd="BeamPipe_Cooling_zpos6" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
+        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" thicknessEnd="0" vis="GrayVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness4" thicknessEnd="BeamPipe_Al_thickness-BeamPipe_Al_thickness3" vis="TubeVis"/>
+      </section>
+      <section type="Waist" name="Waist1st" zStart="BeamPipe_CentralAl_zmax" zEnd="BeamPipe_ExpandAl_zmax" rStart="BeamPipe_Central_inner_radius" size="BeamPipe_FirstExpand_width">
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness" vis="TubeVis"/>
+      </section>
+      <!-- cable pipe-->
+      <section type="CenterSide" name="IPCablePipeFront" zStart="BeamPipe_CablePipe_zpos0" zEnd="BeamPipe_CablePipe_zpos1" rStart="BeamPipe_CablePipe_inner_radius1">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_inner_radius1" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe1" zStart="BeamPipe_CablePipe_zpos1" zEnd="BeamPipe_CablePipe_zpos2" rStart="BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness1">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe2" zStart="BeamPipe_CablePipe_zpos2" zEnd="BeamPipe_CablePipe_zpos3" rStart="BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness1">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_outer_radius2-BeamPipe_CablePipe_outer_radius1+BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe3" zStart="BeamPipe_CablePipe_zpos3" zEnd="BeamPipe_CablePipe_zpos4" rStart="BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness1">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+	<layer material="Air" thickness="BeamPipe_CablePipe_outer_radius2-BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe4" zStart="BeamPipe_CablePipe_zpos4" zEnd="BeamPipe_CablePipe_zpos5" rStart="BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness1">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+        <layer material="Air" thickness="BeamPipe_CablePipe_outer_radius2-BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness2"
+	       thicknessEnd="BeamPipe_CablePipe_outer_radius4-BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2+BeamPipe_CablePipe_outer_radius4-BeamPipe_CablePipe_outer_radius2"
+	       thicknessEnd="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe5" zStart="BeamPipe_CablePipe_zpos5" zEnd="BeamPipe_CablePipe_zpos6"
+	       rStart="BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness1" rEnd="BeamPipe_CablePipe_inner_radius6">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+        <layer material="Air" thickness="BeamPipe_CablePipe_outer_radius4-BeamPipe_CablePipe_outer_radius1-BeamPipe_CablePipe_thickness2"
+	       thicknessEnd="BeamPipe_CablePipe_outer_radius6-BeamPipe_CablePipe_inner_radius6-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe6" zStart="BeamPipe_CablePipe_zpos6" zEnd="BeamPipe_CablePipe_zpos7" rStart="BeamPipe_CablePipe_inner_radius6">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+        <layer material="Air" thickness="BeamPipe_CablePipe_outer_radius6-BeamPipe_CablePipe_inner_radius6-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe7" zStart="BeamPipe_CablePipe_zpos7" zEnd="BeamPipe_CablePipe_zpos8" rStart="BeamPipe_CablePipe_inner_radius6">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+        <layer material="Air" thickness="BeamPipe_CablePipe_outer_radius6-BeamPipe_CablePipe_inner_radius6-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2"
+	       thicknessEnd="BeamPipe_CablePipe_outer_radius7-BeamPipe_CablePipe_inner_radius6-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2+BeamPipe_CablePipe_outer_radius7-BeamPipe_CablePipe_outer_radius6"
+	       thicknessEnd="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe8" zStart="BeamPipe_CablePipe_zpos8" zEnd="BeamPipe_CablePipe_zpos9"
+	       rStart="BeamPipe_CablePipe_inner_radius6" rEnd="BeamPipe_CablePipe_inner_radius9">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+        <layer material="Air" thickness="BeamPipe_CablePipe_outer_radius7-BeamPipe_CablePipe_inner_radius6-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2"
+               thicknessEnd="BeamPipe_CablePipe_outer_radius9-BeamPipe_CablePipe_inner_radius9-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe9" zStart="BeamPipe_CablePipe_zpos9" zEnd="BeamPipe_CablePipe_zpos10" rStart="BeamPipe_CablePipe_inner_radius9">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness1" vis="TubeVis"/>
+        <layer material="Air" thickness="BeamPipe_CablePipe_outer_radius9-BeamPipe_CablePipe_inner_radius9-BeamPipe_CablePipe_thickness1-BeamPipe_CablePipe_thickness2" vis="VacVis"/>
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_thickness2" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe10" zStart="BeamPipe_CablePipe_zpos10" zEnd="BeamPipe_CablePipe_zpos11" rStart="BeamPipe_CablePipe_inner_radius9">
+        <layer material="G4_Al" thickness="BeamPipe_CablePipe_outer_radius9-BeamPipe_CablePipe_inner_radius9" vis="TubeVis"/>
+      </section>
+      <section type="CenterSide" name="IPCablePipe11" zStart="BeamPipe_CablePipe_zpos11" zEnd="BeamPipe_CablePipe_zpos12" rStart="BeamPipe_CablePipe_inner_radius9">
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness" vis="TubeVis"/>
+      </section>
+      <!-- end -->
+      <section type="Runway" name="Waist2nd" zStart="BeamPipe_ExpandAl_zmax" zEnd="BeamPipe_Linker_zmin" rStart="BeamPipe_Central_inner_radius" size="BeamPipe_FirstExpand_width">
+        <layer material="G4_Al" thickness="BeamPipe_Al_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Runway" name="Waist3rd" zStart="BeamPipe_Linker_zmin" zEnd="BeamPipe_Linker_zmax" rStart="BeamPipe_Central_inner_radius" size="BeamPipe_FirstExpand_width">
+        <layer material="G4_Cu" thickness="BeamPipe_ThinCu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Runway" name="Waist4th" zStart="BeamPipe_Linker_zmax" zEnd="BeamPipe_Waist_zmax" rStart="BeamPipe_Central_inner_radius" size="BeamPipe_FirstExpand_width"
+	       shift="BeamPipe_SecondExpand_width-BeamPipe_FirstExpand_width">
+        <layer material="G4_Cu" thickness="BeamPipe_ThinCu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Crotch" name="Fork" zStart="BeamPipe_Waist_zmax" zEnd="BeamPipe_Crotch_zmax"
+	       rStart="BeamPipe_Central_inner_radius" rEnd="BeamPipe_Central_inner_radius" size="BeamPipe_SecondExpand_width">
+        <layer material="G4_Cu" thickness="BeamPipe_ThinCu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="FirstDoublePipe" zStart="BeamPipe_Crotch_zmax" zEnd="BeamPipe_FirstSeparated_zmax" rStart="0">
+	<layer material="beam" thickness="BeamPipe_Fork_inner_radius" vis="VacVis"/>
+	<layer material="G4_Cu" thickness="BeamPipe_ThinCu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="BeforeMask" zStart="BeamPipe_FirstSeparated_zmax" zEnd="BeamPipe_Mask_zmin" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Fork_inner_radius" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="Mask" zStart="BeamPipe_Mask_zmin" zEnd="BeamPipe_Mask_zmax" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Mask_inner_radius" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness+BeamPipe_Fork_inner_radius-BeamPipe_Mask_inner_radius" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="SecondDoublePipe" zStart="BeamPipe_Mask_zmax" zEnd="BeamPipe_Q1a_zmin" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Fork_inner_radius" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="Q1a" zStart="BeamPipe_Q1a_zmin" zEnd="BeamPipe_Q1a_zmax" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Q1a_inner_radius" vis="VacVis"/>
+	<layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+        <layer material="stainless_steel" thickness="BeamPipe_Iron_thickness" vis="TubeVis"/>
+        <layer material="CrZrCu18150" thickness="6.0*mm" vis="MagentaVis"/>
+        <layer material="stainless_steel" thickness="8.0*mm" vis="ShellVis"/>
+      </section>
+      <section type="Legs" name="Q1Linker" zStart="BeamPipe_Q1a_zmax" zEnd="BeamPipe_Q1b_zmin" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Q1a_inner_radius" thicknessEnd="BeamPipe_Q1b_inner_radius" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="Q1b" zStart="BeamPipe_Q1b_zmin" zEnd="BeamPipe_Q1b_zmax" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Q1b_inner_radius" vis="VacVis"/>
+	<layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+        <layer material="stainless_steel" thickness="BeamPipe_Iron_thickness" vis="TubeVis"/>
+        <layer material="CrZrCu18150" thickness="6.0*mm" vis="MagentaVis"/>
+        <layer material="stainless_steel" thickness="8.0*mm" vis="ShellVis"/>
+      </section>
+      <section type="Legs" name="QF1Linker" zStart="BeamPipe_Q1b_zmax" zEnd="BeamPipe_QF1_zmin" rStart="0">
+        <layer material="beam" thickness="BeamPipe_Q1b_inner_radius" thicknessEnd="BeamPipe_QF1_inner_radius" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+      </section>
+      <section type="Legs" name="QF1" zStart="BeamPipe_QF1_zmin" zEnd="BeamPipe_QF1_zmax" rStart="0">
+        <layer material="beam" thickness="BeamPipe_QF1_inner_radius" vis="VacVis"/>
+	<layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+        <layer material="stainless_steel" thickness="BeamPipe_Iron_thickness" vis="TubeVis"/>
+        <layer material="CrZrCu18150" thickness="6.0*mm" vis="MagentaVis"/>
+        <layer material="stainless_steel" thickness="8.0*mm" vis="ShellVis"/>
+      </section>
+      <section type="Legs" name="Farest" zStart="BeamPipe_QF1_zmax" zEnd="BeamPipe_end_z" rStart="0">
+        <layer material="beam" thickness="BeamPipe_QF1_inner_radius" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" vis="TubeVis"/>
+      </section>
+
+      <!-- Magnets and their cooling, support -->
+      <section type="CenterSide" name="AntiSolenoid1" zStart="1160*mm" zEnd="1900*mm" rStart="90*mm">
+        <layer material="CrZrCu18150" thickness="20*mm" vis="MagentaVis"/>
+      </section>
+      <section type="CenterSide" name="AntiSolenoid2" zStart="1930*mm" zEnd="3964*mm" rStart="120*mm">
+        <layer material="CrZrCu18150" thickness="10*mm" vis="MagentaVis"/>
+      </section>
+      <section type="CenterSide" name="AntiSolenoid3" zStart="3970*mm" zEnd="7000*mm" rStart="185*mm">
+        <layer material="CrZrCu18150" thickness="10*mm" vis="MagentaVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetShell_Front" zStart="1110*mm" zEnd="1115*mm" rStart="50.0*mm">
+        <layer material="stainless_steel" thickness="91.25*mm" vis="ShellVis"/>
+	<layer material="G4_W" thickness="10*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetShell_FrontSide" zStart="1115*mm" zEnd="1900*mm" rStart="130.75*mm" rEnd="175*mm">
+        <layer material="stainless_steel" thickness="10.5*mm" thicknessEnd="65*mm" vis="ShellVis"/>
+	<layer material="G4_W" thickness="10*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetShell_CenterSide" zStart="1900*mm" zEnd="3800*mm" rStart="175*mm">
+        <layer material="stainless_steel" thickness="65*mm" vis="ShellVis"/>
+	<layer material="G4_W" thickness="10*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetShell_Linker" zStart="3800*mm" zEnd="3910*mm" rStart="175*mm">
+        <layer material="stainless_steel" thickness="135*mm" vis="ShellVis"/>
+	<layer material="G4_W" thickness="10*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetShell_RearSide" zStart="3910*mm" zEnd="7160*mm" rStart="240*mm">
+        <layer material="stainless_steel" thickness="70*mm" vis="ShellVis"/>
+	<layer material="G4_W" thickness="10*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_1" zStart="1130*mm" zEnd="1135*mm" rStart="75*mm">
+        <layer material="stainless_steel" thickness="50*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_2i" zStart="1135*mm" zEnd="1925*mm" rStart="75*mm">
+        <layer material="stainless_steel" thickness="5*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_2o" zStart="1135*mm" zEnd="1900*mm" rStart="120*mm">
+        <layer material="stainless_steel" thickness="5*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_3l" zStart="1900*mm" zEnd="1905*mm" rStart="120*mm">
+        <layer material="stainless_steel" thickness="25*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_3r" zStart="1925*mm" zEnd="1930*mm" rStart="75*mm">
+        <layer material="stainless_steel" thickness="35*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_4i" zStart="1930*mm" zEnd="4000*mm" rStart="105*mm">
+        <layer material="stainless_steel" thickness="5*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_4o" zStart="1905*mm" zEnd="3940*mm" rStart="140*mm">
+        <layer material="stainless_steel" thickness="5*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_5l" zStart="3940*mm" zEnd="3945*mm" rStart="140*mm">
+        <layer material="stainless_steel" thickness="70*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_5r" zStart="4000*mm" zEnd="4005*mm" rStart="105*mm">
+        <layer material="stainless_steel" thickness="70*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_6i" zStart="4005*mm" zEnd="7050*mm" rStart="170*mm">
+        <layer material="stainless_steel" thickness="5*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_6o" zStart="3945*mm" zEnd="7050*mm" rStart="205*mm">
+        <layer material="stainless_steel" thickness="5*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetSupport_7" zStart="7050*mm" zEnd="7055*mm" rStart="170*mm">
+        <layer material="stainless_steel" thickness="40*mm" vis="ShellVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_1l" zStart="1135*mm" zEnd="1160*mm" rStart="80*mm">
+        <layer material="lHe" thickness="40*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_1i" zStart="1160*mm" zEnd="1900*mm" rStart="80*mm">
+        <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_1o" zStart="1160*mm" zEnd="1900*mm" rStart="110*mm">
+        <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_1r" zStart="1900*mm" zEnd="1925*mm" rStart="80*mm">
+        <layer material="lHe" thickness="40*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_2l" zStart="1905*mm" zEnd="1930*mm" rStart="120*mm">
+        <layer material="lHe" thickness="20*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_2i" zStart="1925*mm" zEnd="3964*mm" rStart="110*mm">
+        <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_2o" zStart="1930*mm" zEnd="3945*mm" rStart="130*mm">
+        <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_2r1" zStart="3964*mm" zEnd="4000*mm" rStart="110*mm">
+        <layer material="lHe" thickness="65*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_2r2" zStart="3945*mm" zEnd="3964*mm" rStart="130*mm">
+        <layer material="lHe" thickness="45*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_3l" zStart="3945*mm" zEnd="3970*mm" rStart="175*mm">
+        <layer material="lHe" thickness="30*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_3i" zStart="3970*mm" zEnd="7000*mm" rStart="175*mm">
+        <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_3o" zStart="3970*mm" zEnd="7000*mm" rStart="195*mm">
+        <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
+      </section>
+      <section type="CenterSide" name="MagnetCooling_3r" zStart="7000*mm" zEnd="7050*mm" rStart="175*mm">
+        <layer material="lHe" thickness="30*mm" vis="BlueVis"/>
+      </section>
+    </detector>
+  </detectors>        
+</lccdd>
