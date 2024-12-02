@@ -21,6 +21,12 @@ TimeProjectionChamberSensitiveDetector::TimeProjectionChamberSensitiveDetector(c
   collectionName.insert(CollName3);
 }
 
+bool TimeProjectionChamberSensitiveDetector::setDedxSimTool(ToolHandle<IDedxSimTool> simtool) {
+    m_dedx_simtool = simtool;
+
+    return true;
+}
+
 void TimeProjectionChamberSensitiveDetector::Initialize(G4HCofThisEvent* HCE){
   m_hc = new HitCollection(GetName(), collectionName[0]);
   int HCID = G4SDManager::GetSDMpointer()->GetCollectionID(m_hc);
@@ -82,6 +88,10 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
   // (ii) a particle that crosses the boundry between two pad-ring halves will have the hit 
   // placed on this surface at the last crossing point, and will be assinged the total energy 
   // deposited in the whole pad-ring. This is a possible source of bias for the hit
+  double dedx = 0.0;
+  if(m_doHeedSim){
+      dedx = m_dedx_simtool->dedx(step);
+  }
   
   G4TouchableHandle touchPost = step->GetPostStepPoint()->GetTouchableHandle(); 
   G4TouchableHandle touchPre  = step->GetPreStepPoint()->GetTouchableHandle(); 
@@ -278,6 +288,9 @@ void TimeProjectionChamberSensitiveDetector::EndOfEvent(G4HCofThisEvent* HCE){
   if (CumulativeEnergyDeposit > m_thresholdEnergyDeposit) {
     DepositLowPtHit(); 
   }  
+  if(m_doHeedSim) {
+      m_dedx_simtool->endOfEvent();
+  }
 }
 
 void TimeProjectionChamberSensitiveDetector::DepositLowPtHit(){

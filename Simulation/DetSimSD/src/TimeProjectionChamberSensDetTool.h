@@ -8,6 +8,7 @@
 #include "GaudiKernel/AlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
 #include "DetSimInterface/ISensDetTool.h"
+#include "DetSimInterface/IDedxSimTool.h"
 #include "DetInterface/IGeomSvc.h"
 
 #include "DD4hep/DD4hepUnits.h"
@@ -35,6 +36,9 @@ private:
   Gaudi::Property<double> m_lowPtMaxHitSeparation{this, "LowPtMaxHitSeparation", 5*dd4hep::mm};
   Gaudi::Property<bool>   m_sameStepLimit{this, "SameStepLimit", true};
   Gaudi::Property<bool>   m_writeMCTruthForLowPtHits{this, "WriteMCTruthForLowPtHits", false};
+  ToolHandle<IDedxSimTool> m_dedx_simtool;
+  Gaudi::Property<std::string> m_dedx_sim_option{this, "DedxSimTool",""};
+  Gaudi::Property<bool>   m_do_heed_sim{this, "DoHeedSim", false};
 };
 
 #endif

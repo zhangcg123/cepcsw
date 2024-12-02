@@ -51,7 +51,6 @@ class TrackHeedSimTool: public extends<AlgTool, IDedxSimTool> {
         double dedx(const G4Step* Step) override;
         double dedx(const edm4hep::MCParticle& mc) override;
         double dndx(double betagamma) override;
-        void getMom(float ee, float dx, float dy,float dz, float mom[3] );
         void reset(){ 
             m_beginEvt = true;
             m_isFirst = true;
@@ -61,17 +60,20 @@ class TrackHeedSimTool: public extends<AlgTool, IDedxSimTool> {
             m_tot_length = 0;
         }
         void endOfEvent();
+    private:
+        void doXRotation(bool transfer_back, float z_real, TVector3& v3);
+        void getMom(float ee, float dx, float dy,float dz, float mom[3] );
         long long getCellID(float x, float y, float z);
         void wire_xy(float x1, float y1, float z1, float x2, float y2, float z2, float z, float &x, float &y);
-        float* NNPred(std::vector<float>& inputs);
-        float xy2phi(float x, float y);
         void getLocal(float x1, float y1, float x2, float y2, float& dx, float& dy);
-    private:
+        float xy2phi(float x, float y);
+        float* NNPred(std::vector<float>& inputs);
         //ServiceHandle<IDataProviderSvc> m_eds;
         SmartIF<IGeomSvc> m_geosvc;
         dd4hep::Detector* m_dd4hep; 
         dd4hep::Readout* m_readout;
         dd4hep::DDSegmentation::GridDriftChamber* m_segmentation;
+        Gaudi::Property<std::string> m_det  {this, "detector", "DC"};//choice ["DC","TPC"]
         Gaudi::Property<std::string> m_readout_name{ this, "readout", "DriftChamberHitsCollection"};//readout for getting segmentation
         Gaudi::Property<std::string> m_gas_file{ this, "gas_file", "He_50_isobutane_50.gas"};//gas
         Gaudi::Property<std::string> m_IonMobility{ this, "IonMobility_file", "IonMobility_He+_He.txt"};
@@ -126,6 +128,9 @@ class TrackHeedSimTool: public extends<AlgTool, IDedxSimTool> {
         G4double m_pre_dy ;
         G4double m_pre_dz ;
         G4double m_pre_t  ;
+        float m_init_x;//cm
+        float m_init_y;//cm
+        TVector3 m_tv3;
   
         //// sim pulse from NN /// 
         Gaudi::Property<int> m_intra_op_nthreads{ this, "intraOpNumThreads", 1};
