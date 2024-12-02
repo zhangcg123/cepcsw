@@ -65,10 +65,11 @@ namespace Cyber{
   }
 
   TVector3 Calo1DCluster::getPos() const{
-    TVector3 pos(0,0,0);
+    if(pos.x()!=0 || pos.y()!=0 || pos.z()!=0) return pos;
+    TVector3 m_pos(0,0,0);
     double Etot=getEnergy();
-    for(int i=0;i<Bars.size();i++) pos += Bars[i]->getPosition() * (Bars[i]->getEnergy()/Etot);
-    return pos;
+    for(int i=0;i<Bars.size();i++) m_pos += Bars[i]->getPosition() * (Bars[i]->getEnergy()/Etot);
+    return m_pos;
   }
 
   double Calo1DCluster::getT1() const{

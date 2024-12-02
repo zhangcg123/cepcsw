@@ -49,9 +49,13 @@ podioinput = PodioInput("PodioReader", collections=[
 #    "EventHeader",
     "MCParticle",
     "EcalBarrelCollection", 
-    "EcalBarrelContributionCollection", 
+    "EcalBarrelContributionCollection",
+    "EcalEndcapsCollection",
+    "EcalEndcapsContributionCollection", 
     "HcalBarrelCollection", 
     "HcalBarrelContributionCollection", 
+    "HcalEndcapsCollection",
+    "HcalEndcapsContributionCollection"
     ])
 
 ########## Digitalization ################
@@ -59,55 +63,90 @@ podioinput = PodioInput("PodioReader", collections=[
 ##ECAL##
 from Configurables import EcalDigiAlg
 EcalDigi = EcalDigiAlg("EcalDigiAlg")
-EcalDigi.ReadOutName = "EcalBarrelCollection"
-EcalDigi.SimCaloHitCollection = "EcalBarrelCollection"
-EcalDigi.CaloHitCollection = "ECALBarrel"
-EcalDigi.CaloAssociationCollection = "ECALBarrelAssoCol"
-EcalDigi.CaloMCPAssociationCollection = "ECALBarrelParticleAssoCol"
+EcalDigi.SimCaloHitCollection = ["EcalBarrelCollection", "EcalEndcapsCollection"]
+EcalDigi.ReadOutName = ["EcalBarrelCollection", "EcalEndcapsCollection"]
+EcalDigi.CaloHitCollection = ["ECALBarrel", "ECALEndcaps"]
+EcalDigi.CaloAssociationCollection = ["ECALBarrelAssoCol", "ECALEndcapsAssoCol"]
+EcalDigi.CaloMCPAssociationCollection = ["ECALBarrelParticleAssoCol", "ECALEndcapsParticleAssoCol"]
 EcalDigi.SkipEvt = 0
 EcalDigi.Seed = 2079
 #Digitalization parameters
-EcalDigi.CalibrECAL = 1.
-EcalDigi.AttenuationLength = 7e10
-EcalDigi.TimeResolution = 0.5        #unit: ns
-EcalDigi.ChargeThresholdFrac = 0.05
-EcalDigi.EcalMIP_Thre = 0.05
-EcalDigi.Debug=1
-EcalDigi.WriteNtuple = 0
-EcalDigi.OutFileName = "Digi_ECAL.root"
+EcalDigi.TimeResolution = 0.7            # 0.7 ns
+EcalDigi.EcalMIPEnergy = 8.9             # MIP energy 8.9 MeV for 1 cm BGO
+EcalDigi.EcalMIP_Thre = 0.05              # 0.05 mip at each side, 0.1 mip for one bar
+EcalDigi.UseRealisticDigi = 1
+# scintillation
+EcalDigi.UseDigiScint = 1
+EcalDigi.EcalCryIntLY = 8200             #intrinsic LY 8200 [p.e./MIP]
+EcalDigi.EcalCryMipLY = 200              #Detected effective LY 200 [p.e./MIP]
+EcalDigi.AttenuationLength = 1e8         # 8000 mm for 5% non-uniformity
+# SiPM
+EcalDigi.SiPMDigiVerbose = 2             # 0:w/o response, w/o correction; 1:w/ response, w/o correction; 2:w/ response, w/ simple correction; 3:w/ response, w/ full correction
+EcalDigi.EcalSiPMPDE = 0.25              # NDL-EQR06, PDE 0.25
+EcalDigi.EcalSiPMDCR = 0                 # NDL-EQR06, dark count rate 2500000 [Hz]
+EcalDigi.EcalTimeInterval = 0.           # Time interval 0.000002 [s]. DCR*TimeInterval = dark count noise
+EcalDigi.EcalSiPMCT = 0.                 # SiPM crosstalk Probability 12%
+EcalDigi.EcalSiPMGainMean = 50           # 50 [ADC/p.e.]
+EcalDigi.EcalSiPMGainSigma = 0.08        # 0.08
+#EcalDigi.EcalSiPMNoiseSigma = 0          # 0
+# ADC
+EcalDigi.ADC = 8192                      # 13-bit, 8192
+EcalDigi.ADCSwitch = 8000                # 8000
+EcalDigi.Pedestal = 50                   # Pedestal 50 ADC
+EcalDigi.GainRatio_12 = 50               # Gain ratio 50
+EcalDigi.GainRatio_23 = 60               # Gain ratio 60
+#EcalDigi.EcalNoiseADCSigma = 4           # 4
+# temperature control
+EcalDigi.UseCryTemp = 0
+EcalDigi.UseCryTempCor = 0
+EcalDigi.UseSiPMTemp = 0
+EcalDigi.UseSiPMTempCor = 0
+EcalDigi.EcalTempGrad = 3./27            # 3./27 = 3K from 0 to 27 layer
+EcalDigi.EcalBGOTempCoef = -0.0138       # -0.0138 [%/K]
+EcalDigi.EcalSiPMGainTempCoef = -0.03    # -0.03 [%/K]
+EcalDigi.EcalSiPMDCRTempCoef = 3.34/80   # 3.34/80 [10^{k*deltaT}]
 #########################################
+EcalDigi.WriteNtuple = 0
 
 ##HCAL##
 from Configurables import HcalDigiAlg
 HcalDigi = HcalDigiAlg("HcalDigiAlg")
-HcalDigi.ReadOutName = "HcalBarrelCollection"
-HcalDigi.SimCaloHitCollection = "HcalBarrelCollection"
-HcalDigi.CaloHitCollection = "HCALBarrel"
-HcalDigi.CaloAssociationCollection = "HCALBarrelAssoCol"
-HcalDigi.CaloMCPAssociationCollection = "HCALBarrelParticleAssoCol"
+HcalDigi.SimCaloHitCollection = ["HcalBarrelCollection", "HcalEndcapsCollection"]
+HcalDigi.ReadOutName = ["HcalBarrelCollection", "HcalEndcapsCollection"]
+HcalDigi.CaloHitCollection = ["HCALBarrel", "HCALEndcaps"]
+HcalDigi.CaloAssociationCollection = ["HCALBarrelAssoCol", "HCALEndcapsAssoCol"]
+HcalDigi.CaloMCPAssociationCollection = ["HCALBarrelParticleAssoCol", "HCALEndcapsParticleAssoCol"]
 HcalDigi.SkipEvt = 0
 HcalDigi.Seed = 2079
-#Digitalization parameters
-HcalDigi.MIPResponse = 0.007126  # MeV / MIP
-HcalDigi.MIPThreshold = 0.1    # Unit: MIP
 HcalDigi.CalibrHCAL = 1.
-HcalDigi.UseRealisticDigi = 1    # Flag to use digitization model.
-HcalDigi.SiPMPixel = 57600       # 57600 for 6025PE (6*6 mm, 25 um pixel pitch)
+#Digitalization parameters
+HcalDigi.UseRealisticDigi = 0     #---------Flag to use digitization model.
+HcalDigi.MIPResponse = 0.007126   # 0.007.126 GeV / MIP
+HcalDigi.MIPThreshold = 0.1       # ----------Unit: MIP
+HcalDigi.TemperatureVariation = 0 # Temperature variation 1K
+# Scintillation
+HcalDigi.UseTileLYMap = 0
+HcalDigi.MIPLY = 80               # Glass LY
+HcalDigi.LYTempCoef = 0           # Glass LY with temperature
 HcalDigi.TileNonUniformity = 0.0
-HcalDigi.EffAttenLength = 1e7
-HcalDigi.ADCError = 0.0
-HcalDigi.MIPADCMean = 80.*30.0   # Light yield 80 pe/mip
-HcalDigi.PeADCMean = 30.0
-HcalDigi.PeADCSigma = 0.
-HcalDigi.ADCBaselineHG = 0
-HcalDigi.ADCBaselineSigmaHG = 0.
-HcalDigi.ADCBaselineLG = 0
-HcalDigi.ADCBaselineSigmaLG = 0.
-HcalDigi.ADCHLRatio = 1
-HcalDigi.ADCSwitch = 1e7
-HcalDigi.ADCLimit = 1e7
+# SiPM
+HcalDigi.SiPMPixel = 57600           #---------57600 for 6025PE (6*6 mm, 25 um pixel pitch)
+HcalDigi.SiPMDCR = 1600              #---------1600 for 6025PE (6*6 mm, 25 um pixel pitch), 3200 for 6015PS ()
+HcalDigi.SiPMCT = 0.0                #---------SiPM crosstalk Probability 0.12
+HcalDigi.TimeInterval = 0.           #---------Shaping time 2 us
+HcalDigi.SiPMGainTempCoef = 0        #---------Temperature dependence of SiPM gain (-3%/K)
+HcalDigi.SiPMDCRTempCoef = 0         #---------Temperature dependence of SiPM DCR (10^{k*deltaT}, k=3.34/80)
+# ADC
+HcalDigi.ADC = 8192
+HcalDigi.ADCSwitch = 1e7          # Switch at 8000
+HcalDigi.GainRatio_12 = 50
+HcalDigi.GainRatio_23 = 60
+HcalDigi.SiPMGainMean = 20        # SiPM gain: 2 ADC / p.e.
+HcalDigi.SiPMGainSigma = 0.08     # Fluctuation of ADC / p.e.
+HcalDigi.SiPMNoiseSigma = 0       # SiPM noise sigma
+HcalDigi.Pedestal = 50            # Pedestal 50 ADC
+HcalDigi.PedestalSigma = 4        # Sigma of electronic noise (4 ADC)
 HcalDigi.WriteNtuple = 0
-HcalDigi.OutFileName = "Digi_HCAL.root"
 
 
 # output
@@ -121,10 +160,16 @@ out.outputCommands = ["drop *",
     "keep TPCCollection",
     "keep OTKBarrelCollection",
     "keep FTDCollection",
+    "keep MuonBarrelCollection",
+    "keep MuonEndcapCollection",
     "keep ECALBarrel",
     "keep HCALBarrel",
     "keep ECALBarrelParticleAssoCol",
-    "keep HCALBarrelParticleAssoCol" ]
+    "keep HCALBarrelParticleAssoCol",
+    "keep ECALEndcaps",
+    "keep HCALEndcaps",
+    "keep ECALEndcapsParticleAssoCol",
+    "keep HCALEndcapsParticleAssoCol" ]
 
 
 # ApplicationMgr

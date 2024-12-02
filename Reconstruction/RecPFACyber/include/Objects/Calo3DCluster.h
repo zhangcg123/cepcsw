@@ -56,6 +56,7 @@ namespace Cyber {
     int getEndDlayer() const;
     double getDepthToECALSurface() const;
     int getType() const { return type; }
+    double getEnergyScale() const { return Escale; }
 
     void setCaloHits( std::vector<const Cyber::CaloHit*> _hits ) { hits = _hits; }
     void setCaloHitsFrom2DCluster(); 
@@ -69,6 +70,7 @@ namespace Cyber {
     { map_localMaxU[name1]=_colU; map_localMaxV[name2]=_colV; }
     void setClusters(std::vector<const Calo2DCluster*> _2dcol) { m_2dclusters = _2dcol; }
     void setType(int _type) { type = _type; }
+    void setEnergyScale(double _scale) { Escale = _scale; }
 
     void addTowerID(int _m, int _p, int _s) { std::vector<int> id(3); id[0] = _m; id[1] = _p; id[2] = _s; towerID.push_back(id); }
     void addTowerID( std::vector<int> id ) { towerID.push_back(id); }
@@ -103,6 +105,7 @@ namespace Cyber {
     std::vector< std::pair<edm4hep::MCParticle, float> > MCParticleWeight;
 
     std::vector< std::vector<int> > towerID; //[module, part, stave]
+    double Escale = 1.;
     TVector3 axis;
     double chi2;
     double alpha;

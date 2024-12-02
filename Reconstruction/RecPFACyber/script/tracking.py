@@ -6,7 +6,7 @@ from Configurables import k4DataSvc
 dsvc = k4DataSvc("EventDataSvc", input="CaloDigi_TDR_o1_v01.root")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
-seed = [12340]
+seed = [1024]
 # rndmengine = HepRndm__Engine_CLHEP__RanluxEngine_() # The default engine in Gaudi
 rndmengine = HepRndm__Engine_CLHEP__HepJamesRandom_("RndmGenSvc.Engine") # The default engine in Geant4
 rndmengine.SetSingleton = True
@@ -52,7 +52,9 @@ podioinput = PodioInput("PodioReader", collections=[
     "SITCollection",
     "TPCCollection",
     "OTKBarrelCollection",
-    "FTDCollection"
+    "FTDCollection",
+    "MuonBarrelCollection",
+    "MuonEndcapCollection"
     ])
 
 # digitization
@@ -134,6 +136,16 @@ digiTPC.TPCTrackerHitsCol = gashitname
 #digiTPC.DiffusionCoeffZ = 0.23
 #digiTPC.N_eff = 30
 #digiTPC.OutputLevel = DEBUG
+
+## Muon Detector ##
+from Configurables import MuonDigiAlg
+digiMuon = MuonDigiAlg("MuonDigiAlg")
+digiMuon.MuonBarrelHitsCollection = "MuonBarrelCollection"
+digiMuon.MuonEndcapHitsCollection = "MuonEndcapCollection"
+digiMuon.MuonBarrelTrackerHits = "MuonBarrelTrackerHits"
+digiMuon.MuonEndcapTrackerHits = "MuonEndcapTrackerHits"
+digiMuon.WriteNtuple = 0
+digiMuon.OutFileName = "Digi_MUON.root"
 
 # tracking
 from Configurables import KalTestTool
@@ -220,12 +232,14 @@ full.FTDRawHits     = ftdhitname
 full.TPCTracks = "ClupatraTracks" # add standalone TPC track
 full.SiTracks  = "SubsetTracks"
 full.OutputTracks  = "CompleteTracks" # default name
-full.VTXHitToTrackDistance = 5.
+#full.VTXHitToTrackDistance = 5.
 full.FTDHitToTrackDistance = 5.
 full.SITHitToTrackDistance = 3.
 full.SETHitToTrackDistance = 5.
 full.MinChi2ProbForSiliconTracks = 0
-full.MaxChi2PerHit = 500
+full.MaxChi2PerHit = 200
+full.ForceSiTPCMerging = True
+full.ForceTPCSegmentsMerging = True
 #full.OutputLevel = DEBUG
 
 from Configurables import TPCDndxAlg
@@ -248,14 +262,14 @@ tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
 
-from Configurables import ReadDigiAlg
-readtrk = ReadDigiAlg("ReadDigiAlg")
-readtrk.SiTracks = "SubsetTracks"
-readtrk.TPCTracks = "ClupatraTracks"
-readtrk.FullTracks = "CompleteTracks"
-readtrk.TPCTracksAssociation = "ClupatraTracksParticleAssociation"
-readtrk.FullTracksAssociation = "CompleteTracksParticleAssociation"
-readtrk.OutFileName = "TrackAnaTuple_mu.root"
+#from Configurables import ReadDigiAlg
+#readtrk = ReadDigiAlg("ReadDigiAlg")
+#readtrk.SiTracks = "SubsetTracks"
+#readtrk.TPCTracks = "ClupatraTracks"
+#readtrk.FullTracks = "CompleteTracks"
+#readtrk.TPCTracksAssociation = "ClupatraTracksParticleAssociation"
+#readtrk.FullTracksAssociation = "CompleteTracksParticleAssociation"
+#readtrk.OutFileName = "TrackAnaTuple_mu.root"
 
 # output
 from Configurables import PodioOutput
@@ -266,6 +280,10 @@ out.outputCommands = ["drop *",
   "keep ECALBarrelParticleAssoCol",
   "keep HCALBarrel",
   "keep HCALBarrelParticleAssoCol",
+  "keep ECALEndcaps",
+  "keep HCALEndcaps",
+  "keep ECALEndcapsParticleAssoCol",
+  "keep HCALEndcapsParticleAssoCol",
   "keep MCParticle",
   "keep CompleteTracks",
   "keep CompleteTracksParticleAssociation" ]
@@ -273,7 +291,7 @@ out.outputCommands = ["drop *",
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, readtrk, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 10,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],

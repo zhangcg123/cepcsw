@@ -28,21 +28,25 @@ namespace Cyber{
     edm4hep::ClusterCollection* m_Hcalcluster = m_outClusterColHandler["HcalCluster"]->createAndPut();
 
     edm4hep::TrackCollection* m_trkCol = nullptr;
-    if(settings.map_boolPars.at("UseTruthTrk")) m_trkCol = m_outTrkHandler.createAndPut();
+    if(settings.map_boolPars.at("UseTruthTrk") || settings.map_boolPars.at("UseTruthMatchTrk") ) m_trkCol = m_outTrkHandler.createAndPut();
 
 
     //PFO
     std::vector<std::shared_ptr<Cyber::PFObject>> p_pfos = m_DataCol.map_PFObjects[settings.map_stringPars.at("OutputPFO")];
 /*
+cout<<endl;
+cout<<"Calibration const: "<<settings.map_floatPars.at("ECALNeutralCalib")<<", "<<settings.map_floatPars.at("ECALChargedCalib")<<", "<<settings.map_floatPars.at("HCALNeutralCalib")<<", "<<settings.map_floatPars.at("HCALChargedCalib")<<endl;
 std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;    
  double totE_Ecal = 0;
  double totE_Hcal = 0;
  for(int i=0; i<p_pfos.size(); i++){
+      double ecalcalib = p_pfos[i]->getTracks().size()==0 ? settings.map_floatPars.at("ECALNeutralCalib") : settings.map_floatPars.at("ECALChargedCalib");
+      double hcalcalib = p_pfos[i]->getTracks().size()==0 ? settings.map_floatPars.at("HCALNeutralCalib") : settings.map_floatPars.at("HCALChargedCalib");
    cout<<"    PFO #"<<i<<": track size "<<p_pfos[i]->getTracks().size()<<", leading P "<<p_pfos[i]->getTrackMomentum();
-   cout<<", ECAL cluster size "<<p_pfos[i]->getECALClusters().size()<<", totE "<<p_pfos[i]->getECALClusterEnergy();
-   cout<<", HCAL cluster size "<<p_pfos[i]->getHCALClusters().size()<<", totE "<<p_pfos[i]->getHCALClusterEnergy()<<endl;
-   totE_Ecal += p_pfos[i]->getECALClusterEnergy();
-   totE_Hcal += p_pfos[i]->getHCALClusterEnergy();
+   cout<<", ECAL cluster size "<<p_pfos[i]->getECALClusters().size()<<", totE "<<p_pfos[i]->getECALClusterEnergy()*ecalcalib;
+   cout<<", HCAL cluster size "<<p_pfos[i]->getHCALClusters().size()<<", totE "<<p_pfos[i]->getHCALClusterEnergy()*hcalcalib<<endl;
+   totE_Ecal += p_pfos[i]->getECALClusterEnergy()*ecalcalib;
+   totE_Hcal += p_pfos[i]->getHCALClusterEnergy()*hcalcalib;
  }
  cout<<"-----Neutral cluster Ecal total energy: "<<totE_Ecal<<", Hcal total energy: "<<totE_Hcal<<endl;
 */
@@ -52,6 +56,8 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
       std::vector<const Track*> vec_trks = p_pfos[ip]->getTracks();
       std::vector<const Calo3DCluster*> vec_Ecalclus = p_pfos[ip]->getECALClusters();
       std::vector<const Calo3DCluster*> vec_Hcalclus = p_pfos[ip]->getHCALClusters();
+      double ecalcalib = vec_trks.size()==0 ? settings.map_floatPars.at("ECALNeutralCalib") : settings.map_floatPars.at("ECALChargedCalib");
+      double hcalcalib = vec_trks.size()==0 ? settings.map_floatPars.at("HCALNeutralCalib") : settings.map_floatPars.at("HCALChargedCalib");
 
       TVector3 vec_Pos(0.,0.,0.);
 
@@ -71,7 +77,7 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
    
           auto _hit = m_calohitCol->create();
           _hit.setCellID(_cellID);
-          _hit.setEnergy( p_hit->getEnergy()*settings.map_floatPars.at("ECALCalib") );
+          _hit.setEnergy( p_hit->getEnergy()*ecalcalib );
           _hit.setPosition( pos );
           _hit.setType(1); //Ecal barrel
           m_clus.addToHits(_hit);
@@ -89,21 +95,21 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
    
           auto _hit = m_corehitCol->create();
           _hit.setCellID(_cellID);
-          _hit.setEnergy( p_core->getEnergy()*settings.map_floatPars.at("ECALCalib") );
+          _hit.setEnergy( p_core->getEnergy()*ecalcalib );
           _hit.setPosition( pos );
           _hit.setType(1); //Ecal barrel
           m_core.addToHits(_hit);
-          totE += p_core->getEnergy()*settings.map_floatPars.at("ECALCalib");
+          totE += p_core->getEnergy()*ecalcalib;
         }
    
-        double tmp_clusE = p_clus->getEnergy()*settings.map_floatPars.at("ECALCalib");
+        double tmp_clusE = p_clus->getLongiE()*ecalcalib;
         TVector3 clus_pos = p_clus->getShowerCenter();
         edm4hep::Vector3f pos( clus_pos.x(), clus_pos.y(), clus_pos.z() );
-        double tmp_phi = std::atan2(clus_pos.y(), clus_pos.x())* 180.0 / M_PI; //TODO: use TVector3 to calculate
-        if (tmp_phi < 0) tmp_phi += 360.0;
-        double tmp_theta = std::atan2(clus_pos.z(), clus_pos.Perp())* 180.0 / M_PI + 90;
-        tmp_clusE = m_DataCol.EnergyCorrSvc->energyCorrection(tmp_clusE, tmp_phi, tmp_theta);
-        totE = m_DataCol.EnergyCorrSvc->energyCorrection(totE, tmp_phi, tmp_theta);
+        //double tmp_phi = std::atan2(clus_pos.y(), clus_pos.x())* 180.0 / M_PI; //TODO: use TVector3 to calculate
+        //if (tmp_phi < 0) tmp_phi += 360.0;
+        //double tmp_theta = std::atan2(clus_pos.z(), clus_pos.Perp())* 180.0 / M_PI + 90;
+        //tmp_clusE = m_DataCol.EnergyCorrSvc->energyCorrection(tmp_clusE, tmp_phi, tmp_theta);
+        //totE = m_DataCol.EnergyCorrSvc->energyCorrection(totE, tmp_phi, tmp_theta);
 
         m_core.setEnergy(totE);
         m_core.setPosition( pos );
@@ -131,7 +137,7 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
           m_clus.addToHits(_hit);
         }
    
-        double tmp_clusE = p_clus->getHitsE()*settings.map_floatPars.at("HCALCalib");
+        double tmp_clusE = p_clus->getHitsE()*hcalcalib;
         m_clus.setEnergy( tmp_clusE );
         edm4hep::Vector3f pos( p_clus->getHitCenter().x(), p_clus->getHitCenter().y(), p_clus->getHitCenter().z() );
         m_clus.setPosition( pos );
@@ -162,7 +168,7 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
         }
         if(trkIndex>=0){
           auto m_trk = vec_trks[trkIndex]->getOriginTrack();
-          if( !m_trk.isAvailable() || settings.map_boolPars.at("UseTruthTrk") )
+          if( !m_trk.isAvailable() || settings.map_boolPars.at("UseTruthTrk") || settings.map_boolPars.at("UseTruthMatchTrk"))
             m_trk = TruthTrack( vec_trks[trkIndex]->getLeadingMCP(), m_trkCol );
 
           m_pfo.addToTracks( m_trk );
@@ -172,6 +178,7 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
           edm4hep::Vector3f p3(p3vec.x(), p3vec.y(), p3vec.z());
           m_pfo.setMomentum(p3);
           m_pfo.setEnergy( vec_trks[trkIndex]->getMomentum() );
+          m_pfo.setMass(139.57039); //TODO: all charged particles are set to pion mass. 
         }
         else{
           TVector3 p3vec = vec_Pos*(  (EcalClusE+HcalClusE)/vec_Pos.Mag() );
@@ -183,7 +190,7 @@ std::cout<<"  Input PFO size: "<<p_pfos.size()<<std::endl;
         }
 
       }
-
+//printf("  Create PFO #%d: charge %.1f, p4 (%.7f, %.7f, %.7f, %.7f), mass %.3f \n", ip, m_pfo.getCharge(), m_pfo.getMomentum().x, m_pfo.getMomentum().y, m_pfo.getMomentum().z, m_pfo.getEnergy(), m_pfo.getMass() );
     }
 /*
 double totE = 0;
@@ -198,7 +205,8 @@ totE = 0;
 for(int i=0; i<m_pfocol->size(); i++){
   auto m_pfo = m_pfocol->at(i);
   if(m_pfo.getCharge()==0) continue;
-   cout<<"    PFO #"<<i<<": track size "<<m_pfo.tracks_size()<<", cluster size "<<m_pfo.clusters_size()<<", energy "<<m_pfo.getEnergy()<<endl;
+   cout<<"    PFO #"<<i<<": track size "<<m_pfo.tracks_size()<<", leading P "<<sqrt(m_pfo.getMomentum().x*m_pfo.getMomentum().x + m_pfo.getMomentum().y*m_pfo.getMomentum().y + m_pfo.getMomentum().z*m_pfo.getMomentum().z);
+   cout<<", cluster size "<<m_pfo.clusters_size()<<", energy "<<m_pfo.getEnergy()<<endl;
    totE += m_pfo.getEnergy();
 }
 cout<<"-----Charged cluster Ecal total energy: "<<totE<<endl;
@@ -227,7 +235,7 @@ std::cout<<"  Created PFO size: "<<m_pfocol->size()<<std::endl;
     m_trkst.Z0 = 0;
     m_trkst.phi = TMath::ATan2(mcp_p.x, mcp_p.x);
     m_trkst.tanLambda = mcp_p.z / mcp_pT;
-    m_trkst.omega = 0.3 * settings.map_floatPars.at("BField") / 1000. / mcp_pT;
+    m_trkst.omega = 0.299792458 * settings.map_floatPars.at("BField") / 1000. / mcp_pT;
     m_trkst.referencePoint = mcp_vertex;
     m_track.addToTrackStates(m_trkst);
 

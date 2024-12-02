@@ -14,7 +14,7 @@ namespace Cyber{
                                          std::vector<DataHandle<edm4hep::TrackCollection>*>& r_TrackCols, 
                                          DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection>* r_MCParticleTrkCol ){
 
-    if(r_TrackCols.size()==0 || settings.map_stringVecPars.at("trackCollections").size()==0) StatusCode::SUCCESS;
+    if(r_TrackCols.size()==0 || settings.map_stringVecPars.at("trackCollections").size()==0) return StatusCode::SUCCESS;
 
     //Save readin collections
     m_DataCol.collectionMap_Track.clear(); 
@@ -75,14 +75,14 @@ namespace Cyber{
       }
     }
 
-    //SelectGoodTrack(m_trkCol);
+    if(settings.map_boolPars.at("DoCleanTrack")) SelectGoodTrack(m_trkCol);
     m_DataCol.TrackCol = m_trkCol;
-
 
     //Track extrapolation
     //  Write settings: geometry description
     //  m_TrkExtraSettings.map_floatPar["Nlayers"] = 28;
 
+    if(settings.map_boolPars.at("UseTruthMatchTrk")) m_TrkExtraSettings.map_intPars["Input_track"] = 1;
     m_TrkExtraAlg = new TrackExtrapolatingAlg();
     m_TrkExtraAlg->ReadSettings(m_TrkExtraSettings);
     m_TrkExtraAlg->Initialize( m_DataCol );
@@ -131,7 +131,7 @@ namespace Cyber{
       m_trkst.Kappa = 1 / mcp_pT;
       if(charge<0) m_trkst.Kappa = -m_trkst.Kappa;
       m_trkst.tanLambda = mcp_p.Z() / mcp_pT;
-      m_trkst.Omega = 0.3 * settings.map_floatPars.at("BField") / 1000. / mcp_pT;
+      m_trkst.Omega = 0.299792458 * settings.map_floatPars.at("BField") / 1000. / mcp_pT;
       m_trkst.referencePoint = mcp_vertex;
       m_trkstates.push_back(m_trkst);
 
@@ -157,53 +157,119 @@ namespace Cyber{
 
 
   StatusCode TrackCreator::SelectGoodTrack(std::vector<std::shared_ptr<Cyber::Track>>& trkCol){
-    if(trkCol.size()<2) return StatusCode::SUCCESS;
+    //Use truth matched tracks
+    if(settings.map_boolPars.at("UseTruthMatchTrk")){
 
-    for(int itrk=0; itrk<trkCol.size(); itrk++){
-      //Endpoint cut
-      if( fabs( trkCol[itrk]->getEndPoint().z() )<settings.map_floatPars.at("TrkEndZCut") && 
-          trkCol[itrk]->getEndPoint().Perp()>settings.map_floatPars.at("TrkEndRCutMin") &&  
-          trkCol[itrk]->getEndPoint().Perp()<settings.map_floatPars.at("TrkEndRCutMax") ){  
-
-        trkCol.erase(trkCol.begin() + itrk);
-        itrk--;
-        continue;
+      std::map<edm4hep::MCParticle, std::vector<std::shared_ptr<Cyber::Track>>> truthMap;
+      for(int itrk=0; itrk<trkCol.size(); itrk++){
+        truthMap[ trkCol[itrk]->getLeadingMCP() ].push_back( trkCol[itrk] );
       }
-      //Start point cut
-      if( trkCol[itrk]->getStartPoint().Perp()>settings.map_floatPars.at("TrkStartRCutMin") &&
-          trkCol[itrk]->getStartPoint().Perp()<settings.map_floatPars.at("TrkStartRCutMax") ){ 
+      std::vector<std::shared_ptr<Cyber::Track>> tmp_selTrk; tmp_selTrk.clear();
+      for(auto iter: truthMap){
+        if(iter.second.size()<=0) continue;
+        int m_index = -1;
+        double minIP = 999999;
+        for(int itrk=0; itrk<iter.second.size(); itrk++){
+          double tmp_IP = sqrt( iter.second[itrk]->getD0()*iter.second[itrk]->getD0() + iter.second[itrk]->getZ0()*iter.second[itrk]->getZ0() );
+          if(tmp_IP<minIP){
+            minIP = tmp_IP;
+            m_index = itrk;
+          }
+        }
 
-        trkCol.erase(trkCol.begin() + itrk);
-        itrk--;
-        continue;
+        if(m_index>=0) tmp_selTrk.push_back( iter.second[m_index] );
       }
-      //Track length cut
-      if( (trkCol[itrk]->getEndPoint().Perp()-trkCol[itrk]->getStartPoint().Perp() )<settings.map_floatPars.at("TrkLengthCut") ){
-
-        trkCol.erase(trkCol.begin() + itrk);
-        itrk--;
-        continue;
-      }
-    }
-
-    if(trkCol.size()<2) return StatusCode::SUCCESS;
-
-    //Remove the broken tracks
-    std::sort(trkCol.begin(), trkCol.end(),  compTrkIP);
-    for(int itrk=0; itrk<trkCol.size()-1; itrk++){
-      for(int jtrk=itrk+1; jtrk<trkCol.size(); jtrk++){
-        double deltaP = (trkCol[itrk]->getP3() - trkCol[jtrk]->getP3()).Mag();
-        if( trkCol[jtrk]->getP3().Perp() < settings.map_floatPars.at("BrokenTrkMinP") &&
-            ( deltaP/max(trkCol[itrk]->getMomentum(), trkCol[jtrk]->getMomentum()) < settings.map_floatPars.at("BrokenTrkDeltaPCut") ||
-            (trkCol[itrk]->getEndPoint()-trkCol[jtrk]->getStartPoint()).Mag() < settings.map_floatPars.at("BrokenTrkDistance") ) ){
-          trkCol.erase(trkCol.begin() + jtrk);
-          jtrk--;
-          if(itrk>jtrk+1) itrk--;
+      for(int itrk=0; itrk<trkCol.size(); itrk++){
+        if( find(tmp_selTrk.begin(), tmp_selTrk.end(), trkCol[itrk])==tmp_selTrk.end() ){
+          trkCol.erase(trkCol.begin() + itrk);
+          itrk--;
         }
       }
+//cout<<"Matched track size: "<<trkCol.size()<<endl;
+
+      //Create truth track from linked MC particle
+      std::vector<std::shared_ptr<Cyber::Track>> truthtrk; 
+      for(int itrk=0; itrk<trkCol.size(); itrk++){
+        edm4hep::MCParticle mcp = trkCol[itrk]->getLeadingMCP();
+
+        std::shared_ptr<Cyber::Track> m_trk = std::make_shared<Cyber::Track>();
+        std::vector<Cyber::TrackState> m_trkstates;        
+
+        TVector3 mcp_vertex(mcp.getVertex().x, mcp.getVertex().y, mcp.getVertex().z);
+        TVector3 mcp_p(mcp.getMomentum().x, mcp.getMomentum().y, mcp.getMomentum().z);
+        double mcp_pT = TMath::Sqrt(mcp_p.X()*mcp_p.X() + mcp_p.Y()*mcp_p.Y());
+        double charge = mcp.getCharge();
+
+        // Evaluate track state at vertex
+        Cyber::TrackState m_trkst;
+        m_trkst.location = 1;  // At IP
+        m_trkst.D0 = 0;
+        m_trkst.Z0 = 0;
+        m_trkst.phi0 = TMath::ATan2(mcp_p.Y(), mcp_p.X());
+        m_trkst.Kappa = 1 / mcp_pT;
+        if(charge<0) m_trkst.Kappa = -m_trkst.Kappa;
+        m_trkst.tanLambda = mcp_p.Z() / mcp_pT;
+        m_trkst.Omega = 0.3 * settings.map_floatPars.at("BField") / 1000. / mcp_pT;
+        m_trkst.referencePoint = mcp_vertex;
+        m_trkstates.push_back(m_trkst);
+
+        m_trk->setTrackStates("Input", m_trkstates);
+        m_trk->setType(0);  // It is a "MC track" and not detected by any tracker system
+        m_trk->addLinkedMCP( std::make_pair(mcp, 1.) );
+        truthtrk.push_back(m_trk);       
+      }
+//cout<<"Created truth track size: "<<truthtrk.size()<<endl;
+      trkCol = truthtrk;
+
+      std::sort(trkCol.begin(), trkCol.end(),  compTrkP);
+      return StatusCode::SUCCESS;
     }
 
+
+    //Select tracks with some custom criteria
+    float trk_P, trk_Pt, trk_Nhit, trk_cosT, trk_startR, trk_startZ, trk_endR, trk_endZ, trk_length, trk_IP;
+    std::ifstream file(settings.map_stringPars.at("TrackIDWeightFile"));
+    if(!file.good()){
+      std::cout << "ERROR: Did not find BDT weight file. Will skip the track cleaning. " << std::endl;
+      std::sort(trkCol.begin(), trkCol.end(),  compTrkP);
+      return StatusCode::SUCCESS;
+    }
+
+    TMVA::Reader *mva_rdr = new TMVA::Reader("Silent");
+    mva_rdr->AddVariable("trk_P", &trk_P);
+    mva_rdr->AddVariable("trk_Pt", &trk_Pt);
+    mva_rdr->AddVariable("trk_Nhit", &trk_Nhit);
+    mva_rdr->AddVariable("trk_IP", &trk_IP);
+    mva_rdr->AddVariable("trk_cosT", &trk_cosT);
+    mva_rdr->AddVariable("trk_startR", &trk_startR);
+    mva_rdr->AddVariable("trk_startZ", &trk_startZ);
+    mva_rdr->AddVariable("trk_endR", &trk_endR);
+    mva_rdr->AddVariable("trk_endZ", &trk_endZ);
+    mva_rdr->AddVariable("trk_length", &trk_length);
+    
+    mva_rdr->BookMVA(settings.map_stringPars.at("TrackIDMethod"), settings.map_stringPars.at("TrackIDWeightFile"));    
+//cout<<"Use BDT track cleaning. BDT cut "<<settings.map_floatPars.at("BDTCut")<<endl;
+    for(int itrk=0; itrk<trkCol.size(); itrk++){
+      //float tmp_IP = sqrt( trkCol[itrk]->getD0()*trkCol[itrk]->getD0() + trkCol[itrk]->getZ0()*trkCol[itrk]->getZ0() );
+      trk_P = trkCol[itrk]->getMomentum();
+      trk_Pt = trkCol[itrk]->getPt();
+      trk_Nhit = trkCol[itrk]->getTrackerHits();
+      trk_cosT = trkCol[itrk]->getP3().CosTheta();
+      trk_startR = trkCol[itrk]->getStartPoint().Perp();
+      trk_startZ = trkCol[itrk]->getStartPoint().z();
+      trk_endR = trkCol[itrk]->getEndPoint().Perp();
+      trk_endZ = trkCol[itrk]->getEndPoint().z();
+      trk_length = trkCol[itrk]->getEndPoint().Perp() - trkCol[itrk]->getStartPoint().Perp();
+      trk_IP = sqrt(trkCol[itrk]->getD0()*trkCol[itrk]->getD0() + trkCol[itrk]->getZ0()*trkCol[itrk]->getZ0());
+      float BDTout = mva_rdr->EvaluateMVA(settings.map_stringPars.at("TrackIDMethod"));
+//printf("  In track #%d: P %.3f, Pt %.3f, cosT %.3f, start (%.3f, %.3f), end (%.3f, %.3f), Nhit %.0f, length %.3f, IP %.3f, BDT %.3f \n ", itrk, trk_P, trk_Pt, trk_cosT, trk_startR, trk_startZ, trk_endR, trk_endZ, trk_Nhit, trk_length, trk_IP, BDTout);
+      if(BDTout<settings.map_floatPars.at("BDTCut")){
+        trkCol.erase(trkCol.begin() + itrk);
+        itrk--;
+      }
+    }
     std::sort(trkCol.begin(), trkCol.end(),  compTrkP);
+    delete mva_rdr;
 
     return StatusCode::SUCCESS;
   }

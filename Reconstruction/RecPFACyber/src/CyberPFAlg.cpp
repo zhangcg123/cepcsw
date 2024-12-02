@@ -12,8 +12,8 @@ using namespace dd4hep;
 int Cyber::CaloUnit::Nmodule = 32;
 int Cyber::CaloUnit::Nstave = 15;
 int Cyber::CaloUnit::Nlayer = 14;
-int Cyber::CaloUnit::NbarPhi_odd[14] = {39, 39, 39, 39, 37, 37, 37, 37, 37, 35, 35, 35, 35, 33};
-int Cyber::CaloUnit::NbarPhi_even[14] = {29, 29, 31, 31, 33, 35, 35, 37, 37, 39, 41, 41, 43, 43};
+int Cyber::CaloUnit::NbarPhi_odd[14] = {39, 37, 37, 37, 37, 37, 35, 35, 35, 35, 33, 33, 33, 33};
+int Cyber::CaloUnit::NbarPhi_even[14] = {27, 29, 29, 31, 31, 33, 35, 35, 37, 37, 39, 41, 41, 43};
 int Cyber::CaloUnit::NbarZ = 36;
 //int Cyber::CaloUnit::over_module[28] = {13,15,16,18,19,21,22,24,25,26,28,29,30,32,33,35,36,38,39,41,42,43,45,46};
 //int Cyber::CaloUnit::over_module_set = 2;
@@ -51,16 +51,22 @@ StatusCode CyberPFAlg::initialize()
   m_pMCParticleCreatorSettings.map_stringPars["MCParticleCollections"] = name_MCParticleCol.value();
 
   m_pTrackCreatorSettings.map_stringVecPars["trackCollections"] = name_TrackCol.value();
+  m_pTrackCreatorSettings.map_boolPars["DoCleanTrack"] = m_doCleanTrack.value();
+  m_pTrackCreatorSettings.map_boolPars["UseTruthMatchTrk"] = m_useTruthMatchTrk.value();
+  m_pTrackCreatorSettings.map_stringPars["TrackIDWeightFile"] = m_trackIDFile.value();
+  m_pTrackCreatorSettings.map_stringPars["TrackIDMethod"] = m_trackIDMethod.value();
   m_pTrackCreatorSettings.map_floatPars["BField"] = m_BField; 
-  m_pTrackCreatorSettings.map_floatPars["TrkEndZCut"] = 200.;
-  m_pTrackCreatorSettings.map_floatPars["TrkEndRCutMin"] = 700.;
-  m_pTrackCreatorSettings.map_floatPars["TrkEndRCutMax"] = 1600.;
-  m_pTrackCreatorSettings.map_floatPars["TrkStartRCutMin"] = 635.;
-  m_pTrackCreatorSettings.map_floatPars["TrkStartRCutMax"] = 640.;
-  m_pTrackCreatorSettings.map_floatPars["TrkLengthCut"] = 130.;
-  m_pTrackCreatorSettings.map_floatPars["BrokenTrkMinP"] = 0.5;
-  m_pTrackCreatorSettings.map_floatPars["BrokenTrkDeltaPCut"] = 0.15;
-  m_pTrackCreatorSettings.map_floatPars["BrokenTrkDistance"] = 10.;
+  m_pTrackCreatorSettings.map_floatPars["TrkMaxIP"] = 100.;
+  m_pTrackCreatorSettings.map_floatPars["BDTCut"] = -0.8289;
+  //m_pTrackCreatorSettings.map_floatPars["TrkEndZCut"] = 200.;
+  //m_pTrackCreatorSettings.map_floatPars["TrkEndRCutMin"] = 700.;
+  //m_pTrackCreatorSettings.map_floatPars["TrkEndRCutMax"] = 1600.;
+  //m_pTrackCreatorSettings.map_floatPars["TrkStartRCutMin"] = 635.;
+  //m_pTrackCreatorSettings.map_floatPars["TrkStartRCutMax"] = 640.;
+  //m_pTrackCreatorSettings.map_floatPars["TrkLengthCut"] = 130.;
+  //m_pTrackCreatorSettings.map_floatPars["BrokenTrkMinP"] = 0.5;
+  //m_pTrackCreatorSettings.map_floatPars["BrokenTrkDeltaPCut"] = 0.15;
+  //m_pTrackCreatorSettings.map_floatPars["BrokenTrkDistance"] = 10.;
 
   std::vector<std::string> name_CaloHits = name_EcalHits; 
   std::vector<std::string> name_CaloReadout = name_EcalReadout;
@@ -71,10 +77,13 @@ StatusCode CyberPFAlg::initialize()
   m_CaloHitsCreatorSettings.map_stringPars["EcalType"] = m_EcalType.value();
 
   m_OutputCreatorSettings.map_stringPars["OutputPFO"] = name_PFObject.value();
-  m_OutputCreatorSettings.map_boolPars["UseTruthTrk"] = m_useTruthTrk.value();
+  m_OutputCreatorSettings.map_boolPars["UseTruthTrk"] = m_useMCPTrk.value();
+  m_OutputCreatorSettings.map_boolPars["UseTruthMatchTrk"] = m_useTruthMatchTrk.value();
   m_OutputCreatorSettings.map_floatPars["BField"] = m_BField.value();
-  m_OutputCreatorSettings.map_floatPars["ECALCalib"] = m_EcalCalib.value();
-  m_OutputCreatorSettings.map_floatPars["HCALCalib"] = m_HcalCalib.value();
+  m_OutputCreatorSettings.map_floatPars["ECALChargedCalib"] = m_EcalChargedCalib.value();
+  m_OutputCreatorSettings.map_floatPars["HCALChargedCalib"] = m_HcalChargedCalib.value();
+  m_OutputCreatorSettings.map_floatPars["ECALNeutralCalib"] = m_EcalNeutralCalib.value();
+  m_OutputCreatorSettings.map_floatPars["HCALNeutralCalib"] = m_HcalNeutralCalib.value();
 
   //Initialize Creators
   m_pMCParticleCreator = new MCParticleCreator( m_pMCParticleCreatorSettings );
@@ -157,6 +166,12 @@ StatusCode CyberPFAlg::initialize()
   m_geosvc = service<IGeomSvc>("GeomSvc");
   if ( !m_geosvc )  throw "CyberPFAlg :Failed to find GeomSvc ...";
 
+  m_dd4hep = m_geosvc->lcdd();
+  if ( !m_dd4hep )  throw "CyberPFAlg :Failed to get dd4hep::Detector ...";
+
+  m_cellIDConverter = new dd4hep::rec::CellIDPositionConverter(*m_dd4hep);
+  m_volumeManager = m_dd4hep->volumeManager();
+
   m_energycorsvc = service<ICrystalEcalSvc>("CrystalEcalEnergyCorrectionSvc");
   if ( !m_energycorsvc )  throw "CyberPFAlg :Failed to find CrystalEcalEnergyCorrectionSvc ...";
   //m_energycorsvc->initialize();
@@ -207,6 +222,9 @@ StatusCode CyberPFAlg::initialize()
     t_MCParticle->Branch("mcEn", &m_mcEn);
     t_MCParticle->Branch("mcMass", &m_mcMass);
     t_MCParticle->Branch("mcCharge", &m_mcCharge);
+    t_MCParticle->Branch("mcVTXx", &m_mcVTXx);
+    t_MCParticle->Branch("mcVTXy", &m_mcVTXy);
+    t_MCParticle->Branch("mcVTXz", &m_mcVTXz);
     t_MCParticle->Branch("mcEPx", &m_mcEPx);
     t_MCParticle->Branch("mcEPy", &m_mcEPy);
     t_MCParticle->Branch("mcEPz", &m_mcEPz);
@@ -610,6 +628,7 @@ StatusCode CyberPFAlg::initialize()
     // Tracks
     t_Track->Branch("m_Ntrk", &m_Ntrk);
     t_Track->Branch("m_type", &m_type);
+    t_Track->Branch("m_Nhit", &m_Nhit);
     t_Track->Branch("m_trkstate_d0", &m_trkstate_d0);
     t_Track->Branch("m_trkstate_z0", &m_trkstate_z0);
     t_Track->Branch("m_trkstate_phi", &m_trkstate_phi);
@@ -678,9 +697,9 @@ StatusCode CyberPFAlg::execute()
 
   //Readin collections 
   m_pMCParticleCreator->CreateMCParticle( m_DataCol, *r_MCParticleCol );
-  if(m_useTruthTrk) m_pTrackCreator->CreateTracksFromMCParticle(m_DataCol, *r_MCParticleCol);
+  if(m_useMCPTrk) m_pTrackCreator->CreateTracksFromMCParticle(m_DataCol, *r_MCParticleCol);
   else m_pTrackCreator->CreateTracks( m_DataCol, r_TrackCols, r_MCPTrkAssoCol );
-  m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols );
+  m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols, m_volumeManager);
 
   //Perform PFA algorithm
   m_algorithmManager.RunAlgorithm( m_DataCol );
@@ -710,6 +729,9 @@ StatusCode CyberPFAlg::execute()
       m_mcEn.push_back( m_MCPCol[imc].getEnergy() );
       m_mcMass.push_back( m_MCPCol[imc].getMass() );
       m_mcCharge.push_back( m_MCPCol[imc].getCharge() );
+      m_mcVTXx.push_back( m_MCPCol[imc].getVertex()[0] );
+      m_mcVTXy.push_back( m_MCPCol[imc].getVertex()[1] );
+      m_mcVTXz.push_back( m_MCPCol[imc].getVertex()[2] );
       m_mcEPx.push_back( m_MCPCol[imc].getEndpoint()[0] );
       m_mcEPy.push_back( m_MCPCol[imc].getEndpoint()[1] );
       m_mcEPz.push_back( m_MCPCol[imc].getEndpoint()[2] );
@@ -1377,7 +1399,8 @@ StatusCode CyberPFAlg::execute()
       if (tmp_phi < 0) tmp_phi += 360.0;
       double tmp_theta = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().z(), m_EcalClusterCol[icl]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
       //cout<<" Theta: "<<tmp_theta<<" Phi: "<<tmp_phi<<endl;
-      m_EcalClus_Escale.push_back(m_energycorsvc->energyCorrection(m_EcalClusterCol[icl]->getLongiE(), tmp_phi, tmp_theta));
+      //m_EcalClus_Escale.push_back(m_energycorsvc->energyCorrection(m_EcalClusterCol[icl]->getLongiE(), tmp_phi, tmp_theta));
+      m_EcalClus_Escale.push_back(m_EcalClusterCol[icl]->getLongiE());
    
    
       if(m_EcalClusterCol[icl]->getAssociatedTracks().size()==1){
@@ -1518,6 +1541,7 @@ StatusCode CyberPFAlg::execute()
     m_Ntrk = m_trkCol.size();
     for(int itrk=0; itrk<m_Ntrk; itrk++){
       m_type.push_back(m_trkCol[itrk]->getType());
+      m_Nhit.push_back(m_trkCol[itrk]->getTrackerHits());
       std::vector<TrackState> AllTrackStates = m_trkCol[itrk]->getAllTrackStates();
       for(int istate=0; istate<AllTrackStates.size(); istate++){
         m_trkstate_d0.push_back( AllTrackStates[istate].D0 );
@@ -1590,7 +1614,7 @@ StatusCode CyberPFAlg::execute()
         double tmp_phi = std::atan2(t_ecal_clusters[ie]->getShowerCenter().y(), t_ecal_clusters[ie]->getShowerCenter().x())* 180.0 / M_PI;
         if (tmp_phi < 0) tmp_phi += 360.0;
         double tmp_theta = std::atan2(t_ecal_clusters[ie]->getShowerCenter().z(), t_ecal_clusters[ie]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
-        pfo_ecal_clus_Escale.push_back(m_energycorsvc->energyCorrection(t_ecal_clusters[ie]->getLongiE(), tmp_phi, tmp_theta));
+        pfo_ecal_clus_Escale.push_back(t_ecal_clusters[ie]->getLongiE());
    
       }
       for(int ih=0; ih<t_hcal_clusters.size(); ih++){
@@ -1655,7 +1679,7 @@ StatusCode CyberPFAlg::finalize()
   //r_HCalHitCols.clear();
   r_CaloHitCols.clear();
   //m_energycorsvc->finalize();
-
+  delete m_cellIDConverter, m_geosvc;
   info() << "Processed " << _nEvt << " events " << endmsg;
   return GaudiAlgorithm::finalize();
 }
@@ -1669,6 +1693,9 @@ void CyberPFAlg::ClearMCParticle(){
   m_mcEn.clear();
   m_mcMass.clear();
   m_mcCharge.clear();
+  m_mcVTXx.clear();
+  m_mcVTXy.clear();
+  m_mcVTXz.clear();
   m_mcEPx.clear();
   m_mcEPy.clear();
   m_mcEPz.clear();
@@ -2093,6 +2120,7 @@ void CyberPFAlg::ClearCluster(){
 
 void CyberPFAlg::ClearTrack(){
   m_type.clear();
+  m_Nhit.clear();
   m_trkstate_d0.clear();
   m_trkstate_z0.clear();
   m_trkstate_phi.clear();

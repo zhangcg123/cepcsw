@@ -7,6 +7,7 @@ gaudi_add_module(DetCRD
                  SOURCES src/Calorimeter/CRDEcal_v01.cpp
                          src/Calorimeter/LongCrystalBarBarrelCalorimeter32Polygon_v01.cpp
                          src/Calorimeter/LongCrystalBarEndcapCalorimeter_v01.cpp
+                         src/Calorimeter/LongCrystalBarEndcapCalorimeter_v02.cpp
                          src/Calorimeter/CRDEcal_Short_v02.cpp
                          src/Calorimeter/CRDEcal_Endcap_Short_v01.cpp
                          src/Calorimeter/RotatedPolyhedraBarrelCalorimeter_v01_geo.cpp
@@ -72,6 +73,12 @@ endforeach()
 add_test(
   NAME Test_TDR_o1_v01_CaloDigi
   COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/calodigi.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  )
+
+add_test(
+  NAME Test_TDR_o1_v01_PFA
+  COMMAND gaudirun.py Detector/DetCRD/scripts/TDR_o1_v01/rec.py
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
 
