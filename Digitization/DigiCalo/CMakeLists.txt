@@ -1,6 +1,7 @@
 # Modules
 gaudi_add_module(CaloDigi
                  SOURCES src/EcalDigiAlg.cpp
+                 SOURCES src/EcalDigiAlgShort.cpp
                  SOURCES src/HcalDigiAlg.cpp
                  LINK k4FWCore::k4FWCore
                       GearSvc

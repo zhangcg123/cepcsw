@@ -101,7 +101,7 @@ namespace Cyber{
   std::shared_ptr<CaloUnit> CaloUnit::Clone() const{
     std::shared_ptr<CaloUnit> m_bar = std::make_shared<CaloUnit>();
     m_bar->setcellID(cellID);
-    m_bar->setcellID( system, module, stave, dlayer, slayer, bar );
+    m_bar->setcellID( system, module, stave, part, dlayer, slayer, bar );
     m_bar->setPosition(position);
     m_bar->setQ(Q1, Q2);
     m_bar->setT(T1, T2);

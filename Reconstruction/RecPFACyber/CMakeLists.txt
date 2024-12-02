@@ -11,6 +11,7 @@ gaudi_add_library(CrystalCaloRecLib
                           src/Objects/HoughObject.cc
                           src/Objects/PFObject.cc
                   LINK    k4FWCore::k4FWCore
+                          ROOT::TMVA
                           GearSvc
                           CrystalEcalSvcLib
                           DetInterface
@@ -21,6 +22,7 @@ gaudi_add_library(CrystalCaloRecLib
                           ${GSL_LIBRARIES}
                           ${LCIO_LIBRARIES}
                           ${ROOT_LIBRARIES}
+                          ${TMVA_LIBRARIES}
                           EDM4HEP::edm4hep EDM4HEP::edm4hepDict
 
 )

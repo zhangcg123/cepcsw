@@ -9,11 +9,15 @@ StatusCode TrackClusterConnectingAlg::ReadSettings(Settings& m_settings){
   //Initialize parameters
   if(settings.map_stringPars.find("ReadinECALClusterName")==settings.map_stringPars.end()) settings.map_stringPars["ReadinECALClusterName"] = "EcalCluster";
   if(settings.map_stringPars.find("ReadinHCALClusterName")==settings.map_stringPars.end()) settings.map_stringPars["ReadinHCALClusterName"] = "HcalCluster";
+  if(settings.map_floatPars.find("ECALChargedCalib")==settings.map_floatPars.end()) settings.map_floatPars["ECALChargedCalib"] = 1.26;
+  if(settings.map_floatPars.find("HCALChargedCalib")==settings.map_floatPars.end()) settings.map_floatPars["HCALChargedCalib"] = 4.0;
+  if(settings.map_floatPars.find("ECALNeutralCalib")==settings.map_floatPars.end()) settings.map_floatPars["ECALNeutralCalib"] = 1.0;
+  if(settings.map_floatPars.find("HCALNeutralCalib")==settings.map_floatPars.end()) settings.map_floatPars["HCALNeutralCalib"] = 4.0;
 
   if(settings.map_floatPars.find("th_ChFragEn")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragEn"] = 2.;
   if(settings.map_floatPars.find("th_ChFragDepth")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragDepth"] = 100.;
   if(settings.map_floatPars.find("th_ChFragMinR")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragMinR"] = 200.;
-  if(settings.map_floatPars.find("th_HcalMatchingR")==settings.map_floatPars.end()) settings.map_floatPars["th_HcalMatchingR"] = 150.;
+  if(settings.map_floatPars.find("th_HcalMatchingR")==settings.map_floatPars.end()) settings.map_floatPars["th_HcalMatchingR"] = 100.;
 
   if(settings.map_floatPars.find("th_MIPEnergy")==settings.map_floatPars.end()) settings.map_floatPars["th_MIPEnergy"] = 0.5;
   if(settings.map_floatPars.find("th_AbsorbCone")==settings.map_floatPars.end()) settings.map_floatPars["th_AbsorbCone"] = 0.8;
@@ -42,6 +46,8 @@ StatusCode TrackClusterConnectingAlg::Initialize( CyberDataCol& m_datacol ){
   for(int itrk=0; itrk<m_datacol.TrackCol.size(); itrk++){
     m_tracks.push_back( m_datacol.TrackCol[itrk].get() );
   }
+
+  m_bkCol.EnergyCorrSvc = m_datacol.EnergyCorrSvc;
 
 //cout<<"Readin Track size: "<<m_tracks.size()<<", ECAL cluster size: "<<m_EcalClusters.size()<<", HCAL cluster size "<<m_HcalClusters.size()<<endl;
 //cout<<"Print track"<<endl;
@@ -304,6 +310,18 @@ StatusCode TrackClusterConnectingAlg::EcalChFragAbsorption( std::vector<const Cy
         jcl--;
       }
     }
+  }
+
+  //Do cluster energy correction
+  for(int ic=0; ic<m_newclusCol.size(); ic++){
+    double tmp_clusE = m_newclusCol[ic]->getEnergy()*settings.map_floatPars.at("ECALNeutralCalib");
+    TVector3 clus_pos = m_newclusCol[ic]->getShowerCenter();
+    double tmp_phi = std::atan2(clus_pos.y(), clus_pos.x())* 180.0 / TMath::Pi(); //TODO: use TVector3 to calculate
+    if (tmp_phi < 0) tmp_phi += 360.0;
+    double tmp_theta = std::atan2(clus_pos.z(), clus_pos.Perp())* 180.0 / TMath::Pi() + 90;  
+
+    double tmp_scale = m_bkCol.EnergyCorrSvc->energyCorrection(tmp_clusE, tmp_phi, tmp_theta)/tmp_clusE;
+    m_newclusCol[ic]->setEnergyScale( tmp_scale );
   }
 //for(int ic=0; ic<m_newclusCol.size(); ic++){
 //  cout<<"    ECAL Cluster #"<<ic<<": En = "<<m_newclusCol[ic]->getLongiE()<<", track size "<<m_newclusCol[ic]->getAssociatedTracks().size()<<endl;

@@ -6,7 +6,7 @@ from Configurables import k4DataSvc
 dsvc = k4DataSvc("EventDataSvc")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
-seed = [12340]
+seed = [1024]
 # rndmengine = HepRndm__Engine_CLHEP__RanluxEngine_() # The default engine in Gaudi
 rndmengine = HepRndm__Engine_CLHEP__HepJamesRandom_("RndmGenSvc.Engine") # The default engine in Geant4
 rndmengine.SetSingleton = True
@@ -57,7 +57,6 @@ from Configurables import GenPrinter
 stdheprdr = StdHepRdr("StdHepRdr")
 stdheprdr.Input = "/cefs/data/stdhep/CEPC240/higgs/update_from_LiangHao_1M/data/E240.Pnnh_gg.e0.p0.whizard195/nnh_gg.e0.p0.00001.stdhep"
 
-
 genalg = GenAlgo("GenAlgo")
 #genalg.GenTools = ["GtGunTool"]
 genalg.GenTools = ["StdHepRdr"]
@@ -90,9 +89,9 @@ tpc_sensdettool.TypeOption = 1
 from Configurables import CalorimeterSensDetTool
 from Configurables import DriftChamberSensDetTool
 cal_sensdettool = CalorimeterSensDetTool("CalorimeterSensDetTool")
-cal_sensdettool.CalNamesMergeDisable = ["EcalBarrel", "CaloDetectorEndcap", "HcalBarrel", "HcalEndcaps"]
-#cal_sensdettool.CalNamesApplyBirks = ["EcalBarrel", "CaloDetectorEndcap", "HcalBarrel","HcalEndcaps"]
-#cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.01, 0.01] # BGO and Glass scintillator
+cal_sensdettool.CalNamesMergeDisable = ["EcalBarrel", "EcalEndcap", "HcalBarrel", "HcalEndcaps"]
+cal_sensdettool.CalNamesApplyBirks = ["EcalBarrel", "EcalEndcap", "HcalBarrel","HcalEndcaps"]
+cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.01, 0.01] # BGO and Glass scintillator
 
 # output
 from Configurables import PodioOutput

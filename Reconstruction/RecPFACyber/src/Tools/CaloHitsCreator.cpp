@@ -11,7 +11,8 @@ namespace Cyber{
   StatusCode CaloHitsCreator::CreateCaloHits( CyberDataCol& m_DataCol, 
                                               std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
                                               std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder,
-                                              std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol )
+                                              std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
+                                              const dd4hep::VolumeManager& m_volumeManager )
   {
     if(r_CaloHitCols.size()==0 || settings.map_stringVecPars.at("CaloHitCollections").size()==0) StatusCode::SUCCESS;
 
@@ -32,7 +33,7 @@ namespace Cyber{
 
     //Convert to local objects: 
     for(auto iter : m_DataCol.collectionMap_CaloHit){
-      if( settings.map_stringPars.at("EcalType")=="BarEcal" && iter.first == "ECALBarrel") continue; 
+      if( settings.map_stringPars.at("EcalType")=="BarEcal" && (iter.first == "ECALBarrel" || iter.first == "ECALEndcaps" )) continue; 
       
       std::vector<std::shared_ptr<Cyber::CaloHit>> m_hitCol; m_hitCol.clear();
       const edm4hep::MCRecoCaloParticleAssociationCollection* const_MCPCaloAssoCol;
@@ -65,60 +66,117 @@ namespace Cyber{
     if(settings.map_stringPars.at("EcalType")=="BarEcal"){
       std::vector<std::shared_ptr<Cyber::CaloUnit>> m_barCol; m_barCol.clear(); 
 
-      const edm4hep::MCRecoCaloParticleAssociationCollection* const_MCPCaloAssoCol = map_CaloParticleAssoCol["ECALBarrel"]->get();   
-      auto CaloHits = m_DataCol.collectionMap_CaloHit["ECALBarrel"]; 
-      std::map<std::uint64_t, std::vector<Cyber::CaloUnit> > map_cellID_hits; map_cellID_hits.clear();
-      for(auto& hit : CaloHits){ 
-        Cyber::CaloUnit m_bar; 
-        m_bar.setcellID(hit.getCellID());
-        m_bar.setPosition( TVector3(hit.getPosition().x, hit.getPosition().y, hit.getPosition().z) );
-        m_bar.setQ(hit.getEnergy()/2., hit.getEnergy()/2.);
-        m_bar.setT(hit.getTime(), hit.getTime());
-        for(int ilink=0; ilink<const_MCPCaloAssoCol->size(); ilink++){
-          if( hit == const_MCPCaloAssoCol->at(ilink).getRec() ) m_bar.addLinkedMCP( std::make_pair(const_MCPCaloAssoCol->at(ilink).getSim(), const_MCPCaloAssoCol->at(ilink).getWeight()) );
-        } 
+      //Readin ECAL barrel hits      
+      if( m_DataCol.collectionMap_CaloHit.find("ECALBarrel") != m_DataCol.collectionMap_CaloHit.end() ){
+        const edm4hep::MCRecoCaloParticleAssociationCollection* const_MCPCaloAssoCol = map_CaloParticleAssoCol["ECALBarrel"]->get();   
+        auto CaloHits = m_DataCol.collectionMap_CaloHit["ECALBarrel"]; 
+        std::map<std::uint64_t, std::vector<Cyber::CaloUnit> > map_cellID_hits; map_cellID_hits.clear();
+        for(auto& hit : CaloHits){ 
+          Cyber::CaloUnit m_bar; 
+          m_bar.setcellID(hit.getCellID());
+          m_bar.setPosition( TVector3(hit.getPosition().x, hit.getPosition().y, hit.getPosition().z) );
+          m_bar.setQ(hit.getEnergy()/2., hit.getEnergy()/2.);
+          m_bar.setT(hit.getTime(), hit.getTime());
 
+          unsigned long long tmp_id = hit.getCellID();
+          dd4hep::PlacedVolume ipv = m_volumeManager.lookupVolumePlacement(tmp_id);
+          dd4hep::Volume ivol = ipv.volume();
+          std::vector< double > iVolParam = ivol.solid().dimensions();
+          auto maxElement = std::max_element(iVolParam.begin(), iVolParam.end());
+          iVolParam.clear();
+          m_bar.setBarLength(*maxElement * 20);
 
-        map_cellID_hits[hit.getCellID()].push_back(m_bar);
-      }
-      for(auto& hit : map_cellID_hits){
-        if(hit.second.size()!=2){ std::cout<<"WARNING: didn't find correct hit pairs! "<<std::endl; continue; }
-   
-        //Cyber::CaloUnit* m_bar = new Cyber::CaloUnit(); 
-        std::shared_ptr<Cyber::CaloUnit> m_bar = std::make_shared<Cyber::CaloUnit>();
-   
-        unsigned long long id = hit.first; 
-        m_bar->setcellID( id );
-        m_bar->setcellID( map_decoder["ECALBarrel"]->get(id, "system"),
-                          map_decoder["ECALBarrel"]->get(id, "module"),
-                          map_decoder["ECALBarrel"]->get(id, "stave"),
-                          map_decoder["ECALBarrel"]->get(id, "dlayer"),
-                          map_decoder["ECALBarrel"]->get(id, "slayer"),
-                          map_decoder["ECALBarrel"]->get(id, "bar"));
-        m_bar->setPosition(hit.second[0].getPosition());
-        m_bar->setQ( hit.second[0].getEnergy(), hit.second[1].getEnergy() );
-        m_bar->setT( hit.second[0].getT1(), hit.second[1].getT1() );
-
-        //---oooOOO000OOOooo---set bar length---oooOOO000OOOooo---
-        //TODO: reading bar length from geosvc. 
-        double t_bar_length;
-        if(m_bar->getSlayer()==1) t_bar_length = 374.667;
-        else{
-          if( m_bar->getModule()%2==0 ) t_bar_length = 288 + (m_bar->getDlayer()-1)* 12.708;
-          else t_bar_length = 409 - (m_bar->getDlayer()-1)* 4.667;
+          for(int ilink=0; ilink<const_MCPCaloAssoCol->size(); ilink++){
+            if( hit == const_MCPCaloAssoCol->at(ilink).getRec() ) m_bar.addLinkedMCP( std::make_pair(const_MCPCaloAssoCol->at(ilink).getSim(), const_MCPCaloAssoCol->at(ilink).getWeight()) );
+          }
+ 
+          map_cellID_hits[hit.getCellID()].push_back(m_bar);
         }
-        m_bar->setBarLength(t_bar_length);
-        //---oooOOO000OOOooo---set bar length---oooOOO000OOOooo---
+        for(auto& hit : map_cellID_hits){
+          if(hit.second.size()!=2){ std::cout<<"WARNING: didn't find correct hit pairs! "<<std::endl; continue; }
+   
+          //Cyber::CaloUnit* m_bar = new Cyber::CaloUnit(); 
+          std::shared_ptr<Cyber::CaloUnit> m_bar = std::make_shared<Cyber::CaloUnit>();
+   
+          unsigned long long id = hit.first; 
+          m_bar->setcellID( id );
+          m_bar->setcellID( map_decoder["ECALBarrel"]->get(id, "system"),
+                            map_decoder["ECALBarrel"]->get(id, "module"),
+                            map_decoder["ECALBarrel"]->get(id, "stave"),
+                            -1,
+                            map_decoder["ECALBarrel"]->get(id, "dlayer"),
+                            map_decoder["ECALBarrel"]->get(id, "slayer"),
+                            map_decoder["ECALBarrel"]->get(id, "bar"));
+          m_bar->setPosition(hit.second[0].getPosition());
+          m_bar->setBarLength(hit.second[0].getBarLength());  
+          m_bar->setQ( hit.second[0].getEnergy(), hit.second[1].getEnergy() );
+          m_bar->setT( hit.second[0].getT1(), hit.second[1].getT1() );
 
-        //add MCParticle link
-        for(int ilink=0; ilink<hit.second[0].getLinkedMCP().size(); ilink++) m_bar->addLinkedMCP( hit.second[0].getLinkedMCP()[ilink] );
+          //add MCParticle link
+          for(int ilink=0; ilink<hit.second[0].getLinkedMCP().size(); ilink++) m_bar->addLinkedMCP( hit.second[0].getLinkedMCP()[ilink] );
 
-        m_barCol.push_back(m_bar);  //Save for later use in algorithms
+          m_barCol.push_back(m_bar);  //Save for later use in algorithms
+        }
+   
+        m_DataCol.map_BarCol["BarCol"] = m_barCol; 
+        const_MCPCaloAssoCol = nullptr;
       }
 
-   
-      m_DataCol.map_BarCol["BarCol"] = m_barCol; 
-      const_MCPCaloAssoCol = nullptr;
+      if( m_DataCol.collectionMap_CaloHit.find("ECALEndcaps") != m_DataCol.collectionMap_CaloHit.end() ){
+        const edm4hep::MCRecoCaloParticleAssociationCollection* const_MCPCaloAssoCol = map_CaloParticleAssoCol["ECALEndcaps"]->get();
+        auto CaloHits = m_DataCol.collectionMap_CaloHit["ECALEndcaps"];
+        std::map<std::uint64_t, std::vector<Cyber::CaloUnit> > map_cellID_hits; map_cellID_hits.clear();
+        for(auto& hit : CaloHits){
+          Cyber::CaloUnit m_bar;
+          m_bar.setcellID(hit.getCellID());
+          m_bar.setPosition( TVector3(hit.getPosition().x, hit.getPosition().y, hit.getPosition().z) );
+          m_bar.setQ(hit.getEnergy()/2., hit.getEnergy()/2.);
+          m_bar.setT(hit.getTime(), hit.getTime());
+
+          unsigned long long tmp_id = hit.getCellID();
+          dd4hep::PlacedVolume ipv = m_volumeManager.lookupVolumePlacement(tmp_id);
+          dd4hep::Volume ivol = ipv.volume();
+          std::vector< double > iVolParam = ivol.solid().dimensions();
+          auto maxElement = std::max_element(iVolParam.begin(), iVolParam.end());
+          iVolParam.clear();
+          m_bar.setBarLength(*maxElement * 20);
+
+          for(int ilink=0; ilink<const_MCPCaloAssoCol->size(); ilink++){
+            if( hit == const_MCPCaloAssoCol->at(ilink).getRec() ) m_bar.addLinkedMCP( std::make_pair(const_MCPCaloAssoCol->at(ilink).getSim(), const_MCPCaloAssoCol->at(ilink).getWeight()) );
+          }
+
+
+          map_cellID_hits[hit.getCellID()].push_back(m_bar);
+        }
+        for(auto& hit : map_cellID_hits){
+          if(hit.second.size()!=2){ std::cout<<"WARNING: didn't find correct hit pairs! "<<std::endl; continue; }
+
+          //Cyber::CaloUnit* m_bar = new Cyber::CaloUnit();
+          std::shared_ptr<Cyber::CaloUnit> m_bar = std::make_shared<Cyber::CaloUnit>();
+
+          unsigned long long id = hit.first;
+          m_bar->setcellID( id );
+          m_bar->setcellID( map_decoder["ECALEndcaps"]->get(id, "system"),
+                            map_decoder["ECALEndcaps"]->get(id, "module"),
+                            map_decoder["ECALEndcaps"]->get(id, "stave"),
+                            map_decoder["ECALEndcaps"]->get(id, "part"),
+                            map_decoder["ECALEndcaps"]->get(id, "dlayer"),
+                            map_decoder["ECALEndcaps"]->get(id, "slayer"),
+                            map_decoder["ECALEndcaps"]->get(id, "bar"));
+          m_bar->setPosition(hit.second[0].getPosition());
+          m_bar->setBarLength(hit.second[0].getBarLength());
+          m_bar->setQ( hit.second[0].getEnergy(), hit.second[1].getEnergy() );
+          m_bar->setT( hit.second[0].getT1(), hit.second[1].getT1() );
+
+          //add MCParticle link
+          for(int ilink=0; ilink<hit.second[0].getLinkedMCP().size(); ilink++) m_bar->addLinkedMCP( hit.second[0].getLinkedMCP()[ilink] );
+
+          m_barCol.push_back(m_bar);  //Save for later use in algorithms
+        }
+
+        m_DataCol.map_BarCol["BarCol"].insert( m_DataCol.map_BarCol["BarCol"].end(), m_barCol.begin(), m_barCol.end() );
+        const_MCPCaloAssoCol = nullptr;
+      }
     }
     return StatusCode::SUCCESS;
   };

@@ -83,6 +83,9 @@ protected:
   SmartIF<IGeomSvc> m_geosvc;
   SmartIF<ICrystalEcalSvc> m_energycorsvc;
   std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*> map_readout_decoder;
+  dd4hep::Detector* m_dd4hep;
+  dd4hep::rec::CellIDPositionConverter* m_cellIDConverter;
+  dd4hep::VolumeManager m_volumeManager;
 
   //DataCollection: moved into execute() to ensure everything can be cleand after one event. 
   //CyberDataCol     m_DataCol; 
@@ -138,9 +141,15 @@ protected:
   Gaudi::Property<int>    m_Debug{this,   "Debug", 0, "Debug level"};
   Gaudi::Property<int>    m_Nskip{this,   "SkipEvt", 0, "Skip event"};
   Gaudi::Property<std::string>   m_EcalType{this, "EcalType", "BarEcal", "ECAL type"};
-  Gaudi::Property<bool>   m_useTruthTrk{this,   "UseTruthTrack", 1, "Use truth track or reconstructed track"};
-  Gaudi::Property<float>  m_EcalCalib{this,  "EcalGlobalCalib", 1.02, "ECAL global calibration"};
-  Gaudi::Property<float>  m_HcalCalib{this,  "HcalGlobalCalib", 65.,  "HCAL global calibration"};
+  Gaudi::Property<bool>   m_useMCPTrk{this,  "UseMCPTrack", 1, "Use track from MCParticle extrapolation"};
+  Gaudi::Property<bool>   m_useTruthMatchTrk{this,  "UseTruthMatchTrack", 1, "Use track from MCParticle extrapolation"};
+  Gaudi::Property<bool>   m_doCleanTrack{this,  "DoCleanTrack", 1, "Do clean tracks"};
+  Gaudi::Property<std::string>   m_trackIDFile{this,  "TrackIDFile", "", "BDT weight file for track ID"};
+  Gaudi::Property<std::string>   m_trackIDMethod{this,  "TrackIDMethod", "BDTG", "BDT weight file for track ID"};
+  Gaudi::Property<float>  m_EcalChargedCalib{this,  "EcalChargedCalib", 1.26, "ECAL global calibration"};
+  Gaudi::Property<float>  m_HcalChargedCalib{this,  "HcalChargedCalib", 4.,  "HCAL global calibration"};
+  Gaudi::Property<float>  m_EcalNeutralCalib{this,  "EcalNeutralCalib", 1., "ECAL global calibration"};
+  Gaudi::Property<float>  m_HcalNeutralCalib{this,  "HcalNeutralCalib", 4.,  "HCAL global calibration"};
   
   //Algorithms: 
   typedef std::vector<std::string> StringVector;
@@ -176,7 +185,8 @@ protected:
   TTree *t_MCParticle;
   int m_Nmc;
   IntVec m_mcPdgid, m_mcStatus;
-  FloatVec m_mcPx, m_mcPy, m_mcPz, m_mcEn, m_mcMass, m_mcCharge, m_mcEPx, m_mcEPy, m_mcEPz, m_depEn_ecal, m_depEn_hcal;
+  FloatVec m_mcPx, m_mcPy, m_mcPz, m_mcEn, m_mcMass, m_mcCharge;
+  FloatVec m_mcVTXx, m_mcVTXy, m_mcVTXz, m_mcEPx, m_mcEPy, m_mcEPz, m_depEn_ecal, m_depEn_hcal;
 
   //Raw bars and hits
   TTree* t_SimBar;
@@ -290,7 +300,7 @@ protected:
   int m_Ntrk; 
   FloatVec m_trkstate_d0, m_trkstate_z0, m_trkstate_phi, m_trkstate_tanL, m_trkstate_omega, m_trkstate_kappa;
   FloatVec m_trkstate_refx, m_trkstate_refy, m_trkstate_refz; 
-  IntVec m_trkstate_tag, m_trkstate_location, m_type;
+  IntVec m_trkstate_tag, m_trkstate_location, m_type, m_Nhit;
   FloatVec m_trkstate_x_ECAL, m_trkstate_y_ECAL, m_trkstate_z_ECAL,  m_trkstate_x_HCAL, m_trkstate_y_HCAL, m_trkstate_z_HCAL;
   IntVec m_trkstate_tag_ECAL, m_trkstate_tag_HCAL;
 

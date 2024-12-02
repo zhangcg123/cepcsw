@@ -100,9 +100,9 @@ namespace Cyber{
 
 
   TVector3 Calo2DCluster::getPos() const{
-    TVector3 m_pos(0, 0, 0); 
-    if(towerID.size()==0) return m_pos; 
+    if( pos.x()!=0 || pos.y()!=0 || pos.z()!=0 || towerID.size()==0 ) return pos;
 
+    TVector3 m_pos(0., 0., 0.);
     float rotAngle = -towerID[0][0]*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
     TVector3 m_vecX(0., 0., 0.);  
     TVector3 m_vecY(0., 0., 0.);

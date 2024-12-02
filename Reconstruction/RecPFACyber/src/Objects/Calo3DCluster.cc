@@ -51,6 +51,7 @@ namespace Cyber{
       for(int ihf=0; ihf<iter.second.size(); ihf++) m_clus->addHalfClusterV(iter.first, iter.second[ihf]);
     for(auto iter:m_TrackCol)
       m_clus->addAssociatedTrack(iter);
+    m_clus->setEnergyScale(Escale);
     m_clus->setLinkedMCP(MCParticleWeight);
     m_clus->FitAxis();
 
@@ -215,13 +216,14 @@ namespace Cyber{
   double Calo3DCluster::getHitsE() const{
     double en=0;
     for(int i=0;i<hits.size(); i++) en+=hits[i]->getEnergy();
-    return en;
+    return en*Escale;
   }
 
   double Calo3DCluster::getEnergy() const{
     double result = 0;
     for(int m=0; m<m_2dclusters.size(); m++)
       result += m_2dclusters[m]->getEnergy();
+    if(result == 0) result = getLongiE();
     return result;
   }
 
@@ -237,7 +239,7 @@ namespace Cyber{
       for(auto iclus: iter.second)
         en += iclus->getEnergy();
     }
-    return en;
+    return en*Escale;
   }
 
   TVector3 Calo3DCluster::getHitCenter() const{

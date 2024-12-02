@@ -6,6 +6,11 @@
 #include "Algorithm/TrackExtrapolatingAlg.h"
 #include "TVector3.h"
 
+#include "TMVA/Tools.h"
+#include "TMVA/Reader.h"
+
+#include <fstream>
+
 namespace Cyber{
   class TrackCreator{
 
@@ -39,6 +44,8 @@ namespace Cyber{
     static bool compTrkP( std::shared_ptr<Cyber::Track> trk1, std::shared_ptr<Cyber::Track> trk2 ){
       return trk1->getMomentum() > trk2->getMomentum();
     }
+
+    TMVA::Reader *mva_rdr = new TMVA::Reader("Silent");  
 
   };
 };

@@ -10,7 +10,7 @@ namespace Cyber {
   class CaloHit;
   class Calo2DCluster {
   public: 
-    Calo2DCluster() {};
+    Calo2DCluster() { pos.SetXYZ(0., 0., 0.); };
     ~Calo2DCluster() { Clear(); };
 
     void Clear();
@@ -49,10 +49,13 @@ namespace Cyber {
     void addTowerID(int _m, int _p, int _s) { std::vector<int> id(3); id[0] = _m; id[1] = _p; id[2] = _s; towerID.push_back(id); }
     void addTowerID(std::vector<int> id) { towerID.push_back(id); }
     void setTowerID(std::vector<int> id) { towerID.clear(); towerID.push_back(id); }
+    void setPos( TVector3 _vec ) { pos = _vec; }
+    void setPos( double _x, double _y, double _z ) { pos.SetXYZ(_x, _y, _z); }
 
   private:
     std::vector< std::vector<int> > towerID; //[module, stave]
 
+    TVector3 pos = TVector3(0.,0.,0.);
     std::vector<const CaloHit*> hits; 
     std::vector<const CaloUnit*> barUCol;  //slayer == 0.
     std::vector<const CaloUnit*> barVCol;  //slayer == 1.

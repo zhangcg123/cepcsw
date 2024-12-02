@@ -18,9 +18,11 @@ public:
   int getSystem() const { return system; }
   int getModule() const { return module; }
   int getStave()  const { return stave;  }
+  int getPart()   const { return part;   }
   int getDlayer() const { return dlayer; }
   int getSlayer() const { return slayer; }
   int getBar()    const { return bar;    }
+  double getLength() const { return length; }
   double getQ1()  const { return Q1;     }
   double getQ2()  const { return Q2;     }
   double getT1()  const { return T1;     }
@@ -30,19 +32,22 @@ public:
   double getEnergy() const { return (Q1+Q2)/2.; }
 
   void setcellID(unsigned long long _cellid) { cellID = _cellid; }
-  void setcellID(int _system, int _module, int _stave, int _dlayer, int _slayer, int _bar) { system=_system; module=_module; stave=_stave; dlayer=_dlayer; slayer=_slayer; bar=_bar; }
+  void setcellID(int _system, int _module, int _stave, int _part, int _dlayer, int _slayer, int _bar) { system=_system; module=_module; stave=_stave; part=_part; dlayer=_dlayer; slayer=_slayer; bar=_bar; }
   void setPosition( TVector3 posv3) { position.SetXYZ( posv3.x(), posv3.y(), posv3.z() ); }
   void setQ(double _q1, double _q2) { Q1=_q1; Q2=_q2; }
   void setT(double _t1, double _t2) { T1=_t1; T2=_t2; }
+  void setLength(double _length) { length = _length; }
 
 private:
 	unsigned long long cellID;
 	int system;
 	int module;
 	int stave;
+  int part;
 	int dlayer;
 	int slayer;
 	int bar;
+  double length;
 	TVector3 position;
 	double Q1;      // Q in left readout
 	double Q2;      // Q in right readout;
