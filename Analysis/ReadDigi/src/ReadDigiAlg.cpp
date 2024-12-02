@@ -52,6 +52,9 @@ StatusCode ReadDigiAlg::initialize()
   m_mctree->Branch("MCP_py", &MCP_py);
   m_mctree->Branch("MCP_pz", &MCP_pz);
   m_mctree->Branch("MCP_E", &MCP_E);
+  m_mctree->Branch("MCP_VTX_x", &MCP_VTX_x);
+  m_mctree->Branch("MCP_VTX_y", &MCP_VTX_y);
+  m_mctree->Branch("MCP_VTX_z", &MCP_VTX_z);
   m_mctree->Branch("MCP_endPoint_x", &MCP_endPoint_x);
   m_mctree->Branch("MCP_endPoint_y", &MCP_endPoint_y);
   m_mctree->Branch("MCP_endPoint_z", &MCP_endPoint_z);
@@ -176,6 +179,9 @@ StatusCode ReadDigiAlg::execute()
       MCP_py.push_back(m_MCp.getMomentum().y);
       MCP_pz.push_back(m_MCp.getMomentum().z);
       MCP_E.push_back(m_MCp.getEnergy());
+      MCP_VTX_x.push_back(m_MCp.getVertex().x);
+      MCP_VTX_y.push_back(m_MCp.getVertex().y);
+      MCP_VTX_z.push_back(m_MCp.getVertex().z);
       MCP_endPoint_x.push_back(m_MCp.getEndpoint().x); 
       MCP_endPoint_y.push_back(m_MCp.getEndpoint().y); 
       MCP_endPoint_z.push_back(m_MCp.getEndpoint().z); 
@@ -359,8 +365,9 @@ StatusCode ReadDigiAlg::execute()
     N_fullTrk = const_fullTrkCol->size();
     for(int i=0; i<N_fullTrk; i++){
       auto m_trk = const_fullTrkCol->at(i);
+//cout<<"In track #"<<i<<": track state size "<<m_trk.trackStates_size()<<", track hit size "<<m_trk.trackerHits_size()<<endl;
       if(m_trk.trackStates_size()==0) continue;
-      if(m_trk.trackerHits_size()==0) continue;
+      //if(m_trk.trackerHits_size()==0) continue;
       int NTrkHit = m_trk.trackerHits_size();
 
       for(int istat=0; istat<m_trk.trackStates_size(); istat++){
@@ -520,6 +527,9 @@ StatusCode ReadDigiAlg::Clear()
   MCP_py.clear();
   MCP_pz.clear();
   MCP_E.clear();
+  MCP_VTX_x.clear();
+  MCP_VTX_y.clear();
+  MCP_VTX_z.clear();
   MCP_endPoint_x.clear();
   MCP_endPoint_y.clear();
   MCP_endPoint_z.clear();
