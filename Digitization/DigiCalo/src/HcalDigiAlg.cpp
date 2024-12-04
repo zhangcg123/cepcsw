@@ -266,7 +266,8 @@ StatusCode HcalDigiAlg::execute()
       //printf("  Step #%d: En %.2f, rotate angle %.2f, tile pos after rotation (%.2f, %.2f, %.2f), ", iCont, conb.getEnergy(), rotPhi, rot_tilepos.x(), rot_tilepos.y(), rot_tilepos.z());
       //printf("rel pos after rotation (%.2f, %.2f, %.2f) \n", (rot_steppos-rot_tilepos).x(), (rot_steppos-rot_tilepos).y(), (rot_steppos-rot_tilepos).z());
       //printf("  Project to bin (%d, %d), LY %.3f \n", ibinx, ibiny, GSTileResMap->GetBinContent( ibinx, ibiny ));
-      
+
+          Npe_att += conb.getEnergy() / _MIPCali * GSTileResMap->GetBinContent( ibinx, ibiny ) * fLY_tempScale;     
           m_step_LY.push_back(GSTileResMap->GetBinContent( ibinx, ibiny ));
         }
         Ehit = Npe_att / _MIPLY / fLY_tempScale * _MIPCali;
