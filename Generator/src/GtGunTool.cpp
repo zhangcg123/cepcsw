@@ -73,17 +73,6 @@ GtGunTool::initialize() {
     }
     
     // others should be empty or specify
-    if (m_thetamins.value().size()
-        && m_thetamins.value().size() != m_particles.value().size()) {
-        error() << "Mismatched thetamins and particles." << endmsg;
-        return StatusCode::FAILURE;
-    }
-    if (m_thetamaxs.value().size()
-        && m_thetamaxs.value().size() != m_particles.value().size()) {
-        error() << "Mismatched thetamaxs and particles." << endmsg;
-        return StatusCode::FAILURE;
-    }
-
     if (m_phimins.value().size()
         && m_phimins.value().size() != m_particles.value().size()) {
         error() << "Mismatched phimins and particles." << endmsg;
@@ -93,6 +82,38 @@ GtGunTool::initialize() {
         && m_phimaxs.value().size() != m_particles.value().size()) {
         error() << "Mismatched phimaxs and particles." << endmsg;
         return StatusCode::FAILURE;
+    }
+
+    if (m_usecostheta.value()) {
+        if (m_costhetamins.value().size() != m_particles.value().size()) {
+            error() << "Mismatched CosthetaMins and particles." << endmsg;
+            return StatusCode::FAILURE;
+        }
+        if (m_costhetamaxs.value().size() != m_particles.value().size()) {
+            error() << "Mismatched CosthetaMaxs and particles." << endmsg;
+            return StatusCode::FAILURE;
+        }
+        for (int i=0; i<m_thetamins.value().size(); ++i) {
+            if ((m_thetamins.value()[i] < -1) || (m_thetamins.value()[i] > 1)) {
+                error() << "UseCostheta: ThetaMins has values outside the range [-1, 1]." << endmsg;
+                return StatusCode::FAILURE;
+            }
+            if ((m_thetamaxs.value()[i] < -1) || (m_thetamaxs.value()[i] > 1)) {
+                error() << "UseCostheta: ThetaMaxs has values outside the range [-1, 1]." << endmsg;
+                return StatusCode::FAILURE;
+            }
+        }
+    } else {
+        if (m_thetamins.value().size()
+            && m_thetamins.value().size() != m_particles.value().size()) {
+            error() << "Mismatched thetamins and particles." << endmsg;
+            return StatusCode::FAILURE;
+        }
+        if (m_thetamaxs.value().size()
+            && m_thetamaxs.value().size() != m_particles.value().size()) {
+            error() << "Mismatched thetamaxs and particles." << endmsg;
+            return StatusCode::FAILURE;
+        }
     }
 
     // Time
@@ -243,16 +264,26 @@ GtGunTool::mutate(Gen::GenEvent& event) {
             return false;
         }
 
+        double costheta = 0;
+        double theta = 0;
+        if (m_usecostheta.value()) {
+            costheta = m_costhetamins.value()[i]==m_costhetamaxs.value()[i] ? m_costhetamins.value()[i] : CLHEP::RandFlat::shoot(m_costhetamins.value()[i], m_costhetamaxs.value()[i]);
+        } else {
+            theta = m_thetamins.value()[i]==m_thetamaxs.value()[i] ? m_thetamins.value()[i] : CLHEP::RandFlat::shoot(m_thetamins.value()[i], m_thetamaxs.value()[i]);
+            costheta = cos(theta*acos(-1)/180);
+        }
+        double phi =   m_phimins.value()[i]==m_phimaxs.value()[i] ? m_phimins.value()[i] : CLHEP::RandFlat::shoot(m_phimins.value()[i], m_phimaxs.value()[i]);
 
-        double theta = m_thetamins.value()[i]==m_thetamaxs.value()[i] ? m_thetamins.value()[i] : CLHEP::RandFlat::shoot(m_thetamins.value()[i], m_thetamaxs.value()[i]);
-        double phi =   m_phimins  .value()[i]==m_phimaxs  .value()[i] ? m_phimins  .value()[i] : CLHEP::RandFlat::shoot(m_phimins  .value()[i], m_phimaxs  .value()[i]);
-        double costheta = cos(theta*acos(-1)/180);
         double phi_  = phi*acos(-1)/180;
         double sintheta = sqrt(1.-costheta*costheta);
         double px = p*sintheta*cos(phi_);
         double py = p*sintheta*sin(phi_);
         double pz = p*costheta;
-        std::cout<<"GenGt p="<<p<<", px="<<px<<",py="<<py<<",pz="<<pz<<",theta="<<theta<<",phi="<<phi<<std::endl;
+        if(m_usecostheta.value()) {
+            std::cout<<"GenGt p="<<p<<", px="<<px<<",py="<<py<<",pz="<<pz<<",costheta="<<costheta<<",phi="<<phi<<std::endl;
+        } else {
+            std::cout<<"GenGt p="<<p<<", px="<<px<<",py="<<py<<",pz="<<pz<<",theta="<<theta<<",phi="<<phi<<std::endl;
+        }
         mcp.setMomentum(edm4hep::Vector3f(px,py,pz));
         // mcp.setMomentumAtEndpoint();
         // mcp.setSpin();
