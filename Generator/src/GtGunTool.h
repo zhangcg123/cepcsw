@@ -57,6 +57,9 @@ private:
     Gaudi::Property<std::vector<double>> m_phimins{this, "PhiMins"};
     Gaudi::Property<std::vector<double>> m_phimaxs{this, "PhiMaxs"};
 
+    Gaudi::Property<bool> m_usecostheta{this, "UseCostheta", false};
+    Gaudi::Property<std::vector<double>> m_costhetamins{this, "CosthetaMins"};
+    Gaudi::Property<std::vector<double>> m_costhetamaxs{this, "CosthetaMaxs"};
     // For time
     Gaudi::Property<std::vector<double>> m_times{this, "Times"};
 
