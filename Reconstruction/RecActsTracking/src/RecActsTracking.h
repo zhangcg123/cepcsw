@@ -179,9 +179,25 @@ class RecActsTracking : public GaudiAlgorithm
         Gaudi::Property<std::string> TGeo_path{this, "TGeoFile"};
         Gaudi::Property<std::string> TGeo_config_path{this, "TGeoConfigFile"};
         Gaudi::Property<std::string> MaterialMap_path{this, "MaterialMapFile"};
+        Gaudi::Property<std::string> m_particle{this, "AssumeParticle"};
         Gaudi::Property<double> m_field{this, "Field", 3.0}; // tesla
         Gaudi::Property<double> onSurfaceTolerance{this, "onSurfaceTolerance", 1e-2}; // mm
+        Gaudi::Property<double> eps{this, "eps", 1e-5}; // mm
 
+        // seed finder config
+        Gaudi::Property<double> SeedDeltaRMin{this, "SeedDeltaRMin", 4}; // mm
+        Gaudi::Property<double> SeedDeltaRMax{this, "SeedDeltaRMax", 13}; // mm
+        Gaudi::Property<double> SeedRMax{this, "SeedRMax", 30}; // mm
+        Gaudi::Property<double> SeedRMin{this, "SeedRMin", 10}; // mm
+        Gaudi::Property<double> SeedImpactMax{this, "SeedImpactMax", 3}; // mm
+        Gaudi::Property<double> SeedRMinMiddle{this, "SeedRMinMiddle", 14}; // mm
+        Gaudi::Property<double> SeedRMaxMiddle{this, "SeedRMaxMiddle", 24}; // mm
+
+        // CKF config
+        Gaudi::Property<double> CKFchi2Cut{this, "CKFchi2Cut", 20};
+        Gaudi::Property<std::size_t> numMeasurementsCutOff{this, "numMeasurementsCutOff", 1};
+        Gaudi::Property<bool> CKFtwoWay{this, "CKFtwoWay", true};
+        
         SmartIF<IGeomSvc> m_geosvc;
         SmartIF<IChronoStatSvc> chronoStatSvc;
         dd4hep::DDSegmentation::BitFieldCoder *vxd_decoder;
@@ -221,7 +237,6 @@ class RecActsTracking : public GaudiAlgorithm
 
         // utils
         int _nEvt;
-        double eps = 1.0e-05;
         const double _FCT = 2.99792458E-4;
         Acts::Vector3 acts_field_value = Acts::Vector3(0., 0., 3*_FCT); // tesla
         // Acts::Vector3 acts_field_value = Acts::Vector3(0., 0., 3); // tesla
@@ -253,11 +268,11 @@ class RecActsTracking : public GaudiAlgorithm
             0 * Acts::UnitConstants::ns / (Acts::UnitConstants::e * Acts::UnitConstants::GeV)};
         std::array<double, 6> initialVarInflation = {10., 10., 10., 10., 10., 10.};
         Acts::ParticleHypothesis particleHypothesis = Acts::ParticleHypothesis::muon();
+        std::array<std::string, 8> particleNames = {"muon", "pion", "electron", "kaon", "proton", "photon", "geantino", "chargedgeantino"};
         // Acts::ParticleHypothesis particleHypothesis = Acts::ParticleHypothesis::chargedGeantino();
 
         // gid convert configuration
-        std::vector<uint64_t> VXD_inner_volume_ids{16, 17, 18, 19};
-        uint64_t VXD_outer_volume_id = 20;
+        std::vector<uint64_t> VXD_volume_ids{16, 17, 18, 19, 20};
         std::vector<uint64_t> SIT_acts_volume_ids{22, 24, 26};
         std::vector<uint64_t> SIT_module_nums{7, 10, 14};
         uint64_t SIT_sensor_nums = 14;
