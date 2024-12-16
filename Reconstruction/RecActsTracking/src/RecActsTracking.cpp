@@ -22,17 +22,7 @@ DECLARE_COMPONENT(RecActsTracking)
 RecActsTracking::RecActsTracking(const std::string& name, ISvcLocator* svcLoc)
     : GaudiAlgorithm(name, svcLoc)
 {
-    // input collections
-    // declareProperty("VXDTrackerHits", _inVTXTrackHdl, "Handle of the Input VTX TrackerHits collection");
-    // declareProperty("SITTrackerHits", _inSITTrackHdl, "Handle of the Input SIT TrackerHits collection");
-
-    // declareProperty("VXDCollection", _inVTXColHdl, "Handle of the Input VTX Sim Hit collection");
-    // declareProperty("SITCollection", _inSITColHdl, "Handle of the Input SIT Sim Hit collection");
-
-    // declareProperty("MCParticleCollection", _inMCColHdl, "Handle of the Input MCParticle collection");
-
-    // Output Collections
-    // declareProperty("OutputTracks", _outColHdl, "Handle of the ACTS SiTrack output collection");
+    // _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
 }
 
 StatusCode RecActsTracking::initialize()
@@ -53,6 +43,41 @@ StatusCode RecActsTracking::initialize()
     if (!std::filesystem::exists(MaterialMap_path.value())) {
         error() << "CEPC Material map file: " << MaterialMap_path.value() << " does not exist!" << endmsg;
         return StatusCode::FAILURE;
+    }
+
+    if(!m_particle.value().empty()){
+        info() << "Assume Particle: " << m_particle.value() << endmsg;
+        if(m_particle.value() == "muon"){
+            particleHypothesis = Acts::ParticleHypothesis::muon();
+        }
+        else if(m_particle.value() == "pion"){
+            particleHypothesis = Acts::ParticleHypothesis::pion();
+        }
+        else if(m_particle.value() == "electron"){
+            particleHypothesis = Acts::ParticleHypothesis::electron();
+        }
+        else if(m_particle.value() == "kaon"){
+            particleHypothesis = Acts::ParticleHypothesis::kaon();
+        }
+        else if(m_particle.value() == "proton"){
+            particleHypothesis = Acts::ParticleHypothesis::proton();
+        }
+        else if(m_particle.value() == "photon"){
+            particleHypothesis = Acts::ParticleHypothesis::photon();
+        }
+        else if(m_particle.value() == "geantino"){
+            particleHypothesis = Acts::ParticleHypothesis::geantino();
+        }
+        else if(m_particle.value() == "chargedgeantino"){
+            particleHypothesis = Acts::ParticleHypothesis::chargedGeantino();
+        }
+        else{
+            info() << "Supported Assumed Particle: " << particleNames[0] << ", " << particleNames[1] << ", " << particleNames[2] << ", "
+                                             << particleNames[3] << ", " << particleNames[4] << ", " << particleNames[5] << ", "
+                                             << particleNames[6] << ", " << particleNames[7] << endmsg;
+            error() << "Unsupported particle name " << m_particle.value() << endmsg;
+            return StatusCode::FAILURE;
+        }
     }
 
     TGeo_ROOTFilePath = TGeo_path.value();
@@ -95,15 +120,15 @@ StatusCode RecActsTracking::initialize()
     info() << "Seeding tools initialized successfully!" << endmsg;
 
     // configure the acts tools
-    seed_cfg.seedFinderOptions.bFieldInZ = 3_T;
-    seed_cfg.seedFinderConfig.deltaRMin = 4_mm;
-    seed_cfg.seedFinderConfig.deltaRMax = 25_mm;
-    seed_cfg.seedFinderConfig.rMax = 40_mm;
-    seed_cfg.seedFinderConfig.rMin = 8_mm;
-    seed_cfg.seedFinderConfig.impactMax = 4_mm;
+    seed_cfg.seedFinderOptions.bFieldInZ = m_field.value();
+    seed_cfg.seedFinderConfig.deltaRMin = SeedDeltaRMin.value();
+    seed_cfg.seedFinderConfig.deltaRMax = SeedDeltaRMax.value();
+    seed_cfg.seedFinderConfig.rMax = SeedRMax.value();
+    seed_cfg.seedFinderConfig.rMin = SeedRMin.value();
+    seed_cfg.seedFinderConfig.impactMax = SeedImpactMax.value();
     seed_cfg.seedFinderConfig.useVariableMiddleSPRange = false;
-    seed_cfg.seedFinderConfig.rMinMiddle = 15_mm; // range for middle spacepoint (TDR)
-    seed_cfg.seedFinderConfig.rMaxMiddle = 30_mm; // range for middle spacepoint (TDR)
+    seed_cfg.seedFinderConfig.rMinMiddle = SeedRMinMiddle.value();
+    seed_cfg.seedFinderConfig.rMaxMiddle = SeedRMaxMiddle.value();
 
     // initialize the acts tools
     seed_cfg.seedFilterConfig = seed_cfg.seedFilterConfig.toInternalUnits();
@@ -147,28 +172,6 @@ StatusCode RecActsTracking::initialize()
 StatusCode RecActsTracking::execute()
 {
     auto trkCol = _outColHdl.createAndPut();
-
-    bool MCsuccess = true;
-    const edm4hep::MCParticleCollection* mcCols = nullptr;
-    mcCols = _inMCColHdl.get();
-    if(mcCols)
-    {
-        for(auto particle : *mcCols)
-        {
-            if (particle.getPDG() != 13)
-            {
-                MCsuccess = false;
-                continue;
-            }
-            break;
-        }
-    }
-
-    if (!MCsuccess)
-    {
-        _nEvt++;
-        return StatusCode::SUCCESS;
-    }
 
     SpacePointPtrs.clear();
     sourceLinks.clear();
@@ -351,7 +354,7 @@ StatusCode RecActsTracking::execute()
     Acts::GainMatrixUpdater kfUpdater;
     Acts::MeasurementSelector::Config measurementSelectorCfg =
     {
-        {Acts::GeometryIdentifier(), {{}, {30}, {1u}}},
+        {Acts::GeometryIdentifier(), {{}, {CKFchi2Cut.value()}, {numMeasurementsCutOff.value()}}},
     };
 
     MeasurementSelector measSel{ Acts::MeasurementSelector(measurementSelectorCfg) };
@@ -473,21 +476,83 @@ StatusCode RecActsTracking::execute()
             if (!firstSmoothingResult.ok())
             {
                 m_nFailedSmoothing++;
+                debug() << "First smoothing for seed " 
+                       << iSeed << " and track " << firstTrack.index()
+                       << " failed with error " << firstSmoothingResult.error() << endmsg;
                 continue;
             }
 
             seedNumber(trackCandidate) = nSeed - 1;
-
-            auto firstExtrapolationResult = Acts::extrapolateTrackToReferenceSurface(
-                trackCandidate, *pSurface, extrapolator, extrapolationOptions, extrapolationStrategy);
-
-            if (!firstExtrapolationResult.ok())
+      
+            // second way track finding
+            std::size_t nSecond = 0;
+            if (CKFtwoWay)
             {
-                m_nFailedExtrapolation++;
-                continue;
+                std::optional<Acts::VectorMultiTrajectory::TrackStateProxy> firstMeasurement;
+                for (auto trackState : trackCandidate.trackStatesReversed())
+                {
+                    bool isMeasurement = trackState.typeFlags().test(Acts::TrackStateFlag::MeasurementFlag);
+                    bool isOutlier = trackState.typeFlags().test(Acts::TrackStateFlag::OutlierFlag);
+                    if (isMeasurement && !isOutlier) { firstMeasurement = trackState; }
+                }
+                
+                if (firstMeasurement.has_value())
+                {
+                    Acts::BoundTrackParameters secondInitialParameters = trackCandidate.createParametersFromState(*firstMeasurement);
+                    auto secondResult = (*findTracks)(secondInitialParameters, secondOptions, tracksTemp);
+                    if (!secondResult.ok())
+                    {
+                        debug() << "Second track finding failed for seed "
+                                << iSeed << " with error" << secondResult.error() << endmsg;
+                    } else {
+                        auto firstState = *std::next(trackCandidate.trackStatesReversed().begin(), trackCandidate.nTrackStates() - 1);
+                        auto& secondTracksForSeed = secondResult.value();
+                        for (auto& secondTrack : secondTracksForSeed)
+                        { 
+                            if (secondTrack.nTrackStates() < 2) { continue; }
+                            auto secondTrackCopy = tracksTemp.makeTrack();
+                            secondTrackCopy.copyFrom(secondTrack, true);
+                            secondTrackCopy.reverseTrackStates(true);
+
+                            firstState.previous() = (*std::next(secondTrackCopy.trackStatesReversed().begin())).index();
+                            Acts::calculateTrackQuantities(trackCandidate);
+                            auto secondExtrapolationResult = Acts::extrapolateTrackToReferenceSurface(
+                                trackCandidate, *pSurface, extrapolator,
+                                extrapolationOptions, extrapolationStrategy);
+                            if (!secondExtrapolationResult.ok())
+                            {
+                                m_nFailedExtrapolation++;
+                                debug() << "Second extrapolation for seed " 
+                                        << iSeed << " and track " << secondTrack.index()
+                                        << " failed with error "
+                                        << secondExtrapolationResult.error() << endmsg;
+                                continue;
+                            }
+
+                            addTrack(trackCandidate);
+
+                            ++nSecond;
+                        }
+
+                        firstState.previous() = Acts::kTrackIndexInvalid;
+                        Acts::calculateTrackQuantities(trackCandidate);
+                    }
+                }
             }
 
-            addTrack(trackCandidate);
+            // if no second track was found, we will use only the first track
+            if (nSecond == 0) {
+                auto firstExtrapolationResult = Acts::extrapolateTrackToReferenceSurface(
+                    trackCandidate, *pSurface, extrapolator, extrapolationOptions, extrapolationStrategy);
+
+                if (!firstExtrapolationResult.ok())
+                {
+                    m_nFailedExtrapolation++;
+                    continue;
+                }
+
+                addTrack(trackCandidate);
+            }
         }
     }
 
@@ -523,7 +588,7 @@ StatusCode RecActsTracking::execute()
                 const auto& MeasSourceLink = cur_measurement_sl.get<IndexSourceLink>();
                 auto cur_measurement = measurements[MeasSourceLink.index()];
                 auto cur_measurement_gid = MeasSourceLink.geometryId();
-                if (std::find(VXD_inner_volume_ids.begin(), VXD_inner_volume_ids.end(), cur_measurement_gid.volume()) != VXD_inner_volume_ids.end()){
+                if (std::find(VXD_volume_ids.begin(), VXD_volume_ids.end(), cur_measurement_gid.volume()) != VXD_volume_ids.end()){
                     nVTXHit++;
                 } else if (std::find(SIT_acts_volume_ids.begin(), SIT_acts_volume_ids.end(), cur_measurement_gid.volume()) != SIT_acts_volume_ids.end()){
                     nSITHit++;
@@ -649,6 +714,9 @@ int RecActsTracking::InitialiseVTX()
             double momentum_y = simhit.getMomentum()[1];
             double momentum_z = simhit.getMomentum()[2];
 
+            const Acts::Vector3 globalmom{momentum_x, momentum_y, momentum_z};
+            std::array<float, 6> m_covMatrix = hit.getCovMatrix();
+
             dd4hep::rec::ISurface* surface = nullptr;
             auto it = m_vtx_surfaces->find(simcellid);
             if (it != m_vtx_surfaces->end()) {
@@ -675,12 +743,12 @@ int RecActsTracking::InitialiseVTX()
 
             if (m_layer <= 3){
                 // set acts geometry identifier
-                // VXD_inner_volume_ids{16, 17, 18, 19};
-                uint64_t acts_volume = VXD_inner_volume_ids[m_layer];
+                uint64_t acts_volume = VXD_volume_ids[m_layer];
                 uint64_t acts_boundary = 0;
                 uint64_t acts_layer = 2;
                 uint64_t acts_approach = 0;
-                uint64_t acts_sensitive = m_module + 1;
+                // uint64_t acts_sensitive = m_module + 1;
+                uint64_t acts_sensitive = 1;
 
                 Acts::GeometryIdentifier moduleGeoId;
                 moduleGeoId.setVolume(acts_volume);
@@ -703,7 +771,6 @@ int RecActsTracking::InitialiseVTX()
 
                 // get the local position of the hit
                 const Acts::Vector3 globalPos{acts_x, acts_y, acts_z};
-                const Acts::Vector3 globalmom{momentum_x, momentum_y, momentum_z};
                 auto acts_local_postion = acts_surface->globalToLocal(geoContext, globalPos, globalmom, onSurfaceTolerance);
                 if (!acts_local_postion.ok()){
                     info() << "Error: failed to get local position for VTX hit " << simcellid << endmsg;
@@ -724,9 +791,10 @@ int RecActsTracking::InitialiseVTX()
                 SpacePointPtrs.push_back(hitExt);
 
                 // create and store the measurement
+                // Cylinder covMatrix[6] = {resU*resU/2, 0, resU*resU/2, 0, 0, resV*resV}
                 Acts::ActsSquareMatrix<2> cov = Acts::ActsSquareMatrix<2>::Identity();
-                cov(0, 0) = std::max<double>(std::abs(acts_global_postion[0] - simhit.getPosition()[0]), eps);
-                cov(1, 1) = std::max<double>(std::abs(acts_global_postion[1] - simhit.getPosition()[1]), eps);
+                cov(0, 0) = std::max<double>(double(std::sqrt(m_covMatrix[2]*2)), eps.value());
+                cov(1, 1) = std::max<double>(double(std::sqrt(m_covMatrix[5])), eps.value());
                 measurements.emplace_back(Acts::Measurement<Acts::BoundIndices, 2>(sl, indices, par, cov));
 
                 // std::vector<std::string> truth_col = {std::to_string(m_layer*2 + m_module), std::to_string(simhit.getPosition()[0]), std::to_string(simhit.getPosition()[1]), std::to_string(simhit.getPosition()[2])};
@@ -736,8 +804,7 @@ int RecActsTracking::InitialiseVTX()
 
             } else {
                 // set acts geometry identifier
-                // VXD_outer_volume_id = 20;
-                uint64_t acts_volume = VXD_outer_volume_id;
+                uint64_t acts_volume = VXD_volume_ids[4];
                 uint64_t acts_boundary = 0;
                 uint64_t acts_layer = 2;
                 uint64_t acts_approach = 0;
@@ -760,7 +827,6 @@ int RecActsTracking::InitialiseVTX()
                 IndexSourceLink::SurfaceAccessor surfaceAccessor{*trackingGeometry};
                 const Acts::Surface* acts_surface = surfaceAccessor(sl);
                 const Acts::Vector3 globalPos{acts_x, acts_y, acts_z};
-                const Acts::Vector3 globalmom{momentum_x, momentum_y, momentum_z};
                 auto acts_local_postion = acts_surface->globalToLocal(geoContext, globalPos, globalmom, onSurfaceTolerance);
                 if (!acts_local_postion.ok()){
                     info() << "Error: failed to get local position for VTX hit " << simcellid << endmsg;
@@ -776,9 +842,10 @@ int RecActsTracking::InitialiseVTX()
                 debug() << "debug surface at: x:" << acts_global_postion[0] << ", y:" << acts_global_postion[1] << ", z:" << acts_global_postion[2] << endmsg;
 
                 // create and store the measurement
+                // Plane covMatrix[6] = {u_direction[0], u_direction[1], resU, v_direction[0], v_direction[1], resV}
                 Acts::ActsSquareMatrix<2> cov = Acts::ActsSquareMatrix<2>::Identity();
-                cov(0, 0) = std::max<double>(std::abs(acts_global_postion[0] - simhit.getPosition()[0]), eps);
-                cov(1, 1) = std::max<double>(std::abs(acts_global_postion[1] - simhit.getPosition()[1]), eps);
+                cov(0, 0) = std::max<double>(double(m_covMatrix[2]), eps.value());
+                cov(1, 1) = std::max<double>(double(m_covMatrix[5]), eps.value());
                 measurements.emplace_back(Acts::Measurement<Acts::BoundIndices, 2>(sl, indices, par, cov));
 
                 // std::vector<std::string> truth_col = {std::to_string(m_layer+4), std::to_string(simhit.getPosition()[0]), std::to_string(simhit.getPosition()[1]), std::to_string(simhit.getPosition()[2])};
@@ -849,6 +916,8 @@ int RecActsTracking::InitialiseSIT()
             double momentum_x = simhit.getMomentum()[0];
             double momentum_y = simhit.getMomentum()[1];
             double momentum_z = simhit.getMomentum()[2];
+            const Acts::Vector3 globalmom{momentum_x, momentum_y, momentum_z};
+            std::array<float, 6> m_covMatrix = hit.getCovMatrix();
 
             dd4hep::rec::ISurface* surface = nullptr;
             auto it = m_sit_surfaces->find(simcellid);
@@ -864,20 +933,12 @@ int RecActsTracking::InitialiseSIT()
                 return 0;
             }
 
-            if (ielem == 0) {
-                min_z = hitSITCol->at(ielem).getPosition()[2];
-            } else {
-                if (std::abs(acts_z - min_z) > 100) {
-                    continue;
-                }
-            }
-
             // set acts geometry identifier
             uint64_t acts_volume = SIT_acts_volume_ids[m_layer];
             uint64_t acts_boundary = 0;
             uint64_t acts_layer = 2;
             uint64_t acts_approach = 0;
-            uint64_t acts_sensitive = m_stave*SIT_module_nums[m_layer]*SIT_sensor_nums + m_module*SIT_sensor_nums + m_sensor + 1;
+            uint64_t acts_sensitive = m_stave*SIT_module_nums[m_layer] + m_module + 1;
 
             Acts::GeometryIdentifier moduleGeoId;
             moduleGeoId.setVolume(acts_volume);
@@ -896,7 +957,6 @@ int RecActsTracking::InitialiseSIT()
             IndexSourceLink::SurfaceAccessor surfaceAccessor{*trackingGeometry};
             const Acts::Surface* acts_surface = surfaceAccessor(sl);
             const Acts::Vector3 globalPos{acts_x, acts_y, acts_z};
-            const Acts::Vector3 globalmom{momentum_x, momentum_y, momentum_z};
             auto acts_local_postion = acts_surface->globalToLocal(geoContext, globalPos, globalmom, onSurfaceTolerance);
             if (!acts_local_postion.ok()){
                 info() << "Error: failed to get local position for SIT hit " << simcellid << endmsg;
@@ -913,8 +973,8 @@ int RecActsTracking::InitialiseSIT()
 
             // create and store the measurement
             Acts::ActsSquareMatrix<2> cov = Acts::ActsSquareMatrix<2>::Identity();
-            cov(0, 0) = std::max<double>(std::abs(acts_global_postion[0] - simhit.getPosition()[0]), eps);
-            cov(1, 1) = std::max<double>(std::abs(acts_global_postion[1] - simhit.getPosition()[1]), eps);
+            cov(0, 0) = std::max<double>(double(m_covMatrix[2]), eps.value());
+            cov(1, 1) = std::max<double>(double(m_covMatrix[5]), eps.value());
             measurements.emplace_back(Acts::Measurement<Acts::BoundIndices, 2>(sl, indices, par, cov));
 
             // std::vector<std::string> truth_col = {std::to_string(m_layer), std::to_string(simhit.getPosition()[0]), std::to_string(simhit.getPosition()[1]), std::to_string(simhit.getPosition()[2])};
