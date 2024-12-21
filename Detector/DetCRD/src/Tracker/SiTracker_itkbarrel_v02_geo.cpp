@@ -679,8 +679,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 
       //====== create the meassurement surface ===================
       dd4hep::rec::Vector3D o(0,0,0);
-      dd4hep::rec::Vector3D u( 0., 0., 1.);
-      dd4hep::rec::Vector3D v( 0., 1., 0.);
+      dd4hep::rec::Vector3D u( 0., 1., 0.);
+      dd4hep::rec::Vector3D v( 0., 0., 1.);
       dd4hep::rec::Vector3D n( 1., 0., 0.);
       double inner_thick = tube_outer_radius*2. + support_thickness + module_thickness/2.0;
       double outer_thick = max_connector_thickness + flex_thickness + module_thickness / 2.0;
@@ -731,7 +731,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     //Layer.lengthModule         = module_active_length;
     Layer.lengthSensor         = module_length;//sensor_active_length;
     Layer.distanceSupport      = stave_radius*cos(stave_phi0) + StaveSupportenv_start_height; //sensitive_radius;
-    Layer.thicknessSupport     = support_thickness / 2.0;
+    Layer.thicknessSupport     = support_thickness;
     Layer.offsetSupport        = stave_radius*sin(stave_phi0);//-stave_offset;
     Layer.widthSupport         = support_width;
     Layer.zHalfSupport         = module_length*n_modules_per_stave/2.0;//support_half_length;

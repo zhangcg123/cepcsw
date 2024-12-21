@@ -37,7 +37,7 @@
 
   <detectors>
     <!--detector id="DetID_OTKBarrel" limits="otk_limits" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true"-->
-    <detector id="DetID_OTKBarrel" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" insideTrackingVolume="true">
+    <detector id="DetID_OTKBarrel" name="OTKBarrel" type="SiTracker_otkbarrel_v01" vis="OTKBarrelVis" readout="OTKBarrelCollection" combineHits="true" insideTrackingVolume="true">
       <envelope>
         <shape type="Tube" rmin="OTKBarrel_inner_radius" rmax="OTKBarrel_outer_radius" dz="OTKBarrel_half_length" material="Air"/>
       </envelope>

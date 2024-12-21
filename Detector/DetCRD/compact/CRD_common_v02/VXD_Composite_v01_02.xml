@@ -19,7 +19,7 @@
   </define>
 
   <detectors>
-    <detector id="DetID_VXD" name="VXD" type="SiTrackerComposite_v02" vis="VXDVis" readout="VXDCollection" insideTrackingVolume="true" printLevel="INFO">
+    <detector id="DetID_VXD" name="VXD" type="SiTrackerComposite_v02" vis="VXDVis" readout="VXDCollection" combineHits="true" insideTrackingVolume="true" printLevel="INFO">
       <envelope>
         <shape type="Assembly"/>
       </envelope>

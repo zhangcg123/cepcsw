@@ -30,8 +30,8 @@ class SmearDigiTool : public extends<AlgTool, IDigiTool> {
   StatusCode finalize() override;
 
  private:
-  Gaudi::Property<std::string> m_detName{this, "DetName", "VXD"};
-  Gaudi::Property<std::string> m_readoutName{this, "Readout", "VXDCollection"};
+  Gaudi::Property<std::string> m_detName{this, "DetName", ""};
+  Gaudi::Property<std::string> m_readoutName{this, "Readout", ""};
 
   Gaudi::Property<float> m_eThreshold{this, "EnergyThreshold", 0};
   Gaudi::Property<float> m_efficiency{this, "Efficiency", 1};
@@ -53,8 +53,8 @@ class SmearDigiTool : public extends<AlgTool, IDigiTool> {
   Gaudi::Property<std::vector<float> > m_parV{this, "ParametersV", {0}};
 
   SmartIF<IRndmGenSvc> m_randSvc;
-  SmartIF<IGeomSvc> m_geosvc;
-  dd4hep::DDSegmentation::BitFieldCoder* m_decoder;
+  SmartIF<IGeomSvc>    m_geosvc;
+  dd4hep::DDSegmentation::BitFieldCoder* m_decoder = nullptr;
   const dd4hep::rec::SurfaceMap* m_surfaces;
   //void* m_pAlgUsing = nullptr;
 };

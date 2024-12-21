@@ -43,8 +43,13 @@ StatusCode SmearDigiTool::initialize() {
     return StatusCode::FAILURE;
   }
 
-  m_surfaces = m_geosvc->getSurfaceMap(m_detName);
-  debug() << "Surface map size: " << m_surfaces->size() << endmsg;
+  if (m_detName=="") {
+    std::string toolName = name();
+    m_detName = toolName.substr(toolName.find(".")+1);
+    debug() << toolName << " --> " << m_detName.value() << endmsg;
+  }
+  m_surfaces = m_geosvc->getSurfaceMap(m_detName.value());
+  debug() << "Surface map size of " << m_detName.value() << ": " << m_surfaces->size() << endmsg;
   if (msgLevel(MSG::VERBOSE)) {
     unsigned long old = 0; 
     for (const auto& pair : *m_surfaces) {
@@ -54,8 +59,9 @@ StatusCode SmearDigiTool::initialize() {
     }
   }
 
-  debug() << "Readout name: " << m_readoutName << endmsg;
-  m_decoder = m_geosvc->getDecoder(m_readoutName);
+  if (m_readoutName=="") m_readoutName = m_detName.value() + "Collection";
+  debug() << "Readout name: " << m_readoutName.value() << endmsg;
+  m_decoder = m_geosvc->getDecoder(m_readoutName.value());
   if(!m_decoder){
     error() << "Failed to get the decoder. " << endmsg;
     return StatusCode::FAILURE;
@@ -114,7 +120,8 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
     return StatusCode::FAILURE;
   }
 
-  dd4hep::rec::Vector3D oldPos(pos.x*dd4hep::mm/CLHEP::mm, pos.y*dd4hep::mm/CLHEP::mm, pos.z*dd4hep::mm/CLHEP::mm);
+  // CLHEP::mm is divided while Edm4hepWriterAnaElemTool write, so pos without unit
+  dd4hep::rec::Vector3D oldPos(pos.x*dd4hep::mm, pos.y*dd4hep::mm, pos.z*dd4hep::mm);
   dd4hep::rec::Vector3D uVec = surface->u(oldPos);
   dd4hep::rec::Vector3D vVec = surface->v(oldPos);
   float u_direction[2];
@@ -158,8 +165,8 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
     resV = m_parV[0] + m_parV[1] * y + m_parV[2] * exp(-m_parV[9] * y) * cos(m_parV[3] * y + m_parV[4])
       + m_parV[5] * exp(-0.5 * pow(((y - m_parV[6]) / m_parV[7]), 2)) + m_parV[8] * pow(y, 0.5);
   }
-  resU *= dd4hep::mm/CLHEP::mm;
-  resV *= dd4hep::mm/CLHEP::mm;
+  resU *= dd4hep::mm;
+  resV *= dd4hep::mm;
   // parameterize only for position now, todo
   resT = (m_resT.size() > 1 ? m_resT.value().at(layer) : m_resT.value().at(0));
   // from ps (input unit) to ns (record unit, Geant4)
@@ -174,6 +181,17 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
 
   if (typeSurface.isPlane() || typeSurface.isCylinder()) {
     dd4hep::rec::Vector2D localPoint = surface->globalToLocal(oldPos);
+    if (typeSurface.isCylinder()) {
+      dd4hep::rec::Vector3D mom_ddrec(mom.x*dd4hep::GeV, mom.y*dd4hep::GeV, mom.z*dd4hep::GeV);
+      double length = simhit.getPathLength()*dd4hep::mm;
+      dd4hep::rec::Vector3D pre       = oldPos - (0.5*length)*mom_ddrec.unit();
+      dd4hep::rec::Vector3D post      = oldPos + (0.5*length)*mom_ddrec.unit();
+      dd4hep::rec::Vector2D localPre  = surface->globalToLocal(pre);
+      dd4hep::rec::Vector2D localPost = surface->globalToLocal(post);
+      localPoint = dd4hep::rec::Vector2D(0.5*(localPre.u()+localPost.u()), 0.5*(localPre.v()+localPost.v()));
+      debug() << "pre: (" << pre.x() << " " << pre.y() << " " << pre.z() << " ) local (" << localPre.u() << ", " << localPre.v() << " ) "
+	      << "post: (" << post.x() << " " << post.y() << " " << post.z() << " ) local (" << localPost.u() << ", " << localPost.v() << " ) " << endmsg;
+    }
     dd4hep::rec::Vector3D local3D(localPoint.u(), localPoint.v(), 0);
     // A small check, if the hit is in the boundaries:
     if (!surface->insideBounds(oldPos)) {
@@ -186,7 +204,7 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
     dd4hep::rec::Vector3D globalPointSmeared;//CLHEP::Hep3Vector globalPoint(pos[0],pos[1],pos[2]);
     dd4hep::rec::Vector2D localPointSmeared;
 
-    debug() << std::setprecision(8) << " Before smearing global: (" << pos[0]/CLHEP::mm << " " << pos[1]/CLHEP::mm << " " << pos[2]/CLHEP::mm << ") "
+    debug() << std::setprecision(8) << " Before smearing global: (" << pos[0] << " " << pos[1] << " " << pos[2] << ") "
 	    << "local: (" << localPoint.u()/dd4hep::mm << " " << localPoint.v()/dd4hep::mm << ")" << endmsg;
 
     unsigned tries = 0;
@@ -234,13 +252,13 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
     auto outhit = hitCol->create();
     outhit.setCellID(cellId);
 
-    edm4hep::Vector3d smearedPos(globalPointSmeared.x()*CLHEP::mm/dd4hep::mm,
-				 globalPointSmeared.y()*CLHEP::mm/dd4hep::mm,
-				 globalPointSmeared.z()*CLHEP::mm/dd4hep::mm);
+    edm4hep::Vector3d smearedPos(globalPointSmeared.x()/dd4hep::mm,
+				 globalPointSmeared.y()/dd4hep::mm,
+				 globalPointSmeared.z()/dd4hep::mm);
     outhit.setPosition(smearedPos);
     // recover CLHEP/Geant4 unit
-    resU /= dd4hep::mm/CLHEP::mm;
-    resV /= dd4hep::mm/CLHEP::mm;
+    resU /= dd4hep::mm;
+    resV /= dd4hep::mm;
 
     std::bitset<32> type;
     if (typeSurface.isPlane() && m_usePlanarTag) {

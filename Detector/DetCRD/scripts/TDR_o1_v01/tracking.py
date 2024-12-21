@@ -71,19 +71,14 @@ sethitname  = "OTKBarrelTrackerHits"
 setspname   = "OTKBarrelSpacePoints"
 ftdhitname  = "FTDTrackerHits"
 ftdspname   = "FTDSpacePoints"
-from Configurables import SmearDigiTool
+from Configurables import SmearDigiTool,SiTrackerDigiAlg
+
+## VXD ##
 vxdtool = SmearDigiTool("VXD")
 vxdtool.ResolutionU = [0.005]
 vxdtool.ResolutionV = [0.005]
-vxdtool.UsePlanarTag = True
-vxdtool.ParameterizeResolution = False
-vxdtool.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
-vxdtool.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
 #vxdtool.OutputLevel = DEBUG
 
-
-## VXD ##
-from Configurables import SiTrackerDigiAlg
 digiVXD = SiTrackerDigiAlg("VXDDigi")
 digiVXD.SimTrackHitCollection = "VXDCollection"
 digiVXD.TrackerHitCollection = vxdhitname
@@ -91,50 +86,43 @@ digiVXD.TrackerHitAssociationCollection = "VXDTrackerHitAssociation"
 digiVXD.DigiTool = "SmearDigiTool/VXD"
 #digiVXD.OutputLevel = DEBUG
 
-
 ## SIT ##
-from Configurables import PlanarDigiAlg
-digiSIT = PlanarDigiAlg("SITDigi")
-digiSIT.IsStrip = False
+sittool = SmearDigiTool("SIT")
+sittool.ResolutionU = [0.0098]
+sittool.ResolutionV = [0.0433]
+#sittool.OutputLevel = DEBUG
+
+digiSIT = SiTrackerDigiAlg("SITDigi")
 digiSIT.SimTrackHitCollection = "SITCollection"
 digiSIT.TrackerHitCollection = sithitname
 digiSIT.TrackerHitAssociationCollection = "SITTrackerHitAssociation"
-digiSIT.ResolutionU = [0.0098]
-digiSIT.ResolutionV = [0.0433]
-digiSIT.UsePlanarTag = True
-digiSIT.ParameterizeResolution = False
-digiSIT.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566, 12.4695e-03, -0.0643059, 0.168662, 1.87998e-03, 0.514452]
-digiSIT.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
+digiSIT.DigiTool = "SmearDigiTool/SIT"
 #digiSIT.OutputLevel = DEBUG
 
+## OTKBarrel ##
+otkbtool = SmearDigiTool("OTKBarrel")
+otkbtool.ResolutionU = [0.010]
+otkbtool.ResolutionV = [1.000]
+#otkbtool.OutputLevel = DEBUG
 
-## SET ##
-digiSET = PlanarDigiAlg("SETDigi")
-digiSET.IsStrip = False
-digiSET.SimTrackHitCollection = "OTKBarrelCollection"
-digiSET.TrackerHitCollection = sethitname
-digiSET.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
-digiSET.ResolutionU = [0.010]
-digiSET.ResolutionV = [1.000]
-digiSET.UsePlanarTag = True
-digiSET.ParameterizeResolution = False
-digiSET.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566, 12.4695e-03, -0.0643059, 0.168662, 1.87998e-03, 0.514452]
-digiSET.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
-#digiSET.OutputLevel = DEBUG
-
+digiOTKB = SiTrackerDigiAlg("OTKBarrelDigi")
+digiOTKB.SimTrackHitCollection = "OTKBarrelCollection"
+digiOTKB.TrackerHitCollection = sethitname
+digiOTKB.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
+digiOTKB.DigiTool = "SmearDigiTool/OTKBarrel"
+#digiOTKB.OutputLevel = DEBUG
 
 ## FTD ##
-digiFTD = PlanarDigiAlg("FTDDigi")
-digiFTD.IsStrip = False
+ftdtool = SmearDigiTool("FTD")
+ftdtool.ResolutionU = [0.0072]
+ftdtool.ResolutionV = [0.086]
+#ftdtool.OutputLevel = DEBUG
+
+digiFTD = SiTrackerDigiAlg("FTDDigi")
 digiFTD.SimTrackHitCollection = "FTDCollection"
 digiFTD.TrackerHitCollection = ftdhitname
 digiFTD.TrackerHitAssociationCollection = "FTDTrackerHitAssociation"
-digiFTD.ResolutionU = [0.0072]
-digiFTD.ResolutionV = [0.086]
-digiFTD.UsePlanarTag = True
-digiFTD.ParameterizeResolution = False
-digiFTD.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566, 12.4695e-03, -0.0643059, 0.168662, 1.87998e-03, 0.514452]
-digiFTD.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
+digiFTD.DigiTool = "SmearDigiTool/FTD"
 #digiFTD.OutputLevel = DEBUG
 
 ## TPC ##
@@ -290,7 +278,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 50,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],

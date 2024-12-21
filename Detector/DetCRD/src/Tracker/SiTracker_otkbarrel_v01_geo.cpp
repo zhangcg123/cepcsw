@@ -324,8 +324,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 
             //====== create the meassurement surface ===================
             dd4hep::rec::Vector3D o(0,0,0);
-            dd4hep::rec::Vector3D u( 0., 0., 1.);
-            dd4hep::rec::Vector3D v( 0., 1., 0.);
+            dd4hep::rec::Vector3D u( 0., 1., 0.);
+            dd4hep::rec::Vector3D v( 0., 0., 1.);
             dd4hep::rec::Vector3D n( 1., 0., 0.);
             double inner_thick = sensor_thickness/2.0;
             double outer_thick = (support_height + sensor_thickness)/2.0;
