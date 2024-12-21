@@ -13,7 +13,7 @@
   </define>
 
   <detectors>
-    <detector id="DetID_SIT" name="SIT" type="SiTracker_itkbarrel_v02" vis="SITVis" readout="SITCollection" insideTrackingVolume="true">
+    <detector id="DetID_SIT" name="SIT" type="SiTracker_itkbarrel_v02" vis="SITVis" readout="SITCollection" combineHits="true" insideTrackingVolume="true">
       <envelope>
 	<shape type="Assembly"/>
         <!--shape type="BooleanShape" operation="Union" material="Air" >

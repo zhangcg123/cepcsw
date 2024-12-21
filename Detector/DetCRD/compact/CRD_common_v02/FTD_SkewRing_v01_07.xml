@@ -8,7 +8,8 @@
   </define>
 
   <detectors>
-    <detector id="DetID_FTD" name="FTD" type="SiTrackerSkewRing_v01" vis="FTDVis" readout="FTDCollection" insideTrackingVolume="true" reflect="true">
+    <detector id="DetID_FTD" name="FTD" type="SiTrackerSkewRing_v01" vis="FTDVis" readout="FTDCollection" combineHits="true"
+	      insideTrackingVolume="true" reflect="true">
       <envelope>
 	<shape type="Assembly"/>
       </envelope>

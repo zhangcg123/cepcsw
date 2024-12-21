@@ -45,13 +45,18 @@ namespace dd4hep {
 	  clear();
 	  return 0;
 	}
+	Position pos     = 0.5 * (pre.position + post.position);
+	Position path    = post.position - pre.position;
+	double   hit_len = path.R();
+
+#ifdef CylinderOnly
+	// calculate point at center of two surface for cylinder measurement
+	// obsolete, deal in digitization for both planar and cylinder
 	double rho1 = pre.position.Rho();
-	double rho2 = post.position.Rho();
-	double rho = 0.5*(rho1+rho2);
-	Position pos = 0.5 * (pre.position + post.position);
+        double rho2 = post.position.Rho();
+        double rho = 0.5*(rho1+rho2);
 	double z = pos.z();
 	double r = sqrt(rho*rho+z*z);
-	Position path = post.position - pre.position;
 	double angle_O_pre_post = acos(-pre.position.Unit().Dot(path.Unit()));
 	double angle_O_post_pre = acos(post.position.Unit().Dot(path.Unit()));
 	double angle_O_P_pre = asin(pre.position.R()*sin(angle_O_pre_post)/r);
@@ -61,6 +66,7 @@ namespace dd4hep {
 	  double pre2P = r/sin(angle_O_pre_post)*sin(angle_O_pre_post+angle_O_P_pre);
 	  pos = pre.position + pre2P*path.Unit();
 	}
+#endif
 	Momentum mom = 0.5 * (pre.momentum + post.momentum);
 	Geant4TrackerHit* hit = new Geant4TrackerHit(pre.truth.trackID,
 						     pre.truth.pdgID,
@@ -68,8 +74,8 @@ namespace dd4hep {
 						     pre.truth.time);
 	hit->cellID   = cellID;
 	hit->position = pos;
-	hit->momentum = mom;
-	hit->length   = path.R();;
+	hit->momentum = path.Unit()*mom.R();
+	hit->length   = hit_len;
 	clear();
 	c->insert(hit);
 	return hit;
