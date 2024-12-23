@@ -29,12 +29,12 @@ double SimplePIDSvc::getDndx(double mean, double sigma) {
 
 double SimplePIDSvc::getDndxMean(double bg, double cos)
 {
-    return interpolate(m_dndxMean, bg, cos);
+    return interpolate(m_dndxMean, bg, fabs(cos));
 }
 
 double SimplePIDSvc::getDndxSigma(double bg, double cos, double len)
 {
-    return interpolate(m_dndxSigma, bg, cos)/sqrt(len*0.1); // len in mm, need to convert to cm
+    return interpolate(m_dndxSigma, bg, fabs(cos))/sqrt(len*0.1); // len in mm, need to convert to cm
 }
 
 double SimplePIDSvc::getChi2(double dndx_meas, double dndx_exp, double dndx_sigma) {
