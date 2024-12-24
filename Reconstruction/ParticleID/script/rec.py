@@ -20,7 +20,7 @@ geomsvc.compact = geometry_path
 
 ########### k4DataSvc ####################
 from Configurables import k4DataSvc
-podioevent = k4DataSvc("EventDataSvc", input="CaloDigi_TDR_o1_v01_00.root")
+podioevent = k4DataSvc("EventDataSvc", input="Tracking_TDR_o1_v01.root")
 ##########################################
 
 ########## CEPCSWData ################# 
@@ -142,24 +142,19 @@ CyberPFAlg.AlgParValues = [ ["BarCol","Cluster1DCol","HalfClusterCol"],#1
                                   ["EcalCluster", "SimpleHCALCluster", "outputPFO"],  #16
                                   ["1.26","4.", "1.", "4."]  ]#17
 
+
 from Configurables import FinalPIDAlg
 pid = FinalPIDAlg("FinalPIDAlg")
 pid.OutputPFOName = "CyberPFOPID"
-
-
-from Configurables import GenMatch
-genmatch = GenMatch("GenMatch")
-genmatch.nJets = 2
-genmatch.R = 0.6
-genmatch.OutputFile = "Jets_TDR_o1_v01.root"
 
 ##############################################################################
 # POD I/O
 ##############################################################################
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "Rec_TDR_o1_v01_00.root"
+out.filename = "Rec_TDR_o1_v01.root"
 out.outputCommands = ["keep *"]
+
 
 ########################################
 
@@ -167,7 +162,7 @@ from Configurables import ApplicationMgr
 ApplicationMgr( 
     TopAlg=[inp, CyberPFAlg, pid, out ],
     EvtSel="NONE",
-    EvtMax=5,
+    EvtMax=10,
     ExtSvc=[podioevent, geomsvc],
     #OutputLevel=DEBUG
 )

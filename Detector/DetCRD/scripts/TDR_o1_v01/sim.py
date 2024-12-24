@@ -90,7 +90,7 @@ evtseeder = MarlinEvtSeeder("EventSeeder")
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "sim00.root"
+out.filename = "sim_v01.root"
 out.outputCommands = ["keep *"]
 
 # ApplicationMgr
