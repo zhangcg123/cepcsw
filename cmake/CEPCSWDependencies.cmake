@@ -18,6 +18,10 @@ Find all the dependencies here, so in each package user don't need to find the p
 - podio
 - ROOT
 - CKF
+- ILCUTIL
+- KalTest
+- aidaTT
+- DDKalTest
 - RDAnalysis
 #]]
 
@@ -56,6 +60,37 @@ else()
   include("${CMAKE_CURRENT_LIST_DIR}/internal_ckf.cmake")
 endif()
 
+if (CEPCSW_USE_SYSTEM_ILCUTIL)
+  message("Try to use an existing installation of ILCUTIL")
+  find_package(ILCUTIL)
+else()
+  message("Try to use an internal installation of ILCUTIL")
+  include("${CMAKE_CURRENT_LIST_DIR}/internal_ilcutil.cmake")
+endif()
+
+if (CEPCSW_USE_SYSTEM_KALTEST)
+  message("Try to use an existing installation of KalTest")
+  find_package(KalTest)
+else()
+  message("Try to use an internal installation of KalTest")
+  include("${CMAKE_CURRENT_LIST_DIR}/internal_kaltest.cmake")
+endif()
+
+if (CEPCSW_USE_SYSTEM_AIDATT)
+  message("Try to use an existing installation of aidaTT")
+  find_package(aidaTT)
+else()
+  message("Try to use an internal installation of aidaTT")
+  include("${CMAKE_CURRENT_LIST_DIR}/internal_aidatt.cmake")
+endif()
+
+if (CEPCSW_USE_SYSTEM_DDKALTEST)
+  message("Try to use an existing installation of DDKalTest")
+  find_package(DDKalTest)
+else()
+  message("Try to use an internal installation of DDKalTest")
+  include("${CMAKE_CURRENT_LIST_DIR}/internal_ddkaltest.cmake")
+endif()
 
 if (CEPCSW_USE_SYSTEM_EDM4CEPC)
   message("Try to use an existing installation of EDM4CEPC")

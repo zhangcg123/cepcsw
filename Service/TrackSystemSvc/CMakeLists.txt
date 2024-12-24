@@ -8,11 +8,15 @@ gaudi_add_library(TrackSystemSvcLib
                           src/LCIOTrackPropagators.cc
                           src/MarlinKalTest.cc
                           src/MarlinKalTestTrack.cc
+                          src/MarlinDDKalTest.cc
+                          src/MarlinDDKalTestTrack.cc
                           src/MarlinTrkUtils.cc
 
-                  LINK DataHelperLib 
-                       KalTestLib 
-                       KalDetLib 
+                  LINK DataHelperLib
+                       ${KalTest_LIBRARIES}
+                       KalDetLib
+                       ${DDKalTest_LIBRARIES}
+                       ${streamlog_LIBRARIES}
                        GearSvc
                        Gaudi::GaudiKernel 
                        ${ROOT_LIBRARIES}
@@ -21,6 +25,14 @@ gaudi_add_library(TrackSystemSvcLib
                        ${LCIO_LIBRARIES}
                        EDM4HEP::edm4hep EDM4HEP::edm4hepDict
 )
+
+target_include_directories(TrackSystemSvcLib
+                           PUBLIC ${KalTest_INCLUDE_DIRS}
+                                  ${DDKalTest_INCLUDE_DIRS}
+                                  ${streamlog_INCLUDE_DIRS}
+)
+
+add_dependencies(TrackSystemSvcLib DDKalTest)
 
 gaudi_add_module(TrackSystemSvc 
                  SOURCES src/TrackSystemSvc.cpp

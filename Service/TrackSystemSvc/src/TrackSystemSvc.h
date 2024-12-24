@@ -9,7 +9,7 @@ class TrackSystemSvc : public extends<Service, ITrackSystemSvc>{
   TrackSystemSvc(const std::string& name, ISvcLocator* svc);
   ~TrackSystemSvc();
 
-  MarlinTrk::IMarlinTrkSystem* getTrackSystem(void* address=0) override;
+  MarlinTrk::IMarlinTrkSystem* getTrackSystem(void* address=0, std::string type="KalTest") override;
   void removeTrackSystem(void* address=0) override;
 
   StatusCode initialize() override;

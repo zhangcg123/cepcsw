@@ -34,5 +34,41 @@ namespace MarlinTrk{
       default: return "UNKNOWN" ;
     }
   }
+
+  std::string IMarlinTrack::toString() {
+
+    std::stringstream str ;
+
+    int ndf ;
+    double chi2 ;
+    std::vector<std::pair<edm4hep::TrackerHit, double> > hits ;
+    edm4hep::TrackState ts ;
+    edm4hep::TrackerHit lastHit ;
+
+    getTrackerHitAtPositiveNDF( lastHit ) ;
+
+    getHitsInFit( hits ) ;
+
+    getTrackState( ts, chi2, ndf ) ;
+
+    str << " ------------------- MarlinDDKalTestTrack: ------------------------ " << std::endl ;
+
+    str << "   ndf: "  << ndf   << std::endl
+        << "   chi2: " << chi2  << std::endl
+        << "   number of hits in fit : " << hits.size() << std::endl
+        << "   last constraned hit id : " <<  ( lastHit.isAvailable() ? lastHit.id().collectionID*10000000 + lastHit.id().index : -9999 )   << std::endl ;
+
+    for( unsigned i=0,n= hits.size() ; i<n ; ++i ){
+
+      str << " hit at index: " << i << " " << hits[i].first << std::endl
+          << " track state : " <<  ts << std::endl ;
+    }
+
+    str << " --------------------- " << std::endl ;
+    str << " current track state :"  << &ts << std::endl ;
+    str << " --------------------- " << std::endl ;
+
+    return str.str() ;
+  }
   
 }
