@@ -1,0 +1,66 @@
+<lccdd>
+    <info name="OTKBarrel_v02"
+          title="CepC OTKBarrel"
+          author="Li Zhihao"
+          url="http://cepc.ihep.ac.cn"
+          contact="lizhihao@ihep.ac.cn"
+          status="developing"
+          version="v02">
+        <comment>CepC Outer Tracker</comment>
+    </info>
+    <define>
+        <!--<constant name="OTKBarrel_inner_radius" value="1800*mm"/>-->
+        <!--<constant name="OTKBarrel_outer_radius" value="1814.09*mm"/>-->
+        <constant name="OTKBarrel_module_width" value="104.40*mm"/> <!-- 2*52.20*mm -->
+        <constant name="OTKBarrel_module_thickness" value="10.8*mm"/>
+        <constant name="OTKBarrel_module_length_inner" value="175.0*mm"/> <!-- 2*87.50*mm -->
+        <constant name="OTKBarrel_module_length_outer" value="180.0*mm"/> <!-- 2*90.00*mm -->
+        <constant name="OTKBarrel_ladder_width" value="104.40*mm"/> <!-- OTKBarrel_module_width -->
+        <constant name="OTKBarrel_ladder_length_inner"
+                  value="4*OTKBarrel_module_length_inner"/> <!-- 4*OTKBarrel_module_length_inner -->
+        <constant name="OTKBarrel_ladder_length_outer"
+                  value="4*OTKBarrel_module_length_outer"/> <!-- 4*OTKBarrel_module_length_outer -->
+        <constant name="OTKBarrel_stave_length"
+                  value="4*(OTKBarrel_ladder_length_inner + OTKBarrel_ladder_length_outer)"/>
+    </define>
+
+    <detectors>
+        <detector id="DetID_OTKBarrel" name="OTKBarrel" type="SiTracker_otkbarrel_v02" vis="OTKBarrelVis"
+                  readout="OTKBarrelCollection" insideTrackingVolume="true">
+            <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_STRIP "/>
+            <envelope vis="SeeThrough">
+                <shape type="Tube" rmin="OTKBarrel_inner_radius" rmax="OTKBarrel_outer_radius"
+                       dz="OTKBarrel_stave_length / 2" material="Air"/>
+            </envelope>
+            <stave name="OTKBarrel_stave" repeat="110" length="OTKBarrel_stave_length"
+                   thickness="OTKBarrel_module_thickness" width="OTKBarrel_ladder_width" vis="SeeThrough">
+                <ladder name="OTKBarrel_ladder" repeat_inner="4" repeat_outer="4" width="OTKBarrel_ladder_width"
+                        length_inner="OTKBarrel_ladder_length_inner" length_outer="OTKBarrel_ladder_length_outer"
+                        thickness="OTKBarrel_module_thickness" vis_inner="SeeThrough" vis_outer="SeeThrough">
+                    <module name="OTKBarrel_module" thickness="OTKBarrel_module_thickness" repeat="4"
+                            width="OTKBarrel_module_width" length_inner="OTKBarrel_module_length_inner"
+                            length_outer="OTKBarrel_module_length_outer" vis="SeeThrough">
+                        <layer name="carbon_fiber_plane_inner" width="100.40*mm" thickness="0.3*mm" material="CarbonFiber" vis="BlackVis"/>
+                        <layer name="carbon_fiber_honeycomb" width="100.40*mm" thickness="2.4*mm" material="CarbonFiber" vis="BlackVis">
+                            <tube name="titanium_cooling_pipe" inner_diameter="1.6*mm" outer_diameter="2.0*mm"
+                                  material="CarbonFiber"/>
+                        </layer>
+                        <layer name="carbon_fiber_plane_outer" width="100.40*mm" thickness="0.3*mm" material="CarbonFiber" vis="BlackVis"/>
+                        <layer name="sensor" sensitive="True" width="OTKBarrel_module_width" thickness="0.3*mm" material="CarbonFiber" vis="FTDSensitiveVis"/>
+                        <data_aggregation name="first_data_aggregation" width="OTKBarrel_module_width" thickness="7.5*mm" length="7.0*mm" vis="SeeThrough">
+                            <layer name="PCB" thickness="0.5*mm" width="OTKBarrel_module_width" length="7.0*mm" vis="GreenVis"/>
+                            <DC name="DC-DC" thickness="7.0*mm" width="10.0*mm" length="3.0*mm" vis="YellowVis"/>
+                        </data_aggregation>
+                    </module>
+                    <data_aggregation name="second_data_aggregation" thickness="7.0*mm" width="20.0*mm" length="10.0*mm" vis="YellowVis"/>
+                </ladder>
+            </stave>
+        </detector>
+    </detectors>
+
+    <readouts>
+        <readout name="OTKBarrelCollection">
+            <id>system:5,side:-2,layer:9,module:8,sensor:8,active:8</id>
+        </readout>
+    </readouts>
+</lccdd>
