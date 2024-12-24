@@ -1,5 +1,6 @@
 add_subdirectory(DataHelper)
-add_subdirectory(KalTest)
+#obsolete, import through FetchContent now
+#add_subdirectory(KalTest)
 add_subdirectory(KalDet)
 add_subdirectory(KiTrack)
 add_subdirectory(DecoderHelper)

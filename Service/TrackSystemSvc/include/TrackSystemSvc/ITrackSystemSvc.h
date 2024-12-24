@@ -13,7 +13,7 @@ class ITrackSystemSvc: virtual public IService {
   virtual ~ITrackSystemSvc() = default;
   
   //Get the track manager
-  virtual MarlinTrk::IMarlinTrkSystem* getTrackSystem(void* address=0) = 0;
+  virtual MarlinTrk::IMarlinTrkSystem* getTrackSystem(void* address=0, std::string type="KalTest") = 0;
   
   virtual void removeTrackSystem(void* address=0) = 0;
 };

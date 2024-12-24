@@ -3,7 +3,7 @@
 #include "TrackSystemSvc/HelixTrack.h"
 #include <cmath>
 #include <TVector3.h>
-#include <kaltest/THelicalTrack.h>
+#include "kaltest/THelicalTrack.h"
 #include <edm4hep/Vector3d.h> //plcio/DoubleThree.h>
 //#include "streamlog/streamlog.h"
 

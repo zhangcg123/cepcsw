@@ -2,6 +2,7 @@
 #include "gear/GearMgr.h"
 
 #include "MarlinKalTest.h"
+#include "MarlinDDKalTest.h"
 
 #include "TrackSystemSvc.h"
 
@@ -14,31 +15,44 @@ TrackSystemSvc::TrackSystemSvc(const std::string& name, ISvcLocator* svc)
 TrackSystemSvc::~TrackSystemSvc(){
 }
 
-MarlinTrk::IMarlinTrkSystem* TrackSystemSvc::getTrackSystem(void* address){
+MarlinTrk::IMarlinTrkSystem* TrackSystemSvc::getTrackSystem(void* address, std::string type) {
   std::map<void*, MarlinTrk::IMarlinTrkSystem*>::iterator it=m_trackSystems.find(address);
   if(it==m_trackSystems.end()){
-    gear::GearMgr* mgr=0; 
-    auto _gear = service<IGearSvc>("GearSvc");
-    if ( !_gear ) {
-      info() << "Failed to find GearSvc ..." << endmsg;
+    MarlinTrk::IMarlinTrkSystem* sys = nullptr;
+
+    if (type=="KalTest") {
+      gear::GearMgr* mgr=0;
+      auto _gear = service<IGearSvc>("GearSvc");
+      if ( !_gear ) {
+	info() << "Failed to find GearSvc ..." << endmsg;
+      }
+      else{
+	mgr = _gear->getGearMgr();
+      }
+
+      auto _geoSvc = service<IGeomSvc>("GeomSvc");
+      if ( !_geoSvc ) {
+	info() << "Failed to find GeomSvc ..." << endmsg;
+      }
+      if(mgr==0&&_geoSvc==0){
+	fatal() << "Both GearSvc and GeomSvc invalid!" << endmsg;
+	return 0;
+      }
+      debug() << "GearMgr=" << mgr << " GeomSvc=" << _geoSvc << endmsg;
+      //sys = new MarlinTrk::MarlinKalTest( *mgr, _geoSvc );
+      sys = new MarlinTrk::MarlinKalTest(*mgr);
     }
-    else{
-      mgr = _gear->getGearMgr();
+    else if (type=="DDKalTest") {
+      sys = new MarlinTrk::MarlinDDKalTest();
+    }
+    else {
+      error() << type << " not support, check type" << endmsg;
     }
 
-    auto _geoSvc = service<IGeomSvc>("GeomSvc");
-    if ( !_geoSvc ) {
-      info() << "Failed to find GeomSvc ..." << endmsg;
+    if (sys) {
+      m_trackSystems[address] = sys;
+      debug() << "Track system created successfully for " << address << endmsg;
     }
-    if(mgr==0&&_geoSvc==0){
-      fatal() << "Both GearSvc and GeomSvc invalid!" << endmsg;
-      return 0;
-    }
-    debug() << "GearMgr=" << mgr << " GeomSvc=" << _geoSvc << endmsg;
-    //MarlinTrk::IMarlinTrkSystem* sys = new MarlinTrk::MarlinKalTest( *mgr, _geoSvc );
-    MarlinTrk::IMarlinTrkSystem* sys = new MarlinTrk::MarlinKalTest(*mgr);
-    m_trackSystems[address] = sys;
-    debug() << "Track system created successfully for " << address << endmsg;
     return sys;
   }
   return it->second;

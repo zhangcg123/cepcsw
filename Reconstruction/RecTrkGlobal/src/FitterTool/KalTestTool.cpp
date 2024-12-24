@@ -17,13 +17,13 @@ DECLARE_COMPONENT(KalTestTool)
 StatusCode KalTestTool::initialize() {
   StatusCode sc;
   always() << m_fitterName << endmsg;
-  if (m_fitterName=="KalTest") {
+  if (m_fitterName=="KalTest" || m_fitterName=="DDKalTest") {
     auto _trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
     if (!_trackSystemSvc) {
       error() << "Failed to find TrackSystemSvc ..." << endmsg;
       return StatusCode::FAILURE;
     }
-    m_factoryMarlinTrk = _trackSystemSvc->getTrackSystem(this);
+    m_factoryMarlinTrk = _trackSystemSvc->getTrackSystem(this, m_fitterName.value());
     m_factoryMarlinTrk->setOption(MarlinTrk::IMarlinTrkSystem::CFG::useQMS, m_useQMS);
     m_factoryMarlinTrk->setOption(MarlinTrk::IMarlinTrkSystem::CFG::usedEdx, m_usedEdx);
     m_factoryMarlinTrk->setOption(MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, m_useSmoothing);
@@ -65,7 +65,7 @@ int KalTestTool::Fit(edm4hep::MutableTrack track, std::vector<edm4hep::TrackerHi
     return 0;
   }
 
-  if (m_fitterName=="KalTest") {
+  if (m_fitterName=="KalTest" || m_fitterName=="DDKalTest") {
     debug() << "start..." << endmsg;
     std::shared_ptr<MarlinTrk::IMarlinTrack> marlinTrack(m_factoryMarlinTrk->createTrack());
     debug() << "created MarlinKalTestTrack" << endmsg;
@@ -87,7 +87,7 @@ int KalTestTool::Fit(edm4hep::MutableTrack track, std::vector<edm4hep::TrackerHi
     return 0;
   }
 
-  if (m_fitterName=="KalTest") {
+  if (m_fitterName=="KalTest" || m_fitterName=="DDKalTest") {
     debug() << "start..." << endmsg;
     std::shared_ptr<MarlinTrk::IMarlinTrack> marlinTrack(m_factoryMarlinTrk->createTrack());
     debug() << "created MarlinKalTestTrack" << endmsg;

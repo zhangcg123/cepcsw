@@ -218,8 +218,11 @@ namespace MarlinTrk{
      *  returning intersection point in global coordinates via reference 
      */
     virtual int intersectionWithDetElement( int detEementID, edm4hep::TrackerHit& hit, edm4hep::Vector3d& point, int mode=modeClosest ) = 0  ;
-    
-    
+
+    /** Dump this track to a string for debugging - implementation dependant.
+     */
+    virtual std::string toString() ;
+
   protected:
     
   private:

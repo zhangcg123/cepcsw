@@ -2,13 +2,13 @@
 # Package: KalDet
 #    Desc: import from ILCSoft
 ##############################################################################
-
-get_target_property(to_incl KalTestLib SOURCE_DIR)
-if (to_incl)
-  LIST( APPEND DICT_INCLUDE_DIRS ${to_incl}/include)
-else()
-  message(FATAL_ERROR "Failed to get the source dir for package KalTestLib")
-endif()
+#get_target_property(to_incl KalTestLib SOURCE_DIR)
+#if (to_incl)
+#  LIST( APPEND DICT_INCLUDE_DIRS ${to_incl}/include)
+#else()
+#  message(FATAL_ERROR "Failed to get the source dir for package KalTestLib")
+#endif()
+LIST( APPEND DICT_INCLUDE_DIRS ${KalTest_INCLUDE_DIRS})
 
 set( DICT_CINT_DEFINITIONS "HANDLE_DICT_EXCEPTIONS=IGNORED_FOR_CINT" )
 set( DICT_INPUT_DIRS gen kern lctpc/gearTPC )
@@ -65,7 +65,7 @@ gaudi_add_library(KalDetLib
                   SOURCES ${KalDetLib_srcs}
                   LINK DetInterface
                        DetIdentifier
-                       KalTestLib
+                       ${KalTest_LIBRARIES}
                        Gaudi::GaudiKernel
                        ${ROOT_LIBRARIES}
                        ${CLHEP_LIBRARIES} 
@@ -81,6 +81,8 @@ target_include_directories(KalDetLib
   PUBLIC ${GEAR_INCLUDE_DIRS}
   PUBLIC ${LCIO_INCLUDE_DIRS}
 )
+
+add_dependencies(KalDetLib KalTest)
 
 install(TARGETS KalDetLib
   EXPORT CEPCSWTargets
