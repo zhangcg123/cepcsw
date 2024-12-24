@@ -363,7 +363,7 @@ StatusCode TrackHeedSimTool::initialize()
   }
   else if(m_det=="TPC"){
       m_gas.SetTemperature(293.15);
-      m_gas.SetPressure(750.);
+      m_gas.SetPressure(m_gaspressure);
       m_gas.SetComposition("Ar", 95., "isobutane", 2., "CF4", 3.);
   }
 
