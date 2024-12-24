@@ -3,7 +3,7 @@ import os
 from Gaudi.Configuration import *
 
 from Configurables import k4DataSvc
-dsvc = k4DataSvc("EventDataSvc", input="sim00.root")
+dsvc = k4DataSvc("EventDataSvc", input="sim_v01.root")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
 seed = [12340]
@@ -253,6 +253,10 @@ from Configurables import TPCDndxAlg
 tpc_dndx = TPCDndxAlg("TPCDndxAlg")
 tpc_dndx.Method = "Simple"
 
+from Configurables import TofRecAlg
+tof = TofRecAlg("TofRecAlg")
+#tof.OutputLevel = DEBUG
+
 from Configurables import TrackParticleRelationAlg
 tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
@@ -272,13 +276,13 @@ tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "rec00.root"
+out.filename = "rec_v01.root"
 out.outputCommands = ["keep *"]
 
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 50,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],

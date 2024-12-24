@@ -3,7 +3,7 @@ import os
 from Gaudi.Configuration import *
 
 from Configurables import k4DataSvc
-dsvc = k4DataSvc("EventDataSvc", input="rec00.root")
+dsvc = k4DataSvc("EventDataSvc", input="rec_v01.root")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
 seed = [12340]

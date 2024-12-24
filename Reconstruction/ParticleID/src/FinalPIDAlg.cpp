@@ -1,0 +1,156 @@
+#include "FinalPIDAlg.h"
+
+#include "GaudiKernel/DataObject.h"
+#include "GaudiKernel/MsgStream.h"
+#include "GaudiKernel/SmartDataPtr.h"
+#include "DetInterface/IGeomSvc.h"
+
+using namespace edm4hep;
+
+DECLARE_COMPONENT( FinalPIDAlg )
+
+//------------------------------------------------------------------------------
+FinalPIDAlg::FinalPIDAlg( const std::string& name, ISvcLocator* pSvcLocator )
+    : Algorithm( name, pSvcLocator ) {
+  // input
+  declareProperty("PFOCollection", m_inPFOCol, "Reconstructed particles to be PIDed");
+  declareProperty("TOFPIDCollection", m_inTofCol, "TOF PID information");
+  declareProperty("TPCPIDCollection", m_inDqdxCol, "TPC PID information");
+  // output
+  declareProperty("OutputPFOName", m_outPFOCol, "Reconstructed particles with PID information");
+  // PID method
+  declareProperty("Method", m_method = "TPC+TOF", "PID method: TPC, TPC+TOF, TPC+TOF+ECAL"); 
+}
+
+//------------------------------------------------------------------------------
+StatusCode FinalPIDAlg::initialize(){
+  debug() << "Initializing..." << endmsg;
+  if (m_method == "TPC" || m_method == "TPC+TOF") { //|| m_method == "TPC+TOF+ECAL" ) { // add ECAL later
+    debug() << "PID method: " << m_method << endmsg;
+  } else {
+    error() << "Unknown PID method: " << m_method << endmsg;
+    return StatusCode::FAILURE;
+  }
+  _nEvt = 0;
+  return StatusCode::SUCCESS;
+}
+
+//------------------------------------------------------------------------------
+StatusCode FinalPIDAlg::execute(){
+  
+  const edm4hep::ReconstructedParticleCollection* inpfocol = nullptr;
+  const edm4hep::RecTofCollection* tofcol = nullptr;
+  const edm4hep::RecDqdxCollection* dqdxcol = nullptr;
+  _hasTOF = true;
+  _hasTPC = true;
+
+  //auto outpfocol = m_outPFOCol.createAndPut();
+  edm4hep::ReconstructedParticleCollection* outpfocol = m_outPFOCol.createAndPut();
+
+  try {
+    inpfocol = m_inPFOCol.get();
+  }
+  catch ( GaudiException &e ) {
+    debug() << " Reconstructed particle " << m_inPFOCol.fullKey() << " is unavailable in event " << _nEvt << endmsg;
+    _nEvt++;
+    return StatusCode::SUCCESS;
+  }
+  try {
+    tofcol = m_inTofCol.get();
+  }
+  catch ( GaudiException &e ) {
+    _hasTOF = false;
+  }
+  try {
+    dqdxcol = m_inDqdxCol.get();
+  }
+  catch ( GaudiException &e ) {
+    _hasTPC = false;
+  }
+  debug()<<" has TOF : "<<_hasTOF<<" has TPC : "<<_hasTPC<<" TOF size : "<<tofcol->size()<<" dqdx size : "<<dqdxcol->size()<<endmsg;
+  
+  if ( ( !_hasTPC && !_hasTOF ) || ( tofcol->size() == 0 && dqdxcol->size() == 0 ) ){
+    
+    debug() << "TPC and TOF PID information are not available, skip event " << _nEvt << endmsg;
+    
+    for ( auto pfo : *inpfocol ){
+      auto outpfo = pfo.clone();
+      outpfocol->push_back(outpfo);
+    }
+    
+    _nEvt++;
+    return StatusCode::SUCCESS;
+  }
+
+  for ( auto pfo : *inpfocol ){
+    auto outpfo = pfo.clone();
+    outpfocol->push_back(outpfo);
+    FillTPCTOFPID(dqdxcol, tofcol, outpfo);
+    debug()<<" cyber pfo pid : " << outpfo.getType() << " cyber pfo charge : " << outpfo.getCharge() << " cyber pfo energy "<< outpfo.getEnergy() << endmsg;
+  }
+
+  _nEvt++;
+
+  return StatusCode::SUCCESS;
+}// end execute
+
+//------------------------------------------------------------------------------
+StatusCode FinalPIDAlg::finalize(){
+  debug() << "Finalizing..." << endmsg;
+  return StatusCode::SUCCESS;
+}
+
+
+/*
+void FinalPIDAlg::FillTPCPID(const edm4hep::ReconstructedParticleCollection* pfocol, const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::ParticleIDCollection* pidcol){
+  for (auto pfo : *pfocol){
+    for (auto trk : pfo.getTracks()){
+      for (auto dqdx : *dqdxcol){
+        if (dqdx.getTrack() == trk){
+          std::array<double, 5> chi2s = dqdx.getHypotheses();
+          int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
+          auto pid = pidcol->create();
+          pid.setPDG( pfo.getCharge() * PDGIDs.at(minchi2idx) );
+          pid.setLikelihood( chi2s[minchi2idx] );
+          //pfo.setParticleID(pid);
+          
+        }
+      }
+    }
+  }
+}
+*/
+
+
+void FinalPIDAlg::FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo){
+
+    for (auto trk : pfo.getTracks()){
+
+      std::array<double, 5> chi2s; chi2s.fill(0);
+      
+      for (auto dqdx : *dqdxcol){
+        if (dqdx.getTrack() == trk){
+          for (int i = 0; i < 5; i++){
+            chi2s[i] = dqdx.getHypotheses(i).chi2;
+          }
+        }
+      }
+
+      for (auto tof : *tofcol){
+        if (tof.getTrack() == trk){
+          double toft = tof.getTime();
+          std::array<float, 5> tofexpts = tof.getTimeExp();
+          double tofexpterr = tof.getSigma();
+          std::array<double, 5> tofchi2s;
+          for (int i = 0; i < 5; i++){
+            tofchi2s[i] = std::pow( (tofexpts[i] - toft) / tofexpterr, 2);
+            chi2s[i] += tofchi2s[i];
+          }
+        }
+      }
+
+      int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
+      pfo.setType( pfo.getCharge() * PDGIDs.at(minchi2idx) );
+
+    }
+}

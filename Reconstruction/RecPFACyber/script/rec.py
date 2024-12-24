@@ -47,7 +47,9 @@ inp.collections = [
 #                    "HCALEndcapsParticleAssoCol",
                     "MCParticle", 
                     "CompleteTracks", 
-                    "CompleteTracksParticleAssociation"]
+                    "CompleteTracksParticleAssociation",
+                    "RecTofCollection",
+                    "DndxTracks"]
 ##########################################
 
 ######### Reconstruction ################
@@ -140,6 +142,9 @@ CyberPFAlg.AlgParValues = [ ["BarCol","Cluster1DCol","HalfClusterCol"],#1
                                   ["EcalCluster", "SimpleHCALCluster", "outputPFO"],  #16
                                   ["1.26","4.", "1.", "4."]  ]#17
 
+from Configurables import FinalPIDAlg
+pid = FinalPIDAlg("FinalPIDAlg")
+pid.OutputPFOName = "CyberPFOPID"
 
 ##############################################################################
 # POD I/O
@@ -154,7 +159,7 @@ out.outputCommands = ["keep *"]
 
 from Configurables import ApplicationMgr
 ApplicationMgr( 
-    TopAlg=[inp, CyberPFAlg, out ],
+    TopAlg=[inp, CyberPFAlg, pid, out ],
     EvtSel="NONE",
     EvtMax=10,
     ExtSvc=[podioevent, geomsvc],
