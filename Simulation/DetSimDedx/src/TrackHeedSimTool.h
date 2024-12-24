@@ -90,6 +90,7 @@ class TrackHeedSimTool: public extends<AlgTool, IDedxSimTool> {
         Gaudi::Property<float> m_change_threshold {this, "change_threshold", 0.05};
         Gaudi::Property<float> m_BField   {this, "BField", -3};
         Gaudi::Property<float> m_eps     { this, "eps"   , 1e-6  };//very small value, it is returned dedx for unsimulated step (may needed for SimTrackerHit)
+        Gaudi::Property<float> m_gaspressure { this, "gaspressure"   , 760.  };// default gas pressure, 760 Torr. 1 ATM
         // Output collections
         DataHandle<edm4hep::SimPrimaryIonizationClusterCollection>    m_SimPrimaryIonizationColWriter{"SimPrimaryIonizationClusterCollection", Gaudi::DataHandle::Writer, this};
         edm4hep::SimPrimaryIonizationClusterCollection* m_SimPrimaryIonizationCol;
