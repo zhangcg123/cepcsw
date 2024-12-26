@@ -3629,6 +3629,7 @@ void FullLDCTrackingAlg::AddNotAssignedHits() {
         
         int layer = getLayerID(trkHit);
         
+	debug() << "VXD hit " << iH << ": layer = " << layer << endmsg;
         if (layer >=0 && layer < (int)_nLayersVTX)
           nonAssignedVTXHits[layer].push_back(trkHitExt);
       }
@@ -5055,6 +5056,9 @@ void FullLDCTrackingAlg::setupGearGeom(){
     pVXDDetMain = &(gearMgr->getVXDParameters());
     pVXDLayerLayout = &(pVXDDetMain->getVXDLayerLayout());
     _nLayersVTX = pVXDLayerLayout->getNLayers();
+
+    const std::vector<int> ids = pVXDDetMain->getIntVals("VTXLayerIds");
+    _nLayersVTX += ids.size();
   }
   catch( ... ){
     debug() << " ### gear::VXDParameters Not Present in GEAR FILE" << endmsg;
@@ -5222,6 +5226,9 @@ void FullLDCTrackingAlg::setupGearGeom(){
       debug() << " ### gear::FTD Parameters as defined in SFtd05 Not Present in GEAR FILE" << endmsg;
     }
   }
+
+  debug() << "layer number read: nvxd = " << _nLayersVTX << " nsit = " << _nLayersSIT << " ntpc = " << _tpc_nrows
+	  << " nset = " << _nLayersSET << " nftd = " << _nLayersFTD << endmsg;
 }
 
 void FullLDCTrackingAlg::checkTrackState(int location){
