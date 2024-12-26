@@ -69,8 +69,7 @@ bool BeamBackgroundFileParserV1::load(IBeamBackgroundFileParser::BeamBackgroundD
 bool BeamBackgroundFileParserV1::SampleParticleNum(int& npart, int& start ){
 
   if(m_Nmcp==-1){
-    npart = int(m_rate * m_timewindow);
-    npart = CLHEP::RandPoisson::shoot(npart);
+    npart = int( CLHEP::RandPoisson::shoot(m_rate * m_timewindow) ) ;
   }
   else npart = m_Nmcp;
 
