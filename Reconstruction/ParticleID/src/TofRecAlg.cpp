@@ -57,10 +57,9 @@ StatusCode TofRecAlg::execute(){
     return StatusCode::SUCCESS;
   }
 
-  hasFTDHit = false;
-  hasSETHit = false;
-  
   for(auto track : *fultrkcol){
+      hasFTDHit = false;
+      hasSETHit = false;
 
       FindToFHits( track, hasFTDHit, hasSETHit, Toft, Tofx, Tofy, Tofz );
 
