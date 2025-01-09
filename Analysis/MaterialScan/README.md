@@ -5,39 +5,21 @@ Use DD4hep tool [materialScan](https://dd4hep.web.cern.ch/dd4hep/reference/mater
 
 ## Material Scan
 
-Select the dd4hep geometry files you wish to scan, and access the interactive interface of materialScan.
+Select the dd4hep geometry files you wish to scan, and run the given script.
 
 ```bash
-# Access to the interactive interface of materialScan
-materialScan ./Detector/DetCRD/compact/TDR_o1_v01/TDR_o1_v01.xml -interactive
+# Scan the material for a specific detector
+root -l 'src/ScanMaterial.cpp("input_file.xml", "output_file.txt", bins, world_size)'
 
-# if you want to scan the material for a specific detector, disable/enable the detectors in the xml file
-materialScan ./Detector/DetCRD/compact/TDR_o1_v01/TDR_o1_v01-onlyBeamPipe.xml -interactive
+# example: scan the material for the BeamPipe detector
+root -l 'src/ScanMaterial.cpp("Detector/DetCRD/compact/TDR_o1_v01/TDR_o1_v01-onlyBeamPipe.xml", "BeamPipe.txt", 100, 10000)'
 ```
 
-copy the following code to the interactive interface, and press enter.
+The "FILE* outFile" truncates the "stdout" output stream to the output_file.txt ("MaterialScanLogs.txt" by default), so you can't see any output. Be patient and wait for the file to be created, it may take 1-2 minutes depending on the detectors & the number of bins.
+
 *bins* is the number of bins for theta and phi, *world_size* is the size of the scanning area (mm).
 
-```bash
-FILE* outFile = freopen("MaterialScanLogs.txt", "w", stdout);
-int bins = 100;
-double world_size = 10000;
-for(int thetabin=0; thetabin<=bins; thetabin++){
-    double theta = thetabin * M_PI / bins;
-    double z = world_size*cos(theta);
-    double tranverse = world_size*sin(theta);
-    for(int phibin=-bins; phibin<=bins; phibin++){
-        double phi = phibin * M_PI / bins;
-        double x = tranverse*cos(phi);
-        double y = tranverse*sin(phi);
-        gMaterialScan->print(0,0,0,x,y,z);
-    }
-}
-```
-
-The "FILE* outFile" truncates the "stdout" output stream to the file "MaterialScanLogs.txt", so you can't see any output. Be patient and wait for the file to be created, it may take 1-2 minutes depending on the detectors & the number of bins.
-
-The file "MaterialScanLogs.txt" contains all the material passing through for a straight line at the given angles with the size of bins of theta and phi.
+The output_file.txt contains all the material passing through for a straight line at the given angles with the size of bins of theta and phi.
 
 ## Draw the material budget for single xml file
 
