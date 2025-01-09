@@ -263,7 +263,7 @@
     <!--standard scale-->
     <constant name="Muon_standard_scale" value="94*cm"/>    
     <!--constant name="Muon_total_length" value="8950*mm"/--><!--overlap with coil and hcal-->
-    <constant name="Muon_total_length" value="Yoke_endcap_zmin*2"/>
+    <constant name="Muon_total_length" value="9150*mm"/>
 
     <!--Muon Barrel>
     <constant name="Muon_barrel_barrel_num" value="2"/>

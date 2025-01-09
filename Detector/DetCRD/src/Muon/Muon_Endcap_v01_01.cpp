@@ -269,7 +269,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
       superlayer_place.addPhysVolID("Superlayer",i+1);
     }
     dd4hep::PlacedVolume pv;
-    dd4hep::DetElement both_endcap(det_name,2000);
+    dd4hep::DetElement both_endcap(det_name,x_det.id());
     dd4hep::Volume motherVol = theDetector.pickMotherVolume(both_endcap);
     dd4hep::DetElement sdetA = sdet;
     dd4hep::Ref_t(sdetA)->SetName((det_name+"_A").c_str());
