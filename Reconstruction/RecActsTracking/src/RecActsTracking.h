@@ -166,9 +166,11 @@ class RecActsTracking : public GaudiAlgorithm
         // Input collections
         DataHandle<edm4hep::TrackerHitCollection> _inVTXTrackHdl{"VXDTrackerHits", Gaudi::DataHandle::Reader, this};
         DataHandle<edm4hep::TrackerHitCollection> _inSITTrackHdl{"SITTrackerHits", Gaudi::DataHandle::Reader, this};
+        DataHandle<edm4hep::TrackerHitCollection> _inFTDTrackHdl{"FTDTrackerHits", Gaudi::DataHandle::Reader, this};
 
         DataHandle<edm4hep::SimTrackerHitCollection> _inVTXColHdl{"VXDCollection", Gaudi::DataHandle::Reader, this};
         DataHandle<edm4hep::SimTrackerHitCollection> _inSITColHdl{"SITCollection", Gaudi::DataHandle::Reader, this};
+        DataHandle<edm4hep::SimTrackerHitCollection> _inFTDColHdl{"FTDCollection", Gaudi::DataHandle::Reader, this};
 
         DataHandle<edm4hep::MCParticleCollection> _inMCColHdl{"MCParticle", Gaudi::DataHandle::Reader, this};
 
@@ -183,6 +185,7 @@ class RecActsTracking : public GaudiAlgorithm
         Gaudi::Property<double> m_field{this, "Field", 3.0}; // tesla
         Gaudi::Property<double> onSurfaceTolerance{this, "onSurfaceTolerance", 1e-2}; // mm
         Gaudi::Property<double> eps{this, "eps", 1e-5}; // mm
+        Gaudi::Property<bool> ExtendSeedRange{this, "ExtendSeedRange", false};
 
         // seed finder config
         Gaudi::Property<double> SeedDeltaRMin{this, "SeedDeltaRMin", 4}; // mm
@@ -194,16 +197,18 @@ class RecActsTracking : public GaudiAlgorithm
         Gaudi::Property<double> SeedRMaxMiddle{this, "SeedRMaxMiddle", 24}; // mm
 
         // CKF config
-        Gaudi::Property<double> CKFchi2Cut{this, "CKFchi2Cut", 20};
-        Gaudi::Property<std::size_t> numMeasurementsCutOff{this, "numMeasurementsCutOff", 1};
+        Gaudi::Property<double> CKFchi2Cut{this, "CKFchi2Cut", std::numeric_limits<double>::max()};
+        Gaudi::Property<std::size_t> numMeasurementsCutOff{this, "numMeasurementsCutOff", 1u};
         Gaudi::Property<bool> CKFtwoWay{this, "CKFtwoWay", true};
         
         SmartIF<IGeomSvc> m_geosvc;
         SmartIF<IChronoStatSvc> chronoStatSvc;
         dd4hep::DDSegmentation::BitFieldCoder *vxd_decoder;
         dd4hep::DDSegmentation::BitFieldCoder *sit_decoder;
+        dd4hep::DDSegmentation::BitFieldCoder *ftd_decoder;
         const dd4hep::rec::SurfaceMap* m_vtx_surfaces;
         const dd4hep::rec::SurfaceMap* m_sit_surfaces;
+        const dd4hep::rec::SurfaceMap* m_ftd_surfaces;
 
         // configs to build acts geometry
         Acts::GeometryContext geoContext;
@@ -231,6 +236,7 @@ class RecActsTracking : public GaudiAlgorithm
 
         int InitialiseVTX();
         int InitialiseSIT();
+        int InitialiseFTD();
         const dd4hep::rec::ISurface* getISurface(edm4hep::TrackerHit* hit);
         const Acts::GeometryIdentifier getVTXGid(uint64_t cellid);
         const Acts::GeometryIdentifier getSITGid(uint64_t cellid);
@@ -272,10 +278,11 @@ class RecActsTracking : public GaudiAlgorithm
         // Acts::ParticleHypothesis particleHypothesis = Acts::ParticleHypothesis::chargedGeantino();
 
         // gid convert configuration
-        std::vector<uint64_t> VXD_volume_ids{16, 17, 18, 19, 20};
-        std::vector<uint64_t> SIT_acts_volume_ids{22, 24, 26};
+        std::vector<uint64_t> VXD_volume_ids{20, 21, 22, 23, 24};
+        std::vector<uint64_t> SIT_volume_ids{28, 31, 34};
+        std::vector<uint64_t> FTD_positive_volume_ids{29, 32, 35};
+        std::vector<uint64_t> FTD_negative_volume_ids{27, 7, 2};
         std::vector<uint64_t> SIT_module_nums{7, 10, 14};
-        uint64_t SIT_sensor_nums = 14;
 
         // CKF configuration
         // Acts::MeasurementSelector::Config measurementSelectorCfg;
@@ -290,7 +297,16 @@ class RecActsTracking : public GaudiAlgorithm
         mutable std::atomic<std::size_t> m_nFoundTracks{0};
         mutable std::atomic<std::size_t> m_nSelectedTracks{0};
         mutable std::atomic<std::size_t> m_nStoppedBranches{0};
-        
+        // layer hits, VXD (0-5) & SIT (6-8)
+        std::array<std::atomic<size_t>, 9> m_nLayerHits{0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::array<std::atomic<size_t>, 6> m_nRec_VTX{0, 0, 0, 0, 0, 0};
+        std::array<std::atomic<size_t>, 3> m_nRec_SIT{0, 0, 0};
+        std::array<std::atomic<size_t>, 3> m_nRec_FTD{0, 0, 0};
+        std::array<std::atomic<size_t>, 9> m_n0EventHits{0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::array<std::atomic<size_t>, 9> m_n1EventHits{0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::array<std::atomic<size_t>, 9> m_n2EventHits{0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::array<std::atomic<size_t>, 9> m_n3EventHits{0, 0, 0, 0, 0, 0, 0, 0, 0};
+
         mutable tbb::combinable<Acts::VectorMultiTrajectory::Statistics> m_memoryStatistics{[]() {
             auto mtj = std::make_shared<Acts::VectorMultiTrajectory>();
             return mtj->statistics();

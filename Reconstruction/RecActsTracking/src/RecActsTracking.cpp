@@ -22,7 +22,6 @@ DECLARE_COMPONENT(RecActsTracking)
 RecActsTracking::RecActsTracking(const std::string& name, ISvcLocator* svcLoc)
     : GaudiAlgorithm(name, svcLoc)
 {
-    // _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
 }
 
 StatusCode RecActsTracking::initialize()
@@ -102,6 +101,9 @@ StatusCode RecActsTracking::initialize()
     m_sit_surfaces = m_geosvc->getSurfaceMap("SIT");
     debug() << "Surface map size: " << m_sit_surfaces->size() << endmsg;
 
+    m_ftd_surfaces = m_geosvc->getSurfaceMap("FTD");
+    debug() << "Surface map size: " << m_ftd_surfaces->size() << endmsg;
+
     vxd_decoder = m_geosvc->getDecoder("VXDCollection");
     if(!vxd_decoder){
         return StatusCode::FAILURE;
@@ -109,6 +111,11 @@ StatusCode RecActsTracking::initialize()
 
     sit_decoder = m_geosvc->getDecoder("SITCollection");
     if(!sit_decoder){
+        return StatusCode::FAILURE;
+    }
+
+    ftd_decoder = m_geosvc->getDecoder("FTDCollection");
+    if(!ftd_decoder){
         return StatusCode::FAILURE;
     }
 
@@ -180,8 +187,8 @@ StatusCode RecActsTracking::execute()
     Selected_Seeds.clear();
 
     chronoStatSvc->chronoStart("read input hits");
-    int successVTX = InitialiseVTX();
 
+    int successVTX = InitialiseVTX();
     if (successVTX == 0)
     {
         _nEvt++;
@@ -191,6 +198,12 @@ StatusCode RecActsTracking::execute()
     int successSIT = InitialiseSIT();
     if (successSIT == 0)
     {
+        _nEvt++;
+        return StatusCode::SUCCESS;
+    }
+
+    int successFTD = InitialiseFTD();
+    if(successFTD == 0){
         _nEvt++;
         return StatusCode::SUCCESS;
     }
@@ -571,27 +584,68 @@ StatusCode RecActsTracking::execute()
         _nEvt++;
         return StatusCode::SUCCESS;
     }
-
     for (const auto& cur_track : constTracks)
     {
         auto writeout_track = trkCol->create();
-        int nVTXHit = 0, nFTDHit = 0, nSITHit = 0;
+        int nVTXHit = 0, nFTDHit = 0, nSITHit = 0, nlayerHits = 9;
         int getFirstHit = 0;
         
         writeout_track.setChi2(cur_track.chi2());
         writeout_track.setNdf(cur_track.nDoF());
         writeout_track.setDEdx(cur_track.absoluteMomentum() / Acts::UnitConstants::GeV);
-        writeout_track.setDEdxError(cur_track.qOverP());
-        for (auto trackState : cur_track.trackStates()){
-            if (trackState.hasUncalibratedSourceLink()){
+        // writeout_track.setDEdxError(cur_track.qOverP());
+        std::array<int, 6> nlayer_VTX{0, 0, 0, 0, 0, 0};
+        std::array<int, 3> nlayer_SIT{0, 0, 0};
+        std::array<int, 3> nlayer_FTD{0, 0, 0};
+
+        for (auto trackState : cur_track.trackStates())
+        {
+            if (trackState.hasUncalibratedSourceLink())
+            {
                 auto cur_measurement_sl = trackState.getUncalibratedSourceLink();
                 const auto& MeasSourceLink = cur_measurement_sl.get<IndexSourceLink>();
                 auto cur_measurement = measurements[MeasSourceLink.index()];
                 auto cur_measurement_gid = MeasSourceLink.geometryId();
-                if (std::find(VXD_volume_ids.begin(), VXD_volume_ids.end(), cur_measurement_gid.volume()) != VXD_volume_ids.end()){
-                    nVTXHit++;
-                } else if (std::find(SIT_acts_volume_ids.begin(), SIT_acts_volume_ids.end(), cur_measurement_gid.volume()) != SIT_acts_volume_ids.end()){
-                    nSITHit++;
+                
+                for (int i = 0; i < 5; i++)
+                {
+                    if (cur_measurement_gid.volume() == VXD_volume_ids[i])
+                    {
+                        if (i == 4){
+                            if (cur_measurement_gid.sensitive() & 1 == 1)
+                            {
+                                nlayer_VTX[5]++;
+                            } else{
+                                nlayer_VTX[4]++;
+                            }
+                        } else {
+                            nlayer_VTX[i]++;
+                        }
+                        nVTXHit++;
+                        break;
+                    }
+                }
+
+                for (int i = 0; i < 3; i++){
+                    if (cur_measurement_gid.volume() == SIT_volume_ids[i]){
+                        nlayer_SIT[i]++;
+                        nSITHit++;
+                        break;
+                    }
+                }
+
+                for (int i = 0; i < 3; i++){
+                    if (cur_measurement_gid.volume() == FTD_positive_volume_ids[i]){
+                        nlayer_FTD[i]++;
+                        nFTDHit++;
+                        break;
+                    }
+
+                    if (cur_measurement_gid.volume() == FTD_negative_volume_ids[i]){
+                        nlayer_FTD[i]++;
+                        nFTDHit++;
+                        break;
+                    }
                 }
 
                 writeout_track.addToTrackerHits(MeasSourceLink.getTrackerHit());
@@ -609,23 +663,55 @@ StatusCode RecActsTracking::execute()
                 }
             }
         }
+        for (int i = 0; i < 6; i++){
+            m_nRec_VTX[i] += nlayer_VTX[i];
+            if (nlayer_VTX[i] == 0) {
+                m_n0EventHits[i]++;
+                nlayerHits--;
+            } else if (nlayer_VTX[i] == 1) {
+                m_n1EventHits[i]++;
+            } else if (nlayer_VTX[i] == 2) {
+                m_n2EventHits[i]++;
+            } else if (nlayer_VTX[i] >= 3) {
+                m_n3EventHits[i]++;
+            }
+        }
+        for (int i = 0; i < 3; i++){
+            m_nRec_SIT[i] += nlayer_SIT[i];
+            if (nlayer_SIT[i] == 0) {
+                m_n0EventHits[i+6]++;
+                nlayerHits--;
+            } else if (nlayer_SIT[i] == 1) {
+                m_n1EventHits[i+6]++;
+            } else if (nlayer_SIT[i] == 2) {
+                m_n2EventHits[i+6]++;
+            } else if (nlayer_SIT[i] >= 3) {
+                m_n3EventHits[i+6]++;
+            }
+        }
+
+        for (int i = 0; i < 3; i++){
+            m_nRec_FTD[i] += nlayer_FTD[i];
+        }
 
         // SubdetectorHitNumbers: VXD = 0, FTD = 1, SIT = 2
+        writeout_track.setDEdxError(nlayerHits);
         writeout_track.addToSubdetectorHitNumbers(nVTXHit);
         writeout_track.addToSubdetectorHitNumbers(nFTDHit);
         writeout_track.addToSubdetectorHitNumbers(nSITHit);
         
+        // TODO: covmatrix need to be converted
         std::array<float, 21> writeout_covMatrix;
         auto cur_track_covariance = cur_track.covariance();
         for (int i = 0; i < 6; i++) {
             for (int j = 0; j < 6-i; j++) {
-                writeout_covMatrix[i * 6 + j] = cur_track_covariance(writeout_indices[i], writeout_indices[j]);
+                writeout_covMatrix[int((13-i)*i/2 + j)] = cur_track_covariance(writeout_indices[i], writeout_indices[j]);
             }
         }
         // location: At{Other|IP|FirstHit|LastHit|Calorimeter|Vertex}|LastLocation
         // TrackState: location, d0, phi, omega, z0, tanLambda, time, referencePoint, covMatrix
         edm4hep::TrackState writeout_trackState{
-            0, // location: AtOther
+            1, // location: AtOther
             cur_track.loc0() / Acts::UnitConstants::mm, // d0
             cur_track.phi(), // phi
             cur_track.qOverP() * sin(cur_track.theta()) * _FCT * m_field, // omega = qop * sin(theta) * _FCT * bf
@@ -653,7 +739,15 @@ StatusCode RecActsTracking::finalize()
     info() << "Total number of **TotalSeeds** processed: " << m_nTotalSeeds << endmsg;
     info() << "Total number of **FoundTracks** processed: " << m_nFoundTracks << endmsg;
     info() << "Total number of **SelectedTracks** processed: " << m_nSelectedTracks << endmsg;
-    
+    info() << "Total number of **LayerHits** processed: " << m_nLayerHits << endmsg;
+    info() << "Total number of **Rec_VTX** processed: " << m_nRec_VTX << endmsg;
+    info() << "Total number of **Rec_SIT** processed: " << m_nRec_SIT << endmsg;
+    info() << "Total number of **Rec_FTD** processed: " << m_nRec_FTD << endmsg;
+    info() << "Total number of **EventHits0** processed: " << m_n0EventHits << endmsg;
+    info() << "Total number of **EventHits1** processed: " << m_n1EventHits << endmsg;
+    info() << "Total number of **EventHits2** processed: " << m_n2EventHits << endmsg;
+    info() << "Total number of **EventHitsmore** processed: " << m_n3EventHits << endmsg;
+
     return GaudiAlgorithm::finalize();
 }
 
@@ -822,6 +916,8 @@ int RecActsTracking::InitialiseVTX()
                 IndexSourceLink sourceLink{moduleGeoId, measurementIdx, hit};
                 sourceLinks.insert(sourceLinks.end(), sourceLink);
                 Acts::SourceLink sl{sourceLink};
+                boost::container::static_vector<Acts::SourceLink, 2> slinks;
+                slinks.emplace_back(sl);
 
                 // get the local position of the hit
                 IndexSourceLink::SurfaceAccessor surfaceAccessor{*trackingGeometry};
@@ -841,6 +937,11 @@ int RecActsTracking::InitialiseVTX()
                 auto acts_global_postion = acts_surface->localToGlobal(geoContext, par, globalFakeMom);
                 debug() << "debug surface at: x:" << acts_global_postion[0] << ", y:" << acts_global_postion[1] << ", z:" << acts_global_postion[2] << endmsg;
 
+                if (ExtendSeedRange.value()) {
+                    SimSpacePoint *hitExt = new SimSpacePoint(hit, acts_global_postion[0], acts_global_postion[1], acts_global_postion[2], 0.002, slinks);
+                    SpacePointPtrs.push_back(hitExt);
+                }
+                
                 // create and store the measurement
                 // Plane covMatrix[6] = {u_direction[0], u_direction[1], resU, v_direction[0], v_direction[1], resV}
                 Acts::ActsSquareMatrix<2> cov = Acts::ActsSquareMatrix<2>::Identity();
@@ -934,7 +1035,7 @@ int RecActsTracking::InitialiseSIT()
             }
 
             // set acts geometry identifier
-            uint64_t acts_volume = SIT_acts_volume_ids[m_layer];
+            uint64_t acts_volume = SIT_volume_ids[m_layer];
             uint64_t acts_boundary = 0;
             uint64_t acts_layer = 2;
             uint64_t acts_approach = 0;
@@ -952,6 +1053,8 @@ int RecActsTracking::InitialiseSIT()
             IndexSourceLink sourceLink{moduleGeoId, measurementIdx, hit};
             sourceLinks.insert(sourceLinks.end(), sourceLink);
             Acts::SourceLink sl{sourceLink};
+            boost::container::static_vector<Acts::SourceLink, 2> slinks;
+            slinks.emplace_back(sl);
 
             // get the local position of the hit
             IndexSourceLink::SurfaceAccessor surfaceAccessor{*trackingGeometry};
@@ -971,6 +1074,11 @@ int RecActsTracking::InitialiseSIT()
             auto acts_global_postion = acts_surface->localToGlobal(geoContext, par, globalFakeMom);
             debug() << "debug surface at: x:" << acts_global_postion[0] << ", y:" << acts_global_postion[1] << ", z:" << acts_global_postion[2] << endmsg;
 
+            if (ExtendSeedRange.value()) {
+                SimSpacePoint *hitExt = new SimSpacePoint(hit, acts_global_postion[0], acts_global_postion[1], acts_global_postion[2], 0.002, slinks);
+                SpacePointPtrs.push_back(hitExt);
+            }
+
             // create and store the measurement
             Acts::ActsSquareMatrix<2> cov = Acts::ActsSquareMatrix<2>::Identity();
             cov(0, 0) = std::max<double>(double(m_covMatrix[2]), eps.value());
@@ -985,4 +1093,116 @@ int RecActsTracking::InitialiseSIT()
     } else { success = 0; }
 
     return success;
+}
+
+int RecActsTracking::InitialiseFTD()
+{
+    const edm4hep::TrackerHitCollection* hitFTDCol = nullptr;
+    const edm4hep::SimTrackerHitCollection* SimhitFTDCol = nullptr;
+
+    try {
+        hitFTDCol = _inFTDTrackHdl.get();
+    } catch (GaudiException& e) {
+        debug() << "Collection " << _inFTDTrackHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
+        return 0;
+    }
+
+    try {
+        SimhitFTDCol = _inFTDColHdl.get();
+    } catch (GaudiException& e) {
+        debug() << "Collection " << _inFTDColHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
+        return 0;
+    }
+
+    if (hitFTDCol && SimhitFTDCol)
+    {
+        int nelem = hitFTDCol->size();
+        debug() << "Number of FTD hits = " << nelem << endmsg;
+        for (int ielem = 0; ielem < nelem; ++ielem)
+        {
+            auto hit = hitFTDCol->at(ielem);
+            auto simhit = SimhitFTDCol->at(ielem);
+            auto simcellid = simhit.getCellID();
+            uint64_t m_system = ftd_decoder->get(simcellid, "system");
+            uint64_t m_side = ftd_decoder->get(simcellid, "side");
+            uint64_t m_layer = ftd_decoder->get(simcellid, "layer");
+            uint64_t m_module = ftd_decoder->get(simcellid, "module");
+            uint64_t m_sensor = ftd_decoder->get(simcellid, "sensor");
+            double acts_x = simhit.getPosition()[0];
+            double acts_y = simhit.getPosition()[1];
+            double acts_z = simhit.getPosition()[2];
+            double momentum_x = simhit.getMomentum()[0];
+            double momentum_y = simhit.getMomentum()[1];
+            double momentum_z = simhit.getMomentum()[2];
+            const Acts::Vector3 globalmom{momentum_x, momentum_y, momentum_z};
+            std::array<float, 6> m_covMatrix = hit.getCovMatrix();
+            
+            if (m_layer > 2) {
+                continue;
+            }
+
+            dd4hep::rec::ISurface* surface = nullptr;
+            auto it = m_ftd_surfaces->find(simcellid);
+            if (it != m_ftd_surfaces->end()) {
+                surface = it->second;
+                if (!surface) {
+                    fatal() << "found surface for FTD cell id " << simcellid << ", but NULL" << endmsg;
+                    return 0;
+                }
+            }
+
+            // set acts geometry identifier
+            uint64_t acts_volume = (acts_z > 0) ? FTD_positive_volume_ids[m_layer] : FTD_negative_volume_ids[m_layer];
+            uint64_t acts_boundary = 0;
+            uint64_t acts_layer = 2;
+            uint64_t acts_approach = 0;
+            uint64_t acts_sensitive = m_module + 1;
+
+            Acts::GeometryIdentifier moduleGeoId;
+            moduleGeoId.setVolume(acts_volume);
+            moduleGeoId.setBoundary(acts_boundary);
+            moduleGeoId.setLayer(acts_layer);
+            moduleGeoId.setApproach(acts_approach);
+            moduleGeoId.setSensitive(acts_sensitive);   
+
+            // create and store the source link
+            uint32_t measurementIdx = measurements.size();
+            IndexSourceLink sourceLink{moduleGeoId, measurementIdx, hit};
+            sourceLinks.insert(sourceLinks.end(), sourceLink);
+            Acts::SourceLink sl{sourceLink};    
+            boost::container::static_vector<Acts::SourceLink, 2> slinks;
+            slinks.emplace_back(sl);
+
+            // get the local position of the hit
+            IndexSourceLink::SurfaceAccessor surfaceAccessor{*trackingGeometry};
+            const Acts::Surface* acts_surface = surfaceAccessor(sl);
+            const Acts::Vector3 globalPos{acts_x, acts_y, acts_z};
+            auto acts_local_postion = acts_surface->globalToLocal(geoContext, globalPos, globalmom, onSurfaceTolerance);
+            if (!acts_local_postion.ok()){
+                info() << "Error: failed to get local position for FTD layer " << m_layer << " module " << m_module << " sensor " << m_sensor << endmsg;
+                acts_local_postion = acts_surface->globalToLocal(geoContext, globalPos, globalmom, 100*onSurfaceTolerance);
+            }
+            const std::array<Acts::BoundIndices, 2> indices{Acts::BoundIndices::eBoundLoc0, Acts::BoundIndices::eBoundLoc1};
+            const Acts::Vector2 par{acts_local_postion.value()[0], acts_local_postion.value()[1]};
+
+            // debug
+            debug() << "FTD measurements global position(x,y,z): " << simhit.getPosition()[0] << ", " << simhit.getPosition()[1] << ", " << simhit.getPosition()[2]
+                << "; local position(loc0, loc1): "<< acts_local_postion.value()[0] << ", " << acts_local_postion.value()[1] << endmsg;
+            auto acts_global_postion = acts_surface->localToGlobal(geoContext, par, globalFakeMom);
+            debug() << "debug surface at: x:" << acts_global_postion[0] << ", y:" << acts_global_postion[1] << ", z:" << acts_global_postion[2] << endmsg;
+
+            if (ExtendSeedRange.value()) {
+                SimSpacePoint *hitExt = new SimSpacePoint(hit, acts_global_postion[0], acts_global_postion[1], acts_global_postion[2], 0.002, slinks);
+                SpacePointPtrs.push_back(hitExt);
+            }
+
+            // create and store the measurement
+            Acts::ActsSquareMatrix<2> cov = Acts::ActsSquareMatrix<2>::Identity();
+            cov(0, 0) = std::max<double>(double(m_covMatrix[2]), eps.value());
+            cov(1, 1) = std::max<double>(double(m_covMatrix[5]), eps.value());
+            measurements.emplace_back(Acts::Measurement<Acts::BoundIndices, 2>(sl, indices, par, cov));
+        }
+    }
+
+    return 1;
 }
