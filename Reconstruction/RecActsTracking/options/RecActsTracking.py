@@ -57,9 +57,22 @@ cepcswdatatop ="/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
 
 from Configurables import RecActsTracking
 actstracking = RecActsTracking("RecActsTracking")
-actstracking.TGeoFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Reconstruction/RecActsTracking/data/tdr24.12.0/SiTrack-tgeo.root")
-actstracking.TGeoConfigFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Reconstruction/RecActsTracking/data/tdr24.12.0/SiTrack-tgeo-config.json")
-actstracking.MaterialMapFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Reconstruction/RecActsTracking/data/tdr24.12.0/SiTrack-material-maps.json")
+actstracking.TGeoFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Reconstruction/RecActsTracking/data/tdr25.1.0/SiTrack-tgeo.root")
+actstracking.TGeoConfigFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Reconstruction/RecActsTracking/data/tdr25.1.0/SiTrack-tgeo-config.json")
+actstracking.MaterialMapFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Reconstruction/RecActsTracking/data/tdr25.1.0/SiTrack-material-maps.json")
+
+# config for acts tracking
+actstracking.onSurfaceTolerance = 2e-1
+# actstracking.ExtendSeedRange = True
+# actstracking.SeedDeltaRMin = 10
+# actstracking.SeedDeltaRMax = 200
+# actstracking.SeedRMax = 600
+# actstracking.SeedRMin = 80
+# actstracking.SeedImpactMax = 4
+# actstracking.SeedRMinMiddle = 340
+# actstracking.SeedRMaxMiddle = 380
+actstracking.numMeasurementsCutOff = 2
+actstracking.CKFchi2Cut = 1
 
 ##############################################################################
 # output
