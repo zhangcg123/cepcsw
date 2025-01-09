@@ -5,6 +5,8 @@ gaudi_add_module(SimpleDigi
                          src/voxel.cpp
                          src/CylinderDigiAlg.cpp
                          src/SiTrackerDigiAlg.cpp
+                         src/TPCPixelDigiAlg.cpp
+                         src/TPCPixelDigiTool.cpp
                          src/SmearDigiTool.cpp
                  LINK GearSvc
                       DigiTool
