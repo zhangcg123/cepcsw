@@ -63,7 +63,7 @@ public:
 	edm4hep::MutableSimCalorimeterHit find(const std::vector<edm4hep::MutableSimCalorimeterHit>& m_col, unsigned long long& cellid) const;
   // double Digitization(double edepCry, double fCrosstalkChannel);
   float EnergyDigi(float ScinGen, float sEcalCryMipLY, float sEcalSiPMGainMean, float sEcalSiPMDCR, 
-                    TF1* f_SiPMResponse, TF1* f_SiPMSigmaDet, TF1* f_SiPMSigmaRecp, TF1* f_SiPMSigmaRecm, TF1* f_AsymGauss, TF1* f_DarkNoise,
+                    TF1* f_SiPMResponse, TF1* f_SiPMSigmaDet, TF1* f_SiPMSigmaRecp, TF1* f_SiPMSigmaRecm, TF1* f_AsymGauss, TF1* f_DarkNoise, TF1* f_ADCNonLin,
                     int& outLO, int& outNDC, int& outNDetPE, float& outPedestal, float& outADC, float& outADCGain);
 
 	void Clear();
@@ -81,7 +81,7 @@ protected:
 	TTree* t_SimCont;
 	TTree* t_SimBar;
 
-  double totE_Truth, totE_Digi;
+  double totE_Truth, totE_Truth_MIP, totE_Digi;
   double mean_CT, ECALTemp;
   FloatVec m_step_t;  // yyy: time of each step
 	FloatVec m_step_x, m_step_y, m_step_z, m_step_E, m_step_T1, m_step_T2, m_stepBar_x, m_stepBar_y, m_stepBar_z;
@@ -109,6 +109,7 @@ protected:
   TF1* f_SiPMSigmaRecm = nullptr;
   TF1* f_AsymGauss = nullptr;
   TF1* f_DarkNoise = nullptr;
+  TF1* f_ADCNonLin = nullptr;
   TGraph* g_SiPMDCR_vs_NIEL = nullptr;
   TGraph* g_CryLYRatio_vs_TID = nullptr;
 
@@ -163,6 +164,7 @@ protected:
   mutable Gaudi::Property<int> fSiPMDigiVerbose{this, 	"SiPMDigiVerbose", 1, "SiPM Digitization verbose. 0:w/o response, w/o correction; 1:w/ response, w/o correction; 2:w/ response, w/ simple correction; 3:w/ response, w/ full correction;"};
   mutable Gaudi::Property<float> fGainRatio_12{this, 	"GainRatio_12", 50, "Gain-1 over Gain-2"};
   mutable Gaudi::Property<float> fGainRatio_23{this, 	"GainRatio_23", 60, "Gain-2 over Gain-3"};
+  mutable Gaudi::Property<float> fADCNonLin{this, 	"ADCNonLinearity", 0.01, "ADC non-linearity"};
   mutable Gaudi::Property<float> fEcalMIPEnergy{this, 	"EcalMIPEnergy", 8.9, "MIP energy deposit in 1cm BGO (MeV/MIP)"};
   mutable Gaudi::Property<float> fEcalCryMipLY{this, 	"EcalCryMipLY", 200, "Detected light yield (p.e./MIP)"};
   mutable Gaudi::Property<float> fEcalCryIntLY{this, 	"EcalCryIntLY", 8200, "Intrinsic light yield (ph/MeV)"};

@@ -46,14 +46,14 @@ namespace Cyber {
     void setShowerUCol(std::vector<const Calo1DCluster*> _sh) { barShowerUCol=_sh; }
     void setShowerVCol(std::vector<const Calo1DCluster*> _sh) { barShowerVCol=_sh; }
     void addUnit(const Calo1DCluster* _1dcluster);
-    void addTowerID(int _m, int _p, int _s) { std::vector<int> id(3); id[0] = _m; id[1] = _p; id[2] = _s; towerID.push_back(id); }
+    void addTowerID(int _sys, int _m,  int _s, int _p) { std::vector<int> id(4); id[0] = _sys; id[1] = _m; id[2] = _s; id[3] = _p; towerID.push_back(id); }
     void addTowerID(std::vector<int> id) { towerID.push_back(id); }
     void setTowerID(std::vector<int> id) { towerID.clear(); towerID.push_back(id); }
     void setPos( TVector3 _vec ) { pos = _vec; }
     void setPos( double _x, double _y, double _z ) { pos.SetXYZ(_x, _y, _z); }
 
   private:
-    std::vector< std::vector<int> > towerID; //[module, stave]
+    std::vector< std::vector<int> > towerID; //[system, module, stave, part]
 
     TVector3 pos = TVector3(0.,0.,0.);
     std::vector<const CaloHit*> hits; 

@@ -14,13 +14,14 @@ cepcswdatatop ="/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
 ########## Podio Input ###################
 from Configurables import PodioInput
 inp = PodioInput("InputReader")
-inp.collections = [ "CyberPFO", "MCParticle" ]
+inp.collections = [ "CyberPFO", "CyberPFOPID", "MCParticle" ]
 ##########################################
 
 
 
 from Configurables import GenMatch
 genmatch = GenMatch("GenMatch")
+genmatch.InputPFOs = "CyberPFOPID"
 genmatch.nJets = 2
 genmatch.R = 0.6
 genmatch.OutputFile = "Jets_TDR_o1_v01.root"

@@ -190,20 +190,38 @@ TVector2 ConeClustering2DAlg::GetProjectedAxis( const Cyber::CaloHalfCluster* m_
 
 TVector2 ConeClustering2DAlg::GetProjectedRelR( const Cyber::Calo1DCluster* m_shower1, const Cyber::Calo1DCluster* m_shower2 ){
   TVector2 paxis1, paxis2;
-  if(m_shower1->getSlayer()==1){ //For V-bars
-    paxis1.Set(m_shower1->getPos().x(), m_shower1->getPos().y());
-    paxis2.Set(m_shower2->getPos().x(), m_shower2->getPos().y());
-  }
-  else{
-    float rotAngle = -m_shower1->getTowerID()[0][0]*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
-    TVector3 raw_pos1 = m_shower1->getPos(); 
-    TVector3 raw_pos2 = m_shower2->getPos(); 
-    raw_pos1.RotateZ(rotAngle); raw_pos2.RotateZ(rotAngle);
-    paxis1.Set(raw_pos1.y(), raw_pos1.z());
-    paxis2.Set(raw_pos2.y(), raw_pos2.z());
+  if(m_shower1->getTowerID()[0][0]==Cyber::CaloUnit::System_Barrel){
 
-    //paxis1.Set( sqrt(m_shower1->getPos().x()*m_shower1->getPos().x()+m_shower1->getPos().y()*m_shower1->getPos().y()), m_shower1->getPos().z());
-    //paxis2.Set( sqrt(m_shower2->getPos().x()*m_shower2->getPos().x()+m_shower2->getPos().y()*m_shower2->getPos().y()), m_shower2->getPos().z());
+    if(m_shower1->getSlayer()==1){ //For V-bars
+      paxis1.Set(m_shower1->getPos().x(), m_shower1->getPos().y());
+      paxis2.Set(m_shower2->getPos().x(), m_shower2->getPos().y());
+    }
+    else{
+      float rotAngle = -m_shower1->getTowerID()[0][1]*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
+      TVector3 raw_pos1 = m_shower1->getPos(); 
+      TVector3 raw_pos2 = m_shower2->getPos(); 
+      raw_pos1.RotateZ(rotAngle); raw_pos2.RotateZ(rotAngle);
+      paxis1.Set(raw_pos1.y(), raw_pos1.z());
+      paxis2.Set(raw_pos2.y(), raw_pos2.z());
+   
+      //paxis1.Set( sqrt(m_shower1->getPos().x()*m_shower1->getPos().x()+m_shower1->getPos().y()*m_shower1->getPos().y()), m_shower1->getPos().z());
+      //paxis2.Set( sqrt(m_shower2->getPos().x()*m_shower2->getPos().x()+m_shower2->getPos().y()*m_shower2->getPos().y()), m_shower2->getPos().z());
+    }
+  }
+
+  else if(m_shower1->getTowerID()[0][0]==Cyber::CaloUnit::System_Endcap){
+    if(m_shower1->getSlayer()==1){
+      paxis1.Set(m_shower1->getPos().z(), m_shower1->getPos().y());
+      paxis2.Set(m_shower2->getPos().z(), m_shower2->getPos().y());
+    }
+    else{
+      paxis1.Set(m_shower1->getPos().z(), m_shower1->getPos().x());
+      paxis2.Set(m_shower2->getPos().z(), m_shower2->getPos().x());
+    }
+  }
+
+  else{
+    std::cout<<"Error in ConeClustering2DAlg: Unknown system ID: "<<m_shower1->getTowerID()[0][0]<<std::endl;
   }
 
   return paxis2 - paxis1;

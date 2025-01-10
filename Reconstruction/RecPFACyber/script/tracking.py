@@ -6,7 +6,7 @@ from Configurables import k4DataSvc
 dsvc = k4DataSvc("EventDataSvc", input="CaloDigi_TDR_o1_v01.root")
 
 from Configurables import RndmGenSvc, HepRndm__Engine_CLHEP__RanluxEngine_
-seed = [1024]
+seed = [12340]
 # rndmengine = HepRndm__Engine_CLHEP__RanluxEngine_() # The default engine in Gaudi
 rndmengine = HepRndm__Engine_CLHEP__HepJamesRandom_("RndmGenSvc.Engine") # The default engine in Geant4
 rndmengine.SetSingleton = True
@@ -51,13 +51,19 @@ podioinput = PodioInput("PodioReader", collections=[
     "VXDCollection",
     "SITCollection",
     "TPCCollection",
+#    "SETCollection",
     "OTKBarrelCollection",
     "FTDCollection",
     "MuonBarrelCollection",
     "MuonEndcapCollection"
     ])
 
-# digitization
+
+##################
+# Digitization
+##################
+
+## Config ##
 vxdhitname  = "VXDTrackerHits"
 sithitname  = "SITTrackerHits"
 gashitname  = "TPCTrackerHits"
@@ -65,17 +71,14 @@ sethitname  = "OTKBarrelTrackerHits"
 setspname   = "OTKBarrelSpacePoints"
 ftdhitname  = "FTDTrackerHits"
 ftdspname   = "FTDSpacePoints"
-from Configurables import SmearDigiTool
+from Configurables import SmearDigiTool,SiTrackerDigiAlg
+
+## VXD ##
 vxdtool = SmearDigiTool("VXD")
 vxdtool.ResolutionU = [0.005]
 vxdtool.ResolutionV = [0.005]
-vxdtool.UsePlanarTag = True
-vxdtool.ParameterizeResolution = False
-vxdtool.ParametersU = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
-vxdtool.ParametersV = [5.60959e-03, 5.74913e-03, 7.03433e-03, 1.99516, -663.952, 3.752e-03, 0, -0.0704734, 0.0454867e-03, 1.07359]
 #vxdtool.OutputLevel = DEBUG
 
-from Configurables import SiTrackerDigiAlg
 digiVXD = SiTrackerDigiAlg("VXDDigi")
 digiVXD.SimTrackHitCollection = "VXDCollection"
 digiVXD.TrackerHitCollection = vxdhitname
@@ -83,46 +86,46 @@ digiVXD.TrackerHitAssociationCollection = "VXDTrackerHitAssociation"
 digiVXD.DigiTool = "SmearDigiTool/VXD"
 #digiVXD.OutputLevel = DEBUG
 
-from Configurables import PlanarDigiAlg
-digiSIT = PlanarDigiAlg("SITDigi")
-digiSIT.IsStrip = False
+## SIT ##
+sittool = SmearDigiTool("SIT")
+sittool.ResolutionU = [0.0098]
+sittool.ResolutionV = [0.0433]
+#sittool.OutputLevel = DEBUG
+
+digiSIT = SiTrackerDigiAlg("SITDigi")
 digiSIT.SimTrackHitCollection = "SITCollection"
 digiSIT.TrackerHitCollection = sithitname
 digiSIT.TrackerHitAssociationCollection = "SITTrackerHitAssociation"
-digiSIT.ResolutionU = [0.0098]
-digiSIT.ResolutionV = [0.0433]
-digiSIT.UsePlanarTag = True
-digiSIT.ParameterizeResolution = False
-digiSIT.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566, 12.4695e-03, -0.0643059, 0.168662, 1.87998e-03, 0.514452]
-digiSIT.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
+digiSIT.DigiTool = "SmearDigiTool/SIT"
 #digiSIT.OutputLevel = DEBUG
 
-digiSET = PlanarDigiAlg("SETDigi")
-digiSET.IsStrip = False
-digiSET.SimTrackHitCollection = "OTKBarrelCollection"
-digiSET.TrackerHitCollection = sethitname
-digiSET.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
-digiSET.ResolutionU = [0.010]
-digiSET.ResolutionV = [1.000]
-digiSET.UsePlanarTag = True
-digiSET.ParameterizeResolution = False
-digiSET.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566, 12.4695e-03, -0.0643059, 0.168662, 1.87998e-03, 0.514452]
-digiSET.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
-#digiSET.OutputLevel = DEBUG
+## OTKBarrel ##
+otkbtool = SmearDigiTool("OTKBarrel")
+otkbtool.ResolutionU = [0.010]
+otkbtool.ResolutionV = [1.000]
+#otkbtool.OutputLevel = DEBUG
 
-digiFTD = PlanarDigiAlg("FTDDigi")
-digiFTD.IsStrip = False
+digiOTKB = SiTrackerDigiAlg("OTKBarrelDigi")
+digiOTKB.SimTrackHitCollection = "OTKBarrelCollection"
+digiOTKB.TrackerHitCollection = sethitname
+digiOTKB.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
+digiOTKB.DigiTool = "SmearDigiTool/OTKBarrel"
+#digiOTKB.OutputLevel = DEBUG
+
+## FTD ##
+ftdtool = SmearDigiTool("FTD")
+ftdtool.ResolutionU = [0.0072]
+ftdtool.ResolutionV = [0.086]
+#ftdtool.OutputLevel = DEBUG
+
+digiFTD = SiTrackerDigiAlg("FTDDigi")
 digiFTD.SimTrackHitCollection = "FTDCollection"
 digiFTD.TrackerHitCollection = ftdhitname
 digiFTD.TrackerHitAssociationCollection = "FTDTrackerHitAssociation"
-digiFTD.ResolutionU = [0.0072]
-digiFTD.ResolutionV = [0.086]
-digiFTD.UsePlanarTag = True
-digiFTD.ParameterizeResolution = False
-digiFTD.ParametersU = [2.29655e-03, 0.965899e-03, 0.584699e-03, 17.0856, 84.566, 12.4695e-03, -0.0643059, 0.168662, 1.87998e-03, 0.514452]
-digiFTD.ParametersV = [1.44629e-02, 2.20108e-03, 1.03044e-02, 4.39195e+00, 3.29641e+00, 1.55167e+18, -5.41954e+01, 5.72986e+00, -6.80699e-03, 5.04095e-01]
+digiFTD.DigiTool = "SmearDigiTool/FTD"
 #digiFTD.OutputLevel = DEBUG
 
+## TPC ##
 from Configurables import TPCDigiAlg
 digiTPC = TPCDigiAlg("TPCDigi")
 digiTPC.TPCCollection = "TPCCollection"
@@ -137,6 +140,7 @@ digiTPC.TPCTrackerHitsCol = gashitname
 #digiTPC.N_eff = 30
 #digiTPC.OutputLevel = DEBUG
 
+
 ## Muon Detector ##
 from Configurables import MuonDigiAlg
 digiMuon = MuonDigiAlg("MuonDigiAlg")
@@ -146,8 +150,11 @@ digiMuon.MuonBarrelTrackerHits = "MuonBarrelTrackerHits"
 digiMuon.MuonEndcapTrackerHits = "MuonEndcapTrackerHits"
 digiMuon.WriteNtuple = 0
 digiMuon.OutFileName = "Digi_MUON.root"
+#########################################
 
-# tracking
+################
+# Tracking
+################
 from Configurables import KalTestTool
 # Close multiple scattering and smooth, used by clupatra
 kt010 = KalTestTool("KalTest010")
@@ -266,41 +273,19 @@ tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
 
-#from Configurables import ReadDigiAlg
-#readtrk = ReadDigiAlg("ReadDigiAlg")
-#readtrk.SiTracks = "SubsetTracks"
-#readtrk.TPCTracks = "ClupatraTracks"
-#readtrk.FullTracks = "CompleteTracks"
-#readtrk.TPCTracksAssociation = "ClupatraTracksParticleAssociation"
-#readtrk.FullTracksAssociation = "CompleteTracksParticleAssociation"
-#readtrk.OutFileName = "TrackAnaTuple_mu.root"
-
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
 out.filename = "Tracking_TDR_o1_v01.root"
-out.outputCommands = ["drop *",
-  "keep ECALBarrel",
-  "keep ECALBarrelParticleAssoCol",
-  "keep HCALBarrel",
-  "keep HCALBarrelParticleAssoCol",
-  "keep ECALEndcaps",
-  "keep HCALEndcaps",
-  "keep ECALEndcapsParticleAssoCol",
-  "keep HCALEndcapsParticleAssoCol",
-  "keep MCParticle",
-  "keep CompleteTracks",
-  "keep CompleteTracksParticleAssociation",
-  "keep RecTofCollection",
-  "keep DndxTracks" ]
+out.outputCommands = ["keep *"]
 
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiSET, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiSIT, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 10,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
-    #HistogramPersistency = 'ROOT',
-    OutputLevel = INFO
+    HistogramPersistency = 'ROOT',
+    OutputLevel = ERROR
 )

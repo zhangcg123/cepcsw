@@ -9,16 +9,51 @@ namespace Cyber{
   bool CaloUnit::isNeighbor(const CaloUnit* x) const {
     if( cellID==x->getcellID() ) return false;
     if( system!=x->getSystem() || dlayer!=x->getDlayer() || slayer!=x->getSlayer() ) return false; 
+    if( system==System_Endcap){ // endcap
+      if( module!=x->getModule() ) return false; 
+      if( slayer==0){
+        if(isAtLowerEdgeZ()){
+          if( ( ( getPosition().x()-x->getPosition().x() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && getPosition().x()-x->getPosition().x()>1e-6)
+                || ( x->getPosition().x()-getPosition().x() <= ecal_endcap_barsize + 1e-6 && x->getPosition().x()-getPosition().x()>1e-6) )
+              && fabs(getPosition().y()-x->getPosition().y()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
+        }
+        else if(isAtUpperEdgeZ()){
+          if( ( (getPosition().x()-x->getPosition().x() <= ecal_endcap_barsize + 1e-6 && getPosition().x()-x->getPosition().x()>1e-6) 
+                || (x->getPosition().x()-getPosition().x() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && x->getPosition().x()-getPosition().x()>1e-6) )
+              && fabs(getPosition().y()-x->getPosition().y()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
+        }
+        else{
+          if(fabs(getPosition().x()-x->getPosition().x()) <= ecal_endcap_barsize + 1e-6 
+          && fabs(getPosition().y()-x->getPosition().y()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + 2*ecal_endcap_barsize) return true;
+        }
+      } 
+      if( slayer==1) {
+        if(isAtLowerEdgePhi()){
+          if( ( (getPosition().y()-x->getPosition().y() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && getPosition().y()-x->getPosition().y()>1e-6) 
+                || ( x->getPosition().y()-getPosition().y() <= ecal_endcap_barsize + 1e-6 && x->getPosition().y()-getPosition().y()>1e-6) )
+              && fabs(getPosition().x()-x->getPosition().x()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
+        }
+        else if(isAtUpperEdgePhi()){
+          if( ( (getPosition().y()-x->getPosition().y() <= ecal_endcap_barsize + 1e-6 && getPosition().y()-x->getPosition().y()>1e-6) 
+                || (x->getPosition().y()-getPosition().y() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && x->getPosition().y()-getPosition().y()>1e-6) )
+              && fabs(getPosition().x()-x->getPosition().x()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
+        }
+        else{
+          if(fabs(getPosition().y()-x->getPosition().y()) <= ecal_endcap_barsize + 1e-6 
+          && fabs(getPosition().x()-x->getPosition().x()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + 2*ecal_endcap_barsize) return true;
+        }
+      } 
+    }
+    else{ //barrel
+      if( module==x->getModule() && stave==x->getStave() && fabs(bar - x->getBar())==1 ) return true;
+      if( slayer==0 && stave==x->getStave() && (fabs(module-x->getModule())<=1 || fabs(module-x->getModule())==Nmodule-1 ) && fabs(bar - x->getBar())<=1 ) return true;
+      if( slayer==1 && module==x->getModule() && fabs(stave-x->getStave())<=1 && fabs(bar - x->getBar())<=1 ) return true;
 
-    if( module==x->getModule() && stave==x->getStave() && fabs(bar - x->getBar())==1 ) return true;
-    if( slayer==0 && stave==x->getStave() && (fabs(module-x->getModule())<=1 || fabs(module-x->getModule())==Nmodule-1 ) && fabs(bar - x->getBar())<=1 ) return true;
-    if( slayer==1 && module==x->getModule() && fabs(stave-x->getStave())<=1 && fabs(bar - x->getBar())<=1 ) return true;
-
-    if( isAtLowerEdgeZ()   && x->isAtUpperEdgeZ()   && x->getStave()==stave-1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
-    if( isAtUpperEdgeZ()   && x->isAtLowerEdgeZ()   && x->getStave()==stave+1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
-    if( isAtLowerEdgePhi() && x->isAtUpperEdgePhi() && (x->getModule()==module-1 || (x->getModule() - module)==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
-    if( isAtUpperEdgePhi() && x->isAtLowerEdgePhi() && (x->getModule()==module+1 || (module - x->getModule())==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
-
+      if( isAtLowerEdgeZ()   && x->isAtUpperEdgeZ()   && x->getStave()==stave-1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
+      if( isAtUpperEdgeZ()   && x->isAtLowerEdgeZ()   && x->getStave()==stave+1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
+      if( isAtLowerEdgePhi() && x->isAtUpperEdgePhi() && (x->getModule()==module-1 || (x->getModule() - module)==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
+      if( isAtUpperEdgePhi() && x->isAtLowerEdgePhi() && (x->getModule()==module+1 || (module - x->getModule())==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
+    }
     return false;
   }
 
@@ -26,18 +61,31 @@ namespace Cyber{
     if( cellID==x->getcellID() ) return false;
     if( system!=x->getSystem() || slayer!=x->getSlayer() ) return false; 
     if( abs(dlayer-x->getDlayer())!=1) return false;
-    if( slayer==0 )
-    {
-      if( stave==x->getStave() && (fabs(module-x->getModule())<=1 || fabs(module-x->getModule())==Nmodule-1 ) && fabs(bar - x->getBar())<=1 ) return true;
-      if( isAtLowerEdgeZ()   && x->isAtUpperEdgeZ()   && x->getStave()==stave-1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
-      if( isAtUpperEdgeZ()   && x->isAtLowerEdgeZ()   && x->getStave()==stave+1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
+    if( system==System_Endcap ){ // endcap
+      if( slayer==0 ){
+        if(fabs(getPosition().x()-x->getPosition().x()) <= ecal_endcap_barsize + 1e-6 
+          && fabs(getPosition().y()-x->getPosition().y()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + 2*ecal_endcap_barsize) return true;
+      }
+      if( slayer==1 ){
+        if(fabs(getPosition().y()-x->getPosition().y()) <= ecal_endcap_barsize + 1e-6 
+          && fabs(getPosition().x()-x->getPosition().x()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + 2*ecal_endcap_barsize) return true;
+      }
     }
-    if( slayer==1 )
-    {
-      if(module==x->getModule() && fabs(stave-x->getStave())<=1 && fabs(bar - x->getBar())<=1 ) return true;
-      if( isAtLowerEdgePhi() && x->isAtUpperEdgePhi() && (x->getModule()==module-1 || (x->getModule() - module)==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
-      if( isAtUpperEdgePhi() && x->isAtLowerEdgePhi() && (x->getModule()==module+1 || (module - x->getModule())==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
+    else{
+      if( slayer==0 )
+      {
+        if( stave==x->getStave() && (fabs(module-x->getModule())<=1 || fabs(module-x->getModule())==Nmodule-1 ) && fabs(bar - x->getBar())<=1 ) return true;
+        if( isAtLowerEdgeZ()   && x->isAtUpperEdgeZ()   && x->getStave()==stave-1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
+        if( isAtUpperEdgeZ()   && x->isAtLowerEdgeZ()   && x->getStave()==stave+1 && (fabs(x->getModule()-module)<=1 || fabs(x->getModule()-module)==Nmodule-1 ) ) return true;
+      }
+      if( slayer==1 )
+      {
+        if(module==x->getModule() && fabs(stave-x->getStave())<=1 && fabs(bar - x->getBar())<=1 ) return true;
+        if( isAtLowerEdgePhi() && x->isAtUpperEdgePhi() && (x->getModule()==module-1 || (x->getModule() - module)==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
+        if( isAtUpperEdgePhi() && x->isAtLowerEdgePhi() && (x->getModule()==module+1 || (module - x->getModule())==Nmodule-1 ) && fabs(x->getStave()-stave)<=1 ) return true;
+      }
     }
+
     
     return false;
   }
@@ -49,11 +97,16 @@ namespace Cyber{
 
   bool CaloUnit::isAtUpperEdgePhi() const{
     bool isEdge = false; 
-    if(module%2==0){
-      if(slayer==1 && bar==NbarPhi_even[dlayer]-1) isEdge = true;
+    if( system==System_Endcap ){
+      if(slayer==1 && bar==nBarInLayer-1) isEdge = true;
     }
     else{
-      if(slayer==1 && bar==NbarPhi_odd[dlayer]-1) isEdge = true;
+      if(module%2==0){
+        if(slayer==1 && bar==NbarPhi_even[dlayer-1]) isEdge = true;
+      }
+      else{
+        if(slayer==1 && bar==NbarPhi_odd[dlayer-1]) isEdge = true;
+      }
     }
     return isEdge; 
   }
@@ -65,7 +118,12 @@ namespace Cyber{
 
 
   bool CaloUnit::isAtUpperEdgeZ() const{
-    return ( slayer==0 && bar==NbarZ-1 );
+    if( system==System_Endcap ){
+      return ( slayer==0 && bar==nBarInLayer-1 );
+    }
+    else{
+      return ( slayer==0 && bar==NbarZ-1 );
+    } 
   }
 
 /*

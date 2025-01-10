@@ -28,7 +28,7 @@ namespace Cyber{
 
     bool isNeighbor(const Cyber::CaloUnit* m_bar) const; 
     bool inCluster(const Cyber::CaloUnit* iBar) const;
-    void sortByPos() { std::sort(Bars.begin(), Bars.end()); }
+    void sortByPos() { std::sort(Bars.begin(), Bars.end(), compPos); }
 
     double getEnergy() const; 
     TVector3 getPos() const;
@@ -65,6 +65,7 @@ namespace Cyber{
 
     int getDlayer() const { if(Bars.size()>0) return Bars[0]->getDlayer(); return -99;  }
     int getSlayer() const { if(Bars.size()>0) return Bars[0]->getSlayer(); return -99;  }
+    int getSystem() const { if(Bars.size()>0) return Bars[0]->getSystem(); return -99;  }
     std::vector< std::vector<int> > getTowerID() const { return towerID; }
     
   private: 
@@ -73,12 +74,15 @@ namespace Cyber{
     double Energy;
     TVector3 pos;
 
-    std::vector< std::vector<int> > towerID; //[module, stave]
+    std::vector< std::vector<int> > towerID; //[system, module, stave, part]
 
     std::vector< const Cyber::Calo1DCluster* > CousinClusters;
     std::vector< const Cyber::Calo1DCluster* > ChildClusters;
 
     std::vector< std::pair<edm4hep::MCParticle, float> > MCParticleWeight;
+
+    static bool compPos( const Cyber::CaloUnit* hit1, const Cyber::CaloUnit* hit2 )
+      { return *hit1 < *hit2; }
   };
 }
 #endif

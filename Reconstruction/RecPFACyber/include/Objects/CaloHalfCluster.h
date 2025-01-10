@@ -72,7 +72,7 @@ namespace Cyber {
     void setHoughPars(double _a, double _r) { Hough_alpha=_a; Hough_rho=_r; }
     void setIntercept(double _in) { Hough_intercept=_in; }
     void mergeHalfCluster( const CaloHalfCluster* clus );
-    void addTowerID(int _m, int _p, int _s) { std::vector<int> id(3); id[0] = _m; id[1] = _p; id[2] = _s; towerID.push_back(id); }
+    void addTowerID(int _sys, int _m,  int _s, int _p) { std::vector<int> id(4); id[0] = _sys; id[1] = _m; id[2] = _s; id[3] = _p; towerID.push_back(id); }
     void addTowerID(std::vector<int> id) { towerID.push_back(id); }
     void setTowerID(std::vector<int> id) { towerID.clear(); towerID.push_back(id); }
     void addAssociatedTrack(const Cyber::Track* _track){ m_TrackCol.push_back(_track); }
@@ -83,7 +83,7 @@ namespace Cyber {
 
   private:
     int type; // yyy: new definition: track: 10000, Hough: 100, cone: 1, merge: sum them
-    std::vector< std::vector<int> > towerID; //[module, part, stave]
+    std::vector< std::vector<int> > towerID; //[system, module, stave, part]
     int slayer;
     mutable TVector3 axis = TVector3(99999., 99999., 99999.);
     mutable double trk_dr;

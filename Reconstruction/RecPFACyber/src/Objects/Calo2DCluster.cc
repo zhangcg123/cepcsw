@@ -103,17 +103,23 @@ namespace Cyber{
     if( pos.x()!=0 || pos.y()!=0 || pos.z()!=0 || towerID.size()==0 ) return pos;
 
     TVector3 m_pos(0., 0., 0.);
-    float rotAngle = -towerID[0][0]*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
-    TVector3 m_vecX(0., 0., 0.);  
+    TVector3 m_vecX(0., 0., 0.);
     TVector3 m_vecY(0., 0., 0.);
     for(int m=0; m<barShowerUCol.size(); m++) m_vecX += barShowerUCol[m]->getPos();
     m_vecX *= (1./barShowerUCol.size());
     for(int m=0; m<barShowerVCol.size(); m++) m_vecY += barShowerVCol[m]->getPos();
     m_vecY *= (1./barShowerVCol.size());
-    m_vecX.RotateZ(rotAngle);
-    m_vecY.RotateZ(rotAngle);
-    m_pos.SetXYZ( m_vecY.x(), (m_vecX.y()+m_vecY.y())/2 , m_vecX.z() );
-    m_pos.RotateZ(-rotAngle);
+    if(towerID[0][0]==CaloUnit::System_Barrel ){
+      float rotAngle = -towerID[0][1]*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
+      m_vecX.RotateZ(rotAngle);
+      m_vecY.RotateZ(rotAngle);
+      m_pos.SetXYZ( m_vecY.x(), (m_vecX.y()+m_vecY.y())/2 , m_vecX.z() );
+      m_pos.RotateZ(-rotAngle);
+      return m_pos;
+    }
+    if(towerID[0][0]==CaloUnit::System_Endcap){
+      m_pos.SetXYZ(m_vecX.x(), m_vecY.y(), (m_vecX.z()+m_vecY.z())/2.);
+    }
     return m_pos;
   }
 

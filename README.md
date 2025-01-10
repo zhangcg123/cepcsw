@@ -38,3 +38,7 @@ $ ./run.sh Examples/options/helloalg.py
 * Reconstruction: Reconstruction
 
 
+## CyberPFA-5.0.1-dev (developing)
+* Based on CEPCSW tag tdr 24.12.0
+
+

@@ -11,7 +11,7 @@ namespace Cyber {
   class HoughObject{
   public:
     HoughObject() {};
-    HoughObject( const Cyber::Calo1DCluster* _localmax, double _cellSize, double _ecal_inner_radius, double _phi=0.);
+    HoughObject( const Cyber::Calo1DCluster* _localmax, double _cellSize, double _ecal_inner_radius);
     ~HoughObject() { };
 
 
@@ -34,12 +34,13 @@ namespace Cyber {
 
     //int getModule() const { return (m_local_max->getTowerID())[0][0]; }
     int getSlayer() const { return m_local_max->getSlayer(); }
+    int getSystem() const { return m_local_max->getBars()[0]->getSystem(); }
     double getE() const { return m_local_max->getEnergy(); }
     double getCellSize() const { return m_cell_size; }
     const Cyber::Calo1DCluster* getLocalMax() const { return m_local_max; }
 
     void setCellSize(double _cs) { m_cell_size=_cs; }
-    void setCenterPoint(double& _ecal_inner_radius, double _phi=0.);
+    void setCenterPoint(double& _ecal_inner_radius);
     void setHoughLine(TF1& line1, TF1& line2);
 
 

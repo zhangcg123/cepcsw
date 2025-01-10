@@ -21,7 +21,8 @@ namespace Cyber{
                                std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
                                std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder, 
                                std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
-                               const dd4hep::VolumeManager& m_volumeManager ); 
+                               const dd4hep::VolumeManager& m_volumeManager,
+                               std::map<std::tuple<int, int, int, int, int>, int>& barNumberMapEndcapMap ); 
 
     //StatusCode CreateMCParticleCaloHitsAsso( std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
     //                                         DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>* r_MCParticleRecoCaloCol );

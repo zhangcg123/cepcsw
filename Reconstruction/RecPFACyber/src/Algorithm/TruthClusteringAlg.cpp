@@ -15,8 +15,8 @@ StatusCode TruthClusteringAlg::ReadSettings(Settings& m_settings){
 
   if(settings.map_stringPars.find("InputECALBars")==settings.map_stringPars.end()) 
     settings.map_stringPars["InputECALBars"] = "BarCol";
-  if(settings.map_stringPars.find("InputHCALHits")==settings.map_stringPars.end()) 
-    settings.map_stringPars["InputHCALHits"] = "HCALBarrel";
+  if(settings.map_stringVecPars.find("InputHCALHits")==settings.map_stringVecPars.end()) 
+    settings.map_stringVecPars["InputHCALHits"] = {"HCALBarrel", "HCALEndcaps"};
   if(settings.map_stringPars.find("OutputECAL1DClusters")==settings.map_stringPars.end()) 
     settings.map_stringPars["OutputECAL1DClusters"] = "TruthCluster1DCol";
   if(settings.map_stringPars.find("OutputECALHalfClusters")==settings.map_stringPars.end()) 
@@ -44,7 +44,10 @@ StatusCode TruthClusteringAlg::Initialize( CyberDataCol& m_datacol ){
 
   m_TrackCol = m_datacol.TrackCol; 
   m_bars = m_datacol.map_BarCol[settings.map_stringPars["InputECALBars"]];
-  m_hits = m_datacol.map_CaloHit[settings.map_stringPars["InputHCALHits"]];
+  for(int icl=0; icl<settings.map_stringVecPars["InputHCALHits"].size(); icl++){
+    m_hits.insert(m_hits.end(), m_datacol.map_CaloHit[settings.map_stringVecPars["InputHCALHits"][icl]].begin(), m_datacol.map_CaloHit[settings.map_stringVecPars["InputHCALHits"][icl]].end());
+    //m_hits = m_datacol.map_CaloHit[settings.map_stringPars["InputHCALHits"]];
+  }
 
   return StatusCode::SUCCESS;
 };

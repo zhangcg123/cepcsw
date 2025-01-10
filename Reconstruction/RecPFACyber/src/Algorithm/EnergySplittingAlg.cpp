@@ -85,7 +85,7 @@ for(int ih=0; ih<p_HalfClusterU.size(); ih++){
   for(int icl=0; icl<tmp_axisUCol.size(); icl++){
     cout<<"  Axis #"<<icl<<": cluster En "<<tmp_axisUCol[icl]->getEnergy()<<", type "<<tmp_axisUCol[icl]->getType()<<endl;
     for(auto ish : tmp_axisUCol[icl]->getCluster()){
-      printf("    Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish );
+      printf("    Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Address \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy());
     }
   }
 }
@@ -96,7 +96,7 @@ for(int ih=0; ih<p_HalfClusterV.size(); ih++){
   for(int icl=0; icl<tmp_axisVCol.size(); icl++){
     cout<<"  Axis #"<<icl<<": cluster En "<<tmp_axisVCol[icl]->getEnergy()<<", type "<<tmp_axisVCol[icl]->getType()<<endl;
     for(auto ish : tmp_axisVCol[icl]->getCluster()){
-      printf("    Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish );
+      printf("    Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Address \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy() );
     }
   }
 }
@@ -158,6 +158,16 @@ cout<<"Empty half cluster energy "<<tmp_totE_U<<", "<<tmp_totE_V<<endl;
 //for(int i1d=0; i1d<m_1dShowerUCol.size(); i1d++) tmp_En += m_1dShowerUCol[i1d]->getEnergy();
 //cout<<"  HalfClusterU #"<<ih<<": total En after energy splitting "<<tmp_En<<endl;
 
+//cout<<"  After energy splitting: 1D cluster size "<<m_1dShowerUCol.size()<<", print check"<<endl;
+//for(int i1d=0; i1d<m_1dShowerUCol.size(); i1d++){
+//  auto ish = m_1dShowerUCol[i1d];
+//  printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, MC map size %d \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds(), ish->getLinkedMCP().size() );
+//  //printf(", cover tower size: %d: ", ish->getTowerID().size());
+//  //for(int atw=0; atw<ish->getTowerID().size(); atw++) printf("[%d, %d, %d], ", ish->getTowerID()[atw][0], ish->getTowerID()[atw][1], ish->getTowerID()[atw][2] );
+//  //cout<<endl;
+//}
+//cout<<endl;
+
     //Clean showers without seed.
     for(int ic=0; ic<m_1dShowerUCol.size(); ic++){
       if(m_1dShowerUCol[ic]->getNseeds()==0){
@@ -175,15 +185,36 @@ cout<<"Empty half cluster energy "<<tmp_totE_U<<", "<<tmp_totE_V<<endl;
 //tmp_En = 0.;
 //for(int i1d=0; i1d<m_1dShowerUCol.size(); i1d++) tmp_En += m_1dShowerUCol[i1d]->getEnergy();
 //cout<<"  HalfClusterU #"<<ih<<": total En after shower cleaning "<<tmp_En<<endl;
+//cout<<"  After shower cleaning: 1D cluster size "<<m_1dShowerUCol.size()<<", print check"<<endl;
+//for(int i1d=0; i1d<m_1dShowerUCol.size(); i1d++){
+//  auto ish = m_1dShowerUCol[i1d];
+//  printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, MC map size %d \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds(), ish->getLinkedMCP().size() );
+//  //printf(", cover tower size: %d: ", ish->getTowerID().size());
+//  //for(int atw=0; atw<ish->getTowerID().size(); atw++) printf("[%d, %d, %d], ", ish->getTowerID()[atw][0], ish->getTowerID()[atw][1], ish->getTowerID()[atw][2] );
+//  //cout<<endl;
+//}
+//cout<<endl;
 
     //  Longitudinal linking: update clusters' energy.
     std::vector<std::shared_ptr<Cyber::CaloHalfCluster>> tmp_newClus; tmp_newClus.clear();
     LongitudinalLinking(m_1dShowerUCol, m_axisUCol, tmp_newClus);
     m_newClusUCol.insert(m_newClusUCol.end(), tmp_newClus.begin(), tmp_newClus.end());
 
-//double tmp_En = 0.;
+//tmp_En = 0.;
 //for(int acl=0; acl<tmp_newClus.size(); acl++) tmp_En += tmp_newClus[acl]->getEnergy();
 //cout<<"  HalfClusterU #"<<ih<<": total En after LongiLinking "<<tmp_En<<endl;
+//cout<<"  After Longitudinally linking: HalfCluster U size "<<tmp_newClus.size()<<", print check"<<endl;
+//for(int icl=0; icl<tmp_newClus.size(); icl++){
+//  cout<<"      In HFClusU #"<<icl<<": shower size = "<<tmp_newClus[icl]->getCluster().size()<<endl;
+//  for(auto ish : tmp_newClus[icl]->getCluster()){
+//    printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, MC map size %d \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds(), ish->getLinkedMCP().size() );
+//    //printf(", cover tower size: %d: ", ish->getTowerID().size());
+//    //for(int atw=0; atw<ish->getTowerID().size(); atw++) printf("[%d, %d, %d], ", ish->getTowerID()[atw][0], ish->getTowerID()[atw][1], ish->getTowerID()[atw][2] );
+//    //cout<<endl;
+//  }
+//}
+//cout<<endl;
+
     tmp_newClus.clear();
   }
 
@@ -301,8 +332,8 @@ for(int icl=0; icl<m_newClusVCol.size(); icl++){
     //cout<<endl;
   }
 }
-
-
+*/
+/*
 float totE_U = 0.;
 float totE_V = 0.;
 for(auto iter : m_newClusUCol) totE_U += iter->getEnergy();
@@ -311,30 +342,30 @@ printf("    Before split to tower: HalfCluster size: (%d, %d), energy (%.3f, %.3
 cout<<"    Loop print HalfClusterU: "<<endl;
 for(int icl=0; icl<m_newClusUCol.size(); icl++){
   cout<<"      In HFClusU #"<<icl<<": shower size = "<<m_newClusUCol[icl]->getCluster().size()<<", En = "<<m_newClusUCol[icl]->getEnergy()<<", type "<<m_newClusUCol[icl]->getType();
-  printf(", Position (%.3f, %.3f, %.3f), address %p ",m_newClusUCol[icl]->getPos().x(), m_newClusUCol[icl]->getPos().y(), m_newClusUCol[icl]->getPos().z(), m_newClusUCol[icl]);
+  printf(", Position (%.3f, %.3f, %.3f), address ",m_newClusUCol[icl]->getPos().x(), m_newClusUCol[icl]->getPos().y(), m_newClusUCol[icl]->getPos().z());
   printf(", cousin size %d, address: ", m_newClusUCol[icl]->getHalfClusterCol("CousinCluster").size());
-  for(int ics=0; ics<m_newClusUCol[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_newClusUCol[icl]->getHalfClusterCol("CousinCluster")[ics]);
+  //for(int ics=0; ics<m_newClusUCol[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_newClusUCol[icl]->getHalfClusterCol("CousinCluster")[ics]);
   printf(", track size %d, address: ", m_newClusUCol[icl]->getAssociatedTracks().size());
-  for(int itrk=0; itrk<m_newClusUCol[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_newClusUCol[icl]->getAssociatedTracks()[itrk]);
+  //for(int itrk=0; itrk<m_newClusUCol[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_newClusUCol[icl]->getAssociatedTracks()[itrk]);
   cout<<endl;
-  for(auto ish : m_newClusUCol[icl]->getCluster()){
-    printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, seedID [%d, %d, %d, %d], Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds(), ish->getSeeds()[0]->getModule(), ish->getSeeds()[0]->getPart(), ish->getSeeds()[0]->getStave(), ish->getSeeds()[0]->getBar(), ish );
-  }
+  //for(auto ish : m_newClusUCol[icl]->getCluster()){
+  //  printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, seedID [%d, %d, %d, %d], Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds(), ish->getSeeds()[0]->getModule(), ish->getSeeds()[0]->getPart(), ish->getSeeds()[0]->getStave(), ish->getSeeds()[0]->getBar(), ish );
+  //}
 }
 cout<<endl;
 
 cout<<"    Loop print HalfClusterV: "<<endl;
 for(int icl=0; icl<m_newClusVCol.size(); icl++){
   cout<<"      In HFClusV #"<<icl<<": shower size = "<<m_newClusVCol[icl]->getCluster().size()<<", En = "<<m_newClusVCol[icl]->getEnergy()<<", type "<<m_newClusVCol[icl]->getType();
-  printf(", Position (%.3f, %.3f, %.3f), address %p ",m_newClusVCol[icl]->getPos().x(), m_newClusVCol[icl]->getPos().y(), m_newClusVCol[icl]->getPos().z(), m_newClusVCol[icl]);
+  printf(", Position (%.3f, %.3f, %.3f), address ",m_newClusVCol[icl]->getPos().x(), m_newClusVCol[icl]->getPos().y(), m_newClusVCol[icl]->getPos().z());
   printf(", cousin size %d, address: ", m_newClusVCol[icl]->getHalfClusterCol("CousinCluster").size());
-  for(int ics=0; ics<m_newClusVCol[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_newClusVCol[icl]->getHalfClusterCol("CousinCluster")[ics]);
+  //for(int ics=0; ics<m_newClusVCol[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_newClusVCol[icl]->getHalfClusterCol("CousinCluster")[ics]);
   printf(", track size %d, address: ", m_newClusVCol[icl]->getAssociatedTracks().size());
-  for(int itrk=0; itrk<m_newClusVCol[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_newClusVCol[icl]->getAssociatedTracks()[itrk]);
+  //for(int itrk=0; itrk<m_newClusVCol[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_newClusVCol[icl]->getAssociatedTracks()[itrk]);
   cout<<endl;
-  for(auto ish : m_newClusVCol[icl]->getCluster()){
-    printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, seedID [%d, %d, %d, %d], Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(), ish->getNseeds(), ish->getSeeds()[0]->getModule(), ish->getSeeds()[0]->getPart(), ish->getSeeds()[0]->getStave(), ish->getSeeds()[0]->getBar(), ish );
-  }
+  //for(auto ish : m_newClusVCol[icl]->getCluster()){
+  //  printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, seedID [%d, %d, %d, %d], Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(), ish->getNseeds(), ish->getSeeds()[0]->getModule(), ish->getSeeds()[0]->getPart(), ish->getSeeds()[0]->getStave(), ish->getSeeds()[0]->getBar(), ish );
+  //}
 }
 cout<<endl;
 */
@@ -392,7 +423,7 @@ StatusCode EnergySplittingAlg::LongitudinalLinking( std::vector<std::shared_ptr<
 //cout<<"  In LongitudinalLinking: input 1DShower total energy : "<<tmp_totE<<". old axis size "<<m_oldClusCol.size()<<endl;
 //cout<<"  Print all 1DShower (address)"<<endl;
 //for(int i=0; i<m_showers.size(); i++){
-//  printf("    Shower #%d, pos+E [%.3f, %.3f, %.3f, %.3f], address %p \n", i, m_showers[i]->getPos().x(), m_showers[i]->getPos().y(), m_showers[i]->getPos().z(), m_showers[i]->getEnergy(), m_showers[i] );
+//  printf("    Shower #%d, pos+E [%.3f, %.3f, %.3f, %.3f], Nbars %d, address \n", i, m_showers[i]->getPos().x(), m_showers[i]->getPos().y(), m_showers[i]->getPos().z(), m_showers[i]->getBars().size(), m_showers[i]->getEnergy() );
 //}
 
   //Update old Hough clusters
@@ -414,7 +445,7 @@ StatusCode EnergySplittingAlg::LongitudinalLinking( std::vector<std::shared_ptr<
         if( fl_inTower &&
             m_showers[js].get()->getDlayer() == m_shower->getDlayer() && 
             m_showers[js].get()->getSeeds().size()==1 && 
-            (m_showers[js].get()->getSeeds()[0]->getPosition()-m_shower->getPos()).Mag()<10 ) 
+            (m_showers[js].get()->getSeeds()[0]->getPosition()-m_shower->getPos()).Mag()<Cyber::CaloUnit::barsize ) 
         {m_selshower = m_showers[js].get(); fl_foundshower=true; break; }
       }
       if(fl_foundshower && m_selshower!=NULL) m_newClus->addUnit( m_selshower );
@@ -432,15 +463,15 @@ StatusCode EnergySplittingAlg::LongitudinalLinking( std::vector<std::shared_ptr<
 //tmp_totE = 0.;
 //for(int i=0; i<m_newClusCol.size(); i++) tmp_totE += m_newClusCol[i]->getEnergy();
 //cout<<"  In Longi-Linking: raw new HFCluster size : "<<m_newClusCol.size()<<", totE "<<tmp_totE<<endl;
-/*
-cout<<"  Print 1DShower in new HFCluster"<<endl;
-for(int ih=0; ih<m_newClusCol.size(); ih++){
-  cout<<"    In new HFCluster #"<<ih<<endl;
-  for(int i=0; i<m_newClusCol[ih]->getCluster().size(); i++){
-    printf("      Shower #%d, pos+E [%.3f, %.3f, %.3f, %.3f], address %p \n", i, m_newClusCol[ih]->getCluster()[i]->getPos().x(), m_newClusCol[ih]->getCluster()[i]->getPos().y(), m_newClusCol[ih]->getCluster()[i]->getPos().z(), m_newClusCol[ih]->getCluster()[i]->getEnergy(), m_newClusCol[ih]->getCluster()[i] );
-  }
-}
-*/
+
+//cout<<"  Print 1DShower in new HFCluster"<<endl;
+//for(int ih=0; ih<m_newClusCol.size(); ih++){
+//  cout<<"    In new HFCluster #"<<ih<<endl;
+//  for(int i=0; i<m_newClusCol[ih]->getCluster().size(); i++){
+//    printf("      Shower #%d, pos+E [%.3f, %.3f, %.3f, %.3f], address \n", i, m_newClusCol[ih]->getCluster()[i]->getPos().x(), m_newClusCol[ih]->getCluster()[i]->getPos().y(), m_newClusCol[ih]->getCluster()[i]->getPos().z(), m_newClusCol[ih]->getCluster()[i]->getEnergy() );
+//  }
+//}
+
 
   std::vector<const Cyber::Calo1DCluster*> m_leftshowers; m_leftshowers.clear(); 
   for(int ish=0; ish<m_showers.size(); ish++){
@@ -480,15 +511,15 @@ for(int ih=0; ih<m_newClusCol.size(); ih++){
     for(int icl=0; icl<m_newClusCol.size(); icl++) 
       m_newClusCol[icl].get()->mergeClusterInLayer();
   }
-/*
-cout<<"  Print 1DShower in new HFCluster"<<endl;
-for(int ih=0; ih<m_newClusCol.size(); ih++){
-  cout<<"    In new HFCluster #"<<ih<<endl;
-  for(int i=0; i<m_newClusCol[ih]->getCluster().size(); i++){
-    printf("      Shower #%d, pos+E [%.3f, %.3f, %.3f, %.3f], address %p \n", i, m_newClusCol[ih]->getCluster()[i]->getPos().x(), m_newClusCol[ih]->getCluster()[i]->getPos().y(), m_newClusCol[ih]->getCluster()[i]->getPos().z(), m_newClusCol[ih]->getCluster()[i]->getEnergy(), m_newClusCol[ih]->getCluster()[i] );
-  }
-}
-*/
+
+//cout<<"  Print 1DShower in new HFCluster"<<endl;
+//for(int ih=0; ih<m_newClusCol.size(); ih++){
+//  cout<<"    In new HFCluster #"<<ih<<endl;
+//  for(int i=0; i<m_newClusCol[ih]->getCluster().size(); i++){
+//    printf("      Shower #%d, pos+E [%.3f, %.3f, %.3f, %.3f], address \n", i, m_newClusCol[ih]->getCluster()[i]->getPos().x(), m_newClusCol[ih]->getCluster()[i]->getPos().y(), m_newClusCol[ih]->getCluster()[i]->getPos().z(), m_newClusCol[ih]->getCluster()[i]->getEnergy() );
+//  }
+//}
+
   return StatusCode::SUCCESS;
 }
 
@@ -541,9 +572,11 @@ StatusCode EnergySplittingAlg::HalfClusterToTowers( std::vector<Cyber::CaloHalfC
 
       std::map<std::vector<int>, Cyber::Calo1DCluster* > tmp_1DClusMaps; tmp_1DClusMaps.clear();
       for(int ib=0; ib<p_shower->getBars().size(); ib++){
-        std::vector<int> towerID(2);
-        towerID[0] = p_shower->getBars()[ib]->getModule();
-        towerID[1] = p_shower->getBars()[ib]->getStave();        
+        std::vector<int> towerID(4);
+        towerID[0] = p_shower->getBars()[ib]->getSystem();
+        towerID[1] = p_shower->getBars()[ib]->getModule();
+        towerID[2] = p_shower->getBars()[ib]->getStave();
+        towerID[3] = p_shower->getBars()[ib]->getPart();        
 
         if(tmp_1DClusMaps.find(towerID)!=tmp_1DClusMaps.end()){
           tmp_1DClusMaps[towerID]->addUnit(p_shower->getBars()[ib]);
@@ -640,9 +673,11 @@ StatusCode EnergySplittingAlg::HalfClusterToTowers( std::vector<Cyber::CaloHalfC
 
       std::map<std::vector<int>, Cyber::Calo1DCluster* > tmp_1DClusMaps; tmp_1DClusMaps.clear();
       for(int ib=0; ib<p_shower->getBars().size(); ib++){
-        std::vector<int> towerID(2);
-        towerID[0] = p_shower->getBars()[ib]->getModule();
-        towerID[1] = p_shower->getBars()[ib]->getStave();
+        std::vector<int> towerID(4);
+        towerID[0] = p_shower->getBars()[ib]->getSystem();
+        towerID[1] = p_shower->getBars()[ib]->getModule();
+        towerID[2] = p_shower->getBars()[ib]->getStave();
+        towerID[3] = p_shower->getBars()[ib]->getPart();
 
         if(tmp_1DClusMaps.find(towerID)!=tmp_1DClusMaps.end()){
           tmp_1DClusMaps[towerID]->addUnit(p_shower->getBars()[ib]);
@@ -876,14 +911,14 @@ cout<<endl;
   cout<<"    Loop print HalfClusterU: "<<endl;
   for(int icl=0; icl<m_HFClusUInTower.size(); icl++){
     cout<<"      In HFClusU #"<<icl<<": shower size = "<<m_HFClusUInTower[icl]->getCluster().size()<<", En = "<<m_HFClusUInTower[icl]->getEnergy()<<", type "<<m_HFClusUInTower[icl]->getType();
-    printf(", Position (%.3f, %.3f, %.3f), address %p ",m_HFClusUInTower[icl]->getPos().x(), m_HFClusUInTower[icl]->getPos().y(), m_HFClusUInTower[icl]->getPos().z(), m_HFClusUInTower[icl]);
+    printf(", Position (%.3f, %.3f, %.3f), ",m_HFClusUInTower[icl]->getPos().x(), m_HFClusUInTower[icl]->getPos().y(), m_HFClusUInTower[icl]->getPos().z());
     printf(", cousin size %d, address: ", m_HFClusUInTower[icl]->getHalfClusterCol("CousinCluster").size());
-    for(int ics=0; ics<m_HFClusUInTower[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_HFClusUInTower[icl]->getHalfClusterCol("CousinCluster")[ics]);
+    //for(int ics=0; ics<m_HFClusUInTower[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_HFClusUInTower[icl]->getHalfClusterCol("CousinCluster")[ics]);
     printf(", track size %d, address: ", m_HFClusUInTower[icl]->getAssociatedTracks().size());
-    for(int itrk=0; itrk<m_HFClusUInTower[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_HFClusUInTower[icl]->getAssociatedTracks()[itrk]);
+    //for(int itrk=0; itrk<m_HFClusUInTower[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_HFClusUInTower[icl]->getAssociatedTracks()[itrk]);
     cout<<endl;
     for(auto ish : m_HFClusUInTower[icl]->getCluster()){
-      printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds(), ish );
+      printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(),  ish->getNseeds() );
     }
   }
   cout<<endl;
@@ -891,14 +926,14 @@ cout<<endl;
   cout<<"    Loop print HalfClusterV: "<<endl;
   for(int icl=0; icl<m_HFClusVInTower.size(); icl++){
     cout<<"      In HFClusV #"<<icl<<": shower size = "<<m_HFClusVInTower[icl]->getCluster().size()<<", En = "<<m_HFClusVInTower[icl]->getEnergy()<<", type "<<m_HFClusVInTower[icl]->getType();
-    printf(", Position (%.3f, %.3f, %.3f), address %p ",m_HFClusVInTower[icl]->getPos().x(), m_HFClusVInTower[icl]->getPos().y(), m_HFClusVInTower[icl]->getPos().z(), m_HFClusVInTower[icl]);
+    printf(", Position (%.3f, %.3f, %.3f), ",m_HFClusVInTower[icl]->getPos().x(), m_HFClusVInTower[icl]->getPos().y(), m_HFClusVInTower[icl]->getPos().z());
     printf(", cousin size %d, address: ", m_HFClusVInTower[icl]->getHalfClusterCol("CousinCluster").size());
-    for(int ics=0; ics<m_HFClusVInTower[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_HFClusVInTower[icl]->getHalfClusterCol("CousinCluster")[ics]);
+    //for(int ics=0; ics<m_HFClusVInTower[icl]->getHalfClusterCol("CousinCluster").size(); ics++) printf("%p, ", m_HFClusVInTower[icl]->getHalfClusterCol("CousinCluster")[ics]);
     printf(", track size %d, address: ", m_HFClusVInTower[icl]->getAssociatedTracks().size());
-    for(int itrk=0; itrk<m_HFClusVInTower[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_HFClusVInTower[icl]->getAssociatedTracks()[itrk]);
+    //for(int itrk=0; itrk<m_HFClusVInTower[icl]->getAssociatedTracks().size(); itrk++) printf("%p, ", m_HFClusVInTower[icl]->getAssociatedTracks()[itrk]);
     cout<<endl;
     for(auto ish : m_HFClusVInTower[icl]->getCluster()){
-      printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d, Address %p \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(), ish->getNseeds(), ish );
+      printf("          Shower layer %d, Pos+E (%.3f, %.3f, %.3f, %.3f), Nbars %d, NSeed %d \n", ish->getDlayer(), ish->getPos().x(), ish->getPos().y(), ish->getPos().z(), ish->getEnergy(), ish->getBars().size(), ish->getNseeds() );
     }
   }
   cout<<endl;
@@ -1017,7 +1052,10 @@ StatusCode EnergySplittingAlg::ClusterSplitting(const Cyber::Calo1DCluster* m_cl
     double Eexp[Nshower];
     double Eexp_tot=0;
     for(int is=0;is<Nshower;is++){ Eexp[is] = Eseed[is]*GetShowerProfile(m_cluster->getBars()[ibar]->getPosition(), SeedPos[is] ); Eexp_tot+= Eexp[is];}
-    for(int is=0;is<Nshower;is++) weight[ibar][is] = Eexp[is]/Eexp_tot;
+    for(int is=0;is<Nshower;is++){ 
+      weight[ibar][is] = Eexp[is]/Eexp_tot;
+      if(weight[ibar][is]<1e-5) weight[ibar][is] = 0.;
+    }
   }
 
 
@@ -1040,10 +1078,11 @@ StatusCode EnergySplittingAlg::ClusterSplitting(const Cyber::Calo1DCluster* m_cl
     double _Emax = -99;
     
     for(int ib=0;ib<Nbars;ib++){
-      double barEn = (m_cluster->getBars()[ib]->getQ1()*weight[ib][is] + m_cluster->getBars()[ib]->getQ2()*weight[ib][is])/2.;
+      double barEn = m_cluster->getBars()[ib]->getEnergy() * weight[ib][is];
 //cout<<"    bar#"<<ib<<" barID "<<m_cluster->getBars()[ib]->getBar()<<" En: "<<barEn<<endl;
-      if(barEn<settings.map_floatPars["Eth_unit"]) continue;
-
+      if(barEn<settings.map_floatPars["Eth_unit"]){ 
+        continue;
+      }
       auto bar = m_cluster->getBars()[ib]->Clone();
       bar->setQ( bar->getQ1()*weight[ib][is], bar->getQ2()*weight[ib][is]  );
       if( bar->getEnergy()>_Emax ) { _Emax=bar->getEnergy(); iseed=icount; }
@@ -1052,14 +1091,13 @@ StatusCode EnergySplittingAlg::ClusterSplitting(const Cyber::Calo1DCluster* m_cl
       m_bkCol.map_BarCol["bkBar"].push_back( bar );
 //cout<<"      Found seed: iseed="<<iseed<<", icount="<<icount<<endl;
     }
-    if(iseed<0) { std::cout<<"ERROR: Can not find seed(max energy bar) in this shower! Nbars = "<<Nbars<<". Please Check!"<<std::endl; continue; }
+    if(iseed<0) { std::cout<<"ERROR: Can not find seed(max energy bar) in this shower! Nbars = "<<Nbars<<", icount "<<icount<<", maxEn "<<_Emax<<". Please Check!"<<std::endl; continue; }
     //if( (Bars[iseed]->getPosition()-SeedPos[is]).Mag()>15 ) { std::cout<<"ERROR: MaxEnergy bar is too far with original seed! Please Check! iSeed = "<<iseed<<std::endl; }
 
     std::shared_ptr<Cyber::Calo1DCluster> shower = std::make_shared<Cyber::Calo1DCluster>();
     shower->setBars(Bars);
     shower->addSeed(Bars[iseed]);
     shower->setIDInfo(); 
-
 
     outshCol.push_back(shower);
   }
@@ -1168,7 +1206,7 @@ StatusCode EnergySplittingAlg::MergeToClosestCluster( Cyber::Calo1DCluster* iclu
   int cLedge = iclus->getLeftEdge();
   int cRedge = iclus->getRightEdge();
 
-//printf("ClusterMerging: input cluster layer %d, energy %.4f, edge [%d, %d]\n", iclus->getDlayer(), iclus->getEnergy(), cLedge, cRedge);
+//printf("ClusterMerging: input cluster system %d, layer %d, energy %.4f, Nbars %d, edge [%d, %d]\n",iclus->getSystem(), iclus->getDlayer(), iclus->getEnergy(), iclus->getBars().size(), cLedge, cRedge);
 
   //Find the closest cluster with iclus.
   int minD = 99;
@@ -1184,11 +1222,11 @@ StatusCode EnergySplittingAlg::MergeToClosestCluster( Cyber::Calo1DCluster* iclu
     //int dis = (cLedge-iRedge>0 ? cLedge-iRedge : iLedge-cRedge );
     int dis = min( abs(cLedge-iRedge), abs(iLedge-cRedge) );
 
-//printf("  Loop in clusterCol #%d: range [%d, %d], distance %d, energy ratio %.3f \n", icl, iLedge, iRedge, dis, iclus->getEnergy()/clusvec[icl]->getEnergy());
+//printf("  Loop in clusterCol #%d: Nbars %d, range [%d, %d], distance %d, energy ratio %.3f \n", icl, clusvec[icl].get()->getBars().size(), iLedge, iRedge, dis, iclus->getEnergy()/clusvec[icl]->getEnergy());
     if(dis>10) continue; //Don't merge to a too far cluster.
     if(dis<minD){ minD = dis; index=icl; }
   }
-//cout<<"Selected closest cluster #"<<index<<endl;
+//cout<<"Selected closest cluster #"<<index<<", minD "<<minD<<endl;
 
   if(index<0) return StatusCode::FAILURE;
 

@@ -68,7 +68,6 @@ StatusCode PFOReclusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   // }
   // cout<<"-----Charged cluster Ecal total energy: "<<totE_Ecal<<", Hcal total energy: "<<totE_Hcal<<endl;
 
-
   //If P_trk > E_cluster, merge nearby neutral PFO into the charged. 
   ReCluster_MergeToChg(m_chargedPFOs, m_neutralPFOs);
 
@@ -523,7 +522,7 @@ StatusCode PFOReclusteringAlg::ReCluster_SplitFromChg( std::vector< std::shared_
         std::shared_ptr<Cyber::Calo2DCluster> m_2dclus = std::make_shared<Cyber::Calo2DCluster>();
         m_2dclus->addShowerU(m_1dclus_u.get());
         m_2dclus->addShowerV(m_1dclus_v.get());
-        m_2dclus->addTowerID(0., 0., 0.);
+        m_2dclus->addTowerID(0., 0., 0., 0.);
         m_2dclus->setPos(tmp_pos);
    
         // -- Create Half cluster U/V

@@ -1,3 +1,12 @@
+//=============================================================
+// CyberPFA: a PFA developed for CEPC referenece detector
+// Ver. CyberPFA-5.0.1(2025.01.09)
+//-------------------------------------------------------------
+//  Author: Fangyi Guo, Yang Zhang, Weizheng Song, Shengsen Sun
+//          (IHEP, CAS)
+//  Contact: guofangyi@ihep.ac.cn,
+//           sunss@ihep.ac.cn
+//=============================================================
 #ifndef PANDORAPLUS_ALG_H
 #define PANDORAPLUS_ALG_H
 
@@ -8,6 +17,7 @@
 #include <DDRec/CellIDPositionConverter.h>
 #include <DD4hep/Segmentations.h>
 #include "DetInterface/IGeomSvc.h"
+#include "DetIdentifier/CEPCDetectorData.h"
 #include <CrystalEcalSvc/ICrystalEcalSvc.h>
 
 #include "k4FWCore/PodioDataSvc.h"
@@ -73,7 +83,6 @@ public:
   /** Called after data processing for clean up.
    */
   virtual StatusCode finalize() ;
-  
 
 protected:
 
@@ -86,7 +95,7 @@ protected:
   dd4hep::Detector* m_dd4hep;
   dd4hep::rec::CellIDPositionConverter* m_cellIDConverter;
   dd4hep::VolumeManager m_volumeManager;
-
+  std::map<std::tuple<int, int, int, int, int>, int> barNumberMapEndcapMap;
   //DataCollection: moved into execute() to ensure everything can be cleand after one event. 
   //CyberDataCol     m_DataCol; 
 
@@ -191,10 +200,10 @@ protected:
   //Raw bars and hits
   TTree* t_SimBar;
   float m_totE_EcalSim, m_totE_HcalSim;
-  FloatVec m_simBar_x, m_simBar_y, m_simBar_z, m_simBar_T1, m_simBar_T2, m_simBar_Q1, m_simBar_Q2; 
+  FloatVec m_simBar_x, m_simBar_y, m_simBar_z, m_simBar_length, m_simBar_nBarInLayer, m_simBar_T1, m_simBar_T2, m_simBar_Q1, m_simBar_Q2; 
   FloatVec m_simBar_truthMC_tag, m_simBar_truthMC_pid, m_simBar_truthMC_px, m_simBar_truthMC_py, m_simBar_truthMC_pz, m_simBar_truthMC_E, 
-           m_simBar_truthMC_EPx, m_simBar_truthMC_EPy, m_simBar_truthMC_EPz, m_simBar_truthMC_weight;
-  IntVec m_simBar_dlayer, m_simBar_stave, m_simBar_slayer, m_simBar_module, m_simBar_bar;
+           m_simBar_truthMC_EPx, m_simBar_truthMC_EPy, m_simBar_truthMC_EPz, m_simBar_truthMC_weight;   
+  IntVec m_simBar_dlayer, m_simBar_stave, m_simBar_slayer, m_simBar_module, m_simBar_bar, m_simBar_system;
   FloatVec m_HcalHit_x, m_HcalHit_y, m_HcalHit_z, m_HcalHit_E, 
            m_HcalHit_truthMC_tag, m_HcalHit_truthMC_pid, m_HcalHit_truthMC_px, m_HcalHit_truthMC_py, m_HcalHit_truthMC_pz, m_HcalHit_truthMC_E,
            m_HcalHit_truthMC_EPx, m_HcalHit_truthMC_EPy, m_HcalHit_truthMC_EPz, m_HcalHit_truthMC_weight;

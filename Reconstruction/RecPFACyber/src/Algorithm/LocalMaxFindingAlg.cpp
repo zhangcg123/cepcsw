@@ -42,6 +42,7 @@ StatusCode LocalMaxFindingAlg::RunAlgorithm( CyberDataCol& m_datacol){
       m_datacol.map_1DCluster["bk1DCluster"].push_back(iter);
     }
     p_HalfClusU->at(iu).get()->setLocalMax(settings.map_stringPars["OutputLocalMaxName"], tmp_localMax);
+//printf("  HalfClusterU #%d: energy %.3f, localMax size %d \n", iu, p_HalfClusU->at(iu).get()->getEnergy(), tmp_localMax.size());
     m_1dClusCol.clear(); 
     ptr_localMax.clear();
   }
@@ -59,6 +60,7 @@ StatusCode LocalMaxFindingAlg::RunAlgorithm( CyberDataCol& m_datacol){
       m_datacol.map_1DCluster["bk1DCluster"].push_back(iter);
     }
     p_HalfClusV->at(iv).get()->setLocalMax(settings.map_stringPars["OutputLocalMaxName"], tmp_localMax);
+//printf("  HalfClusterV #%d: energy %.3f, localMax size %d \n", iv, p_HalfClusV->at(iv).get()->getEnergy(), tmp_localMax.size());
     m_1dClusCol.clear(); 
     ptr_localMax.clear();
   }
@@ -127,22 +129,36 @@ StatusCode LocalMaxFindingAlg::GetLocalMaxBar( std::vector<const Cyber::CaloUnit
 std::vector<const Cyber::CaloUnit*> LocalMaxFindingAlg::getNeighbors( const Cyber::CaloUnit* seed, std::vector<const Cyber::CaloUnit*>& barCol){
   std::vector<const Cyber::CaloUnit*> m_neighbor; m_neighbor.clear();
   for(int i=0;i<barCol.size();i++){
-    bool fl_neighbor = false; 
-    if( seed->getModule()==barCol[i]->getModule() && 
-        seed->getStave()==barCol[i]->getStave() && 
-        seed->getDlayer()==barCol[i]->getDlayer() &&
-        seed->getSlayer()==barCol[i]->getSlayer() &&
-        abs( seed->getBar()-barCol[i]->getBar() )==1 ) fl_neighbor=true;
-    else if( seed->getStave()==barCol[i]->getStave() && 
-             ( ( seed->getModule()-barCol[i]->getModule()==1 && seed->isAtLowerEdgePhi() && barCol[i]->isAtUpperEdgePhi() ) ||
-               ( barCol[i]->getModule()-seed->getModule()==1 && seed->isAtUpperEdgePhi() && barCol[i]->isAtLowerEdgePhi() ) ) ) fl_neighbor=true;
-    else if( seed->getModule()==barCol[i]->getModule() && 
-             ( ( seed->getStave()-barCol[i]->getStave()==1 && seed->isAtLowerEdgeZ() && barCol[i]->isAtUpperEdgeZ() ) || 
-               ( barCol[i]->getStave()-seed->getStave()==1 && seed->isAtUpperEdgeZ() && barCol[i]->isAtLowerEdgeZ() ) ) ) fl_neighbor=true;
+    //bool fl_neighbor = false; 
+    //if( seed->getSystem()==barCol[i]->getSystem() &&
+    //    seed->getModule()==barCol[i]->getModule() && 
+    //    seed->getStave()==barCol[i]->getStave() && 
+    //    seed->getDlayer()==barCol[i]->getDlayer() &&
+    //    seed->getSlayer()==barCol[i]->getSlayer() &&
+    //    abs( seed->getBar()-barCol[i]->getBar() )==1 ) fl_neighbor=true;
+    //else if( seed->getSystem()==barCol[i]->getSystem() && seed->getStave()==barCol[i]->getStave() && 
+    //         ( ( seed->getModule()-barCol[i]->getModule()==1 && seed->isAtLowerEdgePhi() && barCol[i]->isAtUpperEdgePhi() ) ||
+    //           ( barCol[i]->getModule()-seed->getModule()==1 && seed->isAtUpperEdgePhi() && barCol[i]->isAtLowerEdgePhi() ) ) ) fl_neighbor=true;
+    //else if( seed->getSystem()==barCol[i]->getSystem() && seed->getModule()==barCol[i]->getModule() && 
+    //         ( ( seed->getStave()-barCol[i]->getStave()==1 && seed->isAtLowerEdgeZ() && barCol[i]->isAtUpperEdgeZ() ) || 
+    //           ( barCol[i]->getStave()-seed->getStave()==1 && seed->isAtUpperEdgeZ() && barCol[i]->isAtLowerEdgeZ() ) ) ) fl_neighbor=true;
 
-    if(fl_neighbor) m_neighbor.push_back(barCol[i]);
+    bool fl_neighbor = seed->isNeighbor( barCol[i] );
+    if(fl_neighbor){ 
+      if(seed->getSystem()==CaloUnit::System_Barrel && seed->getSlayer()==0 && seed->getModule()!=barCol[i]->getModule()) continue;
+      if(seed->getSystem()==CaloUnit::System_Barrel && seed->getSlayer()==1 && seed->getStave()!=barCol[i]->getStave())   continue;
+      if(seed->getSystem()==CaloUnit::System_Endcap && seed->getSlayer()==0 && seed->getPart()!=barCol[i]->getPart() )    continue;
+      if(seed->getSystem()==CaloUnit::System_Endcap && seed->getSlayer()==1 && seed->getStave()!=barCol[i]->getStave() )  continue;
+      m_neighbor.push_back(barCol[i]);
+    }
   }
-  if(m_neighbor.size()>2) std::cout<<"WARNING: more than 2 hits in neighborCol!!"<<std::endl;
+  if(m_neighbor.size()>2){ 
+    std::cout<<"WARNING: "<<m_neighbor.size()<<" hits in neighborCol!!"<<std::endl;
+    printf("Seed cellID: ( %d, %d, %d, %d, %d, %d, %d), position (%.3f, %.3f, %.3f) \n", seed->getSystem(), seed->getModule(), seed->getStave(), seed->getPart(), seed->getDlayer(), seed->getSlayer(), seed->getBar(), seed->getPosition().x(), seed->getPosition().y(), seed->getPosition().z());
+    for(int i=0; i<m_neighbor.size(); i++)
+      printf("Bar #%d cellID: ( %d, %d, %d, %d, %d, %d, %d), position (%.3f, %.3f, %.3f) \n", i, m_neighbor[i]->getSystem(), m_neighbor[i]->getModule(), m_neighbor[i]->getStave(), m_neighbor[i]->getPart(), m_neighbor[i]->getDlayer(), m_neighbor[i]->getSlayer(), m_neighbor[i]->getBar(), m_neighbor[i]->getPosition().x(), m_neighbor[i]->getPosition().y(), m_neighbor[i]->getPosition().z());
+  
+  }
 
   return m_neighbor;
 }

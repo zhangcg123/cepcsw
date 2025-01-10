@@ -25,6 +25,11 @@ StatusCode TrackExtrapolatingAlg::ReadSettings(Settings& m_settings){
     settings.map_floatPars["ECAL_layer_width"] = 10;
   if(settings.map_floatPars.find("ECAL_half_length")==settings.map_floatPars.end())
     settings.map_floatPars["ECAL_half_length"] = 2900;
+  if(settings.map_floatPars.find("ECAL_endcap_zmin")==settings.map_floatPars.end())
+    settings.map_floatPars["ECAL_endcap_zmin"] = 2930;
+  if(settings.map_floatPars.find("ECAL_endcap_zmax")==settings.map_floatPars.end())
+    settings.map_floatPars["ECAL_endcap_zmax"] = 3230;  // 2930+300
+
   // HCAL parameters
   if(settings.map_floatPars.find("HCAL_innermost_distance")==settings.map_floatPars.end()) 
     settings.map_floatPars["HCAL_innermost_distance"] = 2140;
@@ -38,6 +43,10 @@ StatusCode TrackExtrapolatingAlg::ReadSettings(Settings& m_settings){
     settings.map_floatPars["HCAL_sensitive_distance"] = 22.81;  // distance between sensitive material and front face of each layer
   if(settings.map_floatPars.find("HCAL_half_length")==settings.map_floatPars.end())
     settings.map_floatPars["HCAL_half_length"] = 3230;
+  if(settings.map_floatPars.find("HCAL_endcap_zmin")==settings.map_floatPars.end())
+    settings.map_floatPars["HCAL_endcap_zmin"] = 3260;
+  if(settings.map_floatPars.find("HCAL_endcap_zmax")==settings.map_floatPars.end())
+    settings.map_floatPars["HCAL_endcap_zmax"] = 4575;  // 3260 + (3455-2140)
 
   if(settings.map_intPars.find("Nmodule")==settings.map_intPars.end()) 
     settings.map_intPars["Nmodule"] = 32;
@@ -59,23 +68,23 @@ StatusCode TrackExtrapolatingAlg::Initialize( CyberDataCol& m_datacol ){
 
 
 StatusCode TrackExtrapolatingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
-//std::cout<<"---oooOO0OOooo--- Excuting TrackExtrapolatingAlg ---oooOO0OOooo---"<<std::endl;
-
   std::vector<std::shared_ptr<Cyber::Track>>* p_tracks = &(m_datacol.TrackCol);
-
-  std::vector<float> ECAL_layer_radius;  // Layer radius from ECAL innermost distance to outermost distance; spacing: ECAL_layer_width/2 
+  // (Barrel) Layer radius from ECAL(HCAL) innermost distance to outermost distance; spacing: ECAL_layer_width/2 
+  std::vector<float> ECAL_layer_radius;  
   std::vector<float> HCAL_layer_radius;
   GetLayerRadius(ECAL_layer_radius, HCAL_layer_radius);
+  // (Endcap) Layer z from ECAL innermost distance to outermost distance; spacing: ECAL_layer_width/2
+  std::vector<float> ECAL_layer_z;  
+  std::vector<float> HCAL_layer_z;
+  GetLayerZ(ECAL_layer_z, HCAL_layer_z);
 
   for(int itrk=0; itrk<p_tracks->size(); itrk++){
     // Only tracks that reach ECAL should be processed.
     if(!IsReachECAL( p_tracks->at(itrk).get() )) continue;
-
     // get track state at calorimeter
     Cyber::TrackState CALO_trk_state;
     GetTrackStateAtCalo(p_tracks->at(itrk).get(), CALO_trk_state);
-    
-    ExtrapolateByRadius(ECAL_layer_radius, HCAL_layer_radius, CALO_trk_state, p_tracks->at(itrk).get());
+    Extrapolate(ECAL_layer_radius, ECAL_layer_z, HCAL_layer_radius, HCAL_layer_z, CALO_trk_state, p_tracks->at(itrk).get());
   } // end loop tracks
 
 
@@ -110,6 +119,24 @@ StatusCode TrackExtrapolatingAlg::GetLayerRadius(std::vector<float> & ECAL_layer
   return StatusCode::SUCCESS;
 }
 
+StatusCode TrackExtrapolatingAlg::GetLayerZ(std::vector<float> & ECAL_layer_z, std::vector<float> & HCAL_layer_z){
+  // ECAL
+  float tmp_ecal_z = settings.map_floatPars["ECAL_endcap_zmin"] + 0.5*settings.map_floatPars["ECAL_layer_width"];
+  while(tmp_ecal_z < settings.map_floatPars["ECAL_endcap_zmax"]){
+    ECAL_layer_z.push_back(tmp_ecal_z);
+    tmp_ecal_z += 0.5 * settings.map_floatPars["ECAL_layer_width"];
+  }
+
+  // HCAL
+  float tmp_hcal_z = settings.map_floatPars["HCAL_endcap_zmin"] + 0.5*settings.map_floatPars["HCAL_layer_width"];
+  while(tmp_hcal_z < settings.map_floatPars["HCAL_endcap_zmax"]){
+    HCAL_layer_z.push_back(tmp_hcal_z);
+    tmp_hcal_z += 0.5 * settings.map_floatPars["HCAL_layer_width"];
+  }
+
+  return StatusCode::SUCCESS;
+}
+
 
 // ...oooOO0OOooo......oooOO0OOooo......oooOO0OOooo...
 bool TrackExtrapolatingAlg::IsReachECAL(Cyber::Track * track){
@@ -129,10 +156,10 @@ bool TrackExtrapolatingAlg::IsReachECAL(Cyber::Track * track){
       // The track has no track state at calorimeter
       return false;
     } 
-    if( Abs(Abs(t_vec.Z())-settings.map_floatPars["ECAL_half_length"]) < 1.0 ){
-      // The track escape from endcap
-      return false;
-    } 
+    // if( Abs(Abs(t_vec.Z())-settings.map_floatPars["ECAL_half_length"]) < 1.0 ){
+    //   // The track escape from endcap
+    //   return false;
+    // } 
     
     return true;
   }
@@ -156,7 +183,7 @@ bool TrackExtrapolatingAlg::IsReachECAL(Cyber::Track * track){
     double rho = GetRho(IP_trk_state);
     double r_max = TMath::Sqrt(ref_point.X()*ref_point.X() + ref_point.Y()*ref_point.Y()) + rho*2;
 
-    if(r_max<settings.map_floatPars["ECAL_innermost_distance"]){ return false; }
+    // if(r_max<settings.map_floatPars["ECAL_innermost_distance"]){ return false; }
 
     return true;
   }
@@ -199,18 +226,23 @@ StatusCode TrackExtrapolatingAlg::GetTrackStateAtCalo(Cyber::Track * track,
 
 
 // ...oooOO0OOooo......oooOO0OOooo......oooOO0OOooo...
-StatusCode TrackExtrapolatingAlg::ExtrapolateByRadius( const std::vector<float> & ECAL_layer_radius, std::vector<float> & HCAL_layer_radius,
-                                  const Cyber::TrackState & CALO_trk_state, Cyber::Track* p_track){
+StatusCode TrackExtrapolatingAlg::Extrapolate( const std::vector<float> & ECAL_layer_radius, const std::vector<float> & ECAL_layer_z, 
+                          const std::vector<float> & HCAL_layer_radius, const std::vector<float> & HCAL_layer_z,
+                          const Cyber::TrackState & CALO_trk_state, Cyber::Track* p_track){
   // Extrapolate points to circles with specific radius
   float rho = GetRho(CALO_trk_state);
   TVector2 center = GetCenterOfCircle(CALO_trk_state, rho);
   float alpha0 = GetRefAlpha0(CALO_trk_state, center); 
 
-  std::vector<float> ECAL_delta_phi = GetDeltaPhi(rho, center, alpha0, ECAL_layer_radius, CALO_trk_state);
-  std::vector<float> HCAL_delta_phi = GetDeltaPhi(rho, center, alpha0, HCAL_layer_radius, CALO_trk_state);
+  std::vector<float> ECAL_barrel_delta_phi, ECAL_endcap_delta_phi;
+  GetDeltaPhi(rho, center, alpha0, ECAL_layer_radius, ECAL_layer_z, CALO_trk_state, ECAL_barrel_delta_phi, ECAL_endcap_delta_phi);
+  std::vector<float> HCAL_barrel_delta_phi, HCAL_endcap_delta_phi;
+  GetDeltaPhi(rho, center, alpha0, HCAL_layer_radius, HCAL_layer_z, CALO_trk_state, HCAL_barrel_delta_phi, HCAL_endcap_delta_phi);
 
-  std::vector<TVector3> ECAL_ext_points = GetExtrapoPoints("ECAL", rho, center, alpha0, CALO_trk_state, ECAL_delta_phi);
-  std::vector<TVector3> HCAL_ext_points = GetExtrapoPoints("HCAL", rho, center, alpha0, CALO_trk_state, HCAL_delta_phi);
+  std::vector<TVector3> ECAL_ext_points = GetExtrapoPoints("ECAL", rho, center, alpha0, CALO_trk_state, 
+                                                          ECAL_barrel_delta_phi, ECAL_endcap_delta_phi);
+  std::vector<TVector3> HCAL_ext_points = GetExtrapoPoints("HCAL", rho, center, alpha0, CALO_trk_state, 
+                                                          HCAL_barrel_delta_phi, HCAL_endcap_delta_phi);  
 
   // Sort Extrapolated points
   std::vector<TrackState> t_ECAL_states;
@@ -271,9 +303,10 @@ float TrackExtrapolatingAlg::GetRefAlpha0(const Cyber::TrackState & trk_state, c
 
 
 // ...oooOO0OOooo......oooOO0OOooo......oooOO0OOooo...
-std::vector<float> TrackExtrapolatingAlg::GetDeltaPhi(float rho, TVector2 center, float alpha0, vector<float> layer_radius, const Cyber::TrackState & CALO_trk_state){
-  std::vector<float> delta_phi;
-
+StatusCode TrackExtrapolatingAlg::GetDeltaPhi(float rho, TVector2 center, float alpha0, 
+const std::vector<float> & layer_radius, const std::vector<float> & layer_z, const Cyber::TrackState & CALO_trk_state,
+vector<float> & barrel_delta_phi, vector<float> & endcap_delta_phi){
+  // Barrel
   for(int il=0; il<layer_radius.size(); il++){
     float param0 = (Power(layer_radius[il], 2) - center.Mod2() - Power(rho, 2)) / (2 * rho * center.Mod());
     if(Abs(param0)>1) continue;
@@ -292,10 +325,10 @@ std::vector<float> TrackExtrapolatingAlg::GetDeltaPhi(float rho, TVector2 center
     while(layer_delta_phi2<-Pi()) layer_delta_phi2 = layer_delta_phi2 + 2*Pi();
 
     if(CALO_trk_state.Kappa < 0){ 
-      delta_phi.push_back(layer_delta_phi1); 
+      barrel_delta_phi.push_back(layer_delta_phi1); 
     }
     else if(CALO_trk_state.Kappa > 0){
-      delta_phi.push_back(layer_delta_phi2); 
+      barrel_delta_phi.push_back(layer_delta_phi2); 
     }
     else{
       std::cout << "TrackExtrapolatingAlg: Error! Kappa=0!" << std::endl;
@@ -303,7 +336,24 @@ std::vector<float> TrackExtrapolatingAlg::GetDeltaPhi(float rho, TVector2 center
 
   }
 
-  return delta_phi;  
+  // Endcap
+  float z0 = CALO_trk_state.referencePoint.Z() + CALO_trk_state.Z0;
+  for(int iz=0; iz<layer_z.size(); iz++){
+    float layer_delta_phi = ( layer_z[iz] - z0 ) / ( rho * CALO_trk_state.tanLambda );
+
+    if(CALO_trk_state.Kappa < 0){
+      endcap_delta_phi.push_back(layer_delta_phi);
+    }
+    else if(CALO_trk_state.Kappa > 0){
+      endcap_delta_phi.push_back(-layer_delta_phi);
+    }
+    else{
+      std::cout << "TrackExtrapolatingAlg: Error! Kappa=0!" << std::endl;
+    }
+
+  }
+
+  return StatusCode::SUCCESS;
 }
 
 
@@ -311,33 +361,89 @@ std::vector<float> TrackExtrapolatingAlg::GetDeltaPhi(float rho, TVector2 center
 std::vector<TVector3> TrackExtrapolatingAlg::GetExtrapoPoints(std::string calo_name, 
                                          float rho, TVector2 center, float alpha0, 
                                          const Cyber::TrackState & CALO_trk_state,
-                                         const std::vector<float>& delta_phi){
-  std::vector<TVector3> ext_points;
-  for(int ip=0; ip<delta_phi.size(); ip++){
-    float x = center.X() + (rho*Cos(alpha0+delta_phi[ip]));
-    float y = center.Y() + (rho*Sin(alpha0+delta_phi[ip]));
+                                         const std::vector<float>& barrel_delta_phi, const std::vector<float>& endcap_delta_phi){
+  std::vector<TVector3> barrel_ext_points;
+  for(int ip=0; ip<barrel_delta_phi.size(); ip++){
+    float x = center.X() + (rho*Cos(alpha0+barrel_delta_phi[ip]));
+    float y = center.Y() + (rho*Sin(alpha0+barrel_delta_phi[ip]));
     float z;
     if(CALO_trk_state.Kappa > 0){
       z = CALO_trk_state.referencePoint.Z() + CALO_trk_state.Z0 - 
-              (delta_phi[ip]*rho*CALO_trk_state.tanLambda);
+              (barrel_delta_phi[ip]*rho*CALO_trk_state.tanLambda);
     }else{
       z = CALO_trk_state.referencePoint.Z() + CALO_trk_state.Z0 + 
-              (delta_phi[ip]*rho*CALO_trk_state.tanLambda);
+              (barrel_delta_phi[ip]*rho*CALO_trk_state.tanLambda);
     }
-
+    TVector3 extp(x,y,z);
+    
     if(calo_name=="ECAL"){
-      if(Abs(z)>settings.map_floatPars["ECAL_half_length"]) continue;
-      if(Sqrt(x*x+y*y) > settings.map_floatPars["ECAL_outermost_distance"]) continue;
-      if(Sqrt(x*x+y*y) < settings.map_floatPars["ECAL_innermost_distance"]) continue;
+      if( Abs(z)<settings.map_floatPars["ECAL_half_length"] && 
+          Sqrt(x*x+y*y) < settings.map_floatPars["ECAL_outermost_distance"] && 
+          Sqrt(x*x+y*y) > settings.map_floatPars["ECAL_innermost_distance"]){
+        barrel_ext_points.push_back(extp);
+      }
     }
     else if(calo_name=="HCAL"){
-      if(Abs(z)>settings.map_floatPars["HCAL_half_length"]) continue;
-      if(Sqrt(x*x+y*y) > settings.map_floatPars["HCAL_outermost_distance"]) continue;
+      if( Abs(z)<settings.map_floatPars["HCAL_half_length"] && 
+          Sqrt(x*x+y*y) < settings.map_floatPars["HCAL_outermost_distance"] && 
+          Sqrt(x*x+y*y) > settings.map_floatPars["HCAL_innermost_distance"]){
+        barrel_ext_points.push_back(extp);
+      }
     }
     else continue;
-    
+  }
+
+  std::vector<TVector3> endcap_ext_points;
+  for(int ip=0; ip<endcap_delta_phi.size(); ip++){
+    float x = center.X() + (rho*Cos(alpha0+endcap_delta_phi[ip]));
+    float y = center.Y() + (rho*Sin(alpha0+endcap_delta_phi[ip]));
+    float z;
+    if(CALO_trk_state.Kappa > 0){
+      z = CALO_trk_state.referencePoint.Z() + CALO_trk_state.Z0 - 
+              (endcap_delta_phi[ip]*rho*CALO_trk_state.tanLambda);
+    }else{
+      z = CALO_trk_state.referencePoint.Z() + CALO_trk_state.Z0 + 
+              (endcap_delta_phi[ip]*rho*CALO_trk_state.tanLambda);
+    }
     TVector3 extp(x,y,z);
-    ext_points.push_back(extp);
+
+    if(calo_name=="ECAL"){
+      if( Abs(z)>settings.map_floatPars["ECAL_endcap_zmin"] && 
+          Abs(z)<settings.map_floatPars["ECAL_endcap_zmax"] && 
+          Sqrt(x*x+y*y) < settings.map_floatPars["ECAL_outermost_distance"]){
+        endcap_ext_points.push_back(extp);
+      }
+    }
+    else if(calo_name=="HCAL"){
+      if( Abs(z)>settings.map_floatPars["HCAL_endcap_zmin"] && 
+          Abs(z)<settings.map_floatPars["HCAL_endcap_zmax"] && 
+          Sqrt(x*x+y*y) < settings.map_floatPars["HCAL_outermost_distance"]){
+        endcap_ext_points.push_back(extp);
+      }
+    }
+    else{
+      std::cout << "TrackExtrapolatingAlg: Error! Wrong calorimeter name!" << std::endl;
+    }
+  }
+
+  std::vector<TVector3> ext_points;
+  if(barrel_ext_points.size()>0 && endcap_ext_points.size()==0){
+    ext_points = barrel_ext_points;
+  }
+  else if(barrel_ext_points.size()==0 && endcap_ext_points.size()>0){
+    ext_points = endcap_ext_points;
+  }
+  else if(barrel_ext_points.size()>0 && endcap_ext_points.size()>0){
+    ext_points = barrel_ext_points;
+
+    float barrel_delta_z = TMath::Abs(barrel_ext_points[barrel_ext_points.size()-1].Z() - barrel_ext_points[barrel_ext_points.size()-2].Z());
+    float endcap_barrel_delta_z = TMath::Abs(endcap_ext_points[0].Z() - barrel_ext_points[barrel_ext_points.size()-1].Z());
+    if(endcap_barrel_delta_z < barrel_delta_z){
+      ext_points.insert(ext_points.end(), endcap_ext_points.begin(), endcap_ext_points.end());
+    }
+  } 
+  else{
+    std::cout << "TrackExtrapolatingAlg: Error! No extrapolated points!" << std::endl;
   }
 
   return ext_points;

@@ -36,8 +36,12 @@ public:
   
 
 private:
-	std::vector<Cyber::CaloHalfCluster*> p_HalfClusterV;
-  std::vector<Cyber::CaloHalfCluster*> p_HalfClusterU;
+	std::vector<Cyber::CaloHalfCluster*> barrel_HalfClusterV;  // Barrel ECAL, V: bars parallel to z axis
+  std::vector<Cyber::CaloHalfCluster*> barrel_HalfClusterU;  // Barrel ECAL, U: bars perpendicular to z axis
+  std::vector<Cyber::CaloHalfCluster*> endcap0_HalfClusterV; // Endcap ECAL at z~-2900mm, V: bars parallel to x axis
+  std::vector<Cyber::CaloHalfCluster*> endcap0_HalfClusterU; // Endcap ECAL at z~-2900mm, U: bars parallel to y axis
+  std::vector<Cyber::CaloHalfCluster*> endcap1_HalfClusterV; // Endcap ECAL at z~2900mm, V: bars parallel to x axis
+  std::vector<Cyber::CaloHalfCluster*> endcap1_HalfClusterU; // Endcap ECAL at z~2900mm, U: bars parallel to y axis
 
   std::vector<const Cyber::Calo1DCluster*> m_localMaxVCol;
   std::vector<const Cyber::Calo1DCluster*> m_localMaxUCol;
