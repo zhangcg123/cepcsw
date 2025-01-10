@@ -2,6 +2,9 @@
 #define XTALECALENERGYCORRECTIONSvc_C
 
 #include "CrystalEcalEnergyCorrectionSvc.h"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 DECLARE_COMPONENT(CrystalEcalEnergyCorrectionSvc)
 
@@ -19,27 +22,51 @@ StatusCode CrystalEcalEnergyCorrectionSvc::initialize() {
     
     // read correction file
     std::string m_correctionFile = _correctionFile;
+    if(m_correctionFile.empty()){ 
+      error() << "CrystalEcalEnergyCorrectionSvc error: can not find correction map file! " << endmsg;
+      return StatusCode::FAILURE;
+    }
     file = TFile::Open(m_correctionFile.c_str());
-
+    if(!file->IsOpen()){ 
+      error() << "CrystalEcalEnergyCorrectionSvc error: can not find correction map file! " << endmsg;
+      return StatusCode::FAILURE;
+    }
     // phi
-    treePhi = (TTree*)(file->Get("scalePhi")); 
-    treePhi->SetBranchAddress("phi", &_phiAngle);
-    treePhi->SetBranchAddress("scale", &_phiScale); 
-    for(int i = 0; i < treePhi->GetEntries(); i++) {
-        treePhi->GetEntry(i);
-        phiAngle.push_back(_phiAngle);
-        phiScale.push_back(_phiScale);
+    barrelPhiCorrection = (TTree*)(file->Get("scalePhi")); 
+    barrelPhiCorrection->SetBranchAddress("phi", &_barrelPhiAngle);
+    barrelPhiCorrection->SetBranchAddress("scale", &_barrelPhiScale); 
+    for(int i = 0; i < barrelPhiCorrection->GetEntries(); i++) {
+        barrelPhiCorrection->GetEntry(i);
+        //barrelPhiAngle.push_back(_barrelPhiAngle);
+        barrelPhiScale.push_back(_barrelPhiScale);
     }
 
     //theta
-    treeTheta = (TTree*)(file->Get("scaleTheta"));
-    treeTheta->SetBranchAddress("theta", &_thetaAngle);
-    treeTheta->SetBranchAddress("scale", &_thetaScale);
-    for(int i = 0; i < treeTheta->GetEntries(); i++) {
-        treeTheta->GetEntry(i);
-        thetaAngle.push_back(_thetaAngle);
-        thetaScale.push_back(_thetaScale);
+    barrelThetaCorrection = (TTree*)(file->Get("scaleTheta"));
+    barrelThetaCorrection->SetBranchAddress("theta", &_barrelThetaAngle);
+    barrelThetaCorrection->SetBranchAddress("scale", &_barrelThetaScale);
+    for(int i = 0; i < barrelThetaCorrection->GetEntries(); i++) {
+        barrelThetaCorrection->GetEntry(i);
+        //barrelThetaAngle.push_back(_barrelThetaAngle);
+        barrelThetaScale.push_back(_barrelThetaScale);
     }
+
+    // endcap
+    endcapCorrection = (TTree*)(file->Get("EcalEndcapEnergyCorrection"));
+    endcapCorrection->SetBranchAddress("theta", &_endcapTheta);
+    endcapCorrection->SetBranchAddress("phi", &_endcapPhi);
+    endcapCorrection->SetBranchAddress("mpv", &_endcapScale);
+    for(int i = 0; i < endcapCorrection->GetEntries(); i++) {
+        endcapCorrection->GetEntry(i);
+
+        std::string stringTheta = doubleToString(_endcapTheta);
+        //std::cout<<"theta: "<<stringTheta<<std::endl;
+        std::string stringPhi = doubleToString(_endcapPhi);
+        //std::cout<<"phi: "<<stringPhi<<std::endl;
+        endcapCorrectionMap[std::make_tuple(stringTheta, stringPhi)] = _endcapScale;
+    }
+
+    
 
     StatusCode sc = Service::initialize();
     return sc;
@@ -49,10 +76,13 @@ StatusCode CrystalEcalEnergyCorrectionSvc::finalize() {
     
     file->Close();
 
-    phiAngle.clear();
-    phiScale.clear();
-    thetaAngle.clear();
-    thetaScale.clear();
+    //barrelPhiAngle.clear();
+    barrelPhiScale.clear();
+    //barrelThetaAngle.clear();
+    barrelThetaScale.clear();
+    // endcapTheta.clear();
+    // endcapPhi.clear();
+    // endcapScale.clear();
     
     StatusCode sc = Service::finalize();
     return sc;
@@ -61,9 +91,23 @@ StatusCode CrystalEcalEnergyCorrectionSvc::finalize() {
 double CrystalEcalEnergyCorrectionSvc::energyCorrection(double energy, double phi, double theta) { // energy: GeV, phi: 0-360, theta: 0-180
 
     //std::cout<<"Before correction: "<<energy<<" phi "<<phi<<" theta "<<theta<<std::endl;
+    double energyCor = 0;
+
+    // #####  endcap correction #####
+    if(theta <36 || theta > 144) {
+        double tmpTheta = theta;
+        if(tmpTheta>90) tmpTheta = 90 - (tmpTheta-90);
+        double tmpPhi = phi;
+        
+        std::string stringTheta = doubleToString(tmpTheta);
+        std::string stringPhi = doubleToString(tmpPhi);
+        //std::cout<<"   endcap correction factor: "<<endcapCorrectionMap[std::make_tuple(stringTheta, stringPhi)]<<std::endl;
+        energyCor = energy/endcapCorrectionMap[std::make_tuple(stringTheta, stringPhi)];
+        return energyCor;
+    }
 
     // #####  mpv deviation #####
-    double energyCor = 0;
+    
     energyCor = energy / (mpvCorrectionFactor[3]/(mpvCorrectionFactor[0] + mpvCorrectionFactor[1]*energy + mpvCorrectionFactor[2]*energy*energy) + mpvCorrectionFactor[4]);
     //std::cout<<"After MPV correction: "<<energyCor<<std::endl;
 
@@ -80,8 +124,8 @@ double CrystalEcalEnergyCorrectionSvc::energyCorrection(double energy, double ph
     if(iPhiStart == jPhiEnd) {
         
         int binNumber = jPhiEnd*angleBinNumber + abs((tmpPhi-phiCorrectionAngleStart[iPhiStart])/(angleRangePhi/angleBinNumber));
-        //std::cout<<"   phi correction factor: "<<phiScale.at(binNumber)<<std::endl;
-        energyCor = energyCor/phiScale.at(binNumber);
+        //std::cout<<"   phi correction factor: "<<barrelPhiScale.at(binNumber)<<std::endl;
+        energyCor = energyCor/barrelPhiScale.at(binNumber);
     }
 
     //std::cout<<"After phi correction: "<<energyCor<<std::endl;
@@ -98,8 +142,8 @@ double CrystalEcalEnergyCorrectionSvc::energyCorrection(double energy, double ph
     if(iThetaStart == jThetaEnd) {
         
         int binNumber = jThetaEnd*angleBinNumber + abs((tmpTheta-thetaCorrectionAngleStart[iThetaStart])/(angleRangeTheta/angleBinNumber));
-        //std::cout<<"   theta correction factor: "<<thetaScale.at(binNumber)<<std::endl;
-        energyCor = energyCor/thetaScale.at(binNumber);
+        //std::cout<<"   theta correction factor: "<<barrelThetaScale.at(binNumber)<<std::endl;
+        energyCor = energyCor/barrelThetaScale.at(binNumber);
     }
 
     //std::cout<<"After theta correction: "<<energyCor<<std::endl;
@@ -107,4 +151,11 @@ double CrystalEcalEnergyCorrectionSvc::energyCorrection(double energy, double ph
     //msg() << "corection done!" << endmsg;
     return energyCor;
 }
+
+std::string CrystalEcalEnergyCorrectionSvc::doubleToString(double number) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(1) << number;
+    return oss.str();
+}
+
 #endif

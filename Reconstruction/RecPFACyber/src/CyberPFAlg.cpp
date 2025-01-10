@@ -1,3 +1,13 @@
+//=============================================================
+// CyberPFA: a PFA developed for CEPC referenece detector
+// Ver. CyberPFA-5.0.1(2025.01.09)
+//-------------------------------------------------------------
+//  Author: Fangyi Guo, Yang Zhang, Weizheng Song, Shengsen Sun
+//          (IHEP, CAS)
+//  Contact: guofangyi@ihep.ac.cn,
+//           sunss@ihep.ac.cn
+//=============================================================
+
 #ifndef PANDORAPLUS_ALG_C
 #define PANDORAPLUS_ALG_C
 
@@ -9,6 +19,8 @@
 using namespace std;
 using namespace dd4hep;
 
+int Cyber::CaloUnit::System_Barrel = 20;
+int Cyber::CaloUnit::System_Endcap = 29;
 int Cyber::CaloUnit::Nmodule = 32;
 int Cyber::CaloUnit::Nstave = 15;
 int Cyber::CaloUnit::Nlayer = 14;
@@ -19,6 +31,8 @@ int Cyber::CaloUnit::NbarZ = 36;
 //int Cyber::CaloUnit::over_module_set = 2;
 float Cyber::CaloUnit::barsize = 10.; //mm
 float Cyber::CaloUnit::ecal_innerR = 1830;  //mm
+float Cyber::CaloUnit::ecal_endcap_deadarea = 8.5; //mm
+float Cyber::CaloUnit::ecal_endcap_barsize = 10.; //mm
 
 DECLARE_COMPONENT( CyberPFAlg )
 
@@ -155,6 +169,7 @@ StatusCode CyberPFAlg::initialize()
       if(type_AlgPars.value()[ialg].at(ipar)=="int")    m_settings.map_intPars[name_AlgPars.value()[ialg].at(ipar)] = std::stoi( (string)value_AlgPars.value()[ialg].at(ipar) );
       if(type_AlgPars.value()[ialg].at(ipar)=="double") m_settings.map_floatPars[name_AlgPars.value()[ialg].at(ipar)] = std::stod( (string)value_AlgPars.value()[ialg].at(ipar) );
       if(type_AlgPars.value()[ialg].at(ipar)=="string") m_settings.map_stringPars[name_AlgPars.value()[ialg].at(ipar)] = value_AlgPars.value()[ialg].at(ipar) ;
+      //if(type_AlgPars.value()[ialg].at(ipar)=="stringVec") m_settings.map_stringVecPars[name_AlgPars.value()[ialg].at(ipar)] = value_AlgPars.value()[ialg].at(ipar) ;
       if(type_AlgPars.value()[ialg].at(ipar)=="bool")   m_settings.map_boolPars[name_AlgPars.value()[ialg].at(ipar)] = (bool)std::stoi( (string)value_AlgPars.value()[ialg].at(ipar) );
     }
 
@@ -168,9 +183,20 @@ StatusCode CyberPFAlg::initialize()
 
   m_dd4hep = m_geosvc->lcdd();
   if ( !m_dd4hep )  throw "CyberPFAlg :Failed to get dd4hep::Detector ...";
-
+  
   m_cellIDConverter = new dd4hep::rec::CellIDPositionConverter(*m_dd4hep);
   m_volumeManager = m_dd4hep->volumeManager();
+
+  dd4hep::rec::ECALSystemInfoData* EcalEndcapData = m_geosvc->getDD4HepGeo().child("EcalEndcap").extension<dd4hep::rec::ECALSystemInfoData>();
+  
+  for(int imodule=0; imodule<EcalEndcapData->ModuleInfos.size(); imodule++){
+    dd4hep::rec::ECALModuleInfoStruct tmp_module = EcalEndcapData->ModuleInfos[imodule];
+    for(int ilayer=0; ilayer<tmp_module.LayerInfos.size(); ilayer++){
+      dd4hep::rec::ECALModuleInfoStruct::LayerInfo layer = tmp_module.LayerInfos[ilayer];
+      std::tuple<int, int, int, int, int> tmp_key = std::make_tuple(tmp_module.moduleNumber, tmp_module.staveNumber, tmp_module.partNumber, layer.dlayerNumber, layer.slayerNumber);
+      barNumberMapEndcapMap[tmp_key] = layer.barNumber;
+    }
+  }
 
   m_energycorsvc = service<ICrystalEcalSvc>("CrystalEcalEnergyCorrectionSvc");
   if ( !m_energycorsvc )  throw "CyberPFAlg :Failed to find CrystalEcalEnergyCorrectionSvc ...";
@@ -236,6 +262,8 @@ StatusCode CyberPFAlg::initialize()
     t_SimBar->Branch("simBar_x", &m_simBar_x);
     t_SimBar->Branch("simBar_y", &m_simBar_y);
     t_SimBar->Branch("simBar_z", &m_simBar_z);
+    t_SimBar->Branch("simBar_length", &m_simBar_length);
+    t_SimBar->Branch("simBar_nBarInLayer", &m_simBar_nBarInLayer);
     t_SimBar->Branch("simBar_T1", &m_simBar_T1);
     t_SimBar->Branch("simBar_T2", &m_simBar_T2);
     t_SimBar->Branch("simBar_Q1", &m_simBar_Q1);
@@ -245,6 +273,7 @@ StatusCode CyberPFAlg::initialize()
     t_SimBar->Branch("simBar_stave", &m_simBar_stave);
     t_SimBar->Branch("simBar_slayer", &m_simBar_slayer);
     t_SimBar->Branch("simBar_bar", &m_simBar_bar);
+    t_SimBar->Branch("simBar_system", &m_simBar_system);
     t_SimBar->Branch("simBar_truthMC_tag", &m_simBar_truthMC_tag);
     t_SimBar->Branch("simBar_truthMC_pid", &m_simBar_truthMC_pid);
     t_SimBar->Branch("simBar_truthMC_px", &m_simBar_truthMC_px);
@@ -699,7 +728,7 @@ StatusCode CyberPFAlg::execute()
   m_pMCParticleCreator->CreateMCParticle( m_DataCol, *r_MCParticleCol );
   if(m_useMCPTrk) m_pTrackCreator->CreateTracksFromMCParticle(m_DataCol, *r_MCParticleCol);
   else m_pTrackCreator->CreateTracks( m_DataCol, r_TrackCols, r_MCPTrkAssoCol );
-  m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols, m_volumeManager);
+  m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols, m_volumeManager, barNumberMapEndcapMap);
 
   //Perform PFA algorithm
   m_algorithmManager.RunAlgorithm( m_DataCol );
@@ -756,6 +785,8 @@ StatusCode CyberPFAlg::execute()
       m_simBar_x.push_back(p_hitbar->getPosition().x());
       m_simBar_y.push_back(p_hitbar->getPosition().y());
       m_simBar_z.push_back(p_hitbar->getPosition().z());
+      m_simBar_length.push_back(p_hitbar->getBarLength());
+      m_simBar_nBarInLayer.push_back(p_hitbar->getNBarInLayer());
       m_simBar_Q1.push_back(p_hitbar->getQ1());
       m_simBar_Q2.push_back(p_hitbar->getQ2());
       m_simBar_T1.push_back(p_hitbar->getT1());
@@ -785,7 +816,9 @@ StatusCode CyberPFAlg::execute()
     std::vector<Cyber::CaloHit*> m_hcalHitsCol; m_hcalHitsCol.clear();
     for(int ih=0; ih<m_DataCol.map_CaloHit["HCALBarrel"].size(); ih++)
       m_hcalHitsCol.push_back( m_DataCol.map_CaloHit["HCALBarrel"][ih].get() );
-   
+    for(int ih=0; ih<m_DataCol.map_CaloHit["HCALEndcaps"].size(); ih++)
+      m_hcalHitsCol.push_back( m_DataCol.map_CaloHit["HCALEndcaps"][ih].get() );   
+
     m_totE_HcalSim = 0.;
     for(int ihit=0; ihit<m_hcalHitsCol.size(); ihit++){
       m_HcalHit_x.push_back( m_hcalHitsCol[ihit]->getPosition().x() );
@@ -1295,13 +1328,13 @@ StatusCode CyberPFAlg::execute()
           m_HalfClusterV_truthMC_weight.push_back(iter.second);
         }
    
-        // 1DClusters (hits)
-        for(int ilm=0; ilm<m_halfclusterV[i]->getCluster().size(); ilm++){ 
+        // Bars (hits)
+        for(int ilm=0; ilm<m_halfclusterV[i]->getBars().size(); ilm++){ 
           m_HalfClusterV_hit_tag.push_back(i);
-          m_HalfClusterV_hit_x.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().x() );
-          m_HalfClusterV_hit_y.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().y() );
-          m_HalfClusterV_hit_z.push_back( m_halfclusterV[i]->getCluster()[ilm]->getPos().z() );
-          m_HalfClusterV_hit_E.push_back( m_halfclusterV[i]->getCluster()[ilm]->getEnergy()  );
+          m_HalfClusterV_hit_x.push_back( m_halfclusterV[i]->getBars()[ilm]->getPosition().x() );
+          m_HalfClusterV_hit_y.push_back( m_halfclusterV[i]->getBars()[ilm]->getPosition().y() );
+          m_HalfClusterV_hit_z.push_back( m_halfclusterV[i]->getBars()[ilm]->getPosition().z() );
+          m_HalfClusterV_hit_E.push_back( m_halfclusterV[i]->getBars()[ilm]->getEnergy()  );
         }
     }
     for(int i=0; i<m_halfclusterU.size(); i++){
@@ -1324,13 +1357,13 @@ StatusCode CyberPFAlg::execute()
           m_HalfClusterU_truthMC_weight.push_back(iter.second);
         }
    
-        // 1DClusters (hits)
-        for(int ilm=0; ilm<m_halfclusterU[i]->getCluster().size(); ilm++){
+        // Bars (hits)
+        for(int ilm=0; ilm<m_halfclusterU[i]->getBars().size(); ilm++){
           m_HalfClusterU_hit_tag.push_back(i);
-          m_HalfClusterU_hit_x.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().x() );
-          m_HalfClusterU_hit_y.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().y() );
-          m_HalfClusterU_hit_z.push_back( m_halfclusterU[i]->getCluster()[ilm]->getPos().z() );
-          m_HalfClusterU_hit_E.push_back( m_halfclusterU[i]->getCluster()[ilm]->getEnergy()  );
+          m_HalfClusterU_hit_x.push_back( m_halfclusterU[i]->getBars()[ilm]->getPosition().x() );
+          m_HalfClusterU_hit_y.push_back( m_halfclusterU[i]->getBars()[ilm]->getPosition().y() );
+          m_HalfClusterU_hit_z.push_back( m_halfclusterU[i]->getBars()[ilm]->getPosition().z() );
+          m_HalfClusterU_hit_E.push_back( m_halfclusterU[i]->getBars()[ilm]->getEnergy()  );
         }
     }
     t_HalfCluster->Fill();
@@ -1374,7 +1407,6 @@ StatusCode CyberPFAlg::execute()
         m_HalfClusterV_nTrk.push_back(m_HFClusV[ic]->getAssociatedTracks().size());
         m_totEn_V += m_HFClusV[ic]->getEnergy();
       }
-   
       t_Tower->Fill();
     }
 
@@ -1387,7 +1419,7 @@ StatusCode CyberPFAlg::execute()
     m_totE_Ecal = 0.;
     m_totE_Hcal = 0.;
     m_Nclus_Ecal = m_EcalClusterCol.size();
-    m_Nclus_Hcal = m_HcalClusterCol.size();
+    m_Nclus_Hcal = m_SimpleHcalClusterCol.size();
     for(int icl=0; icl<m_EcalClusterCol.size(); icl++){
       m_EcalClus_x.push_back(m_EcalClusterCol[icl]->getShowerCenter().x());
       m_EcalClus_y.push_back(m_EcalClusterCol[icl]->getShowerCenter().y());
@@ -1395,9 +1427,9 @@ StatusCode CyberPFAlg::execute()
       m_EcalClus_E.push_back(m_EcalClusterCol[icl]->getLongiE());
       m_EcalClus_nTrk.push_back(m_EcalClusterCol[icl]->getAssociatedTracks().size());
    
-      double tmp_phi = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().y(), m_EcalClusterCol[icl]->getShowerCenter().x())* 180.0 / M_PI;
-      if (tmp_phi < 0) tmp_phi += 360.0;
-      double tmp_theta = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().z(), m_EcalClusterCol[icl]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
+      //double tmp_phi = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().y(), m_EcalClusterCol[icl]->getShowerCenter().x())* 180.0 / M_PI;
+      //if (tmp_phi < 0) tmp_phi += 360.0;
+      //double tmp_theta = std::atan2(m_EcalClusterCol[icl]->getShowerCenter().z(), m_EcalClusterCol[icl]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
       //cout<<" Theta: "<<tmp_theta<<" Phi: "<<tmp_phi<<endl;
       //m_EcalClus_Escale.push_back(m_energycorsvc->energyCorrection(m_EcalClusterCol[icl]->getLongiE(), tmp_phi, tmp_theta));
       m_EcalClus_Escale.push_back(m_EcalClusterCol[icl]->getLongiE());
@@ -1611,9 +1643,9 @@ StatusCode CyberPFAlg::execute()
         pfo_ecal_clus_z.push_back(t_ecal_clusters[ie]->getShowerCenter().z());
         pfo_ecal_clus_E.push_back(t_ecal_clusters[ie]->getLongiE());
    
-        double tmp_phi = std::atan2(t_ecal_clusters[ie]->getShowerCenter().y(), t_ecal_clusters[ie]->getShowerCenter().x())* 180.0 / M_PI;
-        if (tmp_phi < 0) tmp_phi += 360.0;
-        double tmp_theta = std::atan2(t_ecal_clusters[ie]->getShowerCenter().z(), t_ecal_clusters[ie]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
+        //double tmp_phi = std::atan2(t_ecal_clusters[ie]->getShowerCenter().y(), t_ecal_clusters[ie]->getShowerCenter().x())* 180.0 / M_PI;
+        //if (tmp_phi < 0) tmp_phi += 360.0;
+        //double tmp_theta = std::atan2(t_ecal_clusters[ie]->getShowerCenter().z(), t_ecal_clusters[ie]->getShowerCenter().Perp())* 180.0 / M_PI + 90; 
         pfo_ecal_clus_Escale.push_back(t_ecal_clusters[ie]->getLongiE());
    
       }
@@ -1709,6 +1741,8 @@ void CyberPFAlg::ClearBar(){
   m_simBar_x.clear();
   m_simBar_y.clear();
   m_simBar_z.clear();
+  m_simBar_length.clear();
+  m_simBar_nBarInLayer.clear();
   m_simBar_T1.clear();
   m_simBar_T2.clear();
   m_simBar_Q1.clear();

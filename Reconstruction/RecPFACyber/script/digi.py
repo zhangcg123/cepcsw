@@ -86,16 +86,18 @@ EcalDigi.EcalSiPMPDE = 0.25              # NDL-EQR06, PDE 0.25
 EcalDigi.EcalSiPMDCR = 0                 # NDL-EQR06, dark count rate 2500000 [Hz]
 EcalDigi.EcalTimeInterval = 0.           # Time interval 0.000002 [s]. DCR*TimeInterval = dark count noise
 EcalDigi.EcalSiPMCT = 0.                 # SiPM crosstalk Probability 12%
-EcalDigi.EcalSiPMGainMean = 50           # 50 [ADC/p.e.]
+EcalDigi.EcalSiPMGainMean = 5            # 5 [ADC/p.e.]
 EcalDigi.EcalSiPMGainSigma = 0.08        # 0.08
 #EcalDigi.EcalSiPMNoiseSigma = 0          # 0
 # ADC
 EcalDigi.ADC = 8192                      # 13-bit, 8192
 EcalDigi.ADCSwitch = 8000                # 8000
 EcalDigi.Pedestal = 50                   # Pedestal 50 ADC
-EcalDigi.GainRatio_12 = 50               # Gain ratio 50
-EcalDigi.GainRatio_23 = 60               # Gain ratio 60
-#EcalDigi.EcalNoiseADCSigma = 4           # 4
+EcalDigi.GainRatio_12 = 30               # Gain ratio 30
+EcalDigi.GainRatio_23 = 10               # Gain ratio 10
+EcalDigi.EcalASICNoiseSigma = 4
+EcalDigi.EcalFEENoiseSigma = 5
+EcalDigi.ADCNonLinearity = 0             # ADC non-linearity 0
 # temperature control
 EcalDigi.UseCryTemp = 0
 EcalDigi.UseCryTempCor = 0

@@ -39,12 +39,12 @@ inp = PodioInput("InputReader")
 inp.collections = [ 
                     "ECALBarrel",
                     "ECALBarrelParticleAssoCol",
-#                    "ECALEndcaps",
-#                    "ECALEndcapsParticleAssoCol",
+                    "ECALEndcaps",
+                    "ECALEndcapsParticleAssoCol",
                     "HCALBarrel",
                     "HCALBarrelParticleAssoCol",
-#                    "HCALEndcaps",
-#                    "HCALEndcapsParticleAssoCol",
+                    "HCALEndcaps",
+                    "HCALEndcapsParticleAssoCol",
                     "MCParticle", 
                     "CompleteTracks", 
                     "CompleteTracksParticleAssociation",
@@ -75,18 +75,12 @@ CyberPFAlg.HcalNeutralCalib = 4.0
 CyberPFAlg.MCParticleCollection = "MCParticle"
 CyberPFAlg.TrackCollections = ["CompleteTracks"]
 CyberPFAlg.MCRecoTrackParticleAssociationCollection = "CompleteTracksParticleAssociation"
-#CyberPFAlg.ECalCaloHitCollections = ["ECALBarrel","ECALEndcaps"]
-#CyberPFAlg.ECalReadOutNames = ["EcalBarrelCollection","EcalEndcapsCollection"]
-#CyberPFAlg.ECalMCPAssociationName = ["ECALBarrelParticleAssoCol", "ECALEndcapsParticleAssoCol"]
-#CyberPFAlg.HCalCaloHitCollections = ["HCALBarrel", "HCALEndcaps"]
-#CyberPFAlg.HCalReadOutNames = ["HcalBarrelCollection", "HcalEndcapsCollection"]
-#CyberPFAlg.HCalMCPAssociationName = ["HCALBarrelParticleAssoCol", "HCALEndcapsParticleAssoCol"]
-CyberPFAlg.ECalCaloHitCollections = ["ECALBarrel"]
-CyberPFAlg.ECalReadOutNames = ["EcalBarrelCollection"]
-CyberPFAlg.ECalMCPAssociationName = ["ECALBarrelParticleAssoCol"]
-CyberPFAlg.HCalCaloHitCollections = ["HCALBarrel"]
-CyberPFAlg.HCalReadOutNames = ["HcalBarrelCollection"]
-CyberPFAlg.HCalMCPAssociationName = ["HCALBarrelParticleAssoCol"]
+CyberPFAlg.ECalCaloHitCollections = ["ECALBarrel","ECALEndcaps"]
+CyberPFAlg.ECalReadOutNames = ["EcalBarrelCollection","EcalEndcapsCollection"]
+CyberPFAlg.ECalMCPAssociationName = ["ECALBarrelParticleAssoCol", "ECALEndcapsParticleAssoCol"]
+CyberPFAlg.HCalCaloHitCollections = ["HCALBarrel", "HCALEndcaps"]
+CyberPFAlg.HCalReadOutNames = ["HcalBarrelCollection", "HcalEndcapsCollection"]
+CyberPFAlg.HCalMCPAssociationName = ["HCALBarrelParticleAssoCol", "HCALEndcapsParticleAssoCol"]
 
 ##--- Output collections ---
 CyberPFAlg.OutputPFO = "outputPFO";
@@ -113,8 +107,8 @@ CyberPFAlg.AlgParNames = [ ["InputECALBars","OutputECAL1DClusters","OutputECALHa
                                  ["OutputAxisName"], #6
                                  ["ReadinAxisName", "OutputClusName", "OutputTowerName"],  #9
                                  ["ReadinHFClusterName", "ReadinTowerName","OutputClusterName"], #11
-                                 ["InputHCALHits", "OutputHCALClusters"], #12
-                                 ["DoECALClustering","DoHCALClustering","InputHCALHits","OutputHCALClusters"], #15
+                                 ["OutputHCALClusters"], #12
+                                 ["DoECALClustering","DoHCALClustering","OutputHCALClusters"], #15
                                  ["ReadinECALClusterName", "ReadinHCALClusterName", "OutputCombPFO"],  #16
                                  ["ECALChargedCalib", "HCALChargedCalib", "ECALNeutralCalib", "HCALNeutralCalib"] ]#17
 CyberPFAlg.AlgParTypes = [ ["string","string","string"],#1
@@ -125,8 +119,8 @@ CyberPFAlg.AlgParTypes = [ ["string","string","string"],#1
                                  ["string"], #6
                                  ["string","string","string"],  #9
                                  ["string","string","string"], #11
-                                 ["string", "string"], #12
-                                 ["bool","bool","string","string"], #15
+                                 ["string"], #12
+                                 ["bool","bool","string"], #15
                                  ["string","string","string"],  #16
                                  ["double","double", "double","double"] ]#17
 CyberPFAlg.AlgParValues = [ ["BarCol","Cluster1DCol","HalfClusterCol"],#1
@@ -137,8 +131,8 @@ CyberPFAlg.AlgParValues = [ ["BarCol","Cluster1DCol","HalfClusterCol"],#1
                                   ["MergedAxis"], #6
                                   ["MergedAxis","ESHalfCluster","ESTower"],  #9
                                   ["ESHalfCluster","ESTower","EcalCluster"], #11
-                                  ["HCALBarrel", "SimpleHCALCluster"], #12
-                                  ["0","1","HCALBarrel","HCALCluster"], #15
+                                  ["SimpleHCALCluster"], #12
+                                  ["0","1","HCALCluster"], #15
                                   ["EcalCluster", "SimpleHCALCluster", "outputPFO"],  #16
                                   ["1.26","4.", "1.", "4."]  ]#17
 

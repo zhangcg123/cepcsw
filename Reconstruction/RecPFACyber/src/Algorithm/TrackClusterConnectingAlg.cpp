@@ -48,18 +48,18 @@ StatusCode TrackClusterConnectingAlg::Initialize( CyberDataCol& m_datacol ){
   }
 
   m_bkCol.EnergyCorrSvc = m_datacol.EnergyCorrSvc;
-
-//cout<<"Readin Track size: "<<m_tracks.size()<<", ECAL cluster size: "<<m_EcalClusters.size()<<", HCAL cluster size "<<m_HcalClusters.size()<<endl;
-//cout<<"Print track"<<endl;
-//for(int i=0; i<m_tracks.size(); i++)
-//  cout<<"Track #"<<i<<": P = "<<m_tracks[i]->getMomentum()<<", Pt = "<<m_tracks[i]->getPt()<<endl;
-//cout<<"Print all ECAL cluster "<<endl;
-//for(int ic=0; ic<m_EcalClusters.size(); ic++){
-//  cout<<"    ECAL Cluster #"<<ic<<": En = "<<m_EcalClusters[ic]->getLongiE()<<", track size "<<m_EcalClusters[ic]->getAssociatedTracks().size();
-//  if(m_EcalClusters[ic]->getAssociatedTracks().size()>0) cout<<", Leading track P = "<<m_EcalClusters[ic]->getAssociatedTracks()[0]->getMomentum()<<endl;
-//  else cout<<endl;
-//}
-
+/*
+cout<<"Readin Track size: "<<m_tracks.size()<<", ECAL cluster size: "<<m_EcalClusters.size()<<", HCAL cluster size "<<m_HcalClusters.size()<<endl;
+cout<<"Print track"<<endl;
+for(int i=0; i<m_tracks.size(); i++)
+  cout<<"Track #"<<i<<": P = "<<m_tracks[i]->getMomentum()<<", Pt = "<<m_tracks[i]->getPt()<<endl;
+cout<<"Print all ECAL cluster "<<endl;
+for(int ic=0; ic<m_EcalClusters.size(); ic++){
+  cout<<"    ECAL Cluster #"<<ic<<": En = "<<m_EcalClusters[ic]->getLongiE()<<", track size "<<m_EcalClusters[ic]->getAssociatedTracks().size();
+  if(m_EcalClusters[ic]->getAssociatedTracks().size()>0) cout<<", Leading track P = "<<m_EcalClusters[ic]->getAssociatedTracks()[0]->getMomentum()<<endl;
+  else cout<<endl;
+}
+*/
   return StatusCode::SUCCESS;
 };
 
@@ -107,6 +107,7 @@ StatusCode TrackClusterConnectingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   //3. Add HCAL clusters into the PFObject. 
   std::sort(m_PFObjects.begin(), m_PFObjects.end(), compTrkP);
   HcalExtrapolatingMatch(m_HcalClusters, m_PFObjects);
+
 //cout<<"  TrackClusterConnectingAlg: PFO size after HCAL matching: "<<m_PFObjects.size()<<endl;
 //for(int i=0; i<m_PFObjects.size(); i++){
 //  cout<<"    PFO #"<<i<<": track size "<<m_PFObjects[i]->getTracks().size()<<", leading P "<<m_PFObjects[i]->getTrackMomentum();

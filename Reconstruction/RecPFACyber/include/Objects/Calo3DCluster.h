@@ -58,6 +58,7 @@ namespace Cyber {
     int getType() const { return type; }
     double getEnergyScale() const { return Escale; }
 
+    void setAxis(TVector3 _axis ) { axis = _axis; }
     void setCaloHits( std::vector<const Cyber::CaloHit*> _hits ) { hits = _hits; }
     void setCaloHitsFrom2DCluster(); 
     void setTowers(std::vector<const Calo3DCluster*> _t) { m_towers = _t; }

@@ -289,16 +289,26 @@ namespace Cyber{
     }
     else{
       track->clear();
-      double barAngle = (barShowerCol[0]->getTowerID()[0][0]+Cyber::CaloUnit::Nmodule/4.)*2*TMath::Pi()/Cyber::CaloUnit::Nmodule;
+      double barAngle = (barShowerCol[0]->getTowerID()[0][1]+Cyber::CaloUnit::Nmodule/4.)*2*TMath::Pi()/Cyber::CaloUnit::Nmodule;
       double posErr = Cyber::CaloUnit::barsize/sqrt(12);
       if(barAngle>=TMath::TwoPi()) barAngle = barAngle-TMath::TwoPi();
-      track->setBarAngle(barAngle);
-      for(int is=0; is<barShowerCol.size(); is++){
-        TVector3 b_pos = barShowerCol[is]->getPos();
-        track->setGlobalPoint(0, b_pos.x(), posErr, b_pos.y(), posErr, b_pos.z(), posErr);
-        track->setGlobalPoint(1, b_pos.x(), posErr, b_pos.y(), posErr, b_pos.z(), posErr);
-      }
 
+      if(barShowerCol[0]->getTowerID()[0][0] == Cyber::CaloUnit::System_Barrel){
+        track->setBarAngle(barAngle);
+        for(int is=0; is<barShowerCol.size(); is++){
+          TVector3 b_pos = barShowerCol[is]->getPos();
+          track->setGlobalPoint(0, b_pos.x(), posErr, b_pos.y(), posErr, b_pos.z(), posErr);
+          track->setGlobalPoint(1, b_pos.x(), posErr, b_pos.y(), posErr, b_pos.z(), posErr);
+        }
+      }
+      else if(barShowerCol[0]->getTowerID()[0][0] == Cyber::CaloUnit::System_Endcap){
+        for(int is=0; is<barShowerCol.size(); is++){
+          TVector3 b_pos = barShowerCol[is]->getPos();
+          track->setPoint(0, b_pos.x(), posErr, b_pos.z(), posErr);
+          track->setPoint(1, b_pos.y(), posErr, b_pos.z(), posErr);
+        }
+      }
+      
       track->fitTrack();
       double fitPhi = track->getPhi();
       double fitTheta = track->getTheta();

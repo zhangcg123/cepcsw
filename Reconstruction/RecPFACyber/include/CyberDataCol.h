@@ -1,3 +1,14 @@
+//=============================================================
+// CyberPFA: a PFA developed for CEPC referenece detector
+// Ver. CyberPFA-5.0.1(2025.01.09)
+//-------------------------------------------------------------
+// Data Collection with CyberPFA EDM
+//-------------------------------------------------------------
+//  Author: Fangyi Guo, Yang Zhang, Weizheng Song, Shengsen Sun
+//          (IHEP, CAS)
+//  Contact: guofangyi@ihep.ac.cn,
+//           sunss@ihep.ac.cn
+//=============================================================
 #ifndef _PANDORAPLUS_DATA_H
 #define _PANDORAPLUS_DATA_H
 #include <iostream>

@@ -7,7 +7,7 @@ using namespace Cyber;
 StatusCode HcalClusteringAlg::ReadSettings(Cyber::Settings& m_settings){
   settings = m_settings;
 
-  if(settings.map_stringPars.find("InputHCALHits")==settings.map_stringPars.end())         settings.map_stringPars["InputHCALHits"] = "HCALBarrel";
+  if(settings.map_stringVecPars.find("InputHCALHits")==settings.map_stringVecPars.end())         settings.map_stringVecPars["InputHCALHits"] = {"HCALBarrel", "HCALEndcaps"};
   if(settings.map_stringPars.find("OutputHCALClusters")==settings.map_stringPars.end())    settings.map_stringPars["OutputHCALClusters"] = "HCALCluster";
 
   //Set initial values
@@ -39,8 +39,10 @@ StatusCode HcalClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
 
   std::vector<Cyber::CaloHit*> m_hcalHits;
   m_hcalHits.clear();
-  for(int ih=0; ih<m_datacol.map_CaloHit[settings.map_stringPars["InputHCALHits"]].size(); ih++)
-    m_hcalHits.push_back( m_datacol.map_CaloHit[settings.map_stringPars["InputHCALHits"]][ih].get() );
+  for(int icl=0; icl<settings.map_stringVecPars["InputHCALHits"].size(); icl++){
+    for(int ih=0; ih<m_datacol.map_CaloHit[settings.map_stringVecPars["InputHCALHits"][icl]].size(); ih++)
+      m_hcalHits.push_back( m_datacol.map_CaloHit[settings.map_stringVecPars["InputHCALHits"][icl]][ih].get() );
+  }
 
   std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_clusterCol;  
   m_clusterCol.clear();

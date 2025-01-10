@@ -673,18 +673,24 @@ vector<vector<double>> EnergyTimeMatchingAlg::GetClusterChi2Map( std::vector<std
   double wi_E = settings.map_floatPars["chi2Wi_E"]/(settings.map_floatPars["chi2Wi_E"] + settings.map_floatPars["chi2Wi_T"]);
   double wi_T = settings.map_floatPars["chi2Wi_T"]/(settings.map_floatPars["chi2Wi_E"] + settings.map_floatPars["chi2Wi_T"]);
 
+  //Rotate angle and tower center position for ECAL Barrel
   TVector3 m_vec(0,0,0);
   double rotAngle = -999;
   TVector3 Ctower(0,0,0);
+  int system = -1;
   for(int ish=0; ish<barShowerUCol.size(); ish++){
     if(barShowerUCol[ish].size()==0) continue;
     rotAngle = -(barShowerUCol[ish][0]->getBars())[0]->getModule()*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
     Ctower.SetX( (barShowerUCol[ish][0]->getBars())[0]->getPosition().x() );
     Ctower.SetY( (barShowerUCol[ish][0]->getBars())[0]->getPosition().y() );
+    system = (barShowerUCol[ish][0]->getBars())[0]->getSystem();
+    break;
   }
   for(int ish=0; ish<barShowerVCol.size(); ish++){
     if(barShowerVCol[ish].size()==0) continue;
     Ctower.SetZ( (barShowerVCol[ish][0]->getBars())[0]->getPosition().z() );
+    system = (barShowerVCol[ish][0]->getBars())[0]->getSystem();
+    break;
   }
   Ctower.RotateZ(rotAngle);
 
@@ -718,13 +724,27 @@ vector<vector<double>> EnergyTimeMatchingAlg::GetClusterChi2Map( std::vector<std
       double Ex = showerX->getEnergy();
       double Ey = showerY->getEnergy();
       double chi2_E = pow(fabs(Ex-Ey)/settings.map_floatPars["sigmaE"], 2);
-      double PosTx = C*(showerY->getT1()-showerY->getT2())/(2*settings.map_floatPars["nMat"]) + showerY->getPos().z();
-      double chi2_tx = pow( fabs(PosTx-showerX->getPos().z())/settings.map_floatPars["sigmaPos"], 2 );
 
-      double PosTy = C*(showerX->getT1()-showerX->getT2())/(2*settings.map_floatPars["nMat"]);
-      m_vec = showerY->getPos();
-      m_vec.RotateZ(rotAngle);
-      double chi2_ty = pow( fabs(PosTy - (m_vec-Ctower).x() )/settings.map_floatPars["sigmaPos"], 2);
+      double PosTx, chi2_tx, PosTy, chi2_ty;
+      if(system == Cyber::CaloUnit::System_Barrel){
+        PosTx = C*(showerY->getT1()-showerY->getT2())/(2*settings.map_floatPars["nMat"]) + showerY->getPos().z();
+        chi2_tx = pow( fabs(PosTx-showerX->getPos().z())/settings.map_floatPars["sigmaPos"], 2 );
+
+        PosTy = C*(showerX->getT1()-showerX->getT2())/(2*settings.map_floatPars["nMat"]);
+        m_vec = showerY->getPos();
+        m_vec.RotateZ(rotAngle);
+        chi2_ty = pow( fabs(PosTy - (m_vec-Ctower).x() )/settings.map_floatPars["sigmaPos"], 2);
+      }
+      else if(system == Cyber::CaloUnit::System_Endcap){
+        PosTx = C*(showerY->getT1()-showerY->getT2())/(2*settings.map_floatPars["nMat"]) + showerY->getPos().x();
+        chi2_tx = pow( fabs(PosTx-showerX->getPos().x())/settings.map_floatPars["sigmaPos"], 2 );
+
+        PosTy = C*(showerX->getT1()-showerX->getT2())/(2*settings.map_floatPars["nMat"]) + showerX->getPos().y();
+        chi2_ty = pow( fabs(PosTy - showerY->getPos().y() )/settings.map_floatPars["sigmaPos"], 2);
+      }
+      else{
+        std::cout<<"ERROR in EnergyTimeMatchingAlg: Unknown system ID: "<<system<<endl;
+      }
 
       if(chi2_E<min_chi2E) min_chi2E=chi2_E;
       if(chi2_tx<min_chi2tx) min_chi2tx=chi2_tx;
@@ -1071,30 +1091,56 @@ StatusCode EnergyTimeMatchingAlg::GetMatchedShowersL0( const Cyber::Calo1DCluste
   //if(barShowerU->getTowerID().size()==0) { barShowerU->setIDInfo(); }
 
   int _layer = barShowerU->getDlayer();
-  int _module = barShowerU->getTowerID()[0][0];
-  float rotAngle = -_module*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
+  int _module = barShowerU->getTowerID()[0][1];
+  int _system = barShowerU->getTowerID()[0][0];
+  if(_system == Cyber::CaloUnit::System_Barrel){
+    float rotAngle = -_module*TMath::TwoPi()/Cyber::CaloUnit::Nmodule;
 
-  for(int ibar=0;ibar<NbarsX;ibar++){
-    double En_x = barShowerU->getBars()[ibar]->getEnergy();
-    TVector3 m_vecx = barShowerU->getBars()[ibar]->getPosition();
-    m_vecx.RotateZ(rotAngle);
+    for(int ibar=0;ibar<NbarsX;ibar++){
+      double En_x = barShowerU->getBars()[ibar]->getEnergy();
+      TVector3 m_vecx = barShowerU->getBars()[ibar]->getPosition();
+      m_vecx.RotateZ(rotAngle);
 
-    for(int jbar=0;jbar<NbarsY;jbar++){
-      double En_y = barShowerV->getBars()[jbar]->getEnergy();
-      TVector3 m_vecy = barShowerV->getBars()[jbar]->getPosition();
-      m_vecy.RotateZ(rotAngle);
+      for(int jbar=0;jbar<NbarsY;jbar++){
+        double En_y = barShowerV->getBars()[jbar]->getEnergy();
+        TVector3 m_vecy = barShowerV->getBars()[jbar]->getPosition();
+        m_vecy.RotateZ(rotAngle);
 
-      TVector3 p_hit(m_vecy.x(), (m_vecx.y()+m_vecy.y())/2., m_vecx.z() );
-      p_hit.RotateZ(-rotAngle);
-      double m_Ehit = En_x*En_y/barShowerV->getEnergy() + En_x*En_y/barShowerU->getEnergy();
-      //Create new CaloHit
-      std::shared_ptr<Cyber::CaloHit> hit = std::make_shared<Cyber::CaloHit>();
-      hit->setcellID(_module, _layer);
-      hit->setPosition(p_hit);
-      hit->setEnergy(m_Ehit);
-      m_digiCol.push_back(hit.get());
-      m_bkCol.map_CaloHit["bkHit"].push_back( hit );
+        TVector3 p_hit(m_vecy.x(), (m_vecx.y()+m_vecy.y())/2., m_vecx.z() );
+        p_hit.RotateZ(-rotAngle);
+        double m_Ehit = En_x*En_y/barShowerV->getEnergy() + En_x*En_y/barShowerU->getEnergy();
+        //Create new CaloHit
+        std::shared_ptr<Cyber::CaloHit> hit = std::make_shared<Cyber::CaloHit>();
+        hit->setcellID(_system, _module, _layer);
+        hit->setPosition(p_hit);
+        hit->setEnergy(m_Ehit);
+        m_digiCol.push_back(hit.get());
+        m_bkCol.map_CaloHit["bkHit"].push_back( hit );
+      }
     }
+  }
+  else{
+
+    for(int ibar=0;ibar<NbarsX;ibar++){
+      double En_x = barShowerU->getBars()[ibar]->getEnergy();
+      TVector3 m_vecx = barShowerU->getBars()[ibar]->getPosition();
+
+      for(int jbar=0;jbar<NbarsY;jbar++){
+        double En_y = barShowerV->getBars()[jbar]->getEnergy();
+        TVector3 m_vecy = barShowerV->getBars()[jbar]->getPosition();
+
+        TVector3 p_hit(m_vecx.x(), m_vecy.y(), (m_vecx.z()+m_vecy.z())/2. );
+        double m_Ehit = En_x*En_y/barShowerV->getEnergy() + En_x*En_y/barShowerU->getEnergy();
+        //Create new CaloHit
+        std::shared_ptr<Cyber::CaloHit> hit = std::make_shared<Cyber::CaloHit>();
+        hit->setcellID(_system, _module, _layer);
+        hit->setPosition(p_hit);
+        hit->setEnergy(m_Ehit);
+        m_digiCol.push_back(hit.get());
+        m_bkCol.map_CaloHit["bkHit"].push_back( hit );
+      }
+    }
+
   }
 
   outsh->addUnit( barShowerU );

@@ -186,6 +186,41 @@ namespace dd4hep {
 
       return io;
     };
+
+
+    /** Simple data structure with key parameters for
+     *  reconstruction of long crystal bar ECAL
+     *
+     * @author Weizheng Song
+     * @date Nov, 20, 2024
+     * @version $Id: $
+     */
+    struct ECALModuleInfoStruct {
+      int moduleNumber;
+      int staveNumber;
+      int partNumber;
+
+      struct LayerInfo {
+        LayerInfo() :
+          dlayerNumber(-1),
+          slayerNumber(-1),
+          barNumber(-1){
+          }
+        int dlayerNumber;
+        int slayerNumber;
+        int barNumber;
+        };
+      std::vector<LayerInfo> LayerInfos;
+    };
+    typedef StructExtension<ECALModuleInfoStruct> ECALModuleInfoData;
+
+    struct ECALSystemInfoStruct {
+      int systemNumber;
+
+      std::vector<ECALModuleInfoStruct> ModuleInfos;
+    };
+    typedef StructExtension<ECALSystemInfoStruct> ECALSystemInfoData;
+
   }
 }
 

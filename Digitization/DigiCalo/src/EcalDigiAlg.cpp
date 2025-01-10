@@ -109,6 +109,7 @@ StatusCode EcalDigiAlg::initialize()
 		t_SimCont->Branch("step_T1", &m_step_T1);
 		t_SimCont->Branch("step_T2", &m_step_T2);
 		t_SimBar->Branch("totE_Truth", &totE_Truth);
+		t_SimBar->Branch("totE_Truth_MIP", &totE_Truth_MIP);
 		t_SimBar->Branch("totE_Digi", &totE_Digi);
 		t_SimBar->Branch("mean_CT", &mean_CT);
 		t_SimBar->Branch("ECALTemp", &ECALTemp);
@@ -179,6 +180,12 @@ StatusCode EcalDigiAlg::initialize()
 	f_DarkNoise = new TF1("f_DarkNoise", "pow([0]*x, x-1) * exp(-[0]*x) / TMath::Factorial(x)");
 	f_DarkNoise->SetParameter(0, fEcalSiPMCT);
 
+  //ADC non-linearity: a simplified quadratic function, with maximum non-linearity 1%
+  f_ADCNonLin = new TF1("f_ADCNonLin", "pol2", 0, fADC);
+  f_ADCNonLin->SetParameter(0, fADCNonLin/2.);
+  f_ADCNonLin->SetParameter(1, -4*fADCNonLin/fADC);
+  f_ADCNonLin->SetParameter(2, 4*fADCNonLin/fADC/fADC);
+
 	g_CryLYRatio_vs_TID = new TGraph();
 	float TID [8] = {50, 230.043, 731.681, 3448.96, 118953, 1.01164e+7, 1.02341e+8, 2.04907e+8};
 	float CryLYRatio_TID[8] = {0.99, 0.774091, 0.689545, 0.633636, 0.588636, 0.549091, 0.401818, 0.374545};
@@ -220,6 +227,8 @@ StatusCode EcalDigiAlg::execute()
    	if(_nEvt<_Nskip){ _nEvt++; return StatusCode::SUCCESS; }
 
 	Clear();
+  totE_Truth=0;
+  totE_Digi=0;
 
   for(int icol=0; icol<_inputSimHitCollection.size(); icol++){
     try{
@@ -242,7 +251,9 @@ StatusCode EcalDigiAlg::execute()
       
       	if(_Debug>=1) std::cout<<"digi, input sim hit size="<< SimHitCol->size() <<std::endl;
       
+
       totE_Truth=0;
+      totE_Truth_MIP=0;
       totE_Digi=0;
       mean_CT = 0;
       for (int i = 1; i < 10; i++)
@@ -497,10 +508,10 @@ StatusCode EcalDigiAlg::execute()
       //cout<<", SiPM gain "<<sEcalSiPMGainMean<<endl;
       
       		totQ1_Digi = EnergyDigi(ScinGen*totQ1_Att/(totQ1_Att+totQ2_Att), sEcalCryIntLY, sEcalSiPMGainMean, sEcalSiPMDCR, 
-      								f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise,
+      								f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise, f_ADCNonLin,
       								outLO1, outNDC1, outNDetPE1, outPedestal1, outADC1, outADCGain1)/1000;
       		totQ2_Digi = EnergyDigi(ScinGen*totQ2_Att/(totQ1_Att+totQ2_Att), sEcalCryIntLY, sEcalSiPMGainMean, sEcalSiPMDCR, 
-      								f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise,
+      								f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise, f_ADCNonLin,
       								outLO2, outNDC2, outNDetPE2, outPedestal2, outADC2, outADCGain2)/1000;
       	}
       	else{
@@ -584,10 +595,11 @@ StatusCode EcalDigiAlg::execute()
       	
         	m_barCol.push_back(hitbar);
       	if(hitbar.getQ1()>=0 && hitbar.getQ2()>=0) totE_Digi += (hitbar.getQ1() + hitbar.getQ2());
-      	//if(totQ1_Att>(fEcalMIPEnergy*fEcalMIP_Thre/1000.) && totQ2_Att>(fEcalMIPEnergy*fEcalMIP_Thre/1000.)){
-      	//  // cout<<"Truth Energy:"<<totQ1_Att<<"   "<<totQ2_Att<<endl;
-      	//  totE_Truth+=(totQ1_Att+totQ2_Att);
-      	//}
+        if (totQ1_Att > (0.001 * fEcalMIPEnergy * fEcalMIP_Thre) && totQ2_Att > (0.001 * fEcalMIPEnergy * fEcalMIP_Thre))
+        {
+//            cout << "Truth Energy:" << totQ1_Att << "   " << totQ2_Att << endl;
+            totE_Truth_MIP += (totQ1_Att + totQ2_Att);
+        }
       
       
       	if(_writeNtuple){
@@ -647,6 +659,7 @@ StatusCode EcalDigiAlg::execute()
 	{
 		std::cout<<"End Loop: Bar Digitalization!"<<std::endl;
 		std::cout<<"Total Truth Energy: "<<totE_Truth<<std::endl;
+        std::cout << "Total Truth Energy with " << (double) fEcalMIP_Thre << " MIP Threshold: " << totE_Truth_MIP << std::endl;
 		std::cout<<"Total Digi Energy: "<<totE_Digi<<std::endl;
 	}
 
@@ -674,12 +687,12 @@ StatusCode EcalDigiAlg::finalize()
 	info() << "Processed " << _nEvt << " events " << endmsg;
   map_readout_decoder.clear();
 	delete m_cellIDConverter, m_geosvc;
-	delete f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise, g_SiPMDCR_vs_NIEL, g_CryLYRatio_vs_TID;
+	delete f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise, f_ADCNonLin, g_SiPMDCR_vs_NIEL, g_CryLYRatio_vs_TID;
 	return GaudiAlgorithm::finalize();
 }
 
 float EcalDigiAlg::EnergyDigi(float ScinGen, float sEcalCryIntLY, float sEcalSiPMGainMean, float sEcalSiPMDCR, 
-								TF1* f_SiPMResponse, TF1* f_SiPMSigmaDet, TF1* f_SiPMSigmaRecp, TF1* f_SiPMSigmaRecm, TF1* f_AsymGauss, TF1* f_DarkNoise,
+								TF1* f_SiPMResponse, TF1* f_SiPMSigmaDet, TF1* f_SiPMSigmaRecp, TF1* f_SiPMSigmaRecm, TF1* f_AsymGauss, TF1* f_DarkNoise, TF1* f_ADCNonLin, 
 								int& outLO, int& outNDC, int& outNDetPE, float& outPedestal, float& outADC, float& outADCGain)
 {
 	// float sEcalSiPMPDE = rndm.Gaus(fEcalSiPMPDE, fEcalSiPMPDEFlu * fEcalSiPMPDE);
@@ -776,6 +789,7 @@ float EcalDigiAlg::EnergyDigi(float ScinGen, float sEcalCryIntLY, float sEcalSiP
 			float NRec = f_AsymGauss->GetRandom();
 			sADC = NRec * sEcalSiPMGainMean + sPedestal;
 		}
+    sADC = (f_ADCNonLin->Eval(sADC)+1) * sADC;
 		outPedestal = sPedestal;
 		outADCGain = sADC;
 		sPedestal = fPedestal + sEcalSiPMDCR * fEcalTimeInterval * (1 + mean_CT) * sEcalSiPMGainMean;
@@ -820,6 +834,7 @@ float EcalDigiAlg::EnergyDigi(float ScinGen, float sEcalCryIntLY, float sEcalSiP
 			float NRec = f_AsymGauss->GetRandom();
 			sADC = NRec * sEcalSiPMGainMean + sPedestal;
 		}
+    sADC = (f_ADCNonLin->Eval(sADC)+1) * sADC;
 		outPedestal = sPedestal;
 		outADCGain = sADC;
 		sPedestal = fPedestal + sEcalSiPMDCR * fEcalTimeInterval * (1 + mean_CT) * sEcalSiPMGainMean;
@@ -868,6 +883,7 @@ float EcalDigiAlg::EnergyDigi(float ScinGen, float sEcalCryIntLY, float sEcalSiP
 			float NRec = f_AsymGauss->GetRandom();
 			sADC = NRec * sEcalSiPMGainMean + sPedestal;
 		}
+    sADC = (f_ADCNonLin->Eval(sADC)+1) * sADC;
 		outPedestal = sPedestal;
 		outADCGain = sADC;
 		sPedestal = fPedestal + sEcalSiPMDCR * fEcalTimeInterval * (1 + mean_CT) * sEcalSiPMGainMean;
@@ -992,7 +1008,7 @@ edm4hep::MutableSimCalorimeterHit EcalDigiAlg::find(const std::vector<edm4hep::M
 }
 
 void EcalDigiAlg::Clear(){
-  	totE_Truth = -99;
+  totE_Truth = -99;
 	totE_Digi = -99;
 	mean_CT = -99;
 	ECALTemp = -99;

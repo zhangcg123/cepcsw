@@ -100,9 +100,9 @@ namespace Cyber{
     }
 
     if(sigmaz!=0) return sigmaz;  //sLayer=1, bars along z-axis.
-    else if(sigmax==0 && sigmaz==0) return sigmay; //Module 2, 6
-    else if(sigmay==0 && sigmaz==0) return sigmax; //Module 0, 4
-    else if(sigmax!=0 && sigmay!=0 && sigmaz==0) return sqrt(sigmax*sigmax+sigmay*sigmay); //Module 1, 3, 5, 7;
+    else if(sigmax==0 && sigmaz==0) return sigmay; 
+    else if(sigmay==0 && sigmaz==0) return sigmax; 
+    else if(sigmax!=0 && sigmay!=0 && sigmaz==0) return sqrt(sigmax*sigmax+sigmay*sigmay);
     else return 0.;
   }
 
@@ -150,25 +150,37 @@ namespace Cyber{
   }
 
   int Calo1DCluster::getLeftEdge(){
-    std::sort(Bars.begin(), Bars.end());
+    std::sort(Bars.begin(), Bars.end(), compPos);
     if(Bars.size()==0) return -99;
     int edge = -99;
-    if( Bars[0]->getSlayer()==0 ) edge = Bars[0]->getBar() + Bars[0]->getStave()*Cyber::CaloUnit::NbarZ; 
-    if( Bars[0]->getSlayer()==1 ){ 
-      if(Bars[0]->getModule()%2==0) edge = Bars[0]->getBar() + Bars[0]->getModule()*(CaloUnit::NbarPhi_even[Bars[0]->getDlayer()]);
-      else edge = Bars[0]->getBar() + Bars[0]->getModule()*(CaloUnit::NbarPhi_odd[Bars[0]->getDlayer()]);
+    if( Bars[0]->getSystem() == CaloUnit::System_Barrel ){
+      if( Bars[0]->getSlayer()==0 ) edge = Bars[0]->getBar() + Bars[0]->getStave()*Cyber::CaloUnit::NbarZ; 
+      if( Bars[0]->getSlayer()==1 ){ 
+        if(Bars[0]->getModule()%2==0) edge = Bars[0]->getBar() + Bars[0]->getModule()*(CaloUnit::NbarPhi_even[Bars[0]->getDlayer()-1]);
+        else edge = Bars[0]->getBar() + Bars[0]->getModule()*(CaloUnit::NbarPhi_odd[Bars[0]->getDlayer()-1]);
+      }
+    }
+    if( Bars[0]->getSystem() == CaloUnit::System_Endcap ){
+      if( Bars[0]->getSlayer()==0 ) edge = Bars[0]->getBar() + Bars[0]->getStave()*Bars[0]->getNBarInLayer();
+      else if( Bars[0]->getSlayer()==1 ) edge = Bars[0]->getBar() + Bars[0]->getPart()*Bars[0]->getNBarInLayer();
     }
     return edge;
   }
 
   int Calo1DCluster::getRightEdge(){
-    std::sort(Bars.begin(), Bars.end());
+    std::sort(Bars.begin(), Bars.end(), compPos);
     if(Bars.size()==0) return -99;
     int edge = -99;
-    if( Bars[Bars.size()-1]->getSlayer()==0 ) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getStave()*CaloUnit::NbarZ;
-    if( Bars[Bars.size()-1]->getSlayer()==1 ){ 
-      if(Bars[Bars.size()-1]->getModule()%2==0) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_even[Bars[Bars.size()-1]->getDlayer()]);
-      else edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_odd[Bars[Bars.size()-1]->getDlayer()]);
+    if( Bars[Bars.size()-1]->getSystem() == CaloUnit::System_Barrel ){
+      if( Bars[Bars.size()-1]->getSlayer()==0 ) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getStave()*CaloUnit::NbarZ;
+      if( Bars[Bars.size()-1]->getSlayer()==1 ){ 
+        if(Bars[Bars.size()-1]->getModule()%2==0) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_even[Bars[Bars.size()-1]->getDlayer()]);
+        else edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_odd[Bars[Bars.size()-1]->getDlayer()]);
+      }
+    }
+    if( Bars[Bars.size()-1]->getSystem() == CaloUnit::System_Endcap ){
+      if( Bars[Bars.size()-1]->getSlayer()==0 ) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getStave()*Bars[Bars.size()-1]->getNBarInLayer();
+      else if( Bars[Bars.size()-1]->getSlayer()==1 ) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getPart()*Bars[Bars.size()-1]->getNBarInLayer();
     }
     return edge;
   }
@@ -176,9 +188,11 @@ namespace Cyber{
   void Calo1DCluster::addUnit(const Cyber::CaloUnit* _bar ) 
   {
     Bars.push_back(_bar);
-    std::vector<int> id(2);
-    id[0] = _bar->getModule();
-    id[1] = _bar->getStave();
+    std::vector<int> id(4);
+    id[0] = _bar->getSystem();
+    id[1] = _bar->getModule();
+    id[2] = _bar->getStave();
+    id[3] = _bar->getPart();
     if(find(towerID.begin(), towerID.end(), id)==towerID.end()) towerID.push_back(id);
   }
 
@@ -190,9 +204,11 @@ namespace Cyber{
 
   void Calo1DCluster::setIDInfo() {
     for(int i=0; i<Bars.size(); i++){
-      std::vector<int> id(2);
-      id[0] = Bars[i]->getModule();
-      id[1] = Bars[i]->getStave();
+      std::vector<int> id(4);
+      id[0] = Bars[i]->getSystem();
+      id[1] = Bars[i]->getModule();
+      id[2] = Bars[i]->getStave();
+      id[3] = Bars[i]->getPart();
       if(find(towerID.begin(), towerID.end(), id)==towerID.end()) towerID.push_back(id);  
     }
   }

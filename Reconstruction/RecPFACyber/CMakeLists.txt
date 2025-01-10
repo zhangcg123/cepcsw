@@ -24,6 +24,8 @@ gaudi_add_library(CrystalCaloRecLib
                           ${ROOT_LIBRARIES}
                           ${TMVA_LIBRARIES}
                           EDM4HEP::edm4hep EDM4HEP::edm4hepDict
+                          ${DD4hep_COMPONENT_LIBRARIES}
+                          DetIdentifier
 
 )
 

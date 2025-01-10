@@ -34,17 +34,22 @@ StatusCode GlobalClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   //cout<<" When begin clustering: "<<ctime(&time_cb)<<endl;
 
   //Threshold and scale factor (Todo) for bars. 
+//double totE = 0.;
+//double totE_rest = 0.;
   for(int ibar=0; ibar<m_bars.size(); ibar++)
   {
     if(m_bars.at(ibar)->getEnergy()>settings.map_floatPars["unit_threshold"])
     {
       m_processbars.push_back(m_bars.at(ibar));
+      //totE += m_bars.at(ibar)->getEnergy();
     }
     else
     {
       m_restbars.push_back(m_bars.at(ibar));
+      //totE_rest += m_bars.at(ibar)->getEnergy();
     }
   }
+//cout<<"Input bar after threshold: "<<m_processbars.size()<<", totE "<<totE<<", rest E "<<totE_rest<<endl;
 
   //Clustering
   Clustering(m_processbars, m_1dclusters);
@@ -53,7 +58,6 @@ StatusCode GlobalClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   //Store created objects to backup col. 
   m_datacol.map_1DCluster["bk1DCluster"].insert(m_datacol.map_1DCluster["bk1DCluster"].end(), m_1dclusters.begin(), m_1dclusters.end());
   m_datacol.map_HalfCluster["bkHalfCluster"].insert(m_datacol.map_HalfCluster["bkHalfCluster"].end(), m_halfclusters.begin(), m_halfclusters.end());
-
 
   std::vector<std::shared_ptr<Cyber::CaloHalfCluster>> m_HalfClusterV; m_HalfClusterV.clear();
   std::vector<std::shared_ptr<Cyber::CaloHalfCluster>> m_HalfClusterU; m_HalfClusterU.clear();
@@ -65,11 +69,11 @@ StatusCode GlobalClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       m_HalfClusterV.push_back(m_halfclusters[i]);
   }
 
-//printf("  GlobalClustering: RestBarCol size %d, 1DCluster size %d, HalfCluster size (%d, %d) \n", m_restbars.size(), m_1dclusters.size(), m_HalfClusterU.size(), m_HalfClusterV.size());
-//for(int ic=0; ic<m_HalfClusterU.size(); ic++) cout<<m_HalfClusterU[ic]->getEnergy()<<'\t';
-//cout<<endl;
-//for(int ic=0; ic<m_HalfClusterV.size(); ic++) cout<<m_HalfClusterV[ic]->getEnergy()<<'\t';
-//cout<<endl;
+  //printf("  GlobalClustering: RestBarCol size %d, 1DCluster size %d, HalfCluster size (%d, %d) \n", m_restbars.size(), m_1dclusters.size(), m_HalfClusterU.size(), m_HalfClusterV.size());
+  //for(int ic=0; ic<m_HalfClusterU.size(); ic++) cout<<m_HalfClusterU[ic]->getEnergy()<<'\t';
+  //cout<<endl;
+  //for(int ic=0; ic<m_HalfClusterV.size(); ic++) cout<<m_HalfClusterV[ic]->getEnergy()<<'\t';
+  //cout<<endl;
 
 
   //Write results into DataCol.

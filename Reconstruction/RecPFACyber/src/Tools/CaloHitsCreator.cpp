@@ -12,7 +12,8 @@ namespace Cyber{
                                               std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
                                               std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder,
                                               std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
-                                              const dd4hep::VolumeManager& m_volumeManager )
+                                              const dd4hep::VolumeManager& m_volumeManager,
+                                              std::map<std::tuple<int, int, int, int, int>, int>& barNumberMapEndcapMap )
   {
     if(r_CaloHitCols.size()==0 || settings.map_stringVecPars.at("CaloHitCollections").size()==0) StatusCode::SUCCESS;
 
@@ -103,7 +104,7 @@ namespace Cyber{
           m_bar->setcellID( map_decoder["ECALBarrel"]->get(id, "system"),
                             map_decoder["ECALBarrel"]->get(id, "module"),
                             map_decoder["ECALBarrel"]->get(id, "stave"),
-                            -1,
+                            -1,                                           //empty 'part' for barrel. 
                             map_decoder["ECALBarrel"]->get(id, "dlayer"),
                             map_decoder["ECALBarrel"]->get(id, "slayer"),
                             map_decoder["ECALBarrel"]->get(id, "bar"));
@@ -122,6 +123,7 @@ namespace Cyber{
         const_MCPCaloAssoCol = nullptr;
       }
 
+      m_barCol.clear();
       if( m_DataCol.collectionMap_CaloHit.find("ECALEndcaps") != m_DataCol.collectionMap_CaloHit.end() ){
         const edm4hep::MCRecoCaloParticleAssociationCollection* const_MCPCaloAssoCol = map_CaloParticleAssoCol["ECALEndcaps"]->get();
         auto CaloHits = m_DataCol.collectionMap_CaloHit["ECALEndcaps"];
@@ -163,6 +165,7 @@ namespace Cyber{
                             map_decoder["ECALEndcaps"]->get(id, "dlayer"),
                             map_decoder["ECALEndcaps"]->get(id, "slayer"),
                             map_decoder["ECALEndcaps"]->get(id, "bar"));
+          m_bar->setNBarInLayer(barNumberMapEndcapMap[std::make_tuple(m_bar->getModule(), m_bar->getStave(), m_bar->getPart(), m_bar->getDlayer(), m_bar->getSlayer())]);
           m_bar->setPosition(hit.second[0].getPosition());
           m_bar->setBarLength(hit.second[0].getBarLength());
           m_bar->setQ( hit.second[0].getEnergy(), hit.second[1].getEnergy() );
@@ -175,8 +178,9 @@ namespace Cyber{
         }
 
         m_DataCol.map_BarCol["BarCol"].insert( m_DataCol.map_BarCol["BarCol"].end(), m_barCol.begin(), m_barCol.end() );
-        const_MCPCaloAssoCol = nullptr;
+        const_MCPCaloAssoCol = nullptr;      
       }
+
     }
     return StatusCode::SUCCESS;
   };

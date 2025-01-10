@@ -47,31 +47,28 @@ StatusCode TrackMatchingAlg::Initialize( CyberDataCol& m_datacol ){
 
 
 StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
-  std::cout << "---oooOO0OOooo---Excuting TrackMatchingAlg---oooOO0OOooo---"<<std::endl;
+  //std::cout << "---oooOO0OOooo---Excuting TrackMatchingAlg---oooOO0OOooo---"<<std::endl;
   // Associate tracks to HalfClusters.
   // This association is a many-to-many relationship: 
   //    One HalCluster may have multiple tracks; 
   //    One track may pass through multiple HalfClusters.
-//cout<<"track size: "<<m_TrackCol.size()<<", HFClusterU size "<<p_HalfClusterU->size()<<", HFClusterV size "<<p_HalfClusterV->size()<<endl;
+  //cout<<"track size: "<<m_TrackCol.size()<<", HFClusterU size "<<p_HalfClusterU->size()<<", HFClusterV size "<<p_HalfClusterV->size()<<endl;
+
 
   for(int itrk=0; itrk<m_TrackCol.size(); itrk++){  // loop tracks
-//printf("  In track %d: Ptrack %.3f, track state size %d \n", itrk, m_TrackCol[itrk]->getMomentum(), m_TrackCol[itrk]->getTrackStates("Ecal").size());
     if(m_TrackCol[itrk]->getTrackStates("Ecal").size()==0) continue;
 
     // Get extrapolated points of the track. These points are sorted by the track
     std::vector<TVector3> extrapo_points;
     GetExtrpoECALPoints(m_TrackCol[itrk], extrapo_points);
-//printf("  In track %d: extrapolated point size %d \n", itrk, extrapo_points.size());
     if(extrapo_points.size()==0) continue;
 
     double pT = TMath::Abs(1. / m_TrackCol[itrk]->getTrackStates("Ecal")[0].Kappa);
     if (pT >= settings.map_floatPars["ConeMatchingCut_pT"]){
-//std::cout << "For track " << itrk << ", pT = " << pT <<", match directly" << std::endl;
-
       for(int ihc=0; ihc<p_HalfClusterV->size(); ihc++){  // loop HalfClusterV
         // Get local max of the HalfCluster
         std::vector<const Cyber::Calo1DCluster*> localMaxColV = p_HalfClusterV->at(ihc).get()->getLocalMaxCol(settings.map_stringPars["ReadinLocalMaxName"]);
-//cout<<"    In HalfClusterV #"<<ihc<<": localMax size "<<localMaxColV.size()<<endl;
+
         // Track axis candidate.
         std::shared_ptr<Cyber::CaloHalfCluster> t_track_axis = std::make_shared<Cyber::CaloHalfCluster>();
         CreateTrackAxis(extrapo_points, localMaxColV, t_track_axis.get());
@@ -79,7 +76,7 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
         // If the track does not match the Halfcluster, the track axis candidate will have no 1DCluster
         if(t_track_axis->getCluster().size()==0)
           continue;
-//cout<<"      Created a track axis"<<endl;
+
         t_track_axis->addAssociatedTrack(m_TrackCol[itrk]);
         t_track_axis->setType(10000); //Track-type axis. 
         m_TrackCol[itrk]->addAssociatedHalfClusterV( p_HalfClusterV->at(ihc).get() );
@@ -90,7 +87,6 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       for(int ihc=0; ihc<p_HalfClusterU->size(); ihc++){  // loop HalfClusterU
         // Get local max of the HalfCluster
         std::vector<const Cyber::Calo1DCluster*> localMaxColU = p_HalfClusterU->at(ihc).get()->getLocalMaxCol(settings.map_stringPars["ReadinLocalMaxName"]);
-//cout<<"    In HalfClusterU #"<<ihc<<": localMax size "<<localMaxColU.size()<<endl;
 
         // Track axis candidate.
         std::shared_ptr<Cyber::CaloHalfCluster> t_track_axis = std::make_shared<Cyber::CaloHalfCluster>();
@@ -100,7 +96,6 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
         if(t_track_axis->getCluster().size()==0)
           continue;
         
-//cout<<"      Created a track axis"<<endl;
         t_track_axis->addAssociatedTrack(m_TrackCol[itrk]);
         t_track_axis->setType(10000); //Track-type axis. 
         m_TrackCol[itrk]->addAssociatedHalfClusterU( p_HalfClusterU->at(ihc).get() );
@@ -109,8 +104,6 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       }  // end loop HalfClusterU
     }
     else{  // pT < settings.map_floatPars["ConeMatchingCut_pT"]
-//std::cout << "For track " << itrk << ", pT = " << pT <<", using Cone method" << std::endl;
-
       // Get local max and HalfCluster near the extrapolated points
       std::vector<Cyber::CaloHalfCluster*> t_nearbyHalfClustersV;  t_nearbyHalfClustersV.clear();
       std::vector<Cyber::CaloHalfCluster*> t_nearbyHalfClustersU;  t_nearbyHalfClustersU.clear();
@@ -125,31 +118,13 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       CreatConeAxis(m_datacol, m_TrackCol[itrk], t_nearbyHalfClustersV, t_cone_axisV);
 
       // U plane
-      // Sort local max by their modules
-      //std::map<int, std::vector<const Cyber::Calo1DCluster*> > m_orderedLocalMaxU;  // key: module of the bar
-      //m_orderedLocalMaxU.clear();
-      //for(int is=0; is<t_nearbyLocalMaxU.size(); is++)
-      //  m_orderedLocalMaxU[t_nearbyLocalMaxU[is]->getTowerID()[0][0]].push_back(t_nearbyLocalMaxU[is]);
-      //// linking 
-      //std::vector<const Cyber::Calo1DCluster*> merged_cone_axisU; merged_cone_axisU.clear();
-      //for (auto it = m_orderedLocalMaxU.begin(); it != m_orderedLocalMaxU.end(); ++it){
-      //  std::vector<const Cyber::Calo1DCluster*> moduled_localMaxU = it->second;
-      //  std::vector<const Cyber::Calo1DCluster*> t_cone_axisU; t_cone_axisU.clear();
-      //  LongiConeLinking(extrapo_points, moduled_localMaxU, t_cone_axisU);
-      //  merged_cone_axisU.insert(merged_cone_axisU.end(), t_cone_axisU.begin(), t_cone_axisU.end());
-      //}
-      //CreatConeAxis(m_datacol, m_TrackCol[itrk], t_nearbyHalfClustersU, merged_cone_axisU);
-
-      // U plane
       std::vector<const Cyber::Calo1DCluster*> t_cone_axisU; t_cone_axisU.clear();
       LongiConeLinking(extrapo_points, t_nearbyLocalMaxU, t_cone_axisU);
       CreatConeAxis(m_datacol, m_TrackCol[itrk], t_nearbyHalfClustersU, t_cone_axisU);
 
     }
 
-  
-
-  }  // end loop tracks
+  }  
 
   //Loop track to check the associated cluster: merge clusters if they are associated to the same track.
   std::vector<Cyber::CaloHalfCluster*> tmp_deleteClus; tmp_deleteClus.clear();
@@ -157,17 +132,8 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
     std::vector<Cyber::CaloHalfCluster*> m_matchedUCol = itrk->getAssociatedHalfClustersU();
     std::vector<Cyber::CaloHalfCluster*> m_matchedVCol = itrk->getAssociatedHalfClustersV();
 
-    // std::cout << "yyy: Before merge, m_matchedVCol.size() = " << m_matchedVCol.size() << std::endl;
     for(int imc=0; imc<m_matchedVCol.size(); imc++){
-      // std::cout<<"  yyy: m_matchedVCol["<<imc<<"]->getCluster().size()="<<m_matchedVCol[imc]->getCluster().size()<<std::endl;
-      // std::cout<<"  yyy: m_matchedVCol["<<imc<<"]->getAssociatedTracks().size()=" << m_matchedVCol[imc]->getAssociatedTracks().size() << std::endl;
       int N_trk_axis = m_matchedVCol[imc]->getHalfClusterMap()[settings.map_stringPars["OutputLongiClusName"]].size() ;
-      // std::cout<<"  yyy: m_matchedVCol["<<imc<<"]->getHalfClusterMap()[TrackAxis].size()="<< N_trk_axis << std::endl;
-      for(int itk=0; itk<N_trk_axis; itk++){
-        // std::cout<<"    yyy: for TrackAxis " << itk 
-        // << ", Nlm = " << m_matchedVCol[imc]->getHalfClusterMap()["TrackAxis"][itk]->getCluster().size()
-        // << ", N trk = " << m_matchedVCol[imc]->getHalfClusterMap()["TrackAxis"][itk]->getAssociatedTracks().size() << std::endl;
-      }
     }
 
     if( m_matchedUCol.size()>1 ){
@@ -183,20 +149,6 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       }
     }
 
-    /////////////////////////////////////////////
-    // if(m_matchedVCol.size()>0){
-    //   // std::cout<<"yyy: After merge, m_matchedVCol[0]->getCluster().size()=" << m_matchedVCol[0]->getCluster().size() << std::endl;
-    //   // std::cout<<"yyy: After merge, m_matchedVCol[0]->getAssociatedTracks().size()=" << m_matchedVCol[0]->getAssociatedTracks().size() << std::endl;
-    //   int N_trk_axis = m_matchedVCol[0]->getHalfClusterMap()["TrackAxis"].size() ;
-    //   // std::cout<<"yyy: After merge, m_matchedVCol[0]->getHalfClusterMap()[TrackAxis].size()="<< N_trk_axis << std::endl;
-    //   for(int nn=0; nn<N_trk_axis; nn++){
-    //     std::cout<<"yyy: for TrackAxis " << nn 
-    //     << ", Nlm = " << m_matchedVCol[0]->getHalfClusterMap()["TrackAxis"][nn]->getCluster().size()
-    //     << ", N trk = " << m_matchedVCol[0]->getHalfClusterMap()["TrackAxis"][nn]->getAssociatedTracks().size() << std::endl;
-
-    //   }
-    // }
-    /////////////////////////////////////////////
   }
 
   //Check vector: clean the merged clusters
@@ -214,7 +166,12 @@ StatusCode TrackMatchingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
     }
   }
 
-
+//for(int ic=0; ic<p_HalfClusterU->size(); ic++){
+//printf("HalfClusterU #%d: energy %.4f, track axis size %d \n", ic, p_HalfClusterU->at(ic)->getEnergy(), p_HalfClusterU->at(ic)->getHalfClusterCol(settings.map_stringPars["OutputLongiClusName"]).size() );
+//}
+//for(int ic=0; ic<p_HalfClusterV->size(); ic++){
+//printf("HalfClusterV #%d: energy %.4f, track axis size %d \n", ic, p_HalfClusterV->at(ic)->getEnergy(), p_HalfClusterV->at(ic)->getHalfClusterCol(settings.map_stringPars["OutputLongiClusName"]).size() );
+//}
 
   return StatusCode::SUCCESS;
 }
@@ -246,34 +203,67 @@ StatusCode TrackMatchingAlg::CreateTrackAxis(vector<TVector3>& extrapo_points, s
   if(localMaxCol.size()==0 || extrapo_points.size()==0)
     return StatusCode::SUCCESS;
   int t_slayer = localMaxCol[0]->getSlayer();
+  int t_system = localMaxCol[0]->getSystem();
   
-  if(t_slayer==1){  // V plane (xy plane)
-    for(int ipt=0; ipt<extrapo_points.size(); ipt++){
-    for(int ilm=0; ilm<localMaxCol.size(); ilm++){
-      // distance from the extrpolated point to the center of the local max bar
-      TVector3 distance = extrapo_points[ipt] - localMaxCol[ilm]->getPos();
-      if( TMath::Abs(distance.Z()) < (localMaxCol[ilm]->getBars()[0]->getBarLength())/2. &&
-          distance.Perp() < Cyber::CaloUnit::barsize ) { 
-        t_track_axis->addUnit(localMaxCol[ilm]);
-      }
-      else { continue; }
-    }}
+  if(t_system==Cyber::CaloUnit::System_Barrel){  // Barrel
+    if(t_slayer==1){  // V plane (xy plane)
+      for(int ipt=0; ipt<extrapo_points.size(); ipt++){
+      for(int ilm=0; ilm<localMaxCol.size(); ilm++){
+        // distance from the extrpolated point to the center of the local max bar
+        TVector3 distance = extrapo_points[ipt] - localMaxCol[ilm]->getPos();
+        if( TMath::Abs(distance.Z()) < (localMaxCol[ilm]->getBars()[0]->getBarLength())/2. &&
+            distance.Perp() < Cyber::CaloUnit::barsize ) { 
+          t_track_axis->addUnit(localMaxCol[ilm]);
+        }
+        else { continue; }
+      }}
+    }
+    else{  // U plane (r-phi plane)
+      for(int ipt=0; ipt<extrapo_points.size(); ipt++){
+      for(int ilm=0; ilm<localMaxCol.size(); ilm++){
+        TVector3 lm_pos = localMaxCol[ilm]->getPos();
+        float barLength = localMaxCol[ilm]->getBars()[0]->getBarLength();
+        if( fabs(extrapo_points[ipt].z()-lm_pos.z()) < Cyber::CaloUnit::barsize &&  
+            fabs(extrapo_points[ipt].Phi()-lm_pos.Phi()) < barLength/2./Cyber::CaloUnit::ecal_innerR &&  
+            fabs(extrapo_points[ipt].Perp()-lm_pos.Perp()) < Cyber::CaloUnit::barsize ){
+          t_track_axis->addUnit(localMaxCol[ilm]);
+        }
+        else { continue; }
+      }}
+    }
   }
-  else{  // U plane (r-phi plane)
-    for(int ipt=0; ipt<extrapo_points.size(); ipt++){
-    for(int ilm=0; ilm<localMaxCol.size(); ilm++){
-      TVector3 lm_pos = localMaxCol[ilm]->getPos();
-      float barLength = localMaxCol[ilm]->getBars()[0]->getBarLength();
-      if( fabs(extrapo_points[ipt].z()-lm_pos.z()) < Cyber::CaloUnit::barsize &&  
-          fabs(extrapo_points[ipt].Phi()-lm_pos.Phi()) < barLength/2./Cyber::CaloUnit::ecal_innerR &&  
-          fabs(extrapo_points[ipt].Perp()-lm_pos.Perp()) < Cyber::CaloUnit::barsize ){
-        t_track_axis->addUnit(localMaxCol[ilm]);
-      }
-      else { continue; }
-    }}
+  else if(t_system==Cyber::CaloUnit::System_Endcap){ // Endcap
+    if(t_slayer==0){ // U plane
+      for(int ipt=0; ipt<extrapo_points.size(); ipt++){
+      for(int ilm=0; ilm<localMaxCol.size(); ilm++){
+        TVector3 lm_pos = localMaxCol[ilm]->getPos();
+        float barLength = localMaxCol[ilm]->getBars()[0]->getBarLength();
+        TVector3 distance = extrapo_points[ipt] - lm_pos;
+        if( fabs(distance.z()) < Cyber::CaloUnit::barsize &&  
+            fabs(distance.x()) < Cyber::CaloUnit::barsize &&
+            fabs(distance.y()) < barLength/2.){
+          t_track_axis->addUnit(localMaxCol[ilm]);
+        }
+        else { continue; }
+      }}
+    }
+    else{ // V plane
+      for(int ipt=0; ipt<extrapo_points.size(); ipt++){
+      for(int ilm=0; ilm<localMaxCol.size(); ilm++){
+        TVector3 lm_pos = localMaxCol[ilm]->getPos();
+        float barLength = localMaxCol[ilm]->getBars()[0]->getBarLength();
+        TVector3 distance = extrapo_points[ipt] - lm_pos;
+        if( fabs(distance.z()) < Cyber::CaloUnit::barsize &&  
+            fabs(distance.y()) < Cyber::CaloUnit::barsize &&
+            fabs(distance.x()) < barLength/2.){  
+          t_track_axis->addUnit(localMaxCol[ilm]);
+        }
+        else { continue; }
+      }}
+    }
   }
+  
 
-//std::cout << "end calling CreateTrackAxis()" << std::endl;
   return StatusCode::SUCCESS;
 }
 
@@ -282,46 +272,73 @@ StatusCode TrackMatchingAlg::GetNearby(const std::vector<std::shared_ptr<Cyber::
                                        const std::vector<TVector3>& extrapo_points, 
                                        std::vector<Cyber::CaloHalfCluster*>& t_nearbyHalfClusters, 
                                        std::vector<const Cyber::Calo1DCluster*>& t_nearbyLocalMax){
-  // std::cout << "calling TrackMatchingAlg::GetNearby()" << std::endl;
+
 
   if(p_HalfCluster->size()==0 || extrapo_points.size()==0)  return StatusCode::SUCCESS; 
 
   std::set<Cyber::CaloHalfCluster*> set_nearbyHalfClusters;
   int slayer = p_HalfCluster->at(0).get()->getSlayer();
+
   if(slayer==1){  // V plane
     for(int ihc=0; ihc<p_HalfCluster->size(); ihc++){
+      int system = p_HalfCluster->at(ihc).get()->getBars()[0]->getSystem();
       std::vector<const Cyber::Calo1DCluster*> localMaxCol = p_HalfCluster->at(ihc).get()->getLocalMaxCol(settings.map_stringPars["ReadinLocalMaxName"]);
+//cout<<"    HFclus #"<<ihc<<": system "<<system<<", localMax size "<<localMaxCol.size()<<endl;
       for(int ilm=0; ilm<localMaxCol.size(); ilm++){
       for(int ipt=0; ipt<extrapo_points.size(); ipt++){
         TVector3 distance(extrapo_points[ipt] - localMaxCol[ilm]->getPos());
-        if(TMath::Abs(distance.Z()) < (localMaxCol[ilm]->getBars()[0]->getBarLength())/2. && 
-            distance.Perp() < settings.map_floatPars["ConeNearByDistance"] ){  
-          t_nearbyLocalMax.push_back(localMaxCol[ilm]);
-          set_nearbyHalfClusters.insert(p_HalfCluster->at(ihc).get());
-          break;
-        }
-      }}
-      
-    }
-  }else{  // U plane
-    for(int ihc=0; ihc<p_HalfCluster->size(); ihc++){
-      std::vector<const Cyber::Calo1DCluster*> localMaxCol = p_HalfCluster->at(ihc).get()->getLocalMaxCol(settings.map_stringPars["ReadinLocalMaxName"]);
-      for(int ilm=0; ilm<localMaxCol.size(); ilm++){
-      for(int ipt=0; ipt<extrapo_points.size(); ipt++){
-        TVector3 lm_pos = localMaxCol[ilm]->getPos();
         float barLength = localMaxCol[ilm]->getBars()[0]->getBarLength();
-        if( fabs(extrapo_points[ipt].z()-lm_pos.z()) < settings.map_floatPars["ConeNearByDistance"] &&
-            fabs(extrapo_points[ipt].Phi()-lm_pos.Phi()) < barLength/2./Cyber::CaloUnit::ecal_innerR &&
-            fabs(extrapo_points[ipt].Perp()-lm_pos.Perp()) < settings.map_floatPars["ConeNearByDistance"] ){
-          t_nearbyLocalMax.push_back(localMaxCol[ilm]);
-          set_nearbyHalfClusters.insert(p_HalfCluster->at(ihc).get());
-          break;
+        if(system==Cyber::CaloUnit::System_Barrel){  // Barrel
+          if(TMath::Abs(distance.Z()) < barLength/2. && 
+              distance.Perp() < settings.map_floatPars["ConeNearByDistance"] ){  
+            t_nearbyLocalMax.push_back(localMaxCol[ilm]);
+            set_nearbyHalfClusters.insert(p_HalfCluster->at(ihc).get());
+            break;
+          }
+        }
+        else if(system==Cyber::CaloUnit::System_Endcap){
+          if( TMath::Sqrt(distance.z()*distance.z() + distance.y()*distance.y()) < settings.map_floatPars["ConeNearByDistance"] && 
+              fabs(distance.x()) < barLength/2.){
+            t_nearbyLocalMax.push_back(localMaxCol[ilm]);
+            set_nearbyHalfClusters.insert(p_HalfCluster->at(ihc).get());
+            break;
+          }
         }
       }}
     }
   }
+  else if(slayer==0){
+    for(int ihc=0; ihc<p_HalfCluster->size(); ihc++){
+      int system = p_HalfCluster->at(ihc).get()->getBars()[0]->getSystem();
+      std::vector<const Cyber::Calo1DCluster*> localMaxCol = p_HalfCluster->at(ihc).get()->getLocalMaxCol(settings.map_stringPars["ReadinLocalMaxName"]);
+//cout<<"    HFclus #"<<ihc<<": system "<<system<<", localMax size "<<localMaxCol.size()<<endl;
+      for(int ilm=0; ilm<localMaxCol.size(); ilm++){
+      for(int ipt=0; ipt<extrapo_points.size(); ipt++){
+        TVector3 lm_pos = localMaxCol[ilm]->getPos();
+        float barLength = localMaxCol[ilm]->getBars()[0]->getBarLength();
+        TVector3 distance = extrapo_points[ipt] - lm_pos;
+        if(system==Cyber::CaloUnit::System_Barrel){  // Barrel
+          if( fabs(extrapo_points[ipt].z()-lm_pos.z()) < settings.map_floatPars["ConeNearByDistance"] &&
+              fabs(extrapo_points[ipt].Phi()-lm_pos.Phi()) < barLength/2./Cyber::CaloUnit::ecal_innerR &&
+              fabs(extrapo_points[ipt].Perp()-lm_pos.Perp()) < settings.map_floatPars["ConeNearByDistance"] ){
+            t_nearbyLocalMax.push_back(localMaxCol[ilm]);
+            set_nearbyHalfClusters.insert(p_HalfCluster->at(ihc).get());
+            break;
+          }
+        }
+        else if(system==Cyber::CaloUnit::System_Endcap){
+          if( TMath::Sqrt(distance.z()*distance.z() + distance.x()*distance.x()) < settings.map_floatPars["ConeNearByDistance"] &&  
+              fabs(distance.y()) < barLength/2.){
+            t_nearbyLocalMax.push_back(localMaxCol[ilm]);
+            set_nearbyHalfClusters.insert(p_HalfCluster->at(ihc).get());
+            break;
+          }
+        }
+      }}
+    }
+  }
+  
   t_nearbyHalfClusters.assign(set_nearbyHalfClusters.begin(), set_nearbyHalfClusters.end());
-
   return StatusCode::SUCCESS; 
 }
 
@@ -329,25 +346,28 @@ StatusCode TrackMatchingAlg::GetNearby(const std::vector<std::shared_ptr<Cyber::
 StatusCode TrackMatchingAlg::LongiConeLinking(const std::vector<TVector3>& extrapo_points,  
                                               std::vector<const Cyber::Calo1DCluster*>& nearbyLocalMax, 
                                               std::vector<const Cyber::Calo1DCluster*>& cone_axis){
-  // std::cout<<"yyy: calling longiConeLinking()"<<std::endl;
   if(nearbyLocalMax.size()==0 || extrapo_points.size()==0) return StatusCode::SUCCESS;
-
-  // Seed finding
   int slayer = nearbyLocalMax[0]->getSlayer();
-  
   // int min_point = settings.map_intPars["Max_Seed_Point"];
   // if (extrapo_points.size()<min_point) min_point = extrapo_points.size();
   
+  std::vector<const Cyber::Calo1DCluster*> barrel_localMax, endcap_localMax;
+  for(int ilm=0; ilm<nearbyLocalMax.size(); ilm++){
+    if(nearbyLocalMax[ilm]->getSystem()==Cyber::CaloUnit::System_Barrel) barrel_localMax.push_back(nearbyLocalMax[ilm]);
+    else if(nearbyLocalMax[ilm]->getSystem()==Cyber::CaloUnit::System_Endcap) endcap_localMax.push_back(nearbyLocalMax[ilm]);
+  }
+  // Seed finding for barrel
+  std::vector<const Cyber::Calo1DCluster*> barrel_cone_axis;
   if(slayer==1){  // If V plane
     // for(int ip=0; ip<min_point; ip++){
     for(int ip=0; ip<extrapo_points.size(); ip++){
       double min_distance = 99999;
       int seed_candidate_index = -1;
 
-      for(int il=0;il<nearbyLocalMax.size(); il++){
-        TVector3 distance = extrapo_points[ip] - nearbyLocalMax[il]->getPos();
+      for(int il=0;il<barrel_localMax.size(); il++){
+        TVector3 distance = extrapo_points[ip] - barrel_localMax[il]->getPos();
         double distance_2d = distance.Perp();
-        if(TMath::Abs(distance.Z()) < (nearbyLocalMax[il]->getBars()[0]->getBarLength())/2.
+        if(TMath::Abs(distance.Z()) < (barrel_localMax[il]->getBars()[0]->getBarLength())/2.
            && distance_2d < settings.map_floatPars["ConeSeedDistance"]
            && distance_2d < min_distance)
         {
@@ -357,8 +377,8 @@ StatusCode TrackMatchingAlg::LongiConeLinking(const std::vector<TVector3>& extra
       }
       if (seed_candidate_index<0) continue;
 
-      cone_axis.push_back(nearbyLocalMax[seed_candidate_index]);
-      nearbyLocalMax.erase(nearbyLocalMax.begin() + seed_candidate_index);
+      barrel_cone_axis.push_back(barrel_localMax[seed_candidate_index]);
+      barrel_localMax.erase(barrel_localMax.begin() + seed_candidate_index);
       break;
     }
   }
@@ -368,9 +388,9 @@ StatusCode TrackMatchingAlg::LongiConeLinking(const std::vector<TVector3>& extra
       double min_distance = 99999;
       int seed_candidate_index = -1;
 
-      for(int il=0;il<nearbyLocalMax.size(); il++){
-        TVector3 lm_pos = nearbyLocalMax[il]->getPos();
-        float barLength = nearbyLocalMax[il]->getBars()[0]->getBarLength();
+      for(int il=0;il<barrel_localMax.size(); il++){
+        TVector3 lm_pos = barrel_localMax[il]->getPos();
+        float barLength = barrel_localMax[il]->getBars()[0]->getBarLength();
         float distance_2d = sqrt( pow(extrapo_points[ip].z()-lm_pos.z(), 2) + pow(extrapo_points[ip].Perp()-lm_pos.Perp(), 2) );
         if( fabs(extrapo_points[ip].Phi()-lm_pos.Phi()) < barLength/2./Cyber::CaloUnit::ecal_innerR && 
             distance_2d < settings.map_floatPars["ConeSeedDistance"] &&
@@ -382,61 +402,138 @@ StatusCode TrackMatchingAlg::LongiConeLinking(const std::vector<TVector3>& extra
       }
       if (seed_candidate_index<0) continue;
 
-      cone_axis.push_back(nearbyLocalMax[seed_candidate_index]);
-      nearbyLocalMax.erase(nearbyLocalMax.begin() + seed_candidate_index);
+      barrel_cone_axis.push_back(barrel_localMax[seed_candidate_index]);
+      barrel_localMax.erase(barrel_localMax.begin() + seed_candidate_index);
       break;
     }
   }
 
-  if (cone_axis.size() == 0) return StatusCode::SUCCESS;
+  // Seed finding for endcap
+  std::vector<const Cyber::Calo1DCluster*> endcap_cone_axis;
+  if(slayer==0){  // U plane (bars parralel to y-axis)
+    // for(int ip=0; ip<min_point; ip++){
+    for(int ip=0; ip<extrapo_points.size(); ip++){
+      double min_distance = 99999;
+      int seed_candidate_index = -1;
 
-  // std::cout<<"  yyy: after seed-finding, cone_axis.size()="<<cone_axis.size()<<endl;
+      for(int il=0;il<endcap_localMax.size(); il++){
+        TVector3 lm_pos = endcap_localMax[il]->getPos();
+        float barLength = endcap_localMax[il]->getBars()[0]->getBarLength();
+        TVector3 distance = extrapo_points[ip] - lm_pos;
+        double distance_2d = sqrt( distance.z()*distance.z() + distance.x()*distance.x() );
+        if( fabs(distance.y()) < barLength/2. && 
+            distance_2d < settings.map_floatPars["ConeSeedDistance"] &&
+            distance_2d < min_distance)
+        {
+          seed_candidate_index = il;
+          min_distance = distance_2d;
+        }
+      }
+      if (seed_candidate_index<0) continue;
 
-  // Linking
-  while(nearbyLocalMax.size()>0){
-    // std::cout<<"  yyy: nearbyLocalMax.size()="<<nearbyLocalMax.size()<<", linking it!"<<std::endl;
-    const Cyber::Calo1DCluster* shower_in_axis = cone_axis.back();
+      endcap_cone_axis.push_back(endcap_localMax[seed_candidate_index]);
+      endcap_localMax.erase(endcap_localMax.begin() + seed_candidate_index);
+      break;
+    }
+  }
+  else{  // V plane (bars parralel to x-axis)
+    // for(int ip=0; ip<min_point; ip++){
+    for(int ip=0; ip<extrapo_points.size(); ip++){
+      double min_distance = 99999;
+      int seed_candidate_index = -1;
+
+      for(int il=0;il<endcap_localMax.size(); il++){
+        TVector3 lm_pos = endcap_localMax[il]->getPos();
+        float barLength = endcap_localMax[il]->getBars()[0]->getBarLength();
+        TVector3 distance = extrapo_points[ip] - lm_pos;
+        double distance_2d = sqrt( distance.z()*distance.z() + distance.y()*distance.y() );
+        if( fabs(distance.x()) < barLength/2. && 
+            distance_2d < settings.map_floatPars["ConeSeedDistance"] &&
+            distance_2d < min_distance)
+        {
+          seed_candidate_index = il;
+          min_distance = distance_2d;
+        }
+      }
+      if (seed_candidate_index<0) continue;
+
+      endcap_cone_axis.push_back(endcap_localMax[seed_candidate_index]);
+      endcap_localMax.erase(endcap_localMax.begin() + seed_candidate_index);
+      break;
+    }
+
+  }
+
+  if (barrel_cone_axis.size()==0 && endcap_cone_axis.size()==0) return StatusCode::SUCCESS;
+
+  // Linking for barrel
+  while(barrel_localMax.size()>0){
+    if(barrel_cone_axis.size()==0) break;
+    const Cyber::Calo1DCluster* shower_in_axis = barrel_cone_axis.back();
     if(!shower_in_axis) break; 
     if(isStopLinking(extrapo_points, shower_in_axis)) break;
 
-    // std::cout<<"  yyy: looking for a lm to link"<<std::endl;
-
-    double min_delta = 9999;
+    double min_distance = 9999;
     int shower_candidate_index = -1;
 
-    for(int il=0; il<nearbyLocalMax.size(); il++){
-      TVector2 relR = GetProjectedRelR(shower_in_axis, nearbyLocalMax[il]);  //Return vec: 1->2.
+    for(int il=0; il<barrel_localMax.size(); il++){
+      TVector2 relR = GetProjectedRelR(shower_in_axis, barrel_localMax[il]);  //Return vec: 1->2.
       TVector2 clusaxis = GetProjectedAxis(extrapo_points, shower_in_axis);
 
       double delta_phi = relR.DeltaPhi(clusaxis);
       double delta_distance = (relR - (clusaxis*2)).Mod();
 
-      // std::cout<<"    yyy: for nearbyLocalMax["<<il<<"], "<<std::endl
-      //          <<"         shower_in_axis=("<<shower_in_axis->getPos().x()<<", "
-      //          <<shower_in_axis->getPos().y()<<", "
-      //          <<shower_in_axis->getPos().z()<<")"<<std::endl
-      //          <<"         nearbyLocalMax=("<<nearbyLocalMax[il]->getPos().x()<<", "
-      //          <<nearbyLocalMax[il]->getPos().y()<<", "
-      //          <<nearbyLocalMax[il]->getPos().z()<<")"<<std::endl
-      //          <<"         relR = ("<<relR.X()<<", "<<relR.Y()<<")"<<std::endl
-      //          <<"         clusaxis = ("<<clusaxis.X()<<", "<<clusaxis.Y()<<")"<<std::endl
-      //          <<"         delta_phi = "<<delta_phi<<", delta_distance="<<delta_distance<<std::endl;
-      
       if( delta_phi<settings.map_floatPars["th_ConeTheta"] 
           && relR.Mod()<settings.map_floatPars["th_ConeR"] 
-          && delta_distance<min_delta)
-      {
-        // std::cout<<"    yyy: nearbyLocalMax["<<il<<"] renewed"<<std::endl;
+          && delta_distance<min_distance){
         shower_candidate_index = il;
-        min_delta = delta_distance;
+        min_distance = delta_distance;
       }
     }
     if (shower_candidate_index<0) break;
 
-    cone_axis.push_back(nearbyLocalMax[shower_candidate_index]);
-    nearbyLocalMax.erase(nearbyLocalMax.begin() + shower_candidate_index);
+    barrel_cone_axis.push_back(barrel_localMax[shower_candidate_index]);
+    barrel_localMax.erase(barrel_localMax.begin() + shower_candidate_index);
   }
-  
+
+
+  // Linking for endcap
+  while(endcap_localMax.size()>0){
+    if(endcap_cone_axis.size()==0) break;
+    const Cyber::Calo1DCluster* shower_in_axis = endcap_cone_axis.back();
+    if(!shower_in_axis) break; 
+    if(isStopLinking(extrapo_points, shower_in_axis)) break;
+
+    double min_distance = 9999;
+    int shower_candidate_index = -1;
+
+    for(int il=0; il<endcap_localMax.size(); il++){
+      TVector2 relR = GetProjectedRelR(shower_in_axis, endcap_localMax[il]);  //Return vec: 1->2.
+      TVector2 clusaxis = GetProjectedAxis(extrapo_points, shower_in_axis);
+
+      double delta_phi = relR.DeltaPhi(clusaxis);
+      double delta_distance = (relR - (clusaxis*2)).Mod();
+
+      if( delta_phi<settings.map_floatPars["th_ConeTheta"] 
+          && relR.Mod()<settings.map_floatPars["th_ConeR"] 
+          && delta_distance<min_distance){
+        shower_candidate_index = il;
+        min_distance = delta_distance;
+      }
+    }
+    if (shower_candidate_index<0) break;
+
+    endcap_cone_axis.push_back(endcap_localMax[shower_candidate_index]);
+    endcap_localMax.erase(endcap_localMax.begin() + shower_candidate_index);
+  }
+
+  cone_axis.insert(cone_axis.end(), barrel_cone_axis.begin(), barrel_cone_axis.end());
+  cone_axis.insert(cone_axis.end(), endcap_cone_axis.begin(), endcap_cone_axis.end());
+
+  // nearbyLocalMax.clear();
+  // nearbyLocalMax.insert(nearbyLocalMax.end(), barrel_localMax.begin(), barrel_localMax.end());
+  // nearbyLocalMax.insert(nearbyLocalMax.end(), endcap_localMax.begin(), endcap_localMax.end());
+
   return StatusCode::SUCCESS;
 }
 
@@ -444,102 +541,168 @@ StatusCode TrackMatchingAlg::LongiConeLinking(const std::vector<TVector3>& extra
 bool TrackMatchingAlg::isStopLinking( const std::vector<TVector3>& extrapo_points, 
                                       const Cyber::Calo1DCluster* final_cone_hit){
 
-  double slayer = final_cone_hit->getSlayer();
-  if(slayer==1){
-    TVector3 f_distance = extrapo_points.back() - final_cone_hit->getPos();
-    double f_distance_2d = f_distance.Perp(); 
-    for(int i=0; i<extrapo_points.size(); i++){
-      TVector3 distance = extrapo_points[i] - final_cone_hit->getPos();
-      double distance_2d = distance.Perp(); 
-      if (distance_2d < f_distance_2d) return false;
+  int slayer = final_cone_hit->getSlayer();
+  int system = final_cone_hit->getSystem();
+  if(system==Cyber::CaloUnit::System_Barrel){
+    if(slayer==1){
+      TVector3 f_distance = extrapo_points.back() - final_cone_hit->getPos();
+      double f_distance_2d = f_distance.Perp(); 
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector3 distance = extrapo_points[i] - final_cone_hit->getPos();
+        double distance_2d = distance.Perp(); 
+        if (distance_2d < f_distance_2d) return false;
+      }
+    }
+    else{
+      TVector3 lm_pos = final_cone_hit->getPos();
+      float f_distance_2d = sqrt( pow(extrapo_points.back().z()-lm_pos.z(), 2) + pow(extrapo_points.back().Perp()-lm_pos.Perp(), 2) );
+      for(int i=0; i<extrapo_points.size(); i++){
+        float distance_2d = sqrt( pow(extrapo_points[i].z()-lm_pos.z(), 2) + pow(extrapo_points[i].Perp()-lm_pos.Perp(), 2) );
+        if (distance_2d < f_distance_2d) return false;
+      }
     }
   }
-  else{
-    
-
-    TVector3 lm_pos = final_cone_hit->getPos();
-    float barLength = final_cone_hit->getBars()[0]->getBarLength();
-    float f_distance_2d = sqrt( pow(extrapo_points.back().z()-lm_pos.z(), 2) + pow(extrapo_points.back().Perp()-lm_pos.Perp(), 2) );
-    for(int i=0; i<extrapo_points.size(); i++){
-      float distance_2d = sqrt( pow(extrapo_points[i].z()-lm_pos.z(), 2) + pow(extrapo_points[i].Perp()-lm_pos.Perp(), 2) );
-      if (distance_2d < f_distance_2d) return false;
+  else if(system==Cyber::CaloUnit::System_Endcap){
+    if(slayer==0){
+      TVector3 lm_pos = final_cone_hit->getPos();
+      TVector3 f_distance = extrapo_points.back() - lm_pos;
+      double f_distance_2d = sqrt( f_distance.z()*f_distance.z() + f_distance.x()*f_distance.x() );
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector3 distance = extrapo_points[i] - lm_pos;
+        double distance_2d = sqrt( distance.z()*distance.z() + distance.x()*distance.x() );
+        if (distance_2d < f_distance_2d) return false;
+      }
+    }
+    else{
+      TVector3 lm_pos = final_cone_hit->getPos();
+      TVector3 f_distance = extrapo_points.back() - lm_pos;
+      double f_distance_2d = sqrt( f_distance.z()*f_distance.z() + f_distance.y()*f_distance.y() );
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector3 distance = extrapo_points[i] - lm_pos;
+        double distance_2d = sqrt( distance.z()*distance.z() + distance.y()*distance.y() );
+        if (distance_2d < f_distance_2d) return false;
+      }
     }
   }
-  // std::cout<<"  yyy: calling isStopLinking(): stop!"<<std::endl;
+  
   return true;   
 }
 
 
 TVector2 TrackMatchingAlg::GetProjectedRelR( const Cyber::Calo1DCluster* m_shower1, const Cyber::Calo1DCluster* m_shower2 ){
-  TVector2 paxis1, paxis2;
-  if(m_shower1->getSlayer()==1){ //For V-bars
-    paxis1.Set(m_shower1->getPos().x(), m_shower1->getPos().y());
-    paxis2.Set(m_shower2->getPos().x(), m_shower2->getPos().y());
-    return paxis2 - paxis1;
+  if(m_shower1->getSystem()==Cyber::CaloUnit::System_Barrel){  // For Barrel
+    if(m_shower1->getSlayer()==1){ //For V-bars
+      TVector3 vec = m_shower2->getPos() - m_shower1->getPos();
+      TVector2 vec2d(vec.x(), vec.y());
+      return vec2d;
+    }
+    else{  //For U-bars
+      TVector3 vec = m_shower2->getPos() - m_shower1->getPos();
+      TVector2 vec2d(vec.Perp(), vec.z());
+      return vec2d;
+    }
   }
-  else{  //For U-bars
-    //if (m_shower1->getTowerID()[0][0] != m_shower2->getTowerID()[0][0])
-    //  std::cout << "warning: In GetProjectedRelR(), modules are different!" << std::endl;
-    TVector3 vec = m_shower2->getPos() - m_shower1->getPos();
-
-    TVector2 vec2d(vec.Perp(), vec.z());
-
-    return vec2d;
-  }
-
-  
+  else if(m_shower1->getSystem()==Cyber::CaloUnit::System_Endcap){  // For Endcap
+    if(m_shower1->getSlayer()==0){ //For U-bars
+      TVector3 vec = m_shower2->getPos() - m_shower1->getPos();
+      TVector2 vec2d(vec.z(), vec.x());
+      return vec2d;
+    }
+    else{  //For V-bars
+      TVector3 vec = m_shower2->getPos() - m_shower1->getPos();
+      TVector2 vec2d(vec.z(), vec.y());
+      return vec2d;
+    }
+  }  
 }
 
 
 TVector2 TrackMatchingAlg::GetProjectedAxis(const std::vector<TVector3>& extrapo_points, const Cyber::Calo1DCluster* m_shower){
   int min_index=0;
   TVector2 distance(999., 999.);
-  if( m_shower->getSlayer()==1 ){  // V plane
-    for(int i=0; i<extrapo_points.size(); i++){
-      TVector2 t_distance(m_shower->getPos().x()-extrapo_points[i].x(), m_shower->getPos().y()-extrapo_points[i].y());
-      if(t_distance.Mod()<distance.Mod()){
-        distance = t_distance;
-        min_index = i;
+  if(m_shower->getSystem()==Cyber::CaloUnit::System_Barrel){
+    if( m_shower->getSlayer()==1 ){  // V plane
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector2 t_distance(m_shower->getPos().x()-extrapo_points[i].x(), m_shower->getPos().y()-extrapo_points[i].y());
+        if(t_distance.Mod()<distance.Mod()){
+          distance = t_distance;
+          min_index = i;
+        }
       }
-    }
 
-    if(min_index < extrapo_points.size()-1){
-      TVector2 axis(extrapo_points[min_index+1].x()-extrapo_points[min_index].x(), extrapo_points[min_index+1].y()-extrapo_points[min_index].y());
-      return axis;
-    }else{
-      TVector2 axis(extrapo_points[min_index].x()-extrapo_points[min_index-1].x(), extrapo_points[min_index].y()-extrapo_points[min_index-1].y());
-      return axis;
-    }
-
-  }else{  // U plane
-    for(int i=0; i<extrapo_points.size(); i++){
-      TVector3 dist3d = m_shower->getPos() - extrapo_points[i];
-      //dist3d.RotateZ( TMath::Pi()/4.*(6-m_shower->getTowerID()[0][0]) );
-      TVector2 t_distance(dist3d.Perp(), dist3d.z());
-      if(t_distance.Mod()<distance.Mod()){
-        distance = t_distance;
-        min_index = i;
+      if(min_index < extrapo_points.size()-1){
+        TVector2 axis(extrapo_points[min_index+1].x()-extrapo_points[min_index].x(), extrapo_points[min_index+1].y()-extrapo_points[min_index].y());
+        return axis;
+      }else{
+        TVector2 axis(extrapo_points[min_index].x()-extrapo_points[min_index-1].x(), extrapo_points[min_index].y()-extrapo_points[min_index-1].y());
+        return axis;
       }
-    }
 
-    if(min_index < extrapo_points.size()-1){
-      double dx = extrapo_points[min_index+1].x() - extrapo_points[min_index].x();
-      double dy = extrapo_points[min_index+1].y() - extrapo_points[min_index].y();
-      double dz = extrapo_points[min_index+1].z() - extrapo_points[min_index].z();
-      TVector3 vec(dx, dy, dz);
-      //vec.RotateZ( TMath::Pi()/4.*(6-m_shower->getTowerID()[0][0]) );
-      TVector2 axis(vec.Perp(), vec.z());
-      return axis;
-    }else{
-      double dx = extrapo_points[min_index].x() - extrapo_points[min_index-1].x();
-      double dy = extrapo_points[min_index].y() - extrapo_points[min_index-1].y();
-      double dz = extrapo_points[min_index].z() - extrapo_points[min_index-1].z();
-      TVector3 vec(dx, dy, dz);
-      //vec.RotateZ( TMath::Pi()/4.*(6-m_shower->getTowerID()[0][0]) );
-      TVector2 axis(vec.Perp(), vec.z());
-      return axis;
+    }else{  // U plane
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector3 dist3d = m_shower->getPos() - extrapo_points[i];
+        //dist3d.RotateZ( TMath::Pi()/4.*(6-m_shower->getTowerID()[0][0]) );
+        TVector2 t_distance(dist3d.Perp(), dist3d.z());
+        if(t_distance.Mod()<distance.Mod()){
+          distance = t_distance;
+          min_index = i;
+        }
+      }
+
+      if(min_index < extrapo_points.size()-1){
+        TVector3 vec = extrapo_points[min_index+1] - extrapo_points[min_index];
+        TVector2 axis(vec.Perp(), vec.z());
+        return axis;
+      }else{
+        TVector3 vec = extrapo_points[min_index] - extrapo_points[min_index-1];
+        TVector2 axis(vec.Perp(), vec.z());
+        return axis;
+      }
     }
   }
+  else if (m_shower->getSystem()==Cyber::CaloUnit::System_Endcap){
+    if( m_shower->getSlayer()==0 ){  // U plane
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector3 dist3d = m_shower->getPos() - extrapo_points[i];
+        TVector2 t_distance(dist3d.z(), dist3d.x());
+        if(t_distance.Mod()<distance.Mod()){
+          distance = t_distance;
+          min_index = i;
+        }
+      }
+
+      if(min_index < extrapo_points.size()-1){
+        TVector3 vec = extrapo_points[min_index+1] - extrapo_points[min_index];
+        TVector2 axis(vec.z(), vec.x());
+        return axis;
+      }else{
+        TVector3 vec = extrapo_points[min_index] - extrapo_points[min_index-1];
+        TVector2 axis(vec.z(), vec.x());
+        return axis;
+      }
+
+    }else{  // V plane
+      for(int i=0; i<extrapo_points.size(); i++){
+        TVector3 dist3d = m_shower->getPos() - extrapo_points[i];
+        TVector2 t_distance(dist3d.z(), dist3d.y());
+        if(t_distance.Mod()<distance.Mod()){
+          distance = t_distance;
+          min_index = i;
+        }
+      }
+
+      if(min_index < extrapo_points.size()-1){
+        TVector3 vec = extrapo_points[min_index+1] - extrapo_points[min_index];
+        TVector2 axis(vec.z(), vec.y());
+        return axis;
+      }else{
+        TVector3 vec = extrapo_points[min_index] - extrapo_points[min_index-1];
+        TVector2 axis(vec.z(), vec.y());
+        return axis;
+      }
+    }
+  }
+  
 
   
 }
@@ -547,24 +710,20 @@ TVector2 TrackMatchingAlg::GetProjectedAxis(const std::vector<TVector3>& extrapo
 
 StatusCode TrackMatchingAlg::CreatConeAxis(CyberDataCol& m_datacol, Cyber::Track* track, std::vector<Cyber::CaloHalfCluster*>& nearbyHalfClusters, 
                                            std::vector<const Cyber::Calo1DCluster*>& cone_axis){
-  // std::cout<<"yyy: Calling CreateConeAxis()"<<std::endl;
   if(nearbyHalfClusters.size()==0 || cone_axis.size()==0) return StatusCode::SUCCESS; 
 
   for(int ihc=0; ihc<nearbyHalfClusters.size(); ihc++){
     std::vector<const Cyber::Calo1DCluster*> localMaxCol = nearbyHalfClusters[ihc]->getLocalMaxCol(settings.map_stringPars["ReadinLocalMaxName"]);
-    // std::cout<<"    yyy: for nearbyHalfClusters["<<ihc<<"], localMax are:"
     // Track axis candidate.
     // Cyber::CaloHalfCluster* t_track_axis = new Cyber::CaloHalfCluster();
     std::shared_ptr<Cyber::CaloHalfCluster> t_track_axis = std::make_shared<Cyber::CaloHalfCluster>();
     for(int ica=0; ica<cone_axis.size(); ica++){
       if( find(localMaxCol.begin(), localMaxCol.end(), cone_axis[ica]) != localMaxCol.end()){
         t_track_axis->addUnit(cone_axis[ica]);
-        // std::cout<<"    add Unit from cone_axis to track_axis: " << cone_axis[ica]->getPos().x() << ", "
-        //          << cone_axis[ica]->getPos().y() << ", " << cone_axis[ica]->getPos().z() << std::endl;
       }
     }
 
-    // // If the track does not match the Halfcluster, the track axis candidate will have no 1DCluster
+    // If the track does not match the Halfcluster, the track axis candidate will have no 1DCluster
     if(t_track_axis->getCluster().size()==0)
       continue;
     
@@ -573,26 +732,12 @@ StatusCode TrackMatchingAlg::CreatConeAxis(CyberDataCol& m_datacol, Cyber::Track
     
     if(nearbyHalfClusters[ihc]->getSlayer()==1){
       track->addAssociatedHalfClusterV( nearbyHalfClusters[ihc] );
-      // std::cout<<"    yyy: track->addAssociatedHalfClusterV"<<std::endl;
     }
     else{
       track->addAssociatedHalfClusterU( nearbyHalfClusters[ihc] );
-      // std::cout<<"    yyy: track->addAssociatedHalfClusterU"<<std::endl;
     }
     m_datacol.map_HalfCluster["bkHalfCluster"].push_back(t_track_axis);
     nearbyHalfClusters[ihc]->addHalfCluster(settings.map_stringPars["OutputLongiClusName"], t_track_axis.get());
-    // std::cout<<"    yyy: nearbyHalfClusters["<<ihc<<"]->addHalfCluster, bars in the nearbyHalfClusters:"<<std::endl;
-    // for(int ii=0; ii<nearbyHalfClusters[ihc]->getCluster().size(); ii++){
-    //   std::cout<<"         "<<nearbyHalfClusters[ihc]->getCluster()[ii]->getPos().x()<<", "
-    //                         <<nearbyHalfClusters[ihc]->getCluster()[ii]->getPos().y()<<", "
-    //                         <<nearbyHalfClusters[ihc]->getCluster()[ii]->getPos().z()<<std::endl;
-    // }
-    // std::cout<<"          bars in the t_track_axis:"<<std::endl;
-    // for(int ii=0; ii<t_track_axis->getCluster().size(); ii++){
-    //   std::cout<<"         "<<t_track_axis->getCluster()[ii]->getPos().x()<<", "
-    //                         <<t_track_axis->getCluster()[ii]->getPos().y()<<", "
-    //                         <<t_track_axis->getCluster()[ii]->getPos().z()<<std::endl;
-    // }
     
     
     

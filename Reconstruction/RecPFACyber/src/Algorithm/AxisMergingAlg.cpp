@@ -190,7 +190,6 @@ cout<<endl;
             tmp_goodAxis.push_back( m_newAxisUCol[ic] );
           }
         
-
       else {
         tmp_badAxis.push_back( m_newAxisUCol[ic] );
       }
@@ -573,11 +572,74 @@ StatusCode AxisMergingAlg::BranchMerging( std::vector<Cyber::CaloHalfCluster*>& 
       double hough_rho = p_axis->getHoughRho();
       double hough_alpha = p_axis->getHoughAlpha();
 
-      // V plane
-      if(m_axis->getSlayer()==1){
-        double x0 = m_axis->getEnergyCenter().x();
-        double y0 = m_axis->getEnergyCenter().y();
-        double distance = TMath::Abs( x0*TMath::Cos(hough_alpha) + y0*TMath::Sin(hough_alpha) - hough_rho );
+      //Barrel 
+      if( m_axis->getTowerID()[0][0] == Cyber::CaloUnit::System_Barrel ){ 
+        // V plane
+        if(m_axis->getSlayer()==1){
+          double x0 = m_axis->getEnergyCenter().x();
+          double y0 = m_axis->getEnergyCenter().y();
+          double distance = TMath::Abs( x0*TMath::Cos(hough_alpha) + y0*TMath::Sin(hough_alpha) - hough_rho );
+
+          //cout << "    yyy:V rho = " << hough_rho << ", alpha = " << hough_alpha << ", x0 = " << x0 << ", y0 = " << y0 << endl;
+          //cout << "         distanceV = " << distance << endl;
+
+          if (distance<settings.map_floatPars["th_branch_distance"]){
+            m_axisCol[iax]->mergeHalfCluster( m_axisCol[jax] );
+            int axis_type = m_axisCol[iax]->getType() + m_axisCol[jax]->getType();
+            m_axisCol[iax]->setType(axis_type);
+            m_axisCol.erase(m_axisCol.begin()+jax);
+            jax--;
+            if(iax>jax+1) iax--;
+            // cout << "  yyy: axis " << jax << " is merged into axis " << iax << endl;
+          }
+        }
+
+        // U plane
+        else{
+          int m_module = m_axis->getEnergyCenterTower()[1];
+          //cout << "  yyy:branceU: m_module = " << m_module << endl;
+          int p_module = p_axis->getTowerID()[0][1];
+          //cout << "  yyy:branceU: p_module = " << p_module << endl;
+          // Do not merge the two axis in two different modules
+          //if (m_module != p_module) continue;
+
+          TVector3 t_pos = m_axis->getEnergyCenter();
+          // cout << "  yyy:branceU: t_pos = " << t_pos.x() << ", " << t_pos.y() << ", " << t_pos.z() << endl;
+          t_pos.RotateZ( TMath::TwoPi()/Cyber::CaloUnit::Nmodule*(int(Cyber::CaloUnit::Nmodule*3./4.)-m_module) );
+          // cout << "  yyy:branceU: t_pos after rotate to module 6 = " << t_pos.x() << ", " << t_pos.y() << ", " << t_pos.z() << endl;
+          double x0 = t_pos.x();
+          double y0 = t_pos.z();
+          double distance = TMath::Abs( x0*TMath::Cos(hough_alpha) + y0*TMath::Sin(hough_alpha) - hough_rho );
+
+          //cout << "    yyy:U rho = " << hough_rho << ", alpha = " << hough_alpha << ", x0 = " << x0 << ", z0 = " << y0 << endl;
+          //cout << "         distanceU = " << distance << endl;
+
+          if (distance<settings.map_floatPars["th_branch_distance"]){
+            m_axisCol[iax]->mergeHalfCluster( m_axisCol[jax] );
+            int axis_type = m_axisCol[iax]->getType() + m_axisCol[jax]->getType();
+            m_axisCol[iax]->setType(axis_type);
+            m_axisCol.erase(m_axisCol.begin()+jax);
+            //cout << "  yyy: axis " << jax << " is merged into axis " << iax << endl;
+            jax--;
+            if(iax>jax+1) iax--;
+          }
+        }
+      }
+
+      //Endcaps
+      else if(m_axis->getTowerID()[0][0] == Cyber::CaloUnit::System_Endcap) {
+        // V plane
+				double x0, y0, distance;
+        if(m_axis->getSlayer()==1){
+          x0 = m_axis->getEnergyCenter().z();
+          y0 = m_axis->getEnergyCenter().y();
+          distance = TMath::Abs( x0*TMath::Cos(hough_alpha) + y0*TMath::Sin(hough_alpha) - hough_rho );
+				}
+				else{
+          x0 = m_axis->getEnergyCenter().z();
+          y0 = m_axis->getEnergyCenter().x();
+          distance = TMath::Abs( x0*TMath::Cos(hough_alpha) + y0*TMath::Sin(hough_alpha) - hough_rho );
+				}
 
         //cout << "    yyy:V rho = " << hough_rho << ", alpha = " << hough_alpha << ", x0 = " << x0 << ", y0 = " << y0 << endl;
         //cout << "         distanceV = " << distance << endl;
@@ -592,40 +654,10 @@ StatusCode AxisMergingAlg::BranchMerging( std::vector<Cyber::CaloHalfCluster*>& 
           // cout << "  yyy: axis " << jax << " is merged into axis " << iax << endl;
         }
       }
-
-      // U plane
       else{
-        int m_module = m_axis->getEnergyCenterTower()[0];
-        //cout << "  yyy:branceU: m_module = " << m_module << endl;
-        int p_module = p_axis->getTowerID()[0][0];
-        //cout << "  yyy:branceU: p_module = " << p_module << endl;
-        // Do not merge the two axis in two different modules
-        //if (m_module != p_module) continue;
-
-        TVector3 t_pos = m_axis->getEnergyCenter();
-        // cout << "  yyy:branceU: t_pos = " << t_pos.x() << ", " << t_pos.y() << ", " << t_pos.z() << endl;
-        t_pos.RotateZ( TMath::TwoPi()/Cyber::CaloUnit::Nmodule*(int(Cyber::CaloUnit::Nmodule*3./4.)-m_module) );
-        // cout << "  yyy:branceU: t_pos after rotate to module 6 = " << t_pos.x() << ", " << t_pos.y() << ", " << t_pos.z() << endl;
-        double x0 = t_pos.x();
-        double y0 = t_pos.z();
-        double distance = TMath::Abs( x0*TMath::Cos(hough_alpha) + y0*TMath::Sin(hough_alpha) - hough_rho );
-
-        //cout << "    yyy:U rho = " << hough_rho << ", alpha = " << hough_alpha << ", x0 = " << x0 << ", z0 = " << y0 << endl;
-        //cout << "         distanceU = " << distance << endl;
-
-        if (distance<settings.map_floatPars["th_branch_distance"]){
-          m_axisCol[iax]->mergeHalfCluster( m_axisCol[jax] );
-          int axis_type = m_axisCol[iax]->getType() + m_axisCol[jax]->getType();
-          m_axisCol[iax]->setType(axis_type);
-          m_axisCol.erase(m_axisCol.begin()+jax);
-          //cout << "  yyy: axis " << jax << " is merged into axis " << iax << endl;
-          jax--;
-          if(iax>jax+1) iax--;
-        }
-
-
+        std::cout<<"ERROR in AxisMergingAlg: Unknown system ID: "<<m_axis->getTowerID()[0][0]<<std::endl;
       }
-
+			
       p_axis=nullptr;
     }
     m_axis=nullptr;
@@ -805,10 +837,7 @@ StatusCode AxisMergingAlg::ConeMerging( std::vector<Cyber::CaloHalfCluster*>& m_
   //cout<<"    Merge! "<<endl;
 
         m_axisCol[iax]->mergeHalfCluster( m_axisCol[jax] );
-        if(m_axisCol[iax]->getType()==1 || m_axisCol[jax]->getType()==1 || m_axisCol[iax]->getType()==5 || m_axisCol[jax]->getType()==5) m_axisCol[iax]->setType(5);
-        else if(m_axisCol[iax]->getType()==3 || m_axisCol[jax]->getType()==3 || m_axisCol[iax]->getType()==6 || m_axisCol[jax]->getType()==6) m_axisCol[iax]->setType(6);
-        else if(m_axisCol[iax]->getType()==4 || m_axisCol[jax]->getType()==4) m_axisCol[iax]->setType(4);
-        else m_axisCol[iax]->setType(7);
+        m_axisCol[iax]->setType( m_axisCol[iax]->getType() + m_axisCol[jax]->getType() );
 
         //delete m_axisCol[jax]; m_axisCol[jax]=nullptr;
         m_axisCol.erase(m_axisCol.begin()+jax);
@@ -852,11 +881,8 @@ StatusCode AxisMergingAlg::ConeMerging( std::vector<Cyber::CaloHalfCluster*>& m_
           relDis <= settings.map_floatPars["relP_Dis"] && relDis>=0 ){
 
         m_axisCol[iax]->mergeHalfCluster( m_axisCol[jax] );
-        if(m_axisCol[iax]->getType()==1 || m_axisCol[jax]->getType()==1 || m_axisCol[iax]->getType()==5 || m_axisCol[jax]->getType()==5) m_axisCol[iax]->setType(5);
-        else if(m_axisCol[iax]->getType()==3 || m_axisCol[jax]->getType()==3 || m_axisCol[iax]->getType()==6 || m_axisCol[jax]->getType()==6) m_axisCol[iax]->setType(6);
-        else if(m_axisCol[iax]->getType()==4 || m_axisCol[jax]->getType()==4) m_axisCol[iax]->setType(4);
-        else m_axisCol[iax]->setType(7);
-
+				m_axisCol[iax]->setType( m_axisCol[iax]->getType()+m_axisCol[jax]->getType() );
+	
         //delete m_axisCol[jax]; m_axisCol[jax]=nullptr;
         m_axisCol.erase(m_axisCol.begin()+jax);
         jax--;

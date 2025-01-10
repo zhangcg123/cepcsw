@@ -53,7 +53,8 @@ namespace Cyber{
       m_clus->addAssociatedTrack(iter);
     m_clus->setEnergyScale(Escale);
     m_clus->setLinkedMCP(MCParticleWeight);
-    m_clus->FitAxis();
+    //m_clus->FitAxis();
+    m_clus->setAxis(axis);
 
     return m_clus;
   }
