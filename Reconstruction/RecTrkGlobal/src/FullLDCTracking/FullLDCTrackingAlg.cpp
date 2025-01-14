@@ -3,8 +3,6 @@
 #include "DataHelper/Navigation.h"
 #include "Tracking/TrackingHelper.h"
 
-#include <GearSvc/IGearSvc.h>
-
 #include <edm4hep/TrackerHit.h>
 #include <edm4hep/TrackerHitPlane.h>
 #include <edm4hep/Track.h>
@@ -25,6 +23,8 @@
 #include <map>
 
 //#include "DataHelper/ClusterShapes.h"
+#ifdef CEPCSW_USE_GEAR
+#include <GearSvc/IGearSvc.h>
 #include <gear/GEAR.h>
 #include <gear/GearParameters.h>
 #include <gear/BField.h>
@@ -34,6 +34,10 @@
 #include "gear/FTDParameters.h"
 #include <gear/TPCParameters.h>
 #include <gear/PadRowLayout2D.h>
+#else
+#include "DetIdentifier/CEPCDetectorData.h"
+#include "DetInterface/IGeomSvc.h"
+#endif
 
 #include "TrackSystemSvc/IMarlinTrack.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
@@ -197,7 +201,7 @@ StatusCode FullLDCTrackingAlg::initialize() {
   _trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
   _trksystem->init() ;
     
-  this->setupGearGeom();
+  if (this->setupGeom().isFailure()) return StatusCode::FAILURE;
   return GaudiAlgorithm::initialize();
 }
 
@@ -5038,8 +5042,9 @@ StatusCode FullLDCTrackingAlg::finalize() {
   return StatusCode::SUCCESS;
 }
 
-void FullLDCTrackingAlg::setupGearGeom(){
-  
+StatusCode FullLDCTrackingAlg::setupGeom(){
+
+#ifdef CEPCSW_USE_GEAR
   auto _gear = service<IGearSvc>("GearSvc");
   gearMgr = _gear->getGearMgr();
 
@@ -5226,9 +5231,96 @@ void FullLDCTrackingAlg::setupGearGeom(){
       debug() << " ### gear::FTD Parameters as defined in SFtd05 Not Present in GEAR FILE" << endmsg;
     }
   }
+#else
+  auto geomSvc = service<IGeomSvc>("GeomSvc");
+  if (!geomSvc) {
+    fatal() << "Fail to find GeomSvc" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+  _bField = field.z()/dd4hep::tesla;
+
+  _nLayersVTX = 0;
+  dd4hep::rec::CompositeData* vtxData = nullptr;
+  auto vxdDet  = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::VXD));
+  try {
+    vtxData = vxdDet.extension<dd4hep::rec::CompositeData>();
+  } catch(std::runtime_error& e) {
+    warning() << e.what() << endmsg;
+  }
+  if (vtxData) {
+    _nLayersVTX = vtxData->layersPlanar.size() + vtxData->layersBent.size();
+  }
+  else {
+    try{
+      auto oldData = vxdDet.extension<dd4hep::rec::ZPlanarData>();
+      _nLayersVTX = oldData->layers.size();
+    } catch(std::runtime_error& e){
+      error() << e.what() << " not CompositeData and ZPlanarData for vertex detector, check geometry" << endmsg;
+    }
+  }
+
+  _nLayersSIT = 0;
+  try {
+    auto sitDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::SIT));
+    auto sitData = sitDet.extension<dd4hep::rec::ZPlanarData>();
+    _nLayersSIT = sitData->layers.size();
+  } catch(std::runtime_error& e) {
+    error() << e.what() << endmsg;
+  }
+
+  _nLayersSET = 0;
+  try {
+    auto setDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::SET));
+    auto setData = setDet.extension<dd4hep::rec::ZPlanarData>();
+    _nLayersSET = setData->layers.size();
+  } catch(std::runtime_error& e) {
+    error() << e.what() << endmsg;
+  }
+
+  try {
+    auto tpcDet  = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::TPC));
+    auto tpcData = tpcDet.extension<dd4hep::rec::FixedPadSizeTPCData>();
+    _tpc_nrows = tpcData->maxRow;
+    _tpc_max_drift_length  = tpcData->driftLength/dd4hep::mm;
+    _tpc_inner_r = tpcData->rMin/dd4hep::mm;
+    _tpc_outer_r = tpcData->rMax/dd4hep::mm;
+    _tpc_pad_height = tpcData->padHeight/dd4hep::mm;
+  } catch(std::runtime_error& e) {
+    error() << e.what() << endmsg;
+  }
+
+  _nLayersFTD = 0;
+  try {
+    auto ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+    auto ftdData = ftdDet.extension<dd4hep::rec::ZDiskPetalsData>();
+    auto ftdlayers = ftdData->layers;
+    for (int layer = 0; layer < ftdlayers.size(); layer++) {
+      dd4hep::rec::ZDiskPetalsData::LayerLayout& ftdlayer = ftdlayers[layer];
+      _zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm - ftdlayer.zOffsetSensitive/dd4hep::mm); // front petal even numbered
+      if (ftdlayer.petalNumber > 0) {
+	_zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm - ftdlayer.zOffsetSensitive/dd4hep::mm - 2*ftdlayer.zOffsetSupport/dd4hep::mm);  // front petal odd numbered
+	_petalBasedFTDWithOverlaps = true;
+      }
+    }
+    _nLayersFTD =_zLayerFTD.size();
+  } catch(std::runtime_error& e){
+    warning() << e.what() << endmsg;
+  }
+
+  _nLayersETD = 0;
+  try {
+    auto etdDet  = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::ETD));
+    auto etdData = etdDet.extension<dd4hep::rec::ZDiskPetalsData>();
+    _nLayersETD  = etdData->layers.size();
+  } catch(std::runtime_error& e){
+    warning() << e.what() << endmsg;
+  }
+#endif
 
   debug() << "layer number read: nvxd = " << _nLayersVTX << " nsit = " << _nLayersSIT << " ntpc = " << _tpc_nrows
-	  << " nset = " << _nLayersSET << " nftd = " << _nLayersFTD << endmsg;
+	  << " nset = " << _nLayersSET << " nftd = " << _nLayersFTD << " netd = " << _nLayersETD << endmsg;
+  return StatusCode::SUCCESS;
 }
 
 void FullLDCTrackingAlg::checkTrackState(int location){

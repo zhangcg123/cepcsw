@@ -22,12 +22,12 @@
 //#include "UTIL/CellIDDecoder.h"
 #include "UTIL/ILDConf.h"
 //#include "UTIL/LCIterator.h"
-
+#include "DetIdentifier/CEPCConf.h"
 //-------gsl -----
 #include "gsl/gsl_randist.h"
 #include "gsl/gsl_cdf.h"
 
-
+#ifdef CEPCSW_USE_GEAR
 //---- GEAR ----
 #include "gear/GEAR.h"
 #include "gear/TPCParameters.h"
@@ -35,7 +35,12 @@
 #include "gear/ZPlanarLayerLayout.h"
 #include "gear/PadRowLayout2D.h"
 #include "gear/BField.h"
-
+gear::GearMgr* gearMgr;
+#else
+#include "DetIdentifier/CEPCDetectorData.h"
+#include "DetInterface/IGeomSvc.h"
+SmartIF<IGeomSvc> geomSvc;
+#endif
 
 #include "TrackSystemSvc/IMarlinTrack.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
@@ -53,22 +58,12 @@ using namespace MarlinTrk ;
 
 using namespace clupatra_new ;
 
-/*
-   namespace edm4hep::TrackState {
-   const int AtIP = 0;
-   const int AtFirstHit = 1;
-   const int AtLastHit = 2;
-   const int AtCalorimeter = 3;
-   };
-   */
-
 RuntimeMap<edm4hep::Track, clupatra_new::TrackInfoStruct*> TrackInfo_of_edm4hepTrack;
 RuntimeMap<edm4hep::Track, MarlinTrk::IMarlinTrack*> MarTrk_of_edm4hepTrack;
 RuntimeMap<MarlinTrk::IMarlinTrack*, clupatra_new::CluTrack*> CluTrk_of_MarTrack;
 RuntimeMap<edm4hep::TrackerHit, clupatra_new::Hit*> GHitof;
 RuntimeMap<clupatra_new::CluTrack*, MarlinTrk::IMarlinTrack*> MarTrkof;
 
-gear::GearMgr* gearMgr; 
 #define WRITE_PICKED_DEBUG_TRACKS false
 
 //----------------------------------------------------------------
@@ -197,56 +192,85 @@ void ClupatraAlg::printParameters() {
 
 StatusCode ClupatraAlg::initialize() {
 
-	// Usually a good idea to
-        // don't need, since Gaudi Algorithm will print all Property  
-	//printParameters() ;
+  // Usually a good idea to
+  // don't need, since Gaudi Algorithm will print all Property
+  //printParameters() ;
+
+#ifdef CEPCSW_USE_GEAR
+  // Gear can be put as global
+  auto _gear = service<IGearSvc>("GearSvc");
+  gearMgr = _gear->getGearMgr();
+
+  _gearTPC = &(gearMgr->getTPCParameters());
+  _bfield = gearMgr->getBField().at( gear::Vector3D(0.,0.0,0.) ).z() ;
+
+  // Support for more than one module
+  // The ternary operator is used to make the trick with the static variable which
+  // is supposed to be calculated only once, also for performance reason
+  _maxTPCLayers = (gearMgr->getDetectorName() == "LPTPC" ) ?
+    _gearTPC->getModule(0).getNRows() + _gearTPC->getModule(2).getNRows() + _gearTPC->getModule(5).getNRows() :  // LCTPC
+    _gearTPC->getModule(0).getNRows(); // ILD
+
+  _driftLength = _gearTPC->getMaxDriftLength() ;
+#else
+  geomSvc = service<IGeomSvc>("GeomSvc");
+  if (!geomSvc) {
+    fatal() << "Fail to find GeomSvc" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+  _bfield = field.z()/dd4hep::tesla;
+  dd4hep::DetElement tpcDet  = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::TPC));
+  auto tpcData = tpcDet.extension<dd4hep::rec::FixedPadSizeTPCData>();
+  _maxTPCLayers = tpcData->maxRow;
+  _driftLength  = tpcData->driftLength/dd4hep::mm;
+#endif
 
   // Set up the track fit tool
   m_fitTool = ToolHandle<ITrackFitterTool>(m_fitToolName.value());
 
-	auto _trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
-	if ( !_trackSystemSvc ) {
-		error() << "Fail to find TrackSystemSvc ..." << endmsg;
-	}
+  auto _trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
+  if ( !_trackSystemSvc ) {
+    error() << "Fail to find TrackSystemSvc ..." << endmsg;
+  }
 
-	_trksystem = _trackSystemSvc->getTrackSystem(this);
-	if(!_trksystem){
-	  error() << "Cannot initialize MarlinTrkSystem of Type: KalTest" <<endmsg;
-	  return StatusCode::FAILURE;
-	}
+  _trksystem = _trackSystemSvc->getTrackSystem(this);
+  if(!_trksystem){
+    error() << "Cannot initialize MarlinTrkSystem of Type: KalTest" <<endmsg;
+    return StatusCode::FAILURE;
+  }
 
-	_trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;
-	_trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::usedEdx,       _ElossOn) ;
-	_trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
-	_trksystem->init() ;
+  _trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useQMS,        _MSOn ) ;
+  _trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::usedEdx,       _ElossOn) ;
+  _trksystem->setOption( MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing,  _SmoothOn) ;
+  _trksystem->init() ;
 
-	_nRun = 0 ;
-	_nEvt = 0 ;
-	// FIXME: fucd
-        //tree = new TTree("Tuple", "Particle Tree");
-        //tree->Branch("omega", &omega, "omega/D");
-        //tree->Branch("totalCandidates", &totalCandidates, "totalCandidates/I");
-        //tree->Branch("eventNumber", &_nEvt, "eventNumber/I");
-	if(_DumpTime){
-	  NTuplePtr nt1(ntupleSvc(), "MyTuples/Time"+name());
-	  if ( !nt1 ) {
-	    m_tuple = ntupleSvc()->book("MyTuples/Time"+name(),CLID_ColumnWiseTuple,"Tracking time");
-	    if ( 0 != m_tuple ) {
-	      m_tuple->addItem ("timeTotal", m_timeTotal ).ignore();
-	      m_tuple->addItem ("timeKalman", m_timeKalman ).ignore();
-	    }
-	    else {
-	      fatal() << "Cannot book MyTuples/Time"+name() <<endmsg;
-	      return StatusCode::FAILURE;
-	    }
-	  }
-	  else{
-	    m_tuple = nt1;
-	  }
-	}
+  _nRun = 0 ;
+  _nEvt = 0 ;
+  // FIXME: fucd
+  //tree = new TTree("Tuple", "Particle Tree");
+  //tree->Branch("omega", &omega, "omega/D");
+  //tree->Branch("totalCandidates", &totalCandidates, "totalCandidates/I");
+  //tree->Branch("eventNumber", &_nEvt, "eventNumber/I");
+  if(_DumpTime){
+    NTuplePtr nt1(ntupleSvc(), "MyTuples/Time"+name());
+    if ( !nt1 ) {
+      m_tuple = ntupleSvc()->book("MyTuples/Time"+name(),CLID_ColumnWiseTuple,"Tracking time");
+      if ( 0 != m_tuple ) {
+	m_tuple->addItem ("timeTotal", m_timeTotal ).ignore();
+	m_tuple->addItem ("timeKalman", m_timeKalman ).ignore();
+      }
+      else {
+	fatal() << "Cannot book MyTuples/Time"+name() <<endmsg;
+	return StatusCode::FAILURE;
+      }
+    }
+    else{
+      m_tuple = nt1;
+    }
+  }
 
-	return GaudiAlgorithm::initialize();
-
+  return GaudiAlgorithm::initialize();
 }
 
 
@@ -284,32 +308,16 @@ StatusCode ClupatraAlg::execute() {
 
 	PLCIOTrackConverter converter ;
 
-	// Gear can be put as global
-	auto _gear = service<IGearSvc>("GearSvc");
-	gearMgr = _gear->getGearMgr();
-
-	_gearTPC = &(gearMgr->getTPCParameters());
-	_bfield = gearMgr->getBField().at( gear::Vector3D(0.,0.0,0.) ).z() ;
-
-	// Support for more than one module
-	// The ternary operator is used to make the trick with the static variable which
-	// is supposed to be calculated only once, also for performance reason 
-	static const unsigned int maxTPCLayers = (gearMgr->getDetectorName() == "LPTPC" ) ?
-		_gearTPC->getModule(0).getNRows() + _gearTPC->getModule(2).getNRows() + _gearTPC->getModule(5).getNRows() :  // LCTPC
-		_gearTPC->getModule(0).getNRows(); // ILD
-
-	double driftLength = _gearTPC->getMaxDriftLength() ;
-	ZIndex zIndex( -driftLength , driftLength , _nZBins  ) ;
+	ZIndex zIndex( -_driftLength , _driftLength , _nZBins  ) ;
 
 
 	const edm4hep::TrackerHitCollection* col = nullptr;
         debug() << "col" << endmsg;
 
-	try{   col = _TPCHitCollectionHandle.get();
-
+	try {
+	  col = _TPCHitCollectionHandle.get();
 	} catch(...) {
-		// FIXME: Mingrui fix the output message
-		// streamlog_out( WARNING ) <<  " input collection not in event : " << _colName << "   - nothing to do  !!! " << std::endl ;
+	  warning() <<  " input collection not in event : " << _colName << "   - nothing to do  !!! " << endmsg;
 	}
 
 	//===============================================================================================
@@ -333,7 +341,7 @@ StatusCode ClupatraAlg::execute() {
 		//------
 		TrackerHit th(col->at(i));
 		//debug() << i << " " << th->getCellID() << endmsg;
-		if ( fabs(th.getPosition()[2]) > driftLength ) continue;
+		if ( fabs(th.getPosition()[2]) > _driftLength ) continue;
 
 		ClupaHit* ch  = & clupaHits[i] ;
 
@@ -369,7 +377,7 @@ StatusCode ClupatraAlg::execute() {
 
 	//---------------------------------------------------------------------------------------------------------
 
-	HitListVector hitsInLayer( maxTPCLayers ) ;
+	HitListVector hitsInLayer( _maxTPCLayers ) ;
 	addToHitListVector(  nncluHits.begin(), nncluHits.end() , hitsInLayer  ) ;
 
 	debug() << "  added  " <<  nncluHits.size()  << "  tp hitsInLayer - > size " <<  hitsInLayer.size() << endmsg;
@@ -455,7 +463,7 @@ StatusCode ClupatraAlg::execute() {
 
 		HitDistance dist( nloop * dcut , _cosAlphaCut ) ;
 
-		outerRow = maxTPCLayers - 1 ;
+		outerRow = _maxTPCLayers - 1 ;
 
 		while( outerRow >= _minCluSize ) {
 
@@ -521,7 +529,7 @@ StatusCode ClupatraAlg::execute() {
 			// remove clusters whith too many duplicate hits per pad row
 			Clusterer::cluster_list bclu ;    // bad clusters
 			bclu.setOwner() ;
-			split_list( sclu, std::back_inserter(bclu),  DuplicatePadRows( maxTPCLayers, _duplicatePadRowFraction  ) ) ;
+			split_list( sclu, std::back_inserter(bclu),  DuplicatePadRows( _maxTPCLayers, _duplicatePadRowFraction  ) ) ;
 			// free hits from bad clusters
 			std::for_each( bclu.begin(), bclu.end(), std::mem_fun( &CluTrack::freeElements ) ) ;
 
@@ -625,12 +633,12 @@ StatusCode ClupatraAlg::execute() {
 	static const int do_global_reclustering = true ;
 	if( do_global_reclustering ) {
 
-		outerRow = maxTPCLayers - 1 ;
+		outerRow = _maxTPCLayers - 1 ;
 
 		int padRangeRecluster = 50 ; // FIXME: make parameter
 		// define an inner cylinder where we exclude hits from re-clustering:
-		double zMaxInnerHits   = driftLength * .67 ;   // FIXME: make parameter
-		double rhoMaxInnerHits = _gearTPC->getPlaneExtent()[0] + (  _gearTPC->getPlaneExtent()[1] - _gearTPC->getPlaneExtent()[0] ) * .67 ;// FIXME: make parameter
+		double zMaxInnerHits   = _driftLength * .67 ;   // FIXME: make parameter
+		double rhoMaxInnerHits = _rmin + ( _rmax - _rmin ) * .67 ;// FIXME: make parameter
 
 
 		while( outerRow > 0 ) {
@@ -1305,9 +1313,9 @@ void ClupatraAlg::computeTrackInfo(  edm4hep::Track lTrk  ){
 	if( ! TrackInfo_of_edm4hepTrack(lTrk) )
 		TrackInfo_of_edm4hepTrack(lTrk) = new TrackInfoStruct ;
 
-	float r_inner = _gearTPC->getPlaneExtent()[0] ;
-	float r_outer = _gearTPC->getPlaneExtent()[1] ;
-	float driftLength = _gearTPC->getMaxDriftLength() ;
+	float r_inner = _rmin ;
+	float r_outer = _rmax ;
+	float driftLength = _driftLength ;
 
 	// compute z-extend of this track segment
 	// auto hv = lTrk->getTrackerHits() ;

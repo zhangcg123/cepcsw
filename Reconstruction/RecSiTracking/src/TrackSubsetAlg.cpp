@@ -1,12 +1,16 @@
 #include "TrackSubsetAlg.h"
 
+#ifdef CEPCSW_USE_GEAR
 #include "GearSvc/IGearSvc.h"
+#include <gear/BField.h>
+#else
+#include "DetInterface/IGeomSvc.h"
+#endif
+
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 #include "DataHelper/Navigation.h"
 
 #include <UTIL/ILDConf.h>
-
-#include <gear/BField.h>
 
 #include "KiTrack/SubsetSimple.h"
 #include "KiTrack/SubsetHopfieldNN.h"
@@ -72,6 +76,7 @@ StatusCode TrackSubsetAlg::initialize() {
   /**********************************************************************************************/
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
   /**********************************************************************************************/
+#ifdef CEPCSW_USE_GEAR
   auto _gear = service<IGearSvc>("GearSvc");
   if ( !_gear ) {
     error() << "Failed to find GearSvc ..." << endmsg;
@@ -79,7 +84,17 @@ StatusCode TrackSubsetAlg::initialize() {
   }
   gear::GearMgr* gearMgr = _gear->getGearMgr();
   _bField = gearMgr->getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
-    
+#else
+  auto geomSvc = service<IGeomSvc>("GeomSvc");
+  if ( !geomSvc ) {
+    info() << "Failed to find GeomSvc ..." << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+  _bField = field.z()/dd4hep::tesla;
+#endif
+
   // set upt the geometry
   auto _trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
   if ( !_trackSystemSvc ) {

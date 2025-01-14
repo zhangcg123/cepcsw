@@ -1,5 +1,5 @@
 #include "ForwardTrackingAlg.h"
-#include "GearSvc/IGearSvc.h"
+
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 #include "DataHelper/Navigation.h"
 
@@ -16,14 +16,19 @@
 #endif
 
 #include "UTIL/ILDConf.h"
+#include "DetIdentifier/CEPCConf.h"
 
 //#include "MarlinCED.h"
-
+#ifdef CEPCSW_USE_GEAR
+#include "GearSvc/IGearSvc.h"
 #include "gear/GEAR.h"
 #include "gear/GearParameters.h"
 #include "gear/BField.h"
 #include "gear/FTDParameters.h"
 #include "gear/FTDLayerLayout.h"
+#else
+#include "DetInterface/IGeomSvc.h"
+#endif
 
 //----From KiTrack-----------------------------
 #include "KiTrack/SubsetHopfieldNN.h"
@@ -127,13 +132,16 @@ StatusCode ForwardTrackingAlg::initialize(){
     debug() << endmsg;
   }
 
+#ifdef CEPCSW_USE_GEAR
   auto _gear = service<IGearSvc>("GearSvc");
   if ( !_gear ) {
     error() << "Failed to find GearSvc ..." << endmsg;
     return StatusCode::FAILURE;
   }
   gear::GearMgr* gearMgr = _gear->getGearMgr();
-     
+
+  // Get the B Field in z direction
+  _Bz = gearMgr->getBField().at( gear::Vector3D(0., 0., 0.) ).z();
   /**********************************************************************************************/
   /*       Make a SectorSystemFTD                                                               */
   /**********************************************************************************************/
@@ -152,14 +160,38 @@ StatusCode ForwardTrackingAlg::initialize(){
     if( ftdLayers.getNSensors(i) > nSensors ) nSensors = ftdLayers.getNSensors(i);
     
   }
+#else
+  auto geomSvc = service<IGeomSvc>("GeomSvc");
+  if ( !geomSvc ) {
+    info() << "Failed to find GeomSvc ..." << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+  _Bz = field.z()/dd4hep::tesla;
+
+  int nLayers(0), nModules(0), nSensors(0);
+  try {
+    auto ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+    auto ftdData = ftdDet.extension<dd4hep::rec::ZDiskPetalsData>();
+    auto ftdlayers = ftdData->layers;
+
+    nLayers = ftdlayers.size() + 1;
+    for (int layer = 0; layer < ftdlayers.size(); layer++) {
+      auto& ftdlayer = ftdlayers[layer];
+      if (ftdlayer.petalNumber > nModules) nModules = ftdlayer.petalNumber;
+      if (ftdlayer.sensorsPerPetal > nSensors)    nSensors = ftdlayer.sensorsPerPetal;
+    }
+  } catch(std::runtime_error& e) {
+    fatal() << e.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
+#endif
   
   debug() << "SectorSystemFTD is using " << nLayers << " layers (including one for the IP), " << nModules << " petals and " << nSensors << " sensors." << endmsg;
    
   _sectorSystemFTD = new SectorSystemFTD( nLayers, nModules , nSensors );
 
-  // Get the B Field in z direction
-  _Bz = gearMgr->getBField().at( gear::Vector3D(0., 0., 0.) ).z();    //The B field in z direction
-  
   /**********************************************************************************************/
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
   /**********************************************************************************************/
@@ -1001,20 +1033,7 @@ void ForwardTrackingAlg::finaliseTrack( edm4hep::MutableTrack* trackImpl ){
         
     ++hitNumbers[ subdet ];
   }
-  
-  //trackImpl->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 2 ] = hitNumbers[lcio::ILDDetID::VXD];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 2 ] = hitNumbers[lcio::ILDDetID::FTD];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 2 ] = hitNumbers[lcio::ILDDetID::SIT];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 2 ] = hitNumbers[lcio::ILDDetID::TPC];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 2 ] = hitNumbers[lcio::ILDDetID::SET];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 2 ] = hitNumbers[lcio::ILDDetID::ETD];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - 1 ] = hitNumbers[lcio::ILDDetID::VXD];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - 1 ] = hitNumbers[lcio::ILDDetID::FTD];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - 1 ] = hitNumbers[lcio::ILDDetID::SIT];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] = hitNumbers[lcio::ILDDetID::TPC];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - 1 ] = hitNumbers[lcio::ILDDetID::SET];
-  //trackImpl->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - 1 ] = hitNumbers[lcio::ILDDetID::ETD];
+
 #if EDM4HEP_BUILD_VERSION > EDM4HEP_VERSION(0, 9, 0)
   trackImpl->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::VXD]);
   trackImpl->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SIT]);
