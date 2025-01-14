@@ -7,19 +7,24 @@
 #include <DetIdentifier/CEPCConf.h>
 #include <UTIL/BitSet32.h>
 
+#ifdef CEPCSW_USE_GEAR
 ///---- GEAR ----
 #include "gear/GEAR.h"
 #include "gear/TPCParameters.h"
 #include "gear/TPCModule.h"
-
 #include "gear/BField.h"
+extern gear::GearMgr* gearMgr; // = _gear->getGearMgr();
+#else
+#include "DetInterface/IGeomSvc.h"
+extern IGeomSvc* geomSvc;
+#endif
 
 #include "IMPL/TrackerHitImpl.h"
 #include "IMPL/TrackStateImpl.h"
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiAlg/GaudiAlgorithm.h"
-#include "GearSvc/IGearSvc.h"
+//#include "GearSvc/IGearSvc.h"
 
 #include "podio/podioVersion.h"
 
@@ -31,7 +36,6 @@ namespace lcio{
 	const int  ILDTrackTypeBit::COMPOSITE = 17  ;
 }
 
-extern gear::GearMgr* gearMgr; // = _gear->getGearMgr();
 extern RuntimeMap<clupatra_new::CluTrack*, MarlinTrk::IMarlinTrack*> MarTrkof;
 extern RuntimeMap<edm4hep::Track, MarlinTrk::IMarlinTrack*> MarTrk_of_edm4hepTrack;
 extern RuntimeMap<edm4hep::Track, clupatra_new::TrackInfoStruct*> TrackInfo_of_edm4hepTrack;
@@ -248,6 +252,7 @@ namespace clupatra_new{
 
 		int nHitsAdded = 0 ;
 
+#ifdef CEPCSW_USE_GEAR
 		const double bfield = gearMgr->getBField().at( gear::Vector3D(0.,0.0,0.) ).z() ;
 
 		// Support for more than one module
@@ -257,6 +262,13 @@ namespace clupatra_new{
 		static const int maxTPCLayerID  = (gearMgr->getDetectorName() == "LPTPC" ) ?
 			gearTPC->getModule(0).getNRows() + gearTPC->getModule(2).getNRows() + gearTPC->getModule(5).getNRows() - 1 : // LCTPC
 			gearTPC->getModule(0).getNRows() - 1 ; // ILD
+#else
+		const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+		const double bfield = field.z()/dd4hep::tesla;
+		auto tpcDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::TPC));
+		auto tpcData = tpcDet.extension<dd4hep::rec::FixedPadSizeTPCData>();
+		static const int maxTPCLayerID  = tpcData->maxRow - 1;
+#endif
 
 		clu->sort( LayerSortIn() ) ;
 
@@ -709,7 +721,7 @@ namespace clupatra_new{
 
 		// Support for more than one module
 		//auto _gear = service<IGearSvc>("GearSvc");
-
+#ifdef CEPCSW_USE_GEAR
 		static const gear::TPCParameters*  gearTPC = &(gearMgr->getTPCParameters());
 		// The ternary operator is used to make the trick with the static variable which
 		// is supposed to be calculated only once, also for performance reason
@@ -717,7 +729,11 @@ namespace clupatra_new{
 			(gearMgr->getDetectorName() == "LPTPC" ) ?
 			gearTPC->getModule(0).getNRows() + gearTPC->getModule(2).getNRows() + gearTPC->getModule(5).getNRows() : // LCTPC
 			gearTPC->getModule(0).getNRows() ; // ILD
-
+#else
+		auto tpcDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::TPC));
+		auto tpcData = tpcDet.extension<dd4hep::rec::FixedPadSizeTPCData>();
+                static const int tpcNRow  = tpcData->maxRow;
+#endif
 		HitListVector hitsInLayer( tpcNRow )  ;
 		addToHitListVector(  hV.begin(), hV.end(), hitsInLayer ) ;
 
@@ -860,6 +876,7 @@ namespace clupatra_new{
 
 		// auto _gear = service<IGearSvc>("GearSvc");
 		// Support for more than one module
+#ifdef CEPCSW_USE_GEAR
 		static const gear::TPCParameters*  gearTPC = &(gearMgr->getTPCParameters());
 		// The ternary operator is used to make the trick with the static variable which
 		// is supposed to be calculated only once, also for performance reason
@@ -867,6 +884,11 @@ namespace clupatra_new{
 			(gearMgr->getDetectorName() == "LPTPC" ) ?
 			gearTPC->getModule(0).getNRows() + gearTPC->getModule(2).getNRows() + gearTPC->getModule(5).getNRows() : // LCTPC
 			gearTPC->getModule(0).getNRows() ; // ILD
+#else
+		auto tpcDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::TPC));
+		auto tpcData = tpcDet.extension<dd4hep::rec::FixedPadSizeTPCData>();
+                static const int tpcNRow  = tpcData->maxRow;
+#endif
 
 		HitListVector hitsInLayer( tpcNRow )  ;
 		addToHitListVector(  hV.begin(), hV.end(), hitsInLayer ) ;
@@ -1041,6 +1063,7 @@ namespace clupatra_new{
 
 
 		// Support for more than one module
+#ifdef CEPCSW_USE_GEAR
 		static const gear::TPCParameters*  gearTPC = &(gearMgr->getTPCParameters());
 		// The ternary operator is used to make the trick with the static variable which
 		// is supposed to be calculated only once, also for performance reason
@@ -1048,7 +1071,11 @@ namespace clupatra_new{
 			(gearMgr->getDetectorName() == "LPTPC" ) ?
 			gearTPC->getModule(0).getNRows() + gearTPC->getModule(2).getNRows() + gearTPC->getModule(5).getNRows() : // LCTPC
 			gearTPC->getModule(0).getNRows() ; // ILD
-
+#else
+		auto tpcDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::TPC));
+		auto tpcData = tpcDet.extension<dd4hep::rec::FixedPadSizeTPCData>();
+                static const int tpcNRow = tpcData->maxRow;
+#endif
 		HitListVector hitsInLayer( tpcNRow )  ;
 
 		addToHitListVector(  clu.begin(), clu.end(), hitsInLayer ) ;

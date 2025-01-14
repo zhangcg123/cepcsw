@@ -16,14 +16,11 @@
 #include <map>
 
 namespace dd4hep {
-    class Detector;
-    class DetElement;
-    namespace DDSegmentation {
-        class BitFieldCoder;
-    }
   class Detector;
   class DetElement;
-
+  namespace DDSegmentation {
+    class BitFieldCoder;
+  }
 }
 
 class StructExtension;
@@ -39,12 +36,15 @@ public:
   // receive DD4hep Geometry
   virtual dd4hep::DetElement getDD4HepGeo() = 0;
   virtual dd4hep::Detector* lcdd() = 0;
+
   // receive Geant4 Geometry
   // virtual G4VUserDetectorConstruction* getGeant4Geo() = 0;
 
   // short cut to retrieve the Decoder according to the Readout name
   virtual Decoder* getDecoder(const std::string& readout_name) = 0;
   virtual const dd4hep::rec::SurfaceMap* getSurfaceMap(const std::string& det_name) = 0;
+
+  virtual std::string getDetName(const int det_id) = 0;
 
   virtual ~IGeomSvc() {}
 };

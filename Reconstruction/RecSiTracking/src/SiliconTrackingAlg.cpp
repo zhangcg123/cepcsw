@@ -25,6 +25,7 @@
 #include <cmath>
 #include <climits>
 
+#ifdef CEPCSW_USE_GEAR
 #include <gear/GEAR.h>
 #include <gear/GearMgr.h>
 #include <gear/GearParameters.h>
@@ -32,8 +33,13 @@
 #include <gear/VXDParameters.h>
 #include "gear/FTDLayerLayout.h"
 #include "gear/FTDParameters.h"
-
 #include <gear/BField.h>
+#else
+#include "DetInterface/IGeomSvc.h"
+#include "DetIdentifier/CEPCDetectorData.h"
+#endif
+
+#include "DDRec/Vector3D.h"
 
 #include <UTIL/BitField64.h>
 #include <UTIL/BitSet32.h>
@@ -184,7 +190,7 @@ StatusCode  SiliconTrackingAlg::initialize() {
   
 #endif
   
-  if(setupGearGeom()==StatusCode::FAILURE) return StatusCode::FAILURE;
+  if (setupGeom().isFailure()) return StatusCode::FAILURE;
   
   if (_useSIT == 0)
     _nLayers = _nLayersVTX;
@@ -503,9 +509,9 @@ int SiliconTrackingAlg::InitialiseFTD() {
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
       //gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
       //gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-      gear::Vector3D U(1.0,hit.getCovMatrix()[1],hit.getCovMatrix()[0],gear::Vector3D::spherical);
-      gear::Vector3D V(1.0,hit.getCovMatrix()[4],hit.getCovMatrix()[3],gear::Vector3D::spherical);
-      gear::Vector3D Z(0.0,0.0,1.0);
+      dd4hep::rec::Vector3D U(1.0,(double)hit.getCovMatrix()[1],(double)hit.getCovMatrix()[0],dd4hep::rec::Vector3D::spherical);
+      dd4hep::rec::Vector3D V(1.0,(double)hit.getCovMatrix()[4],(double)hit.getCovMatrix()[3],dd4hep::rec::Vector3D::spherical);
+      dd4hep::rec::Vector3D Z(0.0,0.0,1.0);
       
       const float eps = 1.0e-07;
       // V must be the global z axis
@@ -729,9 +735,9 @@ int SiliconTrackingAlg::InitialiseVTX() {
       if (UTIL::BitSet32(type)[CEPCConf::TrkHitTypeBit::PLANAR]) {
 	//gear::Vector3D U(1.0,hit->getU()[1],hit->getU()[0],gear::Vector3D::spherical);
 	//gear::Vector3D V(1.0,hit->getV()[1],hit->getV()[0],gear::Vector3D::spherical);
-	gear::Vector3D U(1.0,hit.getCovMatrix()[1],hit.getCovMatrix()[0],gear::Vector3D::spherical);
-	gear::Vector3D V(1.0,hit.getCovMatrix()[4],hit.getCovMatrix()[3],gear::Vector3D::spherical);
-	gear::Vector3D Z(0.0,0.0,1.0);
+	dd4hep::rec::Vector3D U(1.0,hit.getCovMatrix()[1],hit.getCovMatrix()[0],dd4hep::rec::Vector3D::spherical);
+	dd4hep::rec::Vector3D V(1.0,hit.getCovMatrix()[4],hit.getCovMatrix()[3],dd4hep::rec::Vector3D::spherical);
+	dd4hep::rec::Vector3D Z(0.0,0.0,1.0);
 	//debug() << "covMatrix : " << hit->getCovMatrix()[0] << " " << hit->getCovMatrix()[1] << endmsg;
 	const float eps = 1.0e-07;
 	// V must be the global z axis
@@ -877,9 +883,9 @@ int SiliconTrackingAlg::InitialiseVTX() {
           // first we need to check if the measurement vectors are aligned with the global coordinates 
           //gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
           //gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
-	  gear::Vector3D U(1.0,trkhit.getCovMatrix()[1],trkhit.getCovMatrix()[0],gear::Vector3D::spherical);
-	  gear::Vector3D V(1.0,trkhit.getCovMatrix()[4],trkhit.getCovMatrix()[3],gear::Vector3D::spherical);
-          gear::Vector3D Z(0.0,0.0,1.0);
+	  dd4hep::rec::Vector3D U(1.0,trkhit.getCovMatrix()[1],trkhit.getCovMatrix()[0],dd4hep::rec::Vector3D::spherical);
+	  dd4hep::rec::Vector3D V(1.0,trkhit.getCovMatrix()[4],trkhit.getCovMatrix()[3],dd4hep::rec::Vector3D::spherical);
+	  dd4hep::rec::Vector3D Z(0.0,0.0,1.0);
           
           const float eps = 1.0e-07;
           // V must be the global z axis 
@@ -2846,10 +2852,10 @@ void SiliconTrackingAlg::FinalRefit(edm4hep::TrackCollection* trk_col) {
       try {
         //status = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, &track, fit_backwards, covMatrix, _bField, _maxChi2PerHit);
 	status = m_fitTool->Fit(track, trkHits, covMatrix, _maxChi2PerHit, fit_backwards);
-      } catch (...) {
+      } catch (MarlinTrk::Exception& excep) {
 	//      delete Track;
         //      delete marlinTrk;
-        error() << "MarlinTrk::createFinalisedLCIOTrack fail" << endmsg;
+        error() << "MarlinTrk::createFinalisedLCIOTrack fail, " << excep.what() << endmsg;
         //throw ;
       }
       debug() << "createFinalisedLCIOTrack finish" << endmsg;
@@ -2997,7 +3003,9 @@ void SiliconTrackingAlg::FinalRefit(edm4hep::TrackCollection* trk_col) {
 	  << " Pz = " << pzTot << endmsg;
 }
 
-StatusCode SiliconTrackingAlg::setupGearGeom(){
+StatusCode SiliconTrackingAlg::setupGeom() {
+
+#ifdef CEPCSW_USE_GEAR
   auto _gear = service<IGearSvc>("GearSvc");
   if ( !_gear ) {
     error() << "Failed to find GearSvc ..." << endmsg;
@@ -3143,6 +3151,63 @@ StatusCode SiliconTrackingAlg::setupGearGeom(){
       
     } 
   }
+#else
+  auto geomSvc = service<IGeomSvc>("GeomSvc");
+  if ( !geomSvc ) {
+    info() << "Failed to find GeomSvc ..." << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  const dd4hep::Direction& field = geomSvc->lcdd()->field().magneticField(dd4hep::Position(0,0,0));
+  _bField = field.z()/dd4hep::tesla;
+
+  _nLayersVTX = 0;
+  dd4hep::rec::CompositeData* vtxData = nullptr;
+  auto vxdDet  = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::VXD));
+  try {
+    vtxData = vxdDet.extension<dd4hep::rec::CompositeData>();
+  } catch(std::runtime_error& e) {
+    warning() << e.what() << endmsg;
+  }
+  if (vtxData) {
+    _nLayersVTX = vtxData->layersPlanar.size() + vtxData->layersBent.size();
+  }
+  else {
+    try{
+      auto oldData = vxdDet.extension<dd4hep::rec::ZPlanarData>();
+      _nLayersVTX = oldData->layers.size();
+    } catch(std::runtime_error& e){
+      error() << e.what() << " not CompositeData and ZPlanarData for vertex detector, check geometry" << endmsg;
+    }
+  }
+
+  _nLayersSIT = 0;
+  try {
+    auto sitDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::SIT));
+    auto sitData = sitDet.extension<dd4hep::rec::ZPlanarData>();
+    _nLayersSIT = sitData->layers.size();
+  } catch(std::runtime_error& e) {
+    error() << e.what() << endmsg;
+  }
+
+  _nlayersFTD = 0;
+  try {
+    auto ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+    auto ftdData = ftdDet.extension<dd4hep::rec::ZDiskPetalsData>();
+    auto ftdlayers = ftdData->layers;
+    for (int layer = 0; layer < ftdlayers.size(); layer++) {
+      dd4hep::rec::ZDiskPetalsData::LayerLayout& ftdlayer = ftdlayers[layer];
+      _zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm - ftdlayer.zOffsetSensitive/dd4hep::mm); // front petal even numbered
+      if (ftdlayer.petalNumber > 0) {
+	_zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm - ftdlayer.zOffsetSensitive/dd4hep::mm - 2*ftdlayer.zOffsetSupport/dd4hep::mm);  // front petal odd numbered
+	_petalBasedFTDWithOverlaps = true;
+      }
+    }
+    _nlayersFTD =_zLayerFTD.size();
+  } catch(std::runtime_error& e){
+    warning() << e.what() << endmsg;
+  }
+#endif
 
   info() << "nvxd = " << _nLayersVTX << " nsit = " << _nLayersSIT << " nftd = " << _nlayersFTD << endmsg;
 

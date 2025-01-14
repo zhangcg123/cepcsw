@@ -418,7 +418,7 @@ protected:
   int getSensorID(edm4hep::TrackerHit hit)   { _encoder->setValue(hit.getCellID()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
 
   
-  void setupGearGeom() ;
+  StatusCode setupGeom() ;
 
   double _tpc_max_drift_length;
   double _tpc_inner_r;
@@ -500,7 +500,7 @@ protected:
 //  
 //  std::vector<FTD_Disk> _FTDgeo;
   std::vector<float> _zLayerFTD;
-  gear::GearMgr* gearMgr;
+  //gear::GearMgr* gearMgr;
 
   unsigned int _nLayersFTD;
   int _nPhiFTD; 

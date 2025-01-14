@@ -48,3 +48,5 @@ if (NOT CEPCSW_EXTERNAL_AS_COMPONENT)
     set(CEPCSW_EXTERNAL_ROOT ${CMAKE_INSTALL_PREFIX}/External)
   endif()
 endif()
+
+option(CEPCSW_USE_GEAR "Use gear" FALSE)

@@ -1,22 +1,25 @@
-
 # Modules
 gaudi_add_module(SiliconTracking
                  SOURCES src/ForwardTrackingAlg.cpp
                          src/SiliconTrackingAlg.cpp
                          src/SpacePointBuilderAlg.cpp
                          src/TrackSubsetAlg.cpp
-                 LINK GearSvc
-                      EventSeeder
+                 LINK EventSeeder
                       TrackingLib
                       TrackSystemSvcLib
                       DataHelperLib
                       KiTrackLib
                       Gaudi::GaudiKernel
-                      k4FWCore::k4FWCore 
-                      ${GEAR_LIBRARIES} 
-                      ${GSL_LIBRARIES} 
-                      ${LCIO_LIBRARIES} 
+                      k4FWCore::k4FWCore
+                      ${GSL_LIBRARIES}
+                      ${LCIO_LIBRARIES}
 )
+
+if (CEPCSW_USE_GEAR)
+  target_compile_definitions(SiliconTracking PRIVATE CEPCSW_USE_GEAR)
+  target_link_libraries(SiliconTracking PRIVATE GearSvc ${GEAR_LIBRARIES})
+endif()
+
 install(TARGETS SiliconTracking
   EXPORT CEPCSWTargets
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin

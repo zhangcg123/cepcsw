@@ -33,10 +33,11 @@ class DetGeomSvc: public extends<Service, IGeomSvc> {
   // IGeomSvc
   dd4hep::DetElement getDD4HepGeo() override;
   dd4hep::Detector* lcdd() override;
-  
+
  private:
   Decoder* getDecoder(const std::string& readout_name) override;
   const dd4hep::rec::SurfaceMap* getSurfaceMap(const std::string& det_name) override;
+  std::string getDetName(const int det_id) override;
     
 private:
   // DD4hep XML compact file path
@@ -45,6 +46,8 @@ private:
   // 
   dd4hep::Detector* m_dd4hep_geo;
   dd4hep::rec::SurfaceManager* m_surface_manager = nullptr;
+
+  std::map<int, std::string> m_detIdToNames;
 };
 
 #endif // GeomSvc_h

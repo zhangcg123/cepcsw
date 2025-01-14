@@ -424,7 +424,7 @@ class SiliconTrackingAlg : public GaudiAlgorithm {
   int getModuleID(edm4hep::TrackerHit hit)   { _encoder->setValue(hit.getCellID()); return (*_encoder)[lcio::ILDCellID0::module]; };
   int getSensorID(edm4hep::TrackerHit hit)   { _encoder->setValue(hit.getCellID()); return (*_encoder)[lcio::ILDCellID0::sensor]; };
   
-  StatusCode setupGearGeom() ;
+  StatusCode setupGeom() ;
   
   std::vector<float> _zLayerFTD;
   

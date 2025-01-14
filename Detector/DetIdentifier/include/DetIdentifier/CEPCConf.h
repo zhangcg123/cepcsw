@@ -13,7 +13,13 @@ namespace CEPCConf{
     static const int TPC     = 4;
     static const int SET     = 5;
     static const int ETD     = 6;
-    static const int DC      = 7; 
+    static const int DC      = 7;
+    // keep compatibility of tracking algorothm for old detector design,
+    // need to update these options as comprehensive consideration after switching new tracking in good algorithm design
+    static const int ITKBarrel = SIT;
+    static const int ITKEndcap = FTD;
+    static const int OTKBarrel = SET;
+    static const int OTKEndcap = ETD;
     
     static const int ECAL        = 20;
     static const int ECAL_PLUG   = 21;

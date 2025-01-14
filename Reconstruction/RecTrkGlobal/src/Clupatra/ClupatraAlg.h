@@ -153,6 +153,10 @@ class ClupatraAlg : public GaudiAlgorithm {
   DataHandle<edm4hep::TrackCollection> _ClupatraTrackSegmentCollectionHandle{"ClupatraSegmentTracks", Gaudi::DataHandle::Writer, this};
 
   float _bfield ;
+  float _maxTPCLayers ;
+  float _driftLength ;
+  float _rmin ;
+  float _rmax ;
 
   int _nRun ;
   int _nEvt ;

@@ -7,16 +7,13 @@ gaudi_add_module(Tracking
                          src/FullLDCTracking/FullLDCTrackingAlg.cpp
                          src/TruthTracker/TruthTrackerAlg.cpp
                          src/FitterTool/KalTestTool.cpp
-                 LINK GearSvc
-                      EventSeeder
+                 LINK EventSeeder
                       TrackSystemSvcLib
                       DetSegmentation
                       Gaudi::GaudiAlgLib
                       Gaudi::GaudiKernel
-                      ${GEAR_LIBRARIES}
                       ${GSL_LIBRARIES}
                       ${LCIO_LIBRARIES}
-                      DetSegmentation
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
                       k4FWCore::k4FWCore
 )
@@ -24,6 +21,11 @@ gaudi_add_module(Tracking
 target_include_directories(Tracking PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/include
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+if (CEPCSW_USE_GEAR)
+  target_compile_definitions(Tracking PRIVATE CEPCSW_USE_GEAR)
+  target_link_libraries(Tracking PRIVATE GearSvc ${GEAR_LIBRARIES})
+endif()
 
 install(TARGETS Tracking
   EXPORT CEPCSWTargets

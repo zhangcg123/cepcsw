@@ -41,6 +41,13 @@ DetGeomSvc::initialize() {
   m_dd4hep_geo->fromCompact(m_dd4hep_xmls.value());
   // recover to old level, if not, too many DD4hep print
   //dd4hep::setPrintLevel(level);
+  auto world = getDD4HepGeo();
+  auto subs  = world.children();
+  for (auto sub : subs) {
+    int detId = sub.second.id();
+    if (detId!=-1) m_detIdToNames[detId] = sub.first;
+    info() << sub.second.id() << " " << sub.first << endmsg;
+  }
 
   return sc;
 }
@@ -68,7 +75,6 @@ dd4hep::Detector*
 DetGeomSvc::lcdd() {
     return m_dd4hep_geo;
 }
-
 
 IGeomSvc::Decoder*
 DetGeomSvc::getDecoder(const std::string& readout_name) {
@@ -123,4 +129,13 @@ DetGeomSvc::getSurfaceMap(const std::string& det_name) {
     }
   }
   return m_surface_manager->map(det_name);
+}
+
+std::string
+DetGeomSvc::getDetName(const int det_id) {
+  auto it = m_detIdToNames.find(det_id);
+  if (it!=m_detIdToNames.end())
+    return it->second;
+  else
+    return lcdd()->world().name();
 }
