@@ -10,6 +10,7 @@
 #include "DDG4/Geant4Converter.h"
 #include "DetSegmentation/GridDriftChamber.h"
 
+#include "Garfield/Random.hh"
 
 #include <math.h>
 #include <cmath>
@@ -316,6 +317,8 @@ void TrackHeedSimTool::getMom(float ee, float dx, float dy,float dz, float mom[3
 
 StatusCode TrackHeedSimTool::initialize()
 {
+  // FIXME: fixed seed for TrackHeed now, union seed with other random generator? 
+  randomEngine.Seed(4357);
   if(m_det=="DC"){
       m_geosvc = service<IGeomSvc>("GeomSvc");
       if ( !m_geosvc )  throw "TrackHeedSimTool :Failed to find GeomSvc ...";
@@ -617,8 +620,9 @@ float* TrackHeedSimTool::NNPred(std::vector<float>& inputs)
 
 
 void TrackHeedSimTool::endOfEvent() {
+    if (!m_SimPrimaryIonizationCol) m_SimPrimaryIonizationCol =  m_SimPrimaryIonizationColWriter.createAndPut();
+    debug() << "SimPrimaryIonizationCol size = " << m_SimPrimaryIonizationCol->size() << " for " << m_det << endmsg;
     if(m_sim_pulse && m_det=="DC"){
-        if(m_debug) G4cout<<"SimPrimaryIonizationCol size="<<m_SimPrimaryIonizationCol->size()<<G4endl;
         clock_t t01 = clock();
         std::vector<float> inputs;
         std::vector<unsigned long> indexs_c;
@@ -710,6 +714,7 @@ void TrackHeedSimTool::endOfEvent() {
         if(m_debug) std::cout<<"time for Pulse Simulation=" << (double)(t02 - t01) / CLOCKS_PER_SEC <<" seconds"<< std::endl;
     }
     reset();
+    m_SimPrimaryIonizationCol = nullptr;
 }
 
 StatusCode TrackHeedSimTool::finalize()
