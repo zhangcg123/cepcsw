@@ -83,6 +83,18 @@ detsimalg.RootDetElem = "WorldDetElemTool"
 from Configurables import TimeProjectionChamberSensDetTool
 tpc_sensdettool = TimeProjectionChamberSensDetTool("TimeProjectionChamberSensDetTool")
 tpc_sensdettool.TypeOption = 1
+tpc_sensdettool.DoHeedSim = True
+dedxoption = "TrackHeedSimTool"
+tpc_sensdettool.DedxSimTool = dedxoption
+
+from Configurables import TrackHeedSimTool
+dedx_simtool = TrackHeedSimTool("TrackHeedSimTool")
+dedx_simtool.detector = "TPC"
+dedx_simtool.only_primary = False#True
+dedx_simtool.use_max_step = False#True
+dedx_simtool.max_step = 1#mm
+dedx_simtool.save_mc = True
+#dedx_simtool.OutputLevel = DEBUG
 
 from Configurables import MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")
