@@ -62,6 +62,21 @@ build:lcg:el7:
     reports:
       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
 
+
+##############################################################################
+# Build & Test in k8s (LCG)
+##############################################################################
+build:lcg:el7:k8s:
+  extends: .build_template
+  image: cepc/cepcsw-cvmfs:el7
+  tags:
+    - k8s # using k8s as runner
+  script:
+    - sed -i 's%^CVMFS_HTTP_PROXY=.*%CVMFS_HTTP_PROXY=http://squid-01.ihep.ac.cn:3128%' /etc/cvmfs/default.local
+    - for repo in sft.cern.ch geant4.cern.ch cepcsw.ihep.ac.cn; do [ -d "/cvmfs/$repo" ] || mkdir /cvmfs/$repo; sudo mount -t cvmfs $repo /cvmfs/$repo; done
+    - bash ./.build.ci.sh
+    - bash ./.test.ci.sh
+
 ##############################################################################
 # Build the docs
 ##############################################################################
