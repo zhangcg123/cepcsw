@@ -17,8 +17,8 @@ StatusCode PFOReclusteringAlg::ReadSettings(Settings& m_settings){
   if(settings.map_floatPars.find("SplitSigma")==settings.map_floatPars.end()) settings.map_floatPars["SplitSigma"] = 0.2;
   if(settings.map_floatPars.find("NeutralMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["NeutralMergeSigma"] = 0.;
   if(settings.map_floatPars.find("VirtualMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["VirtualMergeSigma"] = 0.4;
-  if(settings.map_floatPars.find("MinAngleForNeuMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForNeuMerge"] = 0.20;
-  if(settings.map_floatPars.find("MinAngleForVirMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForVirMerge"] = 0.24;
+  if(settings.map_floatPars.find("MinAngleForNeuMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForNeuMerge"] = 0.18;
+  if(settings.map_floatPars.find("MinAngleForVirMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForVirMerge"] = 0.20;
 
 
   return StatusCode::SUCCESS;
