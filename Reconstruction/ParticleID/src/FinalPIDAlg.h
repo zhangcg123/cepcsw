@@ -10,6 +10,7 @@
 #include "edm4hep/RecDqdx.h"
 #include "edm4hep/RecDqdxCollection.h"
 #include "edm4hep/ParticleIDCollection.h"
+#include "TVector3.h"
 
 class FinalPIDAlg : public Algorithm {
  public:
@@ -27,14 +28,22 @@ class FinalPIDAlg : public Algorithm {
   DataHandle<edm4hep::RecDqdxCollection> m_inDqdxCol{"DndxTracks", Gaudi::DataHandle::Reader, this};
   //DataHandle<edm4hep::ParticleIDCollection> m_PIDCol{"finalPID", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ReconstructedParticleCollection> m_outPFOCol{"CyberPFOPID", Gaudi::DataHandle::Writer, this};
-  Gaudi::Property<std::string> m_method{this, "Method", "TPC+TOF"};
+  Gaudi::Property<std::string> m_method{this, "Method", "TPC+TOF+CALO"};
 
   //void FillTPCPID(const edm4hep::ReconstructedParticleCollection* pfocol, const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::ParticleIDCollection* pidcol);
-  void FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo);
+  StatusCode FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo);
+  StatusCode FillCaloPID(edm4hep::MutableReconstructedParticle& pfo);
 
   int _nEvt;
   bool _hasTPC;
   bool _hasTOF;
+
+  //Detector geometry size
+  const float EcalOuterR = 2130.;
+  const float EcalHalfZ = 3230.;
+  const float HcalOuterR = 3455.;
+  const float HcalHalfZ = 4575.;
+
 
   const std::map<int, int> PDGIDs = {
     {0, -11},
@@ -42,6 +51,17 @@ class FinalPIDAlg : public Algorithm {
     {2, 211},
     {3, 321},
     {4, 2212},
+  };
+  //Particle mass from PDGLive 2024 edition [https://pdglive.lbl.gov/Viewer.action]
+  const std::map<int, double> ParticleMass = {
+    {11, 0.000511},
+    {13, 0.105658},
+    {211, 0.139570},
+    {321, 0.493677},
+    {2212, 0.938272},
+    {22, 0.},
+    //{130, 0.497611},
+    {130, 0.} //Temp: set K_0 mass as 0, due to imperfect neutral hadron reconstruction in CyberPFA. 
   };
 
 };
