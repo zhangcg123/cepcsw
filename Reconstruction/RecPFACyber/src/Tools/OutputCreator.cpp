@@ -160,8 +160,8 @@ namespace Cyber{
           TVector3 p3vec = vec_trks[trkIndex]->getP3();
           edm4hep::Vector3f p3(p3vec.x(), p3vec.y(), p3vec.z());
           m_pfo.setMomentum(p3);
-          m_pfo.setEnergy( vec_trks[trkIndex]->getMomentum() );
-          m_pfo.setMass(139.57039); //TODO: all charged particles are set to pion mass. 
+          m_pfo.setMass(0.139570); //TODO: all charged particles are set to pion mass. 
+          m_pfo.setEnergy( sqrt(vec_trks[trkIndex]->getMomentum()*vec_trks[trkIndex]->getMomentum() + 0.139570*0.139570) );
         }
         else{
           TVector3 p3vec = vec_Pos*(  (EcalClusE+HcalClusE)/vec_Pos.Mag() );
