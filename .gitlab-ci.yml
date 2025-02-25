@@ -47,6 +47,18 @@ stages:
     - bash ./.build.ci.sh
     - bash ./.test.ci.sh
 
+# for k8s
+.build_template_k8s:
+  extends: .envvar_template
+  stage: build
+  tags:
+    - k8s # using k8s as runner
+  script:
+    - sed -i 's%^CVMFS_HTTP_PROXY=.*%CVMFS_HTTP_PROXY=http://squid-01.ihep.ac.cn:3128%' /etc/cvmfs/default.local
+    - for repo in sft.cern.ch geant4.cern.ch cepcsw.ihep.ac.cn; do [ -d "/cvmfs/$repo" ] || mkdir /cvmfs/$repo; sudo mount -t cvmfs $repo /cvmfs/$repo; done
+    - bash ./.build.ci.sh
+    - bash ./.test.ci.sh
+
 ##############################################################################
 # Build & Test in CentOS 7 (LCG)
 ##############################################################################
@@ -67,25 +79,29 @@ build:lcg:el7:
 # Build & Test in k8s (LCG)
 ##############################################################################
 build:lcg:el7:k8s:
-  extends: .build_template
+  extends: .build_template_k8s
   image: cepc/cepcsw-cvmfs:el7
-  tags:
-    - k8s # using k8s as runner
-  script:
-    - sed -i 's%^CVMFS_HTTP_PROXY=.*%CVMFS_HTTP_PROXY=http://squid-01.ihep.ac.cn:3128%' /etc/cvmfs/default.local
-    - for repo in sft.cern.ch geant4.cern.ch cepcsw.ihep.ac.cn; do [ -d "/cvmfs/$repo" ] || mkdir /cvmfs/$repo; sudo mount -t cvmfs $repo /cvmfs/$repo; done
-    - bash ./.build.ci.sh
-    - bash ./.test.ci.sh
+
+build:lcg:el9:k8s:
+  extends: .build_template_k8s
+  image: cepc/cepcsw-cvmfs:el9
+  variables:
+    CEPCSW_LCG_PLATFORM: x86_64-el9-gcc11-opt
+    CEPCSW_LCG_VERSION: 105.0.0
 
 ##############################################################################
 # Build the docs
 ##############################################################################
-build:docs:
-  stage: build 
-  tags:
-    - centos7
+build:docs:k8s:
+  extends: .build_template_k8s
+  image: cepc/cepcsw-cvmfs:el9
   script:
     - bash ./.build.ci.sh docs
   artifacts:
     paths:
       - docs/build/html/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+      - docs/**/*
+
