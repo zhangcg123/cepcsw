@@ -6,6 +6,7 @@
 #include "G4EventManager.hh"
 #include "G4TrackingManager.hh"
 #include "G4SteppingManager.hh"
+#include "G4GammaGeneralProcess.hh"
 
 #include "DD4hep/Detector.h"
 #include "DD4hep/Plugins.h"
@@ -363,6 +364,37 @@ Edm4hepWriterAnaElemTool::PreUserTrackingAction(const G4Track* track) {
 
 void
 Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
+    // 
+    // cache all the necessary processes
+    // 
+    static G4VProcess* proc_decay = nullptr;
+    static G4VProcess* photon_general = nullptr; // default
+    static G4VProcess* photon_conv = nullptr;  // "/process/em/UseGeneralProcess false"
+    if (!proc_decay || (!(photon_general || photon_conv))) {
+        G4ProcessManager* pm 
+            = track->GetDefinition()->GetProcessManager();
+        G4int nprocesses = pm->GetProcessListLength();
+        G4ProcessVector* pv = pm->GetProcessList();
+            
+        for(G4int i=0; i<nprocesses; ++i){
+            info() << " process: " << (*pv)[i]->GetProcessName() << endmsg;
+            if((*pv)[i]->GetProcessName()=="Decay"){
+                proc_decay = (*pv)[i];
+            } else if((*pv)[i]->GetProcessName()=="GammaGeneralProc"){
+                photon_general = (*pv)[i];
+                photon_conv = dynamic_cast<G4GammaGeneralProcess*>(photon_general)->GetEmProcess("conv");
+                info() << "gamma general proc: " << photon_general
+                       << " conv: " << photon_conv
+                       << endmsg;
+            } else if((*pv)[i]->GetProcessName()=="conv"){
+                photon_conv = (*pv)[i];
+            }
+        }
+
+    }
+
+
+
     int curtrkid = track->GetTrackID(); // starts from 1
     int curparid = track->GetParentID();
     int idxedm4hep = -1;
@@ -405,22 +437,6 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
         // Update the flags of the primary particles
         // ===================================================================
 
-        // processes
-        static G4VProcess* proc_decay = nullptr;
-        if (!proc_decay) {
-            G4ProcessManager* pm 
-                = track->GetDefinition()->GetProcessManager();
-            G4int nprocesses = pm->GetProcessListLength();
-            G4ProcessVector* pv = pm->GetProcessList();
-            
-            for(G4int i=0; i<nprocesses; ++i){
-                if((*pv)[i]->GetProcessName()=="Decay"){
-                    proc_decay = (*pv)[i];
-                }
-            }
-
-        }
-
         // flags
         bool is_decay = false;
 
@@ -437,8 +453,9 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
                 const G4VProcess* creatorProcess = sectrk->GetCreatorProcess();
 
                 // select the necessary processes
-                if (creatorProcess==proc_decay) {
-                    debug() << "Creator Process is Decay for secondary particle: "
+                if (creatorProcess==proc_decay || creatorProcess==photon_general || creatorProcess==photon_conv) {
+                    debug() << "Creator Process is " << creatorProcess->GetProcessName()
+                            << " for secondary particle: "
                             << " idx: " << i
                             << " trkid: " << sectrk->GetTrackID() // not valid until track
                             << " particle: " << secparticle->GetParticleName()
@@ -447,7 +464,7 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
                             << " time: " << sectrk->GetGlobalTime()
                             << " momentum: " << sectrk->GetMomentum() // 
                            << endmsg;
-                    is_decay = true;
+                    if (creatorProcess==proc_decay) is_decay = true;
 
                     // create secondaries in MC particles
                     // todo: convert the const collection to non-const
