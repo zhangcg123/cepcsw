@@ -113,12 +113,12 @@
     <constant name="TPC_half_length"  value="2900*mm"/>
     <constant name="OuterTracker_half_length" value="TPC_half_length"/>
 
-    <constant name="SIT1_inner_radius"   value="240*mm"/>
-    <constant name="SIT2_inner_radius"   value="350*mm"/>
-    <constant name="SIT3_inner_radius"   value="(600-30)*mm"/>
-    <constant name="SIT1_half_length"    value="500.5*mm"/>
-    <constant name="SIT2_half_length"    value="715*mm"/>
-    <constant name="SIT3_half_length"    value="1001*mm"/>
+    <constant name="ITKBarrel1_inner_radius"   value="235*mm"/>
+    <constant name="ITKBarrel2_inner_radius"   value="345*mm"/>
+    <constant name="ITKBarrel3_inner_radius"   value="555.6*mm"/>
+    <constant name="ITKBarrel1_half_length"    value="500.5*mm"/>
+    <constant name="ITKBarrel2_half_length"    value="715*mm"/>
+    <constant name="ITKBarrel3_half_length"    value="1001*mm"/>
 
     <!-- Parameters of time of flight tracker -->
     <constant name="OTKBarrel_inner_radius" value="1800*mm"/>
@@ -135,16 +135,16 @@
     <constant name="SiTracker_endcap_barrel_zgap" value="5*mm"/>
     <constant name="SiTracker_endcap_barrel_rgap" value="-5*mm"/>
     <constant name="SiTracker_endcap_gas_zgap"    value="3*mm"/>
-    <constant name="SiTracker_endcap_gas_rgap"    value="20*mm"/>
-    <constant name="SiTracker_endcap_z1" value="SIT1_half_length+SiTracker_endcap_barrel_zgap"/>
-    <constant name="SiTracker_endcap_z2" value="SIT2_half_length+SiTracker_endcap_barrel_zgap"/>
-    <constant name="SiTracker_endcap_z3" value="SIT3_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_gas_rgap"    value="10*mm"/>
+    <constant name="SiTracker_endcap_z1" value="ITKBarrel1_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_z2" value="ITKBarrel2_half_length+SiTracker_endcap_barrel_zgap"/>
+    <constant name="SiTracker_endcap_z3" value="ITKBarrel3_half_length+SiTracker_endcap_barrel_zgap"/>
     <constant name="SiTracker_endcap_z4" value="1500*mm"/>
     <constant name="SiTracker_endcap_z5" value="TPC_half_length+SiTracker_endcap_gas_zgap"/>
-    <constant name="SiTracker_endcap_outer_radius1" value="SIT1_inner_radius"/>
-    <constant name="SiTracker_endcap_outer_radius2" value="SIT2_inner_radius"/>
-    <constant name="SiTracker_endcap_outer_radius3" value="SIT3_inner_radius-SiTracker_endcap_gas_rgap"/>
-    <constant name="SiTracker_endcap_outer_radius4" value="SIT3_inner_radius-SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius1" value="ITKBarrel1_inner_radius+SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius2" value="ITKBarrel2_inner_radius+SiTracker_endcap_gas_rgap"/>
+    <constant name="SiTracker_endcap_outer_radius3" value="ITKBarrel3_inner_radius"/>
+    <constant name="SiTracker_endcap_outer_radius4" value="ITKBarrel3_inner_radius"/>
     <constant name="SiTracker_endcap_outer_radius5" value="TPC_outer_radius+SiTracker_endcap_barrel_rgap"/>
     <constant name="SiTracker_endcap_inner_radius1" value="75*mm"/>
     <constant name="SiTracker_endcap_inner_radius2" value="101.9*mm"/>

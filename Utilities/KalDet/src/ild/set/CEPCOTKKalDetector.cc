@@ -39,11 +39,11 @@ CEPCOTKKalDetector::CEPCOTKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
   
   TMaterial & air       = *MaterialDataBase::Instance().getMaterial("air");
   TMaterial & silicon   = *MaterialDataBase::Instance().getMaterial("silicon");
-  TMaterial & carbon    = *MaterialDataBase::Instance().getMaterial("carbon");
+  TMaterial & carbon    = *MaterialDataBase::Instance().getMaterial("OTKBarrelSupportMaterial");
   
   if(geoSvc){
     setupGearGeom( geoSvc ) ;
-  }                                                                                                                                                                                    
+  }
   else{
     setupGearGeom( gearMgr );
   }

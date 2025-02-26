@@ -3,7 +3,7 @@
 #include "kaldet/MaterialDataBase.h"
 
 #include "kaldet/ILDParallelPlanarMeasLayer.h"
-#include "kaldet/ILDCylinderMeasLayer.h"
+#include "kaldet/CEPCCylinderMeasLayer.h"
 #include "kaldet/ILDDiscMeasLayer.h"
 
 #include <UTIL/BitField64.h>
@@ -211,9 +211,12 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
     }
   }
 
-  for (int layer=0; layer<_nLayers[1]; ++layer) {
+  if (_nLayers[1]>0) {
+   TMaterial & bentmat   = *MaterialDataBase::Instance().getMaterial("VXDBentSupportMaterial");
+   for (int layer=0; layer<_nLayers[1]; ++layer) {
     //std::cout << "add stitching ... " << layer << std::endl;
     double phi0 = _STTgeo[layer].phi0;
+    double width = _STTgeo[layer].width;
 
     double ladder_distance = _STTgeo[layer].supRMin;
     double ladder_thickness = _STTgeo[layer].supThickness;
@@ -249,16 +252,17 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
       }
 
       // air - sensitive boundary
-      Add(new ILDCylinderMeasLayer(air, silicon, sensitive_distance, halfz, x0, y0, z0, _bZ, dummy, -1, "STTMeasL_0"));
+      Add(new CEPCCylinderMeasLayer(air, silicon, sensitive_distance, halfz, currPhi, width, x0, y0, z0, _bZ, dummy, -1, "STTMeasL_0"));
       // measurement plane defined as the middle of the sensitive volume
       // - unless "relative_position_of_measurement_surface" parameter given in GEAR - even layers face outwards !
-      Add(new ILDCylinderMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*(1.-_relative_position_of_measurement_surface),
-				   halfz, x0, y0, z0, _bZ, active, CellID, "STTMeaslayer_0"));
+      Add(new CEPCCylinderMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*(1.-_relative_position_of_measurement_surface),
+				    halfz, currPhi, width, x0, y0, z0, _bZ, active, CellID, "STTMeaslayer_0"));
       // sensitive - support boundary
-      Add(new ILDCylinderMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, halfz, x0, y0, z0, _bZ, dummy, -1, "STTSenSuppportIntf_0"));
+      Add(new CEPCCylinderMeasLayer(silicon, bentmat, sensitive_distance+sensitive_thickness, halfz, currPhi, width, x0, y0, z0, _bZ, dummy, -1, "STTSenSuppportIntf_0"));
       // support - air boundary
-      Add(new ILDCylinderMeasLayer(carbon, air, ladder_distance+ladder_thickness, halfz, x0, y0, z0, _bZ, dummy, -1, "STTSupRear_0" )) ;
+      Add(new CEPCCylinderMeasLayer(bentmat, air, ladder_distance+ladder_thickness, halfz, currPhi, width, x0, y0, z0, _bZ, dummy, -1, "STTSupRear_0" )) ;
     }
+   }
   }
 
   SetOwner();                   
@@ -307,12 +311,14 @@ void CEPCVTXKalDetector::setupGearGeom( const gear::GearMgr& gearMgr ){
     const std::vector<double> phi0s  = pVXDDetMain.getDoubleVals("VTXLayerPhi0");
     const std::vector<double> rgaps  = pVXDDetMain.getDoubleVals("VTXLayerRadialGap");
     const std::vector<double> dphis  = pVXDDetMain.getDoubleVals("VTXLayerDeltaPhi");
+    const std::vector<double> widths = pVXDDetMain.getDoubleVals("VTXLayerWidth");
   
     _nLayers[1] = ids.size();
     _STTgeo.resize(_nLayers[1]);
     for (int ilayer=0; ilayer<_nLayers[1]; ilayer++) {
       _STTgeo[ilayer].id = ids[ilayer];
       _STTgeo[ilayer].length = zhalfs[ilayer]*2;
+      _STTgeo[ilayer].width = widths[ilayer];
       _STTgeo[ilayer].senRMin = rsens[ilayer];
       _STTgeo[ilayer].senThickness = tsens[ilayer];
       _STTgeo[ilayer].supRMin = rsups[ilayer];

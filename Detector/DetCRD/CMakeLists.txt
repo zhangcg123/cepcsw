@@ -22,6 +22,7 @@ gaudi_add_module(DetCRD
                          src/Tracker/SiTrackerStitching_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v02_geo.cpp
+                         src/Tracker/SiTrackerStaggeredLadder_v03_geo.cpp
                          src/Tracker/SiTrackerComposite_v01_geo.cpp
                          src/Tracker/SiTrackerComposite_v02_geo.cpp
                          src/Tracker/TPC_Simple_o1_v01.cpp
@@ -30,6 +31,8 @@ gaudi_add_module(DetCRD
 			 src/Tracker/SiTracker_itkbarrel_v02_geo.cpp
                          src/Tracker/SiTracker_otkbarrel_v01_geo.cpp
                          src/Tracker/SiTracker_otkendcap_v01_geo.cpp
+                         src/Tracker/SiTracker_otkbarrel_v02_geo.cpp
+                         src/Tracker/SiTracker_otkendcap_v02_geo.cpp
                          src/Other/ParaffinEndcap_v01.cpp
 
 		 LINK ${DD4hep_COMPONENT_LIBRARIES}

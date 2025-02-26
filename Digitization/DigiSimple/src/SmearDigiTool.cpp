@@ -180,10 +180,15 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
 	    << " outer: " << surface->outerMaterial().name() << endmsg;
 
   if (typeSurface.isPlane() || typeSurface.isCylinder()) {
+    // scale to cov at edge
+    double scale = 1.0;
+
     dd4hep::rec::Vector2D localPoint = surface->globalToLocal(oldPos);
+
+    // for planar, same calculation by local is ok, but reduce repeat
     if (typeSurface.isCylinder()) {
       dd4hep::rec::Vector3D mom_ddrec(mom.x*dd4hep::GeV, mom.y*dd4hep::GeV, mom.z*dd4hep::GeV);
-      double length = simhit.getPathLength()*dd4hep::mm;
+      double                length    = simhit.getPathLength()*dd4hep::mm;
       dd4hep::rec::Vector3D pre       = oldPos - (0.5*length)*mom_ddrec.unit();
       dd4hep::rec::Vector3D post      = oldPos + (0.5*length)*mom_ddrec.unit();
       dd4hep::rec::Vector2D localPre  = surface->globalToLocal(pre);
@@ -192,14 +197,36 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
       debug() << "pre: (" << pre.x() << " " << pre.y() << " " << pre.z() << " ) local (" << localPre.u() << ", " << localPre.v() << " ) "
 	      << "post: (" << post.x() << " " << post.y() << " " << post.z() << " ) local (" << localPost.u() << ", " << localPost.v() << " ) " << endmsg;
     }
-    dd4hep::rec::Vector3D local3D(localPoint.u(), localPoint.v(), 0);
+    //dd4hep::rec::Vector3D local3D(localPoint.u(), localPoint.v(), 0);
     // A small check, if the hit is in the boundaries:
     if (!surface->insideBounds(oldPos)) {
-      warning() << " global: (" << oldPos.x() << " " << oldPos.y() << " " << oldPos.z()
-		<< ") local: (" << localPoint.u() << ", " << localPoint.v() << " )"
-		<< " step: " << simhit.getPathLength()
-		<< " is not within boundaries. Hit is skipped." << endmsg;
-      return StatusCode::SUCCESS;
+      double dSToHit = surface->distance(oldPos);
+      debug() << " global: (" << oldPos.x()/dd4hep::mm << " " << oldPos.y()/dd4hep::mm << " " << oldPos.z()/dd4hep::mm
+	      << ") local: (" << localPoint.u()/dd4hep::mm << ", " << localPoint.v()/dd4hep::mm << " )"
+	      << " distance: " << dSToHit/dd4hep::mm
+	      << " is not within boundaries." << endmsg;
+
+      // FIXME: change position to path at center plane? or enlarge cov? other tracker
+      if (system == CEPCConf::DetID::OTKBarrel || system == CEPCConf::DetID::OTKEndcap) {
+#if 0
+	dd4hep::rec::Vector3D global3D = oldPos;
+	dd4hep::rec::Vector3D mom_ddrec(mom.x*dd4hep::GeV, mom.y*dd4hep::GeV, mom.z*dd4hep::GeV);
+	double                length = simhit.getPathLength()*dd4hep::mm;
+	dd4hep::rec::Vector3D pre    = oldPos - (0.5*length)*mom_ddrec.unit();
+	dd4hep::rec::Vector3D post   = oldPos + (0.5*length)*mom_ddrec.unit();
+	double dSToPre   = surface->distance(pre);
+	double dPreToHit = dSToPre - dSToHit;
+	global3D         = pre + (length/dPreToHit*dSToPre)*mom_ddrec.unit();
+	localPoint       = surface->globalToLocal(global3D);
+	scale = 1;
+
+	debug() << " global: (" << global3D.x()/dd4hep::mm << " " << global3D.y()/dd4hep::mm << " " << global3D.z()/dd4hep::mm
+		<< ") local: (" << localPoint.u()/dd4hep::mm << ", " << localPoint.v()/dd4hep::mm << ", 0 )"
+		<< " distance: " << surface->distance(global3D)/dd4hep::mm
+		<< " is not within boundaries." << endmsg;
+#endif
+      }
+      //else return StatusCode::SUCCESS;
     }
     dd4hep::rec::Vector3D globalPointSmeared;//CLHEP::Hep3Vector globalPoint(pos[0],pos[1],pos[2]);
     dd4hep::rec::Vector2D localPointSmeared;
@@ -265,19 +292,19 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
       std::array<float, 6> cov;
       cov[0] = u_direction[0];
       cov[1] = u_direction[1];
-      cov[2] = resU;
+      cov[2] = resU*scale;
       cov[3] = v_direction[0];
       cov[4] = v_direction[1];
-      cov[5] = resV;
+      cov[5] = resV*scale;
       outhit.setCovMatrix(cov);
 
       type.set(CEPCConf::TrkHitTypeBit::PLANAR);
     }
     else if (typeSurface.isPlane()) {
-      outhit.setCovMatrix(CEPC::ConvertToCovXYZ(resU, u_direction[0], u_direction[1], resV, v_direction[0], v_direction[1]));
+      outhit.setCovMatrix(CEPC::ConvertToCovXYZ(resU*scale, u_direction[0], u_direction[1], resV*scale, v_direction[0], v_direction[1]));
     }
     else if (typeSurface.isCylinder()) {
-      outhit.setCovMatrix(std::array<float, 6>{resU*resU/2., 0, resU*resU/2, 0, 0, resV*resV});
+      outhit.setCovMatrix(std::array<float, 6>{resU*resU*scale*scale/2., 0, resU*resU*scale*scale/2, 0, 0, resV*resV*scale*scale});
       type.set(CEPCConf::TrkHitTypeBit::CYLINDER);
     }
 

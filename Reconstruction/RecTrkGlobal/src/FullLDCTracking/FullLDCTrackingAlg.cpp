@@ -68,6 +68,9 @@
 #include <TStopwatch.h>
 #include "TMath.h"
 
+#include "streamlog/streamlog.h"
+//streamlog::logstream out;
+
 typedef std::vector<edm4hep::TrackerHit> TrackerHitVec;
 
 using namespace edm4hep ;
@@ -149,6 +152,9 @@ FullLDCTrackingAlg::FullLDCTrackingAlg(const std::string& name, ISvcLocator* svc
   */ 
   // Output track collection
   declareProperty("OutputTracks", _OutputTrackColHdl, "Full LDC track collection name");
+
+  //out.init(std::cout, name);
+  //out.addLevelName<streamlog::DEBUG>();
 }
 
 
@@ -217,8 +223,6 @@ void FullLDCTrackingAlg::processRunHeader( LCRunHeader* run) {
 */
 
 StatusCode FullLDCTrackingAlg::execute() {
-  
-  // debug() << endmsg;
   info() << "FullLDCTrackingAlg -> run = " << 0/*evt->getRunNumber()*/ << "  event = " << _nEvt << endmsg;
 
   auto stopwatch = TStopwatch();
@@ -420,6 +424,7 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     int  fit_count = 0;
     bool sort_by_r = false;
     bool use_ts_initial = false;
+    double maxChi2PerHit = _maxChi2PerHit;
 
 fitstart:
 
@@ -473,10 +478,10 @@ fitstart:
       debug() << "fit direction: " << ((fit_backwards==IMarlinTrack::backward) ? "backward" : "forward") << endmsg;
       //debug() << "MaxChi2PerHit: " << _maxChi2PerHit << endmsg;
       if (use_ts_initial) {
-	error_code = m_fitTool->Fit(track, trkHits, ts_initial, _maxChi2PerHit, fit_backwards);
+	error_code = m_fitTool->Fit(track, trkHits, ts_initial, maxChi2PerHit, fit_backwards);
       }
       else {
-	error_code = m_fitTool->Fit(track, trkHits, covMatrix, _maxChi2PerHit, fit_backwards);
+	error_code = m_fitTool->Fit(track, trkHits, covMatrix, maxChi2PerHit, fit_backwards);
       }
     } catch (...) {
       //      delete track;
@@ -494,6 +499,14 @@ fitstart:
     }
 #endif
 
+    std::vector<std::pair<edm4hep::TrackerHit , double> > hits_in_fit ;
+    std::vector<std::pair<edm4hep::TrackerHit , double> > outliers ;
+
+    UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string );
+
+    hits_in_fit = m_fitTool->GetHitsInFit();
+    outliers = m_fitTool->GetOutliers();
+
     if (error_code != IMarlinTrack::success) {
       debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit failed with error code " << error_code << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
       m_fitTool->Clear();
@@ -504,25 +517,23 @@ fitstart:
       // TODO: to pick up old tracks
       continue ;
     }
-    
-    std::vector<std::pair<edm4hep::TrackerHit , double> > hits_in_fit ;
-    std::vector<std::pair<edm4hep::TrackerHit , double> > outliers ;
+    else {
+      // FIXME: better to loose cut?
+      if (fit_count < 3 && float(outliers.size())/float(hits_in_fit.size()) > 0.2) {
+	maxChi2PerHit *= 2;
+	m_fitTool->Clear();
+	goto fitstart;
+      }
+    }
+
     std::vector<edm4hep::TrackerHit> all_hits;
     all_hits.reserve(hits_in_fit.size());
-    
-    //marlinTrk->getHitsInFit(hits_in_fit);
-    hits_in_fit = m_fitTool->GetHitsInFit();
 
     for ( unsigned ihit = 0; ihit < hits_in_fit.size(); ++ihit) {
       all_hits.push_back(hits_in_fit[ihit].first);
     }
-    
-    UTIL::BitField64 cellID_encoder( lcio::ILDCellID0::encoder_string ) ;
-    
+
     MarlinTrk::addHitNumbersToTrack(&track, all_hits, true, cellID_encoder);
-    
-    //marlinTrk->getOutliers(outliers);
-    outliers = m_fitTool->GetOutliers();
 
     for ( unsigned ihit = 0; ihit < outliers.size(); ++ihit) {
       all_hits.push_back(outliers[ihit].first);
@@ -1373,7 +1384,7 @@ void FullLDCTrackingAlg::prepareVectors() {
       trackExt->setD0(getD0(tpcTrack));
       trackExt->setZ0(getZ0(tpcTrack));
 
-      float cov[15];
+      //float cov[15];
       //float param[5];
       //      float reso[4];
       //param[0] = getOmega(tpcTrack);
@@ -1384,11 +1395,13 @@ void FullLDCTrackingAlg::prepareVectors() {
       
       auto Cov = getCovMatrix(tpcTrack);
       int NC = int(Cov.size());
+
+      std::unique_ptr<float[]> cov(new float[NC]);
       for (int ic=0;ic<NC;ic++) {
         cov[ic] =  Cov[ic];
       }
       
-      trackExt->setCovMatrix(cov);
+      trackExt->setCovMatrix(cov.get());
       trackExt->setNDF(tpcTrack.getNdf());
       trackExt->setChi2(tpcTrack.getChi2());
       for (int iHit=0;iHit<nHits;++iHit) {
@@ -1442,7 +1455,7 @@ void FullLDCTrackingAlg::prepareVectors() {
       trackExt->setPhi(getPhi(siTrack));
       trackExt->setD0(getD0(siTrack));
       trackExt->setZ0(getZ0(siTrack));
-      float cov[15];
+      //float cov[15];
       //float param[5];
       
       //param[0] = getOmega(siTrack);
@@ -1453,10 +1466,12 @@ void FullLDCTrackingAlg::prepareVectors() {
             
       auto Cov = getCovMatrix(siTrack);
       int NC = int(Cov.size());
+
+      std::unique_ptr<float[]> cov(new float[NC]);
       for (int ic=0;ic<NC;ic++) {
         cov[ic] =  Cov[ic];
       }
-      trackExt->setCovMatrix(cov);
+      trackExt->setCovMatrix(cov.get());
       trackExt->setNDF(siTrack.getNdf());
       trackExt->setChi2(siTrack.getChi2());
       char strg[200];
@@ -1645,7 +1660,6 @@ void FullLDCTrackingAlg::MergeTPCandSiTracks() {
         debug() << " combinedTrack returns " << combinedTrack << endmsg;
         
         if (combinedTrack != NULL) {
-
 
           _allCombinedTracks.push_back( combinedTrack );
           _candidateCombinedTracks.insert(tpcTrackExt);
@@ -1843,12 +1857,13 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
   int errorCode = IMarlinTrack::success;
 
   try{
-    pre_fit = getTrackStateAt(tpcTrack->getTrack(), edm4hep::TrackState::AtLastHit);
+    pre_fit = getTrackStateAt(siTrack->getTrack(), edm4hep::TrackState::AtFirstHit);
+    debug() << pre_fit << endmsg;
   }
   catch(std::runtime_error& e){
     error() << e.what() << " should be checked (TPC track) " << tpcTrack << endmsg;
     try{
-      pre_fit = getTrackStateAt(siTrack->getTrack(), edm4hep::TrackState::AtLastHit);
+      pre_fit = getTrackStateAt(tpcTrack->getTrack(), edm4hep::TrackState::AtLastHit);
     }
     catch(std::runtime_error& e){
       error() << e.what() << " should be checked (Si track)" << endmsg;
@@ -1870,17 +1885,27 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
   
   pre_fit.covMatrix = covMatrix;
   
-  errorCode = MarlinTrk::createFit( trkHits, &marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
+  errorCode = MarlinTrk::createFit( trkHits, &marlin_trk, &pre_fit, _bField, !IMarlinTrack::backward , _maxChi2PerHit );
   
   if ( errorCode != IMarlinTrack::success ) {
     debug() << "FullLDCTrackingAlg::CombineTracks: creation of fit fails with error " << errorCode << endmsg;
     return 0;
   }
   debug() << "createFit finished" << endmsg;
+
+  std::vector<std::pair<edm4hep::TrackerHit, double> > hitsInFit;
+  marlin_trk.getHitsInFit(hitsInFit);
+  auto firstHit = hitsInFit.begin()->first;
+
+  //edm4hep::TrackState tsAtFirstHit;
+  //errorCode = marlin_trk.getTrackState(firstHit, tsAtFirstHit, chi2_D, ndf);
+  //debug() << "CombineTracks: TrackState at first hit " << tsAtFirstHit << " chi2 = " << chi2_D << " ndf = " << ndf << endmsg;
+
   edm4hep::Vector3d point(0.,0.,0.); // nominal IP
   
-  edm4hep::TrackState trkState ;
-  errorCode = marlin_trk.propagate(point, trkState, chi2_D, ndf ) ;
+  edm4hep::TrackState trkState;
+  errorCode = marlin_trk.propagate(point, firstHit, trkState, chi2_D, ndf);
+  debug() << "CombineTracks: output TrackState " << trkState << endmsg;
   
   if ( errorCode != IMarlinTrack::success ) {
     debug() << "FullLDCTrackingAlg::CombineTracks: propagate to IP fails with error " << errorCode << endmsg;
@@ -3889,7 +3914,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
           
           pre_fit.covMatrix = covMatrix;
-	  debug() << "AssignOuterHitsToTracks: before createFit" << endmsg;
+	  debug() << "AssignOuterHitsToTracks: before createFit " << pre_fit << endmsg;
           int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::forward/*backward*/, _maxChi2PerHit );
           debug() << "AssignOuterHitsToTracks: after createFit" << endmsg;
           if ( error != IMarlinTrack::success ) {
@@ -3912,11 +3937,15 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
             continue ;
           }
 	  debug() << "AssignOuterHitsToTracks: before propagate" << endmsg;
+	  std::vector<std::pair<edm4hep::TrackerHit, double> > hitsInFit;
+	  marlin_trk->getHitsInFit(hitsInFit);
+	  auto firstHit = hitsInFit.begin()->first;
+
           edm4hep::Vector3d point(0.,0.,0.); // nominal IP
           int return_code = 0;
           
           TrackState trkState ;
-          return_code = marlin_trk->propagate(point, trkState, chi2_D, ndf ) ;
+          return_code = marlin_trk->propagate(point, firstHit, trkState, chi2_D, ndf);
           
           delete marlin_trk ;
           debug() << "AssignOuterHitsToTracks: after delete" << endmsg;
@@ -4011,7 +4040,8 @@ HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
           z_ref_max = fabs(z_ref);
           ts_at_calo = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtCalorimeter);
 
-          debug() << "FullLDCTrackingAlg::GetExtrapolationHelix set ts_at_calo with ref_z = " << z_ref << endmsg;
+          debug() << "GetExtrapolationHelix set ts_at_calo with ref_z = " << z_ref << endmsg;
+          debug() << "TrackState at calo: " << ts_at_calo << endmsg;
 	}
       }
     }
@@ -4401,7 +4431,7 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
         
         pre_fit.covMatrix = covMatrix;
         
-        int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::backward , _maxChi2PerHit );
+        int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, !IMarlinTrack::backward , _maxChi2PerHit );
         
         if ( error != IMarlinTrack::success ) {
           debug() << "FullLDCTrackingAlg::AssignSiHitsToTracks: creation of fit fails with error " << error << endmsg;

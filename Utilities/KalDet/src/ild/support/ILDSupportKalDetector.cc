@@ -330,8 +330,8 @@ TVKalDetector(10)
   double r_max_ecal_ecap = ecalE.getExtent()[1];
   double z_min_ecal_ecap = ecalE.getExtent()[2];
 
+  encoder[lcio::ILDCellID0::subdet] = lcio::ILDDetID::ECAL_ENDCAP ;
   encoder[lcio::ILDCellID0::module] = 0;
-  
   encoder[lcio::ILDCellID0::side] = lcio::ILDDetID::fwd;
   
   TVector3 front_face_centre_fwd( 0.0, 0.0, z_min_ecal_ecap); // for +z  

@@ -6,7 +6,8 @@
 #include <vector>
 
 namespace MarlinTrk {
-  class IMarlinTrkSystem ;
+  class IMarlinTrkSystem;
+  class IMarlinTrack;
 }
 
 class KalTestTool : public extends<AlgTool, ITrackFitterTool> {
@@ -26,6 +27,12 @@ class KalTestTool : public extends<AlgTool, ITrackFitterTool> {
   std::vector<std::pair<edm4hep::TrackerHit, double> >& GetOutliers() override {return m_outliers;};
   void Clear() override {m_hitsInFit.clear(); m_outliers.clear();};
 
+  int createFinalisedTrack(MarlinTrk::IMarlinTrack* marlinTrk, std::vector<edm4hep::TrackerHit>& hit_list, edm4hep::MutableTrack* track, bool fit_backwards,
+			   const decltype(edm4hep::TrackState::covMatrix)& initial_cov_for_prefit, float bfield_z, double maxChi2Increment);
+  int createFinalisedTrack(MarlinTrk::IMarlinTrack* marlinTrk, std::vector<edm4hep::TrackerHit>& hit_list, edm4hep::MutableTrack* track, bool fit_backwards,
+			   edm4hep::TrackState* pre_fit, float bfield_z, double maxChi2Increment);
+  int finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::MutableTrack* track, std::vector<edm4hep::TrackerHit>& hit_list, bool fit_backwards,
+		    edm4hep::TrackState* atLastHit=0, edm4hep::TrackState* atCaloFace=0);
  private:
   Gaudi::Property<std::string>    m_fitterName{this, "Fitter", "KalTest"};
   Gaudi::Property<bool>           m_useQMS{this, "MSOn", true};

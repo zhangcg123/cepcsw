@@ -327,7 +327,8 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
 			l.zHalfSensitive/dd4hep::mm, l.widthSensitive/dd4hep::mm, 0.);
     }
 
-    {
+    if (vtxData->layersPlanar.size()>0) {
+      debug() << "find out planar support material" << endmsg;
       const dd4hep::rec::ZPlanarData::LayerLayout& l = vtxData->layersPlanar[0] ;
       double offset = l.offsetSupport;
       dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, offset, 2.*dd4hep::mm);
@@ -337,7 +338,7 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
     }
 
     std::vector<int> ids;
-    std::vector<double> zhalfs, rsens, tsens, rsups, tsups, phi0s, rgaps, dphis;
+    std::vector<double> zhalfs, rsens, tsens, rsups, tsups, phi0s, rgaps, dphis, widths;
 
     for (unsigned i=0,n=vtxData->layersBent.size(); i<n; ++i) {
       const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[i];
@@ -351,6 +352,7 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
       phi0s.push_back(l.phi0);
       rgaps.push_back(l.rgap/dd4hep::mm);
       dphis.push_back(l.dphi);
+      widths.push_back(l.width/dd4hep::mm);
     }
 
     gearVTX->setIntVals("VTXLayerIds", ids);
@@ -362,11 +364,13 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
     gearVTX->setDoubleVals("VTXLayerPhi0", phi0s);
     gearVTX->setDoubleVals("VTXLayerRadialGap", rgaps);
     gearVTX->setDoubleVals("VTXLayerDeltaPhi", dphis);
+    gearVTX->setDoubleVals("VTXLayerWidth", widths);
 
     m_gearMgr->setVXDParameters(gearVTX);
 
-    {
-      const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[0] ;
+    if (vtxData->layersBent.size()>0) {
+      debug() << "find out bent support material" << endmsg;
+      const dd4hep::rec::CylindricalData::LayerLayout& l = vtxData->layersBent[0];
       dd4hep::rec::Vector3D a(l.radiusSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
       dd4hep::rec::Vector3D b(l.radiusSupport + l.thicknessSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
       gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDBentSupportMaterial");
@@ -374,6 +378,7 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
     }
 
     if (vtxData->rOuterShell>vtxData->rInnerShell) {
+      debug() << "find out shell material" << endmsg;
       dd4hep::rec::Vector3D a1( vtxData->rInnerShell, 0, 2.*dd4hep::mm);
       dd4hep::rec::Vector3D b1( vtxData->rOuterShell, 0, 2.*dd4hep::mm);
       gear::SimpleMaterialImpl* VXDShellMaterial = CreateGearMaterial(a1, b1, "VXDShellMaterial");
@@ -522,7 +527,10 @@ StatusCode GearSvc::convertSIT(dd4hep::DetElement& sit){
   sitParams->setDoubleVal("strip_length_mm", sitData->lengthStrip*CLHEP::cm);
   sitParams->setDoubleVal("strip_pitch_mm",  sitData->pitchStrip*CLHEP::cm);
   sitParams->setDoubleVal("strip_angle_deg", strip_angle_deg);
+
   std::vector<int> n_sensors_per_ladder;
+  std::vector<double> length_sensors;
+  std::vector<double> thickness_flexs;
   for( int layer=0; layer < nLayers; layer++){
     dd4hep::rec::ZPlanarData::LayerLayout& layout = sitlayers[layer];
 
@@ -537,13 +545,50 @@ StatusCode GearSvc::convertSIT(dd4hep::DetElement& sit){
     double senOffset = layout.offsetSensitive*CLHEP::cm;
     double senThickness = layout.thicknessSensitive*CLHEP::cm;
     double senHalfLength = layout.zHalfSensitive*CLHEP::cm;
-    double senWidth = layout.widthSensitive*CLHEP::cm;
+    //double senWidth = layout.widthSensitive*CLHEP::cm;
+    // FIXME: treat sensitive width as flex thickness as preliminary, since geometry need same width of support and sensitive 
+    double flexThickness = layout.widthSensitive*CLHEP::cm;
     int nSensorsPerLadder = layout.sensorsPerLadder;
+    double sensorLength = layout.lengthSensor*CLHEP::cm;
     double stripAngle = strip_angle_deg*CLHEP::degree;
     n_sensors_per_ladder.push_back(nSensorsPerLadder);
-    sitParams->addLayer(nLadders, phi0, supRMin, supOffset, supThickness, supHalfLength, supWidth, 0, senRMin, senOffset, senThickness, senHalfLength, senWidth, 0);
+    length_sensors.push_back(sensorLength);
+    thickness_flexs.push_back(flexThickness);
+
+    if (layer==0) {
+      // support
+      {
+	dd4hep::rec::Vector3D a(layout.distanceSupport, layout.offsetSupport, 0);
+	dd4hep::rec::Vector3D b(layout.distanceSupport + layout.thicknessSupport, layout.offsetSupport, 0);
+	gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a, b, "ITKBarrelSupportMaterial");
+	m_gearMgr->registerSimpleMaterial(supportMaterial);
+      }
+      // sensor
+      {
+	gear::SimpleMaterialImpl* flexMaterial = nullptr;
+	if (senRMin > supRMin) {
+	  dd4hep::rec::Vector3D a(layout.distanceSensitive + layout.thicknessSensitive, layout.offsetSensitive, 2.*dd4hep::mm);
+	  dd4hep::rec::Vector3D b(layout.distanceSensitive + layout.thicknessSensitive + flexThickness*dd4hep::mm, layout.offsetSensitive, 2.*dd4hep::mm);
+	  flexMaterial = CreateGearMaterial(a, b, "ITKBarrelFlexMaterial");
+	}
+	else {
+	  dd4hep::rec::Vector3D a(layout.distanceSensitive - flexThickness*dd4hep::mm, layout.offsetSensitive, 2.*dd4hep::mm);
+	  dd4hep::rec::Vector3D b(layout.distanceSensitive, layout.offsetSensitive, 2.*dd4hep::mm);
+	  flexMaterial = CreateGearMaterial(a, b, "ITKBarrelFlexMaterial");
+	}
+	double ratio = 1.0 + flexThickness/flexMaterial->getRadLength()*93.6607/senThickness;
+	debug() << "sensor thickness: " << senThickness << " flex thickness: " << flexThickness << " radL: " << flexMaterial->getRadLength() << " effetive thickness: " << ratio*senThickness << endmsg;
+
+	gear::SimpleMaterialImpl* senMaterial = new gear::SimpleMaterialImpl("ITKBarrelSensorMaterial", 28.09, 14.0, 2330.*ratio, 93.6607/ratio, 0);
+	m_gearMgr->registerSimpleMaterial(flexMaterial);
+	m_gearMgr->registerSimpleMaterial(senMaterial);
+      }
+    }
+    sitParams->addLayer(nLadders, phi0, supRMin, supOffset, supThickness, supHalfLength, supWidth, 0, senRMin, senOffset, senThickness, senHalfLength, supWidth, 0);
   }
   sitParams->setIntVals("n_sensors_per_ladder",n_sensors_per_ladder);
+  sitParams->setDoubleVals("length_sensors", length_sensors);
+  sitParams->setDoubleVals("thickness_flexs", thickness_flexs);
   m_gearMgr->setSITParameters( sitParams ) ;
 
   return StatusCode::SUCCESS;
@@ -589,7 +634,28 @@ StatusCode GearSvc::convertTPC(dd4hep::DetElement& tpc){
   tpcParameters->setDoubleVal( "tpcEndplateZmin",        supportData->sections[1].zPos*CLHEP::cm + 1*CLHEP::um );
   tpcParameters->setDoubleVal( "tpcEndplateZmax",        supportData->sections[2].zPos*CLHEP::cm );
 
+  // InnerWall
+  {
+    dd4hep::rec::Vector3D a(tpcData->rMin, 0, tpcData->driftLength/2.0);
+    dd4hep::rec::Vector3D b(tpcData->rMin+tpcData->innerWallThickness, 0, tpcData->driftLength/2.0);
+    gear::SimpleMaterialImpl* TPCInnerWallMaterial = CreateGearMaterial(a, b, "TPCInnerWallMaterial");
+    m_gearMgr->registerSimpleMaterial(TPCInnerWallMaterial);
+  }
   double x = (supportData->sections[0].rInner + supportData->sections[0].rOuter)/2.;
+  // Gas
+  {
+    dd4hep::rec::Vector3D a(x, 0, tpcData->driftLength/2.0);
+    dd4hep::rec::Vector3D b(x+1*dd4hep::mm, 0, tpcData->driftLength/2.0);
+    gear::SimpleMaterialImpl* TPCGasMaterial = CreateGearMaterial(a, b, "TPCGasMaterial");
+    m_gearMgr->registerSimpleMaterial(TPCGasMaterial);
+  }
+  // OuterWall
+  {
+    dd4hep::rec::Vector3D a(tpcData->rMax-tpcData->outerWallThickness, 0, tpcData->driftLength/2.0);
+    dd4hep::rec::Vector3D b(tpcData->rMax, 0, tpcData->driftLength/2.0);
+    gear::SimpleMaterialImpl* TPCOuterWallMaterial = CreateGearMaterial(a, b, "TPCOuterWallMaterial");
+    m_gearMgr->registerSimpleMaterial(TPCOuterWallMaterial);
+  }
   // Readout
   {
     dd4hep::rec::Vector3D a(x, 0, supportData->sections[0].zPos);
@@ -790,6 +856,16 @@ StatusCode GearSvc::convertSET(dd4hep::DetElement& set){
     int nSensorsPerLadder = layout.sensorsPerLadder;
     double stripAngle = strip_angle_deg*CLHEP::degree;
     n_sensors_per_ladder.push_back(nSensorsPerLadder);
+
+    if (layer==0) {
+      // support
+      {
+	dd4hep::rec::Vector3D a(layout.distanceSupport, layout.offsetSupport, 0);
+	dd4hep::rec::Vector3D b(layout.distanceSupport + layout.thicknessSupport, layout.offsetSupport, 0);
+	gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a, b, "OTKBarrelSupportMaterial");
+        m_gearMgr->registerSimpleMaterial(supportMaterial);
+      }
+    }
     setParams->addLayer(nLadders, phi0, supRMin, supOffset, supThickness, supHalfLength, supWidth, 0, senRMin, senOffset, senThickness, senHalfLength, senWidth, 0);
   }
   setParams->setIntVals("n_sensors_per_ladder", n_sensors_per_ladder);
@@ -891,7 +967,9 @@ gear::SimpleMaterialImpl* GearSvc::CreateGearMaterial(const dd4hep::rec::Vector3
   // TODO: move to GeomSvc
   dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() );
 
-  const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a, b);
+  // 0.0005 mm make sure don't loss material because of precision
+  dd4hep::rec::Vector3D safe_env = (a.z() == b.z()) ? dd4hep::rec::Vector3D(0.0005*dd4hep::mm, 0, 0) : dd4hep::rec::Vector3D(0, 0, 0.0005*dd4hep::mm);
+  const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a-safe_env, b+safe_env);
   dd4hep::rec::MaterialData mat = (materials.size() > 1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
   
   debug() << " ####### found materials between points : " << a << " and " << b << " ######" << endmsg;

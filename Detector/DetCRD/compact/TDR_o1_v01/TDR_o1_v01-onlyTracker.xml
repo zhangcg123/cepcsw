@@ -32,7 +32,8 @@
   <include ref="../CRD_common_v02/VXD_Composite_v01_02.xml"/>
   <include ref="../CRD_common_v02/FTD_SkewRing_v01_07.xml"/>
   <!--include ref="../CRD_common_v02/SIT_SimplePixel_v01_04.xml"/-->
-  <include ref="../CRD_common_v02/SIT_StaggeredStave_v02.xml"/>
+  <!--include ref="../CRD_common_v02/SIT_StaggeredStave_v02.xml"/-->
+  <include ref="../CRD_common_v02/ITK_StaggeredStave_v03_01.xml"/>
   <!--include ref="../CRD_common_v01/TPC_Simple_v10_02.xml"/-->
   <!-- use 10 rows clustering version-->
   <include ref="../CRD_common_v02/TPC_ModularEndcap_o1_v02.xml"/>

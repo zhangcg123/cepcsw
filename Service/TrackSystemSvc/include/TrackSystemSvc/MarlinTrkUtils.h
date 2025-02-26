@@ -74,6 +74,7 @@ namespace MarlinTrk{
       IMarlinTrack* marlinTrk,
       edm4hep::MutableTrack* track,
       std::vector<edm4hep::TrackerHit>& hit_list,
+      bool fit_backwards,
       edm4hep::TrackState* atLastHit=0,
       edm4hep::TrackState* atCaloFace=0);
   
@@ -82,7 +83,8 @@ namespace MarlinTrk{
 
   /** Set the subdetector hit numbers for the TrackImpl */
   void addHitNumbersToTrack(edm4hep::MutableTrack* track, std::vector<std::pair<edm4hep::TrackerHit , double> >& hit_list, bool hits_in_fit, UTIL::BitField64& cellID_encoder);
-  
+
+  int createTrackStateAtCaloFace( IMarlinTrack* marlinTrk, edm4hep::TrackState* track, edm4hep::TrackerHit trkhit, bool tanL_is_positive );
 }
 
 #endif

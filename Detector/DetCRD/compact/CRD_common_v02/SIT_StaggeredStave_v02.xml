@@ -4,12 +4,12 @@
     <constant name="SIT_sensitive_thickness" value="0.15*mm"/>
     <!--constant name="SIT_support_thickness"   value="4*mm"/-->  <!--use the barestave num--> 
     <constant name="SIT_module_length"       value="140*mm"/>  <!--module length--> 
-    <constant name="SIT_inner_radius_1"   value="SIT1_inner_radius"/>
-    <constant name="SIT_inner_radius_2" value="SIT2_inner_radius"/>
-    <constant name="SIT_inner_radius_3" value="SIT3_inner_radius"/>
-    <constant name="SIT_half_length_1"  value="SIT1_half_length"/>
-    <constant name="SIT_half_length_2"    value="SIT2_half_length"/>
-    <constant name="SIT_half_length_3"    value="SIT3_half_length"/>
+    <constant name="SIT_inner_radius_1"      value="ITKBarrel1_inner_radius"/>
+    <constant name="SIT_inner_radius_2"      value="ITKBarrel2_inner_radius"/>
+    <constant name="SIT_inner_radius_3"      value="ITKBarrel3_inner_radius"/>
+    <constant name="SIT_half_length_1"       value="ITKBarrel1_half_length"/>
+    <constant name="SIT_half_length_2"       value="ITKBarrel2_half_length"/>
+    <constant name="SIT_half_length_3"       value="ITKBarrel3_half_length"/>
   </define>
 
   <detectors>

@@ -827,12 +827,46 @@
       <fraction n="0.895" ref="Al"/>
     </material>
 
-  <material name="ParaffinWax">
-    <D value="0.9" unit="g/cm3"/>
-    <composite n="25" ref="C"/>
-    <composite n="52" ref="H"/>
-  </material>
+    <material name="ParaffinWax">
+      <D value="0.9" unit="g/cm3"/>
+      <composite n="25" ref="C"/>
+      <composite n="52" ref="H"/>
+    </material>
 
+    <!--ITK-->
+    <material name="CER_ITK">
+      <D type="density" value="0.880906" unit="g/cm3"/>
+      <composite n="6" ref="C"/>
+      <composite n="5" ref="H"/>
+      <composite n="3" ref="N"/>
+      <composite n="3" ref="O"/>
+    </material>
+
+    <material name="CarbonFleece_ITK">
+      <D type="density" value="0.3997838" unit="g/cm3" />
+      <composite n="1" ref="C" />
+    </material>
+
+    <material name="Graphite_ITK">
+      <D type="density" value="1.607564" unit="g/cm3" />
+      <composite n="1" ref="C" />
+    </material>
+
+    <material name="CF_ITK">
+      <D type="density" value="1.60885" unit="g/cm3"/>
+      <fraction n="1.0" ref="CarbonFiber"/>
+    </material>
+
+    <material name="Polyimide_ITK">
+      <D type="density" value="1.428233" unit="g/cm3"/>
+      <fraction n="1.0" ref="Polyimide"/>
+    </material>
+
+    <!-- to reduce equivalent thickness -->
+    <material name="EquivalWater_ITK">
+      <D type="density" value="2" unit="g/cm3"/>
+      <fraction n="1.0" ref="G4_WATER"/>
+    </material>
   </materials>
 
   <surfaces>

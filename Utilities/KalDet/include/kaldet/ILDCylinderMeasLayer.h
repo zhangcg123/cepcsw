@@ -34,7 +34,7 @@ public:
   { /* no op */ }
   
 
-  Bool_t IsOnSurface(const TVector3 &xx) const {
+  virtual Bool_t IsOnSurface(const TVector3 &xx) const {
 
     bool z = (xx.Z() >= GetZmin() && xx.Z() <= GetZmax());
     bool r = std::fabs( (xx-this->GetXc()).Perp() - this->GetR() ) < 1.e-3; // for very short, very stiff tracks this can be poorly defined, so we relax this here a bit to 1 micron
