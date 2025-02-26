@@ -191,11 +191,13 @@ Bool_t ILDPlanarMeasLayer::IsOnSurface(const TVector3 &xx) const
 {
   Double_t xi   = (xx.Y()-GetXc().Y())*GetNormal().X()/GetNormal().Perp() - (xx.X()-GetXc().X())*GetNormal().Y()/GetNormal().Perp() ;
   Double_t zeta = xx.Z() - GetXc().Z();
-    
+
   bool onSurface = false ;
-  
+
   if( (xx.X()-GetXc().X())*GetNormal().X() + (xx.Y()-GetXc().Y())*GetNormal().Y() < 1e-4){
-    if( xi <= GetXioffset() + GetXiwidth()/2  && xi >= GetXioffset() - GetXiwidth()/2  && TMath::Abs(zeta) <= GetZetawidth()/2){
+    //if( xi <= GetXioffset() + GetXiwidth()/2  && xi >= GetXioffset() - GetXiwidth()/2  && TMath::Abs(zeta) <= GetZetawidth()/2){
+    //FIXME: pick up hits in sensor A but propagate to sensor B
+    if ( xi <= GetXioffset() + GetXiwidth()/2  && xi >= GetXioffset() - GetXiwidth()/2  && TMath::Abs(zeta) <= GetZetawidth()/2 + 10) {
       onSurface = true;
     }
     

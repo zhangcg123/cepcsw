@@ -256,7 +256,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 	  thisLayer.thicknessSensitive = sensor_thickness;
 	  thisLayer.radiusSupport      = flex_radius;
 	  thisLayer.thicknessSupport   = flex_thickness;
-	  //thisLayer.width              = flex_width;
+	  thisLayer.width              = flex_width;
 	  thisLayer.phi0 = phi0 + phi;
 	  thisLayer.rgap = radius;
 	}
@@ -515,8 +515,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
       topLayer.phi0                 = 0.;
       topLayer.sensorsPerLadder     = n_sensors_per_side;
       topLayer.lengthSensor         = sensor_active_len;
-      topLayer.distanceSupport      = sensitive_radius;
-      topLayer.thicknessSupport     = support_thickness / 2.0;
+      topLayer.distanceSupport      = sensitive_radius + support_height / 2.0 - support_thickness / 2.0;
+      topLayer.thicknessSupport     = support_thickness / 2.0 + flex_thickness;
       topLayer.offsetSupport        = -ladder_offset;
       topLayer.widthSupport         = support_width;
       topLayer.zHalfSupport         = support_length / 2.0;
@@ -531,7 +531,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
       bottomLayer.sensorsPerLadder     = n_sensors_per_side;
       bottomLayer.lengthSensor         = sensor_active_len;
       bottomLayer.distanceSupport      = sensitive_radius - support_height / 2.0 - flex_thickness;
-      bottomLayer.thicknessSupport     = support_thickness / 2.0;
+      bottomLayer.thicknessSupport     = support_thickness / 2.0 + flex_thickness;
       bottomLayer.offsetSupport        = -ladder_offset;
       bottomLayer.widthSupport         = support_width;
       bottomLayer.zHalfSupport         = support_length / 2.0;

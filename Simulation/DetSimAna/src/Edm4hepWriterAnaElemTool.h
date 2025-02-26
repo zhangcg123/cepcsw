@@ -64,7 +64,7 @@ private:
     Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
         "TrackerCollections",
         {"VXD", "FTD", "SIT", "TPC", "TPCLowPt", "TPCSpacePoint", "SET", 
-         "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"}, 
+         "ITKBarrel", "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"}, 
         "Names of the Tracker collections (without suffix Collection)"};
     Gaudi::Property<std::vector<std::string>> m_calorimeterColNames{this, 
         "CalorimeterCollections",

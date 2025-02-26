@@ -33,8 +33,10 @@ CEPCITKKalDetector::CEPCITKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
   MaterialDataBase::Instance().registerForService(gearMgr, geoSvc);
   
   TMaterial & air       = *MaterialDataBase::Instance().getMaterial("air");
-  TMaterial & silicon   = *MaterialDataBase::Instance().getMaterial("silicon");
-  TMaterial & carbon    = *MaterialDataBase::Instance().getMaterial("carbon");
+  //TMaterial & silicon   = *MaterialDataBase::Instance().getMaterial("silicon");
+  TMaterial & silicon   = *MaterialDataBase::Instance().getMaterial("ITKBarrelSensorMaterial");
+  //TMaterial & carbon    = *MaterialDataBase::Instance().getMaterial("carbon");
+  TMaterial & carbon    = *MaterialDataBase::Instance().getMaterial("ITKBarrelSupportMaterial");
 
   if(geoSvc){
     this->setupGearGeom(geoSvc);
@@ -70,13 +72,13 @@ CEPCITKKalDetector::CEPCITKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
     
     const double phi0 = _ITKgeo[layer].phi0 ;
     
-    const double ladder_distance = _ITKgeo[layer].supRMin ;
+    const double ladder_distance  = _ITKgeo[layer].supRMin ;
     const double ladder_thickness = _ITKgeo[layer].supThickness ;
     
-    const double sensitive_distance = _ITKgeo[layer].senRMin ;
+    const double sensitive_distance  = _ITKgeo[layer].senRMin ;
     const double sensitive_thickness = _ITKgeo[layer].senThickness ;
     
-    const double width = _ITKgeo[layer].width ;
+    const double width  = _ITKgeo[layer].width ;
     const double length = _ITKgeo[layer].length;
     
     double currPhi;
@@ -87,7 +89,9 @@ CEPCITKKalDetector::CEPCITKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
     const int nsensors = _ITKgeo[layer].nSensorsPerLadder;
     
     const double sensor_length = _ITKgeo[layer].sensorLength;
-    
+
+    const int    nrow = std::floor((sensor_length*nsensors)/length+0.001);
+    const double gap  = length - sensor_length*nsensors/nrow;
     // TODO: sorting_policy for overlap region like VXD
     for (int ladder=0; ladder<nLadders; ++ladder) {
       
@@ -117,7 +121,8 @@ CEPCITKKalDetector::CEPCITKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
           
           double measurement_plane_sorting_policy = sensitive_distance  + (4 * ladder+1) * eps_layer + eps_sensor * isensor ;
           
-          double z_centre_sensor = -0.5*length + (0.5*sensor_length) + (isensor*sensor_length) ;
+          double z_centre_sensor = -0.5*length + (0.5*sensor_length) + (isensor%(nsensors/nrow))*sensor_length;
+	  if (z_centre_sensor>0) z_centre_sensor += gap;
 
           if (_isStripDetector) {
             // measurement plane defined as the middle of the sensitive volume
@@ -156,7 +161,9 @@ CEPCITKKalDetector::CEPCITKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
           
           double measurement_plane_sorting_policy = sensitive_distance  + (4 * ladder+2) * eps_layer + eps_sensor * isensor ;
 
-          double z_centre_sensor = -0.5*length + (0.5*sensor_length) + (isensor*sensor_length) ;
+          //double z_centre_sensor = -0.5*length + (0.5*sensor_length) + (isensor*sensor_length) ;
+	  double z_centre_sensor = -0.5*length + (0.5*sensor_length) + (isensor%(nsensors/nrow))*sensor_length;
+          if (z_centre_sensor>0) z_centre_sensor += gap;
 
           if (_isStripDetector) {
 	    // measurement plane defined as the middle of the sensitive volume
@@ -242,9 +249,8 @@ void CEPCITKKalDetector::setupGearGeom( const gear::GearMgr& gearMgr ){
       _ITKgeo[layer].nSensorsPerLadder = 1 ;
     }
     
-    _ITKgeo[layer].sensorLength = _ITKgeo[layer].length / _ITKgeo[layer].nSensorsPerLadder;
-    
-    
+    _ITKgeo[layer].sensorLength = pITKDetMain.getDoubleVals("length_sensors")[layer];//_ITKgeo[layer].length / _ITKgeo[layer].nSensorsPerLadder;
+
     if (_isStripDetector) {
       _ITKgeo[layer].stripAngle = strip_angle_deg * M_PI/180 ;
     } else {
@@ -303,7 +309,7 @@ void CEPCITKKalDetector::setupGearGeom( IGeomSvc* geoSvc ){
     _ITKgeo[layer].senThickness = pITKLayerLayout.thicknessSensitive*CLHEP::cm;
     _ITKgeo[layer].supThickness = pITKLayerLayout.thicknessSupport*CLHEP::cm;
     _ITKgeo[layer].nSensorsPerLadder = pITKLayerLayout.sensorsPerLadder;
-    _ITKgeo[layer].sensorLength = _ITKgeo[layer].length / _ITKgeo[layer].nSensorsPerLadder;
+    _ITKgeo[layer].sensorLength = pITKLayerLayout.lengthSensor*CLHEP::cm;//_ITKgeo[layer].length / _ITKgeo[layer].nSensorsPerLadder;
 
     if (_isStripDetector) {
       _ITKgeo[layer].stripAngle = strip_angle_deg * M_PI/180 ;

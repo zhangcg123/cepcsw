@@ -64,6 +64,8 @@ namespace dd4hep {
 	///
 	double thicknessSupport;
 	///
+	double width;
+	///
 	double phi0;
 	///
 	double rgap;
@@ -88,7 +90,7 @@ namespace dd4hep {
       std::vector<CylindricalData::LayerLayout> layers = d.layers;
 
       io <<  " Layers : " << std::endl
-         <<  "  phi0   zHalf   radiusSensitive thicknessSensitive radiusSupport thicknessSupport radialgap deltaphi" << std::endl;
+         <<  "  phi0   zHalf   width  radiusSensitive thicknessSensitive radiusSupport thicknessSupport radialgap deltaphi" << std::endl;
 
       for(unsigned i=0,N=layers.size(); i<N; ++i){
 
@@ -96,6 +98,7 @@ namespace dd4hep {
 
         io << " " << l.phi0
 	   << " " << l.zHalf
+	   << " " << l.width
            << " " << l.radiusSensitive
            << " " << l.thicknessSensitive
 	   << " " << l.radiusSupport
@@ -142,13 +145,14 @@ namespace dd4hep {
       std::vector<CylindricalData::LayerLayout> layersBent = d.layersBent;
 
       io <<  " Bent Layers : " << std::endl
-         <<  "  phi0   zHalf   radiusSensitive thicknessSensitive radiusSupport thicknessSupport radialgap deltaphi" << std::endl;
+         <<  "  phi0   zHalf  width  radiusSensitive thicknessSensitive radiusSupport thicknessSupport radialgap deltaphi" << std::endl;
 
       for(unsigned i=0,N=layersBent.size(); i<N; ++i){
 	CylindricalData::LayerLayout l = layersBent[i];
 
 	io << " " << l.phi0
            << " " << l.zHalf
+	   << " " << l.width
            << " " << l.radiusSensitive
            << " " << l.thicknessSensitive
            << " " << l.radiusSupport
@@ -187,7 +191,6 @@ namespace dd4hep {
       return io;
     };
 
-
     /** Simple data structure with key parameters for
      *  reconstruction of long crystal bar ECAL
      *
@@ -201,15 +204,15 @@ namespace dd4hep {
       int partNumber;
 
       struct LayerInfo {
-        LayerInfo() :
-          dlayerNumber(-1),
-          slayerNumber(-1),
-          barNumber(-1){
-          }
-        int dlayerNumber;
-        int slayerNumber;
-        int barNumber;
-        };
+	LayerInfo() :
+	  dlayerNumber(-1),
+	  slayerNumber(-1),
+	  barNumber(-1){
+	}
+	int dlayerNumber;
+	int slayerNumber;
+	int barNumber;
+      };
       std::vector<LayerInfo> LayerInfos;
     };
     typedef StructExtension<ECALModuleInfoStruct> ECALModuleInfoData;
@@ -220,7 +223,6 @@ namespace dd4hep {
       std::vector<ECALModuleInfoStruct> ModuleInfos;
     };
     typedef StructExtension<ECALSystemInfoStruct> ECALSystemInfoData;
-
   }
 }
 

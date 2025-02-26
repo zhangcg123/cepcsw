@@ -52,6 +52,7 @@ private:
   struct STT_Layer {
     int    id;
     double length;
+    double width;
     double senRMin;
     double senThickness;
     double supRMin;
