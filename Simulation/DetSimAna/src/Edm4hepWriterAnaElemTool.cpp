@@ -452,8 +452,19 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
                 G4ParticleDefinition* secparticle = sectrk->GetDefinition();
                 const G4VProcess* creatorProcess = sectrk->GetCreatorProcess();
 
+                double Ek = sectrk->GetKineticEnergy();
+                const auto& pos = sectrk->GetPosition();
+                
                 // select the necessary processes
                 if (creatorProcess==proc_decay || creatorProcess==photon_general || creatorProcess==photon_conv) {
+
+                } else if (Ek >= m_sectrk_Ek.value() && fabs(pos.rho()) < m_sectrk_rho.value() && fabs(pos.z()) < m_sectrk_z.value()) {
+                    // if the Ek > x 
+                } else {
+                    // skip this secondary track
+                    continue;
+                }
+                
                     debug() << "Creator Process is " << creatorProcess->GetProcessName()
                             << " for secondary particle: "
                             << " idx: " << i
@@ -502,7 +513,6 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
                     debug() << " Appending MCParticle: (id: " 
                             << mcp.getObjectID().index << ")"
                             << endmsg;
-                }
             }
         }
 
