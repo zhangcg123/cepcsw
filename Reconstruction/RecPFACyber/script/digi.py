@@ -158,7 +158,7 @@ out.filename = "CaloDigi_TDR_o1_v01.root"
 out.outputCommands = ["drop *", 
     "keep MCParticle",
     "keep VXDCollection",
-    "keep SITCollection",
+    "keep ITKBarrelCollection",
     "keep TPCCollection",
     "keep OTKBarrelCollection",
     "keep FTDCollection",

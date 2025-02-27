@@ -42,16 +42,15 @@ tracksystemsvc = TrackSystemSvc("TrackSystemSvc")
 from Configurables import SimplePIDSvc
 pidsvc = SimplePIDSvc("SimplePIDSvc")
 cepcswdatatop = "/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
-pidsvc.ParFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Service/SimplePIDSvc/data/tdr25.1.0/dNdx_TPC.root")
+pidsvc.ParFile = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Service/SimplePIDSvc/data/tdr25.1.1/dNdx_TPC.root")
 
 from Configurables import PodioInput
 podioinput = PodioInput("PodioReader", collections=[
 #    "EventHeader",
     "MCParticle",
     "VXDCollection",
-    "SITCollection",
+    "ITKBarrelCollection",
     "TPCCollection",
-#    "SETCollection",
     "OTKBarrelCollection",
     "FTDCollection",
     "MuonBarrelCollection",
@@ -65,7 +64,7 @@ podioinput = PodioInput("PodioReader", collections=[
 
 ## Config ##
 vxdhitname  = "VXDTrackerHits"
-sithitname  = "SITTrackerHits"
+sithitname  = "ITKBarrelTrackerHits"
 gashitname  = "TPCTrackerHits"
 sethitname  = "OTKBarrelTrackerHits"
 setspname   = "OTKBarrelSpacePoints"
@@ -86,18 +85,18 @@ digiVXD.TrackerHitAssociationCollection = "VXDTrackerHitAssociation"
 digiVXD.DigiTool = "SmearDigiTool/VXD"
 #digiVXD.OutputLevel = DEBUG
 
-## SIT ##
-sittool = SmearDigiTool("SIT")
-sittool.ResolutionU = [0.0098]
-sittool.ResolutionV = [0.0433]
-#sittool.OutputLevel = DEBUG
+## ITKBarrel ##
+itkbtool = SmearDigiTool("ITKBarrel")
+itkbtool.ResolutionU = [0.008]
+itkbtool.ResolutionV = [0.040]
+#itkbtool.OutputLevel = DEBUG
 
-digiSIT = SiTrackerDigiAlg("SITDigi")
-digiSIT.SimTrackHitCollection = "SITCollection"
-digiSIT.TrackerHitCollection = sithitname
-digiSIT.TrackerHitAssociationCollection = "SITTrackerHitAssociation"
-digiSIT.DigiTool = "SmearDigiTool/SIT"
-#digiSIT.OutputLevel = DEBUG
+digiITKB = SiTrackerDigiAlg("ITKBarrelDigi")
+digiITKB.SimTrackHitCollection = "ITKBarrelCollection"
+digiITKB.TrackerHitCollection = sithitname
+digiITKB.TrackerHitAssociationCollection = "ITKBarrelTrackerHitAssociation"
+digiITKB.DigiTool = "SmearDigiTool/ITKBarrel"
+#digiITKB.OutputLevel = DEBUG
 
 ## OTKBarrel ##
 otkbtool = SmearDigiTool("OTKBarrel")
@@ -171,8 +170,22 @@ kt110 = KalTestTool("KalTest110")
 kt110.Smooth = False
 #kt110.OutputLevel = DEBUG
 
+# Close energy loss
+kt101 = KalTestTool("KalTest101")
+kt101.EnergyLossOn = False
+#kt101.OutputLevel = DEBUG
+
 from Configurables import SiliconTrackingAlg
 tracking = SiliconTrackingAlg("SiliconTracking")
+tracking.LayerCombinations = [8,7,6, 8,7,5, 8,7,4, 8,7,3, 8,7,2, 8,7,1, 8,7,0,
+                              8,6,5, 8,6,4, 8,6,3, 8,6,2, 8,6,1, 8,6,0,
+                              7,6,5, 7,6,4, 7,6,3, 7,6,2, 7,6,1, 7,6,0,
+                              7,5,3, 7,5,2, 7,5,1, 7,5,0, 7,4,3, 7,4,2, 7,4,1, 7,4,0,
+                              6,5,3, 6,5,2, 6,5,1, 6,5,0, 6,4,3, 6,4,2, 6,4,1, 6,4,0,
+                              6,3,2, 6,3,1, 6,3,0, 6,2,1, 6,2,0, 6,1,0,
+                              5,3,2, 5,3,1, 5,3,0, 5,2,1, 5,2,0, 5,1,0,
+                              4,3,2, 4,3,1, 4,3,0, 4,2,1, 4,2,0, 4,1,0,
+                              3,2,1, 3,2,0, 3,1,0, 2,1,0]
 tracking.LayerCombinationsFTD = []
 tracking.HeaderCol = "EventHeader"
 tracking.VTXHitCollection = vxdhitname
@@ -237,9 +250,8 @@ full.SITRawHits     = "NotNeedForPixelSIT"
 full.SETRawHits     = "NotNeedForPixelSET"
 full.FTDRawHits     = ftdhitname
 full.TPCTracks = "ClupatraTracks" # add standalone TPC track
-full.SiTracks  = "SubsetTracks"
+full.SiTracks  = "SiTracks"
 full.OutputTracks  = "CompleteTracks" # default name
-#full.VTXHitToTrackDistance = 5.
 full.FTDHitToTrackDistance = 5.
 full.SITHitToTrackDistance = 3.
 full.SETHitToTrackDistance = 5.
@@ -260,15 +272,16 @@ tof = TofRecAlg("TofRecAlg")
 from Configurables import TrackParticleRelationAlg
 tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
-tpr.TrackList = ["CompleteTracks", "ClupatraTracks"]
-tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tpr.TrackList = ["CompleteTracks"]
+tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation"]
 #tpr.OutputLevel = DEBUG
+
 
 from Configurables import TrueMuonTagAlg
 tmt = TrueMuonTagAlg("TrueMuonTag")
 tmt.MCParticleCollection = "MCParticle"
 tmt.TrackList = ["CompleteTracks"]
-tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "SITTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
 tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
@@ -282,7 +295,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiSIT, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiITKB, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 10,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],
