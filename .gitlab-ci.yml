@@ -62,17 +62,17 @@ stages:
 ##############################################################################
 # Build & Test in CentOS 7 (LCG)
 ##############################################################################
-build:lcg:el7:
-  extends: .build_template
-  tags:
-    - centos7
-  artifacts:
-    paths:
-      - InstallArea
-      - TDR_o1_v01.tgeo.root
-      - TDR_o1_v02.tgeo.root
-    reports:
-      junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
+# build:lcg:el7:
+#   extends: .build_template
+#   tags:
+#     - centos7
+#   artifacts:
+#     paths:
+#       - InstallArea
+#       - TDR_o1_v01.tgeo.root
+#       - TDR_o1_v02.tgeo.root
+#     reports:
+#       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
 
 
 ##############################################################################
@@ -81,13 +81,22 @@ build:lcg:el7:
 build:lcg:el7:k8s:
   extends: .build_template_k8s
   image: cepc/cepcsw-cvmfs:el7
-
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      when: manual
 build:lcg:el9:k8s:
   extends: .build_template_k8s
   image: cepc/cepcsw-cvmfs:el9
   variables:
     CEPCSW_LCG_PLATFORM: x86_64-el9-gcc11-opt
     CEPCSW_LCG_VERSION: 105.0.0
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      when: manual
+  artifacts:
+    reports:
+      junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
+
 
 ##############################################################################
 # Build the docs
