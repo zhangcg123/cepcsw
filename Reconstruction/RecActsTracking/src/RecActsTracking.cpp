@@ -341,10 +341,10 @@ StatusCode RecActsTracking::execute()
         Acts::BoundSquareMatrix cov = Acts::BoundSquareMatrix::Zero();
         for (std::size_t i = Acts::eBoundLoc0; i < Acts::eBoundSize; ++i) {
             double sigma = initialSigmas[i];
-            sigma += initialSimgaQoverPCoefficients[i] * params[Acts::eBoundQOverP];
+            sigma += abs(initialSimgaQoverPCoefficients[i] * params[Acts::eBoundQOverP]);
             double var = sigma * sigma;
             if (i == Acts::eBoundTime && !bottomSP->t().has_value()) { var *= noTimeVarInflation; }
-            var *= initialVarInflation[i];
+            var *= initialVarInflation.value()[i];
             
             cov(i, i) = var;
         }
