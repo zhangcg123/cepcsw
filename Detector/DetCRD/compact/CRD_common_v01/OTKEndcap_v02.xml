@@ -16,6 +16,7 @@
     </define>
 
     <detectors>
+        <type_flags type="DetType_TRACKER +  DetType_ENDCAP  + DetType_PIXEL "/>
         <detector id="DetID_OTKEndcap" name="OTKEndcap" type="SiTracker_otkendcap_v02" vis="OTKEndcapVis"
                   readout="OTKEndcapCollection" insideTrackingVolume="true">
             <type_flags type="DetType_TRACKER + DetType_ENDCAP "/>
@@ -43,25 +44,24 @@
                 <ring name="D4" inner_radius="1668*mm" outer_radius="(1816-0.2)*mm" repeat="16*14" aggregation="2" vis="SeeThrough"/>
             </rings>
             <layers thickness="11.4*mm">
-                <first_data_aggregation name="first_data_aggregation" thickness="7.5*mm" height="7*mm">
-                    <DC name="DC-DC" thickness="7.0*mm"/>
-                    <layer name="PCB" thickness="0.5*mm"/>
-                </first_data_aggregation>
-                <second_data_aggregation name="second_data_aggregation" thickness="7.5*mm">
-                    <DC name="DC-DC" thickness="7.0*mm"/>
-                    <layer name="PCB" thickness="0.5*mm"/>
-                </second_data_aggregation>
-                <layer name="sensor" sensitive="True" thickness="0.3*mm" material="CarbonFiber" vis="FTDSensitiveVis"/>
+                <layer name="PCB_metal_layers" thickness="1.436*0.2*100*um" material="G4_Cu" vis="FTDSupportVis"/>
+                <layer name="PCB_insulating_layers" thickness="28.41*0.07*100*um" material="Polyimide" vis="FTDSupportVis"/>
+                <layer name="sensor" sensitive="True" thickness="0.3*mm" material="G4_Si" vis="FTDSensitiveVis"/>
+                <layer name="glue_1" thickness="100*um" material="Air" vis="FTDSupportVis"/>
+                <layer name="other_electronic" width="100.40*mm" thickness="32.6437*0.1*100*um" material="Kapton" vis="BlackVis"/>
                 <layer name="carbon_fiber_plane" thickness="0.3*mm" material="CarbonFiber" vis="FTDSupportVis"/>
-                <layer name="titanium_cooling_plate" thickness="3*mm" material="CarbonFiber" vis="FTDSupportVis"/>
+                <layer name="cooling_tube_wall" thickness="3.560*0.169*100*um" material="G4_Ti" vis="FTDSupportVis"/>
+                <layer name="cooling_fluid" thickness="35.76*0.105*100*um" material="G4_WATER" vis="FTDSupportVis"/>
+                <layer name="graphite_foam_Honeycom" thickness="6000*um" material="Air" vis="FTDSupportVis"/>
                 <layer name="carbon_fiber_back_plate" thickness="0.3*mm" material="CarbonFiber" vis="FTDSupportVis"/>
+                <layer name="glue_2" thickness="200*um" material="Air" vis="FTDSupportVis"/>
             </layers>
         </detector>
     </detectors>
 
     <readouts>
         <readout name="OTKEndcapCollection">
-            <id>system:5,side:-2,layer:9,module:8,sensor:8,active:8</id>
+            <id>system:5,side:-2,layer:4,module:8,sensor:13</id>
         </readout>
     </readouts>
 </lccdd>
