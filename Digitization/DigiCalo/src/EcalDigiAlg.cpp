@@ -939,10 +939,12 @@ double EcalDigiAlg::GetBarLength(CaloBar& bar){
     if(bar.getSlayer()==1) return 374.667;
     else{
         if(bar.getModule()%2 == 0){
-            return 288 + (bar.getDlayer()-1)*12.7080;
+            // return 288 + (bar.getDlayer()-1)*12.7080;
+						return 288 + (bar.getDlayer()-1)*19.062;   // TODO: Get the correct length from the geometry
         }
         else{
-            return 409 - (bar.getDlayer()-1)*4.6670;
+            // return 409 - (bar.getDlayer()-1)*4.6670;
+						return 409 - (bar.getDlayer()-1)*7.001;    // TODO: Get the correct length from the geometry
         }
         
     }

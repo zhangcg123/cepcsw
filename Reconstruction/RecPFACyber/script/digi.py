@@ -72,13 +72,13 @@ EcalDigi.SkipEvt = 0
 EcalDigi.Seed = 2079
 #Digitalization parameters
 EcalDigi.TimeResolution = 0.7            # 0.7 ns
-EcalDigi.EcalMIPEnergy = 8.9             # MIP energy 8.9 MeV for 1 cm BGO
+EcalDigi.EcalMIPEnergy = 13.35            # MIP energy 13.35 MeV for 1.5 cm BGO
 EcalDigi.EcalMIP_Thre = 0.05              # 0.05 mip at each side, 0.1 mip for one bar
 EcalDigi.UseRealisticDigi = 1
 # scintillation
 EcalDigi.UseDigiScint = 1
 EcalDigi.EcalCryIntLY = 8200             #intrinsic LY 8200 [p.e./MIP]
-EcalDigi.EcalCryMipLY = 200              #Detected effective LY 200 [p.e./MIP]
+EcalDigi.EcalCryMipLY = 300              #Detected effective LY 300 [p.e./MIP]
 EcalDigi.AttenuationLength = 1e8         # 8000 mm for 5% non-uniformity
 # SiPM
 EcalDigi.SiPMDigiVerbose = 2             # 0:w/o response, w/o correction; 1:w/ response, w/o correction; 2:w/ response, w/ simple correction; 3:w/ response, w/ full correction
