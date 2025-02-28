@@ -21,6 +21,7 @@ gaudi_add_module(DetCRD
                          src/Muon/Muon_Barrel_v01_04.cpp
                          src/Muon/Muon_Endcap_v01_02.cpp
                          src/Tracker/SiTrackerSkewRing_v01_geo.cpp
+                         src/Tracker/ITK_EndCap_v01.cpp
                          src/Tracker/SiTrackerStitching_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v01_geo.cpp
                          src/Tracker/SiTrackerStaggeredLadder_v02_geo.cpp

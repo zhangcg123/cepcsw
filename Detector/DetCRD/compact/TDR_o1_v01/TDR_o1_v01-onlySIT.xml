@@ -25,11 +25,11 @@
   </define>
 
   <include ref="./TDR_Dimensions_v01_01.xml"/>
-  <include ref="../CRD_common_v02/SIT_StaggeredStave_v02.xml"/>
+<!--  <include ref="../CRD_common_v02/SIT_StaggeredStave_v02.xml"/>-->
   <!--include ref="../CRD_common_v02/SIT_StaggeredStave_v01.xml"/-->
-  <!--include ref="../CRD_common_v02/FTD_SkewRing_v01_05.xml"/>
-      <include ref="../CRD_common_v02/SIT_SimplePixel_v01_03.xml"/>
-  <include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/-->
+  <include ref="../CRD_common_v02/ITK_EndCap_v01.xml"/>
+<!--      <include ref="../CRD_common_v02/SIT_SimplePixel_v01_03.xml"/>-->
+<!--  <include ref="../CRD_common_v01/SET_SimplePixel_v01_01.xml"/&ndash;&gt;-->
   
   <fields>
     <field name="InnerSolenoid" type="solenoid"
