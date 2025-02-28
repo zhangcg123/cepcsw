@@ -102,10 +102,10 @@ namespace Cyber{
     }
     else{
       if(module%2==0){
-        if(slayer==1 && bar==NbarPhi_even[dlayer-1]) isEdge = true;
+        if(slayer==1 && bar==NbarPhi_even[dlayer-1]-1) isEdge = true;
       }
       else{
-        if(slayer==1 && bar==NbarPhi_odd[dlayer-1]) isEdge = true;
+        if(slayer==1 && bar==NbarPhi_odd[dlayer-1]-1) isEdge = true;
       }
     }
     return isEdge; 

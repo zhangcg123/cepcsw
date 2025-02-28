@@ -8,7 +8,7 @@ StatusCode ConeClustering2DAlg::ReadSettings(Settings& m_settings){
 
   //Initialize parameters
   if(settings.map_floatPars.find("th_beginLayer")==settings.map_floatPars.end())   settings.map_floatPars["th_beginLayer"] = 1;
-  if(settings.map_floatPars.find("th_stopLayer")==settings.map_floatPars.end())    settings.map_floatPars["th_stopLayer"] = 15;
+  if(settings.map_floatPars.find("th_stopLayer")==settings.map_floatPars.end())    settings.map_floatPars["th_stopLayer"] = 10;
   if(settings.map_floatPars.find("th_ConeTheta")==settings.map_floatPars.end())    settings.map_floatPars["th_ConeTheta"] = TMath::Pi()/4.;
   if(settings.map_floatPars.find("th_ConeR")==settings.map_floatPars.end())        settings.map_floatPars["th_ConeR"] = 50;
   if(settings.map_intPars.find("th_Nshowers")==settings.map_intPars.end())       settings.map_intPars["th_Nshowers"] = 4;

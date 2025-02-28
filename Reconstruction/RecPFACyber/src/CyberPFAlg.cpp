@@ -23,16 +23,16 @@ int Cyber::CaloUnit::System_Barrel = 20;
 int Cyber::CaloUnit::System_Endcap = 29;
 int Cyber::CaloUnit::Nmodule = 32;
 int Cyber::CaloUnit::Nstave = 15;
-int Cyber::CaloUnit::Nlayer = 14;
-int Cyber::CaloUnit::NbarPhi_odd[14] = {39, 37, 37, 37, 37, 37, 35, 35, 35, 35, 33, 33, 33, 33};
-int Cyber::CaloUnit::NbarPhi_even[14] = {27, 29, 29, 31, 31, 33, 35, 35, 37, 37, 39, 41, 41, 43};
-int Cyber::CaloUnit::NbarZ = 36;
+int Cyber::CaloUnit::Nlayer = 9;
+int Cyber::CaloUnit::NbarPhi_odd[9] = {25, 25, 25, 23, 23, 23, 23, 23, 21};
+int Cyber::CaloUnit::NbarPhi_even[9] = {19, 19, 21, 23, 23, 25, 27, 27, 29};
+int Cyber::CaloUnit::NbarZ = 24;
 //int Cyber::CaloUnit::over_module[28] = {13,15,16,18,19,21,22,24,25,26,28,29,30,32,33,35,36,38,39,41,42,43,45,46};
 //int Cyber::CaloUnit::over_module_set = 2;
-float Cyber::CaloUnit::barsize = 10.; //mm
+float Cyber::CaloUnit::barsize = 15.2; //mm
 float Cyber::CaloUnit::ecal_innerR = 1830;  //mm
 float Cyber::CaloUnit::ecal_endcap_deadarea = 8.5; //mm
-float Cyber::CaloUnit::ecal_endcap_barsize = 10.; //mm
+float Cyber::CaloUnit::ecal_endcap_barsize = 15.2; //mm
 
 DECLARE_COMPONENT( CyberPFAlg )
 
@@ -110,8 +110,11 @@ StatusCode CyberPFAlg::initialize()
   //---MC particle---
   if(!name_MCParticleCol.empty()) r_MCParticleCol = new DataHandle<edm4hep::MCParticleCollection> (name_MCParticleCol, Gaudi::DataHandle::Reader, this);
 
-  //---Tracks---
+  //---Tracks, dN/dx and TOF---
   for(auto& _trk : name_TrackCol) if(!_trk.empty()) r_TrackCols.push_back( new TrackType(_trk, Gaudi::DataHandle::Reader, this) );
+  if(!name_dNdxCol.empty()) r_dNdxCol = new DataHandle<edm4hep::RecDqdxCollection> (name_dNdxCol, Gaudi::DataHandle::Reader, this);
+  if(!name_tofCol.empty()) r_TofCol = new DataHandle<edm4hep::RecTofCollection>(name_tofCol, Gaudi::DataHandle::Reader, this);
+
 
   //---Calo Hits---
   for(auto& _ecal : name_EcalHits){
@@ -615,6 +618,7 @@ StatusCode CyberPFAlg::initialize()
     t_Cluster->Branch("HcalClus_y", &m_HcalClus_y);
     t_Cluster->Branch("HcalClus_z", &m_HcalClus_z);
     t_Cluster->Branch("HcalClus_E", &m_HcalClus_E);
+    t_Cluster->Branch("HcalClus_nHit", &m_HcalClus_nHit);
     t_Cluster->Branch("HcalClus_nTrk", &m_HcalClus_nTrk);
     t_Cluster->Branch("HcalClus_ptrk", &m_HcalClus_pTrk);
     t_Cluster->Branch("HcalClus_hit_x", &m_HcalClus_hit_x);
@@ -636,6 +640,7 @@ StatusCode CyberPFAlg::initialize()
     t_Cluster->Branch("SimpleHcalClus_y", &m_SimpleHcalClus_y);
     t_Cluster->Branch("SimpleHcalClus_z", &m_SimpleHcalClus_z);
     t_Cluster->Branch("SimpleHcalClus_E", &m_SimpleHcalClus_E);
+    t_Cluster->Branch("SimpleHcalClus_nHit", &m_SimpleHcalClus_nHit);
     t_Cluster->Branch("SimpleHcalClus_nTrk", &m_SimpleHcalClus_nTrk);
     t_Cluster->Branch("SimpleHcalClus_ptrk", &m_SimpleHcalClus_pTrk);
     t_Cluster->Branch("SimpleHcalClus_hit_x", &m_SimpleHcalClus_hit_x);
@@ -658,6 +663,13 @@ StatusCode CyberPFAlg::initialize()
     t_Track->Branch("m_Ntrk", &m_Ntrk);
     t_Track->Branch("m_type", &m_type);
     t_Track->Branch("m_Nhit", &m_Nhit);
+    t_Track->Branch("m_pid", &m_pid);
+    t_Track->Branch("m_pid_truth", &m_pid_truth);
+    t_Track->Branch("m_trk_px", &m_trk_px);
+    t_Track->Branch("m_trk_py", &m_trk_py);
+    t_Track->Branch("m_trk_pz", &m_trk_pz);
+    t_Track->Branch("m_trk_p", &m_trk_p);
+    t_Track->Branch("m_trk_truthweight", &m_trk_truthweight);
     t_Track->Branch("m_trkstate_d0", &m_trkstate_d0);
     t_Track->Branch("m_trkstate_z0", &m_trkstate_z0);
     t_Track->Branch("m_trkstate_phi", &m_trkstate_phi);
@@ -722,6 +734,8 @@ StatusCode CyberPFAlg::execute()
   CyberDataCol     m_DataCol;
   m_DataCol.Clear();
   m_DataCol.EnergyCorrSvc = m_energycorsvc; 
+  m_DataCol.tofCol = const_cast<edm4hep::RecTofCollection*>(r_TofCol->get());
+  m_DataCol.dNdxCol = const_cast<edm4hep::RecDqdxCollection*>(r_dNdxCol->get()); 
 
 
   //Readin collections 
@@ -1504,6 +1518,7 @@ StatusCode CyberPFAlg::execute()
         m_HcalClus_pTrk.push_back(m_HcalClusterCol[icl]->getAssociatedTracks()[0]->getMomentum());
       else
         m_HcalClus_pTrk.push_back(-99);
+      m_HcalClus_nHit.push_back(m_HcalClusterCol[icl]->getCaloHits().size());
    
       for(int ih=0; ih<m_HcalClusterCol[icl]->getCaloHits().size(); ih++){
         m_HcalClus_hit_tag.push_back(icl);
@@ -1539,6 +1554,7 @@ StatusCode CyberPFAlg::execute()
         m_SimpleHcalClus_pTrk.push_back(m_SimpleHcalClusterCol[icl]->getAssociatedTracks()[0]->getMomentum());
       else
         m_SimpleHcalClus_pTrk.push_back(-99);
+      m_SimpleHcalClus_nHit.push_back(m_SimpleHcalClusterCol[icl]->getCaloHits().size());
    
       for(int ih=0; ih<m_SimpleHcalClusterCol[icl]->getCaloHits().size(); ih++){
         m_SimpleHcalClus_hit_tag.push_back(icl);
@@ -1574,6 +1590,13 @@ StatusCode CyberPFAlg::execute()
     for(int itrk=0; itrk<m_Ntrk; itrk++){
       m_type.push_back(m_trkCol[itrk]->getType());
       m_Nhit.push_back(m_trkCol[itrk]->getTrackerHits());
+      m_pid.push_back(m_trkCol[itrk]->getPID());
+      m_pid_truth.push_back(m_trkCol[itrk]->getLeadingMCP().getPDG());
+      m_trk_truthweight.push_back( m_trkCol[itrk]->getLeadingMCPweight() );
+      m_trk_px.push_back( m_trkCol[itrk]->getP3().x() );
+      m_trk_py.push_back( m_trkCol[itrk]->getP3().y() );
+      m_trk_pz.push_back( m_trkCol[itrk]->getP3().z() );
+      m_trk_p.push_back( m_trkCol[itrk]->getMomentum() );
       std::vector<TrackState> AllTrackStates = m_trkCol[itrk]->getAllTrackStates();
       for(int istate=0; istate<AllTrackStates.size(); istate++){
         m_trkstate_d0.push_back( AllTrackStates[istate].D0 );
@@ -2112,6 +2135,7 @@ void CyberPFAlg::ClearCluster(){
   m_HcalClus_y.clear();
   m_HcalClus_z.clear();
   m_HcalClus_E.clear();
+  m_HcalClus_nHit.clear();
   m_HcalClus_nTrk.clear();
   m_HcalClus_pTrk.clear();
   m_HcalClus_hit_x.clear();
@@ -2133,6 +2157,7 @@ void CyberPFAlg::ClearCluster(){
   m_SimpleHcalClus_y.clear();
   m_SimpleHcalClus_z.clear();
   m_SimpleHcalClus_E.clear();
+  m_SimpleHcalClus_nHit.clear();
   m_SimpleHcalClus_nTrk.clear();
   m_SimpleHcalClus_pTrk.clear();
   m_SimpleHcalClus_hit_x.clear();
@@ -2155,6 +2180,13 @@ void CyberPFAlg::ClearCluster(){
 void CyberPFAlg::ClearTrack(){
   m_type.clear();
   m_Nhit.clear();
+  m_pid.clear();
+  m_pid_truth.clear();
+  m_trk_px.clear();
+  m_trk_py.clear();
+  m_trk_pz.clear();
+  m_trk_p.clear();
+  m_trk_truthweight.clear();
   m_trkstate_d0.clear();
   m_trkstate_z0.clear();
   m_trkstate_phi.clear();

@@ -227,6 +227,7 @@ cout<<"Empty half cluster energy "<<tmp_totE_U<<", "<<tmp_totE_V<<endl;
     else m_axisVCol = p_HalfClusterV[ih]->getHalfClusterCol(settings.map_stringPars["ReadinAxisName"]);
 
     m_1dShowerVCol.clear();
+    p_HalfClusterV[ih]->sortBarShowersByLayer();
     std::vector<const Cyber::Calo1DCluster*> m_1dclusCol = p_HalfClusterV[ih]->getCluster();
 
 //cout<<"1D Cluster size: "<<m_1dclusCol.size()<<", axis size: "<<m_axisVCol.size()<<endl;

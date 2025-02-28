@@ -62,7 +62,7 @@ StatusCode HoughClusteringAlg::ReadSettings(Cyber::Settings& m_settings){
 
   // Algorithm parameter settings
   if(settings.map_intPars.find("th_Layers")==settings.map_intPars.end())
-    settings.map_intPars["th_Layers"] = 10;
+    settings.map_intPars["th_Layers"] = 7;
   if(settings.map_intPars.find("th_peak")==settings.map_intPars.end())
     settings.map_intPars["th_peak"] = 3;
   if(settings.map_intPars.find("th_continueN")==settings.map_intPars.end())

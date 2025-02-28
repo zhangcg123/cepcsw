@@ -31,6 +31,13 @@ namespace Cyber{
     StatusCode Reset(){};
 
   private: 
+    const std::map<int, int> PDGIDs = {
+      {0, -11},
+      {1, -13},
+      {2, 211},
+      {3, 321},
+      {4, 2212},
+    };
     const Cyber::Settings  settings; 
     Cyber::Algorithm*      m_TrkExtraAlg; 
     Cyber::Settings        m_TrkExtraSettings;  

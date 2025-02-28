@@ -7,7 +7,7 @@ using namespace Cyber;
 StatusCode LocalMaxFindingAlg::ReadSettings(Cyber::Settings& m_settings){
   settings = m_settings;
 
-  if(settings.map_floatPars.find("Eth_localMax")==settings.map_floatPars.end()) settings.map_floatPars["Eth_localMax"] = 0.005;
+  if(settings.map_floatPars.find("Eth_localMax")==settings.map_floatPars.end()) settings.map_floatPars["Eth_localMax"] = 0.0075;
   if(settings.map_floatPars.find("Eth_MaxWithNeigh")==settings.map_floatPars.end()) settings.map_floatPars["Eth_MaxWithNeigh"] = 0.;
   if(settings.map_stringPars.find("OutputLocalMaxName")==settings.map_stringPars.end()) settings.map_stringPars["OutputLocalMaxName"] = "AllLocalMax";
   return StatusCode::SUCCESS;

@@ -75,6 +75,7 @@ StatusCode AxisMergingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
     if(m_newAxisUCol.size()<2){ //No need to merge, save into OutputAxis. 
       std::vector<const Cyber::CaloHalfCluster*> tmp_axisCol; tmp_axisCol.clear();
       for(int ic=0; ic<m_newAxisUCol.size(); ic++) tmp_axisCol.push_back(m_newAxisUCol[ic]);
+      std::sort( tmp_axisCol.begin(), tmp_axisCol.end(), compLayer );
       p_HalfClusterU->at(ih)->setHalfClusters(settings.map_stringPars["OutputAxisName"], tmp_axisCol);
       continue; 
     }
@@ -207,7 +208,7 @@ cout<<endl;
     for(int ic=0; ic<tmp_goodAxis.size(); ic++) tmp_axisCol.push_back(tmp_goodAxis[ic]);
     // for(int ic=0; ic<m_newAxisUCol.size(); ic++) tmp_axisCol.push_back(m_newAxisUCol[ic]);
     p_HalfClusterU->at(ih)->setHalfClusters(settings.map_stringPars["OutputAxisName"], tmp_axisCol);
-
+    p_HalfClusterU->at(ih)->sortBarShowersByLayer();
   }
 
   //Merge empty HalfCluster into the existing clusters. 
@@ -221,6 +222,7 @@ cout<<endl;
       }
     }
   }
+  std::sort( p_HalfClusterU->begin(), p_HalfClusterU->end(), compLayerPtr );
 
   //cout << "yyy: Merge axis in V pHalfClusterV" << endl;
   //Merge axis in HalfClusterV:
@@ -249,6 +251,7 @@ cout<<endl;
     if(m_newAxisVCol.size()<2){
       std::vector<const Cyber::CaloHalfCluster*> tmp_axisCol; tmp_axisCol.clear();
       for(int ic=0; ic<m_newAxisVCol.size(); ic++) tmp_axisCol.push_back(m_newAxisVCol[ic]);
+      std::sort(tmp_axisCol.begin(), tmp_axisCol.end(), compLayer);
       p_HalfClusterV->at(ih)->setHalfClusters(settings.map_stringPars["OutputAxisName"], tmp_axisCol);
       continue;
     }
@@ -315,9 +318,10 @@ cout<<endl;
     //convert to constant object and save in HalfCluster:
     std::vector<const Cyber::CaloHalfCluster*> tmp_axisCol; tmp_axisCol.clear();
     for(int ic=0; ic<tmp_goodAxis.size(); ic++) tmp_axisCol.push_back(tmp_goodAxis[ic]);
+    std::sort(tmp_axisCol.begin(), tmp_axisCol.end(), compLayer);
     // for(int ic=0; ic<m_newAxisVCol.size(); ic++) tmp_axisCol.push_back(m_newAxisVCol[ic]);
     p_HalfClusterV->at(ih)->setHalfClusters(settings.map_stringPars["OutputAxisName"], tmp_axisCol);
-
+    p_HalfClusterV->at(ih)->sortBarShowersByLayer();
   }
 
   //Merge empty HalfClusters into the existing cluster.
@@ -330,6 +334,7 @@ cout<<endl;
         m_datacol.map_HalfCluster["emptyHalfClusterV"].push_back(p_emptyHFClusV[ih]);
     }
   }
+  std::sort( p_HalfClusterV->begin(), p_HalfClusterV->end(), compLayerPtr );
 
   return StatusCode::SUCCESS;
 };

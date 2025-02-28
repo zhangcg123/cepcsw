@@ -124,6 +124,8 @@ protected:
   Gaudi::Property< std::string > name_MCParticleCol{ this, "MCParticleCollection", "MCParticle" };
   Gaudi::Property< std::string > name_MCPTrkAssoCol{this, "MCRecoTrackParticleAssociationCollection", "MarlinTrkAssociation"};
   Gaudi::Property< std::vector<std::string> > name_TrackCol{ this, "TrackCollections", {"MarlinTrkTracks"} };
+  Gaudi::Property< std::string > name_dNdxCol{this, "DndxCollection", "DndxTracks"};
+  Gaudi::Property< std::string > name_tofCol{this, "TOFCollection", "RecTofCollection"};
   Gaudi::Property< std::vector<std::string> > name_EcalHits{ this, "ECalCaloHitCollections", {"ECALBarrel"} };
   Gaudi::Property< std::vector<std::string> > name_EcalReadout{ this, "ECalReadOutNames", {"EcalBarrelCollection"} }; 
   Gaudi::Property< std::vector<std::string> > name_EcalMCPAssociation{ this, "ECalMCPAssociationName", {"ECALBarrelParticleAssoCol"} };
@@ -143,6 +145,8 @@ protected:
   //std::vector<CaloType*>  r_HCalHitCols; 
   std::vector<CaloType*>  r_CaloHitCols; 
   std::map<std::string, CaloParticleAssoType*> map_CaloMCPAssoCols;
+  DataHandle<edm4hep::RecTofCollection>* r_TofCol;
+  DataHandle<edm4hep::RecDqdxCollection>* r_dNdxCol;
 
   //Global parameters.
   Gaudi::Property<float>  m_BField{this,  "BField", 3., "Magnetic field"};
@@ -296,20 +300,21 @@ protected:
           m_EcalClus_trk_d0, m_EcalClus_trk_z0, m_EcalClus_trk_phi, m_EcalClus_trk_tanL, m_EcalClus_trk_omega, m_EcalClus_trk_kappa,
           m_EcalClus_truthMC_tag, m_EcalClus_truthMC_pid, m_EcalClus_truthMC_px, m_EcalClus_truthMC_py, m_EcalClus_truthMC_pz, m_EcalClus_truthMC_E,
           m_EcalClus_truthMC_EPx, m_EcalClus_truthMC_EPy, m_EcalClus_truthMC_EPz, m_EcalClus_truthMC_weight;
-  FloatVec m_HcalClus_x, m_HcalClus_y, m_HcalClus_z, m_HcalClus_E, m_HcalClus_nTrk, m_HcalClus_pTrk,
+  FloatVec m_HcalClus_x, m_HcalClus_y, m_HcalClus_z, m_HcalClus_E, m_HcalClus_nTrk, m_HcalClus_pTrk, m_HcalClus_nHit,
           m_HcalClus_hit_x, m_HcalClus_hit_y, m_HcalClus_hit_z, m_HcalClus_hit_E, m_HcalClus_hit_tag,
           m_HcalClus_truthMC_tag, m_HcalClus_truthMC_pid, m_HcalClus_truthMC_px, m_HcalClus_truthMC_py, m_HcalClus_truthMC_pz, m_HcalClus_truthMC_E,
           m_HcalClus_truthMC_EPx, m_HcalClus_truthMC_EPy, m_HcalClus_truthMC_EPz, m_HcalClus_truthMC_weight;
-  FloatVec m_SimpleHcalClus_x, m_SimpleHcalClus_y, m_SimpleHcalClus_z, m_SimpleHcalClus_E, m_SimpleHcalClus_nTrk, m_SimpleHcalClus_pTrk,
+  FloatVec m_SimpleHcalClus_x, m_SimpleHcalClus_y, m_SimpleHcalClus_z, m_SimpleHcalClus_E, m_SimpleHcalClus_nTrk, m_SimpleHcalClus_pTrk, m_SimpleHcalClus_nHit,
           m_SimpleHcalClus_hit_x, m_SimpleHcalClus_hit_y, m_SimpleHcalClus_hit_z, m_SimpleHcalClus_hit_E, m_SimpleHcalClus_hit_tag,
           m_SimpleHcalClus_truthMC_tag, m_SimpleHcalClus_truthMC_pid, m_SimpleHcalClus_truthMC_px, m_SimpleHcalClus_truthMC_py, m_SimpleHcalClus_truthMC_pz, m_SimpleHcalClus_truthMC_E,
           m_SimpleHcalClus_truthMC_EPx, m_SimpleHcalClus_truthMC_EPy, m_SimpleHcalClus_truthMC_EPz, m_SimpleHcalClus_truthMC_weight;
 
   TTree *t_Track;
   int m_Ntrk; 
+  FloatVec m_trk_p, m_trk_px, m_trk_py, m_trk_pz, m_trk_truthweight; 
   FloatVec m_trkstate_d0, m_trkstate_z0, m_trkstate_phi, m_trkstate_tanL, m_trkstate_omega, m_trkstate_kappa;
   FloatVec m_trkstate_refx, m_trkstate_refy, m_trkstate_refz; 
-  IntVec m_trkstate_tag, m_trkstate_location, m_type, m_Nhit;
+  IntVec m_trkstate_tag, m_trkstate_location, m_type, m_Nhit, m_pid, m_pid_truth;
   FloatVec m_trkstate_x_ECAL, m_trkstate_y_ECAL, m_trkstate_z_ECAL,  m_trkstate_x_HCAL, m_trkstate_y_HCAL, m_trkstate_z_HCAL;
   IntVec m_trkstate_tag_ECAL, m_trkstate_tag_HCAL;
 

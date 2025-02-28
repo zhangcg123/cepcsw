@@ -9,16 +9,18 @@ StatusCode PFOReclusteringAlg::ReadSettings(Settings& m_settings){
   //Initialize parameters
   if(settings.map_stringPars.find("ReadinPFOName")==settings.map_stringPars.end()) settings.map_stringPars["ReadinPFOName"] = "outputPFO";
   if(settings.map_floatPars.find("ECALChargedCalib")==settings.map_floatPars.end()) settings.map_floatPars["ECALChargedCalib"] = 1.26;
+  if(settings.map_floatPars.find("ECALChargedEMCalib")==settings.map_floatPars.end()) settings.map_floatPars["ECALChargedEMCalib"] = 1.0;
   if(settings.map_floatPars.find("HCALChargedCalib")==settings.map_floatPars.end()) settings.map_floatPars["HCALChargedCalib"] = 4.0;
   if(settings.map_floatPars.find("ECALNeutralCalib")==settings.map_floatPars.end()) settings.map_floatPars["ECALNeutralCalib"] = 1.0;
   if(settings.map_floatPars.find("HCALNeutralCalib")==settings.map_floatPars.end()) settings.map_floatPars["HCALNeutralCalib"] = 4.0;
   
+  if(settings.map_floatPars.find("ElecEoverP")==settings.map_floatPars.end()) settings.map_floatPars["ElecEoverP"] = 0.8;
   if(settings.map_floatPars.find("EnergyRes")==settings.map_floatPars.end()) settings.map_floatPars["EnergyRes"] = 0.4;
   if(settings.map_floatPars.find("SplitSigma")==settings.map_floatPars.end()) settings.map_floatPars["SplitSigma"] = 0.2;
   if(settings.map_floatPars.find("NeutralMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["NeutralMergeSigma"] = 0.;
   if(settings.map_floatPars.find("VirtualMergeSigma")==settings.map_floatPars.end()) settings.map_floatPars["VirtualMergeSigma"] = 0.4;
-  if(settings.map_floatPars.find("MinAngleForNeuMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForNeuMerge"] = 0.18;
-  if(settings.map_floatPars.find("MinAngleForVirMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForVirMerge"] = 0.20;
+  if(settings.map_floatPars.find("MinAngleForNeuMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForNeuMerge"] = 0.20;
+  if(settings.map_floatPars.find("MinAngleForVirMerge")==settings.map_floatPars.end()) settings.map_floatPars["MinAngleForVirMerge"] = 0.24;
 
 
   return StatusCode::SUCCESS;
@@ -477,8 +479,17 @@ StatusCode PFOReclusteringAlg::ReCluster_SplitFromChg( std::vector< std::shared_
     if(m_chargedPFOs[ipfo]->getECALClusters().size()==0 && m_chargedPFOs[ipfo]->getHCALClusters().size()==0) continue;
 
     double track_energy = m_chargedPFOs[ipfo]->getTrackMomentum();
-    double ECAL_energy = settings.map_floatPars["ECALChargedCalib"]*m_chargedPFOs[ipfo]->getECALClusterEnergy();
+    double ECAL_energy = settings.map_floatPars["ECALChargedEMCalib"]*m_chargedPFOs[ipfo]->getECALClusterEnergy();
     double HCAL_energy = settings.map_floatPars["HCALChargedCalib"]*m_chargedPFOs[ipfo]->getHCALClusterEnergy();
+
+//cout<<"  Charged PFO #"<<ipfo<<": track P "<<track_energy<<", cluster E "<<ECAL_energy+HCAL_energy<<", PID "<<m_chargedPFOs[ipfo]->getPID()<<endl;
+
+    //FIXME: If PFO is identified as electron (E/p > 0.8): use ECALChargedEMCalib(1.0). Else: use ECALChargedCalib(1.26). 
+    if( track_energy < 15. || ECAL_energy/track_energy < settings.map_floatPars["ElecEoverP"] ) 
+    //if( (track_energy<15. && abs(m_chargedPFOs[ipfo]->getPID())!=11) || 
+    //    (track_energy>15. && ECAL_energy/track_energy < settings.map_floatPars["ElecEoverP"]) )
+      ECAL_energy = ECAL_energy*settings.map_floatPars["ECALChargedCalib"]/settings.map_floatPars["ECALChargedEMCalib"]; 
+
     if(track_energy<0 || ECAL_energy<0 || HCAL_energy<0){
       std::cout<<"ERROR: Charged PFO info break. Ptrk "<<track_energy<<", E_ecal "<<ECAL_energy<<", E_hcal "<<HCAL_energy<<endl;
       continue;

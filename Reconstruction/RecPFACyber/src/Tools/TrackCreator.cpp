@@ -71,6 +71,38 @@ namespace Cyber{
         }
 
 
+        //Assign PID from dNdx and TOF
+        if( m_DataCol.dNdxCol && m_DataCol.tofCol ){
+          std::array<double, 5> chi2s; chi2s.fill(0);
+
+          for (auto dqdx : *m_DataCol.dNdxCol){
+            if (dqdx.getTrack() == const_TrkCol[itrk]){
+              for (int i = 0; i < 5; i++){
+                chi2s[i] = dqdx.getHypotheses(i).chi2;
+              }
+            }
+          }
+
+          for (auto tof : *m_DataCol.tofCol){
+            if (tof.getTrack() == const_TrkCol[itrk]){
+              double toft = tof.getTime();
+              std::array<float, 5> tofexpts = tof.getTimeExp();
+              double tofexpterr = tof.getSigma();
+              std::array<double, 5> tofchi2s;
+              for (int i = 0; i < 5; i++){
+                tofchi2s[i] = std::pow( (tofexpts[i] - toft) / tofexpterr, 2);
+                chi2s[i] += tofchi2s[i];
+              }
+            }
+          }
+
+          int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
+          int pdgid = m_trk->getCharge() * PDGIDs.at(minchi2idx);
+
+          m_trk->setPID(pdgid);    
+//cout<<"  Readin track #"<<itrk<<": pid "<<pdgid<<", truth MC pid "<<m_trk->getLeadingMCP().getPDG()<<endl;
+        }
+
         m_trkCol.push_back(m_trk);
       }
     }

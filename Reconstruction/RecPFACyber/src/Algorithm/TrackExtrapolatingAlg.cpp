@@ -22,7 +22,7 @@ StatusCode TrackExtrapolatingAlg::ReadSettings(Settings& m_settings){
   if(settings.map_intPars.find("ECAL_Nlayers")==settings.map_intPars.end()) 
     settings.map_intPars["ECAL_Nlayers"] = 28;
   if(settings.map_floatPars.find("ECAL_layer_width")==settings.map_floatPars.end())
-    settings.map_floatPars["ECAL_layer_width"] = 10;
+    settings.map_floatPars["ECAL_layer_width"] = Cyber::CaloUnit::barsize;
   if(settings.map_floatPars.find("ECAL_half_length")==settings.map_floatPars.end())
     settings.map_floatPars["ECAL_half_length"] = 2900;
   if(settings.map_floatPars.find("ECAL_endcap_zmin")==settings.map_floatPars.end())
@@ -49,7 +49,7 @@ StatusCode TrackExtrapolatingAlg::ReadSettings(Settings& m_settings){
     settings.map_floatPars["HCAL_endcap_zmax"] = 4575;  // 3260 + (3455-2140)
 
   if(settings.map_intPars.find("Nmodule")==settings.map_intPars.end()) 
-    settings.map_intPars["Nmodule"] = 32;
+    settings.map_intPars["Nmodule"] = Cyber::CaloUnit::Nmodule;
   if(settings.map_floatPars.find("B_field")==settings.map_floatPars.end())
     settings.map_floatPars["B_field"] = 3.0;
 
@@ -339,7 +339,13 @@ vector<float> & barrel_delta_phi, vector<float> & endcap_delta_phi){
   // Endcap
   float z0 = CALO_trk_state.referencePoint.Z() + CALO_trk_state.Z0;
   for(int iz=0; iz<layer_z.size(); iz++){
-    float layer_delta_phi = ( layer_z[iz] - z0 ) / ( rho * CALO_trk_state.tanLambda );
+    float layer_delta_phi;
+    if (CALO_trk_state.tanLambda>0){
+      layer_delta_phi = ( layer_z[iz] - z0 ) / ( rho * CALO_trk_state.tanLambda );
+    }
+    else{
+      layer_delta_phi = ( -layer_z[iz] - z0 ) / ( rho * CALO_trk_state.tanLambda );
+    }
 
     if(CALO_trk_state.Kappa < 0){
       endcap_delta_phi.push_back(layer_delta_phi);

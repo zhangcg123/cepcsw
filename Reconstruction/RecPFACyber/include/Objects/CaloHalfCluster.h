@@ -100,7 +100,12 @@ namespace Cyber {
     TrackFitInEcal* track = new TrackFitInEcal();
 
     static bool compLayer( const Cyber::Calo1DCluster* hit1, const Cyber::Calo1DCluster* hit2 )
-      { return hit1->getDlayer() < hit2->getDlayer(); }
+      { if(hit1->getDlayer() != hit2->getDlayer())
+          return hit1->getDlayer() < hit2->getDlayer();
+        else
+          return hit1->getEnergy() > hit2->getEnergy();
+      }
+
 
   };
 
