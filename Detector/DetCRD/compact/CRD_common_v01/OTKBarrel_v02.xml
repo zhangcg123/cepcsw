@@ -40,19 +40,23 @@
                     <module name="OTKBarrel_module" thickness="OTKBarrel_module_thickness" repeat="4"
                             width="OTKBarrel_module_width" length_inner="OTKBarrel_module_length_inner"
                             length_outer="OTKBarrel_module_length_outer" vis="SeeThrough">
+                        <layer name="glue" width="100.40*mm" thickness="300*um" material="Air" vis="BlackVis"/>
                         <layer name="carbon_fiber_plane_inner" width="100.40*mm" thickness="0.3*mm" material="CarbonFiber" vis="BlackVis"/>
-                        <layer name="carbon_fiber_honeycomb" width="100.40*mm" thickness="2.4*mm" material="CarbonFiber" vis="BlackVis">
-                            <tube name="titanium_cooling_pipe" inner_diameter="1.6*mm" outer_diameter="2.0*mm"
-                                  material="CarbonFiber"/>
-                        </layer>
+                        <layer name="carbon_fiber_honeycomb" width="100.40*mm" thickness="6000*um" material="CarbonFiber" vis="BlackVis"/>
+                        <layer name="cooling_fluid" width="100.40*mm" thickness="35.76*0.105*100*um" material="G4_WATER" vis="BlackVis"/>
+                        <layer name="cooling_tube_wall" width="100.40*mm" thickness="3.560*0.169*100*um" material="G4_Ti" vis="BlackVis"/>
                         <layer name="carbon_fiber_plane_outer" width="100.40*mm" thickness="0.3*mm" material="CarbonFiber" vis="BlackVis"/>
-                        <layer name="sensor" sensitive="True" width="OTKBarrel_module_width" thickness="0.3*mm" material="CarbonFiber" vis="FTDSensitiveVis"/>
-                        <data_aggregation name="first_data_aggregation" width="OTKBarrel_module_width" thickness="7.5*mm" length="7.0*mm" vis="SeeThrough">
-                            <layer name="PCB" thickness="0.5*mm" width="OTKBarrel_module_width" length="7.0*mm" vis="GreenVis"/>
-                            <DC name="DC-DC" thickness="7.0*mm" width="10.0*mm" length="3.0*mm" vis="YellowVis"/>
+                        <layer name="other_electronic" width="100.40*mm" thickness="32.6437*0.1*100*um" material="Kapton" vis="BlackVis"/>
+                        <layer name="glue_2" width="100.40*mm" thickness="100*um" material="Air" vis="BlackVis"/>
+                        <layer name="sensor" sensitive="True" width="OTKBarrel_module_width" thickness="0.3*mm" material="G4_Si" vis="FTDSensitiveVis"/>
+                        <layer name="pcb_insulating_layers" width="100.40*mm" thickness="28.41*0.07*100*um" material="Polyimide" vis="BlackVis"/>
+                        <layer name="pcb_metal_layers" width="100.40*mm" thickness="1.436*0.2*100*um" material="G4_Cu" vis="BlackVis"/>
+                        <data_aggregation name="first_data_aggregation" width="104*mm" thickness="0*mm" length="7.0*mm" vis="SeeThrough">
+                            <layer name="PCB" thickness="0*mm" width="OTKBarrel_module_width" length="7.0*mm" vis="GreenVis"/>
+                            <DC name="DC-DC" thickness="0*mm" width="10.0*mm" length="3.0*mm" vis="YellowVis"/>
                         </data_aggregation>
                     </module>
-                    <data_aggregation name="second_data_aggregation" thickness="7.0*mm" width="20.0*mm" length="10.0*mm" vis="YellowVis"/>
+                    <data_aggregation name="second_data_aggregation" thickness="0*mm" width="20.0*mm" length="10.0*mm" vis="YellowVis"/>
                 </ladder>
             </stave>
         </detector>
@@ -60,7 +64,7 @@
 
     <readouts>
         <readout name="OTKBarrelCollection">
-            <id>system:5,side:-2,layer:9,module:8,sensor:8,active:8</id>
+            <id>system:5,side:-2,layer:4,module:8,iladder:3,oladder:-4,mmodule:-6</id>
         </readout>
     </readouts>
 </lccdd>
