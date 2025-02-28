@@ -37,6 +37,11 @@
 #include "edm4hep/Vertex.h"
 #include "edm4hep/VertexCollection.h"
 #include "edm4hep/ClusterCollection.h"
+#include "edm4cepc/RecTof.h"
+#include "edm4cepc/RecTofCollection.h"
+#include "edm4hep/RecDqdx.h"
+#include "edm4hep/RecDqdxCollection.h"
+#include "edm4hep/ParticleIDCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/MCRecoCaloAssociation.h"
 #include "edm4hep/MCRecoTrackerAssociation.h"
@@ -77,5 +82,8 @@ public:
   //Energy calibration service
   SmartIF<ICrystalEcalSvc> EnergyCorrSvc; 
 
+  //PID collections
+  edm4hep::RecTofCollection* tofCol = nullptr;
+  edm4hep::RecDqdxCollection* dNdxCol = nullptr;
 };
 #endif

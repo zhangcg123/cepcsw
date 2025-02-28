@@ -17,7 +17,10 @@ StatusCode HcalClusteringAlg::ReadSettings(Cyber::Settings& m_settings){
   if(settings.map_floatPars.find("th_ConeR_l2")==settings.map_floatPars.end())        settings.map_floatPars["th_ConeR_l2"] = 120.;
   if(settings.map_floatPars.find("th_ClusChi2")==settings.map_floatPars.end())        settings.map_floatPars["th_ClusChi2"] = 10e17;
   if(settings.map_floatPars.find("fl_GoodClusLevel")==settings.map_floatPars.end())   settings.map_floatPars["fl_GoodClusLevel"] = 10;
-
+  if(settings.map_intPars.find("minNhit")==settings.map_intPars.end())                settings.map_intPars["minNhit"] = 3;
+  if(settings.map_intPars.find("minMergeLayer")==settings.map_intPars.end())          settings.map_intPars["minMergeLayer"] = 5;
+  if(settings.map_floatPars.find("maxMergeR")==settings.map_floatPars.end())          settings.map_floatPars["maxMergeR"] = 500;
+  
   return StatusCode::SUCCESS;
 };
 
@@ -44,18 +47,53 @@ StatusCode HcalClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       m_hcalHits.push_back( m_datacol.map_CaloHit[settings.map_stringVecPars["InputHCALHits"][icl]][ih].get() );
   }
 
+   //ordered hits by layer. 
+	 //TODO: this did not seperate barrel and endcap, need to do cone-clustering separately. 
+   std::map<int, std::vector<Cyber::CaloHit*> > m_orderedHit;
+   m_orderedHit.clear();
+   for(int ih=0;ih<m_hcalHits.size();ih++)
+     m_orderedHit[m_hcalHits[ih]->getLayer()].push_back(m_hcalHits[ih]);
+
   std::vector<std::shared_ptr<Cyber::Calo3DCluster>> m_clusterCol;  
   m_clusterCol.clear();
 
-//   LongiConeLinking( m_orderedHit, m_clusterCol );
+  //LongiConeLinking( m_orderedHit, m_clusterCol );
   Clustering(m_hcalHits, m_clusterCol);
-//   m_datacol.bk_Cluster3DCol.insert(  m_datacol.bk_Cluster3DCol.end(), m_clusterCol.begin(), m_clusterCol.end() );
-  // cout<<"  Cluster size: "<<m_clusterCol.size()<<endl;
-  // for(int ic=0; ic<m_clusterCol.size(); ic++)
-  // {
-  //   cout<<"    Cluster "<<ic<<":"<<m_clusterCol[ic]->getCaloHits().size()<<endl;
-  // }
 
+
+//   m_datacol.bk_Cluster3DCol.insert(  m_datacol.bk_Cluster3DCol.end(), m_clusterCol.begin(), m_clusterCol.end() );
+
+  //Merge isolated hits. 
+  //Do not merge hits at HCAL front 10 layers, they may need to be linked to ECAL clusters. 
+  std::vector<const Cyber::CaloHit*> m_isoHits;
+  for(int ic=0; ic<m_clusterCol.size(); ic++){
+    if(m_clusterCol[ic]->getCaloHits().size()<=settings.map_intPars["minNhit"]){ //TODO: arbitrory criterion: cluster with <=3 hits are removed.
+      int minLayer = 999;
+      for(int ihit=0; ihit<m_clusterCol[ic]->getCaloHits().size(); ihit++){
+        if(m_clusterCol[ic]->getCaloHits()[ihit]->getLayer()<minLayer) 
+          minLayer = m_clusterCol[ic]->getCaloHits()[ihit]->getLayer();
+      }
+
+      if(minLayer<=settings.map_intPars["minMergeLayer"]) continue;
+
+      for(int ihit=0; ihit<m_clusterCol[ic]->getCaloHits().size(); ihit++)      
+        m_isoHits.push_back(m_clusterCol[ic]->getCaloHits()[ihit]);
+
+      m_clusterCol.erase(m_clusterCol.begin()+ic);      
+    }
+  }
+
+  MergeToCluster(m_isoHits, m_clusterCol);
+ 
+  //cout<<"  After HCAL clustering: Cluster size "<<m_clusterCol.size()<<endl;
+  //int Nisohits = 0;
+  //for(int ic=0; ic<m_clusterCol.size(); ic++)
+  //{
+  //  cout<<"    Cluster #"<<ic<<": hit size "<<m_clusterCol[ic]->getCaloHits().size()<<endl;
+  //  if(m_clusterCol[ic]->getCaloHits().size()==1) Nisohits++;
+  //}
+  //cout<<"  Isolated hit size: "<<Nisohits<<endl;
+ 
 //   m_datacol.map_CaloCluster[settings.map_stringPars["OutputCluster"]] = m_clusterCol;
   m_datacol.map_CaloCluster[settings.map_stringPars["OutputHCALClusters"]]= m_clusterCol;
   return StatusCode::SUCCESS;
@@ -172,6 +210,39 @@ template<typename T1, typename T2> StatusCode HcalClusteringAlg::Clustering(std:
   }
   return StatusCode::SUCCESS;
 	//cout<<"how many neighbors: "<<number<<endl;
+}
+
+StatusCode HcalClusteringAlg::MergeToCluster( std::vector<const Cyber::CaloHit*>& m_isohits, std::vector<std::shared_ptr<Cyber::Calo3DCluster>>& m_clusters ){
+
+  if(m_isohits.size()==0) return StatusCode::SUCCESS;
+
+  for(int ihit=0; ihit<m_isohits.size(); ihit++){
+    int index_closest = -1;
+    double minDistance = 1e6;
+    for(int icl=0; icl<m_clusters.size(); icl++){
+      for(auto jhit : m_clusters[icl]->getCaloHits()){
+        double tmp_R = sqrt( pow(jhit->getPosition().x()-m_isohits[ihit]->getPosition().x(),2) + pow(jhit->getPosition().y()-m_isohits[ihit]->getPosition().y(),2) + pow(jhit->getPosition().z()-m_isohits[ihit]->getPosition().z(),2) );
+        if( tmp_R>settings.map_floatPars["maxMergeR"] && tmp_R<minDistance)
+          { minDistance = tmp_R; index_closest = icl; }
+      }
+    }
+
+    if(index_closest>=0){
+      m_clusters[index_closest]->addHit( m_isohits[ihit] );
+      m_isohits.erase(m_isohits.begin()+ihit);
+      ihit--;
+    }  
+    else{
+      std::shared_ptr<Cyber::Calo3DCluster> m_clus = std::make_shared<Cyber::Calo3DCluster>();
+      m_clus->addHit(m_isohits[ihit]);
+      m_clusters.push_back(m_clus);
+      m_isohits.erase(m_isohits.begin()+ihit);
+      ihit--;
+    }
+
+  }
+
+  return StatusCode::SUCCESS;
 }
 
 #endif

@@ -153,8 +153,14 @@ StatusCode TruthClusterMergingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
       const Cyber::Track* p_HcalLeadingTrk = nullptr;
       if(index>=0 && m_linkedHcalClus[index]->getAssociatedTracks().size()>0) p_HcalLeadingTrk = m_linkedHcalClus[index]->getAssociatedTracks()[0];
 
-      if(!p_EcalLeadingTrk && p_HcalLeadingTrk) tmp_newpfo->addTrack(p_HcalLeadingTrk);
-      else if(p_EcalLeadingTrk) tmp_newpfo->addTrack(p_EcalLeadingTrk);
+      if(!p_EcalLeadingTrk && p_HcalLeadingTrk){ 
+        tmp_newpfo->addTrack(p_HcalLeadingTrk);
+        tmp_newpfo->setPID(p_HcalLeadingTrk->getPID());
+      }
+      else if(p_EcalLeadingTrk){ 
+        tmp_newpfo->addTrack(p_EcalLeadingTrk);
+        tmp_newpfo->setPID(p_EcalLeadingTrk->getPID());
+      }
 
       merged_CombClusterCol.push_back(tmp_newpfo);
       m_datacol.map_PFObjects["bkPFO"].push_back(tmp_newpfo);

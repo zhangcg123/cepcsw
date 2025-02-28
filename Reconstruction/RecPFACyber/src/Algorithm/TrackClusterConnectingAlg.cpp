@@ -18,9 +18,13 @@ StatusCode TrackClusterConnectingAlg::ReadSettings(Settings& m_settings){
   if(settings.map_floatPars.find("th_ChFragDepth")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragDepth"] = 100.;
   if(settings.map_floatPars.find("th_ChFragMinR")==settings.map_floatPars.end()) settings.map_floatPars["th_ChFragMinR"] = 200.;
   if(settings.map_floatPars.find("th_HcalMatchingR")==settings.map_floatPars.end()) settings.map_floatPars["th_HcalMatchingR"] = 100.;
+  if(settings.map_floatPars.find("th_NeutralHcalMergeTheta")==settings.map_floatPars.end()) settings.map_floatPars["th_NeutralHcalMergeTheta"] = 0.3;
+  if(settings.map_floatPars.find("th_NeutralHcalMergeR")==settings.map_floatPars.end()) settings.map_floatPars["th_NeutralHcalMergeR"] = 300.;
 
   if(settings.map_floatPars.find("th_MIPEnergy")==settings.map_floatPars.end()) settings.map_floatPars["th_MIPEnergy"] = 0.5;
   if(settings.map_floatPars.find("th_AbsorbCone")==settings.map_floatPars.end()) settings.map_floatPars["th_AbsorbCone"] = 0.8;
+  if(settings.map_intPars.find("minNhit")==settings.map_intPars.end())                settings.map_intPars["minNhit"] = 5;
+
 
   if(settings.map_stringPars.find("OutputMergedECALCluster")==settings.map_stringPars.end()) settings.map_stringPars["OutputMergedECALCluster"] = "TrkMergedECAL";
   if(settings.map_stringPars.find("OutputCombPFO")==settings.map_stringPars.end()) settings.map_stringPars["OutputCombPFO"] = "outputPFO";
@@ -95,11 +99,12 @@ StatusCode TrackClusterConnectingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
 //cout<<"Print all HCAL cluster"<<endl;
 //double totE_Hcal = 0;
 //for(int i=0; i<m_HcalClusters.size(); i++){
-//  printf("  HCAL Cluster #%d: En = %.6f, position (%.3f, %.3f, %.3f) \n", i, 
+//  printf("  HCAL Cluster #%d: En = %.6f, position (%.3f, %.3f, %.3f), address %p \n", i, 
 //            m_HcalClusters[i]->getHitsE(), 
 //            m_HcalClusters[i]->getHitCenter().x(), 
 //            m_HcalClusters[i]->getHitCenter().y(), 
-//            m_HcalClusters[i]->getHitCenter().z() );
+//            m_HcalClusters[i]->getHitCenter().z(), 
+//            m_HcalClusters[i] );
 //  totE_Hcal += m_HcalClusters[i]->getHitsE();
 //}
 //cout<<"Hcal cluster total E "<<totE_Hcal<<endl;
@@ -108,12 +113,15 @@ StatusCode TrackClusterConnectingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   std::sort(m_PFObjects.begin(), m_PFObjects.end(), compTrkP);
   HcalExtrapolatingMatch(m_HcalClusters, m_PFObjects);
 
-//cout<<"  TrackClusterConnectingAlg: PFO size after HCAL matching: "<<m_PFObjects.size()<<endl;
-//for(int i=0; i<m_PFObjects.size(); i++){
-//  cout<<"    PFO #"<<i<<": track size "<<m_PFObjects[i]->getTracks().size()<<", leading P "<<m_PFObjects[i]->getTrackMomentum();
-//  cout<<", ECAL cluster size "<<m_PFObjects[i]->getECALClusters().size()<<", totE "<<m_PFObjects[i]->getECALClusterEnergy();
-//  cout<<", HCAL cluster size "<<m_PFObjects[i]->getHCALClusters().size()<<", totE "<<m_PFObjects[i]->getHCALClusterEnergy()<<endl;
-//} 
+  //cout<<"  TrackClusterConnectingAlg: PFO size after HCAL matching: "<<m_PFObjects.size()<<endl;
+  //for(int i=0; i<m_PFObjects.size(); i++){
+  //  cout<<"    PFO #"<<i<<": track size "<<m_PFObjects[i]->getTracks().size()<<", leading P "<<m_PFObjects[i]->getTrackMomentum();
+  //  cout<<", ECAL cluster size "<<m_PFObjects[i]->getECALClusters().size()<<", totE "<<m_PFObjects[i]->getECALClusterEnergy();
+  //  cout<<", HCAL cluster size "<<m_PFObjects[i]->getHCALClusters().size()<<", totE "<<m_PFObjects[i]->getHCALClusterEnergy()<<endl;
+  //  for(int j=0; j<m_PFObjects[i]->getHCALClusters().size(); j++){
+  //    printf("      HCAL #%d: energy %.6f, Nhit %d, address %p \n", j, m_PFObjects[i]->getHCALClusters()[j]->getHitsE(), m_PFObjects[i]->getHCALClusters()[j]->getCaloHits().size(), m_PFObjects[i]->getHCALClusters()[j]);
+  //  }
+  //} 
 
   m_datacol.map_CaloCluster[ settings.map_stringPars["OutputMergedECALCluster"] ] = m_absorbedEcal;
   m_datacol.map_PFObjects[settings.map_stringPars["OutputCombPFO"]] = m_PFObjects;
@@ -158,6 +166,7 @@ StatusCode TrackClusterConnectingAlg::PFOCreating( std::vector<const Cyber::Calo
     std::vector<const Cyber::Track*> m_trkInClus = m_clusters[ic]->getAssociatedTracks();
     if(m_trkInClus.size()!=0){
       m_newPFO->addTrack( m_trkInClus[0] );
+      m_newPFO->setPID( m_trkInClus[0]->getPID() );
       auto iter = find(m_leftTrks.begin(), m_leftTrks.end(), m_trkInClus[0]);
       if( iter!=m_leftTrks.end() )
         m_leftTrks.erase(iter);
@@ -170,6 +179,7 @@ StatusCode TrackClusterConnectingAlg::PFOCreating( std::vector<const Cyber::Calo
   for(int itrk=0; itrk<m_leftTrks.size(); itrk++){
     std::shared_ptr<Cyber::PFObject> m_newPFO = std::make_shared<Cyber::PFObject>();
     m_newPFO->addTrack( m_leftTrks[itrk] );
+    m_newPFO->setPID( m_leftTrks[itrk]->getPID() );
     m_PFOs.push_back(m_newPFO);
     m_bkCol.map_PFObjects["bkPFO"].push_back(m_newPFO);
   }
@@ -334,17 +344,37 @@ StatusCode TrackClusterConnectingAlg::EcalChFragAbsorption( std::vector<const Cy
 
 StatusCode TrackClusterConnectingAlg::HcalExtrapolatingMatch(std::vector<const Cyber::Calo3DCluster*>& m_clusters, std::vector<std::shared_ptr<Cyber::PFObject>>& m_PFOs){
 
+  if(m_clusters.size()<=0){
+    std::cout<<"Error in TrackClusterConnectingAlg: No HCAL cluster. Skip this match "<<std::endl;
+    return StatusCode::SUCCESS;
+  }
+//cout<<"  HcalExtrapolatingMatch: Readin cluster size "<<m_clusters.size()<<endl;
+//cout<<"  Readin PFO: "<<m_PFOs.size()<<endl;
+//for(int i=0; i<m_PFOs.size(); i++){
+//  cout<<"    In PFO #"<<i<<": Ntrk "<<m_PFOs[i]->getTracks().size()<<", N Ecal "<<m_PFOs[i]->getECALClusters().size()<<", N Hcal "<<m_PFOs[i]->getHCALClusters().size()<<endl; 
+//}
+
+
+/*  std::vector<const Cyber::CaloHit*> m_isoHits;
+  for(int ic=0; ic<m_clusters.size(); ic++){
+    if(m_clusters[ic]->getCaloHits().size()<=3){
+      for(int ihit=0; ihit<m_clusters[ic]->getCaloHits().size(); ihit++)
+        m_isoHits.push_back(m_clusters[ic]->getCaloHits()[ihit]);
+
+      m_clusters.erase(m_clusters.begin()+ic);
+    }
+  }
+cout<<", real cluster size "<<m_clusters.size()<<", isolated hit size "<<m_isoHits.size()<<endl;
+*/
   for(int ic=0; ic<m_clusters.size(); ic++){
     std::vector<const Cyber::CaloHit*> hcal_hits = m_clusters[ic]->getCaloHits();
 //cout<<"HCAL Cluster #"<<ic<<": Nhit "<<hcal_hits.size()<<", En "<<m_clusters[ic]->getHitsE()<<endl;
 
     bool isInPfo = false; 
-    int index_selPfo = -1;
     for(int ipfo=0; ipfo<m_PFOs.size(); ipfo++){
       //Link HCAL cluster to charged PFO
       if(m_PFOs[ipfo]->getTracks().size()!=0){ 
         std::vector<TrackState> trk_points = m_PFOs[ipfo]->getTracks()[0]->getAllTrackStates();
-
 
         bool is_candidate = false;
         double minDistance = 99999;
@@ -368,24 +398,55 @@ StatusCode TrackClusterConnectingAlg::HcalExtrapolatingMatch(std::vector<const C
 //cout<<"  Link cluster #"<<ic<<" to pfo #"<<ipfo<<endl;
           m_PFOs[ipfo]->addHCALCluster( m_clusters[ic] );
           isInPfo = true;
-          index_selPfo = ipfo;
           break;
         }        
-
       }
   
       //Link HCAL cluster to neutral PFO
+      else{
+        TVector3 pfo_pos(0., 0., 0.);      
+        for(int jcl=0; jcl<m_PFOs[ipfo]->getECALClusters().size(); jcl++) pfo_pos += m_PFOs[ipfo]->getECALClusters()[jcl]->getShowerCenter() * m_PFOs[ipfo]->getECALClusters()[jcl]->getLongiE();
+        for(int jcl=0; jcl<m_PFOs[ipfo]->getHCALClusters().size(); jcl++) pfo_pos += m_PFOs[ipfo]->getHCALClusters()[jcl]->getHitCenter() * m_PFOs[ipfo]->getHCALClusters()[jcl]->getHitsE();
+        pfo_pos = pfo_pos*(1./(m_PFOs[ipfo]->getECALClusterEnergy() + m_PFOs[ipfo]->getHCALClusterEnergy()) );
+
+        TVector3 clus_pos = m_clusters[ic]->getHitCenter();
+        if( pfo_pos.Angle(clus_pos)<settings.map_floatPars["th_NeutralHcalMergeTheta"] && (clus_pos-pfo_pos).Mag()<settings.map_floatPars["th_NeutralHcalMergeR"] ){
+          m_PFOs[ipfo]->addHCALCluster( m_clusters[ic] );
+          isInPfo = true;
+          break;
+        }
+      }
 
     }//end loop pfos
 //if(isInPfo) cout<<"  Merged into PFO: Ptrk = "<<m_PFOs[index_selPfo]->getTrackMomentum()<<endl;
 
     //If HCAL cluster is not linked to any existing PFO: create a new one. 
-    if(!isInPfo){
+    if(!isInPfo && m_clusters[ic]->getCaloHits().size()>=settings.map_intPars["minNhit"]){
 //cout<<"  Create a new neutral PFO "<<endl;
       std::shared_ptr<Cyber::PFObject> m_newPFO = std::make_shared<Cyber::PFObject>();
       m_newPFO->addHCALCluster( m_clusters[ic] );     
       m_PFOs.push_back(m_newPFO);
       m_bkCol.map_PFObjects["bkPFO"].push_back(m_newPFO);
+    }
+    //If only have few hits: merge to closest PFO. 
+    else if(!isInPfo){ 
+
+      int index_closest = -1;
+      double minDistance = 1e6;
+      for(int ipfo=0; ipfo<m_PFOs.size(); ipfo++){
+        TVector3 pfo_pos(0., 0., 0.);
+        for(int jcl=0; jcl<m_PFOs[ipfo]->getECALClusters().size(); jcl++) pfo_pos += m_PFOs[ipfo]->getECALClusters()[jcl]->getShowerCenter() * m_PFOs[ipfo]->getECALClusters()[jcl]->getLongiE();
+        for(int jcl=0; jcl<m_PFOs[ipfo]->getHCALClusters().size(); jcl++) pfo_pos += m_PFOs[ipfo]->getHCALClusters()[jcl]->getHitCenter() * m_PFOs[ipfo]->getHCALClusters()[jcl]->getHitsE();
+        pfo_pos = pfo_pos*(1./(m_PFOs[ipfo]->getECALClusterEnergy() + m_PFOs[ipfo]->getHCALClusterEnergy()) );
+
+        double tmp_dis = (pfo_pos-m_clusters[ic]->getHitCenter()).Mag();
+        if(tmp_dis<minDistance){
+          minDistance = tmp_dis;
+          index_closest = ipfo;
+        }
+      }
+
+      if(index_closest>=0) m_PFOs[index_closest]->addHCALCluster( m_clusters[ic] );
     }
   }
 

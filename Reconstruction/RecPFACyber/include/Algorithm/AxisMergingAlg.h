@@ -41,7 +41,18 @@ private:
   std::vector<Cyber::CaloHalfCluster*> m_newAxisVCol;
 
   static bool compLayer( const Cyber::CaloHalfCluster* sh1, const Cyber::CaloHalfCluster* sh2 )
-    { return sh1->getBeginningDlayer() < sh2->getBeginningDlayer(); }
+    { if( sh1->getBeginningDlayer() != sh2->getBeginningDlayer() )
+        return sh1->getBeginningDlayer() < sh2->getBeginningDlayer();
+      else
+        return sh1->getEnergy() > sh2->getEnergy();
+    }
+  static bool compLayerPtr( const std::shared_ptr<Cyber::CaloHalfCluster> sh1, const std::shared_ptr<Cyber::CaloHalfCluster> sh2 )
+    { if( sh1->getBeginningDlayer() != sh2->getBeginningDlayer() )
+        return sh1->getBeginningDlayer() < sh2->getBeginningDlayer();
+      else
+        return sh1->getEnergy() > sh2->getEnergy();
+    }
+
 
 };
 

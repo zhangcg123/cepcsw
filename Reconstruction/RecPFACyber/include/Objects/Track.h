@@ -44,8 +44,10 @@ namespace Cyber {
   void addLinkedMCP( std::pair<edm4hep::MCParticle, float> _pair ) { MCParticleWeight.push_back(_pair); }
   void setLinkedMCP( std::vector<std::pair<edm4hep::MCParticle, float>> _pairVec ) { MCParticleWeight.clear(); MCParticleWeight = _pairVec; }
 
+  void setPID(int _pid) {m_pid = _pid; }
   void setType(int _type) { m_type=_type; }
   int getType() const { return m_type; }
+  int getPID() const { return m_pid; }
 
   private:
     edm4hep::Track m_track;
@@ -56,6 +58,7 @@ namespace Cyber {
     std::vector<Cyber::CaloHalfCluster*> m_halfClusterVCol; 
 
     int m_type;
+    int m_pid;
     std::vector< std::pair<edm4hep::MCParticle, float> > MCParticleWeight;
   };
 

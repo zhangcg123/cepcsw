@@ -38,16 +38,17 @@ StatusCode GlobalClusteringAlg::RunAlgorithm( CyberDataCol& m_datacol ){
 //double totE_rest = 0.;
   for(int ibar=0; ibar<m_bars.size(); ibar++)
   {
-    if(m_bars.at(ibar)->getEnergy()>settings.map_floatPars["unit_threshold"])
-    {
-      m_processbars.push_back(m_bars.at(ibar));
-      //totE += m_bars.at(ibar)->getEnergy();
-    }
-    else
-    {
-      m_restbars.push_back(m_bars.at(ibar));
-      //totE_rest += m_bars.at(ibar)->getEnergy();
-    }
+    m_processbars.push_back(m_bars.at(ibar));
+    // if(m_bars.at(ibar)->getEnergy()>settings.map_floatPars["unit_threshold"])
+    // {
+    //   m_processbars.push_back(m_bars.at(ibar));
+    //   //totE += m_bars.at(ibar)->getEnergy();
+    // }
+    // else
+    // {
+    //   m_restbars.push_back(m_bars.at(ibar));
+    //   //totE_rest += m_bars.at(ibar)->getEnergy();
+    // }
   }
 //cout<<"Input bar after threshold: "<<m_processbars.size()<<", totE "<<totE<<", rest E "<<totE_rest<<endl;
 

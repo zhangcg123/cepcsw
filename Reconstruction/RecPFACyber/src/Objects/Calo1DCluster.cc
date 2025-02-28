@@ -174,8 +174,8 @@ namespace Cyber{
     if( Bars[Bars.size()-1]->getSystem() == CaloUnit::System_Barrel ){
       if( Bars[Bars.size()-1]->getSlayer()==0 ) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getStave()*CaloUnit::NbarZ;
       if( Bars[Bars.size()-1]->getSlayer()==1 ){ 
-        if(Bars[Bars.size()-1]->getModule()%2==0) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_even[Bars[Bars.size()-1]->getDlayer()]);
-        else edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_odd[Bars[Bars.size()-1]->getDlayer()]);
+        if(Bars[Bars.size()-1]->getModule()%2==0) edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_even[Bars[Bars.size()-1]->getDlayer()-1]);
+        else edge = Bars[Bars.size()-1]->getBar() + Bars[Bars.size()-1]->getModule()*(CaloUnit::NbarPhi_odd[Bars[Bars.size()-1]->getDlayer()-1]);
       }
     }
     if( Bars[Bars.size()-1]->getSystem() == CaloUnit::System_Endcap ){

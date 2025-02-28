@@ -31,7 +31,10 @@ StatusCode CyberDataCol::Clear(){
   map_2DCluster.clear();
   map_CaloCluster.clear();
   map_PFObjects.clear();
-  
+ 
+  //if(tofCol) delete tofCol;
+  //if(dNdxCol) delete dNdxCol;
+ 
   return StatusCode::SUCCESS; 
 };
 

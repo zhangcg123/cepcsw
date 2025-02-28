@@ -64,6 +64,7 @@ StatusCode PFOCreatingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
 
       std::shared_ptr<Cyber::PFObject> tmp_pfo = std::make_shared<Cyber::PFObject>();
       tmp_pfo->addTrack(ecal_cls_track[0]);
+      tmp_pfo->setPID(ecal_cls_track[0]->getPID());
       tmp_pfo->addECALCluster(m_ecal_clusters[ie]);
       for(int ic=0; ic<hcal_clus_candidate.size(); ic++){
         tmp_pfo->addHCALCluster(hcal_clus_candidate[ic]);
@@ -92,6 +93,7 @@ StatusCode PFOCreatingAlg::RunAlgorithm( CyberDataCol& m_datacol ){
   for(int it=0; it<m_tracks.size(); it++){
     std::shared_ptr<Cyber::PFObject> tmp_pfo = std::make_shared<Cyber::PFObject>();
     tmp_pfo->addTrack(m_tracks[it]);
+    tmp_pfo->setPID(m_tracks[it]->getPID());
     m_pfobjects.push_back(tmp_pfo);
   }
 
@@ -264,6 +266,7 @@ StatusCode PFOCreatingAlg::CreateLeftPFO(std::vector<Cyber::Track*>& _tracks,
   for(int it=0; it<_tracks.size(); it++){
     std::shared_ptr<Cyber::PFObject> tmp_pfo = std::make_shared<Cyber::PFObject>();
     tmp_pfo->addTrack(_tracks[it]);
+    tmp_pfo->setPID(_tracks[it]->getPID());
     _pfobjects.push_back(tmp_pfo);
   }
 

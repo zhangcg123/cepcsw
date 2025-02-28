@@ -83,8 +83,8 @@ namespace Cyber{
     static int Nmodule;
     static int Nstave;
     static int Nlayer;
-    static int NbarPhi_odd[14];
-    static int NbarPhi_even[14];
+    static int NbarPhi_odd[9];
+    static int NbarPhi_even[9];
     static int NbarZ;
     static float barsize;
     static float ecal_innerR;
