@@ -195,6 +195,7 @@ class RecActsTracking : public GaudiAlgorithm
         Gaudi::Property<double> SeedImpactMax{this, "SeedImpactMax", 3}; // mm
         Gaudi::Property<double> SeedRMinMiddle{this, "SeedRMinMiddle", 14}; // mm
         Gaudi::Property<double> SeedRMaxMiddle{this, "SeedRMaxMiddle", 24}; // mm
+        Gaudi::Property<std::vector<double>> initialVarInflation{this, "initialVarInflation", {1, 1, 20, 20, 20, 20}};
 
         // CKF config
         Gaudi::Property<double> CKFchi2Cut{this, "CKFchi2Cut", std::numeric_limits<double>::max()};
@@ -259,20 +260,20 @@ class RecActsTracking : public GaudiAlgorithm
         // param estimate configuration
         double noTimeVarInflation = 100.;
         std::array<double, 6> initialSigmas = {
-            25 * Acts::UnitConstants::um,
-            100 * Acts::UnitConstants::um,
-            0.02 * Acts::UnitConstants::degree,
-            0.02 * Acts::UnitConstants::degree,
-            0.1 * Acts::UnitConstants::e / Acts::UnitConstants::GeV,
-            1400 * Acts::UnitConstants::s};
+            5 * Acts::UnitConstants::um,
+            5 * Acts::UnitConstants::um,
+            2e-2 * Acts::UnitConstants::degree,
+            2e-2 * Acts::UnitConstants::degree,
+            1e-1 * Acts::UnitConstants::e / Acts::UnitConstants::GeV,
+            1 * Acts::UnitConstants::s};
         std::array<double, 6> initialSimgaQoverPCoefficients = {
             0 * Acts::UnitConstants::mm / (Acts::UnitConstants::e * Acts::UnitConstants::GeV),
             0 * Acts::UnitConstants::mm / (Acts::UnitConstants::e * Acts::UnitConstants::GeV),
-            0 * Acts::UnitConstants::degree / (Acts::UnitConstants::e * Acts::UnitConstants::GeV),
-            0 * Acts::UnitConstants::degree / (Acts::UnitConstants::e * Acts::UnitConstants::GeV),
-            0.1,
+            7.1e-2 * Acts::UnitConstants::degree / (Acts::UnitConstants::e * Acts::UnitConstants::GeV),
+            2.1e-2 * Acts::UnitConstants::degree / (Acts::UnitConstants::e * Acts::UnitConstants::GeV),
+            6.4e-2,
             0 * Acts::UnitConstants::ns / (Acts::UnitConstants::e * Acts::UnitConstants::GeV)};
-        std::array<double, 6> initialVarInflation = {10., 10., 10., 10., 10., 10.};
+        // std::array<double, 6> initialVarInflation = {10., 10., 10., 10., 10., 10.};
         Acts::ParticleHypothesis particleHypothesis = Acts::ParticleHypothesis::muon();
         std::array<std::string, 8> particleNames = {"muon", "pion", "electron", "kaon", "proton", "photon", "geantino", "chargedgeantino"};
         // Acts::ParticleHypothesis particleHypothesis = Acts::ParticleHypothesis::chargedGeantino();
