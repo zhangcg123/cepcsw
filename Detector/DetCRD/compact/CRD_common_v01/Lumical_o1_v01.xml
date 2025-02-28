@@ -80,13 +80,10 @@
             </layer>
             <layer name = "LYSO_2nd">
                 <slice  dx="10*mm" dy="10*mm" dz="150*mm" material="LYSO" vis="GrayVis" sensitive="yes" limits="5*mm">
-	            <position x="0" y="-12*mm" z="875*mm"/>
+	            <position x="0" y="-12*mm" z="800*mm"/>
 	            <rotation x="0" y="0" z="0" />
                 </slice>
             </layer>
-            
-        
-            
         </detector>
     </detectors>
 

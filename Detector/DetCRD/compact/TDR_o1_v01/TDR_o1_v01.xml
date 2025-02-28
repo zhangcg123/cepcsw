@@ -27,7 +27,7 @@
 
   <include ref="./TDR_Dimensions_v01_01.xml"/>
 
-  <include ref="../CRD_common_v02/Beampipe_v01_06.xml"/>
+  <include ref="../CRD_common_v02/Beampipe_v01_07.xml"/>
   <!--preliminary vertex and tracker, to update/-->
   <!--include ref="../CRD_common_v02/VXD_StaggeredLadder_v02_01.xml"/-->
   <include ref="../CRD_common_v02/VXD_Composite_v01_02.xml"/>

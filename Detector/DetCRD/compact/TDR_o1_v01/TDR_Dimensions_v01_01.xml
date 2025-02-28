@@ -78,6 +78,9 @@
     <constant name="BeamPipe_FirstSeparated_zmax"  value="1110*mm"/>
     <constant name="BeamPipe_Mask_zmin"            value="1210*mm"/>
     <constant name="BeamPipe_Mask_zmax"            value="1230*mm"/>
+    <constant name="BeamPipe_SR_Mask_z1"           value="1850*mm"/>
+    <constant name="BeamPipe_SR_Mask_z2"           value="1870*mm"/>
+    <constant name="BeamPipe_SR_Mask_z3"           value="1880*mm"/>
     <constant name="BeamPipe_Q1a_zmin"             value="1900*mm"/>
     <constant name="BeamPipe_Q1a_zmax"             value="3110*mm"/>
     <constant name="BeamPipe_Q1b_zmin"             value="3190*mm"/>
@@ -86,11 +89,22 @@
     <constant name="BeamPipe_QF1_zmax"             value="6200*mm"/>
     <constant name="BeamPipe_end_z"                value="7050*mm"/>
 
-    <constant name="BeamPipe_Central_inner_radius"  value="10*mm"/>
+    <constant name="BeamPipe_AntiSolenoid1_zmin"         value="1130*mm"/>
+    <constant name="BeamPipe_AntiSolenoid1_zmax"         value="1900*mm"/>
+    <constant name="BeamPipe_AntiSolenoid1_inner_radius" value="90*mm"/>
+    <constant name="BeamPipe_AntiSolenoid2_zmin"         value="1930*mm"/>
+    <constant name="BeamPipe_AntiSolenoid2_zmax"         value="3964*mm"/>
+    <constant name="BeamPipe_AntiSolenoid2_inner_radius" value="120*mm"/>
+    <constant name="BeamPipe_AntiSolenoid3_zmin"         value="3970*mm"/>
+    <constant name="BeamPipe_AntiSolenoid3_zmax"         value="7000*mm"/>
+    <constant name="BeamPipe_AntiSolenoid3_inner_radius" value="185*mm"/>
+
+    <constant name="BeamPipe_Central_inner_radius"  value="9.995*mm"/>
     <constant name="BeamPipe_Fork_inner_radius"     value="10*mm"/>
     <constant name="BeamPipe_FirstExpand_width"     value="35*mm"/>
     <constant name="BeamPipe_SecondExpand_width"    value="39*mm"/>
     <constant name="BeamPipe_Mask_inner_radius"     value="6*mm"/>
+    <constant name="BeamPipe_Cu_thickness_SR_Mask_mid" value="7*mm"/>
     <constant name="BeamPipe_Q1a_inner_radius"      value="BeamPipe_Fork_inner_radius"/>
     <constant name="BeamPipe_Q1b_inner_radius"      value="11.5*mm"/>
     <constant name="BeamPipe_QF1_inner_radius"      value="16*mm"/>
