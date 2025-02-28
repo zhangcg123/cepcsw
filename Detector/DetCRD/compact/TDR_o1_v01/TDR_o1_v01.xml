@@ -42,8 +42,8 @@
   <include ref="../CRD_common_v01/OTKBarrel_v01_01.xml"/>
   <!--include ref="../CRD_common_v01/OTKEndcap_v01_01.xml"/-->
 
-  <include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v01_02.xml"/>
-  <include ref="../CRD_common_v01/Ecal_Crystal_Endcap_v01_03.xml"/>
+  <include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v02_02.xml"/>
+  <include ref="../CRD_common_v01/Ecal_Crystal_Endcap_v02_01.xml"/>
   <include ref="../CRD_common_v01/SHcalGlass_Barrel_v05.xml"/>
   <include ref="../CRD_common_v01/SHcalGlass_Endcaps_v01.xml"/>
 

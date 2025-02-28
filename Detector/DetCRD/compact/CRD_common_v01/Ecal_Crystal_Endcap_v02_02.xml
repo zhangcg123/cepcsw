@@ -1,0 +1,86 @@
+<lccdd>
+  <define>
+    <constant name="Ecal_endcap_nlayers" value="18"/> 
+    <constant name="Ecal_scintillator_thickness" value="15.2*mm"/>
+    <constant name="Ecal_endcap_carbonfiber_thickness" value="2.5*mm"/>
+    <constant name="Ecal_endcap_cu_thickness" value="1*mm"/>
+    <constant name="Ecal_endcap_electronics_thickness" value="4*mm"/>
+    <constant name="Ecal_endcap_sipm_thickness" value="0.8*mm"/>
+    <constant name="Ecal_endcap_sipm_width" value="3*mm"/>
+    <constant name="Ecal_endcap_esr_thickness" value="0.1*mm"/>
+  </define>
+
+  <detectors>
+    <detector id="DetID_ECAL_ENDCAP" name="EcalEndcap" type="LongCrystalBarEndcapCalorimeter_v04" readout="EcalEndcapsCollection"  vis="CyanVis" calorimeterType="EMC_ENDCAP">
+      <comment>Electromagnetic Calorimeter Endcap</comment>
+
+      <envelope vis="SeeThrough">
+        <shape type="BooleanShape" operation="Subtraction" material="Air">
+          <shape type="BooleanShape" operation="Subtraction" material="Air">
+            <!-- <shape type="Tube" rmin="0.0" rmax="Ecal_endcap_outer_radius - env_safety" dz="Ecal_endcap_zmax"/>  -->
+            <!--there is a thin plane in envolop -->
+            <!-- <shape type="Tube" rmin="0.0" rmax="Ecal_endcap_outer_radius + env_safety" dz="Ecal_endcap_zmin"/> -->
+            <shape type="PolyhedraRegular" numsides="256" rmin="0.0" rmax="Hcal_barrel_inner_radius - 5*mm" dz="Ecal_endcap_zmax*2"/>
+            <shape type="PolyhedraRegular" numsides="256" rmin="0.0" rmax="Hcal_barrel_inner_radius - 5*mm" dz="Ecal_endcap_zmin*2"/>
+          </shape>
+        <!-- <shape type="Box" dx="Ecal_endcap_inner_radius" dy="Ecal_endcap_inner_radius" dz="Ecal_endcap_zmax + env_safety"/>  -->
+        <shape type="Tube" rmin="0.0" rmax="Ecal_endcap_inner_radius" dz="Ecal_endcap_zmax + env_safety"/>
+        </shape>
+        <rotation x="0" y="0" z="0"/>
+      </envelope>
+
+      <type_flags type=" DetType_CALORIMETER + DetType_ENDCAP + DetType_EMC " />
+
+      <material name="CarbonFiber"/> 
+ 
+      <dimensions numsides="Ecal_x_module" > <!-- 0:cube 1:isosceles trapezoid 2:right trapezoid -->
+        <dimensions id="0"  module_type="0" module_number="3" x_offset="768*mm" y_offset="768*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="326*mm" dim_y="326*mm" dim_z="300*mm"/>
+        <dimensions id="1"  module_type="0" module_number="2" x_offset="1069*mm" y_offset="1069*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="276*mm" dim_y="276*mm" dim_z="300*mm"/>
+        <dimensions id="2"  module_type="0" module_number="1" x_offset="1305.5*mm" y_offset="1305.5*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="197*mm" dim_y="197*mm" dim_z="300*mm"/>
+        <dimensions id="0"  module_type="20" module_number="3" x_offset="768*mm" y_offset="768*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="326*mm" dim_y="326*mm" dim_z="300*mm"/>
+        <dimensions id="1"  module_type="20" module_number="2" x_offset="1069*mm" y_offset="1069*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="276*mm" dim_y="276*mm" dim_z="300*mm"/>
+        <dimensions id="2"  module_type="20" module_number="1" x_offset="1305.5*mm" y_offset="1305.5*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="197*mm" dim_y="197*mm" dim_z="300*mm"/>
+
+        <dimensions id="3"  module_type="1" module_number="4" x_offset="570.5*mm" y_offset="0*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="574*mm" dim_x2="495*mm" dim_y1="441*mm" dim_y2="441*mm" dim_z="300*mm" />
+        <dimensions id="4"  module_type="2" module_number="4" x_offset="570.5*mm" y_offset="0*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="574*mm" dim_x2="495*mm" dim_y1="441*mm" dim_y2="441*mm" dim_z="300*mm" />
+        <dimensions id="3"  module_type="21" module_number="4" x_offset="570.5*mm" y_offset="0*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="574*mm" dim_x2="495*mm" dim_y1="441*mm" dim_y2="441*mm" dim_z="300*mm" />
+        <dimensions id="4"  module_type="22" module_number="4" x_offset="570.5*mm" y_offset="0*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="574*mm" dim_x2="495*mm" dim_y1="441*mm" dim_y2="441*mm" dim_z="300*mm" />
+
+        <dimensions id="5"  module_type="3" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="6"  module_type="4" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="7"  module_type="5" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="8"  module_type="6" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="9"  module_type="7" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="10"  module_type="8" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="11"  module_type="9" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+        <dimensions id="12"  module_type="10" module_number="4" x_offset="426.25*mm" y_offset="436.125*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x1="318*mm" dim_x2="357.5*mm" dim_y1="357.5*mm" dim_y2="357.5*mm" dim_z="300*mm"/>
+
+        <dimensions id="13"  module_type="11" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="14"  module_type="12" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="15"  module_type="13" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="16"  module_type="14" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="17"  module_type="15" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="18"  module_type="16" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="19"  module_type="17" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        <dimensions id="20"  module_type="18" module_number="1" x_offset="426.25*mm" y_offset="426.25*mm" z_offset="Ecal_endcap_zmin+Ecal_endcap_thickness/2" dim_x="178.75*mm" dim_y="139.25*mm" dim_z="300*mm"/>
+        
+      </dimensions>
+
+      <layer repeat="Ecal_endcap_nlayers" vis="CyanVis" material="G4_BGO" thickness = "Ecal_scintillator_thickness">
+        <slice material="G4_BGO" thickness = "Ecal_scintillator_thickness" sensitive = "yes"   limits="cal_limits"  vis="CyanVis"   />
+      </layer>
+    </detector>
+  </detectors>
+
+  <readouts>
+    <readout name="EcalEndcapsCollection">
+      <segmentation type="NoSegmentation"/>
+      <id>system:5,module:1,part:7,stave:7,type:4,dlayer:4,slayer:1,bar:7</id>
+    </readout>
+  </readouts>
+
+</lccdd>
+
+
+
+

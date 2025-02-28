@@ -6,9 +6,11 @@
 gaudi_add_module(DetCRD
                  SOURCES src/Calorimeter/CRDEcal_v01.cpp
                          src/Calorimeter/LongCrystalBarBarrelCalorimeter32Polygon_v01.cpp
+                         src/Calorimeter/LongCrystalBarBarrelCalorimeter32Polygon_v02.cpp
                          src/Calorimeter/LongCrystalBarEndcapCalorimeter_v01.cpp
                          src/Calorimeter/LongCrystalBarEndcapCalorimeter_v02.cpp
                          src/Calorimeter/LongCrystalBarEndcapCalorimeter_v03.cpp
+                         src/Calorimeter/LongCrystalBarEndcapCalorimeter_v04.cpp
                          src/Calorimeter/CRDEcal_Short_v02.cpp
                          src/Calorimeter/CRDEcal_Endcap_Short_v01.cpp
                          src/Calorimeter/RotatedPolyhedraBarrelCalorimeter_v01_geo.cpp
