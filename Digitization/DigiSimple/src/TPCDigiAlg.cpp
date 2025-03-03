@@ -791,10 +791,34 @@ StatusCode TPCDigiAlg::execute()
         // (this is for B=3T, h is the pad height = pad-row pitch in mm)
 
         // sigma_{z}^2 = (400microns)^2 + L_{drift}cm * (80micron/sqrt(cm))^2
+
+        // OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO
+        // Pixel readout TPC spatial resolution (preliminary) update, Xin She, 20250228 
+        // + Take "hodoscope" effect into consideration
+        // + The parameters are based on Neff=30 and the pad pitch=0.5mm 
+        //   @T2K gas, B=3T, D_{T} is close to 32.3 um/sqrt(cm) @230 V/cm Drift field
+        // + sigma_x = 0.006001*sqrt(z/10.)+0.1175*exp(-0.09018*z/10.), z>=5.1mm
+        // + sigma_x = 0.1443-0.0047*z, z<5.1mm 
+        //   where sigma_x is the r-phi resolution, unit [mm], 
+        //   z is the driftlength, unit [mm]
+        // OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO
+        double driftLength_in_mm =  driftLength*10.; 
+        if(driftLength_in_mm>=5.1) // using fitted curves
+        {
+            tpcRPhiRes = _fittedRPhiResoParas[0]*std::sqrt(0.1*driftLength_in_mm) + 
+                         _fittedRPhiResoParas[1]*std::exp(-1*_fittedRPhiResoParas[2]*driftLength_in_mm);
+        }
+        else // using linear interpolation
+        {
+            tpcRPhiRes = _fittedRPhiResoParas[3] + _fittedRPhiResoParas[4]*driftLength_in_mm;
+        }
+        // without "hodoscope" effect
         double aReso = _pointResoRPhi0*_pointResoRPhi0 ;
         double bReso = _diffRPhi * _diffRPhi ;
-        tpcRPhiRes   = sqrt(aReso + bReso * driftLength) / sqrt(ne); // driftLength in cm
-        tpcZRes      = sqrt( _pointResoZ0 * _pointResoZ0 + _diffZ * _diffZ * driftLength ) / sqrt(ne); // driftLength in cm
+        //tpcRPhiRes   = sqrt(aReso + bReso * driftLength) / sqrt(ne); // driftLength in cm
+        //tpcZRes      = sqrt( _pointResoZ0 * _pointResoZ0 + _diffZ * _diffZ * driftLength ) / sqrt(ne); // driftLength in cm
+        tpcZRes      = sqrt( _pointResoZ0 * _pointResoZ0 + _diffZ * _diffZ * driftLength ) / sqrt(_nEff); // driftLength in cm
+
       }
       else {
         // Calculate Point Resolutions according to Ron's Formula
