@@ -84,7 +84,7 @@ detsimalg.RootDetElem = "WorldDetElemTool"
 from Configurables import TimeProjectionChamberSensDetTool
 tpc_sensdettool = TimeProjectionChamberSensDetTool("TimeProjectionChamberSensDetTool")
 tpc_sensdettool.TypeOption = 1
-tpc_sensdettool.DoHeedSim = True
+tpc_sensdettool.DoHeedSim = False#True
 dedxoption = "TrackHeedSimTool"
 tpc_sensdettool.DedxSimTool = dedxoption
 
