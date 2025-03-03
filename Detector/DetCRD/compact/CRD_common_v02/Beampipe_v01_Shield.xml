@@ -36,12 +36,12 @@
     <constant name="BeamPipe_CablePipe_zpos4"          value="259.8*mm"/>
     <constant name="BeamPipe_CablePipe_outer_radius4"  value="27.4*mm"/>
     <constant name="BeamPipe_CablePipe_zpos5"          value="262.0*mm"/>
-    <constant name="BeamPipe_CablePipe_zpos6"          value="372.5*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos6"          value="332.0*mm"/>
     <constant name="BeamPipe_CablePipe_inner_radius6"  value="27.9*mm"/>
-    <constant name="BeamPipe_CablePipe_outer_radius6"  value="43.4*mm"/>
-    <constant name="BeamPipe_CablePipe_zpos7"          value="386.5*mm"/>
-    <constant name="BeamPipe_CablePipe_outer_radius7"  value="44.4*mm"/>
-    <constant name="BeamPipe_CablePipe_zpos8"          value="388.5*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius6"  value="38.4*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos7"          value="347.0*mm"/>
+    <constant name="BeamPipe_CablePipe_outer_radius7"  value="39.4*mm"/>
+    <constant name="BeamPipe_CablePipe_zpos8"          value="351.6*mm"/>
     <constant name="BeamPipe_CablePipe_zpos9"          value="465.0*mm"/>
     <constant name="BeamPipe_CablePipe_outer_radius9"  value="65.0*mm"/>
     <constant name="BeamPipe_CablePipe_zpos10"         value="470.0*mm"/>
