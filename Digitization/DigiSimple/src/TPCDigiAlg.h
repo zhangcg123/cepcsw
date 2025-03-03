@@ -169,6 +169,22 @@ protected:
   edm4hep::TrackerHitCollection* _trkhitVec;
   edm4hep::MCRecoTrackerAssociationCollection* _relCol;
 
+  // OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO
+  // Pixel readout TPC spatial resolution (preliminary) update, Xin She, 20250228 
+  // + Take "hodoscope" effect into consideration
+  // + The parameters are based on Neff=30 and the pad pitch=0.5mm 
+  //   @T2K gas, B=3T, D_{T} is close to 32.3 um/sqrt(cm) @230 V/cm Drift field
+  // + sigma_x = 0.006001*sqrt(z/10.)+0.1175*exp(-0.09018*z/10.), z>=5.1mm
+  // + sigma_x = 0.1443-0.0047*z, z<5.1mm 
+  //   where sigma_x is the r-phi resolution, unit [mm], 
+  //   z is the driftlength, unit [mm]
+  // Input fitted parameters will be set as optional parameters though Gaudi algo 
+  // interface. If some conditions (e.g. pixel size) had changed, it can be modified
+  // OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO
+  Gaudi::Property<std::vector<double>> _fittedRPhiResoParas{this, "fittedRPhiResoParas",{0.006001,0.1175,0.009018,0.1443,-0.0047}};
+
+ 
+
   bool _pixelClustering;
 
   bool _use_raw_hits_to_store_simhit_pointer;
