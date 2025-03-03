@@ -64,6 +64,11 @@ genalg.GenTools = ["GtGunTool"]
 from Configurables import DetSimSvc
 detsimsvc = DetSimSvc("DetSimSvc")
 
+from Configurables import Edm4hepWriterAnaElemTool
+edm4hep_writer = Edm4hepWriterAnaElemTool("Edm4hepWriterAnaElemTool")
+edm4hep_writer.TrackerCollections = ["VXD", "SIT", "FTD", "TPC", "TPCLowPt", "TPCSpacePoint",
+                                     "SET", "COIL", "MuonBarrel", "MuonEndcap"]
+
 from Configurables import DetSimAlg
 detsimalg = DetSimAlg("DetSimAlg")
 detsimalg.RandomSeeds = seed

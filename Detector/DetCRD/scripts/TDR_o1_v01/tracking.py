@@ -50,9 +50,10 @@ podioinput = PodioInput("PodioReader", collections=[
     "MCParticle",
     "VXDCollection",
     "ITKBarrelCollection",
+    "ITKEndcapCollection",
     "TPCCollection",
     "OTKBarrelCollection",
-    "FTDCollection",
+    "OTKEndcapCollection",
     "MuonBarrelCollection",
     "MuonEndcapCollection"
     ])
@@ -65,11 +66,10 @@ podioinput = PodioInput("PodioReader", collections=[
 ## Config ##
 vxdhitname  = "VXDTrackerHits"
 sithitname  = "ITKBarrelTrackerHits"
+ftdhitname  = "ITKEndcapTrackerHits"
 gashitname  = "TPCTrackerHits"
 sethitname  = "OTKBarrelTrackerHits"
-setspname   = "OTKBarrelSpacePoints"
-ftdhitname  = "FTDTrackerHits"
-ftdspname   = "FTDSpacePoints"
+etdhitname  = "OTKEndcapTrackerHits"
 from Configurables import SmearDigiTool,SiTrackerDigiAlg
 
 ## VXD ##
@@ -98,6 +98,19 @@ digiITKB.TrackerHitAssociationCollection = "ITKBarrelTrackerHitAssociation"
 digiITKB.DigiTool = "SmearDigiTool/ITKBarrel"
 #digiITKB.OutputLevel = DEBUG
 
+## ITKEndcap ##
+itketool = SmearDigiTool("ITKEndcap")
+itketool.ResolutionU = [0.008]
+itketool.ResolutionV = [0.040]
+#itketool.OutputLevel = DEBUG
+
+digiITKE = SiTrackerDigiAlg("ITKEndcapDigi")
+digiITKE.SimTrackHitCollection = "ITKEndcapCollection"
+digiITKE.TrackerHitCollection = ftdhitname
+digiITKE.TrackerHitAssociationCollection = "ITKEndcapTrackerHitAssociation"
+digiITKE.DigiTool = "SmearDigiTool/ITKEndcap"
+#digiITKE.OutputLevel = DEBUG
+
 ## OTKBarrel ##
 otkbtool = SmearDigiTool("OTKBarrel")
 otkbtool.ResolutionU = [0.010]
@@ -111,18 +124,18 @@ digiOTKB.TrackerHitAssociationCollection = "OTKBarrelTrackerHitAssociation"
 digiOTKB.DigiTool = "SmearDigiTool/OTKBarrel"
 #digiOTKB.OutputLevel = DEBUG
 
-## FTD ##
-ftdtool = SmearDigiTool("FTD")
-ftdtool.ResolutionU = [0.0072]
-ftdtool.ResolutionV = [0.086]
-#ftdtool.OutputLevel = DEBUG
+## OTKEndcap ##
+otketool = SmearDigiTool("OTKEndcap")
+otketool.ResolutionU = [0.010]
+otketool.ResolutionV = [1.000]
+#otketool.OutputLevel = DEBUG
 
-digiFTD = SiTrackerDigiAlg("FTDDigi")
-digiFTD.SimTrackHitCollection = "FTDCollection"
-digiFTD.TrackerHitCollection = ftdhitname
-digiFTD.TrackerHitAssociationCollection = "FTDTrackerHitAssociation"
-digiFTD.DigiTool = "SmearDigiTool/FTD"
-#digiFTD.OutputLevel = DEBUG
+digiOTKE = SiTrackerDigiAlg("OTKEndcapDigi")
+digiOTKE.SimTrackHitCollection = "OTKEndcapCollection"
+digiOTKE.TrackerHitCollection = etdhitname
+digiOTKE.TrackerHitAssociationCollection = "OTKEndcapTrackerHitAssociation"
+digiOTKE.DigiTool = "SmearDigiTool/OTKEndcap"
+#digiOTKE.OutputLevel = DEBUG
 
 ## TPC ##
 from Configurables import TPCDigiAlg
@@ -195,7 +208,6 @@ tracking.HeaderCol = "EventHeader"
 tracking.VTXHitCollection = vxdhitname
 tracking.SITHitCollection = sithitname
 tracking.FTDPixelHitCollection = ftdhitname
-tracking.FTDSpacePointCollection = ftdspname
 tracking.SITRawHitCollection = "NotNeedForPixelSIT"
 tracking.FTDRawHitCollection = ftdhitname
 tracking.UseSIT = True
@@ -217,7 +229,7 @@ tracking.Chi2WZSeptet  = 0.1
 from Configurables import ForwardTrackingAlg
 forward = ForwardTrackingAlg("ForwardTracking")
 forward.FTDPixelHitCollection = ftdhitname
-forward.FTDSpacePointCollection = ftdspname
+#forward.FTDSpacePointCollection = ftdspname
 forward.FTDRawHitCollection = ftdhitname
 forward.Chi2ProbCut = 0.0
 forward.HitsPerTrackMin = 3
@@ -232,7 +244,7 @@ forward.CriteriaMax = [30, 1.02, 10, 1.015, 20, 1.3, 1.0, 150, 1.08,  99999999, 
 from Configurables import TrackSubsetAlg
 subset = TrackSubsetAlg("TrackSubset")
 subset.TrackInputCollections = ["ForwardTracks", "SiTracks"]
-subset.RawTrackerHitCollections = [vxdhitname, sithitname, ftdhitname, ftdspname]
+subset.RawTrackerHitCollections = [vxdhitname, sithitname, ftdhitname]
 subset.TrackSubsetCollection = "SubsetTracks"
 #subset.FitterTool = "KalTestTool/KalTest111"
 #subset.OutputLevel = DEBUG
@@ -249,7 +261,8 @@ full.SITTrackerHits = sithitname
 full.TPCTrackerHits = gashitname
 full.SETTrackerHits = sethitname
 full.FTDPixelTrackerHits = ftdhitname
-full.FTDSpacePoints = ftdspname
+#full.FTDSpacePoints = ftdspname
+full.ETDTrackerHits = etdhitname
 full.SITRawHits     = "NotNeedForPixelSIT"
 full.SETRawHits     = "NotNeedForPixelSET"
 full.FTDRawHits     = ftdhitname
@@ -259,6 +272,7 @@ full.OutputTracks  = "CompleteTracks" # default name
 full.FTDHitToTrackDistance = 5.
 full.SITHitToTrackDistance = 3.
 full.SETHitToTrackDistance = 5.
+full.ETDHitToTrackDistance = 15.
 full.MinChi2ProbForSiliconTracks = 0
 full.MaxChi2PerHit = 200
 full.ForceSiTPCMerging = True
@@ -277,7 +291,8 @@ from Configurables import TrackParticleRelationAlg
 tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
 tpr.TrackList = ["CompleteTracks"]
-tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation"]
+tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
+                              "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation"]
 #tpr.OutputLevel = DEBUG
 
 
@@ -285,7 +300,8 @@ from Configurables import TrueMuonTagAlg
 tmt = TrueMuonTagAlg("TrueMuonTag")
 tmt.MCParticleCollection = "MCParticle"
 tmt.TrackList = ["CompleteTracks"]
-tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "OTKBarrelTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"]
+tmt.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
+                              "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation", "TPCTrackerHitAss"]
 tmt.MuonTagEfficiency = 0.95 # muon true tag efficiency, default is 1.0 (100%)
 tmt.MuonDetTanTheta = 1.2 # muon det barrel/endcap separation tan(theta)
 #tmt.OutputLevel = DEBUG
@@ -299,7 +315,7 @@ out.outputCommands = ["keep *"]
 # ApplicationMgr
 from Configurables import ApplicationMgr
 mgr = ApplicationMgr(
-    TopAlg = [podioinput, digiVXD, digiITKB, digiOTKB, digiFTD, digiTPC, digiMuon, tracking, forward, subset, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
+    TopAlg = [podioinput, digiVXD, digiITKB, digiITKE, digiOTKB, digiOTKE, digiTPC, digiMuon, tracking, clupatra, full, tpr, tpc_dndx, tof, tmt, out],
     EvtSel = 'NONE',
     EvtMax = 50,
     ExtSvc = [rndmengine, rndmgensvc, dsvc, evtseeder, geosvc, gearsvc, tracksystemsvc, pidsvc],

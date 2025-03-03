@@ -92,6 +92,10 @@ StatusCode GearSvc::initialize()
       }
       else if(it->first=="FTD" || it->first=="ITKEndcap"){
         sc = convertFTD(sub);
+	if (sc.isRecoverable()) sc = convertMultiRingsZDisk(sub);
+	if (!sc.isSuccess()) {
+          error() << it->first << " extension not read" << endmsg;
+        }
       }
       else if(it->first=="SIT" || it->first=="ITKBarrel"){
 	sc = convertSIT(sub);
@@ -125,7 +129,7 @@ StatusCode GearSvc::initialize()
     }
     catch (...) {
       info() << "EcalBarrelParameters not create! create fake parameters (big size) now" << endmsg;
-      gear::CalorimeterParametersImpl* barrelParam = new gear::CalorimeterParametersImpl(2500, 4500, 8, 0.);
+      gear::CalorimeterParametersImpl* barrelParam = new gear::CalorimeterParametersImpl(1860, 2900, 32, 0.);
       barrelParam->layerLayout().positionLayer(0, 5.25, 10, 10, 2.1);
       m_gearMgr->setEcalBarrelParameters(barrelParam);
     }
@@ -134,7 +138,7 @@ StatusCode GearSvc::initialize()
     }
     catch (...) {
       info() << "EcalEndcapsParameters not create! create fake parameters (big size) now" << endmsg;
-      gear::CalorimeterParametersImpl* endcapParam = new gear::CalorimeterParametersImpl(400., 3000, 4510, 2, 0.);
+      gear::CalorimeterParametersImpl* endcapParam = new gear::CalorimeterParametersImpl(400., 2500, 2930, 2, 0.);
       endcapParam->layerLayout().positionLayer(0, 5.25, 10, 10, 2.1);
       m_gearMgr->setEcalEndcapParameters(endcapParam);
     }
@@ -178,7 +182,7 @@ StatusCode GearSvc::convertBeamPipe(dd4hep::DetElement& pipe){
   std::vector<double> gearValROuter;
   std::vector<double> gearValZ;
   const std::vector<dd4hep::rec::ConicalSupportData::Section>& sections = beamPipeData->sections;
-  for(int i=0;i<sections.size();i++){
+  for (unsigned i=0;i<sections.size();i++) {
     gearValZ.push_back(sections[i].zPos*CLHEP::cm );
     gearValRInner.push_back(sections[i].rInner*CLHEP::cm );
     gearValROuter.push_back(sections[i].rOuter*CLHEP::cm );
@@ -235,7 +239,7 @@ StatusCode GearSvc::convertVXD(dd4hep::DetElement& vxd){
     }
 
     info() << vxdData->rInnerShell << " " << vxdData->rOuterShell << " " << vxdData->zHalfShell << " " << vxdData->gapShell << endmsg;
-    for(int i=0,n=vxdData->layers.size(); i<n; i++){
+    for (unsigned i=0,n=vxdData->layers.size(); i<n; i++) {
       const dd4hep::rec::ZPlanarData::LayerLayout& thisLayer = vxdData->layers[i];
       info() << i << ": " << thisLayer.ladderNumber << "," << thisLayer.phi0 << ","
 	     << thisLayer.distanceSupport/dd4hep::mm << "," << thisLayer.offsetSupport/dd4hep::mm << "," << thisLayer.thicknessSupport/dd4hep::mm << ","
@@ -395,7 +399,7 @@ StatusCode GearSvc::convertFTD(dd4hep::DetElement& ftd){
   }
   catch(std::runtime_error& e){
     warning() << e.what() << " " << ftdData << endmsg;
-    return StatusCode::FAILURE;
+    return StatusCode::RECOVERABLE;
   }
 
   std::vector<dd4hep::rec::ZDiskPetalsData::LayerLayout>& ftdlayers = ftdData->layers;
@@ -406,7 +410,7 @@ StatusCode GearSvc::convertFTD(dd4hep::DetElement& ftd){
   ftdParam->setDoubleVal("strip_length_mm", ftdData->lengthStrip*CLHEP::cm);
   ftdParam->setDoubleVal("strip_pitch_mm", ftdData->pitchStrip*CLHEP::cm);
   ftdParam->setDoubleVal("strip_angle_deg", ftdData->angleStrip*rad_to_deg);
-  for(int layer = 0; layer < nLayers; layer++){
+  for (int layer = 0; layer < nLayers; layer++) {
     dd4hep::rec::ZDiskPetalsData::LayerLayout& ftdlayer = ftdlayers[layer];
     int nPetals = ftdlayer.petalNumber;
     double dphi = CLHEP::twopi/nPetals;
@@ -443,6 +447,118 @@ StatusCode GearSvc::convertFTD(dd4hep::DetElement& ftd){
   return StatusCode::SUCCESS;
 }
 
+StatusCode GearSvc::convertMultiRingsZDisk(dd4hep::DetElement& ftd) {
+  dd4hep::rec::MultiRingsZDiskData* ftdData = nullptr;
+  try{
+    ftdData = ftd.extension<dd4hep::rec::MultiRingsZDiskData>();
+  }
+  catch(std::runtime_error& e){
+    warning() << e.what() << " " << ftdData << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  std::vector<dd4hep::rec::MultiRingsZDiskData::LayerLayout>& ftdlayers = ftdData->layers;
+  int nLayers = ftdlayers.size();
+
+  gear::GearParametersImpl* ftdParam = new gear::GearParametersImpl();
+  ftdParam->setDoubleVal("strip_width_mm", ftdData->widthStrip*CLHEP::cm);
+  ftdParam->setDoubleVal("strip_length_mm", ftdData->lengthStrip*CLHEP::cm);
+  ftdParam->setDoubleVal("strip_pitch_mm", ftdData->pitchStrip*CLHEP::cm);
+  ftdParam->setDoubleVal("strip_angle_deg", ftdData->angleStrip*rad_to_deg);
+
+  std::vector<double> alphaPetals, zPositions, zOffsetSupports, rminSupports, rmaxSupports, thicknessSupports;
+  std::vector<double> thicknessSensitives, thicknessGlues, thicknessServices;
+  std::vector<std::string> petalParNames, phi0ParNames, distanceParNames, widthInnerParNames, widthOuterParNames, lengthParNames;
+  for (int layer = 0; layer < nLayers; layer++) {
+    dd4hep::rec::MultiRingsZDiskData::LayerLayout& ftdlayer = ftdlayers[layer];
+
+    //std::bitset<32> typeFlags;
+    alphaPetals.push_back(ftdlayer.alphaPetal);
+    zPositions.push_back(ftdlayer.zPosition*CLHEP::cm);
+    zOffsetSupports.push_back(ftdlayer.zOffsetSupport*CLHEP::cm);
+    rminSupports.push_back(ftdlayer.rminSupport*CLHEP::cm);
+    rmaxSupports.push_back(ftdlayer.rmaxSupport*CLHEP::cm);
+    thicknessSupports.push_back(ftdlayer.thicknessSupport*CLHEP::cm);
+
+    auto& rings = ftdlayer.rings;
+
+    petalParNames.push_back(std::string("PetalNumber_")+std::to_string(layer));
+    phi0ParNames.push_back(std::string("PetalPhi0_")+std::to_string(layer));
+    distanceParNames.push_back(std::string("PetalDistance_")+std::to_string(layer));
+    widthInnerParNames.push_back(std::string("PetalInnerWidth_")+std::to_string(layer));
+    widthOuterParNames.push_back(std::string("PetalOuterWidth_")+std::to_string(layer));
+    lengthParNames.push_back(std::string("PetalLength_")+std::to_string(layer));
+
+    std::vector<int>    petalNumbers;
+    std::vector<double> phi0s, distances, widthInners, widthOuters, lengths;
+    for (unsigned iring = 0; iring < rings.size(); iring++) {
+      auto&  ring = rings[iring];
+
+      petalNumbers.push_back(ring.petalNumber);
+      //int    sensorsPerPetal;
+      phi0s.push_back(ring.phi0);
+      //double phiOffsetOdd;
+      distances.push_back(ring.distance*CLHEP::cm);
+      widthInners.push_back(ring.widthInner*CLHEP::cm);
+      widthOuters.push_back(ring.widthOuter*CLHEP::cm);
+      lengths.push_back(ring.length*CLHEP::cm);
+
+      if (iring==0) {
+	thicknessSensitives.push_back(ring.thicknessSensitive*CLHEP::cm);
+	thicknessGlues.push_back(ring.thicknessGlue*CLHEP::cm);
+	thicknessServices.push_back(ring.thicknessService*CLHEP::cm);
+      }
+    }
+    ftdParam->setIntVals(std::string("PetalNumber_")+std::to_string(layer), petalNumbers);
+    ftdParam->setDoubleVals(std::string("PetalPhi0_")+std::to_string(layer), phi0s);
+    ftdParam->setDoubleVals(std::string("PetalDistance_")+std::to_string(layer), distances);
+    ftdParam->setDoubleVals(std::string("PetalInnerWidth_")+std::to_string(layer), widthInners);
+    ftdParam->setDoubleVals(std::string("PetalOuterWidth_")+std::to_string(layer), widthOuters);
+    ftdParam->setDoubleVals(std::string("PetalLength_")+std::to_string(layer), lengths);
+
+    if (layer == 0) {
+      double zpos = ftdlayer.zPosition;
+      double zmin = zpos - 0.5*ftdlayer.thicknessSupport - rings[0].thicknessGlue - rings[0].thicknessSensitive - rings[0].thicknessService;
+
+      dd4hep::rec::Vector3D a1(rings[0].distance + 0.5*rings[0].length +2*dd4hep::mm, 2*dd4hep::mm, zmin);
+      dd4hep::rec::Vector3D b1(rings[0].distance + 0.5*rings[0].length +2*dd4hep::mm, 2*dd4hep::mm, zmin+rings[0].thicknessService);
+      gear::SimpleMaterialImpl* serviceMaterial = CreateGearMaterial(a1, b1, "ITKEndcapServiceMaterial");
+      m_gearMgr->registerSimpleMaterial(serviceMaterial);
+
+      zmin += rings[0].thicknessService + rings[0].thicknessSensitive;
+      dd4hep::rec::Vector3D a2(rings[0].distance + 0.5*rings[0].length +2*dd4hep::mm, 2*dd4hep::mm, zmin);
+      dd4hep::rec::Vector3D b2(rings[0].distance + 0.5*rings[0].length +2*dd4hep::mm, 2*dd4hep::mm, zmin+rings[0].thicknessGlue);
+      gear::SimpleMaterialImpl* glueMaterial = CreateGearMaterial(a2, b2, "ITKEndcapGlueMaterial");
+      m_gearMgr->registerSimpleMaterial(glueMaterial);
+
+      zmin += rings[0].thicknessGlue;
+      dd4hep::rec::Vector3D a3(0.5*(ftdlayer.rminSupport + ftdlayer.rmaxSupport), 0, zmin);
+      dd4hep::rec::Vector3D b3(0.5*(ftdlayer.rminSupport + ftdlayer.rmaxSupport), 0, zmin+ftdlayer.thicknessSupport);
+      gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a3, b3, "ITKEndcapSupportMaterial");
+      m_gearMgr->registerSimpleMaterial(supportMaterial);
+    }
+  }
+  ftdParam->setDoubleVals("AlphaPetals", alphaPetals);
+  ftdParam->setDoubleVals("ZPositions", zPositions);
+  ftdParam->setDoubleVals("ZOffsetSupport", zOffsetSupports);
+  ftdParam->setDoubleVals("RMinSupports", rminSupports);
+  ftdParam->setDoubleVals("RMaxSupports", rmaxSupports);
+  ftdParam->setDoubleVals("ThicknessSupports", thicknessSupports);
+  ftdParam->setDoubleVals("ThicknessSensitives", thicknessSensitives);
+  ftdParam->setDoubleVals("ThicknessGlues", thicknessGlues);
+  ftdParam->setDoubleVals("ThicknessServices", thicknessServices);
+  ftdParam->setStringVals("PetalNumberNames", petalParNames);
+  ftdParam->setStringVals("PetalPhi0Names", phi0ParNames);
+  ftdParam->setStringVals("PetalDistanceNames", distanceParNames);
+  ftdParam->setStringVals("PetalInnerWidthNames", widthInnerParNames);
+  ftdParam->setStringVals("PetalOuterWidthNames", widthOuterParNames);
+  ftdParam->setStringVals("PetalLengthNames", lengthParNames);
+
+  m_gearMgr->setGearParameters("ITKEndcapParameters", ftdParam);
+  info() << "nftd = " << nLayers << endmsg;
+  return StatusCode::SUCCESS;
+}
+
 StatusCode GearSvc::convertETD(dd4hep::DetElement& etd){
   dd4hep::rec::ZDiskPetalsData* etdData = nullptr;
   try{
@@ -464,7 +580,7 @@ StatusCode GearSvc::convertETD(dd4hep::DetElement& etd){
 
   std::vector<int> nPetals, nSensors;
   std::vector<double> petalangles, phi0s, alphas, zpositions, zoffsets, supRinners, supThicknesss, supHeights, senRinners, senThicknesss, senHeights;
-  for(int layer = 0; layer < nLayers; layer++){
+  for (int layer = 0; layer < nLayers; layer++) {
     dd4hep::rec::ZDiskPetalsData::LayerLayout& etdlayer = etdlayers[layer];
     nPetals.push_back(etdlayer.petalNumber);
     petalangles.push_back(etdlayer.petalHalfAngle*2);
@@ -504,7 +620,7 @@ StatusCode GearSvc::convertETD(dd4hep::DetElement& etd){
   m_gearMgr->registerSimpleMaterial(ETDSupportMaterial);
 
   m_gearMgr->setGearParameters("ETDParameters", etdParam);
-  info() << "nftd = " << nLayers << endmsg;
+  info() << "netd = " << nLayers << endmsg;
   return StatusCode::SUCCESS;
 }
 
@@ -699,7 +815,7 @@ StatusCode GearSvc::convertDC(dd4hep::DetElement& dc){
       TGeoNode* daughter = dc_vol->GetNode(i);
       std::string nodeName = daughter->GetName();
       //info << nodeName << endmsg;
-      if(nodeName.find("chamber_vol")!=-1||nodeName.find("assembly")!=-1){
+      if(nodeName.find("chamber_vol")!=std::string::npos||nodeName.find("assembly")!=std::string::npos){
 	if(grid){
 	  // if more than one chamber, just use the outer, TODO
 	  dcData->rMinReadout = grid->DC_rbegin();
@@ -710,11 +826,11 @@ StatusCode GearSvc::convertDC(dd4hep::DetElement& dc){
 	}
 	else{
 	  TGeoNode* next = daughter;
-	  if(nodeName.find("assembly")!=-1){
+	  if(nodeName.find("assembly")!=std::string::npos){
 	    // if more than one chamber, just use the outer, TODO 
 	    next = daughter->GetDaughter(1);
 	    std::string s = next->GetName();
-	    if(s.find("chamber_vol")==-1){
+	    if(s.find("chamber_vol")==std::string::npos){
 	      error() << s << " not chamber_vol" << endmsg;
 	      is_convert = false;
 	    }
@@ -760,7 +876,7 @@ StatusCode GearSvc::convertDC(dd4hep::DetElement& dc){
 	  dcData->padWidth  = dcData->padHeight;
 	}
       }
-      else if(nodeName.find("wall_vol")!=-1){
+      else if(nodeName.find("wall_vol")!=std::string::npos){
 	const TGeoShape* wall_shape = daughter->GetVolume()->GetShape();
         if(wall_shape->TestShapeBit(TGeoTube::kGeoTube)){
           const TGeoTube* tube = (const TGeoTube*) wall_shape;
@@ -837,6 +953,12 @@ StatusCode GearSvc::convertSET(dd4hep::DetElement& set){
   setParams->setDoubleVal("strip_length_mm", setData->lengthStrip*CLHEP::cm);
   setParams->setDoubleVal("strip_pitch_mm",  setData->pitchStrip*CLHEP::cm);
   setParams->setDoubleVal("strip_angle_deg", strip_angle_deg);
+  if (set.path().find("OTKBarrel") != std::string::npos) {
+    m_presentSensorOTK = false;
+    setParams->setIntVal("OTKBarrel", 1);
+  }
+  else m_presentSensorOTK = true;
+
   std::vector<int> n_sensors_per_ladder;
   for( int layer=0; layer < nLayers; layer++){
     dd4hep::rec::ZPlanarData::LayerLayout& layout = setlayers[layer];
@@ -853,7 +975,7 @@ StatusCode GearSvc::convertSET(dd4hep::DetElement& set){
     double senThickness = layout.thicknessSensitive*CLHEP::cm;
     double senHalfLength = layout.zHalfSensitive*CLHEP::cm;
     double senWidth = layout.widthSensitive*CLHEP::cm;
-    int nSensorsPerLadder = layout.sensorsPerLadder;
+    int nSensorsPerLadder = m_presentSensorOTK ? layout.sensorsPerLadder : 1;
     double stripAngle = strip_angle_deg*CLHEP::degree;
     n_sensors_per_ladder.push_back(nSensorsPerLadder);
 
@@ -912,25 +1034,25 @@ StatusCode GearSvc::convertCal(dd4hep::DetElement& cal) {
       param->layerLayout().positionLayer(0, thickness, cellsize0, cellsize1, absorberThickness);
     }
     if (calData->layoutType==dd4hep::rec::LayeredCalorimeterData::BarrelLayout) {
-      if (name.find("Ecal")!=-1)      m_gearMgr->setEcalBarrelParameters(param);
-      else if (name.find("Hcal")!=-1) m_gearMgr->setHcalBarrelParameters(param);
-      else if (name.find("Yoke")!=-1) m_gearMgr->setYokeBarrelParameters(param);
+      if (name.find("Ecal")!=std::string::npos)      m_gearMgr->setEcalBarrelParameters(param);
+      else if (name.find("Hcal")!=std::string::npos) m_gearMgr->setHcalBarrelParameters(param);
+      else if (name.find("Yoke")!=std::string::npos) m_gearMgr->setYokeBarrelParameters(param);
       else m_gearMgr->setGearParameters("CoilParameters", param);
 
       info() << "BarrelParameters set " << name << endmsg;
     }
     else if (calData->layoutType==dd4hep::rec::LayeredCalorimeterData::EndcapLayout) {
       if (name.find("Endcap")) {
-	if (name.find("Ecal")!=-1)      m_gearMgr->setEcalEndcapParameters(param);
-	else if (name.find("Hcal")!=-1) m_gearMgr->setHcalEndcapParameters(param);
-	else if (name.find("Yoke")!=-1) m_gearMgr->setYokeEndcapParameters(param);
+	if (name.find("Ecal")!=std::string::npos)      m_gearMgr->setEcalEndcapParameters(param);
+	else if (name.find("Hcal")!=std::string::npos) m_gearMgr->setHcalEndcapParameters(param);
+	else if (name.find("Yoke")!=std::string::npos) m_gearMgr->setYokeEndcapParameters(param);
 
 	info() << "EndcapParameters set" << name << endmsg;
       }
       else {
-	if (name.find("Ecal")!=-1)      m_gearMgr->setEcalPlugParameters(param);
-	else if (name.find("Hcal")!=-1) m_gearMgr->setHcalRingParameters(param);
-	else if (name.find("Yoke")!=-1) m_gearMgr->setYokePlugParameters(param);
+	if (name.find("Ecal")!=std::string::npos)      m_gearMgr->setEcalPlugParameters(param);
+	else if (name.find("Hcal")!=std::string::npos) m_gearMgr->setHcalRingParameters(param);
+	else if (name.find("Yoke")!=std::string::npos) m_gearMgr->setYokePlugParameters(param);
 
 	info() << "Plug(Ring)Parameters set" << name << endmsg;
       }
@@ -950,7 +1072,7 @@ TGeoNode* GearSvc::FindNode(TGeoNode* mother, char* name) {
       TGeoNode* daughter = mother->GetDaughter(i);
       std::string s = daughter->GetName();
       //info() << "current: " << s << " search for" << name << endmsg;
-      if(s.find(name)!=-1){
+      if(s.find(name)!=std::string::npos){
         next = daughter;
         break;
       }
@@ -968,15 +1090,15 @@ gear::SimpleMaterialImpl* GearSvc::CreateGearMaterial(const dd4hep::rec::Vector3
   dd4hep::rec::MaterialManager matMgr( dd4hep::Detector::getInstance().world().volume() );
 
   // 0.0005 mm make sure don't loss material because of precision
-  dd4hep::rec::Vector3D safe_env = (a.z() == b.z()) ? dd4hep::rec::Vector3D(0.0005*dd4hep::mm, 0, 0) : dd4hep::rec::Vector3D(0, 0, 0.0005*dd4hep::mm);
+  dd4hep::rec::Vector3D safe_env = (a.z() == b.z()) ? dd4hep::rec::Vector3D(0.0005*dd4hep::mm, 0, 0) : dd4hep::rec::Vector3D(0, 0, 0.0001*dd4hep::mm);
   const dd4hep::rec::MaterialVec& materials = matMgr.materialsBetween(a-safe_env, b+safe_env);
   dd4hep::rec::MaterialData mat = (materials.size() > 1) ? matMgr.createAveragedMaterial(materials) : materials[0].first;
   
-  debug() << " ####### found materials between points : " << a << " and " << b << " ######" << endmsg;
+  debug() << "#### found materials between points : " << a << " and " << b << " ####" << endmsg;
   for (unsigned i=0,n=materials.size(); i<n; ++i) {
-    debug() <<  materials[i].first.name() << " [" <<   materials[i].second << "]" << endmsg;
+    debug() <<  "     " << materials[i].first.name() << " [" <<   materials[i].second << "]" << endmsg;
   }
-  debug() << "   averaged material : " << mat << endmsg;
+  debug() << "    -> averaged material : " << mat << endmsg;
   gear::SimpleMaterialImpl* gearMaterial = new gear::SimpleMaterialImpl(name.c_str(), mat.A(), mat.Z(),
 									mat.density()/(dd4hep::kg/(dd4hep::g*dd4hep::m3)),
 									mat.radiationLength()/dd4hep::mm,

@@ -28,6 +28,7 @@
 #include "gear/FTDLayerLayout.h"
 #else
 #include "DetInterface/IGeomSvc.h"
+#include "DetIdentifier/CEPCDetectorData.h"
 #endif
 
 //----From KiTrack-----------------------------
@@ -172,19 +173,39 @@ StatusCode ForwardTrackingAlg::initialize(){
 
   int nLayers(0), nModules(0), nSensors(0);
   try {
-    auto ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
-    auto ftdData = ftdDet.extension<dd4hep::rec::ZDiskPetalsData>();
-    auto ftdlayers = ftdData->layers;
+    auto  ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+    auto  ftdData = ftdDet.extension<dd4hep::rec::ZDiskPetalsData>();
+    auto& ftdlayers = ftdData->layers;
 
     nLayers = ftdlayers.size() + 1;
-    for (int layer = 0; layer < ftdlayers.size(); layer++) {
+    for (int layer = 0, N = ftdlayers.size(); layer < N; layer++) {
       auto& ftdlayer = ftdlayers[layer];
       if (ftdlayer.petalNumber > nModules) nModules = ftdlayer.petalNumber;
       if (ftdlayer.sensorsPerPetal > nSensors)    nSensors = ftdlayer.sensorsPerPetal;
     }
   } catch(std::runtime_error& e) {
-    fatal() << e.what() << endmsg;
-    return StatusCode::FAILURE;
+    info() << e.what() << endmsg;
+    try {
+      auto  ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+      auto  ftdData = ftdDet.extension<dd4hep::rec::MultiRingsZDiskData>();
+      auto& ftdlayers = ftdData->layers;
+
+      nLayers = ftdlayers.size() + 1;
+      for (int layer = 0; layer < ftdlayers.size(); layer++) {
+	auto& ftdlayer = ftdlayers[layer];
+	auto& rings = ftdlayer.rings;
+	int ns = 0;
+	for (int iring = 0, N = rings.size(); iring < N; iring++) {
+	  auto& ring = rings[iring];
+	  if (ring.petalNumber > nModules) nModules = ring.petalNumber;
+	  ns += ring.sensorsPerPetal;
+	}
+	if (ns > nSensors) nSensors = ns;
+      }
+    } catch(std::runtime_error& e) {
+      fatal() << e.what() << endmsg;
+      return StatusCode::FAILURE;
+    }
   }
 #endif
   

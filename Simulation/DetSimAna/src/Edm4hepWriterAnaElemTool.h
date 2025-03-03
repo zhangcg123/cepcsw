@@ -63,8 +63,9 @@ private:
     // the name here is without suffix "Collection"
     Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
         "TrackerCollections",
-        {"VXD", "FTD", "SIT", "TPC", "TPCLowPt", "TPCSpacePoint", "SET", 
-         "ITKBarrel", "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"}, 
+	{"VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
+	 "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap",
+	 "SIT", "SET", "FTD"},
         "Names of the Tracker collections (without suffix Collection)"};
     Gaudi::Property<std::vector<std::string>> m_calorimeterColNames{this, 
         "CalorimeterCollections",

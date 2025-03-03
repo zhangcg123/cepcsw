@@ -202,7 +202,7 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     }
     else
     {
-      thickness_support += layer_thickness;
+      if (thickness_sensitive == 0) thickness_support += layer_thickness;
       surf_type = rec::SurfaceType(rec::SurfaceType::Helper, rec::SurfaceType::Plane, rec::SurfaceType::ParallelToZ);
     }
 
@@ -307,7 +307,7 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     double z_position = -ladder_length_inner * (ladder_repeat_inner / 2.0) - (i + 0.5) * ladder_length_outer;
     Position pos(0, 0, z_position);
     auto cloned_outer_ladder_det = outer_ladder_det.clone("outer_" + ladder_name + std::to_string(-i - 1));
-    cloned_outer_ladder_det.setPlacement(stave_vol.placeVolume(outer_ladder_vol, pos).addPhysVolID("module", i));
+    cloned_outer_ladder_det.setPlacement(stave_vol.placeVolume(outer_ladder_vol, pos).addPhysVolID("oladder", -i - 1));
     stave_det.add(cloned_outer_ladder_det);
   }
 
@@ -327,28 +327,26 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
       envelope.placeVolume(stave_vol, Transform3D(RotationZ(angle), Position(rotated_x, rotated_y, 0.0))).
                addPhysVolID("module", i));
     otk_barrel.add(cloned_stave_det);
-
-    rec::ZPlanarData::LayerLayout otk_barrel_layer;
-    otk_barrel_layer.phi0 = angle;
-    otk_barrel_layer.ladderNumber = ladder_repeat_outer + ladder_repeat_inner;
-    otk_barrel_layer.thicknessSensitive = thickness_sensitive;
-    otk_barrel_layer.thicknessSupport = thickness_support;
-    otk_barrel_layer.distanceSensitive = otk_inner_radius + thickness_support;
-    otk_barrel_layer.distanceSupport = otk_inner_radius;
-    otk_barrel_layer.offsetSensitive = stave_y_offset;
-    otk_barrel_layer.offsetSupport = stave_y_offset;
-    otk_barrel_layer.widthSensitive = module_width;
-    otk_barrel_layer.widthSupport = module_width;
-    otk_barrel_layer.sensorsPerLadder = module_repeat * 4;
-    double z_half = ladder_length_inner * ladder_repeat_inner / 2.0 + ladder_length_outer * ladder_repeat_outer /
-      2.0;
-    otk_barrel_layer.zHalfSensitive = z_half;
-    otk_barrel_layer.zHalfSupport = z_half;
-    z_planar_data->layers.push_back(otk_barrel_layer);
   }
-
+  rec::ZPlanarData::LayerLayout otk_barrel_layer;
+  otk_barrel_layer.phi0 = 0;
+  otk_barrel_layer.ladderNumber = stave_repeat;
+  otk_barrel_layer.thicknessSensitive = thickness_sensitive;
+  otk_barrel_layer.thicknessSupport = thickness_support;
+  otk_barrel_layer.distanceSensitive = otk_inner_radius + thickness_support;
+  otk_barrel_layer.distanceSupport = otk_inner_radius;
+  otk_barrel_layer.offsetSensitive = stave_y_offset;
+  otk_barrel_layer.offsetSupport = stave_y_offset;
+  otk_barrel_layer.widthSensitive = module_width;
+  otk_barrel_layer.widthSupport = module_width;
+  otk_barrel_layer.sensorsPerLadder = module_repeat * 4;
+  double z_half = ladder_length_inner * ladder_repeat_inner / 2.0 + ladder_length_outer * ladder_repeat_outer / 2.0;
+  otk_barrel_layer.zHalfSensitive = z_half;
+  otk_barrel_layer.zHalfSupport = z_half;
+  z_planar_data->layers.push_back(otk_barrel_layer);
   // check_det_element(otk_barrel);
 
+  std::cout << (*z_planar_data) << std::endl;
   otk_barrel.addExtension<rec::ZPlanarData>(z_planar_data);
   if (x_det.hasAttr(_U(combineHits)))
   {

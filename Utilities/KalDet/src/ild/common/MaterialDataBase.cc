@@ -325,6 +325,32 @@ void MaterialDataBase::createMaterials(const gear::GearMgr& gearMgr, IGeomSvc* g
       std::cout << "Warning! cannot get material ITKEndcapSupportMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
     }
     try {
+      const gear::SimpleMaterial& itk_glue_mat = gearMgr.getSimpleMaterial("ITKEndcapGlueMaterial");
+      A       = itk_glue_mat.getA();
+      Z       = itk_glue_mat.getZ();
+      density = itk_glue_mat.getDensity() * kg_m3TOg_cm3;
+      radlen  = itk_glue_mat.getRadLength() * mmTOcm;
+      name    = itk_glue_mat.getName() ;
+      TMaterial &itkglue = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
+      this->addMaterial(&itkglue, name);
+    }
+    catch( gear::UnknownParameterException& e){
+      std::cout << "Warning! cannot get material ITKEndcapGlueMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+    }
+    try {
+      const gear::SimpleMaterial& itk_service_mat = gearMgr.getSimpleMaterial("ITKEndcapServiceMaterial");
+      A       = itk_service_mat.getA();
+      Z       = itk_service_mat.getZ();
+      density = itk_service_mat.getDensity() * kg_m3TOg_cm3;
+      radlen  = itk_service_mat.getRadLength() * mmTOcm;
+      name    = itk_service_mat.getName() ;
+      TMaterial &itkservice = *new TMaterial(name.c_str(), "", A, Z, density, radlen, 0.);
+      this->addMaterial(&itkservice, name);
+    }
+    catch( gear::UnknownParameterException& e){
+      std::cout << "Warning! cannot get material ITKEndcapServiceMaterial from GeomSvc! GearMgr=" << &gearMgr << std::endl;
+    }
+    try {
       const gear::SimpleMaterial& otk_support_mat = gearMgr.getSimpleMaterial("OTKBarrelSupportMaterial");
       A       = otk_support_mat.getA();
       Z       = otk_support_mat.getZ();

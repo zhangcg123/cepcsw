@@ -3204,8 +3204,29 @@ StatusCode SiliconTrackingAlg::setupGeom() {
       }
     }
     _nlayersFTD =_zLayerFTD.size();
-  } catch(std::runtime_error& e){
-    warning() << e.what() << endmsg;
+  } catch(std::runtime_error& e1){
+    info() << "try ZDiskPetalsData: " << e1.what() << endmsg;
+    try {
+      auto ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+      auto ftdData = ftdDet.extension<dd4hep::rec::MultiRingsZDiskData>();
+      auto ftdlayers = ftdData->layers;
+      for (int layer = 0; layer < ftdlayers.size(); layer++) {
+	dd4hep::rec::MultiRingsZDiskData::LayerLayout& ftdlayer = ftdlayers[layer];
+	auto& ring = ftdlayer.rings[0];
+	// front petal even numbered
+	_zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm + ftdlayer.zOffsetSupport/dd4hep::mm - 0.5*ftdlayer.thicknessSupport/dd4hep::mm
+			     - ring.thicknessGlue/dd4hep::mm - 0.5*ring.thicknessSensitive/dd4hep::mm);
+	if (ring.petalNumber > 0) {
+	  // front petal odd numbered
+	  _zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm + ftdlayer.zOffsetSupport/dd4hep::mm + 0.5*ftdlayer.thicknessSupport/dd4hep::mm
+			       + ring.thicknessGlue/dd4hep::mm + 0.5*ring.thicknessSensitive/dd4hep::mm);
+	  _petalBasedFTDWithOverlaps = true;
+	}
+      }
+      _nlayersFTD =_zLayerFTD.size();
+    } catch(std::runtime_error& e2) {
+      warning() << "try MultiRingsZDiskData: " << e2.what() << endmsg;
+    }
   }
 #endif
 
