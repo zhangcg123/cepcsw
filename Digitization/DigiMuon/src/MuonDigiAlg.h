@@ -49,26 +49,21 @@ class MuonDigiAlg : public GaudiAlgorithm
   virtual StatusCode initialize() ;
   virtual StatusCode execute() ; 
   virtual StatusCode finalize() ;
+  void MuonHandle(int _i); // 2->Barrel  0->Endcap
   void Clear();
-  void GetSimHit(edm4hep::SimTrackerHit _simhit, dd4hep::DDSegmentation::BitFieldCoder* _m_decoder);
-  double Gethit_sipm_length_Barrel();
-  double Gethit_sipm_length_Endcap();
-  void EdeptoADC();
-  void SaveData_mapcell();
-  bool Mapcell_todata(int _message[6], std::array<unsigned long long, 2> _key);
+  void GetSimHit(edm4hep::SimTrackerHit _simhit, dd4hep::DDSegmentation::BitFieldCoder* _m_decoder, int _i, int _message[6], double & _Edep, unsigned long long & _cellid, double & _xydist, edm4hep::Vector3d & _pos, dd4hep::Position & _ddpos, std::array<unsigned long long, 2> & _key, double & _mcpz);
+  double Gethit_sipm_length_Barrel(dd4hep::Position _ddpos, edm4hep::Vector3d _pos, int _message[6]);
+  double Gethit_sipm_length_Endcap(dd4hep::Position _ddpos, edm4hep::Vector3d _pos, int _message[6]);
+  double EdeptoADC(double _Edep, double _hit_sipm_length);
+  void SaveData_mapcell(std::array<unsigned long long, 2> _key, double _Edep, int _message[6], edm4hep::Vector3d _pos);
   void Cut3();
-  void Save_trkhit(edm4hep::TrackerHitCollection* _trkhitVec, std::array<unsigned long long, 2> _key, int _pdgid, unsigned long long _cellid, edm4hep::Vector3d _pos);
-  void Renew_strip(std::array<unsigned long long, 2> _key1, std::array<unsigned long long, 2> _key2);
-  void Find_anotherlayer(int _i, edm4hep::Vector3d _pos1, edm4hep::Vector3d _pos2, double _ddposi, int _pdgid);
-  int Get_true_pdgid(int _i, int _pdgid);
+  void Find_anotherlayer(int _i, std::array<unsigned long long, 2> _key1, std::array<unsigned long long, 2> _key2, double _ddposi, int & _anotherlayer_cell_num);
+  void Save_trkhit(edm4hep::TrackerHitCollection* _trkhitVec, std::array<unsigned long long, 2> _key, int _pdgid, edm4hep::Vector3d _pos);
   void Save_onelayer_signal(edm4hep::TrackerHitCollection* _trkhitVec);
-  void Save_pos(int _i);
+
 
 
  protected:
-
-
-
 
   TTree* m_tree;
   TFile* m_wfile;
@@ -134,14 +129,6 @@ class MuonDigiAlg : public GaudiAlgorithm
   // number of strips parallel to beam direction 
   // in each slayer, each strip width=4cm, so 
   int strip_length[6] = {26, 38, 50, 62, 74, 86}; //for barrel
-  std::array<unsigned long long, 2> key, key1, key2;
-  int pdgid, layer, slayer, strip, Fe, Env, anotherlayer_cell_num, true_pdgid;
-  unsigned long long cellid, abspdgid, cellid1, cellid2; 
-  double Edep, xydist, hit_sipm_length, ADC, hit_strip_length, ADCmean, Hit_max, Hit_min;
-  edm4hep::Vector3d pos, pos1, pos2;
-  edm4hep::Vector3d mcppos;
-  dd4hep::Position ddpos, ddpos1, ddpos2;  
-  int all_message1[6], all_message2[6];  // int layer1, slayer1, strip1, Fe1, Env1, pdgid1;
   double endcap_strip_length[193] = {2.12, 2.12, 2.12, 2.13, 2.14, 2.15, 2.16, 2.17, 2.19, 2.22,
                                      2.24, 2.28, 2.32, 2.37, 2.45, 2.65, 2.64, 2.63, 2.62, 2.61,
                                      2.60, 2.59, 2.57, 2.56, 2.54, 2.53, 2.51, 2.50, 2.48, 2.46, 
