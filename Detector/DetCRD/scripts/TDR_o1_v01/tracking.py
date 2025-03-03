@@ -163,9 +163,10 @@ digiMuon.MuonEndcapTrackerHits = "MuonEndcapTrackerHits"
 digiMuon.WriteNtuple = 0
 digiMuon.OutFileName = "Digi_MUON.root"
 digiMuon.SiPMEff = 1
-digiMuon.EdepMin = 0.0001
-digiMuon.HitEdepMin = 0.000001
-digiMuon.HitEdepMax = 0.1
+digiMuon.EdepMin = 0.0  # no cut on GeV energy deposition
+digiMuon.HitEdepMin = 6.0 # ADC counts
+digiMuon.HitEdepMax = -1 # ADC counts, -1 means no upper cut
+#digiMuon.OutputLevel = DEBUG
 #########################################
 
 ################
