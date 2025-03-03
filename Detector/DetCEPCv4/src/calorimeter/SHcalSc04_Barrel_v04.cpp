@@ -539,7 +539,7 @@ static Ref_t create_detector(Detector &theDetector, xml_h element, SensitiveDete
             cell_x_offset -= total_cell_size_abnormal / 2.;
           }
         }
-        printf("layerID: %2d, x_length: %3.3lf, x_cell: %3.3lf, x_cell_abnormal: %3.3lf, x_dead: %3.3lf, z_length: %3.3lf,z_cell: %3.3lf, z_dead: %3.3lf,\n", layer_id,  2 * x_halflength,  n_x * total_cell_size,  nx_abnormal * total_cell_size_abnormal,  2 * x_halflength - n_x * total_cell_size - nx_abnormal * total_cell_size_abnormal,  2 * z_halfwidth,  n_z * total_cell_size,  2 * z_halfwidth - n_z * total_cell_size);
+        //printf("layerID: %2d, x_length: %3.3lf, x_cell: %3.3lf, x_cell_abnormal: %3.3lf, x_dead: %3.3lf, z_length: %3.3lf,z_cell: %3.3lf, z_dead: %3.3lf,\n", layer_id,  2 * x_halflength,  n_x * total_cell_size,  nx_abnormal * total_cell_size_abnormal,  2 * x_halflength - n_x * total_cell_size - nx_abnormal * total_cell_size_abnormal,  2 * z_halfwidth,  n_z * total_cell_size,  2 * z_halfwidth - n_z * total_cell_size);
         // Reset counters to measure "outside" quantitites
         nRadiationLengths = 0.;
         nInteractionLengths = 0.;

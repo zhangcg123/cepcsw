@@ -179,34 +179,34 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     // ### Print Volume ###
     // ####################
 
-    std::cout << "dim_x1" << " : " << dim_x1*2 << std::endl;
-    std::cout << "dim_x2" << " : " << dim_x2*2 << std::endl;
-    std::cout << "dim_x3" << " : " << dim_x3*2 << std::endl;
-    std::cout << "dim_x4" << " : " << dim_x4*2 << std::endl;
-    std::cout << "depth_longitudinal_p" << " : " << depth_longitudinal_p << std::endl;
-    std::cout << "depth_longitudinal_n" << " : " << depth_longitudinal_n << std::endl;
+    //std::cout << "dim_x1" << " : " << dim_x1*2 << std::endl;
+    //std::cout << "dim_x2" << " : " << dim_x2*2 << std::endl;
+    //std::cout << "dim_x3" << " : " << dim_x3*2 << std::endl;
+    //std::cout << "dim_x4" << " : " << dim_x4*2 << std::endl;
+    //std::cout << "depth_longitudinal_p" << " : " << depth_longitudinal_p << std::endl;
+    //std::cout << "depth_longitudinal_n" << " : " << depth_longitudinal_n << std::endl;
 
-    std::cout << "radius outer" << " : " << sqrt((radius_inner+depth_longitudinal_n)*(radius_inner+depth_longitudinal_n)+dim_x4*dim_x4) << std::endl;
-    std::cout << "radius outer" << " : " << sqrt((radius_inner+height_layer1+depth_longitudinal_p)*(radius_inner+height_layer1+depth_longitudinal_p)+dim_x2*dim_x2) << std::endl;
+    //std::cout << "radius outer" << " : " << sqrt((radius_inner+depth_longitudinal_n)*(radius_inner+depth_longitudinal_n)+dim_x4*dim_x4) << std::endl;
+    //std::cout << "radius outer" << " : " << sqrt((radius_inner+height_layer1+depth_longitudinal_p)*(radius_inner+height_layer1+depth_longitudinal_p)+dim_x2*dim_x2) << std::endl;
 
-    std::cout << "size_crystal" << " : " << size_crystal << std::endl;
-    std::cout << "size_posi_crystal" << " : " << size_posi_crystal << std::endl;
+    //std::cout << "size_crystal" << " : " << size_crystal << std::endl;
+    //std::cout << "size_posi_crystal" << " : " << size_posi_crystal << std::endl;
 
-    std::cout << "pZ" << " : " << pZ << std::endl;
-    std::cout << "Nbar_phi" << " : " << Nbar_phi << std::endl;
+    //std::cout << "pZ" << " : " << pZ << std::endl;
+    //std::cout << "Nbar_phi" << " : " << Nbar_phi << std::endl;
 
-    std::cout << "area_1" << " : " << dead_material_p*2*size_posi_crystal << std::endl;
-    std::cout << "area_2" << " : " << (dead_material_p+dead_material_p+size_posi_crystal*tan(alice_angle))*size_posi_crystal << std::endl;
-    std::cout << "area_3" << " : " << (dead_material_p+dead_material_p+2*size_posi_crystal*tan(alice_angle))*size_posi_crystal << std::endl;
+    //std::cout << "area_1" << " : " << dead_material_p*2*size_posi_crystal << std::endl;
+    //std::cout << "area_2" << " : " << (dead_material_p+dead_material_p+size_posi_crystal*tan(alice_angle))*size_posi_crystal << std::endl;
+    //std::cout << "area_3" << " : " << (dead_material_p+dead_material_p+2*size_posi_crystal*tan(alice_angle))*size_posi_crystal << std::endl;
 
-    std::cout << "area_4" << " : " << dead_material_n*2*size_crystal << std::endl;
-    std::cout << "area_5" << " : " << (dead_material_n+dead_material_n+size_crystal/tan(copper_angle))*size_crystal << std::endl;
-    std::cout << "area_6" << " : " << (dead_material_n+dead_material_n+2*size_crystal/tan(copper_angle))*size_crystal << std::endl;
-    
-    std::cout << "total volume" << " : " << 
-    ( dim_x1*2 + (dim_x1+Nlayers*size_crystal*tan(alice_angle))*2 ) * Nlayers*size_crystal /2 * pZ + 
-    ( dim_x3*2 + (dim_x3-Nlayers*size_posi_crystal/tan(copper_angle))*2 ) * Nlayers*size_posi_crystal /2 * pZ
-    << std::endl;
+    //std::cout << "area_4" << " : " << dead_material_n*2*size_crystal << std::endl;
+    //std::cout << "area_5" << " : " << (dead_material_n+dead_material_n+size_crystal/tan(copper_angle))*size_crystal << std::endl;
+    //std::cout << "area_6" << " : " << (dead_material_n+dead_material_n+2*size_crystal/tan(copper_angle))*size_crystal << std::endl;
+    //
+    //std::cout << "total volume" << " : " << 
+    //( dim_x1*2 + (dim_x1+Nlayers*size_crystal*tan(alice_angle))*2 ) * Nlayers*size_crystal /2 * pZ + 
+    //( dim_x3*2 + (dim_x3-Nlayers*size_posi_crystal/tan(copper_angle))*2 ) * Nlayers*size_posi_crystal /2 * pZ
+    //<< std::endl;
 
     // ####################################
     // ### placement of all the volumes ###
@@ -239,8 +239,8 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
     for(int ilayer=0; ilayer<Nlayers; ilayer=ilayer+1){
 
         length_posi = dim_x1  - dead_material_l + ilayer*size_posi_crystal*tan(alice_angle);
-        cout<< "layer: "<< ilayer+1 << endl;
-        cout<< "   length_posi: "<< length_posi*2 << endl;
+        //cout<< "layer: "<< ilayer+1 << endl;
+        //cout<< "   length_posi: "<< length_posi*2 << endl;
         
         //Trapezoid in layer
         dd4hep::Volume block("block", dd4hep::Trapezoid( dim_x1+ilayer*size_posi_crystal*tan(alice_angle), dim_x1+(ilayer+1)*size_posi_crystal*tan(alice_angle), pZ/2, pZ/2, size_posi_crystal/2), air);
@@ -335,7 +335,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
         // ###################################
 
         if(ilayer%2==0){
-            cout<< "   Nbar_phi: " << Nbar_phi << endl;
+            //cout<< "   Nbar_phi: " << Nbar_phi << endl;
 
             dd4hep::Volume sipm_s0("sipm_s0", dd4hep::Box(photoelectronic/2, photoelectronic_width/2, photoelectronic_width/2), mat_Si); 
             sipm_s0.setVisAttributes(theDetector, "BlueVis");
@@ -556,7 +556,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
             Nbar_z = int((length_posi-0.5*width_crystal)/width_crystal);
             last_bar = length_posi-0.5*width_crystal - (Nbar_z-1)*width_crystal;
 
-            cout<< "   Nbar_z: " << 2*Nbar_z+1 << endl;
+            //cout<< "   Nbar_z: " << 2*Nbar_z+1 << endl;
 
             dd4hep::Volume sipm_s0("sipm_s0", dd4hep::Box(photoelectronic_width/2, photoelectronic/2, photoelectronic_width/2), mat_Si); 
             sipm_s0.setVisAttributes(theDetector, "BlueVis");
@@ -792,8 +792,8 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
         
         length_nega = dim_x3 - dead_material_r - (ilayer+1)*size_crystal/tan(copper_angle);
         
-        cout << "layer: " << ilayer+1 << endl;
-        cout << "   length_nega: " << length_nega*2 << endl;
+        //cout << "layer: " << ilayer+1 << endl;
+        //cout << "   length_nega: " << length_nega*2 << endl;
 
 
         //Trapezoid in layer
@@ -889,7 +889,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
 
         if(ilayer%2==0){
 
-            cout<< "   Nbar_phi: " << Nbar_phi << endl;
+            //cout<< "   Nbar_phi: " << Nbar_phi << endl;
 
             dd4hep::Volume sipm_s0("sipm_s0", dd4hep::Box(photoelectronic/2, photoelectronic_width/2, photoelectronic_width/2), mat_Si); 
             sipm_s0.setVisAttributes(theDetector, "BlueVis");
@@ -1109,7 +1109,7 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
             Nbar_z = int((length_nega-0.5*width_crystal)/width_crystal);
             last_bar = length_nega-0.5*width_crystal - (Nbar_z-1)*width_crystal;
 
-            cout << "   Nbar_z: " << 2*Nbar_z+1 << endl;
+            //cout << "   Nbar_z: " << 2*Nbar_z+1 << endl;
 
             dd4hep::Volume sipm_s0("sipm_s0", dd4hep::Box(photoelectronic_width/2, photoelectronic/2, photoelectronic_width/2), mat_Si); 
             sipm_s0.setVisAttributes(theDetector, "BlueVis");
@@ -1332,8 +1332,8 @@ static dd4hep::Ref_t create_detector(dd4hep::Detector& theDetector,
         sd.setPlacement(plv); 
     }
 
-    cout<<"positive volume "<< positive_volume<<endl;
-    cout<<"negative volume "<< negative_volume<<endl;
+    //cout<<"positive volume "<< positive_volume<<endl;
+    //cout<<"negative volume "<< negative_volume<<endl;
 
     // ###########################
     // ### Z modules placement ###
