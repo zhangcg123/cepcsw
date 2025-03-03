@@ -9,56 +9,54 @@
     <comment>CepC Inner Tracker EndCap</comment>
   </info>
   <define>
-    <constant name="SiliconThickness" value="400*um"/>
-    <constant name="SupportThickness" value="3.5*mm"/>
     <constant name="ITKModuleLengthPhi" value="40.1*mm"/>
   </define>
 
   <detectors>
-    <detector id="DetID_ITKEndCap" name="ITK_EndCap" type="ITK_EndCap_v01" vis="FTDVis" readout="ITKEndcapCollection" insideTrackingVolume="true" reflect="true">
+    <detector id="DetID_ITKEndcap" name="ITKEndcap" type="ITK_EndCap_v01" vis="FTDVis" readout="ITKEndcapCollection" combineHits="true" insideTrackingVolume="true" reflect="true">
       <envelope>
 	<shape type="Assembly"/>
       </envelope>
 
       <type_flags type="DetType_TRACKER +  DetType_ENDCAP  + DetType_PIXEL "/>
 
-      <support thickness="SupportThickness">
-        <slice name="Carbon_fiber_front" material="CarbonFiber" thickness="150*um" vis="GrayVis"/>
+      <support>
+        <slice name="Carbon_fiber_front" material="CF_ITK" thickness="150*um" vis="GrayVis"/>
         <slice name="Cooling_tube_wall" material="G4_Ti" thickness="3.560*0.013*100*um" vis="GrayVis"/>
         <slice name="Cooling_fluid" material="G4_WATER" thickness="35.76*0.105*100*um" vis="GrayVis"/>
-        <slice name="Graphite_foam_Honeycomb" material="Air" thickness="2000*um" vis="YellowVis"/>
-        <slice name="Carbon_fiber_back" material="CarbonFiber" thickness="150*um" vis="GrayVis"/>
-        <slice name="Glue" material="Air" thickness="200*um" vis="YellowVis"/>
-        <slice name="Other_electronics" material="Kapton" thickness="32.6437*0.05*100*um" vis="SeeThrough"/>
+        <slice name="Graphite_foam_Honeycomb" material="GraphiteFoam_OTK" thickness="2000*um" vis="YellowVis"/>
+        <slice name="Carbon_fiber_back" material="CF_ITK" thickness="150*um" vis="GrayVis"/>
       </support>
 
-      <sensor thickness="SiliconThickness">
-        <slice name="Glue" material="Air" thickness="100*um" vis="SeeThrough"/>
+      <sensor>
+	<slice name="GlueF" material="CER_ITK" thickness="200*um" vis="YellowVis"/>
         <slice name="Sensor" material="G4_Si" thickness="150*um" sensitive="true" vis="GreenVis"/>
-        <slice name="FPC_Insulating_layers" material="Polyimide" thickness="100*um" vis="SeeThrough"/>
+	<slice name="GlueB" material="CER_ITK" thickness="100*um" vis="SeeThrough"/>
+        <slice name="FPC_Insulating_layers" material="Polyimide_ITK" thickness="100*um" vis="SeeThrough"/>
         <slice name="FPC_metal_layer" material="G4_Al" thickness="50*um" vis="SeeThrough"/>
+	<slice name="Other_electronics" material="Kapton" thickness="32.6437*0.05*100*um" vis="SeeThrough"/>
       </sensor>
 
       <layers>
-      <layer id="0" z="505*mm" dz="SiliconThickness*2 + SupportThickness" inner_r="81.5*mm" outer_r="245*mm" vis="SeeThrough">
-	    <ring id="0" inner_r="81.5*mm"  outer_r="(163.4-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="13" vis="SeeThrough" />
-        <ring id="1" inner_r="163.4*mm" outer_r="245*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="20" vis="SeeThrough"/>
-      </layer>
-      <layer id="1" z="718.5*mm" dz="SiliconThickness*2 + SupportThickness" inner_r="110.5*mm" outer_r="355*mm" vis="SeeThrough">
-        <ring id="0" inner_r="110.5*mm" outer_r="(192.2-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="16" vis="SeeThrough"/>
-        <ring id="1" inner_r="192.2*mm" outer_r="(273.4-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="24" vis="SeeThrough"/>
-        <ring id="2" inner_r="273.4*mm" outer_r="355*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="28" vis="SeeThrough"/>
-      </layer>
-      <layer id="2" z="1000.3*mm" dz="SiliconThickness*2 + SupportThickness" inner_r="160.5*mm" outer_r="565*mm" vis="SeeThrough">
-        <ring id="0" inner_r="160.5*mm" outer_r="(282-0.1)*mm" module_dr="120.5*mm" module_dphi="40.1*mm" nmodule="24" vis="SeeThrough"/>
-        <ring id="1" inner_r="282*mm"   outer_r="(423.4-0.1)*mm" module_dr="140.6*mm" module_dphi="40.1*mm" nmodule="36" vis="SeeThrough"/>
-        <ring id="2" inner_r="423.4*mm" outer_r="565*mm" module_dr="140.6*mm" module_dphi="40.1*mm" nmodule="44" vis="SeeThrough"/>
-      </layer>
-      <layer id="3" z="1489*mm" dz="SiliconThickness*2 + SupportThickness" inner_r="220.3*mm" outer_r="565*mm" vis="SeeThrough">
-        <ring id="0" inner_r="220.3*mm" outer_r="(301.6-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="24" vis="SeeThrough"/>
-        <ring id="1" inner_r="301.6*mm" outer_r="(443.1-0.1)*mm" module_dr="140.6*mm" module_dphi="40.1*mm" nmodule="36" vis="SeeThrough"/>
-        <ring id="2" inner_r="443.1*mm" outer_r="565*mm" module_dr="120.5*mm" module_dphi="40.1*mm"  nmodule="44" vis="SeeThrough"/>
-      </layer>
+	<layer id="0" z="505*mm" inner_r="81.5*mm" outer_r="245*mm" phi0="90*degree" vis="SeeThrough">
+	  <ring id="0" inner_r="81.5*mm"  outer_r="(163.4-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="13" vis="SeeThrough" />
+          <ring id="1" inner_r="163.4*mm" outer_r="245*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="20" vis="SeeThrough"/>
+	</layer>
+	<layer id="1" z="718.5*mm" inner_r="110.5*mm" outer_r="355*mm" phi0="90*degree" vis="SeeThrough">
+          <ring id="0" inner_r="110.5*mm" outer_r="(192.2-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="16" vis="SeeThrough"/>
+          <ring id="1" inner_r="192.2*mm" outer_r="(273.4-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="24" vis="SeeThrough"/>
+          <ring id="2" inner_r="273.4*mm" outer_r="355*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="28" vis="SeeThrough"/>
+	</layer>
+	<layer id="2" z="1000.3*mm" inner_r="160.5*mm" outer_r="565*mm" phi0="90*degree" vis="SeeThrough">
+          <ring id="0" inner_r="160.5*mm" outer_r="(282-0.1)*mm" module_dr="120.5*mm" module_dphi="40.1*mm" nmodule="24" vis="SeeThrough"/>
+          <ring id="1" inner_r="282*mm"   outer_r="(423.4-0.1)*mm" module_dr="140.6*mm" module_dphi="40.1*mm" nmodule="36" vis="SeeThrough"/>
+          <ring id="2" inner_r="423.4*mm" outer_r="565*mm" module_dr="140.6*mm" module_dphi="40.1*mm" nmodule="44" vis="SeeThrough"/>
+	</layer>
+	<layer id="3" z="1489*mm" inner_r="220.3*mm" outer_r="565*mm" phi0="90*degree" vis="SeeThrough">
+          <ring id="0" inner_r="220.3*mm" outer_r="(301.6-0.1)*mm" module_dr="80.3*mm" module_dphi="40.1*mm" nmodule="24" vis="SeeThrough"/>
+          <ring id="1" inner_r="301.6*mm" outer_r="(443.1-0.1)*mm" module_dr="140.6*mm" module_dphi="40.1*mm" nmodule="36" vis="SeeThrough"/>
+          <ring id="2" inner_r="443.1*mm" outer_r="565*mm" module_dr="120.5*mm" module_dphi="40.1*mm"  nmodule="44" vis="SeeThrough"/>
+	</layer>
       </layers>
 
     </detector>

@@ -35,7 +35,7 @@
     <constant name="DetID_SET"          value="  5"/>
     <constant name="DetID_ETD"          value="  6"/>
     <constant name="DetID_ITKBarrel"    value="  2"/>
-    <constant name="DetID_ITKEndCap"    value="  3"/>
+    <constant name="DetID_ITKEndcap"    value="  3"/>
     <constant name="DetID_OTKBarrel"    value="  5"/>
     <constant name="DetID_OTKEndcap"    value="  6"/>
     
@@ -130,20 +130,25 @@
     <constant name="ITKBarrel1_inner_radius"   value="235*mm"/>
     <constant name="ITKBarrel2_inner_radius"   value="345*mm"/>
     <constant name="ITKBarrel3_inner_radius"   value="555.6*mm"/>
-    <constant name="ITKBarrel1_half_length"    value="500.5*mm"/>
-    <constant name="ITKBarrel2_half_length"    value="715*mm"/>
-    <constant name="ITKBarrel3_half_length"    value="1001*mm"/>
+    <constant name="ITKBarrel1_half_length"    value="493.3*mm"/>
+    <constant name="ITKBarrel2_half_length"    value="704.8*mm"/>
+    <constant name="ITKBarrel3_half_length"    value="986.6*mm"/>
 
     <!-- Parameters of time of flight tracker -->
     <constant name="OTKBarrel_inner_radius" value="1800*mm"/>
     <constant name="OTKBarrel_outer_radius" value="1830*mm"/>
-    <!--constant name="OTKBarrel_half_length" value="2940*mm"/--><!--reach Ecal edge, wait mechanical design update-->
     <constant name="OTKBarrel_half_length" value="2930*mm"/>
     <constant name="OTKBarrelLayer1_half_length" value="OTKBarrel_half_length"/>
     <constant name="OTKBarrelLayer2_half_length" value="OTKBarrel_half_length"/>
     <constant name="OTKBarrel1_inner_radius" value="1805*mm"/>
     <constant name="OTKBarrel2_inner_radius" value="1820*mm"/>
 
+    <constant name="OTKEndcap_zmin"         value="2910*mm"/>
+    <constant name="OTKEndcap_zmax"         value="2930*mm"/>
+    <constant name="OTKEndcap_outer_radius" value="1820*mm"/>
+    <constant name="OTKEndcap_inner_radius" value="400*mm"/>
+
+    <!-- obselete -->
     <constant name="SET_inner_radius"    value="1800*mm"/>
 
     <constant name="SiTracker_endcap_barrel_zgap" value="5*mm"/>

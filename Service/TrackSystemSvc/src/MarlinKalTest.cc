@@ -12,6 +12,7 @@
 #include "kaldet/CEPCVTXKalDetector.h"
 #include "kaldet/ILDSITKalDetector.h"
 #include "kaldet/CEPCITKKalDetector.h"
+#include "kaldet/CEPCITKEndcapKalDetector.h"
 #include "kaldet/ILDSITCylinderKalDetector.h"
 #include "kaldet/ILDSETKalDetector.h"
 #include "kaldet/CEPCOTKKalDetector.h"
@@ -37,7 +38,7 @@
 
 #include <utility>
 
-//#include "streamlog/streamlog.h"
+#include "streamlog/streamlog.h"
 
 #include "kaldet/ILDMeasurementSurfaceStoreFiller.h"
 
@@ -48,7 +49,7 @@ namespace MarlinTrk{
   _gearMgr( &gearMgr ),
   _geoSvc(geoSvc){
     
-    //streamlog_out( DEBUG4 ) << "  MarlinKalTest - initializing the detector ..." << std::endl ;
+    streamlog_out( DEBUG4 ) << "  MarlinKalTest - initializing the detector ..." << std::endl ;
     
     _det = new TKalDetCradle ; // from kaltest. TKalDetCradle inherits from TObjArray ... 
     _det->SetOwner( true ) ; // takes care of deleting subdetector in the end ...
@@ -57,9 +58,7 @@ namespace MarlinTrk{
     
     this->registerOptions() ;
     
-    //streamlog_out( DEBUG4 ) << "  MarlinKalTest - established " << std::endl ;
-    
-    
+    streamlog_out( DEBUG4 ) << "  MarlinKalTest - established " << std::endl ;
   }
 
   MarlinKalTest::~MarlinKalTest(){
@@ -74,8 +73,7 @@ namespace MarlinTrk{
   
   void MarlinKalTest::init() {
     
-    //std::cout << "debug: MarlinKalTest - call  this init " << std::endl ;
-    //ILDSITKalDetector* sitdet = new ILDSITKalDetector( *_gearMgr, _geoSvc )  ;
+    streamlog_out( DEBUG4 ) << " MarlinKalTest - call  this init " << std::endl ;
     
     MeasurementSurfaceStore& surfstore = _gearMgr->getMeasurementSurfaceStore();
     
@@ -83,12 +81,13 @@ namespace MarlinTrk{
     if( surfstore.isFilled() == false ) {
 
       ILDMeasurementSurfaceStoreFiller filler( *_gearMgr );
-      //streamlog_out( DEBUG4 ) << "  MarlinKalTest - set up gear surface store using " << filler.getName() << std::endl ;
+      streamlog_out( DEBUG4 ) << "  MarlinKalTest - set up gear surface store using " << filler.getName() << std::endl ;
       surfstore.FillStore(&filler);
       
     }
     else {
-      //std::cout << "debug: MarlinKalTest - MeasurementSurfaceStore is already full. Using store as filled by MeasurementSurfaceStoreFiller " << surfstore.getFillerName() << std::endl ;
+      streamlog_out( DEBUG4 ) << "  MarlinKalTest - MeasurementSurfaceStore is already full. Using store as filled by MeasurementSurfaceStoreFiller "
+			      << surfstore.getFillerName() << std::endl ;
     }
     
     if (_gearMgr -> getDetectorName() == "LPTPC") {
@@ -99,7 +98,7 @@ namespace MarlinTrk{
         _det->Install( *tpcdet ) ;
       }
       catch( gear::UnknownParameterException& e){
-        //streamlog_out( MESSAGE ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
+        streamlog_out( MESSAGE ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
       }
     }
     else {
@@ -113,7 +112,7 @@ namespace MarlinTrk{
         _det->Install( *supportdet ) ;
       }
       catch( gear::UnknownParameterException& e){
-	std::cout << "Error: " << "MarlinKalTest - Support Material missing in gear file: Cannot proceed as propagations and extrapolations for cannonical track states are impossible: exit(1) called" << std::endl ;
+	streamlog_out( ERROR ) << "  MarlinKalTest - Support Material missing in gear file: Cannot proceed as propagations and extrapolations for cannonical track states are impossible: exit(1) called" << std::endl ;
         exit(1);
       }
 
@@ -125,7 +124,7 @@ namespace MarlinTrk{
         _det->Install( *vxddet ) ;
       }
       catch( gear::UnknownParameterException& e){
-	std::cout << "Warning: " << "  MarlinKalTest - VXD missing in gear file: VXD Material Not Built " << std::endl ;
+	streamlog_out( WARNING ) << "  MarlinKalTest - VXD missing in gear file: VXD Material Not Built " << std::endl ;
       }
       
       bool SIT_found = false ;
@@ -138,7 +137,7 @@ namespace MarlinTrk{
         SIT_found = true ;
       }
       catch( gear::UnknownParameterException& e){
-        //streamlog_out( MESSAGE ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
+	streamlog_out( WARNING ) << "  MarlinKalTest - SIT missing in gear file: SIT Not Built " << std::endl ;
       }
 
       if( ! SIT_found ){
@@ -149,19 +148,32 @@ namespace MarlinTrk{
           _det->Install( *sitdet ) ;
         }
         catch( gear::UnknownParameterException& e){
-	  std::cout << "Warning: " << "  MarlinKalTest - Simple Cylinder Based SIT missing in gear file: Simple Cylinder Based SIT Not Built " << std::endl ;
+	  streamlog_out( WARNING ) << "  MarlinKalTest - Simple Cylinder Based SIT missing in gear file: Simple Cylinder Based SIT Not Built " << std::endl ;
         }
       }
 
+      bool SET_found = false;
       try{
-        //ILDSETKalDetector* setdet = new ILDSETKalDetector( *_gearMgr, _geoSvc );
 	CEPCOTKKalDetector* setdet = new CEPCOTKKalDetector(*_gearMgr, _geoSvc);
         // store the measurement layer id's for the active layers
         this->storeActiveMeasurementModuleIDs(setdet);
         _det->Install( *setdet ) ;
+	SET_found = true;
       }
       catch( gear::UnknownParameterException& e){
-	std::cout << "Warning: " << "  MarlinKalTest - SET missing in gear file: SET Not Built " << std::endl ;
+	streamlog_out( WARNING ) << "  MarlinKalTest - OTKBarrel missing in gear file: Not Built " << std::endl ;
+      }
+
+      if(!SET_found) {
+	try {
+	  ILDSETKalDetector* setdet = new ILDSETKalDetector( *_gearMgr, _geoSvc );
+	  this->storeActiveMeasurementModuleIDs(setdet);
+	  _det->Install( *setdet ) ;
+	  SET_found = true;
+	}
+	catch( gear::UnknownParameterException& e){
+	  streamlog_out( WARNING ) << "  MarlinKalTest - SET missing in gear file: SET Not Built " << std::endl ;
+	}
       }
 
       bool FTD_found = false ;
@@ -173,7 +185,18 @@ namespace MarlinTrk{
         FTD_found = true ;
       }
       catch( gear::UnknownParameterException& e){
-	std::cout << "Warning: " << "  MarlinKalTest - Petal Based FTD missing in gear file: Petal Based FTD Not Built " << std::endl ;
+	streamlog_out( WARNING ) << "  MarlinKalTest - Petal Based FTD missing in gear file: Petal Based FTD Not Built " << std::endl ;
+      }
+
+      try{
+        CEPCITKEndcapKalDetector* ftddet = new CEPCITKEndcapKalDetector(*_gearMgr, _geoSvc);
+	// store the measurement layer id's for the active layers
+        this->storeActiveMeasurementModuleIDs(ftddet);
+	_det->Install(*ftddet);
+        FTD_found = true;
+      }
+      catch( gear::UnknownParameterException& e){
+	streamlog_out( WARNING ) << "  MarlinKalTest - Multi Ring Based Discs missing in gear file: ITKEncap Not Built " << std::endl ;
       }
 
       if( ! FTD_found ){
@@ -184,7 +207,7 @@ namespace MarlinTrk{
           _det->Install( *ftddet ) ;
         }
         catch( gear::UnknownParameterException& e){
-	  std::cout << "Warning: " << "  MarlinKalTest - Simple Disc Based FTD missing in gear file: Simple Disc Based FTD Not Built " << std::endl ;
+	  streamlog_out( WARNING ) << "  MarlinKalTest - All three type FTD missing in gear file: FTD Not Built " << std::endl;
         }
       }
 
@@ -195,7 +218,7 @@ namespace MarlinTrk{
         _det->Install(*etddet);
       }
       catch( gear::UnknownParameterException& e){
-	std::cout << "Warning: " << "  MarlinKalTest - ETD missing in gear file: Petal Based ETD Not Built " << std::endl;
+	streamlog_out( WARNING ) << "  MarlinKalTest - ETD missing in gear file: Petal Based ETD Not Built " << std::endl;
       }
       
       try{
@@ -205,7 +228,7 @@ namespace MarlinTrk{
         _det->Install( *tpcdet ) ;
       }
       catch( gear::UnknownParameterException& e){   
-	std::cout << "Warning: " << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
+	streamlog_out( WARNING ) << "  MarlinKalTest - TPC missing in gear file: TPC Not Built " << std::endl ;
       }
       
     }
@@ -213,20 +236,18 @@ namespace MarlinTrk{
     _det->Close() ;          // close the cradle
     _det->Sort() ;           // sort meas. layers from inside to outside
     
-    //streamlog_out( DEBUG4 ) << "  MarlinKalTest - number of layers = " << _det->GetEntriesFast() << std::endl ;
+    streamlog_out( DEBUG4 ) << "  MarlinKalTest - number of layers = " << _det->GetEntriesFast() << std::endl ;
     
-    //streamlog_out( DEBUG4 ) << "Options: " << std::endl << this->getOptions() << std::endl ;
+    streamlog_out( DEBUG4 ) << "Options: " << std::endl << this->getOptions() << std::endl ;
     
     this->includeMultipleScattering( getOption(IMarlinTrkSystem::CFG::useQMS) ) ;  
     this->includeEnergyLoss( getOption(IMarlinTrkSystem::CFG::usedEdx) ) ; 
     
-    
     is_initialised = true; 
-    
   }
   
   MarlinTrk::IMarlinTrack* MarlinKalTest::createTrack()  {
-    //std::cout << "fucd " << "creatTrack" << std::endl;
+
     if ( ! is_initialised ) {
       std::stringstream errorMsg;
       errorMsg << "MarlinKalTest::createTrack: Fitter not initialised. MarlinKalTest::init() must be called before MarlinKalTest::createTrack()" << std::endl ; 
@@ -268,16 +289,13 @@ namespace MarlinTrk{
       
     }
     
-    //streamlog_out( DEBUG0 ) << "MarlinKalTest::getSensitiveMeasurementModulesForLayer: layerID = " << layerID << std::endl;
+    streamlog_out( DEBUG0 ) << "MarlinKalTest::getSensitiveMeasurementModulesForLayer: layerID = " << layerID << std::endl;
     
     std::multimap<Int_t, const ILDVMeasLayer *>::const_iterator it; //Iterator to be used along with ii
     
-    
-    
-    //  for(it = _active_measurement_modules_by_layer.begin(); it != _active_measurement_modules_by_layer.end(); ++it) {
-    //    streamlog_out( DEBUG0 ) << "Key = "<< ttdecodeILD(it->first) <<"    Value = "<<it->second << std::endl ;
-    //  }
-    
+    for(it = _active_measurement_modules_by_layer.begin(); it != _active_measurement_modules_by_layer.end(); ++it) {
+      streamlog_out( DEBUG0 ) << "Key = "<< it->first <<"    Value = "<<it->second << std::endl ;
+    }
     
     std::pair<std::multimap<Int_t, const ILDVMeasLayer *>::const_iterator, std::multimap<Int_t, const ILDVMeasLayer *>::const_iterator> ii;  
     
@@ -291,7 +309,7 @@ namespace MarlinTrk{
     ii = this->_active_measurement_modules_by_layer.equal_range(layerID); // set the first and last entry in ii;
     
     for(it = ii.first; it != ii.second; ++it) {
-      //    streamlog_out( DEBUG0 ) <<"Key = "<< it->first <<"    Value = "<<it->second << std::endl ;
+      streamlog_out( DEBUG0 ) <<"Key = "<< it->first <<"    Value = "<<it->second << std::endl ;
       measmodules.push_back( it->second ) ; 
     }
     
@@ -314,7 +332,7 @@ namespace MarlinTrk{
     
     
     for(it = ii.first; it != ii.second; ++it) {
-      //      std::cout<<"Key = "<<it->first<<"    Value = "<<it->second << std::endl ;
+      streamlog_out( DEBUG0 ) <<"Key = "<<it->first<<"    Value = "<<it->second << std::endl ;
       measmodules.push_back( it->second ) ; 
     }
   }
@@ -374,8 +392,8 @@ namespace MarlinTrk{
     
     int mode = isfwd ? -1 : +1 ;
     
-    //  streamlog_out( DEBUG4 ) << "  MarlinKalTest - getLastMeasLayer deflection to point = " << deflection_to_point << " kappa = " << helix.GetKappa()  << "  mode = " << mode << std::endl ;
-    //  streamlog_out( DEBUG4 ) << " Point to move to:" << std::endl;
+    streamlog_out( DEBUG4 ) << "  MarlinKalTest - getLastMeasLayer deflection to point = " << deflection_to_point << " kappa = " << helix.GetKappa()  << "  mode = " << mode << std::endl ;
+    streamlog_out( DEBUG4 ) << " Point to move to:" << std::endl;
     //  point.Print();
     
     int nsufaces =  _det->GetEntriesFast();
@@ -401,17 +419,17 @@ namespace MarlinTrk{
         
         if( deflection < min_deflection ) {
           
-          //      streamlog_out( DEBUG4 ) << "  MarlinKalTest - crossing found for suface = " << ml.GetMLName() 
-          //                              << std::endl
-          //                              << "  min_deflection = " << min_deflection
-          //                              << "  deflection = " << deflection
-          //                              << "  deflection angle = " << defection_angle 
-          //                              << std::endl 
-          //                              << " x = " << crossing_point.X() 
-          //                              << " y = " << crossing_point.Y() 
-          //                              << " z = " << crossing_point.Z() 
-          //                              << " r = " << crossing_point.Perp() 
-          //                              << std::endl ;
+	  streamlog_out( DEBUG4 ) << "  MarlinKalTest - crossing found for suface = " << ml.GetName() 
+				  << std::endl
+				  << "  min_deflection = " << min_deflection
+				  << "  deflection = " << deflection
+				  << "  deflection angle = " << defection_angle 
+				  << std::endl 
+				  << " x = " << crossing_point.X() 
+				  << " y = " << crossing_point.Y() 
+				  << " z = " << crossing_point.Z() 
+				  << " r = " << crossing_point.Perp() 
+				  << std::endl ;
           
           min_deflection = deflection ;
           ml_retval = &ml ;
@@ -496,24 +514,22 @@ namespace MarlinTrk{
         
       }
       if( ! surf_found ){ // print out debug info
-	/*
+	
         streamlog_out(DEBUG1) << "MarlinKalTest::findMeasLayer point not found to be on any surface matching moduleID = "
-        << detElementID
-        << ": x = " << point.x()
-        << " y = " << point.y()
-        << " z = " << point.z()
-        << std::endl ;
-	*/
+			      << detElementID
+			      << ": x = " << point.x()
+			      << " y = " << point.y()
+			      << " z = " << point.z()
+			      << std::endl ;
       }
       else{
-	/*
+	
         streamlog_out(DEBUG1) << "MarlinKalTest::findMeasLayer point found to be on surface matching moduleID = "
-        << detElementID
-        << ": x = " << point.x()
-        << " y = " << point.y()
-        << " z = " << point.z()
-        << std::endl ;
-	*/
+			      << detElementID
+			      << ": x = " << point.x()
+			      << " y = " << point.y()
+			      << " z = " << point.z()
+			      << std::endl ;
       }
     }
     

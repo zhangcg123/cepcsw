@@ -483,10 +483,14 @@ fitstart:
       else {
 	error_code = m_fitTool->Fit(track, trkHits, covMatrix, maxChi2PerHit, fit_backwards);
       }
+    } catch (std::runtime_error& e) {
+      error() << e.what() << endmsg;
+      throw std::runtime_error("Need more check");
+    } catch (MarlinTrk::Exception& e) {
+      error() << e.what() << endmsg;
+      throw std::runtime_error("Need more check");
     } catch (...) {
-      //      delete track;
-      //      delete marlinTrk;
-      error() << "exception happened while createFinalisedLCIOTrack!" << endmsg;
+      error() << "unknown exception happened while createFinalisedLCIOTrack!" << endmsg;
       throw std::runtime_error("Need more check");
     }
     debug() << "createFinalisedLCIOTrack finished" << endmsg;
@@ -3516,7 +3520,7 @@ void FullLDCTrackingAlg::AddNotAssignedHits() {
       }
       for (int iL=0; iL<_nLayersETD; ++iL) { // loop over ETD layers
         TrackerHitExtendedVec hitVec = ETDHits[iL];
-        int refit = 0;
+        int refit = 1;
         if (hitVec.empty() == false) AssignOuterHitsToTracks(hitVec, _distCutForETDHits, refit);
       }
     }
@@ -3719,7 +3723,7 @@ void FullLDCTrackingAlg::CleanUpExtrapolations() {
 
 void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, float dcut, int refit) {
 
-  debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks dcut = " << dcut << endmsg;
+  debug() << " AssignOuterHitsToTracks dcut = " << dcut << endmsg;
   
   // get the number of hits to try, and the number of final tracks to which the tracks will be attached
   int nHits = int(hitVec.size());
@@ -3763,25 +3767,22 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
         
         // skip if the extrapolations failed
         if (helix==0) {
-          debug() << "helix extrapolation failed for trkExt" << endmsg;
+          debug() << " **helix extrapolation failed for trkExt" << endmsg;
           continue;
         }
         
         float distance = helix->getDistanceToPoint(pos,dcut);
         
-        debug() << "for helix extrapolation " << helix << " distance = " << distance << endmsg;
+        debug() << " **for helix extrapolation " << helix << " distance = " << distance << endmsg;
         
         // check the distance is less than the steerable cut ...
         if (distance<dcut) {
-          debug() << "for helix extrapolation " << helix << " distance = " << distance << endmsg;
-          
           // ... if so create the association and flag the hit and track
           TrackHitPair * trkHitPair =
           new TrackHitPair(trkExt,trkHitExt,distance);
           pairs.push_back(trkHitPair);
           flagTrack[trkExt] = true;
           flagHit[trkHitExt] = true;
-
         }
       }
     }
@@ -3789,7 +3790,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
   
   int nPairs = int(pairs.size());
 
-  debug() << "AssignOuterHitsToTracks : Number of track hit pairs to try =  " << nPairs << endmsg;
+  debug() << " AssignOuterHitsToTracks : Number of track hit pairs to try =  " << nPairs << endmsg;
   
   if (nPairs>0) {
 
@@ -3881,7 +3882,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
             trkHits.push_back(it->second);
           }
                     
-          debug() << "AssignOuterHitsToTracks: Start Fitting: AddHits: number of hits to fit " << trkHits.size() << endmsg;
+          debug() << " **Start Fitting: AddHits: number of hits to fit " << trkHits.size() << endmsg;
 
           MarlinTrk::IMarlinTrack* marlin_trk = _trksystem->createTrack();
 	  //std::auto_ptr<MarlinTrk::IMarlinTrack> marlin_trk_autop(_trksystem->createTrack());
@@ -3914,11 +3915,11 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
           
           pre_fit.covMatrix = covMatrix;
-	  debug() << "AssignOuterHitsToTracks: before createFit " << pre_fit << endmsg;
+	  debug() << " **createFit from pre_fit TrackState " << pre_fit << endmsg;
           int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::forward/*backward*/, _maxChi2PerHit );
-          debug() << "AssignOuterHitsToTracks: after createFit" << endmsg;
+          debug() << " **createFit finished, error code = " << error << endmsg;
           if ( error != IMarlinTrack::success ) {
-	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: creation of fit fails with error " << error << endmsg;
+	    debug() << " **creation of fit fails with error " << MarlinTrk::errorCode(error) << endmsg;
             
             delete marlin_trk ;
             continue ;
@@ -3929,14 +3930,14 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           
           float outlier_pct = outliers.size()/float(trkHits.size()) ;
           
-          debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: percentage of outliers " << outlier_pct << endmsg;
+          debug() << " **percentage of outliers " << outlier_pct << endmsg;
           
           if ( outlier_pct > _maxAllowedPercentageOfOutliersForTrackCombination) {
-	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: percentage of outliers " << outlier_pct << " is greater than cut maximum: " << _maxAllowedPercentageOfOutliersForTrackCombination << endmsg;
+	    debug() << " **percentage of outliers " << outlier_pct << " is greater than cut maximum: " << _maxAllowedPercentageOfOutliersForTrackCombination << endmsg;
             delete marlin_trk ;
             continue ;
           }
-	  debug() << "AssignOuterHitsToTracks: before propagate" << endmsg;
+	  debug() << " **before propagate" << endmsg;
 	  std::vector<std::pair<edm4hep::TrackerHit, double> > hitsInFit;
 	  marlin_trk->getHitsInFit(hitsInFit);
 	  auto firstHit = hitsInFit.begin()->first;
@@ -3948,21 +3949,21 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           return_code = marlin_trk->propagate(point, firstHit, trkState, chi2_D, ndf);
           
           delete marlin_trk ;
-          debug() << "AssignOuterHitsToTracks: after delete" << endmsg;
+          debug() << " **after delete" << endmsg;
           if ( error != IMarlinTrack::success ) {
-	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: propagate to IP fails with error " << error << endmsg;
+	    debug() << " **propagate to IP fails with error " << MarlinTrk::errorCode(error) << endmsg;
 	    continue ;
 	  }
           
           if ( ndf < 0  ) {
-	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: Fit failed : NDF is less that zero  " << ndf << endmsg;
+	    debug() << " **Fit failed : NDF is less that zero  " << ndf << endmsg;
 	    continue ;
 	  }
           
           float chi2Fit = chi2_D/float(ndf);
           
           if ( chi2Fit > _chi2FitCut ) {
-	    debug() << "FullLDCTrackingAlg::AssignOuterHitsToTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << endmsg;
+	    debug() << " **track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << endmsg;
 	    //why not continue? FIXME, by fucd
 	    return ;
 	  }
@@ -3990,7 +3991,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           flagTrack[trkExt] = false;
           flagHit[trkHitExt] = false;
                     
-          debug() << "AssignOuterHitsToTracks: Hit " << trkHitExt << " successfully assigned to track " << trkExt << endmsg;
+          debug() << " **Hit " << trkHitExt << " successfully assigned to track " << trkExt << endmsg;
 	}
       }
     }
@@ -4006,7 +4007,7 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
 
 HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
   
-  debug() << "FullLDCTrackingAlg::GetExtrapolationHelix called for track " << track << endmsg;
+  debug() << "GetExtrapolationHelix called for track " << track << endmsg;
   
   HelixClass * helix = 0;
   
@@ -4021,7 +4022,7 @@ HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
   ts_at_calo.location = -1;
   float z_ref_max = 0;
   
-  debug() << "FullLDCTrackingAlg::GetExtrapolationHelix number of tracks associated = " << trk_vec.size() << endmsg;
+  debug() << "GetExtrapolationHelix number of tracks associated = " << trk_vec.size() << endmsg;
   
   for (unsigned itrk=0; itrk<trk_vec.size(); ++itrk) {
 
@@ -4030,19 +4031,23 @@ HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
     if (trk_lcio.isAvailable()) {
   
       // use the tracks state at the calorimeter because that will have accounted for energy loss already
-      if (hasTrackStateAt(trk_lcio, edm4hep::TrackState::AtCalorimeter)) {
-        
-        TrackState ts_at_last_hit = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtLastHit);
-        float z_ref = ts_at_last_hit.referencePoint[2];
+      edm4hep::TrackState ts = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtCalorimeter);
+      edm4hep::TrackState ts_at_last_hit = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtLastHit);
+      float z_ref = ts_at_last_hit.referencePoint[2];
+      // make sure we use the one closest to the calo face
+      // fucd FIXME: why use ts_at_calo not ts_at_last_hit
+      if ( fabs(z_ref) >  z_ref_max) {
+	z_ref_max = fabs(z_ref);
 
-        // make sure we use the one closest to the calo face
-        if ( fabs(z_ref) >  z_ref_max) {
-          z_ref_max = fabs(z_ref);
-          ts_at_calo = getTrackStateAt(trk_lcio, edm4hep::TrackState::AtCalorimeter);
-
-          debug() << "GetExtrapolationHelix set ts_at_calo with ref_z = " << z_ref << endmsg;
-          debug() << "TrackState at calo: " << ts_at_calo << endmsg;
+	if (ts.omega!=0) {
+	  ts_at_calo = ts;
 	}
+	else if (ts_at_calo.location!=edm4hep::TrackState::AtCalorimeter) {
+	  ts_at_calo = ts_at_last_hit;
+	}
+
+	debug() << "GetExtrapolationHelix set ts_at_calo with ref_z = " << z_ref << endmsg;
+	debug() << "TrackState at calo: " << ts_at_calo << endmsg;
       }
     }
   }
@@ -4064,7 +4069,7 @@ HelixClass * FullLDCTrackingAlg::GetExtrapolationHelix( TrackExtended * track) {
                                 ts_at_calo_forIP.tanLambda,
                                 _bField);
     
-    debug() << "FullLDCTrackingAlg::GetExtrapolationHelix helix created at IP" << endmsg;
+    debug() << "GetExtrapolationHelix helix created at IP, TrackState " << ts_at_calo_forIP << endmsg;
   }
   
   return helix;
@@ -4434,7 +4439,7 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
         int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, !IMarlinTrack::backward , _maxChi2PerHit );
         
         if ( error != IMarlinTrack::success ) {
-          debug() << "FullLDCTrackingAlg::AssignSiHitsToTracks: creation of fit fails with error " << error << endmsg;
+          debug() << "AssignSiHitsToTracks: creation of fit fails with error " << error << endmsg;
           
           delete marlin_trk ;
           continue ;
@@ -4445,10 +4450,10 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
         
         float outlier_pct = outliers.size()/float(trkHits.size());
         
-        debug()<< "FullLDCTrackingAlg::AssignSiHitsToTracks: percentage of outliers " << outlier_pct << endmsg;
+        debug()<< "AssignSiHitsToTracks: percentage of outliers " << outlier_pct << endmsg;
         
         if ( outlier_pct > _maxAllowedPercentageOfOutliersForTrackCombination) {
-	  debug() << "FullLDCTrackingAlg::AssignSiHitsToTracks: percentage of outliers " << outlier_pct << " is greater than cut maximum: " << _maxAllowedPercentageOfOutliersForTrackCombination << endmsg;
+	  debug() << "AssignSiHitsToTracks: percentage of outliers " << outlier_pct << " is greater than cut maximum: " << _maxAllowedPercentageOfOutliersForTrackCombination << endmsg;
           delete marlin_trk ;
           continue ;
           
@@ -4463,19 +4468,19 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
         delete marlin_trk ;
         
         if ( error != IMarlinTrack::success ) {
-	  debug() << "FullLDCTrackingAlg::AssignSiHitsToTracks: propagate to IP fails with error " << error << endmsg;
+	  debug() << "AssignSiHitsToTracks: propagate to IP fails with error " << error << endmsg;
 	  continue ;
 	}
         
         if ( ndf < 0  ) {
-	  debug() << "FullLDCTrackingAlg::AssignSiHitsToTracks: Fit failed : NDF is less that zero  " << ndf << endmsg;
+	  debug() << "AssignSiHitsToTracks: Fit failed : NDF is less that zero  " << ndf << endmsg;
 	  continue ;
 	}
         
         float chi2Fit = chi2_D/float(ndf);
         
         if ( chi2Fit > _chi2FitCut ) {
-	  debug() << "FullLDCTrackingAlg::AssignSiHitsToTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << endmsg;
+	  debug() << "AssignSiHitsToTracks: track fail Chi2 cut of " << _chi2FitCut << " chi2 of track = " <<  chi2Fit << endmsg;
 	  continue ;
 	}
                 
@@ -5005,7 +5010,7 @@ int FullLDCTrackingAlg::SegmentRadialOverlap(TrackExtended* first, TrackExtended
 
 bool FullLDCTrackingAlg::VetoMerge(TrackExtended* firstTrackExt, TrackExtended* secondTrackExt){
     
-  debug() << "FullLDCTrackingAlg::VetoMerge called for " << firstTrackExt << " and " << secondTrackExt << endmsg;
+  debug() << "VetoMerge called for " << firstTrackExt << " and " << secondTrackExt << endmsg;
   
   const float d0First = firstTrackExt->getD0();
   const float z0First = firstTrackExt->getZ0();
@@ -5034,7 +5039,7 @@ bool FullLDCTrackingAlg::VetoMerge(TrackExtended* firstTrackExt, TrackExtended* 
   const float pSecond = sqrt(pxSecond*pxSecond+pySecond*pySecond+pzSecond*pzSecond);
   
   if(pFirst<_vetoMergeMomentumCut || pSecond<_vetoMergeMomentumCut) {
-    debug() << "FullLDCTrackingAlg::VetoMerge do not veto as below momentum cut of 2.5 : pFirst = " << pFirst << " pSecond = " << pSecond << endmsg;
+    debug() << "VetoMerge do not veto as below momentum cut of 2.5 : pFirst = " << pFirst << " pSecond = " << pSecond << endmsg;
     return false;
   }
 
@@ -5046,7 +5051,7 @@ bool FullLDCTrackingAlg::VetoMerge(TrackExtended* firstTrackExt, TrackExtended* 
   if(combinedTrack!=NULL){
     //SJA:FIXME hardcoded cut: here the check is that no more than 7 hits have been rejected in the combined fit.
     if( combinedTrack->getNDF()+15 < firstTrackExt->getNDF() + secondTrackExt->getNDF()+5 ) {
-      debug() << "FullLDCTrackingAlg::VetoMerge fails NDF cut " << endmsg;
+      debug() << "VetoMerge fails NDF cut " << endmsg;
       veto=true ;
     }
   
@@ -5055,12 +5060,12 @@ bool FullLDCTrackingAlg::VetoMerge(TrackExtended* firstTrackExt, TrackExtended* 
 
   }
   else {
-    debug() << "FullLDCTrackingAlg::VetoMerge fails CombineTracks(firstTrackExt,secondTrackExt,true) test" << endmsg;
+    debug() << "VetoMerge fails CombineTracks(firstTrackExt,secondTrackExt,true) test" << endmsg;
     veto = true;
   }
   
   if(SegmentRadialOverlap(firstTrackExt,secondTrackExt)>10) {
-    debug() << "FullLDCTrackingAlg::VetoMerge fails SegmentRadialOverlap test " << endmsg;
+    debug() << "VetoMerge fails SegmentRadialOverlap test " << endmsg;
     veto=true;
   }
 
@@ -5129,7 +5134,7 @@ StatusCode FullLDCTrackingAlg::setupGeom(){
       _nLayersSIT = SIT_r.size();
       
       if (_nLayersSIT != SIT_r.size() || _nLayersSIT != SIT_hl.size()) {
-	fatal() << "FullLDCTrackingAlg Miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << endmsg;
+	fatal() << "Miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << endmsg;
         exit(1);
       }
     }
@@ -5189,7 +5194,7 @@ StatusCode FullLDCTrackingAlg::setupGeom(){
       _nLayersSET = SET_r.size() ;
       
       if (_nLayersSET != SET_r.size() || _nLayersSET != SET_hl.size()) {
-	fatal() << "FullLDCTrackingAlg Miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << endmsg;
+	fatal() << "Miss-match between DoubleVec and nlayers exit(1) called from file " << __FILE__ << " line " << __LINE__  << endmsg;
         exit(1);
       }
     }
@@ -5334,8 +5339,29 @@ StatusCode FullLDCTrackingAlg::setupGeom(){
       }
     }
     _nLayersFTD =_zLayerFTD.size();
-  } catch(std::runtime_error& e){
-    warning() << e.what() << endmsg;
+  } catch(std::runtime_error& e1) {
+    info() << "try ZDiskPetalsData: " << e1.what() << endmsg;
+    try {
+      auto ftdDet = geomSvc->lcdd()->detector(geomSvc->getDetName(CEPCConf::DetID::FTD));
+      auto ftdData = ftdDet.extension<dd4hep::rec::MultiRingsZDiskData>();
+      auto ftdlayers = ftdData->layers;
+      for (int layer = 0; layer < ftdlayers.size(); layer++) {
+	dd4hep::rec::MultiRingsZDiskData::LayerLayout& ftdlayer = ftdlayers[layer];
+	auto& ring = ftdlayer.rings[0];
+	// front petal even numbered
+	_zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm + ftdlayer.zOffsetSupport/dd4hep::mm - 0.5*ftdlayer.thicknessSupport/dd4hep::mm
+			     - ring.thicknessGlue/dd4hep::mm - 0.5*ring.thicknessSensitive/dd4hep::mm);
+	if (ring.petalNumber > 0) {
+	  // front petal odd numbered
+	  _zLayerFTD.push_back(ftdlayer.zPosition/dd4hep::mm + ftdlayer.zOffsetSupport/dd4hep::mm + 0.5*ftdlayer.thicknessSupport/dd4hep::mm
+			       + ring.thicknessGlue/dd4hep::mm + 0.5*ring.thicknessSensitive/dd4hep::mm);
+	  _petalBasedFTDWithOverlaps = true;
+	}
+      }
+      _nLayersFTD =_zLayerFTD.size();
+    } catch(std::runtime_error& e2) {
+      warning() << "try MultiRingsZDiskData: " << e2.what() << endmsg;
+    }
   }
 
   _nLayersETD = 0;

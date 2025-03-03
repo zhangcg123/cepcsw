@@ -94,11 +94,11 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
   auto t = simhit.getTime();
 
   auto cellId = simhit.getCellID();
-  int system  = m_decoder->get(cellId, "system");
-  int side    = m_decoder->get(cellId, "side"  );
-  int layer   = m_decoder->get(cellId, "layer" );
-  int module  = m_decoder->get(cellId, "module");
-  int sensor  = m_decoder->get(cellId, "sensor");
+  int system  = m_decoder->get(cellId, CEPCConf::DetCellID::system);
+  int side    = m_decoder->get(cellId, CEPCConf::DetCellID::side);
+  int layer   = m_decoder->get(cellId, CEPCConf::DetCellID::layer);
+  int module  = m_decoder->get(cellId, CEPCConf::DetCellID::module);
+  int sensor  = m_decoder->get(cellId, CEPCConf::DetCellID::sensor);
 
   auto& pos   = simhit.getPosition();
   auto& mom   = simhit.getMomentum();
@@ -277,6 +277,7 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
 	    << localPointSmeared.u()/dd4hep::mm << " " << localPointSmeared.v()/dd4hep::mm << ")" << endmsg;
 
     auto outhit = hitCol->create();
+
     outhit.setCellID(cellId);
 
     edm4hep::Vector3d smearedPos(globalPointSmeared.x()/dd4hep::mm,

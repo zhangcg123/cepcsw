@@ -867,6 +867,13 @@
       <D type="density" value="2" unit="g/cm3"/>
       <fraction n="1.0" ref="G4_WATER"/>
     </material>
+
+    <material name="GraphiteFoam_OTK">
+      <D type="density" value="0.113776" unit="g/cm3"/>
+      <fraction n="1.0" ref="Graphite_ITK"/>
+      <fraction n="1.0" ref="CF_ITK"/>
+    </material>
+    Graphite_ITK
   </materials>
 
   <surfaces>

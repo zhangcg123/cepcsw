@@ -208,6 +208,8 @@ void CEPCOTKKalDetector::setupGearGeom( const gear::GearMgr& gearMgr ){
   
   const gear::ZPlanarParameters& pOTKDetMain = gearMgr.getSETParameters();
   const gear::ZPlanarLayerLayout& pOTKLayerLayout = pOTKDetMain.getZPlanarLayerLayout();
+
+  int hasOTKBarrel = pOTKDetMain.getIntVal("OTKBarrel");
   
   _bZ = gearMgr.getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
   

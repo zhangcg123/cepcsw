@@ -56,6 +56,14 @@ namespace CEPCConf{
     static const int GOOD                 = 27;
   };
 
+  struct DetCellID{
+    static const int system = 0;
+    static const int side   = 1;
+    static const int layer  = 2;
+    static const int module = 3;
+    static const int sensor = 4;
+  };
+
   struct DetEncoderString{
     static const int system = 5;
     static const int side = -2;

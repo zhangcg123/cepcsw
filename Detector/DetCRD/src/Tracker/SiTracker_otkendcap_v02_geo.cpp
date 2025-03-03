@@ -96,14 +96,23 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
     const double trapezoid_height = ring_outer_radius - ring_inner_radius;
     const double trapezoid_inner_length = calculate_polygon_side_length(ring_inner_radius, repeat);
     const double trapezoid_outer_length = calculate_polygon_side_length(ring_outer_radius, repeat);
-    const auto layers_thickness = layers_xml.attr<double>("thickness");
-    const double layers_base_thickness = layers_thickness;
+
+    double layers_base_thickness = 0;
+    for (xml_coll_t layers(layers_xml, "layer"); layers; ++layers)
+    {
+      const xml::Component layer = xml::Handle_t(layers);
+      const auto layer_thickness = layer.attr<double>("thickness");
+      layers_base_thickness += layer_thickness;
+    }
 
     Trapezoid layer_base_shape(trapezoid_inner_length / 2.0, trapezoid_outer_length / 2.0,
                                layers_base_thickness / 2.0, layers_base_thickness / 2.0, trapezoid_height / 2.0);
     Volume layer_base_vol(ring_name, layer_base_shape, air);
     layer_base_vol = layer_base_vol.setVisAttributes(theDetector, ring.attr<std::string>("vis"));
 
+    double sensitive_thickness = 0;
+    double support_thickness   = 0;
+    double service_thickness   = 0;
     double y_offset = -layers_base_thickness / 2.0;
     for (xml_coll_t layers(layers_xml, "layer"); layers; ++layers)
     {
@@ -124,10 +133,13 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
       {
         layer_vol = layer_vol.setSensitiveDetector(sens);
         surf_type = rec::SurfaceType(rec::SurfaceType::Sensitive, rec::SurfaceType::Plane);
+	sensitive_thickness += layer_thickness;
       }
       else
       {
         surf_type = rec::SurfaceType(rec::SurfaceType::Helper, rec::SurfaceType::Plane);
+	if (sensitive_thickness==0) service_thickness += layer_thickness;
+	else                        support_thickness += layer_thickness;
       }
       rec::Vector3D u(1., 0., 0.);
       rec::Vector3D v(0., 0., 1.);
@@ -163,30 +175,37 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
       auto cloned_ring_piece_det = ring_piece_det.clone(ring_name + std::to_string(i + 1));
       auto cloned_neg_ring_piece_det = ring_piece_det.clone(ring_name + std::to_string(-(i + 1)));
       auto pv = envelope.placeVolume(layer_base_vol, transform).addPhysVolID("side", 1).addPhysVolID("module", i)
-                        .addPhysVolID("sensor", ring_num);
+                        .addPhysVolID("layer", ring_num);
       auto neg_pv = envelope.placeVolume(layer_base_vol, neg_transform).addPhysVolID("side", -1).
-                             addPhysVolID("module", i).addPhysVolID("sensor", ring_num);
+                             addPhysVolID("module", i).addPhysVolID("layer", ring_num);
       cloned_ring_piece_det.setPlacement(pv);
       cloned_neg_ring_piece_det.setPlacement(neg_pv);
       otk_endcaps.add(cloned_ring_piece_det);
       otk_endcaps.add(cloned_neg_ring_piece_det);
     }
+
+    rec::ZDiskPetalsData::LayerLayout otk_endcap_layer;
+    otk_endcap_layer.typeFlags[rec::ZDiskPetalsData::SensorType::DoubleSided] = false;
+    otk_endcap_layer.typeFlags[rec::ZDiskPetalsData::SensorType::Pixel] = true;
+    otk_endcap_layer.phi0                = angle_step / 2.0;
+    otk_endcap_layer.distanceSupport     = ring_inner_radius;
+    otk_endcap_layer.distanceSensitive   = ring_inner_radius;
+    otk_endcap_layer.lengthSupport       = trapezoid_height;
+    otk_endcap_layer.lengthSensitive     = trapezoid_height;
+    otk_endcap_layer.thicknessSensitive  = sensitive_thickness;
+    otk_endcap_layer.thicknessSupport    = service_thickness; // front regard as support in KF, ignore rear material
+    otk_endcap_layer.widthInnerSupport   = trapezoid_inner_length;
+    otk_endcap_layer.widthInnerSensitive = trapezoid_inner_length;
+    otk_endcap_layer.widthOuterSupport   = trapezoid_outer_length;
+    otk_endcap_layer.widthOuterSensitive = trapezoid_outer_length;
+    otk_endcap_layer.zPosition           = zmax - support_thickness - 0.5*sensitive_thickness;
+    otk_endcap_layer.sensorsPerPetal     = 1;
+    otk_endcap_layer.petalNumber         = repeat;
+    otk_endcap_layer.petalHalfAngle      = angle_step / 2.0;
+    zDiskPetalsData->layers.push_back(otk_endcap_layer);
   }
 
-  rec::ZDiskPetalsData::LayerLayout otk_endcap_layer;
-  otk_endcap_layer.typeFlags[rec::ZDiskPetalsData::SensorType::DoubleSided] = false;
-  otk_endcap_layer.typeFlags[rec::ZDiskPetalsData::SensorType::Pixel] = true;
-  otk_endcap_layer.phi0 = 0;
-  otk_endcap_layer.distanceSupport = 406 * mm;
-  otk_endcap_layer.distanceSensitive = 406 * mm;
-  otk_endcap_layer.lengthSupport = 1410 * mm;
-  otk_endcap_layer.lengthSensitive = 1410 * mm;
-  otk_endcap_layer.thicknessSensitive = 0.3 * mm;
-  otk_endcap_layer.thicknessSupport = 3.6 * mm;
-  otk_endcap_layer.zPosition = zmax - 3.6 * mm;
-  otk_endcap_layer.sensorsPerPetal = 127;
-  otk_endcap_layer.petalNumber = 16;
-  zDiskPetalsData->layers.push_back(otk_endcap_layer);
+  std::cout << (*zDiskPetalsData) << std::endl;
   otk_endcaps.addExtension<rec::ZDiskPetalsData>(zDiskPetalsData);
 
   // #ifdef DET_ELEMENT_DEBUG
@@ -196,6 +215,7 @@ static Ref_t create_element(Detector& theDetector, xml_h e, SensitiveDetector se
   {
     otk_endcaps.setCombineHits(x_det.attr<bool>(_U(combineHits)), sens);
   }
+
   return otk_endcaps;
 }
 
