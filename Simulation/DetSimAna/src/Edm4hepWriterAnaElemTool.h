@@ -75,8 +75,8 @@ private:
         "Names of the Calorimeter collections (without suffix Collection)"};
 
     Gaudi::Property<double> m_sectrk_Ek{this, "SecTrackEk", 100., "Ek (MeV) threshold to record a secondary track"};
-    Gaudi::Property<double> m_sectrk_rho{this, "SecTrackRho", 1000., "rho (mm) threshold to record a secondary track"};
-    Gaudi::Property<double> m_sectrk_z{this, "SecTrackZ", 2000., "rho (mm) threshold to record a secondary track"};
+    Gaudi::Property<double> m_sectrk_rho{this, "SecTrackRho", 1830., "rho (mm) threshold to record a secondary track"};
+    Gaudi::Property<double> m_sectrk_z{this, "SecTrackZ", 2900., "+/- z (mm) threshold to record a secondary track"};
     
 private:
     // in order to associate the hit contribution with the primary track,
