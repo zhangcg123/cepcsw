@@ -171,18 +171,18 @@ static Ref_t create_detector(Detector& theDetector, xml_h element, SensitiveDete
     }
 
 
-    std::cout << "module_type: " << module_type << std::endl;
-    std::cout << "module_number: " << module_number << std::endl;
-    std::cout << "dim_x: " << dim_x << std::endl;
-    std::cout << "dim_x1: " << dim_x1 << std::endl;
-    std::cout << "dim_x2: " << dim_x2 << std::endl;
-    std::cout << "dim_y: " << dim_y << std::endl;
-    std::cout << "dim_y1: " << dim_y1 << std::endl;
-    std::cout << "dim_y2: " << dim_y2 << std::endl;
-    std::cout << "dim_z: " << dim_z << std::endl;
-    std::cout << "pos_x: " << pos_x << std::endl;
-    std::cout << "pos_y: " << pos_y << std::endl;
-    std::cout << "pos_z: " << pos_z << std::endl;
+    //std::cout << "module_type: " << module_type << std::endl;
+    //std::cout << "module_number: " << module_number << std::endl;
+    //std::cout << "dim_x: " << dim_x << std::endl;
+    //std::cout << "dim_x1: " << dim_x1 << std::endl;
+    //std::cout << "dim_x2: " << dim_x2 << std::endl;
+    //std::cout << "dim_y: " << dim_y << std::endl;
+    //std::cout << "dim_y1: " << dim_y1 << std::endl;
+    //std::cout << "dim_y2: " << dim_y2 << std::endl;
+    //std::cout << "dim_z: " << dim_z << std::endl;
+    //std::cout << "pos_x: " << pos_x << std::endl;
+    //std::cout << "pos_y: " << pos_y << std::endl;
+    //std::cout << "pos_z: " << pos_z << std::endl;
 
 
     Box EndcapModule(box_half_x,box_half_y,box_half_z);
@@ -498,8 +498,8 @@ static Ref_t create_detector(Detector& theDetector, xml_h element, SensitiveDete
       }  
     }
 
-    std::cout << "N_bar: " << N_bar << std::endl;
-    std::cout << "volume_bar: " << volume_bar << std::endl;
+    //std::cout << "N_bar: " << N_bar << std::endl;
+    //std::cout << "volume_bar: " << volume_bar << std::endl;
 
     int sector_sum = 0;
     if(module_type==1  || module_type==2 || module_type == 21 || module_type == 22) sector_sum = module_number;
@@ -722,10 +722,10 @@ static Ref_t create_detector(Detector& theDetector, xml_h element, SensitiveDete
     }
     endcapID++;
   }
-  cout<<"EndcapModule0: "<<all_module0<<endl;
-  cout<<"EndcapModule1: "<<all_module1<<endl;
-  cout<<"EndcapModule2: "<<all_module2<<endl;
-  cout<<"EndcapModule3: "<<all_module3<<endl;
+  //cout<<"EndcapModule0: "<<all_module0<<endl;
+  //cout<<"EndcapModule1: "<<all_module1<<endl;
+  //cout<<"EndcapModule2: "<<all_module2<<endl;
+  //cout<<"EndcapModule3: "<<all_module3<<endl;
 
   sdet.addExtension<dd4hep::rec::ECALSystemInfoData>(ecalSystemInfoData);
   return sdet;

@@ -71,7 +71,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         dd4hep::PlacedVolume pv;
         int layer_id                 = x_layer.attr<int>(_Unicode(layer_id));
 
-        std::cout << "layer_id: " << layer_id << " ......." << endl;
+        //std::cout << "layer_id: " << layer_id << " ......." << endl;
 
         double sensitive_radius      = x_layer.attr<double>(_Unicode(ladder_radius));
         int n_ladders                = x_layer.attr<int>(_Unicode(n_ladders)) ;
@@ -81,11 +81,11 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         double ladder_total_thickness         = x_layer.attr<double>(_Unicode(ladder_thickness));
         double ladder_total_width         = x_layer.attr<double>(_Unicode(ladder_width));
         double ladder_total_length         = x_layer.attr<double>(_Unicode(ladder_length));
-        std::cout << "ladder_radius: " << ladder_radius/mm <<" mm" << endl;
-        std::cout << "sensitive_radius: " << sensitive_radius/mm << " mm" << endl;
-        std::cout << "ladder_thickness: " << ladder_total_thickness/mm << " mm" << endl;
-        std::cout << "ladder_width: " << ladder_total_width/mm << " mm" << endl;
-        std::cout << "ladder_length: " << ladder_total_length/mm << " mm" << endl;
+        //std::cout << "ladder_radius: " << ladder_radius/mm <<" mm" << endl;
+        //std::cout << "sensitive_radius: " << sensitive_radius/mm << " mm" << endl;
+        //std::cout << "ladder_thickness: " << ladder_total_thickness/mm << " mm" << endl;
+        //std::cout << "ladder_width: " << ladder_total_width/mm << " mm" << endl;
+        //std::cout << "ladder_length: " << ladder_total_length/mm << " mm" << endl;
 
         std::string layerName = dd4hep::_toString( layer_id , "layer_%d"  );
         dd4hep::Assembly layer_assembly( layerName ) ;
@@ -94,7 +94,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         layerDE.setPlacement( pv ) ;
 
         const double ladder_dphi = ( dd4hep::twopi / n_ladders ) ;
-        std::cout << "ladder_dphi: " << ladder_dphi << endl;
+        //std::cout << "ladder_dphi: " << ladder_dphi << endl;
 
 
         //fetch the ladder parameters
@@ -115,9 +115,9 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         {
             support_mat = theDetector.material(x_ladder_support.materialStr());
         }
-        std::cout << "support_length: " << support_length/mm << " mm" << endl;
-        std::cout << "support_thickness: " << support_thickness/mm << " mm" << endl;
-        std::cout << "support_width: " << support_width/mm << " mm" << endl;
+        //std::cout << "support_length: " << support_length/mm << " mm" << endl;
+        //std::cout << "support_thickness: " << support_thickness/mm << " mm" << endl;
+        //std::cout << "support_width: " << support_width/mm << " mm" << endl;
 
 
         //fetch the flex parameters
@@ -133,11 +133,11 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             flex_thickness += x_flex_slice_thickness;
             if (x_flex_slice_width > flex_width) flex_width = x_flex_slice_width;
             if (x_flex_slice_length > flex_length) flex_length = x_flex_slice_length;
-            std::cout << "x_flex_slice_thickness: " << x_flex_slice_thickness/mm << " mm" << endl;
+            //std::cout << "x_flex_slice_thickness: " << x_flex_slice_thickness/mm << " mm" << endl;
         }
-        std::cout << "flex_thickness: " << flex_thickness/mm << " mm" << endl;
-        std::cout << "flex_width: " << flex_width/mm << " mm" << endl;
-        std::cout << "flex_length: " << flex_length/mm << " mm" << endl;
+        //std::cout << "flex_thickness: " << flex_thickness/mm << " mm" << endl;
+        //std::cout << "flex_width: " << flex_width/mm << " mm" << endl;
+        //std::cout << "flex_length: " << flex_length/mm << " mm" << endl;
 
 
         //fetch the sensor parameters
@@ -151,13 +151,13 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         double sensor_total_width               = sensor_active_width + sensor_dead_width;
         Material sensor_mat                     = theDetector.material(x_sensor.attr<string>(_Unicode(sensor_mat)));
 
-        std::cout << "n_sensors_per_side: " << n_sensors_per_side << endl;
-        std::cout << "dead_gap: " << dead_gap/mm << " mm" << endl;
-        std::cout << "sensor_thickness: " << sensor_thickness/mm << " mm" << endl;
-        std::cout << "sensor_length: " << sensor_length/mm << " mm" << endl;
-        std::cout << "sensor_active_width: " << sensor_active_width/mm << " mm" << endl;
-        std::cout << "sensor_dead_width: " << sensor_dead_width/mm << " mm" << endl;
-        std::cout << "sensor_total_width: " << sensor_total_width/mm << " mm" << endl;
+        //std::cout << "n_sensors_per_side: " << n_sensors_per_side << endl;
+        //std::cout << "dead_gap: " << dead_gap/mm << " mm" << endl;
+        //std::cout << "sensor_thickness: " << sensor_thickness/mm << " mm" << endl;
+        //std::cout << "sensor_length: " << sensor_length/mm << " mm" << endl;
+        //std::cout << "sensor_active_width: " << sensor_active_width/mm << " mm" << endl;
+        //std::cout << "sensor_dead_width: " << sensor_dead_width/mm << " mm" << endl;
+        //std::cout << "sensor_total_width: " << sensor_total_width/mm << " mm" << endl;
 
         //fetch parameters for the pcb and asic parts
         xml_comp_t x_other(x_ladder.child(_Unicode(other)));
@@ -173,14 +173,14 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
         Material pcb_mat                   = theDetector.material(x_other.attr<string>(_Unicode(pcb_mat)));
         Material asic_mat                  = theDetector.material(x_other.attr<string>(_Unicode(asic_mat)));
 
-        std::cout << "pcb_thickness: " << pcb_thickness/mm << " mm" << endl;
-        std::cout << "pcb_width: " << pcb_width/mm << " mm" << endl;
-        std::cout << "pcb_length: " << pcb_length/mm << " mm" << endl;
-        std::cout << "pcb_zgap: " << pcb_zgap/mm << " mm" << endl;
-        std::cout << "port_pcb_width: " << port_pcb_width/mm << " mm" << endl;
-        std::cout << "asic_thickness: " << asic_thickness/mm << " mm" << endl;    std::cout << "asic_width: " << asic_width/mm << " mm" << endl;
-        std::cout << "asic_length: " << asic_length/mm << " mm" << endl;
-        std::cout << "asic_zgap: " << asic_zgap/mm << " mm" << endl;
+        //std::cout << "pcb_thickness: " << pcb_thickness/mm << " mm" << endl;
+        //std::cout << "pcb_width: " << pcb_width/mm << " mm" << endl;
+        //std::cout << "pcb_length: " << pcb_length/mm << " mm" << endl;
+        //std::cout << "pcb_zgap: " << pcb_zgap/mm << " mm" << endl;
+        //std::cout << "port_pcb_width: " << port_pcb_width/mm << " mm" << endl;
+        //std::cout << "asic_thickness: " << asic_thickness/mm << " mm" << endl;    std::cout << "asic_width: " << asic_width/mm << " mm" << endl;
+        //std::cout << "asic_length: " << asic_length/mm << " mm" << endl;
+        //std::cout << "asic_zgap: " << asic_zgap/mm << " mm" << endl;
 
         //*****************************************************************//
 
@@ -224,9 +224,9 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             FlexLayerLogical.setVisAttributes(theDetector.visAttributes(flexVis));
             double flex_slice_height = flex_start_height + x_flex_slice_thickness/2.;
             pv = FlexEnvelopeLogical.placeVolume(FlexLayerLogical, Position(flex_slice_height, 0., 0.));
-            std::cout << "flex thickness = " << x_flex_slice_thickness << std::endl;
-            std::cout << "flex width = " << x_flex_slice_width << std::endl;
-            std::cout << "flex length = " << x_flex_slice_length << std::endl;
+            //std::cout << "flex thickness = " << x_flex_slice_thickness << std::endl;
+            //std::cout << "flex width = " << x_flex_slice_width << std::endl;
+            //std::cout << "flex length = " << x_flex_slice_length << std::endl;
             // std::cout << "flex material: " << x_flex_slice_mat << std::endl;
             flex_start_height += x_flex_slice_thickness;
             index++;
@@ -348,7 +348,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
             pv.addPhysVolID("module", i ) ;
             ladderDE.setPlacement(pv);
             //std::cout << ladder_enum.str() << " done." << endl;
-            if(i==0) std::cout << "xy=" << ladder_radius*cos(ladder_phi0) << " " << ladder_radius*sin(ladder_phi0) << std::endl;
+            //if(i==0) std::cout << "xy=" << ladder_radius*cos(ladder_phi0) << " " << ladder_radius*sin(ladder_phi0) << std::endl;
         }
 
         // package the reconstruction data
@@ -373,12 +373,12 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 
         zPlanarData->layers.push_back(otkbarrelLayer);
     }
-    std::cout << (*zPlanarData) << endl;
+    //std::cout << (*zPlanarData) << endl;
     otkbarrel.addExtension< ZPlanarData >(zPlanarData);
     if ( x_det.hasAttr(_U(combineHits)) ) {
         otkbarrel.setCombineHits(x_det.attr<bool>(_U(combineHits)),sens);
     }
-    std::cout << "otkbarrel done." << endl;
+    //std::cout << "otkbarrel done." << endl;
     return otkbarrel;
 }
 DECLARE_DETELEMENT(SiTracker_otkbarrel_v01,create_element)

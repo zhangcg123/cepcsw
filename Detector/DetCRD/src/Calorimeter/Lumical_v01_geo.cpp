@@ -111,7 +111,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
                 int keyVal = segxml.attr<int>( _Unicode(value) )  ;
 
                 encoder[ keyStr ] =  keyVal ;
-                std::cout<<"keyStr:"<<keyStr<<"_keyVal:"<<keyVal<<"\n";
+                //std::cout<<"keyStr:"<<keyStr<<"_keyVal:"<<keyVal<<"\n";
     // if we have a multisegmentation that uses the slice as key, we need to know for the
     // computation of the layer parameters in LayeredCalorimeterData::Layer below
             if( keyStr == "layer"){sensitive_slice_number = keyVal;}
@@ -239,7 +239,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
                     slice_vol.setVisAttributes(description,x_slice.visStr());
                     PlacedVolume slice_phv = envelope.placeVolume(slice_vol,Position(x_slice.position().x(),ky*x_slice.position().y(),kz*x_slice.position().z()));
 	                slice_phv.addPhysVolID("side",kz).addPhysVolID("stave",ky).addPhysVolID("module",l+1).addPhysVolID("layer",layer_num  ).addPhysVolID("slice",slice_number);
-                    std::cout<<"l + 1 = "<<l+1<<"\n";
+                    //std::cout<<"l + 1 = "<<l+1<<"\n";
                     if(ky==1 && kz==1){
                             dd4hep::PrintLevel printLevel = dd4hep::ERROR;
                             if (x_det.hasAttr(_Unicode(printLevel))) {

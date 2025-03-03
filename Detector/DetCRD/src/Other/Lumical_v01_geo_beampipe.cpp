@@ -144,7 +144,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
                     Transform3D transform_beampipe(RotationZYX(90*deg,0,0), Translation3D(-kx*x_slice.position().x(),x_slice.position().y() , kz*x_slice.position().z()));
                     PlacedVolume slice_phv = envelope.placeVolume(slice_vol,transform_beampipe);
                     slice_phv.addPhysVolID("side",kz).addPhysVolID("module",0).addPhysVolID("layer",0  ).addPhysVolID("slice",layer_num);
-                    std::cout<<"side:"<<kz<<"module:"<<0<<"layer:"<<layer_num<<"slice:"<<layer_num<<"\n";
+                    //std::cout<<"side:"<<kz<<"module:"<<0<<"layer:"<<layer_num<<"slice:"<<layer_num<<"\n";
                     slice.setPlacement(slice_phv);
                     slice_number++;
                 }
@@ -167,7 +167,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
                     Transform3D transform_beampipe(RotationZYX(90*deg,0,0), Translation3D(-kx*x_slice.position().x(),x_slice.position().y() , kz*x_slice.position().z()));
                     PlacedVolume slice_phv = envelope.placeVolume(slice_vol,transform_beampipe);
                     slice_phv.addPhysVolID("side",kz).addPhysVolID("module",0).addPhysVolID("layer",0  ).addPhysVolID("slice",layer_num);
-                    std::cout<<"side:"<<kz<<"module:"<<0<<"layer:"<<layer_num<<"slice:"<<layer_num<<"\n";
+                    //std::cout<<"side:"<<kz<<"module:"<<0<<"layer:"<<layer_num<<"slice:"<<layer_num<<"\n";
                     slice.setPlacement(slice_phv);
                     slice_number++;
                 }
