@@ -253,14 +253,14 @@
       <section type="CenterSide" name="MagnetShell_Front" zStart="1050*mm" zEnd="1056*mm" rStart="50.0*mm">
         <layer material="stainless_steel" thickness="90.75*mm" vis="ShellVis"/>
       </section>
-      <section type="CenterSide" name="MagnetShell_FrontSide" zStart="1056*mm" zEnd="1900*mm" rStart="130.75*mm" rEnd="175*mm">
+      <section type="CenterSide" name="MagnetShell_FrontSide" zStart="1056*mm" zEnd="1900*mm" rStart="132.75*mm" rEnd="175*mm">
         <layer material="stainless_steel" thickness="15*mm" vis="ShellVis"/>
       </section>
       <section type="CenterSide" name="MagnetShell_CenterSide" zStart="1900*mm" zEnd="3800*mm" rStart="175*mm">
         <layer material="stainless_steel" thickness="15*mm" vis="ShellVis"/>
       </section>
       <section type="CenterSide" name="MagnetShell_Linker" zStart="3800*mm" zEnd="3910*mm" rStart="175*mm">
-        <layer material="stainless_steel" thickness="15*mm" vis="ShellVis"/>
+        <layer material="stainless_steel" thickness="15*mm" vis="ShellVis"/>	
       </section>
       <section type="CenterSide" name="MagnetShell_RearSide" zStart="3910*mm" zEnd="7160*mm" rStart="240*mm">
         <layer material="stainless_steel" thickness="15*mm" vis="ShellVis"/>
@@ -271,10 +271,10 @@
       <section type="CenterSide" name="MagnetSupport_2i" zStart="1135*mm" zEnd="1925*mm" rStart="75*mm">
         <layer material="G4_Al" thickness="2*mm" vis="ShellVis"/>
       </section>
-      <section type="CenterSide" name="MagnetSupport_2o" zStart="1135*mm" zEnd="1900*mm" rStart="120*mm">
+      <section type="CenterSide" name="MagnetSupport_2o" zStart="1135*mm" zEnd="1900*mm" rStart="130*mm">
         <layer material="G4_Al" thickness="2*mm" vis="ShellVis"/>
       </section>
-      <section type="CenterSide" name="MagnetSupport_3l" zStart="1900*mm" zEnd="1905*mm" rStart="120*mm">
+      <section type="CenterSide" name="MagnetSupport_3l" zStart="1900*mm" zEnd="1905*mm" rStart="130*mm">
         <layer material="G4_Al" thickness="2*mm" vis="ShellVis"/>
       </section>
       <section type="CenterSide" name="MagnetSupport_3r" zStart="1925*mm" zEnd="1930*mm" rStart="75*mm">
@@ -307,7 +307,7 @@
       <section type="CenterSide" name="MagnetCooling_1i" zStart="1160*mm" zEnd="1900*mm" rStart="80*mm">
         <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
       </section>
-      <section type="CenterSide" name="MagnetCooling_1o" zStart="1160*mm" zEnd="1900*mm" rStart="110*mm">
+      <section type="CenterSide" name="MagnetCooling_1o" zStart="1160*mm" zEnd="1900*mm" rStart="120*mm">
         <layer material="lHe" thickness="10*mm" vis="BlueVis"/>
       </section>
       <section type="CenterSide" name="MagnetCooling_1r" zStart="1900*mm" zEnd="1925*mm" rStart="80*mm">
