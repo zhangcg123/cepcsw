@@ -2845,7 +2845,7 @@ void SiliconTrackingAlg::FinalRefit(edm4hep::TrackCollection* trk_col) {
         trkHits.push_back(it->second);
       }
 
-      bool fit_backwards = IMarlinTrack::backward;
+      bool fit_backwards = !IMarlinTrack::backward;
       
       int status = 0;
       debug() << "call createFinalisedLCIOTrack now" << endmsg;
