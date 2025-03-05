@@ -7,10 +7,7 @@ CEPC offline software prototype based on [Key4hep](https://github.com/key4hep).
 
 ## Quick start
 
-SSH to lxlogin (Alma Linux 9) and start the container CentOS 7:
-```
-$ /cvmfs/container.ihep.ac.cn/bin/hep_container shell CentOS7
-```
+SSH to lxlogin (Alma Linux 9).
 
 Before run following commands, please make sure you setup the CVMFS:
 
@@ -20,6 +17,7 @@ $ cd CEPCSW
 $ git checkout master # branch name
 $ source setup.sh
 $ ./build.sh
+$ source setup.sh
 $ ./run.sh Examples/options/helloalg.py
 ```
 
@@ -36,9 +34,4 @@ $ ./run.sh Examples/options/helloalg.py
 * Digitization: Digitization
 
 * Reconstruction: Reconstruction
-
-
-## CyberPFA-5.0.1-dev (developing)
-* Based on CEPCSW tag tdr 24.12.0
-
 

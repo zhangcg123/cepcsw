@@ -37,19 +37,13 @@ stages:
 .envvar_template:
   variables:
     CEPCSW_LCG_RELEASE: LCG
-    CEPCSW_LCG_PLATFORM: x86_64-centos7-gcc11-opt
-    CEPCSW_LCG_VERSION: 103.0.2
-
-.build_template:
-  extends: .envvar_template
-  stage: build
-  script:
-    - bash ./.build.ci.sh
-    - bash ./.test.ci.sh
+    CEPCSW_LCG_PLATFORM: x86_64-el9-gcc11-opt
+    CEPCSW_LCG_VERSION: 105.0.0
 
 # for k8s
 .build_template_k8s:
   extends: .envvar_template
+  image: cepc/cepcsw-cvmfs:el9
   stage: build
   tags:
     - k8s # using k8s as runner
@@ -60,36 +54,10 @@ stages:
     - bash ./.test.ci.sh
 
 ##############################################################################
-# Build & Test in CentOS 7 (LCG)
-##############################################################################
-# build:lcg:el7:
-#   extends: .build_template
-#   tags:
-#     - centos7
-#   artifacts:
-#     paths:
-#       - InstallArea
-#       - TDR_o1_v01.tgeo.root
-#       - TDR_o1_v02.tgeo.root
-#     reports:
-#       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
-
-
-##############################################################################
 # Build & Test in k8s (LCG)
 ##############################################################################
-# build:lcg:el7:k8s:
-#   extends: .build_template_k8s
-#   image: cepc/cepcsw-cvmfs:el7
-#   rules:
-#     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-#       when: manual
 build:lcg:el9:k8s:
   extends: .build_template_k8s
-  image: cepc/cepcsw-cvmfs:el9
-  variables:
-    CEPCSW_LCG_PLATFORM: x86_64-el9-gcc11-opt
-    CEPCSW_LCG_VERSION: 105.0.0
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       when: manual
@@ -97,15 +65,14 @@ build:lcg:el9:k8s:
     reports:
       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
 
-
 ##############################################################################
 # Build the docs
 ##############################################################################
 build:docs:k8s:
   extends: .build_template_k8s
-  image: cepc/cepcsw-cvmfs:el9
+  image: sphinxdoc/sphinx
   script:
-    - bash ./.build.ci.sh docs
+    - bash build-docs.sh
   artifacts:
     paths:
       - docs/build/html/
