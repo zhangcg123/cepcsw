@@ -71,7 +71,15 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
     auto mcGenCol = m_mcParGenCol.get();
     mcCol = m_mcParCol.createAndPut();
 
-    // copy the MC particle first
+    // ========================================================================
+    // deep clone the MC particle
+    // ========================================================================
+    // In previous version, the mcGenParticle.getParents/getDaughters are used
+    // to add the parents/daughters to the new particle. However, this is not
+    // correct. Because the information is referred to the original collection.
+    //
+    // In order to fix this issue, we need to access the index.
+
     for (auto mcGenParticle: *mcGenCol) {
         auto newparticle = mcCol->create();
         newparticle.setPDG            (mcGenParticle.getPDG());
@@ -87,13 +95,23 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
         newparticle.setSpin           (mcGenParticle.getSpin());
         newparticle.setColorFlow      (mcGenParticle.getColorFlow());
 
+    }
+
+    size_t n = mcGenCol->size();
+    for (size_t i = 0; i < n; ++i) {
+        auto particle_gen = mcGenCol->at(i);
+        auto particle_sim = mcCol->at(i);
+
         // Add parent-daughter relation
-        for(auto imc = 0; imc<mcGenParticle.parents_size(); imc++){
-            newparticle.addToParents(mcGenParticle.getParents(imc));
+        for(auto imc = 0; imc<particle_gen.parents_size(); imc++){
+            auto colidx = particle_gen.getParents(imc).getObjectID().index;
+            particle_sim.addToParents(mcCol->at(colidx));
         }
-        for(auto imc = 0; imc<mcGenParticle.daughters_size(); imc++){
-            newparticle.addToDaughters(mcGenParticle.getDaughters(imc));
+        for(auto imc = 0; imc<particle_gen.daughters_size(); imc++){
+            auto colidx = particle_gen.getDaughters(imc).getObjectID().index;
+            particle_sim.addToDaughters(mcCol->at(colidx));
         }
+
     }
     
     msg() << "mcCol size (original) : " << mcCol->size() << endmsg;
