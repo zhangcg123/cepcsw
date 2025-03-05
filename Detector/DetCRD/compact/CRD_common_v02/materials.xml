@@ -852,6 +852,15 @@
       <composite n="1" ref="C" />
     </material>
 
+    <material name="Concrete">
+      <D value="2.4" unit="g/cm3"/>
+      <composite n="23" ref="Si"/>
+      <composite n="13" ref="O"/>
+      <composite n="5" ref="Ca"/>
+      <composite n="1" ref="Al"/>
+      <composite n="1" ref="Fe"/>
+    </material>
+
     <material name="CF_ITK">
       <D type="density" value="1.60885" unit="g/cm3"/>
       <fraction n="1.0" ref="CarbonFiber"/>

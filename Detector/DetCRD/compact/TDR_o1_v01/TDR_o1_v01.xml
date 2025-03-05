@@ -62,6 +62,7 @@
   <include ref="../CRD_common_v01/Muon_Barrel_v01_04.xml"/>
   <include ref="../CRD_common_v01/Muon_Endcap_v01_02.xml"/>
   <include ref="../CRD_common_v01/ParaffinEndcap_v01_01.xml"/>
+  <!--include ref="../CRD_common_v01/ConcreteWall_v01_01.xml"/-->
  
   <fields>
     <field name="InnerSolenoid" type="solenoid"
