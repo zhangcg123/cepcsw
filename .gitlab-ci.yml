@@ -78,12 +78,12 @@ stages:
 ##############################################################################
 # Build & Test in k8s (LCG)
 ##############################################################################
-build:lcg:el7:k8s:
-  extends: .build_template_k8s
-  image: cepc/cepcsw-cvmfs:el7
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-      when: manual
+# build:lcg:el7:k8s:
+#   extends: .build_template_k8s
+#   image: cepc/cepcsw-cvmfs:el7
+#   rules:
+#     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+#       when: manual
 build:lcg:el9:k8s:
   extends: .build_template_k8s
   image: cepc/cepcsw-cvmfs:el9
