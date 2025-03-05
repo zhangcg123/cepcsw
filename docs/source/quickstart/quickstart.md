@@ -13,7 +13,7 @@ It consists three major parts:
 
 To use CEPCSW, users can use the software release deployed at IHEP's CVMFS or build from source code. 
 
-Currently, the libraries are built in `CentOS 7`. If you are using other different operating systems, you can consider to use the container technologies, such as Docker, Apptainer. 
+Currently, the libraries are built in `AlmaLinux 9` (previously it is `CentOS 7`). If you are using other different operating systems, you can consider to use the container technologies, such as Docker, Apptainer. 
 
 ### SSH login
 If you already have an IHEP AFS account, you can first login using an SSH client, such as OpenSSH:
@@ -21,8 +21,10 @@ If you already have an IHEP AFS account, you can first login using an SSH client
 $ ssh -Y username@lxlogin.ihep.ac.cn
 ```
 
-###  Start CentOS 7 container
-Then, you need to **start the container** with following command:
+###  Start container if necessary (optional)
+Before start the container, make sure you really need it. Since tdr25.3, the default OS is AlmaLinux 9. If you still work on an older version, then you need the CentOS 7 container.
+
+Then, you need to **start the container** with following command if necessary:
 ```bash
 $ /cvmfs/container.ihep.ac.cn/bin/hep_container shell CentOS7
 ```
@@ -51,12 +53,10 @@ REDHAT_SUPPORT_PRODUCT_VERSION="7"
 As CEPCSW is already deployed at IHEP CVMFS. You can use it as following:
 
 ```bash
-Singularity> source /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr24.5.0/CEPCSW/setup.sh
-INFO: Setup CEPCSW externals: /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/externals/103.0.2/setup-103.0.2.sh
-INFO: Setup CEPCSW: /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr24.5.0/CEPCSW/InstallArea
+$ source /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr25.3.2/CEPCSW/setup.sh
 ```
 
-From the output, you will know the current version of external libraries is 103.0.2. This is based on the LCG 103.
+From the output, you will know the current version of external libraries is 105.0.0. This is based on the LCG 105.
 
 To start a simulation and reconstruction with `TDR_o1_v1`:
 ```bash
@@ -129,7 +129,9 @@ There are two options:
 * One is that install CVMFS in your machine directly.
 * Another is that install CVMFS in the Docker container. 
 
-We provide two images for the two cases:
+We provide several images for the two cases:
+* `cepc/cepcsw:el9`
+* `cepc/cepcsw-cvmfs:el9`
 * `cepc/cepcsw:el7`
 * `cepc/cepcsw-cvmfs:el7`
 
@@ -161,13 +163,13 @@ $ sudo cvmfs_config setup
 
 After you see CVMFS is setup without issues, you can try to access the CEPCSW:
 ```bash
-ls /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr24.5.0
+ls /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr25.3.2
 CEPCSW  CEPCSWData
 ```
 
 Now, you can start the container with following long command:
 ```bash
-$ docker run --privileged --rm -i -t -v /home:/home -v /cvmfs/sft.cern.ch:/cvmfs/sft.cern.ch -v /cvmfs/geant4.cern.ch:/cvmfs/geant4.cern.ch -v /cvmfs/cepcsw.ihep.ac.cn:/cvmfs/cepcsw.ihep.ac.cn -v /cvmfs/container.ihep.ac.cn:/cvmfs/container.ihep.ac.cn cepc/cepcsw:el7 /bin/bash
+$ docker run --privileged --rm -i -t -v /home:/home -v /cvmfs/sft.cern.ch:/cvmfs/sft.cern.ch -v /cvmfs/geant4.cern.ch:/cvmfs/geant4.cern.ch -v /cvmfs/cepcsw.ihep.ac.cn:/cvmfs/cepcsw.ihep.ac.cn -v /cvmfs/container.ihep.ac.cn:/cvmfs/container.ihep.ac.cn cepc/cepcsw:el9 /bin/bash
 ```
 
 The option `-v` allows the Docker container to access the directories in the local machine. 
@@ -176,7 +178,7 @@ The option `-v` allows the Docker container to access the directories in the loc
 We also provide a Docker image with cvmfs client installed inside. 
 
 ```bash
-$ docker run --privileged --rm -i -t -v /home:/home cepc/cepcsw-cvmfs:el7 /bin/bash
+$ docker run --privileged --rm -i -t -v /home:/home cepc/cepcsw-cvmfs:el9 /bin/bash
 ```
 
 Now, you should be in the container. However, the cvmfs is not setup automatically. You need to mount the repositories manually. Here is an example:
@@ -190,9 +192,7 @@ Then, you should be able access the necessary CVMFS repositories.
 
 For example, setting up an existing CEPCSW:
 ```bash
-$ source /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr24.5.0/CEPCSW/setup.sh
-INFO: Setup CEPCSW externals: /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/externals/103.0.2/setup-103.0.2.sh
-INFO: Setup CEPCSW: /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr24.5.0/CEPCSW/InstallArea
+$ source /cvmfs/cepcsw.ihep.ac.cn/prototype/releases/tdr25.3.2/CEPCSW/setup.sh
 ```
 
 Run a simulation:
