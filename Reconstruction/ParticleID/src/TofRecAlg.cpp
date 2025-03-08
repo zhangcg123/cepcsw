@@ -143,17 +143,12 @@ void TofRecAlg::FindToFHits(const edm4hep::Track& _track, bool& _hasFTDHit, bool
       _Tofy = SimTHit.getPosition()[1];
       _Tofz = SimTHit.getPosition()[2];
     }
-    else if( det_id == lcio::ILDDetID::FTD ){
-      const int cellID = SimTHit.getCellID();
-      encoder.setValue(cellID);
-      int layer = encoder[lcio::ILDCellID0::layer];
-      if(layer==4){
-        _Toft = SimTHit.getTime();
-        _Tofx = SimTHit.getPosition()[0];
-        _Tofy = SimTHit.getPosition()[1];
-        _Tofz = SimTHit.getPosition()[2];
-        _hasFTDHit = true;
-      }//find ftd hit  
-    }//find ftd hit
+    else if( det_id == lcio::ILDDetID::ETD ){
+      _Toft = SimTHit.getTime();
+      _Tofx = SimTHit.getPosition()[0];
+      _Tofy = SimTHit.getPosition()[1];
+      _Tofz = SimTHit.getPosition()[2];
+      _hasFTDHit = true;
+    }//find etd hit
   }//end track hits loop
 }
