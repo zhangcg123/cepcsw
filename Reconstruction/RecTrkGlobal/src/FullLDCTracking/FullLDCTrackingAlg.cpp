@@ -422,13 +422,13 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     ts_initial.covMatrix = covMatrix;
 
     int  fit_count = 0;
-    bool sort_by_r = false;
+    bool sort_by_r = _sortByRadius;
     bool use_ts_initial = false;
     double maxChi2PerHit = _maxChi2PerHit;
 
 fitstart:
 
-    // sort hits in R
+    // sort hits in R or z
     std::vector< std::pair<float, edm4hep::TrackerHit> > sort_values;
     sort_values.reserve(trkHits.size());
     
@@ -1865,12 +1865,12 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
     debug() << pre_fit << endmsg;
   }
   catch(std::runtime_error& e){
-    error() << e.what() << " should be checked (TPC track) " << tpcTrack << endmsg;
+    warning() << e.what() << " should be checked (silicon track) " << siTrack << endmsg;
     try{
       pre_fit = getTrackStateAt(tpcTrack->getTrack(), edm4hep::TrackState::AtLastHit);
     }
     catch(std::runtime_error& e){
-      error() << e.what() << " should be checked (Si track)" << endmsg;
+      error() << e.what() << " should be checked (both silicon " << siTrack << " and TPC track " << tpcTrack << ")" << endmsg;
     }
   }
   

@@ -68,8 +68,8 @@ detsimsvc = DetSimSvc("DetSimSvc")
 
 from Configurables import Edm4hepWriterAnaElemTool
 edm4hep_writer = Edm4hepWriterAnaElemTool("Edm4hepWriterAnaElemTool")
-#edm4hep_writer.TrackerCollections = ["VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
-#                                     "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"]
+edm4hep_writer.TrackerCollections = ["VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
+                                     "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"]
 
 from Configurables import DetSimAlg
 detsimalg = DetSimAlg("DetSimAlg")

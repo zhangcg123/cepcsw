@@ -226,9 +226,13 @@ StatusCode GearSvc::convertVXD(dd4hep::DetElement& vxd){
 
     const dd4hep::rec::ZPlanarData::LayerLayout& l = vxdData->layers[0] ;
     double offset = l.offsetSupport;
-    dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, offset, 2.*dd4hep::mm);
-    dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   offset, 2.*dd4hep::mm);
-    gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
+    double phi = l.phi0 + 0.5*M_PI;
+    dd4hep::rec::Vector3D shift(offset*cos(phi), offset*sin(phi), 0);
+    dd4hep::rec::Vector3D a(l.distanceSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+    dd4hep::rec::Vector3D b(l.distanceSupport + l.thicknessSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+    //dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, offset, 2.*dd4hep::mm);
+    //dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   offset, 2.*dd4hep::mm);
+    gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a+shift, b+shift, "VXDSupportMaterial");
     m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
 
     if (vxdData->rOuterShell>vxdData->rInnerShell) {
@@ -335,9 +339,11 @@ StatusCode GearSvc::convertComposite(dd4hep::DetElement& vtx){
       debug() << "find out planar support material" << endmsg;
       const dd4hep::rec::ZPlanarData::LayerLayout& l = vtxData->layersPlanar[0] ;
       double offset = l.offsetSupport;
-      dd4hep::rec::Vector3D a( l.distanceSensitive + l.thicknessSensitive, offset, 2.*dd4hep::mm);
-      dd4hep::rec::Vector3D b( l.distanceSupport   + l.thicknessSupport,   offset, 2.*dd4hep::mm);
-      gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a, b, "VXDSupportMaterial");
+      double phi = l.phi0 + 0.5*M_PI;
+      dd4hep::rec::Vector3D shift(offset*cos(phi), offset*sin(phi), 0);
+      dd4hep::rec::Vector3D a(l.distanceSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+      dd4hep::rec::Vector3D b(l.distanceSupport + l.thicknessSupport, l.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+      gear::SimpleMaterialImpl* VXDSupportMaterial = CreateGearMaterial(a+shift, b+shift, "VXDSupportMaterial");
       m_gearMgr->registerSimpleMaterial(VXDSupportMaterial);
     }
 
@@ -671,26 +677,31 @@ StatusCode GearSvc::convertSIT(dd4hep::DetElement& sit){
     length_sensors.push_back(sensorLength);
     thickness_flexs.push_back(flexThickness);
 
+    double phi = layout.phi0 + 0.5*M_PI;
     if (layer==0) {
       // support
       {
-	dd4hep::rec::Vector3D a(layout.distanceSupport, layout.offsetSupport, 0);
-	dd4hep::rec::Vector3D b(layout.distanceSupport + layout.thicknessSupport, layout.offsetSupport, 0);
-	gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a, b, "ITKBarrelSupportMaterial");
+	double offset = layout.offsetSupport;
+	dd4hep::rec::Vector3D shift(offset*cos(phi), offset*sin(phi), 0);
+	dd4hep::rec::Vector3D a(layout.distanceSupport, layout.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+	dd4hep::rec::Vector3D b(layout.distanceSupport + layout.thicknessSupport, layout.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+	gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a+shift, b+shift, "ITKBarrelSupportMaterial");
 	m_gearMgr->registerSimpleMaterial(supportMaterial);
       }
       // sensor
       {
+	double offset = layout.offsetSupport;
+	dd4hep::rec::Vector3D shift(offset*cos(phi), offset*sin(phi), 0);
 	gear::SimpleMaterialImpl* flexMaterial = nullptr;
 	if (senRMin > supRMin) {
-	  dd4hep::rec::Vector3D a(layout.distanceSensitive + layout.thicknessSensitive, layout.offsetSensitive, 2.*dd4hep::mm);
-	  dd4hep::rec::Vector3D b(layout.distanceSensitive + layout.thicknessSensitive + flexThickness*dd4hep::mm, layout.offsetSensitive, 2.*dd4hep::mm);
-	  flexMaterial = CreateGearMaterial(a, b, "ITKBarrelFlexMaterial");
+	  dd4hep::rec::Vector3D a(layout.distanceSensitive + layout.thicknessSensitive, layout.phi0, 2.*dd4hep::mm, dd4hep::rec::Vector3D::cylindrical);
+	  dd4hep::rec::Vector3D b(layout.distanceSensitive + layout.thicknessSensitive + flexThickness*dd4hep::mm, layout.phi0, 2.*dd4hep::mm, dd4hep::rec::Vector3D::cylindrical);
+	  flexMaterial = CreateGearMaterial(a+shift, b+shift, "ITKBarrelFlexMaterial");
 	}
 	else {
-	  dd4hep::rec::Vector3D a(layout.distanceSensitive - flexThickness*dd4hep::mm, layout.offsetSensitive, 2.*dd4hep::mm);
-	  dd4hep::rec::Vector3D b(layout.distanceSensitive, layout.offsetSensitive, 2.*dd4hep::mm);
-	  flexMaterial = CreateGearMaterial(a, b, "ITKBarrelFlexMaterial");
+	  dd4hep::rec::Vector3D a(layout.distanceSensitive - flexThickness*dd4hep::mm, layout.phi0, 2.*dd4hep::mm, dd4hep::rec::Vector3D::cylindrical);
+	  dd4hep::rec::Vector3D b(layout.distanceSensitive, layout.phi0, 2.*dd4hep::mm, dd4hep::rec::Vector3D::cylindrical);
+	  flexMaterial = CreateGearMaterial(a+shift, b+shift, "ITKBarrelFlexMaterial");
 	}
 	double ratio = 1.0 + flexThickness/flexMaterial->getRadLength()*93.6607/senThickness;
 	debug() << "sensor thickness: " << senThickness << " flex thickness: " << flexThickness << " radL: " << flexMaterial->getRadLength() << " effetive thickness: " << ratio*senThickness << endmsg;
@@ -982,9 +993,12 @@ StatusCode GearSvc::convertSET(dd4hep::DetElement& set){
     if (layer==0) {
       // support
       {
-	dd4hep::rec::Vector3D a(layout.distanceSupport, layout.offsetSupport, 0);
-	dd4hep::rec::Vector3D b(layout.distanceSupport + layout.thicknessSupport, layout.offsetSupport, 0);
-	gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a, b, "OTKBarrelSupportMaterial");
+	double offset = layout.offsetSupport;
+	double phi = layout.phi0 + 0.5*M_PI;
+	dd4hep::rec::Vector3D shift(offset*cos(phi), offset*sin(phi), 0);
+	dd4hep::rec::Vector3D a(layout.distanceSupport, layout.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+	dd4hep::rec::Vector3D b(layout.distanceSupport + layout.thicknessSupport, layout.phi0, 0., dd4hep::rec::Vector3D::cylindrical);
+	gear::SimpleMaterialImpl* supportMaterial = CreateGearMaterial(a+shift, b+shift, "OTKBarrelSupportMaterial");
         m_gearMgr->registerSimpleMaterial(supportMaterial);
       }
     }

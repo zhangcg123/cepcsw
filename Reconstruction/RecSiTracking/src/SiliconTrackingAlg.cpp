@@ -2780,11 +2780,9 @@ void SiliconTrackingAlg::FinalRefit(edm4hep::TrackCollection* trk_col) {
       int nFit = 0;
       for (int i=0; i<nHits; ++i) {
 	edm4hep::TrackerHit trkHit = hitVec[i]->getTrackerHit();
-	debug() << "TrackerHit " << i << " id = " << trkHit.id().collectionID << "-" << trkHit.id().index << endmsg;
+	debug() << "TrackerHit " << i << " id = " << trkHit.id().collectionID << "-" << trkHit.id().index << (lh[i] == 1 ? " accept" : " rejected") << endmsg;
         // check if the hit has been rejected as being on the same layer and further from the helix lh==0
         if (lh[i] == 1) {
-	  //edm4hep::TrackerHit trkHit = hitVec[i]->getTrackerHit();
-	  debug() << "                  accept" << endmsg;
           nFit++;
           if(trkHit.isAvailable()) { 
             trkHits.push_back(trkHit);   
@@ -2936,7 +2934,7 @@ void SiliconTrackingAlg::FinalRefit(edm4hep::TrackCollection* trk_col) {
 
       if( status != IMarlinTrack::success ) {       
         //delete track;
-	debug() << "FinalRefit: Track fit failed with error code " << status << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
+	debug() << "FinalRefit: Track fit failed with error code " << MarlinTrk::errorCode(status) << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
         continue ;
       }
       

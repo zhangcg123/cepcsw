@@ -24,13 +24,13 @@
         <slice name="Carbon_fiber_front" material="CF_ITK" thickness="150*um" vis="GrayVis"/>
         <slice name="Cooling_tube_wall" material="G4_Ti" thickness="3.560*0.013*100*um" vis="GrayVis"/>
         <slice name="Cooling_fluid" material="G4_WATER" thickness="35.76*0.105*100*um" vis="GrayVis"/>
-        <slice name="Graphite_foam_Honeycomb" material="GraphiteFoam_OTK" thickness="2000*um" vis="YellowVis"/>
+        <slice name="Graphite_foam_Honeycomb" material="GraphiteFoam_OTK" thickness="2000*um" vis="GrayVis"/>
         <slice name="Carbon_fiber_back" material="CF_ITK" thickness="150*um" vis="GrayVis"/>
       </support>
 
       <sensor>
-	<slice name="GlueF" material="CER_ITK" thickness="200*um" vis="YellowVis"/>
-        <slice name="Sensor" material="G4_Si" thickness="150*um" sensitive="true" vis="GreenVis"/>
+	<slice name="GlueF" material="CER_ITK" thickness="200*um" vis="SeeThrough"/>
+        <slice name="Sensor" material="G4_Si" thickness="150*um" sensitive="true" vis="OrangeVis"/>
 	<slice name="GlueB" material="CER_ITK" thickness="100*um" vis="SeeThrough"/>
         <slice name="FPC_Insulating_layers" material="Polyimide_ITK" thickness="100*um" vis="SeeThrough"/>
         <slice name="FPC_metal_layer" material="G4_Al" thickness="50*um" vis="SeeThrough"/>

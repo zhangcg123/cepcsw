@@ -40,18 +40,18 @@
                     <module name="OTKBarrel_module" thickness="OTKBarrel_module_thickness" repeat="4"
                             width="OTKBarrel_module_width" length_inner="OTKBarrel_module_length_inner"
                             length_outer="OTKBarrel_module_length_outer" vis="SeeThrough">
-                        <layer name="carbon_fiber_plane_inner" width="100.40*mm" thickness="0.3*mm" material="CF_ITK" vis="BlackVis"/>
-                        <layer name="carbon_fiber_honeycomb" width="100.40*mm" thickness="6000*um" material="GraphiteFoam_OTK" vis="BlackVis"/>
-                        <layer name="cooling_fluid" width="100.40*mm" thickness="35.76*0.105*100*um" material="G4_WATER" vis="BlackVis"/>
-                        <layer name="cooling_tube_wall" width="100.40*mm" thickness="3.560*0.169*100*um" material="G4_Ti" vis="BlackVis"/>
-                        <layer name="carbon_fiber_plane_outer" width="100.40*mm" thickness="0.3*mm" material="CF_ITK" vis="BlackVis"/>
-			<layer name="glue" width="100.40*mm" thickness="300*um" material="CER_ITK" vis="BlackVis"/>
+                        <layer name="carbon_fiber_plane_inner" width="100.40*mm" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
+                        <layer name="carbon_fiber_honeycomb" width="100.40*mm" thickness="6000*um" material="GraphiteFoam_OTK" vis="GrayVis"/>
+                        <layer name="cooling_fluid" width="100.40*mm" thickness="35.76*0.105*100*um" material="G4_WATER" vis="GrayVis"/>
+                        <layer name="cooling_tube_wall" width="100.40*mm" thickness="3.560*0.169*100*um" material="G4_Ti" vis="GrayVis"/>
+                        <layer name="carbon_fiber_plane_outer" width="100.40*mm" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
+			<layer name="glue" width="100.40*mm" thickness="300*um" material="CER_ITK" vis="GrayVis"/>
 			<layer name="sensor" sensitive="True" width="OTKBarrel_module_width" thickness="0.3*mm" material="G4_Si" vis="FTDSensitiveVis"/>
-			<layer name="glue_2" width="100.40*mm" thickness="100*um" material="CER_ITK" vis="BlackVis"/>
-			<layer name="pcb_insulating_layers" width="100.40*mm" thickness="28.41*0.07*100*um" material="Polyimide_ITK" vis="BlackVis"/>
-                        <layer name="pcb_metal_layers" width="100.40*mm" thickness="1.436*0.2*100*um" material="G4_Cu" vis="BlackVis"/>
-                        <layer name="other_electronic" width="100.40*mm" thickness="32.6437*0.1*100*um" material="Kapton" vis="BlackVis"/>
-                        <data_aggregation name="first_data_aggregation" width="104*mm" thickness="2*mm" length="7.0*mm" vis="SeeThrough">
+			<layer name="glue_2" width="100.40*mm" thickness="100*um" material="CER_ITK" vis="LightGrayVis"/>
+			<layer name="pcb_insulating_layers" width="100.40*mm" thickness="28.41*0.07*100*um" material="Polyimide_ITK" vis="OrangeVis"/>
+                        <layer name="pcb_metal_layers" width="100.40*mm" thickness="1.436*0.2*100*um" material="G4_Cu" vis="OrangeVis"/>
+                        <layer name="other_electronic" width="100.40*mm" thickness="32.6437*0.1*100*um" material="Kapton" vis="OrangeVis"/>
+                        <data_aggregation name="first_data_aggregation" width="104*mm" thickness="2*mm" length="7.0*mm" vis="OrangeVis">
                             <layer name="PCB" thickness="1*mm" width="OTKBarrel_module_width" length="7.0*mm" vis="GreenVis"/>
                             <DC name="DC-DC" thickness="1*mm" width="10.0*mm" length="3.0*mm" vis="YellowVis"/>
                         </data_aggregation>

@@ -552,15 +552,17 @@ static Ref_t create_detector(Detector& theDetector,
       sectionEnd.rOuter = sectionEnd.rInner + pipeThicknessEnd;
       sectionEnd.zPos   = zend ;
 
-      if(beampipeData->sections.size()!=0){
-	ConicalSupportData::Section last = beampipeData->sections.back(); 
-	if(last.rInner != section.rInner || last.rOuter != section.rOuter){
-	  section.zPos = zstart + 1e-9*dd4hep::mm ;
-	  beampipeData->sections.push_back( section );
+      if (beampipeData->sections.size()<4) {
+	if (beampipeData->sections.size()!=0) {
+	  ConicalSupportData::Section last = beampipeData->sections.back();
+	  if (last.rInner != section.rInner || last.rOuter != section.rOuter) {
+	    section.zPos = zstart + 1e-9*dd4hep::mm ;
+	    beampipeData->sections.push_back( section );
+	  }
 	}
+	else beampipeData->sections.push_back( section );
+	beampipeData->sections.push_back( sectionEnd ) ;
       }
-      else beampipeData->sections.push_back( section );
-      beampipeData->sections.push_back( sectionEnd ) ;
     }
   }//for all xmlSections
   

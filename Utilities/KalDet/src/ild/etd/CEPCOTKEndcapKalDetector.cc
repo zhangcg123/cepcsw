@@ -207,7 +207,8 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
   double eps3 = 1.0e-06 ; // layer in disk 
   double eps4 = 1.0e-08 ; // forward or backwards
   
-  double sort_policy = rInner+height + eps1 * idisk + eps3 * 1;
+  //double sort_policy = rInner+height + eps1 * idisk + eps3 * 1;
+  double sort_policy = fabs(z) + eps1 * idisk + eps3 * 1;
   if (!even_petals) sort_policy += eps2;
   
   // if this is the negative z disk add epsilon to the policy
@@ -228,7 +229,7 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
   // measurement plane
   z += zsign*0.5*senThickness;
   //sort_policy = fabs(z) ;
-  sort_policy = rInner+height + eps1 * idisk + eps3 * 2 ;
+  sort_policy = fabs(z) + eps1 * idisk + eps3 * 2 ;
   if (z < 0) sort_policy += eps4 ;
 
   if (!even_petals) sort_policy += eps2;
@@ -266,7 +267,7 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
   // interface between sensitive and support
   z += zsign*0.5*senThickness;
   //  sort_policy = fabs(z) ;
-  sort_policy = rInner+height + eps1 * idisk + eps3 * 3;
+  sort_policy = fabs(z) + eps1 * idisk + eps3 * 3;
   if (z < 0) sort_policy += eps4;
   if (!even_petals) sort_policy += eps2;
   
@@ -289,7 +290,7 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
     // interface between support and sensitive
     z += zsign*supThickness;   
     //  sort_policy = fabs(z) ;
-    sort_policy = rInner+height + eps1 * idisk + eps3 * 4;
+    sort_policy = fabs(z) + eps1 * idisk + eps3 * 4;
     if (z < 0) sort_policy += eps4;
     if (!even_petals) sort_policy += eps2;
     
@@ -309,7 +310,7 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
     // measurement plane at the back
     z += zsign*0.5*senThickness;   
     //  sort_policy = fabs(z) ;
-    sort_policy = rInner+height + eps1 * idisk + eps3 * 5;
+    sort_policy = fabs(z) + eps1 * idisk + eps3 * 5;
     if (z < 0) sort_policy += eps4;
     if (!even_petals) {
       sort_policy += eps2;
@@ -349,7 +350,7 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
     // rear face of sensitive
     z += zsign*0.5*senThickness;  
     //  sort_policy = fabs(z) ;
-    sort_policy = rInner+height + eps1 * idisk + eps3 * 6;
+    sort_policy = fabs(z) + eps1 * idisk + eps3 * 6;
     if (z < 0) sort_policy += eps4;
     if (!even_petals) sort_policy += eps2;
     
@@ -371,7 +372,7 @@ void CEPCOTKEndcapKalDetector::create_segmented_disk_layers(int idisk, int nsegm
     // rear face of support
     z += zsign*supThickness;
     //  sort_policy = fabs(z) ;
-    sort_policy = rInner+height + eps1 * idisk + eps3 * 4;
+    sort_policy = fabs(z) + eps1 * idisk + eps3 * 4;
     if (z < 0) sort_policy += eps4;
     if (!even_petals) sort_policy += eps2;
     

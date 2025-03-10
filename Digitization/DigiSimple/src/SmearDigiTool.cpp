@@ -89,7 +89,7 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
   }
 
   auto e = simhit.getEDep();
-  if (e <= m_eThreshold) return StatusCode::SUCCESS;
+  if (e < m_eThreshold) return StatusCode::SUCCESS;
   if (m_randSvc->generator(Rndm::Flat(0, 1))->shoot() > m_efficiency) return StatusCode::SUCCESS;
   auto t = simhit.getTime();
 
