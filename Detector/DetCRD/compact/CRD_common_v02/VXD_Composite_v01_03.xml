@@ -18,8 +18,10 @@
     <!--stitching parameter-->
     <constant name="VXD_sensor_backbone"   value="0.055*mm"/>
     <constant name="VXD_sensor_switches"   value="0.019*mm"/>
-    <constant name="VXD_sensor_bias"   value="0.106*mm"/>
-    <constant name="VXD_sensor_periphery"   value="0.177*mm"/>
+    <constant name="VXD_sensor_bias"       value="0.106*mm"/>
+    <constant name="VXD_sensor_periphery"  value="0.177*mm"/>
+    <!--equivalent to CFRP_CMS-->
+    <constant name="VXD_flex_thickness"    value="1.3*um"/>
   </define>
 
   <detectors>
@@ -41,8 +43,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="45*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+45*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
 	  <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -52,8 +54,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="45*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+45*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -65,8 +67,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="32*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+32*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -76,8 +78,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="32*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+32*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -89,8 +91,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
 	  <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="31*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+31*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -100,8 +102,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="31*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+31*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -113,8 +115,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-            <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="29*um" material="CFRP_CMS"/>
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+29*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -124,8 +126,8 @@
 		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
-	    <slice thickness="0.4*um" material="G4_Al"/>
-            <slice thickness="29*um" material="CFRP_CMS"/>
+	    <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+29*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -159,7 +161,7 @@
             <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
           </flex>
           <sensor n_sensors="26" gap="0.1*mm" thickness="50*um" active_length="25.6*mm" active_width="12.8*mm" dead_width="2*mm" sensor_mat="G4_Si"
-                  deadwire_length="(26*(25.6+0.1)-0.1)*mm" deadwire_width="2.6*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
+                  deadwire_length="(26*(25.6+0.1)-0.1)*mm" deadwire_width="2.5*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
         </ladder>
       </layer>
     </detector>

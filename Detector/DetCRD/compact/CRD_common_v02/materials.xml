@@ -882,7 +882,7 @@
       <fraction n="1.0" ref="Graphite_ITK"/>
       <fraction n="1.0" ref="CF_ITK"/>
     </material>
-    Graphite_ITK
+
   </materials>
 
   <surfaces>

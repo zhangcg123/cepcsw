@@ -400,6 +400,7 @@ protected:
   Gaudi::Property<int>   _lowestTrackerHitNumberSi{this, "LowestSiHitsNumberForInitial", 7};
   Gaudi::Property<int>   _lowestTrackerHitNumberTPC{this, "LowestTPCHitsNumberForInitial", 200};
   Gaudi::Property<bool>  _backward{this, "FitBackward", false};
+  Gaudi::Property<bool>  _sortByRadius{this, "SortByRadius", true};
   Gaudi::Property<bool>  m_dumpTime{this, "DumpTime", false};
   //float _dPCutForForcedMerging;
   Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest111"};

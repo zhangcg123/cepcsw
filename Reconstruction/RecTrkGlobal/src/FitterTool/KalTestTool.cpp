@@ -148,7 +148,7 @@ int KalTestTool::createFinalisedTrack(MarlinTrk::IMarlinTrack* marlinTrk, std::v
 
   }
   else {
-    warning() << "createFinalisedLCIOTrack : Prefit failed error = " << return_error << endmsg;
+    warning() << "createFinalisedLCIOTrack : Prefit failed error = " << MarlinTrk::errorCode(return_error) << endmsg;
   }
   return return_error;
 }
@@ -174,12 +174,12 @@ int KalTestTool::createFinalisedTrack(MarlinTrk::IMarlinTrack* marlinTrk, std::v
   int fit_status = MarlinTrk::createFit(hit_list, marlinTrk, pre_fit, bfield_z, fit_backwards, maxChi2Increment);
 
   if (fit_status != MarlinTrk::IMarlinTrack::success) {
-    debug() << "createFinalisedTrack fit failed: fit_status = " << fit_status << endmsg;
+    debug() << "createFinalisedTrack fit failed: fit_status = " << MarlinTrk::errorCode(fit_status) << endmsg;
     return fit_status;
   }
 
   int error = finaliseTrack(marlinTrk, track, hit_list, fit_backwards);
-  debug() << "finaliseTrack. status = " << error << endmsg;
+  debug() << "finaliseTrack. status = " << MarlinTrk::errorCode(error) << endmsg;
 
   return error;
 }
@@ -223,7 +223,7 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
   return_error = marlintrk->getNDF(ndf);
 
   if (return_error != MarlinTrk::IMarlinTrack::success) {
-    debug() << "getNDF returns " << return_error << endmsg;
+    debug() << "getNDF returns " << MarlinTrk::errorCode(return_error) << endmsg;
     return return_error;
   }
   else if (ndf < 0) {
@@ -329,7 +329,7 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
   return_error = marlintrk->smooth(lastHit);
 
   if (return_error != MarlinTrk::IMarlinTrack::success) {
-    debug() << "return_code for smoothing to " << lastHit << " = " << return_error << " NDF = " << ndf << endmsg;
+    debug() << "return_code for smoothing to " << lastHit << " = " << MarlinTrk::errorCode(return_error) << " NDF = " << ndf << endmsg;
     delete trkStateAtFirstHit;
     delete trkStateAtLastHit;
     return return_error ;
@@ -366,21 +366,21 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
     
     double chi2Tmp = 0;
     int    ndfTmp  = 0;
-    //return_error = marlintrk->getTrackState( last_constrained_hit, ts, chi2, ndf);
-    return_error = marlintrk->getTrackState( lastHit, ts, chi2, ndf);
+    return_error = marlintrk->getTrackState( last_constrained_hit, ts, chi2, ndf);
+    //return_error = marlintrk->getTrackState( lastHit, ts, chi2, ndf);
 
     debug() << "-- TrackState at last constrained hit : " << ts << endmsg;
 
     //need to add a dummy hit to the track
-    //mTrk->addHit(last_constrained_hit);
-    mTrk->addHit(lastHit);
+    mTrk->addHit(last_constrained_hit);
+    //mTrk->addHit(lastHit);
 
     double _bfield = m_magneticField;
     // fixme: the implementation for DDKalTest does no longer need this value but the IMarlinTrk interface is not yet changed
     mTrk->initialise(ts, _bfield, fit_backwards);
 
-    //while (hI->first.id() != last_constrained_hit.id()) {
-    while (hI->first.id() != lastHit.id()) {
+    while (hI->first.id() != last_constrained_hit.id()) {
+      //while (hI->first.id() != lastHit.id()) {
       debug() << "-- hit in reverse_iterator : " << hI->first.getCellID() << " " << hI->first.getPosition() << endmsg;
       ++hI;
     }
@@ -395,8 +395,8 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
 
       int addHit = mTrk->addAndFit(hit, deltaChi, maxChi2Increment);
 
-      debug() << "-- hit " << hit << "  added : " << MarlinTrk::errorCode(addHit)
-	      << " deltaChi2: " << deltaChi << endmsg;
+      debug() << "-- hit id: " << hit.id() << " cellId: " << hit.getCellID() << " pos: " << hit.getPosition()
+	      << "  added : " << MarlinTrk::errorCode(addHit) << " deltaChi2: " << deltaChi << endmsg;
 
       if (addHit !=  MarlinTrk::IMarlinTrack::success) {
 	debug() << "-- could not add inner hit to track !!! " << maxChi2Increment << endmsg;
@@ -410,7 +410,7 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
     // now propagate the temporary track to the IP
     return_error = mTrk->propagate(point, firstHit, *trkStateIP, chi2Tmp, ndfTmp);
 
-    debug() << "-- propagated temporary track fromfirst hit to IP : " <<  (*trkStateIP) << endmsg;
+    debug() << "-- propagated temporary track from first hit to IP : " <<  (*trkStateIP) << endmsg;
     //FIXME: if forward, better by add the last inner hits with a Kalman step from the last_constrained hit
     //return_error = marlintrk->propagate(point, firstHit, *trkStateIP, chi2, ndf ) ;
   }

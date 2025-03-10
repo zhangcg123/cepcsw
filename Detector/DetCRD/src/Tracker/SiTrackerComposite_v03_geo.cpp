@@ -528,8 +528,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
       topLayer.zHalfSupport         = support_length / 2.0;
       topLayer.distanceSensitive    = ladder_distance + support_height / 2.0 + flex_thickness;
       topLayer.thicknessSensitive   = sensor_thickness;
-      topLayer.offsetSensitive      = ladder_offset + (support_width/2.0 - sensor_active_width/2.0);
-      topLayer.widthSensitive       = sensor_active_width;
+      topLayer.offsetSensitive      = ladder_offset + (support_width/2.0 - sensor_active_width/2.0 - sensor_dead_width/2.0);
+      topLayer.widthSensitive       = sensor_active_width + sensor_dead_width;
       topLayer.zHalfSensitive       = (n_sensors_per_side*(sensor_active_len + dead_gap) - dead_gap) / 2.0;
 
       bottomLayer.ladderNumber         = n_ladders;
@@ -543,8 +543,8 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
       bottomLayer.zHalfSupport         = support_length / 2.0;
       bottomLayer.distanceSensitive    = ladder_distance - support_height / 2.0 - sensor_thickness - flex_thickness;
       bottomLayer.thicknessSensitive   = sensor_thickness;
-      bottomLayer.offsetSensitive      = ladder_offset + (support_width/2.0 - sensor_active_width/2.0);
-      bottomLayer.widthSensitive       = sensor_active_width;
+      bottomLayer.offsetSensitive      = ladder_offset + (support_width/2.0 - sensor_active_width/2.0 - sensor_dead_width/2.0);
+      bottomLayer.widthSensitive       = sensor_active_width + sensor_dead_width;
       bottomLayer.zHalfSensitive       = (n_sensors_per_side*(sensor_active_len + dead_gap) - dead_gap) / 2.0;
 
       compositeData->layersPlanar.push_back(bottomLayer);

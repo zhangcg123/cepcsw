@@ -203,13 +203,13 @@ TVKalDetector(250) // SJA:FIXME initial size, 250 looks reasonable for ILD, thou
 
   Add(new ILDDiscMeasLayer(tpcgas, tpcreadout, TVector3(0,0,zminReadout), TVector3(0,0,1), bz, zminReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace+Z1"));
   Add(new ILDDiscMeasLayer(tpcreadout, air, TVector3(0,0,zmaxReadout), TVector3(0,0,1), bz, zmaxReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace+Z2"));
-  Add(new ILDDiscMeasLayer(air, tpcendplate, TVector3(0,0,zminEndplate), TVector3(0,0,1), bz, zminEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace+Z1"));
-  Add(new ILDDiscMeasLayer(tpcendplate, air, TVector3(0,0,zmaxEndplate), TVector3(0,0,1), bz, zmaxEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace+Z2"));
+  Add(new ILDDiscMeasLayer(air, tpcendplate, TVector3(0,0,zminEndplate), TVector3(0,0,1), bz, zminEndplate, rtub, outerr, dummy, -1,"TPCEndplateFace+Z1"));
+  Add(new ILDDiscMeasLayer(tpcendplate, air, TVector3(0,0,zmaxEndplate), TVector3(0,0,1), bz, zmaxEndplate, rtub, outerr, dummy, -1,"TPCEndplateFace+Z2"));
 
-  Add(new ILDDiscMeasLayer(tpcgas, tpcreadout, TVector3(0,0,-zminReadout), TVector3(0,0,-1), bz, -zminReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace-Z1"));
-  Add(new ILDDiscMeasLayer(tpcreadout, air, TVector3(0,0,-zmaxReadout), TVector3(0,0,-1), bz, -zmaxReadout, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace-Z2"));
-  Add(new ILDDiscMeasLayer(air, tpcendplate, TVector3(0,0,-zminEndplate), TVector3(0,0,-1), bz, -zminEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace-Z1"));
-  Add(new ILDDiscMeasLayer(tpcendplate, air, TVector3(0,0,-zmaxEndplate), TVector3(0,0,-1), bz, -zmaxEndplate, rminEndplate, rmaxEndplate, dummy, -1,"EPCEndplateFace-Z2"));
+  Add(new ILDDiscMeasLayer(tpcgas, tpcreadout, TVector3(0,0,-zminReadout), TVector3(0,0,-1), bz, zminReadout+1e-8, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace-Z1"));
+  Add(new ILDDiscMeasLayer(tpcreadout, air, TVector3(0,0,-zmaxReadout), TVector3(0,0,-1), bz, zmaxReadout+1e-8, rminReadout, rmaxReadout, dummy, -1, "TPCReadoutFace-Z2"));
+  Add(new ILDDiscMeasLayer(air, tpcendplate, TVector3(0,0,-zminEndplate), TVector3(0,0,-1), bz, zminEndplate+1e-8, rtub, outerr, dummy, -1,"TPCEndplateFace-Z1"));
+  Add(new ILDDiscMeasLayer(tpcendplate, air, TVector3(0,0,-zmaxEndplate), TVector3(0,0,-1), bz, zmaxEndplate+1e-8, rtub, outerr, dummy, -1,"TPCEndplateFace-Z2"));
   
   SetOwner();
 }

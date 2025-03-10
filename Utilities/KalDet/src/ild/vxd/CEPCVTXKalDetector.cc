@@ -3,6 +3,7 @@
 #include "kaldet/MaterialDataBase.h"
 
 #include "kaldet/ILDParallelPlanarMeasLayer.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
 #include "kaldet/CEPCCylinderMeasLayer.h"
 #include "kaldet/ILDDiscMeasLayer.h"
 
@@ -41,10 +42,8 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
   TMaterial & air       = *MaterialDataBase::Instance().getMaterial("air");
   TMaterial & silicon   = *MaterialDataBase::Instance().getMaterial("silicon");
   TMaterial & carbon    = *MaterialDataBase::Instance().getMaterial("VXDSupportMaterial");
-  TMaterial & beryllium = *MaterialDataBase::Instance().getMaterial("beryllium");
 
-  // needed for cryostat
-  TMaterial & aluminium = *MaterialDataBase::Instance().getMaterial("aluminium");
+  //TMaterial & aluminium = *MaterialDataBase::Instance().getMaterial("aluminium");
   
   if(geoSvc){
     this->setupGearGeom(geoSvc) ;
@@ -59,27 +58,34 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
   Bool_t active = true;
   Bool_t dummy  = false;
   
-  static const double eps = 1e-6; 
+  const double eps      = 1e-6;
+  const double edge_eps = 1e-6;
   
   UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string ) ; 
-  
+
+  double front_distance = 0;
   for (int layer=0; layer<_nLayers[0]; ++layer) {
-    
     nLadders = _VXDgeo[layer].nLadders ;
     
     double phi0 = _VXDgeo[layer].phi0 ;
     
-    double ladder_distance = _VXDgeo[layer].supRMin ;
-    double ladder_thickness = _VXDgeo[layer].supThickness ;
+    double ladder_distance       = _VXDgeo[layer].supRMin;
+    double ladder_thickness      = _VXDgeo[layer].supThickness;
+    double ladder_outer_distance = ladder_distance + ladder_thickness;
+
+    if (layer%2 == 0) front_distance = ladder_distance;
     
-    double sensitive_distance = _VXDgeo[layer].senRMin ;
-    double sensitive_thickness = _VXDgeo[layer].senThickness ;
+    double sensitive_distance       = _VXDgeo[layer].senRMin;
+    double sensitive_thickness      = _VXDgeo[layer].senThickness;
+    double sensitive_outer_distance = sensitive_distance + sensitive_thickness;
     
     double width = _VXDgeo[layer].width ;
     double length = _VXDgeo[layer].length;
     double offset = _VXDgeo[layer].offset;
-    
-    double pos_xi_nonoverlap_width = (2.0 * (( width / 2.0 ) - fabs(offset))); 
+
+    // FIXME: generally, more then half nonoverlap
+    double pos_xi_nonoverlap_width = width / 2.0; //(2.0 * (( width / 2.0 ) - fabs(offset)));
+    double nonoverlap_region_offset = offset - offset/fabs(offset) * (width/2.0 - pos_xi_nonoverlap_width/2.0);
     
     double currPhi;
     double dphi = _VXDgeo[layer].dphi ;
@@ -99,115 +105,151 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
       encoder[lcio::ILDCellID0::sensor] = 0 ;
       
       int CellID = encoder.lowWord() ;
+
+      int nsort = offset > 0 ? (nLadders - ladder)%nLadders : ladder;
       
       // even layers have the senstive side facing the IP
       if(layer%2 == 0 ){ // overlap section of ladder0 is defined after the last ladder,
-        
-        
-        double sen_front_sorting_policy         = sensitive_distance  + (4 * ladder+0) * eps ;
-        double measurement_plane_sorting_policy = sensitive_distance  + (4 * ladder+1) * eps ;
-        double sen_back_sorting_policy          = sensitive_distance  + (4 * ladder+2) * eps ;
-        double sup_back_sorting_policy          = sensitive_distance  + (4 * ladder+3) * eps ;
-        
+
+        double sen_front_sorting_policy         = ladder_distance + (100 * nsort + 0) * eps ;
+        double measurement_plane_sorting_policy = ladder_distance + (100 * nsort + 1) * eps ;
+        double sen_back_sorting_policy          = ladder_distance + (100 * nsort + 2) * eps ;
+        double sup_back_sorting_policy          = ladder_distance + (100 * nsort + 3) * eps ;
         
         if(ladder==0){   // bacause overlap section of ladder0 is further outer than the last ladder.
           
           // streamlog_out(DEBUG0) << "CEPCVTXKalDetector add surface with CellID = "
           // << CellID
           // << std::endl ;
-                            
+
           // non overlapping region
           // air - sensitive boundary
-          Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, pos_xi_nonoverlap_width, length, 0.0, z_offset, offset, dummy,-1,"VXDSenFront_non_overlap_even" )) ;
-          
+          Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, dummy, -1, "VXDSenFront_non_overlap_even"));
           // measurement plane defined as the middle of the sensitive volume  - unless "relative_position_of_measurement_surface" parameter given in GEAR
-          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*_relative_position_of_measurement_surface, currPhi, _bZ, measurement_plane_sorting_policy, pos_xi_nonoverlap_width, length, 0.0, z_offset, offset, active, CellID, "VXDMeasLayer_non_overlap_even" )) ;          
-          
-          // sensitive - support boundary 
-          Add(new ILDParallelPlanarMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, pos_xi_nonoverlap_width, length, 0.0, z_offset, offset, dummy,-1,"VXDSenSuppportIntf_non_overlap_even" )) ; 
-          
+          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*_relative_position_of_measurement_surface,
+					     currPhi, _bZ, measurement_plane_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, active, CellID, "VXDMeasLayer_non_overlap_even"));
+          // sensitive - support boundary
+          Add(new ILDParallelPlanarMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, dummy, -1, "VXDSenSuppportIntf_non_overlap_even"));
           // support - air boundary
-          Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, pos_xi_nonoverlap_width, length, 0.0, z_offset, offset, dummy,-1,"VXDSupRear_non_overlap_even" )) ;           
-          
+          Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, dummy, -1, "VXDSupRear_non_overlap_even"));
           
           // overlapping region
           double overlap_region_width  = width - pos_xi_nonoverlap_width ;
-          double overlap_region_offset = -(overlap_region_width/2.0) - (pos_xi_nonoverlap_width)/2.0 ;
-
+          double overlap_region_offset = offset + offset/fabs(offset) * (width/2.0 - overlap_region_width/2.0);// -(overlap_region_width/2.0) - (pos_xi_nonoverlap_width)/2.0 ;
           
           // overlap sorting policy uses nLadders as the overlapping "ladder" is the order i.e. there will now be nLadders+1 
-          double overlap_front_sorting_policy                = sensitive_distance + (4* nLadders+0) * eps;
-          double overlap_measurement_plane_sorting_policy    = sensitive_distance + (4* nLadders+1) * eps;
-          double overlap_back_sorting_policy                 = sensitive_distance + (4* nLadders+2) * eps;
-          double overlap_sup_back_sorting_policy             = sensitive_distance + (4* nLadders+3) * eps;
+          double overlap_front_sorting_policy                = ladder_distance + (100* nLadders+0) * eps;
+          double overlap_measurement_plane_sorting_policy    = ladder_distance + (100* nLadders+1) * eps;
+          double overlap_back_sorting_policy                 = ladder_distance + (100* nLadders+2) * eps;
+          double overlap_sup_back_sorting_policy             = ladder_distance + (100* nLadders+3) * eps;
           
           // streamlog_out(DEBUG0) << "CEPCVTXKalDetector add surface with CellID = "
           // << CellID
           // << std::endl ;
           
           // air - sensitive boundary
-          Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, overlap_front_sorting_policy, overlap_region_width, length, overlap_region_offset, z_offset, offset, dummy,-1,"VXDSenFront_overlap_even")) ;
-          
+          Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, overlap_front_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, dummy, -1, "VXDSenFront_overlap_even"));
           // measurement plane defined as the middle of the sensitive volume  - unless "relative_position_of_measurement_surface" parameter given in GEAR
-          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*_relative_position_of_measurement_surface, currPhi, _bZ, overlap_measurement_plane_sorting_policy, overlap_region_width, length, overlap_region_offset, z_offset, offset, active, CellID, "VXDMeasLayer_overlap_even" )) ;
-          
-          
-          // sensitive - support boundary 
-          Add(new ILDParallelPlanarMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, currPhi, _bZ, overlap_back_sorting_policy, overlap_region_width, length, overlap_region_offset, z_offset, offset, dummy,-1,"VXDSenSuppportIntf_overlap_even")) ; 
-          
+          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*_relative_position_of_measurement_surface,
+					     currPhi, _bZ, overlap_measurement_plane_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, active, CellID, "VXDMeasLayer_overlap_even"));
+          // sensitive - support boundary
+          Add(new ILDParallelPlanarMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, currPhi, _bZ, overlap_back_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, dummy, -1, "VXDSenSuppportIntf_overlap_even"));
           // support - air boundary
-          Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, overlap_sup_back_sorting_policy, overlap_region_width, length, overlap_region_offset, z_offset, offset, dummy,-1,"VXDSupRear_overlap_even")) ; 
-          
+          Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, overlap_sup_back_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, dummy, -1, "VXDSupRear_overlap_even"));
         }
         else{
-          
           // streamlog_out(DEBUG0) << "CEPCVTXKalDetector (ILDParallelPlanarMeasLayer) add surface with CellID = "
           // << CellID
           // << std::endl ;                                        
           
-          
           // air - sensitive boundary
-          Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, width, length, offset, z_offset, offset, dummy,-1, "VXDSenFront_even")) ;
-                    
-
+          Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, width, length,
+					     offset, z_offset, offset, dummy, -1, "VXDSenFront_even"));
           // measurement plane defined as the middle of the sensitive volume  - unless "relative_position_of_measurement_surface" parameter given in GEAR - even layers face outwards ! 
-          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*( 1.-_relative_position_of_measurement_surface ), currPhi, _bZ, measurement_plane_sorting_policy, width, length, offset, z_offset, offset, active, CellID, "VXDMeaslayer_even" )) ;
-          
+          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*(1.-_relative_position_of_measurement_surface),
+					     currPhi, _bZ, measurement_plane_sorting_policy, width, length, offset, z_offset, offset, active, CellID, "VXDMeaslayer_even"));
           // sensitive - support boundary 
-          Add(new ILDParallelPlanarMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, width, length, offset, z_offset, offset, dummy,-1,"VXDSenSuppportIntf_even" )) ; 
-          
+          Add(new ILDParallelPlanarMeasLayer(silicon, carbon, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, width, length,
+					     offset, z_offset, offset, dummy, -1, "VXDSenSuppportIntf_even"));
           // support - air boundary
-          Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, width, length, offset, z_offset, offset, dummy,-1,"VXDSupRear_even" )) ; 
-          
+          Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, width, length,
+					     offset, z_offset, offset, dummy, -1, "VXDSupRear_even"));
         }        
       }
       else{ // counting from 0, odd numbered layers are placed with the support closer to the IP than the sensitive
-                                
         
+        double sup_forward_sorting_policy        = front_distance + (100 * nsort + 10) * eps;
+        double sup_back_sorting_policy           = front_distance + (100 * nsort + 11) * eps;
+        double measurement_plane_sorting_policy  = front_distance + (100 * nsort + 12) * eps;
+        double sen_back_sorting_policy           = front_distance + (100 * nsort + 13) * eps;
         
-        double sup_forward_sorting_policy        = ladder_distance + (4 * ladder+0) * eps ;
-        double sup_back_sorting_policy           = ladder_distance + (4 * ladder+1) * eps ;
-        double measurement_plane_sorting_policy  = ladder_distance + (4 * ladder+2) * eps ;
-        double sen_back_sorting_policy           = ladder_distance + (4 * ladder+3) * eps ;
-        
-        // streamlog_out(DEBUG0) << "CEPCVTXKalDetector (ILDPlanarMeasLayer) add surface with CellID = "
-        // << CellID
-        // << std::endl ;
-                
-        // air - support boundary
-        Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, sup_forward_sorting_policy, width, length, offset, z_offset, offset, dummy,-1,"VXDSupFront_odd" )) ; 
-        
-        // support - sensitive boundary 
-        Add(new ILDParallelPlanarMeasLayer(carbon, silicon, (ladder_distance+ladder_thickness), currPhi, _bZ, sup_back_sorting_policy, width, length, offset, z_offset, offset, dummy,-1,"VXDSenSuppportIntf_odd")) ; 
-        
-        // measurement plane defined as the middle of the sensitive volume
-        Add(new ILDParallelPlanarMeasLayer(silicon, silicon, (sensitive_distance+sensitive_thickness*0.5), currPhi, _bZ, measurement_plane_sorting_policy, width, length, offset, z_offset, offset, active, CellID, "VXDMeaslayer_odd")) ; 
-        
-        // sensitive air - sensitive boundary
-        Add(new ILDParallelPlanarMeasLayer(silicon, air, (sensitive_distance+sensitive_thickness), currPhi, _bZ, sen_back_sorting_policy, width, length, offset, z_offset, offset, dummy,-1,"VXDSenRear_odd")) ;
-        
-        
+	if (ladder==0) {
+          // non overlapping region
+          // air - support boundary
+          Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, sup_forward_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, dummy, -1, "VXDSupFront_non_overlap_odd"));
+          // support - sensitive boundary
+          Add(new ILDParallelPlanarMeasLayer(carbon, silicon, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, dummy, -1, "VXDSenSuppportIntf_non_overlap_odd"));
+          // measurement plane defined as the middle of the sensitive volume  - unless "relative_position_of_measurement_surface" parameter given in GEAR
+          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*(1.-_relative_position_of_measurement_surface),
+					     currPhi, _bZ, measurement_plane_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, active, CellID, "VXDMeasLayer_non_overlap_odd"));
+	  // sensitive - air boundary
+          Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, pos_xi_nonoverlap_width, length,
+					     nonoverlap_region_offset, z_offset, offset, dummy, -1, "VXDSenRear_non_overlap_odd"));
+          // overlapping region
+          double overlap_region_width  = width - pos_xi_nonoverlap_width ;
+          double overlap_region_offset = offset + offset/fabs(offset) * (width/2.0 - overlap_region_width/2.0);
+
+          // overlap sorting policy uses nLadders as the overlapping "ladder" is the order i.e. there will now be nLadders+1
+          double overlap_sup_front_sorting_policy         = front_distance + (100* nLadders+10) * eps;
+          double overlap_sup_back_sorting_policy          = front_distance + (100* nLadders+11) * eps;
+          double overlap_measurement_plane_sorting_policy = front_distance + (100* nLadders+12) * eps;
+          double overlap_sen_back_sorting_policy          = front_distance + (100* nLadders+13) * eps;
+
+	  // air - spport boundary
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, overlap_sup_front_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, dummy, -1, "VXDSupFront_overlap_odd"));
+	  // support - sensitive boundary
+          Add(new ILDParallelPlanarMeasLayer(carbon, silicon, ladder_distance+ladder_thickness, currPhi, _bZ, overlap_sup_back_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, dummy, -1, "VXDSenSuppportIntf_overlap_odd"));
+          // measurement plane defined as the middle of the sensitive volume  - unless "relative_position_of_measurement_surface" parameter given in GEAR
+          Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*(1.-_relative_position_of_measurement_surface),
+					     currPhi, _bZ, overlap_measurement_plane_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, active, CellID, "VXDMeasLayer_overlap_odd"));
+          // sensitive - air boundary
+          Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, overlap_sen_back_sorting_policy, overlap_region_width, length,
+					     overlap_region_offset, z_offset, offset, dummy, -1, "VXDSenRear_overlap_odd"));
+        }
+	else {
+	  // air - support boundary
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, sup_forward_sorting_policy, width, length,
+					     offset, z_offset, offset, dummy, -1, "VXDSupFront_odd"));
+	  // support - sensitive boundary
+	  Add(new ILDParallelPlanarMeasLayer(carbon, silicon, (ladder_distance+ladder_thickness), currPhi, _bZ, sup_back_sorting_policy, width, length,
+					     offset, z_offset, offset, dummy, -1, "VXDSenSuppportIntf_odd"));
+	  // measurement plane defined as the middle of the sensitive volume
+	  Add(new ILDParallelPlanarMeasLayer(silicon, silicon, (sensitive_distance+sensitive_thickness*(1.-_relative_position_of_measurement_surface)),
+					     currPhi, _bZ, measurement_plane_sorting_policy, width, length,
+					     offset, z_offset, offset, active, CellID, "VXDMeaslayer_odd"));
+	  // sensitive air - sensitive boundary
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, (sensitive_distance+sensitive_thickness), currPhi, _bZ, sen_back_sorting_policy, width, length,
+					     offset, z_offset, offset, dummy, -1, "VXDSenRear_odd"));
+	}
       }
+    }
+    if (layer%2 == 1) {
+      double redge = sqrt(sensitive_outer_distance*sensitive_outer_distance + (fabs(offset) + 0.5*width) * (fabs(offset) + 0.5*width)) + edge_eps;
+      Add(new ILDCylinderMeasLayer(air, air, redge, 0.5*length, 0, 0, 0, _bZ, dummy, -1, "VXDOuterEdge"));
     }
   }
 
@@ -262,6 +304,7 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
       // support - air boundary
       Add(new CEPCCylinderMeasLayer(bentmat, air, ladder_distance+ladder_thickness, halfz, currPhi, width, x0, y0, z0, _bZ, dummy, -1, "STTSupRear_0" )) ;
     }
+    Add(new ILDCylinderMeasLayer(air, air, ladder_distance+ladder_thickness+edge_eps, halfz, x0, y0, z0, _bZ, dummy, -1, "STTOuterEdge"));
    }
   }
 

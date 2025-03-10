@@ -273,7 +273,8 @@ full.OutputTracks  = "CompleteTracks" # default name
 full.FTDHitToTrackDistance = 5.
 full.SITHitToTrackDistance = 3.
 full.SETHitToTrackDistance = 5.
-full.ETDHitToTrackDistance = 15.
+#according to particle gun
+full.ETDHitToTrackDistance = 40.
 full.MinChi2ProbForSiliconTracks = 0
 full.MaxChi2PerHit = 200
 full.ForceSiTPCMerging = True
@@ -293,7 +294,7 @@ tpr = TrackParticleRelationAlg("Track2Particle")
 tpr.MCParticleCollection = "MCParticle"
 tpr.TrackList = ["CompleteTracks"]
 tpr.TrackerAssociationList = ["VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
-                              "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation"]
+                              "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation", "TPCTrackerHitAss"]
 #tpr.OutputLevel = DEBUG
 
 

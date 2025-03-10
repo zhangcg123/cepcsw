@@ -17,6 +17,7 @@
 
 #include "kaldet/ILDSegmentedDiscMeasLayer.h"
 #include "kaldet/ILDDiscMeasLayer.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
 
 #include "streamlog/streamlog.h"
 #include "CLHEP/Units/SystemOfUnits.h"
@@ -43,6 +44,11 @@ void CEPCITKEndcapKalDetector::build() {
   streamlog_out(DEBUG) << "CEPCITKEndcapKalDetector::build " << std::endl;
 
   double eps = 1e-9;
+  double eps1 = 1.0e-04; // disk
+  double eps2 = 1.0e-05; // odd or even
+  double eps3 = 1.0e-06; // layer in disk
+  //double eps4 = 1.0e-07; // ring
+  double eps5 = 1.0e-08; // forward or backwards
 
   int ndisks = _disksData.layers.size();
   for (int idisk = 0; idisk < ndisks; idisk++) {
@@ -58,6 +64,7 @@ void CEPCITKEndcapKalDetector::build() {
     double rmaxSupport      = disk.rmaxSupport;
     double thicknessSupport = disk.thicknessSupport;
     int nrings = rings.size();
+    double thicknessTotal = 0;
     for (int iring = 0; iring < nrings; iring++) {
       auto& ring = rings[iring];
 
@@ -67,6 +74,11 @@ void CEPCITKEndcapKalDetector::build() {
       double widthInner = ring.widthInner;
       double widthOuter = ring.widthOuter;
       double length     = ring.length;
+      double tSensitive = ring.thicknessSensitive;
+      double tGlue      = ring.thicknessGlue;
+      double tService   = ring.thicknessService;
+      double thickness  = tSensitive + tGlue + tService;
+      if (thickness > thicknessTotal) thicknessTotal = thickness;
 
       int nsegments = npetals/2;
       this->create_segmented_disk_layers(idisk, iring, nsegments, true, phi0,  zPosition);
@@ -74,7 +86,7 @@ void CEPCITKEndcapKalDetector::build() {
 
       // odd segements
       // update phi0 by the angular distance of one petal
-      phi0 -= 2.0 * M_PI / npetals;
+      phi0 += 2.0 * M_PI / npetals;
       this->create_segmented_disk_layers(idisk, iring, nsegments, false, phi0,  zPosition);
       this->create_segmented_disk_layers(idisk, iring, nsegments, false, phi0, -zPosition);
     }
@@ -84,33 +96,53 @@ void CEPCITKEndcapKalDetector::build() {
     
     Bool_t dummy = false;
 
-    double z0 = zPosition - 0.5*thicknessSupport + eps;
+    double z_front = zPosition - 0.5*thicknessSupport + eps;
 
-    streamlog_out(DEBUG) << "CEPCITKEndcapKalDetector::create air support disk at " << z0 << " sort_policy = " << fabs(z0) << std::endl;
-      
-    TVector3 xc0_fwd(0.0, 0.0, z0);
-    TVector3 normal0_fwd(xc0_fwd);
-    normal0_fwd.SetMag(1.0);
-    Add(new ILDDiscMeasLayer(air, support, xc0_fwd, normal0_fwd, _bZ, fabs(z0), rminSupport, rmaxSupport, dummy, -1, "ITKEAirSupportDiscPositiveZ"));
-    
-    TVector3 xc0_bwd(0.0, 0.0, -z0);
-    TVector3 normal0_bwd(xc0_bwd);
-    normal0_bwd.SetMag(1.0);
-    Add(new ILDDiscMeasLayer(support, air, xc0_bwd, normal0_bwd, _bZ, fabs(z0), rminSupport, rmaxSupport, dummy, -1, "ITKEAirSupportDiscNegativeZ"));
+    double sort_policy = rmaxSupport + idisk * eps1 + 6 * eps3;
+    streamlog_out(DEBUG) << "CEPCITKEndcapKalDetector::create air support disk at " << z_front << " sort_policy = " << sort_policy << std::endl;
 
-    double z1 = zPosition + 0.5*thicknessSupport - eps;
+    TVector3 normal_fwd(0, 0, 1);
+    TVector3 normal_bwd(0, 0,-1);
 
-    TVector3 xc1_fwd(0.0, 0.0, z1);
-    TVector3 normal1_fwd(xc1_fwd);
-    normal1_fwd.SetMag(1.0);
-    Add(new ILDDiscMeasLayer(air, support, xc1_fwd, normal1_fwd, _bZ, fabs(z1), rminSupport, rmaxSupport, dummy, -1, "ITKESupportAirDiscPositiveZ"));
+    TVector3 xc_front_fwd(0.0, 0.0, z_front);
+    Add(new ILDDiscMeasLayer(air, support, xc_front_fwd, normal_fwd, _bZ, sort_policy, rminSupport, rmaxSupport, dummy, -1, "ITKEAirSupportDiscPositiveZ"));
 
-    TVector3 xc1_bwd(0.0, 0.0, -z1);
-    TVector3 normal1_bwd(xc1_bwd);
-    normal1_bwd.SetMag(1.0);
-    Add(new ILDDiscMeasLayer(support, air, xc1_bwd, normal1_bwd, _bZ, fabs(z1), rminSupport, rmaxSupport, dummy, -1, "ITKESupportAirDiscNegativeZ"));
+    TVector3 xc_front_bwd(0.0, 0.0, -z_front);
+    Add(new ILDDiscMeasLayer(air, support, xc_front_bwd, normal_bwd, _bZ, sort_policy+eps5, rminSupport, rmaxSupport, dummy, -1, "ITKEAirSupportDiscNegativeZ"));
+
+    double z_rear = zPosition + 0.5*thicknessSupport - eps;
+
+    TVector3 xc_rear_fwd(0.0, 0.0, z_rear);
+    Add(new ILDDiscMeasLayer(support, air, xc_rear_fwd, normal_fwd, _bZ, sort_policy+eps3, rminSupport, rmaxSupport, dummy, -1, "ITKESupportAirDiscPositiveZ"));
+
+    TVector3 xc_rear_bwd(0.0, 0.0, -z_rear);
+    Add(new ILDDiscMeasLayer(support, air, xc_rear_bwd, normal_bwd, _bZ, sort_policy+eps3+eps5, rminSupport, rmaxSupport, dummy, -1, "ITKESupportAirDiscNegativeZ"));
+
+    double inner_radius = rminSupport - idisk * eps1;
+    double outer_radius = rmaxSupport + idisk * eps1 + 2 * eps2;
+
+    Add(new ILDCylinderMeasLayer(air, air, inner_radius, 0.5*thicknessSupport+thicknessTotal+eps, 0, 0, zPosition, _bZ, dummy, -1, "ITKEInnerEdgePositiveZ"));
+    Add(new ILDCylinderMeasLayer(air, air, inner_radius, 0.5*thicknessSupport+thicknessTotal+eps, 0, 0, -zPosition, _bZ, dummy, -1, "ITKEInnerEdgeNegativeZ"));
+
+    sort_policy = rmaxSupport + idisk * eps1;
+    TVector3 xc_front_edge_fwd(0.0, 0.0, zPosition - 0.5*thicknessSupport - thicknessTotal - eps);
+    Add(new ILDDiscMeasLayer(air, air, xc_front_edge_fwd, normal_fwd, _bZ, sort_policy, inner_radius, outer_radius, dummy, -1, "ITKEFrontEdgePositiveZ"));
+
+    TVector3 xc_front_edge_bwd(0.0, 0.0, -zPosition + 0.5*thicknessSupport + thicknessTotal + eps);
+    Add(new ILDDiscMeasLayer(air, air, xc_front_edge_bwd, normal_bwd, _bZ, sort_policy+eps5, inner_radius, outer_radius, dummy, -1, "ITKEFrontEdgeNegativeZ"));
+
+    Add(new ILDCylinderMeasLayer(air, air, outer_radius, 0.5*thicknessSupport+thicknessTotal+eps, 0, 0, zPosition, _bZ, dummy, -1, "ITKEOuterEdgePositiveZ"));
+    Add(new ILDCylinderMeasLayer(air, air, outer_radius, 0.5*thicknessSupport+thicknessTotal+eps, 0, 0, -zPosition, _bZ, dummy, -1, "ITKEOuterEdgeNegativeZ"));
+
+    sort_policy = rmaxSupport + idisk * eps1 + 3 * eps2;
+    TVector3 xc_rear_edge_fwd(0.0, 0.0, zPosition + 0.5*thicknessSupport + thicknessTotal + eps);
+    Add(new ILDDiscMeasLayer(air, air, xc_rear_edge_fwd, normal_fwd, _bZ, sort_policy, inner_radius, outer_radius, dummy, -1, "ITKERearEdgePositiveZ"));
+
+    TVector3 xc_rear_edge_bwd(0.0, 0.0, -zPosition - 0.5*thicknessSupport - thicknessTotal - eps);
+    Add(new ILDDiscMeasLayer(air, air, xc_rear_edge_bwd, normal_bwd, _bZ, sort_policy+eps5, inner_radius, outer_radius, dummy, -1, "ITKERearEdgeNegativeZ"));
   }
-  
+
+  streamlog_out(DEBUG1) << "MultiRingsZDisk based ITKEndcap MeasLayer created" << std::endl;
 }
 
 void CEPCITKEndcapKalDetector::create_segmented_disk_layers(int idisk, int iring, int nsegments, bool even_petals, double phi0, double zpos) {
@@ -141,16 +173,19 @@ void CEPCITKEndcapKalDetector::create_segmented_disk_layers(int idisk, int iring
   }
   
   // create segmented disk
+  double rmaxSupport = _disksData.layers[idisk].rmaxSupport;
 
-  double eps1 = 1.0e-04; // ring  
+  double eps1 = 1.0e-04; // disk
   double eps2 = 1.0e-05; // odd or even
   double eps3 = 1.0e-06; // layer in disk
-  double eps4 = 1.0e-08; // forward or backwards
+  double eps4 = 1.0e-07; // ring
+  double eps5 = 1.0e-08; // forward or backwards
   //double sort_policy = fabs(z);
   //double sort_policy = rInner+height + eps1 * idisk + eps3 * 1 ;
-  double sort_policy = eps1 * iring;
+  //double sort_policy = eps1 * iring;
+  double sort_policy = rmaxSupport + eps1 * idisk + eps3 + eps4 * iring;
   if (!even_petals) sort_policy += eps2;
-  if (zpos < 0)     sort_policy += eps4;
+  if (zpos < 0)     sort_policy += eps5;
 
   double tSupport   = _disksData.layers[idisk].thicknessSupport;
   double tSensitive = _disksData.layers[idisk].rings[iring].thicknessSensitive;
@@ -167,26 +202,26 @@ void CEPCITKEndcapKalDetector::create_segmented_disk_layers(int idisk, int iring
   TMaterial& rear  = even_petals ? glue : service;
 
   double z = even_petals ? zpos - zsign*(0.5*tSupport + tRear + tSensitive + tFront) : zpos + zsign*(0.5*tSupport);
-  streamlog_out(DEBUG1) << "CEPCITKEndcapKalDetector::create_segmented_disk add front face of sensitive at " << z << " sort_policy = " << fabs(z)+sort_policy << std::endl;
+  streamlog_out(DEBUG1) << "CEPCITKEndcapKalDetector::create_segmented_disk add front face of sensitive at " << z << " sort_policy = " << sort_policy << std::endl;
 
-  const char *name1 = z > 0 ? "ITKEFrontFacePositiveZ" : "ITKEFrontFaceNegativeZ";
-  Add(new ILDSegmentedDiscMeasLayer(air, front, _bZ, fabs(z)+sort_policy, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name1));
+  const char *name1 = z > 0 ? (even_petals ? "ITKEFrontFacePositiveZ_even" : "ITKEFrontFacePositiveZ_odd") : (even_petals ? "ITKEFrontFaceNegativeZ_even" : "ITKEFrontFaceNegativeZ_odd");
+  Add(new ILDSegmentedDiscMeasLayer(air, front, _bZ, sort_policy, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name1));
 
   z += zsign*tFront;
-  const char *name2 = z > 0 ? "ITKEFrontPositiveZ" : "ITKEFrontNegativeZ";
-  Add(new ILDSegmentedDiscMeasLayer(front, silicon, _bZ, fabs(z)+sort_policy, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name2));
+  const char *name2 = z > 0 ? (even_petals ? "ITKEFrontPositiveZ_even" : "ITKEFrontPositiveZ_odd") : (even_petals ? "ITKEFrontNegativeZ_even" : "ITKEFrontNegativeZ_odd");
+  Add(new ILDSegmentedDiscMeasLayer(front, silicon, _bZ, sort_policy+eps3, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name2));
 
   z += zsign*0.5*tSensitive;
-  const char *name3 = z > 0 ? "ITKESenPositiveZ" : "ITKESenNegativeZ";
-  Add( new ILDSegmentedDiscMeasLayer(silicon, silicon, _bZ, fabs(z)+sort_policy, nsegments, z, phi0, rInner, height, widthInner, widthOuter, active, module_ids, name3));
+  const char *name3 = z > 0 ? (even_petals ? "ITKESenPositiveZ_even" : "ITKESenPositiveZ_odd") : (even_petals ? "ITKESenNegativeZ_even" : "ITKESenNegativeZ_odd");
+  Add( new ILDSegmentedDiscMeasLayer(silicon, silicon, _bZ, sort_policy+2*eps3, nsegments, z, phi0, rInner, height, widthInner, widthOuter, active, module_ids, name3));
 
   z += zsign*0.5*tSensitive;
-  const char *name4 = z > 0 ? "ITKERearPositiveZ" : "ITKERearNegativeZ";
-  Add( new ILDSegmentedDiscMeasLayer(silicon, rear, _bZ, fabs(z)+sort_policy, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name4));
+  const char *name4 = z > 0 ? (even_petals ? "ITKERearPositiveZ_even" : "ITKERearPositiveZ_odd") : (even_petals ? "ITKERearNegativeZ_even" : "ITKERearNegativeZ_odd");
+  Add( new ILDSegmentedDiscMeasLayer(silicon, rear, _bZ, sort_policy+3*eps3, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name4));
 
   z += zsign*tRear;
-  const char *name5 = z > 0 ? "ITKERearFacePositiveZ" : "ITKERearFaceNegativeZ";
-  Add(new ILDSegmentedDiscMeasLayer(rear, air, _bZ, fabs(z)+sort_policy, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name5));
+  const char *name5 = z > 0 ? (even_petals ? "ITKERearFacePositiveZ_even" : "ITKERearFacePositiveZ_odd") : (even_petals ? "ITKERearFaceNegativeZ_even" : "ITKERearFaceNegativeZ_odd");
+  Add(new ILDSegmentedDiscMeasLayer(rear, air, _bZ, sort_policy+4*eps3, nsegments, z, phi0, rInner, height, widthInner, widthOuter, dummy, name5));
 }
 
 void CEPCITKEndcapKalDetector::setupGearGeom(const gear::GearMgr& gearMgr) {

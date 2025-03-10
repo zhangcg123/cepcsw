@@ -82,7 +82,20 @@ CEPCOTKKalDetector::CEPCOTKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
     const double sensitive_thickness = _OTKgeo[layer].senThickness;
     const double sensitive_width     = _OTKgeo[layer].senWidth;
     const double sensitive_length    = _OTKgeo[layer].senLength;
-    
+
+    if (ladder_distance+ladder_thickness-sensitive_distance>0)
+      std::cout << "OTK ladder_distance =" << ladder_distance << " ladder_thickness = " << ladder_thickness << " sensitive_distance = " << sensitive_distance << std::endl; 
+
+    double sign = ladder_offset > 0 ? 1 : -1;
+    double nonoverlap_ladder_width     = ladder_width / 2.0;
+    double nonoverlap_ladder_offset    = ladder_offset - sign * (ladder_width/2.0 - nonoverlap_ladder_width/2.0);
+    double overlap_ladder_width        = ladder_width - nonoverlap_ladder_width;
+    double overlap_ladder_offset       = ladder_offset + sign * (ladder_width/2.0 - overlap_ladder_width/2.0);
+    double nonoverlap_sensitive_width  = sensitive_width / 2.0;
+    double nonoverlap_sensitive_offset = sensitive_offset - sign * (sensitive_width/2.0 - nonoverlap_sensitive_width/2.0);
+    double overlap_sensitive_width     = sensitive_width - nonoverlap_sensitive_width;
+    double overlap_sensitive_offset    = sensitive_offset + sign * (sensitive_width/2.0 - overlap_sensitive_width/2.0);
+
     double currPhi;
     const double dphi = _OTKgeo[layer].dphi;
     
@@ -103,98 +116,197 @@ CEPCOTKKalDetector::CEPCOTKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
       encoder[lcio::ILDCellID0::module] = ladder;
       
       double z_centre_support = 0.0;
-      
+
+      int nsort = sensitive_offset > 0 ? (nLadders - ladder)%nLadders : ladder;
       // check if the sensitive is inside or outside for the support 
       if (sensitive_distance < ladder_distance) {
-        
-        double sen_front_sorting_policy         = sensitive_distance  + (4 * ladder+0) * eps_layer ;
-        double sen_back_sorting_policy          = sensitive_distance  + (4 * ladder+2) * eps_layer ;
-        double sup_back_sorting_policy          = ladder_distance     + (4 * ladder+3) * eps_layer ;
-        
-        // air - sensitive boundary
-        Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, sensitive_width, sensitive_length,
-					   sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront"));
-        
+	double gap_distance = sensitive_distance + sensitive_thickness + 1e-6;
+
+        double sen_front_sorting_policy         = sensitive_distance + (5 * nsort + 0) * eps_layer;
+        double sen_back_sorting_policy          = sensitive_distance + (5 * nsort + 2) * eps_layer;
+	double sup_front_sorting_policy         = sensitive_distance + (5 * nsort + 3) * eps_layer;
+        double sup_back_sorting_policy          = sensitive_distance + (5 * nsort + 4) * eps_layer;
+
+	double overlap_sen_front_sorting_policy = sensitive_distance + (5 * nLadders + 0) * eps_layer;
+        double overlap_sen_back_sorting_policy  = sensitive_distance + (5 * nLadders + 2) * eps_layer;
+	double overlap_sup_front_sorting_policy = sensitive_distance + (5 * nLadders + 3) * eps_layer;
+        double overlap_sup_back_sorting_policy  = sensitive_distance + (5 * nLadders + 4) * eps_layer;
+
+	if (ladder == 0) {
+	  // air - sensitive boundary
+	  Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, nonoverlap_sensitive_width, sensitive_length,
+					     nonoverlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, overlap_sen_front_sorting_policy, overlap_sensitive_width, sensitive_length,
+					     overlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront_overlap"));
+	  // sensitive - air boundary
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, nonoverlap_sensitive_width,
+					     sensitive_length, nonoverlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, overlap_sen_back_sorting_policy, overlap_sensitive_width,
+					     sensitive_length, overlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear_overlap"));
+	  // air - support boundary, very thin air gap added for different support and sensitive size
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, gap_distance, currPhi, _bZ, sen_back_sorting_policy+eps_layer*0.1, nonoverlap_ladder_width, ladder_length,
+					     nonoverlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, gap_distance, currPhi, _bZ, overlap_sup_front_sorting_policy, overlap_ladder_width, ladder_length,
+					     overlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront_overlap"));
+	  // support - air boundary
+	  Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, nonoverlap_ladder_width, ladder_length,
+					     nonoverlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1 ,"OTKSupRear_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, overlap_sup_back_sorting_policy, overlap_ladder_width, ladder_length,
+					     overlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupRear_overlap"));
+	}
+	else {
+	  // air - sensitive boundary
+	  Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, sensitive_width, sensitive_length,
+					     sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront"));
+	  // sensitive - air boundary
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, sensitive_width, sensitive_length,
+					     sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear"));
+	  // air - support boundary, very thin air gap added for different support and sensitive size
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, gap_distance, currPhi, _bZ, sup_front_sorting_policy, ladder_width, ladder_length,
+					     ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront"));
+	  // support - air boundary
+	  Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ, sup_back_sorting_policy, ladder_width, ladder_length,
+					     ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupRear"));
+        }
+
         for (int isensor=0; isensor<nsensors; ++isensor) {
           encoder[lcio::ILDCellID0::sensor] = isensor;
           int CellID = encoder.lowWord();
           
-          double measurement_plane_sorting_policy = sensitive_distance  + (4 * ladder+1) * eps_layer + eps_sensor * isensor ;
+          double measurement_plane_sorting_policy         = sensitive_distance + (5 * nsort + 1) * eps_layer + eps_sensor * isensor;
+	  double overlap_measurement_plane_sorting_policy = sensitive_distance + (5 * nLadders + 1) * eps_layer + eps_sensor * isensor;
           
           double z_centre_sensor = -0.5*sensitive_length + (0.5*sensor_length) + (isensor*sensor_length) ;
 
           if (_isStripDetector) {
             // measurement plane defined as the middle of the sensitive volume
-            Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
-						    measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
-						    z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer"));
+	    if (ladder == 0) {
+	      Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+						      measurement_plane_sorting_policy, nonoverlap_sensitive_width, sensor_length, nonoverlap_sensitive_offset,
+						      z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer_nonoverlap"));
+	      Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+						      overlap_measurement_plane_sorting_policy, overlap_sensitive_width, sensor_length, overlap_sensitive_offset,
+						      z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer_overlap"));
+	    }
+	    else {
+	      Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+						      measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
+						      z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer"));
+	    }
           }
 	  else {
             // measurement plane defined as the middle of the sensitive volume
-            Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
-					       measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
-					       z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer"));
+	    if (ladder == 0) {
+	      Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+						 measurement_plane_sorting_policy, nonoverlap_sensitive_width, sensor_length, nonoverlap_sensitive_offset,
+						 z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer_nonoverlap"));
+	      Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+						 overlap_measurement_plane_sorting_policy, overlap_sensitive_width, sensor_length, overlap_sensitive_offset,
+						 z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer_overlap"));
+	    }
+	    else {
+	      Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+						 measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
+						 z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer"));
+	    }
           }
-          
 	  //std::cout << "CEPCOTKKalDetector add surface with CellID = " << CellID
 	  //          << " layer = " << layer << " ladder = " << ladder << " sensor = " << isensor << std::endl;
         }
-       
-        // sensitive - air boundary 
-        Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ,
-					   sen_back_sorting_policy, sensitive_width, sensitive_length, sensitive_offset,
-					   z_centre_support, sensitive_offset, dummy, -1, "OTKSenSupportIntf")); 
-        // air - support boundary, very thin air gap added for different support and sensitive size
-        Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance+1e6, currPhi, _bZ, sen_back_sorting_policy+eps_layer*0.1,
-                                           ladder_width, ladder_length, ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupSenGap"));
-        // support - air boundary
-        Add(new ILDParallelPlanarMeasLayer(carbon, air, ladder_distance+ladder_thickness, currPhi, _bZ,
-					   sup_back_sorting_policy, ladder_width, ladder_length, ladder_offset,
-					   z_centre_support, ladder_offset, dummy,-1,"OTKSupRear"));
       }
       else {
-        
-        double sup_front_sorting_policy         = ladder_distance     + (4 * ladder+0) * eps_layer ;
-        double sen_front_sorting_policy         = sensitive_distance  + (4 * ladder+1) * eps_layer ;
-        double sen_back_sorting_policy          = sensitive_distance  + (4 * ladder+3) * eps_layer ;
-        
-        // air - support boundary
-        Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, sup_front_sorting_policy,
-					   ladder_width, ladder_length, ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront"));
-        // support - air boundary, very thin air gap added for different support and sensitive size
-	Add(new ILDParallelPlanarMeasLayer(carbon, air, sensitive_distance-1e6, currPhi, _bZ, sup_front_sorting_policy+eps_layer*0.1,
-                                           ladder_width, ladder_length, ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupSenGap"));
-        // air boundary - sensitive
-        Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy,
-					   sensitive_width, sensitive_length, sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenSupportIntf"));
+	double gap_distance = sensitive_distance - 1e-6;
+
+        double sup_front_sorting_policy         = sensitive_distance + (5 * nsort + 0) * eps_layer;
+	double sup_back_sorting_policy          = sensitive_distance + (5 * nsort + 1) * eps_layer;
+        double sen_front_sorting_policy         = sensitive_distance + (5 * nsort + 2) * eps_layer;
+        double sen_back_sorting_policy          = sensitive_distance + (5 * nsort + 4) * eps_layer ;
+	double overlap_sup_front_sorting_policy = sensitive_distance + (5 * nLadders + 0) * eps_layer;
+	double overlap_sup_back_sorting_policy  = sensitive_distance + (5 * nLadders + 1) * eps_layer;
+        double overlap_sen_front_sorting_policy = sensitive_distance + (5 * nLadders + 2) * eps_layer;
+        double overlap_sen_back_sorting_policy  = sensitive_distance + (5 * nLadders + 4) * eps_layer;
+
+	if (ladder == 0) {
+	  // air - support boundary
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, sup_front_sorting_policy, nonoverlap_ladder_width, ladder_length,
+					     nonoverlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, overlap_sup_front_sorting_policy, overlap_ladder_width, ladder_length,
+					     overlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront_overlap"));
+	  // support - air boundary, very thin air gap added for different support and sensitive size
+	  Add(new ILDParallelPlanarMeasLayer(carbon, air, gap_distance, currPhi, _bZ, sup_back_sorting_policy, nonoverlap_ladder_width, ladder_length,
+					     nonoverlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupRear_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(carbon, air, gap_distance, currPhi, _bZ, overlap_sup_back_sorting_policy, overlap_ladder_width, ladder_length,
+					     overlap_ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupRear_overlap"));
+	  // air boundary - sensitive
+	  Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, nonoverlap_sensitive_width, sensitive_length,
+					     nonoverlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, overlap_sen_front_sorting_policy, overlap_sensitive_width, sensitive_length,
+					     overlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront_overlap"));
+	  // sensitive - air boundary
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, nonoverlap_sensitive_width,
+					     sensitive_length, nonoverlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear_nonoverlap"));
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, overlap_sen_back_sorting_policy, overlap_sensitive_width,
+					     sensitive_length, overlap_sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear_overlap"));
+	}
+	else {
+	  // air - support boundary
+	  Add(new ILDParallelPlanarMeasLayer(air, carbon, ladder_distance, currPhi, _bZ, sup_front_sorting_policy, ladder_width, ladder_length,
+					     ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupFront"));
+	  // support - air boundary, very thin air gap added for different support and sensitive size
+	  Add(new ILDParallelPlanarMeasLayer(carbon, air, gap_distance, currPhi, _bZ, sup_back_sorting_policy, ladder_width, ladder_length,
+					     ladder_offset, z_centre_support, ladder_offset, dummy, -1, "OTKSupRear"));
+	  // air boundary - sensitive
+	  Add(new ILDParallelPlanarMeasLayer(air, silicon, sensitive_distance, currPhi, _bZ, sen_front_sorting_policy, sensitive_width, sensitive_length,
+					     sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenFront"));
+	  // sensitive - air boundary
+	  Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy, sensitive_width, sensitive_length,
+					     sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear"));
+	}
 
         for (int isensor=0; isensor<nsensors; ++isensor) {
           encoder[lcio::ILDCellID0::sensor] = isensor;
           int CellID = encoder.lowWord() ;
           
-          double measurement_plane_sorting_policy = sensitive_distance  + (4 * ladder+2) * eps_layer + eps_sensor * isensor ;
+          double measurement_plane_sorting_policy         = sensitive_distance  + (5 * nsort + 3) * eps_layer + eps_sensor * isensor;
+	  double overlap_measurement_plane_sorting_policy = sensitive_distance  + (5 * nLadders + 3) * eps_layer + eps_sensor * isensor;
 
           double z_centre_sensor = -0.5*sensitive_length + (0.5*sensor_length) + (isensor*sensor_length) ;
           
           if (_isStripDetector) {
             // measurement plane defined as the middle of the sensitive volume
-            Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
-						    measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
-						    z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer"));
+	    if (ladder == 0) {
+              Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ, measurement_plane_sorting_policy,
+						      nonoverlap_sensitive_width, sensor_length, nonoverlap_sensitive_offset,
+                                                      z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer_nonoverlap"));
+              Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ, overlap_measurement_plane_sorting_policy,
+						      overlap_sensitive_width, sensor_length, overlap_sensitive_offset,
+                                                      z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer_overlap"));
+            }
+            else {
+              Add(new ILDParallelPlanarStripMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+                                                      measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
+                                                      z_centre_sensor, sensitive_offset, stripAngle, CellID, "OTKStripMeaslayer"));
+            }
           }
 	  else {
             // measurement plane defined as the middle of the sensitive volume
-            Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
-					       measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
-					       z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer"));
+	    if (ladder == 0) {
+              Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ, measurement_plane_sorting_policy,
+						 nonoverlap_sensitive_width, sensor_length, nonoverlap_sensitive_offset,
+                                                 z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer_nonoverlap"));
+              Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ, overlap_measurement_plane_sorting_policy,
+						 overlap_sensitive_width, sensor_length, overlap_sensitive_offset,
+                                                 z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer_overlap"));
+            }
+            else {
+              Add(new ILDParallelPlanarMeasLayer(silicon, silicon, sensitive_distance+sensitive_thickness*0.5, currPhi, _bZ,
+                                                 measurement_plane_sorting_policy, sensitive_width, sensor_length, sensitive_offset,
+                                                 z_centre_sensor, sensitive_offset, true, CellID, "OTKMeaslayer"));
+            }
           }
-          
 	  //std::cout << "CEPCOTKKalDetector add surface with CellID = " << CellID
           //          << " layer = " << layer << " ladder = " << ladder << " sensor = " << isensor << std::endl ;
         }
-        // sensitive - air boundary
-        Add(new ILDParallelPlanarMeasLayer(silicon, air, sensitive_distance+sensitive_thickness, currPhi, _bZ, sen_back_sorting_policy,
-					   sensitive_width, sensitive_length, sensitive_offset, z_centre_support, sensitive_offset, dummy, -1, "OTKSenRear"));
       }
     }    
   }

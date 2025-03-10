@@ -135,7 +135,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
       std::string sensor_name = ring_vol_name + "_petal";
       Volume sensor_vol(sensor_name, sensor_box, air);
       DetElement sensor_det(sensor_name, det_id);
-      sensor_vol = sensor_vol.setVisAttributes(description.visAttributes("SeeThrough"));
+      sensor_vol = sensor_vol.setVisAttributes(description.visAttributes(vis));
 
       double sensitive_thickness = 0;
       double glue_thickness      = 0;
@@ -186,7 +186,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
       double r_offset = ring_inner_r + module_dr / 2.0;
       for (int i = 0; i < nmodule; ++i)
       {
-        double angle = phi0 - i * 2 * M_PI / nmodule;
+        double angle = phi0 + i * 2 * M_PI / nmodule;
 	double rotated_x = r_offset * cos(angle);
 	double rotated_y = r_offset * sin(angle);
         auto transform = Transform3D(RotationZ(angle), Position(rotated_x, rotated_y, 0));
@@ -202,7 +202,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
         positive_even_sensor_det.setPlacement(pv);
         ringPosF_det.add(positive_even_sensor_det);
 
-	angle -= M_PI / nmodule;
+	angle += M_PI / nmodule;
         rotated_x = r_offset * cos(angle);
         rotated_y = r_offset * sin(angle);
 	transform = Transform3D(RotationZ(angle), Position(rotated_x, rotated_y, 0));
@@ -230,12 +230,12 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
       ringPosF_det.setPlacement(pv);
       layer_det.add(ringPosF_det);
 
-      pv = layerNeg_vol.placeVolume(ringNegR_vol, Position(0, 0, +(SupportThickness + SiliconThickness) / 2.0));
+      pv = layerNeg_vol.placeVolume(ringNegR_vol, Position(0, 0, -(SupportThickness + SiliconThickness) / 2.0));
       pv = pv.addPhysVolID("sensor", std::stoi(ring_id));
       ringNegR_det.setPlacement(pv);
       layerNeg_det.add(ringNegR_det);
 
-      pv = layerNeg_vol.placeVolume(ringNegF_vol, Position(0, 0, -(SupportThickness + SiliconThickness) / 2.0));
+      pv = layerNeg_vol.placeVolume(ringNegF_vol, Position(0, 0, +(SupportThickness + SiliconThickness) / 2.0));
       pv = pv.addPhysVolID("sensor", std::stoi(ring_id));
       ringNegF_det.setPlacement(pv);
       layerNeg_det.add(ringNegF_det);

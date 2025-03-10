@@ -29,11 +29,11 @@
                 </shape>
             </envelope>
             <rings zmax="OTKEndcap_zmax">
-                <ring name="A1" inner_radius="406*mm" outer_radius="(534-0.2)*mm" repeat="16*5" aggregation="2" vis="SeeThrough"/>
-                <ring name="A2" inner_radius="534*mm" outer_radius="(662-0.5)*mm" repeat="16*5" aggregation="2" vis="SeeThrough"/>
-                <ring name="B1" inner_radius="662*mm" outer_radius="(790-0.2)*mm" repeat="16*7" aggregation="2" vis="SeeThrough"/>
-                <ring name="B2" inner_radius="790*mm" outer_radius="(862-0.2)*mm" repeat="16*7" aggregation="1" vis="SeeThrough"/>
-                <ring name="B3" inner_radius="862*mm" outer_radius="(1008-0.5)*mm" repeat="16*7" aggregation="2" vis="SeeThrough"/>
+                <ring name="A1" inner_radius=" 406*mm" outer_radius="( 534-0.2)*mm" repeat="16* 5" aggregation="2" vis="SeeThrough"/>
+                <ring name="A2" inner_radius=" 534*mm" outer_radius="( 662-0.5)*mm" repeat="16* 5" aggregation="2" vis="SeeThrough"/>
+                <ring name="B1" inner_radius=" 662*mm" outer_radius="( 790-0.2)*mm" repeat="16* 7" aggregation="2" vis="SeeThrough"/>
+                <ring name="B2" inner_radius=" 790*mm" outer_radius="( 862-0.2)*mm" repeat="16* 7" aggregation="1" vis="SeeThrough"/>
+                <ring name="B3" inner_radius=" 862*mm" outer_radius="(1008-0.5)*mm" repeat="16* 7" aggregation="2" vis="SeeThrough"/>
                 <ring name="C1" inner_radius="1008*mm" outer_radius="(1123-0.2)*mm" repeat="16*10" aggregation="2" vis="SeeThrough"/>
                 <ring name="C2" inner_radius="1123*mm" outer_radius="(1255-0.2)*mm" repeat="16*10" aggregation="2" vis="SeeThrough"/>
                 <ring name="C3" inner_radius="1255*mm" outer_radius="(1324-0.2)*mm" repeat="16*10" aggregation="1" vis="SeeThrough"/>
@@ -44,17 +44,17 @@
                 <ring name="D4" inner_radius="1668*mm" outer_radius="(1816-0.2)*mm" repeat="16*14" aggregation="2" vis="SeeThrough"/>
             </rings>
             <layers thickness="11.4*mm">
-	        <layer name="other_electronic" width="100.40*mm" thickness="32.6437*0.1*100*um" material="Kapton" vis="BlackVis"/>
+	        <layer name="other_electronic" width="100.40*mm" thickness="32.6437*0.1*100*um" material="Kapton" vis="OrangeVis"/>
                 <layer name="PCB_metal_layers" thickness="1.436*0.2*100*um" material="G4_Cu" vis="FTDSupportVis"/>
                 <layer name="PCB_insulating_layers" thickness="28.41*0.07*100*um" material="Polyimide_ITK" vis="FTDSupportVis"/>
-		<layer name="glue_1" thickness="100*um" material="CER_ITK" vis="FTDSupportVis"/>
+		<layer name="glue_1" thickness="100*um" material="CER_ITK" vis="LightGrayVis"/>
                 <layer name="sensor" sensitive="True" thickness="0.3*mm" material="G4_Si" vis="FTDSensitiveVis"/>
-		<layer name="glue_2" thickness="200*um" material="Polyimide_ITK" vis="FTDSupportVis"/>
-                <layer name="carbon_fiber_plane" thickness="0.3*mm" material="CF_ITK" vis="FTDSupportVis"/>
-                <layer name="cooling_tube_wall" thickness="3.560*0.169*100*um" material="G4_Ti" vis="FTDSupportVis"/>
-                <layer name="cooling_fluid" thickness="35.76*0.105*100*um" material="G4_WATER" vis="FTDSupportVis"/>
-                <layer name="graphite_foam_Honeycom" thickness="6000*um" material="GraphiteFoam_OTK" vis="FTDSupportVis"/>
-                <layer name="carbon_fiber_back_plate" thickness="0.3*mm" material="CF_ITK" vis="FTDSupportVis"/>
+		<layer name="glue_2" thickness="200*um" material="Polyimide_ITK" vis="LightGrayVis"/>
+                <layer name="carbon_fiber_plane" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
+                <layer name="cooling_tube_wall" thickness="3.560*0.169*100*um" material="G4_Ti" vis="GrayVis"/>
+                <layer name="cooling_fluid" thickness="35.76*0.105*100*um" material="G4_WATER" vis="GrayVis"/>
+                <layer name="graphite_foam_Honeycom" thickness="6000*um" material="GraphiteFoam_OTK" vis="GrayVis"/>
+                <layer name="carbon_fiber_back_plate" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
             </layers>
         </detector>
     </detectors>
