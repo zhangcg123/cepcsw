@@ -517,7 +517,7 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
         mcp.setCreatedInSimulation(1);
         mcp.setCharge(secparticle->GetPDGCharge());
         mcp.setTime(sectrk->GetGlobalTime()/CLHEP::ns); // todo
-        mcp.setMass(secparticle->GetPDGMass());
+        mcp.setMass(secparticle->GetPDGMass()/CLHEP::GeV); // EDM4hep unit: GeV
 
         const G4ThreeVector& sec_init_pos = sectrk->GetPosition();
         double x=sec_init_pos.x()/CLHEP::mm;
