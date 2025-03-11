@@ -326,7 +326,13 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
 
   marlintrk->getTrackerHitAtPositiveNDF(last_constrained_hit);
 
+  debug() << "finaliseLCIOTrack:  firstHit: " << firstHit.getCellID() << " " << firstHit.getPosition()
+	  << " lastHit: " << lastHit.getCellID() << " " << lastHit.getPosition()
+	  << " last constrained hit: " << last_constrained_hit.getCellID() << " " << last_constrained_hit.getPosition()
+	  << " fit direction is backward : " << fit_backwards << endmsg;
+
   return_error = marlintrk->smooth(lastHit);
+  //return_error = marlintrk->smooth(last_constrained_hit);
 
   if (return_error != MarlinTrk::IMarlinTrack::success) {
     debug() << "return_code for smoothing to " << lastHit << " = " << MarlinTrk::errorCode(return_error) << " NDF = " << ndf << endmsg;
@@ -366,21 +372,21 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
     
     double chi2Tmp = 0;
     int    ndfTmp  = 0;
-    return_error = marlintrk->getTrackState( last_constrained_hit, ts, chi2, ndf);
-    //return_error = marlintrk->getTrackState( lastHit, ts, chi2, ndf);
+    //return_error = marlintrk->getTrackState( last_constrained_hit, ts, chi2, ndf);
+    return_error = marlintrk->getTrackState( lastHit, ts, chi2, ndf);
 
     debug() << "-- TrackState at last constrained hit : " << ts << endmsg;
 
     //need to add a dummy hit to the track
-    mTrk->addHit(last_constrained_hit);
-    //mTrk->addHit(lastHit);
+    //mTrk->addHit(last_constrained_hit);
+    mTrk->addHit(lastHit);
 
     double _bfield = m_magneticField;
     // fixme: the implementation for DDKalTest does no longer need this value but the IMarlinTrk interface is not yet changed
     mTrk->initialise(ts, _bfield, fit_backwards);
 
-    while (hI->first.id() != last_constrained_hit.id()) {
-      //while (hI->first.id() != lastHit.id()) {
+    //while (hI->first.id() != last_constrained_hit.id()) {
+    while (hI->first.id() != lastHit.id()) {
       debug() << "-- hit in reverse_iterator : " << hI->first.getCellID() << " " << hI->first.getPosition() << endmsg;
       ++hI;
     }
@@ -457,8 +463,8 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
     // @ last hit
     ///////////////////////////////////////////////////////
 
-    debug() << ">>>> create TrackState AtLastHit : using from trkhit "
-	    << last_constrained_hit.getCellID() << " " << last_constrained_hit.getPosition() << endmsg;
+    debug() << ">>>> create TrackState AtLastHit : using trkhit " << lastHit.getCellID() << " " << lastHit.getPosition()
+	    << " from last_constrained_hit " << last_constrained_hit.getCellID() << " " << last_constrained_hit.getPosition() << endmsg;
 
     edm4hep::Vector3d last_hit_pos(lastHit.getPosition());
 

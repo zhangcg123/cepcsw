@@ -465,7 +465,7 @@ fitstart:
 	unsigned long cellID = hit.getCellID();
 	const edm4hep::Vector3d& pos = hit.getPosition();
 	double r = sqrt(pos.x*pos.x+pos.y*pos.y);
-	debug() << "Hit " << iHit << ": r= " << r << " id = " << hit.id() << " cellID = " << cellID << " det = " << (cellID&0x1F) << endmsg;
+	debug() << "Hit " << iHit << ": r = " << r << " z = " << pos.z << " id = " << hit.id() << " cellID = " << cellID << " det = " << (cellID&0x1F) << endmsg;
       }
     }
 
