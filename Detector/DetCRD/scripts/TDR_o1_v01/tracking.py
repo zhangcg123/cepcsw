@@ -76,6 +76,7 @@ from Configurables import SmearDigiTool,SiTrackerDigiAlg
 vxdtool = SmearDigiTool("VXD")
 vxdtool.ResolutionU = [0.005]
 vxdtool.ResolutionV = [0.005]
+vxdtool.EnergyThreshold = 0.00001 #GeV
 #vxdtool.OutputLevel = DEBUG
 
 digiVXD = SiTrackerDigiAlg("VXDDigi")
@@ -89,6 +90,7 @@ digiVXD.DigiTool = "SmearDigiTool/VXD"
 itkbtool = SmearDigiTool("ITKBarrel")
 itkbtool.ResolutionU = [0.008]
 itkbtool.ResolutionV = [0.040]
+itkbtool.EnergyThreshold = 0.00005 #GeV
 #itkbtool.OutputLevel = DEBUG
 
 digiITKB = SiTrackerDigiAlg("ITKBarrelDigi")
@@ -102,6 +104,7 @@ digiITKB.DigiTool = "SmearDigiTool/ITKBarrel"
 itketool = SmearDigiTool("ITKEndcap")
 itketool.ResolutionU = [0.008]
 itketool.ResolutionV = [0.040]
+itketool.EnergyThreshold = 0.00005 #GeV
 #itketool.OutputLevel = DEBUG
 
 digiITKE = SiTrackerDigiAlg("ITKEndcapDigi")
@@ -115,6 +118,7 @@ digiITKE.DigiTool = "SmearDigiTool/ITKEndcap"
 otkbtool = SmearDigiTool("OTKBarrel")
 otkbtool.ResolutionU = [0.010]
 otkbtool.ResolutionV = [1.000]
+otkbtool.EnergyThreshold = 0.00005 #GeV
 #otkbtool.OutputLevel = DEBUG
 
 digiOTKB = SiTrackerDigiAlg("OTKBarrelDigi")
@@ -128,6 +132,7 @@ digiOTKB.DigiTool = "SmearDigiTool/OTKBarrel"
 otketool = SmearDigiTool("OTKEndcap")
 otketool.ResolutionU = [0.010]
 otketool.ResolutionV = [1.000]
+otketool.EnergyThreshold = 0.00005 #GeV
 #otketool.OutputLevel = DEBUG
 
 digiOTKE = SiTrackerDigiAlg("OTKEndcapDigi")
