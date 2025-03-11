@@ -35,6 +35,10 @@ private:
 
   double _relative_position_of_measurement_surface;
 
+  double _shellInnerR;
+  double _shellOuterR;
+  double _shellHalfZ;
+
   struct VXD_Layer {
     int nLadders;
     double phi0;

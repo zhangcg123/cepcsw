@@ -308,6 +308,18 @@ CEPCVTXKalDetector::CEPCVTXKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
    }
   }
 
+  if (_shellInnerR > 0 && _shellOuterR > _shellInnerR) {
+    TMaterial& shell = *MaterialDataBase::Instance().getMaterial("VXDShellMaterial");
+
+    Add(new ILDCylinderMeasLayer(air, shell, _shellInnerR, _shellHalfZ, 0, 0, 0, _bZ, dummy, -1, "VXDShellInnerWall"));
+    Add(new ILDCylinderMeasLayer(shell, air, _shellOuterR, _shellHalfZ, 0, 0, 0, _bZ, dummy, -1, "VXDShellOuterWall"));
+
+    TVector3 normal(0, 0, 1);
+    TVector3 xc(0.0, 0.0, _shellHalfZ);
+    Add(new ILDDiscMeasLayer(shell, air,  xc,  normal, _bZ, _shellOuterR + eps, _shellInnerR, _shellOuterR, dummy, -1, "VXDShellSidePositiveZ"));
+    Add(new ILDDiscMeasLayer(shell, air, -xc, -normal, _bZ, _shellOuterR + eps, _shellInnerR, _shellOuterR, dummy, -1, "VXDShellSideNegativeZ"));
+  }
+
   SetOwner();                   
 }
 
@@ -316,6 +328,10 @@ void CEPCVTXKalDetector::setupGearGeom( const gear::GearMgr& gearMgr ){
   const gear::VXDLayerLayout& pVXDLayerLayout = pVXDDetMain.getVXDLayerLayout();
 
   _bZ = gearMgr.getBField().at( gear::Vector3D( 0.,0.,0.)  ).z() ;
+
+  _shellInnerR = pVXDDetMain.getShellInnerRadius();
+  _shellOuterR = pVXDDetMain.getShellOuterRadius();
+  _shellHalfZ  = pVXDDetMain.getShellHalfLength();
 
   _nLayers[0] = pVXDLayerLayout.getNLayers();
   _VXDgeo.resize(_nLayers[0]);
