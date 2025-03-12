@@ -72,13 +72,13 @@ EcalDigi.SkipEvt = 0
 EcalDigi.Seed = 2079
 #Digitalization parameters
 EcalDigi.TimeResolution = 0.7            # 0.7 ns
-EcalDigi.EcalMIPEnergy = 8.9             # MIP energy 8.9 MeV for 1 cm BGO
+EcalDigi.EcalMIPEnergy = 13.35            # MIP energy 13.35 MeV for 1.5 cm BGO
 EcalDigi.EcalMIP_Thre = 0.05              # 0.05 mip at each side, 0.1 mip for one bar
 EcalDigi.UseRealisticDigi = 1
 # scintillation
 EcalDigi.UseDigiScint = 1
 EcalDigi.EcalCryIntLY = 8200             #intrinsic LY 8200 [p.e./MIP]
-EcalDigi.EcalCryMipLY = 200              #Detected effective LY 200 [p.e./MIP]
+EcalDigi.EcalCryMipLY = 300              #Detected effective LY 300 [p.e./MIP]
 EcalDigi.AttenuationLength = 1e8         # 8000 mm for 5% non-uniformity
 # SiPM
 EcalDigi.SiPMDigiVerbose = 2             # 0:w/o response, w/o correction; 1:w/ response, w/o correction; 2:w/ response, w/ simple correction; 3:w/ response, w/ full correction
@@ -86,14 +86,18 @@ EcalDigi.EcalSiPMPDE = 0.25              # NDL-EQR06, PDE 0.25
 EcalDigi.EcalSiPMDCR = 0                 # NDL-EQR06, dark count rate 2500000 [Hz]
 EcalDigi.EcalTimeInterval = 0.           # Time interval 0.000002 [s]. DCR*TimeInterval = dark count noise
 EcalDigi.EcalSiPMCT = 0.                 # SiPM crosstalk Probability 12%
-EcalDigi.EcalSiPMGainMean = 50           # 50 [ADC/p.e.]
+EcalDigi.EcalSiPMGainMean = 5            # 5 [ADC/p.e.]
 EcalDigi.EcalSiPMGainSigma = 0.08        # 0.08
+#EcalDigi.EcalSiPMNoiseSigma = 0          # 0
 # ADC
 EcalDigi.ADC = 8192                      # 13-bit, 8192
 EcalDigi.ADCSwitch = 8000                # 8000
 EcalDigi.Pedestal = 50                   # Pedestal 50 ADC
-EcalDigi.GainRatio_12 = 50               # Gain ratio 50
-EcalDigi.GainRatio_23 = 60               # Gain ratio 60
+EcalDigi.GainRatio_12 = 30               # Gain ratio 30
+EcalDigi.GainRatio_23 = 10               # Gain ratio 10
+EcalDigi.EcalASICNoiseSigma = 4
+EcalDigi.EcalFEENoiseSigma = 5
+EcalDigi.ADCNonLinearity = 0             # ADC non-linearity 0
 # temperature control
 EcalDigi.UseCryTemp = 0
 EcalDigi.UseCryTempCor = 0

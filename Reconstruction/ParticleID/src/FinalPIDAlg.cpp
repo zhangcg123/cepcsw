@@ -197,13 +197,15 @@ StatusCode FinalPIDAlg::FillCaloPID(edm4hep::MutableReconstructedParticle& pfo){
             int pdgid = 22;
             pfo.setType( pdgid );
             pfo.setMass( ParticleMass.at( abs(pdgid) ) );
-            pfo.setEnergy( sqrt(pfo.getMomentum()[0]*pfo.getMomentum()[0] + pfo.getMomentum()[1]*pfo.getMomentum()[1] + pfo.getMomentum()[2]*pfo.getMomentum()[2] + pfo.getMass()*pfo.getMass()) );
+            double p_scale = sqrt( pfo.getEnergy()*pfo.getEnergy() - pfo.getMass()*pfo.getMass() ) / sqrt(pfo.getMomentum()[0]*pfo.getMomentum()[0] + pfo.getMomentum()[1]*pfo.getMomentum()[1] + pfo.getMomentum()[2]*pfo.getMomentum()[2] );
+            pfo.setMomentum( Vector3f(pfo.getMomentum()[0]*p_scale, pfo.getMomentum()[1]*p_scale, pfo.getMomentum()[2]*p_scale) );
         }
         else{
             int pdgid = 130;
             pfo.setType( pdgid );
             pfo.setMass( ParticleMass.at( abs(pdgid) ) );
-            pfo.setEnergy( sqrt(pfo.getMomentum()[0]*pfo.getMomentum()[0] + pfo.getMomentum()[1]*pfo.getMomentum()[1] + pfo.getMomentum()[2]*pfo.getMomentum()[2] + pfo.getMass()*pfo.getMass()) );
+            double p_scale = sqrt( pfo.getEnergy()*pfo.getEnergy() - pfo.getMass()*pfo.getMass() ) / sqrt(pfo.getMomentum()[0]*pfo.getMomentum()[0] + pfo.getMomentum()[1]*pfo.getMomentum()[1] + pfo.getMomentum()[2]*pfo.getMomentum()[2] );
+            pfo.setMomentum( Vector3f(pfo.getMomentum()[0]*p_scale, pfo.getMomentum()[1]*p_scale, pfo.getMomentum()[2]*p_scale) );
 
         }
     }
