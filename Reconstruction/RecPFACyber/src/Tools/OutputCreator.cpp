@@ -39,8 +39,16 @@ namespace Cyber{
       std::vector<const Track*> vec_trks = p_pfos[ip]->getTracks();
       std::vector<const Calo3DCluster*> vec_Ecalclus = p_pfos[ip]->getECALClusters();
       std::vector<const Calo3DCluster*> vec_Hcalclus = p_pfos[ip]->getHCALClusters();
-      double ecalcalib = vec_trks.size()==0 ? settings.map_floatPars.at("ECALNeutralCalib") : settings.map_floatPars.at("ECALChargedCalib");
+
+      double ecalcalib = 1.;
       double hcalcalib = vec_trks.size()==0 ? settings.map_floatPars.at("HCALNeutralCalib") : settings.map_floatPars.at("HCALChargedCalib");
+
+      //TODO: this is a calibration based on PID. May need to move this step into the algorithms. 
+      if(vec_trks.size()==0) ecalcalib = settings.map_floatPars.at("ECALNeutralCalib");
+      else{
+        if( p_pfos[ip]->getTrackMomentum() < 15. || p_pfos[ip]->getECALClusterEnergy()*ecalcalib/p_pfos[ip]->getTrackMomentum() < 0.8 ) ecalcalib = settings.map_floatPars.at("ECALChargedCalib");
+        else ecalcalib = settings.map_floatPars.at("ECALNeutralCalib");
+      }
 
       TVector3 vec_Pos(0.,0.,0.);
 

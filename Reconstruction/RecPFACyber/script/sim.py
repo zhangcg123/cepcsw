@@ -67,6 +67,11 @@ genalg.GenTools = ["StdHepRdr"]
 from Configurables import DetSimSvc
 detsimsvc = DetSimSvc("DetSimSvc")
 
+from Configurables import Edm4hepWriterAnaElemTool
+edm4hep_writer = Edm4hepWriterAnaElemTool("Edm4hepWriterAnaElemTool")
+edm4hep_writer.TrackerCollections = ["VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
+                                     "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"]
+
 from Configurables import DetSimAlg
 detsimalg = DetSimAlg("DetSimAlg")
 detsimalg.RandomSeeds = seed
@@ -84,7 +89,7 @@ detsimalg.RootDetElem = "WorldDetElemTool"
 from Configurables import TimeProjectionChamberSensDetTool
 tpc_sensdettool = TimeProjectionChamberSensDetTool("TimeProjectionChamberSensDetTool")
 tpc_sensdettool.TypeOption = 1
-tpc_sensdettool.DoHeedSim = False#True
+tpc_sensdettool.DoHeedSim = False #True
 dedxoption = "TrackHeedSimTool"
 tpc_sensdettool.DedxSimTool = dedxoption
 
@@ -104,6 +109,9 @@ cal_sensdettool = CalorimeterSensDetTool("CalorimeterSensDetTool")
 cal_sensdettool.CalNamesMergeDisable = ["EcalBarrel", "EcalEndcap", "HcalBarrel", "HcalEndcaps"]
 cal_sensdettool.CalNamesApplyBirks = ["EcalBarrel", "EcalEndcap", "HcalBarrel","HcalEndcaps"]
 cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.01, 0.01] # BGO and Glass scintillator
+
+from Configurables import MarlinEvtSeeder
+evtseeder = MarlinEvtSeeder("EventSeeder")
 
 # output
 from Configurables import PodioOutput

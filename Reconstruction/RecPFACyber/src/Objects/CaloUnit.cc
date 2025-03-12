@@ -13,13 +13,13 @@ namespace Cyber{
       if( module!=x->getModule() ) return false; 
       if( slayer==0){
         if(isAtLowerEdgeZ()){
-          if( ( ( getPosition().x()-x->getPosition().x() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && getPosition().x()-x->getPosition().x()>1e-6)
+          if( ( ( getPosition().x()-x->getPosition().x() <= ecal_endcap_barsize + 2*ecal_endcap_deadarea && getPosition().x()-x->getPosition().x()>1e-6)
                 || ( x->getPosition().x()-getPosition().x() <= ecal_endcap_barsize + 1e-6 && x->getPosition().x()-getPosition().x()>1e-6) )
               && fabs(getPosition().y()-x->getPosition().y()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
         }
         else if(isAtUpperEdgeZ()){
           if( ( (getPosition().x()-x->getPosition().x() <= ecal_endcap_barsize + 1e-6 && getPosition().x()-x->getPosition().x()>1e-6) 
-                || (x->getPosition().x()-getPosition().x() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && x->getPosition().x()-getPosition().x()>1e-6) )
+                || (x->getPosition().x()-getPosition().x() <= ecal_endcap_barsize + 2*ecal_endcap_deadarea && x->getPosition().x()-getPosition().x()>1e-6) )
               && fabs(getPosition().y()-x->getPosition().y()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
         }
         else{
@@ -29,13 +29,13 @@ namespace Cyber{
       } 
       if( slayer==1) {
         if(isAtLowerEdgePhi()){
-          if( ( (getPosition().y()-x->getPosition().y() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && getPosition().y()-x->getPosition().y()>1e-6) 
+          if( ( (getPosition().y()-x->getPosition().y() <= ecal_endcap_barsize + 2*ecal_endcap_deadarea && getPosition().y()-x->getPosition().y()>1e-6) 
                 || ( x->getPosition().y()-getPosition().y() <= ecal_endcap_barsize + 1e-6 && x->getPosition().y()-getPosition().y()>1e-6) )
               && fabs(getPosition().x()-x->getPosition().x()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
         }
         else if(isAtUpperEdgePhi()){
           if( ( (getPosition().y()-x->getPosition().y() <= ecal_endcap_barsize + 1e-6 && getPosition().y()-x->getPosition().y()>1e-6) 
-                || (x->getPosition().y()-getPosition().y() <= 2*ecal_endcap_barsize + 2*ecal_endcap_deadarea && x->getPosition().y()-getPosition().y()>1e-6) )
+                || (x->getPosition().y()-getPosition().y() <= ecal_endcap_barsize + 2*ecal_endcap_deadarea && x->getPosition().y()-getPosition().y()>1e-6) )
               && fabs(getPosition().x()-x->getPosition().x()) <= (getBarLength() + x->getBarLength())/2. + 2*ecal_endcap_deadarea + ecal_endcap_barsize) return true;
         }
         else{
