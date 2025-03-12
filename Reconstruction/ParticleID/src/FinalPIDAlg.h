@@ -30,8 +30,9 @@ class FinalPIDAlg : public Algorithm {
   DataHandle<edm4hep::ReconstructedParticleCollection> m_outPFOCol{"CyberPFOPID", Gaudi::DataHandle::Writer, this};
   Gaudi::Property<std::string> m_method{this, "Method", "TPC+TOF+CALO"};
 
-  //void FillTPCPID(const edm4hep::ReconstructedParticleCollection* pfocol, const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::ParticleIDCollection* pidcol);
-  StatusCode FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo);
+
+  void FillTPCPID(const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::MutableReconstructedParticle& pfo, std::array<double, 5>& chi2s);
+  void FillTOFPID(const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo, std::array<double, 5>& chi2s);
   StatusCode FillCaloPID(edm4hep::MutableReconstructedParticle& pfo);
 
   int _nEvt;
