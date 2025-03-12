@@ -86,13 +86,18 @@ StatusCode FinalPIDAlg::execute(){
     auto outpfo = pfo.clone();
     outpfocol->push_back(outpfo);
     if(m_method.value().find("TPC+TOF")!=std::string::npos ){
-      if( _hasTPC && _hasTPC && (tofcol->size()+dqdxcol->size()>0) )
-        FillTPCTOFPID(dqdxcol, tofcol, outpfo);
+      std::array<double, 5> chi2s; chi2s.fill(0);
+      if( _hasTPC && dqdxcol->size()>0){
+        FillTPCPID(dqdxcol, outpfo, chi2s);
+      }
+      if( _hasTOF && tofcol->size()>0){
+        FillTOFPID(tofcol, outpfo, chi2s);
+      }
     }
     if(m_method.value().find("CALO")!=std::string::npos ) 
       FillCaloPID(outpfo);
 
-    debug()<<" cyber pfo pid : " << outpfo.getType() << " cyber pfo charge : " << outpfo.getCharge() << " cyber pfo energy "<< outpfo.getEnergy() << endmsg;
+    debug()<<" cyber pfo pid : " << outpfo.getType() << " cyber pfo charge : " << outpfo.getCharge() << " cyber pfo energy "<< outpfo.getEnergy() << " cyber pfo mass "<< outpfo.getMass() << endmsg;
   }
 
   _nEvt++;
@@ -107,33 +112,10 @@ StatusCode FinalPIDAlg::finalize(){
 }
 
 
-/*
-void FinalPIDAlg::FillTPCPID(const edm4hep::ReconstructedParticleCollection* pfocol, const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::ParticleIDCollection* pidcol){
-  for (auto pfo : *pfocol){
-    for (auto trk : pfo.getTracks()){
-      for (auto dqdx : *dqdxcol){
-        if (dqdx.getTrack() == trk){
-          std::array<double, 5> chi2s = dqdx.getHypotheses();
-          int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
-          auto pid = pidcol->create();
-          pid.setPDG( pfo.getCharge() * PDGIDs.at(minchi2idx) );
-          pid.setLikelihood( chi2s[minchi2idx] );
-          //pfo.setParticleID(pid);
-          
-        }
-      }
-    }
-  }
-}
-*/
-
-
-StatusCode FinalPIDAlg::FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo){
+void FinalPIDAlg::FillTPCPID(const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::MutableReconstructedParticle& pfo, std::array<double, 5>& chi2s){
 
     for (auto trk : pfo.getTracks()){
 
-      std::array<double, 5> chi2s; chi2s.fill(0);
-      
       for (auto dqdx : *dqdxcol){
         if (dqdx.getTrack() == trk){
           for (int i = 0; i < 5; i++){
@@ -141,6 +123,25 @@ StatusCode FinalPIDAlg::FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol,
           }
         }
       }
+
+      int pdgid = 0;
+      if ( std::all_of(chi2s.begin(), chi2s.end(), [](double x){return x == 0;}) ){
+        pdgid = pfo.getCharge() * 211;
+      }else{
+        int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
+        pdgid = pfo.getCharge() * PDGIDs.at(minchi2idx);
+      }
+      pfo.setType( pdgid );
+      pfo.setMass( ParticleMass.at( abs(pdgid) ) );
+      pfo.setEnergy( sqrt(pfo.getMomentum()[0]*pfo.getMomentum()[0] + pfo.getMomentum()[1]*pfo.getMomentum()[1] + pfo.getMomentum()[2]*pfo.getMomentum()[2] + pfo.getMass()*pfo.getMass()) );
+      debug() << " fill tpc pid:  chi2s : " << chi2s[0]<<" " <<chi2s[1]<<" " <<chi2s[2]<<" "<<chi2s[3]<<" "<<chi2s[4]<<"	id:"<<pfo.getType()<<" 	mass:"<<pfo.getMass()<<endmsg;
+    }
+    
+}
+
+void FinalPIDAlg::FillTOFPID(const edm4hep::RecTofCollection* tofcol, edm4hep::MutableReconstructedParticle& pfo, std::array<double, 5>& chi2s){
+
+    for (auto trk : pfo.getTracks()){
 
       for (auto tof : *tofcol){
         if (tof.getTrack() == trk){
@@ -155,13 +156,21 @@ StatusCode FinalPIDAlg::FillTPCTOFPID(const edm4hep::RecDqdxCollection* dqdxcol,
         }
       }
 
-      int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
-      int pdgid = pfo.getCharge() * PDGIDs.at(minchi2idx);
+      int pdgid = 0;
+      if ( std::all_of(chi2s.begin(), chi2s.end(), [](double x){return x == 0;}) ){
+        pdgid = pfo.getCharge() * 211;
+      }else{
+        int minchi2idx = std::distance(chi2s.begin(), std::min_element(chi2s.begin(), chi2s.end()));
+        pdgid = pfo.getCharge() * PDGIDs.at(minchi2idx);
+      }
+
       pfo.setType( pdgid );
       pfo.setMass( ParticleMass.at( abs(pdgid) ) );
       pfo.setEnergy( sqrt(pfo.getMomentum()[0]*pfo.getMomentum()[0] + pfo.getMomentum()[1]*pfo.getMomentum()[1] + pfo.getMomentum()[2]*pfo.getMomentum()[2] + pfo.getMass()*pfo.getMass()) );
+      debug() << " fill tof pid: chi2 : " << chi2s[0]<<" " <<chi2s[1]<<" " <<chi2s[2]<<" "<<chi2s[3]<<" "<<chi2s[4]<<"	id:"<<pfo.getType()<<" 	mass:"<<pfo.getMass()<<endmsg;
+
     }
-    return StatusCode::SUCCESS;
+
 }
 
 
