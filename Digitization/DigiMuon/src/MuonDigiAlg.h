@@ -49,17 +49,22 @@ class MuonDigiAlg : public GaudiAlgorithm
   virtual StatusCode initialize() ;
   virtual StatusCode execute() ; 
   virtual StatusCode finalize() ;
-  void MuonHandle(int _i); // 2->Barrel  0->Endcap
+  void MuonHandle(int barrel_or_endcap); // 2->Barrel  0->Endcap
   void Clear();
-  void GetSimHit(edm4hep::SimTrackerHit _simhit, dd4hep::DDSegmentation::BitFieldCoder* _m_decoder, int _i, int _message[6], double & _Edep, unsigned long long & _cellid, double & _xydist, edm4hep::Vector3d & _pos, dd4hep::Position & _ddpos, std::array<unsigned long long, 2> & _key, double & _mcpz);
-  double Gethit_sipm_length_Barrel(dd4hep::Position _ddpos, edm4hep::Vector3d _pos, int _message[6]);
-  double Gethit_sipm_length_Endcap(dd4hep::Position _ddpos, edm4hep::Vector3d _pos, int _message[6]);
-  double EdeptoADC(double _Edep, double _hit_sipm_length);
-  void SaveData_mapcell(std::array<unsigned long long, 2> _key, double _Edep, int _message[6], edm4hep::Vector3d _pos);
+  void GetSimHit(edm4hep::SimTrackerHit hit_simhit, dd4hep::DDSegmentation::BitFieldCoder* hit_m_decoder, int hit_i, 
+                 int hit_data[6], double & hit_Edep, unsigned long long & hit_cellid, double & hit_xydist, 
+                 edm4hep::Vector3d & hit_pos, dd4hep::Position & hit_ddpos, 
+                 std::array<unsigned long long, 2> & cell_key, double & cell_mcpz, double & hit_time);
+  double Gethit_sipm_length_Barrel(dd4hep::Position hit_ddpos, edm4hep::Vector3d hit_pos, int hit_data[6]);
+  double Gethit_sipm_length_Endcap(dd4hep::Position hit_ddpos, edm4hep::Vector3d hit_pos, int hit_data[6]);
+  double EdeptoADC(double hit_Edep, double hit_sipm_length);
+  void SaveData_mapcell(std::array<unsigned long long, 2> cell_key, double hit_Edep, int hit_data[6], edm4hep::Vector3d hit_pos, double hit_time);
   void Cut3();
-  void Find_anotherlayer(int _i, std::array<unsigned long long, 2> _key1, std::array<unsigned long long, 2> _key2, double _ddposi, int & _anotherlayer_cell_num);
-  void Save_trkhit(edm4hep::TrackerHitCollection* _trkhitVec, std::array<unsigned long long, 2> _key, int _pdgid, edm4hep::Vector3d _pos);
-  void Save_onelayer_signal(edm4hep::TrackerHitCollection* _trkhitVec);
+  void Find_anotherlayer(int barrel_or_endcap, std::array<unsigned long long, 2> key1, 
+                         std::array<unsigned long long, 2> key2, double ddposi, int & anotherlayer_cell_num);
+  void Save_trkhit(edm4hep::TrackerHitCollection* trkhitVec, std::array<unsigned long long, 2> key, int pdgid, edm4hep::Vector3d pos);
+  void Save_onelayer_signal(edm4hep::TrackerHitCollection* trkhitVec);
+
 
 
 
@@ -76,6 +81,7 @@ class MuonDigiAlg : public GaudiAlgorithm
 
   std::map<std::array<unsigned long long, 2>, double> map_cell_edep;
   std::map<std::array<unsigned long long, 2>, double> map_cell_adc;
+  std::map<std::array<unsigned long long, 2>, double> map_cell_time;
   std::map<std::array<unsigned long long, 2>, int> map_cell_layer;
   std::map<std::array<unsigned long long, 2>, int> map_cell_slayer;
   std::map<std::array<unsigned long long, 2>, int> map_cell_strip;
@@ -125,6 +131,7 @@ class MuonDigiAlg : public GaudiAlgorithm
   Gaudi::Property<double>  m_EdepMin{ this, "EdepMin", 0.0001, "Minimum Edep of a mip" };
   Gaudi::Property<double>  m_hit_Edep_min{ this, "HitEdepMin", 0.000001, "Minimum Edep of a mip"};  
   Gaudi::Property<double>  m_hit_Edep_max{ this, "HitEdepMax", 0.1, "Maximum Edep of a mip"};  
+  Gaudi::Property<double>  m_time_resolution{ this, "TimeResolution", 2.0, "Time resolution of a hit, in nano-second ns." };
 
   // number of strips parallel to beam direction 
   // in each slayer, each strip width=4cm, so 
