@@ -171,6 +171,7 @@ digiMuon.SiPMEff = 1
 digiMuon.EdepMin = 0.0  # no cut on GeV energy deposition
 digiMuon.HitEdepMin = 6.0 # ADC counts
 digiMuon.HitEdepMax = -1 # ADC counts, -1 means no upper cut
+digiMuon.TimeResolution = 2.0 # Digi hit time resolution, in unit ns
 #digiMuon.OutputLevel = DEBUG
 #########################################
 
