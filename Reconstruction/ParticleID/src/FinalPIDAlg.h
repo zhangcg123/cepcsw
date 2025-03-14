@@ -28,7 +28,7 @@ class FinalPIDAlg : public Algorithm {
   DataHandle<edm4hep::RecDqdxCollection> m_inDqdxCol{"DndxTracks", Gaudi::DataHandle::Reader, this};
   //DataHandle<edm4hep::ParticleIDCollection> m_PIDCol{"finalPID", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ReconstructedParticleCollection> m_outPFOCol{"CyberPFOPID", Gaudi::DataHandle::Writer, this};
-  Gaudi::Property<std::string> m_method{this, "Method", "TPC+TOF+CALO"};
+  Gaudi::Property<std::string> m_method{this, "PIDMethod", "TPC+TOF+CALO"};
 
 
   void FillTPCPID(const edm4hep::RecDqdxCollection* dqdxcol, edm4hep::MutableReconstructedParticle& pfo, std::array<double, 5>& chi2s);

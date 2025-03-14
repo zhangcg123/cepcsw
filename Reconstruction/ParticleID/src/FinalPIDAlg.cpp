@@ -19,7 +19,7 @@ FinalPIDAlg::FinalPIDAlg( const std::string& name, ISvcLocator* pSvcLocator )
   // output
   declareProperty("OutputPFOName", m_outPFOCol, "Reconstructed particles with PID information");
   // PID method
-  declareProperty("Method", m_method = "TPC+TOF", "PID method: TPC, TPC+TOF, TPC+TOF+CALO"); 
+  declareProperty("PIDMethod", m_method = "TPC+TOF+CALO", "PID method: TPC, TPC+TOF, TPC+TOF+CALO"); 
 }
 
 //------------------------------------------------------------------------------

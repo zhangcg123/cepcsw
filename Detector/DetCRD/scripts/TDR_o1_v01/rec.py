@@ -60,7 +60,7 @@ CyberPFAlg.Seed = 1024
 CyberPFAlg.BField = 3.
 CyberPFAlg.Debug = 0
 CyberPFAlg.SkipEvt = 0
-CyberPFAlg.WriteAna = 1
+CyberPFAlg.WriteAna = 0
 CyberPFAlg.AnaFileName = "RecAnaTuple_TDR_o1_v01.root"
 CyberPFAlg.UseMCPTrack = 0
 CyberPFAlg.UseTruthMatchTrack = 0
@@ -143,6 +143,7 @@ pid.OutputPFOName = "CyberPFOPID"
 
 from Configurables import GenMatch
 genmatch = GenMatch("GenMatch")
+genmatch.InputPFOs = "CyberPFOPID"
 genmatch.nJets = 2
 genmatch.R = 0.6
 genmatch.OutputFile = "Jets_TDR_o1_v01.root"
