@@ -43,6 +43,7 @@ from Configurables import SLCIORdr
 from Configurables import HepMCRdr
 from Configurables import GenPrinter
 
+########### Particle Gun ##############
 gun = GtGunTool("GtGunTool")
 gun.PositionXs = [0]
 gun.PositionYs = [0]
@@ -59,6 +60,13 @@ genprinter = GenPrinter("GenPrinter")
 
 genalg = GenAlgo("GenAlgo")
 genalg.GenTools = ["GtGunTool"]
+
+############ Physics generator in stdhep
+#stdheprdr = StdHepRdr("StdHepRdr")
+#stdheprdr.Input = "/cefs/data/stdhep/CEPC240/higgs/update_from_LiangHao_1M/data/E240.Pnnh_gg.e0.p0.whizard195/nnh_gg.e0.p0.00001.stdhep"
+
+#genalg = GenAlgo("GenAlgo")
+#genalg.GenTools = ["StdHepRdr"]
 
 ##############################################################################
 # Detector Simulation
@@ -100,6 +108,15 @@ dedx_simtool.use_max_step = False#True
 dedx_simtool.max_step = 1#mm
 dedx_simtool.save_mc = True
 #dedx_simtool.OutputLevel = DEBUG
+
+
+from Configurables import CalorimeterSensDetTool
+from Configurables import DriftChamberSensDetTool
+cal_sensdettool = CalorimeterSensDetTool("CalorimeterSensDetTool")
+cal_sensdettool.CalNamesMergeDisable = ["EcalBarrel", "EcalEndcap", "HcalBarrel", "HcalEndcap"]
+cal_sensdettool.CalNamesApplyBirks = ["EcalBarrel", "EcalEndcap", "HcalBarrel","HcalEndcap"]
+cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.01, 0.01] # BGO and Glass scintillator
+
 
 from Configurables import MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")

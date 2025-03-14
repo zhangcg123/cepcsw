@@ -44,7 +44,7 @@
 
     <detectors>
         <detector id="DetID_HCAL_ENDCAP"
-                  name="HcalEndcaps"
+                  name="HcalEndcap"
                   type="SHcalSc04_Endcaps_v02"
                   readout="HcalEndcapsCollection"
                   vis="Invisible"
