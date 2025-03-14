@@ -19,23 +19,23 @@ option(CEPCSW_USE_SYSTEM_CKF_BELLE
        "Use the existing installation of CKF BELLE. Otherwise the internal version will be used."
        FALSE)
 
-option(CEPCSW_USER_SYSTEM_EDM4CEPC
+option(CEPCSW_USE_SYSTEM_EDM4CEPC
        "Use the existing installation of EDM4CEPC. Otherwise the internal version will be used."
-       FALSE)
+       TRUE)
 
-option(CEPCSW_USER_SYSTEM_ILCUTIL
+option(CEPCSW_USE_SYSTEM_ILCUTIL
        "Use the existing installation of ILCUTIL. Otherwise the internal version will be used."
        FALSE)
 
-option(CEPCSW_USER_SYSTEM_AIDATT
+option(CEPCSW_USE_SYSTEM_AIDATT
        "Use the existing installation of aidaTT. Otherwise the internal version will be used."
        FALSE)
 
-option(CEPCSW_USER_SYSTEM_KALTEST
+option(CEPCSW_USE_SYSTEM_KALTEST
        "Use the existing installation of KalTest. Otherwise the internal version will be used."
        FALSE)
 
-option(CEPCSW_USER_SYSTEM_DDKALTEST
+option(CEPCSW_USE_SYSTEM_DDKALTEST
        "Use the existing installation of DDKalTest. Otherwise the internal version will be used."
        FALSE)
 

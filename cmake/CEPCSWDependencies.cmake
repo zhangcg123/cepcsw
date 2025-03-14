@@ -94,7 +94,7 @@ endif()
 
 if (CEPCSW_USE_SYSTEM_EDM4CEPC)
   message("Try to use an existing installation of EDM4CEPC")
-  find_package(EDM4CEPC)
+  find_package(EDM4CEPC REQUIRED)
 else()
   message("Try to use an internal installation of EDM4CEPC")
   include("${CMAKE_CURRENT_LIST_DIR}/internal_edm4cepc.cmake")
