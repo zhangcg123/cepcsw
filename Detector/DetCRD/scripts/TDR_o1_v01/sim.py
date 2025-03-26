@@ -93,6 +93,10 @@ detsimalg.AnaElems = [
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
 
+from Configurables import Edm4hepWriterAnaElemTool
+detsim_anatool = Edm4hepWriterAnaElemTool("Edm4hepWriterAnaElemTool")
+detsim_anatool.IsTrk2Primary = False # True: primary; False: ancestor
+
 from Configurables import TimeProjectionChamberSensDetTool
 tpc_sensdettool = TimeProjectionChamberSensDetTool("TimeProjectionChamberSensDetTool")
 tpc_sensdettool.TypeOption = 1
