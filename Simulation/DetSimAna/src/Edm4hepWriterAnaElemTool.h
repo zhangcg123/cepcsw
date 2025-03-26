@@ -77,11 +77,12 @@ private:
     Gaudi::Property<double> m_sectrk_Ek{this, "SecTrackEk", 100., "Ek (MeV) threshold to record a secondary track"};
     Gaudi::Property<double> m_sectrk_rho{this, "SecTrackRho", 1830., "rho (mm) threshold to record a secondary track"};
     Gaudi::Property<double> m_sectrk_z{this, "SecTrackZ", 2900., "+/- z (mm) threshold to record a secondary track"};
-    
+
+    Gaudi::Property<bool> m_istrk2primary{this, "IsTrk2Primary", true, "For m_track2primary, the value is primary or ancestor"};
 private:
-    // in order to associate the hit contribution with the primary track,
+    // in order to associate the hit contribution with the primary track or ancestor track,
     // we have a bookkeeping of every track.
-    // The primary track will assign the same key/value.
+    // The primary or ancestor track will assign the same key/value.
 
     // Following is an example:
     //    1 -> 1,

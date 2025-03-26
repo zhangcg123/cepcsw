@@ -282,7 +282,7 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
                     
                     int pritrkid = m_track2primary[trackID];
                     if (pritrkid <= 0) {
-                        error() << "Failed to find the primary track for trackID #" << trackID << endmsg;
+                        error() << "Failed to find the primary (or ancestor) track for trackID #" << trackID << endmsg;
                         pritrkid = 1;
                     }
 
@@ -363,6 +363,16 @@ Edm4hepWriterAnaElemTool::PreUserTrackingAction(const G4Track* track) {
     int curparid = track->GetParentID();
     int pritrkid = curparid;
 
+    // if it is ancestor mode, then we need to check whether current track is associated
+    // with MCParticle or not.
+    // If it is associated, then we will record this info.
+    if (not m_istrk2primary.value()) {
+        auto trackinfo = dynamic_cast<CommonUserTrackInfo*>(track->GetUserInformation());
+        if (trackinfo) {
+            curparid = 0; // force to zero, so that it will be set as primary
+        }
+    }
+    
     // try to find the primary track id from the parent track id.
     if (curparid) {
         auto it = m_track2primary.find(curparid);
@@ -429,6 +439,11 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
         auto trackinfo = dynamic_cast<CommonUserTrackInfo*>(track->GetUserInformation());
         if (trackinfo) {
             idxedm4hep = trackinfo->idxEdm4hep();
+            // if the current track is a secondary track and it is associated
+            // with a MCParticle, we need to update the event level user info
+            if (idxedm4hep) {
+                m_userinfo->setIdxG4Track2Edm4hep(curtrkid, idxedm4hep);
+            }
         }
     }
     
@@ -475,6 +490,7 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
 
     // flags
     bool is_decay = false;
+    G4ThreeVector decay_pos; // only valid when is decay
 
     size_t nSeco = secondaries->size();
     for (size_t i = 0; i < nSeco; ++i) {
@@ -506,7 +522,9 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
                 << " momentum: " << sectrk->GetMomentum() // 
                 << endmsg;
 
-        if (creatorProcess==proc_decay) is_decay = true;
+        if (creatorProcess==proc_decay) {
+            is_decay = true;
+        }
 
         // create secondaries in MC particles
         // todo: convert the const collection to non-const
@@ -523,6 +541,11 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
         double x=sec_init_pos.x()/CLHEP::mm;
         double y=sec_init_pos.y()/CLHEP::mm;
         double z=sec_init_pos.z()/CLHEP::mm;
+
+        // if the particle decay, record the position
+        if (is_decay) {
+            decay_pos = sec_init_pos;
+        }
 
         const G4ThreeVector& sec_init_mom = sectrk->GetMomentum();
         double px=sec_init_mom.x()/CLHEP::GeV;
@@ -548,8 +571,12 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
 
     // now update
     if (is_decay) {
-        primary_particle.setDecayedInTracker(is_decay);
-        primary_particle.setDecayedInCalorimeter(is_decay);
+        bool is_in_tracker = decay_pos.perp() < R && std::fabs(decay_pos.z()) < Z;
+        if (is_in_tracker) {
+            primary_particle.setDecayedInTracker(is_decay);
+        } else {
+            primary_particle.setDecayedInCalorimeter(is_decay);
+        }
     }
 
 }
