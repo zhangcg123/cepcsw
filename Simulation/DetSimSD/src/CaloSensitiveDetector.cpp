@@ -33,6 +33,10 @@ CaloSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory*) {
     // std::cout << "CaloSensitiveDetector::ProcessHits" << std::endl;
 
     dd4hep::sim::Geant4StepHandler h(step);
+
+    // if there is no deposit energy, don't create hit object
+    if (h.deposit() <= 0) return true;
+
     if(m_applyBirksLaw) h.doApplyBirksLaw();
     dd4hep::Position pos = 0.5 * (h.prePos() + h.postPos());
     HitContribution contrib = dd4hep::sim::Geant4Hit::extractContribution(step);
