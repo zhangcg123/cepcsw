@@ -35,36 +35,108 @@ public:
                 // std::cout << "available collection: " << col_name << std::endl;
                 evt.collection_index[col_name] = idx;
                 ++idx;
+
+                // find the corresponding subdetector type.
+                for (size_t subdet = 0; subdet < BackgroundEvent::kNSubDetType; ++subdet) {
+                    for (auto key: evt.subdet2colnames[subdet]) {
+                        if (col_name.find(key) != std::string::npos) {
+                            evt.collection_subdet[col_name] = subdet;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
         for (auto [name, colidx]: evt.collection_index) {
             auto col_ = frame.get(name);
 
+            // check whether the collection has a valid subdetector type.
+            if (evt.collection_subdet.find(name) == evt.collection_subdet.end()) {
+                continue;
+            }
+
+            auto time_window = evt.subdet2twindow[evt.collection_subdet[name]];
+            
+            // if the current time is out of the time window, then skip this collection.
+            if (current_time_in_ns < -time_window || current_time_in_ns > time_window) {
+                continue;
+            }
+
+            std::cout << "Collection: " << name 
+                      << ", index: " << colidx 
+                      << ", time window: " << time_window << " ns"
+                      << ", current time: " << current_time_in_ns;
+
+            // debug only. don't create any hits.
+            // conclusion: no memory leakage in the above code.
+            // continue;
+
+            int counter = 0;
+
             if (auto col = dynamic_cast<const edm4hep::SimTrackerHitCollection*>(col_)) {
                 auto& trk_col = evt.tracker_hits[colidx];
                 for (auto oldhit: *col) {
-                    auto newhit = oldhit.clone();
-                    newhit.setTime(oldhit.getTime() + current_time_in_ns);
+                    auto t = oldhit.getTime() + current_time_in_ns;
+                    if (t < -time_window || t > time_window) {
+                        // if the hit is not in the time window, skip.
+                        continue;
+                    }
+
+                    auto newhit = trk_col.create();
+                    newhit.setCellID(oldhit.getCellID());
+                    newhit.setEDep(oldhit.getEDep());
+                    newhit.setTime(t); // new
+                    newhit.setPathLength(oldhit.getPathLength());
+                    newhit.setQuality(oldhit.getQuality());
+                    newhit.setPosition(oldhit.getPosition());
+                    newhit.setMomentum(oldhit.getMomentum());
+
+                    // extra
                     newhit.setOverlay(true);
-                    trk_col.push_back(newhit);
+
+                    ++counter;
                 }
                 
             } else if (auto col = dynamic_cast<const edm4hep::SimCalorimeterHitCollection*>(col_)) {
                 auto& calo_col = evt.calorimeter_hits[colidx];
+                auto& calo_contrib_col = evt.calo_contribs[colidx];
                 for (auto oldhit: *col) {
-                    auto newhit = oldhit.clone();
+                    // check whether the hit is in the time window.
+                    bool is_in_window = false;
+                    for (auto contrib: oldhit.getContributions()) {
+                        auto t = contrib.getTime() + current_time_in_ns;
+                        if (t < -time_window || t > time_window) {
+                            continue;
+                        }
+                        is_in_window = true;
+                        break;
+                    }
+                    if (not is_in_window) {
+                        continue;
+                    }
+
+                    auto newhit = calo_col.create();
+                    newhit.setCellID(oldhit.getCellID());
+                    newhit.setEnergy(oldhit.getEnergy());
+                    newhit.setPosition(oldhit.getPosition());
+                    // todo: fixme
                     // loop all the contributions and add the time.
                     for (auto contrib: oldhit.getContributions()) {
-                        auto newcontrib = contrib.clone();
+                        auto newcontrib = calo_contrib_col.create();
+                        newcontrib.setPDG(contrib.getPDG());
+                        newcontrib.setEnergy(contrib.getEnergy());
+                        newcontrib.setStepPosition(contrib.getStepPosition());
                         newcontrib.setTime(contrib.getTime() + current_time_in_ns);
                         newhit.addToContributions(newcontrib);
                     }
-                    calo_col.push_back(newhit);
+                    ++counter;
                 }
             } else {
                 continue;
             }
+
+            std::cout << ", counter: " << counter << std::endl;
 
         }
 

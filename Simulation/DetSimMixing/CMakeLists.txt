@@ -4,6 +4,7 @@ gaudi_add_module(DetSimMixing
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
                       podio::podioRootIO
                       Gaudi::GaudiKernel
+                      k4FWCore::k4FWCore
 )
 
 install(TARGETS DetSimMixing
