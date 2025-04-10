@@ -59,7 +59,7 @@ public:
 
 private:
     double m_total_rates{0}; // Hz. 
-    double m_total_tau{0}; // s. the total time of the background events
+    double m_total_tau{0}; // s. 
 
 private:
     std::vector<std::string> m_event_types; // the event types of the background events
@@ -67,9 +67,38 @@ private:
     std::vector<IBackgroundLoader*> m_event_loaders; // the loaders of the background events
     std::vector<std::vector<std::string>> m_input_lists; // input files for each backgroud
 
+    // following maps are used to load signal collections from memory
+    std::map<std::string, DataHandle<edm4hep::SimTrackerHitCollection>*> m_sig_trackerColMap;
+    std::map<std::string, DataHandle<edm4hep::SimCalorimeterHitCollection>*> m_sig_calorimeterColMap;
+    std::map<std::string, DataHandle<edm4hep::CaloHitContributionCollection>*> m_sig_caloContribColMap;
+
 private:
-    // properties for user side
-    Gaudi::Property<std::map<std::string, double>> m_background_rates{this, "BackgroundRates", {}, "The rates of the background events"};
+    // following maps are used to put collections into memory
+    std::map<std::string, DataHandle<edm4hep::SimTrackerHitCollection>*> m_trackerColMap;
+    std::map<std::string, DataHandle<edm4hep::SimCalorimeterHitCollection>*> m_calorimeterColMap;
+    std::map<std::string, DataHandle<edm4hep::CaloHitContributionCollection>*> m_caloContribColMap;
+
+    // the name here is without suffix "Collection"
+    Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
+        "TrackerCollections",
+	{"VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
+	 "OTKBarrel", "OTKEndcap", "MuonBarrel", "MuonEndcap"},
+        "Names of the Tracker collections (without suffix Collection)"};
+    Gaudi::Property<std::vector<std::string>> m_calorimeterColNames{this, 
+        "CalorimeterCollections",
+        {"EcalBarrel", "EcalEndcaps", "EcalEndcapRing", 
+         "HcalBarrel", "HcalEndcaps", "HcalEndcapRing"}, 
+        "Names of the Calorimeter collections (without suffix Collection)"};
+
+private:
+    // Following properties are used to configure different types of background events.
+    // * Key: label of one type
+    // * Value: 
+    //   * rate: 
+    //     * FixedTimeWindow: if the rate is less than 0, then always mix the background events. fabs(rate) is the time window of the background events.
+    //     * Sampled: if the rate is larger than 0, then the background events will be sampled according to the rate.
+    //   * filelist: the input file list for this type of background events.
+    Gaudi::Property<std::map<std::string, double>> m_background_rates{this, "BackgroundRates", {}, "The rates (positive, Hz) or time windows (negative, ns) of the background events"};
     Gaudi::Property<std::map<std::string, std::vector<std::string>>> m_background_filelists{this, "BackgroundFileLists", {}, "The input file lists for the background events"};
 };
 

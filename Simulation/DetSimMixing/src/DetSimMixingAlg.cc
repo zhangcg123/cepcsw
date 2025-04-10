@@ -38,20 +38,58 @@ StatusCode DetSimMixingAlg::initialize() {
 
     // prepare the loaders
     for (size_t i = 0; i < m_event_types.size(); ++i) {
-        m_total_rates += m_event_rates[i];
+        // only the positive rates are considered into total rates
+        if (m_event_rates[i] > 0) {
+            m_total_rates += m_event_rates[i];
+        }
         m_event_loaders.push_back(new BackgroundLoader(m_input_lists[i]));
     }
 
-    if (m_total_rates <= 0) {
-        error() << "The total rate of the background events should be positive." << endmsg;
+    if (m_total_rates < 0) {
+        error() << "The total rate of the background events should be >= 0." << endmsg;
         return StatusCode::FAILURE;
+    } else if (m_total_rates == 0) {
+        info() << "All background events will be loaded in fixed time window mode." << endmsg;
+    } else {
+        m_total_tau = 1.0 / m_total_rates;
     }
-
-    m_total_tau = 1.0 / m_total_rates;
-
     info() << "Summary of the background events: " << endmsg;
     for (size_t i = 0; i < m_event_types.size(); ++i) {
-        info() << "  Event type: " << m_event_types[i] << ", rate: " << m_event_rates[i] << " Hz" << endmsg;
+        if (m_event_rates[i] > 0) {
+            info() << "  Event type: " << m_event_types[i] << ", rate: " << m_event_rates[i] << " Hz" << endmsg;
+        } else {
+            info() << "  Event type: " << m_event_types[i] << ", time window: " << fabs(m_event_rates[i]) << " ns" << endmsg;
+        }
+    }
+
+    // prepare for the output
+    // for simplicity, the collection names are with prefix. the key in the map is without prefix, so it is same to the original input.
+    std::string prefix = "Mixed";
+    // SimTrackerHitCollections
+    for (const auto& name : m_trackerColNames) {
+        std::string name_col = name + "Collection";
+        auto col = new DataHandle<edm4hep::SimTrackerHitCollection>(prefix + name_col, Gaudi::DataHandle::Writer, this);
+        m_trackerColMap[name_col] = col;
+
+        auto sig_col = new DataHandle<edm4hep::SimTrackerHitCollection>(name_col, Gaudi::DataHandle::Reader, this);
+        m_sig_trackerColMap[name_col] = col;
+        
+    }
+
+    // SimCalorimeterHitCollections
+    for (const auto& name : m_calorimeterColNames) {
+        std::string name_col = name + "Collection";
+        std::string name_contrib_col = name + "ContributionCollection";
+        auto col = new DataHandle<edm4hep::SimCalorimeterHitCollection>(prefix + name_col, Gaudi::DataHandle::Writer, this);
+        m_calorimeterColMap[name_col] = col;
+        auto col_contrib = new DataHandle<edm4hep::CaloHitContributionCollection>(prefix + name_contrib_col, Gaudi::DataHandle::Writer, this);
+        m_caloContribColMap[name_col] = col_contrib;
+
+        auto sig_col = new DataHandle<edm4hep::SimCalorimeterHitCollection>(name_col, Gaudi::DataHandle::Reader, this);
+        m_sig_calorimeterColMap[name_col] = sig_col;
+        auto sig_col_contrib = new DataHandle<edm4hep::CaloHitContributionCollection>(name_contrib_col, Gaudi::DataHandle::Reader, this);
+        m_sig_caloContribColMap[name_col] = sig_col_contrib;
+
     }
 
     return sc;
@@ -63,17 +101,21 @@ StatusCode DetSimMixingAlg::execute() {
     info() << "Execute DetSimMixingAlg... " << endmsg;
 
     // ========================================================================
+    // Reset
+    // ========================================================================
+    double start_time{0.0}; // ns, the start time of the event, always align to the signal
+
+    // ========================================================================
     // Prepare the batches
     // ========================================================================
     std::vector<BackgroundBatch> batches;
 
-    int nbatches = 5;
-    double duration = 1e3; // 1 us = 1,000 ns of each batch
-    TTimeStamp start_time;
+    int nbatches = 10; // the total number of batches will be 2*nbatches, [-nbatches, nbatches)
+    double duration = 3460; // duration of each batch (ns): Nbunch x TBunchSpacing = 10 x 346 ns = 3460 ns
 
-    for (int i = 0; i < nbatches; i++) {
+    for (int i = -nbatches; i < nbatches; ++i) {
         BackgroundBatch batch;
-        batch.start_time = start_time + TTimeStamp(0, static_cast<int>(i*duration));
+        batch.start_time = start_time + i*duration;
         batch.duration = duration;
 
         // todo: need to sample according to the rate
@@ -84,12 +126,40 @@ StatusCode DetSimMixingAlg::execute() {
 
         double current_time = 0;
 
-        while (true) {
+        // =======================================================================
+        // fixed time window mode
+        // =======================================================================
+        // insert at beginning, align to the begin of batch
+        for (size_t evttype = 0; evttype < m_event_types.size(); ++evttype) {
+            // skip the sampled mode type
+            if (m_event_rates[evttype] > 0) {
+                continue;
+            }
+            double time_window_event = fabs(m_event_rates[evttype]);
+            int n_events = std::max(1, static_cast<int>(batch.duration/time_window_event)); // ns
+
+            for (size_t j = 0; j < n_events; ++j) {
+                double this_current_time = j * time_window_event; // ns
+                ++batch.num_events;
+                batch.event_types.push_back(evttype);
+                batch.event_times.push_back(this_current_time);
+                batch.event_numbers_groupby_type[evttype] += 1;
+            }
+        }
+
+        // =======================================================================
+        // sampled mode
+        // =======================================================================
+        while (m_total_tau>0) {
             // sampling and get an event
             size_t selected_evttype = 0;
             double r = CLHEP::RandFlat::shoot(m_total_rates);
             double accumulated = 0;
             for (size_t evttype = 0; evttype < m_event_types.size(); ++evttype) {
+                // skip the fixed time mode type
+                if (m_event_rates[evttype] <= 0) {
+                    continue;
+                }
                 accumulated += m_event_rates[evttype];
                 if (r < accumulated) {
                     selected_evttype = evttype;
@@ -121,13 +191,15 @@ StatusCode DetSimMixingAlg::execute() {
     // of BackgroundEvent. 
     // ========================================================================
     BackgroundEvent bkg_evt;
-
+    info() << "Creating a BackgroundEvent..." << endmsg;
     for (size_t i = 0; i < batches.size(); ++i) {
+        info() << "  Batch " << i << ": " << endmsg;
         const BackgroundBatch& batch = batches[i];
 
         for (size_t j = 0; j < batch.num_events; ++j) {
             size_t evttype = batch.event_types[j];
-            double evttime = batch.event_times[j];
+            double evttime = batch.start_time + batch.event_times[j];
+            info() << "    Event type: " << m_event_types[evttype] << ", time: " << evttime << " ns" << endmsg;
 
             IBackgroundLoader* loader = m_event_loaders[evttype];
 
@@ -138,10 +210,11 @@ StatusCode DetSimMixingAlg::execute() {
             
         }
     }
-
+    info() << "BackgroundEvent created." << endmsg;
+    info() << "Summary: " << endmsg;
     // dump the information
     for (auto [name, idx]: bkg_evt.collection_index) {
-        info() << "Collection: " << name << ", index: " << idx;
+        info() << "- Collection: " << name << ", index: " << idx;
         if (bkg_evt.tracker_hits.count(idx)) {
             info() << "  Tracker hits: " << bkg_evt.tracker_hits[idx].size() << endmsg;
         } else if (bkg_evt.calorimeter_hits.count(idx)) {
@@ -154,6 +227,99 @@ StatusCode DetSimMixingAlg::execute() {
     // ========================================================================
     // Put the BackgroundEvent into the event store
     // ========================================================================
+    // add prefix 'Mixed'.
+    for (auto [col_name, colidx]: bkg_evt.collection_index) {
+        
+        if (bkg_evt.tracker_hits.count(colidx)) {
+            auto& col = bkg_evt.tracker_hits[colidx];
+            
+            auto newcol = m_trackerColMap[col_name]->createAndPut();
+
+            // background
+            for (auto oldhit: col) {
+                auto newhit = newcol->create();
+                newhit.setCellID(oldhit.getCellID());
+                newhit.setEDep(oldhit.getEDep());
+                newhit.setTime(oldhit.getTime()); // new
+                newhit.setPathLength(oldhit.getPathLength());
+                newhit.setQuality(oldhit.getQuality());
+                newhit.setPosition(oldhit.getPosition());
+                newhit.setMomentum(oldhit.getMomentum());
+            }
+
+            // signal
+            auto sig_col = m_sig_trackerColMap[col_name]->get();
+            if (!sig_col) {
+                continue;
+            }
+            for (auto oldhit: *sig_col) {
+                auto newhit = newcol->create();
+                newhit.setCellID(oldhit.getCellID());
+                newhit.setEDep(oldhit.getEDep());
+                newhit.setTime(oldhit.getTime()); // new
+                newhit.setPathLength(oldhit.getPathLength());
+                newhit.setQuality(oldhit.getQuality());
+                newhit.setPosition(oldhit.getPosition());
+                newhit.setMomentum(oldhit.getMomentum());
+            }
+
+        } else if (bkg_evt.calorimeter_hits.count(colidx)) {
+            auto& col = bkg_evt.calorimeter_hits[colidx];
+            auto& col_contrib = bkg_evt.calo_contribs[colidx];
+            
+            auto newcol = m_calorimeterColMap[col_name]->createAndPut();
+            auto newcol_contrib = m_caloContribColMap[col_name]->createAndPut();
+
+            for (auto oldhit: col) {
+                auto newhit = newcol->create();
+                newhit.setCellID(oldhit.getCellID());
+                newhit.setEnergy(oldhit.getEnergy());
+                newhit.setPosition(oldhit.getPosition());
+                // todo: fixme
+                // loop all the contributions and add the time.
+                for (auto contrib: oldhit.getContributions()) {
+                    auto newcontrib = newcol_contrib->create();
+                    newcontrib.setPDG(contrib.getPDG());
+                    newcontrib.setEnergy(contrib.getEnergy());
+                    newcontrib.setStepPosition(contrib.getStepPosition());
+                    newcontrib.setTime(contrib.getTime());
+                    newhit.addToContributions(newcontrib);
+                }
+            }
+
+            // signal
+            auto sig_col = m_sig_calorimeterColMap[col_name]->get();
+            auto sig_col_contrib = m_sig_caloContribColMap[col_name]->get();
+
+            if (!sig_col || !sig_col_contrib) {
+                continue;
+            }
+
+            for (auto oldhit: *sig_col) {
+                auto newhit = newcol->create();
+                newhit.setCellID(oldhit.getCellID());
+                newhit.setEnergy(oldhit.getEnergy());
+                newhit.setPosition(oldhit.getPosition());
+                // todo: fixme
+                // loop all the contributions and add the time.
+                for (auto contrib: oldhit.getContributions()) {
+                    auto newcontrib = newcol_contrib->create();
+                    newcontrib.setPDG(contrib.getPDG());
+                    newcontrib.setEnergy(contrib.getEnergy());
+                    newcontrib.setStepPosition(contrib.getStepPosition());
+                    newcontrib.setTime(contrib.getTime());
+                    newhit.addToContributions(newcontrib);
+                }
+            }
+            
+        } else {
+            error() << "The collection " << col_name 
+                    << " with idx" << colidx 
+                    << " is not found." << endmsg;
+            continue;
+        }
+    }
+
 
     return sc;
 }

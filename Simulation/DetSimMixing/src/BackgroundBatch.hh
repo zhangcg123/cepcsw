@@ -7,8 +7,8 @@
 
 class BackgroundBatch {
 public:
-    TTimeStamp start_time; // the start time of the batch
-    double duration; // the duration of the batch (in ns)
+    double start_time; // ns, the start time of the batch, relative to signal event
+    double duration; // the duration of the batch
     int num_events; // the number of events in the batch
 
     // below are the metadata of each type of backgrouds in the batch
