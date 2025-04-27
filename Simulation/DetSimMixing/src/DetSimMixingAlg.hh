@@ -46,8 +46,9 @@
 
 #include "k4FWCore/DataHandle.h"
 
-#include "BackgroundBatch.hh"
 #include "IBackgroundLoader.hh"
+#include "BackgroundBatch.hh"
+#include "BackgroundEvent.hh"
 
 class DetSimMixingAlg: public Algorithm {
 public:
@@ -63,7 +64,7 @@ private:
 
 private:
     std::vector<std::string> m_event_types; // the event types of the background events
-    std::vector<double> m_event_rates; // the rates of the background events
+    std::vector<double> m_event_timings; // the rates or durations of the background events
     std::vector<IBackgroundLoader*> m_event_loaders; // the loaders of the background events
     std::vector<std::vector<std::string>> m_input_lists; // input files for each backgroud
 
@@ -94,12 +95,29 @@ private:
     // Following properties are used to configure different types of background events.
     // * Key: label of one type
     // * Value: 
-    //   * rate: 
+    //   * timing: 
     //     * FixedTimeWindow: if the rate is less than 0, then always mix the background events. fabs(rate) is the time window of the background events.
     //     * Sampled: if the rate is larger than 0, then the background events will be sampled according to the rate.
     //   * filelist: the input file list for this type of background events.
-    Gaudi::Property<std::map<std::string, double>> m_background_rates{this, "BackgroundRates", {}, "The rates (positive, Hz) or time windows (negative, ns) of the background events"};
+    Gaudi::Property<std::map<std::string, double>> m_background_timings{this, "BackgroundTimings", {}, "The rates (positive, Hz) or time windows (negative, ns) of the background events"};
     Gaudi::Property<std::map<std::string, std::vector<std::string>>> m_background_filelists{this, "BackgroundFileLists", {}, "The input file lists for the background events"};
+
+
+    // Bunch Crossing information
+    Gaudi::Property<double> m_bunch_crossing_spacing{this, "BunchCrossingSpacing", 277.0, "The bunch crossing spacing in ns"};
+    Gaudi::Property<int> m_nbunches_per_batch{this, "NbunchesPerBatch", 10, "The number of bunches per batch"};
+    Gaudi::Property<int> m_nbatches{this, "Nbatches", 13, "The number of batches to be mixed"}; // 34us/(277ns*10) = ~13
+
+private:
+    // Time window for VXD, ITK, TPC, OTK, ECAL, HCAL, MUON
+    // Only the hits between [-T, T] ns are loaded
+    Gaudi::Property<double> m_vxd_time_window{this, "VXDTimeWindow", 200.0, "The time window for VXD in ns"};
+    Gaudi::Property<double> m_itk_time_window{this, "ITKTimeWindow", 200.0, "The time window for ITK in ns"};
+    Gaudi::Property<double> m_tpc_time_window{this, "TPCTimeWindow", 34000.0, "The time window for TPC in ns"};
+    Gaudi::Property<double> m_otk_time_window{this, "OTKTimeWindow", 1000.0, "The time window for OTK in ns"};
+    Gaudi::Property<double> m_ecal_time_window{this, "EcalTimeWindow", 150.0, "The time window for ECAL in ns"};
+    Gaudi::Property<double> m_hcal_time_window{this, "HcalTimeWindow", 1000.0, "The time window for HCAL in ns"};
+    Gaudi::Property<double> m_muon_time_window{this, "MuonTimeWindow", 100.0, "The time window for MUON in ns"};
 };
 
 #endif
