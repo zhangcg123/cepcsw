@@ -5,8 +5,7 @@
 #include <vector>
 #include "TTimeStamp.h"
 
-class BackgroundBatch {
-public:
+struct BackgroundBatch {
     double start_time; // ns, the start time of the batch, relative to signal event
     double duration; // the duration of the batch
     int num_events; // the number of events in the batch

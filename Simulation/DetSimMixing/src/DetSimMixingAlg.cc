@@ -9,6 +9,7 @@
 #include <CLHEP/Random/RandPoisson.h>
 
 #include "BackgroundLoader.hh"
+#include "BackgroundEvent.hh"
 
 DECLARE_COMPONENT(DetSimMixingAlg)
 
@@ -21,26 +22,26 @@ StatusCode DetSimMixingAlg::initialize() {
 
     info() << "Initialize DetSimMixingAlg... " << endmsg;
     // preparation according to user properties
-    if (m_background_rates.value().size() != m_background_filelists.value().size()) {
+    if (m_background_timings.value().size() != m_background_filelists.value().size()) {
         error() << "The size of the background rates and filelists should be the same." << endmsg;
         return StatusCode::FAILURE;
     }
 
-    for (auto [type, rate]: m_background_rates.value()) {
+    for (auto [type, timing]: m_background_timings.value()) {
         if (m_background_filelists.value().find(type) == m_background_filelists.value().end()) {
             error() << "The input file lists for the background type " << type << " is not provided." << endmsg;
             return StatusCode::FAILURE;
         }
         m_event_types.push_back(type);
-        m_event_rates.push_back(rate);
+        m_event_timings.push_back(timing);
         m_input_lists.push_back(m_background_filelists.value()[type]);
     }
 
     // prepare the loaders
     for (size_t i = 0; i < m_event_types.size(); ++i) {
         // only the positive rates are considered into total rates
-        if (m_event_rates[i] > 0) {
-            m_total_rates += m_event_rates[i];
+        if (m_event_timings[i] > 0) {
+            m_total_rates += m_event_timings[i];
         }
         m_event_loaders.push_back(new BackgroundLoader(m_input_lists[i]));
     }
@@ -55,10 +56,10 @@ StatusCode DetSimMixingAlg::initialize() {
     }
     info() << "Summary of the background events: " << endmsg;
     for (size_t i = 0; i < m_event_types.size(); ++i) {
-        if (m_event_rates[i] > 0) {
-            info() << "  Event type: " << m_event_types[i] << ", rate: " << m_event_rates[i] << " Hz" << endmsg;
+        if (m_event_timings[i] > 0) {
+            info() << "  Event type: " << m_event_types[i] << ", rate: " << m_event_timings[i] << " Hz" << endmsg;
         } else {
-            info() << "  Event type: " << m_event_types[i] << ", time window: " << fabs(m_event_rates[i]) << " ns" << endmsg;
+            info() << "  Event type: " << m_event_types[i] << ", time window: " << fabs(m_event_timings[i]) << " ns" << endmsg;
         }
     }
 
@@ -110,8 +111,9 @@ StatusCode DetSimMixingAlg::execute() {
     // ========================================================================
     std::vector<BackgroundBatch> batches;
 
-    int nbatches = 10; // the total number of batches will be 2*nbatches, [-nbatches, nbatches)
-    double duration = 3460; // duration of each batch (ns): Nbunch x TBunchSpacing = 10 x 346 ns = 3460 ns
+    int nbatches = m_nbatches.value(); // the total number of batches will be 2*nbatches, [-nbatches, nbatches)
+    int nbunches = m_nbunches_per_batch.value(); // the total number of bunches per batch
+    double duration = nbunches * m_bunch_crossing_spacing.value(); // duration of each batch (ns): Nbunch x TBunchSpacing = 10 x 277 ns = 2770 ns
 
     for (int i = -nbatches; i < nbatches; ++i) {
         BackgroundBatch batch;
@@ -132,10 +134,10 @@ StatusCode DetSimMixingAlg::execute() {
         // insert at beginning, align to the begin of batch
         for (size_t evttype = 0; evttype < m_event_types.size(); ++evttype) {
             // skip the sampled mode type
-            if (m_event_rates[evttype] > 0) {
+            if (m_event_timings[evttype] > 0) {
                 continue;
             }
-            double time_window_event = fabs(m_event_rates[evttype]);
+            double time_window_event = fabs(m_event_timings[evttype]);
             int n_events = std::max(1, static_cast<int>(batch.duration/time_window_event)); // ns
 
             for (size_t j = 0; j < n_events; ++j) {
@@ -157,10 +159,10 @@ StatusCode DetSimMixingAlg::execute() {
             double accumulated = 0;
             for (size_t evttype = 0; evttype < m_event_types.size(); ++evttype) {
                 // skip the fixed time mode type
-                if (m_event_rates[evttype] <= 0) {
+                if (m_event_timings[evttype] <= 0) {
                     continue;
                 }
-                accumulated += m_event_rates[evttype];
+                accumulated += m_event_timings[evttype];
                 if (r < accumulated) {
                     selected_evttype = evttype;
                     break;
@@ -191,6 +193,15 @@ StatusCode DetSimMixingAlg::execute() {
     // of BackgroundEvent. 
     // ========================================================================
     BackgroundEvent bkg_evt;
+    // setup the time window
+    bkg_evt.subdet2twindow[BackgroundEvent::kVXD] = m_vxd_time_window.value();
+    bkg_evt.subdet2twindow[BackgroundEvent::kITK] = m_itk_time_window.value();
+    bkg_evt.subdet2twindow[BackgroundEvent::kTPC] = m_tpc_time_window.value();
+    bkg_evt.subdet2twindow[BackgroundEvent::kOTK] = m_otk_time_window.value();
+    bkg_evt.subdet2twindow[BackgroundEvent::kECAL] = m_ecal_time_window.value();
+    bkg_evt.subdet2twindow[BackgroundEvent::kHCAL] = m_hcal_time_window.value();
+    bkg_evt.subdet2twindow[BackgroundEvent::kMUON] = m_muon_time_window.value();
+
     info() << "Creating a BackgroundEvent..." << endmsg;
     for (size_t i = 0; i < batches.size(); ++i) {
         info() << "  Batch " << i << ": " << endmsg;
@@ -228,8 +239,34 @@ StatusCode DetSimMixingAlg::execute() {
     // Put the BackgroundEvent into the event store
     // ========================================================================
     // add prefix 'Mixed'.
-    for (auto [col_name, colidx]: bkg_evt.collection_index) {
+
+    // Need to prepare a complete list of collection names.
+    std::map<std::string, size_t> col_names;
+    for (auto [name, idx]: bkg_evt.collection_index) {
+        ++col_names[name];
+    }
+    for (auto [name, idx]: m_sig_trackerColMap) {
+        if (col_names.find(name) == col_names.end()) {
+            warning() << "Collection " << name << " is not in the background event." << endmsg;
+        }
+        ++col_names[name];
+    }
+    for (auto [name, idx]: m_sig_calorimeterColMap) {
+        if (col_names.find(name) == col_names.end()) {
+            warning() << "Collection " << name << " is not in the background event." << endmsg;
+        }
+        ++col_names[name];
+    }
+
+    for (auto [col_name, cnt]: col_names) {
+
+        if (bkg_evt.collection_index.find(col_name) == bkg_evt.collection_index.end()) {
+            debug() << "Collection " << col_name << " is not in the background event." << endmsg;
+            continue;
+        }
         
+        auto colidx = bkg_evt.collection_index[col_name];
+
         if (bkg_evt.tracker_hits.count(colidx)) {
             auto& col = bkg_evt.tracker_hits[colidx];
             
@@ -252,7 +289,17 @@ StatusCode DetSimMixingAlg::execute() {
             if (!sig_col) {
                 continue;
             }
+
+            // keep the same time windows for signal and backgrounds.
+            auto time_window = bkg_evt.subdet2twindow[bkg_evt.collection_subdet[col_name]];
+
             for (auto oldhit: *sig_col) {
+                auto t = oldhit.getTime();
+                if (t < -time_window || t > time_window) {
+                    // if the hit is not in the time window, skip.
+                    continue;
+                }
+
                 auto newhit = newcol->create();
                 newhit.setCellID(oldhit.getCellID());
                 newhit.setEDep(oldhit.getEDep());
@@ -295,7 +342,25 @@ StatusCode DetSimMixingAlg::execute() {
                 continue;
             }
 
+            // keep the same time windows for signal and backgrounds.
+            auto time_window = bkg_evt.subdet2twindow[bkg_evt.collection_subdet[col_name]];
+
+
             for (auto oldhit: *sig_col) {
+                // check whether the hit is in the time window.
+                bool is_in_window = false;
+                for (auto contrib: oldhit.getContributions()) {
+                    auto t = contrib.getTime();
+                    if (t < -time_window || t > time_window) {
+                        continue;
+                    }
+                    is_in_window = true;
+                    break;
+                }
+                if (not is_in_window) {
+                    continue;
+                }
+
                 auto newhit = newcol->create();
                 newhit.setCellID(oldhit.getCellID());
                 newhit.setEnergy(oldhit.getEnergy());
@@ -313,7 +378,7 @@ StatusCode DetSimMixingAlg::execute() {
             }
             
         } else {
-            error() << "The collection " << col_name 
+            debug() << "The collection " << col_name 
                     << " with idx" << colidx 
                     << " is not found." << endmsg;
             continue;

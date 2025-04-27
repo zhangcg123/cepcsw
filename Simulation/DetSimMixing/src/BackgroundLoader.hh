@@ -2,6 +2,7 @@
 #define BackgroundLoader_hh
 
 #include "IBackgroundLoader.hh"
+#include "BackgroundEvent.hh"
 #include <iostream>
 #include <vector>
 #include <string>
