@@ -232,6 +232,13 @@ StatusCode EnergyTimeMatchingAlg::Matching( std::vector<const Cyber::CaloHalfClu
     //Calculate the initial pattern matrix with track + neighbor
     vector<vector<int>> PatternMatrix(NclusV, vector<int>(NclusU, 0));
     PatternMatrixCalculation(m_HFClusUCol, m_HFClusVCol, PatternMatrix);
+//cout<<"Print initial pattern matrix"<<endl;
+//for (const auto& row : PatternMatrix) {
+//    for (const int& val : row) {
+//        std::cout << val << " ";
+//    }
+//    std::cout << std::endl;
+//}
 
     //If the pattern is empty: use chi2 map to determine the first element.
     bool isEmpty = true;
@@ -247,15 +254,15 @@ StatusCode EnergyTimeMatchingAlg::Matching( std::vector<const Cyber::CaloHalfClu
           break;
         }
       }
-    }
 
-//cout<<"Print initial pattern matrix"<<endl;
+//cout<<"Print initial pattern matrix with chi2"<<endl;
 //for (const auto& row : PatternMatrix) {
 //    for (const int& val : row) {
 //        std::cout << val << " ";
 //    }
 //    std::cout << std::endl;
 //}
+    }
 
     //Initialize
     double min_residual = 9999;
@@ -420,7 +427,11 @@ StatusCode EnergyTimeMatchingAlg::Matching( std::vector<const Cyber::CaloHalfClu
       map_pattern.push_back(PatternMatrix);
     }
 
+    if(index<0) index=0;
+
+
 //cout<<"Minimal residual = "<<min_residual<<", index "<<index<<endl;
+//cout<<"Pattern map size "<<map_pattern.size()<<", energy map size "<<map_Eij.size()<<endl;
 //cout<<"Chosen pattern matrix "<<endl;
 //for (const auto& row : map_pattern[index]) {
 //    for (const int& val : row) {
@@ -452,6 +463,7 @@ StatusCode EnergyTimeMatchingAlg::Matching( std::vector<const Cyber::CaloHalfClu
     ClusterBuilding(EnergyMatrix, m_HFClusUCol, m_HFClusVCol, tmp_clusters);
   }
 
+//cout<<"End matching, clean empty clusters"<<endl;
   //Clean empty Calo3DClusters
   for(int ic=0; ic<tmp_clusters.size(); ic++){
     if( !tmp_clusters[ic].get() || tmp_clusters[ic]->getEnergy()==0 || isnan(tmp_clusters[ic]->getShowerCenter().x()) ){
