@@ -713,6 +713,7 @@ StatusCode HoughClusteringAlg::ClusterFinding(vector<Cyber::HoughObject>& Hobjec
 
   //bk_HFclus.insert( bk_HFclus.end(), m_clusCol.begin(), m_clusCol.end() );
   m_longiClusCol.insert( m_longiClusCol.end(), m_clusCol.begin(), m_clusCol.end() );
+  m_clusCol.clear();
 
   return StatusCode::SUCCESS;
 }  // ClusterFinding() end

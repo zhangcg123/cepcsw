@@ -31,8 +31,8 @@ int Cyber::CaloUnit::NbarZ = 24;
 //int Cyber::CaloUnit::over_module_set = 2;
 float Cyber::CaloUnit::barsize = 15.2; //mm
 float Cyber::CaloUnit::ecal_innerR = 1830;  //mm
-float Cyber::CaloUnit::ecal_endcap_deadarea = 8.5; //mm
-float Cyber::CaloUnit::ecal_endcap_barsize = 15.2; //mm
+float Cyber::CaloUnit::ecal_endcap_deadarea = 10.5; //mm, a bit larger than real value 8.5 mm in geometry
+float Cyber::CaloUnit::ecal_endcap_barsize = 16.2; //mm, a bit larger than real value 15.2 mm in geometry
 
 DECLARE_COMPONENT( CyberPFAlg )
 

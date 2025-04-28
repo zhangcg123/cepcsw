@@ -12,6 +12,10 @@ namespace Cyber{
     m_1dclusters.clear(); 
     map_localMax.clear();
     map_halfClusCol.clear();
+    m_TrackCol.clear();
+    MCParticleWeight.clear();
+
+    delete track;
   }
 
   void CaloHalfCluster::Check(){
