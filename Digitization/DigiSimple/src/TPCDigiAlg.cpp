@@ -577,6 +577,7 @@ StatusCode TPCDigiAlg::execute()
               << endmsg;
 
       CLHEP::Hep3Vector thisPoint(pos[0],pos[1],pos[2]);
+
       double padheight = padLayout.getPadHeight(padLayout.getNearestPad(thisPoint.perp(),thisPoint.phi()));
 
       const double bField = _GEAR->getBField().at( gear::Vector3D( 0., 0., 0.) ).z() ;
@@ -872,6 +873,32 @@ StatusCode TPCDigiAlg::execute()
         continue;
       }
 
+      // mixed backgroud hit
+      if (SimTHit.isOverlay()) {
+        double t_in_ns = SimTHit.getTime();
+        double v_drift = _vDrift*CLHEP::um/CLHEP::mm;
+        double deltaZ = v_drift*t_in_ns;
+        double newz   = thisPoint[2] - deltaZ;
+        if ((newz>0 && thisPoint[2]<0) || (newz<0 && thisPoint[2]>0)) {
+          debug() << "Background hit in another half TPC" << endmsg;
+          debug() << "Z = " << thisPoint.z() << endmsg;
+          debug() << "new z = " << newz << endmsg;
+          debug() << "Hit Dropped " << endmsg;
+          continue;
+        }
+        if ((fabs(newz) > gearTPC.getMaxDriftLength())) {
+          debug() << "Hit Z not in TPC " << endmsg;
+          debug() << "Z = " << thisPoint.z() << " newz = " << newz << endmsg;
+          debug() << "the tpc Max Z = " << gearTPC.getMaxDriftLength() << endmsg;
+          debug() << "Hit Dropped " << endmsg;
+          continue;
+        }
+        thisPoint[2] = newz;
+        iZHit = (int) ( (float) NBinsZ * ( gearTPC.getMaxDriftLength() + thisPoint.z() ) / ( 2.0 * gearTPC.getMaxDriftLength() ) );
+        if (iZHit<0)      iZHit = 0;
+        if (iZHit>NBinsZ) iZHit = NBinsZ;
+      }
+
       // create a tpc voxel hit and store it for this row
       Voxel_tpc * atpcVoxel = new Voxel_tpc(iRowHit,iPhiHit,iZHit, thisPoint, edep, tpcRPhiRes, tpcZRes);
       debug() << "to seed hit position: " << atpcVoxel->getX() << "," << atpcVoxel->getY() << "," << atpcVoxel->getZ()
@@ -944,6 +971,31 @@ StatusCode TPCDigiAlg::execute()
 
         // shift the hit in r-phi to the nearest pad-row centre
         thisPoint.setPerp(padLayout.getPadCenter(padIndex)[0]);
+
+        if (SimTHit.isOverlay()) {
+          double t_in_ns = SimTHit.getTime();
+          double v_drift = _vDrift*CLHEP::um/CLHEP::mm;
+          double deltaZ = v_drift*t_in_ns;
+          double newz   = thisPoint[2] - deltaZ;
+          if ((newz>0 && thisPoint[2]<0) || (newz<0 && thisPoint[2]>0)) {
+            debug() << "Background hit in another half TPC" << endmsg;
+            debug() << "Z = " << thisPoint.z() << endmsg;
+            debug() << "new z = " << newz << endmsg;
+            debug() << "Hit Dropped " << endmsg;
+            continue;
+          }
+          if ((fabs(newz) > gearTPC.getMaxDriftLength())) {
+            debug() << "Hit Z not in TPC " << endmsg;
+            debug() << "Z = " << thisPoint.z() << " newz = " << newz << endmsg;
+            debug() << "the tpc Max Z = " << gearTPC.getMaxDriftLength() << endmsg;
+            debug() << "Hit Dropped " << endmsg;
+            continue;
+          }
+          thisPoint[2] = newz;
+          iZHit = (int) ( (float) NBinsZ * ( gearTPC.getMaxDriftLength() + thisPoint.z() ) / ( 2.0 * gearTPC.getMaxDriftLength() ) );
+          if (iZHit<0)      iZHit = 0;
+          if (iZHit>NBinsZ) iZHit = NBinsZ;
+        }
 
         // set the resolutions to the pads to digital like values
         double tpcRPhiRes = _padWidth;

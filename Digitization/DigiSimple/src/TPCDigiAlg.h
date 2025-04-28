@@ -183,7 +183,8 @@ protected:
   // OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO
   Gaudi::Property<std::vector<double>> _fittedRPhiResoParas{this, "fittedRPhiResoParas",{0.006001,0.1175,0.009018,0.1443,-0.0047}};
 
- 
+  // in unit um/ns
+  Gaudi::Property<double> _vDrift{this, "DriftVelocity", 80.};
 
   bool _pixelClustering;
 
