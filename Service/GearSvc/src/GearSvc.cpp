@@ -474,7 +474,7 @@ StatusCode GearSvc::convertMultiRingsZDisk(dd4hep::DetElement& ftd) {
 
   std::vector<double> alphaPetals, zPositions, zOffsetSupports, rminSupports, rmaxSupports, thicknessSupports;
   std::vector<double> thicknessSensitives, thicknessGlues, thicknessServices;
-  std::vector<std::string> petalParNames, phi0ParNames, distanceParNames, widthInnerParNames, widthOuterParNames, lengthParNames;
+  std::vector<std::string> petalParNames, petalNSensorNames, phi0ParNames, distanceParNames, widthInnerParNames, widthOuterParNames, lengthParNames;
   for (int layer = 0; layer < nLayers; layer++) {
     dd4hep::rec::MultiRingsZDiskData::LayerLayout& ftdlayer = ftdlayers[layer];
 
@@ -489,19 +489,20 @@ StatusCode GearSvc::convertMultiRingsZDisk(dd4hep::DetElement& ftd) {
     auto& rings = ftdlayer.rings;
 
     petalParNames.push_back(std::string("PetalNumber_")+std::to_string(layer));
+    petalNSensorNames.push_back(std::string("PetalNSensor_")+std::to_string(layer));
     phi0ParNames.push_back(std::string("PetalPhi0_")+std::to_string(layer));
     distanceParNames.push_back(std::string("PetalDistance_")+std::to_string(layer));
     widthInnerParNames.push_back(std::string("PetalInnerWidth_")+std::to_string(layer));
     widthOuterParNames.push_back(std::string("PetalOuterWidth_")+std::to_string(layer));
     lengthParNames.push_back(std::string("PetalLength_")+std::to_string(layer));
 
-    std::vector<int>    petalNumbers;
+    std::vector<int>    petalNumbers, petalNSensors;
     std::vector<double> phi0s, distances, widthInners, widthOuters, lengths;
     for (unsigned iring = 0; iring < rings.size(); iring++) {
       auto&  ring = rings[iring];
 
       petalNumbers.push_back(ring.petalNumber);
-      //int    sensorsPerPetal;
+      petalNSensors.push_back(ring.sensorsPerPetal);
       phi0s.push_back(ring.phi0);
       //double phiOffsetOdd;
       distances.push_back(ring.distance*CLHEP::cm);
@@ -516,6 +517,7 @@ StatusCode GearSvc::convertMultiRingsZDisk(dd4hep::DetElement& ftd) {
       }
     }
     ftdParam->setIntVals(std::string("PetalNumber_")+std::to_string(layer), petalNumbers);
+    ftdParam->setIntVals(std::string("PetalNSensor_")+std::to_string(layer), petalNSensors);
     ftdParam->setDoubleVals(std::string("PetalPhi0_")+std::to_string(layer), phi0s);
     ftdParam->setDoubleVals(std::string("PetalDistance_")+std::to_string(layer), distances);
     ftdParam->setDoubleVals(std::string("PetalInnerWidth_")+std::to_string(layer), widthInners);
@@ -554,6 +556,7 @@ StatusCode GearSvc::convertMultiRingsZDisk(dd4hep::DetElement& ftd) {
   ftdParam->setDoubleVals("ThicknessGlues", thicknessGlues);
   ftdParam->setDoubleVals("ThicknessServices", thicknessServices);
   ftdParam->setStringVals("PetalNumberNames", petalParNames);
+  ftdParam->setStringVals("PetalNSensorNames", petalNSensorNames);
   ftdParam->setStringVals("PetalPhi0Names", phi0ParNames);
   ftdParam->setStringVals("PetalDistanceNames", distanceParNames);
   ftdParam->setStringVals("PetalInnerWidthNames", widthInnerParNames);

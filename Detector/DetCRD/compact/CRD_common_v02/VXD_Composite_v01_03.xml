@@ -44,7 +44,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+45*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+57.3*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
 	  <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -55,7 +55,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+45*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+57.3*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -68,7 +68,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+32*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+33.7*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -79,7 +79,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+32*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+33.7*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
@@ -92,7 +92,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
 	  <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+31*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+31.8*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -103,7 +103,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+31*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+31.8*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -116,7 +116,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
             <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+29*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+40*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
@@ -127,7 +127,7 @@
           <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
           <flex vis="GrayVis">
 	    <!--slice thickness="0.4*um" material="G4_Al"/-->
-            <slice thickness="VXD_flex_thickness+29*um" material="CFRP_CMS"/>
+            <slice thickness="VXD_flex_thickness+40*um" material="CFRP_CMS"/>
           </flex>
           <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
           <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>

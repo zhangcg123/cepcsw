@@ -28,7 +28,7 @@
         <slice name="Carbon_fiber_back" material="CF_ITK" thickness="150*um" vis="GrayVis"/>
       </support>
 
-      <sensor>
+      <sensor size="20*mm" side="0.3*mm" dead="2.0*mm">
 	<slice name="GlueF" material="CER_ITK" thickness="200*um" vis="SeeThrough"/>
         <slice name="Sensor" material="G4_Si" thickness="150*um" sensitive="true" vis="OrangeVis"/>
 	<slice name="GlueB" material="CER_ITK" thickness="100*um" vis="SeeThrough"/>
@@ -64,7 +64,7 @@
 
   <readouts>
     <readout name="ITKEndcapCollection">
-      <id>system:5,side:-2,layer:9,module:8,sensor:8</id>
+      <id>system:5,side:-2,layer:9,module:8,ring:3,sensor:5</id>
     </readout>
   </readouts>
 
