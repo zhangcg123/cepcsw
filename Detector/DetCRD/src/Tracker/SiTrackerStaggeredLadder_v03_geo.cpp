@@ -254,7 +254,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
     for (int sensor_id = 0; sensor_id < sensor_n; sensor_id++) {
       int irow            = std::floor(sensor_id/sensor_column_n);
       int icolumn         = sensor_id%sensor_column_n;
-      double ypos = module_y0 - module_width/2.0 + sensor_dead + sensor_side + irow*sensor_gap + (irow + 0.5)*sensor_width;
+      double ypos = module_y0 - module_width/2.0 + sensor_dead + irow*(sensor_gap + sensor_side*2) + (irow + 0.5)*sensor_width;
       double zpos = module_z0 - sensor_total_length/2.0 + sensor_side + icolumn*(sensor_gap + sensor_side*2) + (icolumn + 0.5)*sensor_length;
       pv = moduleLogical.placeVolume(sensorLogical, Position(0, ypos, zpos));
       pv.addPhysVolID("sensor", sensor_id);

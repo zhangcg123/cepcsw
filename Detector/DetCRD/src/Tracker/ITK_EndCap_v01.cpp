@@ -38,6 +38,11 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
 
   const xml::Component supports = x_det.child("support");
   const xml::Component sensor   = x_det.child("sensor");
+  const double sensor_size   = sensor.attr<double>("size");
+  const double sensor_side   = sensor.attr<double>("side");
+  const double sensor_dead   = sensor.attr<double>("dead");
+  const double sensor_width  = sensor_size - sensor_dead - sensor_side;
+  const double sensor_length = sensor_size - sensor_side * 2;
 
   const xml::Component layers_xml = x_det.child("layers");
   for (xml_coll_t layer(layers_xml, "layer"); layer; ++layer)
@@ -115,6 +120,11 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
       const auto nmodule = ring.attr<double>("nmodule");
       const auto vis = ring.attr<std::string>("vis");
 
+      int nrow    = std::floor(module_dr/sensor_size);
+      int ncolumn = std::floor(module_dphi/sensor_size);
+      double gap_dr   = (module_dr - sensor_size*nrow) / (nrow - 1);
+      double gap_dphi = (module_dphi - sensor_size*ncolumn) / (ncolumn - 1);
+
       std::string ring_vol_name = layer_name + "_ring" + ring_id;
       Tube ring_tube(ring_inner_r, ring_outer_r, SiliconThickness / 2.0, 0.0, 2 * M_PI);
       Volume ringPosF_vol(ring_vol_name + "PF", ring_tube, air);
@@ -131,58 +141,80 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
       ringNegR_vol.setVisAttributes(description.visAttributes(vis));
 
       // populate sensor
-      Box sensor_box(module_dr / 2.0, module_dphi / 2.0, SiliconThickness / 2.0);
-      std::string sensor_name = ring_vol_name + "_petal";
-      Volume sensor_vol(sensor_name, sensor_box, air);
-      DetElement sensor_det(sensor_name, det_id);
-      sensor_vol = sensor_vol.setVisAttributes(description.visAttributes(vis));
+      Box module_box(module_dr / 2.0, module_dphi / 2.0, SiliconThickness / 2.0);
+      std::string module_name = ring_vol_name + "_petal";
+      Volume module_vol(module_name, module_box, air);
+      DetElement module_det(module_name, det_id);
+      module_vol = module_vol.setVisAttributes(description.visAttributes(vis));
 
       double sensitive_thickness = 0;
       double glue_thickness      = 0;
       double service_thickness   = 0;
       //const xml::Component sensor = x_det.child("sensor");
-      double sensor_z = -SiliconThickness / 2.0;
+      double module_z = -SiliconThickness / 2.0;
       for (xml_coll_t sensor_layer(sensor, "slice"); sensor_layer; ++sensor_layer)
       {
-        const auto sensor_layer_name = sensor_layer.attr<std::string>("name");
-        const auto sensor_layer_material = sensor_layer.attr<std::string>("material");
-        const auto sensor_layer_thickness = sensor_layer.attr<double>("thickness");
-        const auto sensor_layer_vis = sensor_layer.attr<std::string>("vis");
+        const auto module_layer_name      = sensor_layer.attr<std::string>("name");
+        const auto module_layer_material  = sensor_layer.attr<std::string>("material");
+        const auto module_layer_thickness = sensor_layer.attr<double>("thickness");
+        const auto module_layer_vis       = sensor_layer.attr<std::string>("vis");
         auto is_sensitive = sensor_layer.hasAttr(_U(sensitive));
-        std::string sensor_layer_vol_name = sensor_name + "_" + sensor_layer_name;
-        Box sensor_layer_box(module_dr / 2.0, module_dphi / 2.0, sensor_layer_thickness / 2.0);
-        Volume sensor_layer_vol(sensor_layer_vol_name, sensor_layer_box, description.material(sensor_layer_material));
-        DetElement sensor_layer_det(sensor_layer_vol_name, det_id);
-        sensor_layer_vol = sensor_layer_vol.setVisAttributes(description.visAttributes(sensor_layer_vis));
+        std::string module_layer_vol_name = module_name + "_" + module_layer_name;
+        Box    module_layer_box(module_dr / 2.0, module_dphi / 2.0, module_layer_thickness / 2.0);
+        Volume module_layer_vol(module_layer_vol_name, module_layer_box, description.material(module_layer_material));
+        DetElement module_layer_det(module_layer_vol_name, det_id);
+        module_layer_vol = module_layer_vol.setVisAttributes(description.visAttributes(module_layer_vis));
         rec::SurfaceType surf_type;
+	rec::Vector3D u(0.,-1., 0.);
+        rec::Vector3D v(1., 0., 0.);
+        rec::Vector3D n(0., 0., 1.);
         if (is_sensitive)
         {
-          sensor_layer_vol = sensor_layer_vol.setSensitiveDetector(sens);
-          surf_type = rec::SurfaceType(rec::SurfaceType::Sensitive,rec::SurfaceType::Plane);
-	  sensitive_thickness += sensor_layer_thickness;
+	  surf_type = rec::SurfaceType(rec::SurfaceType::Sensitive,rec::SurfaceType::Plane);
+
+	  Box    sensor_box(sensor_length / 2.0, sensor_width / 2.0, module_layer_thickness / 2.0);
+          Volume sensor_vol(module_layer_vol_name + "_sensor", sensor_box, description.material(module_layer_material));
+	  sensor_vol = sensor_vol.setVisAttributes(description.visAttributes(module_layer_vis));
+          sensor_vol = sensor_vol.setSensitiveDetector(sens);
+	  for (int irow = 0; irow < nrow; irow++) {
+	    for (int icolumn = 0; icolumn < ncolumn; icolumn++) {
+	      int sensor_id = icolumn*nrow + irow;
+	      double xpos = -module_dr/2.0 + (irow+0.5)*sensor_size + (irow-1)*gap_dr;
+	      double ypos = -module_dphi/2.0 + sensor_dead + (icolumn+0.5)*sensor_width + icolumn*(gap_dphi+sensor_side*2);
+	      DetElement sensor_det(module_layer_det, module_layer_vol_name + "_sensor" + std::to_string(sensor_id), det_id);
+	      auto pv = module_layer_vol.placeVolume(sensor_vol, Position(xpos, ypos, 0));
+	      pv.addPhysVolID("sensor", sensor_id);
+	      sensor_det.setPlacement(pv);
+
+	      rec::VolPlane surf(sensor_vol, surf_type, module_layer_thickness / 2.0, module_layer_thickness / 2.0, u, v, n);
+	      rec::volSurfaceList(sensor_det)->push_back(surf);
+	    }
+	  }
+
+	  sensitive_thickness += module_layer_thickness;
         }
         else
         {
           surf_type = rec::SurfaceType(rec::SurfaceType::Helper,rec::SurfaceType::Plane);
-	  if (sensitive_thickness==0) glue_thickness    += sensor_layer_thickness;
-          else                        service_thickness += sensor_layer_thickness;
-        }
-        sensor_layer_det.setPlacement(
-          sensor_vol.placeVolume(sensor_layer_vol, Position(0, 0, sensor_z + sensor_layer_thickness / 2.0)));
-        sensor_z += sensor_layer_thickness;
+	  rec::VolPlane surf(module_layer_vol, surf_type, module_layer_thickness / 2.0, module_layer_thickness / 2.0, u, v, n);
+	  rec::volSurfaceList(module_layer_det)->push_back(surf);
 
-        sensor_det.add(sensor_layer_det);
-        rec::Vector3D u(0.,-1., 0.);
-        rec::Vector3D v(1., 0., 0.);
-        rec::Vector3D n(0., 0., 1.);
-        rec::VolPlane surf(sensor_layer_vol, surf_type, sensor_layer_thickness / 2.0,
-                           sensor_layer_thickness / 2.0, u, v,
-                           n);
-        rec::volSurfaceList(sensor_layer_det)->push_back(surf);
+	  if (sensitive_thickness==0) glue_thickness    += module_layer_thickness;
+          else                        service_thickness += module_layer_thickness;
+        }
+        module_layer_det.setPlacement(
+          module_vol.placeVolume(module_layer_vol, Position(0, 0, module_z + module_layer_thickness / 2.0)));
+        module_z += module_layer_thickness;
+
+        module_det.add(module_layer_det);
+        //rec::VolPlane surf(module_layer_vol, surf_type, module_layer_thickness / 2.0,
+	//                 module_layer_thickness / 2.0, u, v,
+	//                 n);
+        //rec::volSurfaceList(module_layer_det)->push_back(surf);
       }
 
       PlacedVolume pv;
-      // place all the sensors into ring
+      // place all the modules into ring
       double r_offset = ring_inner_r + module_dr / 2.0;
       for (int i = 0; i < nmodule; ++i)
       {
@@ -191,52 +223,52 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
 	double rotated_y = r_offset * sin(angle);
         auto transform = Transform3D(RotationZ(angle), Position(rotated_x, rotated_y, 0));
 
-        DetElement negative_even_sensor_det = i > 0 ? sensor_det.clone(ring_vol_name + "_petalN" + std::to_string(2 * i)) : sensor_det;
-	pv = ringNegF_vol.placeVolume(sensor_vol, transform).addPhysVolID("module", 2 * i);
-        negative_even_sensor_det.setPlacement(pv);
-        ringNegF_det.add(negative_even_sensor_det);
+        DetElement negative_even_module_det = i > 0 ? module_det.clone(ring_vol_name + "_petalN" + std::to_string(2 * i)) : module_det;
+	pv = ringNegF_vol.placeVolume(module_vol, transform).addPhysVolID("module", 2 * i);
+        negative_even_module_det.setPlacement(pv);
+        ringNegF_det.add(negative_even_module_det);
 
         transform = Transform3D(RotationZYX(-angle, 0, M_PI), Position(rotated_x, rotated_y, 0));
-	DetElement positive_even_sensor_det = sensor_det.clone(ring_vol_name + "_petalP" + std::to_string(2 * i));
-        pv = ringPosF_vol.placeVolume(sensor_vol, transform).addPhysVolID("module", 2 * i);
-        positive_even_sensor_det.setPlacement(pv);
-        ringPosF_det.add(positive_even_sensor_det);
+	DetElement positive_even_module_det = module_det.clone(ring_vol_name + "_petalP" + std::to_string(2 * i));
+        pv = ringPosF_vol.placeVolume(module_vol, transform).addPhysVolID("module", 2 * i);
+        positive_even_module_det.setPlacement(pv);
+        ringPosF_det.add(positive_even_module_det);
 
 	angle += M_PI / nmodule;
         rotated_x = r_offset * cos(angle);
         rotated_y = r_offset * sin(angle);
 	transform = Transform3D(RotationZ(angle), Position(rotated_x, rotated_y, 0));
 
-	DetElement positive_odd_sensor_det = sensor_det.clone(ring_vol_name + "_petalP" + std::to_string(2 * i));
-        pv = ringPosR_vol.placeVolume(sensor_vol, transform).addPhysVolID("module", 2 * i + 1);
-        positive_odd_sensor_det.setPlacement(pv);
-        ringPosR_det.add(positive_odd_sensor_det);
+	DetElement positive_odd_module_det = module_det.clone(ring_vol_name + "_petalP" + std::to_string(2 * i));
+        pv = ringPosR_vol.placeVolume(module_vol, transform).addPhysVolID("module", 2 * i + 1);
+        positive_odd_module_det.setPlacement(pv);
+        ringPosR_det.add(positive_odd_module_det);
 
 	transform = Transform3D(RotationZYX(-angle, 0, M_PI), Position(rotated_x, rotated_y, 0));
-	DetElement negative_odd_sensor_det = sensor_det.clone(ring_vol_name + "_petalN" + std::to_string(2 * i));
-	pv = ringNegR_vol.placeVolume(sensor_vol, transform).addPhysVolID("module", 2 * i + 1);
-        negative_odd_sensor_det.setPlacement(pv);
-        ringNegR_det.add(negative_odd_sensor_det);
+	DetElement negative_odd_module_det = module_det.clone(ring_vol_name + "_petalN" + std::to_string(2 * i));
+	pv = ringNegR_vol.placeVolume(module_vol, transform).addPhysVolID("module", 2 * i + 1);
+        negative_odd_module_det.setPlacement(pv);
+        ringNegR_det.add(negative_odd_module_det);
       }
 
       // place ring into layer
       pv = layer_vol.placeVolume(ringPosR_vol, Position(0, 0, +(SupportThickness + SiliconThickness) / 2.0));
-      pv = pv.addPhysVolID("sensor", std::stoi(ring_id));
+      pv = pv.addPhysVolID("ring", std::stoi(ring_id));
       ringPosR_det.setPlacement(pv);
       layer_det.add(ringPosR_det);
 
       pv = layer_vol.placeVolume(ringPosF_vol, Position(0, 0, -(SupportThickness + SiliconThickness) / 2.0));
-      pv = pv.addPhysVolID("sensor", std::stoi(ring_id));
+      pv = pv.addPhysVolID("ring", std::stoi(ring_id));
       ringPosF_det.setPlacement(pv);
       layer_det.add(ringPosF_det);
 
       pv = layerNeg_vol.placeVolume(ringNegR_vol, Position(0, 0, -(SupportThickness + SiliconThickness) / 2.0));
-      pv = pv.addPhysVolID("sensor", std::stoi(ring_id));
+      pv = pv.addPhysVolID("ring", std::stoi(ring_id));
       ringNegR_det.setPlacement(pv);
       layerNeg_det.add(ringNegR_det);
 
       pv = layerNeg_vol.placeVolume(ringNegF_vol, Position(0, 0, +(SupportThickness + SiliconThickness) / 2.0));
-      pv = pv.addPhysVolID("sensor", std::stoi(ring_id));
+      pv = pv.addPhysVolID("ring", std::stoi(ring_id));
       ringNegF_det.setPlacement(pv);
       layerNeg_det.add(ringNegF_det);
       // rotate and reflect ring
@@ -262,7 +294,7 @@ static Ref_t create_detector(Detector& description, xml_h e, SensitiveDetector s
       */
       dd4hep::rec::MultiRingsZDiskData::Ring ringData;
       ringData.petalNumber        = 2 * nmodule;
-      ringData.sensorsPerPetal    = 1;
+      ringData.sensorsPerPetal    = nrow*ncolumn;
       ringData.phi0               = phi0;
       ringData.phiOffsetOdd       = 2 * M_PI / nmodule;
       ringData.distance           = ring_inner_r;

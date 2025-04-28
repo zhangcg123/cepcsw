@@ -159,17 +159,25 @@ void CEPCITKEndcapKalDetector::create_segmented_disk_layers(int idisk, int iring
   int zsign       = zpos > 0 ? 1 : -1;
   int start_index = even_petals ? 0 : 1;
 
+  int nsensor = _disksData.layers[idisk].rings[iring].sensorsPerPetal;
+  std::vector<int> module_ids;
   dd4hep::DDSegmentation::BitField64 encoder("system:5,side:-2,layer:9,module:8,sensor:8");
   encoder.reset();
   encoder[CEPCConf::DetCellID::system] = CEPCConf::DetID::ITKEndcap;
   encoder[CEPCConf::DetCellID::side]   = zsign;
   encoder[CEPCConf::DetCellID::layer]  = idisk;
-  encoder[CEPCConf::DetCellID::sensor] = iring;
-
-  std::vector<int> module_ids;
   for (int i = 0; i < nsegments; i++) {
     encoder[CEPCConf::DetCellID::module] = even_petals ? 2*i : 2*i+1;
-    module_ids.push_back(encoder.lowWord());
+    if (nsensor == 1) {
+      encoder[CEPCConf::DetCellID::sensor] = iring;
+      module_ids.push_back(encoder.lowWord());
+    }
+    else {
+      for (int isensor = 0; isensor < nsensor; isensor++) {
+        encoder[CEPCConf::DetCellID::sensor] = iring + (isensor<<3);
+        module_ids.push_back(encoder.lowWord());
+      }
+    }
   }
   
   // create segmented disk
@@ -241,6 +249,7 @@ void CEPCITKEndcapKalDetector::setupGearGeom(const gear::GearMgr& gearMgr) {
     std::vector<double> tGlues      = params.getDoubleVals("ThicknessGlues");
     std::vector<double> tServices   = params.getDoubleVals("ThicknessServices");
     std::vector<std::string> petalParNames      = params.getStringVals("PetalNumberNames");
+    std::vector<std::string> petalNSenParNames  = params.getStringVals("PetalNSensorNames");
     std::vector<std::string> phi0ParNames       = params.getStringVals("PetalPhi0Names");
     std::vector<std::string> distanceParNames   = params.getStringVals("PetalDistanceNames");
     std::vector<std::string> widthInnerParNames = params.getStringVals("PetalInnerWidthNames");
@@ -261,7 +270,8 @@ void CEPCITKEndcapKalDetector::setupGearGeom(const gear::GearMgr& gearMgr) {
       //std::string widthInnerParName = widthInnerParNames[idisk];
       //std::string widthOuterParName = widthOuterParNames[idisk];
       //std::string lengthParName = lengthParNames[idisk];
-      std::vector<int> petals         = params.getIntVals(petalParNames[idisk]);
+      std::vector<int>    petals      = params.getIntVals(petalParNames[idisk]);
+      std::vector<int>    nsensors    = params.getIntVals(petalNSenParNames[idisk]);
       std::vector<double> phi0s       = params.getDoubleVals(phi0ParNames[idisk]);
       std::vector<double> distances   = params.getDoubleVals(distanceParNames[idisk]);
       std::vector<double> widthInners = params.getDoubleVals(widthInnerParNames[idisk]);
@@ -270,15 +280,16 @@ void CEPCITKEndcapKalDetector::setupGearGeom(const gear::GearMgr& gearMgr) {
       int nrings = petals.size();
       for (int iring = 0; iring < nrings; iring++) {
 	dd4hep::rec::MultiRingsZDiskData::Ring ring;
-	ring.petalNumber = petals[iring];
-	ring.phi0 = phi0s[iring];
-	ring.distance = distances[iring];
-	ring.widthInner = widthInners[iring];
-	ring.widthOuter = widthOuters[iring];
-	ring.length = lengths[iring];
+	ring.petalNumber        = petals[iring];
+	ring.sensorsPerPetal    = nsensors[iring];
+	ring.phi0               = phi0s[iring];
+	ring.distance           = distances[iring];
+	ring.widthInner         = widthInners[iring];
+	ring.widthOuter         = widthOuters[iring];
+	ring.length             = lengths[iring];
 	ring.thicknessSensitive = tSensitives[idisk];
-	ring.thicknessGlue = tGlues[idisk];
-	ring.thicknessService = tServices[idisk];
+	ring.thicknessGlue      = tGlues[idisk];
+	ring.thicknessService   = tServices[idisk];
 	disk.rings.push_back(ring);
       }
       _disksData.layers.push_back(disk);
