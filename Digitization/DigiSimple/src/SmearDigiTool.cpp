@@ -258,6 +258,10 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
 	accept_hit = true;
 	break;
       }
+      else if (system == CEPCConf::DetID::ITKEndcap && fabs(du) <= m_maxPull*resU && fabs(dv) <= m_maxPull*resV) {
+	accept_hit = true;
+	break;
+      }
       tries++;
     }
 
