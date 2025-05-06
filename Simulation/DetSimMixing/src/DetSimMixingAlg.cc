@@ -73,7 +73,7 @@ StatusCode DetSimMixingAlg::initialize() {
         m_trackerColMap[name_col] = col;
 
         auto sig_col = new DataHandle<edm4hep::SimTrackerHitCollection>(name_col, Gaudi::DataHandle::Reader, this);
-        m_sig_trackerColMap[name_col] = col;
+        m_sig_trackerColMap[name_col] = sig_col;
         
     }
 
@@ -308,6 +308,9 @@ StatusCode DetSimMixingAlg::execute() {
                 newhit.setQuality(oldhit.getQuality());
                 newhit.setPosition(oldhit.getPosition());
                 newhit.setMomentum(oldhit.getMomentum());
+
+                // associate MC particle for signal
+                newhit.setMCParticle(oldhit.getMCParticle());
             }
 
         } else if (bkg_evt.calorimeter_hits.count(colidx)) {
