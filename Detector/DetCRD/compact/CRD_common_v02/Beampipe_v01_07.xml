@@ -61,7 +61,7 @@
 
       <section type ="Center" name="IPInnerTube" zStart="0" zEnd="BeamPipe_BeAl_zmin" rStart="0">
 	<layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
-	<layer material="Au" thickness="0.005*mm" vis="VacVis"/>
+	<layer material="Au" thickness="0.010*mm" vis="VacVis"/>
 	<layer material="G4_Be" thickness="BeamPipe_Be_inner_thickness" vis="TubeVis"/>
 	<layer material="G4_WATER" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
 	<layer material="G4_Be" thickness="BeamPipe_Be_outer_thickness" vis="TubeVis"/>
@@ -199,15 +199,15 @@
       </section>
       <section type="Legs" name="SRMask1" zStart="BeamPipe_SR_Mask_z1" zEnd="BeamPipe_SR_Mask_z2" rStart="0">
         <layer material="beam" thickness="BeamPipe_Fork_inner_radius" thicknessEnd="BeamPipe_Mask_inner_radius" vis="VacVis"/>
-        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" thicknessEnd="BeamPipe_Cu_thickness_SR_Mask_mid" vis="TubeVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness" thicknessEnd="BeamPipe_Cu_thickness+BeamPipe_Fork_inner_radius-BeamPipe_Mask_inner_radius" vis="TubeVis"/>
       </section>
       <section type="Legs" name="SRMask2" zStart="BeamPipe_SR_Mask_z2" zEnd="BeamPipe_SR_Mask_z3" rStart="0">
-        <layer material="beam" thickness="BeamPipe_Mask_inner_radius" vis="VacVis"/>
-        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness_SR_Mask_mid" vis="TubeVis"/>
+        <layer material="beam" thickness="BeamPipe_Mask_inner_radius" thicknessEnd="BeamPipe_Cu_thickness_SR_Mask_mid" vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness+BeamPipe_Fork_inner_radius-BeamPipe_Mask_inner_radius" thicknessEnd="BeamPipe_Cu_thickness+BeamPipe_Fork_inner_radius-BeamPipe_Cu_thickness_SR_Mask_mid" vis="TubeVis"/>
       </section>
       <section type="Legs" name="SRMask3" zStart="BeamPipe_SR_Mask_z3" zEnd="BeamPipe_Q1a_zmin" rStart="0">
-        <layer material="beam" thickness="BeamPipe_Mask_inner_radius" thicknessEnd="BeamPipe_Fork_inner_radius"  vis="VacVis"/>
-        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness_SR_Mask_mid" thicknessEnd="BeamPipe_Cu_thickness"  vis="TubeVis"/>
+        <layer material="beam" thickness="BeamPipe_Cu_thickness_SR_Mask_mid" thicknessEnd="BeamPipe_Fork_inner_radius"  vis="VacVis"/>
+        <layer material="G4_Cu" thickness="BeamPipe_Cu_thickness+BeamPipe_Fork_inner_radius-BeamPipe_Cu_thickness_SR_Mask_mid" thicknessEnd="BeamPipe_Cu_thickness"  vis="TubeVis"/>
       </section>
       <section type="Legs" name="Q1a" zStart="BeamPipe_Q1a_zmin" zEnd="BeamPipe_Q1a_zmax" rStart="0">
         <layer material="beam" thickness="BeamPipe_Q1a_inner_radius" vis="VacVis"/>
