@@ -64,10 +64,10 @@ public:
                 continue;
             }
 
-            std::cout << "Collection: " << name 
-                      << ", index: " << colidx 
-                      << ", time window: " << time_window << " ns"
-                      << ", current time: " << current_time_in_ns;
+            // std::cout << "Collection: " << name 
+            //           << ", index: " << colidx 
+            //           << ", time window: " << time_window << " ns"
+            //           << ", current time: " << current_time_in_ns;
 
             // debug only. don't create any hits.
             // conclusion: no memory leakage in the above code.
@@ -137,7 +137,7 @@ public:
                 continue;
             }
 
-            std::cout << ", counter: " << counter << std::endl;
+            // std::cout << ", counter: " << counter << std::endl;
 
         }
 
