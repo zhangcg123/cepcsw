@@ -112,9 +112,9 @@ private:
     // Time window for VXD, ITK, TPC, OTK, ECAL, HCAL, MUON
     // Only the hits between [-T, T] ns are loaded
     Gaudi::Property<double> m_vxd_time_window{this, "VXDTimeWindow", 200.0, "The time window for VXD in ns"};
-    Gaudi::Property<double> m_itk_time_window{this, "ITKTimeWindow", 200.0, "The time window for ITK in ns"};
+    Gaudi::Property<double> m_itk_time_window{this, "ITKTimeWindow", 30.0, "The time window for ITK in ns"};
     Gaudi::Property<double> m_tpc_time_window{this, "TPCTimeWindow", 34000.0, "The time window for TPC in ns"};
-    Gaudi::Property<double> m_otk_time_window{this, "OTKTimeWindow", 1000.0, "The time window for OTK in ns"};
+    Gaudi::Property<double> m_otk_time_window{this, "OTKTimeWindow", 30.0, "The time window for OTK in ns"};
     Gaudi::Property<double> m_ecal_time_window{this, "EcalTimeWindow", 150.0, "The time window for ECAL in ns"};
     Gaudi::Property<double> m_hcal_time_window{this, "HcalTimeWindow", 1000.0, "The time window for HCAL in ns"};
     Gaudi::Property<double> m_muon_time_window{this, "MuonTimeWindow", 100.0, "The time window for MUON in ns"};

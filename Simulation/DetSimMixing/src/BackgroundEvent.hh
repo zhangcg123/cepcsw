@@ -40,7 +40,7 @@ struct BackgroundEvent {
         kMUON = 6, // 100 ns // from Xiaolong Wang
         kNSubDetType
     };
-    std::vector<double> subdet2twindow = {200, 200, 34000, 1000, 150, 1000, 100}; // key is subdet, value is time window.
+    std::vector<double> subdet2twindow = {200, 30, 34000, 30, 150, 1000, 100}; // key is subdet, value is time window.
     std::vector<std::vector<std::string>> subdet2colnames = {
         {"VXD"},
         {"ITK"},
