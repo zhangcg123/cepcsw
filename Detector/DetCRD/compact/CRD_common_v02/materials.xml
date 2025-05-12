@@ -704,6 +704,13 @@
      <fraction n="0.29" ref="CH2OCN" />
    </material>
 
+   <material name="CFRP_M55J">
+     <D type="density" value="1.91" unit="g/cm3" />
+     <!--total 99% of C, 0.8% in CH2OCN-->
+     <fraction n="0.982" ref="C" />
+     <fraction n="0.018" ref="CH2OCN" />
+   </material>
+
    <material name="Acrylicglue">
      <D type="density" value="1.16" unit="g/cm3" />
      <composite n="5" ref="C" />
