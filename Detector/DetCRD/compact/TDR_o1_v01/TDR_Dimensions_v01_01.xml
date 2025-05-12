@@ -104,7 +104,7 @@
     <constant name="BeamPipe_FirstExpand_width"     value="35*mm"/>
     <constant name="BeamPipe_SecondExpand_width"    value="39*mm"/>
     <constant name="BeamPipe_Mask_inner_radius"     value="6*mm"/>
-    <constant name="BeamPipe_Cu_thickness_SR_Mask_mid" value="7*mm"/>
+    <constant name="BeamPipe_Cu_thickness_SR_Mask_mid" value="8*mm"/>
     <constant name="BeamPipe_Q1a_inner_radius"      value="BeamPipe_Fork_inner_radius"/>
     <constant name="BeamPipe_Q1b_inner_radius"      value="11.5*mm"/>
     <constant name="BeamPipe_QF1_inner_radius"      value="16*mm"/>
