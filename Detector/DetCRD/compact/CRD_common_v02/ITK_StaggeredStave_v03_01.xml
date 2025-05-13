@@ -36,7 +36,7 @@
 	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
 	  <slice name="GraphiteFoil" thickness=" 30*um" width="ITKBarrel_module_width" material="Graphite_ITK"     vis="GrayVis"/>
 	  <slice name="CoolingTube"  thickness=" 64*um" width="ITKBarrel_module_width" material="Polyimide_ITK"    vis="SeeThrough"/>
-	  <slice name="CoolingFluid" thickness="190*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
+	  <slice name="CoolingFluid" thickness=" 50*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
 	  <slice name="CFPlate"      thickness="150*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="GrayVis"/>
 	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
 	  <slice name="Glue"         thickness="100*um" width="ITKBarrel_module_width" material="CER_ITK"          vis="GrayVis"/>
@@ -54,8 +54,9 @@
 	  <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
 	  <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
 	  <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
-	  <slice name="OEComponent2"  thickness=" 56*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
-	  <slice name="OEComponent3"  thickness="  3*um" material="G4_Cu"           vis="RedVis"/>
+	  <slice name="OEComponent2"  thickness=" 77*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
+	  <slice name="OEComponent3"  thickness="  4*um" material="G4_Cu"           vis="RedVis"/>
+	  <slice name="PowerBusFPC"   thickness=" 24*um" material="PowerFPCMixture" vis="MagentaVis"/>
 	</flex>
       </layer>
 
@@ -65,7 +66,7 @@
 	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
 	  <slice name="GraphiteFoil" thickness=" 30*um" width="ITKBarrel_module_width" material="Graphite_ITK"     vis="GrayVis"/>
 	  <slice name="CoolingTube"  thickness=" 64*um" width="ITKBarrel_module_width" material="Polyimide_ITK"    vis="SeeThrough"/>
-	  <slice name="CoolingFluid" thickness="190*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
+	  <slice name="CoolingFluid" thickness=" 50*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
 	  <slice name="CFPlate"      thickness="150*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="GrayVis"/>
 	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
 	  <slice name="Glue"         thickness="100*um" width="ITKBarrel_module_width" material="CER_ITK"          vis="GrayVis"/>
@@ -80,11 +81,12 @@
 	</sensitive>
 	<flex length="ITKBarrel_ladder_length_2" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
 	  <slice name="Glue"          thickness="100*um" material="CER_ITK"         vis="YellowVis"/>
-	  <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
-	  <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
-	  <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
-	  <slice name="OEComponent2"  thickness=" 56*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
-	  <slice name="OEComponent3"  thickness="  3*um" material="G4_Cu"           vis="RedVis"/>
+          <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
+          <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
+          <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
+          <slice name="OEComponent2"  thickness=" 77*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
+          <slice name="OEComponent3"  thickness="  4*um" material="G4_Cu"           vis="RedVis"/>
+          <slice name="PowerBusFPC"   thickness=" 24*um" material="PowerFPCMixture" vis="MagentaVis"/>
 	</flex>
       </layer>
 
@@ -94,7 +96,7 @@
 	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
 	  <slice name="GraphiteFoil" thickness=" 30*um" width="ITKBarrel_module_width" material="Graphite_ITK"     vis="GrayVis"/>
 	  <slice name="CoolingTube"  thickness=" 64*um" width="ITKBarrel_module_width" material="Polyimide_ITK"    vis="SeeThrough"/>
-	  <slice name="CoolingFluid" thickness="190*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
+	  <slice name="CoolingFluid" thickness=" 50*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
 	  <slice name="CFPlate"      thickness="150*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="GrayVis"/>
 	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
 	  <slice name="Glue"         thickness="100*um" width="ITKBarrel_module_width" material="CER_ITK"          vis="GrayVis"/>
@@ -109,11 +111,12 @@
 	</sensitive>
 	<flex length="ITKBarrel_ladder_length_3" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
 	  <slice name="Glue"          thickness="100*um" material="CER_ITK"         vis="YellowVis"/>
-	  <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
-	  <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
-	  <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
-	  <slice name="OEComponent2"  thickness=" 56*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
-	  <slice name="OEComponent3"  thickness="  3*um" material="G4_Cu"           vis="RedVis"/>
+          <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
+          <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
+          <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
+          <slice name="OEComponent2"  thickness=" 77*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
+          <slice name="OEComponent3"  thickness="  4*um" material="G4_Cu"           vis="RedVis"/>
+          <slice name="PowerBusFPC"   thickness=" 24*um" material="PowerFPCMixture" vis="MagentaVis"/>
 	</flex>
       </layer>
     </detector>

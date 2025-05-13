@@ -704,6 +704,13 @@
      <fraction n="0.29" ref="CH2OCN" />
    </material>
 
+   <material name="CFRP_M40">
+     <D type="density" value="1.77" unit="g/cm3" />
+     <!--total 99.12% of C-->
+     <fraction n="0.984" ref="C" />
+     <fraction n="0.016" ref="CH2OCN" />
+   </material>
+
    <material name="CFRP_M55J">
      <D type="density" value="1.91" unit="g/cm3" />
      <!--total 99% of C, 0.8% in CH2OCN-->
@@ -886,10 +893,15 @@
 
     <material name="GraphiteFoam_OTK">
       <D type="density" value="0.113776" unit="g/cm3"/>
-      <fraction n="1.0" ref="Graphite_ITK"/>
-      <fraction n="1.0" ref="CF_ITK"/>
+      <fraction n="0.5" ref="Graphite_ITK"/>
+      <fraction n="0.5" ref="CF_ITK"/>
     </material>
 
+    <material name="PowerFPCMixture">
+      <D type="density" value="4.36" unit="g/cm3"/>
+      <fraction n="0.2" ref="Polyimide"/>
+      <fraction n="0.8" ref="Cu"/>
+    </material>
   </materials>
 
   <surfaces>
