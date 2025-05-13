@@ -12,6 +12,7 @@ gaudi_add_module(DetGeomSvc
                    Gaudi::GaudiKernel
                    ${GEAR_LIBRARIES}
                    ${ROOT_LIBRARIES}
+                   k4FWCore::k4FWCore
 )
 
 target_include_directories(DetGeomSvc

@@ -75,7 +75,7 @@
   <readouts>
     <readout name="EcalEndcapsCollection">
       <segmentation type="NoSegmentation"/>
-      <id>system:5,module:1,part:7,stave:7,type:4,dlayer:4,slayer:1,bar:7</id>
+      <id>system:5,module:1,part:7,stave:7,type:5,dlayer:4,slayer:1,bar:6</id>
     </readout>
   </readouts>
 

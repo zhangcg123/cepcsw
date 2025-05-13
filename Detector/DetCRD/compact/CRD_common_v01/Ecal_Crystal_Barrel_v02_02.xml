@@ -50,7 +50,7 @@
                     grid_size_x="1*cm"
                     grid_size_y="1*cm"
                     grid_size_z="1*cm"/-->
-      <id>system:5,module:5,stave:4,dlayer:5,slayer:6,bar:15</id>
+      <id>system:5,module:5,stave:4,dlayer:5,slayer:6,bar:6</id>
     </readout>
   </readouts>
 

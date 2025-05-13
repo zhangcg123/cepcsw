@@ -187,8 +187,8 @@ StatusCode CyberPFAlg::initialize()
   m_dd4hep = m_geosvc->lcdd();
   if ( !m_dd4hep )  throw "CyberPFAlg :Failed to get dd4hep::Detector ...";
   
-  m_cellIDConverter = new dd4hep::rec::CellIDPositionConverter(*m_dd4hep);
-  m_volumeManager = m_dd4hep->volumeManager();
+  //m_cellIDConverter = new dd4hep::rec::CellIDPositionConverter(*m_dd4hep);
+  //m_volumeManager = m_dd4hep->volumeManager();
 
   dd4hep::rec::ECALSystemInfoData* EcalEndcapData = m_geosvc->getDD4HepGeo().child("EcalEndcap").extension<dd4hep::rec::ECALSystemInfoData>();
   
@@ -742,7 +742,7 @@ StatusCode CyberPFAlg::execute()
   m_pMCParticleCreator->CreateMCParticle( m_DataCol, *r_MCParticleCol );
   if(m_useMCPTrk) m_pTrackCreator->CreateTracksFromMCParticle(m_DataCol, *r_MCParticleCol);
   else m_pTrackCreator->CreateTracks( m_DataCol, r_TrackCols, r_MCPTrkAssoCol );
-  m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols, m_volumeManager, barNumberMapEndcapMap);
+  m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols, m_geosvc, barNumberMapEndcapMap);
 
   //Perform PFA algorithm
   m_algorithmManager.RunAlgorithm( m_DataCol );
@@ -1734,7 +1734,7 @@ StatusCode CyberPFAlg::finalize()
   //r_HCalHitCols.clear();
   r_CaloHitCols.clear();
   //m_energycorsvc->finalize();
-  delete m_cellIDConverter, m_geosvc;
+  //delete m_cellIDConverter, m_geosvc;
   info() << "Processed " << _nEvt << " events " << endmsg;
   return GaudiAlgorithm::finalize();
 }

@@ -1,8 +1,13 @@
 import os, sys
 from Gaudi.Configuration import *
 
+
+########## CEPCSWData ################# 
+cepcswdatatop ="/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
+#######################################
+
 ############## GeomSvc #################
-geometry_option = "TDR_o1_v01/TDR_o1_v01.xml"
+geometry_option = "TDR_o1_v01/TDR_o1_v01-onlyCalo.xml"
 
 if not os.getenv("DETCRDROOT"):
     print("Can't find the geometry. Please setup envvar DETCRDROOT." )
@@ -16,6 +21,8 @@ if not os.path.exists(geometry_path):
 from Configurables import DetGeomSvc
 geomsvc = DetGeomSvc("GeomSvc")
 geomsvc.compact = geometry_path
+geomsvc.fastinit = True
+geomsvc.metadata_path = os.path.join(cepcswdatatop, "CEPCSWData/offline-data/Detector/DetGeomMetaWriter/data/tdr25.5.0/GeometryMetaData.root")
 #######################################
 
 ########### k4DataSvc ####################
@@ -23,9 +30,6 @@ from Configurables import k4DataSvc
 podioevent = k4DataSvc("EventDataSvc", input="CaloDigi_TDR_o1_v01_00.root")
 ##########################################
 
-########## CEPCSWData ################# 
-cepcswdatatop ="/cvmfs/cepcsw.ihep.ac.cn/prototype/releases/data/latest"
-#######################################
 
 ########## CrystalEcalEnergyCorrectionSvc ########
 from Configurables import CrystalEcalEnergyCorrectionSvc

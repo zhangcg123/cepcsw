@@ -27,21 +27,10 @@
 
   <include ref="./TDR_Dimensions_v01_01.xml"/>
 
-  <include ref="../CRD_common_v02/Beampipe_v01_07.xml"/>
-  <include ref="../CRD_common_v02/VXD_Composite_v01_04.xml"/>
-  <include ref="../CRD_common_v02/ITK_StaggeredStave_v03_01.xml"/>
-  <include ref="../CRD_common_v02/ITK_EndCap_v01.xml"/>
-  <!-- use 10 rows clustering version-->
-  <include ref="../CRD_common_v02/TPC_ModularEndcap_o1_v02.xml"/>
-  <include ref="../CRD_common_v01/OTKBarrel_v02.xml"/>
-  <include ref="../CRD_common_v01/OTKEndcap_v02.xml"/>
-
-  <!--muon detector-->
-  <include ref="../CRD_common_v01/Muon_Barrel_v01_04.xml"/>
-  <include ref="../CRD_common_v01/Muon_Endcap_v01_02.xml"/>
-  <include ref="../CRD_common_v01/ParaffinEndcap_v01_01.xml"/>
-  <!--include ref="../CRD_common_v01/ConcreteWall_v01_01.xml"/-->
-
+  <include ref="../CRD_common_v01/Ecal_Crystal_Barrel_v02_02.xml"/>
+  <include ref="../CRD_common_v01/Ecal_Crystal_Endcap_v02_02.xml"/>
+  <include ref="../CRD_common_v01/SHcalGlass_Barrel_v05.xml"/>
+  <include ref="../CRD_common_v01/SHcalGlass_Endcaps_v01.xml"/>
 
   <fields>
     <field name="InnerSolenoid" type="solenoid"

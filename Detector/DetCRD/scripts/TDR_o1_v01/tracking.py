@@ -15,7 +15,7 @@ rndmengine.Seeds = seed
 rndmgensvc = RndmGenSvc("RndmGenSvc")
 rndmgensvc.Engine = rndmengine.name()
 
-geometry_option = "TDR_o1_v01/TDR_o1_v01.xml"
+geometry_option = "TDR_o1_v01/TDR_o1_v01-onlyTracker.xml"
 
 if not os.getenv("DETCRDROOT"):
     print("Can't find the geometry. Please setup envvar DETCRDROOT." )
