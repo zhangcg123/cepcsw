@@ -4,6 +4,7 @@
 #include "k4FWCore/DataHandle.h"
 #include "CyberDataCol.h"
 #include "Tools/Algorithm.h"
+#include "DetInterface/IGeomSvc.h"
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
 #include <DD4hep/Segmentations.h>
@@ -21,7 +22,7 @@ namespace Cyber{
                                std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
                                std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder, 
                                std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
-                               const dd4hep::VolumeManager& m_volumeManager,
+                               SmartIF<IGeomSvc>& m_geosvc,
                                std::map<std::tuple<int, int, int, int, int>, int>& barNumberMapEndcapMap ); 
 
     //StatusCode CreateMCParticleCaloHitsAsso( std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 

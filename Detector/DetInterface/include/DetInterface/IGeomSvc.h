@@ -45,6 +45,7 @@ public:
   virtual const dd4hep::rec::SurfaceMap* getSurfaceMap(const std::string& det_name) = 0;
 
   virtual std::string getDetName(const int det_id) = 0;
+  virtual double getEcalBarLength(unsigned long cellId) = 0;
 
   virtual ~IGeomSvc() {}
 };

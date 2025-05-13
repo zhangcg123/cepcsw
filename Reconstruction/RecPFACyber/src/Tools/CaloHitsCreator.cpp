@@ -12,7 +12,7 @@ namespace Cyber{
                                               std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
                                               std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder,
                                               std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
-                                              const dd4hep::VolumeManager& m_volumeManager,
+                                              SmartIF<IGeomSvc>& m_geosvc,
                                               std::map<std::tuple<int, int, int, int, int>, int>& barNumberMapEndcapMap )
   {
     if(r_CaloHitCols.size()==0 || settings.map_stringVecPars.at("CaloHitCollections").size()==0) StatusCode::SUCCESS;
@@ -79,13 +79,14 @@ namespace Cyber{
           m_bar.setQ(hit.getEnergy()/2., hit.getEnergy()/2.);
           m_bar.setT(hit.getTime(), hit.getTime());
 
-          unsigned long long tmp_id = hit.getCellID();
-          dd4hep::PlacedVolume ipv = m_volumeManager.lookupVolumePlacement(tmp_id);
-          dd4hep::Volume ivol = ipv.volume();
-          std::vector< double > iVolParam = ivol.solid().dimensions();
-          auto maxElement = std::max_element(iVolParam.begin(), iVolParam.end());
-          iVolParam.clear();
-          m_bar.setBarLength(*maxElement * 20);
+          //unsigned long long tmp_id = hit.getCellID();
+          //dd4hep::PlacedVolume ipv = m_volumeManager.lookupVolumePlacement(tmp_id);
+          //dd4hep::Volume ivol = ipv.volume();
+          //std::vector< double > iVolParam = ivol.solid().dimensions();
+          //auto maxElement = std::max_element(iVolParam.begin(), iVolParam.end());
+          //iVolParam.clear();
+          //m_bar.setBarLength(*maxElement * 20);
+          m_bar.setBarLength(m_geosvc->getEcalBarLength(hit.getCellID()));
 
           for(int ilink=0; ilink<const_MCPCaloAssoCol->size(); ilink++){
             if( hit == const_MCPCaloAssoCol->at(ilink).getRec() ) m_bar.addLinkedMCP( std::make_pair(const_MCPCaloAssoCol->at(ilink).getSim(), const_MCPCaloAssoCol->at(ilink).getWeight()) );
@@ -135,13 +136,14 @@ namespace Cyber{
           m_bar.setQ(hit.getEnergy()/2., hit.getEnergy()/2.);
           m_bar.setT(hit.getTime(), hit.getTime());
 
-          unsigned long long tmp_id = hit.getCellID();
-          dd4hep::PlacedVolume ipv = m_volumeManager.lookupVolumePlacement(tmp_id);
-          dd4hep::Volume ivol = ipv.volume();
-          std::vector< double > iVolParam = ivol.solid().dimensions();
-          auto maxElement = std::max_element(iVolParam.begin(), iVolParam.end());
-          iVolParam.clear();
-          m_bar.setBarLength(*maxElement * 20);
+          //unsigned long long tmp_id = hit.getCellID();
+          //dd4hep::PlacedVolume ipv = m_volumeManager.lookupVolumePlacement(tmp_id);
+          //dd4hep::Volume ivol = ipv.volume();
+          //std::vector< double > iVolParam = ivol.solid().dimensions();
+          //auto maxElement = std::max_element(iVolParam.begin(), iVolParam.end());
+          //iVolParam.clear();
+          //m_bar.setBarLength(*maxElement * 20);
+          m_bar.setBarLength(m_geosvc->getEcalBarLength(hit.getCellID()));
 
           for(int ilink=0; ilink<const_MCPCaloAssoCol->size(); ilink++){
             if( hit == const_MCPCaloAssoCol->at(ilink).getRec() ) m_bar.addLinkedMCP( std::make_pair(const_MCPCaloAssoCol->at(ilink).getSim(), const_MCPCaloAssoCol->at(ilink).getWeight()) );

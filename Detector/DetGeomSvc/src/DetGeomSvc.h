@@ -5,12 +5,8 @@
 #include "DetInterface/IGeomSvc.h"
 
 // Gaudi
-#include "GaudiKernel/IIncidentListener.h"
-#include "GaudiKernel/IIncidentSvc.h"
-#include "GaudiKernel/Incident.h"
-#include "GaudiKernel/MsgStream.h"
+#include "Gaudi/Property.h"
 #include "GaudiKernel/Service.h"
-#include "GaudiKernel/ServiceHandle.h"
 
 // DD4Hep
 #include "DD4hep/Detector.h"
@@ -18,6 +14,8 @@
 #include <gear/GEAR.h>
 #include <gearimpl/ZPlanarParametersImpl.h>
 #include <gearimpl/GearParametersImpl.h>
+#include <string>
+#include <k4FWCore/MetaDataHandle.h>
 
 class TGeoNode;
 
@@ -38,16 +36,29 @@ class DetGeomSvc: public extends<Service, IGeomSvc> {
   Decoder* getDecoder(const std::string& readout_name) override;
   const dd4hep::rec::SurfaceMap* getSurfaceMap(const std::string& det_name) override;
   std::string getDetName(const int det_id) override;
+  double getEcalBarLength(unsigned long cellId) override;
+  void initDetIdToNames();
+  void initReadoutNameToDecoder();
     
 private:
   // DD4hep XML compact file path
   Gaudi::Property<std::string> m_dd4hep_xmls{this, "compact"};
+  // init without loading dd4hep geometry
+  Gaudi::Property<bool> m_enable_fastinit{this, "fastinit", false};
   
-  // 
   dd4hep::Detector* m_dd4hep_geo;
   dd4hep::rec::SurfaceManager* m_surface_manager = nullptr;
+  dd4hep::VolumeManager* m_volumeManager = nullptr;
 
-  std::map<int, std::string> m_detIdToNames;
+  std::unordered_map<int, std::string> m_detIdToNames;
+  std::unordered_map<std::string, std::string> m_readoutNameToDecoder;
+  std::unordered_map<int, double> m_ecalCellIdToBarLengthMap;
+  
+  Gaudi::Property<std::string> m_metadata_path{this, "metadata_path"};
+  std::unique_ptr<podio::GenericParameters> m_metadata;
+  
+  IGeomSvc::Decoder* _ecal_barrel_decoder;
+  IGeomSvc::Decoder* _ecal_endcap_decoder;
 };
 
 #endif // GeomSvc_h

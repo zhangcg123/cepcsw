@@ -124,7 +124,7 @@ cal_sensdettool.CalNamesBirksConstants = [0.008415, 0.008415, 0.01, 0.01] # BGO 
 
 from Configurables import MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")
-    
+
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")

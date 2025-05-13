@@ -93,8 +93,8 @@ protected:
   SmartIF<ICrystalEcalSvc> m_energycorsvc;
   std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*> map_readout_decoder;
   dd4hep::Detector* m_dd4hep;
-  dd4hep::rec::CellIDPositionConverter* m_cellIDConverter;
-  dd4hep::VolumeManager m_volumeManager;
+  //dd4hep::rec::CellIDPositionConverter* m_cellIDConverter;
+  //dd4hep::VolumeManager m_volumeManager;
   std::map<std::tuple<int, int, int, int, int>, int> barNumberMapEndcapMap;
   //DataCollection: moved into execute() to ensure everything can be cleand after one event. 
   //CyberDataCol     m_DataCol; 
