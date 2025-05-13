@@ -11,7 +11,7 @@ endif()
 ExternalProject_Add(
   KalTest
   GIT_REPOSITORY https://code.ihep.ac.cn/cepc/externals/KalTest_iLCSoft.git
-  GIT_TAG	 v02-05-cepcsw
+  GIT_TAG	 v02-05-03cepcsw
   PREFIX         ${CMAKE_BINARY_DIR}/_deps
   SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/kaltest-src
   BINARY_DIR     ${CMAKE_BINARY_DIR}/_deps/kaltest-build
