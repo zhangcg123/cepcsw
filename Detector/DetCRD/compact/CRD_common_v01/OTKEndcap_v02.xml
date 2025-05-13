@@ -51,9 +51,9 @@
                 <layer name="sensor" sensitive="True" thickness="0.3*mm" material="G4_Si" vis="FTDSensitiveVis"/>
 		<layer name="glue_2" thickness="200*um" material="Polyimide_ITK" vis="LightGrayVis"/>
                 <layer name="carbon_fiber_plane" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
-                <layer name="cooling_tube_wall" thickness="3.560*0.169*100*um" material="G4_Ti" vis="GrayVis"/>
-                <layer name="cooling_fluid" thickness="35.76*0.105*100*um" material="G4_WATER" vis="GrayVis"/>
-                <layer name="graphite_foam_Honeycom" thickness="6000*um" material="GraphiteFoam_OTK" vis="GrayVis"/>
+                <layer name="cooling_tube_wall" thickness="3.560*cm*0.00168" material="G4_Ti" vis="GrayVis"/>
+                <layer name="cooling_fluid" thickness="35.76*cm*0.00054" material="G4_WATER" vis="GrayVis"/>
+                <layer name="graphite_foam_Honeycom" thickness="3000*um" material="GraphiteFoam_OTK" vis="GrayVis"/>
                 <layer name="carbon_fiber_back_plate" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
             </layers>
         </detector>

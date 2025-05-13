@@ -45,7 +45,7 @@
                         <layer name="cooling_fluid" width="100.40*mm" thickness="35.76*0.105*100*um" material="G4_WATER" vis="GrayVis"/>
                         <layer name="cooling_tube_wall" width="100.40*mm" thickness="3.560*0.169*100*um" material="G4_Ti" vis="GrayVis"/>
                         <layer name="carbon_fiber_plane_outer" width="100.40*mm" thickness="0.3*mm" material="CF_ITK" vis="GrayVis"/>
-			<layer name="glue" width="100.40*mm" thickness="300*um" material="CER_ITK" vis="GrayVis"/>
+			<layer name="glue" width="100.40*mm" thickness="200*um" material="CER_ITK" vis="GrayVis"/>
 			<layer name="sensor" sensitive="True" width="OTKBarrel_module_width" thickness="0.3*mm" material="G4_Si" vis="FTDSensitiveVis"/>
 			<layer name="glue_2" width="100.40*mm" thickness="100*um" material="CER_ITK" vis="LightGrayVis"/>
 			<layer name="pcb_insulating_layers" width="100.40*mm" thickness="28.41*0.07*100*um" material="Polyimide_ITK" vis="OrangeVis"/>
