@@ -279,8 +279,12 @@ CEPCITKKalDetector::CEPCITKKalDetector( const gear::GearMgr& gearMgr, IGeomSvc* 
         }
       }
     }
-    double redge = sqrt((ladder_distance+ladder_thickness)*(ladder_distance+ladder_thickness) + (fabs(offset)+0.5*width) * (fabs(offset)+0.5*width)) + eps_layer;
-    Add(new ILDCylinderMeasLayer(air, air, redge, 0.5*length, 0, 0, 0, _bZ, dummy, -1, "ITKOuterEdge"));
+    double d0 = std::min(sensitive_distance, ladder_distance);
+    double d1 = sensitive_distance < ladder_distance ? ladder_distance+ladder_thickness : sensitive_distance+sensitive_thickness;
+    double rmin = fabs(offset) < 0.5*width ? d0 : sqrt(d0*d0 + (fabs(offset)-0.5*width)*(fabs(offset)-0.5*width)) - eps_layer;
+    double rmax = sqrt(d1*d1 + (fabs(offset)+0.5*width) * (fabs(offset)+0.5*width)) + eps_layer;
+    Add(new ILDCylinderMeasLayer(air, air, rmin, 0.5*length, 0, 0, 0, _bZ, dummy, -1, "ITKInnerEdge"));
+    Add(new ILDCylinderMeasLayer(air, air, rmax, 0.5*length, 0, 0, 0, _bZ, dummy, -1, "ITKOuterEdge"));
   }
   
   SetOwner();                   
