@@ -473,6 +473,74 @@ static Ref_t create_detector(Detector& theDetector,
 	dd4hep::Volume pipeLog(volName+"Vacuum", vacuumPipe, beamMaterial);
 	pipeLog.setVisAttributes(theDetector, x_beampipe.visStr());
         shellLog.placeVolume(pipeLog, dd4hep::Position(0, 0, 0));
+
+	if (x_section.hasChild(_Unicode(window))) {
+	  if (radiusEnd != radius || thicknessEnd != thickness) {
+	    dd4hep::printout(dd4hep::ERROR, "Construct", "If open window in pipe, radius and thickness are required to keep same at start and end, requirement to call fucd@ihep.ac.cn");
+	  }
+	  xml_comp_t x_window(x_section.child(_Unicode(window)));
+
+	  dd4hep::Material windowMaterial = theDetector.material(x_window.materialStr());
+	  double thicknessW = x_window.hasAttr(_Unicode(thickness)) ? x_window.thickness() : 0;
+	  double length     = x_window.length();
+	  double z0         = x_window.z0();
+	  double r0         = x_window.attr<double>(_Unicode(r0));
+	  double r1         = x_window.hasAttr(_Unicode(r1)) ? x_window.attr<double>(_Unicode(r1)) : 0;
+	  bool   isCrossing = r1==0 || z0+length>zHalf*2.0;
+	  if (isCrossing) {
+	    dd4hep::printout(dd4hep::ERROR, "Construct", "Window is crossing between two section, not support, requirement to call fucd@ihep.ac.cn");
+	  }
+	  if (thicknessW==0) {
+            dd4hep::printout(dd4hep::WARNING, "Construct", "Thickness of window is zero, force to reset to %f mm", thickness/dd4hep::mm);
+            thicknessW = thickness;
+          }
+	  if (thicknessW>thickness) {
+	    dd4hep::printout(dd4hep::WARNING, "Construct", "Thickness of window exceed pipe, force to reset to %f mm", thickness/dd4hep::mm);
+	    thicknessW = thickness;
+	  }
+	  double distanceC2C = length - r0 - r1;
+	  double cosalpha    = (r1-r0) / distanceC2C;
+	  double alpha       = acos(cosalpha);
+	  double sinalpha    = sin(alpha);
+	  double x0W         = r0 * sinalpha;
+	  double x1W         = r1 * sinalpha;
+	  double yW          = (distanceC2C - r1*cosalpha + r0*cosalpha)/2.0;
+	  double zC0         = z0 + r0 - zHalf;
+	  double zC1         = z0 + length -r1 - zHalf;
+	  double zC0InTrd    = -yW + r0*cosalpha;
+	  double zC1InTrd    =  yW + r1*cosalpha;
+	  double zWindow     = zC0 - r0*cosalpha + yW;
+
+	  dd4hep::printout(dd4hep::INFO, "Construct", "x0 = %f mm, x1 = %f mm, y = %f mm, zC0 = %f mm, zC1 = %f mm, z = %f mm",
+			   x0W/dd4hep::mm, x1W/dd4hep::mm, yW/dd4hep::mm, zC0/dd4hep::mm, zC1/dd4hep::mm, zWindow/dd4hep::mm);
+
+	  dd4hep::Tube circle0Solid(0, r0, thickness/2.0);
+	  dd4hep::Tube circle1Solid(0, r1, thickness/2.0);
+	  dd4hep::Trd1 trdSolid(x0W, x1W, thickness/2.0, yW);
+	  dd4hep::Transform3D circle0Transformer(dd4hep::RotationX(90*dd4hep::degree), dd4hep::Position(0, 0, zC0InTrd));
+	  dd4hep::Transform3D circle1Transformer(dd4hep::RotationX(90*dd4hep::degree), dd4hep::Position(0, 0, zC1InTrd));
+	  dd4hep::UnionSolid union1(trdSolid, circle0Solid, circle0Transformer);
+	  dd4hep::UnionSolid union2(union1,   circle1Solid, circle1Transformer);
+	  dd4hep::Volume window0Log(volName+"Window0", union2, windowMaterial);
+	  window0Log.setVisAttributes(theDetector, x_window.visStr());
+	  dd4hep::Transform3D windowTransformer1(dd4hep::RotationX(90*dd4hep::degree), dd4hep::Position(0,  radius+0.5*thickness, zWindow));
+          dd4hep::Transform3D windowTransformer2(dd4hep::RotationX(90*dd4hep::degree), dd4hep::Position(0, -radius-0.5*thickness, zWindow));
+	  shellLog.placeVolume(window0Log, dd4hep::Position(0,  radius+0.5*thickness, zWindow));
+	  shellLog.placeVolume(window0Log, dd4hep::Position(0, -radius-0.5*thickness, zWindow));
+
+	  if (thicknessW<thickness) {
+	    window0Log.setMaterial(theDetector.air());
+	    window0Log.setVisAttributes(theDetector, "SeeThrough");
+	    dd4hep::Tube circleW0Solid(0, r0, thicknessW/2.0);
+	    dd4hep::Tube circleW1Solid(0, r1, thicknessW/2.0);
+	    dd4hep::Trd1 trdWSolid(x0W, x1W, yW, thicknessW/2.0);
+	    dd4hep::UnionSolid unionW1(trdWSolid, circleW0Solid, dd4hep::Position(0, zC0InTrd, 0));
+	    dd4hep::UnionSolid unionW2(unionW2,   circleW1Solid, dd4hep::Position(0, zC1InTrd, 0));
+	    dd4hep::Volume window1Log(volName+"Window1", unionW2, windowMaterial);
+	    window1Log.setVisAttributes(theDetector, x_window.visStr());
+	    window0Log.placeVolume(window1Log, dd4hep::Position(0, 0, 0.5*(thicknessW-thickness)));
+	  }
+	}
       }
       else if(type == CEPC::kFatWaist){ // expanded single pipe from circle to cuted circle, runway but not 180 degree 
         double beamAngle = 0.5*angle;
