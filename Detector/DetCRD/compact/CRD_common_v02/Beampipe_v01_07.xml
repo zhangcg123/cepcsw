@@ -51,7 +51,7 @@
   </define>
 
   <detectors>        
-    <detector name="BeamPipe" type="CRDBeamPipe_v01" vis="VacVis" printLevel="ERROR">
+    <detector name="BeamPipe" type="CRDBeamPipe_v01" vis="VacVis" printLevel="WARNING">
       <parameter crossingangle="CrossingAngle" />
       <envelope>
 	<shape type="Assembly"/>
@@ -70,50 +70,51 @@
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Be" thickness="BeamPipe_Be_inner_thickness/2" vis="TubeVis"/>
 	<layer material="G4_Al" thickness="BeamPipe_Be_inner_thickness/2" vis="TubeVis"/>
-        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
+        <layer material="G4_WATER" thickness="BeamPipe_Cooling_thickness" vis="GrayVis"/>
         <layer material="G4_Be" thickness="BeamPipe_Be_outer_thickness" vis="TubeVis"/>
 	<layer material="G4_Al" thickness="BeamPipe_BeAl_thickness1" thicknessEnd="BeamPipe_BeAl_thickness2" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeCooling1" zStart="BeamPipe_CentralBe_zmax" zEnd="BeamPipe_Cooling_zpos1" rStart="0">
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Be_inner_thickness" thicknessEnd="BeamPipe_BeAl_thickness2" vis="TubeVis"/>
-        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_thickness" thicknessEnd="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness-BeamPipe_BeAl_thickness2" vis="GrayVis"/>
+        <layer material="G4_WATER" thickness="BeamPipe_Cooling_thickness" thicknessEnd="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness-BeamPipe_BeAl_thickness2" vis="GrayVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Be_outer_thickness+BeamPipe_BeAl_thickness2" thicknessEnd="BeamPipe_BeAl_thickness2" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeCooling2" zStart="BeamPipe_Cooling_zpos1" zEnd="BeamPipe_Cooling_zpos2" rStart="0">
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Al" thickness="BeamPipe_BeAl_thickness2" thicknessEnd="BeamPipe_Al_thickness3" vis="TubeVis"/>
-        <layer material="G4_PARAFFIN" thickness="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness-BeamPipe_BeAl_thickness2"
+        <layer material="G4_WATER" thickness="BeamPipe_Be_inner_thickness+BeamPipe_Cooling_thickness+BeamPipe_Be_outer_thickness-BeamPipe_BeAl_thickness2"
 	       thicknessEnd="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3" vis="GrayVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" thicknessEnd="BeamPipe_Al_thickness3" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeCooling3" zStart="BeamPipe_Cooling_zpos2" zEnd="BeamPipe_Cooling_zpos3" rStart="0">
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
-	<layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3" vis="GrayVis"/>
+	<layer material="G4_WATER" thickness="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3" vis="GrayVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeCooling4" zStart="BeamPipe_Cooling_zpos3" zEnd="BeamPipe_Cooling_zpos4" rStart="0">
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
-        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3"
+        <layer material="G4_WATER" thickness="BeamPipe_Cooling_outer_radius3-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness3"
 	       thicknessEnd="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" vis="GrayVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" thicknessEnd="BeamPipe_Al_thickness4" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeCooling5" zStart="BeamPipe_Cooling_zpos4" zEnd="BeamPipe_Cooling_zpos5" rStart="0">
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
-        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" vis="GrayVis"/>
+        <layer material="G4_WATER" thickness="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" vis="GrayVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness4" vis="TubeVis"/>
       </section>
       <section type ="Center" name="IPBeCooling6" zStart="BeamPipe_Cooling_zpos5" zEnd="BeamPipe_Cooling_zpos6" rStart="0">
         <layer material="beam" thickness="BeamPipe_Central_inner_radius" vis="VacVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness3" vis="TubeVis"/>
-        <layer material="G4_PARAFFIN" thickness="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" thicknessEnd="0" vis="GrayVis"/>
+        <layer material="G4_WATER" thickness="BeamPipe_Cooling_outer_radius5-BeamPipe_Central_inner_radius-BeamPipe_Al_thickness3-BeamPipe_Al_thickness4" thicknessEnd="0" vis="GrayVis"/>
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness4" thicknessEnd="BeamPipe_Al_thickness-BeamPipe_Al_thickness3" vis="TubeVis"/>
       </section>
       <section type="Waist" name="Waist1st" zStart="BeamPipe_CentralAl_zmax" zEnd="BeamPipe_ExpandAl_zmax" rStart="BeamPipe_Central_inner_radius" size="BeamPipe_FirstExpand_width">
         <layer material="G4_Al" thickness="BeamPipe_Al_thickness" vis="TubeVis"/>
+	<window material="G4_Be" thickness="BeamPipe_Al_thickness" z0="90.5*mm" r0="0.5*mm" r1="6.5*mm" length="377*mm" vis="BlueVis"/>
       </section>
       <!-- cable pipe-->
       <section type="CenterSide" name="IPCablePipeFront" zStart="BeamPipe_CablePipe_zpos0" zEnd="BeamPipe_CablePipe_zpos1" rStart="BeamPipe_CablePipe_inner_radius1">
