@@ -82,8 +82,8 @@ private:
     // the name here is without suffix "Collection"
     Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
         "TrackerCollections",
-	{"VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
-	 "OTKBarrel", "OTKEndcap", "MuonBarrel", "MuonEndcap"},
+        {"VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
+         "OTKBarrel", "OTKEndcap", "MuonBarrel", "MuonEndcap"},
         "Names of the Tracker collections (without suffix Collection)"};
     Gaudi::Property<std::vector<std::string>> m_calorimeterColNames{this, 
         "CalorimeterCollections",
@@ -118,6 +118,18 @@ private:
     Gaudi::Property<double> m_ecal_time_window{this, "EcalTimeWindow", 150.0, "The time window for ECAL in ns"};
     Gaudi::Property<double> m_hcal_time_window{this, "HcalTimeWindow", 1000.0, "The time window for HCAL in ns"};
     Gaudi::Property<double> m_muon_time_window{this, "MuonTimeWindow", 100.0, "The time window for MUON in ns"};
+
+    // time window cut modes in different subdetectors.
+    // mode:
+    // - 1: cut only background,
+    // - 2: cut both signal and background
+    Gaudi::Property<int> m_vxd_time_cut_mode{this, "VXDTimeCutMode", 2, "time window cut mode for VXD (1: background only, 2: both)"};
+    Gaudi::Property<int> m_itk_time_cut_mode{this, "ITKTimeCutMode", 2, "time window cut mode for ITK (1: background only, 2: both)"};
+    Gaudi::Property<int> m_tpc_time_cut_mode{this, "TPCTimeCutMode", 2, "time window cut mode for TPC (1: background only, 2: both)"};
+    Gaudi::Property<int> m_otk_time_cut_mode{this, "OTKTimeCutMode", 2, "time window cut mode for OTK (1: background only, 2: both)"};
+    Gaudi::Property<int> m_ecal_time_cut_mode{this, "EcalTimeCutMode", 1, "time window cut mode for ECAL (1: background only, 2: both)"};
+    Gaudi::Property<int> m_hcal_time_cut_mode{this, "HcalTimeCutMode", 1, "time window cut mode for HCAL (1: background only, 2: both)"};
+    Gaudi::Property<int> m_muon_time_cut_mode{this, "MuonTimeCutMode", 2, "time window cut mode for MUON (1: background only, 2: both)"};
 };
 
 #endif
