@@ -40,7 +40,17 @@ struct BackgroundEvent {
         kMUON = 6, // 100 ns // from Xiaolong Wang
         kNSubDetType
     };
+
+    // different time window cut modes
+    // Background hits are always applied the time window cut.
+    enum TimeCutMode {
+        // kNoCut = 0, // no cut. This option is not used to avoid loading too many hits.
+        kCutBkgOnly = 1, // cut only background hits. 
+        kCutBoth = 2 // cut both signal and background hits
+    };
+
     std::vector<double> subdet2twindow = {200, 30, 34000, 30, 150, 1000, 100}; // key is subdet, value is time window.
+    std::vector<int> subdet2tcutmode = {kCutBoth, kCutBoth, kCutBoth, kCutBoth, kCutBkgOnly, kCutBkgOnly, kCutBoth}; // key is subdet, value is time cut mode.
     std::vector<std::vector<std::string>> subdet2colnames = {
         {"VXD"},
         {"ITK"},

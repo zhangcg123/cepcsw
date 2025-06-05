@@ -202,6 +202,14 @@ StatusCode DetSimMixingAlg::execute() {
     bkg_evt.subdet2twindow[BackgroundEvent::kHCAL] = m_hcal_time_window.value();
     bkg_evt.subdet2twindow[BackgroundEvent::kMUON] = m_muon_time_window.value();
 
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kVXD] = m_vxd_time_cut_mode.value();
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kITK] = m_itk_time_cut_mode.value();
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kTPC] = m_tpc_time_cut_mode.value();
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kOTK] = m_otk_time_cut_mode.value();
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kECAL] = m_ecal_time_cut_mode.value();
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kHCAL] = m_hcal_time_cut_mode.value();
+    bkg_evt.subdet2tcutmode[BackgroundEvent::kMUON] = m_muon_time_cut_mode.value();
+
     info() << "Creating a BackgroundEvent..." << endmsg;
     for (size_t i = 0; i < batches.size(); ++i) {
         info() << "  Batch " << i << ": " << endmsg;
@@ -292,12 +300,15 @@ StatusCode DetSimMixingAlg::execute() {
 
             // keep the same time windows for signal and backgrounds.
             auto time_window = bkg_evt.subdet2twindow[bkg_evt.collection_subdet[col_name]];
+            int time_cut_mode = bkg_evt.subdet2tcutmode[bkg_evt.collection_subdet[col_name]];
 
             for (auto oldhit: *sig_col) {
                 auto t = oldhit.getTime();
-                if (t < -time_window || t > time_window) {
-                    // if the hit is not in the time window, skip.
-                    continue;
+                if (time_cut_mode == BackgroundEvent::kCutBoth) {
+                    if (t < -time_window || t > time_window) {
+                        // if the hit is not in the time window, skip.
+                        continue;
+                    }
                 }
 
                 auto newhit = newcol->create();
@@ -347,21 +358,24 @@ StatusCode DetSimMixingAlg::execute() {
 
             // keep the same time windows for signal and backgrounds.
             auto time_window = bkg_evt.subdet2twindow[bkg_evt.collection_subdet[col_name]];
-
+            int time_cut_mode = bkg_evt.subdet2tcutmode[bkg_evt.collection_subdet[col_name]];
 
             for (auto oldhit: *sig_col) {
-                // check whether the hit is in the time window.
-                bool is_in_window = false;
-                for (auto contrib: oldhit.getContributions()) {
-                    auto t = contrib.getTime();
-                    if (t < -time_window || t > time_window) {
+                // only the kCutBoth mode needs to discard the hits which are not in the time window.
+                if (time_cut_mode == BackgroundEvent::kCutBoth) {
+                    // check whether the hit is in the time window.
+                    bool is_in_window = false;
+                    for (auto contrib: oldhit.getContributions()) {
+                        auto t = contrib.getTime();
+                        if (t < -time_window || t > time_window) {
+                            continue;
+                        }
+                        is_in_window = true;
+                        break;
+                    }
+                    if (not is_in_window) {
                         continue;
                     }
-                    is_in_window = true;
-                    break;
-                }
-                if (not is_in_window) {
-                    continue;
                 }
 
                 auto newhit = newcol->create();
