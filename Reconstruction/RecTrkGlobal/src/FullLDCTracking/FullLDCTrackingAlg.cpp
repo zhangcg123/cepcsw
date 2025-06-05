@@ -431,7 +431,68 @@ fitstart:
     // sort hits in R or z
     std::vector< std::pair<float, edm4hep::TrackerHit> > sort_values;
     sort_values.reserve(trkHits.size());
-    
+
+    double r_at_rmax = 0;
+    double z_at_rmax = 0;
+    double r_at_rmin = DBL_MAX;
+    double z_at_rmin = 0;
+    double z_at_zmin = DBL_MAX;
+    for (auto hit : trkHits) {
+      auto&  pos    = hit.getPosition();
+      double radius = sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
+      double zabs   = fabs(pos[2]);
+      auto   cellID = hit.getCellID();
+      unsigned det  = cellID&0x1F;
+      if (det == CEPCConf::DetID::ETD) continue;
+      if (radius > r_at_rmax) {
+	r_at_rmax = radius;
+	z_at_rmax = zabs;
+      }
+      if (radius < r_at_rmin) {
+        r_at_rmin = radius;
+        z_at_rmin = zabs;
+      }
+      if (zabs < z_at_zmin) z_at_zmin = zabs;
+    }
+    double half_length_z = fabs(z_at_rmax - z_at_rmin);
+    for (auto hit : trkHits) {
+      auto&  pos    = hit.getPosition();
+      double radius = sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
+      double zabs   = fabs(pos[2]);
+      auto   cellID = hit.getCellID();
+      unsigned det  = cellID&0x1F;
+      if (r_at_rmax > _tpc_inner_r && zabs > z_at_rmax + half_length_z) continue;
+      float value = radius;
+      if (sort_by_r) {
+	// OTKEndcap: always larger than others
+	if (det == CEPCConf::DetID::ETD) value += 10*r_at_rmax;
+	else {
+	  // second half of circle
+	  if (z_at_rmax > z_at_rmin) {
+	    if (zabs > z_at_rmax) value += (r_at_rmax - radius);
+	  }
+	  else {
+	    if (z_at_zmin == z_at_rmax && r_at_rmax > _tpc_outer_r && r_at_rmin < _tpc_inner_r) {
+	      // FIXME: how to deal with only half and tanLambda*z < 0
+	      if (det == CEPCConf::DetID::ETD) value = radius;
+	    }
+	    else {
+	      if (zabs > z_at_rmax) value += (r_at_rmax - radius);
+	    }
+	  }
+	}
+      }
+      else {
+	// TPC
+        if (det == CEPCConf::DetID::TPC) value = _tpc_inner_r + zabs;
+        // OTKBarrel: always larger than TPC's
+        else if (det == CEPCConf::DetID::SET) value = _tpc_max_drift_length + zabs;
+	// OTKEndcap: always larger than others
+        else if (det == CEPCConf::DetID::ETD) value = 10*_tpc_max_drift_length + zabs;
+      }
+      sort_values.push_back(std::make_pair(value, hit));
+    }
+    /*
     for (std::vector<edm4hep::TrackerHit>::iterator it=trkHits.begin(); it!=trkHits.end(); ++it) {
       edm4hep::TrackerHit h = *it;
       //float value = sort_by_z ? h.getPosition()[2] : h.getPosition()[0]*h.getPosition()[0]+h.getPosition()[1]*h.getPosition()[1];
@@ -446,9 +507,14 @@ fitstart:
 	// OTKEndcap:
 	else if (z>_tpc_max_drift_length) value = _tpc_max_drift_length + value;
       }
+      else {
+	// OTKEndcap:
+	if (z>_tpc_max_drift_length) value = _tpc_outer_r + value;
+      }
+      debug() << sqrt(h.getPosition()[0]*h.getPosition()[0]+h.getPosition()[1]*h.getPosition()[1]) << " " << z << " " << value << endmsg;
       sort_values.push_back(std::make_pair(value, *it));
     }
-    
+    */
     sort(sort_values.begin(),sort_values.end());
     
     trkHits.clear();
@@ -512,10 +578,10 @@ fitstart:
     outliers = m_fitTool->GetOutliers();
 
     if (error_code != IMarlinTrack::success) {
-      debug() << "FullLDCTrackingAlg::AddTrackColToEvt: Track fit failed with error code " << error_code << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
+      debug() << "AddTrackColToEvt: Track fit failed " << MarlinTrk::errorCode(error_code) << " track dropped. Number of hits = "<< trkHits.size() << endmsg;
       m_fitTool->Clear();
       if (fit_count==1) {
-	sort_by_r = !sort_by_r;
+	use_ts_initial = !use_ts_initial;//sort_by_r = !sort_by_r;
 	goto fitstart;
       }
       // TODO: to pick up old tracks
@@ -599,8 +665,8 @@ fitstart:
       }
     }
     
-    float d0TrkCand = trkCand->getD0();
-    float z0TrkCand = trkCand->getZ0();
+    float d0TrkCand = trkStateIP.D0;//trkCand->getD0();
+    float z0TrkCand = trkStateIP.Z0;//trkCand->getZ0();
     //    float phi0TrkCand = trkCand->getPhi();
     // FIXME, fucd
 #if EDM4HEP_BUILD_VERSION > EDM4HEP_VERSION(0, 9, 0)
@@ -658,6 +724,7 @@ fitstart:
 	      << " rejectTrackonSiliconHits " << rejectTrackonSiliconHits
 	      << " rejectTrackonImpactParameters " << rejectTrackonImpactParameters
 	      << endmsg;
+      if (rejectTrackonImpactParameters) debug() << "d0TrkCand = " << d0TrkCand << " z0TrkCand = " << z0TrkCand << endmsg;
       /*
       if (fit_count==1) {
 	fit_backwards = !fit_backwards;
@@ -5324,6 +5391,7 @@ StatusCode FullLDCTrackingAlg::setupGeom(){
   } catch(std::runtime_error& e) {
     error() << e.what() << endmsg;
   }
+  debug() << "TPC: drift_length = " << _tpc_max_drift_length << " inner_r = " << _tpc_inner_r << " outer_r = " << _tpc_outer_r << " pad_height = " << _tpc_pad_height << endmsg;
 
   _nLayersFTD = 0;
   try {
