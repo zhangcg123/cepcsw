@@ -25,6 +25,7 @@ class SmearDigiTool : public extends<AlgTool, IDigiTool> {
 			  edm4hep::MCRecoTrackerAssociationCollection* assCol) override;
   virtual StatusCode Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHitCollection* hitCol,
 			  edm4hep::MCRecoTrackerAssociationCollection* assCol) override;
+  StatusCode AppendNoise(edm4hep::TrackerHitCollection* hitCol);
 
   StatusCode initialize() override;
   StatusCode finalize() override;
@@ -51,6 +52,10 @@ class SmearDigiTool : public extends<AlgTool, IDigiTool> {
   Gaudi::Property<bool>  m_parameterize{this, "ParameterizeResolution", false};
   Gaudi::Property<std::vector<float> > m_parU{this, "ParametersU", {0}};
   Gaudi::Property<std::vector<float> > m_parV{this, "ParametersV", {0}};
+
+  Gaudi::Property<bool>                m_appendNoise{this, "AppendRandomNoise", false};
+  // per cm^2 per readout window
+  Gaudi::Property<float>               m_noiseLevel{this, "NoiseLevel", 0.005};
 
   SmartIF<IRndmGenSvc> m_randSvc;
   SmartIF<IGeomSvc>    m_geosvc;

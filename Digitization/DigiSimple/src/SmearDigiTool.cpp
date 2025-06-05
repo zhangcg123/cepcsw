@@ -79,6 +79,12 @@ StatusCode SmearDigiTool::Call(const edm4hep::SimTrackerHitCollection* simCol, e
     StatusCode sc = Call(simhit, hitCol, assCol);
     if (sc.isFailure()) return sc;
   }
+
+  if (m_appendNoise) {
+    StatusCode sc = AppendNoise(hitCol);
+    if (sc.isFailure()) return sc;
+  }
+
   return StatusCode::SUCCESS;
 }
 
@@ -104,7 +110,7 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
   auto& mom   = simhit.getMomentum();
 
   debug() << "Hit " << simhit.id() << " cell: " << cellId << " d:" << system << " l:" << layer << " m:" << module << " s:" << sensor
-	  << " p = " << mom.x << ", " << mom.y << ", " << mom.z << " e:" << e << " t:" << t << endmsg;
+	  << " p = " << mom.x << ", " << mom.y << ", " << mom.z << " e:" << e << " t:" << t << " isBG: " << simhit.isOverlay() << endmsg;
 
   dd4hep::rec::ISurface* surface = nullptr;
   auto it = m_surfaces->find(cellId);
@@ -341,6 +347,90 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
   else {
     fatal() << "Not plane and cylinder: " << typeSurface << endmsg;
     return StatusCode::FAILURE;
+  }
+
+  return StatusCode::SUCCESS;
+}
+
+StatusCode SmearDigiTool::AppendNoise(edm4hep::TrackerHitCollection* hitCol) {
+  for (const auto& pair/*[cellId, surface]*/ : *m_surfaces) {
+    auto cellId = pair.first;
+    auto surface = pair.second;
+    int layer   = m_decoder->get(cellId, CEPCConf::DetCellID::layer);
+    if ((m_resU.size() > 1 && layer > m_resU.size()-1) || (m_resV.size() > 1 && layer > m_resV.size()-1)) {
+      fatal() << "layer exceeds resolution vector, please check input parameters ResolutionU and ResolutionV" << endmsg;
+      return StatusCode::FAILURE;
+    }
+    double resU = (m_resU.size() > 1 ? m_resU.value().at(layer) : m_resU.value().at(0));
+    double resV = (m_resV.size() > 1 ? m_resV.value().at(layer) : m_resV.value().at(0));
+
+    auto& typeSurface = surface->type();
+    double width  = surface->length_along_u();
+    double length = surface->length_along_v();
+    double area   = (width/dd4hep::cm)*(length/dd4hep::cm);
+    debug() << "plane " << typeSurface.isPlane() << " cylinder " << typeSurface.isCylinder() << " cellId = " << cellId << " width = " << width << " length = " << length << endmsg;
+
+    int nnoise = std::ceil(m_noiseLevel*area);
+    double factor = sqrt(nnoise/m_noiseLevel/area);
+    for (int inoise=0; inoise<nnoise; inoise++) {
+      double u = m_randSvc->generator(Rndm::Flat(-0.5*width*factor, 0.5*width*factor))->shoot();
+      double v = m_randSvc->generator(Rndm::Flat(-0.5*length*factor, 0.5*length*factor))->shoot();
+      dd4hep::rec::Vector2D local(u, v);
+      dd4hep::rec::Vector3D global = surface->localToGlobal(local);
+      if (!surface->insideBounds(global)) continue;
+
+      auto trkHit = hitCol->create();
+      trkHit.setCellID(cellId);
+      edm4hep::Vector3d pos(global.x()/dd4hep::mm, global.y()/dd4hep::mm, global.z()/dd4hep::mm);
+      trkHit.setPosition(pos);
+
+      dd4hep::rec::Vector3D uVec = surface->u(global);
+      dd4hep::rec::Vector3D vVec = surface->v(global);
+      float u_direction[2];
+      u_direction[0] = uVec.theta();
+      u_direction[1] = uVec.phi();
+
+      float v_direction[2];
+      v_direction[0] = vVec.theta();
+      v_direction[1] = vVec.phi();
+
+      debug() << " U: " << uVec << endmsg;
+      debug() << " V: " << vVec << endmsg;
+      debug() << " N: " << surface->normal() << endmsg;
+      debug() << " O: " << surface->origin() << endmsg;
+
+      std::bitset<32> type;
+      if (typeSurface.isPlane() && m_usePlanarTag) {
+	std::array<float, 6> cov;
+	cov[0] = u_direction[0];
+	cov[1] = u_direction[1];
+	cov[2] = resU;
+	cov[3] = v_direction[0];
+	cov[4] = v_direction[1];
+	cov[5] = resV;
+	trkHit.setCovMatrix(cov);
+
+	type.set(CEPCConf::TrkHitTypeBit::PLANAR);
+      }
+      else if (typeSurface.isPlane()) {
+	trkHit.setCovMatrix(CEPC::ConvertToCovXYZ(resU, u_direction[0], u_direction[1], resV, v_direction[0], v_direction[1]));
+      }
+      else if (typeSurface.isCylinder()) {
+	trkHit.setCovMatrix(std::array<float, 6>{resU*resU/2., 0, resU*resU/2, 0, 0, resV*resV});
+	type.set(CEPCConf::TrkHitTypeBit::CYLINDER);
+      }
+
+      if(/*m_isStrip ||*/ (resU != 0 && resV == 0)){
+	type.set(CEPCConf::TrkHitTypeBit::ONE_DIMENSIONAL);
+      }
+      trkHit.setType((int)type.to_ulong());
+
+      debug() <<"Position of noise hit global: ( "
+	      << global.x() <<" "<< global.y() <<" "<< global.z() << " ) "
+	      << "local: ( "
+	      << local.u() << " " << local.v() << " )"
+	      << endmsg;
+    }
   }
 
   return StatusCode::SUCCESS;
