@@ -224,7 +224,7 @@ static dd4hep::Ref_t create_element(dd4hep::Detector& theDetector, xml_h e, dd4h
 		z_bent = -flex_length/2 + sensor_length/2 + (static_cast<int>(ix/3) + 1)*backbone + ix*(sensor_length + switches);
 	    }
 	    else {
-		z_bent = -flex_length/2 + sensor_length/2 + (static_cast<int>(ix/3) + 1)*backbone + ix*(sensor_length + switches) + mechanical_gap;
+		z_bent = -flex_length/2 + sensor_length/2 + (static_cast<int>(ix/3))*backbone + ix*(sensor_length + switches) + switches + mechanical_gap;
 	    }
 	    for (int iy = 0; iy < ny; iy++) {
 	        if (iy % 2 != 0) {
