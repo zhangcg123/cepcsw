@@ -58,11 +58,21 @@ public:
             }
 
             auto time_window = evt.subdet2twindow[evt.collection_subdet[name]];
-            
+            auto oow_time_window = evt.subdet2oowtwindow[evt.collection_subdet[name]];
+
             // if the current time is out of the time window, then skip this collection.
-            if (current_time_in_ns < -time_window || current_time_in_ns > time_window) {
-                continue;
+            if (oow_time_window <= 0) {
+                if (current_time_in_ns < -time_window || current_time_in_ns > time_window) {
+                    continue;
+                }
+            } else {
+                if ((current_time_in_ns < -oow_time_window || current_time_in_ns > oow_time_window)) {
+                    // if the current time is out of the oow time window, then skip this collection.
+                    continue;
+                }
             }
+
+            
 
             // std::cout << "Collection: " << name 
             //           << ", index: " << colidx 
@@ -77,14 +87,28 @@ public:
 
             if (auto col = dynamic_cast<const edm4hep::SimTrackerHitCollection*>(col_)) {
                 auto& trk_col = evt.tracker_hits[colidx];
+                auto& oow_trk_col = evt.oow_tracker_hits[colidx];
                 for (auto oldhit: *col) {
+                    auto ptr_trk_col = &trk_col;
+
                     auto t = oldhit.getTime() + current_time_in_ns;
-                    if (t < -time_window || t > time_window) {
+                    if ((oow_time_window <= 0)) {
                         // if the hit is not in the time window, skip.
-                        continue;
+                        if (t < -time_window || t > time_window) {
+                            continue;
+                        }
+                    } else {
+                        if ((t < -oow_time_window || t > oow_time_window)) {
+                            // if the hit is not in the oow time window, skip.
+                            continue;
+                        }
+                        if ((t < -time_window || t > time_window)) {
+                            // if the hit is not in the oow time window, skip.
+                            ptr_trk_col = &oow_trk_col;
+                        }
                     }
 
-                    auto newhit = trk_col.create();
+                    auto newhit = (*ptr_trk_col).create();
                     newhit.setCellID(oldhit.getCellID());
                     newhit.setEDep(oldhit.getEDep());
                     newhit.setTime(t); // new

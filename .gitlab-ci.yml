@@ -39,6 +39,7 @@ stages:
     CEPCSW_LCG_RELEASE: LCG
     CEPCSW_LCG_PLATFORM: x86_64-el9-gcc11-opt
     CEPCSW_LCG_VERSION: 105.0.0
+    NJOBS: 16
 
 # for k8s
 .build_template_k8s:
