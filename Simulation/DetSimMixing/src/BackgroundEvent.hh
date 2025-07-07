@@ -20,6 +20,7 @@
  */
 struct BackgroundEvent {
     std::map<size_t, edm4hep::SimTrackerHitCollection> tracker_hits;
+    std::map<size_t, edm4hep::SimTrackerHitCollection> oow_tracker_hits; // oow: out-of-window
     std::map<size_t, edm4hep::SimCalorimeterHitCollection> calorimeter_hits;
     std::map<size_t, edm4hep::CaloHitContributionCollection> calo_contribs;
 
@@ -60,6 +61,8 @@ struct BackgroundEvent {
         {"Hcal"},
         {"Muon"}        
     };
+
+    std::vector<double> subdet2oowtwindow = {1000, 1000, -1, -1, -1, -1, -1}; // key is subdet, value is oow time window. -1 means no oow time window.
 };
 
 #endif

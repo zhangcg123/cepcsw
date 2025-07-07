@@ -72,6 +72,9 @@ StatusCode DetSimMixingAlg::initialize() {
         auto col = new DataHandle<edm4hep::SimTrackerHitCollection>(prefix + name_col, Gaudi::DataHandle::Writer, this);
         m_trackerColMap[name_col] = col;
 
+        auto oow_col = new DataHandle<edm4hep::SimTrackerHitCollection>("oow" + prefix + name_col, Gaudi::DataHandle::Writer, this);
+        m_oowTrackerColMap[name_col] = oow_col;
+
         auto sig_col = new DataHandle<edm4hep::SimTrackerHitCollection>(name_col, Gaudi::DataHandle::Reader, this);
         m_sig_trackerColMap[name_col] = sig_col;
         
@@ -210,6 +213,9 @@ StatusCode DetSimMixingAlg::execute() {
     bkg_evt.subdet2tcutmode[BackgroundEvent::kHCAL] = m_hcal_time_cut_mode.value();
     bkg_evt.subdet2tcutmode[BackgroundEvent::kMUON] = m_muon_time_cut_mode.value();
 
+    bkg_evt.subdet2oowtwindow[BackgroundEvent::kVXD] = m_oow_vxd_time_window.value();
+    bkg_evt.subdet2oowtwindow[BackgroundEvent::kITK] = m_oow_itk_time_window.value();
+
     info() << "Creating a BackgroundEvent..." << endmsg;
     for (size_t i = 0; i < batches.size(); ++i) {
         info() << "  Batch " << i << ": " << endmsg;
@@ -276,13 +282,32 @@ StatusCode DetSimMixingAlg::execute() {
         auto colidx = bkg_evt.collection_index[col_name];
 
         if (bkg_evt.tracker_hits.count(colidx)) {
+            if (m_trackerColMap.count(col_name)==0) {
+                warning() << "Collection " << col_name << " is not in the tracker collections." << endmsg;
+                continue;
+            }
+
             auto& col = bkg_evt.tracker_hits[colidx];
+            auto& oow_col = bkg_evt.oow_tracker_hits[colidx];
             
             auto newcol = m_trackerColMap[col_name]->createAndPut();
+            auto newcol_oow = m_oowTrackerColMap[col_name]->createAndPut();
 
             // background
             for (auto oldhit: col) {
                 auto newhit = newcol->create();
+                newhit.setCellID(oldhit.getCellID());
+                newhit.setEDep(oldhit.getEDep());
+                newhit.setTime(oldhit.getTime()); // new
+                newhit.setPathLength(oldhit.getPathLength());
+                newhit.setQuality(oldhit.getQuality());
+                newhit.setPosition(oldhit.getPosition());
+                newhit.setMomentum(oldhit.getMomentum());
+            }
+
+            // background (oow)
+            for (auto oldhit: oow_col) {
+                auto newhit = newcol_oow->create();
                 newhit.setCellID(oldhit.getCellID());
                 newhit.setEDep(oldhit.getEDep());
                 newhit.setTime(oldhit.getTime()); // new

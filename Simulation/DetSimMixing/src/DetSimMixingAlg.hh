@@ -79,6 +79,10 @@ private:
     std::map<std::string, DataHandle<edm4hep::SimCalorimeterHitCollection>*> m_calorimeterColMap;
     std::map<std::string, DataHandle<edm4hep::CaloHitContributionCollection>*> m_caloContribColMap;
 
+    // oow hit collections. Hits outside the detector readout time window, 
+    // but inside the oow time window, will be recorded into these collections.
+    std::map<std::string, DataHandle<edm4hep::SimTrackerHitCollection>*> m_oowTrackerColMap;
+
     // the name here is without suffix "Collection"
     Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
         "TrackerCollections",
@@ -130,6 +134,15 @@ private:
     Gaudi::Property<int> m_ecal_time_cut_mode{this, "EcalTimeCutMode", 1, "time window cut mode for ECAL (1: background only, 2: both)"};
     Gaudi::Property<int> m_hcal_time_cut_mode{this, "HcalTimeCutMode", 1, "time window cut mode for HCAL (1: background only, 2: both)"};
     Gaudi::Property<int> m_muon_time_cut_mode{this, "MuonTimeCutMode", 2, "time window cut mode for MUON (1: background only, 2: both)"};
+
+    // An out-of-window (OOW) time window
+    // When a track passes through the detector, it will generate hits in the tracker and calo detector.
+    // If a tracker hit is outside the detector readout time window, it will be discarded. 
+    // Therefore, only the calo hits will be recorded. This will make the reconstruction difficult.
+    // To study this effect, we can set a OOW time window for the tracker hits. 
+    // These tracker hits will be recorded into another collection.
+    Gaudi::Property<double> m_oow_vxd_time_window{this, "oowVXDTimeWindow", 1000.0, "The oow time window for VXD in ns"};
+    Gaudi::Property<double> m_oow_itk_time_window{this, "oowITKTimeWindow", 1000.0, "The oow time window for ITK in ns"};
 };
 
 #endif
