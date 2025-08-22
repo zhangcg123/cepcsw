@@ -19,6 +19,7 @@ rndmgensvc.Engine = rndmengine.name()
 #geometry_option = "TDR_o1_v01/TDR_o1_v01-oldVersion.xml"
 #geometry_option = "TDR_o1_v01/TDR_o1_v01-patchOTK.xml"
 geometry_option = "TDR_o1_v01/TDR_o1_v01.xml"
+# geometry_option = "TDR_o1_v01/TDR_o1_v01-NonuniformField.xml"
 
 if not os.getenv("DETCRDROOT"):
     print("Can't find the geometry. Please setup envvar DETCRDROOT." )
