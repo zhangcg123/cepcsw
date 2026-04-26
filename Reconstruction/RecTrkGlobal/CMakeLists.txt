@@ -10,7 +10,6 @@ gaudi_add_module(Tracking
                  LINK EventSeeder
                       TrackSystemSvcLib
                       DetSegmentation
-                      Gaudi::GaudiAlgLib
                       Gaudi::GaudiKernel
                       ${GSL_LIBRARIES}
                       ${LCIO_LIBRARIES}

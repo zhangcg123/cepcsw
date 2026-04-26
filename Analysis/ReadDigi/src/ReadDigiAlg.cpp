@@ -6,7 +6,7 @@
 DECLARE_COMPONENT(ReadDigiAlg)
 
 ReadDigiAlg::ReadDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc), 
+    : Algorithm(name, svcLoc), 
      _nEvt(0)
 {
   declareProperty("MCParticle",  m_MCParticleCol, "MCParticle collection (input)");
@@ -159,7 +159,7 @@ StatusCode ReadDigiAlg::initialize()
   m_fulltrktree->Branch("truthMC_EPz", &m_truthMC_EPz);
   m_fulltrktree->Branch("truthMC_weight", &m_truthMC_weight);
 
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode ReadDigiAlg::execute()
@@ -516,7 +516,7 @@ StatusCode ReadDigiAlg::finalize()
   m_fulltrktree->Write();
   m_wfile->Close(); 
 
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 StatusCode ReadDigiAlg::Clear()

@@ -2,7 +2,7 @@
 #define TEST_EDM4HEP_READ_DC_ALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 namespace edm4hep {
     class EventHeaderCollection;
@@ -10,7 +10,7 @@ namespace edm4hep {
     class SimTrackerHitCollection;
 }
 
-class Edm4hepReadDCAlg : public GaudiAlgorithm
+class Edm4hepReadDCAlg : public Algorithm
 {
 
     public :

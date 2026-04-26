@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -42,7 +42,7 @@ class TTree;
 //    std::map<std::string, std::vector<edm4hep::CalorimeterHit> > collectionMap_CaloHit;
 //};
 
-class MarlinArbor  : public GaudiAlgorithm
+class MarlinArbor  : public Algorithm
 {
 	public:
 

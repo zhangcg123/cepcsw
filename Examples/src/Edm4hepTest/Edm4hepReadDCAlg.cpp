@@ -6,7 +6,7 @@
 DECLARE_COMPONENT(Edm4hepReadDCAlg)
 
 Edm4hepReadDCAlg::Edm4hepReadDCAlg(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
 {
     declareProperty("MCParticleCol", m_mcParCol, "MCParticle collection (input)");
     declareProperty("DCHitCol", m_dcCol, "Drift Chamber collections (input)");
@@ -15,7 +15,7 @@ Edm4hepReadDCAlg::Edm4hepReadDCAlg(const std::string& name, ISvcLocator* svcLoc)
 StatusCode Edm4hepReadDCAlg::initialize()
 {
     debug() << "begin initialize Edm4hepReadDCAlg" << endmsg;
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode Edm4hepReadDCAlg::execute()
@@ -81,5 +81,5 @@ StatusCode Edm4hepReadDCAlg::execute()
 StatusCode Edm4hepReadDCAlg::finalize()
 {
     debug() << "begin finalize Edm4hepReadDCAlg" << endmsg;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

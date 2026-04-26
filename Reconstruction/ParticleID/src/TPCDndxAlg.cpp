@@ -15,7 +15,7 @@ using namespace edm4hep;
 
 DECLARE_COMPONENT(TPCDndxAlg)
 
-TPCDndxAlg::TPCDndxAlg(const std::string& name, ISvcLocator* svcLoc) : GaudiAlgorithm(name, svcLoc) {
+TPCDndxAlg::TPCDndxAlg(const std::string& name, ISvcLocator* svcLoc) : Algorithm(name, svcLoc) {
     // Input
     declareProperty("CompleteTracks", _trackCol, "handler of the input track collection");
     declareProperty("CompleteTracksParticleAssociation", _trkParAssCol, "handler of the input track particle association collection");
@@ -46,7 +46,7 @@ StatusCode TPCDndxAlg::initialize() {
         return StatusCode::FAILURE;
     }
 
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode TPCDndxAlg::execute() {

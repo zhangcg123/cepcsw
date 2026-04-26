@@ -38,7 +38,7 @@
 DECLARE_COMPONENT( PlanarDigiAlg )
 
 PlanarDigiAlg::PlanarDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+  : Algorithm(name, svcLoc),
     _nEvt(0)
 {
   //_description = "PlanarDigiAlg creates TrackerHits from SimTrackerHits, smearing them according to the input parameters." ;
@@ -104,7 +104,7 @@ StatusCode PlanarDigiAlg::initialize()
 
   _trackSystemSvc->removeTrackSystem(this);
   
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode PlanarDigiAlg::execute()
@@ -424,5 +424,5 @@ StatusCode PlanarDigiAlg::finalize()
 
   if(_rng) gsl_rng_free(_rng);
 
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }

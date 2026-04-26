@@ -3,8 +3,7 @@
 # Modules
 gaudi_add_module(AnalysisPID
     SOURCES src/AnalysisPIDAlg.cpp
-                 LINK Gaudi::GaudiAlgLib
-                      Gaudi::GaudiKernel
+                 LINK Gaudi::GaudiKernel
                       DataHelperLib
                       DetSegmentation
                       DetInterface

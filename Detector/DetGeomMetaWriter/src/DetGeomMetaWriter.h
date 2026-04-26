@@ -3,7 +3,7 @@
 
 // GAUDI
 #include "DetInterface/IGeomSvc.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/SmartIF.h"
 
 // key4hep
@@ -15,7 +15,7 @@
 /** @class GeomMetaWriter
  *  Lightweight producer for edm data to test cellID
  */
-class GeomMetaWriter : public GaudiAlgorithm {
+class GeomMetaWriter : public Algorithm {
 public:
   explicit GeomMetaWriter(const std::string &, ISvcLocator *);
   virtual ~GeomMetaWriter();

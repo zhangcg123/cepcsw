@@ -22,7 +22,7 @@
 DECLARE_COMPONENT(RecDCHDedxAlg)
 
 RecDCHDedxAlg::RecDCHDedxAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc)
+: Algorithm(name, svcLoc)
 {
     declareProperty("DCHitAssociationCollection", m_dcHitAssociationCol, "Handle of association collection");
     declareProperty("DCTrackCollection", m_dcTrackCol,"Handle of input Track collection");
@@ -53,7 +53,7 @@ StatusCode RecDCHDedxAlg::initialize()
         }
     }
 
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 
@@ -212,7 +212,7 @@ StatusCode RecDCHDedxAlg::execute()
 
 StatusCode RecDCHDedxAlg::finalize()
 {
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 double RecDCHDedxAlg::cal_dedx_bitrunc(float truncate, std::vector<double> phlist, int & usedhit )

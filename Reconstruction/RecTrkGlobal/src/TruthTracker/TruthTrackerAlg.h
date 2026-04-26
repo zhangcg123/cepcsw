@@ -1,7 +1,7 @@
 #ifndef TruthTrackerAlg_h
 #define TruthTrackerAlg_h
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "k4FWCore/DataHandle.h"
 #include "DD4hep/Fields.h"
 #include "GaudiKernel/NTuple.h"
@@ -32,7 +32,7 @@ namespace edm4hep {
     class MCRecoParticleAssociationCollection;
 }
 
-class TruthTrackerAlg: public GaudiAlgorithm
+class TruthTrackerAlg: public Algorithm
 {
     public:
         TruthTrackerAlg(const std::string& name, ISvcLocator* svcLoc);

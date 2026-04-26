@@ -19,7 +19,7 @@ Steve Aplin 26 June 2009 (DESY)
 #ifndef TPCDigiAlg_h
 #define TPCDigiAlg_h 1
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "k4FWCore/DataHandle.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
@@ -124,7 +124,7 @@ class IEventSeeder;
  * clare.lynch@bristol.ac.uk
  *
  */
-class TPCDigiAlg: public GaudiAlgorithm{
+class TPCDigiAlg: public Algorithm{
 
 public:
 

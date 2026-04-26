@@ -13,7 +13,6 @@ gaudi_add_module(RecGenfitAlg
                 src/PlanarMeasurementSDT.cpp
                 src/DCTrackFinding.cpp
         LINK GearSvc
-             Gaudi::GaudiAlgLib
              Gaudi::GaudiKernel
              ${GEAR_LIBRARIES}
              ${GSL_LIBRARIES}

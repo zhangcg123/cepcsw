@@ -12,7 +12,7 @@ gaudi_add_module(RecActsTracking
                         src/RecActsTracking.cpp
                  LINK DetInterface
                       k4FWCore::k4FWCore
-                      Gaudi::GaudiAlgLib Gaudi::GaudiKernel
+                    Gaudi::GaudiKernel
                       ${LCIO_LIBRARIES} 
                       ${DD4hep_COMPONENT_LIBRARIES}
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict

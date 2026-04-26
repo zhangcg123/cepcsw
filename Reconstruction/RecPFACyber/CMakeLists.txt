@@ -16,7 +16,6 @@ gaudi_add_library(CrystalCaloRecLib
                           CrystalEcalSvcLib
                           DetInterface
                           Gaudi::GaudiKernel
-                          Gaudi::GaudiAlgLib
                           ${CLHEP_LIBRARIES}
                           ${GEAR_LIBRARIES}
                           ${GSL_LIBRARIES}

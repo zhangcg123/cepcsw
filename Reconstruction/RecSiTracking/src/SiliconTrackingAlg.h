@@ -4,7 +4,7 @@
 //#include "marlin/Processor.h"
 //#include <marlin/Global.h>
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
@@ -186,7 +186,7 @@ class HelixClass;
  * <br>
  * @author A. Raspereza (MPI Munich)<br>
  */
-class SiliconTrackingAlg : public GaudiAlgorithm {
+class SiliconTrackingAlg : public Algorithm {
  public:
   
   SiliconTrackingAlg(const std::string& name, ISvcLocator* svcLoc);

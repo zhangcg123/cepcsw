@@ -7,7 +7,7 @@
 DECLARE_COMPONENT(Edm4hepReadAlg)
 
 Edm4hepReadAlg::Edm4hepReadAlg(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
 {
     declareProperty("HeaderCol", m_headerCol);
     declareProperty("MCParticleCol", m_mcParCol, "MCParticle collection (input)");
@@ -17,7 +17,7 @@ Edm4hepReadAlg::Edm4hepReadAlg(const std::string& name, ISvcLocator* svcLoc)
 StatusCode Edm4hepReadAlg::initialize()
 {
     debug() << "begin initialize Edm4hepReadAlg" << endmsg;
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode Edm4hepReadAlg::execute()
@@ -63,5 +63,5 @@ StatusCode Edm4hepReadAlg::execute()
 StatusCode Edm4hepReadAlg::finalize()
 {
     debug() << "begin finalize Edm4hepReadAlg" << endmsg;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

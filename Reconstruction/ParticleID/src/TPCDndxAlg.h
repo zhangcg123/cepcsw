@@ -11,7 +11,7 @@
 #include "edm4hep/RecDqdx.h"
 #include "edm4hep/RecDqdxCollection.h"
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "DetInterface/IGeomSvc.h"
 #include "SimplePIDSvc/ISimplePIDSvc.h"
@@ -22,7 +22,7 @@
  * @author Guang Zhao (zhaog@ihep.ac.cn)
 */
 
-class TPCDndxAlg : public GaudiAlgorithm {
+class TPCDndxAlg : public Algorithm {
 public:
     TPCDndxAlg(const std::string& name, ISvcLocator* svcLoc);
 

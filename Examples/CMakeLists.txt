@@ -12,7 +12,7 @@ gaudi_add_module(Examples
                          src/DumpIDAlg/DumpIDAlg.cpp
                  LINK DetInterface
                       k4FWCore::k4FWCore
-                      Gaudi::GaudiAlgLib Gaudi::GaudiKernel
+                      Gaudi::GaudiKernel
                       ${LCIO_LIBRARIES} 
                       ${DD4hep_COMPONENT_LIBRARIES}
                       EDM4CEPC::edm4cepc EDM4CEPC::edm4cepcDict

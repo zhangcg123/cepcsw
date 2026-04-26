@@ -2,7 +2,7 @@
 #define TEST_EDM4HEP_WRITE_ALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 namespace edm4hep {
     class EventHeaderCollection;
@@ -11,7 +11,7 @@ namespace edm4hep {
     class CaloHitContributionCollection;
 }
 
-class Edm4hepWriteAlg : public GaudiAlgorithm
+class Edm4hepWriteAlg : public Algorithm
 {
 
     public :

@@ -23,7 +23,7 @@ extern IGeomSvc* geomSvc;
 #include "IMPL/TrackStateImpl.h"
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 //#include "GearSvc/IGearSvc.h"
 
 #include "podio/podioVersion.h"

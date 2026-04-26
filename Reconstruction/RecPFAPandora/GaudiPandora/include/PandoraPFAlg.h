@@ -2,7 +2,7 @@
 #define PandoraPFAlg_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -64,7 +64,7 @@ public:
 
 
 
-class PandoraPFAlg : public GaudiAlgorithm
+class PandoraPFAlg : public Algorithm
 {
  
 public:

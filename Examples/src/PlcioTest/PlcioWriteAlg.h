@@ -2,14 +2,14 @@
 #define TEST_PLCIO_WRITE_ALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 namespace plcio {
     class EventHeaderCollection;
     class MCParticleCollection;
 }
 
-class PlcioWriteAlg : public GaudiAlgorithm
+class PlcioWriteAlg : public Algorithm
 {
 
     public :

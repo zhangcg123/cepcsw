@@ -7,7 +7,6 @@ gaudi_add_module(CaloDigi
                       GearSvc
                       DetInterface
                       Gaudi::GaudiKernel
-                      Gaudi::GaudiAlgLib 
                       ${CLHEP_LIBRARIES}
                       ${GEAR_LIBRARIES} 
                       ${GSL_LIBRARIES} 

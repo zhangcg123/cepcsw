@@ -3,7 +3,7 @@
 DECLARE_COMPONENT(TrackParticleRelationAlg)
 
 TrackParticleRelationAlg::TrackParticleRelationAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc){
+: Algorithm(name, svcLoc){
   declareProperty("MCParticleCollection", m_inMCParticleColHdl, "Handle of the Input MCParticle collection");
 }
 
@@ -23,7 +23,7 @@ StatusCode TrackParticleRelationAlg::initialize() {
   }
 
   m_nEvt = 0;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode TrackParticleRelationAlg::execute() {

@@ -2,7 +2,7 @@
 #define RecDCHDedxAlg_h
 
 #include "edm4hep/MCParticleCollection.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/NTuple.h"
 #include "k4FWCore/DataHandle.h"
 #include "DD4hep/Fields.h"
@@ -26,7 +26,7 @@ namespace edm4hep {
     class MCRecoParticleAssociationCollection;
 }
 
-class RecDCHDedxAlg: public GaudiAlgorithm
+class RecDCHDedxAlg: public Algorithm
 {
     public:
         RecDCHDedxAlg(const std::string& name, ISvcLocator* svcLoc);

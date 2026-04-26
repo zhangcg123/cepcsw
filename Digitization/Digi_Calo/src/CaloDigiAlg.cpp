@@ -17,7 +17,7 @@
 DECLARE_COMPONENT( CaloDigiAlg )
 
 CaloDigiAlg::CaloDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+  : Algorithm(name, svcLoc),
     _nEvt(0)
 {
   
@@ -40,7 +40,7 @@ StatusCode CaloDigiAlg::initialize()
   dd4hep::Detector* m_dd4hep = m_geosvc->lcdd();
   if ( !m_dd4hep )  throw "CaloDigiAlg :Failed to get dd4hep::Detector ...";
   m_cellIDConverter = new dd4hep::rec::CellIDPositionConverter(*m_dd4hep);
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode CaloDigiAlg::execute()
@@ -114,5 +114,5 @@ StatusCode CaloDigiAlg::execute()
 StatusCode CaloDigiAlg::finalize()
 {
   info() << "Processed " << _nEvt << " events " << endmsg;
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }

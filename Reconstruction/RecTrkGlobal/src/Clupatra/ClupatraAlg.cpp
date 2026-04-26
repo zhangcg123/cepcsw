@@ -150,7 +150,7 @@ struct MeanAbsZOfTrack{
 
 DECLARE_COMPONENT( ClupatraAlg )
 
-ClupatraAlg::ClupatraAlg(const std::string& name, ISvcLocator* svcLoc) : GaudiAlgorithm(name, svcLoc), _trksystem(0), _gearTPC(0) {
+ClupatraAlg::ClupatraAlg(const std::string& name, ISvcLocator* svcLoc) : Algorithm(name, svcLoc), _trksystem(0), _gearTPC(0) {
 
 		// _description = "ClupatraProcessor : nearest neighbour clustering seeded pattern recognition" ;
 
@@ -270,7 +270,7 @@ StatusCode ClupatraAlg::initialize() {
     }
   }
 
-  return GaudiAlgorithm::initialize();
+	return Algorithm::initialize();
 }
 
 

@@ -2,7 +2,7 @@
 #define HCAL_DIGI_ALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/MutableCaloHitContribution.h"
 #include "edm4hep/MutableSimCalorimeterHit.h"
@@ -35,7 +35,7 @@
 #define C 299.79  // unit: mm/ns
 #define PI 3.141592653
 
-class HcalDigiAlg : public GaudiAlgorithm
+class HcalDigiAlg : public Algorithm
 {
  
 public:

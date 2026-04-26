@@ -5,7 +5,7 @@
 DECLARE_COMPONENT(PlcioReadAlg)
 
 PlcioReadAlg::PlcioReadAlg(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
 {
     declareProperty("HeaderCol", m_headerCol);
     declareProperty("InputCol", m_mcParCol, "MCParticle collection (input)");
@@ -14,7 +14,7 @@ PlcioReadAlg::PlcioReadAlg(const std::string& name, ISvcLocator* svcLoc)
 StatusCode PlcioReadAlg::initialize()
 {
     debug() << "begin initialize PlcioReadAlg" << endmsg;
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode PlcioReadAlg::execute()
@@ -41,5 +41,5 @@ StatusCode PlcioReadAlg::execute()
 StatusCode PlcioReadAlg::finalize()
 {
     debug() << "begin finalize PlcioReadAlg" << endmsg;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

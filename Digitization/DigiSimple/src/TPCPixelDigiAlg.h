@@ -3,7 +3,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/NTuple.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
@@ -12,7 +12,7 @@
 
 #include "DigiTool/IDigiTool.h"
 
-class TPCPixelDigiAlg : public GaudiAlgorithm{
+class TPCPixelDigiAlg : public Algorithm{
  public:
   
   TPCPixelDigiAlg(const std::string& name, ISvcLocator* svcLoc);

@@ -6,7 +6,6 @@ gaudi_add_module(G2CDArbor
                       DecoderHelperLib
                       DetInterface
                       Gaudi::GaudiKernel
-                      Gaudi::GaudiAlgLib
                       ${CLHEP_LIBRARIES}
                       ${GEAR_LIBRARIES}
                       ${GSL_LIBRARIES}

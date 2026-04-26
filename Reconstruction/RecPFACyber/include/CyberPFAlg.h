@@ -12,7 +12,7 @@
 
 #include <string>
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
 #include <DD4hep/Segmentations.h>
@@ -64,7 +64,7 @@
 using namespace Cyber;
 using namespace std;
 
-class CyberPFAlg : public GaudiAlgorithm
+class CyberPFAlg : public ::Algorithm
 {
  
 public:

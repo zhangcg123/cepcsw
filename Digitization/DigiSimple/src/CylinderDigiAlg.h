@@ -3,7 +3,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/NTuple.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
@@ -11,7 +11,7 @@
 #include <DDRec/DetectorData.h>
 #include "DetInterface/IGeomSvc.h"
 
-class CylinderDigiAlg : public GaudiAlgorithm{
+class CylinderDigiAlg : public Algorithm{
  public:
   
   CylinderDigiAlg(const std::string& name, ISvcLocator* svcLoc);

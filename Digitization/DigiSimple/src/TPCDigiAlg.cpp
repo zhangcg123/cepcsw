@@ -52,7 +52,7 @@ bool compare_z( Voxel_tpc* a, Voxel_tpc* b) {
 
 
 TPCDigiAlg::TPCDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+  : Algorithm(name, svcLoc),
     _nEvt(0)
 {
 
@@ -418,7 +418,7 @@ StatusCode TPCDigiAlg::initialize()
   debug()<<" __LINE__"<<endmsg;
   //_cellid_encoder = new BitField64( lcio::ILDCellID0::encoder_string ) ;
   debug()<<" __LINE__"<<endmsg;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 //TPCDigiAlg::processRunHeader( LCRunHeader* run)

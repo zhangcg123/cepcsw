@@ -4,7 +4,6 @@ gaudi_add_module(ReadDigi
                          src/HelixClassD.cc
                  LINK k4FWCore::k4FWCore 
                       Gaudi::GaudiKernel 
-                      Gaudi::GaudiAlgLib 
                       ${CLHEP_LIBRARIES} 
                       ${GSL_LIBRARIES}
                       ${LCIO_LIBRARIES}

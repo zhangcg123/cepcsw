@@ -20,7 +20,7 @@ using namespace Acts::UnitLiterals;
 DECLARE_COMPONENT(RecActsTracking)
 
 RecActsTracking::RecActsTracking(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
 {
 }
 
@@ -173,7 +173,7 @@ StatusCode RecActsTracking::initialize()
     info() << "CKF Track Finder initialized successfully!" << endmsg;
     chronoStatSvc->chronoStop("read geometry");
 
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode RecActsTracking::execute()
@@ -748,7 +748,7 @@ StatusCode RecActsTracking::finalize()
     info() << "Total number of **EventHits2** processed: " << m_n2EventHits << endmsg;
     info() << "Total number of **EventHitsmore** processed: " << m_n3EventHits << endmsg;
 
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 int RecActsTracking::InitialiseVTX()

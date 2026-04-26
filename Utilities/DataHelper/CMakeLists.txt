@@ -21,7 +21,6 @@ gaudi_add_library(DataHelperLib
                           LINK
                              EDM4HEP::edm4hep
                              EDM4HEP::edm4hepDict
-                             Gaudi::GaudiAlgLib
                              Gaudi::GaudiKernel
                              ${GSL_LIBRARIES}
                              ${CLHEP_LIBRARIES}

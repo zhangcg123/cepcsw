@@ -4,7 +4,7 @@
 #include "ArborHit.h"
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -59,7 +59,7 @@ extern std::vector<int> IsoHitsIndex;
 DECLARE_COMPONENT(MarlinArbor)
 
 MarlinArbor::MarlinArbor(const std::string& name, ISvcLocator* svcLoc)
-     : GaudiAlgorithm(name, svcLoc),
+    : Algorithm(name, svcLoc),
           _eventNr(0),_output(0)
 {
 }
@@ -98,7 +98,7 @@ StatusCode MarlinArbor::initialize() {
 	  _hcalCollections.push_back( new CaloType(hcal, Gaudi::DataHandle::Reader, this) );
 	  _calCollections.push_back( new CaloType(hcal, Gaudi::DataHandle::Reader, this) );
      }
-	return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 void MarlinArbor::HitsPreparation()
@@ -358,5 +358,5 @@ StatusCode MarlinArbor::execute()
 StatusCode MarlinArbor::finalize()
 {
 	std::cout<<"Arbor Ends. Good luck"<<std::endl;
-	return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

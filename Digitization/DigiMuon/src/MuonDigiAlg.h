@@ -3,7 +3,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/NTuple.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
@@ -12,7 +12,7 @@
 #include "DetInterface/IGeomSvc.h"
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/MutableCaloHitContribution.h"
 #include "edm4hep/MutableSimCalorimeterHit.h"
 #include "edm4hep/SimCalorimeterHit.h"
@@ -40,7 +40,7 @@
 #include <iostream>
 #include <TMath.h>
 #define PI 3.141592653
-class MuonDigiAlg : public GaudiAlgorithm
+class MuonDigiAlg : public Algorithm
 {
  public:
   

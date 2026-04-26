@@ -16,7 +16,7 @@
 #ifndef RECGENFITALG_DCTRACKFINDING_H
 #define RECGENFITALG_DCTRACKFINDING_H
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/NTuple.h"
 #include "k4FWCore/DataHandle.h"
 #include "DD4hep/Fields.h"
@@ -65,7 +65,7 @@ namespace edm4hep{
 
 /////////////////////////////////////////////////////////////////////////////
 
-class DCTrackFinding:public GaudiAlgorithm {
+class DCTrackFinding:public Algorithm {
     public:
         DCTrackFinding (const std::string& name,ISvcLocator* pSvcLocator);
         StatusCode initialize() override; StatusCode execute() override; StatusCode finalize() override;

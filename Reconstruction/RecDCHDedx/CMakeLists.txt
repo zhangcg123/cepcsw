@@ -6,7 +6,6 @@ gaudi_add_module(DCHDedx
                       DetInterface
                       DetSegmentation
                       k4FWCore::k4FWCore
-                      Gaudi::GaudiAlgLib 
                       Gaudi::GaudiKernel 
                       DetSegmentation
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict

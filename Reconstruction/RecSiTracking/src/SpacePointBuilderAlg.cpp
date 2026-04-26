@@ -26,7 +26,7 @@
 DECLARE_COMPONENT(SpacePointBuilderAlg)
 
 SpacePointBuilderAlg::SpacePointBuilderAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc) {
+: Algorithm(name, svcLoc) {
   //declareProperty("HeaderCol", _headerColHdl);
   declareProperty("MCParticleCollection", _inMCColHdl, "Handle of the Input MCParticle collection");
   declareProperty("TrackerHitCollection", _inHitColHdl, "Handle of the Input TrackerHits collection");
@@ -64,7 +64,7 @@ StatusCode SpacePointBuilderAlg::initialize() {
 
   _trackSystemSvc->removeTrackSystem(this);
   
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode SpacePointBuilderAlg::execute(){
@@ -265,7 +265,7 @@ StatusCode SpacePointBuilderAlg::execute(){
 
 StatusCode SpacePointBuilderAlg::finalize(){
   info() << "Processed " << _nEvt << " events " << endmsg;
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 edm4hep::MutableTrackerHit SpacePointBuilderAlg::createSpacePoint( edm4hep::TrackerHit a , edm4hep::TrackerHit b, double stripLength ){

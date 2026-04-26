@@ -81,7 +81,7 @@ const double SiliconTrackingAlg::TWOPI = 2*M_PI;
 DECLARE_COMPONENT( SiliconTrackingAlg )
 
 SiliconTrackingAlg::SiliconTrackingAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc) {
+: Algorithm(name, svcLoc) {
 
   //_description = "Pattern recognition in silicon trackers";
   
@@ -211,7 +211,7 @@ StatusCode  SiliconTrackingAlg::initialize() {
   
   _output_track_col_quality = 0;
   
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode SiliconTrackingAlg::execute(){ 
@@ -988,7 +988,7 @@ StatusCode  SiliconTrackingAlg::finalize(){
   //delete _histos ; _histos = 0;
   info() << "Processed " << _nEvt << " events " << endmsg;
 
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 

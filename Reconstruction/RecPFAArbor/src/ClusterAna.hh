@@ -1,7 +1,7 @@
 #ifndef _ClusterAna_hh_
 #define _ClusterAna_hh_
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 
 #include "k4FWCore/DataHandle.h"
@@ -19,7 +19,7 @@
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 
-class ClusterAna  : public GaudiAlgorithm
+class ClusterAna  : public Algorithm
 {
 public:
 

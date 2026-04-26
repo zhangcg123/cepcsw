@@ -6,14 +6,13 @@
 #include <Gaudi/Property.h>
 #include <GaudiKernel/ToolHandle.h>
 
-#include "GaudiAlg/GaudiAlgorithm.h"
 #include "k4FWCore/DataHandle.h"
 
 #include "GenEvent.h"
 
 class IGenTool;
 
-class GenAlgo: public GaudiAlgorithm {
+class GenAlgo: public Algorithm {
 
 public:
     GenAlgo(const std::string& name, ISvcLocator* pSvcLocator);

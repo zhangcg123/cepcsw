@@ -3,7 +3,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/NTuple.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
@@ -23,7 +23,7 @@ namespace dd4hep {
         class CellIDPositionConverter;
     }
 }
-class DCHDigiAlg : public GaudiAlgorithm
+class DCHDigiAlg : public Algorithm
 {
  
 public:

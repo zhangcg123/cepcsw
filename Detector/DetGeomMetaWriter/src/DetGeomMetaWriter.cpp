@@ -9,7 +9,7 @@
 DECLARE_COMPONENT(GeomMetaWriter)
 
 GeomMetaWriter::GeomMetaWriter(const std::string &aName, ISvcLocator *aSvcLoc)
-    : GaudiAlgorithm(aName, aSvcLoc) {}
+    : Algorithm(aName, aSvcLoc) {}
 
 GeomMetaWriter::~GeomMetaWriter() {}
 
@@ -123,7 +123,7 @@ void GeomMetaWriter::addEcalBarLengthMapping() {
 }
 
 StatusCode GeomMetaWriter::initialize() {
-  if (GaudiAlgorithm::initialize().isFailure()) {
+  if (Algorithm::initialize().isFailure()) {
     return StatusCode::FAILURE;
   }
   addDetIDNameMapping();
@@ -134,4 +134,4 @@ StatusCode GeomMetaWriter::initialize() {
 
 StatusCode GeomMetaWriter::execute() { return StatusCode::SUCCESS; }
 
-StatusCode GeomMetaWriter::finalize() { return GaudiAlgorithm::finalize(); }
+StatusCode GeomMetaWriter::finalize() { return Algorithm::finalize(); }

@@ -35,7 +35,7 @@ const string ECALCellIDDecoder = "M:3,S-1:3,I:9,J:9,K-1:6";
 //TH1F *h_hit;
 
 TotalInvMass::TotalInvMass(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc),
+    : Algorithm(name, svcLoc),
       _output(0)
 {
     // _description = "Print MC Truth" ;
@@ -171,7 +171,7 @@ StatusCode TotalInvMass::initialize() {
 
     info() << "TotalInvMass::initializd" << endmsg;
 
-     return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 
 }
 
@@ -754,7 +754,7 @@ StatusCode TotalInvMass::finalize()
         delete tree_file;
     }
 
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 

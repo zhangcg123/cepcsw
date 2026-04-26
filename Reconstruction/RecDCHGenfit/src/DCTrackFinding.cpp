@@ -86,7 +86,7 @@ DECLARE_COMPONENT( DCTrackFinding )
 
     /////////////////////////////////////////////////////////////////////
     DCTrackFinding::DCTrackFinding(const std::string& name,
-            ISvcLocator* pSvcLocator):GaudiAlgorithm(name, pSvcLocator),
+                ISvcLocator* pSvcLocator):Algorithm(name, pSvcLocator),
     m_dd4hepDetector(nullptr),m_gridDriftChamber(nullptr),m_decoder(nullptr)
 {
 

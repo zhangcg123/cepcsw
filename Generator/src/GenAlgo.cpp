@@ -17,7 +17,7 @@
 
 DECLARE_COMPONENT(GenAlgo)
 
-GenAlgo::GenAlgo(const std::string& name, ISvcLocator* pSvcLocator): GaudiAlgorithm(name, pSvcLocator) {
+GenAlgo::GenAlgo(const std::string& name, ISvcLocator* pSvcLocator): Algorithm(name, pSvcLocator) {
     declareProperty("MCParticleGen", m_hdl, "MCParticle collection (at Generator phase)");
     declareProperty("GenTools", m_genToolNames, "List of GenTools");
     m_evtid = 0;

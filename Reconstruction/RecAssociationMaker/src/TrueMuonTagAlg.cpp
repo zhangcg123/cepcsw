@@ -3,7 +3,7 @@
 DECLARE_COMPONENT(TrueMuonTagAlg)
 
 TrueMuonTagAlg::TrueMuonTagAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc){
+: Algorithm(name, svcLoc){
   declareProperty("MCParticleCollection", m_inMCParticleColHdl, "Handle of the Input MCParticle collection");
   declareProperty("MuonTagEfficiency", _m_muonTagEff, "Muon Tagging efficiency to be used to mimic the true muon tag, default is 1. (100%)");
   declareProperty("MuonDetTanTheta", _m_muonDetTanTheta, "Muon barrel/endcap separate theta angle.");
@@ -26,7 +26,7 @@ StatusCode TrueMuonTagAlg::initialize() {
   }
 
   m_nEvt = 0;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode TrueMuonTagAlg::execute() {
