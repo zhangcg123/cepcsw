@@ -34,7 +34,6 @@ StatusCode FinalPIDAlg::initialize(){
 
 //------------------------------------------------------------------------------
 StatusCode FinalPIDAlg::execute(){
-  
   const edm4hep::ReconstructedParticleCollection* inpfocol = nullptr;
   const edm4hep::RecTofCollection* tofcol = nullptr;
   const edm4hep::RecDqdxCollection* dqdxcol = nullptr;
@@ -84,8 +83,8 @@ StatusCode FinalPIDAlg::execute(){
     _hasMuonEndcap = false;
   }
 
-  debug()<<" has TOF : "<<_hasTOF<<" has TPC : "<<_hasTPC<<" TOF size : "<<tofcol->size()<<" dqdx size : "<<dqdxcol->size()<<endmsg;
-  debug()<<" has Muon Barrel : "<<_hasMuonBarrel<<" has Muon Endcap : "<<_hasMuonEndcap<<" Muon Barrel size : "<<barrelhits->size()<<" Muon Endcap size : "<<endcaphits->size()<<endmsg;
+  debug()<<" has TOF : "<<_hasTOF<<" has TPC : "<<_hasTPC<<" TOF size : "<<(tofcol?tofcol->size():0)<<" dqdx size : "<<(dqdxcol?dqdxcol->size():0)<<endmsg;
+  debug()<<" has Muon Barrel : "<<_hasMuonBarrel<<" has Muon Endcap : "<<_hasMuonEndcap<<" Muon Barrel size : "<<(barrelhits?barrelhits->size():0)<<" Muon Endcap size : "<<(endcaphits?endcaphits->size():0)<<endmsg;
 
   m_pid_svc->SetCollections(barrelhits, endcaphits, tofcol, dqdxcol, inpfocol);
   m_pid_svc->MatchMuonHitsToTracks();

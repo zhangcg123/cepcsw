@@ -70,7 +70,12 @@ void FinalPIDSvc::MatchMuonHitsToTracks()
         _extrap_TS[idx]=newst;
     }
 
-    for (const auto &hit: *_barrelhits) {
+    const auto& __barrelhits = [&]() -> const edm4hep::TrackerHitCollection& {
+        static const edm4hep::TrackerHitCollection empty;
+        return _barrelhits?*_barrelhits:empty;
+    }();
+    
+    for (const auto &hit: __barrelhits) {
         TVector3 x_hit=TVector3(hit.getPosition().x,hit.getPosition().y,hit.getPosition().z);
         int idx_mu=hit.getObjectID().index;
 
@@ -132,7 +137,13 @@ void FinalPIDSvc::MatchMuonHitsToTracks()
         _dd_PFO_to_MuonHits[idx_pfo].push_back(dd);
     }
 
-    for (const auto &hit: *_endcaphits) {
+    const auto& __endcaphits = [&]() -> const edm4hep::TrackerHitCollection& {
+        static const edm4hep::TrackerHitCollection empty;
+        return _endcaphits?*_barrelhits:empty;
+    }();
+
+    
+    for (const auto &hit: __endcaphits) {
         
         TVector3 x_hit=TVector3(hit.getPosition().x,hit.getPosition().y,hit.getPosition().z);
         int idx_mu=hit.getObjectID().index;
