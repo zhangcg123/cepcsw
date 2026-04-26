@@ -3,7 +3,7 @@
 
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -48,12 +48,13 @@ public:
 
 
 
-class ArborToolLCIO  : public GaudiAlgorithm
+class ArborToolLCIO  : public Algorithm
 {
 	public:
 		ArborToolLCIO(const std::string& name, ISvcLocator* svcLoc,  bool m_readLCIO);
 		//ArborToolLCIO(ISvcLocator* svcLoc);
 		~ArborToolLCIO();
+		StatusCode execute() override { return StatusCode::SUCCESS; }
 		typedef DataHandle<edm4hep::Cluster>  ClusterType;
 
         // bool _USE_LCIO;

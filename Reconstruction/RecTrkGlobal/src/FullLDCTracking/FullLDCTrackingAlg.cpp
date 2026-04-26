@@ -113,7 +113,7 @@ std::string toString( int iTrk, edm4hep::Track tpcTrack, float bField=3.5 ) {
 }
 
 DECLARE_COMPONENT( FullLDCTrackingAlg )
-FullLDCTrackingAlg::FullLDCTrackingAlg(const std::string& name, ISvcLocator* svcLoc) : GaudiAlgorithm(name, svcLoc) {
+FullLDCTrackingAlg::FullLDCTrackingAlg(const std::string& name, ISvcLocator* svcLoc) : Algorithm(name, svcLoc) {
   // _description = "Performs full tracking in ILD detector" ;
   
   _encoder = new UTIL::BitField64(lcio::ILDCellID0::encoder_string);
@@ -208,7 +208,7 @@ StatusCode FullLDCTrackingAlg::initialize() {
   _trksystem->init() ;
     
   if (this->setupGeom().isFailure()) return StatusCode::FAILURE;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 /*

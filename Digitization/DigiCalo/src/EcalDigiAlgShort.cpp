@@ -9,7 +9,7 @@ using namespace dd4hep;
 DECLARE_COMPONENT( EcalDigiAlgShort )
 
 EcalDigiAlgShort::EcalDigiAlgShort(const string& name, ISvcLocator* svcLoc)
-        : GaudiAlgorithm(name, svcLoc), _nEvt(0)
+    : Algorithm(name, svcLoc), _nEvt(0)
 {
     // Input collections
     declareProperty("SimCaloHitCollection", r_SimCaloCol, "Handle of the Input SimCaloHit collection");
@@ -93,7 +93,7 @@ StatusCode EcalDigiAlgShort::initialize()
 
     rndm.SetSeed(_seed);
     cout << "EcalDigiAlgShort::initialize" << endl;
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode EcalDigiAlgShort::execute()
@@ -398,7 +398,7 @@ StatusCode EcalDigiAlgShort::finalize()
 
     info() << "Processed " << _nEvt << " events " << endmsg;
     delete m_cellIDConverter;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 StatusCode EcalDigiAlgShort::MergeHits(const edm4hep::SimCalorimeterHitCollection& m_col, vector<edm4hep::SimCalorimeterHit>& m_hits)

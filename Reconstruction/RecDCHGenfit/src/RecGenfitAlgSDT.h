@@ -16,7 +16,7 @@
 #ifndef RECGENFITALG_RECGENFITALGSDT_H
 #define RECGENFITALG_RECGENFITALGSDT_H
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/NTuple.h"
 #include "k4FWCore/DataHandle.h"
 #include "DD4hep/Fields.h"
@@ -56,7 +56,7 @@ namespace edm4hep{
 
 /////////////////////////////////////////////////////////////////////////////
 
-class RecGenfitAlgSDT:public GaudiAlgorithm {
+class RecGenfitAlgSDT:public Algorithm {
     public:
         RecGenfitAlgSDT (const std::string& name, ISvcLocator* pSvcLocator);
         StatusCode initialize() override; StatusCode execute() override; StatusCode finalize() override;

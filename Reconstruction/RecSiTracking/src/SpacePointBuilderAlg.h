@@ -2,7 +2,7 @@
 #define SpacePointBuilder_h 1
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 //#include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
@@ -49,7 +49,7 @@
 
 namespace gear { class GearMgr; }
 
-class SpacePointBuilderAlg : public GaudiAlgorithm {
+class SpacePointBuilderAlg : public Algorithm {
  public:
   
   SpacePointBuilderAlg(const std::string& name, ISvcLocator* svcLoc);

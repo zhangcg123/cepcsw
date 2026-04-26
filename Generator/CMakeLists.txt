@@ -23,7 +23,6 @@ gaudi_add_module(GenAlgo
                          src/GuineaPigPairsFileParser.cpp
                  LINK ${ROOT_LIBRARIES}
                       k4FWCore::k4FWCore 
-                      Gaudi::GaudiAlgLib
                       Gaudi::GaudiKernel
                       ${HEPMC_LIBRARIES}
                       ${CLHEP_LIBRARIES}

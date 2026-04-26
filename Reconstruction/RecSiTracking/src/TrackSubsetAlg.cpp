@@ -26,7 +26,7 @@ using namespace KiTrack;
 DECLARE_COMPONENT(TrackSubsetAlg)
 
 TrackSubsetAlg::TrackSubsetAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc){
+  : Algorithm(name, svcLoc){
   
   // modify processor description
   //_description = "TrackSubsetAlg takes tracks from multiple sources and outputs them (or modified versions, or a subset of them) as one track collection." ;
@@ -116,7 +116,7 @@ StatusCode TrackSubsetAlg::initialize() {
   // initialise the tracking system
   _trkSystem->init() ;
 
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode TrackSubsetAlg::finalize(){
@@ -130,7 +130,7 @@ StatusCode TrackSubsetAlg::finalize(){
   }
   _inTrackerHitColHdls.clear();
 
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 StatusCode TrackSubsetAlg::execute(){ 

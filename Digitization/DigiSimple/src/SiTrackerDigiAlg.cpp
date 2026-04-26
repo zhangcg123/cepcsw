@@ -19,7 +19,7 @@
 DECLARE_COMPONENT(SiTrackerDigiAlg)
 
 SiTrackerDigiAlg::SiTrackerDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc) {
+: Algorithm(name, svcLoc) {
   // Input collections
   declareProperty("SimTrackHitCollection", m_inputColHdls, "Handle of the Input SimTrackerHit collection");
 
@@ -34,7 +34,7 @@ StatusCode SiTrackerDigiAlg::initialize() {
   info() << "DigiTool " << m_digiTool.typeAndName() << " found" << endmsg;
 
   info() << "SiTrackerDigiAlg::initialized" << endmsg;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 
@@ -66,5 +66,5 @@ StatusCode SiTrackerDigiAlg::execute(){
 
 StatusCode SiTrackerDigiAlg::finalize(){
   info() << "Processed " << m_nEvt << " events " << endmsg;
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }

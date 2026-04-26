@@ -15,7 +15,7 @@ gaudi_add_module(SimpleDigi
                       DataHelperLib
                       k4FWCore::k4FWCore
                       Gaudi::GaudiKernel 
-                      Gaudi::GaudiAlgLib
+                      
                       ${CLHEP_LIBRARIES}
                       ${GEAR_LIBRARIES}
                       ${GSL_LIBRARIES}

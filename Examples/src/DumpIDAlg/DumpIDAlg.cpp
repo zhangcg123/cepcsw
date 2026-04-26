@@ -11,7 +11,7 @@
 DECLARE_COMPONENT(DumpIDAlg)
 
 DumpIDAlg::DumpIDAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc), m_dd4hep_geo(nullptr), m_decoder(nullptr)
+: Algorithm(name, svcLoc), m_dd4hep_geo(nullptr), m_decoder(nullptr)
 {
 
 }
@@ -60,7 +60,7 @@ StatusCode DumpIDAlg::initialize()
     }
 
 
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode DumpIDAlg::execute()
@@ -102,7 +102,7 @@ StatusCode DumpIDAlg::execute()
 StatusCode DumpIDAlg::finalize()
 {
 
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 

@@ -2,7 +2,7 @@
 #define FULLLDCTRACKING_H 1
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "GearSvc/IGearSvc.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 
@@ -258,7 +258,7 @@ namespace MarlinTrk {
  * @author A. Raspereza (MPI Munich)<br>
  */
 
-class FullLDCTrackingAlg : public GaudiAlgorithm {
+class FullLDCTrackingAlg : public Algorithm {
   
 public:
   

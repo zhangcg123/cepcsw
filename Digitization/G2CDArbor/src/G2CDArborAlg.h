@@ -2,7 +2,7 @@
 #define G2CDARBORALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -29,7 +29,7 @@
 #include <TH1F.h>
 class TTree;
 
-class G2CDArborAlg  : public GaudiAlgorithm
+class G2CDArborAlg  : public Algorithm
 {
 public:
      /* Processor*  newProcessor() { return new G2CDArborAlg ; } */

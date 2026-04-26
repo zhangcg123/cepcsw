@@ -18,7 +18,7 @@
 DECLARE_COMPONENT( CylinderDigiAlg )
 
 CylinderDigiAlg::CylinderDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc){
+: Algorithm(name, svcLoc){
   // Input collections
   declareProperty("SimTrackHitCollection", m_inputColHdls, "Handle of the Input SimTrackerHit collection");
 
@@ -47,7 +47,7 @@ StatusCode CylinderDigiAlg::initialize(){
   }
 
   info() << "CylinderDigiAlg::initialized" << endmsg;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 
@@ -118,5 +118,5 @@ StatusCode CylinderDigiAlg::execute(){
 
 StatusCode CylinderDigiAlg::finalize(){
   info() << "Processed " << m_nEvt << " events " << endmsg;
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }

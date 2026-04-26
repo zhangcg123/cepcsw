@@ -25,7 +25,7 @@
 DECLARE_COMPONENT(TruthTrackerAlg)
 
 TruthTrackerAlg::TruthTrackerAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc),m_dd4hep(nullptr),m_gridDriftChamber(nullptr),
+: Algorithm(name, svcLoc),m_dd4hep(nullptr),m_gridDriftChamber(nullptr),
     m_decoder(nullptr)
 {
     declareProperty("MCParticle", m_mcParticleCol,
@@ -148,7 +148,7 @@ StatusCode TruthTrackerAlg::initialize()
             }
         }
     }
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode TruthTrackerAlg::execute()
@@ -420,7 +420,7 @@ StatusCode TruthTrackerAlg::execute()
 
 StatusCode TruthTrackerAlg::finalize()
 {
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 void TruthTrackerAlg::getTrackStateFromMcParticle(

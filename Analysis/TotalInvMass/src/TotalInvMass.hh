@@ -1,7 +1,7 @@
 #ifndef _TotalInvMass_hh_
 #define _TotalInvMass_hh_
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include <Gaudi/Property.h>
 
 #include "k4FWCore/DataHandle.h"
@@ -18,7 +18,7 @@
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 
-class TotalInvMass  : public GaudiAlgorithm
+class TotalInvMass  : public Algorithm
 {
 public:
 

@@ -3,7 +3,6 @@ gaudi_add_module(TotalInvMass
                  SOURCES src/TotalInvMass.cc
                  LINK k4FWCore::k4FWCore 
                       Gaudi::GaudiKernel 
-                      Gaudi::GaudiAlgLib 
                       ${CLHEP_LIBRARIES} 
                       ${GSL_LIBRARIES}
                       ${LCIO_LIBRARIES}

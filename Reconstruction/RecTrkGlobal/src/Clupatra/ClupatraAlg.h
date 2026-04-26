@@ -6,7 +6,7 @@
 #include "GearSvc/IGearSvc.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/Track.h"
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/TrackerHitCollection.h"
@@ -76,7 +76,7 @@ namespace gear{
  * @author F.Gaede, DESY, 2011/2012
  * @version $Id: ClupatraProcessor.h 4488 2013-04-05 12:03:59Z volynets $
  */
-class ClupatraAlg : public GaudiAlgorithm {
+class ClupatraAlg : public Algorithm {
     // friend class AlgFactory<ClupatraAlg>;
  public:
 

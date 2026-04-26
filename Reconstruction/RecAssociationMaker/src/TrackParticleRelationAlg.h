@@ -2,14 +2,14 @@
 #define TrackParticleRelationAlg_h 1
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
 
-class TrackParticleRelationAlg : public GaudiAlgorithm {
+class TrackParticleRelationAlg : public Algorithm {
  public:
   // Constructor of this form must be provided
   TrackParticleRelationAlg( const std::string& name, ISvcLocator* pSvcLocator );

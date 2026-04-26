@@ -30,7 +30,7 @@ using namespace dd4hep;
 DECLARE_COMPONENT( HcalDigiAlg )
 
 HcalDigiAlg::HcalDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+  : Algorithm(name, svcLoc),
     _nEvt(0)
 {
   
@@ -150,7 +150,7 @@ StatusCode HcalDigiAlg::initialize()
 
 	rndm.SetSeed(_seed);
 	std::cout<<"HcalDigiAlg::initialize"<<std::endl;
-	return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode HcalDigiAlg::execute()
@@ -468,7 +468,7 @@ StatusCode HcalDigiAlg::finalize()
   map_readout_decoder.clear();
 	delete m_cellIDConverter, m_geosvc;
   delete f_DarkNoise, GSTileResMap;
-	return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 

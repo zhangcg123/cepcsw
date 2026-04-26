@@ -9,7 +9,6 @@ gaudi_add_module(ParticleID
                  LINK SimplePIDSvc
                       FinalPIDSvc
                       FinalPIDSvcLib
-                      Gaudi::GaudiAlgLib
                       Gaudi::GaudiKernel
                       DataHelperLib
                       DetSegmentation

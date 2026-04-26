@@ -2,7 +2,7 @@
 #define TrueMuonTagAlg_h 1
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackCollection.h"
@@ -14,7 +14,7 @@
 
 #include "TRandom3.h"
 
-class TrueMuonTagAlg : public GaudiAlgorithm {
+class TrueMuonTagAlg : public Algorithm {
  public:
   // Constructor of this form must be provided
   TrueMuonTagAlg( const std::string& name, ISvcLocator* pSvcLocator );

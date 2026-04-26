@@ -2,7 +2,7 @@
 #define READ_DIGI_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackerHit.h"
@@ -17,7 +17,7 @@
 #include "TVector3.h"
 using namespace std;
 
-class ReadDigiAlg : public GaudiAlgorithm
+class ReadDigiAlg : public Algorithm
 {
 
 public :

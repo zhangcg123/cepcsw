@@ -35,7 +35,7 @@ using dd4hep::rec::LayeredCalorimeterStruct;
 DECLARE_COMPONENT( EcalDigiAlg )
 
 EcalDigiAlg::EcalDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+	: Algorithm(name, svcLoc),
     _nEvt(0)
 {
   
@@ -214,7 +214,7 @@ StatusCode EcalDigiAlg::initialize()
 	}
 
 	std::cout<<"EcalDigiAlg::initialize"<<std::endl;
-	return GaudiAlgorithm::initialize();
+	return Algorithm::initialize();
 }
 
 StatusCode EcalDigiAlg::execute()
@@ -688,7 +688,7 @@ StatusCode EcalDigiAlg::finalize()
   map_readout_decoder.clear();
 	delete m_cellIDConverter, m_geosvc;
 	delete f_SiPMResponse, f_SiPMSigmaDet, f_SiPMSigmaRecp, f_SiPMSigmaRecm, f_AsymGauss, f_DarkNoise, f_ADCNonLin, g_SiPMDCR_vs_NIEL, g_CryLYRatio_vs_TID;
-	return GaudiAlgorithm::finalize();
+	return Algorithm::finalize();
 }
 
 float EcalDigiAlg::EnergyDigi(float ScinGen, float sEcalCryIntLY, float sEcalSiPMGainMean, float sEcalSiPMDCR, 

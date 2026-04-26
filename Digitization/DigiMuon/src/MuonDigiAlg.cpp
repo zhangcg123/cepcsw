@@ -36,7 +36,7 @@ using namespace std ;
 DECLARE_COMPONENT( MuonDigiAlg )
 
 MuonDigiAlg::MuonDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc)
+: Algorithm(name, svcLoc)
 {
   // Input collections
   declareProperty("MuonBarrelHitsCollection", m_inputMuonBarrel, "Handle of the Input SimTrackerHit collection");
@@ -125,7 +125,7 @@ StatusCode MuonDigiAlg::initialize()
   debug() << "m_hitEff: " << m_hitEff << endmsg;
  
   info() << "MuonDigiAlg::initialized" << endmsg;
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 
@@ -227,7 +227,7 @@ StatusCode MuonDigiAlg::finalize()
     delete m_wfile;
   } 
   info() << "Processed " << m_nEvt << " events " << endmsg;
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 

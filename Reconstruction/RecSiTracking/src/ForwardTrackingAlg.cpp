@@ -58,7 +58,7 @@ const int ForwardTrackingAlg::_output_track_col_quality_POOR = 3;
 DECLARE_COMPONENT( ForwardTrackingAlg )
 
 ForwardTrackingAlg::ForwardTrackingAlg(const std::string& name, ISvcLocator* svcLoc)
-: GaudiAlgorithm(name, svcLoc) {
+: Algorithm(name, svcLoc) {
   //_description = "ForwardTracking reconstructs tracks through the FTD" ;
 
   declareProperty("FTDPixelHitCollection", _inFTDPixelColHdl, "Handle of the Input FTD TrackerHits collection");
@@ -259,7 +259,7 @@ StatusCode ForwardTrackingAlg::initialize(){
     assert( !_critMaxima[ critName ].empty() );
     
   }
-  return GaudiAlgorithm::initialize();
+  return Algorithm::initialize();
 }
 
 StatusCode ForwardTrackingAlg::execute(){
@@ -795,7 +795,7 @@ StatusCode ForwardTrackingAlg::finalize(){
 	  << " track Candidates with hits from overlapping hits" << endmsg
 	  << "The ratio is " << float( _nTrackCandidatesPlus )/_nTrackCandidates << endmsg;
 
-  return GaudiAlgorithm::finalize();
+  return Algorithm::finalize();
 }
 
 std::map< IHit* , std::vector< IHit* > > ForwardTrackingAlg::getOverlapConnectionMap(std::map< int , std::vector< IHit* > > & map_sector_hits, 

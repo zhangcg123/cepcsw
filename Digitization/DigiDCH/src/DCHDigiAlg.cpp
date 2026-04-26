@@ -28,7 +28,7 @@
 DECLARE_COMPONENT( DCHDigiAlg )
 
 DCHDigiAlg::DCHDigiAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+    : Algorithm(name, svcLoc),
     _nEvt(0)
 {
   
@@ -107,7 +107,7 @@ StatusCode DCHDigiAlg::initialize()
       }
   }
   info()<<"DCHDigiAlg::initialized"<<endmsg;
-  return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 
@@ -300,7 +300,7 @@ StatusCode DCHDigiAlg::execute()
 StatusCode DCHDigiAlg::finalize()
 {
     info() << "Processed " << _nEvt << " events " << endmsg;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 void DCHDigiAlg::mixNoise(int layerID ,int wireID,

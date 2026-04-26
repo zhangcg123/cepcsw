@@ -2,7 +2,7 @@
 #define _ECAL_DIGI_ALG_SHORT_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/MutableCaloHitContribution.h"
 #include "edm4hep/MutableSimCalorimeterHit.h"
 #include "edm4hep/CalorimeterHit.h"
@@ -47,7 +47,7 @@
 const double C = 299.79;    // In mm/ns
 const double PI = 3.141592653;
 
-class EcalDigiAlgShort : public GaudiAlgorithm
+class EcalDigiAlgShort : public Algorithm
 {
 public:
     EcalDigiAlgShort(const std::string& name, ISvcLocator* svcLoc);

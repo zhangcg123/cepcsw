@@ -60,7 +60,7 @@ DECLARE_COMPONENT( RecGenfitAlgSDT )
     /////////////////////////////////////////////////////////////////////
     RecGenfitAlgSDT::RecGenfitAlgSDT(const std::string& name,
             ISvcLocator* pSvcLocator):
-        GaudiAlgorithm(name, pSvcLocator),m_nPDG(5),m_dd4hepDetector(nullptr),
+        Algorithm(name, pSvcLocator),m_nPDG(5),m_dd4hepDetector(nullptr),
         m_gridDriftChamber(nullptr),m_decoder(nullptr)
 {
     declareProperty("EventHeaderCollection", m_headerCol);

@@ -5,7 +5,7 @@
 DECLARE_COMPONENT(PlcioWriteAlg)
 
 PlcioWriteAlg::PlcioWriteAlg(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
 {
     declareProperty("HeaderCol", m_headerCol);
     declareProperty("OutputCol", m_mcParCol, "MCParticle collection (output)");
@@ -14,7 +14,7 @@ PlcioWriteAlg::PlcioWriteAlg(const std::string& name, ISvcLocator* svcLoc)
 StatusCode PlcioWriteAlg::initialize()
 {
     debug() << "begin initialize PlcioWriteAlg" << endmsg;
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode PlcioWriteAlg::execute()
@@ -50,5 +50,5 @@ StatusCode PlcioWriteAlg::execute()
 StatusCode PlcioWriteAlg::finalize()
 {
     debug() << "begin finalize PlcioWriteAlg" << endmsg;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

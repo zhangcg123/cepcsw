@@ -2,7 +2,7 @@
 #define Calo_DIGI_ALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/SimCalorimeterHit.h"
 #include "edm4hep/CalorimeterHit.h"
 #include "edm4hep/CalorimeterHitCollection.h"
@@ -16,7 +16,7 @@
 
 
 
-class CaloDigiAlg : public GaudiAlgorithm
+class CaloDigiAlg : public Algorithm
 {
  
 public:

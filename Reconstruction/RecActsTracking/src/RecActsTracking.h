@@ -8,7 +8,7 @@
 #include <filesystem>
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "DD4hep/Detector.h"
 #include "DDRec/DetectorData.h"
 #include "DDRec/ISurface.h"
@@ -148,7 +148,7 @@ struct SeedingConfig
     int numPhiNeighbors = 1;
 };
 
-class RecActsTracking : public GaudiAlgorithm
+class RecActsTracking : public Algorithm
 {
 
     public :

@@ -2,7 +2,7 @@
 #define ForwardTracking_h 1
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
@@ -101,7 +101,7 @@ typedef std::vector< IHit* > RawTrack;
  *
  */
 
-class ForwardTrackingAlg : public GaudiAlgorithm {
+class ForwardTrackingAlg : public Algorithm {
  public:
   
   ForwardTrackingAlg(const std::string& name, ISvcLocator* svcLoc);

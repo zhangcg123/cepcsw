@@ -5,7 +5,7 @@
 #include "HelixClassD.hh"
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -54,7 +54,7 @@ using namespace std;
 DECLARE_COMPONENT(BushConnect)
 
 BushConnect::BushConnect(const std::string& name, ISvcLocator* svcLoc)
-	: GaudiAlgorithm(name, svcLoc)
+	: Algorithm(name, svcLoc)
 {
 
 }
@@ -67,7 +67,7 @@ StatusCode BushConnect::initialize() {
     //   m_ArborToolLCIO->_USE_LCIO = m_readLCIO;
 //printParameters();
 	//Cluflag.setBit(LCIO::CHBIT_LONG);
-	return GaudiAlgorithm::initialize();
+	return Algorithm::initialize();
 }
 
 void BushConnect::Clean(){
@@ -1537,6 +1537,6 @@ StatusCode BushConnect::execute()
 StatusCode BushConnect::finalize()
 {
 	std::cout<<"Bush Connection Finished, ArborObject Formed"<<std::endl;
-	return GaudiAlgorithm::finalize();
+	return Algorithm::finalize();
 }
 

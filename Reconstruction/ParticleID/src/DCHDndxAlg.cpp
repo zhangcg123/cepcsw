@@ -18,7 +18,7 @@ using namespace edm4hep;
 
 DECLARE_COMPONENT(DCHDndxAlg)
 
-DCHDndxAlg::DCHDndxAlg(const std::string& name, ISvcLocator* svcLoc) : GaudiAlgorithm(name, svcLoc) {
+DCHDndxAlg::DCHDndxAlg(const std::string& name, ISvcLocator* svcLoc) : Algorithm(name, svcLoc) {
     // Input
     declareProperty("SDTRecTrackCollection", _trackCol, "handler of the input track collection");
     declareProperty("SDTRecTrackCollectionParticleAssociation", _trkParAssCol, "handler of the input track particle association collection");
@@ -39,7 +39,7 @@ StatusCode DCHDndxAlg::initialize() {
 
     m_geom_svc = service("GeomSvc");
 
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode DCHDndxAlg::execute() {

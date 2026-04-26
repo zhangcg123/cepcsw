@@ -33,7 +33,7 @@ StatusCode getCol(T & t, T1 & t1)
 
 
 PandoraPFAlg::PandoraPFAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+    : Algorithm(name, svcLoc),
     _nEvt(0)
 {
  m_CollectionMaps = new CollectionMaps();
@@ -360,7 +360,7 @@ StatusCode PandoraPFAlg::initialize()
   }
 
 
-  return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode PandoraPFAlg::execute()
@@ -412,7 +412,7 @@ StatusCode PandoraPFAlg::finalize()
   delete m_pTrackCreator;
   delete m_pMCParticleCreator;
   delete m_pPfoCreator;
-  return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 

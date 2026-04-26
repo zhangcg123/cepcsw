@@ -35,7 +35,7 @@ const string ECALCellIDDecoder = "M:3,S-1:3,I:9,J:9,K-1:6";
 //TH1F *h_hit;
 
 ClusterAna::ClusterAna(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc),
+    : Algorithm(name, svcLoc),
       _output(0)
 {
 }
@@ -77,7 +77,7 @@ StatusCode ClusterAna::initialize() {
 
     _Num = 0;
 
-     return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 
 }
 
@@ -178,7 +178,7 @@ StatusCode ClusterAna::finalize()
         delete tree_file;
     }
 
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 

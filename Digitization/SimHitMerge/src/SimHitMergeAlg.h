@@ -2,7 +2,7 @@
 #define SimHitMergeAlg_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -20,7 +20,7 @@
 #include <fstream>
 
 
-class SimHitMergeAlg  : public GaudiAlgorithm
+class SimHitMergeAlg  : public Algorithm
 {
 public:
 

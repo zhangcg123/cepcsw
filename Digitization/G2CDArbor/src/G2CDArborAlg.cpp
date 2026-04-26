@@ -56,7 +56,7 @@ float KinkHitChargeBoost = 2.2;
 // G2CDArborAlg aG2CDArborAlg ;
 
 G2CDArborAlg::G2CDArborAlg(const std::string& name, ISvcLocator* svcLoc)
-     : GaudiAlgorithm(name, svcLoc), m_dd4hep_geo(nullptr), m_decoder(nullptr),
+    : Algorithm(name, svcLoc), m_dd4hep_geo(nullptr), m_decoder(nullptr),
           _output(0), m_pi(acos(-1.0)), _eventNr(0)
 {
 //     m_pi = acos(-1.0);
@@ -408,7 +408,7 @@ StatusCode G2CDArborAlg::initialize() {
      	  }
      	  cout<<endl;
      }
-     return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode G2CDArborAlg::execute()
@@ -1048,7 +1048,7 @@ StatusCode G2CDArborAlg::finalize()
      //      delete caloLink;
      // }
 
-     return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }
 
 std::string G2CDArborAlg::GetLayerCoding(const std::string &encodingString) const

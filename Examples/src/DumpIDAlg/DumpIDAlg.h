@@ -2,7 +2,7 @@
 #define DumpIDAlg_h
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/NTuple.h"
 
 #include "DetInterface/IGeomSvc.h"
@@ -16,7 +16,7 @@ namespace edm4hep {
     class CaloHitContributionCollection;
 }
 
-class DumpIDAlg: public GaudiAlgorithm
+class DumpIDAlg: public Algorithm
 {
 public:
 

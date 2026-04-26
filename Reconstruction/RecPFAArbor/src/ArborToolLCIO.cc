@@ -17,7 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -172,7 +172,7 @@ void ClusterBuilding( LCEvent * evtPP, std::string Name, std::vector<Calorimeter
 
 
 ArborToolLCIO::ArborToolLCIO(const std::string& name,ISvcLocator* svcLoc, bool m_readLCIO)
-     : GaudiAlgorithm(name, svcLoc)
+	: Algorithm(name, svcLoc)
 {
 	m_geosvc=service<IGeomSvc>("GeomSvc");
     m_encoder_str = "M:3,S-1:3,I:9,J:9,K-1:6";

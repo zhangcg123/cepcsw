@@ -2,7 +2,7 @@
 #define PLANAR_DIGI_ALG_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include <gsl/gsl_rng.h>
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
@@ -42,7 +42,7 @@ namespace gear { class GearMgr; }
 
 class IEventSeeder;
 
-class PlanarDigiAlg : public GaudiAlgorithm
+class PlanarDigiAlg : public Algorithm
 {
  
 public:

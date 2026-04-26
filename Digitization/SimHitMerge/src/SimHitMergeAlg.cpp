@@ -24,7 +24,7 @@ DECLARE_COMPONENT( SimHitMergeAlg )
 
 
 SimHitMergeAlg::SimHitMergeAlg(const std::string& name, ISvcLocator* svcLoc)
-     : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
       
 {
 }
@@ -52,7 +52,7 @@ StatusCode SimHitMergeAlg::initialize() {
      }
      
 
-     return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode SimHitMergeAlg::execute()
@@ -150,5 +150,5 @@ StatusCode SimHitMergeAlg::finalize()
      std::cout<<"SimHitMergeAlg FINISHED"<<std::endl;
 
 
-     return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

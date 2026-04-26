@@ -2,7 +2,7 @@
 #define TrackSubsetAlg_h 1
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
@@ -44,7 +44,7 @@
  * 
  */
 
-class TrackSubsetAlg : public GaudiAlgorithm {
+class TrackSubsetAlg : public Algorithm {
  public:
 
   TrackSubsetAlg(const std::string& name, ISvcLocator* svcLoc);

@@ -1,7 +1,7 @@
 #ifndef ALGORITHM_TEMP_H
 #define ALGORITHM_TEMP_H
 
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "CyberDataCol.h"
 

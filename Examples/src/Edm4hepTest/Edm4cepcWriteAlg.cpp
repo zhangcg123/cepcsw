@@ -10,21 +10,21 @@
  */
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 
 #include "edm4cepc/RecTofCollection.h"
 
-class Edm4cepcWriteAlg: public GaudiAlgorithm {
+class Edm4cepcWriteAlg: public Algorithm {
 public:
 
     Edm4cepcWriteAlg(const std::string& name, ISvcLocator* svcLoc)
-        : GaudiAlgorithm(name, svcLoc) {
+        : Algorithm(name, svcLoc) {
 
     }
 
     StatusCode initialized() {
 
-        return GaudiAlgorithm::initialize();
+        return Algorithm::initialize();
     }
 
     StatusCode execute() {
@@ -46,7 +46,7 @@ public:
 
     StatusCode finalize() {
 
-        return GaudiAlgorithm::finalize();
+        return Algorithm::finalize();
     }
 
 private:

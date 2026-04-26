@@ -2,7 +2,7 @@
 #define PandoraMatrixAlg_H
 
 #include "k4FWCore/DataHandle.h"
-#include "GaudiAlg/GaudiAlgorithm.h"
+#include "GaudiKernel/Algorithm.h"
 #include <gsl/gsl_rng.h>
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
@@ -69,7 +69,7 @@ public:
 
 
 
-class PandoraMatrixAlg : public GaudiAlgorithm
+class PandoraMatrixAlg : public Algorithm
 {
  
 public:

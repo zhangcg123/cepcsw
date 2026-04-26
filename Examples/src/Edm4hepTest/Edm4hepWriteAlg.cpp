@@ -7,7 +7,7 @@
 DECLARE_COMPONENT(Edm4hepWriteAlg)
 
 Edm4hepWriteAlg::Edm4hepWriteAlg(const std::string& name, ISvcLocator* svcLoc)
-    : GaudiAlgorithm(name, svcLoc)
+    : Algorithm(name, svcLoc)
 {
     declareProperty("HeaderOut", m_headerCol);
     declareProperty("MCParticleOut", m_mcParCol, "MCParticle collection (output)");
@@ -18,7 +18,7 @@ Edm4hepWriteAlg::Edm4hepWriteAlg(const std::string& name, ISvcLocator* svcLoc)
 StatusCode Edm4hepWriteAlg::initialize()
 {
     debug() << "begin initialize Edm4hepWriteAlg" << endmsg;
-    return GaudiAlgorithm::initialize();
+    return Algorithm::initialize();
 }
 
 StatusCode Edm4hepWriteAlg::execute()
@@ -63,5 +63,5 @@ StatusCode Edm4hepWriteAlg::execute()
 StatusCode Edm4hepWriteAlg::finalize()
 {
     debug() << "begin finalize Edm4hepWriteAlg" << endmsg;
-    return GaudiAlgorithm::finalize();
+    return Algorithm::finalize();
 }

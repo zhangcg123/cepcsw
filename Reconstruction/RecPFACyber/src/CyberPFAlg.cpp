@@ -37,7 +37,7 @@ float Cyber::CaloUnit::ecal_endcap_barsize = 16.2; //mm, a bit larger than real 
 DECLARE_COMPONENT( CyberPFAlg )
 
 CyberPFAlg::CyberPFAlg(const std::string& name, ISvcLocator* svcLoc)
-  : GaudiAlgorithm(name, svcLoc),
+  : ::Algorithm(name, svcLoc),
     _nEvt(0)
 {
  
@@ -719,7 +719,7 @@ StatusCode CyberPFAlg::initialize()
 
   }
 
-  return GaudiAlgorithm::initialize();
+  return ::Algorithm::initialize();
 }
 
 StatusCode CyberPFAlg::execute()
@@ -1740,7 +1740,7 @@ StatusCode CyberPFAlg::finalize()
   //m_energycorsvc->finalize();
   //delete m_cellIDConverter, m_geosvc;
   info() << "Processed " << _nEvt << " events " << endmsg;
-  return GaudiAlgorithm::finalize();
+  return ::Algorithm::finalize();
 }
 
 void CyberPFAlg::ClearMCParticle(){

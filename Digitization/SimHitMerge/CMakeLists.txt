@@ -5,7 +5,6 @@ gaudi_add_module(SimHitMerge
                  LINK DetInterface
                       k4FWCore::k4FWCore
                       Gaudi::GaudiKernel
-                      Gaudi::GaudiAlgLib
                       ${DD4hep_COMPONENT_LIBRARIES}
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
 )
