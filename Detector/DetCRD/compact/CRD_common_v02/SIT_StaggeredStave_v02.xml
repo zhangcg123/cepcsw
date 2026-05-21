@@ -1,0 +1,141 @@
+<lccdd>
+  <define>
+    <!--0.17mm silicon + 1.0mm carbon -> 0.65% of X0-->
+    <constant name="SIT_sensitive_thickness" value="0.15*mm"/>
+    <!--constant name="SIT_support_thickness"   value="4*mm"/-->  <!--use the barestave num--> 
+    <constant name="SIT_module_length"       value="140*mm"/>  <!--module length--> 
+    <constant name="SIT_inner_radius_1"      value="ITKBarrel1_inner_radius"/>
+    <constant name="SIT_inner_radius_2"      value="ITKBarrel2_inner_radius"/>
+    <constant name="SIT_inner_radius_3"      value="ITKBarrel3_inner_radius"/>
+    <constant name="SIT_half_length_1"       value="ITKBarrel1_half_length"/>
+    <constant name="SIT_half_length_2"       value="ITKBarrel2_half_length"/>
+    <constant name="SIT_half_length_3"       value="ITKBarrel3_half_length"/>
+  </define>
+
+  <detectors>
+    <detector id="DetID_SIT" name="SIT" type="SiTracker_itkbarrel_v02" vis="SITVis" readout="SITCollection" combineHits="true" insideTrackingVolume="true">
+      <envelope>
+	<shape type="Assembly"/>
+        <!--shape type="BooleanShape" operation="Union" material="Air" >
+          <shape type="Tube" rmin="SIT_inner_radius"   rmax="SIT_outer_radius_1" dz="SIT_half_length_1" />
+          <shape type="Tube" rmin="SIT_inner_radius_2" rmax="SIT_outer_radius"   dz="SIT_half_length" />
+        </shape-->
+      </envelope>
+
+      <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_PIXEL "/>
+
+      <!--reconstruction strip_width="0." strip_length="0." strip_pitch="0." strip_angle="0*deg"  /-->
+
+      <global sensitive_thickness="SIT_sensitive_thickness" support_thickness="SIT_support_thickness" module_length="SIT_module_length"
+              sensitive_mat="G4_Si" support_mat="CarbonFiber" sensitive_threshold_KeV="64*keV" />
+      <display stave="SeeThrough" tubeTi="SilverGrayVis" support="DarkGrayVis" flex="OrangeVis" sens_env="SeeThrough" sens="SilverWhiteVis" deadsensor="GrayVis" ports="SeeThrough" dataaggregation="BlueVis" lpGBTx="TurquoiseVis" opticalconnector="OrangeRedVis" DCDC="MagentaVis"/>  <!--DCDC: Direct Current Direct Current Converter-->
+      <layer layer_id="0" sensitive_radius="SIT_inner_radius_1" n_staves="44" stave_offset="70*mm"> 
+	<stave isDoubleSided="false">
+	  <tubeTi  length="SIT_half_length_1" innerradius="2*mm" outerradius="2.2*mm" mat="G4_Ti"/>
+	  <staveSupport>
+	    <slice length="SIT_half_length_1" thickness="0.15*mm" width="(40+0.01)*mm" mat="CarbonFiber"/>
+	    <slice length="SIT_half_length_1" thickness="0.03*mm" width="(40+0.01)*mm" mat="G4_GRAPHITE"/>
+	    <slice length="SIT_half_length_1" thickness="0.03*mm" width="(40+0.01)*mm" mat="G4_GRAPHITE"/>
+	    <slice length="SIT_half_length_1" thickness="0.1*mm" width="(40+0.01)*mm" mat="CarbonFiber"/>
+	  </staveSupport>
+	  <flex>
+	    <slice length="SIT_half_length_1" thickness="0.025*mm" width="(40+0.01-0.02)*mm" mat="Kapton"/>
+	    <slice length="SIT_half_length_1" thickness="0.05*mm" width="(40+0.01-0.02)*mm" mat="G4_Cu"/>
+	    <slice length="SIT_half_length_1" thickness="0.025*mm" width="(40+0.01-0.02)*mm" mat="Kapton"/>
+	  </flex>
+	  <module n_modules="7" gap="1.08*mm" thickness="SIT_sensitive_thickness" length="(20*7+0.01*6+1.08*2)*mm" width="(20*2+0.01)*mm" 
+		  n_sensors="14" sensor_gap="0.01*mm" sensor_thickness="SIT_sensitive_thickness" sensor_sensitive_length="(20-0.8)*mm" sensor_sensitive_width="(20-2.59)*mm" dead_length="0.8*mm" dead_width="2.59*mm" sensor_mat="G4_Si"/>
+	  <lpGBTx>
+	    <slice length="9*mm" thickness="(4-0.15)*mm" width="9*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="9*mm" thickness="0.15*mm" width="9*mm" mat="G4_Si"/>
+	  </lpGBTx>
+	  <opticalconnector> 
+	    <slice length="20*mm" thickness="(1.25-0.15)*mm" width="10*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="20*mm" thickness="0.15*mm" width="10*mm" mat="G4_Si"/>
+	  </opticalconnector>
+	  <dataaggregation>
+	    <slice length="9*mm" thickness="(4-0.15)*mm" width="9*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="9*mm" thickness="0.15*mm" width="9*mm" mat="G4_Si"/>
+	  </dataaggregation>
+	  <DCDC> 
+	    <slice length="20*mm" thickness="(4-0.15)*mm" width="10*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="20*mm" thickness="0.15*mm" width="10*mm" mat="G4_Si"/>
+	  </DCDC>
+	</stave>
+      </layer>
+      <layer layer_id="1" sensitive_radius="SIT_inner_radius_2" n_staves="64" stave_offset="100*mm"> 
+	<stave isDoubleSided="false">
+	  <tubeTi  length="SIT_half_length_2" innerradius="2*mm" outerradius="2.2*mm" mat="G4_Ti"/>
+	  <staveSupport>
+	    <slice length="SIT_half_length_2" thickness="0.15*mm" width="(40+0.01)*mm" mat="CarbonFiber"/>
+	    <slice length="SIT_half_length_2" thickness="0.03*mm" width="(40+0.01)*mm" mat="G4_GRAPHITE"/>
+	    <slice length="SIT_half_length_2" thickness="0.03*mm" width="(40+0.01)*mm" mat="G4_GRAPHITE"/>
+	    <slice length="SIT_half_length_2" thickness="0.1*mm" width="(40+0.01)*mm" mat="CarbonFiber"/>
+	  </staveSupport>
+	  <flex>
+	    <slice length="SIT_half_length_2" thickness="0.025*mm" width="(40+0.01-0.02)*mm" mat="Kapton"/>
+	    <slice length="SIT_half_length_2" thickness="0.05*mm" width="(40+0.01-0.02)*mm" mat="G4_Cu"/>
+	    <slice length="SIT_half_length_2" thickness="0.025*mm" width="(40+0.01-0.02)*mm" mat="Kapton"/>
+	  </flex>
+	  <module n_modules="10" gap="1.08*mm" thickness="SIT_sensitive_thickness" length="(20*7+0.01*6+1.08*2)*mm" width="(20*2+0.01)*mm" 
+		  n_sensors="14" sensor_gap="0.01*mm" sensor_thickness="SIT_sensitive_thickness" sensor_sensitive_length="(20-0.8)*mm" sensor_sensitive_width="(20-2.59)*mm" dead_length="0.8*mm" dead_width="2.59*mm" sensor_mat="G4_Si"/>
+	  <lpGBTx>
+	    <slice length="9*mm" thickness="(4-0.15)*mm" width="9*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="9*mm" thickness="0.15*mm" width="9*mm" mat="G4_Si"/>
+	  </lpGBTx>
+	  <opticalconnector> 
+	    <slice length="20*mm" thickness="(1.25-0.15)*mm" width="10*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="20*mm" thickness="0.15*mm" width="10*mm" mat="G4_Si"/>
+	  </opticalconnector>
+	  <dataaggregation>
+	    <slice length="9*mm" thickness="(4-0.15)*mm" width="9*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="9*mm" thickness="0.15*mm" width="9*mm" mat="G4_Si"/>
+	  </dataaggregation>
+	  <DCDC> 
+	    <slice length="20*mm" thickness="(4-0.15)*mm" width="10*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="20*mm" thickness="0.15*mm" width="10*mm" mat="G4_Si"/>
+	  </DCDC>
+	</stave>
+      </layer>
+      <layer layer_id="2" sensitive_radius="SIT_inner_radius_3" n_staves="103" stave_offset="150*mm">
+	<stave isDoubleSided="false">
+	  <tubeTi  length="SIT_half_length_3" innerradius="2*mm" outerradius="2.2*mm" mat="G4_Ti"/>
+	  <staveSupport>
+	    <slice length="SIT_half_length_3" thickness="0.15*mm" width="(40+0.01)*mm" mat="CarbonFiber"/>
+	    <slice length="SIT_half_length_3" thickness="0.03*mm" width="(40+0.01)*mm" mat="G4_GRAPHITE"/>
+	    <slice length="SIT_half_length_3" thickness="0.03*mm" width="(40+0.01)*mm" mat="G4_GRAPHITE"/>
+	    <slice length="SIT_half_length_3" thickness="0.1*mm" width="(40+0.01)*mm" mat="CarbonFiber"/>
+	  </staveSupport>
+	  <flex>
+	    <slice length="SIT_half_length_3" thickness="0.025*mm" width="(40+0.01-0.02)*mm" mat="Kapton"/>
+	    <slice length="SIT_half_length_3" thickness="0.05*mm" width="(40+0.01-0.02)*mm" mat="G4_Cu"/>
+	    <slice length="SIT_half_length_3" thickness="0.025*mm" width="(40+0.01-0.02)*mm" mat="Kapton"/>
+	  </flex>
+	  <module n_modules="14" gap="1.08*mm" thickness="SIT_sensitive_thickness" length="(20*7+0.01*6+1.08*2)*mm" width="(20*2+0.01)*mm"
+		  n_sensors="14" sensor_gap="0.01*mm" sensor_thickness="SIT_sensitive_thickness" sensor_sensitive_length="(20-0.8)*mm" sensor_sensitive_width="(20-2.59)*mm" dead_length="0.8*mm" dead_width="2.59*mm" sensor_mat="G4_Si"/>
+	  <lpGBTx>
+	    <slice length="9*mm" thickness="(4-0.15)*mm" width="9*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="9*mm" thickness="0.15*mm" width="9*mm" mat="G4_Si"/>
+	  </lpGBTx>
+	  <opticalconnector> 
+	    <slice length="20*mm" thickness="(1.25-0.15)*mm" width="10*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="20*mm" thickness="0.15*mm" width="10*mm" mat="G4_Si"/>
+	  </opticalconnector>
+	  <dataaggregation>
+	    <slice length="9*mm" thickness="(4-0.15)*mm" width="9*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="9*mm" thickness="0.15*mm" width="9*mm" mat="G4_Si"/>
+	  </dataaggregation>
+	  <DCDC> 
+	    <slice length="20*mm" thickness="(4-0.15)*mm" width="10*mm" mat="G4_POLYETHYLENE"/>
+	    <slice length="20*mm" thickness="0.15*mm" width="10*mm" mat="G4_Si"/>
+	  </DCDC> 
+	</stave>
+      </layer>
+    </detector>
+  </detectors>
+  <readouts>
+    <readout name="SITCollection">
+      <id>system:5,side:-2,layer:9,stave:8,module:8,sensor:5</id>
+    </readout>
+  </readouts>
+</lccdd>

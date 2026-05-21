@@ -1,0 +1,8 @@
+add_subdirectory(DigiTool)
+add_subdirectory(DigiDCH)
+add_subdirectory(G2CDArbor)
+add_subdirectory(SimHitMerge)
+add_subdirectory(DigiSimple)
+add_subdirectory(DigiCalo)
+add_subdirectory(Digi_Calo)
+add_subdirectory(DigiMuon)

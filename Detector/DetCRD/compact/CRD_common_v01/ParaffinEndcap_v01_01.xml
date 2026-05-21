@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+ 
+  <define>
+    <constant name="pos_z" value="562.5*cm"/>
+    <constant name="shape_rmin" value="65*cm"/>
+    <constant name="shape_rmax" value="520*cm"/>
+    <constant name="shape_hz" value="5*cm"/>
+  </define>
+
+
+  <detectors>
+    <detector id="DetID_WAX_ENDCAP" name="ParaffinEndcap" type="ParaffinEndcap_v01" vis="VisibleGreen" material="ParaffinWax">
+      <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+      <position x="0"  y="0"  z="pos_z"/>
+      <dimensions rmin="shape_rmin"  rmax="shape_rmax"  dz="shape_hz"/>
+    </detector>
+  </detectors>
+  
+
+</lccdd>

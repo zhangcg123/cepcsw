@@ -1,0 +1,48 @@
+<lccdd>
+
+    <define>
+        <include ref="${DD4hepINSTALL}/DDDetectors/compact/detector_types.xml"/>
+    </define>
+
+
+    <detectors>
+        <detector name="Lumical_Beampipe" type="Lumical_v01_standalone"  vis="SeeThroughit" insideTrackingVolume="false">
+            <envelope>
+                <shape type="Assembly"/>
+            </envelope>       
+            <type_flags type=" DetType_CALORIMETER + DetType_BARREL + DetType_HADRONIC " />
+            <beampipe_Be_inner type="Tubs" rmin="10*mm" rmax="10.5*mm" z="85*mm" phi1="0*deg" phi2="360*deg" material="G4_Be" vis="SeeThroughit">
+                <position x="0*mm" y="0*mm" z="42.5*mm"/>
+                <rotation x="0" y="0" z="0"/>
+            </beampipe_Be_inner>
+            <beampipe_Be_outter type="Tubs" rmin="11*mm" rmax="11.35*mm" z="85*mm" phi1="0*deg" phi2="360*deg" material="G4_Be" vis="SeeThroughit">
+                <position x="0*mm" y="0*mm" z="42.5*mm"/>
+                <rotation x="0" y="0" z="0"/>
+            </beampipe_Be_outter>
+            <beampipe_Al_inner type="Tubs" rmin="10*mm" rmax="10.5*mm" z="95*mm" phi1="0*deg" phi2="360*deg" material="G4_Al" vis="SeeThroughit">
+                <position x="0*mm" y="0*mm" z="132.5*mm"/>
+                <rotation x="0" y="0" z="0"/>
+            </beampipe_Al_inner>
+            <beampipe_Al_outter type="Tubs" rmin="11*mm" rmax="11.35*mm" z="95*mm" phi1="0*deg" phi2="360*deg" material="G4_Al" vis="SeeThroughit">
+                <position x="0*mm" y="0*mm" z="132.5*mm"/>
+                <rotation x="0" y="0" z="0"/>
+            </beampipe_Al_outter>
+            <runway type="Tubs" rmin="10*mm" rmax="11*mm" z="474.8*mm" phi1="0*deg" phi2="180*deg" material="G4_Al" vis="SeeThroughit">
+                <position x="3.75*mm" y="0*mm" z="417.58*mm"/>
+                <rotation x="0" y="0" z="0"/>
+            </runway>
+            <beampipe>
+                <slice type="Tubs" rmin="10*mm" rmax="11*mm" z="125*mm" phi1="0*deg" phi2="180*deg" material="G4_Cu" vis="SeeThroughit">
+                    <position x="3.75*mm" y="0*mm" z="717.5*mm"/>
+                </slice>
+                <slice type="Cone" rmin1="10*mm" rmax1="11*mm" rmin2="20*mm" rmax2="21*mm" z="75*mm" phi1="0*deg" phi2="180*deg" material="G4_Cu" vis="SeeThroughit">
+                    <position x="3.75*mm" y="0*mm" z="817.5*mm"/>
+                </slice>
+                <slice type="Tubs" rmin="10*mm" rmax="11*mm" z="345*mm" phi1="0*deg" phi2="360*deg" material="G4_Al" vis="SeeThroughit">
+                    <position x="11*mm" y="0*mm" z="1027.5*mm"/>
+                </slice>
+            </beampipe>
+        </detector>
+    </detectors>
+            
+</lccdd>

@@ -1,0 +1,81 @@
+#ifndef GtBeamBackgroundTool_h
+#define GtBeamBackgroundTool_h
+
+/*
+ * Description:
+ *   This tool is used to simulation the non-collision beam backgrounds.
+ *
+ *   The properties:
+ *     - InputFileMap
+ *         this is a map to store the label and the input filename
+ *     - InputFormatMap
+ *         this is a map to store the label and the input format
+ *     - InputRateMap
+ *         this is a map to store the label and the rate
+ * 
+ *     Note: the label (key) should be consistent
+ *
+ * About the design:
+ *   IBeamBackgroundFileParser is the interface to load the next event.
+ *   Different file formats should be implemented in the corresponding parsers. 
+ *   The format will be used to create the corresponding instance.
+ *
+ * Author:
+ *   Tao Lin <lintao AT ihep.ac.cn>
+ */
+
+#include <GaudiKernel/AlgTool.h>
+#include <Gaudi/Property.h>
+#include "IGenTool.h"
+#include "IBeamBackgroundFileParser.h"
+
+#include <vector>
+#include <map>
+
+
+class GtBeamBackgroundTool: public extends<AlgTool, IGenTool> {
+public:
+    using extends::extends;
+
+    // Overriding initialize and finalize
+    StatusCode initialize() override;
+    StatusCode finalize() override;
+
+    // IGenTool
+    bool mutate(Gen::GenEvent& event) override;
+    bool finish() override;
+    bool configure_gentool() override;
+
+
+private:
+    bool init_BeamBackgroundFileParserV0(const std::string& label, const std::string& inputfn);
+    bool init_BeamBackgroundFileParserV1(const std::string& label, const std::string& inputfn);
+    bool init_BeamBackgroundFileParserV2(const std::string& label, const std::string& inputfn);
+    bool init_GuineaPigPairsFileParser(const std::string& label, const std::string& inputfn);
+
+private:
+    Gaudi::Property<std::map<std::string, std::string>> m_inputmaps{this, "InputFileMap"};
+    Gaudi::Property<std::map<std::string, std::string>> m_formatmaps{this, "InputFormatMap"};
+    Gaudi::Property<std::map<std::string, double>>      m_ratemaps {this, "InputRateMap"}; // unit: Hz
+
+    // Detector time window. Should be different for different sub-Det. Unit: s
+    Gaudi::Property<double>      m_timewindow{this, "TimeWindow"}; 
+
+    // unit of beam energy: GeV
+    Gaudi::Property<double>      m_Ebeam{this, "InputBeamEnergy"};
+
+    // Rotation along Y for single beam background. Unit: rad
+    Gaudi::Property<std::map<std::string, double>>      m_rotYMap {this, "RotationAlongYMap"};
+
+    // Time of bunch crossing. Unit: ns, consistent with simulation
+    Gaudi::Property<std::map<std::string, double>>      m_timebkgmaps{this, "TimeBkgMap"};
+
+    // Number of McParticles in different beambkg. -1: pair use one file and single beam use rate*time; >=0: fixed number
+    Gaudi::Property<std::map<std::string, int>>      m_Nmcpmaps{this, "NumberMcParticle"};
+
+private:
+    std::map<std::string, std::shared_ptr<IBeamBackgroundFileParser>> m_beaminputs;
+
+};
+
+#endif

@@ -1,0 +1,129 @@
+<lccdd>
+  <define>
+    <constant name="ITKBarrel_sensitive_thickness" value="0.15*mm"/>
+    <constant name="ITKBarrel_inner_radius_1"      value="ITKBarrel1_inner_radius"/>
+    <constant name="ITKBarrel_inner_radius_2"      value="ITKBarrel2_inner_radius"/>
+    <constant name="ITKBarrel_inner_radius_3"      value="ITKBarrel3_inner_radius"/>
+    <constant name="ITKBarrel_ladder_length_1"     value="ITKBarrel1_half_length*2"/>
+    <constant name="ITKBarrel_ladder_length_2"     value="ITKBarrel2_half_length*2"/>
+    <constant name="ITKBarrel_ladder_length_3"     value="ITKBarrel3_half_length*2"/>
+    <constant name="ITKBarrel_sensor_size"         value="20*mm"/>
+    <constant name="ITKBarrel_sensor_side"         value="0.3*mm"/>
+    <constant name="ITKBarrel_sensor_dead"         value="2.0*mm"/>
+    <constant name="ITKBarrel_sensor_gap"          value="0.1*mm"/>
+    <constant name="ITKBarrel_sensor_number"       value="14"/>
+    <constant name="ITKBarrel_module_length"       value="(ITKBarrel_sensor_size+ITKBarrel_sensor_gap)*ITKBarrel_sensor_number/2
+                                                          -ITKBarrel_sensor_gap"/>
+    <constant name="ITKBarrel_module_width"        value="2*ITKBarrel_sensor_size+ITKBarrel_sensor_gap"/>
+    <constant name="ITKBarrel_module_gap"          value="0.3*mm"/>
+    <constant name="ITKBarrel_module_number_1"     value="7"/>
+    <constant name="ITKBarrel_module_number_2"     value="10"/>
+    <constant name="ITKBarrel_module_number_3"     value="14"/>
+  </define>
+
+  <detectors>
+    <detector id="DetID_ITKBarrel" name="ITKBarrel" type="SiTrackerStaggeredLadder_v03" vis="SeeThrough"
+	      readout="ITKBarrelCollection" combineHits="true" printLevel="INFO" insideTrackingVolume="true">
+      <envelope>
+	<shape type="Assembly"/>
+      </envelope>
+
+      <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_PIXEL "/>
+
+      <layer layer_id="0" phi0="0" n_ladders="44" radius="ITKBarrel_inner_radius_1" rotate="-55.85*mrad">
+	<support length="ITKBarrel_ladder_length_1" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
+	  <slice name="TrussFrame"   thickness="208*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="LightGrayVis"/>
+	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
+	  <slice name="GraphiteFoil" thickness=" 30*um" width="ITKBarrel_module_width" material="Graphite_ITK"     vis="GrayVis"/>
+	  <slice name="CoolingTube"  thickness=" 64*um" width="ITKBarrel_module_width" material="Polyimide_ITK"    vis="SeeThrough"/>
+	  <slice name="CoolingFluid" thickness=" 50*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
+	  <slice name="CFPlate"      thickness="150*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="GrayVis"/>
+	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
+	  <slice name="Glue"         thickness="100*um" width="ITKBarrel_module_width" material="CER_ITK"          vis="GrayVis"/>
+	</support>
+	<sensitive length="ITKBarrel_ladder_length_1" width="ITKBarrel_module_width" thickness="ITKBarrel_sensitive_thickness" material="G4_Si" vis="OrangeVis">
+	  <module length="ITKBarrel_module_length" width="ITKBarrel_module_width" material="G4_Si" vis="CyanVis">
+	    <row repeat="1" gap="0" up_side="0"/>
+	    <column repeat="ITKBarrel_module_number_1" gap="ITKBarrel_module_gap" left_side="0"/>
+	    <sensor repeat="ITKBarrel_sensor_number" length="ITKBarrel_sensor_size-2*ITKBarrel_sensor_side" width="ITKBarrel_sensor_size-2*ITKBarrel_sensor_side-ITKBarrel_sensor_dead"
+		    gap="ITKBarrel_sensor_gap" dead="ITKBarrel_sensor_dead" side="ITKBarrel_sensor_side" material="G4_Si" vis="MagentaVis"/>
+	  </module>
+	</sensitive>
+	<flex length="ITKBarrel_ladder_length_1" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
+	  <slice name="Glue"          thickness="100*um" material="CER_ITK"         vis="YellowVis"/>
+	  <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
+	  <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
+	  <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
+	  <slice name="OEComponent2"  thickness=" 77*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
+	  <slice name="OEComponent3"  thickness="  4*um" material="G4_Cu"           vis="RedVis"/>
+	  <slice name="PowerBusFPC"   thickness=" 24*um" material="PowerFPCMixture" vis="MagentaVis"/>
+	</flex>
+      </layer>
+
+      <layer layer_id="1" phi0="0" n_ladders="64" radius="ITKBarrel_inner_radius_2" rotate="-55.85*mrad">
+	<support length="ITKBarrel_ladder_length_2" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
+	  <slice name="TrussFrame"   thickness="208*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="LightGrayVis"/>
+	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
+	  <slice name="GraphiteFoil" thickness=" 30*um" width="ITKBarrel_module_width" material="Graphite_ITK"     vis="GrayVis"/>
+	  <slice name="CoolingTube"  thickness=" 64*um" width="ITKBarrel_module_width" material="Polyimide_ITK"    vis="SeeThrough"/>
+	  <slice name="CoolingFluid" thickness=" 50*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
+	  <slice name="CFPlate"      thickness="150*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="GrayVis"/>
+	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
+	  <slice name="Glue"         thickness="100*um" width="ITKBarrel_module_width" material="CER_ITK"          vis="GrayVis"/>
+	</support>
+	<sensitive length="ITKBarrel_ladder_length_2" width="ITKBarrel_module_width" thickness="ITKBarrel_sensitive_thickness" gap="0.3*mm" material="G4_Si" vis="OrangeVis">
+	  <module length="ITKBarrel_module_length" width="ITKBarrel_module_width" material="G4_Si" vis="CyanVis">
+	    <row repeat="1" gap="0" up_side="0"/>
+	    <column repeat="ITKBarrel_module_number_2" gap="ITKBarrel_module_gap" left_side="0"/>
+	    <sensor repeat="ITKBarrel_sensor_number" length="ITKBarrel_sensor_size-2*ITKBarrel_sensor_side" width="ITKBarrel_sensor_size-ITKBarrel_sensor_dead"
+		    gap="ITKBarrel_sensor_gap" dead="ITKBarrel_sensor_dead" side="ITKBarrel_sensor_side" material="G4_Si" vis="MagentaVis"/>
+	  </module>
+	</sensitive>
+	<flex length="ITKBarrel_ladder_length_2" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
+	  <slice name="Glue"          thickness="100*um" material="CER_ITK"         vis="YellowVis"/>
+          <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
+          <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
+          <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
+          <slice name="OEComponent2"  thickness=" 77*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
+          <slice name="OEComponent3"  thickness="  4*um" material="G4_Cu"           vis="RedVis"/>
+          <slice name="PowerBusFPC"   thickness=" 24*um" material="PowerFPCMixture" vis="MagentaVis"/>
+	</flex>
+      </layer>
+
+      <layer layer_id="2" phi0="0" n_ladders="102" radius="ITKBarrel_inner_radius_3" rotate="-55.85*mrad">
+	<support length="ITKBarrel_ladder_length_3" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
+	  <slice name="TrussFrame"   thickness="208*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="LightGrayVis"/>
+	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
+	  <slice name="GraphiteFoil" thickness=" 30*um" width="ITKBarrel_module_width" material="Graphite_ITK"     vis="GrayVis"/>
+	  <slice name="CoolingTube"  thickness=" 64*um" width="ITKBarrel_module_width" material="Polyimide_ITK"    vis="SeeThrough"/>
+	  <slice name="CoolingFluid" thickness=" 50*um" width="ITKBarrel_module_width" material="EquivalWater_ITK" vis="SeeThrough"/>
+	  <slice name="CFPlate"      thickness="150*um" width="ITKBarrel_module_width" material="CF_ITK"           vis="GrayVis"/>
+	  <slice name="CarbonFleece" thickness=" 20*um" width="ITKBarrel_module_width" material="CarbonFleece_ITK" vis="LightGrayVis"/>
+	  <slice name="Glue"         thickness="100*um" width="ITKBarrel_module_width" material="CER_ITK"          vis="GrayVis"/>
+	</support>
+	<sensitive length="ITKBarrel_ladder_length_3" width="ITKBarrel_module_width" thickness="ITKBarrel_sensitive_thickness" gap="0.3*mm" material="G4_Si" vis="OrangeVis">
+	  <module length="ITKBarrel_module_length" width="ITKBarrel_module_width" material="G4_Si" vis="CyanVis">
+	    <row repeat="1" gap="0" up_side="0"/>
+	    <column repeat="ITKBarrel_module_number_3" gap="ITKBarrel_module_gap" left_side="0"/>
+	    <sensor repeat="ITKBarrel_sensor_number" length="ITKBarrel_sensor_size-2*ITKBarrel_sensor_side" width="ITKBarrel_sensor_size-ITKBarrel_sensor_dead"
+		    gap="ITKBarrel_sensor_gap" dead="ITKBarrel_sensor_dead" side="ITKBarrel_sensor_side" material="G4_Si" vis="MagentaVis"/>
+	  </module>
+	</sensitive>
+	<flex length="ITKBarrel_ladder_length_3" width="ITKBarrel_module_width" material="Air" vis="SeeThrough">
+	  <slice name="Glue"          thickness="100*um" material="CER_ITK"         vis="YellowVis"/>
+          <slice name="FPCInsulating" thickness="100*um" material="Polyimide_ITK"   vis="YellowVis"/>
+          <slice name="FPCMetal"      thickness="100*um" material="G4_Al"           vis="GrayVis"/>
+          <slice name="OEComponent1"  thickness=" 25*um" material="Kapton"          vis="YellowVis"/>
+          <slice name="OEComponent2"  thickness=" 77*um" material="G4_POLYETHYLENE" vis="GreenVis"/>
+          <slice name="OEComponent3"  thickness="  4*um" material="G4_Cu"           vis="RedVis"/>
+          <slice name="PowerBusFPC"   thickness=" 24*um" material="PowerFPCMixture" vis="MagentaVis"/>
+	</flex>
+      </layer>
+    </detector>
+  </detectors>
+  <readouts>
+    <readout name="ITKBarrelCollection">
+      <id>system:5,side:-2,layer:9,stave:8,module:8,sensor:5</id>
+    </readout>
+  </readouts>
+</lccdd>

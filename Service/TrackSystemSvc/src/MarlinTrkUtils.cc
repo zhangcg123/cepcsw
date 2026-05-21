@@ -1,0 +1,850 @@
+#include "TrackSystemSvc/MarlinTrkUtils.h"
+
+#include <vector>
+#include <algorithm>
+
+#include "TrackSystemSvc/IMarlinTrack.h"
+#include "TrackSystemSvc/HelixTrack.h"
+
+#include "DataHelper/Navigation.h"
+//#include "lcio.h"
+//#include <IMPL/TrackImpl.h>
+//#include <IMPL/TrackStateImpl.h>
+//#include <EVENT/TrackerHit.h>
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackState.h"
+#include "edm4hep/Track.h"
+#include "edm4hep/MutableTrack.h"
+
+#if __has_include("edm4hep/EDM4hepVersion.h")
+#include "edm4hep/EDM4hepVersion.h"
+#else
+// Copy the necessary parts from  the header above to make whatever we need to work here
+#define EDM4HEP_VERSION(major, minor, patch) ((UINT64_C(major) << 32) | (UINT64_C(minor) << 16) | (UINT64_C(patch)))
+// v00-09 is the last version without the capitalization change of the track vector members
+#define EDM4HEP_BUILD_VERSION EDM4HEP_VERSION(0, 9, 0)
+#endif
+
+#include <UTIL/BitField64.h>
+#include <UTIL/ILDConf.h>
+#include <UTIL/BitSet32.h>
+
+//#include "streamlog/streamlog.h"
+
+#include "TMatrixD.h"
+
+#include "podio/podioVersion.h"
+
+#define MIN_NDF 6
+
+namespace MarlinTrk {
+  
+
+//  // Check if a square matrix is Positive Definite 
+//  bool Matrix_Is_Positive_Definite(const EVENT::FloatVec& matrix){
+//    
+//    std::cout << "\n MarlinTrk::Matrix_Is_Positive_Definite(EVENT::FloatVec& matrix): " << std::endl;
+//    
+//    int icol,irow;
+//    
+//    int nrows = 5;
+//    
+//    TMatrixD cov(nrows,nrows) ;
+//    
+//    bool matrix_is_positive_definite = true;
+//    
+//    int icov = 0;
+//    for(int irow=0; irow<nrows; ++irow ){
+//      for(int jcol=0; jcol<irow+1; ++jcol){
+//        cov(irow,jcol) = matrix[icov];
+//        cov(jcol,irow) = matrix[icov];
+////        std::cout << " " << matrix[icov] ;
+//        ++icov ;
+//      }
+////      std::cout << std::endl;
+//    }
+//    
+////    cov.Print();
+//    
+//    double *pU = cov.GetMatrixArray();
+//    
+//    for (icol = 0; icol < nrows; icol++) {
+//      const int rowOff = icol * nrows;
+//      
+//      //Compute fU(j,j) and test for non-positive-definiteness.
+//      double ujj = pU[rowOff+icol];
+//      double diagonal = ujj;
+////      std::cout << "ERROR: diagonal = " << diagonal << std::endl;
+//
+//      for (irow = 0; irow < icol; irow++) {
+//        const int pos_ij = irow*nrows+icol;
+//        std::cout << " " << pU[pos_ij] ;
+//        ujj -= pU[pos_ij]*pU[pos_ij];
+//      }
+//      std::cout  << " " << diagonal << std::endl;
+//
+//      
+//      if (ujj <= 0) {
+//        matrix_is_positive_definite = false;
+//      }
+//    }
+//    
+//      std::cout  << std::endl;
+//    
+//    if ( matrix_is_positive_definite == false ) {
+//      std::cout << "******************************************************" << std::endl;
+//      std::cout << "** ERROR:  matrix shown not to be positive definite **" << std::endl;
+//      std::cout << "******************************************************" << std::endl;
+//    }
+//    
+//    return matrix_is_positive_definite;
+//    
+//  }
+  
+  
+  
+  //int createTrackStateAtCaloFace( IMarlinTrack* marlinTrk, edm4hep::TrackState* track, edm4hep::TrackerHit trkhit, bool tanL_is_positive );
+  
+    int createFinalisedLCIOTrack( IMarlinTrack* marlinTrk, std::vector<edm4hep::TrackerHit>& hit_list, edm4hep::MutableTrack* track, bool fit_backwards, const decltype(edm4hep::TrackState::covMatrix)& initial_cov_for_prefit, float bfield_z, double maxChi2Increment){
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if ( hit_list.empty() ) return IMarlinTrack::bad_intputs ;
+    
+    if( track == 0 ){
+      throw std::runtime_error( "MarlinTrk::finaliseLCIOTrack: TrackImpl == NULL " ) ;
+    }
+    
+    int return_error = 0;
+    ///////////////////////////////////////////////////////
+    // produce prefit parameters
+    ///////////////////////////////////////////////////////
+    
+    edm4hep::TrackState pre_fit ;
+    
+    //std::cout << "debug:=====================before createPrefit" << std::endl;
+    return_error = createPrefit(hit_list, &pre_fit, bfield_z, fit_backwards);
+    //std::cout << "debug:=====================after createPrefit return code=" << return_error << std::endl;
+    pre_fit.covMatrix = initial_cov_for_prefit;
+
+    ///////////////////////////////////////////////////////
+    // use prefit parameters to produce Finalised track
+    ///////////////////////////////////////////////////////
+    
+    if( return_error == 0 ) {
+      
+      return_error = createFinalisedLCIOTrack( marlinTrk, hit_list, track, fit_backwards, &pre_fit, bfield_z, maxChi2Increment);
+      
+    } else {
+      //std::cout << "MarlinTrk::createFinalisedLCIOTrack : Prefit failed error = " << return_error << std::endl;
+    }
+    return return_error;
+  }
+  
+  int createFinalisedLCIOTrack( IMarlinTrack* marlinTrk, std::vector<edm4hep::TrackerHit>& hit_list, edm4hep::MutableTrack* track, bool fit_backwards, edm4hep::TrackState* pre_fit, float bfield_z, double maxChi2Increment){
+    
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if ( hit_list.empty() ) return IMarlinTrack::bad_intputs ;
+    
+    if( track == 0 ){
+      throw std::runtime_error("MarlinTrk::finaliseLCIOTrack: TrackImpl == NULL ");
+    }
+    
+    if( pre_fit == 0 ){
+      throw std::runtime_error("MarlinTrk::finaliseLCIOTrack: TrackStateImpl == NULL ");
+    }
+    
+    
+    int fit_status = createFit(hit_list, marlinTrk, pre_fit, bfield_z, fit_backwards, maxChi2Increment);
+    //std::cout << "createFit finished. status = " << fit_status << std::endl;
+    if( fit_status != IMarlinTrack::success ){
+      //std::cout << "MarlinTrk::createFinalisedLCIOTrack fit failed: fit_status = " << fit_status << std::endl;
+      return fit_status;
+    } 
+    
+    int error = finaliseLCIOTrack(marlinTrk, track, hit_list, fit_backwards);
+    //std::cout << "finaliseLCIOTrack. status = " << error << std::endl;
+    return error;
+  }
+  
+  
+  
+  
+  int createFit( std::vector<edm4hep::TrackerHit>& hit_list, IMarlinTrack* marlinTrk, edm4hep::TrackState* pre_fit, float bfield_z, bool fit_backwards, double maxChi2Increment){
+    
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if ( hit_list.empty() ) return IMarlinTrack::bad_intputs;
+    
+    if( marlinTrk == 0 ){
+      throw std::runtime_error("MarlinTrk::createFit: IMarlinTrack == NULL ");
+    }
+    
+    if( pre_fit == 0 ){
+      throw std::runtime_error("MarlinTrk::createFit: TrackStateImpl == NULL ");
+    }
+    
+    int return_error = 0;
+    
+    
+//    ///////////////////////////////////////////////////////
+//    // check that the prefit has the reference point at the correct location 
+//    ///////////////////////////////////////////////////////
+//    
+//    if (( fit_backwards == IMarlinTrack::backward && pre_fit->getLocation() != lcio::TrackState::AtLastHit ) 
+//        ||  
+//        ( fit_backwards == IMarlinTrack::forward && pre_fit->getLocation() != lcio::TrackState::AtFirstHit )) {
+//      std::stringstream ss ;
+//      
+//      ss << "MarlinTrk::createFinalisedLCIOTrack track state must be set at either first or last hit. Location = ";
+//      ss << pre_fit->getLocation();
+//      
+//      throw EVENT::Exception( ss.str() );
+//      
+//    } 
+    
+    ///////////////////////////////////////////////////////
+    // add hits to IMarlinTrk  
+    ///////////////////////////////////////////////////////
+
+    std::vector<edm4hep::TrackerHit>::iterator it = hit_list.begin();
+    
+    //  start by trying to add the hits to the track we want to finally use. 
+    //std::cout << "MarlinTrk::createFit Start Fit: AddHits: number of hits to fit " << hit_list.size() << std::endl;
+    
+    std::vector<edm4hep::TrackerHit> added_hits;
+    unsigned int ndof_added = 0;
+    
+    for( it = hit_list.begin() ; it != hit_list.end() ; ++it ) {
+      
+      edm4hep::TrackerHit trkHit = *it;
+      bool isSuccessful = false;
+      //std::cout << "debug: TrackerHit pointer " << trkHit << std::endl;
+      if( UTIL::BitSet32( trkHit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint        
+        //Split it up and add both hits to the MarlinTrk
+        //const EVENT::LCObjectVec rawObjects = trkHit->getRawHits();
+	//std::cout << "space point is not still valid! pelease wait updating..." <<std::endl;
+	//exit(1);
+        int nRawHit = trkHit.rawHits_size();
+        for( unsigned k=0; k< nRawHit; k++ ){
+          edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+	  if( marlinTrk->addHit( rawHit ) == IMarlinTrack::success ){
+	    isSuccessful = true; //if at least one hit from the spacepoint gets added
+            ++ndof_added;
+	    //std::cout << "DEBUG<<<<<MarlinTrk::createFit ndof_added = " << ndof_added << std::endl;
+          }
+        }
+      }
+      else { // normal non composite hit
+        if (marlinTrk->addHit( trkHit ) == IMarlinTrack::success ) {
+          isSuccessful = true;
+          ndof_added += 2;
+	  //std::cout << "DEBUG<<<<<MarlinTrk::createFit ndof_added = " << ndof_added << std::endl;
+        }
+      }
+      
+      if (isSuccessful) {
+        added_hits.push_back(trkHit);
+	//std::cout << "DEBUG<<<<<MarlinTrkUtils::createFit Hit " << it - hit_list.begin() << " Added " << trkHit.getPosition() << std::endl;
+      }        
+      else{
+	//std::cout << "DEBUG<<<<<MarlinTrkUtils::createFit Hit " << it - hit_list.begin() << " Dropped " << trkHit.getPosition() << std::endl;
+      }
+      
+    }
+      
+    if( ndof_added < MIN_NDF ) {
+      //std::cout << "ERROR<<<<<MarlinTrk::createFit : Cannot fit less with less than " << MIN_NDF << " degrees of freedom. Number of hits =  " << added_hits.size() << " ndof = " << ndof_added << std::endl;
+      return IMarlinTrack::bad_intputs;
+    }
+
+    ///////////////////////////////////////////////////////
+    // set the initial track parameters  
+    ///////////////////////////////////////////////////////
+    
+    //return_error = marlinTrk->initialise( *pre_fit, bfield_z, IMarlinTrack::backward ) ;
+    // fucd: previous fixed as IMarlinTrack::backward, can not change? using input value now
+    return_error = marlinTrk->initialise( *pre_fit, bfield_z, fit_backwards ) ;
+    if (return_error != IMarlinTrack::success) {
+      
+      std::cout << "MarlinTrk::createFit Initialisation of track fit failed with error : " << return_error << std::endl;
+      
+      return return_error;
+      
+    }
+    //std::cout << "debug:===================initialise " << return_error << std::endl;
+    ///////////////////////////////////////////////////////
+    // try fit and return error
+    ///////////////////////////////////////////////////////
+    int status = marlinTrk->fit(maxChi2Increment);
+    //std::cout << "debug:===================createFit " << status << std::endl;
+    
+    return status;
+    
+  }
+  
+  
+  
+  int createPrefit( std::vector<edm4hep::TrackerHit>& hit_list, edm4hep::TrackState* pre_fit, float bfield_z, bool fit_backwards){
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if ( hit_list.empty() ) return IMarlinTrack::bad_intputs ;
+    
+    if( pre_fit == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::finaliseLCIOTrack: TrackStateImpl == NULL ")  ) ;
+    }
+    
+    ///////////////////////////////////////////////////////
+    // loop over all the hits and create a list consisting only 2D hits 
+    ///////////////////////////////////////////////////////
+    
+    std::vector<edm4hep::TrackerHit> twoD_hits;
+    
+    for (unsigned ihit=0; ihit < hit_list.size(); ++ihit) {
+      
+      // check if this a space point or 2D hit 
+      if(UTIL::BitSet32( hit_list[ihit].getType() )[ UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL ] == false ){
+        // then add to the list 
+        twoD_hits.push_back(hit_list[ihit]);
+        
+      }
+    }
+    
+    ///////////////////////////////////////////////////////
+    // check that there are enough 2-D hits to create a helix 
+    ///////////////////////////////////////////////////////
+    
+    if (twoD_hits.size() < 3) { // no chance to initialise print warning and return
+      //streamlog_out(WARNING) << "MarlinTrk::createFinalisedLCIOTrack Cannot create helix from less than 3 2-D hits" << std::endl;
+      return IMarlinTrack::bad_intputs;
+    }
+    
+    ///////////////////////////////////////////////////////
+    // make a helix from 3 hits to get a trackstate
+    ///////////////////////////////////////////////////////
+    
+    // SJA:FIXME: this may not be the optimal 3 hits to take in certain cases where the 3 hits are not well spread over the track length 
+    const edm4hep::Vector3d& x1 = twoD_hits[0].getPosition();
+    const edm4hep::Vector3d& x2 = twoD_hits[ twoD_hits.size()/2 ].getPosition();
+    const edm4hep::Vector3d& x3 = twoD_hits.back().getPosition();
+
+    HelixTrack helixTrack( x1, x2, x3, bfield_z, HelixTrack::forwards );
+
+    helixTrack.moveRefPoint(0.0, 0.0, 0.0);
+
+    //if ( fit_backwards == IMarlinTrack::backward ) {
+    //pre_fit->location = MarlinTrk::Location::AtLastHit;
+    //helixTrack.moveRefPoint(hit_list.back().getPosition()[0], hit_list.back().getPosition()[1], hit_list.back().getPosition()[2]);
+    //} else {
+    //pre_fit->location = MarlinTrk::Location::AtFirstHit;
+    //helixTrack.moveRefPoint(hit_list.front().getPosition()[0], hit_list.front().getPosition()[1], hit_list.front().getPosition()[2]);
+    //}
+    
+    const float referencePoint[3] = { helixTrack.getRefPointX() , helixTrack.getRefPointY() , helixTrack.getRefPointZ() };
+    
+    pre_fit->D0 = helixTrack.getD0();
+    pre_fit->phi = helixTrack.getPhi0();
+    pre_fit->omega = helixTrack.getOmega();
+    pre_fit->Z0 = helixTrack.getZ0();
+    pre_fit->tanLambda = helixTrack.getTanLambda();
+    
+    pre_fit->referencePoint = referencePoint;
+    
+    return IMarlinTrack::success;
+    
+  }
+  
+  int finaliseLCIOTrack( IMarlinTrack* marlintrk, edm4hep::MutableTrack* track, std::vector<edm4hep::TrackerHit>& hit_list, bool fit_backwards, edm4hep::TrackState* atLastHit, edm4hep::TrackState* atCaloFace){
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if( marlintrk == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::finaliseLCIOTrack: IMarlinTrack == NULL ")  ) ;
+    }
+    
+    if( track == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::finaliseLCIOTrack: TrackImpl == NULL ")  ) ;
+    }
+    
+    if( atCaloFace && atLastHit == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::finaliseLCIOTrack: atLastHit == NULL ")  ) ;
+    }
+
+    if( atLastHit && atCaloFace == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::finaliseLCIOTrack: atCaloFace == NULL ")  ) ;
+    }
+
+    
+    
+    ///////////////////////////////////////////////////////
+    // error to return if any
+    ///////////////////////////////////////////////////////
+    int return_error = 0;
+    
+    int ndf = 0;
+    double chi2 = -DBL_MAX;
+    
+    /////////////////////////////////////////////////////////////
+    // First check NDF to see if it make any sense to continue.
+    // The track will be dropped if the NDF is less than 0 
+    /////////////////////////////////////////////////////////////
+    
+    return_error = marlintrk->getNDF(ndf);
+
+    if ( return_error != IMarlinTrack::success) {
+      //std::cout << "MarlinTrk::finaliseLCIOTrack: getNDF returns " << return_error << std::endl;
+      return return_error;
+    } else if( ndf < 0 ) {
+      //std::cout << "MarlinTrk::finaliseLCIOTrack: number of degrees of freedom less than 0 track dropped : NDF = " << ndf << std::endl;
+      return IMarlinTrack::error;
+    } else {
+      //streamlog_out(DEBUG1) << "MarlinTrk::finaliseLCIOTrack: NDF = " << ndf << std::endl;
+    }
+    
+    
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // get the list of hits used in the fit
+    // add these to the track, add spacepoints as long as at least on strip hit is used.  
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    std::vector<std::pair<edm4hep::TrackerHit, double> > hits_in_fit;
+    std::vector<std::pair<edm4hep::TrackerHit, double> > outliers;
+    std::vector<edm4hep::TrackerHit> used_hits;
+        
+    hits_in_fit.reserve(300);
+    outliers.reserve(300);
+    
+    marlintrk->getHitsInFit(hits_in_fit);
+    marlintrk->getOutliers(outliers);
+    
+    ///////////////////////////////////////////////
+    // now loop over the hits provided for fitting 
+    // we do this so that the hits are added in the
+    // order in which they have been fitted
+    ///////////////////////////////////////////////
+    
+    for ( unsigned ihit = 0; ihit < hit_list.size(); ++ihit) {
+      
+      edm4hep::TrackerHit trkHit = hit_list[ihit];
+      
+      if( UTIL::BitSet32( trkHit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+	//std::cout << "Error: space point is not still valid! pelease wait updating..." <<std::endl;
+        //exit(1);
+	// get strip hits 
+        int nRawHit = trkHit.rawHits_size();
+        for( unsigned k=0; k< nRawHit; k++ ){
+	  edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+	  bool is_outlier = false;
+	  // here we loop over outliers as this will be faster than looping over the used hits
+          for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
+	    if ( rawHit.id() == outliers[ohit].first.id() ) {
+              is_outlier = true;
+              break; // break out of loop over outliers
+            }
+          }
+          if (is_outlier == false) {
+            used_hits.push_back(hit_list[ihit]);
+            track->addToTrackerHits(used_hits.back());
+            break; // break out of loop over rawObjects
+          }          
+        }
+      } else {
+        bool is_outlier = false;
+        // here we loop over outliers as this will be faster than looping over the used hits
+        for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
+          if ( trkHit == outliers[ohit].first ) {
+            is_outlier = true;
+            break; // break out of loop over outliers
+          }
+        }
+        if (is_outlier == false) {
+          used_hits.push_back(hit_list[ihit]);
+          track->addToTrackerHits(used_hits.back());
+        }          
+      }
+    }
+
+    
+//    ///////////////////////////////////////////////////////////////////////////
+//    // We now need to find out at which point the fit is constrained 
+//    // and therefore be able to provide well formed (pos. def.) cov. matrices
+//    ///////////////////////////////////////////////////////////////////////////
+//    
+    
+        
+    ///////////////////////////////////////////////////////
+    // first hit
+    ///////////////////////////////////////////////////////
+    
+    edm4hep::TrackState* trkStateAtFirstHit = new edm4hep::TrackState() ;
+    edm4hep::TrackerHit firstHit = ( fit_backwards == IMarlinTrack::backward ? hits_in_fit.back().first : hits_in_fit.front().first ) ;
+
+    ///////////////////////////////////////////////////////
+    // last hit
+    ///////////////////////////////////////////////////////
+    
+    edm4hep::TrackState* trkStateAtLastHit = new edm4hep::TrackState() ;
+
+    edm4hep::TrackerHit lastHit = ( fit_backwards == IMarlinTrack::backward ? hits_in_fit.front().first : hits_in_fit.back().first ) ;
+          
+#if PODIO_BUILD_VERSION < PODIO_VERSION(0, 17, 4)
+    edm4hep::TrackerHit last_constrained_hit(0);// = 0 ;
+#else
+		auto last_constrained_hit = edm4hep::TrackerHit::makeEmpty();
+#endif
+    marlintrk->getTrackerHitAtPositiveNDF(last_constrained_hit);
+
+    return_error = marlintrk->smooth(lastHit);
+    
+    if ( return_error != IMarlinTrack::success ) {
+      //streamlog_out(DEBUG4) << "MarlinTrk::finaliseLCIOTrack: return_code for smoothing to " << lastHit << " = " << return_error << " NDF = " << ndf << std::endl;
+      delete trkStateAtFirstHit;
+      delete trkStateAtLastHit;
+      return return_error ;
+    }
+
+    
+    ///////////////////////////////////////////////////////
+    // first create trackstate at IP
+    ///////////////////////////////////////////////////////
+    const edm4hep::Vector3d point; // nominal IP
+    
+    edm4hep::TrackState* trkStateIP = new edm4hep::TrackState() ;
+      
+    
+    ///////////////////////////////////////////////////////
+    // make sure that the track state can be propagated to the IP 
+    ///////////////////////////////////////////////////////
+
+    //FIXME: AidaTT not used now, if to use AidaTT, these code need to update and apply
+    //MarlinTrk::IMarlinTrkSystem* trksystem =  MarlinTrk::Factory::getCurrentMarlinTrkSystem() ;
+    //bool usingAidaTT = ( trksystem->name() == "AidaTT" ) ;
+    bool usingAidaTT = false;
+    if (fit_backwards == IMarlinTrack::backward ||  usingAidaTT ) {
+      return_error = marlintrk->propagate(point, firstHit, *trkStateIP, chi2, ndf ) ;
+    }
+    else {
+      //FIXME: if forward, better by add the last inner hits with a Kalman step from the last_constrained hit
+      return_error = marlintrk->propagate(point, firstHit, *trkStateIP, chi2, ndf ) ;
+    }
+    if ( return_error != IMarlinTrack::success ) {
+      //streamlog_out(DEBUG4) << "MarlinTrk::finaliseLCIOTrack: return_code for propagation = " << return_error << " NDF = " << ndf << std::endl;
+      delete trkStateIP;
+      delete trkStateAtFirstHit;
+      delete trkStateAtLastHit;
+
+      return return_error ;
+    }
+    
+    trkStateIP->location = MarlinTrk::Location::AtIP;
+    track->addToTrackStates(*trkStateIP);
+    track->setChi2(chi2);
+    track->setNdf(ndf);
+    
+              
+    ///////////////////////////////////////////////////////
+    // set the track states at the first and last hits 
+    ///////////////////////////////////////////////////////    
+    
+    ///////////////////////////////////////////////////////
+    // @ first hit
+    ///////////////////////////////////////////////////////
+    
+    //streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> create TrackState AtFirstHit" << std::endl ;
+
+    
+    return_error = marlintrk->getTrackState(firstHit, *trkStateAtFirstHit, chi2, ndf ) ;
+    
+    if ( return_error == 0 ) {
+      trkStateAtFirstHit->location = MarlinTrk::Location::AtFirstHit;
+      track->addToTrackStates(*trkStateAtFirstHit);
+    } else {
+      //streamlog_out( WARNING ) << "  >>>>>>>>>>> MarlinTrk::finaliseLCIOTrack:  could not get TrackState at First Hit " << firstHit << std::endl ;
+    }
+    
+    double r_first = firstHit.getPosition()[0]*firstHit.getPosition()[0] + firstHit.getPosition()[1]*firstHit.getPosition()[1];
+    
+    track->setRadiusOfInnermostHit(sqrt(r_first));
+    
+    if ( atLastHit == 0 && atCaloFace == 0 ) {
+    
+      ///////////////////////////////////////////////////////
+      // @ last hit
+      ///////////////////////////////////////////////////////  
+      
+      //streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> create TrackState AtLastHit : using trkhit " << last_constrained_hit << std::endl ;
+      
+      edm4hep::Vector3d last_hit_pos(lastHit.getPosition());
+      
+      return_error = marlintrk->propagate(last_hit_pos, last_constrained_hit, *trkStateAtLastHit, chi2, ndf);
+            
+//      return_error = marlintrk->getTrackState(lastHit, *trkStateAtLastHit, chi2, ndf ) ;
+      
+      if ( return_error == 0 ) {
+        trkStateAtLastHit->location = MarlinTrk::Location::AtLastHit;
+        track->addToTrackStates(*trkStateAtLastHit);
+      } else {
+	std::cout << "ERROR>>>>>>>>>>> MarlinTrk::finaliseLCIOTrack:  could not get TrackState at Last Hit " << last_constrained_hit.id() << std::endl ;
+        //delete trkStateAtLastHit;
+      }
+      
+//      const EVENT::FloatVec& ma = trkStateAtLastHit->getCovMatrix();
+//      
+//      Matrix_Is_Positive_Definite( ma );
+
+      ///////////////////////////////////////////////////////
+      // set the track state at Calo Face 
+      ///////////////////////////////////////////////////////
+      
+      edm4hep::TrackState trkStateCalo;
+      bool tanL_is_positive = trkStateIP->tanLambda >0 ;
+      
+      return_error = createTrackStateAtCaloFace(marlintrk, &trkStateCalo, last_constrained_hit, tanL_is_positive);
+//      return_error = createTrackStateAtCaloFace(marlintrk, trkStateCalo, lastHit, tanL_is_positive);
+      
+      if ( return_error == 0 ) {
+	//std::cout << "fucdout referencePoint " << trkStateCalo.referencePoint << std::endl;
+        trkStateCalo.location = MarlinTrk::Location::AtCalorimeter;
+        // std::cout << "createTrackStateAtCaloFace OK: " << trkStateCalo << std::endl;
+        track->addToTrackStates(trkStateCalo);
+      } else {
+#ifdef DEBUG
+	std::cout << "  >>>>>>>>>>> MarlinTrk::finaliseLCIOTrack:  could not get TrackState at Calo Face "  << std::endl ;
+	if (last_constrained_hit.isAvailable()) {
+	  auto pos = last_constrained_hit.getPosition();
+	  std::cout << " last_constrained_hit = " << pos.x << "," << pos.y << "," << pos.z << std::endl;
+	}
+	else {
+	  std::cout << " last_constrained_hit not Available" << std::endl;
+	}
+#endif
+        //delete trkStateCalo;
+      }
+    } else {
+      track->addToTrackStates(*atLastHit);
+      track->addToTrackStates(*atCaloFace);
+      //delete trkStateAtLastHit;
+    }
+
+    if(trkStateAtFirstHit) delete trkStateAtFirstHit;
+    if(trkStateAtLastHit)  delete trkStateAtLastHit;
+    if(trkStateIP)         delete trkStateIP;
+    ///////////////////////////////////////////////////////
+    // done
+    ///////////////////////////////////////////////////////
+    return return_error;
+  }
+  
+  
+  int createTrackStateAtCaloFace( IMarlinTrack* marlintrk, edm4hep::TrackState* trkStateCalo, edm4hep::TrackerHit trkhit, bool tanL_is_positive ){
+    
+    //streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> createTrackStateAtCaloFace : using trkhit " << trkhit << " tanL_is_positive = " << tanL_is_positive << std::endl ;
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if( marlintrk == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::createTrackStateAtCaloFace: IMarlinTrack == NULL ")  ) ;
+    }
+    
+    if( trkStateCalo == 0 ){
+      throw EVENT::Exception( std::string("MarlinTrk::createTrackStateAtCaloFace: TrackImpl == NULL ")  ) ;
+    }
+    
+    if( !trkhit.isAvailable() ){
+      throw EVENT::Exception( std::string("MarlinTrk::createTrackStateAtCaloFace: TrackHit == NULL ")  ) ;
+    }
+        
+    int return_error = 0;
+    int return_error_barrel = 0;
+    int return_error_endcap = 0;
+    
+    double chi2 = -DBL_MAX;
+    int ndf = 0;
+    
+    UTIL::BitField64 encoder( lcio::ILDCellID0::encoder_string );
+    encoder.reset() ;  // reset to 0
+    
+    // ================== need to get the correct ID(s) for the calorimeter face  ============================
+    unsigned ecal_barrel_face_ID = lcio::ILDDetID::ECAL ;
+    unsigned ecal_endcap_face_ID = lcio::ILDDetID::ECAL_ENDCAP ;
+
+    //=========================================================================================================
+
+    encoder[lcio::LCTrackerCellID::subdet()] = ecal_barrel_face_ID ;
+    encoder[lcio::LCTrackerCellID::side()]   = lcio::ILDDetID::barrel;
+    encoder[lcio::LCTrackerCellID::layer()]  = 0 ;
+    
+    int detElementID = 0;
+    edm4hep::TrackState tsBarrel;
+    edm4hep::TrackState tsEndcap;
+    // propagate to the barrel layer
+    return_error_barrel = marlintrk->propagateToLayer(encoder.lowWord(), trkhit, tsBarrel, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+    // propagate to the endcap layer
+    encoder[lcio::LCTrackerCellID::subdet()] = ecal_endcap_face_ID ;
+    if (tanL_is_positive) {
+      encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::fwd;
+    }
+    else{
+      encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::bwd;
+    }
+    return_error_endcap = marlintrk->propagateToLayer(encoder.lowWord(), trkhit, tsEndcap, chi2, ndf, detElementID, IMarlinTrack::modeForward ) ;
+
+    // check which is the right intersection / closer to the trkhit
+    if ( return_error_barrel == IMarlinTrack::no_intersection ){
+      //if barrel fails just return ts at the Endcap if exists
+      return_error = return_error_endcap;
+      *trkStateCalo = tsEndcap;
+    }
+    else if( return_error_endcap == IMarlinTrack::no_intersection ){
+      //if barrel succeeded and endcap fails return ts at the barrel
+      return_error = return_error_barrel;
+      *trkStateCalo = tsBarrel;
+    }
+    else{
+      //this means both barrel and endcap have intersections. Return closest to the tracker hit
+      auto hitPos = trkhit.getPosition();
+      auto barrelPos = tsBarrel.referencePoint;
+      auto endcapPos = tsEndcap.referencePoint;
+      double dToBarrel = sqrt((hitPos.x-barrelPos.x)*(hitPos.x-barrelPos.x)+(hitPos.y-barrelPos.y)*(hitPos.y-barrelPos.y)+(hitPos.z-barrelPos.z)*(hitPos.z-barrelPos.z));
+      double dToendcap = sqrt((hitPos.x-endcapPos.x)*(hitPos.x-endcapPos.x)+(hitPos.y-endcapPos.y)*(hitPos.y-endcapPos.y)+(hitPos.z-endcapPos.z)*(hitPos.z-endcapPos.z));
+      if ( dToBarrel < dToendcap ){
+	return_error = return_error_barrel;
+	*trkStateCalo = tsBarrel;
+      }
+      else{
+	return_error = return_error_endcap;
+	*trkStateCalo = tsEndcap;
+      }
+    }
+    
+    if (return_error !=IMarlinTrack::success ) {
+      //std::cout << "createTrackStateAtCaloFace :  could not get TrackState at Calo Face: return_error = " << return_error_barrel << " " << return_error_endcap << std::endl ;
+      //streamlog_out( DEBUG5 ) << "  >>>>>>>>>>> createTrackStateAtCaloFace :  could not get TrackState at Calo Face: return_error = " << return_error << std::endl ;
+    }
+    else {
+      //std::cout << "createTrackStateAtCaloFace : " << (*trkStateCalo) << std::endl;
+    }
+    
+    return return_error;
+    
+    
+  }
+  
+  void addHitNumbersToTrack(edm4hep::MutableTrack* track, std::vector<edm4hep::TrackerHit>& hit_list, bool hits_in_fit, UTIL::BitField64& cellID_encoder){
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if( track == 0 ){
+      throw std::runtime_error( std::string("MarlinTrk::addHitsToTrack: TrackImpl == NULL ")  ) ;
+    }
+    std::map<int, int> hitNumbers;
+    
+    hitNumbers[UTIL::ILDDetID::VXD] = 0;
+    hitNumbers[UTIL::ILDDetID::SIT] = 0;
+    hitNumbers[UTIL::ILDDetID::FTD] = 0;
+    hitNumbers[UTIL::ILDDetID::TPC] = 0;
+    hitNumbers[UTIL::ILDDetID::SET] = 0;
+    hitNumbers[UTIL::ILDDetID::ETD] = 0;
+    
+    for(unsigned int j=0; j<hit_list.size(); ++j) {
+      cellID_encoder.setValue(hit_list.at(j).getCellID()) ;
+      int detID = cellID_encoder[UTIL::ILDCellID0::subdet];
+      ++hitNumbers[detID];
+      //std::cout << "debug: " << "Hit from Detector " << detID << std::endl;
+    }
+    
+    int offset = 2 ;
+    if ( hits_in_fit == false ) { // all hit atributed by patrec
+      offset = 1 ;
+    }
+#if EDM4HEP_BUILD_VERSION > EDM4HEP_VERSION(0, 9, 0)
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::VXD]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::FTD]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SIT]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::TPC]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SET]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::ETD]);
+#else
+    track->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::VXD]);
+    track->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::FTD]);
+    track->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SIT]);
+    track->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::TPC]);
+    track->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SET]);
+    track->addToSubDetectorHitNumbers(hitNumbers[UTIL::ILDDetID::ETD]);
+#endif
+    //track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - offset ] = hitNumbers[lcio::ILDDetID::VXD];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - offset ] = hitNumbers[lcio::ILDDetID::FTD];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - offset ] = hitNumbers[lcio::ILDDetID::SIT];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - offset ] = hitNumbers[lcio::ILDDetID::TPC];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - offset ] = hitNumbers[lcio::ILDDetID::SET];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - offset ] = hitNumbers[lcio::ILDDetID::ETD];
+  }
+  
+  void addHitNumbersToTrack(edm4hep::MutableTrack* track, std::vector<std::pair<edm4hep::TrackerHit , double> >& hit_list, bool hits_in_fit, UTIL::BitField64& cellID_encoder){
+    
+    ///////////////////////////////////////////////////////
+    // check inputs 
+    ///////////////////////////////////////////////////////
+    if( track == 0 ){
+      throw std::runtime_error( std::string("MarlinTrk::addHitsToTrack: TrackImpl == NULL ")  ) ;
+    }
+    
+    std::map<int, int> hitNumbers;
+    
+    hitNumbers[lcio::ILDDetID::VXD] = 0;
+    hitNumbers[lcio::ILDDetID::SIT] = 0;
+    hitNumbers[lcio::ILDDetID::FTD] = 0;
+    hitNumbers[lcio::ILDDetID::TPC] = 0;
+    hitNumbers[lcio::ILDDetID::SET] = 0;
+    hitNumbers[lcio::ILDDetID::ETD] = 0;
+    
+    for(unsigned int j=0; j<hit_list.size(); ++j) {
+      cellID_encoder.setValue(hit_list.at(j).first.getCellID()) ;
+      int detID = cellID_encoder[UTIL::ILDCellID0::subdet];
+      ++hitNumbers[detID];
+      //std::cout << "debug: Hit from Detector " << detID << std::endl;
+    }
+    
+    int offset = 2 ;
+    if ( hits_in_fit == false ) { // all hit atributed by patrec
+      offset = 1 ;
+    }
+#if EDM4HEP_BUILD_VERSION > EDM4HEP_VERSION(0, 9, 0)
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::VXD]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::FTD]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SIT]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::TPC]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::SET]);
+    track->addToSubdetectorHitNumbers(hitNumbers[UTIL::ILDDetID::ETD]);
+#else
+    track->addToSubDetectorHitNumbers(hitNumbers[lcio::ILDDetID::VXD]);
+    track->addToSubDetectorHitNumbers(hitNumbers[lcio::ILDDetID::FTD]);
+    track->addToSubDetectorHitNumbers(hitNumbers[lcio::ILDDetID::SIT]);
+    track->addToSubDetectorHitNumbers(hitNumbers[lcio::ILDDetID::TPC]);
+    track->addToSubDetectorHitNumbers(hitNumbers[lcio::ILDDetID::SET]);
+    track->addToSubDetectorHitNumbers(hitNumbers[lcio::ILDDetID::ETD]);
+#endif
+    //track->subdetectorHitNumbers().resize(2 * lcio::ILDDetID::ETD);
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::VXD - offset ] = hitNumbers[lcio::ILDDetID::VXD];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::FTD - offset ] = hitNumbers[lcio::ILDDetID::FTD];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SIT - offset ] = hitNumbers[lcio::ILDDetID::SIT];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - offset ] = hitNumbers[lcio::ILDDetID::TPC];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::SET - offset ] = hitNumbers[lcio::ILDDetID::SET];
+    //track->subdetectorHitNumbers()[ 2 * lcio::ILDDetID::ETD - offset ] = hitNumbers[lcio::ILDDetID::ETD];
+    
+  }
+  
+}

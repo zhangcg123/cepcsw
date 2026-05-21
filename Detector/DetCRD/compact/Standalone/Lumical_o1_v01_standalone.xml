@@ -1,0 +1,20 @@
+<lccdd>
+    <includes>
+        <gdmlFile  ref="${DD4hepINSTALL}/DDDetectors/compact/elements.xml"/>
+        <gdmlFile  ref="../CRD_common_v02/materials.xml"/>
+    </includes>
+
+    <define>
+        <include ref="${DD4hepINSTALL}/DDDetectors/compact/detector_types.xml"/>
+        <constant name="world_x" value="1*m"/>
+        <constant name="world_y" value="1*m"/>
+        <constant name="world_z" value="1.5*m"/>
+        <constant name="tracker_region_zmax" value="1500*mm"/>
+        <constant name="tracker_region_rmax" value="1100*mm"/>
+    </define>
+
+    <include ref="../TDR_o1_v01/TDR_Dimensions_v01_01.xml"/>
+    <include ref="../CRD_common_v01/Lumical_o1_v01.xml"/>
+    <include ref="../CRD_common_v01/Lumical_Beampipe.xml"/>
+
+</lccdd>

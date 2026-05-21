@@ -1,0 +1,178 @@
+<lccdd>
+  <info name="VXD_Composite_v01_03"
+        title="CepC VXD with stitch and ladder module"
+        author=""
+        url="http://cepc.ihep.ac.cn"
+        status="developing"
+        version="v01">
+    <comment>CepC vertex detector</comment>
+  </info>
+  <define>
+    <constant name="VXD_inner_radius" value="Vertex_inner_radius"/>
+    <constant name="VXD_outer_radius" value="Vertex_outer_radius"/>
+    <constant name="VXD_half_length"  value="Vertex_half_length"/>
+    <!--ladder parameter-->
+    <constant name="VXD_ladder_length" value="682*mm"/>
+    <constant name="VXD_ladder_width"      value="17.3*mm"/>
+    <constant name="VXD_ladder_flex_width" value="VXD_ladder_width"/>
+    <!--stitching parameter-->
+    <constant name="VXD_sensor_backbone"   value="0.055*mm"/>
+    <constant name="VXD_sensor_switches"   value="0.019*mm"/>
+    <constant name="VXD_sensor_bias"       value="0.106*mm"/>
+    <constant name="VXD_sensor_periphery"  value="0.177*mm"/>
+    <!--equivalent to CFRP_CMS-->
+    <constant name="VXD_flex_thickness"    value="1.3*um"/>
+  </define>
+
+  <detectors>
+    <detector id="DetID_VXD" name="VXD" type="SiTrackerComposite_v03" vis="VXDVis" readout="VXDCollection" combineHits="true" insideTrackingVolume="true" printLevel="INFO">
+      <envelope>
+        <shape type="Assembly"/>
+      </envelope>
+
+      <type_flags type="DetType_TRACKER + DetType_BARREL + DetType_PIXEL "/>
+
+      <global sensitive_thickness="VXD_sensitive_thickness" support_thickness="VXD_support_thickness" sensor_length="VXD_sensor_length"
+              sensitive_mat="G4_Si" support_mat="G4_C" sensitive_threshold_KeV="64*keV"  />
+      <display ladder="SeeThrough" support="VXDSupportVis" flex="VXDFlexVis" sens_env="SeeThrough" sens="GrayVis" deadsensor="GreenVis" deadwire="RedVis"/>
+
+      <shell rmin="70*mm" rmax="72.5*mm" zhalf="510*mm" material="CFRP_CMS" vis="LightGrayVis"/>
+
+      <layer id="0" phi0="0" isBent="true">
+	<module offset="0" phi="0" radius="11.06254*mm" nx="48" ny="4" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+57.3*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+	  <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+	<module offset="0" phi="180*degree" radius="11.06254*mm" nx="48" ny="4" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+57.3*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+      </layer>
+
+      <layer id="1" phi0="11.4375*degree" isBent="true">
+	<module offset="0" phi="0" radius="16.56198*mm" nx="72" ny="6" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+33.7*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module offset="0" phi="180*degree" radius="16.56198*mm" nx="72" ny="6" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+33.7*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="1.385*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+      </layer>
+
+      <layer id="2" phi0="-1.6875*degree" isBent="true">
+	<module offset="0" phi="0" radius="22.06142*mm" nx="96" ny="8" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+	  <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+31.8*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module offset="0" phi="180*degree" radius="22.06142*mm" nx="96" ny="8" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+31.8*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+      </layer>
+
+      <layer id="3" phi0="-6.75*degree" isBent="true">
+	<module offset="0" phi="0" radius="27.56086*mm" nx="120" ny="10" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+            <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+40*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+
+        <module offset="0" phi="180*degree" radius="27.56086*mm" nx="120" ny="10" backbone="VXD_sensor_backbone" switches="VXD_sensor_switches"
+		bias="VXD_sensor_bias" periphery="VXD_sensor_periphery" mechanical_gap="0.5*mm" material="G4_Si">
+          <sensor thickness="50*um" width="8.409*mm" length="3.296*mm" material="G4_Si" vis="VXDVis"/>
+          <flex vis="GrayVis">
+	    <!--slice thickness="0.4*um" material="G4_Al"/-->
+            <slice thickness="VXD_flex_thickness+40*um" material="CFRP_CMS"/>
+          </flex>
+          <readout thickness="50*um" width="4.155*mm" material="Kapton" vis="RedVis"/>
+          <driver thickness="50*um" width="4.155*mm" material="Kapton" vis="BlueVis"/>
+        </module>
+      </layer>
+
+      <layer id="4" support_rmin="39.5*mm" rotate="13.5*degree" phi0="13.5*degree" n_ladders="24" n_sensors_per_side="0">
+        <ladder isDoubleSided="true">
+          <ladderSupport height="3.1988*mm" length="VXD_ladder_length" thickness="370*um" width="VXD_ladder_width" mat="CFRP_CMS"/>
+          <flex>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/>
+            <slice length="VXD_ladder_length" thickness=" 8.0*um" width="VXD_ladder_flex_width" mat="G4_Al"/>
+            <slice length="VXD_ladder_length" thickness="13.0*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/>
+            <slice length="VXD_ladder_length" thickness=" 8.0*um" width="VXD_ladder_flex_width" mat="G4_Al"/>
+            <slice length="VXD_ladder_length" thickness="13.0*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/>
+            <slice length="VXD_ladder_length" thickness="12.0*um" width="VXD_ladder_flex_width" mat="G4_Al"/>
+            <slice length="VXD_ladder_length" thickness="25.0*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness="12.0*um" width="VXD_ladder_flex_width" mat="G4_Al"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/>
+            <slice length="VXD_ladder_length" thickness="13.0*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness=" 8.0*um" width="VXD_ladder_flex_width" mat="G4_Al"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/>
+            <slice length="VXD_ladder_length" thickness="13.0*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness=" 8.0*um" width="VXD_ladder_flex_width" mat="G4_Al"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Kapton"/>
+            <slice length="VXD_ladder_length" thickness="12.5*um" width="VXD_ladder_flex_width" mat="Acrylicglue"/> <!--glue between flex and sensor/support-->
+          </flex>
+          <sensor n_sensors="26" gap="0.1*mm" thickness="50*um" active_length="25.6*mm" active_width="12.8*mm" dead_width="2*mm" sensor_mat="G4_Si"
+                  deadwire_length="(26*(25.6+0.1)-0.1)*mm" deadwire_width="2.5*mm" deadwire_thickness="(50/10)*um" deadwire_mat="G4_Al"/>
+        </ladder>
+      </layer>
+    </detector>
+  </detectors>
+  
+  <readouts>
+    <readout name="VXDCollection">
+      <!--segmentation type="CartesianGridYZ" grid_size_y="0.016*mm" grid_size_z="0.016*mm"/>
+      <id>system:5,side:-2,layer:9,module:8,sensor:32:8,y:-12,z:-12</id-->
+      <!-- old tracking not use senor id: 24-31 bit-->
+      <id>system:5,side:-2,layer:9,module:8,sensor:32:16</id>
+    </readout>
+  </readouts>
+</lccdd>

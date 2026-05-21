@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+ 
+<define>
+    <constant name="concrete_position_z" value="592.5*cm"/>
+    <constant name="concrete_hole_rmin" value="65*cm"/>
+    <constant name="concrete_wall_size" value="520*cm"/>
+    <constant name="concrete_wall_hz" value="50*cm"/>
+</define>
+
+<detectors>
+    <detector name="ConcreteWall" type="ConcreteWall_v01" vis="VisibleBrown" material="Concrete">
+      <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+      <position x="0"  y="0"  z="concrete_position_z"/>
+      <dimensions rmax="concrete_wall_size" rmin="concrete_hole_rmin" dz="concrete_wall_hz"/>
+    </detector>
+</detectors>  
+
+</lccdd>

@@ -1,0 +1,6 @@
+add_subdirectory(EventSeeder)
+add_subdirectory(GearSvc)
+add_subdirectory(TrackSystemSvc)
+add_subdirectory(SimplePIDSvc)
+add_subdirectory(CrystalEcalSvc)
+add_subdirectory(FinalPIDSvc)

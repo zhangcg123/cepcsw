@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+    <define>
+        <constant name="ecalbarrel_inner_radius" value="Ecal_barrel_inner_radius"/>
+        <constant name="ecalbarrel_outer_radius" value="Ecal_barrel_outer_radius"/>
+        <!--<constant name="ecalbarrel_thickness" value="Ecal_barrel_thickness"/>-->
+        <constant name="ecalbarrel_thickness" value="28.5*cm"/>
+        <constant name="ecalbarrel_zlength" value="Ecal_barrel_half_length*2"/>
+        <constant name="Nmodule" value="32"/>
+        <constant name="Nblock_z" value="15"/>
+        <constant name="module_rotation" value="12*degree"/>
+
+        <constant name="crystal_r" value="4.1*cm"/>
+        <constant name="crystal_phi" value="1*cm"/>
+        <constant name="crystal_z_barrel" value="1*cm"/>
+
+        <constant name="esr_thickness_barrel" value="0.1*mm"/>
+        <constant name="sipm_r" value="0.8*mm"/>
+        <constant name="sipm_phi" value="3*mm"/>
+        <constant name="sipm_z_barrel" value="3*mm"/>
+        <constant name="pcb_thickness_barrel" value="2.2*mm"/>
+        <constant name="cu_thickness_barrel" value="1*mm"/>
+        <constant name="fibre_thickness_barrel" value="0.1*mm"/>
+
+        <constant name="collection_width" value="300*mm"/>
+        <constant name="collection_thickness" value="10*mm"/>
+
+        <constant name="boundary_safety_barrel" value="1*nm"/>
+    </define>
+
+    <regions>
+        <region name="EcalBarrelRegion">
+        </region>
+    </regions>
+
+    <detectors>
+        <detector id="DetID_ECAL"
+                  name="EcalBarrel"
+                  type="CRDEcalBarrel_Short_v02"
+                  readout="EcalBarrelCollection"
+                  vis="Invisible"
+                  sensitive="true"
+                  region="EcalBarrelRegion">
+            <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+        <material name="G4_BGO"/>
+        </detector>
+    </detectors>
+
+    <readouts>
+        <readout name="EcalBarrelCollection">
+            <segmentation type="NoSegmentation"/>
+            <!--segmentation type="CartesianGridXYZ"
+                          grid_size_x="1*cm"
+                          grid_size_y="1*cm"
+                          grid_size_z="1*cm"/-->
+            <id>system:5,module:5,stave:4,layer:5,phi:6,z:6</id>
+        </readout>
+    </readouts>
+
+</lccdd>

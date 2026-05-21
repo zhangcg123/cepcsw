@@ -1,0 +1,28 @@
+
+gaudi_add_module(DetSimCore 
+                 SOURCES src/DetSimAlg.cpp
+                         src/DetSimSvc.cpp
+                         src/DetectorConstruction.cpp
+                         src/PrimaryGeneratorAction.cpp
+                         src/G4PrimaryCnvTool.cpp
+                         src/ActionInitialization.cpp
+                         src/RunAction.cpp
+                         src/EventAction.cpp
+                         src/TrackingAction.cpp
+                         src/SteppingAction.cpp
+                 LINK DetSimInterface
+                      Gaudi::GaudiKernel
+                      ${Geant4_LIBRARIES}
+                      ${DD4hep_COMPONENT_LIBRARIES} 
+                      k4FWCore::k4FWCore
+                      EDM4HEP::edm4hep EDM4HEP::edm4hepDict
+                      k4FWCore::k4FWCore
+)
+
+install(TARGETS DetSimCore
+  EXPORT CEPCSWTargets
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
+  COMPONENT dev)
+
+

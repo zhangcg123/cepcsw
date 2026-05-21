@@ -1,0 +1,119 @@
+
+# CRD detector models - Overview
+
+The following CRD detector models are available in CEPCSW
+
+| Model         |  Description                 | MainTracker |  Ecal   | Hcal | Muon  | Status         |
+| ------------- | -----------------------------|------------ |---------|------|-------|----------------|
+| CRD_o1_v01    | coil inside simulation model | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v02    | strip SET                    | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v03    | MOST2 vertex                 | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v04    | smaller center beam pipe     | SIT+DC+SET  | crystal | RPC  | Scint | developing     |
+| CRD_o1_v05    | Use Ref-Det ECAL and HCAL    | SIT+TPC+SET | crystal | Glass| Scint | developing     |
+| ------------- | -----------------------------|-------------|---------|------|-------|----------------|
+| TDR_o1_v01    | stitching and planar VXD, TPC| ITK+TPC+OTK | crystal | Glass| Scint | developing     |
+| TDR_o1_v02    | short barrel vertex, TPC     | SIT+TPC+SET | crystal | Glass| Scint | developing     |
+| TDR_o2_v01    | long barrel vertex,  DC      | SIT+DC +SET | crystal | Glass| Scint | developing     |
+| TDR_o2_v02    | short barrel vertex, DC      | SIT+DC +SET | crystal | Glass| Scint | developing     |
+ 
+## Details
+
+### CRD_o1_v01 (to update)
+ - coil inside CRD model
+ - BeamPipe
+         - with center pipe + crotch link to doubly-pipe
+         - Detector/DetCRD/src/Other/CRDBeamPipe_v01_geo.cpp
+ - Vertex
+         - with silicon ladders (VXD + SIT12)
+         - Detector/DetCEPCv4/src/tracker/VXD04_geo.cpp
+         - Detector/DetCEPCv4/src/tracker/SIT_Simple_Planar_geo.cpp
+ - MainTracker
+         - with Dirft Chamber + pixel silicon layer between inner and outer chambers (SIT1234 + DC + SET)
+         - DC_outer_radius = 1800*mm for maximum sensitive gas 
+         - Detector/DetDriftChamber/src/driftchamber/DriftChamber.cpp
+         - Detector/DetCEPCv4/src/tracker/SIT_Simple_Pixel_geo.cpp  
+ - EndcapTracker
+         - with silicon pestals (FTDPixel)
+         - Detector/DetCRD/src/Tracker/SiTrackerSkewRing_v01_geo.cpp
+ - Ecal
+         - with crystal 
+         - Detector/DetCRD/src/Calorimeter/CRDEcal.cpp
+         - Endcap (TODO)
+ - Hcal
+         - with RPC readout
+         - creates two sets of hit collections
+ - Coil
+         - Al layers using DD4hep_Solenoid_o1_v01
+ - Yoke
+         - Barrel:  Detector/DetCRD/src/Calorimeter/RotatedPolyhedraBarrelCalorimeter_v01_geo.cpp
+	 - Endcaps: DD4hep_PolyhedraEndcapCalorimeter2
+ - compact files:
+         - [./CRD_o1_v01/CRD_o1_v01.xml](./CRD_o1_v01/CRD_o1_v01.xml)
+
+### CRD_o1_v02 (to update)
+ - based on CRD_o1_v01
+ - strip SET: double layers
+ - compact files:
+         - [./CRD_o1_v02/CRD_o1_v02.xml](./CRD_o1_v02/CRD_o1_v02.xml)
+
+### CRD_o1_v03 (to update)
+ - based on CRD_o1_v01
+ - MOST2 vertex
+ - compact files:
+         - [./CRD_o1_v03/CRD_o1_v03.xml](./CRD_o1_v03/CRD_o1_v03.xml)
+
+### CRD_o1_v04 (to update)
+ - based on CRD_o1_v01
+ - smaller center beam pipe & new MDI: inner radius = 10mm, flat at y direction
+ - compact files:
+         - [./CRD_o1_v04/CRD_o1_v04.xml](./CRD_o1_v04/CRD_o1_v04.xml)
+
+
+### CRD_o1_v05 (towarding TDR Ref-Detector)
+  - based on CRD_o1_v01  
+  - Main tracker: Replace DC with CEPC_v4 TPC for preliminary performance study.  
+  - ECAL barrel: 32-polygon crystal bar ECAL.  
+  - HCAL barrel: 16-polygon glass HCAL, based on SHcalSc04_barrel geometry.   
+  - compact files: 
+        - [./CRD_o1_v05/CRD_o1_v05.xml]
+
+### TDR_o1_v01
+ - coil outside Hcal ref-TDR detector model
+ - BeamPipe
+         - with center pipe + crotch link to doubly-pipe
+         - CRD_common_v02/Beampipe_v01_07.xml: Detector/DetCRD/src/Other/CRDBeamPipe_v01_geo.cpp
+ - Vertex
+         - with silicon ladders (sitiching 4 layers + ladder double layers)
+         - CRD_common_v02/VXD_Composite_v01_03.xml: Detector/DetCRD/src/Tracker/SiTrackerComposite_v03_geo.cpp
+ - MainTracker
+         - with TPC + pixel silicon detector
+         - CRD_common_v02/TPC_ModularEndcap_o1_v02.xml:  Detector/DetCRD/src/Tracker/TPC_ModularEndcap_o1_v01.cpp
+         - CRD_common_v02/ITK_StaggeredStave_v03_01.xml: Detector/DetCRD/src/Tracker/SiTrackerStaggeredLadder_v03_geo.cpp
+         - CRD_common_v02/ITK_EndCap_v01.xml:            Detector/DetCRD/src/Tracker/ITK_EndCap_v01.cpp
+ - TOF & outer tracker
+         - with AC-LCAD
+         - OTKBarrel_v02.xml: Detector/DetCRD/src/Tracker/Detector/DetCRD/src/Tracker/SiTracker_otkbarrel_v02_geo.cpp
+         - OTKEndcap_v02.xml: Detector/DetCRD/src/Tracker/Detector/DetCRD/src/Tracker/SiTracker_otkendcap_v02_geo.cpp
+ - Ecal
+         - with crystal
+         - Ecal_Crystal_Barrel_v02_02.xml: Detector/DetCRD/src/Calorimeter/LongCrystalBarBarrelCalorimeter32Polygon_v02.cpp
+         - Ecal_Crystal_Endcap_v02_01.xml: Detector/DetCRD/src/Calorimeter/LongCrystalBarEndcapCalorimeter_v03.cpp
+ - Hcal
+         - with glass sensitive
+         - SHcalGlass_Barrel_v05.xml:  Detector/DetCEPCv4/src/calorimeter/SHcalSc04_Barrel_v04.cpp
+         - SHcalGlass_Endcaps_v01.xml: Detector/DetCEPCv4/src/calorimeter/SHcalSc04_Endcaps_v01.cpp
+ - Coil
+         - sub-layers using DD4hep_TubeSegment
+         - Coil_Simple_v01_03.xml
+ - Yoke & muon
+         - CRD_common_v01/Muon_Barrel_v01_04.xml: Detector/DetCRD/src/Muon/Muon_Barrel_v01_04.cpp 
+         - CRD_common_v01/Muon_Endcap_v01_02.xml: Detector/DetCRD/src/Muon/Muon_Endcap_v01_02.cpp
+ - LumiCal
+         - CRD_common_v01/Lumical_o1_v01.xml: Detector/DetCRD/src/Calorimeter/Lumical_v01_geo.cpp
+ - Service & others (TODO)
+
+### TDR_o1_v02 (TODO)
+
+### TDR_o2_v01 (TODO)
+
+### TDR_o2_v02 (TODO)

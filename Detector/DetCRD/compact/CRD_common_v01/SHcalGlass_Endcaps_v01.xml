@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+  <comment>Glass Scintillator tile HCAL endcap, modified from Jiyuan's SHcalSc04_Endcaps_v02.xml</comment>
+
+    <define>
+        <constant name="hcalendcap_inner_radius" value="Hcal_endcap_inner_radius"/>
+        <constant name="hcalendcap_outer_radius" value="Hcal_endcap_outer_radius"/>
+        <constant name="hcalendcap_thickness" value="Hcal_endcap_zmax-Hcal_endcap_zmin"/>
+        <constant name="hcalendcap_z" value="0.5*(Hcal_endcap_zmin+Hcal_endcap_zmax)"/>
+        <constant name="Nmodules" value="Hcal_endcap_symmetry"/>
+
+        <constant name="scintillator_xy" value="40.0*mm"/>
+        <constant name="scintillator_z" value="10.0*mm"/>
+        <constant name="wrapped_scintillator_xy" value="40.3*mm"/>
+        <constant name="wrapped_scintillator_z" value="10.2*mm"/>
+
+        <!-- Odd-shaped cells -->
+        <constant name="Nodd" value="5"/>
+        <constant name="short_elongation_1" value="0*mm"/>
+        <constant name="short_elongation_2" value="4.5*mm"/>
+        <constant name="short_elongation_3" value="9*mm"/>
+        <constant name="short_elongation_4" value="14*mm"/>
+        <constant name="short_elongation_5" value="17*mm"/>
+
+        <constant name="cassette_thickness" value="2.0*mm"/>
+        <constant name="esr_thickness" value="65.0*um"/>
+        <constant name="sipm_xy" value="3.0*mm"/>
+        <constant name="sipm_z" value="0.8*mm"/>
+        <constant name="pcb_thickness" value="3.1*mm"/>
+        <constant name="absorber_thickness" value="9.9*mm"/>
+
+        <constant name="inner_structure_thickness" value="50*mm"/>
+        <constant name="outer_structure_width" value="120*mm"/>
+        <constant name="outer_structure_thickness" value="50*mm"/>
+        <constant name="frame_thickness" value="3*mm"/>
+
+        <constant name="boundary_safety" value="1*nm"/>
+    </define>
+
+    <regions>
+        <region name="HcalEndcapsRegion">
+        </region>
+    </regions>
+
+    <detectors>
+        <detector id="DetID_HCAL_ENDCAP"
+                  name="HcalEndcap"
+                  type="SHcalSc04_Endcaps_v02"
+                  readout="HcalEndcapsCollection"
+                  vis="Invisible"
+                  sensitive="true"
+                  region="HcalEndcapsRegion">
+            <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+        <material name="G4_GlassHCAL"/>
+        </detector>
+    </detectors>
+
+    <readouts>
+        <readout name="HcalEndcapsCollection">
+            <segmentation type="NoSegmentation"/>
+            <!--segmentation type="CartesianGridXYZ"
+                          grid_size_x="1*cm"
+                          grid_size_y="1*cm"
+                          grid_size_z="1*cm"/-->
+            <id>system:5,stave:5,layer:6,row:7,phi:6</id>
+        </readout>
+    </readouts>
+
+</lccdd>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lccdd>
+  <define>
+    <constant name="ecalbarrel_inner_radius" value="Ecal_barrel_inner_radius"/>
+    <constant name="ecalbarrel_thickness"    value="Ecal_barrel_thickness"/>       <!--Must be n*10*mm! -->
+    <constant name="ecalbarrel_zlength"      value="Ecal_barrel_half_length*2"/>   <!--Must be n*10*mm n*Nblock_z! -->
+    <constant name="n_symm"                  value="Ecal_barrel_symmetry" />       <!--Only support 8 and 12 now -->
+    <constant name="Nblock_z"   value="11" />
+    <constant name="Nblock_phi" value="4" />
+    <constant name="bar_x"      value="1*cm"/>
+    <constant name="bar_y"      value="1*cm"/>
+  </define>
+
+  <regions>
+    <region name="EcalBarrelRegion">
+    </region>
+  </regions>
+
+  <detectors>
+    <detector id="DetID_ECAL" name="CaloDetector" type="CRDEcalBarrel_v01" readout="EcalBarrelCollection" vis="Invisible" sensitive="true" region="EcalBarrelRegion">
+      <!-- Use cm as unit if you want to use Pandora for reconstruction -->
+    </detector>
+  </detectors>
+  
+  <readouts>
+    <readout name="EcalBarrelCollection">
+      <!--segmentation type="NoSegmentation"/-->
+
+      <!--segmentation type="CartesianGridXYZ"
+                    grid_size_x="1*cm"
+                    grid_size_y="1*cm"
+                    grid_size_z="1*cm"/-->
+      <id>system:5,module:3,stave:4,dlayer:5,part:3,slayer:32:2,bar:6</id>
+    </readout>
+  </readouts>
+
+</lccdd>
