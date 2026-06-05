@@ -586,7 +586,11 @@ StatusCode TPCDigiAlg::execute()
       bool found_mc = false;
       edm4hep::MCParticle mcp;
       try{ // protect crash while MCParticle unavailable
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        mcp = SimTHit.getParticle();
+#else
         mcp = SimTHit.getMCParticle() ;
+#endif
       }
       catch(...){
         debug() << "catch throw MCParticle not available" << endmsg;
@@ -660,7 +664,11 @@ StatusCode TPCDigiAlg::execute()
           // if there is at least one more hit after this one, set the pointer to the MCParticle for the next hit
           if (i < (n_sim_hits-1) ) {
             nextSimTHit = STHcol->at( i+1 ) ;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            nextMCP     = nextSimTHit.getParticle() ;
+#else
             nextMCP     = nextSimTHit.getMCParticle() ;
+#endif
           }
           else{ // set make sure that the pointers are set back to NULL so that the comparisons later hold
             //nextSimTHit = edm4hep::SimTrackerHit;
@@ -669,7 +677,11 @@ StatusCode TPCDigiAlg::execute()
           // if there is at least two more hits after this one, set the pointer to the MCParticle for the next but one hit
           if (i < (n_sim_hits-2) ) {
             nPlus2SimHit = STHcol->at( i+2 );
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            nPlus2MCP    = nPlus2SimHit.getParticle() ;
+#else
             nPlus2MCP    = nPlus2SimHit.getMCParticle() ;
+#endif
           }
           else{ // set make sure that the pointers are set back to NULL so that the comparisons later hold
             //_nPlus2SimHit = edm4hep::SimTrackerHit;
@@ -1153,7 +1165,11 @@ StatusCode TPCDigiAlg::execute()
       Voxel_tpc* seed_hit = row_hits[j];
       if(seed_hit->IsMerged() || seed_hit->IsClusterHit() || seed_hit->getNumberOfAdjacent() > _maxMerge ) {
         ++_NRevomedHits;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto mcp = (_tpcHitMap[ seed_hit ]).getParticle() ;
+#else
         auto mcp = (_tpcHitMap[ seed_hit ]).getMCParticle() ;
+#endif
         if(mcp.isAvailable()) {
           ++_NLostPhysicsTPCHits;
           const auto& mom= mcp.getMomentum() ;
@@ -1265,7 +1281,11 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
   //  if( seed_hit->getRowIndex() > 5 ) return ;
 
   //store hit variables
-  edm4hep::MutableTrackerHit trkHit;// = _trkhitVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  edm4hep::MutableTrackerHit3D trkHit;// = _trkhitVec->create();
+#else
+  edm4hep::MutableTrackerHit trkHit;
+#endif
   //now the hit pos has to be smeared
 
   double tpcRPhiRes = seed_hit->getRPhiRes();
@@ -1357,12 +1377,21 @@ void TPCDigiAlg::writeVoxelToHit( Voxel_tpc* aVoxel){
     //    push back the SimTHit for this TrackerHit
 
     if (_use_raw_hits_to_store_simhit_pointer) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
       trkHit.addToRawHits(_tpcHitMap[seed_hit].getObjectID());
+#endif
     }
 
     auto rel = _relCol->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    rel.setFrom (trkHit);
+    rel.setTo (_tpcHitMap[seed_hit]);
+#else
     rel.setRec (trkHit);
     rel.setSim (_tpcHitMap[seed_hit]);
+#endif
     rel.setWeight( 1.0 );
 
     _trkhitVec->push_back( trkHit );
@@ -1401,7 +1430,11 @@ void TPCDigiAlg::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge){
   const gear::PadRowLayout2D& padLayout = gearTPC.getPadLayout() ;
   const gear::Vector2D padCoord = padLayout.getPadCenter(1) ;
 
-  edm4hep::MutableTrackerHit trkHit;// = _trkhitVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  edm4hep::MutableTrackerHit3D trkHit;// = _trkhitVec->create();
+#else
+  edm4hep::MutableTrackerHit trkHit;
+#endif
 
   double sumZ = 0;
   double sumPhi = 0;
@@ -1421,13 +1454,22 @@ void TPCDigiAlg::writeMergedVoxelsToHit( vector <Voxel_tpc*>* hitsToMerge){
     lastR = hitsToMerge->at(ihitCluster)->getR();
 
     if (_use_raw_hits_to_store_simhit_pointer) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
       trkHit.addToRawHits(_tpcHitMap[hitsToMerge->at(ihitCluster)].getObjectID());
+#endif
     }
     debug() << "raw hit: " << _tpcHitMap[hitsToMerge->at(ihitCluster)].getPosition() << endmsg;
 
     auto rel = _relCol->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    rel.setFrom (trkHit);
+    rel.setTo (_tpcHitMap[ hitsToMerge->at(ihitCluster) ]);
+#else
     rel.setRec (trkHit);
     rel.setSim (_tpcHitMap[ hitsToMerge->at(ihitCluster) ]);
+#endif
     rel.setWeight( float(1.0/number_of_hits_to_merge) );
 
   }

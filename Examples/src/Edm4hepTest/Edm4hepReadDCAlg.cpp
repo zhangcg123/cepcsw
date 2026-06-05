@@ -1,4 +1,5 @@
 #include "Edm4hepReadDCAlg.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
@@ -36,8 +37,11 @@ StatusCode Edm4hepReadDCAlg::execute()
     for (auto trkhit : *trkCol) {
         auto position = trkhit.getPosition();
         auto momentum = trkhit.getMomentum();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto primary_particle = trkhit.getParticle();
+#else
         auto primary_particle = trkhit.getMCParticle();
-
+#endif
         info() << " cellID: " << trkhit.getCellID()
                << " edep: " << trkhit.getEDep()
                << " time: " << trkhit.getTime()

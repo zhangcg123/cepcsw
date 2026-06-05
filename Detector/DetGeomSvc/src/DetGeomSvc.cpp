@@ -18,9 +18,9 @@ DetGeomSvc::~DetGeomSvc() {}
 void DetGeomSvc::initDetIdToNames() {
   if (m_enable_fastinit.value()) {
     // fastinit enabled, no dd4hep geo initlized, read from metadata
-    auto _detIdVec = m_metadata->getValue<std::vector<int>>("DetIDVector");
+    auto _detIdVec = get_metadata_value<std::vector<int>>("DetIDVector");
     auto _detNameVec =
-        m_metadata->getValue<std::vector<std::string>>("DetNameVector");
+        get_metadata_value<std::vector<std::string>>("DetNameVector");
     // Convert vectors to map (detID -> detName)
     for (size_t i = 0; i < _detIdVec.size() && i < _detNameVec.size(); ++i) {
       m_detIdToNames[_detIdVec[i]] = _detNameVec[i];
@@ -41,8 +41,8 @@ void DetGeomSvc::initReadoutNameToDecoder() {
   if (m_enable_fastinit.value()) {
     // fastinit enabled, no dd4hep geo initlized, read from metadata
     auto _readoutNameVec =
-        m_metadata->getValue<std::vector<std::string>>("ReadoutNameVector");
-    auto _decoderVec = m_metadata->getValue<std::vector<std::string>>(
+        get_metadata_value<std::vector<std::string>>("ReadoutNameVector");
+    auto _decoderVec = get_metadata_value<std::vector<std::string>>(
         "CellIDDecoderStringVector");
     // Convert vectors to map (detID -> detName)
     for (size_t i = 0; i < _readoutNameVec.size() && i < _decoderVec.size();
@@ -66,8 +66,14 @@ StatusCode DetGeomSvc::initialize() {
   // recover to old level, if not, too many DD4hep print
   // dd4hep::setPrintLevel(level);
   if (m_enable_fastinit.value()) {
+
+#if podio_VERSION >= PODIO_VERSION(1,0,0)
+    podio::ROOTReader m_reader;
+#else
     podio::ROOTFrameReader m_reader;
+#endif
     m_reader.openFile(m_metadata_path.value());
+    
     auto frame = podio::Frame(m_reader.readEntry(podio::Category::Metadata, 0));
     m_metadata =
         std::make_unique<podio::GenericParameters>(frame.getParameters());
@@ -178,9 +184,9 @@ double DetGeomSvc::getEcalBarLength(unsigned long cellId) {
       // Lazy init
       _ecal_barrel_decoder = getDecoder("EcalBarrelCollection");
       _ecal_endcap_decoder = getDecoder("EcalEndcapsCollection");
-      auto cellIDs = m_metadata->getValue<std::vector<int>>("EcalCellIDVector");
+      auto cellIDs = get_metadata_value<std::vector<int>>("EcalCellIDVector");
       auto barLengths =
-          m_metadata->getValue<std::vector<double>>("EcalBarLengthVector");
+          get_metadata_value<std::vector<double>>("EcalBarLengthVector");
       for (size_t i = 0; i < cellIDs.size(); ++i) {
         m_ecalCellIdToBarLengthMap[cellIDs[i]] = barLengths[i];
       }

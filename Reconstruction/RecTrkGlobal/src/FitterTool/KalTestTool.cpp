@@ -266,7 +266,13 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
       // get strip hits
       int nRawHit = trkHit.rawHits_size();
       for( unsigned k=0; k< nRawHit; k++ ){
-	edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+	auto rawHitOpt = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+
+        if (!rawHitOpt) {
+            throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+        }
+
+        edm4hep::TrackerHit rawHit = *rawHitOpt;
 	bool is_outlier = false;
 	// here we loop over outliers as this will be faster than looping over the used hits
 	for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {

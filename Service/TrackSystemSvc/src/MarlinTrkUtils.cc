@@ -231,15 +231,24 @@ namespace MarlinTrk {
         //const EVENT::LCObjectVec rawObjects = trkHit->getRawHits();
 	//std::cout << "space point is not still valid! pelease wait updating..." <<std::endl;
 	//exit(1);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
         int nRawHit = trkHit.rawHits_size();
         for( unsigned k=0; k< nRawHit; k++ ){
-          edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+          auto rawHitOpt = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+          if (!rawHitOpt) {
+              throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+          }
+
+          edm4hep::TrackerHit rawHit = *rawHitOpt;
 	  if( marlinTrk->addHit( rawHit ) == IMarlinTrack::success ){
 	    isSuccessful = true; //if at least one hit from the spacepoint gets added
             ++ndof_added;
 	    //std::cout << "DEBUG<<<<<MarlinTrk::createFit ndof_added = " << ndof_added << std::endl;
           }
         }
+#endif
       }
       else { // normal non composite hit
         if (marlinTrk->addHit( trkHit ) == IMarlinTrack::success ) {
@@ -441,9 +450,17 @@ namespace MarlinTrk {
 	//std::cout << "Error: space point is not still valid! pelease wait updating..." <<std::endl;
         //exit(1);
 	// get strip hits 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
         int nRawHit = trkHit.rawHits_size();
         for( unsigned k=0; k< nRawHit; k++ ){
-	  edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+	  auto rawHitOpt = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+          if (!rawHitOpt) {
+              throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+          }
+
+          edm4hep::TrackerHit rawHit = *rawHitOpt;
 	  bool is_outlier = false;
 	  // here we loop over outliers as this will be faster than looping over the used hits
           for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
@@ -458,6 +475,7 @@ namespace MarlinTrk {
             break; // break out of loop over rawObjects
           }          
         }
+#endif
       } else {
         bool is_outlier = false;
         // here we loop over outliers as this will be faster than looping over the used hits
@@ -573,9 +591,11 @@ namespace MarlinTrk {
     }
     
     double r_first = firstHit.getPosition()[0]*firstHit.getPosition()[0] + firstHit.getPosition()[1]*firstHit.getPosition()[1];
-    
+#if podio_VERSION >= PODIO_VERSION(1, 0, 0)
+    throw std::runtime_error("The setRadiusOfInnermostHit interface is removed from TrackerHit");    
+#else
     track->setRadiusOfInnermostHit(sqrt(r_first));
-    
+#endif
     if ( atLastHit == 0 && atCaloFace == 0 ) {
     
       ///////////////////////////////////////////////////////

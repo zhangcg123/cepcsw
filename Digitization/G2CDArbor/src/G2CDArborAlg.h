@@ -4,14 +4,20 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
+
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/SimCalorimeterHit.h"
 #include "edm4hep/CalorimeterHit.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
-#include "edm4hep/MCRecoCaloAssociationCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#else
+#include "edm4hep/MCRecoCaloAssociationCollection.h"
+#endif
 
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
@@ -86,7 +92,12 @@ protected:
      /* typedef DataHandle<edm4hep::MCRecoCaloAssociationCollection>  McRecoCaloAssoType; */
      /* Gaudi::Property<std::vector<std::string>> m_caloTruthLinkColName{this, "caloTruthLinkCollection", {}, "caloTruthLinkCollection"}; */
      /* std::vector<McRecoCaloAssoType*> _caloTruthLinkCollection; */
-     DataHandle<edm4hep::MCRecoCaloAssociationCollection> _caloTruthLinkCollection{"MCRecoCaloAssociationCollection", Gaudi::DataHandle::Writer, this};
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::CaloHitSimCaloHitLinkCollection;
+#else
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::MCRecoCaloAssociationCollection;
+#endif
+     DataHandle<CEPCSWCaloHitSimCaloHitLinkCollection> _caloTruthLinkCollection{"MCRecoCaloAssociationCollection", Gaudi::DataHandle::Writer, this};
 
      mutable Gaudi::Property<std::vector<float>> m_ChargeSpatialDistri{this, "ChargeSpatialDistribution", {0.1, 0.2, 0.4, 0.2, 0.1}, "Spactial Distribution of MIP charge X*Y;"};
      mutable Gaudi::Property<std::vector<float>> _calibCoeffEcal{this, "CalibrECAL", {40.91, 81.81}, "Calibration coefficients for ECAL"};

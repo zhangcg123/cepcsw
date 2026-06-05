@@ -320,8 +320,18 @@ StatusCode ReadDigiAlg::execute()
 
       if(const_TPCTrkLinkCol){
         for(auto iter: *const_TPCTrkLinkCol){
-          if(iter.getRec()==m_trk){
-            edm4hep::MCParticle m_mcp = iter.getSim();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+          auto from = iter.getFrom();
+#else
+          auto from = iter.getRec();
+#endif
+            
+          if(from==m_trk){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            auto m_mcp = iter.getTo();
+#else
+            auto m_mcp = iter.getSim();
+#endif
             m_truthMC_pid.push_back(m_mcp.getPDG());
             m_truthMC_px.push_back(m_mcp.getMomentum().x);
             m_truthMC_py.push_back(m_mcp.getMomentum().y);
@@ -399,8 +409,18 @@ StatusCode ReadDigiAlg::execute()
 
       if(const_fullTrkLinkCol){
         for(auto iter: *const_fullTrkLinkCol){
-          if(iter.getRec()==m_trk){
-            edm4hep::MCParticle m_mcp = iter.getSim();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            auto from = iter.getFrom();
+#else
+            auto from = iter.getRec();
+#endif
+            
+          if(from==m_trk){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            auto m_mcp = iter.getTo();
+#else
+            auto m_mcp = iter.getSim();
+#endif
             m_truthMC_pid.push_back(m_mcp.getPDG());
             m_truthMC_px.push_back(m_mcp.getMomentum().x);
             m_truthMC_py.push_back(m_mcp.getMomentum().y);

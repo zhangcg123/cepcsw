@@ -3,12 +3,16 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/SimCalorimeterHit.h"
 #include "edm4hep/CalorimeterHit.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#else
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
-
+#endif
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
 #include "DetInterface/IGeomSvc.h"
@@ -20,6 +24,11 @@ class CaloDigiAlg : public Algorithm
 {
  
 public:
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::CaloHitSimCaloHitLinkCollection;
+#else
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::MCRecoCaloAssociationCollection;
+#endif
  
   CaloDigiAlg(const std::string& name, ISvcLocator* svcLoc);
  
@@ -51,7 +60,7 @@ protected:
   DataHandle<edm4hep::SimCalorimeterHitCollection> r_SimCaloCol{"SimCaloCol", Gaudi::DataHandle::Reader, this};
   // Output collections
   DataHandle<edm4hep::CalorimeterHitCollection>    w_DigiCaloCol{"DigiCaloCol", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::MCRecoCaloAssociationCollection>    w_CaloAssociationCol{"MCRecoCaloAssociationCollection", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWCaloHitSimCaloHitLinkCollection>    w_CaloAssociationCol{"MCRecoCaloAssociationCollection", Gaudi::DataHandle::Writer, this};
 };
 
 #endif

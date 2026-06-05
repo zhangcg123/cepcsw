@@ -123,8 +123,8 @@ StatusCode TPCPixelDigiTool::initialize()
   return StatusCode::SUCCESS;
 }
 
-StatusCode TPCPixelDigiTool::Call(const edm4hep::SimTrackerHitCollection *simCol, edm4hep::TrackerHitCollection *hitCol,
-                                  edm4hep::MCRecoTrackerAssociationCollection *assCol)
+StatusCode TPCPixelDigiTool::Call(const edm4hep::SimTrackerHitCollection *simCol, IDigiTool::CEPCSWTrackerHit3DCollection *hitCol,
+                                  IDigiTool::CEPCSWTrackerHitSimTrackerHitLinkCollection *assCol)
 {
 
   edm4hep::SimTrackerHit simhit;
@@ -134,8 +134,11 @@ StatusCode TPCPixelDigiTool::Call(const edm4hep::SimTrackerHitCollection *simCol
   return StatusCode::SUCCESS;
 }
 
-StatusCode TPCPixelDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHitCollection *hitCol, edm4hep::MCRecoTrackerAssociationCollection *assCol)
+StatusCode TPCPixelDigiTool::Call(edm4hep::SimTrackerHit simhit, IDigiTool::CEPCSWTrackerHit3DCollection *hitCol, IDigiTool::CEPCSWTrackerHitSimTrackerHitLinkCollection *assCol)
 {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  // TODO: SimPrimaryIonizationClusterCollection is removed from EDM4hep
+#else
   DataHandle<edm4hep::SimPrimaryIonizationClusterCollection> m_inputIonClusterCol{"SimPrimaryIonizationClusterCollection", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::SimTrackerHitCollection> m_inputSimCol{m_readoutName, Gaudi::DataHandle::Reader, this};
   UTIL::BitField64 *_cellid_encoder = new UTIL::BitField64(CEPCConf::DetEncoderString::getStringRepresentation());
@@ -401,6 +404,7 @@ StatusCode TPCPixelDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::Tracke
       }
       }
     }
+#endif
   return StatusCode::SUCCESS;
 }
 

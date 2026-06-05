@@ -6,7 +6,7 @@
 #include "UTIL/LCStdHepRdrNew.h"
 #include "IMPL/MCParticleImpl.h"
 
-
+#include <edm4hep/EDM4hepVersion.h>
 #include "edm4hep/MCParticle.h" //edm4hep
 #include "edm4hep/MCParticleObj.h"
 #include "edm4hep/MCParticleCollection.h"
@@ -52,10 +52,19 @@ bool StdHepRdr::mutate(Gen::GenEvent& event){
         mcp.setMass               (mc->getMass());
         mcp.setVertex             (mc->getVertex()); 
         mcp.setEndpoint           (mc->getEndpoint());
-        mcp.setMomentum           (Vector3f(float(mc->getMomentum()[0]), float(mc->getMomentum()[1]), float(mc->getMomentum()[2]) ));
-        mcp.setMomentumAtEndpoint (Vector3f(float(mc->getMomentumAtEndpoint()[0]), float(mc->getMomentumAtEndpoint()[1]), float(mc->getMomentumAtEndpoint()[2]) ));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        using vector_type = Vector3d;
+#else
+        using vector_type = Vector3f;
+#endif
+        mcp.setMomentum           (vector_type(float(mc->getMomentum()[0]), float(mc->getMomentum()[1]), float(mc->getMomentum()[2]) ));
+        mcp.setMomentumAtEndpoint (vector_type(float(mc->getMomentumAtEndpoint()[0]), float(mc->getMomentumAtEndpoint()[1]), float(mc->getMomentumAtEndpoint()[2]) ));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO: please fix me
+#else
         mcp.setSpin               (mc->getSpin());
         mcp.setColorFlow          (mc->getColorFlow());
+#endif
     }
     // second loop for setting parents and daughters
     

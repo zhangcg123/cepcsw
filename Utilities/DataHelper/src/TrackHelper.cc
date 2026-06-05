@@ -29,7 +29,11 @@ void CEPC::getPosMomFromTrackState(const edm4hep::TrackState& trackState,
     TMatrixDSym covMatrix_5(5);
     ///< lower triangular covariance matrix of the track parameters.
     ///  the order of parameters is  d0, phi, omega, z0, tan(lambda).
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    std::array<float,21> covMatrix=trackState.covMatrix.values;
+#else
     std::array<float,21> covMatrix=trackState.covMatrix;
+#endif
     int k=0;
     for(int i=0;i<5;i++){
         for(int j=0;j<5;j++){
@@ -143,15 +147,26 @@ void CEPC::getHelixFromPosMom(HelixClass& helix,double& xc,double& yc,
 }
 
 void CEPC::getAssoMCParticle(
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+        const CEPC::CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         edm4hep::TrackerHit trackerHit,
         edm4hep::MCParticle& mcParticle,edm4hep::SimTrackerHit& simTrackerHit)
 {
     for(auto assoHit: *assoHits){
-        if(assoHit.getRec()==trackerHit)
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto from = assoHit.getFrom();
+#else
+        auto from = assoHit.getRec();
+#endif
+        
+        if(from==trackerHit)
         {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            simTrackerHit=assoHit.getTo();
+            mcParticle = simTrackerHit.getParticle();
+#else
             simTrackerHit=assoHit.getSim();
             mcParticle = simTrackerHit.getMCParticle();
+#endif
 
         }
     }

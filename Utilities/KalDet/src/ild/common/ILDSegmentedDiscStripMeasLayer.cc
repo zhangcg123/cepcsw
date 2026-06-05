@@ -14,6 +14,7 @@
 #include "TString.h"
 
 //#include <EVENT/TrackerHitPlane.h>
+#include "edm4hep/EDM4hepVersion.h"
 
 #include <math.h>
 #include <assert.h>
@@ -266,9 +267,24 @@ ILDVTrackHit* ILDSegmentedDiscStripMeasLayer::ConvertLCIOTrkHit(edm4hep::Tracker
   x[0] = h(0, 0);
   if(ILDPlanarStripHit_DIM == 2) x[1] = h(1, 0);
   
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+      auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+      auto covmat = hit3d.getCovMatrix();
+      dx[0] = covmat[2];
+      if(ILDPlanarStripHit_DIM == 2) dx[1] = covmat[5];
+  } else if (trkhit.isA<edm4hep::TrackerHitPlane>()) {
+      auto hitPlane = trkhit.as<edm4hep::TrackerHitPlane>();
+      dx[0] = hitPlane.getDu();
+      if(ILDPlanarStripHit_DIM == 2) dx[1] = hitPlane.getDv();
+  } else {
+      throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+  }
+#else
   dx[0] = trkhit.getCovMatrix(2);
   if(ILDPlanarStripHit_DIM == 2) dx[1] = trkhit.getCovMatrix(5);
-    
+#endif
+  
   bool hit_on_surface = IsOnSurface(hit);
   
   //std::cout << "ILDSegmentedDiscStripMeasLayer::ConvertLCIOTrkHit ILDPlanarStripHit created" 

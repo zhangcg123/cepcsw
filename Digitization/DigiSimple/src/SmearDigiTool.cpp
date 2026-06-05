@@ -73,8 +73,8 @@ StatusCode SmearDigiTool::initialize() {
   return StatusCode::SUCCESS;
 }
 
-StatusCode SmearDigiTool::Call(const edm4hep::SimTrackerHitCollection* simCol, edm4hep::TrackerHitCollection* hitCol,
-			       edm4hep::MCRecoTrackerAssociationCollection* assCol) {
+StatusCode SmearDigiTool::Call(const edm4hep::SimTrackerHitCollection* simCol, IDigiTool::CEPCSWTrackerHit3DCollection* hitCol,
+			       IDigiTool::CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol) {
   for (auto simhit : *simCol) {
     StatusCode sc = Call(simhit, hitCol, assCol);
     if (sc.isFailure()) return sc;
@@ -88,7 +88,7 @@ StatusCode SmearDigiTool::Call(const edm4hep::SimTrackerHitCollection* simCol, e
   return StatusCode::SUCCESS;
 }
 
-StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHitCollection* hitCol, edm4hep::MCRecoTrackerAssociationCollection* assCol) {
+StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, IDigiTool::CEPCSWTrackerHit3DCollection* hitCol, IDigiTool::CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol) {
   if (!simhit.isAvailable()) {
     error() << "input SimTrackerHit not available!" << endmsg;
     return StatusCode::SUCCESS;
@@ -336,10 +336,15 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
 	    << " to tracker hit " << outhit.id()
 	    << " with a weight of " << weight
 	    << endmsg;
-
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+    ass.setTo(simhit);
+    ass.setFrom(outhit);
+#else
     outhit.addToRawHits(simhit.getObjectID());
     ass.setSim(simhit);
     ass.setRec(outhit);
+#endif
     ass.setWeight(weight);
 
     debug() << "-------------------------------------------------------" << endmsg;
@@ -352,7 +357,7 @@ StatusCode SmearDigiTool::Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHi
   return StatusCode::SUCCESS;
 }
 
-StatusCode SmearDigiTool::AppendNoise(edm4hep::TrackerHitCollection* hitCol) {
+StatusCode SmearDigiTool::AppendNoise(IDigiTool::CEPCSWTrackerHit3DCollection* hitCol) {
   for (const auto& pair/*[cellId, surface]*/ : *m_surfaces) {
     auto cellId = pair.first;
     auto surface = pair.second;

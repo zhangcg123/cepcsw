@@ -3,6 +3,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MutableCaloHitContribution.h"
 #include "edm4hep/MutableSimCalorimeterHit.h"
 #include "edm4hep/CalorimeterHit.h"
@@ -10,8 +11,13 @@
 #include "edm4hep/Cluster.h"
 #include "edm4hep/SimCalorimeterHit.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#include "edm4hep/CaloHitMCParticleLinkCollection.h"
+#else
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
 #include "edm4hep/MCRecoCaloParticleAssociationCollection.h"
+#endif
 #include "edm4hep/Vector3f.h"
 
 #include <DDRec/DetectorData.h>
@@ -50,6 +56,13 @@ const double PI = 3.141592653;
 class EcalDigiAlgShort : public Algorithm
 {
 public:
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::CaloHitSimCaloHitLinkCollection;
+    using CEPCSWCaloHitMCParticleLinkCollection = edm4hep::CaloHitMCParticleLinkCollection;
+#else
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::MCRecoCaloAssociationCollection;
+    using CEPCSWCaloHitMCParticleLinkCollection = edm4hep::MCRecoCaloParticleAssociationCollection;
+#endif
     EcalDigiAlgShort(const std::string& name, ISvcLocator* svcLoc);
 
     virtual StatusCode initialize();
@@ -130,8 +143,8 @@ protected:
 
     // Output collections
     DataHandle <edm4hep::CalorimeterHitCollection> w_DigiCaloCol{"DigiCaloCol", Gaudi::DataHandle::Writer, this};
-    DataHandle <edm4hep::MCRecoCaloAssociationCollection> w_CaloAssociationCol{"ECALBarrelAssoCol", Gaudi::DataHandle::Writer, this};
-    DataHandle <edm4hep::MCRecoCaloParticleAssociationCollection> w_MCPCaloAssociationCol{"ECALBarrelParticleAssoCol", Gaudi::DataHandle::Writer, this};
+    DataHandle <CEPCSWCaloHitSimCaloHitLinkCollection> w_CaloAssociationCol{"ECALBarrelAssoCol", Gaudi::DataHandle::Writer, this};
+    DataHandle <CEPCSWCaloHitMCParticleLinkCollection> w_MCPCaloAssociationCol{"ECALBarrelParticleAssoCol", Gaudi::DataHandle::Writer, this};
 };
 
 #endif

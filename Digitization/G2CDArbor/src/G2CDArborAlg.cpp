@@ -456,7 +456,7 @@ StatusCode G2CDArborAlg::execute()
      // LCFlagImpl linkflag;
      // linkflag.setBit(LCIO::CHBIT_LONG);
      // relcol->setFlag(linkflag.getFlag());
-     edm4hep::MCRecoCaloAssociationCollection* relcol = _caloTruthLinkCollection.createAndPut();
+     auto relcol = _caloTruthLinkCollection.createAndPut();
 
      // LCCollection * MCPCol = evtP->getCollection("MCParticle");
      // for ( int s0(0); s0 < MCPCol->getNumberOfElements(); s0++)
@@ -606,8 +606,13 @@ StatusCode G2CDArborAlg::execute()
             // LCRelationImpl *rel = new LCRelationImpl(DigiEcalhit, SimEcalhit, 1.0);    //only keep the leading contribution
             // relcol->addElement(rel);
             auto rel = relcol->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+            rel.setFrom(DigiEcalhit);
+            rel.setTo(SimEcalhit);
+#else            
             rel.setRec(DigiEcalhit);
             rel.setSim(SimEcalhit);
+#endif
             rel.setWeight(1.0);
 
             ESum_ECALSimu += SimEcalhit.getEnergy();
@@ -726,8 +731,14 @@ StatusCode G2CDArborAlg::execute()
      		    // LCRelationImpl *rel = new LCRelationImpl(DigiHcalhit, SimHcalhit, 1.0);    //only keep the leading contribution
      	  	    // relcol->addElement(rel);
      		    auto rel = relcol->create();
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+                    rel.setFrom(DigiHcalhit);
+                    rel.setTo(SimHcalhit);
+#else
      		    rel.setRec(DigiHcalhit);
      		    rel.setSim(SimHcalhit);
+#endif
      		    rel.setWeight(1.0);
 
 

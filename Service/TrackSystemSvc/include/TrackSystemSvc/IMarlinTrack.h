@@ -5,7 +5,7 @@
 
 //#include "lcio.h"
 
-#include "edm4hep/TrackerHit.h"
+#include <edm4hep/EDM4hepVersion.h>
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/TrackState.h"
 
@@ -13,6 +13,7 @@
 //#include "plcio/DoubleThree.h"
 #include "edm4hep/Vector3d.h"
 
+#include <optional>
 #include <exception>
 
   /** Interface for generic tracks in MarlinTrk. The interface should provide the functionality to

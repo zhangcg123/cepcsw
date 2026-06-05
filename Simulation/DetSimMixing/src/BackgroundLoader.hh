@@ -7,8 +7,13 @@
 #include <vector>
 #include <string>
 
+#include <podio/podioVersion.h>
 #include <podio/Frame.h>
+#if podio_VERSION >= PODIO_VERSION(1,0,0)
+#include <podio/ROOTReader.h>
+#else
 #include <podio/ROOTFrameReader.h>
+#endif
 
 class BackgroundLoader: public IBackgroundLoader {
 public:
@@ -170,8 +175,11 @@ public:
     }
 
 private:
+#if podio_VERSION >= PODIO_VERSION(1, 0, 0)
+    podio::ROOTReader m_reader;
+#else
     podio::ROOTFrameReader m_reader;
-
+#endif
     unsigned int m_current_evt{0};
     unsigned int m_max_evt{0};
 

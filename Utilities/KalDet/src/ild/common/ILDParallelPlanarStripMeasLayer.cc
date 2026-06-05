@@ -5,6 +5,7 @@
 #include "kaltest/TVTrackHit.h"
 
 //#include <EVENT/TrackerHitPlane.h>
+#include "edm4hep/EDM4hepVersion.h"
 
 #include "gearimpl/Vector3D.h"
 
@@ -190,8 +191,23 @@ ILDVTrackHit* ILDParallelPlanarStripMeasLayer::ConvertLCIOTrkHit(edm4hep::Tracke
 
   //dx[0] = plane_hit.getdU() ;
   //if(ILDPlanarStripHit_DIM == 2) dx[1] = plane_hit.getdV() ;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          dx[0] = covmat[2];
+          if(ILDPlanarStripHit_DIM == 2) dx[1] = covmat[5];
+      } else if (trkhit.isA<edm4hep::TrackerHitPlane>()) {
+          auto hitPlane = trkhit.as<edm4hep::TrackerHitPlane>();
+          dx[0] = hitPlane.getDu();
+          if(ILDPlanarStripHit_DIM == 2) dx[1] = hitPlane.getDv();
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
   dx[0] = trkhit.getCovMatrix(2);
   if(ILDPlanarStripHit_DIM == 2) dx[1] = trkhit.getCovMatrix(5);
+#endif
 
   bool hit_on_surface = IsOnSurface(hit);
   /*

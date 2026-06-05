@@ -447,27 +447,31 @@ StatusCode TotalInvMass::execute()
             //					ArborTotalP += 0.98*currP;
             //				else
             //					ArborTotalP += currP;
-
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            const auto pdg = a_RecoP.getPDG();
+#else
+            const auto pdg = a_RecoP.getType();
+#endif            
             if(a_RecoP.getCharge() != 0) {
                 ArborChP += currP;
-            } else if(a_RecoP.getType() == 310) {
+            } else if(pdg == 310) {
                 ArborKPF += currP;
-            } else if(a_RecoP.getType() == 22) {
+            } else if(pdg == 22) {
                 if(a_RecoP.getEnergy() < 3.0)
                     ArborFrPh += currP;
                 else
                     ArborPhP += currP;
-            } else if(a_RecoP.getType() == 2112) {
+            } else if(pdg == 2112) {
                 if(a_RecoP.getEnergy() < 3.0)
                     ArborFrNe += currP;
                 else
                     ArborNeP += currP;
             } else if(a_RecoP.getEnergy() < 3.0) {
                 ArborFrP += currP;
-                if(0) debug()<<"Undef "<<a_RecoP.getType()<<endmsg;
+                if(0) debug()<<"Undef "<<pdg<<endmsg;
             } else {
                 ArborUdP += currP;
-                if(0) debug()<<"Undef "<<a_RecoP.getType() << "En "<<a_RecoP.getEnergy()<<endmsg;
+                if(0) debug()<<"Undef "<<pdg << "En "<<a_RecoP.getEnergy()<<endmsg;
             }
 
 

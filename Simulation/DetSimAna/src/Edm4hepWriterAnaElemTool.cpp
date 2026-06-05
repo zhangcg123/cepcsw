@@ -16,6 +16,8 @@
 #include "DDG4/Geant4Data.h"
 #include "DetSimSD/Geant4Hits.h"
 
+#include "edm4hep/EDM4hepVersion.h"
+
 DECLARE_COMPONENT(Edm4hepWriterAnaElemTool)
 
 void
@@ -92,8 +94,12 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
         newparticle.setEndpoint       (mcGenParticle.getEndpoint());
         newparticle.setMomentum       (mcGenParticle.getMomentum());
         newparticle.setMomentumAtEndpoint(mcGenParticle.getMomentumAtEndpoint());
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO
+#else
         newparticle.setSpin           (mcGenParticle.getSpin());
         newparticle.setColorFlow      (mcGenParticle.getColorFlow());
+#endif
 
     }
 
@@ -274,6 +280,7 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
                     float mom[3] = {trk_hit->momentum.x()/CLHEP::GeV,
                                     trk_hit->momentum.y()/CLHEP::GeV,
                                     trk_hit->momentum.z()/CLHEP::GeV};
+
                     edm_trk_hit.setMomentum(edm4hep::Vector3f(mom));
 
                     // get the truth or contribution
@@ -289,7 +296,11 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
                     if (m_userinfo) {
                         auto idxedm4hep =  m_userinfo->idxG4Track2Edm4hep(pritrkid);
                         if (idxedm4hep != -1) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                            edm_trk_hit.setParticle(mcCol->at(idxedm4hep));
+#else
                             edm_trk_hit.setMCParticle(mcCol->at(idxedm4hep));
+#endif
                         }
                     }
 
@@ -467,9 +478,14 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
 
     const G4ThreeVector& stop_mom = track->GetMomentum();
 
-    edm4hep::Vector3f mom_endpoint(stop_mom.x()/CLHEP::GeV,
-                                   stop_mom.y()/CLHEP::GeV,
-                                   stop_mom.z()/CLHEP::GeV);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using vector_type = edm4hep::Vector3d;
+#else
+    using vector_type = edm4hep::Vector3f;
+#endif
+                    
+
+    vector_type mom_endpoint(stop_mom.x()/CLHEP::GeV, stop_mom.y()/CLHEP::GeV, stop_mom.z()/CLHEP::GeV);
     primary_particle.setMomentumAtEndpoint(mom_endpoint);
 
 
@@ -553,8 +569,14 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
         double pz=sec_init_mom.z()/CLHEP::GeV;
         mcp.setVertex(edm4hep::Vector3d(x,y,z)); // todo
         mcp.setEndpoint(edm4hep::Vector3d(x,y,z)); // todo
-        mcp.setMomentum(edm4hep::Vector3f(px,py,pz)); // todo
-        mcp.setMomentumAtEndpoint(edm4hep::Vector3f(px,py,pz)); //todo
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using vector_type = edm4hep::Vector3d;
+#else
+    using vector_type = edm4hep::Vector3f;
+#endif
+        
+        mcp.setMomentum(vector_type(px,py,pz)); // todo
+        mcp.setMomentumAtEndpoint(vector_type(px,py,pz)); //todo
 
         mcp.addToParents(primary_particle);
         primary_particle.addToDaughters(mcp);

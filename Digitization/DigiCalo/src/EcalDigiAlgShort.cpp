@@ -116,8 +116,8 @@ StatusCode EcalDigiAlgShort::execute()
 
     const edm4hep::SimCalorimeterHitCollection* SimHitCol = r_SimCaloCol.get();
     edm4hep::CalorimeterHitCollection* caloVec = w_DigiCaloCol.createAndPut();
-    edm4hep::MCRecoCaloAssociationCollection* caloAssoVec = w_CaloAssociationCol.createAndPut();
-    edm4hep::MCRecoCaloParticleAssociationCollection* caloMCPAssoVec = w_MCPCaloAssociationCol.createAndPut();
+    auto* caloAssoVec = w_CaloAssociationCol.createAndPut();
+    auto* caloMCPAssoVec = w_MCPCaloAssociationCol.createAndPut();
     vector<edm4hep::SimCalorimeterHit> m_simhitCol;
     m_simhitCol.clear();
     vector<CaloCrystalShort> m_hitCol;
@@ -313,8 +313,13 @@ StatusCode EcalDigiAlgShort::execute()
 
         // SimHit - CaloHit association
         auto rel = caloAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        rel.setFrom(digiHit);
+        rel.setTo(SimHit);
+#else
         rel.setRec(digiHit);
         rel.setSim(SimHit);
+#endif
         rel.setWeight(1.0);
 
         // MCParticle - CaloHit association
@@ -328,8 +333,13 @@ StatusCode EcalDigiAlgShort::execute()
 //                selMCP = iter.first;
 //            }
             auto rel_MCP = caloMCPAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            rel_MCP.setFrom(digiHit);
+            rel_MCP.setTo(iter.first);
+#else
             rel_MCP.setRec(digiHit);
             rel_MCP.setSim(iter.first);
+#endif
             rel_MCP.setWeight(iter.second / SimHit.getEnergy());
         }
 

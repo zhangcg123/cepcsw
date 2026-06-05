@@ -6,7 +6,7 @@
 #include "HepMC/GenVertex.h"
 #include "HepMC/Polarization.h"
 
-
+#include <edm4hep/EDM4hepVersion.h>
 #include "edm4hep/MCParticle.h" //edm4hep
 #include "edm4hep/MCParticleObj.h"
 #include "edm4hep/MCParticleCollection.h"
@@ -62,12 +62,21 @@ bool HepMCRdr::mutate(Gen::GenEvent& event){
             mcp.setEndpoint           (edm4hep::Vector3d (three));
         } 
         else mcp.setEndpoint (edm4hep::Vector3d());
-        mcp.setMomentum           (edm4hep::Vector3f(float((*p)->momentum().px()), float((*p)->momentum().py()), float((*p)->momentum().pz()) ));
-        mcp.setMomentumAtEndpoint (edm4hep::Vector3f(float((*p)->momentum().px()), float((*p)->momentum().py()), float((*p)->momentum().pz()) ));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        using vector_type = Vector3d;
+#else
+        using vector_type = Vector3f;
+#endif
+        mcp.setMomentum           (vector_type(float((*p)->momentum().px()), float((*p)->momentum().py()), float((*p)->momentum().pz()) ));
+        mcp.setMomentumAtEndpoint (vector_type(float((*p)->momentum().px()), float((*p)->momentum().py()), float((*p)->momentum().pz()) ));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO: please fix me
+#else
         const HepMC::Polarization & polar = (*p)->polarization();
         mcp.setSpin               (edm4hep::Vector3f(polar.normal3d().x(), polar.normal3d().y(), polar.normal3d().z()) );
         int two[2] = {1, (*p)->flow(1)};
         mcp.setColorFlow          (edm4hep::Vector2i (two) );
+#endif
     }
     // second loop for setting parents and daughters
     index = 0 ;

@@ -12,6 +12,7 @@
 #include "TNode.h"
 #include "TString.h"
 
+#include "edm4hep/EDM4hepVersion.h"
 #include <edm4hep/TrackerHit.h>
 
 #include "gearimpl/Vector3D.h"
@@ -228,8 +229,38 @@ ILDVTrackHit* CEPCArcDiscMeasLayer::ConvertLCIOTrkHit(edm4hep::TrackerHit trkhit
   //gear::Vector3D U(1.0,plane_hit.getU()[1],plane_hit.getU()[0],gear::Vector3D::spherical);
   //gear::Vector3D V(1.0,plane_hit.getV()[1],plane_hit.getV()[0],gear::Vector3D::spherical);
   if (type[CEPCConf::TrkHitTypeBit::PLANAR]) {
-    gear::Vector3D U(1.0,trkhit.getCovMatrix(1),trkhit.getCovMatrix(0),gear::Vector3D::spherical);
-    gear::Vector3D V(1.0,trkhit.getCovMatrix(4),trkhit.getCovMatrix(3),gear::Vector3D::spherical);
+      float phiU = 0.0;
+      float thetaU = 0.0;
+      float phiV = 0.0;
+      float thetaV = 0.0;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHitPlane>()) {
+          auto hitPlane = trkhit.as<edm4hep::TrackerHitPlane>();
+          // TODO
+          thetaU = hitPlane.getU().a;
+          phiU   = hitPlane.getU().b;
+          thetaV = hitPlane.getV().a;
+          phiV   = hitPlane.getV().b;
+      } else if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          phiU = covmat[1];
+          thetaU = covmat[0];
+          phiV = covmat[4];
+          thetaV = covmat[3];
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
+      phiU = trkhit.getCovMatrix(1);
+      thetaU = trkhit.getCovMatrix(0);
+      phiV = trkhit.getCovMatrix(4);
+      thetaV = trkhit.getCovMatrix(3);
+#endif
+    gear::Vector3D U(1.0,phiU,thetaU,gear::Vector3D::spherical);
+    gear::Vector3D V(1.0,phiV,thetaV,gear::Vector3D::spherical);
+    // gear::Vector3D U(1.0,trkhit.getCovMatrix(1),trkhit.getCovMatrix(0),gear::Vector3D::spherical);
+    // gear::Vector3D V(1.0,trkhit.getCovMatrix(4),trkhit.getCovMatrix(3),gear::Vector3D::spherical);
     gear::Vector3D X(1.0,0.0,0.0);
     gear::Vector3D Y(0.0,1.0,0.0);
     gear::Vector3D Z(0.0,0.0,1.0);
@@ -271,16 +302,63 @@ ILDVTrackHit* CEPCArcDiscMeasLayer::ConvertLCIOTrkHit(edm4hep::TrackerHit trkhit
   x[1] = h(1, 0);
 
   if (type[CEPCConf::TrkHitTypeBit::PLANAR]) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          dx[0] = covmat[2];
+          dx[1] = covmat[5];
+      } else if (trkhit.isA<edm4hep::TrackerHitPlane>()) {
+          auto hitPlane = trkhit.as<edm4hep::TrackerHitPlane>();
+          dx[0] = hitPlane.getDu();
+          dx[1] = hitPlane.getDv();
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
     dx[0] = trkhit.getCovMatrix(2);
     dx[1] = trkhit.getCovMatrix(5);
+#endif
   }
   else if (type[CEPCConf::TrkHitTypeBit::CYLINDER]) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          dx[0] = sqrt(covmat[0]+covmat[2]);
+          dx[1] = sqrt(covmat[5]);
+      } else if (trkhit.isA<edm4hep::TrackerHitPlane>()) {
+          // TODO: fixme
+          auto hitPlane = trkhit.as<edm4hep::TrackerHitPlane>();
+          dx[0] = sqrt(hitPlane.getU().a+hitPlane.getDu());
+          dx[1] = sqrt(hitPlane.getDv());
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
     dx[0] = sqrt(trkhit.getCovMatrix(0)+trkhit.getCovMatrix(2));
     dx[1] = sqrt(trkhit.getCovMatrix(5));
+#endif
   }
   else {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          dx[0] = sqrt(covmat[0]+covmat[2]);
+          dx[1] = sqrt(covmat[5]);
+      } else if (trkhit.isA<edm4hep::TrackerHitPlane>()) {
+          // TODO: fixme
+          auto hitPlane = trkhit.as<edm4hep::TrackerHitPlane>();
+          dx[0] = sqrt(hitPlane.getU().a+hitPlane.getDu());
+          dx[1] = sqrt(hitPlane.getDv());
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
     dx[0] = sqrt(trkhit.getCovMatrix(0)+trkhit.getCovMatrix(2));
     dx[1] = sqrt(trkhit.getCovMatrix(5));
+#endif
   }
 
   bool hit_on_surface = IsOnSurface(hit);

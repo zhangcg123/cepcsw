@@ -117,10 +117,10 @@ StatusCode DCHDigiAlg::execute()
 
   info() << "Processing " << _nEvt << " events " << endmsg;
   if(m_WriteAna) m_evt = _nEvt;
-  edm4hep::TrackerHitCollection* Vec   = w_DigiDCHCol.createAndPut();
-  edm4hep::TrackerHitCollection* SignalVec   = w_SignalDigiDCHCol.createAndPut();
-  edm4hep::MCRecoTrackerAssociationCollection* AssoVec   = w_AssociationCol.createAndPut();
-  const edm4hep::SimTrackerHitCollection* SimHitCol =  r_SimDCHCol.get();
+  auto Vec   = w_DigiDCHCol.createAndPut();
+  auto SignalVec   = w_SignalDigiDCHCol.createAndPut();
+  auto AssoVec   = w_AssociationCol.createAndPut();
+  auto SimHitCol =  r_SimDCHCol.get();
   if (SimHitCol->size() == 0) {
     return StatusCode::SUCCESS;
   }
@@ -221,8 +221,13 @@ StatusCode DCHDigiAlg::execute()
           }
           tot_length += iter->second.at(i).getPathLength();//mm
           auto asso = AssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+          asso.setFrom(trkHit);
+          asso.setTo(iter->second.at(i));
+#else
           asso.setRec(trkHit);
           asso.setSim(iter->second.at(i));
+#endif
           asso.setWeight(iter->second.at(i).getEDep()/tot_edep);
 
           if(m_WriteAna && (nullptr!=m_tuple)) {
@@ -232,7 +237,11 @@ StatusCode DCHDigiAlg::execute()
               m_Simdca[m_n_sim] = sim_distance;
               m_simhitT[m_n_sim] = iter->second.at(i).getTime();
               m_simhitmom[m_n_sim] = sim_hit_mom;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+              m_simPDG[m_n_sim] = iter->second.at(i).getParticle().getPDG();
+#else
               m_simPDG[m_n_sim] = iter->second.at(i).getMCParticle().getPDG();
+#endif
               m_n_sim ++ ;
           }
       }
@@ -304,8 +313,8 @@ StatusCode DCHDigiAlg::finalize()
 }
 
 void DCHDigiAlg::mixNoise(int layerID ,int wireID,
-        edm4hep::TrackerHitCollection* Vec,
-        edm4hep::MutableTrackerHit* trackerHitLayer,
+        DCHDigiAlg::CEPCSWTrackerHit3DCollection* Vec,
+        DCHDigiAlg::CEPCSWMutableTrackerHit3D* trackerHitLayer,
         bool ismixNoise[55]){
 
     int maxCellID = m_segmentation->maxWireID(0,layerID);

@@ -9,7 +9,7 @@ endif()
 ExternalProject_Add(
   DDKalTest
   GIT_REPOSITORY https://code.ihep.ac.cn/cepc/externals/DDKalTest_iLCSoft.git
-  GIT_TAG        v01-07-cepcsw
+  GIT_TAG        v01-07-01-cepcsw
   PREFIX         ${CMAKE_BINARY_DIR}/_deps
   SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/ddkaltest-src
   BINARY_DIR     ${CMAKE_BINARY_DIR}/_deps/ddkaltest-build

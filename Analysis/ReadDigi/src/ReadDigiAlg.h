@@ -4,12 +4,17 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
 
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackerHit.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+#endif
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
-#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
 #include "HelixClassD.hh"
 
 #include "TFile.h"
@@ -48,8 +53,15 @@ private :
   DataHandle<edm4hep::TrackCollection>      m_TPCTrk{"ClupatraTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>      m_fullTrk{"CompleteTracks", Gaudi::DataHandle::Reader, this};
 
-  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_TPCTrkAssoHdl{"ClupatraTracksParticleAssociation",  Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_fullTrkAssoHdl{"CompleteTracksParticleAssociation",  Gaudi::DataHandle::Reader, this};
+ // using type alias
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
+    using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackParticleAssociationCollection;
+#endif
+    
+  DataHandle<CEPCSWTrackMCParticleLinkCollection> m_TPCTrkAssoHdl{"ClupatraTracksParticleAssociation",  Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackMCParticleLinkCollection> m_fullTrkAssoHdl{"CompleteTracksParticleAssociation",  Gaudi::DataHandle::Reader, this};
 
   //DataHandle<edm4hep::SimCalorimeterHitCollection> m_ECalBarrelHitCol{"EcalBarrelCollection", Gaudi::DataHandle::Reader, this};
   //DataHandle<edm4hep::SimCalorimeterHitCollection> m_ECalEndcapHitCol{"EcalEndcapCollection", Gaudi::DataHandle::Reader, this};

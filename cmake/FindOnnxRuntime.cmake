@@ -15,8 +15,8 @@ endif()
 
 find_path(
   OnnxRuntime_INCLUDE_DIR
-  NAMES core/session/onnxruntime_cxx_api.h
-  PATH_SUFFIXES include include/onnxruntime
+  NAMES onnxruntime_cxx_api.h
+  PATH_SUFFIXES include include/onnxruntime include/onnxruntime/core/session include/core/session
   DOC "The ONNXRuntime include directory")
   
 if(NOT OnnxRuntime_INCLUDE_DIR)

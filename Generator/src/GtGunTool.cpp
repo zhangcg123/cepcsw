@@ -4,6 +4,7 @@
 #include "CLHEP/Units/SystemOfUnits.h"
 #include "CLHEP/Random/RandFlat.h"
 #include "CLHEP/Random/RandGauss.h"
+#include <edm4hep/EDM4hepVersion.h>
 
 DECLARE_COMPONENT(GtGunTool)
 
@@ -284,7 +285,12 @@ GtGunTool::mutate(Gen::GenEvent& event) {
         } else {
             std::cout<<"GenGt p="<<p<<", px="<<px<<",py="<<py<<",pz="<<pz<<",theta="<<theta<<",phi="<<phi<<std::endl;
         }
-        mcp.setMomentum(edm4hep::Vector3f(px,py,pz));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        using vector_type = edm4hep::Vector3d;
+#else
+        using vector_type = edm4hep::Vector3f;
+#endif
+        mcp.setMomentum(vector_type(px,py,pz));
         // mcp.setMomentumAtEndpoint();
         // mcp.setSpin();
         // mcp.setColorFlow();

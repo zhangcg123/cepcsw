@@ -1,10 +1,15 @@
 #include <iostream>
 #include <cmath>
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/TrackState.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
+#endif
 
 #include <TVector3.h>
 
@@ -17,12 +22,20 @@ using namespace edm4hep;
 
 class MuonExtrapolator {
 public:
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
+    
+    
     MuonExtrapolator( double BfieldRBound_, double BfieldZBound_ ) : BfieldRBound(BfieldRBound_), BfieldZBound(BfieldZBound_) {}
 
     TrackState extrap_Simple( const Track& track);
     TrackState extrap_CalCorr( const Track& track, const ReconstructedParticle& pfo);
 
-    std::vector<double> angles(TrackState st, const TrackerHitCollection& hits, int variable);
+    std::vector<double> angles(TrackState st, const CEPCSWTrackerHit3DCollection& hits, int variable);
 
 private:
     double BfieldRBound;

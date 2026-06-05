@@ -2032,7 +2032,13 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
 	try{
 	  int type = hit.getType();
 	  if(UTIL::BitSet32(type)[UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT]){
-	    edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(hit.getRawHits(ihit));
+	    auto rawHitOpt = Navigation::Instance()->GetTrackerHit(hit.getRawHits(ihit));
+
+            if (!rawHitOpt) {
+                throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+            }
+
+            edm4hep::TrackerHit rawHit = *rawHitOpt;
 	    hits.push_back(rawHit);
 	  }
 	  else debug() << "not space point, id=" << hit.id() << endmsg;

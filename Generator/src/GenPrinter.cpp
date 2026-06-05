@@ -1,5 +1,6 @@
 #include "GenPrinter.h"
 #include "GenEvent.h"
+#include <edm4hep/EDM4hepVersion.h>
 
 DECLARE_COMPONENT(GenPrinter)
 
@@ -25,9 +26,14 @@ bool GenPrinter::mutate(Gen::GenEvent& event){
                  << "Vertex            :"<< p.getVertex            ()<<std::endl 
                  << "Endpoint          :"<< p.getEndpoint          ()<<std::endl 
                  << "Momentum          :"<< p.getMomentum          ()<<std::endl 
-                 << "MomentumAtEndpoint:"<< p.getMomentumAtEndpoint()<<std::endl 
+                 << "MomentumAtEndpoint:"<< p.getMomentumAtEndpoint()<<std::endl
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                 << "Helicity          :" << p.getHelicity() << std::endl
+                 << "ColorFlow         :" << "N/A" << std::endl
+#else
                  << "Spin              :"<< p.getSpin              ()<<std::endl 
-                 << "ColorFlow         :"<< p.getColorFlow         ()<<std::endl 
+                 << "ColorFlow         :"<< p.getColorFlow         ()<<std::endl
+#endif
                  << "Parent size       :"<< p.parents_size         ()<<std::endl 
                  << "Daughter size     :"<< p.daughters_size       ()<<std::endl; 
         //for(unsigned int j=0; j<p.parents_size(); j++) std::cout << " for parent: "<< j << ",PDG="<< p.getParents(j).getPDG() << ",id=:"<< p.getParents(j).id()<<std::endl;

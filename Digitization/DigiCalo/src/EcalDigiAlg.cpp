@@ -239,8 +239,8 @@ StatusCode EcalDigiAlg::execute()
 
       const edm4hep::SimCalorimeterHitCollection* SimHitCol =  r_SimCaloCol->get();
       edm4hep::CalorimeterHitCollection* caloVec = w_DigiCaloCol->createAndPut();
-      edm4hep::MCRecoCaloAssociationCollection* caloAssoVec = w_CaloAssociationCol->createAndPut();
-      edm4hep::MCRecoCaloParticleAssociationCollection* caloMCPAssoVec = w_MCPCaloAssociationCol->createAndPut();
+      auto* caloAssoVec = w_CaloAssociationCol->createAndPut();
+      auto* caloMCPAssoVec = w_MCPCaloAssociationCol->createAndPut();
       std::vector<edm4hep::SimCalorimeterHit> m_simhitCol; m_simhitCol.clear();
       std::vector<CaloBar> m_barCol; m_barCol.clear(); 
       
@@ -550,12 +550,22 @@ StatusCode EcalDigiAlg::execute()
       
       	//SimHit - CaloHit association
       	auto rel1 = caloAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      	rel1.setFrom(digiHit1);
+      	rel1.setTo(SimHit);
+#else
       	rel1.setRec(digiHit1);
       	rel1.setSim(SimHit);
+#endif
       	rel1.setWeight( hitbar.getQ1()/(hitbar.getQ1()+hitbar.getQ2()) );
       	auto rel2 = caloAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      	rel2.setFrom(digiHit2);
+      	rel2.setTo(SimHit);
+#else
       	rel2.setRec(digiHit2);
       	rel2.setSim(SimHit);
+#endif
       	rel2.setWeight( hitbar.getQ2()/(hitbar.getQ1()+hitbar.getQ2()) );
       
       
@@ -568,12 +578,22 @@ StatusCode EcalDigiAlg::execute()
       	//  selMCP = iter.first;
       	//}
       	auto rel_MCP1 = caloMCPAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      	rel_MCP1.setFrom(digiHit1);
+      	rel_MCP1.setTo(iter.first);
+#else
       	rel_MCP1.setRec(digiHit1);
       	rel_MCP1.setSim(iter.first);
+#endif
       	rel_MCP1.setWeight(iter.second/SimHit.getEnergy());
       	auto rel_MCP2 = caloMCPAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      	rel_MCP2.setFrom(digiHit2);
+      	rel_MCP2.setTo(iter.first);
+#else
       	rel_MCP2.setRec(digiHit2);
       	rel_MCP2.setSim(iter.first);
+#endif
       	rel_MCP2.setWeight(iter.second/SimHit.getEnergy());      
       	}
       
