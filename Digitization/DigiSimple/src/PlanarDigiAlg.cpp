@@ -4,6 +4,7 @@
 #include "GearSvc/IGearSvc.h"
 #include "EventSeeder/IEventSeeder.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/Vector3d.h"
 /*
@@ -176,8 +177,11 @@ StatusCode PlanarDigiAlg::execute()
   for( auto SimTHit : *STHcol ) {
     if (SimTHit.getEDep()<=_eThreshold) continue;
     if (gsl_ran_flat(_rng, 0, 1)>_efficiency) continue;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    debug() << "MCParticle id " << SimTHit.getParticle().id() << endmsg;
+#else
     debug() << "MCParticle id " << SimTHit.getMCParticle().id() << endmsg;
-
+#endif
     const int celId = SimTHit.getCellID() ;
 
     encoder.setValue(celId) ;
@@ -397,9 +401,15 @@ StatusCode PlanarDigiAlg::execute()
             << " to tracker hit " << trkHit.id()
             << " with a weight of " << weight 
             << endmsg;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    throw std::runtime_error("No addToRawHits in EDM4hep");
+    rel.setTo(SimTHit);
+    rel.setFrom(trkHit);
+#else
     trkHit.addToRawHits(SimTHit.getObjectID());
     rel.setSim(SimTHit);
     rel.setRec(trkHit);
+#endif
     rel.setWeight(weight);
 
     nCreatedHits++;

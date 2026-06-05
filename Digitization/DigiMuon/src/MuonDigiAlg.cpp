@@ -313,7 +313,11 @@ void MuonDigiAlg::GetSimHit(edm4hep::SimTrackerHit hit_simhit,
                             double & hit_time)
 {
   hit_cellid = hit_simhit.getCellID();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+  auto mcp = hit_simhit.getParticle();
+#else
   auto mcp = hit_simhit.getMCParticle();
+#endif
   auto mcppos = mcp.getEndpoint();
   auto pdgid = mcp.getPDG();    
   hit_data[0] = std::abs(mcp.getPDG()); //abspdgid    
@@ -505,9 +509,13 @@ void MuonDigiAlg::Find_anotherlayer(int barrel_or_endcap, std::array<unsigned lo
   map_pdgid[anotherlayer_cell_num] = map_cell_pdgid[key2];
 }
 
-void MuonDigiAlg::Save_trkhit(edm4hep::TrackerHitCollection* trkhitVec, std::array<unsigned long long, 2> key, int pdgid, edm4hep::Vector3d pos)
+void MuonDigiAlg::Save_trkhit(MuonDigiAlg::CEPCSWTrackerHit3DCollection* trkhitVec, std::array<unsigned long long, 2> key, int pdgid, edm4hep::Vector3d pos)
 {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+  edm4hep::MutableTrackerHit3D trkHit;
+#else
   edm4hep::MutableTrackerHit trkHit;
+#endif
   trkHit.setEDep((float)map_cell_adc[key]);
   trkHit.setQuality(pdgid);
   trkHit.setCellID(key[0]);
@@ -516,7 +524,7 @@ void MuonDigiAlg::Save_trkhit(edm4hep::TrackerHitCollection* trkhitVec, std::arr
   trkhitVec->push_back( trkHit );
 }
 
-void MuonDigiAlg::Save_onelayer_signal(edm4hep::TrackerHitCollection* trkhitVec)
+void MuonDigiAlg::Save_onelayer_signal(MuonDigiAlg::CEPCSWTrackerHit3DCollection* trkhitVec)
 {
   for (const auto& item : map_cell_strip) 
   {

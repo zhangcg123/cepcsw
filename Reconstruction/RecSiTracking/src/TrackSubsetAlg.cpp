@@ -251,7 +251,13 @@ StatusCode TrackSubsetAlg::execute(){
 
     for(unsigned i=0; i<trackerHitsObj.size(); i++){
       //debug() << trackerHitsObj[i].id() << endmsg;
-      trackerHits.push_back(Navigation::Instance()->GetTrackerHit(trackerHitsObj[i].getObjectID()));
+      auto rawHitOpt =  Navigation::Instance()->GetTrackerHit(trackerHitsObj[i].getObjectID());
+      if (!rawHitOpt) {
+          throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+      }
+
+      edm4hep::TrackerHit rawHit = *rawHitOpt;
+      trackerHits.push_back(rawHit);
     } 
     // setup initial dummy covariance matrix
     decltype(edm4hep::TrackState::covMatrix) covMatrix;

@@ -4,23 +4,31 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/NTuple.h"
 #include "GaudiKernel/Algorithm.h"
-#include "edm4hep/SimTrackerHitCollection.h"
-#include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/MCRecoTrackerAssociationCollection.h"
-
 #include <DDRec/DetectorData.h>
 #include "DetInterface/IGeomSvc.h"
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
+#include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/MutableCaloHitContribution.h"
 #include "edm4hep/MutableSimCalorimeterHit.h"
 #include "edm4hep/SimCalorimeterHit.h"
 #include "edm4hep/CalorimeterHit.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#include "edm4hep/CaloHitMCParticleLinkCollection.h"
+#else
+#include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
 #include "edm4hep/MCRecoCaloParticleAssociationCollection.h"
+#endif
 
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
@@ -29,6 +37,7 @@
 #include "TVector3.h"
 #include "TRandom3.h"
 #include "TFile.h"
+#include "TTree.h"
 #include "TString.h"
 #include "TH3.h"
 #include "TH1.h"
@@ -43,7 +52,12 @@
 class MuonDigiAlg : public Algorithm
 {
  public:
-  
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
+    
   MuonDigiAlg(const std::string& name, ISvcLocator* svcLoc);
  
   virtual StatusCode initialize() ;
@@ -62,8 +76,8 @@ class MuonDigiAlg : public Algorithm
   void Cut3();
   void Find_anotherlayer(int barrel_or_endcap, std::array<unsigned long long, 2> key1, 
                          std::array<unsigned long long, 2> key2, double ddposi, int & anotherlayer_cell_num);
-  void Save_trkhit(edm4hep::TrackerHitCollection* trkhitVec, std::array<unsigned long long, 2> key, int pdgid, edm4hep::Vector3d pos);
-  void Save_onelayer_signal(edm4hep::TrackerHitCollection* trkhitVec);
+  void Save_trkhit(CEPCSWTrackerHit3DCollection* trkhitVec, std::array<unsigned long long, 2> key, int pdgid, edm4hep::Vector3d pos);
+  void Save_onelayer_signal(CEPCSWTrackerHit3DCollection* trkhitVec);
 
 
 
@@ -162,12 +176,12 @@ class MuonDigiAlg : public Algorithm
   DataHandle<edm4hep::SimTrackerHitCollection>            m_inputMuonBarrel{"MuonBarrelHitsCollection", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::SimTrackerHitCollection>            m_inputMuonEndcap{"MuonEndcapHitsCollection", Gaudi::DataHandle::Reader, this};
   // Output collections
-  DataHandle<edm4hep::TrackerHitCollection>               m_outputMuonBarrel{"MuonBarrelTrackerHits", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackerHitCollection>               m_outputMuonEndcap{"MuonEndcapTrackerHits", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHit3DCollection>               m_outputMuonBarrel{"MuonBarrelTrackerHits", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHit3DCollection>               m_outputMuonEndcap{"MuonEndcapTrackerHits", Gaudi::DataHandle::Writer, this};
 
   //DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_assMuonBarrel{"MuonBarrelTrackerHitAssociationCollection", Gaudi::DataHandle::Writer, this};
   SmartIF<IRndmGenSvc> m_randSvc;
-  edm4hep::TrackerHitCollection* trkhitVec;
+  CEPCSWTrackerHit3DCollection* trkhitVec{nullptr};
   int m_nEvt=0;
 };
 #endif

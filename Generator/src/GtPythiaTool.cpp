@@ -1,5 +1,5 @@
 #include "GtPythiaTool.hh"
-
+#include <edm4hep/EDM4hepVersion.h>
 DECLARE_COMPONENT(GtPythiaTool)
 
 StatusCode GtPythiaTool::initialize() {
@@ -49,7 +49,13 @@ bool GtPythiaTool::mutate(Gen::GenEvent& event) {
         mcp.setVertex(edm4hep::Vector3d(p.xProd(), p.yProd(), p.zProd()));
         // update the endpoint later
         mcp.setEndpoint(edm4hep::Vector3d(p.xProd(), p.yProd(), p.zProd()));
-        mcp.setMomentum(edm4hep::Vector3f(p.px(), p.py(), p.pz()));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        using vector_type = edm4hep::Vector3d;
+#else
+        using vector_type = edm4hep::Vector3f;
+#endif
+        
+        mcp.setMomentum(vector_type(p.px(), p.py(), p.pz()));
     }
     // setup the relationships (mother and daughter)
     for (int i = 0; i < pythia_particles.size(); ++i) {

@@ -14,9 +14,30 @@ std::array<float,6> CEPC::GetCovMatrix(edm4hep::TrackerHit& hit, bool useSpacePo
   if(hit.isAvailable()){
     int type = hit.getType();
     if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT]){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (hit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+          return hit3d.getCovMatrix().values;
+      }
+      throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT, class is not edm4hep::TrackerHit3D");
+#else
       return hit.getCovMatrix();
-    }
-    else if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::PLANAR]){
+#endif
+    } else if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::PLANAR]){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (hit.isA<edm4hep::TrackerHitPlane>()) {
+          auto hitPlane = hit.as<edm4hep::TrackerHitPlane>();
+          // TODO
+          float thetaU = hitPlane.getU().a;
+          float phiU   = hitPlane.getU().b;
+          float dU     = hitPlane.getDu();
+          float thetaV = hitPlane.getV().a;
+          float phiV   = hitPlane.getV().b;
+          float dV     = hitPlane.getDv();
+          return ConvertToCovXYZ(dU, thetaU, phiU, dV, thetaV, phiV, useSpacePointBuilderMethod);
+      }
+      throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::PLANAR, class is not edm4hep::TrackerHitPlane");
+#else
       float thetaU = hit.getCovMatrix(0);
       float phiU   = hit.getCovMatrix(1);
       float dU     = hit.getCovMatrix(2);
@@ -24,10 +45,19 @@ std::array<float,6> CEPC::GetCovMatrix(edm4hep::TrackerHit& hit, bool useSpacePo
       float phiV   = hit.getCovMatrix(4);
       float dV     = hit.getCovMatrix(5);
       return ConvertToCovXYZ(dU, thetaU, phiU, dV, thetaV, phiV, useSpacePointBuilderMethod);
+#endif
     }
     else{
       std::cout << "Warning: not SpacePoint and Planar, return original cov matrix preliminaryly." << std::endl;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (hit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+          return hit3d.getCovMatrix().values;
+      }
+      throw std::runtime_error("Unsupported concrete TrackerHit type: cannot access covMatrix");
+#else
       return hit.getCovMatrix();
+#endif
     }
   }
   std::array<float,6> cov{0.,0.,0.,0.,0.,0.};
@@ -38,14 +68,39 @@ float CEPC::GetResolutionRPhi(edm4hep::TrackerHit& hit){
   if(hit.isAvailable()){
     int type = hit.getType();
     if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT]){
-      return sqrt(hit.getCovMatrix(0)+hit.getCovMatrix(2));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHit3D>()) {
+            auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+            auto covmat = hit3d.getCovMatrix();
+            return sqrt(covmat[0]+covmat[2]);
+        }
+        throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT, class is not edm4hep::TrackerHit3D");
+#else
+        return sqrt(hit.getCovMatrix(0)+hit.getCovMatrix(2));
+#endif
     }
     else if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::PLANAR]){
-      return hit.getCovMatrix(2);
-    }
-    else{
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHitPlane>()) {
+            auto hitPlane = hit.as<edm4hep::TrackerHitPlane>();
+            return hitPlane.getDu();
+        }
+        throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::PLANAR, class is not edm4hep::TrackerHitPlane");
+#else
+        return hit.getCovMatrix(2);
+#endif
+    } else {
       std::cout << "Warning: not SpacePoint and Planar, return value from original cov matrix preliminaryly." << std::endl;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (hit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          return sqrt(covmat[0]+covmat[2]);
+      }
+      throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT, class is not edm4hep::TrackerHit3D");
+#else
       return sqrt(hit.getCovMatrix(0)+hit.getCovMatrix(2));
+#endif
     }
   }
   return 0.;
@@ -55,14 +110,40 @@ float CEPC::GetResolutionZ(edm4hep::TrackerHit& hit){
   if(hit.isAvailable()){
     int type = hit.getType();
     if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT]){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHit3D>()) {
+            auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+            auto covmat = hit3d.getCovMatrix();
+            return covmat[5];
+        }
+        throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT, class is not edm4hep::TrackerHit3D");
+#else
       return sqrt(hit.getCovMatrix(5));
+#endif
     }
     else if(std::bitset<32>(type)[CEPCConf::TrkHitTypeBit::PLANAR]){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHitPlane>()) {
+            auto hitPlane = hit.as<edm4hep::TrackerHitPlane>();
+            return hitPlane.getDv();
+        }
+        throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::PLANAR, class is not edm4hep::TrackerHitPlane");
+#else
       return hit.getCovMatrix(5);
+#endif
     }
     else{
-      std::cout << "Warning: not SpacePoint and Planar, return value from original cov matrix preliminaryly." << std::endl;
+        std::cout << "Warning: not SpacePoint and Planar, return value from original cov matrix preliminaryly." << std::endl;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHit3D>()) {
+            auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+            auto covmat = hit3d.getCovMatrix();
+            return covmat[5];
+        }
+        throw std::runtime_error("Mismatch concrete TrackerHit type: getType() is CEPCConf::TrkHitTypeBit::COMPOSITE_SPACEPOINT, class is not edm4hep::TrackerHit3D");
+#else
       return sqrt(hit.getCovMatrix(5));
+#endif
     }
   }
   return 0.;
@@ -119,15 +200,23 @@ std::array<float, 6> CEPC::ConvertToCovXYZ(float dU, float thetaU, float phiU, f
 }
 
 const edm4hep::SimTrackerHit CEPC::getAssoClosestSimTrackerHit(
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+        const CEPC::CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         const edm4hep::TrackerHit trackerHit,
         const dd4hep::DDSegmentation::GridDriftChamber* segmentation,
         int docaMehtod)
 {
   std::vector<edm4hep::SimTrackerHit> hits;
   for(auto assoHit: *assoHits){
-    if(assoHit.getRec()==trackerHit){
-      hits.push_back(assoHit.getSim());
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto from = assoHit.getFrom();
+      auto to = assoHit.getTo();
+#else
+      auto from = assoHit.getRec();
+      auto to = assoHit.getSim();
+#endif
+      
+    if(from==trackerHit){
+      hits.push_back(to);
     }
   }
   edm4hep::SimTrackerHit minSimTrackerHit;
@@ -154,25 +243,40 @@ const edm4hep::SimTrackerHit CEPC::getAssoClosestSimTrackerHit(
   return minSimTrackerHit;
 }
 
-const edm4hep::TrackerHit CEPC::getAssoTrackerHit(
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+std::optional<edm4hep::TrackerHit> CEPC::getAssoTrackerHit(
+        const CEPC::CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         edm4hep::SimTrackerHit simTrackerHit){
-    edm4hep::TrackerHit trackerHit;
     for(auto assoHit: *assoHits){
-        if(assoHit.getSim()==simTrackerHit){
-            trackerHit = assoHit.getRec();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto from = assoHit.getFrom();
+        auto to = assoHit.getTo();
+#else
+        auto from = assoHit.getRec();
+        auto to = assoHit.getSim();
+#endif
+        
+        if(to==simTrackerHit){
+            return from;
         }
     }
-    return trackerHit;
+    return std::nullopt;
 }
 
 const edm4hep::SimTrackerHit CEPC::getAssoSimTrackerHit(
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+        const CEPC::CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         edm4hep::TrackerHit trackerHit){
     edm4hep::SimTrackerHit simTrackerHit;
     for(auto assoHit: *assoHits){
-        if(assoHit.getRec()==trackerHit){
-            simTrackerHit = assoHit.getSim();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto from = assoHit.getFrom();
+        auto to = assoHit.getTo();
+#else
+        auto from = assoHit.getRec();
+        auto to = assoHit.getSim();
+#endif
+        
+        if(from==trackerHit){
+            simTrackerHit = to;
         }
     }
     return simTrackerHit;

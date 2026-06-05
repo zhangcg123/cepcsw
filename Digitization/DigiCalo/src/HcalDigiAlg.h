@@ -3,6 +3,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/MutableCaloHitContribution.h"
 #include "edm4hep/MutableSimCalorimeterHit.h"
@@ -10,10 +11,14 @@
 #include "edm4hep/CalorimeterHit.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+#include "edm4hep/MCParticle.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#include "edm4hep/CaloHitMCParticleLinkCollection.h"
+#else
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
 #include "edm4hep/MCRecoCaloParticleAssociationCollection.h"
-#include "edm4hep/MCParticle.h"
-
+#endif
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
 #include <DD4hep/Segmentations.h> 
@@ -29,6 +34,7 @@
 
 #include <cstdlib>
 #include "time.h"
+#include <TTree.h> 
 #include <TTimeStamp.h> 
 #include <ctime>
 
@@ -39,6 +45,13 @@ class HcalDigiAlg : public Algorithm
 {
  
 public:
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::CaloHitSimCaloHitLinkCollection;
+    using CEPCSWCaloHitMCParticleLinkCollection = edm4hep::CaloHitMCParticleLinkCollection;
+#else
+    using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::MCRecoCaloAssociationCollection;
+    using CEPCSWCaloHitMCParticleLinkCollection = edm4hep::MCRecoCaloParticleAssociationCollection;
+#endif
  
   HcalDigiAlg(const std::string& name, ISvcLocator* svcLoc);
  
@@ -93,8 +106,8 @@ protected:
   // Input collections
   typedef DataHandle<edm4hep::SimCalorimeterHitCollection>              SimCaloType;
   typedef DataHandle<edm4hep::CalorimeterHitCollection>                 CaloType;
-  typedef DataHandle<edm4hep::MCRecoCaloAssociationCollection>          CaloSimAssoType;      //Calorimeter - SimCalorimeter
-  typedef DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>  CaloParticleAssoType; //Calorimeter - MCParticle
+  typedef DataHandle<CEPCSWCaloHitSimCaloHitLinkCollection>          CaloSimAssoType;      //Calorimeter - SimCalorimeter
+  typedef DataHandle<CEPCSWCaloHitMCParticleLinkCollection>  CaloParticleAssoType; //Calorimeter - MCParticle
 
   Gaudi::Property< std::vector<std::string> > name_SimCaloHit{ this, "SimCaloHitCollection", {"HcalBarrelCollection"} };
   Gaudi::Property< std::vector<std::string> > name_Readout{ this, "ReadOutName", {"HcalBarrelCollection"} };

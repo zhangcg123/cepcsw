@@ -7,11 +7,17 @@
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/TrackCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+#endif
 #include "edm4hep/RecDqdx.h"
 #include "edm4hep/RecDqdxCollection.h"
 #include "edm4cepc/RecTofCollection.h"
@@ -34,8 +40,21 @@ class AnalysisPIDAlg : public Algorithm {
   StatusCode finalize() override;
 
  private:
+
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
+    using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackParticleAssociationCollection;
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
+    
+    
   DataHandle<edm4hep::TrackCollection> _FultrkCol{"CompleteTracks", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> _FultrkParAssCol{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackMCParticleLinkCollection> _FultrkParAssCol{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::RecDqdxCollection> _inDndxColHdl{"DndxTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::RecTofCollection> _inTofColHdl{"RecTofCollection", Gaudi::DataHandle::Reader, this};
 

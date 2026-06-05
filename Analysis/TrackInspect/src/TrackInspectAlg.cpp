@@ -130,13 +130,23 @@ StatusCode TrackInspectAlg::execute(){
     mcpHitMap.clear();
     matchvec.clear();
 
-    std::vector<const edm4hep::MCRecoTrackerAssociationCollection*> relCols;
+    std::vector<const CEPCSWTrackerHitSimTrackerHitLinkCollection*> relCols;
 
 
     for (auto relCol: relCols) {
     	if (relCol){
 	    for (auto rel: *relCol){
-		    std::pair<edm4hep::TrackerHit, edm4hep::MCParticle> p = std::make_pair(rel.getRec(), rel.getSim().getMCParticle());
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+                auto recoHit = rel.getFrom();
+                auto simHit  = rel.getTo();
+                auto mcparticle = simHit.getParticle();
+#else
+                auto recoHit = rel.getRec();
+                auto simHit  = rel.getSim();
+                auto mcparticle = simHit.getMCParticle();
+#endif
+                
+		    std::pair<edm4hep::TrackerHit, edm4hep::MCParticle> p = std::make_pair(recoHit, mcparticle);
 		    if (hitmap.find(p) == hitmap.end()) hitmap[p] = 0.;
 		    hitmap[p] += rel.getWeight();
 	    }
@@ -306,11 +316,11 @@ std::vector<edm4hep::Track> TrackInspectAlg::MCParticleTrackAssociator(edm4hep::
     return theTracks;
 }
 
-void TrackInspectAlg::initializeRelationCollections(std::vector<const edm4hep::MCRecoTrackerAssociationCollection*> &relCols) {
+void TrackInspectAlg::initializeRelationCollections(std::vector<const TrackInspectAlg::CEPCSWTrackerHitSimTrackerHitLinkCollection*> &relCols) {
 
     // Use TPC 
     if (_useTPC) {
-	    const edm4hep::MCRecoTrackerAssociationCollection* relCol = nullptr;
+	    const CEPCSWTrackerHitSimTrackerHitLinkCollection* relCol = nullptr;
 	    // Establish the relation of MCParticle --> TrackerHit
 	    try {
 		relCol = _TPCRelColHdl.get();
@@ -323,7 +333,7 @@ void TrackInspectAlg::initializeRelationCollections(std::vector<const edm4hep::M
 
     // Use VXD
     if (_useVXD) {
-	    const edm4hep::MCRecoTrackerAssociationCollection* relCol = nullptr;
+	    const CEPCSWTrackerHitSimTrackerHitLinkCollection* relCol = nullptr;
 	    // Establish the relation of MCParticle --> TrackerHit
 	    try {
 		relCol = _VXDRelColHdl.get();
@@ -336,7 +346,7 @@ void TrackInspectAlg::initializeRelationCollections(std::vector<const edm4hep::M
 
     // Use SIT
     if (_useSIT) {
-	    const edm4hep::MCRecoTrackerAssociationCollection* relCol = nullptr;
+	    const CEPCSWTrackerHitSimTrackerHitLinkCollection* relCol = nullptr;
 	    // Establish the relation of MCParticle --> TrackerHit
 	    try {
 		relCol = _SITRelColHdl.get();
@@ -349,7 +359,7 @@ void TrackInspectAlg::initializeRelationCollections(std::vector<const edm4hep::M
 
     // Use SET
     if (_useSET) {
-	    const edm4hep::MCRecoTrackerAssociationCollection* relCol = nullptr;
+	    const CEPCSWTrackerHitSimTrackerHitLinkCollection* relCol = nullptr;
 	    // Establish the relation of MCParticle --> TrackerHit
 	    try {
 		relCol = _SETRelColHdl.get();
@@ -362,7 +372,7 @@ void TrackInspectAlg::initializeRelationCollections(std::vector<const edm4hep::M
 
     // Use FTD
     if (_useFTD) {
-	    const edm4hep::MCRecoTrackerAssociationCollection* relCol = nullptr;
+	    const CEPCSWTrackerHitSimTrackerHitLinkCollection* relCol = nullptr;
 	    // Establish the relation of MCParticle --> TrackerHit
 	    try {
 		relCol = _FTDRelColHdl.get();

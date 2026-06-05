@@ -88,7 +88,12 @@ void Fitter::fitVXD(){
   std::vector< edm4hep::TrackerHit > added_hits_2D;
   
   for( it = _trackerHits.begin() ; it != _trackerHits.end() ; ++it ) {
-    edm4hep::TrackerHit trkHit = Navigation::Instance()->GetTrackerHit((*it).getObjectID());
+    auto trkHitOpt = Navigation::Instance()->GetTrackerHit((*it).getObjectID());
+    if (!trkHitOpt) {
+        throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+    }
+
+    edm4hep::TrackerHit trkHit = *trkHitOpt;
     bool isSuccessful = false; 
     
     if( UTIL::BitSet32( trkHit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
@@ -98,7 +103,12 @@ void Fitter::fitVXD(){
       //for( unsigned k=0; k<rawObjects.size(); k++ ) rawHits.push_back( dynamic_cast< ConstTrackerHit >( rawObjects[k] ) );
       int nRawHit = trkHit.rawHits_size();
       for( unsigned k=0; k< nRawHit; k++ ){
-	edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+	auto rawHitOpt = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+        if (!rawHitOpt) {
+            throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+        }
+
+        edm4hep::TrackerHit rawHit = *rawHitOpt;
 	rawHits.push_back(rawHit);
       }
       std::sort( rawHits.begin(), rawHits.end(), compare_TrackerHit_R );
@@ -279,7 +289,12 @@ void Fitter::fit(){
   std::vector<edm4hep::TrackerHit> added_hits;
   
   for( it = _trackerHits.begin() ; it != _trackerHits.end() ; ++it ) {
-    edm4hep::TrackerHit trkHit = Navigation::Instance()->GetTrackerHit((*it).getObjectID());
+    auto trkHitOpt = Navigation::Instance()->GetTrackerHit((*it).getObjectID());
+    if (!trkHitOpt) {
+        throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+    }
+
+    edm4hep::TrackerHit trkHit = *trkHitOpt;    
     bool isSuccessful = false; 
     //std::cout << "Hit " << trkHit->id() << " " << trkHit.getPosition() << std::endl;
     if( UTIL::BitSet32( trkHit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
@@ -289,7 +304,13 @@ void Fitter::fit(){
       //for( unsigned k=0; k<rawObjects.size(); k++ ) rawHits.push_back( dynamic_cast< ConstTrackerHit >( rawObjects[k] ) );
       int nRawHit = trkHit.rawHits_size();
       for( unsigned k=0; k< nRawHit; k++ ){
-	edm4hep::TrackerHit rawHit = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+	auto rawHitOpt = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
+        if (!rawHitOpt) {
+            throw std::runtime_error("Failed to find raw TrackerHit from ObjectID");
+        }
+
+        edm4hep::TrackerHit rawHit = *rawHitOpt;
+
 	//std::cout << "Raw Hit " << rawHit->id() << " " << rawHit.getPosition() << std::endl;
 	rawHits.push_back(rawHit);
       }

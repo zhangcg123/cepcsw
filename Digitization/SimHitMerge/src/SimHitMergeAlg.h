@@ -4,11 +4,11 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
 #include "Gaudi/Property.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeader.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/SimCalorimeterHit.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
-#include "edm4hep/MCRecoCaloAssociationCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 
 #include <DDRec/DetectorData.h>

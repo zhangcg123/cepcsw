@@ -8,7 +8,7 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
-
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
@@ -61,8 +61,11 @@ StatusCode DumpSimHitAlg::execute() {
     auto vxdCol = m_VXDCol.get();
 
     for (auto hit: *vxdCol) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto mcparticle = hit.getParticle();
+#else
         auto mcparticle = hit.getMCParticle();
-
+#endif
         if (mcparticle.getGeneratorStatus() != 1) {
             error() << "Found generator status is not 1 for hit. " << endmsg;
         }

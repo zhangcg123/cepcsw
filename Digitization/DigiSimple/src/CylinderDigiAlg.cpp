@@ -67,7 +67,11 @@ StatusCode CylinderDigiAlg::execute(){
   debug() << m_inputColHdls.fullKey() << " has SimTrackerHit "<< STHCol->size() << endmsg;
   
   for(auto simhit : *STHCol){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    auto particle = simhit.getParticle();
+#else
     auto particle = simhit.getMCParticle();
+#endif
     if(!particle.isAvailable()) continue;
     
     auto& mom0 = particle.getMomentum();
@@ -97,7 +101,11 @@ StatusCode CylinderDigiAlg::execute(){
     trkHit.setPosition (edm4hep::Vector3d(smearedX, smearedY, smearedZ));
     trkHit.setCovMatrix(std::array<float, 6>{m_resRPhi*m_resRPhi/2, 0, m_resRPhi*m_resRPhi/2, 0, 0, m_resZ*m_resZ});
     trkHit.setType(1<<CEPCConf::TrkHitTypeBit::CYLINDER);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
     trkHit.addToRawHits(simhit.getObjectID());
+#endif
     debug() << "Hit " << simhit.id() << ": " << pos << " -> " << trkHit.getPosition() << "s:" << system << " l:" << layer << " m:" << module << " s:" << sensor
 	    << " pt = " << pt << " " << mom.x << " " << mom.y << " " << mom.z << endmsg;
 
@@ -106,8 +114,13 @@ StatusCode CylinderDigiAlg::execute(){
     float weight = 1.0;
 
     debug() <<" Set relation between " << " sim hit " << simhit.id() << " to tracker hit " << trkHit.id() << " with a weight of " << weight << endmsg;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    ass.setTo(simhit);
+    ass.setFrom(trkHit);
+#else
     ass.setSim(simhit);
     ass.setRec(trkHit);
+#endif
     ass.setWeight(weight);
   }
 

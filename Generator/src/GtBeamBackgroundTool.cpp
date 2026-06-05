@@ -9,6 +9,8 @@
 #include "CLHEP/Random/RandPoisson.h"
 #include "CLHEP/Random/RandFlat.h"
 
+#include <edm4hep/EDM4hepVersion.h>
+
 #include "TVector3.h" // for rotation
 DECLARE_COMPONENT(GtBeamBackgroundTool)
 
@@ -98,7 +100,12 @@ bool GtBeamBackgroundTool::mutate(Gen::GenEvent& event) {
             mcp.setTime(beamdata.t);
             mcp.setMass(beamdata.mass);
             mcp.setVertex(edm4hep::Vector3d(pos.X(), pos.Y(), pos.Z()));
-            mcp.setMomentum(edm4hep::Vector3f(mom.X(), mom.Y(), mom.Z()));
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            using vector_type = edm4hep::Vector3d;
+#else
+            using vector_type = edm4hep::Vector3f;
+#endif
+            mcp.setMomentum(vector_type(mom.X(), mom.Y(), mom.Z()));
 
         }
 

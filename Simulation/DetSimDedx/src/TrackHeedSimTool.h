@@ -5,9 +5,14 @@
 #include "GaudiKernel/MsgStream.h"
 #include "DetSimInterface/IDedxSimTool.h"
 #include <GaudiKernel/AlgTool.h>
+#include <edm4hep/EDM4hepVersion.h>
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/MCParticleCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+// TODO: SimPrimaryIonizationClusterCollection is removed from EDM4hep
+#else
 #include "edm4hep/SimPrimaryIonizationClusterCollection.h"
+#endif
 #include "TVector3.h"
 #include <G4StepPoint.hh>
 
@@ -38,8 +43,8 @@
 #include <map>
 #include <string>
 
-#include "core/session/onnxruntime_cxx_api.h"
-#include "core/session/onnxruntime_c_api.h"
+#include "onnxruntime_cxx_api.h"
+#include "onnxruntime_c_api.h"
 using namespace Garfield;
 
 class TrackHeedSimTool: public extends<AlgTool, IDedxSimTool> {
@@ -92,8 +97,13 @@ class TrackHeedSimTool: public extends<AlgTool, IDedxSimTool> {
         Gaudi::Property<float> m_eps     { this, "eps"   , 1e-6  };//very small value, it is returned dedx for unsimulated step (may needed for SimTrackerHit)
         Gaudi::Property<float> m_gaspressure { this, "gaspressure"   , 760.  };// default gas pressure, 760 Torr. 1 ATM
         // Output collections
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO: SimPrimaryIonizationClusterCollection is removed from EDM4hep
+#else
         DataHandle<edm4hep::SimPrimaryIonizationClusterCollection>    m_SimPrimaryIonizationColWriter{"SimPrimaryIonizationClusterCollection", Gaudi::DataHandle::Writer, this};
         edm4hep::SimPrimaryIonizationClusterCollection* m_SimPrimaryIonizationCol;
+#endif    
         // In order to associate MCParticle with contribution, we need to access MC Particle.
         DataHandle<edm4hep::MCParticleCollection> m_mc_handle{"MCParticle", Gaudi::DataHandle::Writer, this};
 

@@ -7,9 +7,15 @@
 #include "DigiTool/IDigiTool.h"
 #include "DetInterface/IGeomSvc.h"
 
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
 
 #include "DDRec/DetectorData.h"
 #include "DDRec/SurfaceManager.h"
@@ -21,11 +27,11 @@ class SmearDigiTool : public extends<AlgTool, IDigiTool> {
   using extends::extends;
   //SmearDigiTool(void* p) { m_pAlgUsing=p; };                                                                                                                         
 
-  virtual StatusCode Call(const edm4hep::SimTrackerHitCollection* simCol, edm4hep::TrackerHitCollection* hitCol,
-			  edm4hep::MCRecoTrackerAssociationCollection* assCol) override;
-  virtual StatusCode Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHitCollection* hitCol,
-			  edm4hep::MCRecoTrackerAssociationCollection* assCol) override;
-  StatusCode AppendNoise(edm4hep::TrackerHitCollection* hitCol);
+  virtual StatusCode Call(const edm4hep::SimTrackerHitCollection* simCol, CEPCSWTrackerHit3DCollection* hitCol,
+			  CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol) override;
+  virtual StatusCode Call(edm4hep::SimTrackerHit simhit, CEPCSWTrackerHit3DCollection* hitCol,
+			  CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol) override;
+  StatusCode AppendNoise(CEPCSWTrackerHit3DCollection* hitCol);
 
   StatusCode initialize() override;
   StatusCode finalize() override;

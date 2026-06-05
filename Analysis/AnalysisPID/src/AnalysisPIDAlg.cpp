@@ -97,7 +97,7 @@ StatusCode AnalysisPIDAlg::execute(){
   const edm4hep::TrackCollection* trkCol = nullptr;
   const edm4hep::RecDqdxCollection* dndxCols = nullptr;
   const edm4hep::RecTofCollection* tofCols = nullptr;
-  const edm4hep::MCRecoTrackParticleAssociationCollection* fultrkparassCols = nullptr;
+  const CEPCSWTrackMCParticleLinkCollection* fultrkparassCols = nullptr;
   
   ClearVars();
 
@@ -177,7 +177,13 @@ StatusCode AnalysisPIDAlg::execute(){
       max_weight_idx = -1;
       ass_idx = 0;
       for (auto ass : *fultrkparassCols) {
-          if (ass.getRec() == track) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+          auto from = ass.getFrom();
+#else
+          auto from = ass.getRec();
+#endif
+              
+          if (from == track) {
               weight = ass.getWeight();
               if (weight > max_weight) {
                   max_weight = weight;
@@ -188,30 +194,36 @@ StatusCode AnalysisPIDAlg::execute(){
       }
       truthidx.push_back(max_weight_idx);
 //      if (max_weight_idx < 0) continue;
-      p1=fultrkparassCols->at(max_weight_idx).getSim().getMomentum()[0];
-      p2=fultrkparassCols->at(max_weight_idx).getSim().getMomentum()[1];
-      p3=fultrkparassCols->at(max_weight_idx).getSim().getMomentum()[2];
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+      auto to = fultrkparassCols->at(max_weight_idx).getTo();
+#else
+      auto to = fultrkparassCols->at(max_weight_idx).getSim();
+#endif
+      p1=to.getMomentum()[0];
+      p2=to.getMomentum()[1];
+      p3=to.getMomentum()[2];
       genpx.push_back(p1);
       genpy.push_back(p2);
       genpz.push_back(p3);
       genp.push_back(std::sqrt(p1*p1 + p2*p2 + p3*p3));
-      genE.push_back(fultrkparassCols->at(max_weight_idx).getSim().getEnergy());
-      genM.push_back(fultrkparassCols->at(max_weight_idx).getSim().getMass());
+      genE.push_back(to.getEnergy());
+      genM.push_back(to.getMass());
       genphi.push_back(std::atan2(p2,p1));
       gentheta.push_back(std::acos(p3/std::sqrt(p1*p1 + p2*p2 + p3*p3)));
-      x1=fultrkparassCols->at(max_weight_idx).getSim().getEndpoint()[0];
-      y1=fultrkparassCols->at(max_weight_idx).getSim().getEndpoint()[1];
+      x1=to.getEndpoint()[0];
+      y1=to.getEndpoint()[1];
       endx.push_back(x1);
       endy.push_back(y1);
-      endz.push_back(fultrkparassCols->at(max_weight_idx).getSim().getEndpoint()[2]);
+      endz.push_back(to.getEndpoint()[2]);
       endr.push_back(std::sqrt(x1*x1 + y1*y1));
-      PDG.push_back(fultrkparassCols->at(max_weight_idx).getSim().getPDG());
-      genstatus.push_back(fultrkparassCols->at(max_weight_idx).getSim().getGeneratorStatus());
-      simstatus.push_back(fultrkparassCols->at(max_weight_idx).getSim().getSimulatorStatus());
-      isdecayintrker.push_back(fultrkparassCols->at(max_weight_idx).getSim().isDecayedInTracker());//getSimulatorStatus().isDecayInTracker();
-      iscreatedinsim.push_back(fultrkparassCols->at(max_weight_idx).getSim().isCreatedInSimulation());
-      isbackscatter.push_back(fultrkparassCols->at(max_weight_idx).getSim().isBackscatter());
-      isstopped.push_back(fultrkparassCols->at(max_weight_idx).getSim().isStopped());
+      PDG.push_back(to.getPDG());
+      genstatus.push_back(to.getGeneratorStatus());
+      simstatus.push_back(to.getSimulatorStatus());
+      isdecayintrker.push_back(to.isDecayedInTracker());//getSimulatorStatus().isDecayInTracker();
+      iscreatedinsim.push_back(to.isCreatedInSimulation());
+      isbackscatter.push_back(to.isBackscatter());
+      isstopped.push_back(to.isStopped());
 
       //find corresponding dndx track
       edm4hep::RecDqdx dndxtrk;
@@ -233,9 +245,17 @@ StatusCode AnalysisPIDAlg::execute(){
           tpcdndxerr = dndxtrk.getDQdx().error;
           debug()<<"tpc_measdndx = "<<dndxtrk.getDQdx().value<<endmsg;
           for (int idx=0;idx<5;idx++) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+              // TODO: need to know how to store Hypotheses
+              double tpc_chi2 = -999;
+              double tpc_expdndx = -999;
+              double tpc_chi = -999;
+#else
               double tpc_chi2 = dndxtrk.getHypotheses(idx).chi2;
               double tpc_expdndx = dndxtrk.getHypotheses(idx).expected;
               double tpc_chi = ( tpcdndx - tpc_expdndx ) / tpcdndxerr;
+#endif
+
               tpc_chi2s_1.push_back(tpc_chi2);
               tpc_chis_1.push_back(tpc_chi);
               tpc_expdndxs_1.push_back(tpc_expdndx);

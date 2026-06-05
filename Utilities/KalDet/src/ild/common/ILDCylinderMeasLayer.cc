@@ -10,6 +10,7 @@
 #include "kaldet/ILDCylinderHit.h"
 
 #include <lcio.h>
+#include "edm4hep/EDM4hepVersion.h"
 #include <edm4hep/TrackerHit.h>
 //#include <EVENT/TrackerHitZCylinder.h>
 
@@ -134,13 +135,35 @@ ILDVTrackHit* ILDCylinderMeasLayer::ConvertLCIOTrkHit(edm4hep::TrackerHit trkhit
   if(trkhit.getType()==16){
   //if(cylinder_hit){
     // convert errors
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          dx[0] = covmat[0];
+          dx[1] = covmat[1];
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in ILDCylinderMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
     dx[0] = trkhit.getCovMatrix(0);
     dx[1] = trkhit.getCovMatrix(1);
+#endif
   }
   else {
     // convert errors
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      if (trkhit.isA<edm4hep::TrackerHit3D>()) {
+          auto hit3d = trkhit.as<edm4hep::TrackerHit3D>();
+          auto covmat = hit3d.getCovMatrix();
+          dx[0] = sqrt(covmat[0]+covmat[2]);
+          dx[1] = sqrt(covmat[5]);
+      } else {
+          throw std::runtime_error("Unsupported concrete TrackerHit type in CEPCArcDiscMeasLayer::ConvertLCIOTrkHit");
+      }
+#else
     dx[0] = sqrt(trkhit.getCovMatrix(0) + trkhit.getCovMatrix(2)) ;
     dx[1] = sqrt(trkhit.getCovMatrix(5)); 
+#endif
   }
   
     

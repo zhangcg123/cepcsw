@@ -21,11 +21,18 @@ Steve Aplin 26 June 2009 (DESY)
 
 #include "GaudiKernel/Algorithm.h"
 #include "k4FWCore/DataHandle.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
-#include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
+#include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
 
 #include <gsl/gsl_rng.h>
 
@@ -127,7 +134,14 @@ class IEventSeeder;
 class TPCDigiAlg: public Algorithm{
 
 public:
-
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+  using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
+  using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+  using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
+  
   TPCDigiAlg(const std::string& name, ISvcLocator* svcLoc);
 
   /** Called at the begin of the job before anything is read.
@@ -164,10 +178,10 @@ protected:
 
   /** Output collection name.
    */
-  DataHandle<edm4hep::TrackerHitCollection> _TPCTrackerHitsColHdl{"TPCTrackerHits", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> _TPCAssColHdl{"TPCTrackerHitAss", Gaudi::DataHandle::Writer, this};
-  edm4hep::TrackerHitCollection* _trkhitVec;
-  edm4hep::MCRecoTrackerAssociationCollection* _relCol;
+  DataHandle<CEPCSWTrackerHit3DCollection> _TPCTrackerHitsColHdl{"TPCTrackerHits", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> _TPCAssColHdl{"TPCTrackerHitAss", Gaudi::DataHandle::Writer, this};
+  CEPCSWTrackerHit3DCollection* _trkhitVec;
+  CEPCSWTrackerHitSimTrackerHitLinkCollection* _relCol;
 
   // OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO OOOoooOOOoooOOO
   // Pixel readout TPC spatial resolution (preliminary) update, Xin She, 20250228 

@@ -27,7 +27,11 @@ double TrackHeedSimTool::dndx(double betagamma) {return 0;}
 double TrackHeedSimTool::dedx(const G4Step* Step)
 {
     if(m_beginEvt){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO: SimPrimaryIonizationClusterCollection is removed from EDM4hep
+#else        
         m_SimPrimaryIonizationCol =  m_SimPrimaryIonizationColWriter.createAndPut();
+#endif
         m_beginEvt = false;
     }
     clock_t t0 = clock();
@@ -198,6 +202,9 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
     int first=true;
     clock_t t02 = clock();
     while (m_track->GetCluster(xc, yc, zc, tc, nc, ec, extra)) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO: SimPrimaryIonizationClusterCollection is removed from EDM4hep
+#else
         //auto chit = SimHitCol->create();
         //auto chit = SimPrimaryIonizationCol->create();
         auto chit = m_SimPrimaryIonizationCol->create();
@@ -254,6 +261,7 @@ double TrackHeedSimTool::dedx(const G4Step* Step)
             //ehit.setQuality(2);
             //ehit.setType(0);//default
         }
+#endif        
     }
     double Dedx = (de*1e-6/(track_length/CLHEP::cm) ) ;//MeV/cm
     double new_KE = track_KE/CLHEP::MeV - de*1e-6; 
@@ -318,7 +326,7 @@ void TrackHeedSimTool::getMom(float ee, float dx, float dy,float dz, float mom[3
 StatusCode TrackHeedSimTool::initialize()
 {
   // FIXME: fixed seed for TrackHeed now, union seed with other random generator? 
-  randomEngine.Seed(4357);
+  // randomEngine.Seed(4357);
   if(m_det=="DC"){
       m_geosvc = service<IGeomSvc>("GeomSvc");
       if ( !m_geosvc )  throw "TrackHeedSimTool :Failed to find GeomSvc ...";
@@ -620,6 +628,9 @@ float* TrackHeedSimTool::NNPred(std::vector<float>& inputs)
 
 
 void TrackHeedSimTool::endOfEvent() {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        // TODO: SimPrimaryIonizationClusterCollection is removed from EDM4hep
+#else
     if (!m_SimPrimaryIonizationCol) m_SimPrimaryIonizationCol =  m_SimPrimaryIonizationColWriter.createAndPut();
     debug() << "SimPrimaryIonizationCol size = " << m_SimPrimaryIonizationCol->size() << " for " << m_det << endmsg;
     if(m_sim_pulse && m_det=="DC"){
@@ -715,6 +726,7 @@ void TrackHeedSimTool::endOfEvent() {
     }
     reset();
     m_SimPrimaryIonizationCol = nullptr;
+#endif
 }
 
 StatusCode TrackHeedSimTool::finalize()

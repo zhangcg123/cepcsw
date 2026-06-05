@@ -11,6 +11,8 @@
 #include "BackgroundLoader.hh"
 #include "BackgroundEvent.hh"
 
+#include <edm4hep/EDM4hepVersion.h>
+
 DECLARE_COMPONENT(DetSimMixingAlg)
 
 DetSimMixingAlg::DetSimMixingAlg(const std::string& name, ISvcLocator* pSvcLocator)
@@ -346,7 +348,11 @@ StatusCode DetSimMixingAlg::execute() {
                 newhit.setMomentum(oldhit.getMomentum());
 
                 // associate MC particle for signal
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                newhit.setParticle(oldhit.getParticle());
+#else
                 newhit.setMCParticle(oldhit.getMCParticle());
+#endif
             }
 
         } else if (bkg_evt.calorimeter_hits.count(colidx)) {

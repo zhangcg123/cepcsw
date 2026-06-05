@@ -43,8 +43,11 @@ namespace MarlinTrk{
     double chi2 ;
     std::vector<std::pair<edm4hep::TrackerHit, double> > hits ;
     edm4hep::TrackState ts ;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    edm4hep::TrackerHit lastHit = edm4hep::TrackerHit::makeEmpty();
+#else    
     edm4hep::TrackerHit lastHit ;
-
+#endif
     getTrackerHitAtPositiveNDF( lastHit ) ;
 
     getHitsInFit( hits ) ;

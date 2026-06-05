@@ -4,10 +4,18 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
 #include <gsl/gsl_rng.h>
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitPlaneCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
 
 /** ======= PlanarDigiProcessor / PlanarDigiAlg ========== <br>
  * Creates TrackerHits from SimTrackerHits, smearing them according to the input parameters. 
@@ -95,8 +103,16 @@ protected:
   DataHandle<edm4hep::EventHeaderCollection> _headerCol{"EventHeaderCol", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::SimTrackerHitCollection> _inColHdl{"VXDCollection", Gaudi::DataHandle::Reader, this};
   // Output collections
-  DataHandle<edm4hep::TrackerHitCollection> _outColHdl{"VXDTrackerHits", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> _outRelColHdl{"VXDTrackerHitRelations", Gaudi::DataHandle::Writer, this};
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+    using CEPCSWTrackerHitPlaneCollection = edm4hep::TrackerHit3DCollection;
+#else
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+    using CEPCSWTrackerHitPlaneCollection = edm4hep::TrackerHitCollection;
+#endif
+    
+  DataHandle<CEPCSWTrackerHitPlaneCollection> _outColHdl{"VXDTrackerHits", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> _outRelColHdl{"VXDTrackerHitRelations", Gaudi::DataHandle::Writer, this};
 };
 
 #endif

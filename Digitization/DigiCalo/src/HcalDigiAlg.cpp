@@ -177,8 +177,8 @@ StatusCode HcalDigiAlg::execute()
       std::vector<edm4hep::SimCalorimeterHit> m_simhitCol; m_simhitCol.clear();
       
       edm4hep::CalorimeterHitCollection* caloVec = w_DigiCaloCol->createAndPut();
-      edm4hep::MCRecoCaloAssociationCollection* caloAssoVec = w_CaloAssociationCol->createAndPut();
-      edm4hep::MCRecoCaloParticleAssociationCollection* caloMCPAssoVec = w_MCPCaloAssociationCol->createAndPut(); 
+      auto* caloAssoVec = w_CaloAssociationCol->createAndPut();
+      auto* caloMCPAssoVec = w_MCPCaloAssociationCol->createAndPut(); 
       
       if(const_MCPCol){
         int N_MCP = const_MCPCol->size();
@@ -397,15 +397,25 @@ StatusCode HcalDigiAlg::execute()
       
         //Create SimHit-DigiHit association. 
         auto rel = caloAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        rel.setFrom(digiHit);
+        rel.setTo(simhit);
+#else
         rel.setRec(digiHit);
         rel.setSim(simhit);
+#endif
         rel.setWeight(1.);
       
         //Create DigiHit-MCParticle association.
         for(auto iter : MCPEnMap){
           auto rel_MC = caloMCPAssoVec->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+          rel_MC.setFrom(digiHit);
+          rel_MC.setTo(iter.first);
+#else
           rel_MC.setRec(digiHit);
           rel_MC.setSim(iter.first);
+#endif
           rel_MC.setWeight(iter.second/Ehit_raw);
         }
       

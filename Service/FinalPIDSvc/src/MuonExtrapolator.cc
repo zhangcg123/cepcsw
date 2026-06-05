@@ -115,7 +115,7 @@ TrackState MuonExtrapolator::extrap_CalCorr( const Track& track, const Reconstru
 
 }
 
-std::vector<double> MuonExtrapolator::angles(TrackState st, const TrackerHitCollection& hits, int variable) {
+std::vector<double> MuonExtrapolator::angles(TrackState st, const CEPCSWTrackerHit3DCollection& hits, int variable) {
     double refx = st.referencePoint.x;
     double refy = st.referencePoint.y;
     double refz = st.referencePoint.z;

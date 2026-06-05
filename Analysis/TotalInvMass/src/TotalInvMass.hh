@@ -14,6 +14,7 @@
 #include <TTree.h>
 #include <TFile.h>
 
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"

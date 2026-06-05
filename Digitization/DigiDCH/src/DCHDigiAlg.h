@@ -4,10 +4,17 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/NTuple.h"
 #include "GaudiKernel/Algorithm.h"
+
+#include "edm4hep/EDM4hepVersion.h"
+#include "edm4hep/MCParticle.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
-#include "edm4hep/MCParticle.h"
+#endif
 
 #include <DDRec/DetectorData.h>
 #include <DDRec/CellIDPositionConverter.h>
@@ -27,6 +34,16 @@ class DCHDigiAlg : public Algorithm
 {
  
 public:
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+    using CEPCSWMutableTrackerHit3D = edm4hep::MutableTrackerHit3D;
+#else
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+    using CEPCSWMutableTrackerHit3D = edm4hep::MutableTrackerHit;
+#endif
+    
  
   DCHDigiAlg(const std::string& name, ISvcLocator* svcLoc);
  
@@ -44,16 +61,15 @@ public:
   virtual StatusCode finalize() ;
  
 protected:
-
   SmartIF<IGeomSvc> m_geosvc;
   typedef std::vector<float> FloatVec;
   int _nEvt ;
 
-  void addNoiseHit(edm4hep::TrackerHitCollection* Vec,double time, int chamber,
+  void addNoiseHit(CEPCSWTrackerHit3DCollection* Vec,double time, int chamber,
           int layer, int cellID,unsigned long long wcellid);
   void mixNoise(int layerID,int wireID,
-          edm4hep::TrackerHitCollection* Vec,
-          edm4hep::MutableTrackerHit* trackerHitLayer,
+          CEPCSWTrackerHit3DCollection* Vec,
+          CEPCSWMutableTrackerHit3D* trackerHitLayer,
           bool ismixNoise[55]);
 
   TRandom3 fRandom;
@@ -134,10 +150,10 @@ protected:
   // Input collections
   DataHandle<edm4hep::SimTrackerHitCollection> r_SimDCHCol{"DriftChamberHitsCollection", Gaudi::DataHandle::Reader, this};
   // Output collections
-  DataHandle<edm4hep::TrackerHitCollection>    w_DigiDCHCol{"DigiDCHitCollection", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>    w_AssociationCol{"DCHitAssociationCollection", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHit3DCollection>    w_DigiDCHCol{"DigiDCHitCollection", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>    w_AssociationCol{"DCHitAssociationCollection", Gaudi::DataHandle::Writer, this};
   // Output signal digiHits
-  DataHandle<edm4hep::TrackerHitCollection>    w_SignalDigiDCHCol{"SignalDigiDCHitCollection", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHit3DCollection>    w_SignalDigiDCHCol{"SignalDigiDCHitCollection", Gaudi::DataHandle::Writer, this};
 };
 
 #endif

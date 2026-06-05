@@ -7,11 +7,19 @@
 #include "DigiTool/IDigiTool.h"
 #include "DetInterface/IGeomSvc.h"
 #include "GearSvc/IGearSvc.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/SimPrimaryIonizationClusterCollection.h"
 #include "edm4hep/SimPrimaryIonizationCluster.h"
+#endif
+
 #include <gear/GEAR.h>
 #include "DDRec/DetectorData.h"
 #include "DDRec/SurfaceManager.h"
@@ -23,10 +31,10 @@ class TPCPixelDigiTool : public extends<AlgTool, IDigiTool> {
  public:
   using extends::extends;
 
-  virtual StatusCode Call(const edm4hep::SimTrackerHitCollection* simCol, edm4hep::TrackerHitCollection* hitCol,
-			  edm4hep::MCRecoTrackerAssociationCollection* assCol) override;
-  virtual StatusCode Call(edm4hep::SimTrackerHit simhit, edm4hep::TrackerHitCollection* hitCol,
-			  edm4hep::MCRecoTrackerAssociationCollection* assCol) override;
+  virtual StatusCode Call(const edm4hep::SimTrackerHitCollection* simCol, CEPCSWTrackerHit3DCollection* hitCol,
+			  CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol) override;
+  virtual StatusCode Call(edm4hep::SimTrackerHit simhit, CEPCSWTrackerHit3DCollection* hitCol,
+			  CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol) override;
 
   StatusCode initialize() override;
   StatusCode finalize() override;

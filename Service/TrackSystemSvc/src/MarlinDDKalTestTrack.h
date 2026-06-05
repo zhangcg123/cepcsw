@@ -4,6 +4,8 @@
 #include "TrackSystemSvc/IMarlinTrack.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
+#include "edm4hep/EDM4hepVersion.h"
+
 #include <TObjArray.h>
 
 #include <cmath>
@@ -344,8 +346,12 @@ private:
   TObjArray* _kalhits=nullptr;
   
   MarlinDDKalTest* _ktest=nullptr;
-  
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  edm4hep::TrackerHit _trackHitAtPositiveNDF = edm4hep::TrackerHit::makeEmpty();
+#else    
   edm4hep::TrackerHit _trackHitAtPositiveNDF=nullptr;
+#endif    
   int _hitIndexAtPositiveNDF=-1;
   
   /** used to store whether initial track state has been supplied or created 
