@@ -36,9 +36,10 @@ stages:
 
 .envvar_template:
   variables:
-    CEPCSW_LCG_RELEASE: LCG
-    CEPCSW_LCG_PLATFORM: x86_64-el9-gcc11-opt
-    CEPCSW_LCG_VERSION: 105.0.0
+    CEPCSW_LCG_RELEASE: "LCG"
+    CEPCSW_LCG_PLATFORM: "x86_64-el9-gcc11-opt"
+    CEPCSW_LCG_VERSION: "105.0.0"
+    CEPCSW_CI_RUN_TESTS: ON
     NJOBS: 16
 
 # for k8s
@@ -52,7 +53,7 @@ stages:
     - sed -i 's%^CVMFS_HTTP_PROXY=.*%CVMFS_HTTP_PROXY=http://squid-01.ihep.ac.cn:3128%' /etc/cvmfs/default.local
     - for repo in sft.cern.ch geant4.cern.ch cepcsw.ihep.ac.cn; do [ -d "/cvmfs/$repo" ] || mkdir /cvmfs/$repo; sudo mount -t cvmfs $repo /cvmfs/$repo; done
     - bash ./.build.ci.sh
-    - bash ./.test.ci.sh
+    - case "${CEPCSW_CI_RUN_TESTS}" in ON|true) bash ./.test.ci.sh;; esac
 
 ##############################################################################
 # Build & Test in k8s (LCG)
@@ -65,6 +66,20 @@ build:lcg:el9:k8s:
   artifacts:
     reports:
       junit: build.${CEPCSW_LCG_VERSION}.${CEPCSW_LCG_PLATFORM}/cepcsw-ctest-result.xml
+
+##############################################################################
+# Build & Test in k8s (LCG 109)
+##############################################################################
+build:lcg109:el9:k8s:
+  extends: .build_template_k8s
+  variables:
+    CEPCSW_LCG_RELEASE: "LCG"
+    CEPCSW_LCG_PLATFORM: "x86_64-el9-gcc13-opt"
+    CEPCSW_LCG_VERSION: "109.0.0"
+    CEPCSW_CI_RUN_TESTS: OFF
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      when: manual
 
 ##############################################################################
 # Build the docs

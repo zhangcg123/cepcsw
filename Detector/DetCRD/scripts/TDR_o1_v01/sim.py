@@ -11,6 +11,10 @@ seed = [12340]
 rndmengine = HepRndm__Engine_CLHEP__HepJamesRandom_("RndmGenSvc.Engine") # The default engine in Geant4
 rndmengine.SetSingleton = True
 rndmengine.Seeds = seed
+# avoid lock
+props = rndmengine.getProperties()
+if "ThreadSafe" in props:
+    rndmengine.ThreadSafe = False
 
 rndmgensvc = RndmGenSvc("RndmGenSvc")
 rndmgensvc.Engine = rndmengine.name()
