@@ -5,9 +5,22 @@
 
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/TrackCollection.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackParticleAssociationCollection;
+#endif
 #include "edm4hep/RecDqdx.h"
 #include "edm4hep/RecDqdxCollection.h"
 
@@ -36,7 +49,7 @@ protected:
     dd4hep::DDSegmentation::BitFieldCoder* m_decoder;
 
     DataHandle<edm4hep::TrackCollection> _trackCol{"CompleteTracks", Gaudi::DataHandle::Reader, this};
-    DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> _trkParAssCol{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
+    DataHandle<CEPCSWTrackMCParticleLinkCollection> _trkParAssCol{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
     DataHandle<edm4hep::RecDqdxCollection> _dndxCol{"DndxTracks", Gaudi::DataHandle::Writer, this};
 
 private:

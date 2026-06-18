@@ -110,37 +110,37 @@ class DCTrackFinding:public Algorithm {
         DataHandle<edm4hep::TrackCollection> m_siSubsetTrackCol{
             "SubsetTracks" , Gaudi::DataHandle::Reader, this};
         //DC DigiHit SimTrackHit DCHitAssociation
-        DataHandle<edm4hep::TrackerHitCollection> m_DCDigiCol{
+        DataHandle<CEPCSWTrackerHit3DCollection> m_DCDigiCol{
             "DigiDCHitCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::TrackerHitCollection> m_SignalDCDigiCol{
+        DataHandle<CEPCSWTrackerHit3DCollection> m_SignalDCDigiCol{
             "SignalDigiDCHitCollection", Gaudi::DataHandle::Reader, this};
         DataHandle<edm4hep::SimTrackerHitCollection> m_simDCHitCol{
             "DriftChamberHitsCollection" , Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_DCHitAssociationCol{"DCHitAssociationCollection",
                 Gaudi::DataHandle::Reader, this};
         //SIT SimTrackHit DCHitAssociation 
         DataHandle<edm4hep::SimTrackerHitCollection> m_simSITHitCol{
             "SITCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_SITHitAssociationCol{"SITTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
         //VXD SimTrackHit DCHitAssociation 
         DataHandle<edm4hep::SimTrackerHitCollection> m_simVXDHitCol{
             "VXDCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_VXDHitAssociationCol{"VXDTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
         //FTD SimTrackHit DCHitAssociation 
         DataHandle<edm4hep::SimTrackerHitCollection> m_simFTDHitCol{
             "FTDCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_FTDHitAssociationCol{"FTDTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
         //SET SimTrackHit DCHitAssociation 
         DataHandle<edm4hep::SimTrackerHitCollection> m_simSETHitCol{
             "SETCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_SETHitAssociationCol{"SETTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
 
@@ -151,7 +151,7 @@ class DCTrackFinding:public Algorithm {
             Gaudi::DataHandle::Writer, this};
 
         // Output collections
-        DataHandle<edm4hep::TrackerHitCollection>    w_DCTrackFindingCol{
+        DataHandle<CEPCSWTrackerHit3DCollection>    w_DCTrackFindingCol{
             "DCTrackFindingHitCollection", Gaudi::DataHandle::Writer, this};
 
         int getNumPointsWithFittedInfo(genfit::Track genfitTrack,int repID) const;
@@ -162,7 +162,7 @@ class DCTrackFinding:public Algorithm {
         bool getMOP(int hitID, genfit::MeasuredStateOnPlane& mop,
                 genfit::AbsTrackRep* trackRep,genfit::Track* track) const;
 
-        int addHitsToTk(edm4hep::TrackerHitCollection* col, edm4hep::Track& track, const char* msg) const;
+        int addHitsToTk(CEPCSWTrackerHit3DCollection* col, edm4hep::Track& track, const char* msg) const;
         int m_eventNo;
 
         /// tuples

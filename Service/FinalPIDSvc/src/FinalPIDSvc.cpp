@@ -33,7 +33,7 @@ FinalPIDSvc::~FinalPIDSvc()
     if (_muonExtrapolator != nullptr) delete _muonExtrapolator;
 }
 
-void FinalPIDSvc::SetCollections( const edm4hep::TrackerHitCollection* barrelhits, const edm4hep::TrackerHitCollection* endcaphits, const edm4hep::RecTofCollection* tofcol, const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::ReconstructedParticleCollection* PFO) 
+void FinalPIDSvc::SetCollections( const IFinalPIDSvc::CEPCSWTrackerHit3DCollection* barrelhits, const IFinalPIDSvc::CEPCSWTrackerHit3DCollection* endcaphits, const edm4hep::RecTofCollection* tofcol, const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::ReconstructedParticleCollection* PFO) 
 {
     _barrelhits=barrelhits;
     _endcaphits=endcaphits;
@@ -70,8 +70,8 @@ void FinalPIDSvc::MatchMuonHitsToTracks()
         _extrap_TS[idx]=newst;
     }
 
-    const auto& __barrelhits = [&]() -> const edm4hep::TrackerHitCollection& {
-        static const edm4hep::TrackerHitCollection empty;
+    const auto& __barrelhits = [&]() -> const CEPCSWTrackerHit3DCollection& {
+        static const CEPCSWTrackerHit3DCollection empty;
         return _barrelhits?*_barrelhits:empty;
     }();
     
@@ -137,8 +137,8 @@ void FinalPIDSvc::MatchMuonHitsToTracks()
         _dd_PFO_to_MuonHits[idx_pfo].push_back(dd);
     }
 
-    const auto& __endcaphits = [&]() -> const edm4hep::TrackerHitCollection& {
-        static const edm4hep::TrackerHitCollection empty;
+    const auto& __endcaphits = [&]() -> const CEPCSWTrackerHit3DCollection& {
+        static const CEPCSWTrackerHit3DCollection empty;
         return _endcaphits?*_barrelhits:empty;
     }();
 
@@ -421,6 +421,9 @@ bool FinalPIDSvc::LoadPFO(const edm4hep::ReconstructedParticle pfo)
 
     if (m_readFromData) {
         if (pfo.getCharge()==0) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            throw std::runtime_error("Unsupported particleIDs");
+#else
             if (pfo.particleIDs_size()!=2) {
                 error()<<"Neutral particles should have 2 ParticleIDs instead of "<<pfo.particleIDs_size()<<endmsg;
                 return false;
@@ -429,8 +432,12 @@ bool FinalPIDSvc::LoadPFO(const edm4hep::ReconstructedParticle pfo)
                 auto pid=pfo.getParticleIDs(i_fl);
                 _prob_photon[i_fl]=pid.getLikelihood();
             }
+#endif
         }
         else {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            throw std::runtime_error("Unsupported particleIDs");
+#else
             if (pfo.particleIDs_size()!=5) {
                 error()<<"Charged particles should have 5 ParticleIDs instead of "<<pfo.particleIDs_size()<<endmsg;
                 return false;
@@ -450,6 +457,7 @@ bool FinalPIDSvc::LoadPFO(const edm4hep::ReconstructedParticle pfo)
                     _prob_hadron[i_fl-2]/=_prob_lepton[2];
                 }
             }
+#endif
         }
     }
     else ApplyModel();
@@ -755,7 +763,12 @@ void FinalPIDSvc::FillTPCTOF(bool doPID, const edm4hep::ReconstructedParticle pf
                 if (dqdx.getTrack() == trk){
                     _dndx=dqdx.getDQdx().value;
                     for (int i_pdg = 0; i_pdg < 5; i_pdg++){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                        throw std::runtime_error("Unsupported dqdx.getHypotheses");
+                        _chi2_TPC[i_pdg] = -999;
+#else
                         _chi2_TPC[i_pdg] = dqdx.getHypotheses(i_pdg).chi2;
+#endif
                     }
                 }
             }

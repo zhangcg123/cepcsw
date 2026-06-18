@@ -20,6 +20,14 @@
 #include "GaudiKernel/NTuple.h"
 #include "k4FWCore/DataHandle.h"
 #include "DD4hep/Fields.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
+#include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
 #include <string>
 #include <vector>
 #include "AbsKalmanFitter.h"
@@ -45,14 +53,21 @@ namespace edm4hep{
     class MutableReconstructedParticle;
     class SimTrackerHitCollection;
     class TrackCollection;
-    class TrackerHitCollection;
-    class MCRecoTrackerAssociationCollection;
     class ReconstructedParticle;
     class ReconstructedParticleCollection;
     class MutableReconstructedParticleCollection;
     class TrackerHit;
     class Track;
+    class MCRecoTrackerAssociationCollection;
 }
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+#else
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -76,14 +91,14 @@ class RecGenfitAlgSDT:public Algorithm {
         bool addHitsToTk(edm4hep::TrackerHit hit,edm4hep::Track& track,const char* msg) const;
         double getSETRadius();
         void addSETHitsToTk(edm4hep::Track& track,
-                const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
-                const edm4hep::TrackerHitCollection* SETHits);
+                const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
+                const CEPCSWTrackerHit3DCollection* SETHits);
 
         DataHandle<edm4hep::EventHeaderCollection> m_headerCol{
             "EventHeaderCol", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::TrackerHitCollection> m_DCDigiCol{
+        DataHandle<CEPCSWTrackerHit3DCollection> m_DCDigiCol{
             "DigiDCHitCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::TrackerHitCollection> m_SignalDCDigiCol{
+        DataHandle<CEPCSWTrackerHit3DCollection> m_SignalDCDigiCol{
             "SignalDigiDCHitCollection", Gaudi::DataHandle::Reader, this};
         //Mc truth
         DataHandle<edm4hep::SimTrackerHitCollection> m_simVXDHitCol{
@@ -98,25 +113,25 @@ class RecGenfitAlgSDT:public Algorithm {
             "MCParticle", Gaudi::DataHandle::Reader, this};
         DataHandle<edm4hep::SimTrackerHitCollection> m_simDCHitCol{
             "DriftChamberHitsCollection" , Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_DCHitAssociationCol{"DCHitAssociationCollection",
                 Gaudi::DataHandle::Reader, this};
         DataHandle<edm4hep::TrackCollection> m_dcTrackCol{
             "DCTrackCollection", Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_VXDHitAssociationCol{"VXDTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_SITHitAssociationCol{"SITTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_SETHitAssociationCol{"SETTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>
             m_FTDHitAssociationCol{"FTDTrackerHitAssociation",
                 Gaudi::DataHandle::Reader, this};
 
-        DataHandle<edm4hep::TrackerHitCollection> m_SETHitCol{
+        DataHandle<CEPCSWTrackerHit3DCollection> m_SETHitCol{
             "SETTrackerHits",Gaudi::DataHandle::Reader, this};
 
         //Track from silicon detectors
@@ -130,7 +145,7 @@ class RecGenfitAlgSDT:public Algorithm {
             Gaudi::DataHandle::Writer, this};
 
         //Track Finding
-        DataHandle<edm4hep::TrackerHitCollection> m_DCTrackFindingCol{
+        DataHandle<CEPCSWTrackerHit3DCollection> m_DCTrackFindingCol{
             "DCTrackFindingHitCollection",Gaudi::DataHandle::Reader, this};
 
         //Output hits and particles

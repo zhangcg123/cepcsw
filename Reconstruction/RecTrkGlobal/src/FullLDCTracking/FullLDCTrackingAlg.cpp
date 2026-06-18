@@ -338,21 +338,34 @@ void FullLDCTrackingAlg::AddTrackColToEvt(TrackExtendedVec & trkVec, edm4hep::Tr
     
     // setup initial dummy covariance matrix
     decltype(edm4hep::TrackState::covMatrix) covMatrix;
-    
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    for (unsigned icov = 0; icov<covMatrix.values.size(); ++icov) {
+      covMatrix.values[icov] = 0;
+#else
     for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
       covMatrix[icov] = 0;
+#endif
     }
-    
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    covMatrix.values[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
+    covMatrix.values[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
+    covMatrix.values[5]  = ( _initialTrackError_omega ); //sigma_omega^2
+    covMatrix.values[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
+    covMatrix.values[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+#else
     covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
     covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
     covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
     covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
     covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+#endif
 
     bool fit_backwards = _backward ? (IMarlinTrack::backward) : (!IMarlinTrack::backward);
-    
+
     // get the track state at the last hit at the outer most hit
-    
+
     GroupTracks * group = trkCand->getGroupTracks();
 
     edm4hep::TrackState ts_initial;
@@ -826,7 +839,7 @@ void FullLDCTrackingAlg::prepareVectors() {
   std::map <edm4hep::TrackerHit,TrackerHitExtended*> mapTrackerHits;
 
   // Reading TPC hits
-  const edm4hep::TrackerHitCollection* hitTPCCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitTPCCol = nullptr;
   try {
     hitTPCCol = _TPCTrackerHitColHdl.get();
   }
@@ -842,8 +855,14 @@ void FullLDCTrackingAlg::prepareVectors() {
       // Covariance Matrix in LCIO is defined in XYZ convert to R-Phi-Z
       // For no error in r
       
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto covmat = hit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+      double tpcRPhiRes = sqrt(covmat[0] + covmat[2]);
+      double tpcZRes = sqrt(covmat[5]);
+#else
       double tpcRPhiRes = sqrt(hit.getCovMatrix()[0] + hit.getCovMatrix()[2]);
       double tpcZRes = sqrt(hit.getCovMatrix()[5]);
+#endif
       
       hitExt->setResolutionRPhi(float(tpcRPhiRes));
       hitExt->setResolutionZ(float(tpcZRes));
@@ -870,7 +889,7 @@ void FullLDCTrackingAlg::prepareVectors() {
   
   // Reading in FTD Pixel Hits Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  const edm4hep::TrackerHitCollection* hitFTDPixelCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitFTDPixelCol = nullptr;
   try {
     hitFTDPixelCol = _FTDPixelTrackerHitColHdl.get();
   }
@@ -888,7 +907,12 @@ void FullLDCTrackingAlg::prepareVectors() {
       
       // double point_res_rphi = sqrt( hit->getdU()*hit->getdU() + hit->getdV()*hit->getdV() );
       // FIXME to calculate the correct resolution;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto covmat = hit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+      double point_res_rphi = sqrt( covmat[2]*covmat[2] + covmat[5]*covmat[5] );
+#else
       double point_res_rphi = sqrt( hit.getCovMatrix()[2]*hit.getCovMatrix()[2] + hit.getCovMatrix()[5]*hit.getCovMatrix()[5] );
+#endif
       hitExt->setResolutionRPhi( point_res_rphi );
       
       // SJA:FIXME why is this needed? 
@@ -935,7 +959,7 @@ void FullLDCTrackingAlg::prepareVectors() {
   
   // Reading in FTD SpacePoint Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  const edm4hep::TrackerHitCollection* hitFTDSpacePointCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitFTDSpacePointCol = nullptr;
   try {
     hitFTDSpacePointCol = _FTDSpacePointColHdl.get();
   }
@@ -943,7 +967,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     debug() << "Collection " << _FTDSpacePointColHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
   }
 
-  const edm4hep::TrackerHitCollection* rawFTDCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* rawFTDCol = nullptr;
   if(hitFTDSpacePointCol){
     try{
       rawFTDCol = _inFTDRawColHdl.get();
@@ -961,7 +985,12 @@ void FullLDCTrackingAlg::prepareVectors() {
       TrackerHitExtended * hitExt = new TrackerHitExtended( hit );
       
       // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto covmat = hit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+      double point_res_rphi = 2 * sqrt( covmat[0] + covmat[2] );
+#else
       double point_res_rphi = 2 * sqrt( hit.getCovMatrix()[0] + hit.getCovMatrix()[2] );
+#endif
       
       hitExt->setResolutionRPhi( point_res_rphi );
       
@@ -1008,7 +1037,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     }
   }
   
-  const edm4hep::TrackerHitCollection* hitSITCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitSITCol = nullptr;
   try {
     hitSITCol = _SITTrackerHitColHdl.get();
   }
@@ -1016,7 +1045,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     debug() << "Collection " << _SITTrackerHitColHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
   }
   
-  const edm4hep::TrackerHitCollection* rawSITCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* rawSITCol = nullptr;
   if(hitSITCol){
     try{
       rawSITCol = _inSITRawColHdl.get();
@@ -1066,15 +1095,39 @@ void FullLDCTrackingAlg::prepareVectors() {
       else if ( UTIL::BitSet32( trkhit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
         
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+        drphi =  2 * sqrt(covmat[0] + covmat[2]);
+        dz    =      sqrt(covmat[5]);
+#else
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi =  2 * sqrt(covmat[0] + covmat[2]);
+          dz    =      sqrt(covmat[5]);
+        }
+#else
         drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
         dz    =      sqrt(trkhit.getCovMatrix()[5]);
+#endif
+#endif
       }
       // or a PIXEL based SIT, using 2D TrackerHitPlane like the VXD above
       else if ( UTIL::BitSet32( trkhit.getType() )[3])  {
         // FIXME Should make it correct
 	// first we need to check if the measurement vectors are aligned with the global coordinates 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	auto uVec = trkhit.as<edm4hep::TrackerHitPlane>().getU();
+	gear::Vector3D U(1.0, uVec.b, uVec.a, gear::Vector3D::spherical);
+#else
 	gear::Vector3D U(1.0,trkhit.getCovMatrix()[1],trkhit.getCovMatrix()[0],gear::Vector3D::spherical);
+#endif
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	auto vVec = trkhit.as<edm4hep::TrackerHitPlane>().getV();
+	gear::Vector3D V(1.0, vVec.b, vVec.a, gear::Vector3D::spherical);
+#else
 	gear::Vector3D V(1.0,trkhit.getCovMatrix()[4],trkhit.getCovMatrix()[3],gear::Vector3D::spherical);
+#endif
 	gear::Vector3D Z(0.0,0.0,1.0);
         
         const float eps = 1.0e-07;
@@ -1093,8 +1146,13 @@ void FullLDCTrackingAlg::prepareVectors() {
         // FIXME should make it correct
         // drphi = trkhit_P->getdU();
         // dz    = trkhit_P->getdV();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        drphi = trkhit.as<edm4hep::TrackerHitPlane>().getDu();
+        dz    = trkhit.as<edm4hep::TrackerHitPlane>().getDv();
+#else
         drphi = trkhit.getCovMatrix()[2];
-	dz    = trkhit.getCovMatrix()[5];
+        dz    = trkhit.getCovMatrix()[5];
+#endif
       }
       // or a simple cylindrical design, as used in the LOI
       /* FIXME, fucd
@@ -1111,8 +1169,16 @@ void FullLDCTrackingAlg::prepareVectors() {
       else {
         
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi =  2 * sqrt(covmat[0] + covmat[2]);
+          dz =     sqrt(covmat[5]);
+        }
+#else
         drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
         dz =     sqrt(trkhit.getCovMatrix()[5]);
+#endif
       }
       
       // now that the hit type has been established carry on and create a 
@@ -1142,7 +1208,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     }
   }
   
-  const edm4hep::TrackerHitCollection* hitSETCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitSETCol = nullptr;
   try {
     hitSETCol = _SETTrackerHitColHdl.get();
   }
@@ -1150,7 +1216,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     debug() << "Collection " << _SETTrackerHitColHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
   }
 
-  const edm4hep::TrackerHitCollection* rawSETCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* rawSETCol = nullptr;
   if(hitSETCol){
     try{
       rawSETCol = _inSETRawColHdl.get();
@@ -1197,8 +1263,16 @@ void FullLDCTrackingAlg::prepareVectors() {
       // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
       else if ( UTIL::BitSet32( trkhit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
 	// SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi =  2 * sqrt(covmat[0] + covmat[2]);
+          dz    =      sqrt(covmat[5]);
+        }
+#else
         drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
         dz    =      sqrt(trkhit.getCovMatrix()[5]);
+#endif
       }
       // or a PIXEL based SET, using 2D TrackerHitPlane like the VXD above
       else if ( UTIL::BitSet32( trkhit.getType() )[3] )  {
@@ -1208,8 +1282,18 @@ void FullLDCTrackingAlg::prepareVectors() {
         // gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
         // gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
         // FIXME Should calculate it correctly
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	auto uVec = trkhit.as<edm4hep::TrackerHitPlane>().getU();
+	gear::Vector3D U(1.0, uVec.b, uVec.a, gear::Vector3D::spherical);
+#else
 	gear::Vector3D U(1.0,trkhit.getCovMatrix()[1],trkhit.getCovMatrix()[0],gear::Vector3D::spherical);
+#endif
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	auto vVec = trkhit.as<edm4hep::TrackerHitPlane>().getV();
+	gear::Vector3D V(1.0, vVec.b, vVec.a, gear::Vector3D::spherical);
+#else
 	gear::Vector3D V(1.0,trkhit.getCovMatrix()[4],trkhit.getCovMatrix()[3],gear::Vector3D::spherical);
+#endif
 	gear::Vector3D Z(0.0,0.0,1.0);
         
         const float eps = 1.0e-07;
@@ -1228,8 +1312,13 @@ void FullLDCTrackingAlg::prepareVectors() {
         // FIXME should use the correct 
         // drphi = trkhit_P->getdU();
         // dz    = trkhit_P->getdV();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        drphi = trkhit.as<edm4hep::TrackerHitPlane>().getDu();
+        dz    = trkhit.as<edm4hep::TrackerHitPlane>().getDv();
+#else
         drphi = trkhit.getCovMatrix()[2];
-	dz    = trkhit.getCovMatrix()[5];
+        dz    = trkhit.getCovMatrix()[5];
+#endif
       }
       // or a simple cylindrical design, as used in the LOI
       /*FIXME, fucd
@@ -1246,8 +1335,16 @@ void FullLDCTrackingAlg::prepareVectors() {
       else {
         
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi =  2 * sqrt(covmat[0] + covmat[2]);
+          dz =     sqrt(covmat[5]);
+        }
+#else
         drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
         dz =     sqrt(trkhit.getCovMatrix()[5]);
+#endif
       }
       
       // now that the hit type has been established carry on and create a
@@ -1276,7 +1373,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     }
   }
 
-  const edm4hep::TrackerHitCollection* hitETDCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitETDCol = nullptr;
   try {
     hitETDCol = _ETDTrackerHitColHdl.get();
   }
@@ -1284,7 +1381,7 @@ void FullLDCTrackingAlg::prepareVectors() {
     debug() << "Collection " << _ETDTrackerHitColHdl.fullKey() << " is unavailable in event " << _nEvt << endmsg;
   }
 
-  const edm4hep::TrackerHitCollection* rawETDCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* rawETDCol = nullptr;
   if(hitETDCol){
     try{
       rawETDCol = _inETDRawColHdl.get();
@@ -1320,8 +1417,16 @@ void FullLDCTrackingAlg::prepareVectors() {
       // most likely case: COMPOSITE_SPACEPOINT hits formed from stereo strip hits
       else if ( UTIL::BitSet32( trkhit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ) {
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi =  2 * sqrt(covmat[0] + covmat[2]);
+          dz    =      sqrt(covmat[5]);
+        }
+#else
         drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
         dz    =      sqrt(trkhit.getCovMatrix()[5]);
+#endif
       }
       // or a PIXEL based SET, using 2D TrackerHitPlane like the VXD above
       else if ( UTIL::BitSet32( trkhit.getType() )[3] )  {
@@ -1331,8 +1436,18 @@ void FullLDCTrackingAlg::prepareVectors() {
         // gear::Vector3D U(1.0,trkhit_P->getU()[1],trkhit_P->getU()[0],gear::Vector3D::spherical);
         // gear::Vector3D V(1.0,trkhit_P->getV()[1],trkhit_P->getV()[0],gear::Vector3D::spherical);
         // FIXME Should calculate it correctly
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	auto uVec = trkhit.as<edm4hep::TrackerHitPlane>().getU();
+	gear::Vector3D U(1.0, uVec.b, uVec.a, gear::Vector3D::spherical);
+#else
 	gear::Vector3D U(1.0,trkhit.getCovMatrix()[1],trkhit.getCovMatrix()[0],gear::Vector3D::spherical);
+#endif
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	auto vVec = trkhit.as<edm4hep::TrackerHitPlane>().getV();
+	gear::Vector3D V(1.0, vVec.b, vVec.a, gear::Vector3D::spherical);
+#else
 	gear::Vector3D V(1.0,trkhit.getCovMatrix()[4],trkhit.getCovMatrix()[3],gear::Vector3D::spherical);
+#endif
 	gear::Vector3D Z(0.0,0.0,1.0);
 
         const float eps = 1.0e-07;
@@ -1351,14 +1466,29 @@ void FullLDCTrackingAlg::prepareVectors() {
 	// FIXME should use the correct
         // drphi = trkhit_P->getdU();
         // dz    = trkhit_P->getdV();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi = sqrt(covmat[2]*covmat[2]+covmat[5]*covmat[5]);
+        }
+#else
         drphi = sqrt(trkhit.getCovMatrix()[2]*trkhit.getCovMatrix()[2]+trkhit.getCovMatrix()[5]*trkhit.getCovMatrix()[5]);
+#endif
         dz    = 0.1;
       }
       // this would be very unlikely, but who knows ... just an ordinary TrackerHit, which is not a COMPOSITE_SPACEPOINT
       else {
         // SJA:FIXME: fudge for now by a factor of two and ignore covariance
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        {
+          auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+          drphi =  2 * sqrt(covmat[0] + covmat[2]);
+          dz =     sqrt(covmat[5]);
+        }
+#else
         drphi =  2 * sqrt(trkhit.getCovMatrix()[0] + trkhit.getCovMatrix()[2]);
         dz =     sqrt(trkhit.getCovMatrix()[5]);
+#endif
       }
       
       // now that the hit type has been established carry on and create a
@@ -1387,7 +1517,7 @@ void FullLDCTrackingAlg::prepareVectors() {
   }
 
   // Reading VTX Hits
-  const edm4hep::TrackerHitCollection* hitVTXCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitVTXCol = nullptr;
   try {
     hitVTXCol = _VTXTrackerHitColHdl.get();
   }
@@ -1406,8 +1536,14 @@ void FullLDCTrackingAlg::prepareVectors() {
       // FIXME should use the correct resolution
       // hitExt->setResolutionRPhi(trkhit->getdU());
       // hitExt->setResolutionZ(trkhit->getdV());
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto covmat = trkhit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+      hitExt->setResolutionRPhi(covmat[2]);
+      hitExt->setResolutionZ(covmat[5]);
+#else
       hitExt->setResolutionRPhi(trkhit.getCovMatrix()[2]);
       hitExt->setResolutionZ(trkhit.getCovMatrix()[5]);
+#endif
 
       // type and det are no longer used, set to INT_MAX to try and catch any missuse
       hitExt->setType(int(INT_MAX));
@@ -1465,7 +1601,11 @@ void FullLDCTrackingAlg::prepareVectors() {
       //param[4] = getZ0(tpcTrack);
       
       auto Cov = getCovMatrix(tpcTrack);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      int NC = int(Cov.values.size());
+#else
       int NC = int(Cov.size());
+#endif
 
       std::unique_ptr<float[]> cov(new float[NC]);
       for (int ic=0;ic<NC;ic++) {
@@ -1536,7 +1676,11 @@ void FullLDCTrackingAlg::prepareVectors() {
       //param[4] = getZ0(siTrack);
             
       auto Cov = getCovMatrix(siTrack);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      int NC = int(Cov.values.size());
+#else
       int NC = int(Cov.size());
+#endif
 
       std::unique_ptr<float[]> cov(new float[NC]);
       for (int ic=0;ic<NC;ic++) {
@@ -1943,19 +2087,24 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
   
   // setup initial dummy covariance matrix
   decltype(edm4hep::TrackState::covMatrix) covMatrix;
-  
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  for (unsigned icov = 0; icov<covMatrix.values.size(); ++icov) {
+    covMatrix.values[icov] = 0;
+#else
   for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
     covMatrix[icov] = 0;
+#endif
   }
-  
+
   covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
   covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
   covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
   covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
   covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
-  
+
   pre_fit.covMatrix = covMatrix;
-  
+
   errorCode = MarlinTrk::createFit( trkHits, &marlin_trk, &pre_fit, _bField, !IMarlinTrack::backward , _maxChi2PerHit );
   
   if ( errorCode != IMarlinTrack::success ) {
@@ -2026,6 +2175,9 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
     hits.push_back(hit);
     
     // add the raw hits ...
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
     int nRawHits = hit.rawHits_size();
     if ( nRawHits>0 ) {
       for (unsigned ihit=0; ihit < nRawHits; ++ihit) {
@@ -2048,6 +2200,7 @@ TrackExtended * FullLDCTrackingAlg::CombineTracks(TrackExtended * tpcTrack, Trac
 	}
       }
     }
+#endif
     
     // now double loop over the outliers and the hits assosiated with this TrackerHitExtended and compare
     for ( unsigned ohit = 0; ohit < outliers.size(); ++ohit) {
@@ -3977,16 +4130,21 @@ void FullLDCTrackingAlg::AssignOuterHitsToTracks(TrackerHitExtendedVec hitVec, f
           // setup initial dummy covariance matrix
           decltype(edm4hep::TrackState::covMatrix) covMatrix;
           
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+          for (unsigned icov = 0; icov<covMatrix.values.size(); ++icov) {
+            covMatrix.values[icov] = 0;
+#else
           for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
             covMatrix[icov] = 0;
+#endif
           }
-          
+
           covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
           covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
           covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
           covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
           covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
-          
+
           pre_fit.covMatrix = covMatrix;
 	  debug() << " **createFit from pre_fit TrackState " << pre_fit << endmsg;
           int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, IMarlinTrack::forward/*backward*/, _maxChi2PerHit );
@@ -4497,16 +4655,21 @@ void FullLDCTrackingAlg::AssignSiHitsToTracks(TrackerHitExtendedVec hitVec,
         // setup initial dummy covariance matrix
         decltype(edm4hep::TrackState::covMatrix) covMatrix;
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        for (unsigned icov = 0; icov<covMatrix.values.size(); ++icov) {
+          covMatrix.values[icov] = 0;
+#else
         for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
           covMatrix[icov] = 0;
+#endif
         }
-        
+
         covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
         covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
         covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
         covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
         covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
-        
+
         pre_fit.covMatrix = covMatrix;
         
         int error = MarlinTrk::createFit( trkHits, marlin_trk, &pre_fit, _bField, !IMarlinTrack::backward , _maxChi2PerHit );

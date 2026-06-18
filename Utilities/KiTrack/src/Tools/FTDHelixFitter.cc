@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/TrackerHit.h"
 #include "UTIL/BitSet32.h"
 #include "UTIL/ILDConf.h"
@@ -71,14 +72,36 @@ void FTDHelixFitter::fit(){
     if (ph[i] < 0.)  ph[i] = 2.*M_PI + ph[i]; 
             
     if( UTIL::BitSet32( hit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ] ){
-      float sigX = hit.getCovMatrix()[0];
-      float sigY = hit.getCovMatrix()[2];
+        float sigX = 0.0;
+        float sigY = 0.0;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHit3D>()) {
+            auto hit3d = hit.as<edm4hep::TrackerHit3D>();
+            auto covmat = hit3d.getCovMatrix();
+            sigX = covmat[0];
+            sigY = covmat[2];
+        } else {
+            throw std::runtime_error("Unsupported concrete TrackerHit type in FTDHelixFitter::fit");
+        }
+#else
+        sigX = hit.getCovMatrix()[0];
+        sigY = hit.getCovMatrix()[2];
+#endif
       wrh[i] = 1/sqrt( sigX*sigX + sigY*sigY );
-    }
-    else {
+    } else {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if (hit.isA<edm4hep::TrackerHitPlane>()) {
+            auto hitPlane = hit.as<edm4hep::TrackerHitPlane>();
+            // TODO
+            wrh[i] = double(1.0/( hitPlane.getDu()*hitPlane.getDu() + hitPlane.getDv()*hitPlane.getDv() ));
+        } else {
+            throw std::runtime_error("Unsupported concrete TrackerHit type in FTDHelixFitter::fit");
+        }
+#else
       //TrackerHitPlane* hitPlane = dynamic_cast<TrackerHitPlane*>( hit );
       //wrh[i] = double(1.0/( hitPlane->getdU()*hitPlane->getdU() + hitPlane->getdV()*hitPlane->getdV() ) );
       wrh[i] = double(1.0/( hit.getCovMatrix(2)*hit.getCovMatrix(2) + hit.getCovMatrix(5)*hit.getCovMatrix(5) ));
+#endif
     }
   }
      

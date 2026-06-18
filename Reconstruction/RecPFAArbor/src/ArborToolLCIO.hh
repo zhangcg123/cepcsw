@@ -4,22 +4,44 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/EventHeaderCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#include "edm4hep/CaloHitMCParticleLinkCollection.h"
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#else
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoCaloAssociation.h"
+#include "edm4hep/MCRecoTrackerAssociation.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#include "edm4hep/MCRecoCaloAssociationCollection.h"
+#endif
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/VertexCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/MCParticleCollection.h"
-#include "edm4hep/MCRecoCaloAssociation.h"
-#include "edm4hep/MCRecoTrackerAssociation.h"
-#include "edm4hep/MCRecoTrackerAssociationCollection.h"
-#include "edm4hep/MCRecoCaloAssociationCollection.h"
-#include "edm4hep/MCRecoParticleAssociation.h"
-#include "edm4hep/MCRecoParticleAssociationCollection.h"
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+using CEPCSWCaloHitMCParticleLink = edm4hep::CaloHitMCParticleLink;
+using CEPCSWCaloHitMCParticleLinkCollection = edm4hep::CaloHitMCParticleLinkCollection;
+using CEPCSWTrackMCParticleLink = edm4hep::TrackMCParticleLink;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+using CEPCSWCaloHitSimCaloHitLink = edm4hep::CaloHitSimCaloHitLink;
+using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::CaloHitSimCaloHitLinkCollection;
+#else
+using CEPCSWCaloHitMCParticleLink = edm4hep::MCRecoCaloAssociation;
+using CEPCSWCaloHitMCParticleLinkCollection = edm4hep::MCRecoCaloAssociationCollection;
+using CEPCSWTrackMCParticleLink = edm4hep::MCRecoTrackerAssociation;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+using CEPCSWCaloHitSimCaloHitLink = edm4hep::MCRecoCaloAssociation;
+using CEPCSWCaloHitSimCaloHitLinkCollection = edm4hep::MCRecoCaloAssociationCollection;
+#endif
 
 
 #include <DDRec/DetectorData.h>
@@ -42,8 +64,8 @@ public:
     std::map<std::string, std::vector<edm4hep::CalorimeterHit> > collectionMap_CaloHit;
     std::map<std::string, std::vector<edm4hep::Vertex> >         collectionMap_Vertex;
     std::map<std::string, std::vector<edm4hep::Track> >          collectionMap_Track;
-    std::map<std::string, std::vector<edm4hep::MCRecoCaloAssociation> > collectionMap_CaloRel;
-    std::map<std::string, std::vector<edm4hep::MCRecoTrackerAssociation> > collectionMap_TrkRel;
+    std::map<std::string, std::vector<CEPCSWCaloHitSimCaloHitLink> > collectionMap_CaloRel;
+    std::map<std::string, std::vector<CEPCSWTrackMCParticleLink> > collectionMap_TrkRel;
 };
 
 

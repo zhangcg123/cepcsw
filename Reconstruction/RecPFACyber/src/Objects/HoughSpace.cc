@@ -2,6 +2,7 @@
 #define HOUGHSPACE_C
 
 #include "Objects/HoughSpace.h"
+#include <cmath>
 #include <iostream>
 namespace Cyber{
 

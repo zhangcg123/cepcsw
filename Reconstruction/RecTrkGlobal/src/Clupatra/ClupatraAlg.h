@@ -9,7 +9,12 @@
 #include "GaudiKernel/Algorithm.h"
 #include "edm4hep/Track.h"
 #include "edm4hep/TrackerHit.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
+#endif
 #include "edm4hep/TrackCollection.h"
 #include <string>
 
@@ -25,6 +30,7 @@
 #include "Tracking/ITrackFitterTool.h"
 
 #include "GaudiKernel/NTuple.h"
+#include "TTree.h"
 
 namespace MarlinTrk{
   class IMarlinTrkSystem ;
@@ -145,9 +151,14 @@ class ClupatraAlg : public Algorithm {
   Gaudi::Property<std::string> m_fitToolName{this, "FitterTool", "KalTestTool/KalTest010"};
   Gaudi::Property<bool> _DumpTime{this, "DumpTime", false};
 
-  DataHandle<edm4hep::TrackerHitCollection> _TPCHitCollectionHandle{"TPCTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _SITHitCollectionHandle{"SIDTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _VTXHitCollectionHandle{"VTXTrackerHits", Gaudi::DataHandle::Reader, this};
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
+  using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
+  DataHandle<CEPCSWTrackerHit3DCollection> _TPCHitCollectionHandle{"TPCTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _SITHitCollectionHandle{"SIDTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _VTXHitCollectionHandle{"VTXTrackerHits", Gaudi::DataHandle::Reader, this};
 
   DataHandle<edm4hep::TrackCollection> _ClupatraTrackCollectionHandle{"ClupatraTracks", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> _ClupatraTrackSegmentCollectionHandle{"ClupatraSegmentTracks", Gaudi::DataHandle::Writer, this};

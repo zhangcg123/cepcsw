@@ -16,7 +16,11 @@
 #include "edm4hep/ReconstructedParticle.h"
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#else
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
+#endif
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 
@@ -785,7 +789,11 @@ void BushConnect::TagCore()
             ESum_ChCore_in += Clu_ChCore_E;
 
 		}
-		chargeparticle.setType(Track_Core_ID);
+		#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+			chargeparticle.setPDG(Track_Core_ID);
+#else
+			chargeparticle.setType(Track_Core_ID);
+#endif
 		ChCoreID[chargeparticle] = Track_Core_ID;
 	}
 
@@ -1238,11 +1246,19 @@ void BushConnect::ParticleReco()
 
 			if( currChargeCoreType2 == 130 || currChargeCoreType2 == 131 )
 			{
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				chargeparticle.setPDG( int(-13*charge) );
+#else
 				chargeparticle.setType( int(-13*charge) );
+#endif
 			}
 			else if( currChargeCoreType2 == 110 || currChargeCoreType2 == 111 )
 			{
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				chargeparticle.setPDG( int(-11*charge) );
+#else
 				chargeparticle.setType( int(-11*charge) );
+#endif
 				if(CHCluEnergy > CurrTrackEnergy + 0.5*sqrt(CurrTrackEnergy) + 1)
 				{
 					flagEnergyFlow = 1;
@@ -1250,7 +1266,11 @@ void BushConnect::ParticleReco()
 			}
 			else
 			{
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				chargeparticle.setPDG( Track_Type[a_chargedTrk] );
+#else
 				chargeparticle.setType( Track_Type[a_chargedTrk] );
+#endif
 				if(CHCluEnergy > CurrTrackEnergy + 1.5*sqrt(CurrTrackEnergy) + 1)
 				{
 					flagEnergyFlow = 2;
@@ -1279,7 +1299,11 @@ void BushConnect::ParticleReco()
 				a_Ef_Ne_particle.setMomentum(PFNEMom);
 				a_Ef_Ne_particle.setMass( 0.0 );
 				a_Ef_Ne_particle.setCharge( 0.0 );
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				a_Ef_Ne_particle.setPDG(501);
+#else
 				a_Ef_Ne_particle.setType(501);
+#endif
 
 				cout<<"Energy Flow Neutral Tagged "<<CHCluEnergy - CurrTrackEnergy<<endl;
 
@@ -1340,7 +1364,11 @@ void BushConnect::ParticleReco()
 		{
 			TVector3 BushSeedPos = TVector3(a_clu.getPosition().x,a_clu.getPosition().y,a_clu.getPosition().z);
 			auto neutralparticle = arborrecoparticleCol->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+			neutralparticle.setPDG(22);
+#else
 			neutralparticle.setType(22);
+#endif
 			TVector3 PP = m_ArborToolLCIO->ClusterCoG(a_clu);
 			NAMom[0] = CoreEnCorr*1.0/PP.Mag()*PP.X();
 			NAMom[1] = CoreEnCorr*1.0/PP.Mag()*PP.Y();
@@ -1470,12 +1498,20 @@ void BushConnect::ParticleReco()
 			if(m_ArborToolLCIO->newPhotonTag(a_clu)==1)
 				cout<<"WARNING... Photons after neutron merge merged"<<endl;
 			auto neutralparticle = arborrecoparticleCol->create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+			neutralparticle.setPDG(21120);
+#else
 			neutralparticle.setType(21120);
+#endif
 			TVector3 PP = m_ArborToolLCIO->ClusterCoG(a_clu);
 
 			if( RecoT0 > 0.16 && RecoT0 < 100 && MinDisToChCore > 50 && a_clu.hits_size() > 5 && abs(CoreEnCorr - 6) < 4 )
 			{
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				neutralparticle.setPDG(2112);
+#else
 				neutralparticle.setType(2112);
+#endif
 				float Dis = PP.Mag();
 				float Beta = 1.0/(1 + 300*RecoT0/Dis);
 				float PPN = 0.941/sqrt(1-Beta*Beta);
@@ -1483,17 +1519,29 @@ void BushConnect::ParticleReco()
 				if(PPN/CoreEnCorr < 1)
 				{
 					CoreEnCorr = PPN;
-					neutralparticle.setType(2112);
+	#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				neutralparticle.setPDG(2112);
+#else
+				neutralparticle.setType(2112);
+#endif
 				}
 				else if(PPK/CoreEnCorr < 1 && PPN/CoreEnCorr > 1)
 				{
 					CoreEnCorr = 0.5*(PPN+PPK);
-					neutralparticle.setType(2112);
+	#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				neutralparticle.setPDG(2112);
+#else
+				neutralparticle.setType(2112);
+#endif
 				}
 				else if(PPK/CoreEnCorr > 1)
 				{
 					CoreEnCorr = PPK;
-					neutralparticle.setType(310);
+	#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				neutralparticle.setPDG(310);
+#else
+				neutralparticle.setType(310);
+#endif
 				}
 			}
 

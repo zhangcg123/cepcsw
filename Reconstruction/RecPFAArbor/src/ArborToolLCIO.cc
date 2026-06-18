@@ -27,7 +27,11 @@
 #include "edm4hep/Cluster.h"
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/SimCalorimeterHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#else
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
+#endif
 #include "edm4hep/MCParticleCollection.h"
 
 #include "DD4hep/Detector.h"

@@ -12,7 +12,7 @@ namespace Cyber{
 
   StatusCode TrackCreator::CreateTracks( CyberDataCol& m_DataCol, 
                                          std::vector<DataHandle<edm4hep::TrackCollection>*>& r_TrackCols, 
-                                         DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection>* r_MCParticleTrkCol ){
+                                         DataHandle<CEPCSWMcRecoTrackParticleAssociationCollection>* r_MCParticleTrkCol ){
 
     if(r_TrackCols.size()==0 || settings.map_stringVecPars.at("trackCollections").size()==0) return StatusCode::SUCCESS;
 
@@ -34,7 +34,7 @@ namespace Cyber{
 
     //Convert to local objects
     std::vector<std::shared_ptr<Cyber::Track>> m_trkCol; m_trkCol.clear();
-    const edm4hep::MCRecoTrackParticleAssociationCollection* const_MCPTrkAssoCol = r_MCParticleTrkCol->get();
+    const CEPCSWMcRecoTrackParticleAssociationCollection* const_MCPTrkAssoCol = r_MCParticleTrkCol->get();
 
     for(auto iter : m_DataCol.collectionMap_Track){
       auto const_TrkCol = iter.second; 
@@ -64,8 +64,13 @@ namespace Cyber{
         m_trk->setOriginTrack( const_TrkCol[itrk] );
 
         for(int ilink=0; ilink<const_MCPTrkAssoCol->size(); ilink++){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+          if( const_TrkCol[itrk] == const_MCPTrkAssoCol->at(ilink).getFrom() ) {
+            m_trk->addLinkedMCP( std::make_pair(const_MCPTrkAssoCol->at(ilink).getTo(), const_MCPTrkAssoCol->at(ilink).getWeight()) );
+#else
           if( const_TrkCol[itrk] == const_MCPTrkAssoCol->at(ilink).getRec() ) {
             m_trk->addLinkedMCP( std::make_pair(const_MCPTrkAssoCol->at(ilink).getSim(), const_MCPTrkAssoCol->at(ilink).getWeight()) );
+#endif
             break;
           }
         }
@@ -78,7 +83,12 @@ namespace Cyber{
           for (auto dqdx : *m_DataCol.dNdxCol){
             if (dqdx.getTrack() == const_TrkCol[itrk]){
               for (int i = 0; i < 5; i++){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                // TODO: need to know how to store Hypotheses
+                chi2s[i] = -999;
+#else
                 chi2s[i] = dqdx.getHypotheses(i).chi2;
+#endif
               }
             }
           }

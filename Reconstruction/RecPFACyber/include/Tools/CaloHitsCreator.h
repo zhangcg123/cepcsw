@@ -9,19 +9,25 @@
 #include <DDRec/CellIDPositionConverter.h>
 #include <DD4hep/Segmentations.h>
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+using CEPCSWMcRecoCaloParticleAssociationCollection = edm4hep::CaloHitMCParticleLinkCollection;
+#else
+using CEPCSWMcRecoCaloParticleAssociationCollection = edm4hep::MCRecoCaloParticleAssociationCollection;
+#endif
+
 namespace Cyber{
 
   class CaloHitsCreator{
 
-  public: 
+  public:
     //initialize a CaloHitCreator
     CaloHitsCreator( const Settings& m_settings );
     ~CaloHitsCreator() {};
-   
+
     StatusCode CreateCaloHits( CyberDataCol& m_DataCol,
-                               std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols, 
-                               std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder, 
-                               std::map<std::string, DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
+                               std::vector<DataHandle<edm4hep::CalorimeterHitCollection>*>& r_CaloHitCols,
+                               std::map<std::string, dd4hep::DDSegmentation::BitFieldCoder*>& map_decoder,
+                               std::map<std::string, DataHandle<CEPCSWMcRecoCaloParticleAssociationCollection>*>& map_CaloParticleAssoCol,
                                SmartIF<IGeomSvc>& m_geosvc,
                                std::map<std::tuple<int, int, int, int, int>, int>& barNumberMapEndcapMap ); 
 

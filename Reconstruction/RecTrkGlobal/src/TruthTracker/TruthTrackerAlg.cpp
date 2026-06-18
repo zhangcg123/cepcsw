@@ -13,13 +13,20 @@
 
 //external
 #include "CLHEP/Random/RandGauss.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#include "edm4hep/TrackerHit.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoParticleAssociationCollection.h"
+#endif
+#include "edm4hep/TrackCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 
 DECLARE_COMPONENT(TruthTrackerAlg)
@@ -165,13 +172,13 @@ StatusCode TruthTrackerAlg::execute()
     auto truthTrackerHitCol = m_truthTrackerHitCol.createAndPut();
 
     //VXD MCRecoTrackerAssociation
-    const edm4hep::MCRecoTrackerAssociationCollection* VXDAssoVec = m_VXDHitAssociationCol.get();
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* VXDAssoVec = m_VXDHitAssociationCol.get();
     //SIT MCRecoTrackerAssociation
-    const edm4hep::MCRecoTrackerAssociationCollection* SITAssoVec = m_SITHitAssociationCol.get();
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* SITAssoVec = m_SITHitAssociationCol.get();
     //SET MCRecoTrackerAssociation
-    const edm4hep::MCRecoTrackerAssociationCollection* SETAssoVec = m_SETHitAssociationCol.get();
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* SETAssoVec = m_SETHitAssociationCol.get();
     //FTD MCRecoTrackerAssociation
-    const edm4hep::MCRecoTrackerAssociationCollection* FTDAssoVec = m_FTDHitAssociationCol.get();
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* FTDAssoVec = m_FTDHitAssociationCol.get();
 
     ///Retrieve MC particle(s)
     const edm4hep::MCParticleCollection* mcParticleCol=nullptr;
@@ -189,7 +196,7 @@ StatusCode TruthTrackerAlg::execute()
     }
 
     ///Retrieve DC digi
-    const edm4hep::TrackerHitCollection* digiDCHitsCol=nullptr;
+    const CEPCSWTrackerHit3DCollection* digiDCHitsCol=nullptr;
     digiDCHitsCol=m_DCDigiCol.get();
     if(digiDCHitsCol->size()<1e-9){
         debug() << " TruthTrackerAlg digiDCHitsCol size =0 !!" << endmsg;
@@ -197,7 +204,7 @@ StatusCode TruthTrackerAlg::execute()
     }
     const edm4hep::SimTrackerHitCollection* dcSimHitCol
         =m_DCSimTrackerHitCol.get();
-    const edm4hep::MCRecoTrackerAssociationCollection* assoHits
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits
         = m_DCHitAssociationCol.get();
     if(m_useDC){
         if(nullptr==dcSimHitCol){
@@ -334,10 +341,14 @@ StatusCode TruthTrackerAlg::execute()
                 sdtTk.setType(siTk.getType());
                 sdtTk.setChi2(siTk.getChi2());
                 sdtTk.setNdf(siTk.getNdf());
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                throw std::runtime_error("setDEdx/setRadiusOfInnermostHit missing in EDM4hep v1.0.0");
+#else
                 sdtTk.setDEdx(siTk.getDEdx());
                 sdtTk.setDEdxError(siTk.getDEdxError());
                 sdtTk.setRadiusOfInnermostHit(
                         siTk.getRadiusOfInnermostHit());
+#endif
             }
             if(!m_useSiTruthHit){
                 debug()<<"use Si hit on track"<<endmsg;
@@ -393,11 +404,11 @@ StatusCode TruthTrackerAlg::execute()
                 }else{
                     nDCHitDCTk=addHitsToTk(m_DCDigiCol,dcTrack,"DC digi(dcTrack)",nDCHitDCTk);
                 }
-                debug()<<"dcTrack nHit "<<dcTrack.trackerHits_size()<<dcTrack<<endmsg;
+                debug()<<"dcTrack nHit "<<dcTrack.trackerHits_size()<<endmsg;
             }
         }
 
-        debug()<<"sdtTk nHit "<<sdtTk.trackerHits_size()<<sdtTk<<endmsg;
+        debug()<<"sdtTk nHit "<<sdtTk.trackerHits_size()<<endmsg;
         debug()<<"nVXDHit "<<nVXDHit<<" nSITHit "<<nSITHit<<" nSETHit "<<nSETHit
             <<" nFTDHit "<<nFTDHit<<" nDCHitSDTTk "<<nDCHitSDTTk<<endmsg;
         std::cout<<"iSitrk = " << iSitrk << " nVXDHit "<<nVXDHit<<" nSITHit "<<nSITHit<<" nSETHit "<<nSETHit
@@ -439,7 +450,7 @@ void TruthTrackerAlg::getTrackStateFromMcParticle(
     mcParticleVertexSmeared.z=
         CLHEP::RandGauss::shoot(mcParticleVertex.z,m_resVertexZ);
     ///Momentum
-    const edm4hep::Vector3f mcParticleMom=mcParticle.getMomentum();//GeV
+    const auto& mcParticleMom=mcParticle.getMomentum();//GeV
     float mcParticlePt=sqrt(mcParticleMom.x*mcParticleMom.x+
             mcParticleMom.y*mcParticleMom.y);
     //float mcParticlePtSmeared=
@@ -469,7 +480,11 @@ void TruthTrackerAlg::getTrackStateFromMcParticle(
     trackState.tanLambda=helix.getTanLambda();
     trackState.referencePoint=helix.getReferencePoint();
     decltype(trackState.covMatrix) covMatrix;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    for(int i=0;i<covMatrix.values.size();i++){covMatrix.values[i]=999.;}//FIXME
+#else
     for(int i=0;i<covMatrix.size();i++){covMatrix[i]=999.;}//FIXME
+#endif
     trackState.covMatrix=covMatrix;
 
     getCircleFromPosMom(pos,mom,B[2]/dd4hep::tesla,mcParticle.getCharge(),m_helixRadius,m_helixXC,m_helixYC);
@@ -585,15 +600,14 @@ void TruthTrackerAlg::debugEvent()
 }
 
 int TruthTrackerAlg::addIdealHitsToTk(
-        DataHandle<edm4hep::TrackerHitCollection>& colHandle,
-        edm4hep::TrackerHitCollection*& truthTrackerHitCol,
+        DataHandle<CEPCSWTrackerHit3DCollection>& colHandle,
+        CEPCSWTrackerHit3DCollection*& truthTrackerHitCol,
         edm4hep::MutableTrack& track, const char* msg,int nHitAdded)
 {
     if(nHitAdded>0) return nHitAdded;
     int nHit=0;
-    const edm4hep::TrackerHitCollection* col=colHandle.get();
+    const CEPCSWTrackerHit3DCollection* col=colHandle.get();
     debug()<<"add "<<msg<<" "<<col->size()<<" trackerHit"<<endmsg;
-    debug()<<track<<endmsg;
     for(auto hit:*col){
         //get end point of this wire
         TVector3 endPointStart(0,0,0);
@@ -627,12 +641,12 @@ int TruthTrackerAlg::addIdealHitsToTk(
     return nHit;
 }
 
-int TruthTrackerAlg::addHitsToTk(DataHandle<edm4hep::TrackerHitCollection>&
+int TruthTrackerAlg::addHitsToTk(DataHandle<CEPCSWTrackerHit3DCollection>&
 colHandle, edm4hep::MutableTrack& track, const char* msg,int nHitAdded)
 {
     if(nHitAdded>0) return nHitAdded;
     int nHit=0;
-    const edm4hep::TrackerHitCollection* col=colHandle.get();
+    const CEPCSWTrackerHit3DCollection* col=colHandle.get();
     debug()<<"add "<<msg<<" "<<col->size()<<" trackerHit"<<endmsg;
     //sort,FIXME
     for(auto hit:*col){
@@ -642,12 +656,12 @@ colHandle, edm4hep::MutableTrack& track, const char* msg,int nHitAdded)
     return nHit;
 }
 
-int TruthTrackerAlg::addOneLayerHitsToTk(DataHandle<edm4hep::TrackerHitCollection>&
+int TruthTrackerAlg::addOneLayerHitsToTk(DataHandle<CEPCSWTrackerHit3DCollection>&
 colHandle, edm4hep::MutableTrack& track, const char* msg,int nHitAdded)
 {
     if(nHitAdded>0) return nHitAdded;
     int nHit=0;
-    const edm4hep::TrackerHitCollection* col=colHandle.get();
+    const CEPCSWTrackerHit3DCollection* col=colHandle.get();
     debug()<<"add "<<msg<<" "<<col->size()<<" trackerHit"<<endmsg;
     //sort,FIXME
     bool isHaveHit[55]={0};
@@ -664,42 +678,56 @@ colHandle, edm4hep::MutableTrack& track, const char* msg,int nHitAdded)
 }
 
 void TruthTrackerAlg::getAssoMCParticle(
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         edm4hep::TrackerHit trackerHit,
         edm4hep::MCParticle& mcParticle) const
 {
     edm4hep::SimTrackerHit simTrackerHit;
     for(auto assoHit: *assoHits){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if(assoHit.getFrom()==trackerHit)
+        {
+            simTrackerHit=assoHit.getTo();
+            mcParticle = simTrackerHit.getParticle();
+        }
+#else
         if(assoHit.getRec()==trackerHit)
         {
             simTrackerHit=assoHit.getSim();
             mcParticle = simTrackerHit.getMCParticle();
-
         }
+#endif
     }
 }
 
 edm4hep::SimTrackerHit TruthTrackerAlg::getAssoSimTrackerHit(
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         edm4hep::TrackerHit trackerHit) const
 {
     edm4hep::SimTrackerHit simTrackerHit;
     for(auto assoHit: *assoHits){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if(assoHit.getFrom()==trackerHit)
+        {
+            simTrackerHit=assoHit.getTo();
+        }
+#else
         if(assoHit.getRec()==trackerHit)
         {
             simTrackerHit=assoHit.getSim();
         }
+#endif
     }
     return simTrackerHit;
 }
 
 int TruthTrackerAlg::getSiMCParticle(edm4hep::Track siTrack,
-        const edm4hep::TrackerHitCollection* dcTrackerHits,
-        const edm4hep::MCRecoTrackerAssociationCollection* vxdAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* sitAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* setAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* ftdAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* dcAsso
+        const CEPCSWTrackerHit3DCollection* dcTrackerHits,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* vxdAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* sitAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* setAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* ftdAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* dcAsso
         )
 {
     int nDCHit =0;
@@ -730,7 +758,11 @@ int TruthTrackerAlg::getSiMCParticle(edm4hep::Track siTrack,
 
         edm4hep::SimTrackerHit simDCHit = getAssoSimTrackerHit(dcAsso,dcHit);
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        if(mcParticle==simDCHit.getParticle()) nDCHit++;
+#else
         if(mcParticle==simDCHit.getMCParticle()) nDCHit++;
+#endif
     }
     return nDCHit;
 }
@@ -738,7 +770,7 @@ int TruthTrackerAlg::getSiMCParticle(edm4hep::Track siTrack,
 
 int TruthTrackerAlg::addSimHitsToTk(
         DataHandle<edm4hep::SimTrackerHitCollection>& colHandle,
-        edm4hep::TrackerHitCollection*& truthTrackerHitCol,
+        CEPCSWTrackerHit3DCollection*& truthTrackerHitCol,
         //edm4hep::Track& track, const char* msg,int nHitAdded)
         edm4hep::MutableTrack& track, const char* msg,int nHitAdded)
 {
@@ -782,11 +814,15 @@ int TruthTrackerAlg::addSimHitsToTk(
         cov[4]=0.;
         cov[5]=resolution[2]*resolution[2];
         trackerHit.setCovMatrix(cov);
-        debug()<<"add simTrackerHit "<<msg<<" trackerHit "<<trackerHit<<endmsg;
+        debug()<<"add simTrackerHit "<<msg<<" trackerHit "<<trackerHit.id()<<endmsg;
         ///Add hit to track
         track.addToTrackerHits(trackerHit);
         trackerHit.setEDep(simTrackerHit.getEDep());
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
         trackerHit.addToRawHits(simTrackerHit.getObjectID());
+#endif
         trackerHit.setType(-8);//FIXME?
         ++nHit;
     }
@@ -795,10 +831,10 @@ int TruthTrackerAlg::addSimHitsToTk(
 }
 
 bool TruthTrackerAlg::debugVertex(edm4hep::Track sourceTrack,
-        const edm4hep::MCRecoTrackerAssociationCollection* vxdAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* sitAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* setAsso,
-        const edm4hep::MCRecoTrackerAssociationCollection* ftdAsso
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* vxdAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* sitAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* setAsso,
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* ftdAsso
         ){
     for(unsigned int iHit=0;iHit<sourceTrack.trackerHits_size();iHit++){
         edm4hep::TrackerHit hit=sourceTrack.getTrackerHits(iHit);
@@ -887,9 +923,9 @@ int TruthTrackerAlg::nHotsOnTrack(edm4hep::Track& track, int hitType)
     return nHit;
 }
 
-int TruthTrackerAlg::trackerHitColSize(DataHandle<edm4hep::TrackerHitCollection>& col)
+int TruthTrackerAlg::trackerHitColSize(DataHandle<CEPCSWTrackerHit3DCollection>& col)
 {
-    const edm4hep::TrackerHitCollection* c=col.get();
+    const CEPCSWTrackerHit3DCollection* c=col.get();
     if(nullptr!=c) return c->size();
     return 0;
 }

@@ -21,9 +21,14 @@
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
 #include "edm4hep/ReconstructedParticle.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/Track.h"
@@ -371,7 +376,7 @@ StatusCode RecGenfitAlgSDT::execute()
     auto assoDCHitsCol=m_DCHitAssociationCol.get();
     double eventStartTime=0;
 
-    const edm4hep::TrackerHitCollection* dCDigiCol=nullptr;
+    const CEPCSWTrackerHit3DCollection* dCDigiCol=nullptr;
     dCDigiCol=m_DCDigiCol.get();
 
     const edm4hep::TrackCollection* dcTrackCol=nullptr;
@@ -388,7 +393,7 @@ StatusCode RecGenfitAlgSDT::execute()
     }
 
     //SET SimTrackerHits
-    const edm4hep::TrackerHitCollection* SETHits = m_SETHitCol.get();
+    const CEPCSWTrackerHit3DCollection* SETHits = m_SETHitCol.get();
 
     ///----------------------------------------------------
     ///Loop over Track and do fitting for each track
@@ -702,10 +707,14 @@ void RecGenfitAlgSDT::debugTrack(int iStrack,int pidType,const GenfitTrack* genf
     edm4hep::TrackState trackState_Origin;
     CEPC::getTrackStateFromPosMom(trackState_Origin,m_genfitField->getBz(pocaToOrigin_POS.Vect())/GenfitUnit::tesla,pocaToOrigin_pos,
             pocaToOrigin_mom,charge,covMatrix_6);
-    std::array<float,21> errorCov_Origin;
+    decltype(trackState_Origin.covMatrix) errorCov_Origin;
     errorCov_Origin = trackState_Origin.covMatrix;
     for(int j=0; j<15; j++) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        m_ErrorcovMatrix_Origin[iStrack][j] = errorCov_Origin.values[j];
+#else
         m_ErrorcovMatrix_Origin[iStrack][j] = errorCov_Origin[j];
+#endif
     }
     m_D0_Origin[iStrack] = helix_origin.getD0();
     m_phi_Origin[iStrack] = helix_origin.getPhi0();
@@ -798,7 +807,7 @@ void RecGenfitAlgSDT::debugEvent(const edm4hep::TrackCollection* sdtTrackCol,
         int iMcParticle=0;
         HelixClass helix_mcP;
         for(auto mcParticle : *mcParticleCol){
-            edm4hep::Vector3f mcPocaMom = mcParticle.getMomentum();//GeV
+            const auto& mcPocaMom = mcParticle.getMomentum();//GeV
             edm4hep::Vector3d mcPocaPos = mcParticle.getVertex();
 
             double mcPos[3]={(mcPocaPos.x),(mcPocaPos.y),(mcPocaPos.z)};
@@ -851,10 +860,14 @@ void RecGenfitAlgSDT::debugEvent(const edm4hep::TrackCollection* sdtTrackCol,
         }
         for(unsigned int i=0; i<sdtRecTrack.trackStates_size(); i++) {
             edm4hep::TrackState trackStat=sdtRecTrack.getTrackStates(i);
-            std::array<float,21> errorCov;
+            decltype(trackStat.covMatrix) errorCov;
             errorCov = trackStat.covMatrix;
             for(int j=0; j<15; j++) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                m_ErrorcovMatrix[isdttrack][j] = errorCov.values[j];
+#else
                 m_ErrorcovMatrix[isdttrack][j] = errorCov[j];
+#endif
                 if(m_debug)debug()<<"errorCov "<<j<<" "<<errorCov[j]<<endmsg;
             }
             m_D0[isdttrack] = trackStat.D0;
@@ -877,11 +890,11 @@ void RecGenfitAlgSDT::debugEvent(const edm4hep::TrackCollection* sdtTrackCol,
     }
 
     //signal digi hit
-    const edm4hep::TrackerHitCollection* SignaldCDigiCol=m_SignalDCDigiCol.get();
+    const CEPCSWTrackerHit3DCollection* SignaldCDigiCol=m_SignalDCDigiCol.get();
     m_nSignalDCDigi=SignaldCDigiCol->size();
 
     //debug digi
-    const edm4hep::TrackerHitCollection* dCDigiCol=nullptr;
+    const CEPCSWTrackerHit3DCollection* dCDigiCol=nullptr;
     dCDigiCol=m_DCDigiCol.get();
     if(nullptr!=dCDigiCol){ m_nDCDigi=dCDigiCol->size(); }
     int iDCDigi=0;
@@ -930,9 +943,9 @@ void RecGenfitAlgSDT::debugEvent(const edm4hep::TrackCollection* sdtTrackCol,
                     <<","<<dcSimTrackerHit.getMomentum().z<<")"<<std::endl;
             }
         }
-        if(m_debug) std::cout<<"digi "<<iDCDigi<<" ("
-            <<m_decoder->get(dcDigi.getCellID(),"layer")<<","
-                <<m_decoder->get(dcDigi.getCellID(),"cellID")<<") truth mom GeV"
+        if(m_debug) std::cout<<"digi "<<(long)iDCDigi<<" ("
+            <<(long)m_decoder->get(dcDigi.getCellID(),"layer")<<","
+                <<(long)m_decoder->get(dcDigi.getCellID(),"cellID")<<") truth mom GeV"
                 <<firstMom<<" "<<dcSimTrackerHit.getMomentum().x<<" "
                 <<dcSimTrackerHit.getMomentum().y<<" "
                 <<dcSimTrackerHit.getMomentum().z<<" truth pos "
@@ -960,7 +973,7 @@ void RecGenfitAlgSDT::selectHits(const edm4hep::Track&,
     if(genfitTrack->createGenfitTrackFromMCParticle(
                 pidType,*(mcParticleCol->begin()),
                 eventStartTime)){
-        const edm4hep::TrackerHitCollection* dCDigiCol=nullptr;
+        const CEPCSWTrackerHit3DCollection* dCDigiCol=nullptr;
         dCDigiCol=m_DCDigiCol.get();
         int iDCDigi=0;
         for(auto dcDigi:*dCDigiCol){
@@ -1001,8 +1014,8 @@ void RecGenfitAlgSDT::selectHits(const edm4hep::Track&,
             iDCDigi++;
         }//end loop over digi
         if(m_debug>0){
-            std::cout<<"selectHits "<<dCDigiCol->size()
-                <<" after "<<iDCDigi<<std::endl;
+            std::cout<<"selectHits "<<(unsigned long)dCDigiCol->size()
+                <<" after "<<(long)iDCDigi<<std::endl;
         }
     }//end loop over track
     delete genfitTrack;
@@ -1047,8 +1060,8 @@ double RecGenfitAlgSDT::getSETRadius(){
 }
 
 void RecGenfitAlgSDT::addSETHitsToTk(edm4hep::Track& track,
-        const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
-        const edm4hep::TrackerHitCollection* SETHits)
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
+        const CEPCSWTrackerHit3DCollection* SETHits)
 {
     TVector3 SETPos,SETMom;
 

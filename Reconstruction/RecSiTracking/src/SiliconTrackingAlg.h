@@ -5,12 +5,29 @@
 //#include <marlin/Global.h>
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "edm4hep/TrackCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+#endif
 
 //#include "lcio.h"
 #include <string>
@@ -295,12 +312,12 @@ class SiliconTrackingAlg : public Algorithm {
   // Input collections
   DataHandle<edm4hep::EventHeaderCollection> _headerColHdl{"EventHeaderCol", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection> _inMCColHdl{"MCParticle", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inVTXColHdl{"VXDTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inFTDPixelColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inFTDSpacePointColHdl{"FTDSpacePoints", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inSITColHdl{"SITSpacePoints", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inSITRawColHdl{"SITTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inFTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inVTXColHdl{"VXDTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inFTDPixelColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inFTDSpacePointColHdl{"FTDSpacePoints", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inSITColHdl{"SITSpacePoints", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inSITRawColHdl{"SITTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inFTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
   // Output collections
   DataHandle<edm4hep::TrackCollection> _outColHdl{"SiTracks", Gaudi::DataHandle::Writer, this};
   //DataHandle<edm4hep::LCRelationCollection> _outRelColHdl{"TrackerHitRelations", Gaudi::DataHandle::Reader, this};

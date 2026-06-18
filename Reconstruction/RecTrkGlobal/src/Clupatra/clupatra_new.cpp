@@ -213,8 +213,14 @@ namespace clupatra_new{
 			//      gear::Vector3D v0( h->getPosition()[0] ,  h->getPosition()[1] ,  h->getPosition()[2] ) ;
 			const gear::Vector3D& v0 = h->pos ;
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+			auto covmat = h->edm4hepHit.as<edm4hep::TrackerHit3D>().getCovMatrix();
+			double sigsr =  covmat[0] + covmat[2]  ;
+			double sigsz =  covmat[5] ;
+#else
 			double sigsr =  h->edm4hepHit.getCovMatrix()[0] + h->edm4hepHit.getCovMatrix()[2]  ;
 			double sigsz =  h->edm4hepHit.getCovMatrix()[5] ;
+#endif
 			// double sigsr =  0.01 ;
 			// double sigsz =  0.1 ;
 
@@ -1361,7 +1367,11 @@ start:
 
 		MarTrk_of_edm4hepTrack(trk) = mtrk ;
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+		throw std::runtime_error("setDEdx missing in EDM4hep v1.0.0");
+#else
 		trk.setDEdx( ( nHit ? e/nHit : -1. )  ) ;
+#endif
 
 		/* FIXME Mingrui
 		   trk->subdetectorHitNumbers().resize( 2 * lcio::ILDDetID::ETD ) ;
@@ -1532,7 +1542,11 @@ start:
 				double RMin = sqrt( tsFH.referencePoint[0] * tsFH.referencePoint[0]
 						+ tsFH.referencePoint[1] * tsFH.referencePoint[1] ) ;
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				throw std::runtime_error("setRadiusOfInnermostHit missing in EDM4hep v1.0.0");
+#else
 				trk.setRadiusOfInnermostHit( RMin  ) ;
+#endif
 
 				trk.setChi2( chi2 ) ;
 				trk.setNdf( ndf ) ;

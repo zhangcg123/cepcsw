@@ -48,7 +48,13 @@ SmartIF<IGeomSvc> geomSvc;
 
 #include "RuntimeMap.h"
 
+#include "edm4hep/EDM4hepVersion.h"
+#include "podio/podioVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
+#endif
 #include "edm4hep/TrackCollection.h"
 // #include "edm4hep/TrackerHitPlane.h"
 #include <TStopwatch.h>
@@ -311,7 +317,11 @@ StatusCode ClupatraAlg::execute() {
 	ZIndex zIndex( -_driftLength , _driftLength , _nZBins  ) ;
 
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	const edm4hep::TrackerHit3DCollection* col = nullptr;
+#else
 	const edm4hep::TrackerHitCollection* col = nullptr;
+#endif
         debug() << "col" << endmsg;
 
 	try {
@@ -1139,8 +1149,12 @@ StatusCode ClupatraAlg::execute() {
 				//int hitsInFit  =  firstTrk->getSubdetectorHitNumbers()[ 2 * lcio::ILDDetID::TPC - 1 ] ;
 				trk.setChi2(     firstTrk.getChi2()     ) ;
 				trk.setNdf(      firstTrk.getNdf()      ) ;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+				throw std::runtime_error("setDEdx and setRadiusOfInnermostHit missing in EDM4hep v1.0.0");
+#else
 				trk.setDEdx(     firstTrk.getDEdx()     ) ;
 				trk.setDEdxError(firstTrk.getDEdxError()) ;
+#endif
 
 				/* FIXME: Mingrui Maybe this subdetectorHitNumbers is not needed?
 				   trk->subdetectorHitNumbers().resize( 2 * lcio::ILDDetID::ETD ) ;
@@ -1161,7 +1175,11 @@ StatusCode ClupatraAlg::execute() {
 				   + ts->referencePoint[1] * ts->referencePoint[1] )
 				   :  0.0 ) ;
 				   */
+#if podio_VERSION >= PODIO_VERSION(1, 0, 0)
+				throw std::runtime_error("The setRadiusOfInnermostHit interface is removed from Track");
+#else
 				trk.setRadiusOfInnermostHit( RMin  ) ;
+#endif
 
 
 

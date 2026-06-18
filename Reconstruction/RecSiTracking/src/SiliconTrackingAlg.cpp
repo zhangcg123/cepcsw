@@ -483,7 +483,7 @@ int SiliconTrackingAlg::InitialiseFTD() {
   
   // Reading in FTD Pixel Hits Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  const edm4hep::TrackerHitCollection* hitFTDPixelCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitFTDPixelCol = nullptr;
   try {
     hitFTDPixelCol = _inFTDPixelColHdl.get();
   }
@@ -582,7 +582,7 @@ int SiliconTrackingAlg::InitialiseFTD() {
   }
   // Reading out FTD SpacePoint Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  const edm4hep::TrackerHitCollection* hitFTDSpacePointCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitFTDSpacePointCol = nullptr;
   try {
     hitFTDSpacePointCol = _inFTDSpacePointColHdl.get();
   }
@@ -591,7 +591,7 @@ int SiliconTrackingAlg::InitialiseFTD() {
     //success = 0;
   }
 
-  const edm4hep::TrackerHitCollection* rawHitCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* rawHitCol = nullptr;
   if(hitFTDSpacePointCol){
     try{
       rawHitCol = _inFTDRawColHdl.get();
@@ -708,7 +708,7 @@ int SiliconTrackingAlg::InitialiseVTX() {
   int success = 1;
   // Reading out VTX Hits Collection
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
-  const edm4hep::TrackerHitCollection* hitVTXCol = nullptr;
+  const CEPCSWTrackerHit3DCollection* hitVTXCol = nullptr;
   try {
     hitVTXCol = _inVTXColHdl.get();
   }
@@ -803,7 +803,7 @@ int SiliconTrackingAlg::InitialiseVTX() {
   }
   
   if (_useSIT > 0 ) {
-    const edm4hep::TrackerHitCollection* hitSITCol = nullptr;
+    const CEPCSWTrackerHit3DCollection* hitSITCol = nullptr;
     try {
       hitSITCol = _inSITColHdl.get();
     }
@@ -812,7 +812,7 @@ int SiliconTrackingAlg::InitialiseVTX() {
       success = 0;
     }
 
-    const edm4hep::TrackerHitCollection* rawHitCol = nullptr;
+    const CEPCSWTrackerHit3DCollection* rawHitCol = nullptr;
     if(hitSITCol){
       try{
 	rawHitCol = _inSITRawColHdl.get();
@@ -2813,8 +2813,13 @@ void SiliconTrackingAlg::FinalRefit(edm4hep::TrackCollection* trk_col) {
       //std::vector<float> covMatrix;
       //covMatrix.resize(15);
       decltype(edm4hep::TrackState::covMatrix) covMatrix;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto covMatrixSize = covMatrix.values.size();
+#else
+      auto covMatrixSize = covMatrix.size();
+#endif
 
-      for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+      for (unsigned icov = 0; icov<covMatrixSize; ++icov) {
         covMatrix[icov] = 0;
       }
       

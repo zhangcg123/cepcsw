@@ -1,4 +1,5 @@
 #include "TrackSubsetAlg.h"
+#include "edm4hep/EDM4hepVersion.h"
 
 #ifdef CEPCSW_USE_GEAR
 #include "GearSvc/IGearSvc.h"
@@ -71,7 +72,11 @@ StatusCode TrackSubsetAlg::initialize() {
   }
 
   for(unsigned i=0; i<_trackerHitInputColNames.size(); i++){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    _inTrackerHitColHdls.push_back(new DataHandle<edm4hep::TrackerHit3DCollection> (_trackerHitInputColNames[i], Gaudi::DataHandle::Reader, this));
+#else
     _inTrackerHitColHdls.push_back(new DataHandle<edm4hep::TrackerHitCollection> (_trackerHitInputColNames[i], Gaudi::DataHandle::Reader, this));
+#endif
   }
   /**********************************************************************************************/
   /*       Initialise the MarlinTrkSystem, needed by the tracks for fitting                     */
@@ -261,15 +266,25 @@ StatusCode TrackSubsetAlg::execute(){
     } 
     // setup initial dummy covariance matrix
     decltype(edm4hep::TrackState::covMatrix) covMatrix;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    for (unsigned icov = 0; icov<covMatrix.values.size(); ++icov) {
+      covMatrix.values[icov] = 0;
+    }
+    covMatrix.values[0]  = ( _initialTrackError_d0    );
+    covMatrix.values[2]  = ( _initialTrackError_phi0  );
+    covMatrix.values[5]  = ( _initialTrackError_omega );
+    covMatrix.values[9]  = ( _initialTrackError_z0    );
+    covMatrix.values[14] = ( _initialTrackError_tanL  );
+#else
     for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
       covMatrix[icov] = 0;
     }
-    
-    covMatrix[0]  = ( _initialTrackError_d0    ); //sigma_d0^2
-    covMatrix[2]  = ( _initialTrackError_phi0  ); //sigma_phi0^2
-    covMatrix[5]  = ( _initialTrackError_omega ); //sigma_omega^2
-    covMatrix[9]  = ( _initialTrackError_z0    ); //sigma_z0^2
-    covMatrix[14] = ( _initialTrackError_tanL  ); //sigma_tanl^2
+    covMatrix[0]  = ( _initialTrackError_d0    );
+    covMatrix[2]  = ( _initialTrackError_phi0  );
+    covMatrix[5]  = ( _initialTrackError_omega );
+    covMatrix[9]  = ( _initialTrackError_z0    );
+    covMatrix[14] = ( _initialTrackError_tanL  );
+#endif
     
     std::vector< std::pair<float, edm4hep::TrackerHit> > r2_values;
     r2_values.reserve(trackerHits.size());

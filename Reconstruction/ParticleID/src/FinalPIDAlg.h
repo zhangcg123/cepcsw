@@ -10,7 +10,14 @@
 #include "edm4hep/RecDqdx.h"
 #include "edm4hep/RecDqdxCollection.h"
 #include "edm4hep/ParticleIDCollection.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
 #include "edm4hep/TrackerHitCollection.h"
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
 #include "TVector3.h"
 
 #include "FinalPIDSvc/IFinalPIDSvc.h"
@@ -34,8 +41,8 @@ class FinalPIDAlg : public Algorithm {
 
   DataHandle<edm4hep::RecTofCollection> m_inTofCol{"RecTofCollection", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::RecDqdxCollection> m_inDqdxCol{"DndxTracks", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_inputMuonBarrel{"MuonBarrelTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> m_inputMuonEndcap{"MuonEndcapTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> m_inputMuonBarrel{"MuonBarrelTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> m_inputMuonEndcap{"MuonEndcapTrackerHits", Gaudi::DataHandle::Reader, this};
   //DataHandle<edm4hep::ParticleIDCollection> m_PIDCol{"finalPID", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ReconstructedParticleCollection> m_outPFOCol{"CyberPFOPID", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ParticleIDCollection> m_ParticleID{"ParticleID", Gaudi::DataHandle::Writer, this};

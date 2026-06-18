@@ -2,9 +2,8 @@
 #define I_FinalPID_SVC_H
 
 #include "GaudiKernel/IService.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/SimTrackerHitCollection.h"
-#include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/TrackState.h"
@@ -12,6 +11,14 @@
 #include "edm4cepc/RecTofCollection.h"
 #include "edm4hep/RecDqdx.h"
 #include "edm4hep/RecDqdxCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
+#include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+#endif
+
 #include <xgboost/c_api.h>
 
 /**
@@ -22,12 +29,18 @@
 
 class IFinalPIDSvc: virtual public IService {
 public:
-
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+    using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+    using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackParticleAssociationCollection;
+#endif
     DeclareInterfaceID(IFinalPIDSvc, 0, 1);
     
     virtual ~IFinalPIDSvc() = default;
 
-    virtual void SetCollections( const edm4hep::TrackerHitCollection* barrelhits, const edm4hep::TrackerHitCollection* endcaphits, const edm4hep::RecTofCollection* tofcol, const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::ReconstructedParticleCollection* PFO) = 0;
+    virtual void SetCollections( const CEPCSWTrackerHit3DCollection* barrelhits, const CEPCSWTrackerHit3DCollection* endcaphits, const edm4hep::RecTofCollection* tofcol, const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::ReconstructedParticleCollection* PFO) = 0;
 
     virtual void MatchMuonHitsToTracks() = 0;
 
