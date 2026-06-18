@@ -1,4 +1,5 @@
 #include "TrackParticleRelationAlg.h"
+#include "edm4hep/EDM4hepVersion.h"
 
 DECLARE_COMPONENT(TrackParticleRelationAlg)
 
@@ -10,13 +11,13 @@ TrackParticleRelationAlg::TrackParticleRelationAlg(const std::string& name, ISvc
 StatusCode TrackParticleRelationAlg::initialize() {
   for(auto name : m_inTrackCollectionNames) {
     m_inTrackColHdls.push_back(new DataHandle<edm4hep::TrackCollection> (name, Gaudi::DataHandle::Reader, this));
-    m_outColHdls.push_back(new DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> (name+"ParticleAssociation", Gaudi::DataHandle::Writer, this));
+    m_outColHdls.push_back(new DataHandle<CEPCSWTrackMCParticleLinkCollection> (name+"ParticleAssociation", Gaudi::DataHandle::Writer, this));
   }
-  
+
   for(unsigned i=0; i<m_inAssociationCollectionNames.size(); i++) {
-    m_inAssociationColHdls.push_back(new DataHandle<edm4hep::MCRecoTrackerAssociationCollection> (m_inAssociationCollectionNames[i], Gaudi::DataHandle::Reader, this));
+    m_inAssociationColHdls.push_back(new DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> (m_inAssociationCollectionNames[i], Gaudi::DataHandle::Reader, this));
   }
-  
+
   if(m_inAssociationColHdls.size()==0) {
     warning() << "no Association Collection input" << endmsg;
     return StatusCode::FAILURE;
@@ -28,7 +29,7 @@ StatusCode TrackParticleRelationAlg::initialize() {
 
 StatusCode TrackParticleRelationAlg::execute() {
   info() << "start Event " << m_nEvt << endmsg;
-  
+
   // MCParticle
   const edm4hep::MCParticleCollection* mcpCol = nullptr;
   try {
@@ -50,7 +51,7 @@ StatusCode TrackParticleRelationAlg::execute() {
     debug() << "Collection " << m_inMCParticleColHdl.fullKey() << " is unavailable in event " << m_nEvt << endmsg;
   }
   if(!mcpCol) {
-    warning() << "pass this event because MCParticle collection can not read" << endmsg; 
+    warning() << "pass this event because MCParticle collection can not read" << endmsg;
     return StatusCode::SUCCESS;
   }
 
@@ -58,7 +59,7 @@ StatusCode TrackParticleRelationAlg::execute() {
   std::map<edm4hep::TrackerHit, edm4hep::MCParticle> mapHitParticle;
   debug() << "reading Association" << endmsg;
   for (auto hdl : m_inAssociationColHdls) {
-    const edm4hep::MCRecoTrackerAssociationCollection* assCol = nullptr;
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol = nullptr;
     try {
       assCol = hdl->get();
     }
@@ -67,12 +68,17 @@ StatusCode TrackParticleRelationAlg::execute() {
       return StatusCode::FAILURE;
     }
     for (auto ass: *assCol) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto hit = ass.getFrom();
+      auto particle = ass.getTo().getParticle();
+#else
       auto hit = ass.getRec();
       auto particle = ass.getSim().getMCParticle();
+#endif
       mapHitParticle[hit] = particle;
     }
   }
-  
+
   // Handle all input TrackCollection
   for (unsigned icol=0; icol<m_inTrackColHdls.size(); icol++) {
     auto hdl = m_inTrackColHdls[icol];
@@ -90,13 +96,13 @@ StatusCode TrackParticleRelationAlg::execute() {
       error() << "Collection " << m_outColHdls[icol]->fullKey() << " cannot be created" << endmsg;
       return StatusCode::FAILURE;
     }
-    
+
     if(trkCol) {
       std::map<edm4hep::MCParticle, std::vector<edm4hep::TrackerHit> > mapParticleHits;
 
       for (auto track: *trkCol) {
 	std::map<edm4hep::MCParticle, int> mapParticleNHits;
-	
+
 	// Count hits related to MCParticle
 	int nhits = track.trackerHits_size();
 	for (int ihit=0; ihit<nhits; ihit++) {
@@ -122,11 +128,16 @@ StatusCode TrackParticleRelationAlg::execute() {
 	for (std::map<edm4hep::MCParticle, int>::iterator it=mapParticleNHits.begin(); it!=mapParticleNHits.end(); it++) {
 	  auto ass = outCol->create();
 	  ass.setWeight(it->second);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+	  ass.setFrom(track);
+	  ass.setTo(it->first);
+#else
 	  ass.setRec(track);
 	  ass.setSim(it->first);
+#endif
 	}
       }
-      
+
       if (msgLevel(MSG::DEBUG)) {
 	for (std::map<edm4hep::MCParticle, std::vector<edm4hep::TrackerHit> >::iterator it=mapParticleHits.begin(); it!=mapParticleHits.end(); it++) {
 	  auto particle = it->first;
@@ -145,6 +156,6 @@ StatusCode TrackParticleRelationAlg::execute() {
 }
 
 StatusCode TrackParticleRelationAlg::finalize() {
-  
+
   return StatusCode::SUCCESS;
 }

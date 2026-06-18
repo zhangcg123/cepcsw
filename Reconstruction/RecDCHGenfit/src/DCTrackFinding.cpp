@@ -44,9 +44,15 @@
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
-#include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/TrackCollection.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
+#include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
 #include "edm4hep/ReconstructedParticle.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/Track.h"
@@ -261,7 +267,7 @@ StatusCode DCTrackFinding::execute()
 
     StatusCode sc=StatusCode::SUCCESS;
 
-    edm4hep::TrackerHitCollection* TrF = w_DCTrackFindingCol.createAndPut();
+    auto TrF = w_DCTrackFindingCol.createAndPut();
     
     edm4hep::TrackCollection* sdtTkFCol= m_SDTTrackFindCol.createAndPut();
 
@@ -279,15 +285,14 @@ StatusCode DCTrackFinding::execute()
 
     //DC
     auto assoDCHitsCol=m_DCHitAssociationCol.get();
-    const edm4hep::TrackerHitCollection* dCDigiCol=nullptr;
-    dCDigiCol=m_DCDigiCol.get();
+    auto dCDigiCol=m_DCDigiCol.get();
 
     // Signal DC hit
-    const edm4hep::TrackerHitCollection* SignaldCDigiCol=m_SignalDCDigiCol.get();
+    auto SignaldCDigiCol=m_SignalDCDigiCol.get();
     int truthNumdc = SignaldCDigiCol->size();
     m_n_SignalDigi = truthNumdc;
    //VXDAssoHits
-    const edm4hep::MCRecoTrackerAssociationCollection* VXDAssoVec = m_VXDHitAssociationCol.get();
+    auto VXDAssoVec = m_VXDHitAssociationCol.get();
     //SIT
     auto assoSITHitsCol=m_SITHitAssociationCol.get();
     const edm4hep::SimTrackerHitCollection* simSITHitCol=nullptr;
@@ -374,7 +379,11 @@ StatusCode DCTrackFinding::execute()
         int ndigi =0;
         int detID = 7;
         std::map < std::vector<int> , unsigned long long > findCellID;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        edm4hep::TrackerHit3D digihits[66][1000];
+#else
         edm4hep::TrackerHit digihits[66][1000];
+#endif
         for(auto dcDigi: *dCDigiCol){
 
             if(0==dcDigi.getQuality()) m_digiOverlap[siNum]++;
@@ -385,9 +394,9 @@ StatusCode DCTrackFinding::execute()
             hitpos[1]=dcDigi.getPosition()[1];
             hitpos[2]=dcDigi.getPosition()[2];
 
-            hitCov(0,0)=dcDigi.getCovMatrix().at(0);
-            hitCov(1,1)=dcDigi.getCovMatrix().at(2);
-            hitCov(2,2)=dcDigi.getCovMatrix().at(5);
+            hitCov(0,0)=dcDigi.getCovMatrix()[0];
+            hitCov(1,1)=dcDigi.getCovMatrix()[2];
+            hitCov(2,2)=dcDigi.getCovMatrix()[5];
 
             unsigned short tdcCount = dcDigi.getTime();
             unsigned short adcCount = 0;
@@ -501,7 +510,7 @@ StatusCode DCTrackFinding::execute()
         for(int i = 0;i<output.size();i++)
         {
             auto trkHit = TrF->create();
-            edm4hep::TrackerHit digihit = digihits[output[i].at(0)][output[i].at(1)];
+            auto digihit = digihits[output[i].at(0)][output[i].at(1)];
 
             TVector3 Wstart(0,0,0);
             TVector3 Wend  (0,0,0);
@@ -652,7 +661,7 @@ genfit::AbsTrackRep* DCTrackFinding::getRep(int id,genfit::Track* track) const
     return track->getTrackRep(id);
 }
 
-int DCTrackFinding::addHitsToTk(edm4hep::TrackerHitCollection *
+int DCTrackFinding::addHitsToTk(CEPCSWTrackerHit3DCollection *
 col, edm4hep::Track& track, const char* msg) const
 {
     int nHit=0;

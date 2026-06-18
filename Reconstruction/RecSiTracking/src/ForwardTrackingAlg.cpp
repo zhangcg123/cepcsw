@@ -301,7 +301,7 @@ StatusCode ForwardTrackingAlg::execute(){
   
   debug() << "\t\t---Reading in Collections---" << endmsg;
   Navigation::Instance()->Initialize();
-  std::vector<const edm4hep::TrackerHitCollection*> hitFTDCollections;
+  std::vector<const CEPCSWTrackerHit3DCollection*> hitFTDCollections;
   int pixelCollectionID = -1; 
   try {
     auto hitFTDPixelCol = _inFTDPixelColHdl.get();
@@ -1034,7 +1034,11 @@ void ForwardTrackingAlg::finaliseTrack( edm4hep::MutableTrack* trackImpl ){
   trackImpl->setNdf(  fitter.getNdf ( 1 ) );
   
   const edm4hep::Vector3f& p = trkStateFirstHit.referencePoint;
+#if podio_VERSION >= PODIO_VERSION(1, 0, 0)
+  throw std::runtime_error("The setRadiusOfInnermostHit interface is removed from TrackerHit");
+#else
   trackImpl->setRadiusOfInnermostHit( sqrt( p[0]*p[0] + p[1]*p[1] + p[2]*p[2] ) );
+#endif
   
   std::map<int, int> hitNumbers; 
    

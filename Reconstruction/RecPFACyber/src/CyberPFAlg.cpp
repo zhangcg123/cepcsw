@@ -129,7 +129,7 @@ StatusCode CyberPFAlg::initialize()
   }}
 
   //---MCParticle CaloHit Association
-  if(!name_MCPTrkAssoCol.empty())      r_MCPTrkAssoCol = new DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> (name_MCPTrkAssoCol, Gaudi::DataHandle::Reader, this);
+  if(!name_MCPTrkAssoCol.empty())      r_MCPTrkAssoCol = new DataHandle<CEPCSWMcRecoTrackParticleAssociationCollection> (name_MCPTrkAssoCol, Gaudi::DataHandle::Reader, this);
 
   std::vector<std::string> name_CaloAssoCol = name_EcalMCPAssociation; 
   name_CaloAssoCol.insert(name_CaloAssoCol.end(), name_HcalMCPAssociation.begin(), name_HcalMCPAssociation.end());

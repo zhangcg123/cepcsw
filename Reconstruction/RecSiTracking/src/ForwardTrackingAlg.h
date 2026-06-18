@@ -3,12 +3,29 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "edm4hep/TrackCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+using CEPCSWTrackMCParticleLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+#endif
 
 #include <string>
 
@@ -228,9 +245,9 @@ class ForwardTrackingAlg : public Algorithm {
   std::string getInfo_map_sector_hits();
       
   /* Input collection names */
-  DataHandle<edm4hep::TrackerHitCollection> _inFTDPixelColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inFTDSpacePointColHdl{"FTDSpacePoints", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inFTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inFTDPixelColHdl{"FTDPixelTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inFTDSpacePointColHdl{"FTDSpacePoints", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _inFTDRawColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
   
   /** Output collection name */
   DataHandle<edm4hep::TrackCollection> _outColHdl{"ForwardTracks", Gaudi::DataHandle::Writer, this};

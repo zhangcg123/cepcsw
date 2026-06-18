@@ -3,11 +3,27 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 //#include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+using CEPCSWTrackerHitPlaneCollection = edm4hep::TrackerHitPlaneCollection;
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+#else
+using CEPCSWTrackerHitPlaneCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+#endif
 
 #include "CLHEP/Vector/ThreeVector.h"
 
@@ -73,11 +89,11 @@ class SpacePointBuilderAlg : public Algorithm {
  protected:
   // Input collection
   DataHandle<edm4hep::MCParticleCollection> _inMCColHdl{"MCParticle", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackerHitCollection> _inHitColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> _inHitAssColHdl{"FTDStripTrackerHitsAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHitPlaneCollection> _inHitColHdl{"FTDStripTrackerHits", Gaudi::DataHandle::Reader, this};
+  DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> _inHitAssColHdl{"FTDStripTrackerHitsAssociation", Gaudi::DataHandle::Reader, this};
   // Output collection
-  DataHandle<edm4hep::TrackerHitCollection> _outSPColHdl{"FTDSpacePoints", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> _outSPAssColHdl{"FTDSpacePointsAssociation", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHit3DCollection> _outSPColHdl{"FTDSpacePoints", Gaudi::DataHandle::Writer, this};
+  DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> _outSPAssColHdl{"FTDSpacePointsAssociation", Gaudi::DataHandle::Writer, this};
 
   Gaudi::Property<float> _nominal_vertex_x{this, "NominalVertexX", 0.0};
   Gaudi::Property<float> _nominal_vertex_y{this, "NominalVertexY", 0.0};
@@ -144,7 +160,11 @@ class SpacePointBuilderAlg : public Algorithm {
   
   
   /** @return a spacepoint (in the form of a TrackerHitImpl* ) created from two TrackerHitPlane* which stand for si-strips */
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+  edm4hep::MutableTrackerHit3D createSpacePoint( edm4hep::TrackerHit a , edm4hep::TrackerHit b, double stripLength );
+#else
   edm4hep::MutableTrackerHit createSpacePoint( edm4hep::TrackerHit a , edm4hep::TrackerHit b, double stripLength );
+#endif
   
 //   TrackerHitImpl* createSpacePointOld( TrackerHitPlane* a , TrackerHitPlane* b );
   

@@ -1,4 +1,5 @@
 #include "TrueMuonTagAlg.h"
+#include "edm4hep/EDM4hepVersion.h"
 
 DECLARE_COMPONENT(TrueMuonTagAlg)
 
@@ -17,7 +18,7 @@ StatusCode TrueMuonTagAlg::initialize() {
   }
   
   for(unsigned i=0; i<m_inAssociationCollectionNames.size(); i++) {
-    m_inAssociationColHdls.push_back(new DataHandle<edm4hep::MCRecoTrackerAssociationCollection> (m_inAssociationCollectionNames[i], Gaudi::DataHandle::Reader, this));
+    m_inAssociationColHdls.push_back(new DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> (m_inAssociationCollectionNames[i], Gaudi::DataHandle::Reader, this));
   }
   
   if(m_inAssociationColHdls.size()==0) {
@@ -61,7 +62,7 @@ StatusCode TrueMuonTagAlg::execute() {
   std::map<edm4hep::TrackerHit, edm4hep::MCParticle> mapHitParticle;
   debug() << "reading Association" << endmsg;
   for (auto hdl : m_inAssociationColHdls) {
-    const edm4hep::MCRecoTrackerAssociationCollection* assCol = nullptr;
+    const CEPCSWTrackerHitSimTrackerHitLinkCollection* assCol = nullptr;
     try {
       assCol = hdl->get();
     }
@@ -70,8 +71,13 @@ StatusCode TrueMuonTagAlg::execute() {
       return StatusCode::FAILURE;
     }
     for (auto ass: *assCol) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      auto hit = ass.getFrom();
+      auto particle = ass.getTo().getParticle();
+#else
       auto hit = ass.getRec();
       auto particle = ass.getSim().getMCParticle();
+#endif
       mapHitParticle[hit] = particle;
     }
   }

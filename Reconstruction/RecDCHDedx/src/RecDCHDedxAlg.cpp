@@ -1,12 +1,5 @@
 #include "RecDCHDedxAlg.h"
-#include "edm4hep/EventHeaderCollection.h"
-#include "edm4hep/MCParticleCollection.h"
-#include "edm4hep/SimTrackerHitCollection.h"
-#include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/TrackCollection.h"
-#include "edm4hep/MCRecoTrackerAssociationCollection.h"
-#include "edm4hep/MCRecoParticleAssociationCollection.h"
-#include "edm4hep/ReconstructedParticleCollection.h"
+
 #include "DDSegmentation/Segmentation.h"
 #include "DetSegmentation/GridDriftChamber.h"
 #include "DetInterface/IGeomSvc.h"
@@ -79,7 +72,7 @@ StatusCode RecDCHDedxAlg::execute()
         }
         edm4hep::TrackCollection* ptrkCol = const_cast<edm4hep::TrackCollection*>(trkCol);
 
-        const edm4hep::MCRecoTrackerAssociationCollection* assoCol=nullptr;
+        const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoCol=nullptr;
         assoCol = m_dcHitAssociationCol.get();
         if(nullptr==assoCol){
             throw ("Error: MCRecoTrackerAssociationCollection not found.");
@@ -90,9 +83,15 @@ StatusCode RecDCHDedxAlg::execute()
             auto tmp_track = ptrkCol->at(j);
             for(unsigned k=0; k< tmp_track.trackerHits_size(); k++){
                 for(unsigned z=0; z< assoCol->size(); z++){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                    if(assoCol->at(z).getFrom().id() != tmp_track.getTrackerHits(k).id()) continue;
+                    
+                    auto tmp_mc = assoCol->at(z).getTo().getParticle();
+#else
                     if(assoCol->at(z).getRec().id() != tmp_track.getTrackerHits(k).id()) continue;
                     
                     auto tmp_mc = assoCol->at(z).getSim().getMCParticle();
+#endif
                     if(tmp_mc.parents_size()!=0) continue;
                     if(map_mc_count.find(tmp_mc) != map_mc_count.end()) map_mc_count[tmp_mc] += 1;
                     else                                                map_mc_count[tmp_mc] = 1;
@@ -113,12 +112,20 @@ StatusCode RecDCHDedxAlg::execute()
                     }
                 }
             }
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            double dedx_ori = -999.;
+#else
             double dedx_ori = tmp_track.getDEdx();
+#endif
             double dedx = 0.0;
             dedx = m_dedx_simtool->dedx(tmp_mc);
             float dedx_smear  = CLHEP::RandGauss::shoot(m_scale, m_resolution);
             if(m_debug) std::cout<<"ori dedx="<<dedx_ori<<", dedx from sampling ="<<dedx<<",smear="<<dedx_smear<<",final="<<dedx*dedx_smear<<",scale="<<m_scale<<",res="<<m_resolution<<std::endl;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            throw std::runtime_error("setDEdx missing");
+#else
             ptrkCol->at(j).setDEdx(dedx*dedx_smear);
+#endif
             if(m_WriteAna){
                 m_track_dedx[m_n_track]= dedx*dedx_smear;
                 m_track_dedx_BB[m_n_track]= dedx;
@@ -147,7 +154,7 @@ StatusCode RecDCHDedxAlg::execute()
        }
        edm4hep::TrackCollection* ptrkCol = const_cast<edm4hep::TrackCollection*>(trkCol);
 
-       const edm4hep::MCRecoTrackerAssociationCollection* assoCol=nullptr;
+       const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoCol=nullptr;
        assoCol = m_dcHitAssociationCol.get();
        if(nullptr==assoCol){
            throw ("Error: MCRecoTrackerAssociationCollection not found.");
@@ -158,9 +165,15 @@ StatusCode RecDCHDedxAlg::execute()
            auto tmp_track = ptrkCol->at(j);
            for(unsigned k=0; k< tmp_track.trackerHits_size(); k++){
                for(unsigned z=0; z< assoCol->size(); z++){
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+                   if(assoCol->at(z).getFrom().id() != tmp_track.getTrackerHits(k).id()) continue;
+                   
+                   auto tmp_mc = assoCol->at(z).getTo().getParticle();
+#else
                    if(assoCol->at(z).getRec().id() != tmp_track.getTrackerHits(k).id()) continue;
                    
                    auto tmp_mc = assoCol->at(z).getSim().getMCParticle();
+#endif
                    if(tmp_mc.parents_size()!=0) continue;
                    if(map_mc_count.find(tmp_mc) != map_mc_count.end()) map_mc_count[tmp_mc] += 1;
                    else                                                map_mc_count[tmp_mc] = 1;
@@ -186,7 +199,11 @@ StatusCode RecDCHDedxAlg::execute()
            dndx = m_dedx_simtool->dndx(betagamma);
            float dndx_smear  = CLHEP::RandGauss::shoot(m_scale, m_resolution);
            if(m_debug) std::cout<<"dndx from sampling ="<<dndx<<",smear="<<dndx_smear<<",final="<<dndx*dndx_smear<<",scale="<<m_scale<<",res="<<m_resolution<<std::endl;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+           throw std::runtime_error("setDEdx missing");
+#else
            ptrkCol->at(j).setDEdx(dndx*dndx_smear);//update the dndx
+#endif
            if(m_WriteAna){
                m_track_dedx[m_n_track]= dndx*dndx_smear;
                m_track_dedx_BB[m_n_track]= dndx;

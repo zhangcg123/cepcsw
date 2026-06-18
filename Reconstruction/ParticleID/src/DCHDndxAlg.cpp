@@ -5,7 +5,12 @@
 #include "UTIL/ILDConf.h"
 
 #include "DD4hep/Detector.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+// Hypothesis.h removed in EDM4hep v1.0.0
+#else
 #include "edm4hep/Hypothesis.h"
+#endif
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/Quantity.h"
 #include "edm4hep/Vector3d.h"
@@ -49,7 +54,7 @@ StatusCode DCHDndxAlg::execute() {
     // check_file << "--------                 Event " << ievent++ << " --------" << std::endl;
 
     const edm4hep::TrackCollection* trkcol = nullptr;
-    const edm4hep::MCRecoTrackParticleAssociationCollection* trkparasscol = nullptr;
+    const CEPCSWTrackMCParticleLinkCollection* trkparasscol = nullptr;
     try {
         trkcol = _trackCol.get();
         trkparasscol = _trkParAssCol.get();
@@ -78,7 +83,11 @@ StatusCode DCHDndxAlg::execute() {
         int max_weight_idx = -1;
         int ass_idx = 0;
         for (auto ass : *trkparasscol) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            if (ass.getFrom() == trk) {
+#else
             if (ass.getRec() == trk) {
+#endif
                 float weight = ass.getWeight();
                 if (weight > max_weight) {
                     max_weight = weight;
@@ -88,10 +97,17 @@ StatusCode DCHDndxAlg::execute() {
             ass_idx++;
         }
         if (max_weight_idx < 0) continue;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        pdgid = trkparasscol->at(max_weight_idx).getTo().getPDG();
+        double px = trkparasscol->at(max_weight_idx).getTo().getMomentum()[0];
+        double py = trkparasscol->at(max_weight_idx).getTo().getMomentum()[1];
+        double pz = trkparasscol->at(max_weight_idx).getTo().getMomentum()[2];
+#else
         pdgid = trkparasscol->at(max_weight_idx).getSim().getPDG();
         double px = trkparasscol->at(max_weight_idx).getSim().getMomentum()[0];
         double py = trkparasscol->at(max_weight_idx).getSim().getMomentum()[1];
         double pz = trkparasscol->at(max_weight_idx).getSim().getMomentum()[2];
+#endif
         p_truth = sqrt(px*px + py*py + pz*pz);
 
         // check_file << "before track par" << std::endl;
@@ -142,7 +158,9 @@ StatusCode DCHDndxAlg::execute() {
             q.value = dndx_meas;
             q.error = dndx_sigma;
 
-            //check_file << "before hypotheses loop" << std::endl;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+            throw std::runtime_error("Hypothesis not available in EDM4hep v1.0.0");
+#else
             std::array<Hypothesis, 5> hypotheses;
             for (int pid = 0; pid < 5; pid++) {
                 bg = m_pid_svc->getBetaGamma(p_truth, pid);
@@ -156,11 +174,11 @@ StatusCode DCHDndxAlg::execute() {
 
                 hypotheses[pid] = h;
             }
-            //check_file << "after hypotheses loop" << std::endl;
 
             MutableRecDqdx dndx_track(q, particle_type, 0, hypotheses);
             dndx_track.setTrack(trk);
             outCol->push_back(dndx_track);
+#endif
         }
         else if (m_method.value() == "Full") {
             // Hit level implementation, loop over hits ...

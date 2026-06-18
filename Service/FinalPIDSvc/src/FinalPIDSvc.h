@@ -36,7 +36,7 @@ class FinalPIDSvc : public extends<Service, IFinalPIDSvc>
         FinalPIDSvc(const std::string& name, ISvcLocator* svc);
         virtual ~FinalPIDSvc();
 
-        void SetCollections( const edm4hep::TrackerHitCollection* barrelhits, const edm4hep::TrackerHitCollection* endcaphits, const edm4hep::RecTofCollection* tofcol, const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::ReconstructedParticleCollection* PFO) override;
+        void SetCollections( const CEPCSWTrackerHit3DCollection* barrelhits, const CEPCSWTrackerHit3DCollection* endcaphits, const edm4hep::RecTofCollection* tofcol, const edm4hep::RecDqdxCollection* dqdxcol, const edm4hep::ReconstructedParticleCollection* PFO) override;
 
         void MatchMuonHitsToTracks() override;
 
@@ -124,8 +124,8 @@ class FinalPIDSvc : public extends<Service, IFinalPIDSvc>
         Gaudi::Property<bool> m_readFromData{this, "readFromData", 0};
         Gaudi::Property<bool> m_computeVar{this, "computeVar", 1};
 
-        const edm4hep::TrackerHitCollection* _barrelhits;
-        const edm4hep::TrackerHitCollection* _endcaphits;
+        const CEPCSWTrackerHit3DCollection* _barrelhits;
+        const CEPCSWTrackerHit3DCollection* _endcaphits;
         const edm4hep::RecTofCollection* _tofcol;
         const edm4hep::RecDqdxCollection* _dqdxcol;
         const edm4hep::ReconstructedParticleCollection* _PFO;

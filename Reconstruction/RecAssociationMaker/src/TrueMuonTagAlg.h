@@ -6,8 +6,15 @@
 
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackCollection.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+#else
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+#endif
 
 #include <UTIL/BitField64.h>
 #include <UTIL/ILDConf.h>
@@ -31,7 +38,7 @@ class TrueMuonTagAlg : public Algorithm {
   std::vector<DataHandle<edm4hep::TrackCollection>* >                    m_inTrackColHdls;
   Gaudi::Property<std::vector<std::string> >                             m_inTrackCollectionNames{this, "TrackList", {"SiTracks"}};
   // input TrackerAssociation to link TrackerHit and SimTrackerHit
-  std::vector<DataHandle<edm4hep::MCRecoTrackerAssociationCollection>* > m_inAssociationColHdls;
+  std::vector<DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection>* > m_inAssociationColHdls;
   Gaudi::Property<std::vector<std::string> >                             m_inAssociationCollectionNames{this, "TrackerAssociationList", {"VXDTrackerHitAssociation",
         "SITTrackerHitAssociation", "SETTrackerHitAssociation", "FTDTrackerHitAssociation", "TPCTrackerHitAss"}};
 

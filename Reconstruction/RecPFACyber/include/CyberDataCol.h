@@ -28,6 +28,7 @@
 #include "Objects/Track.h"
 
 #include "k4FWCore/DataHandle.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/MCParticle.h"
 #include "edm4hep/Track.h"
@@ -43,11 +44,25 @@
 #include "edm4hep/RecDqdxCollection.h"
 #include "edm4hep/ParticleIDCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/CaloHitMCParticleLinkCollection.h"
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
 #include "edm4hep/MCRecoCaloAssociation.h"
 #include "edm4hep/MCRecoTrackerAssociation.h"
 #include "edm4hep/MCRecoParticleAssociationCollection.h"
 #include "edm4hep/MCRecoCaloParticleAssociationCollection.h"
 #include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+#endif
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+using CEPCSWCaloHitSimCaloHitLink = edm4hep::CaloHitSimCaloHitLink;
+using CEPCSWTrackMCParticleLink = edm4hep::TrackMCParticleLink;
+#else
+using CEPCSWCaloHitSimCaloHitLink = edm4hep::MCRecoCaloAssociation;
+using CEPCSWTrackMCParticleLink = edm4hep::MCRecoTrackerAssociation;
+#endif
 
 #define PI 3.141592653
 //#define C 299.79  // unit: mm/ns
@@ -65,8 +80,8 @@ public:
   std::map<std::string, std::vector<edm4hep::CalorimeterHit> >   collectionMap_CaloHit;
   std::map<std::string, std::vector<edm4hep::Vertex> >           collectionMap_Vertex;
   std::map<std::string, std::vector<edm4hep::Track> >            collectionMap_Track;
-  std::map<std::string, std::vector<edm4hep::MCRecoCaloAssociation> > collectionMap_CaloRel;
-  std::map<std::string, std::vector<edm4hep::MCRecoTrackerAssociation> > collectionMap_TrkRel;
+  std::map<std::string, std::vector<CEPCSWCaloHitSimCaloHitLink> > collectionMap_CaloRel;
+  std::map<std::string, std::vector<CEPCSWTrackMCParticleLink> > collectionMap_TrkRel;
 
   //Self used objects
   //General objects for all PFA

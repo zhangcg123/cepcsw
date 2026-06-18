@@ -1,4 +1,5 @@
 #include "ClusterAna.hh"
+#include "edm4hep/EDM4hepVersion.h"
 #include <EVENT/LCCollection.h>
 #include <IMPL/LCCollectionVec.h>
 #include <EVENT/LCFloatVec.h>
@@ -157,7 +158,11 @@ StatusCode ClusterAna::execute()
 	    for(int i0 = 0; i0 < col_PFO->size(); i0++){
 		    auto a_PFO=(*col_PFO)[i0];
 		    _PFOEn=a_PFO.getEnergy();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+		    _PID=a_PFO.getPDG();
+#else
 		    _PID=a_PFO.getType();
+#endif
 		    _outputPFO->Fill();
 	    }
     }catch (lcio::DataNotAvailableException err) { }

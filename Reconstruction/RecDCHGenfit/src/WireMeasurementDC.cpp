@@ -24,6 +24,7 @@
 #include "WireMeasurementDC.h"
 #include "edm4hep/SimTrackerHit.h"
 #include "edm4hep/TrackerHit.h"
+#include "edm4hep/EDM4hepVersion.h"
 
 #include <iostream>
 #include <algorithm>
@@ -39,6 +40,9 @@
 
 WireMeasurementDC::WireMeasurementDC()
   : AbsMeasurement(1), maxDistance_(2), leftRight_(0)
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    , trackerHitObj_(edm4hep::TrackerHit::makeEmpty())
+#endif
 {
   memset(wireEndPoint1_, 0, 3*sizeof(double));
   memset(wireEndPoint2_, 0, 3*sizeof(double));
@@ -46,6 +50,9 @@ WireMeasurementDC::WireMeasurementDC()
 
 WireMeasurementDC::WireMeasurementDC(double driftDistance, double driftDistanceError, const TVector3& endPoint1, const TVector3& endPoint2, int detId, int hitId, TrackPoint* trackPoint)
   : AbsMeasurement(1), maxDistance_(2), leftRight_(0)
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    , trackerHitObj_(edm4hep::TrackerHit::makeEmpty())
+#endif
 {
   TVectorD coords(1);
   coords[0] = driftDistance;
@@ -176,6 +183,9 @@ WireMeasurementDC::WireMeasurementDC(const GenfitHit* genfitHit,int iHit):
     leftRight_(genfitHit->getLeftRightAmbig()),
     trackerHit_(genfitHit->getTrackerHit()),
     simTrackerHit_(genfitHit->getSimTrackerHit()),
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    trackerHitObj_(edm4hep::TrackerHit::makeEmpty()),
+#endif
     layer_(genfitHit->getLayer()),
     cell_(genfitHit->getCell())
 {

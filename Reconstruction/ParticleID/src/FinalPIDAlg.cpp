@@ -4,6 +4,7 @@
 #include "GaudiKernel/MsgStream.h"
 #include "GaudiKernel/SmartDataPtr.h"
 #include "DetInterface/IGeomSvc.h"
+#include "edm4hep/EDM4hepVersion.h"
 
 using namespace edm4hep;
 
@@ -37,8 +38,8 @@ StatusCode FinalPIDAlg::execute(){
   const edm4hep::ReconstructedParticleCollection* inpfocol = nullptr;
   const edm4hep::RecTofCollection* tofcol = nullptr;
   const edm4hep::RecDqdxCollection* dqdxcol = nullptr;
-  const edm4hep::TrackerHitCollection* barrelhits = nullptr;
-  const edm4hep::TrackerHitCollection* endcaphits = nullptr;
+  const CEPCSWTrackerHit3DCollection* barrelhits = nullptr;
+  const CEPCSWTrackerHit3DCollection* endcaphits = nullptr;
 
   _hasTOF = true;
   _hasTPC = true;
@@ -103,10 +104,18 @@ StatusCode FinalPIDAlg::execute(){
         int PDG=PDGIDs.at(i_fl+5);
         edm4hep::MutableParticleID pid(PDG, PDG, 0, m_pid_svc->GetProb(i_fl));
         ParticleID->push_back(pid);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        pid.setParticle(outpfo);
+#else
         outpfo.addToParticleIDs(pid);
+#endif
       }
       int PDG=m_pid_svc->GetType();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      outpfo.setPDG( PDG );
+#else
       outpfo.setType( PDG );
+#endif
       outpfo.setMass( ParticleMass.at( abs(PDG) ) );
       outpfo.setEnergy( sqrt(outpfo.getMomentum()[0]*outpfo.getMomentum()[0] + outpfo.getMomentum()[1]*outpfo.getMomentum()[1] + outpfo.getMomentum()[2]*outpfo.getMomentum()[2] + outpfo.getMass()*outpfo.getMass()) );
     }
@@ -115,19 +124,31 @@ StatusCode FinalPIDAlg::execute(){
         int PDG=PDGIDs.at(i_fl)*outpfo.getCharge();
         edm4hep::MutableParticleID pid(PDG, PDG, 0, m_pid_svc->GetProb(i_fl));
         ParticleID->push_back(pid);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+        pid.setParticle(outpfo);
+#else
         outpfo.addToParticleIDs(pid);
+#endif
       }
       int PDG=m_pid_svc->GetType();
       if (PDG==11 || PDG==13) PDG*=-1;
       PDG*=outpfo.getCharge();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      outpfo.setPDG( PDG );
+#else
       outpfo.setType( PDG );
+#endif
       outpfo.setMass( ParticleMass.at( abs(PDG) ) );
       outpfo.setEnergy( sqrt(outpfo.getMomentum()[0]*outpfo.getMomentum()[0] + outpfo.getMomentum()[1]*outpfo.getMomentum()[1] + outpfo.getMomentum()[2]*outpfo.getMomentum()[2] + outpfo.getMass()*outpfo.getMass()) );
     }
 
     outpfocol->push_back(outpfo);
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    debug()<<"Pdgid: "<<outpfo.getPDG()<<endmsg;
+#else
     debug()<<"Pdgid: "<<outpfo.getType()<<endmsg;
+#endif
   }
 
   _nEvt++;

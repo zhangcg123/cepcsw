@@ -1,7 +1,20 @@
 #ifndef RecDCHDedxAlg_h
 #define RecDCHDedxAlg_h
-
+#include "edm4hep/EDM4hepVersion.h"
+#include "edm4hep/EventHeaderCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "edm4hep/SimTrackerHitCollection.h"
+#include "edm4hep/TrackCollection.h"
+#include "edm4hep/ReconstructedParticleCollection.h"
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+#else
+#include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#endif
+
 #include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/NTuple.h"
 #include "k4FWCore/DataHandle.h"
@@ -17,18 +30,22 @@ namespace dd4hep {
         class BitFieldCoder;
     }
 }
-namespace edm4hep {
-    class MCParticleCollection;
-    class TrackerHitCollection;
-    class TrackCollection;
-    class MCRecoTrackerAssociationCollection;
-    class ReconstructedParticleCollection;
-    class MCRecoParticleAssociationCollection;
-}
 
 class RecDCHDedxAlg: public Algorithm
 {
     public:
+
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+#else
+    using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+    using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+#endif
+
+    
+    
         RecDCHDedxAlg(const std::string& name, ISvcLocator* svcLoc);
 
         virtual StatusCode initialize();
@@ -41,7 +58,7 @@ class RecDCHDedxAlg: public Algorithm
         Gaudi::Property<std::string>  m_dedx_sim_option{ this, "sampling_option", ""};
 
         //reader
-        DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_dcHitAssociationCol{ "DCHitAssociationCollection",Gaudi::DataHandle::Reader, this};
+        DataHandle<CEPCSWTrackerHitSimTrackerHitLinkCollection> m_dcHitAssociationCol{ "DCHitAssociationCollection",Gaudi::DataHandle::Reader, this};
         //writer
         DataHandle<edm4hep::TrackCollection> m_dcTrackCol{"DCTrackCollection", Gaudi::DataHandle::Writer, this};
 

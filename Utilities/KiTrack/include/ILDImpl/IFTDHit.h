@@ -1,7 +1,7 @@
 #ifndef IFTDHit_h
 #define IFTDHit_h
 
-
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/TrackerHit.h"
 
 #include "KiTrack/IHit.h"
@@ -30,9 +30,12 @@ namespace KiTrackMarlin{
     virtual const ISectorSystem* getSectorSystem() const { return _sectorSystemFTD; };
     
   protected:
-    
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    edm4hep::TrackerHit _trackerHit = edm4hep::TrackerHit::makeEmpty();
+#else  
     edm4hep::TrackerHit _trackerHit;
-            
+#endif
+      
     int _side;
     unsigned _layer;
     unsigned _module;

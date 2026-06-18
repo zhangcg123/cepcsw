@@ -3,22 +3,38 @@
 
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/EventHeaderCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+#include "edm4hep/TrackerHit.h"
+#include "edm4hep/CaloHitSimCaloHitLinkCollection.h"
+#include "edm4hep/CaloHitMCParticleLinkCollection.h"
+#include "edm4hep/TrackMCParticleLinkCollection.h"
+#else
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
-#include "edm4hep/CalorimeterHitCollection.h"
-#include "edm4hep/VertexCollection.h"
-#include "edm4hep/TrackCollection.h"
-#include "edm4hep/MCParticle.h" 
-#include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/MCRecoCaloAssociation.h"
 #include "edm4hep/MCRecoTrackerAssociation.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/MCRecoCaloAssociationCollection.h"
-#include "edm4hep/MCRecoParticleAssociation.h"
-#include "edm4hep/MCRecoParticleAssociationCollection.h"
+#endif
+#include "edm4hep/CalorimeterHitCollection.h"
+#include "edm4hep/VertexCollection.h"
+#include "edm4hep/TrackCollection.h"
+#include "edm4hep/MCParticle.h"
+#include "edm4hep/MCParticleCollection.h"
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+using CEPCSWCaloHitSimCaloHitLink = edm4hep::CaloHitSimCaloHitLink;
+using CEPCSWCaloHitMCParticleLink = edm4hep::CaloHitMCParticleLink;
+using CEPCSWTrackMCParticleLink = edm4hep::TrackMCParticleLink;
+#else
+using CEPCSWCaloHitSimCaloHitLink = edm4hep::MCRecoCaloAssociation;
+using CEPCSWCaloHitMCParticleLink = edm4hep::MCRecoCaloParticleAssociation;
+using CEPCSWTrackMCParticleLink = edm4hep::MCRecoTrackerAssociation;
+#endif
 
 #include "Api/PandoraApi.h"
 

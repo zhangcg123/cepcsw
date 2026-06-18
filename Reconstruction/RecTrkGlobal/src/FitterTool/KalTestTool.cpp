@@ -14,14 +14,7 @@
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/TrackState.h"
 #include "edm4hep/MutableTrack.h"
-//#if __has_include("edm4hep/EDM4hepVersion.h")
-//#include "edm4hep/EDM4hepVersion.h"
-//#else
-// Copy the necessary parts from  the header above to make whatever we need to work here
-//#define EDM4HEP_VERSION(major, minor, patch) ((UINT64_C(major) << 32) | (UINT64_C(minor) << 16) | (UINT64_C(patch)))
-// v00-09 is the last version without the capitalization change of the track vector members
-//#define EDM4HEP_BUILD_VERSION EDM4HEP_VERSION(0, 9, 0)
-//#endif
+#include "edm4hep/EDM4hepVersion.h"
 #include "podio/podioVersion.h"
 
 DECLARE_COMPONENT(KalTestTool)
@@ -264,6 +257,9 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
       //std::cout << "Error: space point is not still valid! pelease wait updating..." <<std::endl;
       //exit(1);
       // get strip hits
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
       int nRawHit = trkHit.rawHits_size();
       for( unsigned k=0; k< nRawHit; k++ ){
 	auto rawHitOpt = Navigation::Instance()->GetTrackerHit(trkHit.getRawHits(k));
@@ -287,6 +283,7 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
 	  break; // break out of loop over rawObjects
 	}
       }
+#endif
     }
     else {
       bool is_outlier = false;
@@ -461,7 +458,11 @@ int KalTestTool::finaliseTrack(MarlinTrk::IMarlinTrack* marlintrk, edm4hep::Muta
 
   double r_first = firstHit.getPosition()[0]*firstHit.getPosition()[0] + firstHit.getPosition()[1]*firstHit.getPosition()[1];
 
+#if podio_VERSION >= PODIO_VERSION(1, 0, 0)
+  throw std::runtime_error("The setRadiusOfInnermostHit interface is removed from Track");
+#else
   track->setRadiusOfInnermostHit(sqrt(r_first));
+#endif
 
   if ( atLastHit == 0 && atCaloFace == 0 ) {
 

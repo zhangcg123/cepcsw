@@ -11,18 +11,24 @@
 
 #include <fstream>
 
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+using CEPCSWMcRecoTrackParticleAssociationCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
+using CEPCSWMcRecoTrackParticleAssociationCollection = edm4hep::MCRecoTrackParticleAssociationCollection;
+#endif
+
 namespace Cyber{
   class TrackCreator{
 
-  public: 
+  public:
 
     //initialize a CaloHitCreator
     TrackCreator( const Settings& m_settings );
     ~TrackCreator() { delete m_TrkExtraAlg; };
-   
-    StatusCode CreateTracks( CyberDataCol& m_DataCol, 
-                             std::vector<DataHandle<edm4hep::TrackCollection>*>& r_TrackCols, 
-                             DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection>* r_MCParticleTrkCol ); 
+
+    StatusCode CreateTracks( CyberDataCol& m_DataCol,
+                             std::vector<DataHandle<edm4hep::TrackCollection>*>& r_TrackCols,
+                             DataHandle<CEPCSWMcRecoTrackParticleAssociationCollection>* r_MCParticleTrkCol );
    
     StatusCode CreateTracksFromMCParticle(CyberDataCol& m_DataCol, 
                                           DataHandle<edm4hep::MCParticleCollection>& r_MCParticleCol);

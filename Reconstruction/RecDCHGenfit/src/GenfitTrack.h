@@ -35,6 +35,18 @@
 #include "DataHelper/HelixClass.h"
 #include "WireMeasurementDC.h"
 #include "PlanarMeasurementSDT.h"
+#include "edm4hep/EDM4hepVersion.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHitSimTrackerHitLinkCollection.h"
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHit3DCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::TrackerHitSimTrackerHitLinkCollection;
+#else
+#include "edm4hep/TrackerHitCollection.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
+using CEPCSWTrackerHit3DCollection = edm4hep::TrackerHitCollection;
+using CEPCSWTrackerHitSimTrackerHitLinkCollection = edm4hep::MCRecoTrackerAssociationCollection;
+#endif
 
 class TLorentzVector;
 class IGeomSvc;
@@ -53,7 +65,6 @@ namespace edm4hep{
     class SimTrackerHitCollection;
     class ReconstructedParticle;
     class MutableReconstructedParticle;
-    class MCRecoTrackerAssociationCollection;
     class Track;
     class MutableTrack;
     class TrackCollection;
@@ -61,7 +72,6 @@ namespace edm4hep{
     class SimTrackerHit;
     class Vector3d;
     class Vector3f;
-    class TrackerHitCollection;
     class MCParticleCollection;
 }
 namespace dd4hep {
@@ -108,20 +118,20 @@ class GenfitTrack {
 
     ///Add drift chamber space points from edm4hep::track
     int addSpacePointsDC(const edm4hep::Track& track,
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
         std::vector<float> sigmaU,std::vector<float> sigmaV);
 
     ///Add WireMeasurements of hits on track
     virtual int addWireMeasurementsOnTrack(edm4hep::Track& track,float sigma,
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             int sortMethod,bool truthAmbig,float skipCorner, float skipNear);
 
     ///Add WireMeasurements of hits on track from hit selection
     virtual int addWireMeasurementsFromList(std::vector<edm4hep::TrackerHit*>& hits,float sigma,
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             int sortMethod,bool truthAmbig,float skipCorner, float skipNear);
 
-    virtual int addWireMeasurementsFromListTrF(const edm4hep::TrackerHitCollection* trkHits,
+    virtual int addWireMeasurementsFromListTrF(const CEPCSWTrackerHit3DCollection* trkHits,
             float sigma,int sortMethod);
 
     //Add salhits
@@ -137,7 +147,7 @@ class GenfitTrack {
     int addSiliconMeasurements(edm4hep::Track& track,
             std::vector<float> sigmaU,std::vector<float> sigmaV);
 
-    bool debugDistance(const edm4hep::TrackerHitCollection* dCDigiCol,
+    bool debugDistance(const CEPCSWTrackerHit3DCollection* dCDigiCol,
             int& nFittedDC,int& nFittedSDT,int& ngenfitHit,
             std::vector<double>& smearDistance,
             std::vector<double>& truthDistance,double driftVelocity);
@@ -155,7 +165,7 @@ class GenfitTrack {
             int& nFittedDC, int& nFittedSDT,int& ngenfitHit,
             std::vector<double>& trackL, std::vector<double>& hitMom,
             std::vector<float>& truthMomEdep,
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             std::vector<double>& driftDis,
             std::vector<double>& FittedDoca,
             std::vector<double>& truthDoca,
@@ -271,8 +281,8 @@ class GenfitTrack {
             TVector3& mom);
     int salvageHits(int PDG,
             const edm4hep::MCParticleCollection* mcParticleCol,
-            const edm4hep::TrackerHitCollection* dCDigiCol,
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHit3DCollection* dCDigiCol,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             double sigma,bool truthAmbig,double skipCorner,double skipNear,
             double extraCut,double extraDocaCut,
             std::vector<double>& docaTrack,std::vector<int>& isNoise,
@@ -297,11 +307,11 @@ class GenfitTrack {
     const dd4hep::rec::ISurface* getISurface(edm4hep::TrackerHit* hit);
     void getSeedCov(TMatrixDSym& cov);
     void getAssoSimTrackerHit(
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             edm4hep::TrackerHit* trackerHit,
             edm4hep::SimTrackerHit& simTrackerHit) const;
     void getAssoSimTrackerHit2(
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             const edm4hep::TrackerHit& trackerHit,
             edm4hep::SimTrackerHit& simTrackerHit) const;
     void getEndPointsOfWire(unsigned long long cellID,TVector3& end0,TVector3& end1)const;
@@ -322,7 +332,7 @@ class GenfitTrack {
             edm4hep::SimTrackerHit* simTrackerHitAsso,
             double sigma,bool truthAmbig,double skipCorner,double skipNear);
     void getSortedTrackerHits(std::vector<edm4hep::TrackerHit*>& hits,
-            const edm4hep::MCRecoTrackerAssociationCollection* assoHits,
+            const CEPCSWTrackerHitSimTrackerHitLinkCollection* assoHits,
             std::vector<edm4hep::TrackerHit*>& sortedDCTrackerHits,
             int sortMethod);
     void getSortedTrackerHitsTrF(std::vector<edm4hep::TrackerHit*> trackerHits,

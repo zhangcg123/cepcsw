@@ -4,8 +4,14 @@
 #include "k4FWCore/DataHandle.h"
 #include "GaudiKernel/Algorithm.h"
 
+#include "edm4hep/EDM4hepVersion.h"
 #include "edm4hep/TrackCollection.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/TrackerHit3DCollection.h"
+#include "edm4hep/TrackerHit.h"
+#else
 #include "edm4hep/TrackerHitCollection.h"
+#endif
 //#include "edm4hep/Track.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "Tracking/ITrackFitterTool.h"
@@ -60,7 +66,11 @@ class TrackSubsetAlg : public Algorithm {
   ToolHandle<ITrackFitterTool> m_fitTool;
   /* Input collection */
   std::vector<DataHandle<edm4hep::TrackCollection>* > _inTrackColHdls;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  std::vector<DataHandle<edm4hep::TrackerHit3DCollection>* > _inTrackerHitColHdls;
+#else
   std::vector<DataHandle<edm4hep::TrackerHitCollection>* > _inTrackerHitColHdls;
+#endif
   /* Output collection */
   DataHandle<edm4hep::TrackCollection> _outColHdl{"SubsetTracks", Gaudi::DataHandle::Writer, this};
   

@@ -21,8 +21,13 @@
 #include <CrystalEcalSvc/ICrystalEcalSvc.h>
 
 #include "k4FWCore/PodioDataSvc.h"
+#include "podio/podioVersion.h"
 #include "podio/CollectionBase.h"
+#if podio_VERSION >= PODIO_VERSION(1, 0, 0)
+#include "podio/ROOTWriter.h"
+#else
 #include "podio/ROOTFrameWriter.h"
+#endif
 
 #include "CyberDataCol.h"
 #include "Tools/MCParticleCreator.h"
@@ -135,11 +140,17 @@ protected:
   
 
   //---Readin collections
-  typedef DataHandle<edm4hep::TrackCollection>                          TrackType; 
-  typedef DataHandle<edm4hep::CalorimeterHitCollection>                 CaloType; 
-  typedef DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>  CaloParticleAssoType; 
-  DataHandle<edm4hep::MCParticleCollection>* r_MCParticleCol; 
-  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection>* r_MCPTrkAssoCol;  
+  typedef DataHandle<edm4hep::TrackCollection>                          TrackType;
+  typedef DataHandle<edm4hep::CalorimeterHitCollection>                 CaloType;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(0, 99, 0)
+  typedef DataHandle<edm4hep::CaloHitMCParticleLinkCollection>          CaloParticleAssoType;
+  using CEPCSWMcRecoTrackParticleAssociationCollection = edm4hep::TrackMCParticleLinkCollection;
+#else
+  typedef DataHandle<edm4hep::MCRecoCaloParticleAssociationCollection>  CaloParticleAssoType;
+  using CEPCSWMcRecoTrackParticleAssociationCollection = edm4hep::MCRecoTrackParticleAssociationCollection;
+#endif
+  DataHandle<edm4hep::MCParticleCollection>* r_MCParticleCol;
+  DataHandle<CEPCSWMcRecoTrackParticleAssociationCollection>* r_MCPTrkAssoCol;
   std::vector<TrackType*> r_TrackCols; 
   //std::vector<CaloType*>  r_ECalHitCols; 
   //std::vector<CaloType*>  r_HCalHitCols; 

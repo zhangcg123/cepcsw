@@ -97,6 +97,9 @@ void Fitter::fitVXD(){
     bool isSuccessful = false; 
     
     if( UTIL::BitSet32( trkHit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
       //Split it up and hits to the MarlinTrk
       std::vector< edm4hep::TrackerHit > rawHits;
       //const LCObjectVec rawObjects = trkHit.getRawHits();
@@ -122,8 +125,8 @@ void Fitter::fitVXD(){
 	  //std::cout << "Cannot addHit " << rawHits[k]->id() << " to MarlinTrk" << std::endl; 
 	}
       }
-    }
-    else { // normal non composite hit
+#endif
+    } else { // normal non composite hit
       if (_marlinTrk->addHit( trkHit ) == 0) {
 	isSuccessful = true;
 	ndof_added += 2;
@@ -177,8 +180,13 @@ void Fitter::fitVXD(){
   /*       Create a TrackStateImpl from the helix values and use it to initalise the fit        */
   /**********************************************************************************************/
   decltype(edm4hep::TrackState::covMatrix) covMatrix;
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  auto covMatrixSize = covMatrix.values.size();
+#else
+  auto covMatrixSize = covMatrix.size();
+#endif
   
-  for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+  for (unsigned icov = 0; icov<covMatrixSize; ++icov) {
     covMatrix[icov] = 0;
   }
   
@@ -298,6 +306,9 @@ void Fitter::fit(){
     bool isSuccessful = false; 
     //std::cout << "Hit " << trkHit->id() << " " << trkHit.getPosition() << std::endl;
     if( UTIL::BitSet32( trkHit.getType() )[ UTIL::ILDTrkHitTypeBit::COMPOSITE_SPACEPOINT ]   ){ //it is a composite spacepoint
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+      throw std::runtime_error("The RAWHIT related interfaces are removed from TrackerHit");
+#else
       //Split it up and hits to the MarlinTrk
       std::vector<edm4hep::TrackerHit> rawHits;
       //const LCObjectVec rawObjects = trkHit.getRawHits();                    
@@ -325,8 +336,8 @@ void Fitter::fit(){
 	  //std::cout << "Cannot addHit " << rawHits[k]->id() << " to MarlinTrk" << std::endl;
 	}
       }
-    }
-    else { // normal non composite hit
+#endif
+    } else { // normal non composite hit
       
       if (_marlinTrk->addHit( trkHit ) == 0) {
 	isSuccessful = true;
@@ -372,7 +383,12 @@ void Fitter::fit(){
   /*       Create a TrackStateImpl from the helix values and use it to initalise the fit        */
   /**********************************************************************************************/
   decltype(edm4hep::TrackState::covMatrix) covMatrix;
-  for (unsigned icov = 0; icov<covMatrix.size(); ++icov) {
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  auto covMatrixSize = covMatrix.values.size();
+#else
+  auto covMatrixSize = covMatrix.size();
+#endif
+  for (unsigned icov = 0; icov<covMatrixSize; ++icov) {
     covMatrix[icov] = 0;
   }
   
