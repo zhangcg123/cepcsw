@@ -66,6 +66,8 @@ static const double highData[6][3][6] = {
 /// Inverse logit transform: y = 1/(1+exp(-x))
 inline double invLogit(double x) { return 1.0 / (1.0 + std::exp(-x)); }
 
+constexpr double kThinGaussianUpperX0 = 0.1;
+
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
 /// Returns up to 6 (weight, mean, var) tuples.
 std::vector<BHComponent> bhMixture6(double x) {
@@ -77,8 +79,9 @@ std::vector<BHComponent> bhMixture6(double x) {
     result[0] = {1.0, 1.0, 0.0};
     return result;
   }
-  if (x < 0.002) {
-    // single Gaussian approximation
+  if (x < kThinGaussianUpperX0) {
+    // CEPC thin-material sanity model: keep the physically reasonable
+    // single-Gaussian approximation through the current split range.
     result.resize(1);
     double c = x / std::log(2);
     result[0].weight = 1.0;
@@ -133,7 +136,7 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
     GsfComponent* child = (i == 0) ? parent : parent->clone();
     child->weight = parent->weight * mixture[i].weight;
 
-    if (i > 0 && child->kaltrack->GetEntriesFast() > 0) {
+    if (child->kaltrack->GetEntriesFast() > 0) {
       auto* lastSite = dynamic_cast<TKalTrackSite*>(
           child->kaltrack->Last());
       if (lastSite) {

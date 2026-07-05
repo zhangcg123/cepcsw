@@ -75,3 +75,26 @@
 - split 后 kappa 更新是否应该用加权平均而非直接替换？
 - 多径迹事件如何处理？
 - KL 归并保留高权重组分而非加权平均，是否引入偏差？
+
+### 发现 6: First BH sanity patch started (2026-07-05)
+- Created branch `gsf-bh-thin-gaussian-20260705` from baseline commit `5871a69`.
+- First development step: bypass the ACTS/ATLAS low-x 6-component parameterization for `tX0 < 0.1` and use the single-Gaussian thin-material formula instead.
+- Also fixed the existing split update bug: `child[0]` reused the parent component but did not update its kappa; now all returned children/components update the last-site kappa.
+- Expected immediate behavior: for `tX0≈0.01`, retained momentum should be about 0.99 instead of producing children near `pT≈0.01 GeV`.
+- Next validation: rebuild and run `run_gsf_test.py`, then compare verbose dump and pT summary.
+
+
+### 发现 7: Thin-Gaussian sanity patch result (2026-07-05)
+- Build succeeded with `./quick_build.sh`.
+- 5-event smoke test succeeded: `./run.sh Reconstruction/RecGsfTracking/options/run_gsf_test.py`.
+- Positive result: BH split is now physically sane at `tX0≈0.01`; examples changed from children near `pT≈0.01 GeV` to `pT≈0.99 GeV`:
+  - event 1 split: parent `pT≈1.000` → child `pT≈0.990`, second split `0.990` → `0.980`
+  - event 2 split: parent `pT≈0.997` → child `pT≈0.987`
+- Negative result: forcing a single deterministic thin-Gaussian energy-loss component worsens chi2 for normal tracks:
+  - event 1 GSF chi2/ndf changed from baseline `448.9/454` to `545.0/454`
+  - event 2 changed from `414.9/454` to `517.1/454`
+  - event 5 changed from `452.5/452` to `556.3/452`
+- pT summary from `plot_pt_resolution.py gsf_test.root`:
+  - LCIO mean/RMS = `-3.3899% / 6.6364%`
+  - GSF mean/RMS = `-3.3184% / 6.6739%`
+- Interpretation: bypassing the broken low-x ACTS/ATLAS mixture fixes the unphysical split scale, but a one-component forced-loss model is too rigid. The next model should keep a no-loss/small-loss competition, or add process-noise/covariance treatment, instead of replacing the state with a single shifted kappa.

@@ -112,3 +112,53 @@ These are secondary until the BH split creates useful hypotheses.
 ## Notes
 
 This plan is consistent with `gsf-bethe-heitler-model.md`, `DEVELOPMENT.md`, and the latest verbose test output. The priority is to fix the energy-loss model first because current GSF performance is limited by the split model collapsing, not by the absence of more seed tuning.
+
+## Experiment Log
+
+### 2026-07-05: Thin-Gaussian Sanity Patch
+
+Branch: `gsf-bh-thin-gaussian-20260705`
+
+Changes started:
+
+- Use the single-Gaussian thin-material approximation for `x < 0.1` in `BetheHeitlerSplitter.cpp`.
+- Update kappa for every returned split component, including `child[0]` which reuses the parent object.
+
+Reason:
+
+- The previous low-x 6-component parameterization produced near-zero retained momentum at `tX0 ~= 0.01`.
+- The previous implementation also failed to apply the computed `newKappa` to `child[0]`, so a single-component thin-Gaussian branch would otherwise have no effect.
+
+Validation to run:
+
+```bash
+source setup.sh
+./quick_build.sh
+./run.sh Reconstruction/RecGsfTracking/options/run_gsf_test.py
+python3 Reconstruction/RecGsfTracking/scripts/plot_pt_resolution.py gsf_test.root
+```
+
+
+### 2026-07-05: Thin-Gaussian Smoke-Test Result
+
+Validation completed:
+
+```bash
+./quick_build.sh
+./run.sh Reconstruction/RecGsfTracking/options/run_gsf_test.py
+python3 Reconstruction/RecGsfTracking/scripts/plot_pt_resolution.py gsf_test.root
+```
+
+Result summary:
+
+- Build: success.
+- Run: success, 5 events processed.
+- BH scale: fixed. At `tX0 ~= 0.01`, split components now retain about 99% momentum instead of collapsing to about 1% momentum.
+- Performance: not improved yet. Chi2 worsens for normal tracks because the model is now a single forced energy-loss branch, not a mixture of competing hypotheses.
+- pT summary:
+  - LCIO `(rec-gen)/gen`: mean `-3.3899%`, RMS `6.6364%`
+  - GSF `(rec-gen)/gen`: mean `-3.3184%`, RMS `6.6739%`
+
+Conclusion:
+
+The first patch validates the core diagnosis: the previous BH scale was wrong for CEPC thin material. However, the one-component replacement is not sufficient as a tracking model. The next step should introduce a small CEPC-oriented mixture, for example a dominant no/small-loss component plus one or more moderate-loss tail components, rather than forcing every split to shift kappa by the mean loss.
