@@ -7,11 +7,12 @@ theta=$4
 seed=$5
 nevt=$6
 
-cd /cefs/higgs/zhangcg/cepc/28Jun2026/CEPCSW/
+WORKDIR=${CEPCSW_GSFDEV_DIR:-/aifs/user/data/zhangcg/gsfdev/CEPCSW}
+cd "${WORKDIR}"
 
 source setup.sh
 
-jobpath=/cefs/higgs/zhangcg/cepc/28Jun2026/CEPCSW/DumpGsfTrks/
+jobpath=${WORKDIR}/DumpGsfTrks/
 
 momenta_low=${momenta_trn}
 momenta_hig=${momenta_mag}
