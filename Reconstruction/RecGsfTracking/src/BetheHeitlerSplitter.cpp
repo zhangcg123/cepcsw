@@ -4,6 +4,7 @@
 #include "kaltest/TKalTrackState.h"
 #include "kaltest/TKalTrackSite.h"
 
+#include <algorithm>
 #include <cmath>
 
 /// The ACTS AtlasBetheHeitlerApprox<6,5> data, reproduced here to avoid
@@ -80,13 +81,18 @@ std::vector<BHComponent> bhMixture6(double x) {
     return result;
   }
   if (x < kThinGaussianUpperX0) {
-    // CEPC thin-material sanity model: keep the physically reasonable
-    // single-Gaussian approximation through the current split range.
-    result.resize(1);
-    double c = x / std::log(2);
-    result[0].weight = 1.0;
-    result[0].mean   = std::pow(2.0, -c);
-    result[0].var    = std::pow(3.0, -c) - std::pow(4.0, -c);
+    // CEPC thin-material toy mixture. Keep a dominant no-loss branch so
+    // normal tracks are not forced to lose energy, plus one moderate-loss
+    // tail branch. The weighted mean is constrained to exp(-x), matching
+    // the thin-material Bethe-Heitler expectation E[p/p0].
+    result.resize(2);
+    double expectedMean = std::exp(-x);
+    double tailWeight = std::min(0.20, std::max(0.02, 10.0 * x));
+    double tailMean = (expectedMean - (1.0 - tailWeight)) / tailWeight;
+    tailMean = std::min(0.999, std::max(0.50, tailMean));
+
+    result[0] = {1.0 - tailWeight, 1.0, 0.0};
+    result[1] = {tailWeight, tailMean, x * x};
     return result;
   }
 

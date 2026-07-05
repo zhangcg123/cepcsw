@@ -162,3 +162,42 @@ Result summary:
 Conclusion:
 
 The first patch validates the core diagnosis: the previous BH scale was wrong for CEPC thin material. However, the one-component replacement is not sufficient as a tracking model. The next step should introduce a small CEPC-oriented mixture, for example a dominant no/small-loss component plus one or more moderate-loss tail components, rather than forcing every split to shift kappa by the mean loss.
+
+### 2026-07-05: Two-Component CEPC Toy Mixture Started
+
+Branch: `gsf-bh-cepc-two-component-20260705`
+
+Change:
+
+- Replace the forced one-component thin-Gaussian model with a two-component toy mixture for `x < 0.1`.
+- Component 0: dominant no-loss branch, `mean = 1.0`.
+- Component 1: moderate-loss tail branch, with weight/mean chosen so the mixture expectation remains approximately `exp(-x)`.
+
+Reason:
+
+The one-component model fixed the energy-loss scale but degraded chi2 because it forced every track to lose momentum. A useful GSF needs competing hypotheses; this toy mixture is the smallest test of that idea.
+
+
+### 2026-07-05: Two-Component CEPC Toy Mixture Result
+
+Validation completed:
+
+```bash
+./quick_build.sh
+./run.sh Reconstruction/RecGsfTracking/options/run_gsf_test.py
+python3 Reconstruction/RecGsfTracking/scripts/plot_pt_resolution.py gsf_test.root
+```
+
+Result summary:
+
+- Build: success.
+- Run: success, 5 events processed.
+- BH hypotheses: physically plausible. At `tX0 ~= 0.01`, the model creates a no-loss branch around `pT ~= 1.0 GeV` and a moderate-loss branch around `pT ~= 0.9 GeV`, rather than pathological `pT ~= 0.01 GeV` branches.
+- Chi2: returns to baseline-like behavior; the no-loss branch remains available and is usually selected.
+- pT summary:
+  - LCIO `(rec-gen)/gen`: mean `-3.3899%`, RMS `6.6364%`
+  - GSF `(rec-gen)/gen`: mean `-3.4015%`, RMS `6.6325%`
+
+Conclusion:
+
+This is a better sanity baseline than the one-component model: it fixes the scale and avoids forcing every track to lose energy. It still does not improve tracking performance in the current small smoke test because the selected component remains no-loss for normal events. The next step should use truth energy-loss information or bad/high-bremsstrahlung events to tune the tail component(s).

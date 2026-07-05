@@ -98,3 +98,26 @@
   - LCIO mean/RMS = `-3.3899% / 6.6364%`
   - GSF mean/RMS = `-3.3184% / 6.6739%`
 - Interpretation: bypassing the broken low-x ACTS/ATLAS mixture fixes the unphysical split scale, but a one-component forced-loss model is too rigid. The next model should keep a no-loss/small-loss competition, or add process-noise/covariance treatment, instead of replacing the state with a single shifted kappa.
+
+### 发现 8: Two-component CEPC toy mixture started (2026-07-05)
+- Created branch `gsf-bh-cepc-two-component-20260705` from commit `7965974`.
+- Replaced the forced single-component thin-Gaussian branch with a two-component CEPC toy mixture for `tX0 < 0.1`:
+  - dominant no-loss branch: `mean=1.0`
+  - moderate-loss tail branch: weighted so total `E[p/p0]≈exp(-tX0)`
+- Motivation: the single-component patch fixed the unphysical BH scale but worsened chi2 because every split forced energy loss. This test lets the filter choose between no-loss and moderate-loss hypotheses.
+
+
+### 发现 9: Two-component CEPC toy mixture result (2026-07-05)
+- Build succeeded with `./quick_build.sh`.
+- 5-event smoke test succeeded.
+- Positive result: the model now creates physically plausible competing hypotheses:
+  - at `tX0≈0.01`, child[0] keeps `pT≈1.000`, child[1] gives moderate tail `pT≈0.900`
+  - components survive the next hit instead of being immediately killed as unphysical
+- Positive result versus the one-component patch: chi2 returned to the baseline level because the no-loss branch remains available:
+  - event 1 GSF chi2/ndf `448.9/454`
+  - event 2 GSF chi2/ndf `414.9/454`
+  - event 5 GSF chi2/ndf `452.5/452`
+- pT summary from `plot_pt_resolution.py gsf_test.root`:
+  - LCIO mean/RMS = `-3.3899% / 6.6364%`
+  - GSF mean/RMS = `-3.4015% / 6.6325%`
+- Interpretation: this is a safer BH model than the single forced-loss patch, but still not a performance improvement. The fitter almost always selects the no-loss branch in the current 1 GeV/85deg smoke test. Next useful tests should target samples/events with real hard bremsstrahlung or tune the tail weights/means with truth energy-loss information.
