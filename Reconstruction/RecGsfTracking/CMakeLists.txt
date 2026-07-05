@@ -42,3 +42,23 @@ install(TARGETS RecGsfFlatTuple
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
   COMPONENT dev)
+
+
+gaudi_add_module(RecGsfSimHitTuple
+                 SOURCES
+                        src/GsfSimHitTuple.cpp
+                 LINK Gaudi::GaudiKernel
+                      k4FWCore::k4FWCore
+                      EDM4HEP::edm4hep EDM4HEP::edm4hepDict
+                      ${ROOT_LIBRARIES}
+)
+
+target_include_directories(RecGsfSimHitTuple PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/src
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+install(TARGETS RecGsfSimHitTuple
+  EXPORT CEPCSWTargets
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
+  COMPONENT dev)

@@ -185,3 +185,47 @@ A CEPC BH model is useful only if:
 ## Current Recommendation
 
 Do not keep tuning the hand-made toy mixture blindly. First determine whether existing simulation files contain enough truth information. If not, add a dedicated Geant4 step/momentum recorder for primary electrons in tracker material.
+
+## Experiment Log
+
+### 2026-07-05: RecGsfSimHitTuple Added
+
+Branch: `gsf-simhit-energy-loss-tuple-20260705`
+
+Implementation:
+
+- Added `RecGsfSimHitTuple` under `Reconstruction/RecGsfTracking/src/`.
+- Added `RecGsfSimHitTuple` to `Reconstruction/RecGsfTracking/CMakeLists.txt`.
+- Added test option `options/run_gsf_simhit_tuple_test.py`.
+- Added summary script `scripts/analyze_simhit_energy_loss.py`.
+
+What it saves:
+
+- Event-level primary MCParticle start/end momentum.
+- Vector branches for all selected `SimTrackerHit` truth hits:
+  - detector collection index and local hit index
+  - MCParticle link index/collection and PDG
+  - cellID, quality, position, radius, time
+  - EDep and path length
+  - momentum at hit position and retained momentum relative to primary
+
+Validation:
+
+```bash
+./quick_build.sh
+./run.sh Reconstruction/RecGsfTracking/options/run_gsf_simhit_tuple_test.py
+python3 Reconstruction/RecGsfTracking/scripts/analyze_simhit_energy_loss.py gsf_simhit_tuple_test.root
+```
+
+Result:
+
+- Build succeeded.
+- The test produced `gsf_simhit_tuple_test.root` with 5 entries.
+- Each event contains primary-electron sim-hit momentum evolution through tracker collections.
+- First retained-momentum summary for `trk-e--1.0-85-1.root`:
+  - last-hit retained p/p_primary: `0.90943 0.99465 0.99651 0.01621 0.99470`
+  - global hit retained quantiles 0/1/5/10/50/90/99/100%: `0.00002 0.00223 0.83404 0.83420 0.99607 0.99792 0.99976 0.99988`
+
+Caveat:
+
+`SimTrackerHit::getMomentum()` gives momentum at the hit position. It is not a full Geant4 pre/post-step pair. This is enough for a first radius/layer momentum-loss study, but a dedicated stepping action may still be needed for exact material-by-material loss.

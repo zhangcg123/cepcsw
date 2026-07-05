@@ -127,3 +127,21 @@
 - Next planned step is to inspect existing `sim/trk/gsf/gsf_flat` ROOT files for pre/post material momentum information.
 - If existing outputs are insufficient, add a lightweight Geant4 truth recorder for primary electron steps in tracker volumes.
 - New plan recorded in `agent_record/plans/2026-07-05-measure-cepc-electron-energy-loss.md`.
+
+### 发现 11: Added RecGsfSimHitTuple for simulation-hit energy-loss diagnostics (2026-07-05)
+- User clarified that existing flat tuples do not contain the needed simulation information.
+- Added a new module under `Reconstruction/RecGsfTracking`: `RecGsfSimHitTuple`.
+- It reads configurable EDM4hep `SimTrackerHitCollection`s and writes `simhit_tuple` to ROOT with:
+  - primary MCParticle production/end momentum and retained fraction where available
+  - per-sim-hit position, radius, time, EDep, path length, quality, cellID
+  - per-sim-hit truth momentum at hit position: `hit_px/py/pz`, `hit_p`, `hit_pT`
+  - MCParticle link IDs and PDG
+  - retained momentum relative to primary: `hit_retained_vs_primary = hit_p / mc_p`
+- Added test option: `Reconstruction/RecGsfTracking/options/run_gsf_simhit_tuple_test.py`.
+- Added analysis script: `Reconstruction/RecGsfTracking/scripts/analyze_simhit_energy_loss.py`.
+- Build succeeded; test ran over 5 events and produced `gsf_simhit_tuple_test.root`.
+- First diagnostic result for `trk-e--1.0-85-1.root`:
+  - 5 entries, 233-244 primary electron sim hits per event
+  - last-hit retained p/p_primary: `0.90943 0.99465 0.99651 0.01621 0.99470`
+  - global hit retained quantiles 0/1/5/10/50/90/99/100%: `0.00002 0.00223 0.83404 0.83420 0.99607 0.99792 0.99976 0.99988`
+- Important caveat: `SimTrackerHit::getMomentum()` is momentum at the hit position, not a full Geant4 pre/post-step pair. This is still useful for layer/radius momentum evolution, but true per-step loss may need a deeper Geant4 stepping recorder later.
