@@ -6,3 +6,13 @@ spack*
 
 InstallArea/
 venv
+
+# GSF generated outputs
+*.root
+gsf_test_*.png
+outlog/
+*.bak
+
+# Local editor/agent settings
+.vscode/
+.claude/

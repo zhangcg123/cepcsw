@@ -1,0 +1,77 @@
+# GSF Tracking Development Log
+
+## 当前状态
+- 回滚到 2026-06-28 之前：**无 3-hit 预拟合、无 q/p 扫描、kappaCov=1e-7**
+- 测试通过（5 events, 1.0 GeV e- @ 85°），输出正常
+- Verbose dump 已增强：BH split 时显示 parent/child kappa + 下一 hit 的预测 vs 测量
+
+## 测试结果 (Baseline, 2026-07-05)
+### 1.0 GeV e- @ 85°, 5 events
+- GSF pT 与 LCIO pT 差异 < 0.15%，几乎完全一致
+- Event 2: LCIO pT=0.83（truth=1.0），GSF 继承了错误
+- BH 分裂在部分事件触发（splits=1-2），但 6 组分最终坍缩为 1
+
+### 0.5 GeV e- @ 85°, 5 events
+- 8 条径迹中 3 条 LCIO pT 偏差 > 12%，GSF 忠实复制错误
+- 极端：event 1 trk 1: GSF d0 从 0.0001 跳到 -139.9 mm（径迹爆炸）
+- 唯一改善：event 4 χ²/ndf 从 268/196 降到 190/190（拟合更平滑，但 pT 未变）
+
+## 关键发现（按时间顺序，每次在前次基础上追加）
+
+### 发现 1: Seed Curvature 问题 (2026-07-05)
+- GSF 用 LCIO 的 omega 直接转换 kappaSeed，初始协方差 `kappaCov=1e-7`（极紧）
+- KF 高度信任种子值，forward filter 无法纠正错误的 curvature
+- 改善方向：增大 kappaCov、3-hit 预拟合
+
+### 发现 2: 放宽 KappaSeedCov 无效 (2026-07-05)
+- 即使 KappaSeedCov=1e-4，GSF pT 与 LCIO pT 差异仍 < 0.15%
+- KF 的 forward filter 用 hit 测量约束的是局部几何，不是绝对动量标度
+- 单独放宽协方差无法改善 pT
+
+### 发现 3: 3-hit 预拟合也无改善（用户确认）
+- 即使改用外半层 hit 的几何关系重算 curvature seed，也无法改善 pT 精度
+- 说明问题不在 seed 上
+
+### 发现 4: BH 分裂产生的子组分全部被数据否决 (2026-07-05)
+- Verbose dump 显示：BH split 产生 5 个极端能量损失子组分（pT≈10 MeV，99% 能量损失）
+- 下一个 hit（仅 5mm 外）立即以 Δχ²≈30 拒绝，权重归零
+- 只有 child[0]（无能量损失，kappa 不变）存活
+- **GSF 等价于没做分裂**
+
+### 发现 5: BH 参数化在低 tX0 区域完全失败 (2026-07-05)
+- 深入分析 BH 多项式参数化：在 tX0=0.01 时，6 组分 mean 值 = {0.289, 0.001, 0.010, 0.008, 0.007, 0.009}
+- 物理预期：轫致辐射 ΔE/E ≈ tX0 = 1%；BH 模型给出 71-99.9%
+- **在 tX0=0.002 处存在严重不连续**：单高斯 mean=0.998（0.2% 损失）→ 6 组分 mean=0.001-0.276（72-99.9% 损失），跳跃 400 倍
+- 根因：BH 参数化为 ATLAS 设计（单层 tX0~0.1），CEPC tracker 材料很薄（单层 tX0~1e-4 到 3e-3），累计到 0.01 仍处于 low-x 区，invLogit 多项式在此范围外推产生了极端值
+
+## 根因分析演进
+- 初疑：seed covariance 太紧 → 验证后发现无效
+- 再疑：seed curvature 初始值不对 → 3-hit 预拟合也无效
+- 终疑：**BH 参数化在低 tX0 区域完全失败**——6 组分 mean 值比物理预期大 70-100 倍
+- 当前方向：BH 参数化根本不适合 CEPC tracker 的薄材料场景，需要改用单高斯近似或重新参数化
+
+## 总体目标
+- [ ] GSF pT 分辨率显著优于 LCIO baseline（尤其在低 pT 和电子场景）
+- [ ] 降低 BAD track 比例（当前 ~8.5% @ 2GeV/85°）
+- [ ] 代码合入主分支（commit + PR）
+- [ ] 扩展到多径迹物理事件
+
+## 已完成
+- 2026-06-28: 实现 3-hit 解析预拟合（外半层取点）和 q/p 多轮扫描
+- 2026-07-05: 建立 agent_record 知识库（10 个 RAG + 本日志 + plans/）
+- 2026-07-05: 回滚 3-hit 预拟合和 q/p 扫描，恢复原始基线
+- 2026-07-05: KappaSeedCov 改为可配置属性（默认 1e-7），测试 1e-4 效果有限
+- 2026-07-05: Verbose dump 增加 BH split 诊断（parent/child kappa、Post-split 预测 vs 测量）
+- 2026-07-05: 发现 BH 子组分全部被数据否决——GSF 等价于没做分裂
+
+## 下一步
+- [ ] 验证 BH 参数化：检查 tX0=0.01 时的 6 组分多项式输出是否合理
+- [ ] 检查 split() 中 kappa 更新方式：`newKappa = parentKappa / fracMomentum` 是否正确
+- [ ] 考虑降低 BHSplitThreshold 或调整 split 策略
+- [ ] 【远期】从 Geant4 模拟生成 CEPC 专用的 BH 参数化：单电子穿过 tracker 各层材料，记录实际能量损失分布，EM 算法拟合高斯混合，替代现有 ACTS 数据
+
+## 待解决问题
+- BH 参数化是否适用于 CEPC tracker 材料（tX0 范围、材料成分）？
+- split 后 kappa 更新是否应该用加权平均而非直接替换？
+- 多径迹事件如何处理？
+- KL 归并保留高权重组分而非加权平均，是否引入偏差？
