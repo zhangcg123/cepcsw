@@ -16,3 +16,4 @@
 ## Plans
 - [2026-07-05 Rollback Prefit & QP Refinement](plans/2026-07-05-rollback-prefit-qpref.md) — 回滚 3-hit 预拟合和多轮 q/p 扫描
 - [2026-07-05 Optimize BH for CEPC](plans/2026-07-05-optimize-bh-for-cepc.md) — Plan to bypass/fix the broken low-x Bethe-Heitler parameterization for CEPC thin tracker material
+- [2026-07-05 Measure CEPC Electron Energy Loss](plans/2026-07-05-measure-cepc-electron-energy-loss.md) — Plan to extract Geant4 truth energy-loss distributions for fitting a CEPC-specific BH mixture

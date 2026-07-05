@@ -121,3 +121,9 @@
   - LCIO mean/RMS = `-3.3899% / 6.6364%`
   - GSF mean/RMS = `-3.4015% / 6.6325%`
 - Interpretation: this is a safer BH model than the single forced-loss patch, but still not a performance improvement. The fitter almost always selects the no-loss branch in the current 1 GeV/85deg smoke test. Next useful tests should target samples/events with real hard bremsstrahlung or tune the tail weights/means with truth energy-loss information.
+
+### 发现 10: Need simulation truth for CEPC BH model (2026-07-05)
+- Current BH tuning is limited by lack of direct CEPC electron energy-loss truth.
+- Next planned step is to inspect existing `sim/trk/gsf/gsf_flat` ROOT files for pre/post material momentum information.
+- If existing outputs are insufficient, add a lightweight Geant4 truth recorder for primary electron steps in tracker volumes.
+- New plan recorded in `agent_record/plans/2026-07-05-measure-cepc-electron-energy-loss.md`.
