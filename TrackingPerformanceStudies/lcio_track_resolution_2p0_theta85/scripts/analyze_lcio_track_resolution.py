@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import json
 import math
 from pathlib import Path
 
@@ -52,6 +53,11 @@ PARAMS = [
 ]
 
 COLORS = {'electron': 'black', 'muon': '#0072B2'}
+EBREM_COLORS = {
+    'no_tracker_ebrem': 'black',
+    'light_tracker_ebrem': '#0072B2',
+    'hard_tracker_ebrem': '#00BFC4',
+}
 
 
 def delta_phi(a, b):
@@ -70,8 +76,13 @@ def charge_from_pdg(pdg):
     return 0.0
 
 
-def as_event_list(x):
-    return x
+def load_ebrem_categories(path):
+    path = Path(path)
+    if not path.exists():
+        return {}, None
+    payload = json.loads(path.read_text())
+    mapping = {(int(e['file_index']), int(e['entry_index'])): e for e in payload.get('events', [])}
+    return mapping, payload
 
 
 def choose_track(arr, ev):
@@ -106,7 +117,7 @@ def ip_state_index(arr, ev, track_index):
     return b if e > b else None
 
 
-def analyze_sample(label, pattern):
+def analyze_sample(label, pattern, ebrem_categories=None):
     rows = []
     files = [pattern.format(i=i) for i in range(1, 11)]
     for file_index, path in enumerate(files, start=1):
@@ -146,7 +157,7 @@ def analyze_sample(label, pattern):
             ndf = int(arr['CompleteTracks/CompleteTracks.ndf'][ev][trk])
             pt_rec = abs(OMEGA_FACTOR / omega) if omega != 0 else float('nan')
 
-            rows.append({
+            row = {
                 'sample': label,
                 'file_index': file_index,
                 'event': ev,
@@ -165,7 +176,29 @@ def analyze_sample(label, pattern):
                 'chi2': chi2,
                 'ndf': ndf,
                 'chi2_ndf': chi2 / ndf if ndf > 0 else float('nan'),
-            })
+                'ebrem_category': '',
+                'tracker_ebrem_category': '',
+                'primary_ebrem_count': '',
+                'primary_tracker_ebrem_count': '',
+                'max_single_frac_loss': '',
+                'max_tracker_single_frac_loss': '',
+                'cumulative_frac_loss': '',
+                'tracker_cumulative_frac_loss': '',
+            }
+            if ebrem_categories is not None:
+                eb = ebrem_categories.get((file_index, ev))
+                if eb is not None:
+                    row.update({
+                        'ebrem_category': eb.get('category', ''),
+                        'tracker_ebrem_category': eb.get('tracker_category', ''),
+                        'primary_ebrem_count': eb.get('primary_ebrem_count', ''),
+                        'primary_tracker_ebrem_count': eb.get('primary_tracker_ebrem_count', ''),
+                        'max_single_frac_loss': eb.get('max_single_frac_loss', ''),
+                        'max_tracker_single_frac_loss': eb.get('max_tracker_single_frac_loss', ''),
+                        'cumulative_frac_loss': eb.get('cumulative_frac_loss', ''),
+                        'tracker_cumulative_frac_loss': eb.get('tracker_cumulative_frac_loss', ''),
+                    })
+            rows.append(row)
     return rows
 
 
@@ -183,6 +216,28 @@ def stats(values):
         'q84': float(np.quantile(a, 0.84)),
         'rms': float(math.sqrt(np.mean(a * a))),
     }
+
+
+def plot_electron_ebrem_categories(electron_rows, key, xlabel, xlim, outdir):
+    groups = ['no_tracker_ebrem', 'light_tracker_ebrem', 'hard_tracker_ebrem']
+    fig, ax = plt.subplots(figsize=(8.5, 6.0))
+    bins = np.linspace(xlim[0], xlim[1], 90)
+    for group in groups:
+        vals = np.asarray([r[key] for r in electron_rows if r.get('tracker_ebrem_category') == group], dtype=float)
+        vals = vals[np.isfinite(vals)]
+        if len(vals) == 0:
+            continue
+        ax.hist(vals, bins=bins, histtype='step', density=True, linewidth=2.0,
+                color=EBREM_COLORS[group], label=f'{group} (N={len(vals)})')
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('normalized electron tracks')
+    ax.set_xlim(*xlim)
+    ax.grid(True, alpha=0.25)
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    fig.savefig(outdir / f'electron_tracker_ebrem_{key}_resolution_comparison.png', dpi=160)
+    fig.savefig(outdir / f'electron_tracker_ebrem_{key}_resolution_comparison.pdf')
+    plt.close(fig)
 
 
 def plot_param(rows_by_sample, key, xlabel, xlim, outdir):
@@ -207,6 +262,7 @@ def plot_param(rows_by_sample, key, xlabel, xlim, outdir):
 def main():
     parser = argparse.ArgumentParser(description='Compare LCIO CompleteTracks IP-state resolutions for 2 GeV theta=85 electron and muon samples.')
     parser.add_argument('--outdir', default='TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85')
+    parser.add_argument('--ebrem-json', default='TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/electron_ebrem_event_categories.json')
     args = parser.parse_args()
 
     outdir = Path(args.outdir)
@@ -214,8 +270,9 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     plotdir.mkdir(parents=True, exist_ok=True)
 
+    ebrem_categories, ebrem_payload = load_ebrem_categories(args.ebrem_json)
     rows_by_sample = {
-        'electron': analyze_sample('electron', 'trk-e--2.0-85-{i}.root'),
+        'electron': analyze_sample('electron', 'trk-e--2.0-85-{i}.root', ebrem_categories),
         'muon': analyze_sample('muon', 'trk-mu--2.0-85-{i}.root'),
     }
     all_rows = rows_by_sample['electron'] + rows_by_sample['muon']
@@ -230,10 +287,21 @@ def main():
         for key, _, _ in PARAMS + [('chi2_ndf', 'chi2/ndf', (0, 3))]:
             st = stats([r[key] for r in rows])
             summary_rows.append({'sample': label, 'quantity': key, **st})
+    category_summary_rows = []
+    electron_rows = rows_by_sample['electron']
+    for group in ['no_tracker_ebrem', 'light_tracker_ebrem', 'hard_tracker_ebrem']:
+        group_rows = [r for r in electron_rows if r.get('tracker_ebrem_category') == group]
+        for key, _, _ in PARAMS + [('chi2_ndf', 'chi2/ndf', (0, 3))]:
+            st = stats([r[key] for r in group_rows])
+            category_summary_rows.append({'sample': 'electron', 'tracker_ebrem_category': group, 'quantity': key, **st})
     with open(outdir / 'track_resolution_summary.csv', 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=list(summary_rows[0].keys()))
         writer.writeheader()
         writer.writerows(summary_rows)
+    with open(outdir / 'track_resolution_by_tracker_ebrem_summary.csv', 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=list(category_summary_rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(category_summary_rows)
 
     tail_rows = []
     for label, rows in rows_by_sample.items():
@@ -261,16 +329,27 @@ def main():
         f.write('Track: CompleteTracks, matched to primary MCParticle through CompleteTracksParticleAssociation when possible.\n')
         f.write('State: LCIO TrackState with location == 1, reference point at IP.\n')
         f.write(f'Assumed magnetic field for omega/pT conversion: {B_FIELD_T:.1f} T.\n')
-        f.write('Truth: MCParticleGen[0], generated particle momentum. D0 and Z0 truth are taken as 0 for particle-gun IP samples.\n\n')
+        f.write('Truth: MCParticleGen[0], generated particle momentum. D0 and Z0 truth are taken as 0 for particle-gun IP samples.\n')
+        if ebrem_payload:
+            f.write(f"Electron eBrem JSON: {args.ebrem_json}\n")
+            f.write(f"All-material primary eBrem event counts: {ebrem_payload.get('counts', {})}\n")
+            f.write(f"Tracker primary eBrem event counts: {ebrem_payload.get('tracker_counts', {})}\n")
+        f.write('\n')
         for row in summary_rows:
             f.write(f"{row['sample']:8s} {row['quantity']:14s} count {row['count']:4d} mean {row['mean']:.8g} std {row['std']:.8g} median {row['median']:.8g} q16 {row['q16']:.8g} q84 {row['q84']:.8g} rms {row['rms']:.8g}\n")
+        f.write('\nElectron resolution split by tracker eBrem category.\n')
+        for row in category_summary_rows:
+            f.write(f"{row['tracker_ebrem_category']:20s} {row['quantity']:14s} count {row['count']:4d} mean {row['mean']:.8g} std {row['std']:.8g} median {row['median']:.8g} q16 {row['q16']:.8g} q84 {row['q84']:.8g} rms {row['rms']:.8g}\n")
+
         f.write('\nTail fractions use absolute residual thresholds.\n')
         for row in tail_rows:
             f.write(f"{row['sample']:8s} {row['quantity']:14s} |x| > {row['abs_threshold']:<8g} count {row['count']:4d} fraction {row['fraction']:.6f}\n")
 
     for key, xlabel, xlim in PARAMS:
         plot_param(rows_by_sample, key, xlabel, xlim, plotdir)
+        plot_electron_ebrem_categories(rows_by_sample['electron'], key, xlabel, xlim, plotdir)
     plot_param(rows_by_sample, 'chi2_ndf', 'chi2/ndf', (0.0, 2.5), plotdir)
+    plot_electron_ebrem_categories(rows_by_sample['electron'], 'chi2_ndf', 'chi2/ndf', (0.0, 2.5), plotdir)
 
 if __name__ == '__main__':
     main()

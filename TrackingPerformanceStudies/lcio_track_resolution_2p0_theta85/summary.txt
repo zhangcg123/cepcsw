@@ -4,6 +4,9 @@ Track: CompleteTracks, matched to primary MCParticle through CompleteTracksParti
 State: LCIO TrackState with location == 1, reference point at IP.
 Assumed magnetic field for omega/pT conversion: 3.0 T.
 Truth: MCParticleGen[0], generated particle momentum. D0 and Z0 truth are taken as 0 for particle-gun IP samples.
+Electron eBrem JSON: TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/electron_ebrem_event_categories.json
+All-material primary eBrem event counts: {'hard_ebrem': 1000}
+Tracker primary eBrem event counts: {'hard_tracker_ebrem': 174, 'light_tracker_ebrem': 458, 'no_tracker_ebrem': 368}
 
 electron d0_mm          count 1000 mean 4.2244378 std 26.932542 median 0.002701812 q16 -0.0055150773 q84 0.017201908 rms 27.248529
 electron z0_mm          count 1000 mean 0.16113182 std 1.4775127 median 0.00037200932 q16 -0.0075979717 q84 0.0083508361 rms 1.4855384
@@ -19,6 +22,29 @@ muon     tanlambda      count 1000 mean 4.7134116e-06 std 0.00056460389 median -
 muon     omega_rel_pct  count 1000 mean -0.05276391 std 0.17588497 median -0.061462598 q16 -0.18353879 q84 0.06365765 rms 0.18354459
 muon     pt_rel_pct     count 1000 mean 0.053099324 std 0.1749551 median 0.061500398 q16 -0.063617153 q84 0.18387628 rms 0.18275179
 muon     chi2_ndf       count 1000 mean 1.0261782 std 0.12858313 median 1.0100214 q16 0.93668999 q84 1.0992855 rms 1.0341947
+
+Electron resolution split by tracker eBrem category.
+no_tracker_ebrem     d0_mm          count  368 mean 0.00076637842 std 0.0074819402 median 0.00049435896 q16 -0.0061494408 q84 0.0081172395 rms 0.0075109684
+no_tracker_ebrem     z0_mm          count  368 mean -0.00074764274 std 0.0068575615 median -0.0007013084 q16 -0.0078062141 q84 0.005955547 rms 0.0068889281
+no_tracker_ebrem     phi_mrad       count  368 mean -0.067957624 std 0.56421757 median -0.029864599 q16 -0.54163241 q84 0.42965278 rms 0.56753383
+no_tracker_ebrem     tanlambda      count  368 mean 4.1264499e-05 std 0.00047648103 median 1.7849979e-05 q16 -0.00042505778 q84 0.00049770986 rms 0.00047761909
+no_tracker_ebrem     omega_rel_pct  count  368 mean 0.4364931 std 5.0468026 median -0.046068382 q16 -0.149942 q84 0.10884482 rms 5.0588072
+no_tracker_ebrem     pt_rel_pct     count  368 mean -0.28785539 std 2.9762152 median 0.046089615 q16 -0.10872646 q84 0.15016716 rms 2.9860756
+no_tracker_ebrem     chi2_ndf       count  368 mean 1.0294389 std 0.11920599 median 1.0181585 q16 0.9358472 q84 1.092226 rms 1.0362991
+light_tracker_ebrem  d0_mm          count  458 mean 0.10670133 std 2.1199299 median 0.0023348151 q16 -0.0058731207 q84 0.011478479 rms 2.1203008
+light_tracker_ebrem  z0_mm          count  458 mean 0.0058383226 std 0.10691994 median 0.00081172257 q16 -0.0075824611 q84 0.0078264827 rms 0.10696261
+light_tracker_ebrem  phi_mrad       count  458 mean -0.99381905 std 11.517672 median -0.17214292 q16 -0.80517535 q84 0.37537654 rms 11.547935
+light_tracker_ebrem  tanlambda      count  458 mean -4.441735e-05 std 0.00078338299 median -3.7924426e-05 q16 -0.00047220212 q84 0.00046564047 rms 0.00078378688
+light_tracker_ebrem  omega_rel_pct  count  458 mean 6.8922212 std 76.152448 median 0.11151741 q16 -0.095515011 q84 2.8873263 rms 76.380862
+light_tracker_ebrem  pt_rel_pct     count  458 mean -1.8929851 std 7.5858322 median -0.11139318 q16 -2.8062951 q84 0.095606331 rms 7.810416
+light_tracker_ebrem  chi2_ndf       count  458 mean 1.0812606 std 0.22731781 median 1.0162289 q16 0.93959003 q84 1.169135 rms 1.1048462
+hard_tracker_ebrem   d0_mm          count  174 mean 23.9959 std 60.83397 median 0.033612026 q16 0.00053267447 q84 43.29604 rms 65.232709
+hard_tracker_ebrem   z0_mm          count  174 mean 0.91225865 std 3.448013 median 0.0026953248 q16 -0.0069344016 q84 1.2457851 rms 3.5570611
+hard_tracker_ebrem   phi_mrad       count  174 mean -75.517214 std 163.39917 median -2.5720511 q16 -148.88251 q84 -0.034261041 rms 179.57921
+hard_tracker_ebrem   tanlambda      count  174 mean -7.2297444e-05 std 0.0012793193 median 3.2964988e-05 q16 -0.00081514422 q84 0.00072468721 rms 0.0012776849
+hard_tracker_ebrem   omega_rel_pct  count  174 mean 67.031102 std 183.17875 median 14.812758 q16 0.016698988 q84 100.08295 rms 194.56306
+hard_tracker_ebrem   pt_rel_pct     count  174 mean -22.265085 std 24.283265 median -12.901664 q16 -50.020028 q84 -0.016696083 rms 32.894103
+hard_tracker_ebrem   chi2_ndf       count  174 mean 1.7296027 std 1.7741291 median 1.0694897 q16 0.97564334 q84 1.9305481 rms 2.4740595
 
 Tail fractions use absolute residual thresholds.
 electron d0_mm          |x| > 0.1      count   69 fraction 0.069000

@@ -36,6 +36,7 @@ The output rows are stored in `track_resolution_rows.csv`; summary statistics ar
 Run from the CEPCSW top directory:
 
 ```bash
+TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/scripts/build_electron_ebrem_categories.py
 TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/scripts/analyze_lcio_track_resolution.py
 ```
 
@@ -58,6 +59,43 @@ Each plot overlays electron in black and muon in blue, normalized to unit area.
 The pT residual plot is zoomed to `[-2%, 2%]` to show the core resolution; the larger electron tails are quantified separately below.
 
 ![chi2 over ndf](plots/chi2_ndf_resolution_comparison.png)
+
+
+## Electron eBrem Categories
+
+The electron events are also classified with the material-step tuples:
+
+```bash
+TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/scripts/build_electron_ebrem_categories.py
+```
+
+This writes `electron_ebrem_event_categories.json`. The JSON is joined to the tracking rows by `(file_index, entry_index)`, which corresponds to `trk-e--2.0-85-{file_index}.root` and the event entry in that file.
+
+Primary eBrem selection in the material-step tuple:
+
+```text
+track_id == 1 && parent_id == 0 && pdg == 11 && process_subtype == 3
+```
+
+Hard eBrem is defined as either `max_single_frac_loss >= 0.10` or `cumulative_frac_loss >= 0.10`, where `frac_loss = 1 - post_p/pre_p`. All-material primary eBrem is hard for all 1000 electron events at this point, so the useful tracking split is the tracker-volume category:
+
+```text
+no_tracker_ebrem     368
+light_tracker_ebrem  458
+hard_tracker_ebrem   174
+```
+
+The tracking CSV contains these category columns, and `track_resolution_by_tracker_ebrem_summary.csv` stores the category-split resolution summaries.
+
+Electron-only tracker-eBrem split plots:
+
+![electron tracker eBrem D0 split](plots/electron_tracker_ebrem_d0_mm_resolution_comparison.png)
+
+![electron tracker eBrem phi split](plots/electron_tracker_ebrem_phi_mrad_resolution_comparison.png)
+
+![electron tracker eBrem omega split](plots/electron_tracker_ebrem_omega_rel_pct_resolution_comparison.png)
+
+![electron tracker eBrem pT split](plots/electron_tracker_ebrem_pt_rel_pct_resolution_comparison.png)
 
 ## Current Results
 
