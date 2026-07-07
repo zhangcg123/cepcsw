@@ -1,0 +1,8 @@
+Selection: primary muon steps in tracker-named volumes. Loss variable: branch `loss` in GeV.
+Muon files: gsf_material_steps-mu--1.0-85-{1..10}.root. Primary muon: track_id==1 && parent_id==0 && pdg==13.
+Tracker volume name contains VXD/ITK/TPC/OTK/SIT/SET.
+
+muIoni count 21674 nonzero 21631 mean 0.00005209 q50 0.00000250 q90 0.00001466 q99 0.00105227 max 0.03330916
+StepLimiter count 11391 nonzero 11391 mean 0.00000199 q50 0.00000167 q90 0.00000310 q99 0.00000819 max 0.00024030
+Transportation count 617346 nonzero 585137 mean 0.00000671 q50 0.00000060 q90 0.00001180 q99 0.00012541 max 0.00810252
+other count 4 nonzero 0 mean 0.00000000 q50 0.00000000 q90 0.00000000 q99 0.00000000 max 0.00000000

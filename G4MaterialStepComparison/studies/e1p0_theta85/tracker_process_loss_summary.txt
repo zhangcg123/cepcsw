@@ -1,0 +1,8 @@
+Selection: primary electron steps in tracker-named volumes. Loss variable: branch `loss` in GeV.
+Tracker volume name contains VXD/ITK/TPC/OTK/SIT/SET.
+
+eBrem count 1817 nonzero 1817 mean 0.04892010 q50 0.00209175 q90 0.14636195 q99 0.75838900 max 0.99203920
+eIoni count 35628 nonzero 35628 mean 0.00008230 q50 0.00000271 q90 0.00001353 q99 0.00086416 max 0.42022222
+msc count 1310 nonzero 1309 mean 0.00002463 q50 0.00001441 q90 0.00005023 q99 0.00017801 max 0.00052010
+StepLimiter count 35384 nonzero 35384 mean 0.00000338 q50 0.00000228 q90 0.00000367 q99 0.00000757 max 0.00293168
+Transportation count 910035 nonzero 894216 mean 0.00000576 q50 0.00000083 q90 0.00000989 q99 0.00010455 max 0.00367749

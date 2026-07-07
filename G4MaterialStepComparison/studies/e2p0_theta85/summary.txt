@@ -1,0 +1,49 @@
+Input files: gsf_material_steps-e--2.0-85-{1..10}.root
+Tree: g4step_tuple
+eBrem selection: process_subtype == 3
+Primary electron selection: track_id == 1 && parent_id == 0 && pdg == 11
+
+events 1000
+steps 21366816
+all_eBrem_steps 850404
+all_eBrem_same_track_after 848017
+all_eBrem_no_same_track_after 2387
+primary_eBrem_steps 36525
+primary_eBrem_same_track_after 36518
+primary_eBrem_no_same_track_after 7
+primary_eBrem_immediate_same_track 36518
+primary_eBrem_immediate_different_track 7
+
+primary_eBrem_R_mid_mm mean 1807.161226 q01 142.729691 q05 1831.085571 q10 1836.088623 q25 1842.453125 q50 1852.650635 q75 1865.723145 q90 1879.402954 q95 1889.179688 q99 1914.175171
+r100_primary_eBrem_count 160
+r100_midR_q10_q50_q90 70.137825 90.023849 109.999130
+r100_midZ_q10_q50_q90 6.142229 715.889282 849.181702
+r100_absZ_q50_q90 715.889282 849.181702
+r100_step_tX0_mean_q50_q90 0.060810 0.031237 0.173107
+r100_loss_GeV_mean_q50_q90 0.047061 0.003172 0.063934
+r100_hard_loss_gt_1pct 114
+r100_hard_loss_gt_10pct 58
+
+primary_next_same_track_process_counts
+1 38
+eIoni 3218
+eBrem 29058
+msc 474
+Transportation 3686
+StepLimiter 44
+
+r100_material_counts
+stainless_steel 70
+G4_W 45
+CFRP_M55J 26
+CrZrCu18150 16
+Air 3
+
+r100_pre_volume_counts_top40
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_7#7 60
+AV_190!BeamPipe_assembly_0#0!BeamPipe_BeforeCryoW_238#238 45
+AV_191!VXD_assembly_1#1!VXD_ShellLogical_0#0 26
+AV_190!BeamPipe_assembly_0#0!BeamPipe_AntiSolenoid1_232#232 16
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_10#10 6
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_8#8 4
+pWorld 3

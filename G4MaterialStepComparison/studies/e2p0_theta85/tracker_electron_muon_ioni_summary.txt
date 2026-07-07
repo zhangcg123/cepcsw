@@ -1,0 +1,6 @@
+Selection: primary charged particle ionization steps in tracker-named volumes. Loss variable: branch `loss` in GeV.
+electron: gsf_material_steps-e--2.0-85-{1..10}.root, pdg==11, process_subtype==2 (eIoni).
+muon: gsf_material_steps-mu--2.0-85-{1..10}.root, pdg==13, process_subtype==2 (muIoni).
+
+eIoni count 18871 nonzero 18871 mean 0.00005924 q50 0.00000262 q90 0.00001323 q99 0.00104129 max 0.08241606
+muIoni count 16192 nonzero 16183 mean 0.00006383 q50 0.00000238 q90 0.00001359 q99 0.00103476 max 0.07229447

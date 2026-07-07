@@ -1,0 +1,86 @@
+Input files: gsf_material_steps-e--1.0-85-{1..10}.root
+Tree: g4step_tuple
+eBrem selection: process_subtype == 3
+Primary electron selection: track_id == 1 && parent_id == 0 && pdg == 11
+
+events 1000
+steps 15552758
+all_eBrem_steps 386315
+all_eBrem_same_track_after 385330
+all_eBrem_no_same_track_after 985
+primary_eBrem_steps 31991
+primary_eBrem_same_track_after 31988
+primary_eBrem_no_same_track_after 3
+primary_eBrem_immediate_same_track 31988
+primary_eBrem_immediate_different_track 3
+
+primary_eBrem_R_mid_mm mean 1708.335640 q01 46.140854 q05 139.584503 q10 1460.039429 q25 1840.655273 q50 1856.544922 q75 1877.993164 q90 1897.158081 q95 1905.677856 q99 1921.765991
+r100_primary_eBrem_count 1155
+r100_midR_q10_q50_q90 72.125443 102.917435 109.247742
+r100_midZ_q10_q50_q90 688.435974 833.894836 1019.001526
+r100_absZ_q50_q90 833.894836 1019.001526
+r100_step_tX0_mean_q50_q90 0.092813 0.063207 0.223003
+r100_loss_GeV_mean_q50_q90 0.022248 0.003076 0.049455
+r100_hard_loss_gt_1pct 863
+r100_hard_loss_gt_10pct 376
+
+primary_next_same_track_process_counts
+1 14
+eIoni 3471
+eBrem 21919
+msc 454
+Transportation 6043
+StepLimiter 87
+
+r100_material_counts
+G4_W 661
+stainless_steel 260
+LYSO 95
+CrZrCu18150 64
+CFRP_M55J 43
+G4_Al 27
+Air 3
+G4_Ti 1
+Polyimide_ITK 1
+
+r100_pre_volume_counts_top40
+AV_190!BeamPipe_assembly_0#0!BeamPipe_BeforeCryoW_238#238 661
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_6#6 107
+AV_190!BeamPipe_assembly_0#0!BeamPipe_AntiSolenoid1_232#232 64
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_7#7 55
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_8#8 48
+AV_191!VXD_assembly_1#1!VXD_ShellLogical_0#0 43
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_13#13 18
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_11#11 17
+AV_190!BeamPipe_assembly_0#0!BeamPipe_IPCablePipe10_120#120 14
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer7_slice2_903#903 9
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_12#12 9
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer5_slice2_777#777 9
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer2_slice15_743#743 9
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer5_slice12_889#889 8
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer6_slice4_792#792 7
+AV_190!BeamPipe_assembly_0#0!BeamPipe_IPCablePipe8_112#112 7
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer6_slice3_893#893 7
+AV_192!Lumical_assembly_11#11!Lumical_module3_stave0_layer1_slice0_921#921 6
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer7_slice2_801#801 6
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer6_slice8_796#796 5
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer2_slice14_844#844 4
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer1_slice15_828#828 3
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer7_slice7_806#806 3
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer7_slice1_800#800 3
+pWorld 3
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer1_slice0_711#711 3
+AV_190!BeamPipe_assembly_0#0!BeamPipe_IPCablePipe10_121#121 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer6_slice0_788#788 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer7_slice3_904#904 2
+AV_190!BeamPipe_assembly_0#0!BeamPipe_IPCablePipe9_118#118 2
+AV_190!BeamPipe_assembly_0#0!BeamPipe_MagnetSupport_2i_252#252 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer4_slice14_876#876 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer3_slice15_759#759 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer4_slice4_764#764 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer5_slice0_775#775 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer5_slice8_783#783 2
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer1_slice15_726#726 1
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer5_slice4_881#881 1
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave-1_layer5_slice1_776#776 1
+AV_192!Lumical_assembly_11#11!Lumical_module5_stave1_layer8_slice2_912#912 1
