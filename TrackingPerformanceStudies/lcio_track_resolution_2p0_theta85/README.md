@@ -55,6 +55,8 @@ Each plot overlays electron in black and muon in blue, normalized to unit area.
 
 ![pT resolution](plots/pt_rel_pct_resolution_comparison.png)
 
+The pT residual plot is zoomed to `[-2%, 2%]` to show the core resolution; the larger electron tails are quantified separately below.
+
 ![chi2 over ndf](plots/chi2_ndf_resolution_comparison.png)
 
 ## Current Results

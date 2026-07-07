@@ -48,7 +48,7 @@ PARAMS = [
     ('phi_mrad', 'phi residual [mrad]', (-8.0, 8.0)),
     ('tanlambda', 'tan(lambda) residual', (-0.004, 0.004)),
     ('omega_rel_pct', 'omega relative residual [%]', (-15.0, 15.0)),
-    ('pt_rel_pct', 'pT relative residual [%]', (-15.0, 15.0)),
+    ('pt_rel_pct', 'pT relative residual [%]', (-2.0, 2.0)),
 ]
 
 COLORS = {'electron': 'black', 'muon': '#0072B2'}
