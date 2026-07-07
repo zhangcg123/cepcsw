@@ -1,0 +1,53 @@
+LCIO CompleteTracks resolution comparison: 2 GeV, theta=85 deg
+Inputs: trk-e--2.0-85-{1..10}.root and trk-mu--2.0-85-{1..10}.root
+Track: CompleteTracks, matched to primary MCParticle through CompleteTracksParticleAssociation when possible.
+State: LCIO TrackState with location == 1, reference point at IP.
+Assumed magnetic field for omega/pT conversion: 3.0 T.
+Truth: MCParticleGen[0], generated particle momentum. D0 and Z0 truth are taken as 0 for particle-gun IP samples.
+
+electron d0_mm          count 1000 mean 4.2244378 std 26.932542 median 0.002701812 q16 -0.0055150773 q84 0.017201908 rms 27.248529
+electron z0_mm          count 1000 mean 0.16113182 std 1.4775127 median 0.00037200932 q16 -0.0075979717 q84 0.0083508361 rms 1.4855384
+electron phi_mrad       count 1000 mean -13.620173 std 74.111071 median -0.18992292 q16 -1.1859808 q84 0.36410512 rms 75.315785
+electron tanlambda      count 1000 mean -1.7737566e-05 std 0.00080603594 median 2.3332147e-06 q16 -0.00047387869 q84 0.00051397658 rms 0.00080582806
+electron omega_rel_pct  count 1000 mean 14.980678 std 95.146048 median 0.042073839 q16 -0.11520648 q84 5.3323914 rms 96.271171
+electron pt_rel_pct     count 1000 mean -4.8470427 std 14.006953 median -0.042056144 q16 -5.0624421 q84 0.11533936 rms 14.815274
+electron chi2_ndf       count 1000 mean 1.1750017 std 0.79958358 median 1.0255192 q16 0.9412748 q84 1.1693571 rms 1.4210291
+muon     d0_mm          count 1000 mean 0.00014930944 std 0.0075915062 median 0.00043057316 q16 -0.0064433894 q84 0.0072109511 rms 0.0075891784
+muon     z0_mm          count 1000 mean -0.00010709568 std 0.0076837733 median -0.00013724474 q16 -0.0071353436 q84 0.0069603345 rms 0.0076806772
+muon     phi_mrad       count 1000 mean -0.018558349 std 0.53677319 median -0.018034486 q16 -0.48566418 q84 0.42067023 rms 0.53682562
+muon     tanlambda      count 1000 mean 4.7134116e-06 std 0.00056460389 median -2.3048367e-05 q16 -0.00048436195 q84 0.00047684777 rms 0.00056434121
+muon     omega_rel_pct  count 1000 mean -0.05276391 std 0.17588497 median -0.061462598 q16 -0.18353879 q84 0.06365765 rms 0.18354459
+muon     pt_rel_pct     count 1000 mean 0.053099324 std 0.1749551 median 0.061500398 q16 -0.063617153 q84 0.18387628 rms 0.18275179
+muon     chi2_ndf       count 1000 mean 1.0261782 std 0.12858313 median 1.0100214 q16 0.93668999 q84 1.0992855 rms 1.0341947
+
+Tail fractions use absolute residual thresholds.
+electron d0_mm          |x| > 0.1      count   69 fraction 0.069000
+electron d0_mm          |x| > 1        count   61 fraction 0.061000
+electron d0_mm          |x| > 10       count   45 fraction 0.045000
+electron z0_mm          |x| > 0.1      count   58 fraction 0.058000
+electron z0_mm          |x| > 1        count   34 fraction 0.034000
+electron z0_mm          |x| > 10       count    4 fraction 0.004000
+electron phi_mrad       |x| > 1        count  201 fraction 0.201000
+electron phi_mrad       |x| > 10       count   69 fraction 0.069000
+electron phi_mrad       |x| > 100      count   41 fraction 0.041000
+electron omega_rel_pct  |x| > 1        count  257 fraction 0.257000
+electron omega_rel_pct  |x| > 10       count  127 fraction 0.127000
+electron omega_rel_pct  |x| > 100      count   31 fraction 0.031000
+electron pt_rel_pct     |x| > 1        count  257 fraction 0.257000
+electron pt_rel_pct     |x| > 10       count  124 fraction 0.124000
+electron pt_rel_pct     |x| > 50       count   31 fraction 0.031000
+muon     d0_mm          |x| > 0.1      count    0 fraction 0.000000
+muon     d0_mm          |x| > 1        count    0 fraction 0.000000
+muon     d0_mm          |x| > 10       count    0 fraction 0.000000
+muon     z0_mm          |x| > 0.1      count    0 fraction 0.000000
+muon     z0_mm          |x| > 1        count    0 fraction 0.000000
+muon     z0_mm          |x| > 10       count    0 fraction 0.000000
+muon     phi_mrad       |x| > 1        count   50 fraction 0.050000
+muon     phi_mrad       |x| > 10       count    0 fraction 0.000000
+muon     phi_mrad       |x| > 100      count    0 fraction 0.000000
+muon     omega_rel_pct  |x| > 1        count    4 fraction 0.004000
+muon     omega_rel_pct  |x| > 10       count    0 fraction 0.000000
+muon     omega_rel_pct  |x| > 100      count    0 fraction 0.000000
+muon     pt_rel_pct     |x| > 1        count    4 fraction 0.004000
+muon     pt_rel_pct     |x| > 10       count    0 fraction 0.000000
+muon     pt_rel_pct     |x| > 50       count    0 fraction 0.000000
