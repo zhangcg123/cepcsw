@@ -99,6 +99,14 @@ w_beampipe_shell  count    45  frac_loss_mean 0.188707  abs_loss_GeV_mean 0.0264
 other_tracker     count  1107  frac_loss_mean 0.074683  abs_loss_GeV_mean 0.116773
 ```
 
+Primary electron eBrem in tracker-named volumes, shape-normalized `E_f/E_i = post_p/pre_p` spectrum:
+
+```text
+tracker_Ef_over_Ei_count 1107  mean 0.925317  q10 0.741971  q50 0.995027  q90 0.999911
+```
+
+![primary tracker eBrem Ef/Ei shape](plots/primary_tracker_ebrem_Ef_over_Ei_shape.png)
+
 Tracker-only primary electron process loss summaries:
 
 ```text

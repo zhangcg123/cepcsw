@@ -162,6 +162,14 @@ Separate fractional spectra:
 
 ![primary eBrem loss fraction other tracker](plots/primary_ebrem_loss_fraction_other_tracker.png)
 
+Primary electron eBrem in tracker-named volumes, shape-normalized `E_f/E_i = post_p/pre_p` spectrum:
+
+```text
+tracker_Ef_over_Ei_count 1817  mean 0.928326  q10 0.770737  q50 0.994173  q90 0.999880
+```
+
+![primary tracker eBrem Ef/Ei shape](plots/primary_tracker_ebrem_Ef_over_Ei_shape.png)
+
 Reproduce these category spectra with:
 
 ```bash

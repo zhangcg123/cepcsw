@@ -2,6 +2,8 @@ Categories are mutually exclusive and restricted to primary electron eBrem.
 crystal_bar: material == G4_BGO and pre_volume starts with bar_s or contains crystal_s.
 w_beampipe_shell: material == G4_W and pre_volume contains BeamPipe_BeforeCryoW.
 other_tracker: pre_volume contains VXD/ITK/TPC/OTK/SIT/SET, excluding earlier categories.
+tracker_Ef_over_Ei_shape: primary electron eBrem with tracker-named pre_volume; histogram normalized to unit area.
+tracker_Ef_over_Ei_count 1817 mean 0.928326 q10 0.770737 q50 0.994173 q90 0.999880
 
 crystal_bar count 16072 frac_loss_mean 0.127808 frac_loss_q50 0.045517 frac_loss_q90 0.380147 frac_loss_q99 0.864487 abs_loss_GeV_mean 0.022940 abs_loss_GeV_q50 0.002758 abs_loss_GeV_q90 0.049235 hard_frac_gt_1pct 12047 hard_frac_gt_10pct 5539
 w_beampipe_shell count 661 frac_loss_mean 0.132710 frac_loss_q50 0.046252 frac_loss_q90 0.426232 frac_loss_q99 0.874909 abs_loss_GeV_mean 0.021542 abs_loss_GeV_q50 0.003425 abs_loss_GeV_q90 0.052865 hard_frac_gt_1pct 500 hard_frac_gt_10pct 224

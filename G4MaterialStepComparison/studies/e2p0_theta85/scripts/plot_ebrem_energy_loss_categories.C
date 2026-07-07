@@ -2,6 +2,7 @@
 #include <TChain.h>
 #include <TH1F.h>
 #include <TLegend.h>
+#include <TPaveText.h>
 #include <TStyle.h>
 #include <TSystem.h>
 
@@ -98,15 +99,18 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   TH1F hAbsTracker("hAbsTracker", "Primary eBrem absolute momentum loss;pre_p - post_p [GeV];steps", 120, 0, 1.0);
 
   TH1F hFracCrystalN("hFracCrystalN", "Primary eBrem fractional energy loss, shape-normalized;1 - p_{post}/p_{pre};normalized steps", 120, 0, 1.0);
+  TH1F hEfEiTrackerN("hEfEiTrackerN", "Primary eBrem in tracker volumes;E_{f}/E_{i};normalized steps", 120, 0, 1.0);
   TH1F hFracWN("hFracWN", "Primary eBrem fractional energy loss, shape-normalized;1 - p_{post}/p_{pre};normalized steps", 120, 0, 1.0);
   TH1F hFracTrackerN("hFracTrackerN", "Primary eBrem fractional energy loss, shape-normalized;1 - p_{post}/p_{pre};normalized steps", 120, 0, 1.0);
 
   styleHist(hFracCrystal, kBlack); styleHist(hFracW, kBlue + 1); styleHist(hFracTracker, kCyan + 2);
   styleHist(hAbsCrystal, kBlack); styleHist(hAbsW, kBlue + 1); styleHist(hAbsTracker, kCyan + 2);
   styleHist(hFracCrystalN, kBlack); styleHist(hFracWN, kBlue + 1); styleHist(hFracTrackerN, kCyan + 2);
+  styleHist(hEfEiTrackerN, kBlack);
 
   vector<float> fracCrystal, fracW, fracTracker;
   vector<float> absCrystal, absW, absTracker;
+  vector<float> efEiTracker;
 
   auto fill = [](TH1F& hf, TH1F& ha, vector<float>& vf, vector<float>& va, float frac, float absLoss) {
     if (!isfinite(frac) || !isfinite(absLoss)) return;
@@ -130,8 +134,14 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
       const string& vol = pre_volume->at(i);
       const float p0 = pre_p->at(i);
       const float p1 = post_p->at(i);
-      const float frac = p0 > 0 ? 1.0f - p1 / p0 : 0.0f;
+      const float efEi = p0 > 0 ? p1 / p0 : 0.0f;
+      const float frac = p0 > 0 ? 1.0f - efEi : 0.0f;
       const float absLoss = loss->at(i);
+
+      if (isTrackerVolume(vol) && isfinite(efEi)) {
+        hEfEiTrackerN.Fill(max(0.0f, min(1.0f, efEi)));
+        efEiTracker.push_back(efEi);
+      }
 
       if (isCrystalBar(mat, vol)) fill(hFracCrystal, hAbsCrystal, fracCrystal, absCrystal, frac, absLoss);
       else if (isWBeamPipeShell(mat, vol)) fill(hFracW, hAbsW, fracW, absW, frac, absLoss);
@@ -143,6 +153,7 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   if (hFracCrystalN.Integral() > 0) hFracCrystalN.Scale(1.0 / hFracCrystalN.Integral());
   if (hFracWN.Integral() > 0) hFracWN.Scale(1.0 / hFracWN.Integral());
   if (hFracTrackerN.Integral() > 0) hFracTrackerN.Scale(1.0 / hFracTrackerN.Integral());
+  if (hEfEiTrackerN.Integral() > 0) hEfEiTrackerN.Scale(1.0 / hEfEiTrackerN.Integral());
 
   TCanvas c1("c_loss_frac", "c_loss_frac", 900, 650);
   c1.SetLogy();
@@ -181,6 +192,21 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   drawOne(hFracW, plotdir, "primary_ebrem_loss_fraction_w_beampipe_shell");
   drawOne(hFracTracker, plotdir, "primary_ebrem_loss_fraction_other_tracker");
 
+  const double efEiMean = efEiTracker.empty() ? 0.0 : accumulate(efEiTracker.begin(), efEiTracker.end(), 0.0) / efEiTracker.size();
+  TCanvas c4("c_tracker_efei", "c_tracker_efei", 900, 650);
+  c4.SetLogy();
+  hEfEiTrackerN.SetMaximum(hEfEiTrackerN.GetMaximum() * 2.0);
+  hEfEiTrackerN.SetMinimum(1e-5);
+  hEfEiTrackerN.Draw("hist");
+  TPaveText box(0.16, 0.74, 0.45, 0.86, "NDC");
+  box.SetFillColor(0);
+  box.SetBorderSize(1);
+  box.SetTextAlign(12);
+  box.AddText(Form("N = %zu", efEiTracker.size()));
+  box.AddText(Form("mean = %.4f", efEiMean));
+  box.Draw();
+  saveCanvas(c4, plotdir, "primary_tracker_ebrem_Ef_over_Ei_shape");
+
   ofstream out(string(outdir) + "/category_energy_loss_summary.txt");
   out << fixed << setprecision(6);
   auto write = [&](const char* name, const vector<float>& vf, const vector<float>& va) {
@@ -202,7 +228,13 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   out << "Categories are mutually exclusive and restricted to primary electron eBrem.\n";
   out << "crystal_bar: material == G4_BGO and pre_volume starts with bar_s or contains crystal_s.\n";
   out << "w_beampipe_shell: material == G4_W and pre_volume contains BeamPipe_BeforeCryoW.\n";
-  out << "other_tracker: pre_volume contains VXD/ITK/TPC/OTK/SIT/SET, excluding earlier categories.\n\n";
+  out << "other_tracker: pre_volume contains VXD/ITK/TPC/OTK/SIT/SET, excluding earlier categories.\n";
+  out << "tracker_Ef_over_Ei_shape: primary electron eBrem with tracker-named pre_volume; histogram normalized to unit area.\n";
+  out << "tracker_Ef_over_Ei_count " << efEiTracker.size()
+      << " mean " << efEiMean
+      << " q10 " << quantile(efEiTracker, 0.10)
+      << " q50 " << quantile(efEiTracker, 0.50)
+      << " q90 " << quantile(efEiTracker, 0.90) << "\n\n";
   write("crystal_bar", fracCrystal, absCrystal);
   write("w_beampipe_shell", fracW, absW);
   write("other_tracker", fracTracker, absTracker);
