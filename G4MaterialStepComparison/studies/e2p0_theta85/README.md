@@ -107,6 +107,8 @@ tracker_Ef_over_Ei_count 1107  mean 0.925317  q10 0.741971  q50 0.995027  q90 0.
 
 ![primary tracker eBrem Ef/Ei shape](plots/primary_tracker_ebrem_Ef_over_Ei_shape.png)
 
+The same normalized histogram is saved for downstream studies in `plots/primary_tracker_ebrem_Ef_over_Ei_shape.root` as `h_primary_tracker_ebrem_Ef_over_Ei_shape`.
+
 Tracker-only primary electron process loss summaries:
 
 ```text

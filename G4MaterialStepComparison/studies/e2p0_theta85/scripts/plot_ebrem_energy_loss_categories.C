@@ -1,5 +1,6 @@
 #include <TCanvas.h>
 #include <TChain.h>
+#include <TFile.h>
 #include <TH1F.h>
 #include <TLegend.h>
 #include <TPaveText.h>
@@ -206,6 +207,10 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   box.AddText(Form("mean = %.4f", efEiMean));
   box.Draw();
   saveCanvas(c4, plotdir, "primary_tracker_ebrem_Ef_over_Ei_shape");
+  TFile histFile((plotdir + "/primary_tracker_ebrem_Ef_over_Ei_shape.root").c_str(), "RECREATE");
+  hEfEiTrackerN.SetName("h_primary_tracker_ebrem_Ef_over_Ei_shape");
+  hEfEiTrackerN.Write();
+  histFile.Close();
 
   ofstream out(string(outdir) + "/category_energy_loss_summary.txt");
   out << fixed << setprecision(6);

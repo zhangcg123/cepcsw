@@ -170,6 +170,8 @@ tracker_Ef_over_Ei_count 1817  mean 0.928326  q10 0.770737  q50 0.994173  q90 0.
 
 ![primary tracker eBrem Ef/Ei shape](plots/primary_tracker_ebrem_Ef_over_Ei_shape.png)
 
+The same normalized histogram is saved for downstream studies in `plots/primary_tracker_ebrem_Ef_over_Ei_shape.root` as `h_primary_tracker_ebrem_Ef_over_Ei_shape`.
+
 Reproduce these category spectra with:
 
 ```bash
