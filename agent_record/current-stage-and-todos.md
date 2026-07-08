@@ -105,7 +105,7 @@ A parallel `GlobalSim2GeV85` BH model is now encoded in `BetheHeitlerSplitter` f
 gsf.BHModel = "GlobalSim2GeV85"
 ```
 
-Current runbook and test summary are in `agent_record/2026-07-08-global-bh-gsf-run.md`. A selected light-tracker-eBrem scan completed seeds 1-5 only (`235/235` selected events) before the user requested stopping the remaining jobs. The model is runnable but not validated: completed events still show a high GSF momentum tail (`40/235` with `gsf_p > 10 GeV`) and many zero-chi2 fits (`186/235`).
+Current runbook and test summary are in `agent_record/2026-07-08-global-bh-gsf-run.md`. The current covariance/reducer fixes and five-event debug workflow are in `agent_record/2026-07-08-gsf-cov-reducer-debug.md`. A selected light-tracker-eBrem scan completed seeds 1-5 only (`235/235` selected events) before the user requested stopping the remaining jobs. The model is runnable but not validated: completed events still show a high GSF momentum tail (`40/235` with `gsf_p > 10 GeV`) and many zero-chi2 fits (`186/235`).
 
 ## Prioritized TODOs
 

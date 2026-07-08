@@ -198,9 +198,21 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
       auto* lastSite = dynamic_cast<TKalTrackSite*>(
           child->kaltrack->Last());
       if (lastSite) {
+        const double invFrac = 1.0 / fracMomentum;
+        const double invFrac2 = invFrac * invFrac;
+        const double fracVar = std::max(mixture[i].var, 0.0);
+        const double bhKappaVar = parentKappa * parentKappa * fracVar * invFrac2 * invFrac2;
         for (int j = 0; j < lastSite->GetEntries(); j++) {
           auto* st = dynamic_cast<TKalTrackState*>(lastSite->At(j));
-          if (st) (*st)(2, 0) = newKappa;
+          if (!st) continue;
+
+          TKalMatrix cov = st->GetCovMat();
+          for (int r = 0; r < cov.GetNrows(); r++) cov(r, 2) *= invFrac;
+          for (int c = 0; c < cov.GetNcols(); c++) cov(2, c) *= invFrac;
+          cov(2, 2) += bhKappaVar;
+
+          (*st)(2, 0) = newKappa;
+          st->SetCovMat(cov);
         }
       }
     }

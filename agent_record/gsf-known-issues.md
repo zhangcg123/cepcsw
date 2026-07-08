@@ -23,9 +23,10 @@ The code assumes exactly one track per event (uses `trk[0]`, `mcp[0]`). Multi-tr
 - Some BAD tracks have extreme resolution errors (-93% to +143%)
 
 ### 4. Mixture Reduction Quality
-- KL-divergence merging uses full 5x5 covariance but keeps the higher-weight component's track (no weighted mean)
-- This means the merged component's state is not the true mixture mean — it's biased toward the higher-weight component
-- The O(N²) pairwise search is fine for N≤12 but doesn't scale
+- KL-divergence pair selection still uses full 5x5 covariance at the last active site.
+- As of 2026-07-08, reduction does moment matching for the selected pair and overwrites the representative component's last-site mean/covariance.
+- This is better than the old higher-weight-only merge, but it is still an approximation because the earlier KalTest track history is not a true per-site Gaussian mixture history.
+- The O(N²) pairwise search is fine for N<=12 but does not scale to very large mixtures.
 
 ### 5. Material IP Extrapolation
 - `MaterialIPExtrapolation` is disabled by default (false)

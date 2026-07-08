@@ -15,8 +15,8 @@ When the number of Gaussian components exceeds `MaxComponents` (default 12), the
 While `comps.size() > maxN`:
 1. Compute pairwise symmetric KL distance for all component pairs
 2. Find the pair with minimum distance
-3. Merge: keep the higher-weight component, accumulate the lower's weight into it
-4. Delete the lower-weight component
+3. Merge the selected pair by moment matching at the active last site
+4. Keep the higher-weight component as the representative track, overwrite its last-site mean/covariance with the merged moments, and delete the other component
 5. Repeat until at or below maxN
 
 ## KL Distance Computation
@@ -45,7 +45,7 @@ where d=5 (drho, phi0, kappa, dz, tanLambda).
 
 ## Key Design Decisions
 - **Full 5x5 covariance** is used (not just diagonal), capturing correlations between parameters
-- The **higher-weight component's track** is kept (not a weighted average), preserving the KF state history
+- The **higher-weight component's track history** is kept as the representative, but its active last-site mean/covariance are overwritten with the moment-matched merged Gaussian
 - Mean vectors are extracted from the **last site** (current position), not the initial site
 - The reduction is **O(N²)** per iteration — acceptable for N ≤ 12 but would be expensive for very large mixtures
 

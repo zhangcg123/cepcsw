@@ -414,7 +414,7 @@ StatusCode RecGsfTracking::execute() {
 
     std::vector<GsfComponent*> comps = {initComp};
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
-    double aTX0 = 0.0, totalTX0 = 0.0, maxTX0Layer = 0.0;
+    double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
 
     for (size_t ih = 1; ih < hits.size(); ih++) {
@@ -496,21 +496,21 @@ StatusCode RecGsfTracking::execute() {
       justSplit = false;
 
       comps = std::move(accepted);
-      double lTX0 = thicknessInX0(hi.layer);
-      aTX0 += lTX0; totalTX0 += lTX0;
-      if (lTX0 > maxTX0Layer) maxTX0Layer = lTX0;
+      const double stepTX0 = thicknessInX0(hi.layer);
+      totalTX0 += stepTX0;
+      if (stepTX0 > maxTX0Layer) maxTX0Layer = stepTX0;
 
-      if (aTX0 > m_bhSplitThresh && m_isElectron &&
+      if (stepTX0 > m_bhSplitThresh && m_isElectron &&
           (int)comps.size() < m_maxComponents) {
         if (m_verboseDump && m_verboseSplitDump) {
-          info() << boost::format("  ── BH Split @ hit %d (r=%.1f mm, tX0=%.2e) — %d comps before split")
-                    % ih % hi.radius % aTX0 % (int)comps.size() << endmsg;
+          info() << boost::format("  ── BH Split @ hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
+                    % ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
         }
         BetheHeitlerSplitter bhs(m_bhModel.value());
         std::vector<GsfComponent*> newCps;
         for (auto* comp : comps) {
           double parentKappa = comp->helixAtLastSite(bz).GetKappa();
-          auto children = bhs.split(comp, aTX0, bz);
+          auto children = bhs.split(comp, stepTX0, bz);
           if (m_verboseDump && m_verboseSplitDump) {
             double parentPT = (bz != 0 && parentKappa != 0) ? 1.0/std::abs(parentKappa) : 0;
             info() << boost::format("    parent κ=%.4e (pT≈%.3f)  weight=%.4f  → %d children")
@@ -525,7 +525,6 @@ StatusCode RecGsfTracking::execute() {
           for (auto* c : children) newCps.push_back(c);
         }
         comps = std::move(newCps);
-        aTX0 = 0.0;
         nSplits++;
         justSplit = true;
       }
@@ -564,6 +563,23 @@ StatusCode RecGsfTracking::execute() {
 
       auto* best = comps[bestIdx];
 
+      if (m_verboseDump && m_verboseSplitDump) {
+        auto dumpSite = [&](const char* label, int idx) {
+          if (!best->kaltrack || idx < 0 || idx >= best->kaltrack->GetEntriesFast()) return;
+          auto* site = dynamic_cast<const TKalTrackSite*>(best->kaltrack->At(idx));
+          if (!site) return;
+          auto& state = dynamic_cast<TKalTrackState&>(site->GetCurState());
+          auto h = state.GetHelix();
+          auto pv = h.GetPivot();
+          info() << boost::format("  DIAG %s site=%d drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
+                    % label % idx % h.GetDrho() % h.GetPhi0() % h.GetKappa() % h.GetDz() % h.GetTanLambda()
+                    % pv.X() % pv.Y() % pv.Z() << endmsg;
+        };
+        dumpSite("initial", 0);
+        dumpSite("inner", 1);
+        dumpSite("last", best->kaltrack->GetEntriesFast() - 1);
+      }
+
       // Extrapolate to IP (method selected by MaterialIPExtrapolation)
       THelicalTrack ipHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
       TMatrixD ipCov(5, 5);
@@ -571,6 +587,12 @@ StatusCode RecGsfTracking::execute() {
         extrapolateToIP_material(best, m_cradle, m_ipLayer, bz, ipHelix, ipCov);
       else
         extrapolateToIP_geometric(best, m_ipLayer, bz, ipHelix, ipCov);
+      if (m_verboseDump && m_verboseSplitDump) {
+        auto pv = ipHelix.GetPivot();
+        info() << boost::format("  DIAG ip    drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
+                  % ipHelix.GetDrho() % ipHelix.GetPhi0() % ipHelix.GetKappa() % ipHelix.GetDz() % ipHelix.GetTanLambda()
+                  % pv.X() % pv.Y() % pv.Z() << endmsg;
+      }
 
       // Write output track
       auto ot = out->create();
