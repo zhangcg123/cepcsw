@@ -42,6 +42,7 @@ gsf.BHSplitThreshold = 1e-4; gsf.MSOn = True; gsf.ElossOn = True
 gsf.VerboseDump = True; gsf.VerboseSplitDump = True; gsf.MaterialIPExtrapolation = False
 gsf.KappaSeedCov = 1e-7
 gsf.BHModel = "GlobalSim2GeV85"
+gsf.GSFOutputMode = os.getenv("GSF_OUTPUT_MODE", "BestBranch")
 gsf.SelectedEventIndices = selected_event_indices
 
 from Configurables import PodioOutput

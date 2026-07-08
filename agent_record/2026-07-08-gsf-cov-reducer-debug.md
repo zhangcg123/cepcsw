@@ -203,3 +203,48 @@ Interpretation:
 Do not reintroduce the `Last()` workaround. If event `15` is investigated, keep using `At(1)` and diagnose why the smoothed first-layer state differs sharply from the otherwise sane trajectory.
 
 When testing runtime behavior, always install after building. A plain target build is not enough for `./run.sh`.
+
+## 2026-07-08 Weighted-Mixture Output Mode
+
+`RecGsfTracking` now has a configurable GSF output mode:
+
+```python
+gsf.GSFOutputMode = "BestBranch"    # default, historical behavior
+gsf.GSFOutputMode = "WeightedMean"  # publish moment-matched mixture at IP
+```
+
+The internal filtering remains component-mixture based in both modes. In
+`BestBranch`, `GSFTracks` is filled from the highest-weight smoothed branch. In
+`WeightedMean`, every surviving component is extrapolated to IP with the same
+`MaterialIPExtrapolation` setting, then the 5D helix mean/covariance is
+moment-matched using component weights. The output track still uses the best
+branch chi2/ndf as a representative fit-quality value because the weighted
+mixture does not have its own KalTest trajectory chi2.
+
+The committed seed-1 five-event and seed-1..5 template cards expose this via:
+
+```bash
+GSF_OUTPUT_MODE=WeightedMean ./run.sh DumpGsfTrks/rungsf-light-globalBH-e--2.0-85-seed1-five-debug.py
+GSF_OUTPUT_MODE=WeightedMean GSF_LIGHT_SEED=1 ./run.sh DumpGsfTrks/rungsf-light-globalBH-e--2.0-85-seed1to5-template.py
+```
+
+Five-event validation directories:
+
+```text
+/tmp/gsf_weighted_output_mode/best_outputs/
+/tmp/gsf_weighted_output_mode/weighted_outputs/
+```
+
+Best vs weighted published IP state for the five-event debug sample:
+
+```text
+event best_p   weighted_p  dp_MeV  best_pt  weighted_pt dpt_MeV
+22    2.003910 2.003805   -0.105  1.996334 1.996229   -0.105
+37    2.004674 2.004687   +0.013  1.997072 1.997085   +0.013
+47    2.008237 2.008253   +0.016  2.000846 2.000863   +0.016
+89    1.999184 1.999167   -0.017  1.991495 1.991478   -0.017
+94    1.843617 1.843617   +0.000  1.836470 1.836470   +0.000
+```
+
+For this small sample the weighted output is numerically close to the best
+branch, but the switch is now available for larger comparisons.

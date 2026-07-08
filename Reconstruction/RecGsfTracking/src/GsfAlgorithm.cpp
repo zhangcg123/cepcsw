@@ -212,6 +212,105 @@ static void extrapolateToIP_material(GsfComponent* comp,
   outHelix = THelicalTrack(tSv, TVector3(0, 0, 0), bz);
 }
 
+static void helixToMean(const THelicalTrack& h, TMatrixD& mean) {
+  mean.ResizeTo(5, 1);
+  mean(0, 0) = h.GetDrho();
+  mean(1, 0) = h.GetPhi0();
+  mean(2, 0) = h.GetKappa();
+  mean(3, 0) = h.GetDz();
+  mean(4, 0) = h.GetTanLambda();
+}
+
+static void wrapPhiNear(double& phi, double ref) {
+  while (phi - ref > M_PI) phi -= 2.0 * M_PI;
+  while (phi - ref < -M_PI) phi += 2.0 * M_PI;
+}
+
+static bool extrapolateToIP_component(GsfComponent* comp,
+                                      bool materialIPExtrap,
+                                      TKalDetCradle* cradle,
+                                      const DDCylinderMeasLayer* ipLayer,
+                                      double bz,
+                                      THelicalTrack& outHelix,
+                                      TMatrixD& outCov) {
+  if (!comp || !comp->kaltrack || comp->kaltrack->GetEntriesFast() <= 1)
+    return false;
+  if (materialIPExtrap)
+    extrapolateToIP_material(comp, cradle, ipLayer, bz, outHelix, outCov);
+  else
+    extrapolateToIP_geometric(comp, ipLayer, bz, outHelix, outCov);
+  return true;
+}
+
+static bool weightedMixtureAtIP(const std::vector<GsfComponent*>& comps,
+                                bool materialIPExtrap,
+                                TKalDetCradle* cradle,
+                                const DDCylinderMeasLayer* ipLayer,
+                                double bz,
+                                THelicalTrack& outHelix,
+                                TMatrixD& outCov) {
+  std::vector<double> weights;
+  std::vector<TMatrixD> means;
+  std::vector<TMatrixD> covs;
+  weights.reserve(comps.size());
+  means.reserve(comps.size());
+  covs.reserve(comps.size());
+
+  double sumW = 0.0;
+  double phiRef = 0.0;
+  bool havePhiRef = false;
+
+  for (auto* comp : comps) {
+    if (!comp || comp->weight <= 0.0) continue;
+    THelicalTrack h(TMatrixD(5,1), TVector3(0, 0, 0), bz);
+    TMatrixD cov(5, 5);
+    if (!extrapolateToIP_component(comp, materialIPExtrap, cradle, ipLayer, bz, h, cov))
+      continue;
+
+    TMatrixD mean(5, 1);
+    helixToMean(h, mean);
+    if (!havePhiRef) {
+      phiRef = mean(1, 0);
+      havePhiRef = true;
+    } else {
+      wrapPhiNear(mean(1, 0), phiRef);
+    }
+
+    weights.push_back(comp->weight);
+    means.push_back(mean);
+    covs.push_back(cov);
+    sumW += comp->weight;
+  }
+
+  if (weights.empty() || sumW <= 0.0) return false;
+
+  TMatrixD mergedMean(5, 1);
+  mergedMean.Zero();
+  for (size_t i = 0; i < weights.size(); i++) {
+    TMatrixD term = means[i];
+    term *= weights[i] / sumW;
+    mergedMean += term;
+  }
+  wrapPhiNear(mergedMean(1, 0), 0.0);
+
+  TMatrixD mergedCov(5, 5);
+  mergedCov.Zero();
+  for (size_t i = 0; i < weights.size(); i++) {
+    const double w = weights[i] / sumW;
+    TMatrixD d = means[i] - mergedMean;
+    wrapPhiNear(d(1, 0), 0.0);
+    TMatrixD dT(TMatrixD::kTransposed, d);
+    TMatrixD term = covs[i] + d * dT;
+    term *= w;
+    mergedCov += term;
+  }
+
+  outCov.ResizeTo(5, 5);
+  outCov = mergedCov;
+  outHelix = THelicalTrack(mergedMean, TVector3(0, 0, 0), bz);
+  return true;
+}
+
 /// Fill an edm4hep TrackState from a THelicalTrack + 5x5 cov
 static void fillTrackState(edm4hep::TrackState& ts,
                             const THelicalTrack& h,
@@ -585,18 +684,46 @@ StatusCode RecGsfTracking::execute() {
         dumpSite("last", best->kaltrack->GetEntriesFast() - 1);
       }
 
-      // Extrapolate to IP (method selected by MaterialIPExtrapolation)
-      THelicalTrack ipHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
-      TMatrixD ipCov(5, 5);
-      if (m_materialIPExtrap)
-        extrapolateToIP_material(best, m_cradle, m_ipLayer, bz, ipHelix, ipCov);
-      else
-        extrapolateToIP_geometric(best, m_ipLayer, bz, ipHelix, ipCov);
+      // Extrapolate to IP (method selected by MaterialIPExtrapolation).
+      // By default publish the highest-weight branch. Optionally publish the
+      // moment-matched weighted mixture at IP.
+      THelicalTrack bestIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
+      TMatrixD bestIpCov(5, 5);
+      extrapolateToIP_component(best, m_materialIPExtrap, m_cradle, m_ipLayer,
+                                bz, bestIpHelix, bestIpCov);
+
+      THelicalTrack ipHelix = bestIpHelix;
+      TMatrixD ipCov = bestIpCov;
+      const std::string outputMode = m_outputMode.value();
+      bool usedWeightedOutput = false;
+      if (outputMode == "WeightedMean") {
+        THelicalTrack mixIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
+        TMatrixD mixIpCov(5, 5);
+        if (weightedMixtureAtIP(comps, m_materialIPExtrap, m_cradle, m_ipLayer,
+                                bz, mixIpHelix, mixIpCov)) {
+          ipHelix = mixIpHelix;
+          ipCov = mixIpCov;
+          usedWeightedOutput = true;
+        } else {
+          warning() << "GSFOutputMode=WeightedMean failed; falling back to BestBranch"
+                    << endmsg;
+        }
+      } else if (outputMode != "BestBranch") {
+        warning() << "Unknown GSFOutputMode '" << outputMode
+                  << "'; falling back to BestBranch" << endmsg;
+      }
       if (m_verboseDump && m_verboseSplitDump) {
         auto pv = ipHelix.GetPivot();
         info() << boost::format("  DIAG ip    drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
                   % ipHelix.GetDrho() % ipHelix.GetPhi0() % ipHelix.GetKappa() % ipHelix.GetDz() % ipHelix.GetTanLambda()
                   % pv.X() % pv.Y() % pv.Z() << endmsg;
+        if (usedWeightedOutput) {
+          auto bestPv = bestIpHelix.GetPivot();
+          info() << boost::format("  DIAG best-ip drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
+                    % bestIpHelix.GetDrho() % bestIpHelix.GetPhi0() % bestIpHelix.GetKappa()
+                    % bestIpHelix.GetDz() % bestIpHelix.GetTanLambda()
+                    % bestPv.X() % bestPv.Y() % bestPv.Z() << endmsg;
+        }
       }
 
       // Write output track
@@ -693,6 +820,8 @@ StatusCode RecGsfTracking::execute() {
                   % nSplits % nReductions % maxCompsEver % sum.finalComps << endmsg;
         info() << boost::format("  weights        | best %.4f  mean %.4f  ratio %.2f")
                   % best->weight % (1.0 / sum.finalComps) % (best->weight * sum.finalComps) << endmsg;
+        info() << boost::format("  output         | mode %s")
+                  % (usedWeightedOutput ? "WeightedMean" : "BestBranch") << endmsg;
         info() << boost::format("  material       | max-tX0 %.2e  total-tX0 %.2e")
                   % maxTX0Layer % totalTX0 << endmsg;
         info() << sep << endmsg;
