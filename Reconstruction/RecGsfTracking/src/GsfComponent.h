@@ -6,12 +6,16 @@
 #include "TMatrixD.h"
 #include "TVector3.h"
 
+#include <string>
+
 /// One Gaussian component in the GSF mixture.
 /// Owns a TKalTrack holding the KF state across all measurement sites.
 struct GsfComponent {
   double    weight = 1.0;
   int       charge = 1;
   TKalTrack* kaltrack = nullptr;
+  int       debugId = 0;
+  std::string debugHistory;
 
   ~GsfComponent();
 

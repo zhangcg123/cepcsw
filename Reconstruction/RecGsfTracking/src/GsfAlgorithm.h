@@ -73,11 +73,15 @@ private:
   Gaudi::Property<bool>   m_doMS{this,"MSOn",true};
   Gaudi::Property<bool>   m_doDEDX{this,"ElossOn",false};
   Gaudi::Property<int>    m_maxComponents{this,"MaxComponents",12};
+  Gaudi::Property<int>    m_reductionTargetComponents{this,"ReductionTargetComponents",0};
+  Gaudi::Property<std::string> m_reductionMode{this,"ReductionMode","KL"};
   Gaudi::Property<double> m_bhSplitThresh{this,"BHSplitThreshold",1e-4};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",true};
   Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",true};
+  Gaudi::Property<bool>   m_componentDebugDump{this,"ComponentDebugDump",false};
+  Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
   Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};

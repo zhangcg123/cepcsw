@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 
 /// The ACTS AtlasBetheHeitlerApprox<6,5> data, reproduced here to avoid
@@ -193,6 +194,17 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
 
     GsfComponent* child = result[i];
     child->weight = parentWeight * mixture[i].weight;
+    {
+      std::ostringstream dbg;
+      dbg.setf(std::ios::fixed, std::ios::floatfield);
+      dbg.precision(4);
+      dbg << "g" << i
+          << "[w=" << mixture[i].weight
+          << ",f=" << mixture[i].mean
+          << ",s=" << std::sqrt(std::max(mixture[i].var, 0.0)) << "]";
+      if (!child->debugHistory.empty()) child->debugHistory += "->";
+      child->debugHistory += dbg.str();
+    }
 
     if (child->kaltrack->GetEntriesFast() > 0) {
       auto* lastSite = dynamic_cast<TKalTrackSite*>(

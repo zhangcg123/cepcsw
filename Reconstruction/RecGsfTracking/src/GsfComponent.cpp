@@ -46,6 +46,8 @@ GsfComponent* GsfComponent::clone() const {
   auto* c = new GsfComponent();
   c->weight = weight;
   c->charge = charge;
+  c->debugId = debugId;
+  c->debugHistory = debugHistory;
   c->kaltrack = new TKalTrack();
   c->kaltrack->SetOwner();
 

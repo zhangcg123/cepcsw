@@ -6,6 +6,10 @@
 
 #include <cmath>
 #include <algorithm>
+#include <functional>
+#include <sstream>
+#include <string>
+#include <utility>
 
 namespace GsfMixture {
 
@@ -135,6 +139,8 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double /*bz*/) {
 
   const double wk = keep->weight / totalWeight;
   const double wd = drop->weight / totalWeight;
+  const std::string keepHistory = keep->debugHistory;
+  const std::string dropHistory = drop->debugHistory;
 
   if (keep->kaltrack && drop->kaltrack) {
     const int nSites = std::min(keep->kaltrack->GetEntriesFast(),
@@ -148,6 +154,9 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double /*bz*/) {
   }
 
   keep->weight = totalWeight;
+  if (!dropHistory.empty()) {
+    keep->debugHistory = "merge(" + keepHistory + " | " + dropHistory + ")";
+  }
 }
 
 /// Symmetric KL distance: ½[KL(P‖Q) + KL(Q‖P)]
@@ -163,8 +172,14 @@ static double klDistance(GsfComponent* a, GsfComponent* b, double bz) {
 
 // ============================================================================
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz) {
+  reduce(comps, maxN, bz, {});
+}
+
+void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
+            const std::function<void(const std::string&)>& logger) {
   if (maxN < 1) maxN = 1;
 
+  int mergeStep = 0;
   while ((int)comps.size() > maxN) {
     int bi = -1, bj = -1;
     double bestDist = 1e30;
@@ -180,14 +195,86 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz) {
     }
     if (bi < 0) break;
 
+    const int origI = bi;
+    const int origJ = bj;
+    const double wi = comps[bi]->weight;
+    const double wj = comps[bj]->weight;
+    const double ki = comps[bi]->helixAtLastSite(bz).GetKappa();
+    const double kj = comps[bj]->helixAtLastSite(bz).GetKappa();
+    const double detI = comps[bi]->covAtLastSite().Determinant();
+    const double detJ = comps[bj]->covAtLastSite().Determinant();
+
     // Merge by moment matching the common branch history, then keep the
     // merged trajectory as the representative component for propagation.
     if (comps[bi]->weight < comps[bj]->weight)
       std::swap(bi, bj);
     momentMerge(comps[bi], comps[bj], bz);
+
+    if (logger) {
+      const double km = comps[bi]->helixAtLastSite(bz).GetKappa();
+      std::ostringstream os;
+      os.setf(std::ios::scientific, std::ios::floatfield);
+      os.precision(4);
+      os << "      reducer merge[" << mergeStep << "] pair=(" << origI << "," << origJ
+         << ") symKL=" << bestDist
+         << " w=(" << wi << "," << wj << ")"
+         << " kappa=(" << ki << "," << kj << ")"
+         << " det=(" << detI << "," << detJ << ")"
+         << " -> keep=" << bi << " w=" << comps[bi]->weight
+         << " kappa=" << km;
+      logger(os.str());
+    }
+
     delete comps[bj];
     comps.erase(comps.begin() + bj);
+    mergeStep++;
   }
+}
+
+// ============================================================================
+void reduceTopN(std::vector<GsfComponent*>& comps, int maxN) {
+  reduceTopN(comps, maxN, {});
+}
+
+void reduceTopN(std::vector<GsfComponent*>& comps, int maxN,
+                const std::function<void(const std::string&)>& logger) {
+  if (maxN < 1) maxN = 1;
+  if ((int)comps.size() <= maxN) {
+    normalizeWeights(comps);
+    return;
+  }
+
+  normalizeWeights(comps);
+  std::sort(comps.begin(), comps.end(),
+            [](const GsfComponent* a, const GsfComponent* b) {
+              return a->weight > b->weight;
+            });
+
+  if (logger) {
+    std::ostringstream os;
+    os.setf(std::ios::scientific, std::ios::floatfield);
+    os.precision(4);
+    os << "      reducer topN keep=" << maxN << " from=" << comps.size();
+    logger(os.str());
+    for (size_t i = 0; i < comps.size(); i++) {
+      const double kappa = comps[i]->helixAtLastSite(0.0).GetKappa();
+      std::ostringstream line;
+      line.setf(std::ios::scientific, std::ios::floatfield);
+      line.precision(4);
+      line << "        topN[" << i << "] "
+           << (i < (size_t)maxN ? "keep" : "drop")
+           << " id=" << comps[i]->debugId
+           << " w=" << comps[i]->weight
+           << " kappa=" << kappa;
+      logger(line.str());
+    }
+  }
+
+  for (size_t i = maxN; i < comps.size(); i++) {
+    delete comps[i];
+  }
+  comps.resize(maxN);
+  normalizeWeights(comps);
 }
 
 } // namespace GsfMixture

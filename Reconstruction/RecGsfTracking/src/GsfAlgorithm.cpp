@@ -504,9 +504,12 @@ StatusCode RecGsfTracking::execute() {
 
     // ---- Step 4: forward GSF filter ----
     auto* site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
+    int nextComponentDebugId = 0;
     auto* initComp = new GsfComponent();
     initComp->weight = 1.0;
     initComp->charge = charge;
+    initComp->debugId = nextComponentDebugId++;
+    initComp->debugHistory = "seed";
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
@@ -516,6 +519,34 @@ StatusCode RecGsfTracking::execute() {
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
 
+    auto truncateHistory = [&](const std::string& h) {
+      const int maxLen = std::max(0, m_componentDebugMaxHistory.value());
+      if ((int)h.size() <= maxLen) return h;
+      if (maxLen <= 3) return h.substr(0, maxLen);
+      return h.substr(0, maxLen - 3) + "...";
+    };
+
+    auto dumpComponents = [&](const char* label, int ih,
+                              const std::vector<GsfComponent*>& vc) {
+      if (!m_verboseDump || !m_verboseSplitDump) return;
+      info() << boost::format("  MIX %s hit=%d n=%d")
+                % label % ih % (int)vc.size() << endmsg;
+      for (size_t ci = 0; ci < vc.size(); ci++) {
+        const auto* c = vc[ci];
+        const double k = c->helixAtLastSite(bz).GetKappa();
+        const double pt = (k != 0.0) ? 1.0 / std::abs(k) : 0.0;
+        const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
+        const double chi2 = c->kaltrack ? c->kaltrack->GetChi2() : 0.0;
+        const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
+        info() << boost::format("      comp[%02d] id=%d w=%.6g kappa=%.6e pT=%.6g chi2=%.3f ndf=%d sites=%d")
+                  % (int)ci % c->debugId % c->weight % k % pt % chi2 % ndf % entries << endmsg;
+        if (m_componentDebugDump) {
+          info() << boost::format("          history=%s")
+                    % truncateHistory(c->debugHistory) << endmsg;
+        }
+      }
+    };
+
     for (size_t ih = 1; ih < hits.size(); ih++) {
       auto& hi = hits[ih];
       // measurement position (same for all components)
@@ -524,6 +555,10 @@ StatusCode RecGsfTracking::execute() {
       const double stepTX0 = thicknessInX0(hi.layer);
       totalTX0 += stepTX0;
       if (stepTX0 > maxTX0Layer) maxTX0Layer = stepTX0;
+      if (m_verboseDump && m_componentDebugDump) {
+        info() << boost::format("  MAT hit=%d r=%.1f stepTX0=%.6g comps=%d")
+                  % (int)ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
+      }
 
       // Apply the material/BH process before the measurement update at this hit.
       // The current coarse material estimate is attached to the target layer, so
@@ -551,19 +586,26 @@ StatusCode RecGsfTracking::execute() {
                         % ci % childKappa % childPT % children[ci]->weight << endmsg;
             }
           }
-          for (auto* c : children) newCps.push_back(c);
+          for (auto* c : children) {
+            c->debugId = nextComponentDebugId++;
+            newCps.push_back(c);
+          }
         }
         comps = std::move(newCps);
         nSplits++;
         justSplit = true;
+        dumpComponents("after-split/raw", (int)ih, comps);
       }
       GsfMixture::normalizeWeights(comps);
+      if (justSplit || (int)comps.size() > 1)
+        dumpComponents("after-split/norm", (int)ih, comps);
       if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
-      if ((int)comps.size() > m_maxComponents) {
-        GsfMixture::reduce(comps, m_maxComponents, bz);
-        nReductions++;
-      }
+      const int reductionTarget = (m_reductionTargetComponents.value() > 0)
+          ? std::min(m_reductionTargetComponents.value(), m_maxComponents.value())
+          : m_maxComponents.value();
       GsfMixture::normalizeWeights(comps);
+      if (justSplit || (int)comps.size() > 1)
+        dumpComponents("before-hit", (int)ih, comps);
 
       std::vector<GsfComponent*> accepted;
       std::vector<double> dchi2s;
@@ -583,7 +625,12 @@ StatusCode RecGsfTracking::execute() {
 
         if (comp->kaltrack->AddAndFilter(*st)) {
           double dchi = st->GetDeltaChi2();
+          const double oldWeight = comp->weight;
           comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
+          if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+            info() << boost::format("      hit-update accept comp[%02d] dchi2=%.6g w %.6g -> %.6g")
+                      % (int)accepted.size() % dchi % oldWeight % comp->weight << endmsg;
+          }
           accepted.push_back(comp);
           if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
             dchi2s.push_back(dchi);
@@ -608,8 +655,14 @@ StatusCode RecGsfTracking::execute() {
             }
           }
           if (!recovered) {
+            if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+              info() << boost::format("      hit-update reject comp at hit=%d") % (int)ih << endmsg;
+            }
             delete st;
             delete comp;
+          } else if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+            info() << boost::format("      hit-update recover comp at hit=%d w=%.6g")
+                      % (int)ih % comp->weight << endmsg;
           }
         }
       }
@@ -638,7 +691,35 @@ StatusCode RecGsfTracking::execute() {
       }
 
       comps = std::move(accepted);
+      if (justSplit || (int)comps.size() > 1)
+        dumpComponents("after-hit/raw", (int)ih, comps);
       GsfMixture::normalizeWeights(comps);
+      if (justSplit || (int)comps.size() > 1)
+        dumpComponents("after-hit/norm", (int)ih, comps);
+
+      const bool shouldReduce = ((int)comps.size() > m_maxComponents.value()) ||
+          (reductionTarget < m_maxComponents.value() &&
+           (int)comps.size() >= m_maxComponents.value());
+      if (shouldReduce && (int)comps.size() > reductionTarget) {
+        if (m_verboseDump && m_verboseSplitDump) {
+          info() << boost::format("  MIX reduce begin hit=%d n=%d max=%d target=%d mode=%s after measurement")
+                    % (int)ih % (int)comps.size() % m_maxComponents.value()
+                    % reductionTarget % m_reductionMode.value() << endmsg;
+        }
+        auto reductionLogger = [&](const std::string& line) {
+          if (m_verboseDump && m_verboseSplitDump) info() << line << endmsg;
+        };
+        if (m_reductionMode.value() == "TopN" || m_reductionMode.value() == "topN" ||
+            m_reductionMode.value() == "topn") {
+          GsfMixture::reduceTopN(comps, reductionTarget, reductionLogger);
+        } else {
+          GsfMixture::reduce(comps, reductionTarget, bz, reductionLogger);
+        }
+        nReductions++;
+        dumpComponents("after-reduce", (int)ih, comps);
+        GsfMixture::normalizeWeights(comps);
+        dumpComponents("after-reduce/norm", (int)ih, comps);
+      }
       nProc++;
     }
 
@@ -666,6 +747,11 @@ StatusCode RecGsfTracking::execute() {
       }
 
       auto* best = comps[bestIdx];
+      dumpComponents("final-smoothed", -1, comps);
+      if (m_verboseDump && m_verboseSplitDump) {
+        info() << boost::format("  MIX selected bestIdx=%d bestWeight=%.6g outputMode=%s")
+                  % bestIdx % best->weight % m_outputMode.value() << endmsg;
+      }
 
       if (m_verboseDump && m_verboseSplitDump) {
         auto dumpSite = [&](const char* label, int idx) {
