@@ -12,9 +12,11 @@ metadata:
 
 This record captures the post-`GlobalSim2GeV85` debugging changes made on 2026-07-08.
 
-### Per-propagation BH split
+### Pre-measurement per-propagation BH split
 
-`Reconstruction/RecGsfTracking/src/GsfAlgorithm.cpp` now uses the current layer/material estimate only for BH splitting:
+`Reconstruction/RecGsfTracking/src/GsfAlgorithm.cpp` now applies the BH/material transition before the measurement update at the target hit. This fixes the earlier wrong ordering where the current hit constrained the unsplit parent and the BH ambiguity appeared only afterward.
+
+The code uses the current layer/material estimate only for BH splitting:
 
 ```cpp
 const double stepTX0 = thicknessInX0(hi.layer);
@@ -24,7 +26,7 @@ if (stepTX0 > m_bhSplitThresh && m_isElectron) {
 }
 ```
 
-The old accumulated `aTX0` trigger/input was removed. `totalTX0` and `maxTX0Layer` remain diagnostics.
+The old accumulated `aTX0` trigger/input was removed. `totalTX0` and `maxTX0Layer` remain diagnostics. The split log now reads `BH Split before hit ...`, and the post-split diagnostic table is printed after the measurement update so it reports which child components survived the hit likelihood.
 
 ### BH split covariance update
 
@@ -137,14 +139,32 @@ Useful log filter:
 grep -E "GSF event index|BH Split|DIAG (inner|last|ip)|GSF diagnostics"   /tmp/gsf_seed1_five_event_debug/logs/run.log
 ```
 
-Expected current behavior for the five-event card:
+Expected current behavior for the five-event card after the pre-measurement split change:
 
 ```text
 splits 2
 peak-comps 25
 final-comps 12
+log contains `BH Split before hit`
 no huge tanLambda at inner/IP
 GSF p close to LCIO/truth, except expected energy-loss behavior
+```
+
+Latest five-event output after moving the split before the measurement update:
+
+```text
+/tmp/gsf_seed1_five_event_debug/outputs/gsf_light_global_bh_seed1_five_debug.root
+```
+
+Kinematic summary:
+
+```text
+event truth_p truth_pt truth_theta lcio_p lcio_pt lcio_theta gsf_p gsf_pt gsf_theta gsf_tanl gsf_d0 gsf_z0
+22    2.0080  2.0004  85.0000    2.0046 1.9971 85.0174    2.0039 1.9963 85.0163  0.0872 -0.0016 -0.0047
+37    2.0080  2.0004  85.0000    2.0054 1.9978 85.0253    2.0047 1.9971 85.0088  0.0873 -0.0479 -0.0028
+47    2.0080  2.0004  85.0000    2.0087 2.0011 85.0175    2.0082 2.0008 85.0831  0.0860 -0.0234  0.0560
+89    2.0080  2.0004  85.0000    2.0015 1.9938 84.9781    1.9992 1.9915 84.9733  0.0880  0.0540 -0.0130
+94    2.0080  2.0004  85.0000    1.8435 1.8364 84.9581    1.8436 1.8365 84.9534  0.0883  0.0665 -0.0154
 ```
 
 ## Six-Event Validation Snapshot

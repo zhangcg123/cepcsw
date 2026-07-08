@@ -422,6 +422,50 @@ StatusCode RecGsfTracking::execute() {
       // measurement position (same for all components)
       TVector3 measPos = hi.layer->HitToXv(*hi.kalHit);
 
+      const double stepTX0 = thicknessInX0(hi.layer);
+      totalTX0 += stepTX0;
+      if (stepTX0 > maxTX0Layer) maxTX0Layer = stepTX0;
+
+      // Apply the material/BH process before the measurement update at this hit.
+      // The current coarse material estimate is attached to the target layer, so
+      // the child hypotheses are what the hit likelihood sees.
+      justSplit = false;
+      if (stepTX0 > m_bhSplitThresh && m_isElectron &&
+          (int)comps.size() < m_maxComponents) {
+        if (m_verboseDump && m_verboseSplitDump) {
+          info() << boost::format("  ── BH Split before hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
+                    % ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
+        }
+        BetheHeitlerSplitter bhs(m_bhModel.value());
+        std::vector<GsfComponent*> newCps;
+        for (auto* comp : comps) {
+          double parentKappa = comp->helixAtLastSite(bz).GetKappa();
+          auto children = bhs.split(comp, stepTX0, bz);
+          if (m_verboseDump && m_verboseSplitDump) {
+            double parentPT = (bz != 0 && parentKappa != 0) ? 1.0/std::abs(parentKappa) : 0;
+            info() << boost::format("    parent κ=%.4e (pT≈%.3f)  weight=%.4f  → %d children")
+                      % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
+            for (size_t ci = 0; ci < children.size(); ci++) {
+              double childKappa = children[ci]->helixAtLastSite(bz).GetKappa();
+              double childPT = (bz != 0 && childKappa != 0) ? 1.0/std::abs(childKappa) : 0;
+              info() << boost::format("      child[%d] κ=%.4e (pT≈%.3f)  weight=%.4f")
+                        % ci % childKappa % childPT % children[ci]->weight << endmsg;
+            }
+          }
+          for (auto* c : children) newCps.push_back(c);
+        }
+        comps = std::move(newCps);
+        nSplits++;
+        justSplit = true;
+      }
+      GsfMixture::normalizeWeights(comps);
+      if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
+      if ((int)comps.size() > m_maxComponents) {
+        GsfMixture::reduce(comps, m_maxComponents, bz);
+        nReductions++;
+      }
+      GsfMixture::normalizeWeights(comps);
+
       std::vector<GsfComponent*> accepted;
       std::vector<double> dchi2s;
       if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
@@ -478,9 +522,9 @@ StatusCode RecGsfTracking::execute() {
         break;
       }
 
-      // ── verbose: prediction vs measurement after split ──
+      // ── verbose: prediction vs measurement after pre-hit split ──
       if (m_verboseDump && m_verboseSplitDump && justSplit && !accepted.empty()) {
-        info() << boost::format("  >>> Post-split @ hit %d (r=%.1f mm) — %d components survive")
+        info() << boost::format("  >>> Post-split measurement @ hit %d (r=%.1f mm) — %d components survive")
                   % ih % hi.radius % (int)accepted.size() << endmsg;
         info() << boost::format("      measurement: (%.3f, %.3f, %.3f)")
                   % measPos.X() % measPos.Y() % measPos.Z() << endmsg;
@@ -493,47 +537,8 @@ StatusCode RecGsfTracking::execute() {
                     % ci % k % (1.0/std::abs(k)) % c->weight % dchi << endmsg;
         }
       }
-      justSplit = false;
 
       comps = std::move(accepted);
-      const double stepTX0 = thicknessInX0(hi.layer);
-      totalTX0 += stepTX0;
-      if (stepTX0 > maxTX0Layer) maxTX0Layer = stepTX0;
-
-      if (stepTX0 > m_bhSplitThresh && m_isElectron &&
-          (int)comps.size() < m_maxComponents) {
-        if (m_verboseDump && m_verboseSplitDump) {
-          info() << boost::format("  ── BH Split @ hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
-                    % ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
-        }
-        BetheHeitlerSplitter bhs(m_bhModel.value());
-        std::vector<GsfComponent*> newCps;
-        for (auto* comp : comps) {
-          double parentKappa = comp->helixAtLastSite(bz).GetKappa();
-          auto children = bhs.split(comp, stepTX0, bz);
-          if (m_verboseDump && m_verboseSplitDump) {
-            double parentPT = (bz != 0 && parentKappa != 0) ? 1.0/std::abs(parentKappa) : 0;
-            info() << boost::format("    parent κ=%.4e (pT≈%.3f)  weight=%.4f  → %d children")
-                      % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
-            for (size_t ci = 0; ci < children.size(); ci++) {
-              double childKappa = children[ci]->helixAtLastSite(bz).GetKappa();
-              double childPT = (bz != 0 && childKappa != 0) ? 1.0/std::abs(childKappa) : 0;
-              info() << boost::format("      child[%d] κ=%.4e (pT≈%.3f)  weight=%.4f")
-                        % ci % childKappa % childPT % children[ci]->weight << endmsg;
-            }
-          }
-          for (auto* c : children) newCps.push_back(c);
-        }
-        comps = std::move(newCps);
-        nSplits++;
-        justSplit = true;
-      }
-      GsfMixture::normalizeWeights(comps);
-      if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
-      if ((int)comps.size() > m_maxComponents) {
-        GsfMixture::reduce(comps, m_maxComponents, bz);
-        nReductions++;
-      }
       GsfMixture::normalizeWeights(comps);
       nProc++;
     }
