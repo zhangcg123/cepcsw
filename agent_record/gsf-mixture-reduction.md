@@ -15,8 +15,8 @@ When the number of Gaussian components exceeds `MaxComponents` (default 12), the
 While `comps.size() > maxN`:
 1. Compute pairwise symmetric KL distance for all component pairs
 2. Find the pair with minimum distance
-3. Merge the selected pair by moment matching at the active last site
-4. Keep the higher-weight component as the representative track, overwrite its last-site mean/covariance with the merged moments, and delete the other component
+3. Merge the selected pair by moment matching corresponding states across the common branch history
+4. Keep the higher-weight component as the representative track, overwrite its matching site-state means/covariances with the merged moments, and delete the other component
 5. Repeat until at or below maxN
 
 ## KL Distance Computation
@@ -45,8 +45,9 @@ where d=5 (drho, phi0, kappa, dz, tanLambda).
 
 ## Key Design Decisions
 - **Full 5x5 covariance** is used (not just diagonal), capturing correlations between parameters
-- The **higher-weight component's track history** is kept as the representative, but its active last-site mean/covariance are overwritten with the moment-matched merged Gaussian
-- Mean vectors are extracted from the **last site** (current position), not the initial site
+- The **higher-weight component's track object** is kept as the representative, but corresponding state means/covariances across the common branch history are overwritten with moment-matched merged Gaussians
+- KL pair selection still uses means/covariances from the **last site** (current filtering frontier)
+- The history merge prevents the reduced component from carrying a stale inner-hit history into `SmoothAll()` and IP extrapolation from `At(1)`
 - The reduction is **O(N²)** per iteration — acceptable for N ≤ 12 but would be expensive for very large mixtures
 
 **Why:** Understanding the reduction algorithm is needed when debugging component merging behavior or tuning MaxComponents.
