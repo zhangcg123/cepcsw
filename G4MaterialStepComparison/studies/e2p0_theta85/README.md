@@ -5,8 +5,8 @@ This directory repeats the 1 GeV, theta=85 deg material-step procedure for the 2
 Input tuples in the CEPCSW top directory:
 
 ```text
-gsf_material_steps-e--2.0-85-{1..10}.root
-gsf_material_steps-mu--2.0-85-{1..10}.root
+gsf_material_steps-e--2.0-85-{1..15}.root
+gsf_material_steps-mu--2.0-85-{1..15}.root
 ```
 
 The ROOT tuples are not copied here. This directory contains only analysis scripts, generated summaries, and plots.
@@ -58,15 +58,22 @@ root -l -b -q 'G4MaterialStepComparison/studies/e2p0_theta85/scripts/plot_electr
 
 ## Current Results
 
+These numbers use the full currently available sample:
+
+```text
+gsf_material_steps-e--2.0-85-{1..15}.root: 3500 events
+gsf_material_steps-mu--2.0-85-{1..15}.root: 3500 events
+```
+
 Electron eBrem track-id continuity:
 
 ```text
-all_eBrem_steps                  850404
-all_eBrem_same_track_after       848017
-all_eBrem_no_same_track_after      2387
-primary_eBrem_steps               36525
-primary_eBrem_same_track_after    36518
-primary_eBrem_no_same_track_after     7
+all_eBrem_steps                 2979904
+all_eBrem_same_track_after      2971381
+all_eBrem_no_same_track_after      8523
+primary_eBrem_steps              128475
+primary_eBrem_same_track_after   128459
+primary_eBrem_no_same_track_after    16
 ```
 
 The primary eBrem `track_id` therefore almost always continues after the eBrem step. The few no-same-track cases are edge cases where no later same-track step is recorded.
@@ -74,65 +81,79 @@ The primary eBrem `track_id` therefore almost always continues after the eBrem s
 Primary eBrem radius distribution:
 
 ```text
-primary_eBrem_R_mid_mm mean 1807.16
-q01/q05/q10/q50/q90/q99 = 142.73 / 1831.09 / 1836.09 / 1852.65 / 1879.40 / 1914.18 mm
-R~100 primary eBrem count = 160
-R~100 midR q10/q50/q90 = 70.14 / 90.02 / 110.00 mm
-R~100 midZ q10/q50/q90 = 6.14 / 715.89 / 849.18 mm
+primary_eBrem_R_mid_mm mean 1807.51
+q01/q05/q10/q50/q90/q99 = 107.58 / 1831.29 / 1836.20 / 1852.59 / 1879.02 / 1913.38 mm
+R~100 primary eBrem count = 712
+R~100 midR q10/q50/q90 = 70.13 / 92.88 / 108.88 mm
+R~100 midZ q10/q50/q90 = 6.15 / 739.28 / 955.45 mm
 ```
 
-The dominant primary eBrem population is still near `R = 1.8-1.9 m`. The small-radius population is much smaller than in the 1 GeV point and is dominated by forward/MDI material:
+The dominant primary eBrem population is still near `R = 1.8-1.9 m`. The small-radius population is dominated by forward/MDI material:
 
 ```text
-stainless_steel 70
-G4_W            45
-CFRP_M55J       26
-CrZrCu18150     16
-Air              3
+G4_W             281
+stainless_steel 256
+CFRP_M55J       108
+LYSO             29
+Air              19
+CrZrCu18150      16
+G4_Al             2
+Polyimide_ITK     1
 ```
 
 Primary eBrem category loss summaries:
 
 ```text
-crystal_bar       count 34269  frac_loss_mean 0.117973  abs_loss_GeV_mean 0.049002
-w_beampipe_shell  count    45  frac_loss_mean 0.188707  abs_loss_GeV_mean 0.026412
-other_tracker     count  1107  frac_loss_mean 0.074683  abs_loss_GeV_mean 0.116773
+crystal_bar       count 120945  frac_loss_mean 0.117853  abs_loss_GeV_mean 0.048926
+w_beampipe_shell  count    281  frac_loss_mean 0.167001  abs_loss_GeV_mean 0.023209
+other_tracker     count   3774  frac_loss_mean 0.072882  abs_loss_GeV_mean 0.109965
 ```
 
-Primary electron eBrem in tracker-named volumes, shape-normalized `E_f/E_i = post_p/pre_p` spectrum:
+Primary electron tracker-process retained-fraction spectra use `E_f/E_i = post_p/pre_p` and are shape-normalized:
 
 ```text
-tracker_Ef_over_Ei_count 1107  mean 0.925317  q10 0.741971  q50 0.995027  q90 0.999911
+tracker_Ef_over_Ei_count       3774  mean 0.927118  q10 0.754791  q50 0.995559  q90 0.999912
+tracker_eIoni_Ef_over_Ei_count 69611 mean 0.999588  q10 0.999970  q50 0.999998  q90 0.999999
 ```
 
 ![primary tracker eBrem Ef/Ei shape](plots/primary_tracker_ebrem_Ef_over_Ei_shape.png)
 
-The same normalized histogram is saved for downstream studies in `plots/primary_tracker_ebrem_Ef_over_Ei_shape.root` as `h_primary_tracker_ebrem_Ef_over_Ei_shape`.
+![primary tracker eIoni Ef/Ei shape](plots/primary_tracker_eioni_Ef_over_Ei_shape.png)
+
+![primary tracker eBrem and eIoni Ef/Ei shape](plots/primary_tracker_ebrem_eioni_Ef_over_Ei_shape.png)
+
+The normalized histograms are saved for downstream studies in:
+
+```text
+plots/primary_tracker_ebrem_Ef_over_Ei_shape.root        h_primary_tracker_ebrem_Ef_over_Ei_shape
+plots/primary_tracker_eioni_Ef_over_Ei_shape.root        h_primary_tracker_eioni_Ef_over_Ei_shape
+plots/primary_tracker_ebrem_eioni_Ef_over_Ei_shape.root  h_primary_tracker_ebrem_Ef_over_Ei_shape, h_primary_tracker_eioni_Ef_over_Ei_shape
+```
 
 Tracker-only primary electron process loss summaries:
 
 ```text
-eBrem           count   1107  mean 0.13005871 GeV  q50 0.00654459  q90 0.42895171
-eIoni           count  18871  mean 0.00005924 GeV  q50 0.00000262  q90 0.00001323
-msc             count    132  mean 0.00003134 GeV  q50 0.00001458  q90 0.00005900
-StepLimiter     count  11335  mean 0.00000395 GeV  q50 0.00000238  q90 0.00000376
-Transportation  count 647347  mean 0.00000525 GeV  q50 0.00000072  q90 0.00001121
+eBrem           count    3774  mean 0.12384662 GeV  q50 0.00563061  q90 0.38432580
+eIoni           count   69611  mean 0.00005356 GeV  q50 0.00000262  q90 0.00001311
+msc             count     619  mean 0.00002984 GeV  q50 0.00001369  q90 0.00005054
+StepLimiter     count   43732  mean 0.00000364 GeV  q50 0.00000235  q90 0.00000370
+Transportation  count 2324127  mean 0.00000509 GeV  q50 0.00000072  q90 0.00001073
 ```
 
 Tracker-only primary muon process loss summaries:
 
 ```text
-muIoni          count  16192  mean 0.00006383 GeV  q50 0.00000238  q90 0.00001359
-StepLimiter     count   6577  mean 0.00000187 GeV  q50 0.00000167  q90 0.00000286
-Transportation  count 594676  mean 0.00000483 GeV  q50 0.00000048  q90 0.00001073
-other           count      1  mean 0.00002575 GeV
+muIoni          count   56527  mean 0.00006835 GeV  q50 0.00000238  q90 0.00001359
+StepLimiter     count   23026  mean 0.00000187 GeV  q50 0.00000167  q90 0.00000286
+Transportation  count 2081477  mean 0.00000484 GeV  q50 0.00000048  q90 0.00001073
+other           count       4  mean 0.00015390 GeV
 ```
 
 Direct tracker ionization comparison:
 
 ```text
-eIoni  count 18871  mean 0.00005924 GeV  q50 0.00000262  q90 0.00001323  q99 0.00104129
-muIoni count 16192  mean 0.00006383 GeV  q50 0.00000238  q90 0.00001359  q99 0.00103476
+eIoni  count 69611  mean 0.00005356 GeV  q50 0.00000262  q90 0.00001311  q99 0.00089476
+muIoni count 56527  mean 0.00006835 GeV  q50 0.00000238  q90 0.00001359  q99 0.00102888
 ```
 
-At 2 GeV, the electron and muon tracker ionization spectra are very similar in the central and high-percentile regions. The electron sample still has more ionization steps, but the mean `loss` is not larger than the muon mean for this 2 GeV tracker-only selection.
+At 2 GeV, the electron and muon tracker ionization spectra remain similar in the central and high-percentile regions. The electron sample has more ionization steps, while the muon mean `loss` is slightly larger in this expanded tracker-only selection.

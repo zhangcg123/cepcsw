@@ -229,25 +229,36 @@ StatusCode RecGsfFlatTuple::execute() {
     m_lcio_hit_n = (int)m_lcio_hit_x.size();
   }
 
-  if (gsfCol) {
-    fillTrack(const_cast<edm4hep::TrackCollection*>(gsfCol),
-              m_gsf_pT, m_gsf_p, m_gsf_eta, m_gsf_theta,
-              m_gsf_phi, m_gsf_d0, m_gsf_z0,
-              m_gsf_omega, m_gsf_tanl,
-              m_gsf_chi2, m_gsf_ndf, m_gsf_nhits, m_gsf_type);
-    // per-hit data from GSFTracks
-    const auto& trk = (*gsfCol)[0];
-    for (const auto& th : trk.getTrackerHits()) {
-      if (!th.isAvailable()) continue;
-      auto& pos = th.getPosition();
-      m_gsf_hit_x.push_back((float)pos.x);
-      m_gsf_hit_y.push_back((float)pos.y);
-      m_gsf_hit_z.push_back((float)pos.z);
-      m_gsf_hit_r.push_back((float)std::hypot(pos.x, pos.y));
-      m_gsf_hit_edep.push_back(th.getEDep());
-      m_gsf_hit_cellid.push_back(th.getCellID());
+  if (gsfCol && gsfCol->size() > 0) {
+    try {
+      fillTrack(const_cast<edm4hep::TrackCollection*>(gsfCol),
+                m_gsf_pT, m_gsf_p, m_gsf_eta, m_gsf_theta,
+                m_gsf_phi, m_gsf_d0, m_gsf_z0,
+                m_gsf_omega, m_gsf_tanl,
+                m_gsf_chi2, m_gsf_ndf, m_gsf_nhits, m_gsf_type);
+      // per-hit data from GSFTracks
+      const auto& trk = (*gsfCol)[0];
+      auto trackerHits = trk.getTrackerHits();
+      if (trackerHits.size() > 0) {
+        for (const auto& th : trackerHits) {
+          if (!th.isAvailable()) continue;
+          auto& pos = th.getPosition();
+          m_gsf_hit_x.push_back((float)pos.x);
+          m_gsf_hit_y.push_back((float)pos.y);
+          m_gsf_hit_z.push_back((float)pos.z);
+          m_gsf_hit_r.push_back((float)std::hypot(pos.x, pos.y));
+          m_gsf_hit_edep.push_back(th.getEDep());
+          m_gsf_hit_cellid.push_back(th.getCellID());
+        }
+      }
+      m_gsf_hit_n = (int)m_gsf_hit_x.size();
+    } catch (const std::exception& e) {
+      warning() << "Event " << m_iev << ": GSF track access failed — " << e.what() << " — skipping GSF per-hit data" << endmsg;
+      m_gsf_hit_n = 0;
+    } catch (...) {
+      warning() << "Event " << m_iev << ": GSF track access failed (unknown exception) — skipping GSF per-hit data" << endmsg;
+      m_gsf_hit_n = 0;
     }
-    m_gsf_hit_n = (int)m_gsf_hit_x.size();
   }
 
   // ── all hits from original collections ──

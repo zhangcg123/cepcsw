@@ -1,0 +1,21 @@
+Fit of normalized tracker eBrem E_f/E_i histogram, electron 2 GeV theta=85 deg
+Histogram is normalized by bin sum, so curves are plotted as probability per bin.
+Primary smooth function: 3-component beta mixture on 0<z<1.
+Gaussian mimic: 5 truncated Gaussian components normalized on 0<=z<=1 and fitted to the beta-mixture curve.
+
+n_values 3774
+beta_chi2_like 0.0418816585
+gaussian_vs_beta_chi2_like 0.00200051018
+gaussian_vs_hist_chi2_like 0.0438295567
+
+beta_components index weight alpha beta mean
+beta 0 0.208440412 1.41542981 0.314198803 0.818343197
+beta 1 0.502854286 7.22103593 0.241764543 0.967604046
+beta 2 0.288705302 800 4.00962563 0.995012963
+
+gaussian_components index weight mean sigma
+gaussian 0 0.0774161169 0.677171067 0.35
+gaussian 1 0.135334171 0.999993856 0.153904803
+gaussian 2 0.125841439 0.999993856 0.0573680712
+gaussian 3 0.101560696 0.999993856 0.0195818944
+gaussian 4 0.559847577 0.999993856 0.00479768892

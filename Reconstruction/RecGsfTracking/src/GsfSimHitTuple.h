@@ -16,8 +16,9 @@ class TTree;
 /// This reads EDM4hep SimTrackerHit collections from the event store and
 /// writes the hit-level truth momentum, position, path length, EDep, and
 /// MCParticle links. SimTrackerHit momentum is the particle momentum at the
-/// hit position, not a full Geant4 pre/post-step pair, but it is the truth
-/// information available in standard CEPCSW ROOT outputs.
+/// hit position, not a full Geant4 pre/post-step pair. The tuple also stores
+/// hit-to-hit momentum changes ordered by hit time; these are diagnostic
+/// approximations, not exact material-crossing losses.
 class RecGsfSimHitTuple : public Algorithm {
 public:
   RecGsfSimHitTuple(const std::string& name, ISvcLocator* svc);
@@ -71,8 +72,26 @@ private:
   std::vector<float> m_hit_edep;
   std::vector<float> m_hit_path_length;
   std::vector<float> m_hit_retained_vs_primary;
+  std::vector<float> m_hit_loss_vs_primary;
+
+  // Time-ordered hit-to-hit diagnostics. These approximate local momentum
+  // changes between recorded sensitive hits; they are not Geant4 step
+  // pre/post momenta.
+  std::vector<int> m_hit_has_prev;
+  std::vector<int> m_hit_prev_index_time;
+  std::vector<int> m_hit_order_time;
+  std::vector<float> m_hit_prev_p, m_hit_prev_pT;
+  std::vector<float> m_hit_prev_x, m_hit_prev_y, m_hit_prev_z, m_hit_prev_r;
+  std::vector<float> m_hit_prev_time;
+  std::vector<float> m_hit_step_retained_vs_prev;
+  std::vector<float> m_hit_step_loss_vs_prev;
+  std::vector<float> m_hit_step_dp;
+  std::vector<float> m_hit_step_dr;
+  std::vector<float> m_hit_step_ds;
+  std::vector<float> m_hit_step_dt;
 
   void clearVectors();
+  void fillHitToHitDiagnostics();
 };
 
 #endif

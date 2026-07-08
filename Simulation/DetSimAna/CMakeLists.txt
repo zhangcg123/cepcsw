@@ -2,12 +2,14 @@
 gaudi_add_module(DetSimAna
                  SOURCES src/Edm4hepWriterAnaElemTool.cpp
                          src/ExampleAnaDoseElemTool.cpp
+                         src/GsfMaterialStepRecorderAnaElemTool.cpp
                  LINK DetSimInterface
                       DetSimSDLib
                       ${DD4hep_COMPONENT_LIBRARIES} 
                       Gaudi::GaudiKernel
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
                       k4FWCore::k4FWCore
+                      ${ROOT_LIBRARIES}
 )
 
 target_include_directories(DetSimAna PUBLIC

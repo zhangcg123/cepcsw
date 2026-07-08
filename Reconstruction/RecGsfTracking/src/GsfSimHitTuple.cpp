@@ -7,8 +7,10 @@
 
 #include <TFile.h>
 #include <TTree.h>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <numeric>
 
 DECLARE_COMPONENT(RecGsfSimHitTuple)
 
@@ -79,6 +81,23 @@ StatusCode RecGsfSimHitTuple::initialize() {
   m_tree->Branch("hit_edep", &m_hit_edep);
   m_tree->Branch("hit_path_length", &m_hit_path_length);
   m_tree->Branch("hit_retained_vs_primary", &m_hit_retained_vs_primary);
+  m_tree->Branch("hit_loss_vs_primary", &m_hit_loss_vs_primary);
+  m_tree->Branch("hit_has_prev", &m_hit_has_prev);
+  m_tree->Branch("hit_prev_index_time", &m_hit_prev_index_time);
+  m_tree->Branch("hit_order_time", &m_hit_order_time);
+  m_tree->Branch("hit_prev_p", &m_hit_prev_p);
+  m_tree->Branch("hit_prev_pT", &m_hit_prev_pT);
+  m_tree->Branch("hit_prev_x", &m_hit_prev_x);
+  m_tree->Branch("hit_prev_y", &m_hit_prev_y);
+  m_tree->Branch("hit_prev_z", &m_hit_prev_z);
+  m_tree->Branch("hit_prev_r", &m_hit_prev_r);
+  m_tree->Branch("hit_prev_time", &m_hit_prev_time);
+  m_tree->Branch("hit_step_retained_vs_prev", &m_hit_step_retained_vs_prev);
+  m_tree->Branch("hit_step_loss_vs_prev", &m_hit_step_loss_vs_prev);
+  m_tree->Branch("hit_step_dp", &m_hit_step_dp);
+  m_tree->Branch("hit_step_dr", &m_hit_step_dr);
+  m_tree->Branch("hit_step_ds", &m_hit_step_ds);
+  m_tree->Branch("hit_step_dt", &m_hit_step_dt);
 
   info() << "Output: " << m_outFileName << endmsg;
   info() << "SimTrackerHit collections to dump: "
@@ -102,6 +121,76 @@ void RecGsfSimHitTuple::clearVectors() {
   m_hit_edep.clear();
   m_hit_path_length.clear();
   m_hit_retained_vs_primary.clear();
+  m_hit_loss_vs_primary.clear();
+  m_hit_has_prev.clear();
+  m_hit_prev_index_time.clear();
+  m_hit_order_time.clear();
+  m_hit_prev_p.clear(); m_hit_prev_pT.clear();
+  m_hit_prev_x.clear(); m_hit_prev_y.clear(); m_hit_prev_z.clear(); m_hit_prev_r.clear();
+  m_hit_prev_time.clear();
+  m_hit_step_retained_vs_prev.clear();
+  m_hit_step_loss_vs_prev.clear();
+  m_hit_step_dp.clear();
+  m_hit_step_dr.clear();
+  m_hit_step_ds.clear();
+  m_hit_step_dt.clear();
+}
+
+void RecGsfSimHitTuple::fillHitToHitDiagnostics() {
+  const int n = (int)m_hit_p.size();
+  m_hit_has_prev.assign(n, 0);
+  m_hit_prev_index_time.assign(n, -1);
+  m_hit_order_time.assign(n, -1);
+  m_hit_prev_p.assign(n, 0.0f);
+  m_hit_prev_pT.assign(n, 0.0f);
+  m_hit_prev_x.assign(n, 0.0f);
+  m_hit_prev_y.assign(n, 0.0f);
+  m_hit_prev_z.assign(n, 0.0f);
+  m_hit_prev_r.assign(n, 0.0f);
+  m_hit_prev_time.assign(n, 0.0f);
+  m_hit_step_retained_vs_prev.assign(n, 1.0f);
+  m_hit_step_loss_vs_prev.assign(n, 0.0f);
+  m_hit_step_dp.assign(n, 0.0f);
+  m_hit_step_dr.assign(n, 0.0f);
+  m_hit_step_ds.assign(n, 0.0f);
+  m_hit_step_dt.assign(n, 0.0f);
+
+  std::vector<int> order(n);
+  std::iota(order.begin(), order.end(), 0);
+  std::stable_sort(order.begin(), order.end(), [this](int a, int b) {
+    if (m_hit_time[a] != m_hit_time[b]) return m_hit_time[a] < m_hit_time[b];
+    if (m_hit_r[a] != m_hit_r[b]) return m_hit_r[a] < m_hit_r[b];
+    if (m_hit_det[a] != m_hit_det[b]) return m_hit_det[a] < m_hit_det[b];
+    return m_hit_col_index[a] < m_hit_col_index[b];
+  });
+
+  for (int iord = 0; iord < n; ++iord) {
+    const int idx = order[iord];
+    m_hit_order_time[idx] = iord;
+    if (iord == 0) continue;
+
+    const int prev = order[iord - 1];
+    const float dx = m_hit_x[idx] - m_hit_x[prev];
+    const float dy = m_hit_y[idx] - m_hit_y[prev];
+    const float dz = m_hit_z[idx] - m_hit_z[prev];
+    const float retained = (m_hit_p[prev] > 0.0f) ? m_hit_p[idx] / m_hit_p[prev] : 0.0f;
+
+    m_hit_has_prev[idx] = 1;
+    m_hit_prev_index_time[idx] = prev;
+    m_hit_prev_p[idx] = m_hit_p[prev];
+    m_hit_prev_pT[idx] = m_hit_pT[prev];
+    m_hit_prev_x[idx] = m_hit_x[prev];
+    m_hit_prev_y[idx] = m_hit_y[prev];
+    m_hit_prev_z[idx] = m_hit_z[prev];
+    m_hit_prev_r[idx] = m_hit_r[prev];
+    m_hit_prev_time[idx] = m_hit_time[prev];
+    m_hit_step_retained_vs_prev[idx] = retained;
+    m_hit_step_loss_vs_prev[idx] = 1.0f - retained;
+    m_hit_step_dp[idx] = m_hit_p[idx] - m_hit_p[prev];
+    m_hit_step_dr[idx] = m_hit_r[idx] - m_hit_r[prev];
+    m_hit_step_ds[idx] = std::sqrt(dx*dx + dy*dy + dz*dz);
+    m_hit_step_dt[idx] = m_hit_time[idx] - m_hit_time[prev];
+  }
 }
 
 StatusCode RecGsfSimHitTuple::execute() {
@@ -191,13 +280,16 @@ StatusCode RecGsfSimHitTuple::execute() {
       m_hit_time.push_back(hit.getTime());
       m_hit_edep.push_back(hit.getEDep());
       m_hit_path_length.push_back(hit.getPathLength());
-      m_hit_retained_vs_primary.push_back((m_mc_p > 0) ? (float)(p / m_mc_p) : 0.0f);
+      const float retained = (m_mc_p > 0) ? (float)(p / m_mc_p) : 0.0f;
+      m_hit_retained_vs_primary.push_back(retained);
+      m_hit_loss_vs_primary.push_back(1.0f - retained);
       localIdx++;
     }
     detIdx++;
   }
 
   m_hit_n = (int)m_hit_p.size();
+  fillHitToHitDiagnostics();
   m_tree->Fill();
   return StatusCode::SUCCESS;
 }

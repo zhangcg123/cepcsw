@@ -1,0 +1,16 @@
+Tracker eBrem retained-fraction split for electron 2 GeV, theta=85 deg
+selection primary electron eBrem steps in tracker-named pre_volume VXD/ITK/TPC/OTK/SIT/SET
+input gsf_material_steps-e--2.0-85-{1..15}.root
+variable E_f/E_i = post_p/pre_p
+total 3774
+count_lt_0p9 698
+count_eq_0p9 0
+count_gt_0p9 3076
+count_ge_0p9 3076
+fraction_lt_0p9 0.184949656
+fraction_gt_0p9 0.815050344
+fraction_ge_0p9 0.815050344
+mean 0.927117862
+q10 0.754791442
+q50 0.995559081
+q90 0.999911997

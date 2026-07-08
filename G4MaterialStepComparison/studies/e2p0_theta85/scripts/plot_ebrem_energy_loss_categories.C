@@ -70,7 +70,7 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   gStyle->SetOptStat(0);
 
   TChain ch("g4step_tuple");
-  for (int i = 1; i <= 10; ++i) ch.Add(Form("gsf_material_steps-e--2.0-85-%d.root", i));
+  for (int i = 1; i <= 15; ++i) ch.Add(Form("gsf_material_steps-e--2.0-85-%d.root", i));
 
   vector<int>* track_id = nullptr;
   vector<int>* parent_id = nullptr;
@@ -101,6 +101,7 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
 
   TH1F hFracCrystalN("hFracCrystalN", "Primary eBrem fractional energy loss, shape-normalized;1 - p_{post}/p_{pre};normalized steps", 120, 0, 1.0);
   TH1F hEfEiTrackerN("hEfEiTrackerN", "Primary eBrem in tracker volumes;E_{f}/E_{i};normalized steps", 120, 0, 1.0);
+  TH1F hEfEiEIoniN("hEfEiEIoniN", "Primary eIoni in tracker volumes;E_{f}/E_{i};normalized steps", 120, 0, 1.0);
   TH1F hFracWN("hFracWN", "Primary eBrem fractional energy loss, shape-normalized;1 - p_{post}/p_{pre};normalized steps", 120, 0, 1.0);
   TH1F hFracTrackerN("hFracTrackerN", "Primary eBrem fractional energy loss, shape-normalized;1 - p_{post}/p_{pre};normalized steps", 120, 0, 1.0);
 
@@ -108,10 +109,11 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   styleHist(hAbsCrystal, kBlack); styleHist(hAbsW, kBlue + 1); styleHist(hAbsTracker, kCyan + 2);
   styleHist(hFracCrystalN, kBlack); styleHist(hFracWN, kBlue + 1); styleHist(hFracTrackerN, kCyan + 2);
   styleHist(hEfEiTrackerN, kBlack);
+  styleHist(hEfEiEIoniN, kBlue + 1);
 
   vector<float> fracCrystal, fracW, fracTracker;
   vector<float> absCrystal, absW, absTracker;
-  vector<float> efEiTracker;
+  vector<float> efEiTracker, efEiEIoni;
 
   auto fill = [](TH1F& hf, TH1F& ha, vector<float>& vf, vector<float>& va, float frac, float absLoss) {
     if (!isfinite(frac) || !isfinite(absLoss)) return;
@@ -128,7 +130,6 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   for (Long64_t entry = 0; entry < ch.GetEntries(); ++entry) {
     ch.GetEntry(entry);
     for (size_t i = 0; i < process_subtype->size(); ++i) {
-      if (process_subtype->at(i) != 3) continue;
       if (track_id->at(i) != 1 || parent_id->at(i) != 0 || pdg->at(i) != 11) continue;
 
       const string& mat = material->at(i);
@@ -138,15 +139,23 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
       const float efEi = p0 > 0 ? p1 / p0 : 0.0f;
       const float frac = p0 > 0 ? 1.0f - efEi : 0.0f;
       const float absLoss = loss->at(i);
+      const bool inTracker = isTrackerVolume(vol);
 
-      if (isTrackerVolume(vol) && isfinite(efEi)) {
+      if (process_subtype->at(i) == 2 && inTracker && isfinite(efEi)) {
+        hEfEiEIoniN.Fill(max(0.0f, min(1.0f, efEi)));
+        efEiEIoni.push_back(efEi);
+      }
+
+      if (process_subtype->at(i) != 3) continue;
+
+      if (inTracker && isfinite(efEi)) {
         hEfEiTrackerN.Fill(max(0.0f, min(1.0f, efEi)));
         efEiTracker.push_back(efEi);
       }
 
       if (isCrystalBar(mat, vol)) fill(hFracCrystal, hAbsCrystal, fracCrystal, absCrystal, frac, absLoss);
       else if (isWBeamPipeShell(mat, vol)) fill(hFracW, hAbsW, fracW, absW, frac, absLoss);
-      else if (isTrackerVolume(vol)) fill(hFracTracker, hAbsTracker, fracTracker, absTracker, frac, absLoss);
+      else if (inTracker) fill(hFracTracker, hAbsTracker, fracTracker, absTracker, frac, absLoss);
     }
   }
 
@@ -155,6 +164,7 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   if (hFracWN.Integral() > 0) hFracWN.Scale(1.0 / hFracWN.Integral());
   if (hFracTrackerN.Integral() > 0) hFracTrackerN.Scale(1.0 / hFracTrackerN.Integral());
   if (hEfEiTrackerN.Integral() > 0) hEfEiTrackerN.Scale(1.0 / hEfEiTrackerN.Integral());
+  if (hEfEiEIoniN.Integral() > 0) hEfEiEIoniN.Scale(1.0 / hEfEiEIoniN.Integral());
 
   TCanvas c1("c_loss_frac", "c_loss_frac", 900, 650);
   c1.SetLogy();
@@ -212,6 +222,46 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   hEfEiTrackerN.Write();
   histFile.Close();
 
+  const double efEiEIoniMean = efEiEIoni.empty() ? 0.0 : accumulate(efEiEIoni.begin(), efEiEIoni.end(), 0.0) / efEiEIoni.size();
+  TCanvas c5("c_tracker_eioni_efei", "c_tracker_eioni_efei", 900, 650);
+  c5.SetLogy();
+  hEfEiEIoniN.SetMaximum(hEfEiEIoniN.GetMaximum() * 2.0);
+  hEfEiEIoniN.SetMinimum(1e-5);
+  hEfEiEIoniN.Draw("hist");
+  TPaveText box5(0.16, 0.74, 0.45, 0.86, "NDC");
+  box5.SetFillColor(0);
+  box5.SetBorderSize(1);
+  box5.SetTextAlign(12);
+  box5.AddText(Form("N = %zu", efEiEIoni.size()));
+  box5.AddText(Form("mean = %.6f", efEiEIoniMean));
+  box5.Draw();
+  saveCanvas(c5, plotdir, "primary_tracker_eioni_Ef_over_Ei_shape");
+
+  TCanvas c6("c_tracker_ebrem_eioni_efei", "c_tracker_ebrem_eioni_efei", 900, 650);
+  c6.SetLogy();
+  hEfEiTrackerN.SetMaximum(max(hEfEiTrackerN.GetMaximum(), hEfEiEIoniN.GetMaximum()) * 2.0);
+  hEfEiTrackerN.SetMinimum(1e-5);
+  hEfEiTrackerN.SetTitle("Primary electron tracker processes;E_{f}/E_{i};normalized steps");
+  hEfEiTrackerN.Draw("hist");
+  hEfEiEIoniN.Draw("hist same");
+  TLegend leg6(0.50, 0.72, 0.88, 0.86);
+  leg6.AddEntry(&hEfEiTrackerN, "tracker eBrem", "l");
+  leg6.AddEntry(&hEfEiEIoniN, "tracker eIoni", "l");
+  leg6.Draw();
+  saveCanvas(c6, plotdir, "primary_tracker_ebrem_eioni_Ef_over_Ei_shape");
+
+  TFile eIoniFile((plotdir + "/primary_tracker_eioni_Ef_over_Ei_shape.root").c_str(), "RECREATE");
+  hEfEiEIoniN.SetName("h_primary_tracker_eioni_Ef_over_Ei_shape");
+  hEfEiEIoniN.Write();
+  eIoniFile.Close();
+
+  TFile overlayFile((plotdir + "/primary_tracker_ebrem_eioni_Ef_over_Ei_shape.root").c_str(), "RECREATE");
+  hEfEiTrackerN.SetName("h_primary_tracker_ebrem_Ef_over_Ei_shape");
+  hEfEiEIoniN.SetName("h_primary_tracker_eioni_Ef_over_Ei_shape");
+  hEfEiTrackerN.Write();
+  hEfEiEIoniN.Write();
+  overlayFile.Close();
+
   ofstream out(string(outdir) + "/category_energy_loss_summary.txt");
   out << fixed << setprecision(6);
   auto write = [&](const char* name, const vector<float>& vf, const vector<float>& va) {
@@ -235,11 +285,17 @@ void plot_ebrem_energy_loss_categories(const char* outdir = "G4MaterialStepCompa
   out << "w_beampipe_shell: material == G4_W and pre_volume contains BeamPipe_BeforeCryoW.\n";
   out << "other_tracker: pre_volume contains VXD/ITK/TPC/OTK/SIT/SET, excluding earlier categories.\n";
   out << "tracker_Ef_over_Ei_shape: primary electron eBrem with tracker-named pre_volume; histogram normalized to unit area.\n";
+  out << "tracker_eIoni_Ef_over_Ei_shape: primary electron eIoni with tracker-named pre_volume; histogram normalized to unit area.\n";
   out << "tracker_Ef_over_Ei_count " << efEiTracker.size()
       << " mean " << efEiMean
       << " q10 " << quantile(efEiTracker, 0.10)
       << " q50 " << quantile(efEiTracker, 0.50)
-      << " q90 " << quantile(efEiTracker, 0.90) << "\n\n";
+      << " q90 " << quantile(efEiTracker, 0.90) << "\n";
+  out << "tracker_eIoni_Ef_over_Ei_count " << efEiEIoni.size()
+      << " mean " << efEiEIoniMean
+      << " q10 " << quantile(efEiEIoni, 0.10)
+      << " q50 " << quantile(efEiEIoni, 0.50)
+      << " q90 " << quantile(efEiEIoni, 0.90) << "\n\n";
   write("crystal_bar", fracCrystal, absCrystal);
   write("w_beampipe_shell", fracW, absW);
   write("other_tracker", fracTracker, absTracker);

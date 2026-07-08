@@ -7,9 +7,6 @@ metadata:
 
 # Bethe-Heitler Splitter
 
-## BH 参数化可视化
-![BH Parameterization](bh_parameterization.png)
-
 ## What is tX0?
 tX0 = 径迹穿过的材料厚度 / 辐射长度（radiation length, X0）。辐射长度是材料的一个属性，表示电子通过轫致辐射损失 1/e 能量的平均距离。
 
@@ -72,6 +69,38 @@ The parameterization data is embedded directly in `BetheHeitlerSplitter.cpp` to 
 - 在 CEPC 的测试中，tX0 累积到 0.01 触发分裂，但产生的子组分全部被 KF 拒绝
 - **GSF 等价于没做分裂**
 
+
+## 2026-07-08 implementation update
+
+`BetheHeitlerSplitter` now supports named model options while preserving the existing split interface:
+
+- `Current`: default existing model.
+- `GlobalSim2GeV85`: 5-component simulation-derived global retained-fraction model from `BHModelComparisonStudies/globalBHmodelfromSim@2GeV85Degree/`.
+
+`RecGsfTracking` exposes the model through:
+
+```python
+gsf.BHModel = "Current"
+gsf.BHModel = "GlobalSim2GeV85"
+```
+
+The new global model does not depend on `tX0`; this is intentional for this fitted sample. The `split(parent, tX0, bz)` interface keeps `tX0` for compatibility and future models.
+
+Splitter implementation notes:
+
+- Child components are now created before mutating the reused parent, so all children clone from the original parent state.
+- Child weights use the original parent weight, not a parent weight already modified by child 0.
+- The old note that child 0 kappa was not updated is superseded by this implementation.
+
+GSF diagnostics now separate final fit summaries from detailed split logs:
+
+```python
+gsf.VerboseDump = True       # final fit parameter table
+gsf.VerboseSplitDump = False # suppress per-split component dump
+```
+
+See `agent_record/2026-07-08-global-bh-gsf-run.md` for the current run recipe and light-eBrem test results.
+
 ## Split Operation
 ```
 BetheHeitlerSplitter::split(parent, tX0, bz) -> vector<GsfComponent*>
@@ -116,7 +145,7 @@ For each component in the BH mixture:
 4. For i>0: deep-clone parent via `GsfComponent::clone()`, then overwrite kappa(2,0) in the last site's state vector
 5. Weight of each child = parent.weight * mixture[i].weight
 
-**已知 bug**: child[0] 的 kappa 没有被更新（只有 i>0 才更新），但因为 mean[0] 本身也大错，所以这个 bug 不是当前的主因。
+**2026-07-08 update**: the child-cloning/weighting path has been fixed so child 0 and cloned children are all derived from the original parent state and original parent weight before per-child kappa updates.
 
 ## tX0 累积数据（实测）
 在 1.0 GeV e- @ 85° 的 232 个 hit 中：

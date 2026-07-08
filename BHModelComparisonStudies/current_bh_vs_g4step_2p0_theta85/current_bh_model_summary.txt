@@ -1,0 +1,13 @@
+Current BetheHeitlerSplitter.cpp model visualization
+For 0.0001 <= tX0 < 0.1, current code uses a two-component CEPC thin-material toy mixture.
+Zero-variance no-loss branches are drawn with a narrow display sigma only for visualization.
+
+tX0 5e-05 n 1 mean_z 1 q10 1 q50 1 q90 1
+tX0 0.0001 n 2 mean_z 0.9999 q10 0.99540839 q50 0.99744911 q90 0.99948982
+tX0 0.0003 n 2 mean_z 0.99970004 q10 0.98622656 q50 0.99234809 q90 0.99846962
+tX0 0.001 n 2 mean_z 0.9990005 q10 0.95410458 q50 0.97450255 q90 0.99490051
+tX0 0.003 n 2 mean_z 0.9970045 q10 0.90735553 q50 0.94853085 q90 0.98970617
+tX0 0.01 n 2 mean_z 0.99004983 q10 0.90049834 q50 0.9447213 q90 0.98894426
+tX0 0.03 n 2 mean_z 0.97044553 q10 0.85222767 q50 0.90764229 q90 0.98152846
+tX0 0.1 n 6 mean_z 0.14419526 q10 0.020421423 q50 0.078725728 q90 0.25396435
+tX0 0.2 n 6 mean_z 0.55664899 q10 0.4399542 q50 0.48418681 q90 0.66435419

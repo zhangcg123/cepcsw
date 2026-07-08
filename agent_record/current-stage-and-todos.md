@@ -72,6 +72,41 @@ SimHitEnergyLoss/root_files/electron/
 SimHitEnergyLoss/root_files/muon/
 ```
 
+
+## Current Study Directories To Read
+
+There are two separate top-level study areas that should both be checked before continuing analysis:
+
+```text
+G4MaterialStepComparison/studies/
+TrackingPerformanceStudies/
+```
+
+`G4MaterialStepComparison/studies/` contains the true Geant4 material-step studies by energy/theta point. It is the place for `g4step_tuple` material truth summaries, primary eBrem categories, tracker process-loss spectra, and electron/muon material controls.
+
+`TrackingPerformanceStudies/` contains tracking-resolution studies. The current important subdirectory is `TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/`, which is an LCIO `CompleteTracks` performance study joined to material-step eBrem categories. Its useful no/light/hard eBrem categories are based on tracker-volume primary eBrem only (`pre_volume` contains VXD/ITK/TPC/OTK/SIT/SET); all-material eBrem is computed but is not the performance split. It is not automatically a GSF-vs-LCIO study unless extended to read `gsf_flat`/`GSFTracks`.
+
+Latest regenerated 2 GeV, theta=85 deg tracking-performance result uses seeds 1..15. Tracker-volume category counts are `no_tracker_ebrem=1373`, `light_tracker_ebrem=1561`, `hard_tracker_ebrem=566`. For transverse momentum only, no-tracker-eBrem electrons have median/q16/q84 `0.0542/-0.0884/0.1737%` and `|pT residual|>10% = 13/1373`; muon LCIO has median/q16/q84 `0.0668/-0.0569/0.1826%` and `|pT residual|>10% = 2/3500`. Conclusion: no-tracker-eBrem electron pT core is close to muon, but tails are still larger, so quote both core quantiles and tail fractions.
+
+User guidance as of this stage: current GSF output is known not to work properly, so do not spend effort checking GSF-vs-LCIO results yet. Switch to direct BH-model diagnostics. New study area: `BHModelComparisonStudies/current_bh_vs_g4step_2p0_theta85/`. First step is understanding the actual current `BetheHeitlerSplitter.cpp` model by plotting its weighted Gaussian mixture curves; next step is overlaying G4 tracker-volume primary eBrem `z = post_p/pre_p` truth.
+
+
+
+### Active BH Model Finding
+
+The current `BetheHeitlerSplitter.cpp` model is not validated. Model-only plots in `BHModelComparisonStudies/current_bh_vs_g4step_2p0_theta85/` show a sharp discontinuity at `tX0 = 0.1`: the weighted mean retained fraction changes from about `z=0.951` at `tX0=0.05` to about `z=0.144` at `tX0=0.10`. This is suspicious because the physical BH shape should evolve smoothly with material thickness. Next work should fine tune the current BH model against G4 tracker-volume primary eBrem truth before returning to GSF validation.
+
+
+### 2026-07-08 Global BH Model Status
+
+A parallel `GlobalSim2GeV85` BH model is now encoded in `BetheHeitlerSplitter` from the tracker primary eBrem `E_f/E_i` fit in `BHModelComparisonStudies/globalBHmodelfromSim@2GeV85Degree/`. The default remains `Current`. Select the new model with:
+
+```python
+gsf.BHModel = "GlobalSim2GeV85"
+```
+
+Current runbook and test summary are in `agent_record/2026-07-08-global-bh-gsf-run.md`. A selected light-tracker-eBrem scan completed seeds 1-5 only (`235/235` selected events) before the user requested stopping the remaining jobs. The model is runnable but not validated: completed events still show a high GSF momentum tail (`40/235` with `gsf_p > 10 GeV`) and many zero-chi2 fits (`186/235`).
+
 ## Prioritized TODOs
 
 ### 1. Build a dedicated G4-step analysis script

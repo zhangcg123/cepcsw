@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 
 #include "TrackSystemSvc/HelixTrack.h"
 
@@ -76,7 +77,10 @@ private:
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",true};
+  Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",true};
+  Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
+  Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};
 
   int m_nEvt = 0;
   std::vector<TrackSummary> m_summaries;  // accumulated per-track data

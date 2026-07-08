@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
+#include <string>
 
 /// The ACTS AtlasBetheHeitlerApprox<6,5> data, reproduced here to avoid
 /// requiring Eigen/Boost transitive dependencies.
@@ -69,6 +71,24 @@ inline double invLogit(double x) { return 1.0 / (1.0 + std::exp(-x)); }
 
 constexpr double kThinGaussianUpperX0 = 0.1;
 
+/// Simulation-derived global retained-fraction model from
+/// BHModelComparisonStudies/globalBHmodelfromSim@2GeV85Degree.
+///
+/// Fit target: 2 GeV, theta=85 deg primary electron tracker eBrem,
+/// z = post_p/pre_p.  Components are truncated Gaussians normalized on [0,1],
+/// so the listed weights are already the in-range probability masses.  The
+/// current split implementation uses weight and mean to create hypotheses;
+/// the variance is retained here for model provenance/future covariance work.
+std::vector<BHComponent> globalSim2GeV85Mixture(double /*x*/) {
+  return {
+      {0.077416116868, 0.677171066692, 0.35 * 0.35},
+      {0.135334171174, 0.999993855825, 0.153904803245 * 0.153904803245},
+      {0.125841439379, 0.999993855825, 0.0573680711812 * 0.0573680711812},
+      {0.101560696051, 0.999993855825, 0.019581894445 * 0.019581894445},
+      {0.559847576529, 0.999993855825, 0.00479768891507 * 0.00479768891507},
+  };
+}
+
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
 /// Returns up to 6 (weight, mean, var) tuples.
 std::vector<BHComponent> bhMixture6(double x) {
@@ -126,21 +146,53 @@ std::vector<BHComponent> bhMixture6(double x) {
 
 // ============================================================================
 
-BetheHeitlerSplitter::BetheHeitlerSplitter() {}
+BetheHeitlerSplitter::BetheHeitlerSplitter() = default;
+
+BetheHeitlerSplitter::BetheHeitlerSplitter(Model model)
+    : m_model(model) {}
+
+BetheHeitlerSplitter::BetheHeitlerSplitter(const std::string& modelName)
+    : m_model(modelFromName(modelName)) {}
+
+BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::string& modelName) {
+  if (modelName == "Current" || modelName == "current" || modelName == "default") {
+    return Model::Current;
+  }
+  if (modelName == "GlobalSim2GeV85" || modelName == "globalSim2GeV85" ||
+      modelName == "globalBHmodelfromSim@2GeV85Degree") {
+    return Model::GlobalSim2GeV85;
+  }
+  throw std::invalid_argument("Unknown Bethe-Heitler model option: " + modelName);
+}
+
+const char* BetheHeitlerSplitter::modelName(Model model) {
+  switch (model) {
+    case Model::Current: return "Current";
+    case Model::GlobalSim2GeV85: return "GlobalSim2GeV85";
+  }
+  return "Unknown";
+}
 
 std::vector<GsfComponent*> BetheHeitlerSplitter::split(
     GsfComponent* parent, double tX0, double bz) const {
 
-  auto mixture = bhMixture6(tX0);
-  double parentKappa = parent->helixAtLastSite(bz).GetKappa();
+  auto mixture = (m_model == Model::GlobalSim2GeV85)
+      ? globalSim2GeV85Mixture(tX0)
+      : bhMixture6(tX0);
+  const double parentKappa = parent->helixAtLastSite(bz).GetKappa();
+  const double parentWeight = parent->weight;
   std::vector<GsfComponent*> result;
+  result.reserve(mixture.size());
+  for (size_t i = 0; i < mixture.size(); i++) {
+    result.push_back((i == 0) ? parent : parent->clone());
+  }
 
   for (size_t i = 0; i < mixture.size(); i++) {
     double fracMomentum = std::max(mixture[i].mean, 0.01);
     double newKappa = parentKappa / fracMomentum;
 
-    GsfComponent* child = (i == 0) ? parent : parent->clone();
-    child->weight = parent->weight * mixture[i].weight;
+    GsfComponent* child = result[i];
+    child->weight = parentWeight * mixture[i].weight;
 
     if (child->kaltrack->GetEntriesFast() > 0) {
       auto* lastSite = dynamic_cast<TKalTrackSite*>(
@@ -152,7 +204,6 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
         }
       }
     }
-    result.push_back(child);
   }
 
   return result;

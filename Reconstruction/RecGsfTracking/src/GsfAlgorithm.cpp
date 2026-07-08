@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <exception>
 
 DECLARE_COMPONENT(RecGsfTracking)
 
@@ -333,12 +334,32 @@ StatusCode RecGsfTracking::initialize() {
          << "  cellID-index: " << m_cellIDToLayer.size() << " entries"
          << " IP r=" << (m_ipLayer ? m_ipLayer->GetR() : -1) << endmsg;
 
+  try {
+    const auto bhModel = BetheHeitlerSplitter::modelFromName(m_bhModel.value());
+    info() << "Bethe-Heitler model: "
+           << BetheHeitlerSplitter::modelName(bhModel) << endmsg;
+  } catch (const std::exception& e) {
+    error() << e.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
+
   return StatusCode::SUCCESS;
 }
 
 // ---------------------------------------------------------------------------
 StatusCode RecGsfTracking::execute() {
   m_nEvt++;
+  const int eventIndex = m_nEvt - 1;
+  const bool selectedOnly = !m_selectedEventIndices.value().empty();
+  if (selectedOnly && std::find(m_selectedEventIndices.value().begin(),
+                                m_selectedEventIndices.value().end(),
+                                eventIndex) == m_selectedEventIndices.value().end()) {
+    m_outputTracks.createAndPut();
+    return StatusCode::SUCCESS;
+  }
+
+  info() << "GSF event index " << eventIndex
+         << " (event count " << m_nEvt << ")" << endmsg;
   const auto* in = m_inputTracks.get();
   if (!in) return StatusCode::SUCCESS;
 
@@ -403,7 +424,7 @@ StatusCode RecGsfTracking::execute() {
 
       std::vector<GsfComponent*> accepted;
       std::vector<double> dchi2s;
-      if (m_verboseDump && (justSplit || (int)comps.size() > 1)) {
+      if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
         dchi2s.reserve(comps.size());
       }
       for (auto* comp : comps) {
@@ -416,23 +437,49 @@ StatusCode RecGsfTracking::execute() {
 
         auto* st = new TKalTrackSite(*khClone, kSdim);
         st->SetHitOwner();
+
         if (comp->kaltrack->AddAndFilter(*st)) {
           double dchi = st->GetDeltaChi2();
           comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
           accepted.push_back(comp);
-          if (m_verboseDump && (justSplit || (int)comps.size() > 1)) {
+          if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
             dchi2s.push_back(dchi);
           }
         } else {
-          delete st;
-          comp->weight *= 1e-6;
-          if (comp->weight > 1e-30) accepted.push_back(comp);
-          else delete comp;
+          bool recovered = false;
+          // KalTest can fail re-crossing after Transport has already pivoted exactly to the hit.
+          // In that narrow case keep the predicted state instead of dropping the component.
+          if (st->GetEntriesFast() > TVKalSite::kPredicted) {
+            auto& preState = dynamic_cast<const TKalTrackState&>(st->GetState(TVKalSite::kPredicted));
+            auto preHel = preState.GetHelix();
+            const auto& pv = preHel.GetPivot();
+            const double pivotResidual = std::sqrt((pv.X() - measPos.X()) * (pv.X() - measPos.X()) +
+                                                   (pv.Y() - measPos.Y()) * (pv.Y() - measPos.Y()) +
+                                                   (pv.Z() - measPos.Z()) * (pv.Z() - measPos.Z()));
+            if (pivotResidual < 1e-3) {
+              st->Add(new TKalTrackState(preState, preState.GetCovMat(), *st, TVKalSite::kFiltered));
+              st->SetOwner();
+              comp->kaltrack->Add(st);
+              accepted.push_back(comp);
+              recovered = true;
+            }
+          }
+          if (!recovered) {
+            delete st;
+            delete comp;
+          }
         }
       }
 
+      if (accepted.empty()) {
+        warning() << boost::format("GSF event index %d track %d: all components rejected at hit %d (r=%.1f mm); no GSF output track")
+                     % (m_nEvt - 1) % (nFit + 1) % ih % hi.radius << endmsg;
+        comps.clear();
+        break;
+      }
+
       // ── verbose: prediction vs measurement after split ──
-      if (m_verboseDump && justSplit && !accepted.empty()) {
+      if (m_verboseDump && m_verboseSplitDump && justSplit && !accepted.empty()) {
         info() << boost::format("  >>> Post-split @ hit %d (r=%.1f mm) — %d components survive")
                   % ih % hi.radius % (int)accepted.size() << endmsg;
         info() << boost::format("      measurement: (%.3f, %.3f, %.3f)")
@@ -455,16 +502,16 @@ StatusCode RecGsfTracking::execute() {
 
       if (aTX0 > m_bhSplitThresh && m_isElectron &&
           (int)comps.size() < m_maxComponents) {
-        if (m_verboseDump) {
+        if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  ── BH Split @ hit %d (r=%.1f mm, tX0=%.2e) — %d comps before split")
                     % ih % hi.radius % aTX0 % (int)comps.size() << endmsg;
         }
-        BetheHeitlerSplitter bhs;
+        BetheHeitlerSplitter bhs(m_bhModel.value());
         std::vector<GsfComponent*> newCps;
         for (auto* comp : comps) {
           double parentKappa = comp->helixAtLastSite(bz).GetKappa();
           auto children = bhs.split(comp, aTX0, bz);
-          if (m_verboseDump) {
+          if (m_verboseDump && m_verboseSplitDump) {
             double parentPT = (bz != 0 && parentKappa != 0) ? 1.0/std::abs(parentKappa) : 0;
             info() << boost::format("    parent κ=%.4e (pT≈%.3f)  weight=%.4f  → %d children")
                       % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
@@ -500,11 +547,20 @@ StatusCode RecGsfTracking::execute() {
 
       GsfMixture::normalizeWeights(comps);
 
-      // Pick best component
-      int bestIdx = 0;
-      for (size_t i = 1; i < comps.size(); i++)
-        if (comps[i]->weight > comps[bestIdx]->weight)
+      // Pick best component among components with at least one real filtered hit.
+      int bestIdx = -1;
+      for (size_t i = 0; i < comps.size(); i++) {
+        if (!comps[i]->kaltrack || comps[i]->kaltrack->GetEntriesFast() <= 1) continue;
+        if (bestIdx < 0 || comps[i]->weight > comps[bestIdx]->weight)
           bestIdx = (int)i;
+      }
+      if (bestIdx < 0) {
+        warning() << "GSF event index " << (m_nEvt - 1)
+                  << ": no component has a filtered hit; no GSF output track" << endmsg;
+        for (auto* c : comps) delete c;
+        for (auto& h : hits) delete h.kalHit;
+        continue;
+      }
 
       auto* best = comps[bestIdx];
 
