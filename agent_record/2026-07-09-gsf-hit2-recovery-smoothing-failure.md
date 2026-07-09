@@ -824,3 +824,65 @@ Log:
 ```text
 /tmp/gsf_gsf_max1_topn1_baselineearlyfit3_events_10_12_14_15.log
 ```
+
+## 2026-07-09 Current Understanding: Why BaselineEarlyFit Works
+
+The important difference is not the numerical seed state. That was tested directly:
+
+| Test | Result |
+|---|---|
+| Original direct GSF | recoveries at early hits 1-3 |
+| Direct GSF initialized from `CompleteTracks::AtFirstHit` | same recovery pattern |
+| Direct GSF initialized from baseline `KalTestTool` fitted `AtFirstHit` | same recovery pattern |
+| Local baseline wrapper through hit 2, direct GSF from hit 3 | hit 3 still recovers in events 10, 12, 14 |
+| Local baseline wrapper through hit 3, direct GSF from hit 4 | zero direct-GSF recoveries in events 10, 12, 14, 15 |
+
+Therefore the issue is not simply an inaccurate first-hit helix or covariance. The issue is the way direct GSF constructs and extends the first KalTest sites.
+
+Direct GSF currently does:
+
+```text
+manual one-site TKalTrack at hit 0
+TKalTrack::AddAndFilter(hit 1)
+TKalTrack::AddAndFilter(hit 2)
+TKalTrack::AddAndFilter(hit 3)
+...
+```
+
+BaselineEarlyFit does:
+
+```text
+MarlinTrk::createPrefit(first N hits)
+MarlinTrk::createFit(first N hits, local IMarlinTrack)
+get fitted state at last early hit
+manual one-site direct GSF starts only from next hit
+```
+
+The core behavioral difference is the early fit history:
+
+| Aspect | Direct GSF | BaselineEarlyFit |
+|---|---|---|
+| Initial KalTest history | one manually built site | MarlinTrk-created fit history over early hits |
+| First measurements | hit 0 is the initial site, hits 1-3 use direct `AddAndFilter` | hits 0-3 are handled by MarlinTrk `createFit` |
+| Early constraints | underconstrained, first direct updates can fail | enough early hits fitted through wrapper, e.g. ndf=2 after 4 hits |
+| KalTest path | direct `TKalTrack::AddAndFilter` | `IMarlinTrack::addHit/initialise/fit` through MarlinTrk |
+| Observed failure | `CalcExpectedMeasVec`/surface crossing can fail despite exact predicted pivot | wrapper path avoids exposing those early hits to the failing direct path |
+
+The likely mechanism remains:
+
+1. Direct GSF propagates to an early VXD measurement.
+2. The predicted pivot lands exactly on the measurement surface.
+3. `TKalTrackSite::Filter()` then internally calls `CalcExpectedMeasVec()` and asks KalTest/DDKalTest to solve the expected measurement/surface crossing again.
+4. In this already-on-surface early-site case, the crossing/expected-measurement calculation can fail.
+5. Direct GSF recovery copies the predicted state as filtered, so the hit is retained but not truly measurement-updated.
+
+BaselineEarlyFit works because the problematic first few VXD hits are not passed through the direct one-site `TKalTrack::AddAndFilter` sequence. They are consumed by MarlinTrk's normal `createFit` machinery first. Once the local wrapper has fitted through hit 3, direct GSF starts at hit 4 and the recovery disappears in the tested events.
+
+This does not yet prove that `BaselineEarlyFit` is a final production design. It proves a narrower point: the root cause is the direct early-site construction/update path, not BH splitting, not kappa modification, not component reduction, and not first-hit parameter values alone.
+
+Open implementation questions:
+
+1. How should the early wrapper hits be counted in final GSF diagnostics and chi2/ndf?
+2. Should the GSF track own a merged early-wrapper history, or should the early segment remain a bootstrap-only state?
+3. When BH splitting is reintroduced, should splitting begin only after the early wrapper segment, or should the early wrapper provide a baseline component history that can be cloned/split?
+4. The next safe validation is to run `BaselineEarlyFit` with multi-component GSF/BH enabled and check whether recovery remains reduced after hit 4.
