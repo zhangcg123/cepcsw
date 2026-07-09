@@ -886,3 +886,26 @@ Open implementation questions:
 2. Should the GSF track own a merged early-wrapper history, or should the early segment remain a bootstrap-only state?
 3. When BH splitting is reintroduced, should splitting begin only after the early wrapper segment, or should the early wrapper provide a baseline component history that can be cloned/split?
 4. The next safe validation is to run `BaselineEarlyFit` with multi-component GSF/BH enabled and check whether recovery remains reduced after hit 4.
+
+
+## 2026-07-10 BaselineEarlyFit With Full GSF Splitting
+
+Validated `GSFInitialisationMode=BaselineEarlyFit`, `GSFInitialisationFitHits=4`, `MaxComponents=25`, `ReductionTargetComponents=5`, `ReductionMode=TopN`, `BHModel=GlobalSim2GeV85` on events 10, 12, 14, 15.
+
+This confirms a split between two issues:
+
+- The original one-component direct-GSF early recovery is avoided by letting the baseline-style wrapper fit through hit 3 first.
+- With full GSF splitting enabled, recoveries reappear after the baseline early segment, mainly around hits 5-9 and only for subsets of split components. This is no longer the same pure fresh-seed hit-1/2/3 issue.
+
+Results:
+
+| event | baseline early fit | recovered hit summaries | total A/R/J | final p | note |
+|---:|---|---|---:|---:|---|
+| 10 | through hit 3, chi2/ndf 2.733/2 | hit 6: 20/5/0, hit 9: 20/5/0 | 1260/10/0 | 0.06 GeV | bad final p |
+| 12 | through hit 3, chi2/ndf 2.962/2 | hit 6: 15/10/0, hit 7: 5/20/0, hit 8: 0/25/0 | 1190/55/0 | 1.68 GeV | hit 8 all components recovered |
+| 14 | through hit 3, chi2/ndf 0.715/2 | hit 6: 20/5/0, hit 7: 15/10/0, hit 8: 12/13/0 | 1217/28/0 | 1.67 GeV | partial component recovery |
+| 15 | through hit 3, chi2/ndf 5.068/2 | hit 5: 18/7/0, hit 6: 20/5/0, hit 7: 20/5/0 | 1203/17/0 | 4.29 GeV | bad final p |
+
+Interpretation:
+
+`BaselineEarlyFit` is useful and real baseline-style integration for the first VXD segment, but it is not a full solution for multi-component GSF. After BH splitting, some child histories still hit the direct GSF `TKalTrack::AddAndFilter` recovery edge case. The next implementation direction should be to make the post-split component update baseline-style as well, or to identify what in the split child state makes only some components fail while sibling components on the same hit accept normally.
