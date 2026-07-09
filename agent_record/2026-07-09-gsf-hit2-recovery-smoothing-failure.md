@@ -437,3 +437,17 @@ Summary of `abs(KF)-abs(LCIO)`:
 Interpretation: the current pure-KF mode is baseline-fitter-like but not bit-for-bit the LCIO `CompleteTracks` workflow. It calls `KalTestTool::Fit`, so smoothing/finalisation occurs through `KalTestTool::finaliseTrack` (`marlintrk->smooth(lastHit)` plus the forward-fit temporary-track propagation to IP). It no longer uses GSF's old direct `TKalTrack::SmoothAll()` plus manual first-site IP extrapolation. Remaining differences from LCIO likely come from pre-finalisation orchestration: hit ordering, initial-state choice, retry/outlier policy, and the fact that GSF refits the already-produced `CompleteTracks` hit list rather than rerunning full `FullLDCTrackingAlg`.
 
 Important for the hit-recovery study: in the baseline-style pure-KF path on events 0-19, the explicit GSF `AddAndFilter` recovery does not happen at all. The path does not call the GSF manual `TKalTrack::AddAndFilter` loop. It delegates fitting to `KalTestTool`/MarlinTrk; any failed low-level `addAndFit` inside `KalTestTool::finaliseTrack` is currently only debug-logged by the baseline tool and does not correspond to the GSF recovery counter.
+
+## 2026-07-09 Baseline KalTestTool IP-Refit Failure Check
+
+Instrumented `KalTestTool::finaliseTrack` temporarily around the forward-fit IP temporary-track loop:
+
+```cpp
+mTrk->addAndFit(hit, deltaChi, DBL_MAX)
+```
+
+This exposed a GSF KF-mode bug first: passing `m_kfFitBackward.value()` directly was not equivalent to the baseline algorithms.  The baseline maps the user property with `(_backward ? IMarlinTrack::backward : !IMarlinTrack::backward)`.  GSF pure-KF now does the same mapping, so default `KFFitBackward=false` exercises the baseline forward-finalisation branch.
+
+After the mapping fix, events 10/12/14/15 entered the `KalTestTool` forward IP-refit branch with `fit_backwards=1`, attempted 233/232/232/231 internal `addAndFit` calls respectively, and had zero failures.  On events 0-19 the same check gave total internal IP-refit failures = 0.  All events used all hits with zero outliers.
+
+Conclusion: the hit-recovery problem we saw earlier is not reproduced inside the baseline-style `KalTestTool` workflow, including its forward IP-refit `addAndFit` loop.  The recovery issue remains specific to the old GSF direct `TKalTrack::AddAndFilter` driving path.

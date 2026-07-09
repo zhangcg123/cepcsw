@@ -20,6 +20,7 @@
 #include "DDKalTest/DDPlanarHit.h"
 
 #include "DDKalTest/DDKalDetector.h"
+#include "TrackSystemSvc/IMarlinTrack.h"
 
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/MCParticle.h"
@@ -546,10 +547,13 @@ StatusCode RecGsfTracking::execute() {
 
       edm4hep::MutableTrack kfTrack;
       int status = 0;
+      const bool fitBackwards = m_kfFitBackward.value()
+          ? MarlinTrk::IMarlinTrack::backward
+          : !MarlinTrk::IMarlinTrack::backward;
       try {
         status = m_kfFitTool->Fit(kfTrack, kfHits, covMatrix,
                                   m_kfMaxChi2PerHit.value(),
-                                  m_kfFitBackward.value());
+                                  fitBackwards);
       } catch (const std::exception& e) {
         warning() << "Baseline KF fit threw exception: " << e.what() << endmsg;
         status = 1;
@@ -649,7 +653,7 @@ StatusCode RecGsfTracking::execute() {
                   % kfTrack.getChi2() % kfTrack.getNdf()
                   % (int)hitsInFit.size() % (int)outliers.size() << endmsg;
         info() << boost::format("  KF diagnostics | tool=%s maxChi2PerHit=%.3g fitBackward=%d")
-                  % m_kfFitToolName.value() % m_kfMaxChi2PerHit.value() % (m_kfFitBackward.value() ? 1 : 0) << endmsg;
+                  % m_kfFitToolName.value() % m_kfMaxChi2PerHit.value() % (fitBackwards ? 1 : 0) << endmsg;
         info() << sep << endmsg;
       }
 
