@@ -173,6 +173,63 @@ static int covIndex5(int row, int col) {
 }
 
 static TKalTrackSite* makeInitialSiteFromTrackState(
+    const DH& ts, const MatchedHit& firstHit, double bz);
+
+static double normalizePhi(double phi) {
+  while (phi >= M_PI) phi -= 2.0 * M_PI;
+  while (phi < -M_PI) phi += 2.0 * M_PI;
+  return phi;
+}
+
+static edm4hep::TrackState trackStateFromComponent(
+    const GsfComponent& comp, double bz, int location) {
+  edm4hep::TrackState ts;
+  ts.location = location;
+  if (!comp.kaltrack || comp.kaltrack->GetEntriesFast() == 0 || bz == 0.0) return ts;
+
+  auto* site = dynamic_cast<TKalTrackSite*>(comp.kaltrack->Last());
+  if (!site) return ts;
+  auto& state = dynamic_cast<TKalTrackState&>(site->GetCurState());
+  auto helix = state.GetHelix();
+  const auto& pivot = helix.GetPivot();
+  const double alpha = bz * 2.99792458e-4;
+
+  ts.D0 = -helix.GetDrho();
+  ts.phi = normalizePhi(helix.GetPhi0() + M_PI / 2.0);
+  ts.omega = helix.GetKappa() * alpha;
+  ts.Z0 = helix.GetDz();
+  ts.tanLambda = helix.GetTanLambda();
+  ts.referencePoint = {pivot.X(), pivot.Y(), pivot.Z()};
+
+  auto& cov = state.GetCovMat();
+  for (auto& v : ts.covMatrix) v = 0.0;
+  const double scale[5] = {-1.0, 1.0, alpha, 1.0, 1.0};
+  for (int i = 0; i < 5; ++i) {
+    for (int j = 0; j <= i; ++j) {
+      ts.covMatrix[covIndex5(i, j)] = scale[i] * scale[j] * cov(i, j);
+    }
+  }
+  return ts;
+}
+
+static double componentFitChi2(const GsfComponent& comp) {
+  if (comp.fitChi2 > 0.0) return comp.fitChi2;
+  return comp.kaltrack ? comp.kaltrack->GetChi2() : 0.0;
+}
+
+static bool appendBaselineStateToComponent(
+    GsfComponent& comp, const edm4hep::TrackState& ts,
+    const MatchedHit& hit, double bz) {
+  TKalTrackSite* site = makeInitialSiteFromTrackState(ts, hit, bz);
+  if (!site || !comp.kaltrack) {
+    delete site;
+    return false;
+  }
+  comp.kaltrack->Add(site);
+  return true;
+}
+
+static TKalTrackSite* makeInitialSiteFromTrackState(
     const DH& ts, const MatchedHit& firstHit, double bz) {
 
   const double alpha = bz * 2.99792458e-4;
@@ -626,38 +683,9 @@ StatusCode RecGsfTracking::execute() {
 
     TKalTrackSite* site = nullptr;
     size_t gsfStartHit = 1;
-    DH firstHitState;
     std::string initMode = m_gsfInitialisationMode.value();
     std::transform(initMode.begin(), initMode.end(), initMode.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-
-    if (runGSF && (initMode == "baselineprefit" || initMode == "baseline")) {
-      edm4hep::MutableTrack prefitTrack;
-      int prefitStatus = 0;
-      try {
-        prefitStatus = m_kfFitTool->Fit(prefitTrack, kfHits, kfCovMatrix,
-                                        m_kfMaxChi2PerHit.value(),
-                                        fitBackwards);
-      } catch (const std::exception& e) {
-        warning() << "Baseline prefit for GSF threw exception: " << e.what() << endmsg;
-        prefitStatus = 1;
-      } catch (...) {
-        warning() << "Baseline prefit for GSF threw unknown exception" << endmsg;
-        prefitStatus = 1;
-      }
-      m_kfFitTool->Clear();
-
-      if (prefitStatus == 0 && getTrackStateAt(prefitTrack, DH::AtFirstHit, firstHitState)) {
-        site = makeInitialSiteFromTrackState(firstHitState, hits[0], bz);
-        if (site && m_verboseDump) {
-          info() << boost::format("GSF event index %d: direct GSF initialised from baseline KalTestTool AtFirstHit")
-                    % (m_nEvt - 1) << endmsg;
-        }
-      } else if (m_verboseDump) {
-        warning() << boost::format("GSF event index %d: baseline prefit init failed status=%d states=%d; falling back")
-                     % (m_nEvt - 1) % prefitStatus % prefitTrack.trackStates_size() << endmsg;
-      }
-    }
 
     if (!site && runGSF && (initMode == "baselineearlyfit" || initMode == "earlyfit")) {
       const size_t nEarly = std::min(hits.size(),
@@ -707,14 +735,6 @@ StatusCode RecGsfTracking::execute() {
       }
     }
 
-    if (!site && (m_useCompleteTrackFirstHitInit.value() || initMode == "completetrackfirsthit") &&
-        getTrackStateAt(trk, DH::AtFirstHit, firstHitState)) {
-      site = makeInitialSiteFromTrackState(firstHitState, hits[0], bz);
-      if (site && m_verboseDump) {
-        info() << boost::format("GSF event index %d: direct GSF initialised from CompleteTracks AtFirstHit")
-                  % (m_nEvt - 1) << endmsg;
-      }
-    }
     if (!site) {
       site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
     }
@@ -885,7 +905,7 @@ StatusCode RecGsfTracking::execute() {
         const double k = c->helixAtLastSite(bz).GetKappa();
         const double pt = (k != 0.0) ? 1.0 / std::abs(k) : 0.0;
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
-        const double chi2 = c->kaltrack ? c->kaltrack->GetChi2() : 0.0;
+        const double chi2 = componentFitChi2(*c);
         const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
         info() << boost::format("      top%-2d comp[%02d] id=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
                   % (int)rank % (int)ci % c->debugId % c->weight % pt % k % chi2 % ndf % entries << endmsg;
@@ -964,6 +984,63 @@ StatusCode RecGsfTracking::execute() {
       int nAccept = 0, nRecover = 0, nReject = 0;
       double minDChi2 = 1e300, maxDChi2 = -1e300;
       for (auto* comp : comps) {
+        if (m_gsfMarlinTrkSystem) {
+          bool baselineAccepted = false;
+          double dchi = 0.0;
+          try {
+            edm4hep::TrackerHit trkHit = hi.lcioHit;
+            edm4hep::TrackerHit referenceHit = hits[ih - 1].lcioHit;
+            edm4hep::TrackState componentState = trackStateFromComponent(*comp, bz, DH::AtOther);
+            std::unique_ptr<MarlinTrk::IMarlinTrack> baselineTrack(m_gsfMarlinTrkSystem->createTrack());
+            if (baselineTrack &&
+                baselineTrack->addHit(referenceHit) == MarlinTrk::IMarlinTrack::success &&
+                baselineTrack->initialise(componentState, bz, fitBackwards) == MarlinTrk::IMarlinTrack::success &&
+                baselineTrack->addAndFit(trkHit, dchi, DBL_MAX) == MarlinTrk::IMarlinTrack::success) {
+              edm4hep::TrackState updatedState;
+              double chi2 = 0.0;
+              int ndf = -999;
+              if (baselineTrack->getTrackState(trkHit, updatedState, chi2, ndf) == MarlinTrk::IMarlinTrack::success &&
+                  appendBaselineStateToComponent(*comp, updatedState, hi, bz)) {
+                baselineAccepted = true;
+              }
+            }
+          } catch (const std::exception& e) {
+            if (m_verboseDump && m_componentDebugDump) {
+              warning() << "GSF baseline component update threw exception: " << e.what() << endmsg;
+            }
+          } catch (...) {
+            if (m_verboseDump && m_componentDebugDump) {
+              warning() << "GSF baseline component update threw unknown exception" << endmsg;
+            }
+          }
+
+          if (baselineAccepted) {
+            const double oldWeight = comp->weight;
+            comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
+            comp->fitChi2 += dchi;
+            nAccept++;
+            minDChi2 = std::min(minDChi2, dchi);
+            maxDChi2 = std::max(maxDChi2, dchi);
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
+                (justSplit || (int)comps.size() > 1)) {
+              info() << boost::format("      baseline-update accept comp[%02d] dchi2=%.6g w %.6g -> %.6g")
+                        % (int)accepted.size() % dchi % oldWeight % comp->weight << endmsg;
+            }
+            accepted.push_back(comp);
+            if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+              dchi2s.push_back(dchi);
+            }
+          } else {
+            nReject++;
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
+                (justSplit || (int)comps.size() > 1)) {
+              info() << boost::format("      baseline-update reject comp at hit=%d") % (int)ih << endmsg;
+            }
+            delete comp;
+          }
+          continue;
+        }
+
         DDVTrackHit* khClone = nullptr;
         if (auto* ch = dynamic_cast<DDCylinderHit*>(hi.kalHit))
           khClone = new DDCylinderHit(*ch);
@@ -1193,7 +1270,7 @@ StatusCode RecGsfTracking::execute() {
       // Write output track
       auto ot = out->create();
       ot.setType(2);
-      ot.setChi2(best->kaltrack->GetChi2());
+      ot.setChi2(componentFitChi2(*best));
       ot.setNdf(best->kaltrack->GetNDF());
 
       edm4hep::TrackState ts;
@@ -1242,7 +1319,7 @@ StatusCode RecGsfTracking::execute() {
       sum.lcio_chi2 = trk.getChi2(); sum.lcio_ndf = trk.getNdf();
       sum.gsf_pT   = gsf_pT;   sum.gsf_eta   = gsf_eta;   sum.gsf_phi   = ts.phi;
       sum.gsf_d0   = ts.D0;    sum.gsf_z0    = ts.Z0;     sum.gsf_p     = gsf_p;
-      sum.gsf_chi2 = best->kaltrack->GetChi2(); sum.gsf_ndf = best->kaltrack->GetNDF();
+      sum.gsf_chi2 = componentFitChi2(*best); sum.gsf_ndf = best->kaltrack->GetNDF();
       // GSF diagnostics
       sum.nSplits     = nSplits;
       sum.nReductions = nReductions;
@@ -1265,7 +1342,7 @@ StatusCode RecGsfTracking::execute() {
         info() << sep << endmsg;
         info() << boost::format("%s %02d  |  comps %2d  hits %d/%d  q=%+d  p %.2f GeV  χ²/ndf %.1f/%d")
                   % "GSF Track" % (nFit + 1) % sum.nComps % sum.nHits % (int)hits.size()
-                  % charge % gsf_p % best->kaltrack->GetChi2() % best->kaltrack->GetNDF() << endmsg;
+                  % charge % gsf_p % componentFitChi2(*best) % best->kaltrack->GetNDF() << endmsg;
         info() << sep << endmsg;
         info() << boost::format("  %-6s  %10s  %10s  %10s  %16s  %s") % ""    % "Truth"  % "LCIO"   % "GSF"    % "AddFilter" % "" << endmsg;
         info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s  %s")   % "pT"  % t_pT      % lcio_pT   % gsf_pT   % "" % "GeV" << endmsg;
@@ -1276,7 +1353,7 @@ StatusCode RecGsfTracking::execute() {
         info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %16s  %s")   % "p"   % t_p       % lcio_p     % gsf_p    % "" % "GeV" << endmsg;
         info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  last %2d/%2d/%2d")
                   % "chi2" % "-" % trk.getChi2() % trk.getNdf()
-                  % best->kaltrack->GetChi2() % best->kaltrack->GetNDF()
+                  % componentFitChi2(*best) % best->kaltrack->GetNDF()
                   % lastAccept % lastRecover % lastReject << endmsg;
         info() << boost::format("  %-6s  %10s  %10s  %10s  total %2d/%2d/%2d")
                   % "A/R/J" % "-" % "-" % "-"

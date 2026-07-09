@@ -48,6 +48,7 @@ GsfComponent* GsfComponent::clone() const {
   c->charge = charge;
   c->debugId = debugId;
   c->debugHistory = debugHistory;
+  c->fitChi2 = fitChi2;
   c->kaltrack = new TKalTrack();
   c->kaltrack->SetOwner();
 

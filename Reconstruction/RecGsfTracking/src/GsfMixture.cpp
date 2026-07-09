@@ -141,6 +141,7 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double /*bz*/) {
   const double wd = drop->weight / totalWeight;
   const std::string keepHistory = keep->debugHistory;
   const std::string dropHistory = drop->debugHistory;
+  const double mergedChi2 = wk * keep->fitChi2 + wd * drop->fitChi2;
 
   if (keep->kaltrack && drop->kaltrack) {
     const int nSites = std::min(keep->kaltrack->GetEntriesFast(),
@@ -154,6 +155,7 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double /*bz*/) {
   }
 
   keep->weight = totalWeight;
+  keep->fitChi2 = mergedChi2;
   if (!dropHistory.empty()) {
     keep->debugHistory = "merge(" + keepHistory + " | " + dropHistory + ")";
   }

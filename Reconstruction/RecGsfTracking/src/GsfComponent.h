@@ -14,6 +14,7 @@ struct GsfComponent {
   double    weight = 1.0;
   int       charge = 1;
   TKalTrack* kaltrack = nullptr;
+  double    fitChi2 = 0.0;
   int       debugId = 0;
   std::string debugHistory;
 
