@@ -451,3 +451,9 @@ This exposed a GSF KF-mode bug first: passing `m_kfFitBackward.value()` directly
 After the mapping fix, events 10/12/14/15 entered the `KalTestTool` forward IP-refit branch with `fit_backwards=1`, attempted 233/232/232/231 internal `addAndFit` calls respectively, and had zero failures.  On events 0-19 the same check gave total internal IP-refit failures = 0.  All events used all hits with zero outliers.
 
 Conclusion: the hit-recovery problem we saw earlier is not reproduced inside the baseline-style `KalTestTool` workflow, including its forward IP-refit `addAndFit` loop.  The recovery issue remains specific to the old GSF direct `TKalTrack::AddAndFilter` driving path.
+
+## 2026-07-09 Scope Note: Pure-KF d0/z0 Offset vs Hit-Recovery Issue
+
+After matching GSF pure-KF fit-direction handling to the baseline mapping, the `d0/z0` offset relative to LCIO remains: in events 0-19, `abs(d0_KF) > abs(d0_LCIO)` for 15/20 events with mean `abs(KF)-abs(LCIO) = +0.00700 mm`, and `abs(z0_KF) > abs(z0_LCIO)` for 13/20 events with mean `+0.00338 mm`.  This appears to be a separate pure-KF-vs-full-LCIO orchestration difference, not the hit-recovery issue.
+
+For the hit-recovery question, the important current finding is unchanged: the baseline-style `KalTestTool` workflow, including the forward IP-refit `addAndFit` loop inside `finaliseTrack`, showed zero internal failures on events 0-19.  Therefore the recovery issue remains localized to the old GSF direct `TKalTrack::AddAndFilter` component-driving path, not to the baseline-style wrapper workflow.
