@@ -1,0 +1,13 @@
+Distinct-mean 5 truncated-Gaussian fit to normalized tracker eBrem E_f/E_i histogram
+Input: tracker_ebrem_efei_values.csv, 120 bins on [0,1].
+Fit target: histogram directly, not beta-mixture mimic. Means are constrained to distinct z windows.
+
+n_values 3774
+gaussian_vs_hist_chi2_like 0.0461367387
+
+gaussian_components index weight mean sigma
+gaussian 0 0.0242290286362 0.365756880771 0.0894763172003
+gaussian 1 0.0344751132969 0.67849322257 0.0581046301255
+gaussian 2 0.202654370513 0.974999959756 0.113549947214
+gaussian 3 0.159340275436 0.994999996168 0.0264108788879
+gaussian 4 0.579301212118 0.999949999762 0.00493729677128

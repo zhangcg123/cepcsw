@@ -107,6 +107,15 @@ gsf.BHModel = "GlobalSim2GeV85"
 
 Current runbook and test summary are in `agent_record/2026-07-08-global-bh-gsf-run.md`. The current covariance/reducer fixes and five-event debug workflow are in `agent_record/2026-07-08-gsf-cov-reducer-debug.md`. A selected light-tracker-eBrem scan completed seeds 1-5 only (`235/235` selected events) before the user requested stopping the remaining jobs. The model is runnable but not validated: completed events still show a high GSF momentum tail (`40/235` with `gsf_p > 10 GeV`) and many zero-chi2 fits (`186/235`).
 
+
+### 2026-07-09 GSF Hit-2 Recovery / Smoothing Failure
+
+A focused debug of `run_gsf_light_global_bh_seed1.py` with the new distinct-mean `GlobalSim2GeV85` model shows the current GSF output problem is dominated by early KalTest hit-update recovery and backward smoothing, not simply by the final outer fitted branch. In event 15 the final selected branch at the last hit has sane `tanl=0.0877` and `pT~2.01 GeV`, but the smoothed first-hit state used for IP output has `tanl=-57.4`, producing `p=60.6 GeV` and `z0=667.5 mm`.
+
+The critical pattern is usually at hit 2 after `1 -> 5 -> 25` early splitting: `AddAndFilter()` fails for all 25 components, all are recovered because their predicted pivots are already at the measurement surface, no real `DeltaChi2` is applied, and the reducer immediately compresses those unmeasured branches to 3. This damaged early history later makes `SmoothAll()` produce an unphysical first-hit state. Multi-event debug found all-25 hit-2 recovery in 7/8 tested events. Full note: `agent_record/2026-07-09-gsf-hit2-recovery-smoothing-failure.md`.
+
+Next work should fix or bypass the recovered-hit path before interpreting GSF-vs-LCIO performance. Candidate fixes: avoid reducing immediately after an all-recovered split, reject or downweight recovered split branches, or change the KalTest update path so already-on-surface predicted states can still receive a proper measurement update.
+
 ## Prioritized TODOs
 
 ### 1. Build a dedicated G4-step analysis script

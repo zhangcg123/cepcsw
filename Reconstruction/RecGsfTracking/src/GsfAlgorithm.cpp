@@ -63,6 +63,7 @@ struct MatchedHit {
   double              radius;
 };
 
+
 /// Find the measurement layer for a TrackerHit, first by cellID-indexed lookup
 /// (O(1) via IsOnSurface), then fall back to the legacy radius-based scan.
 static const DDVMeasLayer* findLayer(
@@ -518,6 +519,8 @@ StatusCode RecGsfTracking::execute() {
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
+    int totalAccept = 0, totalRecover = 0, totalReject = 0;
+    int lastAccept = 0, lastRecover = 0, lastReject = 0;
 
     auto truncateHistory = [&](const std::string& h) {
       const int maxLen = std::max(0, m_componentDebugMaxHistory.value());
@@ -529,17 +532,34 @@ StatusCode RecGsfTracking::execute() {
     auto dumpComponents = [&](const char* label, int ih,
                               const std::vector<GsfComponent*>& vc) {
       if (!m_verboseDump || !m_verboseSplitDump) return;
-      info() << boost::format("  MIX %s hit=%d n=%d")
-                % label % ih % (int)vc.size() << endmsg;
-      for (size_t ci = 0; ci < vc.size(); ci++) {
+      double sumW = 0.0, minPt = 1e300, maxPt = 0.0;
+      std::vector<size_t> order(vc.size());
+      for (size_t i = 0; i < vc.size(); ++i) {
+        order[i] = i;
+        const auto* c = vc[i];
+        sumW += c->weight;
+        const double k = c->helixAtLastSite(bz).GetKappa();
+        const double pt = (k != 0.0) ? 1.0 / std::abs(k) : 0.0;
+        minPt = std::min(minPt, pt);
+        maxPt = std::max(maxPt, pt);
+      }
+      std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        return vc[a]->weight > vc[b]->weight;
+      });
+      info() << boost::format("  MIX %-18s hit=%3d n=%2d sumW=%.4g pT=[%.3f, %.3f]")
+                % label % ih % (int)vc.size() % sumW
+                % (vc.empty() ? 0.0 : minPt) % (vc.empty() ? 0.0 : maxPt) << endmsg;
+      const size_t nShow = m_componentDebugDump ? vc.size() : std::min<size_t>(3, vc.size());
+      for (size_t rank = 0; rank < nShow; rank++) {
+        const size_t ci = order[rank];
         const auto* c = vc[ci];
         const double k = c->helixAtLastSite(bz).GetKappa();
         const double pt = (k != 0.0) ? 1.0 / std::abs(k) : 0.0;
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
         const double chi2 = c->kaltrack ? c->kaltrack->GetChi2() : 0.0;
         const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
-        info() << boost::format("      comp[%02d] id=%d w=%.6g kappa=%.6e pT=%.6g chi2=%.3f ndf=%d sites=%d")
-                  % (int)ci % c->debugId % c->weight % k % pt % chi2 % ndf % entries << endmsg;
+        info() << boost::format("      top%-2d comp[%02d] id=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
+                  % (int)rank % (int)ci % c->debugId % c->weight % pt % k % chi2 % ndf % entries << endmsg;
         if (m_componentDebugDump) {
           info() << boost::format("          history=%s")
                     % truncateHistory(c->debugHistory) << endmsg;
@@ -575,14 +595,14 @@ StatusCode RecGsfTracking::execute() {
         for (auto* comp : comps) {
           double parentKappa = comp->helixAtLastSite(bz).GetKappa();
           auto children = bhs.split(comp, stepTX0, bz);
-          if (m_verboseDump && m_verboseSplitDump) {
+          if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
             double parentPT = (bz != 0 && parentKappa != 0) ? 1.0/std::abs(parentKappa) : 0;
-            info() << boost::format("    parent κ=%.4e (pT≈%.3f)  weight=%.4f  → %d children")
+            info() << boost::format("    parent kappa=%.4e (pT=%.3f) weight=%.4f -> %d children")
                       % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
             for (size_t ci = 0; ci < children.size(); ci++) {
               double childKappa = children[ci]->helixAtLastSite(bz).GetKappa();
               double childPT = (bz != 0 && childKappa != 0) ? 1.0/std::abs(childKappa) : 0;
-              info() << boost::format("      child[%d] κ=%.4e (pT≈%.3f)  weight=%.4f")
+              info() << boost::format("      child[%d] kappa=%.4e pT=%.3f weight=%.4f")
                         % ci % childKappa % childPT % children[ci]->weight << endmsg;
             }
           }
@@ -612,6 +632,8 @@ StatusCode RecGsfTracking::execute() {
       if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
         dchi2s.reserve(comps.size());
       }
+      int nAccept = 0, nRecover = 0, nReject = 0;
+      double minDChi2 = 1e300, maxDChi2 = -1e300;
       for (auto* comp : comps) {
         DDVTrackHit* khClone = nullptr;
         if (auto* ch = dynamic_cast<DDCylinderHit*>(hi.kalHit))
@@ -627,7 +649,11 @@ StatusCode RecGsfTracking::execute() {
           double dchi = st->GetDeltaChi2();
           const double oldWeight = comp->weight;
           comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
-          if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+          nAccept++;
+          minDChi2 = std::min(minDChi2, dchi);
+          maxDChi2 = std::max(maxDChi2, dchi);
+          if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
+              (justSplit || (int)comps.size() > 1)) {
             info() << boost::format("      hit-update accept comp[%02d] dchi2=%.6g w %.6g -> %.6g")
                       % (int)accepted.size() % dchi % oldWeight % comp->weight << endmsg;
           }
@@ -655,16 +681,38 @@ StatusCode RecGsfTracking::execute() {
             }
           }
           if (!recovered) {
-            if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+            nReject++;
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
+                (justSplit || (int)comps.size() > 1)) {
               info() << boost::format("      hit-update reject comp at hit=%d") % (int)ih << endmsg;
             }
             delete st;
             delete comp;
-          } else if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
-            info() << boost::format("      hit-update recover comp at hit=%d w=%.6g")
-                      % (int)ih % comp->weight << endmsg;
+          } else {
+            nRecover++;
+            if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+              dchi2s.push_back(-1.0);
+            }
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
+                (justSplit || (int)comps.size() > 1)) {
+              info() << boost::format("      hit-update recover comp at hit=%d w=%.6g")
+                        % (int)ih % comp->weight << endmsg;
+            }
           }
         }
+      }
+
+      totalAccept += nAccept;
+      totalRecover += nRecover;
+      totalReject += nReject;
+      lastAccept = nAccept;
+      lastRecover = nRecover;
+      lastReject = nReject;
+
+      if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+        info() << boost::format("  HIT hit=%3d r=%7.1f accepted=%2d recovered=%2d rejected=%2d dchi2=[%.3g, %.3g]")
+                  % (int)ih % hi.radius % nAccept % nRecover % nReject
+                  % (nAccept ? minDChi2 : -1.0) % (nAccept ? maxDChi2 : -1.0) << endmsg;
       }
 
       if (accepted.empty()) {
@@ -676,17 +724,17 @@ StatusCode RecGsfTracking::execute() {
 
       // ── verbose: prediction vs measurement after pre-hit split ──
       if (m_verboseDump && m_verboseSplitDump && justSplit && !accepted.empty()) {
-        info() << boost::format("  >>> Post-split measurement @ hit %d (r=%.1f mm) — %d components survive")
-                  % ih % hi.radius % (int)accepted.size() << endmsg;
-        info() << boost::format("      measurement: (%.3f, %.3f, %.3f)")
+        info() << boost::format("  POST-SPLIT hit=%d r=%.1f survivors=%d measurement=(%.3f, %.3f, %.3f)")
+                  % ih % hi.radius % (int)accepted.size()
                   % measPos.X() % measPos.Y() % measPos.Z() << endmsg;
-        for (size_t ci = 0; ci < accepted.size(); ci++) {
-          auto* c = accepted[ci];
-          double k = c->helixAtLastSite(bz).GetKappa();
-          double pt = (bz != 0 && k != 0) ? std::abs(alpha / k) : 0;
-          double dchi = (ci < dchi2s.size()) ? dchi2s[ci] : -1;
-          info() << boost::format("      comp[%d] κ=%.4e pT≈%.3f  weight=%.4f  Δχ²=%.1f")
-                    % ci % k % (1.0/std::abs(k)) % c->weight % dchi << endmsg;
+        if (m_componentDebugDump) {
+          for (size_t ci = 0; ci < accepted.size(); ci++) {
+            auto* c = accepted[ci];
+            double k = c->helixAtLastSite(bz).GetKappa();
+            double dchi = (ci < dchi2s.size()) ? dchi2s[ci] : -1;
+            info() << boost::format("      comp[%d] kappa=%.4e pT=%.3f weight=%.4f dchi2=%.1f")
+                      % ci % k % (1.0/std::abs(k)) % c->weight % dchi << endmsg;
+          }
         }
       }
 
@@ -889,16 +937,20 @@ StatusCode RecGsfTracking::execute() {
                   % "GSF Track" % (nFit + 1) % sum.nComps % sum.nHits % (int)hits.size()
                   % charge % gsf_p % best->kaltrack->GetChi2() % best->kaltrack->GetNDF() << endmsg;
         info() << sep << endmsg;
-        info() << boost::format("  %-6s  %10s  %10s  %10s  %s") % ""    % "Truth"  % "LCIO"   % "GSF"    % "" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %s")   % "pT"  % t_pT      % lcio_pT   % gsf_pT   % "GeV" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f")       % "η"   % t_eta     % lcio_eta  % gsf_eta          << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f")       % "φ"   % t_phi     % seed.phi   % ts.phi           << endmsg;
-        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %s")     % "d0"  % "—"       % seed.d0    % ts.D0    % "mm"  << endmsg;
-        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %s")     % "z0"  % "—"       % seed.z0    % ts.Z0    % "mm"  << endmsg;
-        info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %s")   % "p"   % t_p       % lcio_p     % gsf_p    % "GeV" << endmsg;
-        info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d")
-                  % "χ²/ndf" % "—" % trk.getChi2() % trk.getNdf()
-                  % best->kaltrack->GetChi2() % best->kaltrack->GetNDF() << endmsg;
+        info() << boost::format("  %-6s  %10s  %10s  %10s  %16s  %s") % ""    % "Truth"  % "LCIO"   % "GSF"    % "AddFilter" % "" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s  %s")   % "pT"  % t_pT      % lcio_pT   % gsf_pT   % "" % "GeV" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s")       % "eta" % t_eta     % lcio_eta  % gsf_eta  % "" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s")       % "phi" % t_phi     % seed.phi   % ts.phi   % "" << endmsg;
+        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %16s  %s")     % "d0"  % "-"       % seed.d0    % ts.D0    % "" % "mm"  << endmsg;
+        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %16s  %s")     % "z0"  % "-"       % seed.z0    % ts.Z0    % "" % "mm"  << endmsg;
+        info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %16s  %s")   % "p"   % t_p       % lcio_p     % gsf_p    % "" % "GeV" << endmsg;
+        info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  last %2d/%2d/%2d")
+                  % "chi2" % "-" % trk.getChi2() % trk.getNdf()
+                  % best->kaltrack->GetChi2() % best->kaltrack->GetNDF()
+                  % lastAccept % lastRecover % lastReject << endmsg;
+        info() << boost::format("  %-6s  %10s  %10s  %10s  total %2d/%2d/%2d")
+                  % "A/R/J" % "-" % "-" % "-"
+                  % totalAccept % totalRecover % totalReject << endmsg;
 
         // ── GSF diagnostics table ──
         info() << sep << endmsg;

@@ -76,17 +76,19 @@ constexpr double kThinGaussianUpperX0 = 0.1;
 /// BHModelComparisonStudies/globalBHmodelfromSim@2GeV85Degree.
 ///
 /// Fit target: 2 GeV, theta=85 deg primary electron tracker eBrem,
-/// z = post_p/pre_p.  Components are truncated Gaussians normalized on [0,1],
-/// so the listed weights are already the in-range probability masses.  The
-/// current split implementation uses weight and mean to create hypotheses;
-/// the variance is retained here for model provenance/future covariance work.
+/// z = post_p/pre_p. Components are distinct-mean truncated Gaussians
+/// normalized on [0,1], refit directly to the 120-bin truth histogram in
+/// tracker_ebrem_efei_gaussian_components_distinct5.csv. The listed weights
+/// are already the in-range probability masses. The current split
+/// implementation uses weight and mean to create hypotheses; the variance is
+/// retained for covariance propagation and model provenance.
 std::vector<BHComponent> globalSim2GeV85Mixture(double /*x*/) {
   return {
-      {0.077416116868, 0.677171066692, 0.35 * 0.35},
-      {0.135334171174, 0.999993855825, 0.153904803245 * 0.153904803245},
-      {0.125841439379, 0.999993855825, 0.0573680711812 * 0.0573680711812},
-      {0.101560696051, 0.999993855825, 0.019581894445 * 0.019581894445},
-      {0.559847576529, 0.999993855825, 0.00479768891507 * 0.00479768891507},
+      {0.0242290286362, 0.365756880771, 0.0894763172003 * 0.0894763172003},
+      {0.0344751132969, 0.678493222570, 0.0581046301255 * 0.0581046301255},
+      {0.2026543705130, 0.974999959756, 0.1135499472140 * 0.1135499472140},
+      {0.1593402754360, 0.994999996168, 0.0264108788879 * 0.0264108788879},
+      {0.5793012121180, 0.999949999762, 0.00493729677128 * 0.00493729677128},
   };
 }
 
