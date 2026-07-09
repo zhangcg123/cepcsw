@@ -457,3 +457,25 @@ Conclusion: the hit-recovery problem we saw earlier is not reproduced inside the
 After matching GSF pure-KF fit-direction handling to the baseline mapping, the `d0/z0` offset relative to LCIO remains: in events 0-19, `abs(d0_KF) > abs(d0_LCIO)` for 15/20 events with mean `abs(KF)-abs(LCIO) = +0.00700 mm`, and `abs(z0_KF) > abs(z0_LCIO)` for 13/20 events with mean `+0.00338 mm`.  This appears to be a separate pure-KF-vs-full-LCIO orchestration difference, not the hit-recovery issue.
 
 For the hit-recovery question, the important current finding is unchanged: the baseline-style `KalTestTool` workflow, including the forward IP-refit `addAndFit` loop inside `finaliseTrack`, showed zero internal failures on events 0-19.  Therefore the recovery issue remains localized to the old GSF direct `TKalTrack::AddAndFilter` component-driving path, not to the baseline-style wrapper workflow.
+
+## 2026-07-09 Direct GSF MaxComponents=1 TopN=1 vs Baseline-Wrapper KF
+
+Ran direct GSF with `MaxComponents=1`, `ReductionTargetComponents=1`, `ReductionMode="TopN"`, `FitterMode="GSF"` on events 10/12/14/15.  Since `MaxComponents=1`, no BH split occurs; this is the old direct `TKalTrack::AddAndFilter` path with a single component.
+
+Results:
+
+| event | direct GSF A/R/J | direct GSF chi2/ndf | baseline-wrapper KF hits/outliers | baseline-wrapper KF chi2/ndf |
+|---:|---:|---:|---:|---:|
+| 10 | 230/3/0 | 476.1/460 | 234/0 | 467.5/462 |
+| 12 | 230/2/0 | 583.1/458 | 233/0 | 543.1/460 |
+| 14 | 229/3/0 | 425.8/458 | 233/0 | 431.9/460 |
+| 15 | 230/1/0 | 409.4/456 | 232/0 | 413.1/458 |
+
+The recovery issue persists even with no GSF splitting and no mixture reduction.  Therefore the recovery is not caused by BH splitting or component reduction in this configuration.  It is tied to the direct GSF `TKalTrack::AddAndFilter` driving/setup.
+
+Key setup difference identified from code comparison:
+
+- Direct GSF builds its own `TKalTrack` from an LCIO seed at the first hit, with a dummy initial site and custom covariance (`drho/dz=100`, `phi/tanl=0.01`, `kappa=KappaSeedCov`, time=1e6), then calls `TKalTrack::AddAndFilter` hit by hit.
+- Baseline-wrapper KF calls `KalTestTool::Fit`, which uses `MarlinTrk::createPrefit`/`createFit`, baseline-style broad covariance in LCIO parameter space, correct `IMarlinTrack::backward` direction mapping, MarlinTrk hit/outlier bookkeeping, smoothing, and `KalTestTool::finaliseTrack`.
+
+Current conclusion: the wrapper still performs Kalman add/filter operations internally, but its prefit/initialisation/state convention avoids the direct-GSF AddAndFilter failures.  The next focused comparison should instrument the direct-GSF initial state and the MarlinTrk prefit state at the first few hits, especially before the recovered hits.
