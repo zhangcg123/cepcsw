@@ -693,3 +693,52 @@ Logs:
 /tmp/gsf_gsf_max1_topn1_firsthitinit_events_10_12_14_15.log
 /tmp/run_gsf_gsf_max1_topn1_firsthitinit_events_10_12_14_15.py
 ```
+
+## 2026-07-09 BaselinePrefit Initialization Test
+
+A second direct-GSF initialization mode was added:
+
+```python
+gsf.GSFInitialisationMode = "BaselinePrefit"
+```
+
+In this mode, the GSF algorithm first runs the baseline `KalTestTool::Fit(...)` on a temporary track using the same hit list and baseline covariance. It then extracts the temporary fitted track's `TrackState::AtFirstHit`, converts it to a KalTest state, and uses that as the initial direct-GSF component site. The temporary baseline track is not written to the output collection.
+
+Test setup:
+
+```python
+gsf.FitterMode = "GSF"
+gsf.MaxComponents = 1
+gsf.ReductionTargetComponents = 1
+gsf.ReductionMode = "TopN"
+gsf.GSFInitialisationMode = "BaselinePrefit"
+gsf.SelectedEventIndices = [10, 12, 14, 15]
+```
+
+Result: this also does **not** reduce the early recovery count. It reproduces the same result as `UseCompleteTrackFirstHitInit=True`:
+
+| Event | recovered hits with BaselinePrefit init | A/R/J | chi2/ndf |
+|---:|---|---:|---:|
+| 10 | 1, 2, 3 | 230/3/0 | 496.3/460 |
+| 12 | 1, 3 | 230/2/0 | 596.9/458 |
+| 14 | 1, 2, 3 | 229/3/0 | 437.9/458 |
+| 15 | 2 | 230/1/0 | 409.6/456 |
+
+Interpretation:
+
+- A baseline-produced fitted `AtFirstHit` parameter state is not enough to make direct `TKalTrack::AddAndFilter` behave like the baseline wrapper.
+- The difference is therefore not just seed parameters or first-hit covariance.
+- The baseline wrapper avoids the recovery because of its internal `MarlinTrk::createPrefit/createFit/finaliseTrack` site construction and fit history. Direct GSF still builds a fresh `TKalTrack` with one initial site and then calls `AddAndFilter` on early VXD hits; that direct KalTest path still hits the same already-on-surface `CalcExpectedMeasVec` failure.
+
+Next practical direction:
+
+1. Do not spend more time only changing initial parameter values.
+2. Compare or instrument direct GSF `TKalTrackSite` construction against MarlinTrk/KalTestTool's internal site construction for hits 0-3.
+3. If the goal is to make GSF robust, the more realistic change is to let the GSF component track be initialized with a KalTest-compatible early fit history, not only an AtFirstHit state. This may require exposing or reusing lower-level MarlinTrk/KalTest internals rather than just copying edm4hep `TrackState`s.
+
+Logs:
+
+```text
+/tmp/gsf_gsf_max1_topn1_baselineprefit_events_10_12_14_15.log
+/tmp/run_gsf_gsf_max1_topn1_baselineprefit_events_10_12_14_15.py
+```

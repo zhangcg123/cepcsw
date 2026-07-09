@@ -593,9 +593,58 @@ StatusCode RecGsfTracking::execute() {
     double kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;
 
     // ---- Step 4: forward GSF filter ----
+    decltype(edm4hep::TrackState::covMatrix) kfCovMatrix;
+    auto kfCovMatrixSize = kfCovMatrix.size();
+    for (unsigned icov = 0; icov < kfCovMatrixSize; ++icov) kfCovMatrix[icov] = 0;
+    kfCovMatrix[0]  = m_kfInitialTrackErrorD0.value();
+    kfCovMatrix[2]  = m_kfInitialTrackErrorPhi0.value();
+    kfCovMatrix[5]  = m_kfInitialTrackErrorOmega.value();
+    kfCovMatrix[9]  = m_kfInitialTrackErrorZ0.value();
+    kfCovMatrix[14] = m_kfInitialTrackErrorTanL.value();
+
+    std::vector<edm4hep::TrackerHit> kfHits;
+    kfHits.reserve(hits.size());
+    for (const auto& h : hits) kfHits.push_back(h.lcioHit);
+
+    const bool fitBackwards = m_kfFitBackward.value()
+        ? MarlinTrk::IMarlinTrack::backward
+        : !MarlinTrk::IMarlinTrack::backward;
+
     TKalTrackSite* site = nullptr;
     DH firstHitState;
-    if (m_useCompleteTrackFirstHitInit.value() &&
+    std::string initMode = m_gsfInitialisationMode.value();
+    std::transform(initMode.begin(), initMode.end(), initMode.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+
+    if (runGSF && (initMode == "baselineprefit" || initMode == "baseline")) {
+      edm4hep::MutableTrack prefitTrack;
+      int prefitStatus = 0;
+      try {
+        prefitStatus = m_kfFitTool->Fit(prefitTrack, kfHits, kfCovMatrix,
+                                        m_kfMaxChi2PerHit.value(),
+                                        fitBackwards);
+      } catch (const std::exception& e) {
+        warning() << "Baseline prefit for GSF threw exception: " << e.what() << endmsg;
+        prefitStatus = 1;
+      } catch (...) {
+        warning() << "Baseline prefit for GSF threw unknown exception" << endmsg;
+        prefitStatus = 1;
+      }
+      m_kfFitTool->Clear();
+
+      if (prefitStatus == 0 && getTrackStateAt(prefitTrack, DH::AtFirstHit, firstHitState)) {
+        site = makeInitialSiteFromTrackState(firstHitState, hits[0], bz);
+        if (site && m_verboseDump) {
+          info() << boost::format("GSF event index %d: direct GSF initialised from baseline KalTestTool AtFirstHit")
+                    % (m_nEvt - 1) << endmsg;
+        }
+      } else if (m_verboseDump) {
+        warning() << boost::format("GSF event index %d: baseline prefit init failed status=%d states=%d; falling back")
+                     % (m_nEvt - 1) % prefitStatus % prefitTrack.trackStates_size() << endmsg;
+      }
+    }
+
+    if (!site && (m_useCompleteTrackFirstHitInit.value() || initMode == "completetrackfirsthit") &&
         getTrackStateAt(trk, DH::AtFirstHit, firstHitState)) {
       site = makeInitialSiteFromTrackState(firstHitState, hits[0], bz);
       if (site && m_verboseDump) {
@@ -617,26 +666,10 @@ StatusCode RecGsfTracking::execute() {
     initComp->kaltrack->Add(site);
 
     if (runKF) {
-      decltype(edm4hep::TrackState::covMatrix) covMatrix;
-      auto covMatrixSize = covMatrix.size();
-      for (unsigned icov = 0; icov < covMatrixSize; ++icov) covMatrix[icov] = 0;
-      covMatrix[0]  = m_kfInitialTrackErrorD0.value();
-      covMatrix[2]  = m_kfInitialTrackErrorPhi0.value();
-      covMatrix[5]  = m_kfInitialTrackErrorOmega.value();
-      covMatrix[9]  = m_kfInitialTrackErrorZ0.value();
-      covMatrix[14] = m_kfInitialTrackErrorTanL.value();
-
-      std::vector<edm4hep::TrackerHit> kfHits;
-      kfHits.reserve(hits.size());
-      for (const auto& h : hits) kfHits.push_back(h.lcioHit);
-
       edm4hep::MutableTrack kfTrack;
       int status = 0;
-      const bool fitBackwards = m_kfFitBackward.value()
-          ? MarlinTrk::IMarlinTrack::backward
-          : !MarlinTrk::IMarlinTrack::backward;
       try {
-        status = m_kfFitTool->Fit(kfTrack, kfHits, covMatrix,
+        status = m_kfFitTool->Fit(kfTrack, kfHits, kfCovMatrix,
                                   m_kfMaxChi2PerHit.value(),
                                   fitBackwards);
       } catch (const std::exception& e) {

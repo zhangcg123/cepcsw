@@ -87,6 +87,7 @@ private:
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
   Gaudi::Property<bool>   m_useCompleteTrackFirstHitInit{this,"UseCompleteTrackFirstHitInit",false};
+  Gaudi::Property<std::string> m_gsfInitialisationMode{this,"GSFInitialisationMode","Seed"};
   Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
   Gaudi::Property<std::string> m_fitterMode{this,"FitterMode","GSF"};
