@@ -479,3 +479,32 @@ Key setup difference identified from code comparison:
 - Baseline-wrapper KF calls `KalTestTool::Fit`, which uses `MarlinTrk::createPrefit`/`createFit`, baseline-style broad covariance in LCIO parameter space, correct `IMarlinTrack::backward` direction mapping, MarlinTrk hit/outlier bookkeeping, smoothing, and `KalTestTool::finaliseTrack`.
 
 Current conclusion: the wrapper still performs Kalman add/filter operations internally, but its prefit/initialisation/state convention avoids the direct-GSF AddAndFilter failures.  The next focused comparison should instrument the direct-GSF initial state and the MarlinTrk prefit state at the first few hits, especially before the recovered hits.
+
+## 2026-07-09 Direct GSF vs KalTestTool State Comparison at Recovered Hits
+
+Temporarily instrumented direct GSF recovery and KalTestTool hit states for events 10/12/14/15 with `MaxComponents=1`, `ReductionTargetComponents=1`, `ReductionMode="TopN"`, `FitterMode="GSF"` for direct GSF, and baseline-wrapper `FitterMode="KF"` for the wrapper comparison.  Temporary instrumentation was reverted after collecting logs.
+
+Direct GSF recoveries happen at the first real updates after the dummy seed site:
+
+| event | direct recovered hit indices | A/R/J |
+|---:|---|---:|
+| 10 | 1, 2, 3 | 230/3/0 |
+| 12 | 1, 3 | 230/2/0 |
+| 14 | 1, 2, 3 | 229/3/0 |
+| 15 | 2 | 230/1/0 |
+
+At these recovered hits, the predicted pivot is exactly the measurement position, but the state still carries seed-like covariance for the earliest failures.  Example event 10:
+
+- direct GSF hit 1: pivot equals measurement; KalTest params `drho=-0.004119`, `phi0=1.362124`, `kappa=-0.499565`, `dz=-0.000898`, `tanl=0.088142`; covariance diagonal `(100, 0.01, 1e-7, 100, 0.01)`.
+- direct GSF hit 2: covariance diagonal `(101, 0.01, 1e-7, 101, 0.01)`.
+- direct GSF hit 3: covariance diagonal `(103, 0.01, 1e-7, 103, 0.01)`.
+
+For the same event/hit indices, the baseline-wrapper KalTestTool state at the hit is successful and tightly constrained after the MarlinTrk fit/smooth.  Example event 10:
+
+- KalTestTool hit 1: status success, LCIO-like state `d0=+0.004120`, `phi=2.93293`, `omega=-4.49314e-4`, `z0=-0.000895`, `tanl=0.088141`; covariance diagonal `(7.06e-6, 6.49e-8, 1.59e-13, 7.08e-6, 6.68e-8)`.
+- KalTestTool hit 2: status success, covariance diagonal `(5.65e-6, 5.75e-8, 1.58e-13, 5.72e-6, 5.94e-8)`.
+- KalTestTool hit 3: status success, covariance diagonal `(5.25e-6, 3.24e-8, 1.57e-13, 5.49e-6, 3.48e-8)`.
+
+Interpretation: the direct GSF path is not equivalent to the wrapper because it consumes `hits[0]` as a dummy initial site with huge errors and then begins real `AddAndFilter` at hit 1 from an LCIO-seed state.  The baseline wrapper includes the early hits in `createPrefit/createFit` as real measurements and obtains a constrained state/covariance before finalisation.  This explains why the first few direct GSF `AddAndFilter` calls can fail/recover even with exact predicted pivot matching, while the wrapper fit succeeds with all hits.
+
+Current hypothesis for the recovery issue: direct GSF violates the baseline initialization convention by replacing the first measurement with a dummy seed site and starting measurement updates from an underconstrained seed-like state.  The next test should be to change only the initialization strategy in direct GSF, e.g. use a MarlinTrk-like prefit/first-hit treatment or add the first hit as a real measurement before continuing, without involving BH splitting.
