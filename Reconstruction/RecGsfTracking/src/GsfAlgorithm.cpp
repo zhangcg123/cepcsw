@@ -385,6 +385,12 @@ StatusCode RecGsfTracking::initialize() {
                 .z() / dd4hep::tesla;
   info() << "B=" << m_field << " T" << endmsg;
 
+  m_kfFitTool = ToolHandle<ITrackFitterTool>(m_kfFitToolName.value());
+  if (m_kfFitTool.retrieve().isFailure()) {
+    error() << "Failed to retrieve KF fitter tool " << m_kfFitToolName.value() << endmsg;
+    return StatusCode::FAILURE;
+  }
+
   // Build DDKalTest geometry cradle (standalone, independent of tracking pipeline)
   m_cradle = new TKalDetCradle();
   m_cradle->SetOwner(true);
@@ -525,130 +531,64 @@ StatusCode RecGsfTracking::execute() {
     initComp->kaltrack->Add(site);
 
     if (runKF) {
-      int nAccept = 0;
-      int nRecover = 0;
-      int nReject = 0;
-      double minDChi2 = 1e300, maxDChi2 = -1e300;
-      const std::string kfRecoveryMode = m_kfRecoveryMode.value();
-      const bool kfPivotRecovery = (kfRecoveryMode == "PivotCopy" ||
-                                    kfRecoveryMode == "pivotcopy");
-      bool kfFailed = false;
-      int failedHit = -1;
-      double failedRadius = 0.0;
+      decltype(edm4hep::TrackState::covMatrix) covMatrix;
+      auto covMatrixSize = covMatrix.size();
+      for (unsigned icov = 0; icov < covMatrixSize; ++icov) covMatrix[icov] = 0;
+      covMatrix[0]  = m_kfInitialTrackErrorD0.value();
+      covMatrix[2]  = m_kfInitialTrackErrorPhi0.value();
+      covMatrix[5]  = m_kfInitialTrackErrorOmega.value();
+      covMatrix[9]  = m_kfInitialTrackErrorZ0.value();
+      covMatrix[14] = m_kfInitialTrackErrorTanL.value();
 
-      for (size_t ih = 1; ih < hits.size(); ih++) {
-        auto& hi = hits[ih];
-        DDVTrackHit* khClone = nullptr;
-        if (auto* ch = dynamic_cast<DDCylinderHit*>(hi.kalHit))
-          khClone = new DDCylinderHit(*ch);
-        else if (auto* ph = dynamic_cast<DDPlanarHit*>(hi.kalHit))
-          khClone = new DDPlanarHit(*ph);
-        else
-          continue;
+      std::vector<edm4hep::TrackerHit> kfHits;
+      kfHits.reserve(hits.size());
+      for (const auto& h : hits) kfHits.push_back(h.lcioHit);
 
-        auto* st = new TKalTrackSite(*khClone, kSdim);
-        st->SetHitOwner();
-
-        if (initComp->kaltrack->AddAndFilter(*st)) {
-          const double dchi = st->GetDeltaChi2();
-          nAccept++;
-          minDChi2 = std::min(minDChi2, dchi);
-          maxDChi2 = std::max(maxDChi2, dchi);
-          if (m_verboseDump && m_verboseSplitDump) {
-            info() << boost::format("  KF HIT hit=%3d r=%7.1f accepted=1 rejected=0 dchi2=%.6g")
-                      % (int)ih % hi.radius % dchi << endmsg;
-          }
-        } else {
-          bool recovered = false;
-          if (kfPivotRecovery && st->GetEntriesFast() > TVKalSite::kPredicted) {
-            auto& preState = dynamic_cast<const TKalTrackState&>(st->GetState(TVKalSite::kPredicted));
-            auto preHel = preState.GetHelix();
-            const auto& pv = preHel.GetPivot();
-            TVector3 measPos = hi.layer->HitToXv(*hi.kalHit);
-            const double pivotResidual = std::sqrt((pv.X() - measPos.X()) * (pv.X() - measPos.X()) +
-                                                   (pv.Y() - measPos.Y()) * (pv.Y() - measPos.Y()) +
-                                                   (pv.Z() - measPos.Z()) * (pv.Z() - measPos.Z()));
-            if (pivotResidual < 1e-3) {
-              st->Add(new TKalTrackState(preState, preState.GetCovMat(), *st, TVKalSite::kFiltered));
-              st->SetOwner();
-              initComp->kaltrack->Add(st);
-              recovered = true;
-            }
-          }
-
-          if (recovered) {
-            nRecover++;
-            if (m_verboseDump && m_verboseSplitDump) {
-              info() << boost::format("  KF HIT hit=%3d r=%7.1f accepted=0 recovered=1 rejected=0 dchi2=-1")
-                        % (int)ih % hi.radius << endmsg;
-            }
-          } else {
-            nReject++;
-            kfFailed = true;
-            failedHit = (int)ih;
-            failedRadius = hi.radius;
-            if (m_verboseDump) {
-              info() << boost::format("  KF HIT hit=%3d r=%7.1f accepted=0 recovered=0 rejected=1 dchi2=-1")
-                        % (int)ih % hi.radius << endmsg;
-            }
-            delete st;
-            break;
-          }
-        }
+      edm4hep::MutableTrack kfTrack;
+      int status = 0;
+      try {
+        status = m_kfFitTool->Fit(kfTrack, kfHits, covMatrix,
+                                  m_kfMaxChi2PerHit.value(),
+                                  m_kfFitBackward.value());
+      } catch (const std::exception& e) {
+        warning() << "Baseline KF fit threw exception: " << e.what() << endmsg;
+        status = 1;
+      } catch (...) {
+        warning() << "Baseline KF fit threw unknown exception" << endmsg;
+        status = 1;
       }
 
-      if (kfFailed) {
-        warning() << boost::format("KF event index %d track %d: AddAndFilter failed at hit %d (r=%.1f mm); no KF output track")
-                     % eventIndex % (nFit + 1) % failedHit % failedRadius << endmsg;
+      auto hitsInFit = m_kfFitTool->GetHitsInFit();
+      auto outliers = m_kfFitTool->GetOutliers();
+      m_kfFitTool->Clear();
+
+      if (status != 0 || kfTrack.getNdf() < 0) {
+        warning() << boost::format("KF event index %d track %d: baseline KalTestTool fit failed status=%d ndf=%d hits=%d inFit=%d outliers=%d")
+                     % eventIndex % (nFit + 1) % status % kfTrack.getNdf()
+                     % (int)kfHits.size() % (int)hitsInFit.size() % (int)outliers.size() << endmsg;
         delete initComp;
         for (auto& h : hits) delete h.kalHit;
         continue;
       }
-
-      initComp->kaltrack->SmoothAll();
-      if (m_verboseDump && m_verboseSplitDump) {
-        auto dumpSite = [&](const char* label, int idx) {
-          if (!initComp->kaltrack || idx < 0 || idx >= initComp->kaltrack->GetEntriesFast()) return;
-          auto* ksite = dynamic_cast<const TKalTrackSite*>(initComp->kaltrack->At(idx));
-          if (!ksite) return;
-          auto& state = dynamic_cast<TKalTrackState&>(ksite->GetCurState());
-          auto h = state.GetHelix();
-          auto pv = h.GetPivot();
-          info() << boost::format("  KF DIAG %s site=%d drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
-                    % label % idx % h.GetDrho() % h.GetPhi0() % h.GetKappa() % h.GetDz() % h.GetTanLambda()
-                    % pv.X() % pv.Y() % pv.Z() << endmsg;
-        };
-        dumpSite("initial", 0);
-        dumpSite("inner", 1);
-        dumpSite("last", initComp->kaltrack->GetEntriesFast() - 1);
-      }
-
-      THelicalTrack ipHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
-      TMatrixD ipCov(5, 5);
-      if (!extrapolateToIP_component(initComp, m_materialIPExtrap, m_cradle, m_ipLayer,
-                                     bz, ipHelix, ipCov)) {
-        warning() << "KF IP extrapolation failed; no KF output track" << endmsg;
-        delete initComp;
-        for (auto& h : hits) delete h.kalHit;
-        continue;
-      }
-      if (m_verboseDump && m_verboseSplitDump) {
-        auto pv = ipHelix.GetPivot();
-        info() << boost::format("  KF DIAG ip    drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
-                  % ipHelix.GetDrho() % ipHelix.GetPhi0() % ipHelix.GetKappa() % ipHelix.GetDz() % ipHelix.GetTanLambda()
-                  % pv.X() % pv.Y() % pv.Z() << endmsg;
-      }
-
-      auto ot = out->create();
-      ot.setType(1);
-      ot.setChi2(initComp->kaltrack->GetChi2());
-      ot.setNdf(initComp->kaltrack->GetNDF());
 
       edm4hep::TrackState ts;
-      ts.location = DH::AtIP;
-      fillTrackState(ts, ipHelix, ipCov, bz);
-      ot.addToTrackStates(ts);
-      for (const auto& h : assocHits) ot.addToTrackerHits(h);
+      bool haveIP = false;
+      for (int its = 0; its < kfTrack.trackStates_size(); ++its) {
+        auto candidate = kfTrack.getTrackStates(its);
+        if (candidate.location == DH::AtIP) {
+          ts = candidate;
+          haveIP = true;
+          break;
+        }
+      }
+      if (!haveIP) {
+        warning() << "Baseline KF fit succeeded but returned no AtIP state; no KF output track" << endmsg;
+        delete initComp;
+        for (auto& h : hits) delete h.kalHit;
+        continue;
+      }
+
+      out->push_back(kfTrack);
 
       double t_pT = 0, t_eta = 0, t_phi = 0, t_p = 0;
       if (m_mcParticles.isValid()) {
@@ -658,8 +598,7 @@ StatusCode RecGsfTracking::execute() {
           auto& mom = mcp.getMomentum();
           t_pT  = std::hypot(mom.x, mom.y);
           t_p   = std::hypot(t_pT, mom.z);
-          t_eta = (t_p > 0 && std::abs(t_pT / t_p) < 1.0)
-                  ? std::atanh(mom.z / t_p) : 0.0;
+          t_eta = (t_p > 0 && std::abs(t_pT / t_p) < 1.0) ? std::atanh(mom.z / t_p) : 0.0;
           t_phi = std::atan2(mom.y, mom.x);
         }
       }
@@ -677,47 +616,40 @@ StatusCode RecGsfTracking::execute() {
       const double kf_p = kf_pT * std::cosh(kf_eta);
 
       TrackSummary sum;
-      sum.iev      = m_nEvt;
-      sum.charge   = charge;
-      sum.nHits    = nAccept + nRecover + 1;
-      sum.nComps   = 1;
+      sum.iev = m_nEvt;
+      sum.charge = charge;
+      sum.nHits = hitsInFit.size();
+      sum.nComps = 1;
       sum.truth_pT = t_pT; sum.truth_eta = t_eta; sum.truth_phi = t_phi; sum.truth_p = t_p;
-      sum.lcio_pT  = lcio_pT; sum.lcio_eta = lcio_eta; sum.lcio_phi = seed.phi;
-      sum.lcio_d0  = seed.d0; sum.lcio_z0 = seed.z0; sum.lcio_p = lcio_p;
+      sum.lcio_pT = lcio_pT; sum.lcio_eta = lcio_eta; sum.lcio_phi = seed.phi;
+      sum.lcio_d0 = seed.d0; sum.lcio_z0 = seed.z0; sum.lcio_p = lcio_p;
       sum.lcio_chi2 = trk.getChi2(); sum.lcio_ndf = trk.getNdf();
-      sum.gsf_pT   = kf_pT; sum.gsf_eta = kf_eta; sum.gsf_phi = ts.phi;
-      sum.gsf_d0   = ts.D0; sum.gsf_z0 = ts.Z0; sum.gsf_p = kf_p;
-      sum.gsf_chi2 = initComp->kaltrack->GetChi2(); sum.gsf_ndf = initComp->kaltrack->GetNDF();
-      sum.nSplits = 0;
-      sum.nReductions = 0;
-      sum.maxCompsEver = 1;
-      sum.finalComps = 1;
-      sum.bestWeight = 1.0;
-      sum.meanWeight = 1.0;
+      sum.gsf_pT = kf_pT; sum.gsf_eta = kf_eta; sum.gsf_phi = ts.phi;
+      sum.gsf_d0 = ts.D0; sum.gsf_z0 = ts.Z0; sum.gsf_p = kf_p;
+      sum.gsf_chi2 = kfTrack.getChi2(); sum.gsf_ndf = kfTrack.getNdf();
+      sum.nSplits = 0; sum.nReductions = 0; sum.maxCompsEver = 1; sum.finalComps = 1;
+      sum.bestWeight = 1.0; sum.meanWeight = 1.0;
       m_summaries.push_back(sum);
 
       if (m_verboseDump) {
         std::string const sep(60, '-');
         info() << sep << endmsg;
-        info() << boost::format("%s %02d  |  comps %2d  hits %d/%d  q=%+d  p %.2f GeV  chi2/ndf %.1f/%d")
-                  % "KF Track" % (nFit + 1) % 1 % sum.nHits % (int)hits.size()
-                  % charge % kf_p % initComp->kaltrack->GetChi2() % initComp->kaltrack->GetNDF() << endmsg;
-        info() << sep << endmsg;
-        info() << boost::format("  %-6s  %10s  %10s  %10s  %16s  %s") % "" % "Truth" % "LCIO" % "KF" % "AddFilter" % "" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s  %s") % "pT" % t_pT % lcio_pT % kf_pT % "" % "GeV" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s") % "eta" % t_eta % lcio_eta % kf_eta % "" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s") % "phi" % t_phi % seed.phi % ts.phi % "" << endmsg;
-        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %16s  %s") % "d0" % "-" % seed.d0 % ts.D0 % "" % "mm" << endmsg;
-        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %16s  %s") % "z0" % "-" % seed.z0 % ts.Z0 % "" % "mm" << endmsg;
-        info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %16s  %s") % "p" % t_p % lcio_p % kf_p % "" % "GeV" << endmsg;
-        info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  total %2d/%2d/%2d")
+        info() << boost::format("KF Track %02d  |  baseline hits %d/%d  outliers %d  q=%+d  p %.2f GeV  chi2/ndf %.1f/%d")
+                  % (nFit + 1) % (int)hitsInFit.size() % (int)kfHits.size()
+                  % (int)outliers.size() % charge % kf_p % kfTrack.getChi2() % kfTrack.getNdf() << endmsg;
+        info() << boost::format("  %-6s  %10s  %10s  %10s") % "" % "Truth" % "LCIO" % "KF" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %s") % "pT" % t_pT % lcio_pT % kf_pT % "GeV" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f") % "eta" % t_eta % lcio_eta % kf_eta << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f") % "phi" % t_phi % seed.phi % ts.phi << endmsg;
+        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %s") % "d0" % "-" % seed.d0 % ts.D0 % "mm" << endmsg;
+        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %s") % "z0" % "-" % seed.z0 % ts.Z0 % "mm" << endmsg;
+        info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %s") % "p" % t_p % lcio_p % kf_p % "GeV" << endmsg;
+        info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  in/out %2d/%2d")
                   % "chi2" % "-" % trk.getChi2() % trk.getNdf()
-                  % initComp->kaltrack->GetChi2() % initComp->kaltrack->GetNDF()
-                  % nAccept % nRecover % nReject << endmsg;
-        info() << sep << endmsg;
-        info() << boost::format("  KF diagnostics | recovery=%s dchi2=[%.3g, %.3g]")
-                  % (kfPivotRecovery ? "PivotCopy" : "None")
-                  % (nAccept ? minDChi2 : -1.0) % (nAccept ? maxDChi2 : -1.0) << endmsg;
+                  % kfTrack.getChi2() % kfTrack.getNdf()
+                  % (int)hitsInFit.size() % (int)outliers.size() << endmsg;
+        info() << boost::format("  KF diagnostics | tool=%s maxChi2PerHit=%.3g fitBackward=%d")
+                  % m_kfFitToolName.value() % m_kfMaxChi2PerHit.value() % (m_kfFitBackward.value() ? 1 : 0) << endmsg;
         info() << sep << endmsg;
       }
 

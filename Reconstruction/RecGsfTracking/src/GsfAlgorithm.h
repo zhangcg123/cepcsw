@@ -2,9 +2,11 @@
 #define RecGsfTracking_GsfAlgorithm_h
 
 #include "GaudiKernel/Algorithm.h"
+#include "GaudiKernel/ToolHandle.h"
 #include "k4FWCore/DataHandle.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "Tracking/ITrackFitterTool.h"
 
 #include "DetInterface/IGeomSvc.h"
 
@@ -88,6 +90,15 @@ private:
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
   Gaudi::Property<std::string> m_fitterMode{this,"FitterMode","GSF"};
   Gaudi::Property<std::string> m_kfRecoveryMode{this,"KFRecoveryMode","None"};
+  Gaudi::Property<std::string> m_kfFitToolName{this,"KFFitterTool","KalTestTool/KalTest111"};
+  Gaudi::Property<float> m_kfInitialTrackErrorD0{this,"KFInitialTrackErrorD0",1e6};
+  Gaudi::Property<float> m_kfInitialTrackErrorPhi0{this,"KFInitialTrackErrorPhi0",1e2};
+  Gaudi::Property<float> m_kfInitialTrackErrorOmega{this,"KFInitialTrackErrorOmega",1e-4};
+  Gaudi::Property<float> m_kfInitialTrackErrorZ0{this,"KFInitialTrackErrorZ0",1e6};
+  Gaudi::Property<float> m_kfInitialTrackErrorTanL{this,"KFInitialTrackErrorTanL",1e2};
+  Gaudi::Property<float> m_kfMaxChi2PerHit{this,"KFMaxChi2PerHit",200.0};
+  Gaudi::Property<bool> m_kfFitBackward{this,"KFFitBackward",false};
+  ToolHandle<ITrackFitterTool> m_kfFitTool;
 
   int m_nEvt = 0;
   std::vector<TrackSummary> m_summaries;  // accumulated per-track data

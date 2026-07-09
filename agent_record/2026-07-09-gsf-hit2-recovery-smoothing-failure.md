@@ -407,3 +407,18 @@ The single-branch KF control now establishes a baseline:
 2. The pivot-copy recovery is enough for a single branch to continue and produce LCIO-like final parameters.
 3. Therefore the catastrophic GSF final IP failure is not caused by recovery alone. It needs the multi-component history: repeated split/reduce cycles, branch selection/merging, or smoothing through histories that have mixed recovered and updated sites.
 4. The strongest current suspect remains reduction/merge consistency: the reducer changes a component last-site state/covariance, but the earlier KalTest site history still belongs to one surviving branch. Backward smoothing through that inconsistent history can produce a nonphysical inner/IP state.
+
+## 2026-07-09 GSF KF Mode Switched to Baseline KalTestTool Workflow
+
+Changed `RecGsfTracking` `FitterMode="KF"` from the direct `TKalTrack::AddAndFilter` diagnostic loop to the baseline `ITrackFitterTool` path, defaulting to `KalTestTool/KalTest111`.  The KF mode now builds the same broad initial covariance style used by `RecSiTracking`/`RecTrkGlobal`, calls `KalTestTool::Fit(...)`, uses the tool-produced `AtIP` state, and pushes the fitted `MutableTrack` into `GSFTracks`.  GSF mode is unchanged.
+
+Validation after `cmake --build build.105.0.0.x86_64-el9-gcc11-opt --target install -j8`:
+
+| event | hits in fit / input | outliers | LCIO pT eta phi d0 z0 | baseline-KF pT eta phi d0 z0 | chi2/ndf LCIO -> KF |
+|---:|---:|---:|---|---|---|
+| 10 | 234/234 | 0 | 2.0017 0.0880 2.9304 -0.0084 0.0004 | 2.0009 0.0880 2.9256 -0.0126 -0.0067 | 467.5/462 -> 472.8/462 |
+| 12 | 233/233 | 0 | 1.9658 0.0874 -1.0824 -0.0009 -0.0006 | 1.9660 0.0874 -1.0874 0.0129 0.0041 | 543.1/460 -> 549.1/460 |
+| 14 | 233/233 | 0 | 2.0006 0.0866 0.1774 -0.0009 -0.0024 | 2.0005 0.0866 0.1725 0.0014 0.0128 | 431.9/460 -> 431.9/460 |
+| 15 | 232/232 | 0 | 2.0036 0.0877 2.3251 0.0038 -0.0023 | 2.0040 0.0877 2.3201 0.0081 -0.0070 | 413.1/458 -> 412.4/458 |
+
+Conclusion: the hit-recovery failures seen in the earlier pure-KF diagnostic were caused by driving low-level `TKalTrack::AddAndFilter` directly from GSF, not by the baseline KalTestTool workflow.  With the baseline workflow inside GSF, these same events fit all hits with zero outliers and no manual recovery.
