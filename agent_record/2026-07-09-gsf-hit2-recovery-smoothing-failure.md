@@ -508,3 +508,114 @@ For the same event/hit indices, the baseline-wrapper KalTestTool state at the hi
 Interpretation: the direct GSF path is not equivalent to the wrapper because it consumes `hits[0]` as a dummy initial site with huge errors and then begins real `AddAndFilter` at hit 1 from an LCIO-seed state.  The baseline wrapper includes the early hits in `createPrefit/createFit` as real measurements and obtains a constrained state/covariance before finalisation.  This explains why the first few direct GSF `AddAndFilter` calls can fail/recover even with exact predicted pivot matching, while the wrapper fit succeeds with all hits.
 
 Current hypothesis for the recovery issue: direct GSF violates the baseline initialization convention by replacing the first measurement with a dummy seed site and starting measurement updates from an underconstrained seed-like state.  The next test should be to change only the initialization strategy in direct GSF, e.g. use a MarlinTrk-like prefit/first-hit treatment or add the first hit as a real measurement before continuing, without involving BH splitting.
+
+## 2026-07-09 Direct GSF Max1 vs Baseline KalTestTool Wrapper
+
+A later comparison removed BH splitting and component reduction from the direct GSF path:
+
+```python
+gsf.FitterMode = "GSF"
+gsf.MaxComponents = 1
+gsf.ReductionTargetComponents = 1
+gsf.ReductionMode = "TopN"
+gsf.SelectedEventIndices = [10, 12, 14, 15]
+```
+
+Because the split condition is `comps.size() < MaxComponents`, `MaxComponents=1` means no BH split is executed. This is a single KalTest branch driven by the direct GSF loop.
+
+The same events were compared with the baseline-style KF wrapper path added under `FitterMode="KF"`, which calls `KalTestTool::Fit(...)` through `ITrackFitterTool`, as the baseline tracking does.
+
+Summary:
+
+| Event | Direct GSF accepted/recovered/rejected | Direct GSF chi2/ndf | Baseline-wrapper KF hits/outliers | Baseline-wrapper KF chi2/ndf |
+|---:|---:|---:|---:|---:|
+| 10 | 230/3/0 | 476.1/460 | 234/0 | 467.5/462 |
+| 12 | 230/2/0 | 583.1/458 | 233/0 | 543.1/460 |
+| 14 | 229/3/0 | 425.8/458 | 233/0 | 431.9/460 |
+| 15 | 230/1/0 | 409.4/456 | 232/0 | 413.1/458 |
+
+Direct GSF recovery therefore persists even with:
+
+- no BH kappa modification,
+- no BH covariance modification,
+- no branch splitting,
+- no component reduction.
+
+This localizes the remaining recovery issue to the direct GSF KalTest driving/initialization sequence, not to the BH model or component reducer.
+
+The recovered direct-GSF hit indices in this setup were:
+
+| Event | Direct recovered hit indices |
+|---:|---|
+| 10 | 1, 2, 3 |
+| 12 | 1, 3 |
+| 14 | 1, 2, 3 |
+| 15 | 2 |
+
+Examples from direct GSF show that the failed/recovered early states are still near seed-like and underconstrained:
+
+```text
+event=10 hit=1 r=16.6
+meas=(-16.206574,3.508421,1.455612)
+pivot=(-16.206574,3.508421,1.455612)
+drho=-0.00411938738 phi0=1.36212404 kappa=-0.499565055 dz=-0.000898161757 tanl=0.0881416947
+covDiag=(100,0.01,1e-07,100,0.01)
+
+event=10 hit=2 covDiag=(101,0.01,1e-07,101,0.01)
+event=10 hit=3 covDiag=(103,0.01,1e-07,103,0.01)
+```
+
+The predicted pivot matching the measurement at machine precision is expected after KalTest propagation to the next surface. It is not proof that the measurement update succeeded, because `Filter()` still calls `CalcExpectedMeasVec()`/surface-crossing logic internally.
+
+The corresponding baseline-wrapper states at the same early hits are tightly constrained after the wrapper's prefit/fit/smooth sequence. For example, event 10:
+
+```text
+hit=1 status=success
+pos=(-16.2066,3.50842,1.45561)
+omega=-0.000449314 phi=2.93293 d0=0.00411998 z0=-0.000895413 tanl=0.0881412
+covDiag=(7.06462e-06,6.49007e-08,1.58852e-13,7.08416e-06,6.67514e-08)
+chi2=467.522 ndf=462
+
+hit=2 status=success
+covDiag=(5.64852e-06,5.75176e-08,1.57849e-13,5.7201e-06,5.94046e-08)
+
+hit=3 status=success
+covDiag=(5.25384e-06,3.2351e-08,1.57458e-13,5.49116e-06,3.48242e-08)
+```
+
+Interpretation:
+
+- Direct GSF currently consumes `hits[0]` as a dummy initial site and starts real `AddAndFilter()` at hit 1 from a broad, seed-like state.
+- The baseline-style wrapper includes the early hits in `createPrefit/createFit` and reaches the same region with much tighter states before final smoothing/output.
+- This explains why direct GSF can fail/recover in the first few `AddAndFilter()` calls while the baseline wrapper fits all hits with zero outliers.
+
+## Current Working Conclusion
+
+The latest evidence changes the priority. BH splitting can amplify damage, but it is not the root cause of the early recovery itself. The recovery already exists in a one-component direct GSF path.
+
+The direct GSF path is not equivalent to the baseline KalTestTool workflow. The main difference now under suspicion is the early-site initialization and fit-driving sequence:
+
+```text
+Direct GSF:        seed/dummy site -> AddAndFilter(hit 1) -> AddAndFilter(hit 2) -> ...
+Baseline wrapper:  KalTestTool prefit/createFit over early hits -> fit/smooth managed by wrapper
+```
+
+This is why a direct GSF component can have a predicted pivot exactly on the measurement but still fail the internal KalTest measurement calculation, while the baseline-wrapper state at the same hit is already well constrained and succeeds.
+
+## Focused TODOs
+
+1. Keep the branch clean: no temporary KalTest/GSF instrumentation should remain uncommitted.
+2. For the next test, change only the direct GSF initialization/early-fit driving, not the BH model.
+3. Test whether treating hit 0 as a real fitted measurement, instead of only a dummy seed site, removes recoveries at hits 1-3 in `MaxComponents=1`, `TopN=1`.
+4. If needed, test a MarlinTrk/KalTestTool-like prefit state for the first few VXD hits and then hand that state to the GSF component loop.
+5. Use events 10, 12, 14, 15 as the short regression set and report per-hit accepted/recovered/rejected, especially hit indices 1-3.
+6. Only after single-component direct GSF has no early recoveries should BH splitting/kappa modifications be reintroduced.
+
+Relevant logs from this stage:
+
+```text
+/tmp/gsf_gsf_max1_topn1_events_10_12_14_15.log
+/tmp/gsf_gsf_max1_direct_recover_diag.log
+/tmp/gsf_baseline_kf_hit_state_diag.log
+/tmp/gsf_baseline_kf_iprefit3_10_12_14_15.log
+```
