@@ -185,3 +185,30 @@ Focused validation with `MaxComponents=1`, `TopN=1` on events 10, 12, 14, and 15
 
 Limitation: the accepted baseline `TKalTrackSite` object is not directly transferred into the persistent GSF component because the public `IMarlinTrack` API hides that ownership. The current implementation exports the baseline-updated `TrackState` and rebuilds a component site from it, with explicit GSF-side chi2 bookkeeping (`fitChi2`) copied through clone and moment-merged through reduction. This is baseline-compatible at the workflow/API level, but not a full internal KalTest site ownership merge. Next validation should run the real working point `MaxComponents=9`, `TopN=3` to test split/reduce cooperation beyond the max1 smoke case.
 
+
+
+## 2026-07-10 GSF verbose prediction diagnostic motivation
+
+The next verbose diagnostic must expose the true per-component KF prediction at the current measurement surface, not just the `TrackState.referencePoint`. The current dump labels the component state passed to the baseline update as `predict`, but that state reference point is only the parameterization pivot. Before update it is normally the previous component site pivot; after `getTrackState(trkHit, ...)` it is naturally the measured hit position because the returned state is parameterized at that hit. Therefore identical pivot coordinates across components do not prove the components predict the same measurement, and the updated state reference point matching the measured hit is expected by construction.
+
+The required diagnostic is instead:
+
+```text
+component id / branch / weight / pT after split
+predicted crossing or predicted measurement on the current hit surface
+measured tracker-hit position
+residual = measured - predicted, ideally in global and/or local measurement coordinates
+updated state after the baseline-style addAndFit
+weight and chi2 change
+survival through reduction
+```
+
+Motivation: the recovery issue was fixed operationally by moving GSF component updates onto the baseline-style `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)` path, but we still need to verify that each split GSF component is being propagated to the same physical measurement surface in the same way as the baseline KF. This diagnostic should distinguish prediction/extrapolation problems from measurement association, residual/covariance, update, likelihood weighting, and reduction effects. Do not interpret `TrackState.referencePoint` as a predicted hit location.
+
+## 2026-07-10 multi-component validation and current blocker
+
+The baseline-style update was tested with real splitting and TopN reduction on events 10, 12, 14, and 15 (`MaxComponents=9`, target 3). No recovery shortcut occurred, final momenta were physical, and the old catastrophic smoothing output was absent. This closes the immediate component-update recovery blocker.
+
+The remaining physics blocker is energy-loss inference. A quiet events 10-19 run with `MaxComponents=2`, `TopN=1` follows LCIO rather than recovering generated momentum in hard-loss events 11, 16, and 17. Immediate TopN=1 normally keeps the `GlobalSim2GeV85` near-no-loss child (`z=0.99995`, prior weight 0.5793) after only one hit and deletes hard-loss alternatives before later hits provide enough curvature leverage. The global model also ignores per-step `t/X0`.
+
+Next: retain 3-5 components across several post-split hits before reduction, inspect events 11/16/17, then implement a step-`t/X0`-conditioned model and an explicit pre/post-material transition. Full evidence and the simplified active argument list are in `agent_record/2026-07-10-gsf-topn-energy-loss-status.md` and `Reconstruction/RecGsfTracking/README.md`.

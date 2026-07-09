@@ -212,6 +212,26 @@ static edm4hep::TrackState trackStateFromComponent(
   return ts;
 }
 
+
+static double ptFromTrackState(const edm4hep::TrackState& ts, double bz) {
+  const double alpha = bz * 2.99792458e-4;
+  const double kappa = (alpha != 0.0) ? ts.omega / alpha : 0.0;
+  return (kappa != 0.0) ? 1.0 / std::abs(kappa) : 0.0;
+}
+
+static std::string compactTrackState(const edm4hep::TrackState& ts, double bz) {
+  std::ostringstream os;
+  os << std::fixed << std::setprecision(4)
+     << "ref=(" << ts.referencePoint.x << "," << ts.referencePoint.y << "," << ts.referencePoint.z << ")"
+     << " pT=" << ptFromTrackState(ts, bz)
+     << " d0=" << ts.D0
+     << " z0=" << ts.Z0
+     << " phi=" << ts.phi
+     << " tanL=" << ts.tanLambda
+     << " omega=" << ts.omega;
+  return os.str();
+}
+
 static double componentFitChi2(const GsfComponent& comp) {
   if (comp.fitChi2 > 0.0) return comp.fitChi2;
   return comp.kaltrack ? comp.kaltrack->GetChi2() : 0.0;
@@ -512,18 +532,38 @@ RecGsfTracking::RecGsfTracking(const std::string& name,
 StatusCode RecGsfTracking::initialize() {
   m_nEvt = 0;
 
+  if (m_maxComponents.value() < 1) {
+    error() << "MaxComponents must be at least 1" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_reductionTargetComponents.value() < 0 ||
+      m_reductionTargetComponents.value() > m_maxComponents.value()) {
+    error() << "ReductionTargetComponents must be 0 or in [1, MaxComponents]" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_bhSplitThresh.value() < 0.0) {
+    error() << "BHSplitThreshold must be non-negative" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  std::string reductionMode = m_reductionMode.value();
+  std::transform(reductionMode.begin(), reductionMode.end(), reductionMode.begin(), ::tolower);
+  if (reductionMode != "kl" && reductionMode != "topn") {
+    error() << "ReductionMode must be KL or TopN" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  std::string outputMode = m_outputMode.value();
+  std::transform(outputMode.begin(), outputMode.end(), outputMode.begin(), ::tolower);
+  if (outputMode != "bestbranch" && outputMode != "weightedmean") {
+    error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
+    return StatusCode::FAILURE;
+  }
+
   m_geosvc = service<IGeomSvc>("GeomSvc");
   m_field = m_geosvc->lcdd()
                 ->field()
                 .magneticField(dd4hep::Position(0, 0, 0))
                 .z() / dd4hep::tesla;
   info() << "B=" << m_field << " T" << endmsg;
-
-  m_kfFitTool = ToolHandle<ITrackFitterTool>(m_kfFitToolName.value());
-  if (m_kfFitTool.retrieve().isFailure()) {
-    error() << "Failed to retrieve KF fitter tool " << m_kfFitToolName.value() << endmsg;
-    return StatusCode::FAILURE;
-  }
 
   auto trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
   if (!trackSystemSvc) {
@@ -594,6 +634,14 @@ StatusCode RecGsfTracking::initialize() {
     return StatusCode::FAILURE;
   }
 
+  info() << "GSF configuration: maxComponents=" << m_maxComponents.value()
+         << " reductionTarget=" << m_reductionTargetComponents.value()
+         << " reductionMode=" << m_reductionMode.value()
+         << " outputMode=" << m_outputMode.value()
+         << " verbose=" << m_verboseDump.value() << "/"
+         << m_verboseSplitDump.value() << "/"
+         << m_componentDebugDump.value() << endmsg;
+
   return StatusCode::SUCCESS;
 }
 
@@ -609,16 +657,7 @@ StatusCode RecGsfTracking::execute() {
     return StatusCode::SUCCESS;
   }
 
-  const std::string fitterMode = m_fitterMode.value();
-  const bool runKF = (fitterMode == "KF" || fitterMode == "kf");
-  const bool runGSF = (fitterMode == "GSF" || fitterMode == "gsf");
-  if (!runKF && !runGSF) {
-    error() << "Unknown FitterMode '" << fitterMode
-            << "'; supported values are GSF and KF" << endmsg;
-    return StatusCode::FAILURE;
-  }
-
-  info() << (runKF ? "KF" : "GSF") << " event index " << eventIndex
+  info() << "GSF event index " << eventIndex
          << " (event count " << m_nEvt << ")" << endmsg;
   const auto* in = m_inputTracks.get();
   if (!in) return StatusCode::SUCCESS;
@@ -664,205 +703,18 @@ StatusCode RecGsfTracking::execute() {
     double kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;
 
     // ---- Step 4: forward GSF filter ----
-    decltype(edm4hep::TrackState::covMatrix) kfCovMatrix;
-    auto kfCovMatrixSize = kfCovMatrix.size();
-    for (unsigned icov = 0; icov < kfCovMatrixSize; ++icov) kfCovMatrix[icov] = 0;
-    kfCovMatrix[0]  = m_kfInitialTrackErrorD0.value();
-    kfCovMatrix[2]  = m_kfInitialTrackErrorPhi0.value();
-    kfCovMatrix[5]  = m_kfInitialTrackErrorOmega.value();
-    kfCovMatrix[9]  = m_kfInitialTrackErrorZ0.value();
-    kfCovMatrix[14] = m_kfInitialTrackErrorTanL.value();
-
-    std::vector<edm4hep::TrackerHit> kfHits;
-    kfHits.reserve(hits.size());
-    for (const auto& h : hits) kfHits.push_back(h.lcioHit);
-
-    const bool fitBackwards = m_kfFitBackward.value()
-        ? MarlinTrk::IMarlinTrack::backward
-        : !MarlinTrk::IMarlinTrack::backward;
-
-    TKalTrackSite* site = nullptr;
-    size_t gsfStartHit = 1;
-    std::string initMode = m_gsfInitialisationMode.value();
-    std::transform(initMode.begin(), initMode.end(), initMode.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-
-    if (!site && runGSF && (initMode == "baselineearlyfit" || initMode == "earlyfit")) {
-      const size_t nEarly = std::min(hits.size(),
-          std::max<size_t>(3, static_cast<size_t>(std::max(0, m_gsfInitialisationFitHits.value()))));
-      if (nEarly >= 3 && m_gsfMarlinTrkSystem) {
-        std::vector<edm4hep::TrackerHit> earlyHits(kfHits.begin(), kfHits.begin() + nEarly);
-        edm4hep::TrackState preFit;
-        int prefitStatus = 0;
-        int fitStatus = 0;
-        double earlyChi2 = 0.0;
-        int earlyNdf = -999;
-        try {
-          prefitStatus = MarlinTrk::createPrefit(earlyHits, &preFit, bz, fitBackwards);
-          preFit.covMatrix = kfCovMatrix;
-          if (prefitStatus == MarlinTrk::IMarlinTrack::success) {
-            std::unique_ptr<MarlinTrk::IMarlinTrack> earlyTrack(m_gsfMarlinTrkSystem->createTrack());
-            fitStatus = MarlinTrk::createFit(earlyHits, earlyTrack.get(), &preFit, bz,
-                                             fitBackwards, m_kfMaxChi2PerHit.value());
-            if (fitStatus == MarlinTrk::IMarlinTrack::success) {
-              edm4hep::TrackState earlyState;
-              int stateStatus = earlyTrack->getTrackState(earlyHits.back(), earlyState, earlyChi2, earlyNdf);
-              if (stateStatus == MarlinTrk::IMarlinTrack::success) {
-                site = makeInitialSiteFromTrackState(earlyState, hits[nEarly - 1], bz);
-                if (site) {
-                  gsfStartHit = nEarly;
-                  if (m_verboseDump) {
-                    info() << boost::format("GSF event index %d: direct GSF initialised from local baseline early fit through hit %d chi2=%.3f ndf=%d")
-                              % (m_nEvt - 1) % (int)(nEarly - 1) % earlyChi2 % earlyNdf << endmsg;
-                  }
-                }
-              } else {
-                fitStatus = stateStatus;
-              }
-            }
-          }
-        } catch (const std::exception& e) {
-          warning() << "GSF local baseline early fit threw exception: " << e.what() << endmsg;
-          fitStatus = 1;
-        } catch (...) {
-          warning() << "GSF local baseline early fit threw unknown exception" << endmsg;
-          fitStatus = 1;
-        }
-        if (!site && m_verboseDump) {
-          warning() << boost::format("GSF event index %d: local baseline early fit init failed nEarly=%d prefit=%d fit=%d; falling back")
-                       % (m_nEvt - 1) % (int)nEarly % prefitStatus % fitStatus << endmsg;
-        }
-      }
-    }
-
-    if (!site) {
-      site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
-    }
+    const bool fitBackwards = !MarlinTrk::IMarlinTrack::backward;
+    const size_t gsfStartHit = 1;
+    TKalTrackSite* site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
     int nextComponentDebugId = 0;
     auto* initComp = new GsfComponent();
     initComp->weight = 1.0;
     initComp->charge = charge;
     initComp->debugId = nextComponentDebugId++;
-    initComp->debugHistory = (gsfStartHit > 1) ? "baseline-early-fit" : "seed";
+    initComp->debugHistory = "seed";
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
-
-    if (runKF) {
-      edm4hep::MutableTrack kfTrack;
-      int status = 0;
-      try {
-        status = m_kfFitTool->Fit(kfTrack, kfHits, kfCovMatrix,
-                                  m_kfMaxChi2PerHit.value(),
-                                  fitBackwards);
-      } catch (const std::exception& e) {
-        warning() << "Baseline KF fit threw exception: " << e.what() << endmsg;
-        status = 1;
-      } catch (...) {
-        warning() << "Baseline KF fit threw unknown exception" << endmsg;
-        status = 1;
-      }
-
-      auto hitsInFit = m_kfFitTool->GetHitsInFit();
-      auto outliers = m_kfFitTool->GetOutliers();
-      m_kfFitTool->Clear();
-
-      if (status != 0 || kfTrack.getNdf() < 0) {
-        warning() << boost::format("KF event index %d track %d: baseline KalTestTool fit failed status=%d ndf=%d hits=%d inFit=%d outliers=%d")
-                     % eventIndex % (nFit + 1) % status % kfTrack.getNdf()
-                     % (int)kfHits.size() % (int)hitsInFit.size() % (int)outliers.size() << endmsg;
-        delete initComp;
-        for (auto& h : hits) delete h.kalHit;
-        continue;
-      }
-
-      edm4hep::TrackState ts;
-      bool haveIP = false;
-      for (int its = 0; its < kfTrack.trackStates_size(); ++its) {
-        auto candidate = kfTrack.getTrackStates(its);
-        if (candidate.location == DH::AtIP) {
-          ts = candidate;
-          haveIP = true;
-          break;
-        }
-      }
-      if (!haveIP) {
-        warning() << "Baseline KF fit succeeded but returned no AtIP state; no KF output track" << endmsg;
-        delete initComp;
-        for (auto& h : hits) delete h.kalHit;
-        continue;
-      }
-
-      out->push_back(kfTrack);
-
-      double t_pT = 0, t_eta = 0, t_phi = 0, t_p = 0;
-      if (m_mcParticles.isValid()) {
-        auto* mcCol = m_mcParticles.get();
-        if (mcCol && mcCol->size() > 0) {
-          auto mcp = (*mcCol)[0];
-          auto& mom = mcp.getMomentum();
-          t_pT  = std::hypot(mom.x, mom.y);
-          t_p   = std::hypot(t_pT, mom.z);
-          t_eta = (t_p > 0 && std::abs(t_pT / t_p) < 1.0) ? std::atanh(mom.z / t_p) : 0.0;
-          t_phi = std::atan2(mom.y, mom.x);
-        }
-      }
-
-      auto toPtEta = [bz](double omega, double tanl) {
-        double a = bz * 2.99792458e-4;
-        double pT = (omega != 0) ? std::abs(a / omega) : 0.0;
-        double eta = std::asinh(tanl);
-        return std::make_pair(pT, eta);
-      };
-      double lcio_pT, lcio_eta, kf_pT, kf_eta;
-      std::tie(lcio_pT, lcio_eta) = toPtEta(seed.omega, seed.tanl);
-      std::tie(kf_pT, kf_eta) = toPtEta(ts.omega, ts.tanLambda);
-      const double lcio_p = lcio_pT * std::cosh(lcio_eta);
-      const double kf_p = kf_pT * std::cosh(kf_eta);
-
-      TrackSummary sum;
-      sum.iev = m_nEvt;
-      sum.charge = charge;
-      sum.nHits = hitsInFit.size();
-      sum.nComps = 1;
-      sum.truth_pT = t_pT; sum.truth_eta = t_eta; sum.truth_phi = t_phi; sum.truth_p = t_p;
-      sum.lcio_pT = lcio_pT; sum.lcio_eta = lcio_eta; sum.lcio_phi = seed.phi;
-      sum.lcio_d0 = seed.d0; sum.lcio_z0 = seed.z0; sum.lcio_p = lcio_p;
-      sum.lcio_chi2 = trk.getChi2(); sum.lcio_ndf = trk.getNdf();
-      sum.gsf_pT = kf_pT; sum.gsf_eta = kf_eta; sum.gsf_phi = ts.phi;
-      sum.gsf_d0 = ts.D0; sum.gsf_z0 = ts.Z0; sum.gsf_p = kf_p;
-      sum.gsf_chi2 = kfTrack.getChi2(); sum.gsf_ndf = kfTrack.getNdf();
-      sum.nSplits = 0; sum.nReductions = 0; sum.maxCompsEver = 1; sum.finalComps = 1;
-      sum.bestWeight = 1.0; sum.meanWeight = 1.0;
-      m_summaries.push_back(sum);
-
-      if (m_verboseDump) {
-        std::string const sep(60, '-');
-        info() << sep << endmsg;
-        info() << boost::format("KF Track %02d  |  baseline hits %d/%d  outliers %d  q=%+d  p %.2f GeV  chi2/ndf %.1f/%d")
-                  % (nFit + 1) % (int)hitsInFit.size() % (int)kfHits.size()
-                  % (int)outliers.size() % charge % kf_p % kfTrack.getChi2() % kfTrack.getNdf() << endmsg;
-        info() << boost::format("  %-6s  %10s  %10s  %10s") % "" % "Truth" % "LCIO" % "KF" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %s") % "pT" % t_pT % lcio_pT % kf_pT % "GeV" << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f") % "eta" % t_eta % lcio_eta % kf_eta << endmsg;
-        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f") % "phi" % t_phi % seed.phi % ts.phi << endmsg;
-        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %s") % "d0" % "-" % seed.d0 % ts.D0 % "mm" << endmsg;
-        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %s") % "z0" % "-" % seed.z0 % ts.Z0 % "mm" << endmsg;
-        info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %s") % "p" % t_p % lcio_p % kf_p % "GeV" << endmsg;
-        info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  in/out %2d/%2d")
-                  % "chi2" % "-" % trk.getChi2() % trk.getNdf()
-                  % kfTrack.getChi2() % kfTrack.getNdf()
-                  % (int)hitsInFit.size() % (int)outliers.size() << endmsg;
-        info() << boost::format("  KF diagnostics | tool=%s maxChi2PerHit=%.3g fitBackward=%d")
-                  % m_kfFitToolName.value() % m_kfMaxChi2PerHit.value() % (fitBackwards ? 1 : 0) << endmsg;
-        info() << sep << endmsg;
-      }
-
-      nFit++;
-      delete initComp;
-      for (auto& h : hits) delete h.kalHit;
-      continue;
-    }
 
     std::vector<GsfComponent*> comps = {initComp};
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
@@ -918,8 +770,17 @@ StatusCode RecGsfTracking::execute() {
 
     for (size_t ih = gsfStartHit; ih < hits.size(); ih++) {
       auto& hi = hits[ih];
+      const int compsAtHitBegin = (int)comps.size();
+      int compsAfterSplit = compsAtHitBegin;
+      int compsAfterUpdate = 0;
+      int compsAfterReduce = 0;
+      bool didReduceHit = false;
       // measurement position (same for all components)
       TVector3 measPos = hi.layer->HitToXv(*hi.kalHit);
+      if (m_verboseDump && m_verboseSplitDump) {
+        info() << boost::format("  FLOW hit=%3d begin: inputComps=%2d measurementR=%.1f mm")
+                  % (int)ih % compsAtHitBegin % hi.radius << endmsg;
+      }
 
       const double stepTX0 = thicknessInX0(hi.layer);
       totalTX0 += stepTX0;
@@ -961,6 +822,7 @@ StatusCode RecGsfTracking::execute() {
           }
         }
         comps = std::move(newCps);
+        compsAfterSplit = (int)comps.size();
         nSplits++;
         justSplit = true;
         dumpComponents("after-split/raw", (int)ih, comps);
@@ -987,19 +849,23 @@ StatusCode RecGsfTracking::execute() {
         if (m_gsfMarlinTrkSystem) {
           bool baselineAccepted = false;
           double dchi = 0.0;
+          const double beforeKappa = comp->helixAtLastSite(bz).GetKappa();
+          const double beforePt = (beforeKappa != 0.0) ? 1.0 / std::abs(beforeKappa) : 0.0;
+          const double beforeWeight = comp->weight;
+          edm4hep::TrackState componentState;
+          edm4hep::TrackState updatedState;
+          double updateChi2 = 0.0;
+          int updateNdf = -999;
           try {
             edm4hep::TrackerHit trkHit = hi.lcioHit;
             edm4hep::TrackerHit referenceHit = hits[ih - 1].lcioHit;
-            edm4hep::TrackState componentState = trackStateFromComponent(*comp, bz, DH::AtOther);
+            componentState = trackStateFromComponent(*comp, bz, DH::AtOther);
             std::unique_ptr<MarlinTrk::IMarlinTrack> baselineTrack(m_gsfMarlinTrkSystem->createTrack());
             if (baselineTrack &&
                 baselineTrack->addHit(referenceHit) == MarlinTrk::IMarlinTrack::success &&
                 baselineTrack->initialise(componentState, bz, fitBackwards) == MarlinTrk::IMarlinTrack::success &&
                 baselineTrack->addAndFit(trkHit, dchi, DBL_MAX) == MarlinTrk::IMarlinTrack::success) {
-              edm4hep::TrackState updatedState;
-              double chi2 = 0.0;
-              int ndf = -999;
-              if (baselineTrack->getTrackState(trkHit, updatedState, chi2, ndf) == MarlinTrk::IMarlinTrack::success &&
+              if (baselineTrack->getTrackState(trkHit, updatedState, updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
                   appendBaselineStateToComponent(*comp, updatedState, hi, bz)) {
                 baselineAccepted = true;
               }
@@ -1015,16 +881,23 @@ StatusCode RecGsfTracking::execute() {
           }
 
           if (baselineAccepted) {
-            const double oldWeight = comp->weight;
             comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
             comp->fitChi2 += dchi;
+            const double afterKappa = comp->helixAtLastSite(bz).GetKappa();
+            const double afterPt = (afterKappa != 0.0) ? 1.0 / std::abs(afterKappa) : 0.0;
             nAccept++;
             minDChi2 = std::min(minDChi2, dchi);
             maxDChi2 = std::max(maxDChi2, dchi);
-            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
-                (justSplit || (int)comps.size() > 1)) {
-              info() << boost::format("      baseline-update accept comp[%02d] dchi2=%.6g w %.6g -> %.6g")
-                        % (int)accepted.size() % dchi % oldWeight % comp->weight << endmsg;
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
+              info() << boost::format("      UPDATE accept comp[%02d] id=%d pT %.6g -> %.6g dchi2=%.6g chi2=%.6g weight %.6g -> %.6g")
+                        % (int)accepted.size() % comp->debugId % beforePt % afterPt % dchi % comp->fitChi2
+                        % beforeWeight % comp->weight << endmsg;
+              info() << boost::format("          predict: %s")
+                        % compactTrackState(componentState, bz) << endmsg;
+              info() << boost::format("          measure: pos=(%.4f,%.4f,%.4f) r=%.4f")
+                        % measPos.X() % measPos.Y() % measPos.Z() % hi.radius << endmsg;
+              info() << boost::format("          updated: %s fitChi2=%.6g ndf=%d")
+                        % compactTrackState(updatedState, bz) % updateChi2 % updateNdf << endmsg;
             }
             accepted.push_back(comp);
             if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
@@ -1032,9 +905,13 @@ StatusCode RecGsfTracking::execute() {
             }
           } else {
             nReject++;
-            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
-                (justSplit || (int)comps.size() > 1)) {
-              info() << boost::format("      baseline-update reject comp at hit=%d") % (int)ih << endmsg;
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
+              info() << boost::format("      UPDATE reject comp id=%d pT=%.6g weight=%.6g at hit=%d")
+                        % comp->debugId % beforePt % beforeWeight % (int)ih << endmsg;
+              info() << boost::format("          predict: %s")
+                        % compactTrackState(componentState, bz) << endmsg;
+              info() << boost::format("          measure: pos=(%.4f,%.4f,%.4f) r=%.4f")
+                        % measPos.X() % measPos.Y() % measPos.Z() % hi.radius << endmsg;
             }
             delete comp;
           }
@@ -1146,6 +1023,7 @@ StatusCode RecGsfTracking::execute() {
       }
 
       comps = std::move(accepted);
+      compsAfterUpdate = (int)comps.size();
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/raw", (int)ih, comps);
       GsfMixture::normalizeWeights(comps);
@@ -1157,7 +1035,7 @@ StatusCode RecGsfTracking::execute() {
            (int)comps.size() >= m_maxComponents.value());
       if (shouldReduce && (int)comps.size() > reductionTarget) {
         if (m_verboseDump && m_verboseSplitDump) {
-          info() << boost::format("  MIX reduce begin hit=%d n=%d max=%d target=%d mode=%s after measurement")
+          info() << boost::format("  FLOW hit=%3d reduce: n=%d max=%d target=%d mode=%s")
                     % (int)ih % (int)comps.size() % m_maxComponents.value()
                     % reductionTarget % m_reductionMode.value() << endmsg;
         }
@@ -1171,9 +1049,18 @@ StatusCode RecGsfTracking::execute() {
           GsfMixture::reduce(comps, reductionTarget, bz, reductionLogger);
         }
         nReductions++;
+        didReduceHit = true;
         dumpComponents("after-reduce", (int)ih, comps);
         GsfMixture::normalizeWeights(comps);
         dumpComponents("after-reduce/norm", (int)ih, comps);
+      }
+      compsAfterReduce = (int)comps.size();
+      if (m_verboseDump && m_verboseSplitDump) {
+        info() << boost::format("  FLOW hit=%3d summary: begin=%2d split=%2d update=%2d reduce=%2d%s A/R/J=%d/%d/%d dchi2=[%.4g, %.4g]")
+                  % (int)ih % compsAtHitBegin % compsAfterSplit % compsAfterUpdate
+                  % compsAfterReduce % (didReduceHit ? " yes" : " no ")
+                  % nAccept % nRecover % nReject
+                  % (nAccept > 0 ? minDChi2 : 0.0) % (nAccept > 0 ? maxDChi2 : 0.0) << endmsg;
       }
       nProc++;
     }
@@ -1204,8 +1091,14 @@ StatusCode RecGsfTracking::execute() {
       auto* best = comps[bestIdx];
       dumpComponents("final-smoothed", -1, comps);
       if (m_verboseDump && m_verboseSplitDump) {
-        info() << boost::format("  MIX selected bestIdx=%d bestWeight=%.6g outputMode=%s")
-                  % bestIdx % best->weight % m_outputMode.value() << endmsg;
+        const double bestKappa = best->helixAtLastSite(bz).GetKappa();
+        const double bestPt = (bestKappa != 0.0) ? 1.0 / std::abs(bestKappa) : 0.0;
+        info() << boost::format("  MIX selected bestIdx=%d id=%d bestWeight=%.6g pT=%.6g kappa=%.6e outputMode=%s")
+                  % bestIdx % best->debugId % best->weight % bestPt % bestKappa % m_outputMode.value() << endmsg;
+        if (m_componentDebugDump) {
+          info() << boost::format("  SELECTED branch id=%d full-history=%s")
+                    % best->debugId % best->debugHistory << endmsg;
+        }
       }
 
       if (m_verboseDump && m_verboseSplitDump) {

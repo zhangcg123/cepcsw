@@ -2,11 +2,9 @@
 #define RecGsfTracking_GsfAlgorithm_h
 
 #include "GaudiKernel/Algorithm.h"
-#include "GaudiKernel/ToolHandle.h"
 #include "k4FWCore/DataHandle.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
-#include "Tracking/ITrackFitterTool.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
 #include "DetInterface/IGeomSvc.h"
@@ -82,27 +80,14 @@ private:
   Gaudi::Property<double> m_bhSplitThresh{this,"BHSplitThreshold",1e-4};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
-  Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",true};
-  Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",true};
+  Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",false};
+  Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",false};
   Gaudi::Property<bool>   m_componentDebugDump{this,"ComponentDebugDump",false};
   Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
-  Gaudi::Property<std::string> m_gsfInitialisationMode{this,"GSFInitialisationMode","Seed"};
-  Gaudi::Property<int> m_gsfInitialisationFitHits{this,"GSFInitialisationFitHits",4};
   Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
-  Gaudi::Property<std::string> m_fitterMode{this,"FitterMode","GSF"};
-  Gaudi::Property<std::string> m_kfRecoveryMode{this,"KFRecoveryMode","None"};
-  Gaudi::Property<std::string> m_kfFitToolName{this,"KFFitterTool","KalTestTool/KalTest111"};
-  Gaudi::Property<float> m_kfInitialTrackErrorD0{this,"KFInitialTrackErrorD0",1e6};
-  Gaudi::Property<float> m_kfInitialTrackErrorPhi0{this,"KFInitialTrackErrorPhi0",1e2};
-  Gaudi::Property<float> m_kfInitialTrackErrorOmega{this,"KFInitialTrackErrorOmega",1e-4};
-  Gaudi::Property<float> m_kfInitialTrackErrorZ0{this,"KFInitialTrackErrorZ0",1e6};
-  Gaudi::Property<float> m_kfInitialTrackErrorTanL{this,"KFInitialTrackErrorTanL",1e2};
-  Gaudi::Property<float> m_kfMaxChi2PerHit{this,"KFMaxChi2PerHit",200.0};
-  Gaudi::Property<bool> m_kfFitBackward{this,"KFFitBackward",false};
-  ToolHandle<ITrackFitterTool> m_kfFitTool;
   MarlinTrk::IMarlinTrkSystem* m_gsfMarlinTrkSystem = nullptr;
 
   int m_nEvt = 0;
