@@ -422,3 +422,18 @@ Validation after `cmake --build build.105.0.0.x86_64-el9-gcc11-opt --target inst
 | 15 | 232/232 | 0 | 2.0036 0.0877 2.3251 0.0038 -0.0023 | 2.0040 0.0877 2.3201 0.0081 -0.0070 | 413.1/458 -> 412.4/458 |
 
 Conclusion: the hit-recovery failures seen in the earlier pure-KF diagnostic were caused by driving low-level `TKalTrack::AddAndFilter` directly from GSF, not by the baseline KalTestTool workflow.  With the baseline workflow inside GSF, these same events fit all hits with zero outliers and no manual recovery.
+
+## 2026-07-09 Baseline-KF d0/z0 Bias Check and Finalisation Note
+
+Checked `FitterMode="KF"` with the baseline `KalTestTool` path on events 0-19 from `trk-e--2.0-85-1.root`. All fitted tracks used all input hits with zero outliers.
+
+Summary of `abs(KF)-abs(LCIO)`:
+
+| quantity | abs(KF) > abs(LCIO) | mean abs delta [mm] | median abs delta [mm] | mean signed KF-LCIO [mm] |
+|---|---:|---:|---:|---:|
+| d0 | 15/20 | +0.00698 | +0.00425 | +0.00735 |
+| z0 | 13/20 | +0.00338 | +0.00335 | -0.00238 |
+
+Interpretation: the current pure-KF mode is baseline-fitter-like but not bit-for-bit the LCIO `CompleteTracks` workflow. It calls `KalTestTool::Fit`, so smoothing/finalisation occurs through `KalTestTool::finaliseTrack` (`marlintrk->smooth(lastHit)` plus the forward-fit temporary-track propagation to IP). It no longer uses GSF's old direct `TKalTrack::SmoothAll()` plus manual first-site IP extrapolation. Remaining differences from LCIO likely come from pre-finalisation orchestration: hit ordering, initial-state choice, retry/outlier policy, and the fact that GSF refits the already-produced `CompleteTracks` hit list rather than rerunning full `FullLDCTrackingAlg`.
+
+Important for the hit-recovery study: in the baseline-style pure-KF path on events 0-19, the explicit GSF `AddAndFilter` recovery does not happen at all. The path does not call the GSF manual `TKalTrack::AddAndFilter` loop. It delegates fitting to `KalTestTool`/MarlinTrk; any failed low-level `addAndFit` inside `KalTestTool::finaliseTrack` is currently only debug-logged by the baseline tool and does not correspond to the GSF recovery counter.
