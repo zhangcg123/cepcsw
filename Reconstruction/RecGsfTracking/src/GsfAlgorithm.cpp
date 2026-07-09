@@ -56,6 +56,16 @@ static LcioSeed extractSeed(const edm4hep::Track& trk) {
   return {};
 }
 
+static bool getTrackStateAt(const edm4hep::Track& trk, int location, DH& out) {
+  for (const auto& ts : trk.getTrackStates()) {
+    if (ts.location == location) {
+      out = ts;
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Hit matched to a measurement layer
 struct MatchedHit {
   edm4hep::TrackerHit lcioHit;
@@ -151,6 +161,69 @@ static TKalTrackSite* makeInitialSite(
   site.Add(new TKalTrackState(sv, cv, site, TVKalSite::kPredicted));
   site.Add(new TKalTrackState(sv, cv, site, TVKalSite::kFiltered));
 
+  return &site;
+}
+
+static int covIndex5(int row, int col) {
+  if (row < col) std::swap(row, col);
+  return row * (row + 1) / 2 + col;
+}
+
+static TKalTrackSite* makeInitialSiteFromTrackState(
+    const DH& ts, const MatchedHit& firstHit, double bz) {
+
+  const double alpha = bz * 2.99792458e-4;
+  if (alpha == 0.0) return nullptr;
+
+  TVector3 tsPivot(ts.referencePoint.x, ts.referencePoint.y, ts.referencePoint.z);
+  TVector3 hitPivot = firstHit.layer->HitToXv(*firstHit.kalHit);
+
+  THelicalTrack helix(-ts.D0, ts.phi - M_PI / 2., ts.omega / alpha,
+                      ts.Z0, ts.tanLambda,
+                      tsPivot.X(), tsPivot.Y(), tsPivot.Z(), bz);
+
+  TMatrixD cov5(5, 5);
+  cov5.Zero();
+  const double scale[5] = {-1.0, 1.0, 1.0 / alpha, 1.0, 1.0};
+  for (int i = 0; i < 5; ++i) {
+    for (int j = 0; j < 5; ++j) {
+      cov5(i, j) = scale[i] * scale[j] * ts.covMatrix[covIndex5(i, j)];
+    }
+  }
+
+  double dphi = 0.0;
+  TMatrixD jac(5, 5);
+  jac.UnitMatrix();
+  helix.MoveTo(hitPivot, dphi, &jac, &cov5);
+
+  TKalMatrix sv(kSdim, 1);
+  sv(0, 0) = helix.GetDrho();
+  sv(1, 0) = helix.GetPhi0();
+  sv(2, 0) = helix.GetKappa();
+  sv(3, 0) = helix.GetDz();
+  sv(4, 0) = helix.GetTanLambda();
+  sv(5, 0) = 0.0;
+
+  TKalMatrix cv(kSdim, kSdim);
+  cv.Zero();
+  for (int i = 0; i < 5; ++i)
+    for (int j = 0; j < 5; ++j)
+      cv(i, j) = cov5(i, j);
+  cv(5, 5) = 1e6;
+
+  TVTrackHit* siteHit = nullptr;
+  if (auto* ch = dynamic_cast<DDCylinderHit*>(firstHit.kalHit))
+    siteHit = new DDCylinderHit(*ch);
+  else if (auto* ph = dynamic_cast<DDPlanarHit*>(firstHit.kalHit))
+    siteHit = new DDPlanarHit(*ph);
+  if (!siteHit) return nullptr;
+
+  auto& site = *new TKalTrackSite(*siteHit, kSdim);
+  site.SetHitOwner();
+  site.SetOwner();
+  site.SetPivot(hitPivot);
+  site.Add(new TKalTrackState(sv, cv, site, TVKalSite::kPredicted));
+  site.Add(new TKalTrackState(sv, cv, site, TVKalSite::kFiltered));
   return &site;
 }
 
@@ -520,7 +593,19 @@ StatusCode RecGsfTracking::execute() {
     double kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;
 
     // ---- Step 4: forward GSF filter ----
-    auto* site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
+    TKalTrackSite* site = nullptr;
+    DH firstHitState;
+    if (m_useCompleteTrackFirstHitInit.value() &&
+        getTrackStateAt(trk, DH::AtFirstHit, firstHitState)) {
+      site = makeInitialSiteFromTrackState(firstHitState, hits[0], bz);
+      if (site && m_verboseDump) {
+        info() << boost::format("GSF event index %d: direct GSF initialised from CompleteTracks AtFirstHit")
+                  % (m_nEvt - 1) << endmsg;
+      }
+    }
+    if (!site) {
+      site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
+    }
     int nextComponentDebugId = 0;
     auto* initComp = new GsfComponent();
     initComp->weight = 1.0;
@@ -857,7 +942,8 @@ StatusCode RecGsfTracking::execute() {
       lastRecover = nRecover;
       lastReject = nReject;
 
-      if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
+      if (m_verboseDump && m_verboseSplitDump &&
+          (justSplit || (int)comps.size() > 1 || nRecover > 0 || nReject > 0)) {
         info() << boost::format("  HIT hit=%3d r=%7.1f accepted=%2d recovered=%2d rejected=%2d dchi2=[%.3g, %.3g]")
                   % (int)ih % hi.radius % nAccept % nRecover % nReject
                   % (nAccept ? minDChi2 : -1.0) % (nAccept ? maxDChi2 : -1.0) << endmsg;

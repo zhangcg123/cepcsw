@@ -619,3 +619,77 @@ Relevant logs from this stage:
 /tmp/gsf_baseline_kf_hit_state_diag.log
 /tmp/gsf_baseline_kf_iprefit3_10_12_14_15.log
 ```
+
+## 2026-07-09 CompleteTracks AtFirstHit Initialization Test
+
+A direct GSF diagnostic option was added:
+
+```python
+gsf.UseCompleteTrackFirstHitInit = True
+```
+
+When enabled, the direct GSF initial site is built from the input `CompleteTracks` `TrackState::AtFirstHit` instead of the old loose LCIO/IP seed. The implementation converts:
+
+```text
+LCIO/edm4hep: d0, phi, omega, z0, tanLambda
+KalTest:      drho=-d0, phi0=phi-pi/2, kappa=omega/(Bz*2.99792458e-4), dz=z0, tanLambda
+```
+
+The covariance is transformed with the corresponding diagonal Jacobian, then the helix/covariance is moved from the `TrackState` reference point to the first matched hit pivot before constructing the initial `TKalTrackSite`.
+
+Test setup:
+
+```python
+gsf.FitterMode = "GSF"
+gsf.MaxComponents = 1
+gsf.ReductionTargetComponents = 1
+gsf.ReductionMode = "TopN"
+gsf.UseCompleteTrackFirstHitInit = True
+gsf.SelectedEventIndices = [10, 12, 14, 15]
+```
+
+Result: this initialization changes the fitted parameters somewhat, but it does **not** reduce the early recovery count. The recovered hit indices are unchanged from the old max1 direct-GSF run:
+
+| Event | recovered hits with old direct init | recovered hits with CompleteTracks AtFirstHit init |
+|---:|---|---|
+| 10 | 1, 2, 3 | 1, 2, 3 |
+| 12 | 1, 3 | 1, 3 |
+| 14 | 1, 2, 3 | 1, 2, 3 |
+| 15 | 2 | 2 |
+
+The summary table is:
+
+| Event | old direct GSF A/R/J | AtFirstHit-init direct GSF A/R/J | old chi2/ndf | AtFirstHit-init chi2/ndf |
+|---:|---:|---:|---:|---:|
+| 10 | 230/3/0 | 230/3/0 | 476.1/460 | 496.3/460 |
+| 12 | 230/2/0 | 230/2/0 | 583.1/458 | 596.9/458 |
+| 14 | 229/3/0 | 229/3/0 | 425.8/458 | 437.9/458 |
+| 15 | 230/1/0 | 230/1/0 | 409.4/456 | 409.6/456 |
+
+Selected IP parameter changes:
+
+| Event | LCIO d0/z0 [mm] | old direct GSF d0/z0 [mm] | AtFirstHit-init GSF d0/z0 [mm] |
+|---:|---:|---:|---:|
+| 10 | -0.0084 / 0.0004 | -0.0580 / -0.0031 | -0.0217 / -0.0062 |
+| 12 | -0.0009 / -0.0006 | 0.0167 / -0.0289 | 0.0146 / -0.0064 |
+| 14 | -0.0009 / -0.0024 | -0.0314 / 0.0213 | -0.0060 / 0.0136 |
+| 15 | 0.0038 / -0.0023 | 0.0050 / -0.0047 | 0.0069 / -0.0071 |
+
+Current interpretation after this test:
+
+- The old broad dummy initialization is not sufficient to explain the recovery issue.
+- The recovery pattern is stable against replacing the initial state with the fitted `CompleteTracks::AtFirstHit` state.
+- The more likely root is the direct GSF use of `TKalTrack::AddAndFilter` on early already-on-surface VXD hits. The baseline wrapper still avoids this failure because it drives KalTest through the MarlinTrk/KalTestTool prefit/createFit/finalise sequence, not because it merely starts from a better first-hit state.
+
+Next diagnostic direction:
+
+1. Compare direct GSF's first few `TKalTrackSite` objects against the sites produced internally by `KalTestTool/createFit` for the same hits.
+2. Check whether the baseline wrapper calls a different site construction path, measurement ordering, or dummy-hit initialization that avoids `CalcExpectedMeasVec()` failing at the already-on-surface crossing.
+3. If the direct GSF must keep `TKalTrack::AddAndFilter`, test a KalTest-compatible first real site construction rather than only changing the initial helix/covariance.
+
+Logs:
+
+```text
+/tmp/gsf_gsf_max1_topn1_firsthitinit_events_10_12_14_15.log
+/tmp/run_gsf_gsf_max1_topn1_firsthitinit_events_10_12_14_15.py
+```
