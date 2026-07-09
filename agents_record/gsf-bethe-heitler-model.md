@@ -99,7 +99,7 @@ gsf.VerboseDump = True       # final fit parameter table
 gsf.VerboseSplitDump = False # suppress per-split component dump
 ```
 
-See `agent_record/2026-07-08-global-bh-gsf-run.md` for the current run recipe and light-eBrem test results.
+See `agents_record/2026-07-08-global-bh-gsf-run.md` for the current run recipe and light-eBrem test results.
 
 ## Split Operation
 ```

@@ -4,7 +4,7 @@
 writes `GSFTracks`.  Each component now uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
 update path.  The old alternate KF fitter and initialization experiments have
-been removed; historical comparisons remain under `agent_record/`.
+been removed; historical comparisons remain under `agents_record/`.
 
 ## Active configuration
 
@@ -50,4 +50,4 @@ momentum distribution and currently ignores the individual step `t/X0`.
 Immediate `TopN=1` reduction normally selects its dominant near-no-loss branch
 before later hits can distinguish hard-bremsstrahlung hypotheses.  It improves
 fit consistency but does not recover the generated IP momentum in known hard-
-loss events.  See `agent_record/2026-07-10-gsf-topn-energy-loss-status.md`.
+loss events.  See `agents_record/2026-07-10-gsf-topn-energy-loss-status.md`.

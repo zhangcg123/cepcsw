@@ -7,7 +7,7 @@ metadata:
 
 # 开发日志记录原则
 
-**`agent_record/DEVELOPMENT.md` 是开发日志的唯一总纲**，任何时候不应新建独立日志文件。
+**`agents_record/DEVELOPMENT.md` 是开发日志的唯一总纲**，任何时候不应新建独立日志文件。
 
 ## 核心原则：累积追加，不覆盖删除
 

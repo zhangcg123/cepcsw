@@ -20,7 +20,7 @@
 
 ### 2. `Reconstruction/RecGsfTracking/src/GsfAlgorithm.cpp`（~120行删除+重写）
 - `makeInitialSite` 函数签名和实现：`kappaCov` 参数改为函数内硬编码 `1e-7`
-- Step 3：删除 3-hit 解析预拟合 block（lines 386-408），恢复为一句 `kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;`
+- Step 3：删除 3-hit 解析预拟合 block（lines 386-408），保留一句 `kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;`
 - 删除 `runGsfPass` lambda（lines 412-478），将 forward filter 逻辑恢复为内联
 - 删除 Step 4b q/p refinement（lines 492-552）
 - Verbose dump：删除 kappa 对比行和 q/p refit 行（lines 675-683）
@@ -34,9 +34,9 @@
 - `gsf.QPRefinementSteps = 3`
 - `gsf.QPRefinementStepSize = 0.1`
 
-### 4. `agent_record/DEVELOPMENT.md`
+### 4. `agents_record/DEVELOPMENT.md`
 更新状态：标注回滚完成，当前基线为"回滚后原始版本"
 
 ## 验证步骤
 1. `./build.sh` 编译通过
-2. 用 `run_gsf_e.py` 跑一条径迹，对比 GSF 和 LCIO 的 track parameters（pT, eta, phi, d0, z0, chi2/ndf），确认回滚后结果合理
+2. 用 `run_gsf_e.py` 跑一条径迹（或少量 events），对比 GSF 和 LCIO 的 track parameters（pT, eta, phi, d0, z0, chi2/ndf），确认回滚后结果合理

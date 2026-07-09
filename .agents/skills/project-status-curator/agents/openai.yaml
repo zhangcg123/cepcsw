@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Status Curator"
+  short_description: "Keep status concise and history lossless"
+  default_prompt: "Use $project-status-curator to refresh AGENTS.md and archive every superseded detail without losing anything."

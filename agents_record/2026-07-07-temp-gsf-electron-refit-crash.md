@@ -140,7 +140,7 @@ gsf-e--1.0-85-1.root       11M, timestamp 2026-07-07 20:06
 gsf_flat-e--1.0-85-1.root  1.2M, timestamp 2026-07-07 20:06
 ```
 
-The old crash mechanism remains documented below for provenance, but the actionable next step is no longer crash repair. Continue from `agent_record/current-stage-and-todos.md`: true G4-step analysis, larger electron samples, and CEPC-specific BH mixture fitting.
+The old crash mechanism remains documented below for provenance, but the actionable next step is no longer crash repair. Continue from `agents_record/current-stage-and-todos.md`: true G4-step analysis, larger electron samples, and CEPC-specific BH mixture fitting.
 
 ## Other Current Edits To Remember
 

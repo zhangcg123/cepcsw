@@ -1,5 +1,9 @@
 # GSF Tracking Development Log
 
+> Historical append-only log moved from the repository root on 2026-07-10. Its
+> top “Current Stage” predates the July 9-10 component-update repair. Use root
+> `AGENTS.md` for the current concentration and this file only for chronology.
+
 ## Current Stage (2026-07-05)
 
 The active development path is now based on true Geant4 pre/post-step material truth, not SimHit hit-position momentum.
@@ -38,7 +42,7 @@ Current conclusion:
 Current RAG entry to read first:
 
 ```text
-agent_record/current-stage-and-todos.md
+agents_record/current-stage-and-todos.md
 ```
 
 ## Current TODOs
@@ -174,7 +178,7 @@ The sections below are kept for provenance. Some earlier next-step items, especi
 - Current BH tuning is limited by lack of direct CEPC electron energy-loss truth.
 - Next planned step is to inspect existing `sim/trk/gsf/gsf_flat` ROOT files for pre/post material momentum information.
 - If existing outputs are insufficient, add a lightweight Geant4 truth recorder for primary electron steps in tracker volumes.
-- New plan recorded in `agent_record/plans/2026-07-05-measure-cepc-electron-energy-loss.md`.
+- New plan recorded in `agents_record/plans/2026-07-05-measure-cepc-electron-energy-loss.md`.
 
 ### 发现 11: Added RecGsfSimHitTuple for simulation-hit energy-loss diagnostics (2026-07-05)
 - User clarified that existing flat tuples do not contain the needed simulation information.
@@ -203,7 +207,7 @@ The sections below are kept for provenance. Some earlier next-step items, especi
 - **First hard loss at R~300-330 mm** (TPC inner region). ITK Barrel is the biggest per-hit loss region (e- retained drops from 0.85→0.65).
 - **MC endpoint momentum is zero for all events** — likely a Geant4 output issue; this branch is unusable.
 - **Key implication**: the current BH toy model's "no-loss branch almost always wins" is wrong. Truth shows ~56% of e- events experience significant energy loss. A proper multi-component mixture must be fitted to these distributions.
-- Full analysis record: [[2026-07-06-simhit-energy-loss-first-analysis]] (in `agent_record/`).
+- Full analysis record: [[2026-07-06-simhit-energy-loss-first-analysis]] (in `agents_record/`).
 
 ### Priority update: analysis and truth-definition decision (2026-07-05)
 - High priority before broader pT/theta scans: improve the existing SimHit energy-loss analysis so electron/muon retained-momentum summaries, radius/layer bins, overflow handling, and artifact/control checks are reliable.
@@ -211,7 +215,7 @@ The sections below are kept for provenance. Some earlier next-step items, especi
 - Broader scans and fitted CEPC BH mixture work should follow these two items.
 
 ### Finding 13: SimTrackerHit momentum sufficiency and tuple extension (2026-07-05)
-- Assessment recorded in `agent_record/2026-07-05-simtrackerhit-momentum-sufficiency.md`.
+- Assessment recorded in `agents_record/2026-07-05-simtrackerhit-momentum-sufficiency.md`.
 - Conclusion: SimTrackerHit momentum is solid enough for the electron-vs-muon qualitative conclusion, but not enough for final CEPC BH parameter fitting.
 - Extended `RecGsfSimHitTuple` with explicit hit-to-hit diagnostic branches ordered by SimTrackerHit time:
   - previous hit index and previous hit momentum/position/time
@@ -239,7 +243,7 @@ The sections below are kept for provenance. Some earlier next-step items, especi
 - Reproducibility files and text summary are in `G4MaterialStepComparison/`.
 
 ### Current TODO Record Added (2026-07-05)
-- Added `agent_record/2026-07-05-current-gsf-todos-after-g4-step-comparison.md`.
+- Added `agents_record/2026-07-05-current-gsf-todos-after-g4-step-comparison.md`.
 - It centralizes the prioritized next steps after the true G4 pre/post-step e/mu comparison.
 - Highest priorities: larger true G4-step electron samples, dedicated `g4step_tuple` analysis, precise eBrem BH fitting target, then CEPC-specific BH mixture fitting.
 
