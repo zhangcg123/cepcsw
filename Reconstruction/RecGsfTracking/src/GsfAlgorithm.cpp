@@ -458,7 +458,16 @@ StatusCode RecGsfTracking::execute() {
     return StatusCode::SUCCESS;
   }
 
-  info() << "GSF event index " << eventIndex
+  const std::string fitterMode = m_fitterMode.value();
+  const bool runKF = (fitterMode == "KF" || fitterMode == "kf");
+  const bool runGSF = (fitterMode == "GSF" || fitterMode == "gsf");
+  if (!runKF && !runGSF) {
+    error() << "Unknown FitterMode '" << fitterMode
+            << "'; supported values are GSF and KF" << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  info() << (runKF ? "KF" : "GSF") << " event index " << eventIndex
          << " (event count " << m_nEvt << ")" << endmsg;
   const auto* in = m_inputTracks.get();
   if (!in) return StatusCode::SUCCESS;
@@ -514,6 +523,209 @@ StatusCode RecGsfTracking::execute() {
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
+
+    if (runKF) {
+      int nAccept = 0;
+      int nRecover = 0;
+      int nReject = 0;
+      double minDChi2 = 1e300, maxDChi2 = -1e300;
+      const std::string kfRecoveryMode = m_kfRecoveryMode.value();
+      const bool kfPivotRecovery = (kfRecoveryMode == "PivotCopy" ||
+                                    kfRecoveryMode == "pivotcopy");
+      bool kfFailed = false;
+      int failedHit = -1;
+      double failedRadius = 0.0;
+
+      for (size_t ih = 1; ih < hits.size(); ih++) {
+        auto& hi = hits[ih];
+        DDVTrackHit* khClone = nullptr;
+        if (auto* ch = dynamic_cast<DDCylinderHit*>(hi.kalHit))
+          khClone = new DDCylinderHit(*ch);
+        else if (auto* ph = dynamic_cast<DDPlanarHit*>(hi.kalHit))
+          khClone = new DDPlanarHit(*ph);
+        else
+          continue;
+
+        auto* st = new TKalTrackSite(*khClone, kSdim);
+        st->SetHitOwner();
+
+        if (initComp->kaltrack->AddAndFilter(*st)) {
+          const double dchi = st->GetDeltaChi2();
+          nAccept++;
+          minDChi2 = std::min(minDChi2, dchi);
+          maxDChi2 = std::max(maxDChi2, dchi);
+          if (m_verboseDump && m_verboseSplitDump) {
+            info() << boost::format("  KF HIT hit=%3d r=%7.1f accepted=1 rejected=0 dchi2=%.6g")
+                      % (int)ih % hi.radius % dchi << endmsg;
+          }
+        } else {
+          bool recovered = false;
+          if (kfPivotRecovery && st->GetEntriesFast() > TVKalSite::kPredicted) {
+            auto& preState = dynamic_cast<const TKalTrackState&>(st->GetState(TVKalSite::kPredicted));
+            auto preHel = preState.GetHelix();
+            const auto& pv = preHel.GetPivot();
+            TVector3 measPos = hi.layer->HitToXv(*hi.kalHit);
+            const double pivotResidual = std::sqrt((pv.X() - measPos.X()) * (pv.X() - measPos.X()) +
+                                                   (pv.Y() - measPos.Y()) * (pv.Y() - measPos.Y()) +
+                                                   (pv.Z() - measPos.Z()) * (pv.Z() - measPos.Z()));
+            if (pivotResidual < 1e-3) {
+              st->Add(new TKalTrackState(preState, preState.GetCovMat(), *st, TVKalSite::kFiltered));
+              st->SetOwner();
+              initComp->kaltrack->Add(st);
+              recovered = true;
+            }
+          }
+
+          if (recovered) {
+            nRecover++;
+            if (m_verboseDump && m_verboseSplitDump) {
+              info() << boost::format("  KF HIT hit=%3d r=%7.1f accepted=0 recovered=1 rejected=0 dchi2=-1")
+                        % (int)ih % hi.radius << endmsg;
+            }
+          } else {
+            nReject++;
+            kfFailed = true;
+            failedHit = (int)ih;
+            failedRadius = hi.radius;
+            if (m_verboseDump) {
+              info() << boost::format("  KF HIT hit=%3d r=%7.1f accepted=0 recovered=0 rejected=1 dchi2=-1")
+                        % (int)ih % hi.radius << endmsg;
+            }
+            delete st;
+            break;
+          }
+        }
+      }
+
+      if (kfFailed) {
+        warning() << boost::format("KF event index %d track %d: AddAndFilter failed at hit %d (r=%.1f mm); no KF output track")
+                     % eventIndex % (nFit + 1) % failedHit % failedRadius << endmsg;
+        delete initComp;
+        for (auto& h : hits) delete h.kalHit;
+        continue;
+      }
+
+      initComp->kaltrack->SmoothAll();
+      if (m_verboseDump && m_verboseSplitDump) {
+        auto dumpSite = [&](const char* label, int idx) {
+          if (!initComp->kaltrack || idx < 0 || idx >= initComp->kaltrack->GetEntriesFast()) return;
+          auto* ksite = dynamic_cast<const TKalTrackSite*>(initComp->kaltrack->At(idx));
+          if (!ksite) return;
+          auto& state = dynamic_cast<TKalTrackState&>(ksite->GetCurState());
+          auto h = state.GetHelix();
+          auto pv = h.GetPivot();
+          info() << boost::format("  KF DIAG %s site=%d drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
+                    % label % idx % h.GetDrho() % h.GetPhi0() % h.GetKappa() % h.GetDz() % h.GetTanLambda()
+                    % pv.X() % pv.Y() % pv.Z() << endmsg;
+        };
+        dumpSite("initial", 0);
+        dumpSite("inner", 1);
+        dumpSite("last", initComp->kaltrack->GetEntriesFast() - 1);
+      }
+
+      THelicalTrack ipHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
+      TMatrixD ipCov(5, 5);
+      if (!extrapolateToIP_component(initComp, m_materialIPExtrap, m_cradle, m_ipLayer,
+                                     bz, ipHelix, ipCov)) {
+        warning() << "KF IP extrapolation failed; no KF output track" << endmsg;
+        delete initComp;
+        for (auto& h : hits) delete h.kalHit;
+        continue;
+      }
+      if (m_verboseDump && m_verboseSplitDump) {
+        auto pv = ipHelix.GetPivot();
+        info() << boost::format("  KF DIAG ip    drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
+                  % ipHelix.GetDrho() % ipHelix.GetPhi0() % ipHelix.GetKappa() % ipHelix.GetDz() % ipHelix.GetTanLambda()
+                  % pv.X() % pv.Y() % pv.Z() << endmsg;
+      }
+
+      auto ot = out->create();
+      ot.setType(1);
+      ot.setChi2(initComp->kaltrack->GetChi2());
+      ot.setNdf(initComp->kaltrack->GetNDF());
+
+      edm4hep::TrackState ts;
+      ts.location = DH::AtIP;
+      fillTrackState(ts, ipHelix, ipCov, bz);
+      ot.addToTrackStates(ts);
+      for (const auto& h : assocHits) ot.addToTrackerHits(h);
+
+      double t_pT = 0, t_eta = 0, t_phi = 0, t_p = 0;
+      if (m_mcParticles.isValid()) {
+        auto* mcCol = m_mcParticles.get();
+        if (mcCol && mcCol->size() > 0) {
+          auto mcp = (*mcCol)[0];
+          auto& mom = mcp.getMomentum();
+          t_pT  = std::hypot(mom.x, mom.y);
+          t_p   = std::hypot(t_pT, mom.z);
+          t_eta = (t_p > 0 && std::abs(t_pT / t_p) < 1.0)
+                  ? std::atanh(mom.z / t_p) : 0.0;
+          t_phi = std::atan2(mom.y, mom.x);
+        }
+      }
+
+      auto toPtEta = [bz](double omega, double tanl) {
+        double a = bz * 2.99792458e-4;
+        double pT = (omega != 0) ? std::abs(a / omega) : 0.0;
+        double eta = std::asinh(tanl);
+        return std::make_pair(pT, eta);
+      };
+      double lcio_pT, lcio_eta, kf_pT, kf_eta;
+      std::tie(lcio_pT, lcio_eta) = toPtEta(seed.omega, seed.tanl);
+      std::tie(kf_pT, kf_eta) = toPtEta(ts.omega, ts.tanLambda);
+      const double lcio_p = lcio_pT * std::cosh(lcio_eta);
+      const double kf_p = kf_pT * std::cosh(kf_eta);
+
+      TrackSummary sum;
+      sum.iev      = m_nEvt;
+      sum.charge   = charge;
+      sum.nHits    = nAccept + nRecover + 1;
+      sum.nComps   = 1;
+      sum.truth_pT = t_pT; sum.truth_eta = t_eta; sum.truth_phi = t_phi; sum.truth_p = t_p;
+      sum.lcio_pT  = lcio_pT; sum.lcio_eta = lcio_eta; sum.lcio_phi = seed.phi;
+      sum.lcio_d0  = seed.d0; sum.lcio_z0 = seed.z0; sum.lcio_p = lcio_p;
+      sum.lcio_chi2 = trk.getChi2(); sum.lcio_ndf = trk.getNdf();
+      sum.gsf_pT   = kf_pT; sum.gsf_eta = kf_eta; sum.gsf_phi = ts.phi;
+      sum.gsf_d0   = ts.D0; sum.gsf_z0 = ts.Z0; sum.gsf_p = kf_p;
+      sum.gsf_chi2 = initComp->kaltrack->GetChi2(); sum.gsf_ndf = initComp->kaltrack->GetNDF();
+      sum.nSplits = 0;
+      sum.nReductions = 0;
+      sum.maxCompsEver = 1;
+      sum.finalComps = 1;
+      sum.bestWeight = 1.0;
+      sum.meanWeight = 1.0;
+      m_summaries.push_back(sum);
+
+      if (m_verboseDump) {
+        std::string const sep(60, '-');
+        info() << sep << endmsg;
+        info() << boost::format("%s %02d  |  comps %2d  hits %d/%d  q=%+d  p %.2f GeV  chi2/ndf %.1f/%d")
+                  % "KF Track" % (nFit + 1) % 1 % sum.nHits % (int)hits.size()
+                  % charge % kf_p % initComp->kaltrack->GetChi2() % initComp->kaltrack->GetNDF() << endmsg;
+        info() << sep << endmsg;
+        info() << boost::format("  %-6s  %10s  %10s  %10s  %16s  %s") % "" % "Truth" % "LCIO" % "KF" % "AddFilter" % "" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s  %s") % "pT" % t_pT % lcio_pT % kf_pT % "" % "GeV" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s") % "eta" % t_eta % lcio_eta % kf_eta % "" << endmsg;
+        info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s") % "phi" % t_phi % seed.phi % ts.phi % "" << endmsg;
+        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %16s  %s") % "d0" % "-" % seed.d0 % ts.D0 % "" % "mm" << endmsg;
+        info() << boost::format("  %-6s  %10s  %10.4f  %10.4f  %16s  %s") % "z0" % "-" % seed.z0 % ts.Z0 % "" % "mm" << endmsg;
+        info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %16s  %s") % "p" % t_p % lcio_p % kf_p % "" % "GeV" << endmsg;
+        info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  total %2d/%2d/%2d")
+                  % "chi2" % "-" % trk.getChi2() % trk.getNdf()
+                  % initComp->kaltrack->GetChi2() % initComp->kaltrack->GetNDF()
+                  % nAccept % nRecover % nReject << endmsg;
+        info() << sep << endmsg;
+        info() << boost::format("  KF diagnostics | recovery=%s dchi2=[%.3g, %.3g]")
+                  % (kfPivotRecovery ? "PivotCopy" : "None")
+                  % (nAccept ? minDChi2 : -1.0) % (nAccept ? maxDChi2 : -1.0) << endmsg;
+        info() << sep << endmsg;
+      }
+
+      nFit++;
+      delete initComp;
+      for (auto& h : hits) delete h.kalHit;
+      continue;
+    }
 
     std::vector<GsfComponent*> comps = {initComp};
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;

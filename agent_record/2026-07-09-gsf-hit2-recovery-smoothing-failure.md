@@ -349,3 +349,61 @@ The evidence now separates three effects:
 1. `AddAndFilter()` recovery at early hits is a real KalTest/surface-crossing edge case and persists even when BH kappa/covariance mutation is disabled.
 2. The final catastrophic IP/direction output requires larger component evolution. It is absent for `MaxComponents=1` and `MaxComponents=2, TopN=2`, but present for `MaxComponents=25, target=5` with both TopN and KL.
 3. Because event 12 fails with hit 2 fully accepted, the final IP failure is not only an all-recovered-hit-2 problem. The repeated split/reduce/smooth history itself can create a bad smoothed inner state.
+
+## 2026-07-09 Parallel Pure-KF Fitter Mode
+
+A selectable fitter path was added to `RecGsfTracking`:
+
+```python
+gsf.FitterMode = "GSF"  # default, existing multi-component workflow
+gsf.FitterMode = "KF"   # new single-branch KalTest workflow
+```
+
+The KF path reuses the same LCIO seed extraction, hit/layer matching, initial KalTest site construction, smoothing, IP extrapolation, and output table. It skips all BH splitting, component cloning, mixture weighting, and reduction.
+
+A second option controls whether the single KF branch uses the same pivot-copy recovery fallback:
+
+```python
+gsf.KFRecoveryMode = "None"       # default, raw AddAndFilter only
+gsf.KFRecoveryMode = "PivotCopy"  # recover if predicted pivot is already on the hit
+```
+
+### Raw KF, recovery disabled
+
+With `FitterMode="KF"` and default `KFRecoveryMode="None"`, raw KalTest `AddAndFilter()` fails very early:
+
+```text
+event 10: AddAndFilter failed at hit 1, r=16.6 mm
+event 12: AddAndFilter failed at hit 1, r=16.6 mm
+event 14: AddAndFilter failed at hit 1, r=16.6 mm
+event 15: hit1 accepted, AddAndFilter failed at hit 2, r=27.6 mm
+```
+
+This proves the recovery issue is not introduced by GSF splitting. It is already present in the single-branch KalTest hit-update path.
+
+### KF with PivotCopy recovery
+
+With:
+
+```python
+gsf.FitterMode = "KF"
+gsf.KFRecoveryMode = "PivotCopy"
+```
+
+selected events 10, 12, 14, and 15 reproduce the healthy single-branch result and are close to LCIO/truth:
+
+```text
+event 10: hit1 recovered, hit2 recovered; KF pT/eta/phi=2.0010/0.0879/ 2.9267; d0/z0=-0.0580/-0.0031 mm; total A/R/J=230/3/0
+event 12: hit1 recovered, hit2 accepted;  KF pT/eta/phi=1.9656/0.0882/-1.0876; d0/z0= 0.0167/-0.0289 mm; total A/R/J=230/2/0
+event 14: hit1 recovered, hit2 recovered; KF pT/eta/phi=2.0004/0.0864/ 0.1732; d0/z0=-0.0314/ 0.0213 mm; total A/R/J=229/3/0
+event 15: hit1 accepted,  hit2 recovered; KF pT/eta/phi=2.0031/0.0877/ 2.3202; d0/z0= 0.0050/-0.0047 mm; total A/R/J=230/1/0
+```
+
+### Updated KF/GSF Interpretation
+
+The single-branch KF control now establishes a baseline:
+
+1. Raw `AddAndFilter()` can fail at the first VXD hits even without BH splitting or GSF components. This is a KalTest/DDKalTest crossing/update edge case.
+2. The pivot-copy recovery is enough for a single branch to continue and produce LCIO-like final parameters.
+3. Therefore the catastrophic GSF final IP failure is not caused by recovery alone. It needs the multi-component history: repeated split/reduce cycles, branch selection/merging, or smoothing through histories that have mixed recovered and updated sites.
+4. The strongest current suspect remains reduction/merge consistency: the reducer changes a component last-site state/covariance, but the earlier KalTest site history still belongs to one surviving branch. Backward smoothing through that inconsistent history can produce a nonphysical inner/IP state.

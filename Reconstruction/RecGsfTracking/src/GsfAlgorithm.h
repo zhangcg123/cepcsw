@@ -86,6 +86,8 @@ private:
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
   Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
+  Gaudi::Property<std::string> m_fitterMode{this,"FitterMode","GSF"};
+  Gaudi::Property<std::string> m_kfRecoveryMode{this,"KFRecoveryMode","None"};
 
   int m_nEvt = 0;
   std::vector<TrackSummary> m_summaries;  // accumulated per-track data
