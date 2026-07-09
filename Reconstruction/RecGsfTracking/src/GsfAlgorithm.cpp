@@ -21,6 +21,8 @@
 
 #include "DDKalTest/DDKalDetector.h"
 #include "TrackSystemSvc/IMarlinTrack.h"
+#include "TrackSystemSvc/ITrackSystemSvc.h"
+#include "TrackSystemSvc/MarlinTrkUtils.h"
 
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/MCParticle.h"
@@ -31,6 +33,7 @@
 #include <sstream>
 #include <iomanip>
 #include <exception>
+#include <memory>
 
 DECLARE_COMPONENT(RecGsfTracking)
 
@@ -465,6 +468,17 @@ StatusCode RecGsfTracking::initialize() {
     return StatusCode::FAILURE;
   }
 
+  auto trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
+  if (!trackSystemSvc) {
+    error() << "Failed to find TrackSystemSvc for GSF local baseline initialisation" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  m_gsfMarlinTrkSystem = trackSystemSvc->getTrackSystem(this, "KalTest");
+  m_gsfMarlinTrkSystem->setOption(MarlinTrk::IMarlinTrkSystem::CFG::useQMS, m_doMS.value());
+  m_gsfMarlinTrkSystem->setOption(MarlinTrk::IMarlinTrkSystem::CFG::usedEdx, m_doDEDX.value());
+  m_gsfMarlinTrkSystem->setOption(MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, true);
+  m_gsfMarlinTrkSystem->init();
+
   // Build DDKalTest geometry cradle (standalone, independent of tracking pipeline)
   m_cradle = new TKalDetCradle();
   m_cradle->SetOwner(true);
@@ -611,6 +625,7 @@ StatusCode RecGsfTracking::execute() {
         : !MarlinTrk::IMarlinTrack::backward;
 
     TKalTrackSite* site = nullptr;
+    size_t gsfStartHit = 1;
     DH firstHitState;
     std::string initMode = m_gsfInitialisationMode.value();
     std::transform(initMode.begin(), initMode.end(), initMode.begin(),
@@ -644,6 +659,54 @@ StatusCode RecGsfTracking::execute() {
       }
     }
 
+    if (!site && runGSF && (initMode == "baselineearlyfit" || initMode == "earlyfit")) {
+      const size_t nEarly = std::min(hits.size(),
+          std::max<size_t>(3, static_cast<size_t>(std::max(0, m_gsfInitialisationFitHits.value()))));
+      if (nEarly >= 3 && m_gsfMarlinTrkSystem) {
+        std::vector<edm4hep::TrackerHit> earlyHits(kfHits.begin(), kfHits.begin() + nEarly);
+        edm4hep::TrackState preFit;
+        int prefitStatus = 0;
+        int fitStatus = 0;
+        double earlyChi2 = 0.0;
+        int earlyNdf = -999;
+        try {
+          prefitStatus = MarlinTrk::createPrefit(earlyHits, &preFit, bz, fitBackwards);
+          preFit.covMatrix = kfCovMatrix;
+          if (prefitStatus == MarlinTrk::IMarlinTrack::success) {
+            std::unique_ptr<MarlinTrk::IMarlinTrack> earlyTrack(m_gsfMarlinTrkSystem->createTrack());
+            fitStatus = MarlinTrk::createFit(earlyHits, earlyTrack.get(), &preFit, bz,
+                                             fitBackwards, m_kfMaxChi2PerHit.value());
+            if (fitStatus == MarlinTrk::IMarlinTrack::success) {
+              edm4hep::TrackState earlyState;
+              int stateStatus = earlyTrack->getTrackState(earlyHits.back(), earlyState, earlyChi2, earlyNdf);
+              if (stateStatus == MarlinTrk::IMarlinTrack::success) {
+                site = makeInitialSiteFromTrackState(earlyState, hits[nEarly - 1], bz);
+                if (site) {
+                  gsfStartHit = nEarly;
+                  if (m_verboseDump) {
+                    info() << boost::format("GSF event index %d: direct GSF initialised from local baseline early fit through hit %d chi2=%.3f ndf=%d")
+                              % (m_nEvt - 1) % (int)(nEarly - 1) % earlyChi2 % earlyNdf << endmsg;
+                  }
+                }
+              } else {
+                fitStatus = stateStatus;
+              }
+            }
+          }
+        } catch (const std::exception& e) {
+          warning() << "GSF local baseline early fit threw exception: " << e.what() << endmsg;
+          fitStatus = 1;
+        } catch (...) {
+          warning() << "GSF local baseline early fit threw unknown exception" << endmsg;
+          fitStatus = 1;
+        }
+        if (!site && m_verboseDump) {
+          warning() << boost::format("GSF event index %d: local baseline early fit init failed nEarly=%d prefit=%d fit=%d; falling back")
+                       % (m_nEvt - 1) % (int)nEarly % prefitStatus % fitStatus << endmsg;
+        }
+      }
+    }
+
     if (!site && (m_useCompleteTrackFirstHitInit.value() || initMode == "completetrackfirsthit") &&
         getTrackStateAt(trk, DH::AtFirstHit, firstHitState)) {
       site = makeInitialSiteFromTrackState(firstHitState, hits[0], bz);
@@ -660,7 +723,7 @@ StatusCode RecGsfTracking::execute() {
     initComp->weight = 1.0;
     initComp->charge = charge;
     initComp->debugId = nextComponentDebugId++;
-    initComp->debugHistory = "seed";
+    initComp->debugHistory = (gsfStartHit > 1) ? "baseline-early-fit" : "seed";
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
@@ -833,7 +896,7 @@ StatusCode RecGsfTracking::execute() {
       }
     };
 
-    for (size_t ih = 1; ih < hits.size(); ih++) {
+    for (size_t ih = gsfStartHit; ih < hits.size(); ih++) {
       auto& hi = hits[ih];
       // measurement position (same for all components)
       TVector3 measPos = hi.layer->HitToXv(*hi.kalHit);

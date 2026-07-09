@@ -742,3 +742,85 @@ Logs:
 /tmp/gsf_gsf_max1_topn1_baselineprefit_events_10_12_14_15.log
 /tmp/run_gsf_gsf_max1_topn1_baselineprefit_events_10_12_14_15.py
 ```
+
+## 2026-07-09 Local BaselineEarlyFit Inside GSF
+
+A contained GSF-only early-wrapper diagnostic was added:
+
+```python
+gsf.GSFInitialisationMode = "BaselineEarlyFit"
+gsf.GSFInitialisationFitHits = 4
+```
+
+This does not modify baseline tracking packages. Inside `RecGsfTracking`, it locally calls the baseline helper sequence on the first `GSFInitialisationFitHits` hits:
+
+```text
+MarlinTrk::createPrefit(earlyHits, ...)
+preFit.covMatrix = baseline broad covariance
+MarlinTrk::createFit(earlyHits, local IMarlinTrack, ...)
+local IMarlinTrack::getTrackState(earlyHits.back(), ...)
+```
+
+The resulting state at the last early hit is converted to the direct GSF `TKalTrackSite`, and the direct GSF loop starts from the following hit. With `GSFInitialisationFitHits=4`, the local wrapper handles hits 0,1,2,3 and direct GSF begins at hit 4.
+
+Test setup:
+
+```python
+gsf.FitterMode = "GSF"
+gsf.MaxComponents = 1
+gsf.ReductionTargetComponents = 1
+gsf.ReductionMode = "TopN"
+gsf.GSFInitialisationMode = "BaselineEarlyFit"
+gsf.GSFInitialisationFitHits = 4
+gsf.SelectedEventIndices = [10, 12, 14, 15]
+```
+
+Result: the direct `AddAndFilter` recovery count after the early wrapper segment drops to zero in all four events.
+
+| Event | early wrapper through hit | direct GSF starts at hit | early chi2/ndf | direct GSF A/R/J | direct GSF chi2/ndf |
+|---:|---:|---:|---:|---:|---:|
+| 10 | 3 | 4 | 2.733/2 | 230/0/0 | 489.3/454 |
+| 12 | 3 | 4 | 2.962/2 | 229/0/0 | 586.5/452 |
+| 14 | 3 | 4 | 0.715/2 | 229/0/0 | 440.4/452 |
+| 15 | 3 | 4 | 5.068/2 | 228/0/0 | 411.2/450 |
+
+Important caveat: the `A/R/J` count in this mode only counts direct GSF `AddAndFilter` calls after the early wrapper segment. It does not count the hits already consumed by the local baseline wrapper. The result is therefore a diagnostic, not a final accounting convention.
+
+Interpretation:
+
+- The early recovery problem is tied to direct GSF handling of the first VXD hits.
+- A fitted state alone is not enough, as shown by the previous `CompleteTracks::AtFirstHit` and `BaselinePrefit` tests.
+- Letting the baseline-style wrapper handle the early fit history through hit 3 removes the subsequent direct-GSF recovery failures in the max1 test.
+- This supports the hypothesis that the missing piece is the baseline KalTest/MarlinTrk early site/history construction, not BH splitting, not kappa modification, and not simply first-hit parameters.
+
+Next tests:
+
+1. Vary `GSFInitialisationFitHits` to find the minimal early-wrapper length: test 3 and 4 first.
+2. Reintroduce GSF components/BH only after the single-component direct updates remain recovery-free.
+3. Decide how to account for early wrapper hits in the output track chi2/ndf and diagnostics before treating this as a production workflow.
+
+Logs:
+
+```text
+/tmp/gsf_gsf_max1_topn1_baselineearlyfit_events_10_12_14_15.log
+/tmp/run_gsf_gsf_max1_topn1_baselineearlyfit_events_10_12_14_15.py
+```
+
+### BaselineEarlyFit length check
+
+A follow-up tested `GSFInitialisationFitHits=3`, so the local baseline wrapper handles hits 0,1,2 and direct GSF starts at hit 3.
+
+| Event | early wrapper through hit | direct GSF starts at hit | recovered direct-GSF hits | direct GSF A/R/J |
+|---:|---:|---:|---|---:|
+| 10 | 2 | 3 | 3 | 230/1/0 |
+| 12 | 2 | 3 | 3 | 229/1/0 |
+| 14 | 2 | 3 | 3 | 229/1/0 |
+| 15 | 2 | 3 | none | 229/0/0 |
+
+Conclusion for this event sample: fitting through hit 2 is not enough; hit 3 still hits the direct `AddAndFilter` recovery in events 10, 12, and 14. Fitting through hit 3 (`GSFInitialisationFitHits=4`) is the first tested setting that removes recoveries in all four events.
+
+Log:
+
+```text
+/tmp/gsf_gsf_max1_topn1_baselineearlyfit3_events_10_12_14_15.log
+```

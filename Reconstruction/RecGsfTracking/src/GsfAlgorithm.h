@@ -7,6 +7,7 @@
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "Tracking/ITrackFitterTool.h"
+#include "TrackSystemSvc/IMarlinTrkSystem.h"
 
 #include "DetInterface/IGeomSvc.h"
 
@@ -20,6 +21,7 @@ class TKalDetCradle;
 class DDCylinderMeasLayer;
 class DDVMeasLayer;
 class TVKalDetector;
+class ITrackSystemSvc;
 
 /// Per-track comparison tuple for downstream analysis / plotting
 struct TrackSummary {
@@ -88,6 +90,7 @@ private:
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
   Gaudi::Property<bool>   m_useCompleteTrackFirstHitInit{this,"UseCompleteTrackFirstHitInit",false};
   Gaudi::Property<std::string> m_gsfInitialisationMode{this,"GSFInitialisationMode","Seed"};
+  Gaudi::Property<int> m_gsfInitialisationFitHits{this,"GSFInitialisationFitHits",4};
   Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
   Gaudi::Property<std::string> m_fitterMode{this,"FitterMode","GSF"};
@@ -101,6 +104,7 @@ private:
   Gaudi::Property<float> m_kfMaxChi2PerHit{this,"KFMaxChi2PerHit",200.0};
   Gaudi::Property<bool> m_kfFitBackward{this,"KFFitBackward",false};
   ToolHandle<ITrackFitterTool> m_kfFitTool;
+  MarlinTrk::IMarlinTrkSystem* m_gsfMarlinTrkSystem = nullptr;
 
   int m_nEvt = 0;
   std::vector<TrackSummary> m_summaries;  // accumulated per-track data
