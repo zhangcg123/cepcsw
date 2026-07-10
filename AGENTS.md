@@ -41,6 +41,10 @@ Global status:
   reduction, and publishes a consistent reverse best-branch IP state. Events
   11, 16, and 17 retain 234/234 hits with zero reverse rejection and IP pT of
   1.9785, 1.9970, and 2.2591 GeV, each closer to truth than LCIO.
+- A five-event 2 GeV muon control shows that reverse filtering without the
+  electron hypothesis leaves pT essentially unchanged from LCIO. Forcing the
+  same electron BH and split/reduce strategy onto the muons also does not raise
+  every pT. The workflow is therefore not a universal momentum inflator.
 - True Geant4 pre/post-step data is the authoritative energy-loss truth.
   SimTrackerHit momentum is only a detector-level cross-check.
 - The electron loss tail is physically established. At 1 GeV and theta 85
