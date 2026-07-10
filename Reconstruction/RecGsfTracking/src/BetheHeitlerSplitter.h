@@ -36,7 +36,8 @@ struct BetheHeitlerSplitter {
   /// @param tX0     Path length in radiation lengths
   /// @param bz      B-field strength [T] for helix-to-kappa conversion
   /// @return Vector of child components (parent is first element)
-  std::vector<GsfComponent*> split(GsfComponent* parent, double tX0, double bz) const;
+  std::vector<GsfComponent*> split(GsfComponent* parent, double tX0, double bz,
+                                   bool reverse = false) const;
 
 private:
   Model m_model = Model::Current;

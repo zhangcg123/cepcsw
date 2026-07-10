@@ -35,6 +35,7 @@
 #include <exception>
 #include <memory>
 #include <limits>
+#include <set>
 
 DECLARE_COMPONENT(RecGsfTracking)
 
@@ -76,6 +77,9 @@ struct MatchedHit {
   const DDVMeasLayer* layer;
   DDVTrackHit*        kalHit;
   double              radius;
+  std::size_t         inputOrder;
+  int                 surfaceIndex;
+  double              surfaceOrder;
 };
 
 
@@ -407,6 +411,24 @@ static void extrapolateToIP_geometric(GsfComponent* comp,
     jac.UnitMatrix();
     outHelix.MoveTo(ipPoint, dphi, &jac, &outCov);  // jac=F, outCov=F·C·Fᵀ
   }
+}
+
+/// Extrapolate the current continuation state to the IP.  This is used by the
+/// reverse pass, whose last stored site is the innermost filtered measurement
+/// and whose continuation snapshot additionally contains the reversed process
+/// transition on that surface.
+static bool extrapolateContinuationToIP(const GsfComponent& comp, double bz,
+                                        THelicalTrack& outHelix,
+                                        TMatrixD& outCov) {
+  if (!comp.continuationValid || bz == 0.0) return false;
+  outHelix = comp.helixAtLastSite(bz);
+  outCov = comp.covAtLastSite(bz);
+  double dphi = 0.0;
+  TMatrixD jacobian(5, 5);
+  jacobian.UnitMatrix();
+  outHelix.MoveTo(TVector3(0.0, 0.0, 0.0), dphi, &jacobian, &outCov);
+  return std::isfinite(outHelix.GetKappa()) &&
+         std::isfinite(outCov(2, 2));
 }
 
 /// Full material-aware extrapolation: innermost state → IP using cradle Transport.
@@ -763,7 +785,9 @@ StatusCode RecGsfTracking::execute() {
 
     // ---- Step 2: match hits to measurement layers ----
     std::vector<MatchedHit> hits;
+    std::size_t inputHitOrder = 0;
     for (const auto& th : assocHits) {
+      const std::size_t thisInputOrder = inputHitOrder++;
       if (!th.isAvailable()) continue;
 
       TVector3 pos(th.getPosition().x, th.getPosition().y,
@@ -776,13 +800,58 @@ StatusCode RecGsfTracking::execute() {
           const_cast<edm4hep::TrackerHit&>(th));
       if (!khit) continue;
 
+      const auto* surface = dynamic_cast<const TVSurface*>(layer);
+      const double surfaceOrder = surface ? surface->GetSortingPolicy() : 0.0;
       hits.push_back({th, layer, khit,
-                      std::hypot(pos.X(), pos.Y())});
+                      std::hypot(pos.X(), pos.Y()), thisInputOrder,
+                      layer->GetIndex(), surfaceOrder});
     }
 
     std::sort(hits.begin(), hits.end(),
               [](auto& a, auto& b) { return a.radius < b.radius; });
     if (hits.empty()) continue;
+
+    if (m_verboseDump && m_componentDebugDump) {
+      bool inputMonotonic = true;
+      bool surfaceMonotonic = true;
+      bool repeatedSurface = false;
+      int directionReversals = 0;
+      double minimumStepCosine = 1.0;
+      std::set<int> visitedSurfaceIndices;
+      TVector3 previousStep;
+      bool havePreviousStep = false;
+      info() << boost::format("  NAV audit: hits=%d radius-sorted surface records")
+                % (int)hits.size() << endmsg;
+      for (std::size_t i = 0; i < hits.size(); ++i) {
+        const auto& navHit = hits[i];
+        const auto& position = navHit.lcioHit.getPosition();
+        if (i > 0) {
+          inputMonotonic &= navHit.inputOrder > hits[i - 1].inputOrder;
+          surfaceMonotonic &= navHit.surfaceIndex >= hits[i - 1].surfaceIndex;
+          const auto& previousPosition = hits[i - 1].lcioHit.getPosition();
+          TVector3 step(position.x - previousPosition.x,
+                        position.y - previousPosition.y,
+                        position.z - previousPosition.z);
+          if (havePreviousStep && step.Mag2() > 0.0 && previousStep.Mag2() > 0.0) {
+            const double cosine = step.Dot(previousStep) /
+                std::sqrt(step.Mag2() * previousStep.Mag2());
+            minimumStepCosine = std::min(minimumStepCosine, cosine);
+            if (cosine < 0.0) ++directionReversals;
+          }
+          previousStep = step;
+          havePreviousStep = step.Mag2() > 0.0;
+        }
+        repeatedSurface |= !visitedSurfaceIndices.insert(navHit.surfaceIndex).second;
+        info() << boost::format("    NAV hit=%3d input=%3d surface=%4d order=%9.3f cell=%lld xyz=(%.3f,%.3f,%.3f) r=%.3f")
+                  % (int)i % (int)navHit.inputOrder % navHit.surfaceIndex
+                  % navHit.surfaceOrder % (long long)navHit.lcioHit.getCellID()
+                  % position.x % position.y % position.z % navHit.radius << endmsg;
+      }
+      info() << boost::format("  NAV summary: inputMonotonic=%d surfaceMonotonic=%d repeatedSurface=%d directionReversals=%d minStepCos=%.6f")
+                % (inputMonotonic ? 1 : 0) % (surfaceMonotonic ? 1 : 0)
+                % (repeatedSurface ? 1 : 0) % directionReversals
+                % minimumStepCosine << endmsg;
+    }
 
     // ---- Step 3: compute kappa seed ----
     double alpha = bz * 2.99792458e-4;
@@ -1120,7 +1189,8 @@ StatusCode RecGsfTracking::execute() {
       // then convolve components through the material associated with this
       // surface.  The splitter writes only the continuation snapshot, leaving
       // the Kalman measurement history unchanged.
-      if (stepTX0 > m_bhSplitThresh && m_isElectron &&
+      const bool hasNextForwardSurface = ih + 1 < hits.size();
+      if (hasNextForwardSurface && stepTX0 > m_bhSplitThresh && m_isElectron &&
           (int)comps.size() < m_maxComponents) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
@@ -1166,6 +1236,10 @@ StatusCode RecGsfTracking::execute() {
         dumpComponents("after-split/norm", (int)ih, comps);
       } else {
         compsAfterSplit = (int)comps.size();
+        if (!hasNextForwardSurface && m_verboseDump && m_verboseSplitDump) {
+          info() << boost::format("  FLOW hit=%3d final-surface: preserve filtered mixture; no outgoing convolution")
+                    % (int)ih << endmsg;
+        }
       }
       if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
 
@@ -1225,6 +1299,194 @@ StatusCode RecGsfTracking::execute() {
                   % (nAccept > 0 ? minDChi2 : 0.0) % (nAccept > 0 ? maxDChi2 : 0.0) << endmsg;
       }
       nProc++;
+    }
+
+    bool reverseIpAvailable = false;
+    THelicalTrack reverseOutputIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD reverseOutputIpCov(5, 5);
+    double reverseOutputChi2 = 0.0;
+    int reverseOutputNdf = 0;
+    double reverseOutputWeight = 0.0;
+    int reverseOutputComps = 0;
+
+    // Experimental reverse GSF pass.  Initialize from the filtered mixture on
+    // the final measurement surface, then revisit preceding measurements in
+    // the audited reverse order.  Reverse process convolution increases the
+    // momentum according to the same retained-fraction mixture.
+    if (m_reverseFiltering.value() && !comps.empty() && hits.size() > 1) {
+      std::vector<GsfComponent*> reverseComps;
+      int nextReverseId = 0;
+      for (const auto* forwardComp : comps) {
+        edm4hep::TrackState finalState =
+            trackStateFromComponent(*forwardComp, bz, DH::AtOther);
+        auto* reverseComp = new GsfComponent();
+        reverseComp->weight = forwardComp->weight;
+        reverseComp->charge = forwardComp->charge;
+        reverseComp->debugId = nextReverseId++;
+        reverseComp->debugHistory = "reverse(" + forwardComp->debugHistory + ")";
+        reverseComp->kaltrack = new TKalTrack();
+        reverseComp->kaltrack->SetOwner();
+        auto* reverseSite = makeInitialSiteFromTrackState(
+            finalState, hits.back(), bz);
+        if (!reverseSite) {
+          delete reverseComp;
+          continue;
+        }
+        reverseComp->kaltrack->Add(reverseSite);
+        reverseComp->continuationState = finalState;
+        reverseComp->continuationValid = true;
+        reverseComps.push_back(reverseComp);
+      }
+      GsfMixture::normalizeWeights(reverseComps);
+      if (m_verboseDump && m_verboseSplitDump)
+        dumpComponents("reverse-start", (int)hits.size() - 1, reverseComps);
+
+      int reverseAcceptedTotal = 0;
+      int reverseRejectedTotal = 0;
+      int reverseSplits = 0;
+      int reverseReductions = 0;
+      const int reverseReductionTarget =
+          (m_reductionTargetComponents.value() > 0)
+              ? std::min(m_reductionTargetComponents.value(),
+                         m_maxComponents.value())
+              : m_maxComponents.value();
+      for (int reverseHit = (int)hits.size() - 2;
+           reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
+        auto& target = hits[reverseHit];
+        std::vector<GsfComponent*> acceptedReverse;
+        std::vector<double> reverseLogWeights;
+        for (auto* component : reverseComps) {
+          double dchi = 0.0;
+          double updateChi2 = 0.0;
+          int updateNdf = -999;
+          edm4hep::TrackState componentState =
+              trackStateFromComponent(*component, bz, DH::AtOther);
+          edm4hep::TrackState updatedState;
+          MarlinTrk::MeasurementUpdate update;
+          bool accepted = false;
+          try {
+            edm4hep::TrackerHit referenceHit = hits[reverseHit + 1].lcioHit;
+            edm4hep::TrackerHit targetHit = target.lcioHit;
+            std::unique_ptr<MarlinTrk::IMarlinTrack> reverseTrack(
+                m_gsfMarlinTrkSystem->createTrack());
+            if (reverseTrack &&
+                reverseTrack->addHit(referenceHit) == MarlinTrk::IMarlinTrack::success &&
+                reverseTrack->initialise(componentState, bz,
+                    MarlinTrk::IMarlinTrack::backward) == MarlinTrk::IMarlinTrack::success &&
+                reverseTrack->addAndFit(targetHit, dchi, update, DBL_MAX) ==
+                    MarlinTrk::IMarlinTrack::success && update.valid &&
+                reverseTrack->getTrackState(targetHit, updatedState,
+                    updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
+                appendBaselineStateToComponent(*component, updatedState,
+                    target, bz)) {
+              accepted = true;
+            }
+          } catch (...) {
+            accepted = false;
+          }
+
+          if (accepted) {
+            component->fitChi2 += dchi;
+            reverseLogWeights.push_back(std::log(component->weight) -
+                0.5 * (dchi + update.logDetInnovation));
+            acceptedReverse.push_back(component);
+            ++reverseAcceptedTotal;
+            if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
+              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g dchi2=%.6g logDetS=%.6g")
+                        % reverseHit % component->debugId
+                        % ptFromTrackState(updatedState, bz) % dchi
+                        % update.logDetInnovation << endmsg;
+            }
+          } else {
+            delete component;
+            ++reverseRejectedTotal;
+          }
+        }
+        reverseComps.clear();
+        if (acceptedReverse.empty()) break;
+        const double maxReverseLog = *std::max_element(
+            reverseLogWeights.begin(), reverseLogWeights.end());
+        for (std::size_t i = 0; i < acceptedReverse.size(); ++i)
+          acceptedReverse[i]->weight =
+              std::exp(reverseLogWeights[i] - maxReverseLog);
+        reverseComps = std::move(acceptedReverse);
+        GsfMixture::normalizeWeights(reverseComps);
+
+        const double reverseTX0 = thicknessInX0(target.layer);
+        if (reverseTX0 > m_bhSplitThresh && m_isElectron &&
+            (int)reverseComps.size() < m_maxComponents.value()) {
+          BetheHeitlerSplitter splitter(m_bhModel.value());
+          std::vector<GsfComponent*> reverseChildren;
+          for (auto* parent : reverseComps) {
+            const int parentId = parent->debugId;
+            auto children = splitter.split(parent, reverseTX0, bz, true);
+            for (auto* child : children) {
+              child->debugParentId = parentId;
+              child->debugId = nextReverseId++;
+              child->debugHistory += "->reverse-material";
+              reverseChildren.push_back(child);
+            }
+          }
+          reverseComps = std::move(reverseChildren);
+          ++reverseSplits;
+          GsfMixture::normalizeWeights(reverseComps);
+        }
+        GsfMixture::removeLowWeight(reverseComps,
+                                    m_componentWeightCutoff.value());
+        if ((int)reverseComps.size() > reverseReductionTarget) {
+          if (m_reductionMode.value() == "TopN" ||
+              m_reductionMode.value() == "topN" ||
+              m_reductionMode.value() == "topn") {
+            GsfMixture::reduceTopN(reverseComps, reverseReductionTarget);
+          } else {
+            GsfMixture::reduce(reverseComps, reverseReductionTarget, bz);
+          }
+          ++reverseReductions;
+          GsfMixture::normalizeWeights(reverseComps);
+        }
+        if (m_verboseDump && m_verboseSplitDump &&
+            (reverseHit < 3 || reverseHit == (int)hits.size() - 2)) {
+          dumpComponents("reverse-after-hit", reverseHit, reverseComps);
+        }
+      }
+
+      if (m_verboseDump) {
+        info() << boost::format("  REVERSE summary: finalComps=%d accepted=%d rejected=%d splits=%d reductions=%d")
+                  % (int)reverseComps.size() % reverseAcceptedTotal
+                  % reverseRejectedTotal % reverseSplits % reverseReductions
+               << endmsg;
+      }
+      GsfMixture::normalizeWeights(reverseComps);
+      if (!reverseComps.empty()) {
+        auto* reverseBest = *std::max_element(
+            reverseComps.begin(), reverseComps.end(),
+            [](const GsfComponent* a, const GsfComponent* b) {
+              return a->weight < b->weight;
+            });
+        THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+        TMatrixD reverseIpCov(5, 5);
+        if (extrapolateContinuationToIP(*reverseBest, bz,
+                                       reverseIp, reverseIpCov)) {
+          const double reversePt = reverseIp.GetKappa() != 0.0
+              ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
+          if (m_verboseDump) {
+            info() << boost::format("  REVERSE IP best: id=%d weight=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
+                      % reverseBest->debugId % reverseBest->weight % reversePt
+                      % (-reverseIp.GetDrho()) % reverseIp.GetDz()
+                      % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
+                      % reverseIp.GetTanLambda() << endmsg;
+          }
+          reverseOutputIp = reverseIp;
+          reverseOutputIpCov = reverseIpCov;
+          reverseOutputChi2 = componentFitChi2(*reverseBest);
+          reverseOutputNdf = reverseBest->kaltrack
+              ? reverseBest->kaltrack->GetNDF() : 0;
+          reverseOutputWeight = reverseBest->weight;
+          reverseOutputComps = (int)reverseComps.size();
+          reverseIpAvailable = true;
+        }
+      }
+      for (auto* reverseComp : reverseComps) delete reverseComp;
     }
 
     // ---- Step 5: smooth, extrapolate to IP, write output ----
@@ -1290,9 +1552,15 @@ StatusCode RecGsfTracking::execute() {
 
       THelicalTrack ipHelix = bestIpHelix;
       TMatrixD ipCov = bestIpCov;
+      bool usedReverseOutput = false;
+      if (m_reverseFiltering.value() && reverseIpAvailable) {
+        ipHelix = reverseOutputIp;
+        ipCov = reverseOutputIpCov;
+        usedReverseOutput = true;
+      }
       const std::string outputMode = m_outputMode.value();
       bool usedWeightedOutput = false;
-      if (outputMode == "WeightedMean") {
+      if (outputMode == "WeightedMean" && !usedReverseOutput) {
         THelicalTrack mixIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
         TMatrixD mixIpCov(5, 5);
         if (weightedMixtureAtIP(comps, m_materialIPExtrap, m_cradle, m_ipLayer,
@@ -1325,8 +1593,12 @@ StatusCode RecGsfTracking::execute() {
       // Write output track
       auto ot = out->create();
       ot.setType(2);
-      ot.setChi2(componentFitChi2(*best));
-      ot.setNdf(best->kaltrack->GetNDF());
+      const double outputChi2 = usedReverseOutput
+          ? reverseOutputChi2 : componentFitChi2(*best);
+      const int outputNdf = usedReverseOutput
+          ? reverseOutputNdf : best->kaltrack->GetNDF();
+      ot.setChi2(outputChi2);
+      ot.setNdf(outputNdf);
 
       edm4hep::TrackState ts;
       ts.location = DH::AtIP;
@@ -1367,20 +1639,20 @@ StatusCode RecGsfTracking::execute() {
       sum.iev      = m_nEvt;
       sum.charge   = charge;
       sum.nHits    = nProc + 1;
-      sum.nComps   = (int)comps.size();
+      sum.nComps   = usedReverseOutput ? reverseOutputComps : (int)comps.size();
       sum.truth_pT = t_pT; sum.truth_eta = t_eta; sum.truth_phi = t_phi; sum.truth_p = t_p;
       sum.lcio_pT  = lcio_pT; sum.lcio_eta  = lcio_eta;  sum.lcio_phi  = seed.phi;
       sum.lcio_d0  = seed.d0; sum.lcio_z0   = seed.z0;   sum.lcio_p    = lcio_p;
       sum.lcio_chi2 = trk.getChi2(); sum.lcio_ndf = trk.getNdf();
       sum.gsf_pT   = gsf_pT;   sum.gsf_eta   = gsf_eta;   sum.gsf_phi   = ts.phi;
       sum.gsf_d0   = ts.D0;    sum.gsf_z0    = ts.Z0;     sum.gsf_p     = gsf_p;
-      sum.gsf_chi2 = componentFitChi2(*best); sum.gsf_ndf = best->kaltrack->GetNDF();
+      sum.gsf_chi2 = outputChi2; sum.gsf_ndf = outputNdf;
       // GSF diagnostics
       sum.nSplits     = nSplits;
       sum.nReductions = nReductions;
       sum.maxCompsEver= maxCompsEver;
-      sum.finalComps  = (int)comps.size();
-      sum.bestWeight  = best->weight;
+      sum.finalComps  = sum.nComps;
+      sum.bestWeight  = usedReverseOutput ? reverseOutputWeight : best->weight;
       sum.meanWeight  = 1.0 / (int)comps.size();
       sum.maxTX0Layer = maxTX0Layer;
       sum.totalTX0    = totalTX0;
@@ -1397,7 +1669,7 @@ StatusCode RecGsfTracking::execute() {
         info() << sep << endmsg;
         info() << boost::format("%s %02d  |  comps %2d  hits %d/%d  q=%+d  p %.2f GeV  χ²/ndf %.1f/%d")
                   % "GSF Track" % (nFit + 1) % sum.nComps % sum.nHits % (int)hits.size()
-                  % charge % gsf_p % componentFitChi2(*best) % best->kaltrack->GetNDF() << endmsg;
+                  % charge % gsf_p % outputChi2 % outputNdf << endmsg;
         info() << sep << endmsg;
         info() << boost::format("  %-6s  %10s  %10s  %10s  %16s  %s") % ""    % "Truth"  % "LCIO"   % "GSF"    % "AddFilter" % "" << endmsg;
         info() << boost::format("  %-6s  %10.4f  %10.4f  %10.4f  %16s  %s")   % "pT"  % t_pT      % lcio_pT   % gsf_pT   % "" % "GeV" << endmsg;
@@ -1408,7 +1680,7 @@ StatusCode RecGsfTracking::execute() {
         info() << boost::format("  %-6s  %10.3f  %10.3f  %10.3f  %16s  %s")   % "p"   % t_p       % lcio_p     % gsf_p    % "" % "GeV" << endmsg;
         info() << boost::format("  %-6s  %10s  %7.1f/%-2d  %7.1f/%-2d  last %2d/%2d/%2d")
                   % "chi2" % "-" % trk.getChi2() % trk.getNdf()
-                  % componentFitChi2(*best) % best->kaltrack->GetNDF()
+                  % outputChi2 % outputNdf
                   % lastAccept % lastRecover % lastReject << endmsg;
         info() << boost::format("  %-6s  %10s  %10s  %10s  total %2d/%2d/%2d")
                   % "A/R/J" % "-" % "-" % "-"
@@ -1419,9 +1691,12 @@ StatusCode RecGsfTracking::execute() {
         info() << boost::format("  GSF diagnostics | splits %d  reductions %d  peak-comps %d  final-comps %d")
                   % nSplits % nReductions % maxCompsEver % sum.finalComps << endmsg;
         info() << boost::format("  weights        | best %.4f  mean %.4f  ratio %.2f")
-                  % best->weight % (1.0 / sum.finalComps) % (best->weight * sum.finalComps) << endmsg;
+                  % sum.bestWeight % (1.0 / sum.finalComps)
+                  % (sum.bestWeight * sum.finalComps) << endmsg;
         info() << boost::format("  output         | mode %s")
-                  % (usedWeightedOutput ? "WeightedMean" : "BestBranch") << endmsg;
+                  % (usedReverseOutput ? "ReverseBestBranch" :
+                     (usedWeightedOutput ? "WeightedMean" : "BestBranch"))
+               << endmsg;
         info() << boost::format("  material       | max-tX0 %.2e  total-tX0 %.2e")
                   % maxTX0Layer % totalTX0 << endmsg;
         info() << sep << endmsg;

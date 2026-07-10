@@ -30,6 +30,7 @@ been removed; historical comparisons remain under `agents_record/`.
 | `ComponentWeightCutoff` | `1e-8` | Remove normalized post-transition components below this weight while preserving at least the largest component. |
 | `GSFOutputMode` | `"BestBranch"` | Publish the best branch or `WeightedMean`. |
 | `MaterialIPExtrapolation` | `false` | Include material when extrapolating the selected state to the IP. |
+| `ReverseFiltering` | `false` | Experimental reverse multi-component filtering audit from the final measurement to the innermost hit. |
 
 ### Selection and diagnostics
 

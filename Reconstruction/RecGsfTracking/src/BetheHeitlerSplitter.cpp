@@ -177,7 +177,7 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
 }
 
 std::vector<GsfComponent*> BetheHeitlerSplitter::split(
-    GsfComponent* parent, double tX0, double bz) const {
+    GsfComponent* parent, double tX0, double bz, bool reverse) const {
 
   auto mixture = (m_model == Model::GlobalSim2GeV85)
       ? globalSim2GeV85Mixture(tX0)
@@ -195,7 +195,8 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
 
   for (size_t i = 0; i < mixture.size(); i++) {
     double fracMomentum = std::max(mixture[i].mean, 0.01);
-    double newKappa = parentKappa / fracMomentum;
+    double newKappa = reverse ? parentKappa * fracMomentum
+                              : parentKappa / fracMomentum;
 
     GsfComponent* child = result[i];
     child->weight = parentWeight * mixture[i].weight;
@@ -215,18 +216,21 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
     // process changes only the surface-local continuation snapshot used to
     // initialize propagation toward the next measurement.
     auto& continuation = child->continuationState;
+    const double scaleKappa = reverse ? fracMomentum : 1.0 / fracMomentum;
     const double invFrac = 1.0 / fracMomentum;
     const double invFrac2 = invFrac * invFrac;
     const double fracVar = std::max(mixture[i].var, 0.0);
-    const double bhKappaVar = parentKappa * parentKappa * fracVar * invFrac2 * invFrac2;
+    const double bhKappaVar = reverse
+        ? parentKappa * parentKappa * fracVar
+        : parentKappa * parentKappa * fracVar * invFrac2 * invFrac2;
     const double alpha = bz * 2.99792458e-4;
     auto covIndex = [](int row, int col) {
       if (row < col) std::swap(row, col);
       return row * (row + 1) / 2 + col;
     };
     for (int r = 0; r < 5; ++r)
-      continuation.covMatrix[covIndex(r, 2)] *= invFrac;
-    continuation.covMatrix[covIndex(2, 2)] *= invFrac;
+      continuation.covMatrix[covIndex(r, 2)] *= scaleKappa;
+    continuation.covMatrix[covIndex(2, 2)] *= scaleKappa;
     continuation.covMatrix[covIndex(2, 2)] += alpha * alpha * bhKappaVar;
     continuation.omega = newKappa * alpha;
     child->continuationValid = true;

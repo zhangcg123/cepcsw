@@ -82,6 +82,7 @@ private:
   Gaudi::Property<double> m_bhSplitThresh{this,"BHSplitThreshold",1e-4};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
+  Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",false};
   Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",false};
   Gaudi::Property<bool>   m_componentDebugDump{this,"ComponentDebugDump",false};
