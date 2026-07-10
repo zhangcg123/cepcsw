@@ -26,6 +26,7 @@ been removed; historical comparisons remain under `agents_record/`.
 | `MaxComponents` | `12` | Split/reduction trigger. It is not a strict instantaneous ceiling: one split can temporarily exceed it. |
 | `ReductionTargetComponents` | `0` | Target after reduction; `0` means `MaxComponents`. |
 | `ReductionMode` | `"KL"` | Select KL moment merging or `TopN` weight pruning. |
+| `ReductionMinHitsAfterSplit` | `0` | Minimum successful hit updates each branch must survive after its latest split before reduction. Set to several hits for delayed pruning studies. |
 | `GSFOutputMode` | `"BestBranch"` | Publish the best branch or `WeightedMean`. |
 | `MaterialIPExtrapolation` | `false` | Include material when extrapolating the selected state to the IP. |
 

@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <exception>
 #include <memory>
+#include <limits>
 
 DECLARE_COMPONENT(RecGsfTracking)
 
@@ -229,6 +230,60 @@ static std::string compactTrackState(const edm4hep::TrackState& ts, double bz) {
      << " phi=" << ts.phi
      << " tanL=" << ts.tanLambda
      << " omega=" << ts.omega;
+  return os.str();
+}
+
+static std::string surfacePredictionResidual(
+    const GsfComponent& comp, const MatchedHit& hit, double bz) {
+  std::ostringstream os;
+  if (!comp.kaltrack || !hit.layer || !hit.kalHit) return "unavailable";
+
+  auto helix = comp.helixAtLastSite(bz);
+  TVector3 crossing;
+  double dphi = 0.0;
+  int cellId = 0;
+  const TVector3 measured = hit.layer->HitToXv(*hit.kalHit);
+  double bestResidual2 = std::numeric_limits<double>::infinity();
+  for (int mode : {MarlinTrk::IMarlinTrack::modeBackward,
+                   MarlinTrk::IMarlinTrack::modeClosest,
+                   MarlinTrk::IMarlinTrack::modeForward}) {
+    TVector3 candidate;
+    double candidateDphi = 0.0;
+    int candidateCellId = 0;
+    if (hit.layer->getIntersectionAndCellID(
+            helix, candidate, candidateDphi, candidateCellId, mode) == 0) continue;
+    const double residual2 = (candidate - measured).Mag2();
+    if (residual2 < bestResidual2) {
+      bestResidual2 = residual2;
+      crossing = candidate;
+      dphi = candidateDphi;
+      cellId = candidateCellId;
+    }
+  }
+  if (!std::isfinite(bestResidual2)) return "no surface intersection";
+
+  const TKalMatrix predicted = hit.layer->XvToMv(*hit.kalHit, crossing);
+  const int dim = std::min(hit.kalHit->GetDimension(), predicted.GetNrows());
+  const TVector3 globalResidual = measured - crossing;
+
+  os << std::fixed << std::setprecision(6)
+     << "predXYZ=(" << crossing.X() << "," << crossing.Y() << "," << crossing.Z() << ") mm"
+     << " measXYZ=(" << measured.X() << "," << measured.Y() << "," << measured.Z() << ") mm"
+     << " resXYZ(meas-pred)=(" << globalResidual.X() << ","
+     << globalResidual.Y() << "," << globalResidual.Z() << ") mm"
+     << " |cross-hit|=" << std::sqrt(bestResidual2) << " mm"
+     << " local=[";
+  for (int i = 0; i < dim; ++i) {
+    if (i) os << ", ";
+    const double measurement = hit.kalHit->GetX(i);
+    const double sigma = hit.kalHit->GetDX(i);
+    const double residual = measurement - predicted(i, 0);
+    os << "m" << i << " pred=" << predicted(i, 0)
+       << " meas=" << measurement << " res=" << residual
+       << " sigma=" << sigma;
+    if (sigma > 0.0) os << " measPull=" << residual / sigma;
+  }
+  os << "] dphi=" << dphi << " cell=" << cellId;
   return os.str();
 }
 
@@ -541,6 +596,10 @@ StatusCode RecGsfTracking::initialize() {
     error() << "ReductionTargetComponents must be 0 or in [1, MaxComponents]" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_reductionMinHitsAfterSplit.value() < 0) {
+    error() << "ReductionMinHitsAfterSplit must be non-negative" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_bhSplitThresh.value() < 0.0) {
     error() << "BHSplitThreshold must be non-negative" << endmsg;
     return StatusCode::FAILURE;
@@ -637,6 +696,7 @@ StatusCode RecGsfTracking::initialize() {
   info() << "GSF configuration: maxComponents=" << m_maxComponents.value()
          << " reductionTarget=" << m_reductionTargetComponents.value()
          << " reductionMode=" << m_reductionMode.value()
+         << " reductionMinHitsAfterSplit=" << m_reductionMinHitsAfterSplit.value()
          << " outputMode=" << m_outputMode.value()
          << " verbose=" << m_verboseDump.value() << "/"
          << m_verboseSplitDump.value() << "/"
@@ -759,8 +819,9 @@ StatusCode RecGsfTracking::execute() {
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
         const double chi2 = componentFitChi2(*c);
         const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
-        info() << boost::format("      top%-2d comp[%02d] id=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
-                  % (int)rank % (int)ci % c->debugId % c->weight % pt % k % chi2 % ndf % entries << endmsg;
+        info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d age=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
+                  % (int)rank % (int)ci % c->debugId % c->debugParentId % c->generation
+                  % c->hitsSinceSplit % c->weight % pt % k % chi2 % ndf % entries << endmsg;
         if (m_componentDebugDump) {
           info() << boost::format("          history=%s")
                     % truncateHistory(c->debugHistory) << endmsg;
@@ -803,6 +864,8 @@ StatusCode RecGsfTracking::execute() {
         BetheHeitlerSplitter bhs(m_bhModel.value());
         std::vector<GsfComponent*> newCps;
         for (auto* comp : comps) {
+          const int parentDebugId = comp->debugId;
+          const int childGeneration = comp->generation + 1;
           double parentKappa = comp->helixAtLastSite(bz).GetKappa();
           auto children = bhs.split(comp, stepTX0, bz);
           if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
@@ -818,6 +881,9 @@ StatusCode RecGsfTracking::execute() {
           }
           for (auto* c : children) {
             c->debugId = nextComponentDebugId++;
+            c->debugParentId = parentDebugId;
+            c->generation = childGeneration;
+            c->hitsSinceSplit = 0;
             newCps.push_back(c);
           }
         }
@@ -852,6 +918,10 @@ StatusCode RecGsfTracking::execute() {
           const double beforeKappa = comp->helixAtLastSite(bz).GetKappa();
           const double beforePt = (beforeKappa != 0.0) ? 1.0 / std::abs(beforeKappa) : 0.0;
           const double beforeWeight = comp->weight;
+          const std::string predictedSurface =
+              (m_verboseDump && m_verboseSplitDump && m_componentDebugDump)
+                  ? surfacePredictionResidual(*comp, hi, bz)
+                  : std::string();
           edm4hep::TrackState componentState;
           edm4hep::TrackState updatedState;
           double updateChi2 = 0.0;
@@ -894,6 +964,8 @@ StatusCode RecGsfTracking::execute() {
                         % beforeWeight % comp->weight << endmsg;
               info() << boost::format("          predict: %s")
                         % compactTrackState(componentState, bz) << endmsg;
+              info() << boost::format("          predicted-surface: %s")
+                        % predictedSurface << endmsg;
               info() << boost::format("          measure: pos=(%.4f,%.4f,%.4f) r=%.4f")
                         % measPos.X() % measPos.Y() % measPos.Z() % hi.radius << endmsg;
               info() << boost::format("          updated: %s fitChi2=%.6g ndf=%d")
@@ -910,6 +982,8 @@ StatusCode RecGsfTracking::execute() {
                         % comp->debugId % beforePt % beforeWeight % (int)ih << endmsg;
               info() << boost::format("          predict: %s")
                         % compactTrackState(componentState, bz) << endmsg;
+              info() << boost::format("          predicted-surface: %s")
+                        % predictedSurface << endmsg;
               info() << boost::format("          measure: pos=(%.4f,%.4f,%.4f) r=%.4f")
                         % measPos.X() % measPos.Y() % measPos.Z() % hi.radius << endmsg;
             }
@@ -1023,6 +1097,7 @@ StatusCode RecGsfTracking::execute() {
       }
 
       comps = std::move(accepted);
+      for (auto* comp : comps) ++comp->hitsSinceSplit;
       compsAfterUpdate = (int)comps.size();
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/raw", (int)ih, comps);
@@ -1033,7 +1108,20 @@ StatusCode RecGsfTracking::execute() {
       const bool shouldReduce = ((int)comps.size() > m_maxComponents.value()) ||
           (reductionTarget < m_maxComponents.value() &&
            (int)comps.size() >= m_maxComponents.value());
-      if (shouldReduce && (int)comps.size() > reductionTarget) {
+      const bool oldEnoughToReduce = std::all_of(
+          comps.begin(), comps.end(), [&](const GsfComponent* comp) {
+            return comp->hitsSinceSplit >= m_reductionMinHitsAfterSplit.value();
+          });
+      if (shouldReduce && !oldEnoughToReduce && m_verboseDump && m_verboseSplitDump) {
+        info() << boost::format("  FLOW hit=%3d defer-reduce: n=%d target=%d minAge=%d requiredAge=%d")
+                  % (int)ih % (int)comps.size() % reductionTarget
+                  % (*std::min_element(comps.begin(), comps.end(),
+                        [](const GsfComponent* a, const GsfComponent* b) {
+                          return a->hitsSinceSplit < b->hitsSinceSplit;
+                        }))->hitsSinceSplit
+                  % m_reductionMinHitsAfterSplit.value() << endmsg;
+      }
+      if (shouldReduce && oldEnoughToReduce && (int)comps.size() > reductionTarget) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  FLOW hit=%3d reduce: n=%d max=%d target=%d mode=%s")
                     % (int)ih % (int)comps.size() % m_maxComponents.value()

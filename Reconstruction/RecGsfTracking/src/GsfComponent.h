@@ -16,6 +16,9 @@ struct GsfComponent {
   TKalTrack* kaltrack = nullptr;
   double    fitChi2 = 0.0;
   int       debugId = 0;
+  int       debugParentId = -1;
+  int       generation = 0;
+  int       hitsSinceSplit = 0;
   std::string debugHistory;
 
   ~GsfComponent();

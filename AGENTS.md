@@ -59,6 +59,10 @@ These constraints are active and mandatory:
 - Keep `AGENTS.md` current and concise. Before replacing a focus or removing
   detail, preserve every unique item in a dated `agents_record/` entry. Do not
   lose information during status migration.
+- Validate every GSF implementation step with comprehensive verbose component
+  dumps on a focused event before proceeding. Once stable, repeat the check on
+  hard-loss events 11, 16, and 17. Build success, finite output, or lower
+  chi-square is not a sufficient gate.
 - Load historical records only when regression evidence, design rationale,
   experiment comparison, or explicit provenance is needed. Historical detail
   must not override the current focus merely because it is more extensive.
@@ -104,15 +108,16 @@ Do not lose unique information during that migration.
 
 ## 2. Current focus
 
-The current concentration is energy-loss inference and component lifetime, not
-the resolved hit-update recovery problem.
+The current concentration is statistically correct component evaluation and
+explicit material-transition semantics, not the resolved hit-update recovery
+problem.
 
-The experimental `GlobalSim2GeV85` model provides the same five retained-
-momentum hypotheses at every qualifying split and ignores the individual
-material step `t/X0`. Its dominant prior is the near-no-loss component
-`z=0.99995` with weight 0.5793. With immediate TopN target 1, lower-`z`
-components are normally deleted after only one following hit, before enough
-outer-hit curvature information exists to identify a hard loss.
+An ACTS GSF implementation review identified a more fundamental problem than
+component lifetime: `RecGsfTracking` weights a branch with only
+`exp(-deltaChi2/2)`. A statistically correct Gaussian-mixture update also
+requires the innovation normalization `det(S)^(-1/2)`, where
+`S = H*Ppred*H^T + R`. Without the determinant, broad and narrow BH hypotheses
+are not comparable posterior components.
 
 The focused evidence is:
 
@@ -122,32 +127,43 @@ The focused evidence is:
 | 16 | 2.000 | 1.812 | 1.812 |
 | 17 | 2.000 | 1.579 | 1.579 |
 
-GSF improves fit chi-square in these events but does not restore generated
-momentum. Lower chi-square alone is not evidence of energy-loss recovery.
+Keeping five hypotheses for three hit updates through the experimental
+`ReductionMinHitsAfterSplit` control did not change these momenta. Surface
+diagnostics show that branches do separate geometrically, but the current
+standalone intersection helper fails on the first three hits and is not the
+authoritative MarlinTrk prediction. GSF improves fit chi-square in these events
+but does not restore generated momentum.
 
 Proceed in this order:
 
-1. Use hard-loss events 11, 16, and 17 as the primary validation set.
-2. Retain 3-5 hypotheses across several hits after a split; add delayed
-   reduction or an equivalent component-age/minimum-hit policy.
-3. Track each branch's momentum, weight, chi-square, age, and ancestry until a
-   lower-retained-fraction hypothesis becomes favored or is conclusively
-   rejected.
-4. Expose the true predicted measurement/crossing and residual on the current
-   surface. Do not interpret a `TrackState.referencePoint` as a predicted hit.
+1. Use event 11 for step-level verbose development and events 11, 16, and 17 as
+   the primary validation set.
+2. Expose the exact prediction, calibrated residual, measurement projector,
+   predicted covariance, and innovation covariance used by the existing
+   MarlinTrk `addAndFit` path. Do not interpret a `TrackState.referencePoint` or
+   an independent geometric intersection as that prediction.
+3. Implement the full posterior weight factor
+   `det(S)^(-1/2)*exp(-deltaChi2/2)` with stable normalization, and demonstrate
+   in verbose output how it changes every branch weight.
+4. Represent loss as a distinct pre-material to post-material transition and
+   use component-dependent, incidence-path-corrected `t/X0`.
 5. Fit a Bethe-Heitler mixture conditioned on actual per-step `t/X0` using
    primary-electron tracker-volume Geant4 eBrem truth.
-6. Represent loss as a distinct pre-material to post-material transition and
-   validate backward smoothing to the interaction point.
-7. Only then run broad GSF-versus-LCIO performance studies.
+6. Retain 4-5 hypotheses with current-surface KL reduction and a low-weight
+   cutoff; then determine whether the provisional component-age policy is
+   still needed.
+7. Implement and validate reverse multi-component propagation to the
+   interaction point.
+8. Only then run broad GSF-versus-LCIO performance studies.
 
 Success means that a retained hard-loss branch accumulates measurement support
 and produces a finite, full-hit interaction-point state closer to generator
 truth than LCIO across the focused events without reintroducing recovery or
 catastrophic smoothing.
 
-Current non-goals: reopening resolved recovery/segmentation investigations
-without a fresh reproduction, restoring removed KF/initialization experiments,
-using immediate TopN target 1 as a recovery benchmark, fitting the final BH
-model to SimHit momentum, or modifying shared KalTest/MarlinTrk packages for a
-GSF-local design issue.
+Current non-goals: treating delayed TopN as a validated final policy, reopening
+resolved recovery/segmentation investigations without a fresh reproduction,
+restoring removed KF/initialization experiments, using immediate TopN target 1
+as a recovery benchmark, fitting the final BH model to SimHit momentum,
+assuming ACTS's ATLAS BH coefficients validate CEPC physics, or modifying
+shared KalTest/MarlinTrk packages for a GSF-local design issue.

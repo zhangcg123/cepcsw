@@ -47,6 +47,9 @@ GsfComponent* GsfComponent::clone() const {
   c->weight = weight;
   c->charge = charge;
   c->debugId = debugId;
+  c->debugParentId = debugParentId;
+  c->generation = generation;
+  c->hitsSinceSplit = hitsSinceSplit;
   c->debugHistory = debugHistory;
   c->fitChi2 = fitChi2;
   c->kaltrack = new TKalTrack();
