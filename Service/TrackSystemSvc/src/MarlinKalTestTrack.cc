@@ -667,6 +667,15 @@ namespace MarlinTrk {
   }
   
   int MarlinKalTestTrack::addAndFit( edm4hep::TrackerHit& trkhit, double& chi2increment, double maxChi2Increment) {
+
+    MeasurementUpdate update;
+    return addAndFit(trkhit, chi2increment, update, maxChi2Increment);
+  }
+
+  int MarlinKalTestTrack::addAndFit( edm4hep::TrackerHit& trkhit, double& chi2increment,
+                                    MeasurementUpdate& update, double maxChi2Increment) {
+
+    update = MeasurementUpdate{};
     
     if( ! trkhit.isAvailable() ) {
       std::cout << "Error: MarlinKalTestTrack::addAndFit(edm4hep::TrackerHit trkhit, double& chi2increment, double maxChi2Increment): trkhit == 0" << std::endl;
@@ -694,6 +703,65 @@ namespace MarlinTrk {
     
     TKalTrackSite* site = 0 ;
     int error_code = this->addAndFit( kalhit, chi2increment, site, maxChi2Increment);
+
+    if (error_code == success && site != 0) {
+      const TVKalState& predictedState = site->GetState(TVKalSite::kPredicted);
+      const TKalMatrix& predicted = predictedState;
+      const TKalMatrix& predictedCovariance = predictedState.GetCovMat();
+      const TKalMatrix& projector = site->GetMeasVecDerivative();
+      const TKalMatrix& filtered = site->GetState(TVKalSite::kFiltered);
+
+      if (projector.GetNrows() == site->GetDimension() &&
+          projector.GetNcols() == predicted.GetNrows()) {
+        const TKalMatrix residual = site->GetResVec() -
+            projector * (predicted - filtered);
+        const TKalMatrix predictedMeasurement = site->GetMeasVec() - residual;
+        const TKalMatrix projectorT(TKalMatrix::kTransposed, projector);
+        const TKalMatrix innovation = site->GetMeasNoiseMat() +
+            projector * predictedCovariance * projectorT;
+
+        auto copyMatrix = [](const TMatrixD& source, MeasurementUpdate::Matrix& target) {
+          target.rows = source.GetNrows();
+          target.cols = source.GetNcols();
+          target.values.resize(target.rows * target.cols);
+          for (int row = 0; row < target.rows; ++row)
+            for (int col = 0; col < target.cols; ++col)
+              target.values[row * target.cols + col] = source(row, col);
+        };
+
+        copyMatrix(predicted, update.predictedState);
+        copyMatrix(predictedCovariance, update.predictedCovariance);
+        copyMatrix(predictedMeasurement, update.predictedMeasurement);
+        copyMatrix(residual, update.residual);
+        copyMatrix(projector, update.projector);
+        copyMatrix(site->GetMeasNoiseMat(), update.measurementCovariance);
+        copyMatrix(innovation, update.innovationCovariance);
+
+        TMatrixD lower(innovation);
+        bool positiveDefinite = true;
+        double logDet = 0.0;
+        for (int i = 0; i < lower.GetNrows() && positiveDefinite; ++i) {
+          for (int j = 0; j <= i; ++j) {
+            double value = innovation(i, j);
+            for (int k = 0; k < j; ++k) value -= lower(i, k) * lower(j, k);
+            if (i == j) {
+              if (!(value > 0.0) || !std::isfinite(value)) {
+                positiveDefinite = false;
+                break;
+              }
+              lower(i, j) = std::sqrt(value);
+              logDet += 2.0 * std::log(lower(i, j));
+            } else {
+              lower(i, j) = value / lower(j, j);
+            }
+          }
+        }
+        if (positiveDefinite) {
+          update.logDetInnovation = logDet;
+          update.valid = true;
+        }
+      }
+    }
     
     if( error_code != success ){
 

@@ -24,6 +24,12 @@ Global status:
   baseline-compatible MarlinTrk `initialise -> addAndFit` path; focused
   single- and multi-component tests no longer reproduce the former recovery
   and catastrophic smoothing failures.
+- The exact MarlinTrk prediction and innovation quantities are now exposed to
+  `RecGsfTracking`, and component posterior weights use the full Gaussian
+  innovation likelihood including `det(S)^(-1/2)` with stable log-space
+  normalization. Focused events 11, 16, and 17 run successfully with these
+  diagnostics, but this statistical correction has not recovered truth
+  momentum.
 - True Geant4 pre/post-step data is the authoritative energy-loss truth.
   SimTrackerHit momentum is only a detector-level cross-check.
 - The electron loss tail is physically established. At 1 GeV and theta 85
@@ -108,53 +114,59 @@ Do not lose unique information during that migration.
 
 ## 2. Current focus
 
-The current concentration is statistically correct component evaluation and
-explicit material-transition semantics, not the resolved hit-update recovery
-problem.
+The current concentration is explicit material-transition semantics and
+component-dependent path-corrected material, not the resolved hit-update or
+innovation-likelihood problems.
 
-An ACTS GSF implementation review identified a more fundamental problem than
-component lifetime: `RecGsfTracking` weights a branch with only
-`exp(-deltaChi2/2)`. A statistically correct Gaussian-mixture update also
-requires the innovation normalization `det(S)^(-1/2)`, where
-`S = H*Ppred*H^T + R`. Without the determinant, broad and narrow BH hypotheses
-are not comparable posterior components.
+The ACTS-derived innovation-likelihood issue is resolved: the exact prediction,
+calibrated residual, projector, predicted covariance, and innovation covariance
+come from the accepted MarlinTrk `addAndFit` update, and weights use
+`det(S)^(-1/2)*exp(-deltaChi2/2)`. Event-11 verbose output demonstrates the
+calculation for every branch. At its first two updates the leading components
+have nearly equal innovation likelihoods, so their relative weights remain
+close to the BH priors.
 
-The focused evidence is:
+The next defect includes both transition semantics and surface ordering. The
+current code splits before the target measurement and rewrites kappa and
+covariance in the preceding stored Kalman site. In the reviewed ACTS workflow,
+components first propagate and bind to the current surface, undergo the
+measurement update there, and are then convolved with that surface's
+direction-aware, locally evaluated, path-corrected material slab before
+continuing. CEPC must explicitly map its material slabs to measurement surfaces
+before adopting that ordering; it must not silently assume all target-layer
+material lies before the hit.
 
-| event | truth pT [GeV] | LCIO pT [GeV] | GSF pT [GeV] |
-|---:|---:|---:|---:|
-| 11 | 2.000 | 1.793 | 1.793 |
-| 16 | 2.000 | 1.812 | 1.812 |
-| 17 | 2.000 | 1.579 | 1.579 |
-
-Keeping five hypotheses for three hit updates through the experimental
-`ReductionMinHitsAfterSplit` control did not change these momenta. Surface
-diagnostics show that branches do separate geometrically, but the current
-standalone intersection helper fails on the first three hits and is not the
-authoritative MarlinTrk prediction. GSF improves fit chi-square in these events
-but does not restore generated momentum.
+With the corrected likelihood, event 11 retains all 234 hits but selects a
+1.2167 GeV branch against truth pT 2.0004 GeV and LCIO pT 1.7934 GeV. Events
+16 and 17 also complete successfully; complete transition-level physics
+validation remains pending. The exact dumps show that branches separate, but
+the first two measurements have very similar innovation likelihoods across
+the leading components and therefore add little early discrimination.
 
 Proceed in this order:
 
 1. Use event 11 for step-level verbose development and events 11, 16, and 17 as
    the primary validation set.
-2. Expose the exact prediction, calibrated residual, measurement projector,
-   predicted covariance, and innovation covariance used by the existing
-   MarlinTrk `addAndFit` path. Do not interpret a `TrackState.referencePoint` or
-   an independent geometric intersection as that prediction.
-3. Implement the full posterior weight factor
-   `det(S)^(-1/2)*exp(-deltaChi2/2)` with stable normalization, and demonstrate
-   in verbose output how it changes every branch weight.
-4. Represent loss as a distinct pre-material to post-material transition and
-   use component-dependent, incidence-path-corrected `t/X0`.
-5. Fit a Bethe-Heitler mixture conditioned on actual per-step `t/X0` using
+2. Establish the CEPC surface convention: identify which material belongs to
+   the pre-measurement and post-measurement side of each sensitive surface and
+   prevent double counting at start and target surfaces.
+3. Replace the preceding-site rewrite with surface-bound, direction-aware BH
+   convolution. Following ACTS where the geometry supports it, update the
+   measurement first, preserve that filtered surface state, convolve its
+   components through the local material slab, reduce, and continue propagation.
+4. Compute component-local, incidence-path-corrected `t/X0` and dump the
+   filtered pre-material state, local slab/path correction, post-material
+   component state, and following exact innovation for every branch.
+5. Validate those transition semantics first on two event-11 steps and then on
+   complete runs of events 11, 16, and 17.
+6. Fit a Bethe-Heitler mixture conditioned on actual per-step `t/X0` using
    primary-electron tracker-volume Geant4 eBrem truth.
-6. Retain 4-5 hypotheses with current-surface KL reduction and a low-weight
+7. Retain 4-5 hypotheses with current-surface KL reduction and a low-weight
    cutoff; then determine whether the provisional component-age policy is
    still needed.
-7. Implement and validate reverse multi-component propagation to the
+8. Implement and validate reverse multi-component propagation to the
    interaction point.
-8. Only then run broad GSF-versus-LCIO performance studies.
+9. Only then run broad GSF-versus-LCIO performance studies.
 
 Success means that a retained hard-loss branch accumulates measurement support
 and produces a finite, full-hit interaction-point state closer to generator

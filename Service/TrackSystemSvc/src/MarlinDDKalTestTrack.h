@@ -121,6 +121,10 @@ private:
    *  the given hit will not be added if chi2increment > maxChi2Increment. 
    */
   int addAndFit( edm4hep::TrackerHit& hit, double& chi2increment, double maxChi2Increment=DBL_MAX ) ;
+
+  int addAndFit( edm4hep::TrackerHit& hit, double& chi2increment,
+                 MeasurementUpdate& update,
+                 double maxChi2Increment=DBL_MAX ) ;
   
   /** update the current fit using the supplied hit, return code via int. Provides the Chi2 increment to the fit from adding the hit via reference. 
    *  the given hit will not be added if chi2increment > maxChi2Increment. 

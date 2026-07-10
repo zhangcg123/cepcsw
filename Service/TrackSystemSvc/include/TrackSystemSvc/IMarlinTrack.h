@@ -15,6 +15,7 @@
 
 #include <optional>
 #include <exception>
+#include <vector>
 
   /** Interface for generic tracks in MarlinTrk. The interface should provide the functionality to
    *  perform track finding and fitting. It is asssumed that the underlying implemetation will by 
@@ -24,6 +25,28 @@
    * @author S.Aplin, F. Gaede DESY
    */
 namespace MarlinTrk{
+  /** Exact quantities used by one measurement update.  Matrices are stored in
+   * row-major order; their shapes are given explicitly so implementations do
+   * not leak their native matrix type through the public interface.
+   */
+  struct MeasurementUpdate {
+    struct Matrix {
+      int rows = 0;
+      int cols = 0;
+      std::vector<double> values;
+    };
+
+    bool valid = false;
+    Matrix predictedState;
+    Matrix predictedCovariance;
+    Matrix predictedMeasurement;
+    Matrix residual;
+    Matrix projector;
+    Matrix measurementCovariance;
+    Matrix innovationCovariance;
+    double logDetInnovation = 0.0;
+  };
+
   class IMarlinTrack {
     
   public:
@@ -85,7 +108,6 @@ namespace MarlinTrk{
      */
     virtual int addAndFit( edm4hep::TrackerHit& hit, double& chi2increment, double maxChi2Increment=DBL_MAX ) = 0 ;
 
-    
     /** obtain the chi2 increment which would result in adding the hit to the fit. This method will not alter the current fit, and the hit will not be stored in the list of hits or outliers
      */
     virtual int testChi2Increment( edm4hep::TrackerHit& hit, double& chi2increment ) = 0 ;
@@ -224,6 +246,16 @@ namespace MarlinTrk{
      */
     virtual std::string toString() ;
 
+    /** As addAndFit(), additionally returning the exact prediction and
+     * innovation quantities used by the accepted update.  Appended to the
+     * virtual interface to preserve all pre-existing vtable slots.
+     * Implementations which do not provide diagnostics retain normal
+     * addAndFit behaviour and return update.valid == false.
+     */
+    virtual int addAndFit( edm4hep::TrackerHit& hit, double& chi2increment,
+                           MeasurementUpdate& update,
+                           double maxChi2Increment=DBL_MAX );
+
   protected:
     
   private:
@@ -234,4 +266,3 @@ namespace MarlinTrk{
   std::string errorCode( int error );
 }
 #endif
-

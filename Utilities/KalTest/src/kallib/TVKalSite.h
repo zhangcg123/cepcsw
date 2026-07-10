@@ -74,6 +74,7 @@ public:
    inline virtual TVKalState & GetState (EStType t);
    inline virtual TKalMatrix & GetMeasVec      ()   { return fM;            }
    inline virtual TKalMatrix & GetMeasNoiseMat ()   { return fV;            }
+   inline const TKalMatrix & GetMeasVecDerivative() const { return fH; }
    inline virtual TKalMatrix & GetResVec       ()   { return fResVec;       }
    inline virtual TKalMatrix & GetCovMat       ()   { return fR;            }
    inline virtual Double_t     GetDeltaChi2() const { return fDeltaChi2;    }

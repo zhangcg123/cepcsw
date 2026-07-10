@@ -233,6 +233,20 @@ static std::string compactTrackState(const edm4hep::TrackState& ts, double bz) {
   return os.str();
 }
 
+static std::string compactMatrix(const MarlinTrk::MeasurementUpdate::Matrix& matrix) {
+  std::ostringstream os;
+  os << matrix.rows << "x" << matrix.cols << "[";
+  for (int row = 0; row < matrix.rows; ++row) {
+    if (row) os << "; ";
+    for (int col = 0; col < matrix.cols; ++col) {
+      if (col) os << ", ";
+      os << std::setprecision(8) << matrix.values[row * matrix.cols + col];
+    }
+  }
+  os << "]";
+  return os.str();
+}
+
 static std::string surfacePredictionResidual(
     const GsfComponent& comp, const MatchedHit& hit, double bz) {
   std::ostringstream os;
@@ -906,6 +920,7 @@ StatusCode RecGsfTracking::execute() {
 
       std::vector<GsfComponent*> accepted;
       std::vector<double> dchi2s;
+      std::vector<double> acceptedLogWeights;
       if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
         dchi2s.reserve(comps.size());
       }
@@ -924,6 +939,8 @@ StatusCode RecGsfTracking::execute() {
                   : std::string();
           edm4hep::TrackState componentState;
           edm4hep::TrackState updatedState;
+          MarlinTrk::MeasurementUpdate measurementUpdate;
+          double posteriorLogWeight = -std::numeric_limits<double>::infinity();
           double updateChi2 = 0.0;
           int updateNdf = -999;
           try {
@@ -934,10 +951,13 @@ StatusCode RecGsfTracking::execute() {
             if (baselineTrack &&
                 baselineTrack->addHit(referenceHit) == MarlinTrk::IMarlinTrack::success &&
                 baselineTrack->initialise(componentState, bz, fitBackwards) == MarlinTrk::IMarlinTrack::success &&
-                baselineTrack->addAndFit(trkHit, dchi, DBL_MAX) == MarlinTrk::IMarlinTrack::success) {
+                baselineTrack->addAndFit(trkHit, dchi, measurementUpdate, DBL_MAX) == MarlinTrk::IMarlinTrack::success &&
+                measurementUpdate.valid) {
               if (baselineTrack->getTrackState(trkHit, updatedState, updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
                   appendBaselineStateToComponent(*comp, updatedState, hi, bz)) {
                 baselineAccepted = true;
+                posteriorLogWeight = std::log(beforeWeight) -
+                    0.5 * (dchi + measurementUpdate.logDetInnovation);
               }
             }
           } catch (const std::exception& e) {
@@ -951,7 +971,6 @@ StatusCode RecGsfTracking::execute() {
           }
 
           if (baselineAccepted) {
-            comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
             comp->fitChi2 += dchi;
             const double afterKappa = comp->helixAtLastSite(bz).GetKappa();
             const double afterPt = (afterKappa != 0.0) ? 1.0 / std::abs(afterKappa) : 0.0;
@@ -959,9 +978,19 @@ StatusCode RecGsfTracking::execute() {
             minDChi2 = std::min(minDChi2, dchi);
             maxDChi2 = std::max(maxDChi2, dchi);
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
-              info() << boost::format("      UPDATE accept comp[%02d] id=%d pT %.6g -> %.6g dchi2=%.6g chi2=%.6g weight %.6g -> %.6g")
+              info() << boost::format("      UPDATE accept comp[%02d] id=%d pT %.6g -> %.6g dchi2=%.6g chi2=%.6g logDetS=%.6g logWeight %.6g -> %.6g")
                         % (int)accepted.size() % comp->debugId % beforePt % afterPt % dchi % comp->fitChi2
-                        % beforeWeight % comp->weight << endmsg;
+                        % measurementUpdate.logDetInnovation % std::log(beforeWeight) % posteriorLogWeight << endmsg;
+              info() << boost::format("          exact-predicted-state: %s")
+                        % compactMatrix(measurementUpdate.predictedState) << endmsg;
+              info() << boost::format("          exact-Ppred: %s")
+                        % compactMatrix(measurementUpdate.predictedCovariance) << endmsg;
+              info() << boost::format("          exact-measurement: predicted=%s residual=%s H=%s R=%s S=%s")
+                        % compactMatrix(measurementUpdate.predictedMeasurement)
+                        % compactMatrix(measurementUpdate.residual)
+                        % compactMatrix(measurementUpdate.projector)
+                        % compactMatrix(measurementUpdate.measurementCovariance)
+                        % compactMatrix(measurementUpdate.innovationCovariance) << endmsg;
               info() << boost::format("          predict: %s")
                         % compactTrackState(componentState, bz) << endmsg;
               info() << boost::format("          predicted-surface: %s")
@@ -972,6 +1001,7 @@ StatusCode RecGsfTracking::execute() {
                         % compactTrackState(updatedState, bz) % updateChi2 % updateNdf << endmsg;
             }
             accepted.push_back(comp);
+            acceptedLogWeights.push_back(posteriorLogWeight);
             if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
               dchi2s.push_back(dchi);
             }
@@ -986,6 +1016,11 @@ StatusCode RecGsfTracking::execute() {
                         % predictedSurface << endmsg;
               info() << boost::format("          measure: pos=(%.4f,%.4f,%.4f) r=%.4f")
                         % measPos.X() % measPos.Y() % measPos.Z() % hi.radius << endmsg;
+              info() << boost::format("          update-diagnostics: valid=%d Ppred=%s H=%s S=%s")
+                        % (measurementUpdate.valid ? 1 : 0)
+                        % compactMatrix(measurementUpdate.predictedCovariance)
+                        % compactMatrix(measurementUpdate.projector)
+                        % compactMatrix(measurementUpdate.innovationCovariance) << endmsg;
             }
             delete comp;
           }
@@ -1005,16 +1040,17 @@ StatusCode RecGsfTracking::execute() {
         if (comp->kaltrack->AddAndFilter(*st)) {
           double dchi = st->GetDeltaChi2();
           const double oldWeight = comp->weight;
-          comp->weight *= std::exp(-0.5 * std::min(dchi, 100.0));
+          const double posteriorLogWeight = std::log(oldWeight) - 0.5 * std::min(dchi, 100.0);
           nAccept++;
           minDChi2 = std::min(minDChi2, dchi);
           maxDChi2 = std::max(maxDChi2, dchi);
           if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
               (justSplit || (int)comps.size() > 1)) {
-            info() << boost::format("      hit-update accept comp[%02d] dchi2=%.6g w %.6g -> %.6g")
-                      % (int)accepted.size() % dchi % oldWeight % comp->weight << endmsg;
+            info() << boost::format("      hit-update accept comp[%02d] dchi2=%.6g logWeight %.6g -> %.6g")
+                      % (int)accepted.size() % dchi % std::log(oldWeight) % posteriorLogWeight << endmsg;
           }
           accepted.push_back(comp);
+          acceptedLogWeights.push_back(posteriorLogWeight);
           if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
             dchi2s.push_back(dchi);
           }
@@ -1034,6 +1070,7 @@ StatusCode RecGsfTracking::execute() {
               st->SetOwner();
               comp->kaltrack->Add(st);
               accepted.push_back(comp);
+              acceptedLogWeights.push_back(std::log(comp->weight));
               recovered = true;
             }
           }
@@ -1079,6 +1116,13 @@ StatusCode RecGsfTracking::execute() {
         comps.clear();
         break;
       }
+
+      // Convert posterior log weights to a safely scaled linear
+      // representation.  The common shift cancels in normalization.
+      const double maxLogWeight = *std::max_element(
+          acceptedLogWeights.begin(), acceptedLogWeights.end());
+      for (size_t i = 0; i < accepted.size(); ++i)
+        accepted[i]->weight = std::exp(acceptedLogWeights[i] - maxLogWeight);
 
       // ── verbose: prediction vs measurement after pre-hit split ──
       if (m_verboseDump && m_verboseSplitDump && justSplit && !accepted.empty()) {

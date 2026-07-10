@@ -3,6 +3,13 @@
 
 namespace MarlinTrk{
 
+  int IMarlinTrack::addAndFit(edm4hep::TrackerHit& hit, double& chi2increment,
+                              MeasurementUpdate& update,
+                              double maxChi2Increment) {
+    update = MeasurementUpdate{};
+    return addAndFit(hit, chi2increment, maxChi2Increment);
+  }
+
   const bool IMarlinTrack::backward = false ;
   const bool IMarlinTrack::forward  = ! IMarlinTrack::backward;
   
