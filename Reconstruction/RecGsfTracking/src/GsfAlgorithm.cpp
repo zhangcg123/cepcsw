@@ -184,6 +184,11 @@ static double normalizePhi(double phi) {
 
 static edm4hep::TrackState trackStateFromComponent(
     const GsfComponent& comp, double bz, int location) {
+  if (comp.continuationValid) {
+    edm4hep::TrackState ts = comp.continuationState;
+    ts.location = location;
+    return ts;
+  }
   edm4hep::TrackState ts;
   ts.location = location;
   if (!comp.kaltrack || comp.kaltrack->GetEntriesFast() == 0 || bz == 0.0) return ts;
@@ -315,6 +320,8 @@ static bool appendBaselineStateToComponent(
     return false;
   }
   comp.kaltrack->Add(site);
+  comp.continuationState = ts;
+  comp.continuationValid = true;
   return true;
 }
 
@@ -614,6 +621,11 @@ StatusCode RecGsfTracking::initialize() {
     error() << "ReductionMinHitsAfterSplit must be non-negative" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_componentWeightCutoff.value() < 0.0 ||
+      m_componentWeightCutoff.value() >= 1.0) {
+    error() << "ComponentWeightCutoff must be in [0, 1)" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_bhSplitThresh.value() < 0.0) {
     error() << "BHSplitThreshold must be non-negative" << endmsg;
     return StatusCode::FAILURE;
@@ -865,52 +877,7 @@ StatusCode RecGsfTracking::execute() {
                   % (int)ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
       }
 
-      // Apply the material/BH process before the measurement update at this hit.
-      // The current coarse material estimate is attached to the target layer, so
-      // the child hypotheses are what the hit likelihood sees.
       justSplit = false;
-      if (stepTX0 > m_bhSplitThresh && m_isElectron &&
-          (int)comps.size() < m_maxComponents) {
-        if (m_verboseDump && m_verboseSplitDump) {
-          info() << boost::format("  ── BH Split before hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
-                    % ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
-        }
-        BetheHeitlerSplitter bhs(m_bhModel.value());
-        std::vector<GsfComponent*> newCps;
-        for (auto* comp : comps) {
-          const int parentDebugId = comp->debugId;
-          const int childGeneration = comp->generation + 1;
-          double parentKappa = comp->helixAtLastSite(bz).GetKappa();
-          auto children = bhs.split(comp, stepTX0, bz);
-          if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
-            double parentPT = (bz != 0 && parentKappa != 0) ? 1.0/std::abs(parentKappa) : 0;
-            info() << boost::format("    parent kappa=%.4e (pT=%.3f) weight=%.4f -> %d children")
-                      % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
-            for (size_t ci = 0; ci < children.size(); ci++) {
-              double childKappa = children[ci]->helixAtLastSite(bz).GetKappa();
-              double childPT = (bz != 0 && childKappa != 0) ? 1.0/std::abs(childKappa) : 0;
-              info() << boost::format("      child[%d] kappa=%.4e pT=%.3f weight=%.4f")
-                        % ci % childKappa % childPT % children[ci]->weight << endmsg;
-            }
-          }
-          for (auto* c : children) {
-            c->debugId = nextComponentDebugId++;
-            c->debugParentId = parentDebugId;
-            c->generation = childGeneration;
-            c->hitsSinceSplit = 0;
-            newCps.push_back(c);
-          }
-        }
-        comps = std::move(newCps);
-        compsAfterSplit = (int)comps.size();
-        nSplits++;
-        justSplit = true;
-        dumpComponents("after-split/raw", (int)ih, comps);
-      }
-      GsfMixture::normalizeWeights(comps);
-      if (justSplit || (int)comps.size() > 1)
-        dumpComponents("after-split/norm", (int)ih, comps);
-      if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
       const int reductionTarget = (m_reductionTargetComponents.value() > 0)
           ? std::min(m_reductionTargetComponents.value(), m_maxComponents.value())
           : m_maxComponents.value();
@@ -1148,6 +1115,69 @@ StatusCode RecGsfTracking::execute() {
       GsfMixture::normalizeWeights(comps);
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/norm", (int)ih, comps);
+
+      // ACTS-like surface ordering: preserve the filtered measurement state,
+      // then convolve components through the material associated with this
+      // surface.  The splitter writes only the continuation snapshot, leaving
+      // the Kalman measurement history unchanged.
+      if (stepTX0 > m_bhSplitThresh && m_isElectron &&
+          (int)comps.size() < m_maxComponents) {
+        if (m_verboseDump && m_verboseSplitDump) {
+          info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
+                    % ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
+        }
+        BetheHeitlerSplitter bhs(m_bhModel.value());
+        std::vector<GsfComponent*> newCps;
+        for (auto* comp : comps) {
+          const int parentDebugId = comp->debugId;
+          const int childGeneration = comp->generation + 1;
+          const double parentKappa = comp->helixAtLastSite(bz).GetKappa();
+          auto children = bhs.split(comp, stepTX0, bz);
+          if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
+            const double parentPT = (bz != 0 && parentKappa != 0)
+                ? 1.0 / std::abs(parentKappa) : 0.0;
+            info() << boost::format("    filtered parent kappa=%.4e (pT=%.3f) weight=%.4f -> %d post-material children")
+                      % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
+            for (size_t ci = 0; ci < children.size(); ++ci) {
+              const double childKappa = children[ci]->helixAtLastSite(bz).GetKappa();
+              const double childPT = (bz != 0 && childKappa != 0)
+                  ? 1.0 / std::abs(childKappa) : 0.0;
+              const double filteredKappa =
+                  children[ci]->helixAtMeasurementSite(bz).GetKappa();
+              info() << boost::format("      post-material child[%d] filteredKappa=%.4e continuationKappa=%.4e pT=%.3f weight=%.4f")
+                        % ci % filteredKappa % childKappa % childPT
+                        % children[ci]->weight << endmsg;
+            }
+          }
+          for (auto* child : children) {
+            child->debugId = nextComponentDebugId++;
+            child->debugParentId = parentDebugId;
+            child->generation = childGeneration;
+            child->hitsSinceSplit = 0;
+            newCps.push_back(child);
+          }
+        }
+        comps = std::move(newCps);
+        compsAfterSplit = (int)comps.size();
+        ++nSplits;
+        justSplit = true;
+        dumpComponents("after-split/raw", (int)ih, comps);
+        GsfMixture::normalizeWeights(comps);
+        dumpComponents("after-split/norm", (int)ih, comps);
+      } else {
+        compsAfterSplit = (int)comps.size();
+      }
+      if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
+
+      const int beforeCutoff = (int)comps.size();
+      GsfMixture::removeLowWeight(comps, m_componentWeightCutoff.value());
+      if (m_verboseDump && m_verboseSplitDump &&
+          (int)comps.size() != beforeCutoff) {
+        info() << boost::format("  FLOW hit=%3d cutoff: n=%d -> %d threshold=%.3g")
+                  % (int)ih % beforeCutoff % (int)comps.size()
+                  % m_componentWeightCutoff.value() << endmsg;
+        dumpComponents("after-cutoff", (int)ih, comps);
+      }
 
       const bool shouldReduce = ((int)comps.size() > m_maxComponents.value()) ||
           (reductionTarget < m_maxComponents.value() &&

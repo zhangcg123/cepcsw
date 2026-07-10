@@ -78,6 +78,7 @@ private:
   Gaudi::Property<int>    m_reductionTargetComponents{this,"ReductionTargetComponents",0};
   Gaudi::Property<std::string> m_reductionMode{this,"ReductionMode","KL"};
   Gaudi::Property<int>    m_reductionMinHitsAfterSplit{this,"ReductionMinHitsAfterSplit",0};
+  Gaudi::Property<double> m_componentWeightCutoff{this,"ComponentWeightCutoff",1e-8};
   Gaudi::Property<double> m_bhSplitThresh{this,"BHSplitThreshold",1e-4};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};

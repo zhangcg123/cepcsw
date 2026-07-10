@@ -30,6 +30,11 @@ Global status:
   normalization. Focused events 11, 16, and 17 run successfully with these
   diagnostics, but this statistical correction has not recovered truth
   momentum.
+- The forward surface workflow now preserves filtered measurement history in
+  each branch and applies process convolution only to a separate continuation
+  state. Low-weight cutoff and KL reduction operate on common-surface states;
+  focused events 11, 16, and 17 retain all 234 hits with finite KL distances
+  and no measurement-update rejection.
 - True Geant4 pre/post-step data is the authoritative energy-loss truth.
   SimTrackerHit momentum is only a detector-level cross-check.
 - The electron loss tail is physically established. At 1 GeV and theta 85
@@ -114,58 +119,43 @@ Do not lose unique information during that migration.
 
 ## 2. Current focus
 
-The current concentration is explicit material-transition semantics and
-component-dependent path-corrected material, not the resolved hit-update or
-innovation-likelihood problems.
+The current concentration is the remaining tracking workflow: path-order and
+surface navigation first, then a genuine reverse multi-component filtering
+pass to the interaction point. The resolved hit update, innovation likelihood,
+and forward continuation-state separation are not the active blockers.
 
-The ACTS-derived innovation-likelihood issue is resolved: the exact prediction,
-calibrated residual, projector, predicted covariance, and innovation covariance
-come from the accepted MarlinTrk `addAndFit` update, and weights use
-`det(S)^(-1/2)*exp(-deltaChi2/2)`. Event-11 verbose output demonstrates the
-calculation for every branch. At its first two updates the leading components
-have nearly equal innovation likelihoods, so their relative weights remain
-close to the BH priors.
+The completed forward workflow uses
+`update -> preserve filtered state -> convolve continuation state -> cutoff ->
+current-surface KL reduction -> continue`. Events 11, 16, and 17 each retain
+234/234 hits and finish with twelve components. Their GSF pT values remain
+1.7933, 1.8118, and 1.5789 GeV, respectively, so no momentum-recovery claim is
+made.
 
-The next defect includes both transition semantics and surface ordering. The
-current code splits before the target measurement and rewrites kappa and
-covariance in the preceding stored Kalman site. In the reviewed ACTS workflow,
-components first propagate and bind to the current surface, undergo the
-measurement update there, and are then convolved with that surface's
-direction-aware, locally evaluated, path-corrected material slab before
-continuing. CEPC must explicitly map its material slabs to measurement surfaces
-before adopting that ordering; it must not silently assume all target-layer
-material lies before the hit.
-
-With the corrected likelihood, event 11 retains all 234 hits but selects a
-1.2167 GeV branch against truth pT 2.0004 GeV and LCIO pT 1.7934 GeV. Events
-16 and 17 also complete successfully; complete transition-level physics
-validation remains pending. The exact dumps show that branches separate, but
-the first two measurements have very similar innovation likelihoods across
-the leading components and therefore add little early discrimination.
+The current hit list is still primarily ordered by transverse radius. This is
+not a general signed track-path order and cannot safely define reverse surface
+traversal for curling, displaced, endcap/barrel, or repeated-crossing tracks.
+The current `SmoothAll` and IP extrapolation are also not a reverse GSF pass.
 
 Proceed in this order:
 
 1. Use event 11 for step-level verbose development and events 11, 16, and 17 as
    the primary validation set.
-2. Establish the CEPC surface convention: identify which material belongs to
-   the pre-measurement and post-measurement side of each sensitive surface and
-   prevent double counting at start and target surfaces.
-3. Replace the preceding-site rewrite with surface-bound, direction-aware BH
-   convolution. Following ACTS where the geometry supports it, update the
-   measurement first, preserve that filtered surface state, convolve its
-   components through the local material slab, reduce, and continue propagation.
-4. Compute component-local, incidence-path-corrected `t/X0` and dump the
-   filtered pre-material state, local slab/path correction, post-material
-   component state, and following exact innovation for every branch.
-5. Validate those transition semantics first on two event-11 steps and then on
-   complete runs of events 11, 16, and 17.
-6. Fit a Bethe-Heitler mixture conditioned on actual per-step `t/X0` using
+2. Audit radius ordering against signed path order and explicit surface IDs in
+   events 11, 16, and 17; detect repeated and non-monotonic crossings.
+3. Establish forward/reverse ownership of the start and final surfaces so
+   process transitions are not double counted.
+4. Implement reverse multi-component filtering from the final forward
+   measurement mixture through reversed measurements and surface transitions.
+5. Apply the exact posterior likelihood, low-weight cutoff, and current-surface
+   KL reduction during the reverse pass, with full event-11 component dumps.
+6. Validate the IP mixture on events 11, 16, and 17 before changing material or
+   BH physics.
+7. Compute component-local, incidence-path-corrected `t/X0`, then fit a
+   Bethe-Heitler mixture conditioned on actual per-step `t/X0` using
    primary-electron tracker-volume Geant4 eBrem truth.
-7. Retain 4-5 hypotheses with current-surface KL reduction and a low-weight
+8. Retain 4-5 hypotheses with current-surface KL reduction and a low-weight
    cutoff; then determine whether the provisional component-age policy is
    still needed.
-8. Implement and validate reverse multi-component propagation to the
-   interaction point.
 9. Only then run broad GSF-versus-LCIO performance studies.
 
 Success means that a retained hard-loss branch accumulates measurement support

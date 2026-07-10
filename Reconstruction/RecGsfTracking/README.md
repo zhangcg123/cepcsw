@@ -27,6 +27,7 @@ been removed; historical comparisons remain under `agents_record/`.
 | `ReductionTargetComponents` | `0` | Target after reduction; `0` means `MaxComponents`. |
 | `ReductionMode` | `"KL"` | Select KL moment merging or `TopN` weight pruning. |
 | `ReductionMinHitsAfterSplit` | `0` | Minimum successful hit updates each branch must survive after its latest split before reduction. Set to several hits for delayed pruning studies. |
+| `ComponentWeightCutoff` | `1e-8` | Remove normalized post-transition components below this weight while preserving at least the largest component. |
 | `GSFOutputMode` | `"BestBranch"` | Publish the best branch or `WeightedMean`. |
 | `MaterialIPExtrapolation` | `false` | Include material when extrapolating the selected state to the IP. |
 

@@ -15,6 +15,7 @@ namespace GsfMixture {
 
 // ============================================================================
 void normalizeWeights(std::vector<GsfComponent*>& comps) {
+  if (comps.empty()) return;
   double sum = 0.0;
   for (auto* c : comps) sum += c->weight;
   if (sum < 1e-30) {
@@ -24,21 +25,44 @@ void normalizeWeights(std::vector<GsfComponent*>& comps) {
   for (auto* c : comps) c->weight /= sum;
 }
 
+void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff) {
+  if (comps.empty() || cutoff <= 0.0) return;
+  normalizeWeights(comps);
+  auto* largest = *std::max_element(
+      comps.begin(), comps.end(),
+      [](const GsfComponent* a, const GsfComponent* b) {
+        return a->weight < b->weight;
+      });
+  auto out = comps.begin();
+  for (auto* component : comps) {
+    if (component->weight >= cutoff || component == largest) {
+      *out++ = component;
+    } else {
+      delete component;
+    }
+  }
+  comps.erase(out, comps.end());
+  normalizeWeights(comps);
+}
+
 // ============================================================================
 /// Full-covariance KL divergence between two multivariate Gaussians.
 ///   KL(P‖Q) = ½ [ ln(|ΣQ|/|ΣP|) - d + tr(ΣQ⁻¹ ΣP) + (μQ-μP)ᵀ ΣQ⁻¹ (μQ-μP) ]
 static double klDirectional(GsfComponent* p, GsfComponent* q,
-                             const TMatrixD& muP, const TMatrixD& muQ) {
-  TMatrixD covP = p->covAtLastSite();
-  TMatrixD covQ = q->covAtLastSite();
+                             const TMatrixD& muP, const TMatrixD& muQ,
+                             double bz) {
+  TMatrixD covP = p->covAtLastSite(bz);
+  TMatrixD covQ = q->covAtLastSite(bz);
 
   static constexpr int d = 5;
-  constexpr double eps = 1e-12;
-
   // Determinants
   double detP = covP.Determinant();
   double detQ = covQ.Determinant();
-  if (detP < eps || detQ < eps || std::isnan(detP) || std::isnan(detQ))
+  // Track covariances have mixed physical units, so their 5-D determinants
+  // can legitimately be far below an absolute epsilon (typically 1e-22 here).
+  // Reject only non-positive or non-finite matrices.
+  if (!(detP > 0.0) || !(detQ > 0.0) ||
+      !std::isfinite(detP) || !std::isfinite(detQ))
     return 1e30;
 
   double logDetP = std::log(detP);
@@ -66,74 +90,13 @@ static double klDirectional(GsfComponent* p, GsfComponent* q,
   return result;
 }
 
-static TMatrixD stateMean5(const TKalTrackState& state) {
-  TMatrixD mean(5, 1);
-  for (int r = 0; r < 5; r++) mean(r, 0) = state(r, 0);
-  return mean;
+static double wrapNear(double value, double reference) {
+  while (value - reference >= M_PI) value -= 2.0 * M_PI;
+  while (value - reference < -M_PI) value += 2.0 * M_PI;
+  return value;
 }
 
-static TMatrixD stateCov5(const TKalTrackState& state) {
-  TMatrixD cov(5, 5);
-  const auto& kCov = state.GetCovMat();
-  for (int r = 0; r < 5; r++)
-    for (int c = 0; c < 5; c++)
-      cov(r, c) = kCov(r, c);
-  return cov;
-}
-
-static void overwriteState5(TKalTrackState& state,
-                            const TMatrixD& mean,
-                            const TMatrixD& cov) {
-  for (int r = 0; r < 5; r++) state(r, 0) = mean(r, 0);
-
-  TKalMatrix kCov = state.GetCovMat();
-  for (int r = 0; r < 5; r++)
-    for (int c = 0; c < 5; c++)
-      kCov(r, c) = cov(r, c);
-  state.SetCovMat(kCov);
-}
-
-static void momentMergeState(TKalTrackState& keepState,
-                             const TKalTrackState& dropState,
-                             double wk, double wd) {
-  TMatrixD muK = stateMean5(keepState);
-  TMatrixD muD = stateMean5(dropState);
-
-  TMatrixD mergedMu = muK;
-  mergedMu *= wk;
-  TMatrixD weightedDropMu = muD;
-  weightedDropMu *= wd;
-  mergedMu += weightedDropMu;
-
-  TMatrixD covK = stateCov5(keepState);
-  TMatrixD covD = stateCov5(dropState);
-  TMatrixD dK = muK - mergedMu;
-  TMatrixD dD = muD - mergedMu;
-  TMatrixD dKT(TMatrixD::kTransposed, dK);
-  TMatrixD dDT(TMatrixD::kTransposed, dD);
-
-  TMatrixD mergedCov = covK + dK * dKT;
-  mergedCov *= wk;
-  TMatrixD dropCovTerm = covD + dD * dDT;
-  dropCovTerm *= wd;
-  mergedCov += dropCovTerm;
-
-  overwriteState5(keepState, mergedMu, mergedCov);
-}
-
-static void momentMergeSite(TKalTrackSite& keepSite,
-                            const TKalTrackSite& dropSite,
-                            double wk, double wd) {
-  const int nStates = std::min(keepSite.GetEntries(), dropSite.GetEntries());
-  for (int j = 0; j < nStates; j++) {
-    auto* keepState = dynamic_cast<TKalTrackState*>(keepSite.At(j));
-    auto* dropState = dynamic_cast<const TKalTrackState*>(dropSite.At(j));
-    if (!keepState || !dropState) continue;
-    momentMergeState(*keepState, *dropState, wk, wd);
-  }
-}
-
-static void momentMerge(GsfComponent* keep, GsfComponent* drop, double /*bz*/) {
+static void momentMerge(GsfComponent* keep, GsfComponent* drop, double bz) {
   const double totalWeight = keep->weight + drop->weight;
   if (totalWeight <= 0.0) return;
 
@@ -143,16 +106,32 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double /*bz*/) {
   const std::string dropHistory = drop->debugHistory;
   const double mergedChi2 = wk * keep->fitChi2 + wd * drop->fitChi2;
 
-  if (keep->kaltrack && drop->kaltrack) {
-    const int nSites = std::min(keep->kaltrack->GetEntriesFast(),
-                                drop->kaltrack->GetEntriesFast());
-    for (int i = 0; i < nSites; i++) {
-      auto* keepSite = dynamic_cast<TKalTrackSite*>(keep->kaltrack->At(i));
-      auto* dropSite = dynamic_cast<const TKalTrackSite*>(drop->kaltrack->At(i));
-      if (!keepSite || !dropSite) continue;
-      momentMergeSite(*keepSite, *dropSite, wk, wd);
-    }
-  }
+  TMatrixD muK(5, 1), muD(5, 1);
+  keep->helixAtLastSite(bz).PutInto(muK);
+  drop->helixAtLastSite(bz).PutInto(muD);
+  muD(1, 0) = wrapNear(muD(1, 0), muK(1, 0));
+
+  TMatrixD mergedMu = muK;
+  mergedMu *= wk;
+  TMatrixD weightedDropMu = muD;
+  weightedDropMu *= wd;
+  mergedMu += weightedDropMu;
+
+  const TMatrixD covK = keep->covAtLastSite(bz);
+  const TMatrixD covD = drop->covAtLastSite(bz);
+  TMatrixD dK = muK - mergedMu;
+  TMatrixD dD = muD - mergedMu;
+  TMatrixD dKT(TMatrixD::kTransposed, dK);
+  TMatrixD dDT(TMatrixD::kTransposed, dD);
+  TMatrixD mergedCov = covK + dK * dKT;
+  mergedCov *= wk;
+  TMatrixD dropTerm = covD + dD * dDT;
+  dropTerm *= wd;
+  mergedCov += dropTerm;
+
+  // Only the common-surface continuation state is merged.  The retained
+  // component's measurement history remains a real representative history.
+  keep->setContinuationSurfaceState(mergedMu, mergedCov, bz);
 
   keep->weight = totalWeight;
   keep->fitChi2 = mergedChi2;
@@ -167,8 +146,8 @@ static double klDistance(GsfComponent* a, GsfComponent* b, double bz) {
   a->helixAtLastSite(bz).PutInto(muA);
   b->helixAtLastSite(bz).PutInto(muB);
 
-  double klAB = klDirectional(a, b, muA, muB);
-  double klBA = klDirectional(b, a, muB, muA);
+  double klAB = klDirectional(a, b, muA, muB, bz);
+  double klBA = klDirectional(b, a, muB, muA, bz);
   return 0.5 * (klAB + klBA);
 }
 
@@ -203,11 +182,11 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
     const double wj = comps[bj]->weight;
     const double ki = comps[bi]->helixAtLastSite(bz).GetKappa();
     const double kj = comps[bj]->helixAtLastSite(bz).GetKappa();
-    const double detI = comps[bi]->covAtLastSite().Determinant();
-    const double detJ = comps[bj]->covAtLastSite().Determinant();
+    const double detI = comps[bi]->covAtLastSite(bz).Determinant();
+    const double detJ = comps[bj]->covAtLastSite(bz).Determinant();
 
-    // Merge by moment matching the common branch history, then keep the
-    // merged trajectory as the representative component for propagation.
+    // Merge only the common current-surface continuation state, then keep one
+    // real measurement history as the representative branch.
     if (comps[bi]->weight < comps[bj]->weight)
       std::swap(bi, bj);
     momentMerge(comps[bi], comps[bj], bz);
