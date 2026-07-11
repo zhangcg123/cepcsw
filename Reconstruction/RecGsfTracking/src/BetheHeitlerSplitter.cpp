@@ -5,6 +5,7 @@
 #include "kaltest/TKalTrackSite.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <stdexcept>
 #include <sstream>
@@ -16,10 +17,11 @@ namespace {
 
 struct BHComponent { double weight, mean, var; };
 
-/// Evaluate polynomial: c[0] + c[1]*x + c[2]*x^2 + ... + c[degree]*x^degree
+/// ACTS/ATLAS coefficient convention: c[0] is the highest-order term and
+/// c[degree] is the constant term. This matches ACTS's Horner evaluation.
 inline double poly(double x, const double* c, int degree) {
   double sum = 0;
-  for (int i = degree; i >= 0; i--) sum = x * sum + c[i];
+  for (int i = 0; i <= degree; i++) sum = x * sum + c[i];
   return sum;
 }
 
@@ -75,24 +77,134 @@ constexpr double kActsSingleGaussianLimit = 0.002;
 constexpr double kActsLowerParameterLimit = 0.1;
 constexpr double kActsHigherLimit = 0.2;
 
-/// Simulation-derived global retained-fraction model from
-/// BHModelComparisonStudies/globalBHmodelfromSim@2GeV85Degree.
-///
-/// Fit target: 2 GeV, theta=85 deg primary electron tracker eBrem,
-/// z = post_p/pre_p. Components are distinct-mean truncated Gaussians
-/// normalized on [0,1], refit directly to the 120-bin truth histogram in
-/// tracker_ebrem_efei_gaussian_components_distinct5.csv. The listed weights
-/// are already the in-range probability masses. The current split
-/// implementation uses weight and mean to create hypotheses; the variance is
-/// retained for covariance propagation and model provenance.
-std::vector<BHComponent> globalSim2GeV85Mixture(double /*x*/) {
-  return {
-      {0.0242290286362, 0.365756880771, 0.0894763172003 * 0.0894763172003},
-      {0.0344751132969, 0.678493222570, 0.0581046301255 * 0.0581046301255},
-      {0.2026543705130, 0.974999959756, 0.1135499472140 * 0.1135499472140},
-      {0.1593402754360, 0.994999996168, 0.0264108788879 * 0.0264108788879},
-      {0.5793012121180, 0.999949999762, 0.00493729677128 * 0.00493729677128},
-  };
+/// Same-sample execution artifact from
+/// data/CEPC2GeV85StepConditioned/cepc2gev85_step_conditioned.json.
+/// Interpolation follows that artifact exactly; this scoped model is not
+/// physics validation.
+constexpr size_t kCepcKnotCount = 8;
+constexpr size_t kCepcComponentCount = 5;
+constexpr double kCepcWeightFloor = 1e-12;
+constexpr double kCepcMeanEpsilon = 1e-9;
+constexpr double kCepcVarianceFloor = 1e-12;
+
+static constexpr std::array<double, kCepcKnotCount> cepcTX0 = {{
+    5.0000000000000002e-05, 0.00022360679774997898,
+    0.001, 0.0031622776601683794, 0.0070710678118654753,
+    0.012247448713915889, 0.017320508075688773,
+    0.024494897427831779}};
+
+static constexpr double cepcWeights[kCepcKnotCount][kCepcComponentCount] = {
+    {0.9965097820933061, 0.0032185045457356672, 0.00012245655266250233, 7.9576143649370189e-05, 6.9680664646339698e-05},
+    {0.87008084940580566, 0.12831190337034876, 0.0009984414572374832, 0.000340931229300604, 0.00026787453730761743},
+    {0.95744153170804291, 0.038342303018278318, 0.0019840777758488135, 0.0010912427767168474, 0.0011408447211130677},
+    {0.59932257421797175, 0.36600916517234511, 0.017931858936043037, 0.0094640366606893803, 0.0072723650129507874},
+    {0.0018937600606003223, 0.93838967269513629, 0.031404854338288678, 0.016475712527222804, 0.011836000378752013},
+    {0.0, 0.9149185198523454, 0.03722877464661925, 0.026244710542900875, 0.021607994958134511},
+    {0.0, 0.84926884139482561, 0.070866141732283464, 0.043869516310461196, 0.0359955005624297},
+    {0.0, 0.5597920277296361, 0.27036395147313691, 0.079722703639514725, 0.090121317157712308}};
+
+static constexpr double cepcMeans[kCepcKnotCount][kCepcComponentCount] = {
+    {0.99999811391315019, 0.99938688500060302, 0.97617963579030098, 0.89269820354133711, 0.54228065295083616},
+    {0.99998047457474859, 0.99961208001603763, 0.98078234822899879, 0.88097879266387447, 0.61056764207947289},
+    {0.99998509587401396, 0.99911725277295882, 0.97716525500206708, 0.90243815104595593, 0.57007756399784459},
+    {0.99991481811354443, 0.99953613012669662, 0.97564721474571958, 0.89909651661696777, 0.54352176936338537},
+    {0.99991999301828394, 0.99953248416091778, 0.97675773836350976, 0.89851360714856876, 0.53865488274246753},
+    {1.0, 0.9993549086350817, 0.97524610025529535, 0.89423348465003205, 0.55164047060437005},
+    {1.0, 0.99856506652807908, 0.976923320066443, 0.89589451425672062, 0.50750544512066587},
+    {1.0, 0.99712776666391623, 0.97842076290488311, 0.9007924013632066, 0.52141167311299952}};
+
+static constexpr double cepcVariances[kCepcKnotCount][kCepcComponentCount] = {
+    {3.3372860031022356e-11, 1.4912932545518842e-06, 0.00012116083220237162, 0.0016667582707591277, 0.048297685187217387},
+    {3.6621883303666891e-10, 4.1020433305671844e-07, 5.7236966114704302e-05, 0.0012285854352461767, 0.016812978691541913},
+    {1.5192502811345321e-10, 2.8139546006666905e-06, 0.00012250065676688848, 0.0013636559662150161, 0.051250747922331974},
+    {6.1595950562320922e-11, 1.4410967023037458e-06, 0.00012241265019885539, 0.0015480717521817455, 0.047326773871511407},
+    {9.4471763745218595e-11, 1.063007537327465e-06, 0.00011859343832043567, 0.0016571173623998181, 0.045583739695020109},
+    {1e-12, 1.6044829763695034e-06, 0.00012679998906051093, 0.0016828516931821635, 0.041075174846030127},
+    {1e-12, 3.6069453316356359e-06, 0.00011915982398802427, 0.0015079659222358988, 0.056943939908073782},
+    {1e-12, 7.2875506121894418e-06, 8.8171979417239754e-05, 0.0018923590562457404, 0.05778801862206423}};
+
+inline double boundedLogit(double value) {
+  value = std::min(1.0 - kCepcMeanEpsilon,
+                   std::max(kCepcMeanEpsilon, value));
+  return std::log(value / (1.0 - value));
+}
+
+inline double stableInvLogit(double value) {
+  if (value >= 0.0) {
+    const double e = std::exp(-value);
+    return 1.0 / (1.0 + e);
+  }
+  const double e = std::exp(value);
+  return e / (1.0 + e);
+}
+
+std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
+  std::vector<BHComponent> result(kCepcComponentCount);
+  if (!(x > 0.0)) {
+    result[0] = {1.0, 1.0, kCepcVarianceFloor};
+    for (size_t i = 1; i < result.size(); ++i)
+      result[i] = {0.0, 1.0, kCepcVarianceFloor};
+    return result;
+  }
+
+  if (x < cepcTX0.front()) {
+    const double fraction = x / cepcTX0.front();
+    double weightSum = 0.0;
+    for (size_t i = 0; i < result.size(); ++i) {
+      const double zeroWeight = (i == 0) ? 1.0 : 0.0;
+      result[i].weight = (1.0 - fraction) * zeroWeight +
+                         fraction * cepcWeights[0][i];
+      result[i].mean = 1.0 - fraction * (1.0 - cepcMeans[0][i]);
+      result[i].var = kCepcVarianceFloor * std::exp(
+          fraction * std::log(cepcVariances[0][i] / kCepcVarianceFloor));
+      weightSum += result[i].weight;
+    }
+    for (auto& component : result) component.weight /= weightSum;
+    return result;
+  }
+
+  size_t lower = kCepcKnotCount - 1;
+  size_t upper = lower;
+  double fraction = 0.0;
+  if (x < cepcTX0.back()) {
+    upper = 1;
+    while (upper < kCepcKnotCount && cepcTX0[upper] < x) ++upper;
+    lower = upper - 1;
+    fraction = ((std::log(x) - std::log(cepcTX0[lower])) /
+                (std::log(cepcTX0[upper]) - std::log(cepcTX0[lower])));
+  }
+
+  if (lower == upper) {
+    for (size_t i = 0; i < result.size(); ++i)
+      result[i] = {cepcWeights[lower][i], cepcMeans[lower][i],
+                   cepcVariances[lower][i]};
+    return result;
+  }
+
+  std::array<double, kCepcComponentCount> unnormalized{};
+  unnormalized[0] = 1.0;
+  double weightSum = 1.0;
+  for (size_t i = 1; i < result.size(); ++i) {
+    const double leftCoordinate = std::log(
+        std::max(cepcWeights[lower][i], kCepcWeightFloor) /
+        std::max(cepcWeights[lower][0], kCepcWeightFloor));
+    const double rightCoordinate = std::log(
+        std::max(cepcWeights[upper][i], kCepcWeightFloor) /
+        std::max(cepcWeights[upper][0], kCepcWeightFloor));
+    unnormalized[i] = std::exp((1.0 - fraction) * leftCoordinate +
+                               fraction * rightCoordinate);
+    weightSum += unnormalized[i];
+  }
+  for (size_t i = 0; i < result.size(); ++i) {
+    result[i].weight = unnormalized[i] / weightSum;
+    result[i].mean = stableInvLogit(
+        (1.0 - fraction) * boundedLogit(cepcMeans[lower][i]) +
+        fraction * boundedLogit(cepcMeans[upper][i]));
+    result[i].var = std::exp(
+        (1.0 - fraction) * std::log(cepcVariances[lower][i]) +
+        fraction * std::log(cepcVariances[upper][i]));
+  }
+  return result;
 }
 
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
@@ -143,20 +255,6 @@ std::vector<BHComponent> actsAtlasMixture(double x) {
   return result;
 }
 
-/// Preserve the pre-existing CEPC thin-material test model unchanged.
-std::vector<BHComponent> currentMixture(double x) {
-  if (x < kActsNoChangeLimit) return {{1.0, 1.0, 0.0}};
-  if (x < kActsLowerParameterLimit) {
-    const double expectedMean = std::exp(-x);
-    const double tailWeight = std::min(0.20, std::max(0.02, 10.0 * x));
-    double tailMean = (expectedMean - (1.0 - tailWeight)) / tailWeight;
-    tailMean = std::min(0.999, std::max(0.50, tailMean));
-    return {{1.0 - tailWeight, 1.0, 0.0},
-            {tailWeight, tailMean, x * x}};
-  }
-  return actsAtlasMixture(x);
-}
-
 } // anonymous namespace
 
 // ============================================================================
@@ -170,25 +268,22 @@ BetheHeitlerSplitter::BetheHeitlerSplitter(const std::string& modelName)
     : m_model(modelFromName(modelName)) {}
 
 BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::string& modelName) {
-  if (modelName == "Current" || modelName == "current" || modelName == "default") {
-    return Model::Current;
-  }
   if (modelName == "ActsAtlas" || modelName == "actsAtlas" ||
       modelName == "ACTS" || modelName == "Acts") {
     return Model::ActsAtlas;
   }
-  if (modelName == "GlobalSim2GeV85" || modelName == "globalSim2GeV85" ||
-      modelName == "globalBHmodelfromSim@2GeV85Degree") {
-    return Model::GlobalSim2GeV85;
+  if (modelName == "CEPC2GeV85StepConditioned" ||
+      modelName == "cepc2GeV85StepConditioned") {
+    return Model::CEPC2GeV85StepConditioned;
   }
   throw std::invalid_argument("Unknown Bethe-Heitler model option: " + modelName);
 }
 
 const char* BetheHeitlerSplitter::modelName(Model model) {
   switch (model) {
-    case Model::Current: return "Current";
     case Model::ActsAtlas: return "ActsAtlas";
-    case Model::GlobalSim2GeV85: return "GlobalSim2GeV85";
+    case Model::CEPC2GeV85StepConditioned:
+      return "CEPC2GeV85StepConditioned";
   }
   return "Unknown";
 }
@@ -198,14 +293,11 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
 
   std::vector<BHComponent> mixture;
   switch (m_model) {
-    case Model::Current:
-      mixture = currentMixture(tX0);
-      break;
     case Model::ActsAtlas:
       mixture = actsAtlasMixture(tX0);
       break;
-    case Model::GlobalSim2GeV85:
-      mixture = globalSim2GeV85Mixture(tX0);
+    case Model::CEPC2GeV85StepConditioned:
+      mixture = cepc2GeV85StepConditionedMixture(tX0);
       break;
   }
   const double parentKappa = parent->helixAtLastSite(bz).GetKappa();
@@ -236,6 +328,15 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
           << ",s=" << std::sqrt(std::max(mixture[i].var, 0.0)) << "]";
       if (!child->debugHistory.empty()) child->debugHistory += "->";
       child->debugHistory += dbg.str();
+      constexpr std::size_t maxHistoryLength = 4096;
+      constexpr std::size_t historyEdgeLength = 2000;
+      if (child->debugHistory.size() > maxHistoryLength) {
+        child->debugHistory =
+            child->debugHistory.substr(0, historyEdgeLength) +
+            "...<history-truncated>..." +
+            child->debugHistory.substr(
+                child->debugHistory.size() - historyEdgeLength);
+      }
     }
 
     // Preserve the filtered measurement state in the Kalman history.  The BH

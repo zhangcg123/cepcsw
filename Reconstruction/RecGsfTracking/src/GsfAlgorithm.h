@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <fstream>
 
 #include "TrackSystemSvc/HelixTrack.h"
 
@@ -20,6 +21,7 @@ class DDCylinderMeasLayer;
 class DDVMeasLayer;
 class TVKalDetector;
 class ITrackSystemSvc;
+namespace dd4hep { namespace rec { class MaterialManager; } }
 
 /// Per-track comparison tuple for downstream analysis / plotting
 struct TrackSummary {
@@ -90,9 +92,19 @@ private:
   Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
-  Gaudi::Property<std::string> m_bhModel{this,"BHModel","Current"};
+  Gaudi::Property<std::string> m_bhModel{
+      this, "BHModel", "CEPC2GeV85StepConditioned"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
+  Gaudi::Property<std::string> m_materialPathMode{
+      this, "MaterialPathMode", "CurrentSurface",
+      "CurrentSurface or DD4hepBetweenSurfaces"};
+  Gaudi::Property<std::string> m_materialTransitionCSV{
+      this, "MaterialTransitionCSV", "",
+      "Optional component-local outgoing-surface material transition CSV"};
   MarlinTrk::IMarlinTrkSystem* m_gsfMarlinTrkSystem = nullptr;
+
+  std::ofstream m_materialTransitionStream;
+  dd4hep::rec::MaterialManager* m_materialManager = nullptr;
 
   int m_nEvt = 0;
   std::vector<TrackSummary> m_summaries;  // accumulated per-track data

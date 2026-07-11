@@ -5,6 +5,7 @@
 
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
+#include "DDRec/MaterialManager.h"
 
 #include "kaltest/TKalDetCradle.h"
 #include "kaltest/TKalTrackState.h"
@@ -29,9 +30,9 @@
 
 #include <boost/format.hpp>
 #include <cmath>
+#include <iomanip>
 #include <algorithm>
 #include <sstream>
-#include <iomanip>
 #include <exception>
 #include <memory>
 #include <limits>
@@ -707,6 +708,66 @@ static bool weightedMixtureAtIP(const std::vector<GsfComponent*>& comps,
   return true;
 }
 
+/// Moment-match the reverse-filter continuation mixture at the IP. Reverse
+/// tracks are stored outer-to-inner, so the forward helper cannot obtain their
+/// innermost state from kaltrack->At(1).
+static bool weightedReverseMixtureAtIP(
+    const std::vector<GsfComponent*>& comps, double bz,
+    THelicalTrack& outHelix, TMatrixD& outCov) {
+  std::vector<double> weights;
+  std::vector<TMatrixD> means;
+  std::vector<TMatrixD> covariances;
+  double sumWeight = 0.0;
+  double phiReference = 0.0;
+  bool havePhiReference = false;
+
+  for (const auto* comp : comps) {
+    if (!comp || comp->weight <= 0.0) continue;
+    THelicalTrack helix(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD covariance(5, 5);
+    if (!extrapolateContinuationToIP(*comp, bz, helix, covariance)) continue;
+    TMatrixD mean(5, 1);
+    helixToMean(helix, mean);
+    if (!havePhiReference) {
+      phiReference = mean(1, 0);
+      havePhiReference = true;
+    } else {
+      wrapPhiNear(mean(1, 0), phiReference);
+    }
+    weights.push_back(comp->weight);
+    means.push_back(mean);
+    covariances.push_back(covariance);
+    sumWeight += comp->weight;
+  }
+  if (weights.empty() || sumWeight <= 0.0) return false;
+
+  TMatrixD mergedMean(5, 1);
+  mergedMean.Zero();
+  for (size_t i = 0; i < weights.size(); ++i) {
+    TMatrixD term = means[i];
+    term *= weights[i] / sumWeight;
+    mergedMean += term;
+  }
+  wrapPhiNear(mergedMean(1, 0), 0.0);
+
+  TMatrixD mergedCovariance(5, 5);
+  mergedCovariance.Zero();
+  for (size_t i = 0; i < weights.size(); ++i) {
+    const double weight = weights[i] / sumWeight;
+    TMatrixD delta = means[i] - mergedMean;
+    wrapPhiNear(delta(1, 0), 0.0);
+    TMatrixD deltaT(TMatrixD::kTransposed, delta);
+    TMatrixD term = covariances[i] + delta * deltaT;
+    term *= weight;
+    mergedCovariance += term;
+  }
+
+  outCov.ResizeTo(5, 5);
+  outCov = mergedCovariance;
+  outHelix = THelicalTrack(mergedMean, TVector3(0, 0, 0), bz);
+  return true;
+}
+
 /// Fill an edm4hep TrackState from a THelicalTrack + 5x5 cov
 static void fillTrackState(edm4hep::TrackState& ts,
                             const THelicalTrack& h,
@@ -766,6 +827,8 @@ struct ComponentMaterialPath {
   double normalTX0 = 0.0;
   double pathTX0 = 0.0;
   double absCosIncidence = 0.0;
+  int layerCount = 0;
+  std::string layerAudit;
   bool valid = false;
 };
 
@@ -796,8 +859,133 @@ static ComponentMaterialPath componentMaterialPath(
     return result;
   }
   result.pathTX0 = result.normalTX0 / result.absCosIncidence;
+  result.layerCount = 1;
   result.valid = std::isfinite(result.pathTX0) && result.pathTX0 > 0.0;
   return result;
+}
+
+/// Diagnostic full material interval from the current measurement surface up
+/// to, but excluding, the next measurement surface. This follows the cradle's
+/// sorted layer interval and therefore includes passive support/wall layers
+/// that componentMaterialPath(currentLayer) cannot see. It is deliberately
+/// not used by the BH splitter until matched G4 transitions validate it.
+static ComponentMaterialPath componentTransitionMaterialPath(
+    const TKalDetCradle* cradle, const DDVMeasLayer* fromLayer,
+    const DDVMeasLayer* toLayer, const TVector3& destinationPoint,
+    const GsfComponent& component, double bz) {
+  ComponentMaterialPath result = componentMaterialPath(
+      fromLayer, component, bz);
+  if (!cradle || !fromLayer || !toLayer) return result;
+  const int fromIndex = fromLayer->GetIndex();
+  const int toIndex = toLayer->GetIndex();
+  if (toIndex <= fromIndex) return result;
+
+  THelicalTrack helix = component.helixAtMeasurementSite(bz);
+  const TVector3 start = helix.GetPivot();
+  const double destinationDistance = (destinationPoint - start).Mag();
+  if (result.valid) {
+    std::ostringstream audit;
+    audit << fromIndex << ':' << fromLayer->GetName() << ':'
+          << (fromLayer->IsActive() ? 1 : 0) << ':'
+          << result.normalTX0 << ':' << result.pathTX0;
+    result.layerAudit = audit.str();
+  }
+
+  for (int index = fromIndex + 1; index < toIndex; ++index) {
+    const auto* layer = dynamic_cast<const DDVMeasLayer*>(cradle->At(index));
+    const auto* surface = dynamic_cast<const TVSurface*>(layer);
+    if (!layer || !surface || !layer->surface()) continue;
+    // The next actual measurement hit defines the active destination. Other
+    // active layers interleaved in cradle sorting belong to different bounded
+    // ladders/modules and must not be assigned to this transition.
+    if (layer->IsActive()) continue;
+
+    TVector3 crossing;
+    double phi = 0.0;
+    if (!surface->CalcXingPointWith(helix, crossing, phi, 1)) continue;
+    if ((crossing - start).Mag() - 1.0 > destinationDistance) continue;
+    const dd4hep::rec::Vector3D ddCrossing(
+        crossing.X() * dd4hep::mm, crossing.Y() * dd4hep::mm,
+        crossing.Z() * dd4hep::mm);
+    if (!layer->surface()->insideBounds(ddCrossing)) continue;
+
+    const double normalTX0 = thicknessInX0(layer);
+    if (!(normalTX0 > 0.0)) continue;
+    const TMatrixD tangentMatrix = helix.CalcDxDphi(phi);
+    TVector3 tangent(tangentMatrix(0, 0), tangentMatrix(1, 0),
+                     tangentMatrix(2, 0));
+    if (!(tangent.Mag2() > 0.0)) continue;
+    tangent = tangent.Unit();
+    TVector3 normal = surface->GetOutwardNormal(crossing);
+    if (!(normal.Mag2() > 0.0)) continue;
+    normal = normal.Unit();
+    const double absCos = std::abs(tangent.Dot(normal));
+    if (!(absCos > 1.0e-6) || !std::isfinite(absCos)) continue;
+
+    result.normalTX0 += normalTX0;
+    const double layerPathTX0 = normalTX0 / absCos;
+    result.pathTX0 += layerPathTX0;
+    ++result.layerCount;
+    if (!result.layerAudit.empty()) result.layerAudit += '|';
+    std::ostringstream audit;
+    audit << index << ':' << layer->GetName() << ':'
+          << (layer->IsActive() ? 1 : 0) << ':'
+          << normalTX0 << ':' << layerPathTX0;
+    result.layerAudit += audit.str();
+  }
+
+  result.absCosIncidence = result.pathTX0 > 0.0
+      ? result.normalTX0 / result.pathTX0 : 0.0;
+  result.valid = result.layerCount > 0 && std::isfinite(result.pathTX0) &&
+      result.pathTX0 > 0.0;
+  return result;
+}
+
+static ComponentMaterialPath geometryTransitionMaterialPath(
+    dd4hep::rec::MaterialManager* manager, const TVector3& from,
+    const TVector3& to) {
+  ComponentMaterialPath result;
+  if (!manager || (to - from).Mag2() <= 0.0) return result;
+  const dd4hep::rec::Vector3D p0(from.X() * dd4hep::mm,
+                                  from.Y() * dd4hep::mm,
+                                  from.Z() * dd4hep::mm);
+  const dd4hep::rec::Vector3D p1(to.X() * dd4hep::mm,
+                                  to.Y() * dd4hep::mm,
+                                  to.Z() * dd4hep::mm);
+  const auto& materials = manager->materialsBetween(p0, p1);
+  for (const auto& segment : materials) {
+    const double radLength = segment.first.radLength();
+    if (!(radLength > 0.0) || !(segment.second > 0.0)) continue;
+    const double tx0 = segment.second / radLength;
+    result.pathTX0 += tx0;
+    ++result.layerCount;
+    if (!result.layerAudit.empty()) result.layerAudit += '|';
+    std::ostringstream audit;
+    audit << segment.first.name() << ':' << segment.second / dd4hep::mm
+          << ':' << tx0;
+    result.layerAudit += audit.str();
+  }
+  result.normalTX0 = result.pathTX0;
+  result.absCosIncidence = 1.0;
+  result.valid = result.layerCount > 0 && std::isfinite(result.pathTX0) &&
+      result.pathTX0 > 0.0;
+  return result;
+}
+
+static ComponentMaterialPath componentGeometryTransitionMaterialPath(
+    dd4hep::rec::MaterialManager* manager, const DDVMeasLayer* toLayer,
+    const GsfComponent& component, double bz, int propagationDirection = 1) {
+  if (!manager || !toLayer) return {};
+  THelicalTrack helix = component.helixAtMeasurementSite(bz);
+  const auto* destination = dynamic_cast<const TVSurface*>(toLayer);
+  TVector3 crossing;
+  double phi = 0.0;
+  if (!destination ||
+      !destination->CalcXingPointWith(
+          helix, crossing, phi, propagationDirection)) {
+    return {};
+  }
+  return geometryTransitionMaterialPath(manager, helix.GetPivot(), crossing);
 }
 
 // ============================================================================
@@ -845,6 +1033,15 @@ StatusCode RecGsfTracking::initialize() {
     error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
     return StatusCode::FAILURE;
   }
+  std::string materialPathMode = m_materialPathMode.value();
+  std::transform(materialPathMode.begin(), materialPathMode.end(),
+                 materialPathMode.begin(), ::tolower);
+  if (materialPathMode != "currentsurface" &&
+      materialPathMode != "dd4hepbetweensurfaces") {
+    error() << "MaterialPathMode must be CurrentSurface or "
+               "DD4hepBetweenSurfaces" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_retainedLineageSmoothing.value() && reductionMode != "topn") {
     error() << "RetainedLineageSmoothing requires ReductionMode=TopN so every "
                "smoothed component has one real, unmerged process lineage"
@@ -865,6 +1062,8 @@ StatusCode RecGsfTracking::initialize() {
   }
 
   m_geosvc = service<IGeomSvc>("GeomSvc");
+  m_materialManager = new dd4hep::rec::MaterialManager(
+      m_geosvc->lcdd()->world().volume());
   m_field = m_geosvc->lcdd()
                 ->field()
                 .magneticField(dd4hep::Position(0, 0, 0))
@@ -949,6 +1148,28 @@ StatusCode RecGsfTracking::initialize() {
          << m_verboseSplitDump.value() << "/"
          << m_componentDebugDump.value() << endmsg;
 
+  if (!m_materialTransitionCSV.value().empty()) {
+    m_materialTransitionStream.open(m_materialTransitionCSV.value());
+    if (!m_materialTransitionStream) {
+      error() << "Cannot create material transition CSV "
+              << m_materialTransitionCSV.value() << endmsg;
+      return StatusCode::FAILURE;
+    }
+    m_materialTransitionStream
+        << "event_index,track_index,hit_index,component_id,component_weight,"
+        << "surface_from_index,surface_to_index,cell_from,cell_to,"
+        << "from_x_mm,from_y_mm,from_z_mm,from_r_mm,"
+        << "to_x_mm,to_y_mm,to_z_mm,to_r_mm,"
+        << "normal_t_over_x0,abs_cos_incidence,path_t_over_x0,valid,"
+        << "interval_normal_t_over_x0,interval_effective_abs_cos,"
+        << "interval_path_t_over_x0,interval_layer_count,interval_valid,"
+        << "interval_layers,geometry_path_t_over_x0,geometry_segment_count,"
+        << "geometry_valid,geometry_materials\n";
+    m_materialTransitionStream << std::setprecision(17);
+    info() << "Material transition CSV: " << m_materialTransitionCSV.value()
+           << endmsg;
+  }
+
   return StatusCode::SUCCESS;
 }
 
@@ -972,6 +1193,11 @@ StatusCode RecGsfTracking::execute() {
   auto* out = m_outputTracks.createAndPut();
   int nFit = 0;
   double bz = m_field;
+  std::string materialPathMode = m_materialPathMode.value();
+  std::transform(materialPathMode.begin(), materialPathMode.end(),
+                 materialPathMode.begin(), ::tolower);
+  const bool useDD4hepBetweenSurfaces =
+      materialPathMode == "dd4hepbetweensurfaces";
 
   for (const auto& trk : *in) {
     auto assocHits = trk.getTrackerHits();
@@ -1123,6 +1349,39 @@ StatusCode RecGsfTracking::execute() {
         }
       }
     };
+
+    // The seed already contains the filtered hit-0 state. In full-interval
+    // mode, convolve it through the hit-0 -> hit-1 material before the first
+    // measurement update; the legacy current-surface mode intentionally keeps
+    // its historical behavior for controlled comparison.
+    if (useDD4hepBetweenSurfaces && hits.size() > 1) {
+      const auto seedMaterial = componentGeometryTransitionMaterialPath(
+          m_materialManager, hits[1].layer, *initComp, bz);
+      if (seedMaterial.valid) {
+        maxTX0Layer = std::max(maxTX0Layer, seedMaterial.pathTX0);
+        totalTX0 += seedMaterial.pathTX0;
+      }
+      if (seedMaterial.valid &&
+          seedMaterial.pathTX0 > m_bhSplitThresh.value() && m_isElectron) {
+        BetheHeitlerSplitter splitter(m_bhModel.value());
+        const int parentDebugId = initComp->debugId;
+        auto children = splitter.split(
+            initComp, seedMaterial.pathTX0, bz);
+        comps.clear();
+        for (auto* child : children) {
+          child->debugId = nextComponentDebugId++;
+          child->debugParentId = parentDebugId;
+          child->generation = 1;
+          child->hitsSinceSplit = 0;
+          comps.push_back(child);
+        }
+        ++nSplits;
+        justSplit = true;
+        maxCompsEver = std::max(maxCompsEver, (int)comps.size());
+        GsfMixture::normalizeWeights(comps);
+        dumpComponents("seed-material", 0, comps);
+      }
+    }
 
     for (size_t ih = gsfStartHit; ih < hits.size(); ih++) {
       auto& hi = hits[ih];
@@ -1394,7 +1653,11 @@ StatusCode RecGsfTracking::execute() {
       materialPaths.reserve(comps.size());
       bool anyComponentMaterial = false;
       for (const auto* comp : comps) {
-        materialPaths.push_back(componentMaterialPath(hi.layer, *comp, bz));
+        materialPaths.push_back(
+            hasNextForwardSurface && useDD4hepBetweenSurfaces
+                ? componentGeometryTransitionMaterialPath(
+                      m_materialManager, hits[ih + 1].layer, *comp, bz)
+                : componentMaterialPath(hi.layer, *comp, bz));
         anyComponentMaterial |= materialPaths.back().valid &&
             materialPaths.back().pathTX0 > m_bhSplitThresh.value();
       }
@@ -1408,6 +1671,41 @@ StatusCode RecGsfTracking::execute() {
           maxTX0Layer = std::max(maxTX0Layer, materialPaths[ci].pathTX0);
         }
         if (validWeight > 0.0) totalTX0 += weightedPathTX0 / validWeight;
+
+        if (m_materialTransitionStream) {
+          const auto& fromPosition = hi.lcioHit.getPosition();
+          const auto& nextHit = hits[ih + 1];
+          const auto& toPosition = nextHit.lcioHit.getPosition();
+          for (size_t ci = 0; ci < comps.size(); ++ci) {
+            const auto& path = materialPaths[ci];
+            const auto geometryPath = componentGeometryTransitionMaterialPath(
+                m_materialManager, nextHit.layer, *comps[ci], bz);
+            const auto intervalPath = componentTransitionMaterialPath(
+                m_cradle, hi.layer, nextHit.layer,
+                TVector3(toPosition.x, toPosition.y, toPosition.z),
+                *comps[ci], bz);
+            m_materialTransitionStream
+                << eventIndex << ',' << nFit << ',' << ih << ','
+                << comps[ci]->debugId << ',' << comps[ci]->weight << ','
+                << hi.surfaceIndex << ',' << nextHit.surfaceIndex << ','
+                << (long long)hi.lcioHit.getCellID() << ','
+                << (long long)nextHit.lcioHit.getCellID() << ','
+                << fromPosition.x << ',' << fromPosition.y << ','
+                << fromPosition.z << ',' << hi.radius << ','
+                << toPosition.x << ',' << toPosition.y << ','
+                << toPosition.z << ',' << nextHit.radius << ','
+                << path.normalTX0 << ',' << path.absCosIncidence << ','
+                << path.pathTX0 << ',' << (path.valid ? 1 : 0) << ','
+                << intervalPath.normalTX0 << ','
+                << intervalPath.absCosIncidence << ','
+                << intervalPath.pathTX0 << ',' << intervalPath.layerCount << ','
+                << (intervalPath.valid ? 1 : 0) << ','
+                << intervalPath.layerAudit << ',' << geometryPath.pathTX0 << ','
+                << geometryPath.layerCount << ','
+                << (geometryPath.valid ? 1 : 0) << ','
+                << geometryPath.layerAudit << '\n';
+          }
+        }
       }
       if (m_verboseDump && m_componentDebugDump && hasNextForwardSurface &&
           (ih < 3 || anyComponentMaterial)) {
@@ -1419,8 +1717,11 @@ StatusCode RecGsfTracking::execute() {
                     % (path.valid ? 1 : 0) << endmsg;
         }
       }
-      if (hasNextForwardSurface && anyComponentMaterial && m_isElectron &&
-          (int)comps.size() < m_maxComponents) {
+      // Always represent an eligible owned material transition before applying
+      // the component budget.  Gating the split on the incoming mixture size
+      // skips the physical transition when the previous surface happens to
+      // leave MaxComponents branches and moves the next split one surface late.
+      if (hasNextForwardSurface && anyComponentMaterial && m_isElectron) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, component-local path tX0) — %d comps before split")
                     % ih % hi.radius % (int)comps.size() << endmsg;
@@ -1498,7 +1799,11 @@ StatusCode RecGsfTracking::execute() {
           comps.begin(), comps.end(), [&](const GsfComponent* comp) {
             return comp->hitsSinceSplit >= m_reductionMinHitsAfterSplit.value();
           });
-      if (shouldReduce && !oldEnoughToReduce && m_verboseDump && m_verboseSplitDump) {
+      // A just-created over-budget mixture must be reduced on this same
+      // surface.  The age delay remains applicable to mixtures carried from a
+      // previous surface, but must not defeat the split-before-budget ordering.
+      const bool mayReduceNow = oldEnoughToReduce || justSplit;
+      if (shouldReduce && !mayReduceNow && m_verboseDump && m_verboseSplitDump) {
         info() << boost::format("  FLOW hit=%3d defer-reduce: n=%d target=%d minAge=%d requiredAge=%d")
                   % (int)ih % (int)comps.size() % reductionTarget
                   % (*std::min_element(comps.begin(), comps.end(),
@@ -1507,7 +1812,7 @@ StatusCode RecGsfTracking::execute() {
                         }))->hitsSinceSplit
                   % m_reductionMinHitsAfterSplit.value() << endmsg;
       }
-      if (shouldReduce && oldEnoughToReduce && (int)comps.size() > reductionTarget) {
+      if (shouldReduce && mayReduceNow && (int)comps.size() > reductionTarget) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  FLOW hit=%3d reduce: n=%d max=%d target=%d mode=%s")
                     % (int)ih % (int)comps.size() % m_maxComponents.value()
@@ -1591,6 +1896,61 @@ StatusCode RecGsfTracking::execute() {
       for (int reverseHit = (int)hits.size() - 2;
            reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
         auto& target = hits[reverseHit];
+
+        // Propagate the full mixture through the outer-to-inner interval
+        // before updating its inner bounding measurement.  This mirrors the
+        // ACTS backward actor and is the direction-reversed counterpart of the
+        // forward update-then-outgoing-material ordering.
+        std::vector<ComponentMaterialPath> reverseMaterialPaths;
+        reverseMaterialPaths.reserve(reverseComps.size());
+        bool anyReverseMaterial = false;
+        for (const auto* component : reverseComps) {
+          reverseMaterialPaths.push_back(
+              componentGeometryTransitionMaterialPath(
+                  m_materialManager, target.layer, *component, bz, -1));
+          anyReverseMaterial |= reverseMaterialPaths.back().valid &&
+              reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
+        }
+        if (anyReverseMaterial && m_isElectron) {
+          BetheHeitlerSplitter splitter(m_bhModel.value());
+          std::vector<GsfComponent*> reverseChildren;
+          for (size_t componentIndex = 0;
+               componentIndex < reverseComps.size(); ++componentIndex) {
+            auto* parent = reverseComps[componentIndex];
+            const auto& materialPath = reverseMaterialPaths[componentIndex];
+            if (!materialPath.valid ||
+                materialPath.pathTX0 <= m_bhSplitThresh.value()) {
+              reverseChildren.push_back(parent);
+              continue;
+            }
+            const int parentId = parent->debugId;
+            auto children = splitter.split(parent, materialPath.pathTX0, bz,
+                                           true);
+            for (auto* child : children) {
+              child->debugParentId = parentId;
+              child->debugId = nextReverseId++;
+              child->debugHistory += "->reverse-material";
+              reverseChildren.push_back(child);
+            }
+          }
+          reverseComps = std::move(reverseChildren);
+          ++reverseSplits;
+          GsfMixture::normalizeWeights(reverseComps);
+        }
+        GsfMixture::removeLowWeight(reverseComps,
+                                    m_componentWeightCutoff.value());
+        if ((int)reverseComps.size() > reverseReductionTarget) {
+          if (m_reductionMode.value() == "TopN" ||
+              m_reductionMode.value() == "topN" ||
+              m_reductionMode.value() == "topn") {
+            GsfMixture::reduceTopN(reverseComps, reverseReductionTarget);
+          } else {
+            GsfMixture::reduce(reverseComps, reverseReductionTarget, bz);
+          }
+          ++reverseReductions;
+          GsfMixture::normalizeWeights(reverseComps);
+        }
+
         std::vector<GsfComponent*> acceptedReverse;
         std::vector<double> reverseLogWeights;
         for (auto* component : reverseComps) {
@@ -1650,55 +2010,6 @@ StatusCode RecGsfTracking::execute() {
         reverseComps = std::move(acceptedReverse);
         GsfMixture::normalizeWeights(reverseComps);
 
-        std::vector<ComponentMaterialPath> reverseMaterialPaths;
-        reverseMaterialPaths.reserve(reverseComps.size());
-        bool anyReverseMaterial = false;
-        for (const auto* component : reverseComps) {
-          reverseMaterialPaths.push_back(
-              componentMaterialPath(target.layer, *component, bz));
-          anyReverseMaterial |= reverseMaterialPaths.back().valid &&
-              reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
-        }
-        if (anyReverseMaterial && m_isElectron &&
-            (int)reverseComps.size() < m_maxComponents.value()) {
-          BetheHeitlerSplitter splitter(m_bhModel.value());
-          std::vector<GsfComponent*> reverseChildren;
-          for (size_t componentIndex = 0;
-               componentIndex < reverseComps.size(); ++componentIndex) {
-            auto* parent = reverseComps[componentIndex];
-            const auto& materialPath = reverseMaterialPaths[componentIndex];
-            if (!materialPath.valid ||
-                materialPath.pathTX0 <= m_bhSplitThresh.value()) {
-              reverseChildren.push_back(parent);
-              continue;
-            }
-            const int parentId = parent->debugId;
-            auto children = splitter.split(parent, materialPath.pathTX0, bz,
-                                           true);
-            for (auto* child : children) {
-              child->debugParentId = parentId;
-              child->debugId = nextReverseId++;
-              child->debugHistory += "->reverse-material";
-              reverseChildren.push_back(child);
-            }
-          }
-          reverseComps = std::move(reverseChildren);
-          ++reverseSplits;
-          GsfMixture::normalizeWeights(reverseComps);
-        }
-        GsfMixture::removeLowWeight(reverseComps,
-                                    m_componentWeightCutoff.value());
-        if ((int)reverseComps.size() > reverseReductionTarget) {
-          if (m_reductionMode.value() == "TopN" ||
-              m_reductionMode.value() == "topN" ||
-              m_reductionMode.value() == "topn") {
-            GsfMixture::reduceTopN(reverseComps, reverseReductionTarget);
-          } else {
-            GsfMixture::reduce(reverseComps, reverseReductionTarget, bz);
-          }
-          ++reverseReductions;
-          GsfMixture::normalizeWeights(reverseComps);
-        }
         if (m_verboseDump && m_verboseSplitDump &&
             (reverseHit < 3 || reverseHit == (int)hits.size() - 2)) {
           dumpComponents("reverse-after-hit", reverseHit, reverseComps);
@@ -1720,12 +2031,14 @@ StatusCode RecGsfTracking::execute() {
             });
         THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
         TMatrixD reverseIpCov(5, 5);
-        if (extrapolateContinuationToIP(*reverseBest, bz,
+        // ACTS-style output is the moment-matched backward mixture at the
+        // reference surface, not only its highest-weight component.
+        if (weightedReverseMixtureAtIP(reverseComps, bz,
                                        reverseIp, reverseIpCov)) {
           const double reversePt = reverseIp.GetKappa() != 0.0
               ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
           if (m_verboseDump) {
-            info() << boost::format("  REVERSE IP best: id=%d weight=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
+            info() << boost::format("  REVERSE IP mixture: bestId=%d bestWeight=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
                       % reverseBest->debugId % reverseBest->weight % reversePt
                       % (-reverseIp.GetDrho()) % reverseIp.GetDz()
                       % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
@@ -1992,7 +2305,7 @@ StatusCode RecGsfTracking::execute() {
                   % sum.bestWeight % (1.0 / sum.finalComps)
                   % (sum.bestWeight * sum.finalComps) << endmsg;
         info() << boost::format("  output         | mode %s")
-                  % (usedReverseOutput ? "ReverseBestBranch" :
+                  % (usedReverseOutput ? "ReverseMixture" :
                      (usedWeightedOutput ? "WeightedMean" : "BestBranch"))
                << endmsg;
         info() << boost::format("  material       | max-tX0 %.2e  total-tX0 %.2e")
@@ -2013,6 +2326,11 @@ StatusCode RecGsfTracking::execute() {
 
 StatusCode RecGsfTracking::finalize() {
   info() << "Processed " << m_nEvt << " events" << endmsg;
+  if (m_materialTransitionStream.is_open()) {
+    m_materialTransitionStream.close();
+  }
+  delete m_materialManager;
+  m_materialManager = nullptr;
   m_detectors.clear();
   if (m_cradle) { m_cradle->SetOwner(true); delete m_cradle; m_cradle = nullptr; }
   return Algorithm::finalize();

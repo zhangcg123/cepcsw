@@ -13,6 +13,9 @@ struct GsfComponent;
 /// A faithful ACTS default AtlasBetheHeitlerApprox regime selection is also
 /// available as ActsAtlas; its ATLAS-derived coefficients are not CEPC
 /// validation.
+/// CEPC2GeV85StepConditioned is the explicitly scoped five-component,
+/// transition-t/X0-conditioned execution model fitted to the 2 GeV, 85-degree
+/// primary-electron sample; it is not a general or validated CEPC model.
 ///
 /// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
@@ -22,9 +25,8 @@ struct GsfComponent;
 ///
 struct BetheHeitlerSplitter {
   enum class Model {
-    Current,
     ActsAtlas,
-    GlobalSim2GeV85
+    CEPC2GeV85StepConditioned
   };
 
   BetheHeitlerSplitter();
@@ -43,7 +45,7 @@ struct BetheHeitlerSplitter {
                                    bool reverse = false) const;
 
 private:
-  Model m_model = Model::Current;
+  Model m_model = Model::CEPC2GeV85StepConditioned;
 };
 
 #endif

@@ -12,10 +12,10 @@ import os
 from Gaudi.Configuration import *
 
 # ---- User inputs -----------------------------------------------------------
-evtmax = 100
-input_file = "trk-e--2.0-85-1.root"
-edm_output = "gsf-reverse-e--2.0-85-1.root"
-tuple_output = "gsf_flat-reverse-e--2.0-85-1.root"
+evtmax = int(os.getenv("GSF_EVTMAX", "100"))
+input_file = os.getenv("GSF_INPUT_FILE", "trk-e--2.0-85-1.root")
+edm_output = os.getenv("GSF_EDM_OUTPUT", "gsf-reverse-e--2.0-85-1.root")
+tuple_output = os.getenv("GSF_TUPLE_OUTPUT", "gsf_flat-reverse-e--2.0-85-1.root")
 
 # True for electron GSF/BH processing. Set False for the no-BH muon control.
 electron_hypothesis = True
@@ -58,8 +58,9 @@ gearsvc = GearSvc("GearSvc")
 
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = electron_hypothesis
-gsf.BHModel = "GlobalSim2GeV85"
+gsf.BHModel = os.getenv("GSF_BH_MODEL", "CEPC2GeV85StepConditioned")
 gsf.BHSplitThreshold = 1.0e-4
+gsf.MaterialPathMode = os.getenv("GSF_MATERIAL_PATH_MODE", "CurrentSurface")
 
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents
@@ -81,6 +82,9 @@ gsf.SelectedEventIndices = selected_event_indices
 gsf.VerboseDump = verbose_components
 gsf.VerboseSplitDump = verbose_components
 gsf.ComponentDebugDump = verbose_components
+material_transition_csv = os.getenv("GSF_MATERIAL_TRANSITION_CSV", "")
+if material_transition_csv:
+    gsf.MaterialTransitionCSV = material_transition_csv
 gsf.OutputLevel = INFO
 
 # ---- Flat analysis tuple ---------------------------------------------------

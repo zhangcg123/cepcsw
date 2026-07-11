@@ -3,8 +3,13 @@ import os
 import sys
 from Gaudi.Configuration import *
 
-EvtMax = 5
-seed = [12340]
+EvtMax = int(os.getenv("GSF_STEPREC_EVTMAX", "5"))
+seed = [int(os.getenv("GSF_STEPREC_SEED", "12340"))]
+gun_energy = float(os.getenv("GSF_STEPREC_ENERGY_GEV", "1.0"))
+gun_theta = float(os.getenv("GSF_STEPREC_THETA_DEG", "85"))
+step_output = os.getenv("GSF_STEPREC_OUTPUT", "gsf_material_steps_test.root")
+edm_output = os.getenv(
+    "GSF_STEPREC_EDM_OUTPUT", "gsf_material_steps_test_edm4hep.root")
 
 from Configurables import k4DataSvc
 dsvc = k4DataSvc("EventDataSvc")
@@ -38,10 +43,10 @@ gun.PositionXs = [0]
 gun.PositionYs = [0]
 gun.PositionZs = [0]
 gun.Particles = ["e-"]
-gun.EnergyMins = [1.0]
-gun.EnergyMaxs = [1.0]
-gun.ThetaMins = [85]
-gun.ThetaMaxs = [85]
+gun.EnergyMins = [gun_energy]
+gun.EnergyMaxs = [gun_energy]
+gun.ThetaMins = [gun_theta]
+gun.ThetaMaxs = [gun_theta]
 gun.PhiMins = [0]
 gun.PhiMaxs = [360]
 
@@ -60,9 +65,9 @@ edm4hep_writer.TrackerCollections = [
 
 from Configurables import GsfMaterialStepRecorderAnaElemTool
 steprec = GsfMaterialStepRecorderAnaElemTool("GsfMaterialStepRecorderAnaElemTool")
-steprec.OutputFile = "gsf_material_steps_test.root"
+steprec.OutputFile = step_output
 steprec.PDGs = [11, -11]
-steprec.PrimaryOnly = False
+steprec.PrimaryOnly = True
 steprec.TrackerOnly = True
 steprec.MinStepLengthMm = 0.0
 steprec.MinAbsLossGeV = 0.0
@@ -93,7 +98,7 @@ dedx_simtool.save_mc = True
 
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "gsf_material_steps_test_edm4hep.root"
+out.filename = edm_output
 out.outputCommands = ["keep *"]
 
 from Configurables import ApplicationMgr

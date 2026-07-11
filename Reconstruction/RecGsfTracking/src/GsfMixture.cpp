@@ -96,14 +96,22 @@ static double wrapNear(double value, double reference) {
   return value;
 }
 
+static std::string boundedHistory(const std::string& history) {
+  constexpr std::size_t maxLength = 4096;
+  constexpr std::size_t edgeLength = 2000;
+  if (history.size() <= maxLength) return history;
+  return history.substr(0, edgeLength) + "...<history-truncated>..." +
+      history.substr(history.size() - edgeLength);
+}
+
 static void momentMerge(GsfComponent* keep, GsfComponent* drop, double bz) {
   const double totalWeight = keep->weight + drop->weight;
   if (totalWeight <= 0.0) return;
 
   const double wk = keep->weight / totalWeight;
   const double wd = drop->weight / totalWeight;
-  const std::string keepHistory = keep->debugHistory;
-  const std::string dropHistory = drop->debugHistory;
+  const std::string keepHistory = boundedHistory(keep->debugHistory);
+  const std::string dropHistory = boundedHistory(drop->debugHistory);
   const double mergedChi2 = wk * keep->fitChi2 + wd * drop->fitChi2;
 
   TMatrixD muK(5, 1), muD(5, 1);
@@ -136,7 +144,8 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double bz) {
   keep->weight = totalWeight;
   keep->fitChi2 = mergedChi2;
   if (!dropHistory.empty()) {
-    keep->debugHistory = "merge(" + keepHistory + " | " + dropHistory + ")";
+    keep->debugHistory = boundedHistory(
+        "merge(" + keepHistory + " | " + dropHistory + ")");
   }
 }
 
