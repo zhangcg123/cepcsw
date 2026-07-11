@@ -8,6 +8,27 @@
 #include "edm4hep/TrackState.h"
 
 #include <string>
+#include <vector>
+
+/// One retained-lineage transition used by the branch RTS smoother.  All
+/// quantities use KalTest's local five-parameter helix convention.
+struct GsfSmoothingStep {
+  bool transitionValid = false;
+  double transportCovarianceClosure = 0.0;
+  double bhAddedKappaVariance = 0.0;
+  double rtsKappaGainNorm = 0.0;
+  double rtsKappaCorrection = 0.0;
+  TMatrixD filteredMean{5, 1};
+  TMatrixD filteredCovariance{5, 5};
+  TMatrixD processInputMean{5, 1};
+  TMatrixD processInputCovariance{5, 5};
+  TMatrixD predictedMean{5, 1};
+  TMatrixD predictedCovariance{5, 5};
+  TMatrixD processJacobian{5, 5};
+  TMatrixD transportJacobian{5, 5};
+  TMatrixD transportProcessNoise{5, 5};
+  TMatrixD transitionJacobian{5, 5};
+};
 
 /// One Gaussian component in the GSF mixture.
 /// Owns a TKalTrack holding the KF state across all measurement sites.
@@ -26,6 +47,13 @@ struct GsfComponent {
   /// history; this snapshot may contain the post-process component state.
   bool continuationValid = false;
   edm4hep::TrackState continuationState;
+  /// BH/process Jacobian at the current surface, composed with the exact
+  /// MarlinTrk transport Jacobian when the next measurement is accepted.
+  TMatrixD pendingProcessJacobian{5, 5};
+  std::vector<GsfSmoothingStep> smoothingSteps;
+  bool smoothedInnerValid = false;
+  TMatrixD smoothedInnerMean{5, 1};
+  TMatrixD smoothedInnerCovariance{5, 5};
 
   ~GsfComponent();
 

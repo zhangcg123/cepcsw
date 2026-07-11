@@ -39,6 +39,11 @@ namespace MarlinTrk{
     bool valid = false;
     Matrix predictedState;
     Matrix predictedCovariance;
+    /// Jacobian transporting the input filtered state to predictedState.
+    /// This is the exact propagator used by the accepted Kalman update.
+    Matrix transportJacobian;
+    /// Process-noise covariance paired with transportJacobian.
+    Matrix processNoiseCovariance;
     Matrix predictedMeasurement;
     Matrix residual;
     Matrix projector;

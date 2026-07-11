@@ -710,6 +710,8 @@ namespace MarlinTrk {
       const TKalMatrix& predictedCovariance = predictedState.GetCovMat();
       const TKalMatrix& projector = site->GetMeasVecDerivative();
       const TKalMatrix& filtered = site->GetState(TVKalSite::kFiltered);
+      auto* sourceSite = dynamic_cast<TKalTrackSite*>(
+          _kaltrack->At(_kaltrack->GetEntriesFast() - 2));
 
       if (projector.GetNrows() == site->GetDimension() &&
           projector.GetNcols() == predicted.GetNrows()) {
@@ -731,6 +733,12 @@ namespace MarlinTrk {
 
         copyMatrix(predicted, update.predictedState);
         copyMatrix(predictedCovariance, update.predictedCovariance);
+        if (sourceSite != nullptr) {
+          copyMatrix(sourceSite->GetState(TVKalSite::kFiltered).GetPropMat(),
+                     update.transportJacobian);
+          copyMatrix(sourceSite->GetState(TVKalSite::kFiltered).GetProcNoiseMat(),
+                     update.processNoiseCovariance);
+        }
         copyMatrix(predictedMeasurement, update.predictedMeasurement);
         copyMatrix(residual, update.residual);
         copyMatrix(projector, update.projector);

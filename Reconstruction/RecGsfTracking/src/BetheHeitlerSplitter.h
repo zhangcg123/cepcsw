@@ -8,11 +8,13 @@ struct GsfComponent;
 
 /// Bethe-Heitler bremsstrahlung splitter.
 ///
-/// The default model keeps the current CEPC thin-material plus ACTS/ATLAS
-/// parameterization behavior.  A simulation-derived global model can be
-/// selected as a parallel option for controlled tests.
+/// The default model preserves the current CEPC thin-material test behavior.
+/// A simulation-derived global model can be selected in parallel.
+/// A faithful ACTS default AtlasBetheHeitlerApprox regime selection is also
+/// available as ActsAtlas; its ATLAS-derived coefficients are not CEPC
+/// validation.
 ///
-/// Three regimes:
+/// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
 ///   0.0001 ≤ tX0 < 0.002  →  1 component (single Gaussian approx)
 ///   0.002 ≤ tX0 < 0.1    →  6 components (low-x parameterization)
@@ -21,6 +23,7 @@ struct GsfComponent;
 struct BetheHeitlerSplitter {
   enum class Model {
     Current,
+    ActsAtlas,
     GlobalSim2GeV85
   };
 

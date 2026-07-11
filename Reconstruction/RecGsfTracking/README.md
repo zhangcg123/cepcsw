@@ -13,11 +13,18 @@ been removed; historical comparisons remain under `agents_record/`.
 | Property | Default | Purpose |
 |---|---:|---|
 | `ElectronHypothesis` | `true` | Enable Bethe-Heitler splitting. |
-| `BHModel` | `"Current"` | Select `Current` or experimental `GlobalSim2GeV85`. |
+| `BHModel` | `"Current"` | Select `Current`, `ActsAtlas`, or experimental `GlobalSim2GeV85`. `ActsAtlas` reproduces ACTS's default ATLAS regime thresholds and coefficients but is not CEPC validation. |
 | `BHSplitThreshold` | `1e-4` | Minimum target-layer `t/X0` for a split. |
 | `MSOn` | `true` | Enable multiple-scattering process noise. |
 | `ElossOn` | `false` | Enable the KalTest dE/dx treatment in addition to BH splitting. |
 | `KappaSeedCov` | `1e-7` | Initial curvature variance for the LCIO-derived seed site. |
+
+Material assigned to a measurement surface is owned by the outgoing
+transition from that surface. Its inner and outer normal-thickness `t/X0`
+contributions are divided by the absolute dot product of the component-local
+track tangent and DD4hep surface normal. The final measurement has no outgoing
+transition. Forward and reverse workflows apply the same current-surface
+ownership in their respective direction and are alternative published paths.
 
 ### Mixture and output
 
@@ -31,6 +38,7 @@ been removed; historical comparisons remain under `agents_record/`.
 | `GSFOutputMode` | `"BestBranch"` | Publish the best branch or `WeightedMean`. |
 | `MaterialIPExtrapolation` | `false` | Include material when extrapolating the selected state to the IP. |
 | `ReverseFiltering` | `false` | Experimental reverse multi-component filtering audit from the final measurement to the innermost hit. |
+| `RetainedLineageSmoothing` | `false` | Run an RTS smoother on each retained forward lineage. Requires `TopN`, geometric IP extrapolation, and `ReverseFiltering=false`. |
 
 ### Selection and diagnostics
 

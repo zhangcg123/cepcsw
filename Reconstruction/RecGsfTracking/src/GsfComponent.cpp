@@ -142,6 +142,11 @@ GsfComponent* GsfComponent::clone() const {
   c->fitChi2 = fitChi2;
   c->continuationValid = continuationValid;
   c->continuationState = continuationState;
+  c->pendingProcessJacobian = pendingProcessJacobian;
+  c->smoothingSteps = smoothingSteps;
+  c->smoothedInnerValid = smoothedInnerValid;
+  c->smoothedInnerMean = smoothedInnerMean;
+  c->smoothedInnerCovariance = smoothedInnerCovariance;
   c->kaltrack = new TKalTrack();
   c->kaltrack->SetOwner();
 

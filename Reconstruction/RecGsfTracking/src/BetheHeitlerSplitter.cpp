@@ -70,7 +70,10 @@ static const double highData[6][3][6] = {
 /// Inverse logit transform: y = 1/(1+exp(-x))
 inline double invLogit(double x) { return 1.0 / (1.0 + std::exp(-x)); }
 
-constexpr double kThinGaussianUpperX0 = 0.1;
+constexpr double kActsNoChangeLimit = 0.0001;
+constexpr double kActsSingleGaussianLimit = 0.002;
+constexpr double kActsLowerParameterLimit = 0.1;
+constexpr double kActsHigherLimit = 0.2;
 
 /// Simulation-derived global retained-fraction model from
 /// BHModelComparisonStudies/globalBHmodelfromSim@2GeV85Degree.
@@ -94,32 +97,27 @@ std::vector<BHComponent> globalSim2GeV85Mixture(double /*x*/) {
 
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
 /// Returns up to 6 (weight, mean, var) tuples.
-std::vector<BHComponent> bhMixture6(double x) {
+std::vector<BHComponent> actsAtlasMixture(double x) {
   std::vector<BHComponent> result(6);
 
-  if (x < 0.0001) {
+  if (x < kActsNoChangeLimit) {
     // negligible material: no energy loss
     result.resize(1);
     result[0] = {1.0, 1.0, 0.0};
     return result;
   }
-  if (x < kThinGaussianUpperX0) {
-    // CEPC thin-material toy mixture. Keep a dominant no-loss branch so
-    // normal tracks are not forced to lose energy, plus one moderate-loss
-    // tail branch. The weighted mean is constrained to exp(-x), matching
-    // the thin-material Bethe-Heitler expectation E[p/p0].
-    result.resize(2);
-    double expectedMean = std::exp(-x);
-    double tailWeight = std::min(0.20, std::max(0.02, 10.0 * x));
-    double tailMean = (expectedMean - (1.0 - tailWeight)) / tailWeight;
-    tailMean = std::min(0.999, std::max(0.50, tailMean));
-
-    result[0] = {1.0 - tailWeight, 1.0, 0.0};
-    result[1] = {tailWeight, tailMean, x * x};
+  if (x < kActsSingleGaussianLimit) {
+    // Exact first two moments of the Bethe-Heitler retained-energy fraction.
+    // With c=x/log(2), E[z^n]=(n+1)^(-c).
+    result.resize(1);
+    const double mean = std::exp(-x);
+    const double secondMoment =
+        std::exp(-x * std::log(3.0) / std::log(2.0));
+    result[0] = {1.0, mean, std::max(0.0, secondMoment - mean * mean)};
     return result;
   }
 
-  if (x < 0.1) {
+  if (x < kActsLowerParameterLimit) {
     // Low-x parameterization (transformed)
     double weightSum = 0;
     for (int i = 0; i < 6; i++) {
@@ -133,7 +131,7 @@ std::vector<BHComponent> bhMixture6(double x) {
   }
 
   // High-x parameterization (untransformed, capped at 0.2)
-  double xx = std::min(x, 0.2);
+  double xx = std::min(x, kActsHigherLimit);
   double weightSum = 0;
   for (int i = 0; i < 6; i++) {
     result[i].weight = poly(xx, highData[i][0], 5);
@@ -143,6 +141,20 @@ std::vector<BHComponent> bhMixture6(double x) {
   }
   for (int i = 0; i < 6; i++) result[i].weight /= weightSum;
   return result;
+}
+
+/// Preserve the pre-existing CEPC thin-material test model unchanged.
+std::vector<BHComponent> currentMixture(double x) {
+  if (x < kActsNoChangeLimit) return {{1.0, 1.0, 0.0}};
+  if (x < kActsLowerParameterLimit) {
+    const double expectedMean = std::exp(-x);
+    const double tailWeight = std::min(0.20, std::max(0.02, 10.0 * x));
+    double tailMean = (expectedMean - (1.0 - tailWeight)) / tailWeight;
+    tailMean = std::min(0.999, std::max(0.50, tailMean));
+    return {{1.0 - tailWeight, 1.0, 0.0},
+            {tailWeight, tailMean, x * x}};
+  }
+  return actsAtlasMixture(x);
 }
 
 } // anonymous namespace
@@ -161,6 +173,10 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
   if (modelName == "Current" || modelName == "current" || modelName == "default") {
     return Model::Current;
   }
+  if (modelName == "ActsAtlas" || modelName == "actsAtlas" ||
+      modelName == "ACTS" || modelName == "Acts") {
+    return Model::ActsAtlas;
+  }
   if (modelName == "GlobalSim2GeV85" || modelName == "globalSim2GeV85" ||
       modelName == "globalBHmodelfromSim@2GeV85Degree") {
     return Model::GlobalSim2GeV85;
@@ -171,6 +187,7 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
 const char* BetheHeitlerSplitter::modelName(Model model) {
   switch (model) {
     case Model::Current: return "Current";
+    case Model::ActsAtlas: return "ActsAtlas";
     case Model::GlobalSim2GeV85: return "GlobalSim2GeV85";
   }
   return "Unknown";
@@ -179,9 +196,18 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
 std::vector<GsfComponent*> BetheHeitlerSplitter::split(
     GsfComponent* parent, double tX0, double bz, bool reverse) const {
 
-  auto mixture = (m_model == Model::GlobalSim2GeV85)
-      ? globalSim2GeV85Mixture(tX0)
-      : bhMixture6(tX0);
+  std::vector<BHComponent> mixture;
+  switch (m_model) {
+    case Model::Current:
+      mixture = currentMixture(tX0);
+      break;
+    case Model::ActsAtlas:
+      mixture = actsAtlasMixture(tX0);
+      break;
+    case Model::GlobalSim2GeV85:
+      mixture = globalSim2GeV85Mixture(tX0);
+      break;
+  }
   const double parentKappa = parent->helixAtLastSite(bz).GetKappa();
   const double parentWeight = parent->weight;
   if (!parent->continuationValid && !parent->snapshotContinuation(bz)) {
@@ -217,6 +243,12 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
     // initialize propagation toward the next measurement.
     auto& continuation = child->continuationState;
     const double scaleKappa = reverse ? fracMomentum : 1.0 / fracMomentum;
+    if (child->pendingProcessJacobian.GetNrows() != 5 ||
+        child->pendingProcessJacobian.GetNcols() != 5) {
+      child->pendingProcessJacobian.ResizeTo(5, 5);
+      child->pendingProcessJacobian.UnitMatrix();
+    }
+    child->pendingProcessJacobian(2, 2) *= scaleKappa;
     const double invFrac = 1.0 / fracMomentum;
     const double invFrac2 = invFrac * invFrac;
     const double fracVar = std::max(mixture[i].var, 0.0);

@@ -315,17 +315,149 @@ static double componentFitChi2(const GsfComponent& comp) {
   return comp.kaltrack ? comp.kaltrack->GetChi2() : 0.0;
 }
 
+static TMatrixD updateMatrix5(const MarlinTrk::MeasurementUpdate::Matrix& source) {
+  TMatrixD result(5, 5);
+  result.Zero();
+  if (source.rows < 5 || source.cols < 5 ||
+      source.values.size() < static_cast<size_t>(source.rows * source.cols))
+    return result;
+  for (int row = 0; row < 5; ++row)
+    for (int col = 0; col < 5; ++col)
+      result(row, col) = source.values[row * source.cols + col];
+  return result;
+}
+
+static TMatrixD updateVector5(const MarlinTrk::MeasurementUpdate::Matrix& source) {
+  TMatrixD result(5, 1);
+  result.Zero();
+  if (source.rows < 5 || source.cols != 1 ||
+      source.values.size() < static_cast<size_t>(source.rows))
+    return result;
+  for (int row = 0; row < 5; ++row) result(row, 0) = source.values[row];
+  return result;
+}
+
+static void trackStateToKalTest5(const edm4hep::TrackState& ts, double bz,
+                                 TMatrixD& mean, TMatrixD& covariance) {
+  const double alpha = bz * 2.99792458e-4;
+  mean.ResizeTo(5, 1);
+  mean(0, 0) = -ts.D0;
+  mean(1, 0) = normalizePhi(ts.phi - M_PI / 2.0);
+  mean(2, 0) = ts.omega / alpha;
+  mean(3, 0) = ts.Z0;
+  mean(4, 0) = ts.tanLambda;
+  covariance.ResizeTo(5, 5);
+  const double scale[5] = {-1.0, 1.0, 1.0 / alpha, 1.0, 1.0};
+  for (int row = 0; row < 5; ++row)
+    for (int col = 0; col < 5; ++col)
+      covariance(row, col) = scale[row] * scale[col] *
+          ts.covMatrix[covIndex5(row, col)];
+}
+
+static double maxRelativeMatrixDifference(const TMatrixD& actual,
+                                          const TMatrixD& expected) {
+  double maximum = 0.0;
+  for (int row = 0; row < actual.GetNrows(); ++row) {
+    for (int col = 0; col < actual.GetNcols(); ++col) {
+      const double scale = std::max({1.0e-30, std::abs(actual(row, col)),
+                                     std::abs(expected(row, col))});
+      maximum = std::max(maximum,
+                         std::abs(actual(row, col) - expected(row, col)) / scale);
+    }
+  }
+  return maximum;
+}
+
 static bool appendBaselineStateToComponent(
     GsfComponent& comp, const edm4hep::TrackState& ts,
-    const MatchedHit& hit, double bz) {
+    const MatchedHit& hit, double bz,
+    const edm4hep::TrackState& processInput,
+    const MarlinTrk::MeasurementUpdate& update) {
   TKalTrackSite* site = makeInitialSiteFromTrackState(ts, hit, bz);
   if (!site || !comp.kaltrack) {
     delete site;
     return false;
   }
   comp.kaltrack->Add(site);
+  GsfSmoothingStep step;
+  trackStateToKalTest5(ts, bz, step.filteredMean, step.filteredCovariance);
+  trackStateToKalTest5(processInput, bz, step.processInputMean,
+                       step.processInputCovariance);
+  step.predictedMean = updateVector5(update.predictedState);
+  step.predictedCovariance = updateMatrix5(update.predictedCovariance);
+  step.processJacobian = comp.pendingProcessJacobian;
+  step.transportJacobian = updateMatrix5(update.transportJacobian);
+  step.transportProcessNoise = updateMatrix5(update.processNoiseCovariance);
+  step.transitionJacobian = step.transportJacobian;
+  step.transitionValid = update.transportJacobian.rows >= 5 &&
+      update.transportJacobian.cols >= 5 &&
+      update.processNoiseCovariance.rows >= 5 &&
+      update.processNoiseCovariance.cols >= 5;
+  if (comp.pendingProcessJacobian.GetNrows() == 5 &&
+      comp.pendingProcessJacobian.GetNcols() == 5) {
+    step.transitionJacobian *= comp.pendingProcessJacobian;
+  }
+  if (step.transitionValid) {
+    TMatrixD transportT(TMatrixD::kTransposed, step.transportJacobian);
+    const TMatrixD reconstructedPrediction = step.transportJacobian *
+        step.processInputCovariance * transportT + step.transportProcessNoise;
+    step.transportCovarianceClosure = maxRelativeMatrixDifference(
+        step.predictedCovariance, reconstructedPrediction);
+    if (!comp.smoothingSteps.empty()) {
+      const auto& previous = comp.smoothingSteps.back();
+      TMatrixD processT(TMatrixD::kTransposed, step.processJacobian);
+      const TMatrixD deterministicProcessCovariance = step.processJacobian *
+          previous.filteredCovariance * processT;
+      step.bhAddedKappaVariance = step.processInputCovariance(2, 2) -
+          deterministicProcessCovariance(2, 2);
+    }
+  }
+  comp.smoothingSteps.push_back(step);
+  comp.pendingProcessJacobian.ResizeTo(5, 5);
+  comp.pendingProcessJacobian.UnitMatrix();
   comp.continuationState = ts;
   comp.continuationValid = true;
+  return true;
+}
+
+static bool smoothRetainedLineage(GsfComponent& comp) {
+  if (comp.smoothingSteps.size() < 2) return false;
+  const size_t n = comp.smoothingSteps.size();
+  std::vector<TMatrixD> smoothedMeans(n, TMatrixD(5, 1));
+  std::vector<TMatrixD> smoothedCovariances(n, TMatrixD(5, 5));
+  smoothedMeans[n - 1] = comp.smoothingSteps[n - 1].filteredMean;
+  smoothedCovariances[n - 1] = comp.smoothingSteps[n - 1].filteredCovariance;
+
+  for (size_t next = n - 1; next > 0; --next) {
+    const size_t current = next - 1;
+    const auto& currentStep = comp.smoothingSteps[current];
+    auto& nextStep = comp.smoothingSteps[next];
+    if (!nextStep.transitionValid || nextStep.transitionJacobian.GetNrows() != 5 ||
+        nextStep.predictedCovariance.GetNrows() != 5) return false;
+    TMatrixD predictedInverse = nextStep.predictedCovariance;
+    double determinant = 0.0;
+    predictedInverse.Invert(&determinant);
+    if (!(std::abs(determinant) > 0.0) || !std::isfinite(determinant)) return false;
+    TMatrixD transitionT(TMatrixD::kTransposed, nextStep.transitionJacobian);
+    TMatrixD gain = currentStep.filteredCovariance * transitionT * predictedInverse;
+    double kappaGainNorm2 = 0.0;
+    for (int col = 0; col < 5; ++col)
+      kappaGainNorm2 += gain(2, col) * gain(2, col);
+    nextStep.rtsKappaGainNorm = std::sqrt(kappaGainNorm2);
+    TMatrixD deltaMean = smoothedMeans[next] - nextStep.predictedMean;
+    // Keep the periodic helix angle on the local branch.
+    deltaMean(1, 0) = normalizePhi(deltaMean(1, 0));
+    const TMatrixD smoothingCorrection = gain * deltaMean;
+    nextStep.rtsKappaCorrection = smoothingCorrection(2, 0);
+    smoothedMeans[current] = currentStep.filteredMean + smoothingCorrection;
+    TMatrixD gainT(TMatrixD::kTransposed, gain);
+    smoothedCovariances[current] = currentStep.filteredCovariance +
+        gain * (smoothedCovariances[next] - nextStep.predictedCovariance) * gainT;
+  }
+  // smoothingSteps[0] is the first real measurement accepted after the seed.
+  comp.smoothedInnerMean = smoothedMeans.front();
+  comp.smoothedInnerCovariance = smoothedCovariances.front();
+  comp.smoothedInnerValid = true;
   return true;
 }
 
@@ -392,10 +524,21 @@ static TKalTrackSite* makeInitialSiteFromTrackState(
 /// No material effects (MS / energy loss) applied.
 static void extrapolateToIP_geometric(GsfComponent* comp,
                                       const DDCylinderMeasLayer* ipLayer,
-                                      double /*bz*/,
+                                      double bz,
                                       THelicalTrack& outHelix, TMatrixD& outCov) {
   auto& innerSite = *dynamic_cast<const TKalTrackSite*>(comp->kaltrack->At(1));
   auto& innerState = dynamic_cast<TKalTrackState&>(innerSite.GetCurState());
+
+  if (comp->smoothedInnerValid) {
+    outCov.ResizeTo(5, 5);
+    outCov = comp->smoothedInnerCovariance;
+    outHelix = THelicalTrack(comp->smoothedInnerMean, innerSite.GetPivot(), bz);
+    double dphi = 0.0;
+    TMatrixD jacobian(5, 5);
+    jacobian.UnitMatrix();
+    outHelix.MoveTo(TVector3(0, 0, 0), dphi, &jacobian, &outCov);
+    return;
+  }
 
   outCov.ResizeTo(5, 5);
   for (int i = 0; i < 5; i++)
@@ -619,6 +762,44 @@ static double thicknessInX0(const DDVMeasLayer* layer) {
   return tX0;
 }
 
+struct ComponentMaterialPath {
+  double normalTX0 = 0.0;
+  double pathTX0 = 0.0;
+  double absCosIncidence = 0.0;
+  bool valid = false;
+};
+
+/// Material owned by the current measurement surface and traversed when
+/// continuing away from that surface. The slab thickness is projected along
+/// the component-local tangent, matching DDKalTest's surface-material
+/// convention while retaining the separate inner/outer radiation lengths.
+static ComponentMaterialPath componentMaterialPath(
+    const DDVMeasLayer* layer, const GsfComponent& component, double bz) {
+  ComponentMaterialPath result;
+  if (!layer || !layer->surface()) return result;
+  result.normalTX0 = thicknessInX0(layer);
+  if (!(result.normalTX0 > 0.0)) return result;
+
+  const THelicalTrack helix = component.helixAtMeasurementSite(bz);
+  const double tanLambda = helix.GetTanLambda();
+  dd4hep::rec::Vector3D direction(-std::sin(helix.GetPhi0()),
+                                  std::cos(helix.GetPhi0()), tanLambda);
+  direction = direction.unit();
+  const TVector3& pivot = helix.GetPivot();
+  const dd4hep::rec::Vector3D point(pivot.X() * dd4hep::mm,
+                                    pivot.Y() * dd4hep::mm,
+                                    pivot.Z() * dd4hep::mm);
+  const dd4hep::rec::Vector3D normal = layer->surface()->normal(point).unit();
+  result.absCosIncidence = std::abs(direction * normal);
+  if (!(result.absCosIncidence > 1.0e-6) ||
+      !std::isfinite(result.absCosIncidence)) {
+    return result;
+  }
+  result.pathTX0 = result.normalTX0 / result.absCosIncidence;
+  result.valid = std::isfinite(result.pathTX0) && result.pathTX0 > 0.0;
+  return result;
+}
+
 // ============================================================================
 // Algorithm
 // ============================================================================
@@ -662,6 +843,24 @@ StatusCode RecGsfTracking::initialize() {
   std::transform(outputMode.begin(), outputMode.end(), outputMode.begin(), ::tolower);
   if (outputMode != "bestbranch" && outputMode != "weightedmean") {
     error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_retainedLineageSmoothing.value() && reductionMode != "topn") {
+    error() << "RetainedLineageSmoothing requires ReductionMode=TopN so every "
+               "smoothed component has one real, unmerged process lineage"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_retainedLineageSmoothing.value() && m_reverseFiltering.value()) {
+    error() << "RetainedLineageSmoothing and ReverseFiltering are alternative "
+               "backward-information workflows; enable only one"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_retainedLineageSmoothing.value() && m_materialIPExtrap.value()) {
+    error() << "RetainedLineageSmoothing currently requires "
+               "MaterialIPExtrapolation=False"
+            << endmsg;
     return StatusCode::FAILURE;
   }
 
@@ -863,6 +1062,7 @@ StatusCode RecGsfTracking::execute() {
     TKalTrackSite* site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
     int nextComponentDebugId = 0;
     auto* initComp = new GsfComponent();
+    initComp->pendingProcessJacobian.UnitMatrix();
     initComp->weight = 1.0;
     initComp->charge = charge;
     initComp->debugId = nextComponentDebugId++;
@@ -939,8 +1139,6 @@ StatusCode RecGsfTracking::execute() {
       }
 
       const double stepTX0 = thicknessInX0(hi.layer);
-      totalTX0 += stepTX0;
-      if (stepTX0 > maxTX0Layer) maxTX0Layer = stepTX0;
       if (m_verboseDump && m_componentDebugDump) {
         info() << boost::format("  MAT hit=%d r=%.1f stepTX0=%.6g comps=%d")
                   % (int)ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
@@ -990,7 +1188,9 @@ StatusCode RecGsfTracking::execute() {
                 baselineTrack->addAndFit(trkHit, dchi, measurementUpdate, DBL_MAX) == MarlinTrk::IMarlinTrack::success &&
                 measurementUpdate.valid) {
               if (baselineTrack->getTrackState(trkHit, updatedState, updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
-                  appendBaselineStateToComponent(*comp, updatedState, hi, bz)) {
+                  appendBaselineStateToComponent(*comp, updatedState, hi, bz,
+                                                 componentState,
+                                                 measurementUpdate)) {
                 baselineAccepted = true;
                 posteriorLogWeight = std::log(beforeWeight) -
                     0.5 * (dchi + measurementUpdate.logDetInnovation);
@@ -1190,24 +1390,62 @@ StatusCode RecGsfTracking::execute() {
       // surface.  The splitter writes only the continuation snapshot, leaving
       // the Kalman measurement history unchanged.
       const bool hasNextForwardSurface = ih + 1 < hits.size();
-      if (hasNextForwardSurface && stepTX0 > m_bhSplitThresh && m_isElectron &&
+      std::vector<ComponentMaterialPath> materialPaths;
+      materialPaths.reserve(comps.size());
+      bool anyComponentMaterial = false;
+      for (const auto* comp : comps) {
+        materialPaths.push_back(componentMaterialPath(hi.layer, *comp, bz));
+        anyComponentMaterial |= materialPaths.back().valid &&
+            materialPaths.back().pathTX0 > m_bhSplitThresh.value();
+      }
+      if (hasNextForwardSurface) {
+        double weightedPathTX0 = 0.0;
+        double validWeight = 0.0;
+        for (size_t ci = 0; ci < comps.size(); ++ci) {
+          if (!materialPaths[ci].valid) continue;
+          weightedPathTX0 += comps[ci]->weight * materialPaths[ci].pathTX0;
+          validWeight += comps[ci]->weight;
+          maxTX0Layer = std::max(maxTX0Layer, materialPaths[ci].pathTX0);
+        }
+        if (validWeight > 0.0) totalTX0 += weightedPathTX0 / validWeight;
+      }
+      if (m_verboseDump && m_componentDebugDump && hasNextForwardSurface &&
+          (ih < 3 || anyComponentMaterial)) {
+        for (size_t ci = 0; ci < comps.size(); ++ci) {
+          const auto& path = materialPaths[ci];
+          info() << boost::format("  MAT-COMP hit=%d comp=%d id=%d owner=outgoing-current normalTX0=%.9g absCos=%.9g pathTX0=%.9g valid=%d")
+                    % (int)ih % (int)ci % comps[ci]->debugId
+                    % path.normalTX0 % path.absCosIncidence % path.pathTX0
+                    % (path.valid ? 1 : 0) << endmsg;
+        }
+      }
+      if (hasNextForwardSurface && anyComponentMaterial && m_isElectron &&
           (int)comps.size() < m_maxComponents) {
         if (m_verboseDump && m_verboseSplitDump) {
-          info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, step tX0=%.2e) — %d comps before split")
-                    % ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
+          info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, component-local path tX0) — %d comps before split")
+                    % ih % hi.radius % (int)comps.size() << endmsg;
         }
         BetheHeitlerSplitter bhs(m_bhModel.value());
         std::vector<GsfComponent*> newCps;
-        for (auto* comp : comps) {
+        for (size_t componentIndex = 0; componentIndex < comps.size(); ++componentIndex) {
+          auto* comp = comps[componentIndex];
+          const auto& materialPath = materialPaths[componentIndex];
+          if (!materialPath.valid ||
+              materialPath.pathTX0 <= m_bhSplitThresh.value()) {
+            newCps.push_back(comp);
+            continue;
+          }
           const int parentDebugId = comp->debugId;
           const int childGeneration = comp->generation + 1;
           const double parentKappa = comp->helixAtLastSite(bz).GetKappa();
-          auto children = bhs.split(comp, stepTX0, bz);
+          auto children = bhs.split(comp, materialPath.pathTX0, bz);
           if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
             const double parentPT = (bz != 0 && parentKappa != 0)
                 ? 1.0 / std::abs(parentKappa) : 0.0;
-            info() << boost::format("    filtered parent kappa=%.4e (pT=%.3f) weight=%.4f -> %d post-material children")
-                      % parentKappa % parentPT % comp->weight % (int)children.size() << endmsg;
+            info() << boost::format("    filtered parent kappa=%.4e (pT=%.3f) weight=%.4f normalTX0=%.6g absCos=%.6g pathTX0=%.6g -> %d post-material children")
+                      % parentKappa % parentPT % comp->weight
+                      % materialPath.normalTX0 % materialPath.absCosIncidence
+                      % materialPath.pathTX0 % (int)children.size() << endmsg;
             for (size_t ci = 0; ci < children.size(); ++ci) {
               const double childKappa = children[ci]->helixAtLastSite(bz).GetKappa();
               const double childPT = (bz != 0 && childKappa != 0)
@@ -1378,7 +1616,7 @@ StatusCode RecGsfTracking::execute() {
                 reverseTrack->getTrackState(targetHit, updatedState,
                     updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
                 appendBaselineStateToComponent(*component, updatedState,
-                    target, bz)) {
+                    target, bz, componentState, update)) {
               accepted = true;
             }
           } catch (...) {
@@ -1412,14 +1650,31 @@ StatusCode RecGsfTracking::execute() {
         reverseComps = std::move(acceptedReverse);
         GsfMixture::normalizeWeights(reverseComps);
 
-        const double reverseTX0 = thicknessInX0(target.layer);
-        if (reverseTX0 > m_bhSplitThresh && m_isElectron &&
+        std::vector<ComponentMaterialPath> reverseMaterialPaths;
+        reverseMaterialPaths.reserve(reverseComps.size());
+        bool anyReverseMaterial = false;
+        for (const auto* component : reverseComps) {
+          reverseMaterialPaths.push_back(
+              componentMaterialPath(target.layer, *component, bz));
+          anyReverseMaterial |= reverseMaterialPaths.back().valid &&
+              reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
+        }
+        if (anyReverseMaterial && m_isElectron &&
             (int)reverseComps.size() < m_maxComponents.value()) {
           BetheHeitlerSplitter splitter(m_bhModel.value());
           std::vector<GsfComponent*> reverseChildren;
-          for (auto* parent : reverseComps) {
+          for (size_t componentIndex = 0;
+               componentIndex < reverseComps.size(); ++componentIndex) {
+            auto* parent = reverseComps[componentIndex];
+            const auto& materialPath = reverseMaterialPaths[componentIndex];
+            if (!materialPath.valid ||
+                materialPath.pathTX0 <= m_bhSplitThresh.value()) {
+              reverseChildren.push_back(parent);
+              continue;
+            }
             const int parentId = parent->debugId;
-            auto children = splitter.split(parent, reverseTX0, bz, true);
+            auto children = splitter.split(parent, materialPath.pathTX0, bz,
+                                           true);
             for (auto* child : children) {
               child->debugParentId = parentId;
               child->debugId = nextReverseId++;
@@ -1491,9 +1746,52 @@ StatusCode RecGsfTracking::execute() {
 
     // ---- Step 5: smooth, extrapolate to IP, write output ----
     if (!comps.empty() && nProc > 0) {
-      for (auto* c : comps)
-        if (c->kaltrack->GetEntriesFast() > 1)
-          c->kaltrack->SmoothAll();
+      int lineageSmoothed = 0;
+      if (m_retainedLineageSmoothing.value()) {
+        for (auto* c : comps) {
+          if (smoothRetainedLineage(*c)) {
+            ++lineageSmoothed;
+            if (m_verboseDump && m_componentDebugDump) {
+              const auto& filteredInner = c->smoothingSteps.front();
+              const double filteredPt = filteredInner.filteredMean(2, 0) != 0.0
+                  ? 1.0 / std::abs(filteredInner.filteredMean(2, 0)) : 0.0;
+              const double smoothedPt = c->smoothedInnerMean(2, 0) != 0.0
+                  ? 1.0 / std::abs(c->smoothedInnerMean(2, 0)) : 0.0;
+              info() << boost::format("  LINEAGE-SMOOTH comp id=%d steps=%d inner-pT %.9g -> %.9g inner-varK %.9g -> %.9g")
+                        % c->debugId % (int)c->smoothingSteps.size()
+                        % filteredPt % smoothedPt
+                        % filteredInner.filteredCovariance(2, 2)
+                        % c->smoothedInnerCovariance(2, 2) << endmsg;
+              for (size_t si = 1; si < c->smoothingSteps.size(); ++si) {
+                const auto& transition = c->smoothingSteps[si];
+                const bool isBh = std::abs(transition.processJacobian(2, 2) - 1.0) > 1.0e-12;
+                if (si <= 2 || isBh) {
+                  info() << boost::format("    LINEAGE-TRANS comp=%d step=%d kind=%s FbhKK=%.9g covClosure=%.3g bhQkk=%.9g rtsGainK=%.9g deltaK=%.9g")
+                            % c->debugId % (int)si % (isBh ? "BH" : "transport")
+                            % transition.processJacobian(2, 2)
+                            % transition.transportCovarianceClosure
+                            % transition.bhAddedKappaVariance
+                            % transition.rtsKappaGainNorm
+                            % transition.rtsKappaCorrection << endmsg;
+                }
+              }
+            }
+          }
+        }
+        if (m_verboseDump) {
+          info() << boost::format("  LINEAGE-SMOOTH summary: smoothed=%d total=%d")
+                    % lineageSmoothed % (int)comps.size() << endmsg;
+        }
+        if (lineageSmoothed != static_cast<int>(comps.size())) {
+          warning() << boost::format("GSF event index %d track %d: retained-lineage smoothing failed for %d/%d components; no GSF output track")
+                       % (m_nEvt - 1) % (nFit + 1)
+                       % ((int)comps.size() - lineageSmoothed)
+                       % (int)comps.size() << endmsg;
+          for (auto* c : comps) delete c;
+          for (auto& h : hits) delete h.kalHit;
+          continue;
+        }
+      }
 
       GsfMixture::normalizeWeights(comps);
 

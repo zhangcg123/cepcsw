@@ -44,8 +44,8 @@ struct TrackSummary {
   int    finalComps    = 0;   // components after final smoothing
   double bestWeight    = 0;   // weight of best component
   double meanWeight    = 0;   // average weight (should be ~1/N)
-  double maxTX0Layer   = 0;   // largest single-layer t/X0
-  double totalTX0      = 0;   // total accumulated radiation length
+  double maxTX0Layer   = 0;   // largest component-local outgoing path t/X0
+  double totalTX0      = 0;   // sum of weighted outgoing path t/X0 values
 };
 
 class RecGsfTracking : public Algorithm {
@@ -83,6 +83,7 @@ private:
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
+  Gaudi::Property<bool>   m_retainedLineageSmoothing{this,"RetainedLineageSmoothing",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",false};
   Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",false};
   Gaudi::Property<bool>   m_componentDebugDump{this,"ComponentDebugDump",false};
