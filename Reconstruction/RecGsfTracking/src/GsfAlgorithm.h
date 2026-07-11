@@ -85,6 +85,9 @@ private:
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
+  Gaudi::Property<std::string> m_reverseOutputMode{
+      this, "ReverseOutputMode", "BestBranch",
+      "WeightedMean or BestBranch output from the reverse filter"};
   Gaudi::Property<bool>   m_retainedLineageSmoothing{this,"RetainedLineageSmoothing",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",false};
   Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",false};

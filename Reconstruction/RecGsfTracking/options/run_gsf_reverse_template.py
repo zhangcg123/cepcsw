@@ -20,9 +20,12 @@ tuple_output = os.getenv("GSF_TUPLE_OUTPUT", "gsf_flat-reverse-e--2.0-85-1.root"
 # True for electron GSF/BH processing. Set False for the no-BH muon control.
 electron_hypothesis = True
 
-# Set, for example, [11] for comprehensive focused diagnostics. Leave empty
-# for normal processing of every event up to evtmax.
-selected_event_indices = []
+# Set GSF_SELECTED_EVENT_INDICES to a comma-separated list such as "1,4,7".
+# Leave it empty for normal processing of every event up to evtmax.
+selected_event_indices = [
+    int(index) for index in os.getenv("GSF_SELECTED_EVENT_INDICES", "").split(",")
+    if index.strip()
+]
 verbose_components = False
 
 # ---- Input and geometry ----------------------------------------------------
@@ -69,13 +72,13 @@ gsf.ReductionMinHitsAfterSplit = 0
 gsf.ComponentWeightCutoff = 1.0e-8
 
 gsf.MSOn = True
-gsf.ElossOn = True
+gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "0").lower() in ("1", "true", "yes")
 gsf.KappaSeedCov = 1.0e-7
 
-# Enables inward multi-component filtering and publishes its best IP branch
-# with matching reverse chi2/NDF metadata.
+# Enables inward multi-component filtering. ReverseOutputMode controls whether
+# the published IP state is the moment-matched mixture or highest-weight branch.
 gsf.ReverseFiltering = True
-gsf.GSFOutputMode = "BestBranch"
+gsf.ReverseOutputMode = os.getenv("GSF_REVERSE_OUTPUT_MODE", "BestBranch")
 gsf.MaterialIPExtrapolation = False
 
 gsf.SelectedEventIndices = selected_event_indices

@@ -1033,6 +1033,13 @@ StatusCode RecGsfTracking::initialize() {
     error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
     return StatusCode::FAILURE;
   }
+  std::string reverseOutputMode = m_reverseOutputMode.value();
+  std::transform(reverseOutputMode.begin(), reverseOutputMode.end(),
+                 reverseOutputMode.begin(), ::tolower);
+  if (reverseOutputMode != "bestbranch" && reverseOutputMode != "weightedmean") {
+    error() << "ReverseOutputMode must be BestBranch or WeightedMean" << endmsg;
+    return StatusCode::FAILURE;
+  }
   std::string materialPathMode = m_materialPathMode.value();
   std::transform(materialPathMode.begin(), materialPathMode.end(),
                  materialPathMode.begin(), ::tolower);
@@ -1851,6 +1858,7 @@ StatusCode RecGsfTracking::execute() {
     int reverseOutputNdf = 0;
     double reverseOutputWeight = 0.0;
     int reverseOutputComps = 0;
+    std::string reverseOutputLabel = "ReverseMixture";
 
     // Experimental reverse GSF pass.  Initialize from the filtered mixture on
     // the final measurement surface, then revisit preceding measurements in
@@ -2031,15 +2039,26 @@ StatusCode RecGsfTracking::execute() {
             });
         THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
         TMatrixD reverseIpCov(5, 5);
-        // ACTS-style output is the moment-matched backward mixture at the
-        // reference surface, not only its highest-weight component.
-        if (weightedReverseMixtureAtIP(reverseComps, bz,
-                                       reverseIp, reverseIpCov)) {
+        std::string reverseMode = m_reverseOutputMode.value();
+        std::transform(reverseMode.begin(), reverseMode.end(),
+                       reverseMode.begin(), ::tolower);
+        bool reverseOutputOk = false;
+        if (reverseMode == "bestbranch") {
+          reverseOutputOk = extrapolateContinuationToIP(
+              *reverseBest, bz, reverseIp, reverseIpCov);
+          reverseOutputLabel = "ReverseBestBranch";
+        } else {
+          reverseOutputOk = weightedReverseMixtureAtIP(
+              reverseComps, bz, reverseIp, reverseIpCov);
+          reverseOutputLabel = "ReverseMixture";
+        }
+        if (reverseOutputOk) {
           const double reversePt = reverseIp.GetKappa() != 0.0
               ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
           if (m_verboseDump) {
-            info() << boost::format("  REVERSE IP mixture: bestId=%d bestWeight=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
-                      % reverseBest->debugId % reverseBest->weight % reversePt
+            info() << boost::format("  REVERSE IP output: mode=%s bestId=%d bestWeight=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
+                      % reverseOutputLabel % reverseBest->debugId
+                      % reverseBest->weight % reversePt
                       % (-reverseIp.GetDrho()) % reverseIp.GetDz()
                       % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
                       % reverseIp.GetTanLambda() << endmsg;
@@ -2305,7 +2324,7 @@ StatusCode RecGsfTracking::execute() {
                   % sum.bestWeight % (1.0 / sum.finalComps)
                   % (sum.bestWeight * sum.finalComps) << endmsg;
         info() << boost::format("  output         | mode %s")
-                  % (usedReverseOutput ? "ReverseMixture" :
+                  % (usedReverseOutput ? reverseOutputLabel :
                      (usedWeightedOutput ? "WeightedMean" : "BestBranch"))
                << endmsg;
         info() << boost::format("  material       | max-tX0 %.2e  total-tX0 %.2e")
