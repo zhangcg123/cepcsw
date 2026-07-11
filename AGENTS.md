@@ -141,79 +141,47 @@ Do not lose unique information during that migration.
 
 ## 2. Current focus
 
-The active concentration is now the retained-lineage Gaussian-sum smoother.
-The prior material-semantics and step-conditioned CEPC BH roadmap is preserved
-in `agents_record/2026-07-11-retained-lineage-smoother-start.md` and is deferred,
-not cancelled.
+The active concentration is the transition-matched Geant4 dataset and a CEPC
+thin-step, `t/X0`-conditioned Bethe-Heitler mixture. The completed smoother,
+ACTS reference, transition-gain, pruning, and incidence-corrected-material
+evidence is preserved in
+`agents_record/2026-07-11-retained-lineage-smoother-completion.md`; load it only
+when detailed provenance or regression comparison is needed.
 
-The user authorized a narrow TrackSystemSvc interface extension after the audit
-showed that exact inter-surface transport Jacobians were unavailable to
-`RecGsfTracking`. `MeasurementUpdate` now exposes the existing KalTest
-propagator. The new opt-in `RetainedLineageSmoothing` path composes it with the
-selected BH process Jacobian and runs an RTS recursion independently on each
-retained forward history. It requires `TopN`, disables the experimental reverse
-refit, and currently supports geometric IP extrapolation only.
-
-Focused verbose validation is mechanically successful but physically
-negative. Events 11, 16, and 17 retain 234/234 hits and smooth 7/7, 7/7, and
-12/12 branches, yet give IP pT 1.7933, 1.8118, and 1.5789 GeV versus truth
-2.0004 GeV and LCIO 1.7934, 1.8118, and 1.5790 GeV. The inner curvature and
-variance change only minimally. Do not interpret this as hard-loss recovery or
-as validation of the smoother.
-
-The transition audit now localizes the negligible correction. Exact MarlinTrk
-covariance closure is typically at the `1e-6` level and no worse than about
-`1e-4` in the checked first transitions. Instead, the fixed global BH model
-adds curvature variance of about `7.6e-6` even for its near-no-loss component
-and about `4.4e-3` for its `z=0.975` component, versus an incoming variance near
-`1.0e-7`. This reduces the first backward curvature gain to about `0.013` or
-`2.3e-5`. The no-BH one-component control has gain near one and agrees with
-LCIO pT within 0.0002 GeV. Three-hit delayed TopN retains more histories but
-does not recover momentum.
-
-The new faithful `ActsAtlas` reference also does not recover the focused
-events. All current nominal transitions are below `0.002 X0`, so ACTS selects
-one analytic Gaussian rather than a mixture. Events 11, 16, and 17 remain at
-1.7934, 1.8118, and 1.5790 GeV. Event 11's first thin Gaussian adds about
-`7.39e-5` curvature variance and reduces its first backward curvature gain to
-`1.35e-3`. This is useful reference behavior but not evidence that ATLAS
-coefficients describe CEPC material losses.
-
-Component-local incidence correction is now implemented with explicit
-outgoing-current-surface ownership. For each component,
-`pathTX0 = normalTX0/abs(tangent·normal)` using the filtered helix tangent and
-DD4hep surface normal at its pivot; the final forward surface has no outgoing
-transition. Event-11's first two values become `0.000573798` and `0.000566019
-X0`, and the largest focused corrected paths for events 11, 16, and 17 are
-`0.00163546`, `0.00163468`, and `0.00164820 X0`. They remain below the ACTS
-six-component threshold, so focused momenta are unchanged.
+The immediate blocker is not another tracking-workflow change. Existing models
+either ignore `t/X0`, collapse the actual thin CEPC range into one Gaussian, or
+put so much full-distribution width inside each component that the backward
+curvature correlation vanishes. The fitted model must instead describe the
+actual owned reconstruction transition between measurement surfaces.
 
 Proceed in this order:
 
-1. Use event 11 for step-level verbose development and events 11, 16, and 17 as
-   the primary validation set.
-2. Validate the one-component (`ElectronHypothesis=False`) covariance pulls on
-   the running large muon sample; the focused central-value check already
-   agrees with LCIO.
-3. Fit a per-step-`t/X0` CEPC BH mixture with narrow conditional components
-   using primary-electron Geant4 eBrem truth; incidence-corrected ownership is
-   now implemented.
-4. Verify that the fitted conditional variances preserve useful backward RTS
-   curvature gains across the first hard-loss transition.
-5. Repeat comprehensive events 11, 16, and 17 before any broad performance
-   claim or pruning-policy decision.
+1. Use primary-electron tracker-volume Geant4 pre/post-step eBrem truth; never
+   fit the final model to SimTrackerHit momentum.
+2. Aggregate every Geant4 loss occurring between the same owned reconstruction
+   surfaces into one transition with `z=p_post/p_pre`, and pair it with the
+   incidence-corrected reconstruction `t/X0`.
+3. Cover the observed thin range, currently about `1e-4` to `1.7e-3 X0`, with
+   explicit no/negligible-, small-, moderate-, large-, and extreme-loss
+   hypotheses. Use `-log(z)` or an equivalent stable positive variable.
+4. Fit smooth constrained functions `weight_j(t/X0)`, `mean_j(t/X0)`, and
+   `variance_j(t/X0)`. Tail weights must vanish appropriately as `t/X0 -> 0`;
+   each component variance must represent only its conditional width, not the
+   full loss distribution.
+5. Validate held-out means, variances, quantiles, and probabilities such as
+   `P(z<0.95)`, `P(z<0.8)`, and `P(z<0.5)` in separate `t/X0` bins before
+   integrating `BHModel="CEPCStepConditioned"`.
+6. On two event-11 transitions, require a finite hard-loss child and useful
+   backward curvature gain. Then run complete verbose events 11, 16, and 17,
+   retaining 4-5 hypotheses long enough to accumulate measurement support.
 
-Success for the present stage means exact transition-consistency checks, a
-one-component result consistent with standard smoothing, calibrated finite
-covariances, and then a retained hard-loss lineage whose smoothed full-hit IP
-state is closer to truth than LCIO across the focused events.
+Success means that the held-out transition distribution, including its rare
+tail, is reproduced and a supported hard-loss lineage produces a finite
+234-hit smoothed IP state closer to generator truth than LCIO across events 11,
+16, and 17 without covariance failure or measurement rejection.
 
-Current non-goals: treating the reverse refit as a Gaussian-sum smoother,
-treating the first finite RTS output as validation, treating delayed TopN as a
-validated final policy, reopening
-resolved recovery/segmentation investigations without a fresh reproduction,
-restoring removed KF/initialization experiments, using immediate TopN target 1
-as a recovery benchmark, fitting the final BH model to SimHit momentum,
-assuming ACTS's ATLAS BH coefficients validate CEPC physics, or making further
-shared-package changes without a demonstrated interface need and explicit user
-authorization.
+Current non-goals: further reverse-refit investigation, global-model tuning,
+pruning/runtime optimization before the matched model exists, treating delayed
+TopN as a final policy, fitting to SimHit momentum, assuming ACTS ATLAS
+coefficients validate CEPC, broad performance plots, or additional shared-
+package changes.
