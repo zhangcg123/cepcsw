@@ -60,6 +60,7 @@ def read_table(path):
             by_center.setdefault(center, []).append({
                 "component": int(row["component"]),
                 "loss_class": row["loss_class"],
+                "is_identity": row["loss_class"] == "no_ebrem",
                 "count": int(row["count"]),
                 "weight": float(row["weight"]),
                 "mean_z": float(row["mean_z"]),
@@ -81,6 +82,7 @@ def read_table(path):
             "components": [{
                 "component": item["component"],
                 "loss_class": item["loss_class"],
+                "is_identity": item["is_identity"],
                 "count": item["count"],
                 "weight": float(weights[index]),
                 "mean_z": min(1.0, max(0.0, item["mean_z"])),
@@ -108,10 +110,14 @@ def interpolate_components(knots, tx0):
                             fraction * first_weights)
         result = []
         for i, component in enumerate(first["components"]):
-            mean = 1.0 - fraction * (1.0 - component["mean_z"])
-            variance = VARIANCE_FLOOR * math.exp(
-                fraction * math.log(component["variance_z"] /
-                                    VARIANCE_FLOOR))
+            if component.get("is_identity", False):
+                mean = 1.0
+                variance = VARIANCE_FLOOR
+            else:
+                mean = 1.0 - fraction * (1.0 - component["mean_z"])
+                variance = VARIANCE_FLOOR * math.exp(
+                    fraction * math.log(component["variance_z"] /
+                                        VARIANCE_FLOOR))
             result.append({"weight": float(weights[i]), "mean_z": mean,
                            "variance_z": variance})
         return result
@@ -144,11 +150,15 @@ def interpolate_components(knots, tx0):
     result = []
     for i, (left, right) in enumerate(zip(lower["components"],
                                           upper["components"])):
-        mean = inv_logit((1.0 - fraction) * logit(left["mean_z"]) +
-                         fraction * logit(right["mean_z"]))
-        variance = math.exp(
-            (1.0 - fraction) * math.log(left["variance_z"]) +
-            fraction * math.log(right["variance_z"]))
+        if left.get("is_identity", False) and right.get("is_identity", False):
+            mean = 1.0
+            variance = VARIANCE_FLOOR
+        else:
+            mean = inv_logit((1.0 - fraction) * logit(left["mean_z"]) +
+                             fraction * logit(right["mean_z"]))
+            variance = math.exp(
+                (1.0 - fraction) * math.log(left["variance_z"]) +
+                fraction * math.log(right["variance_z"]))
         result.append({"weight": float(weights[i]), "mean_z": mean,
                        "variance_z": variance})
     return result
@@ -159,7 +169,7 @@ def write_artifact(path, source, knots):
         "model": MODEL_NAME,
         "scope": {"particle": "electron", "pt_GeV": 2.0,
                   "theta_deg": 85.0, "max_tx0": 0.03},
-        "variable": "z=p_after/p_before",
+        "variable": "z=1-ebrem_step_loss_sum/p_before",
         "status": "same-sample execution artifact; not physics validated",
         "source_table": os.path.abspath(source),
         "interpolation": {

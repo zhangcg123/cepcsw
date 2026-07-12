@@ -20,19 +20,22 @@ EVENTS = Path(
     "gsf_reverse_vs_lcio_pt_resolution_by_tracker_ebrem_events.csv")
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--events", type=Path, default=EVENTS)
     parser.add_argument(
         "--category", default="no_ebrem",
         choices=("no_ebrem", "light_ebrem", "hard_ebrem"))
     parser.add_argument("--best-dir", type=Path)
+    parser.add_argument("--candidate-label", default="Reverse best branch")
+    parser.add_argument("--output-name")
     args = parser.parse_args()
     best_dir = args.best_dir or Path(
         f"/tmp/gsf-bestbranch-{args.category.replace('_', '-')}")
-    out = Path(
-        "TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/plots/"
-        f"{args.category}_reverse_bestbranch_vs_mixture")
+    output_name = (args.output_name or
+                   f"{args.category}_reverse_bestbranch_vs_mixture")
+    out = Path("TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/plots") / output_name
 
     rows = []
-    with EVENTS.open() as source:
+    with args.events.open() as source:
         for row in csv.DictReader(source):
             if row["category"] == args.category:
                 rows.append(row)
@@ -83,7 +86,7 @@ def main() -> None:
             [float(row["lcio_residual_pct"]) for row in successful_rows]),
         "Reverse weighted mixture": np.asarray(
             [float(row["gsf_residual_pct"]) for row in successful_rows]),
-        "Reverse best branch": np.asarray(best),
+        args.candidate_label: np.asarray(best),
     }
     summary = []
     for name, residual in values.items():
@@ -106,7 +109,7 @@ def main() -> None:
     styles = (
         ("LCIO", "#276FBF", "--"),
         ("Reverse weighted mixture", "#D1495B", "-"),
-        ("Reverse best branch", "#2A9D8F", "-.")
+        (args.candidate_label, "#2A9D8F", "-.")
     )
     combined = np.concatenate(list(values.values()))
     lo, hi = np.quantile(combined, [0.002, 0.998])

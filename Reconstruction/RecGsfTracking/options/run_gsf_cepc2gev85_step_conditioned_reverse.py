@@ -10,4 +10,5 @@ gsf.ReductionMode = "KL"
 gsf.RetainedLineageSmoothing = False
 gsf.ReverseFiltering = True
 gsf.ReverseOutputMode = os.getenv("GSF_REVERSE_OUTPUT_MODE", "BestBranch")
+gsf.ElossOn = True
 gsf.MaterialIPExtrapolation = False

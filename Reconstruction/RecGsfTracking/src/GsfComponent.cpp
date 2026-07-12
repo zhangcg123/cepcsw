@@ -138,6 +138,7 @@ GsfComponent* GsfComponent::clone() const {
   c->debugParentId = debugParentId;
   c->generation = generation;
   c->hitsSinceSplit = hitsSinceSplit;
+  c->noRadiationLineage = noRadiationLineage;
   c->debugHistory = debugHistory;
   c->fitChi2 = fitChi2;
   c->continuationValid = continuationValid;

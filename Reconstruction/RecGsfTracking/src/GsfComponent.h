@@ -41,6 +41,9 @@ struct GsfComponent {
   int       debugParentId = -1;
   int       generation = 0;
   int       hitsSinceSplit = 0;
+  /// True only for the lineage that selected the exact no-radiation atom at
+  /// every BH convolution. It is protected from cutoff and radiative merges.
+  bool      noRadiationLineage = true;
   std::string debugHistory;
   /// State used to continue propagation after a surface-local process
   /// transition.  The Kalman history remains the pre-process measurement

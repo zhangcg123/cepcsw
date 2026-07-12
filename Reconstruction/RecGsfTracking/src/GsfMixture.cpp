@@ -35,7 +35,8 @@ void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff) {
       });
   auto out = comps.begin();
   for (auto* component : comps) {
-    if (component->weight >= cutoff || component == largest) {
+    if (component->weight >= cutoff || component == largest ||
+        component->noRadiationLineage) {
       *out++ = component;
     } else {
       delete component;
@@ -175,6 +176,9 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
     double bestDist = 1e30;
     for (size_t i = 0; i < comps.size(); i++) {
       for (size_t j = i + 1; j < comps.size(); j++) {
+        if (maxN > 1 &&
+            comps[i]->noRadiationLineage != comps[j]->noRadiationLineage)
+          continue;
         double d = klDistance(comps[i], comps[j], bz);
         if (bi < 0 || d < bestDist) {
           bestDist = d;

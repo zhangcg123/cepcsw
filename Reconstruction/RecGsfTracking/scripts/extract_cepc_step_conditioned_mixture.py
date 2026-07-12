@@ -21,6 +21,7 @@ DEFAULT_TX0_EDGES = (0.0, 1e-4, 5e-4, 2e-3, 5e-3, 1e-2, 1.5e-2,
                      2e-2, 3e-2)
 LOSS_EDGES = (0.0, 1e-4, 1e-2, 5e-2, 2e-1, 1.0 + 1e-12)
 LOSS_LABELS = ("negligible", "small", "moderate", "large", "extreme")
+EBREM_LOSS_LABELS = ("no_ebrem", "small", "moderate", "large", "extreme")
 OUTPUT_FIELDS = (
     "tx0_low", "tx0_high", "tx0_center", "component", "loss_class",
     "count", "weight", "mean_z", "variance_z", "sigma_z",
@@ -51,15 +52,17 @@ def new_accumulator(n_tx0, n_loss):
              for _ in range(n_loss)] for _ in range(n_tx0)]
 
 
-def extract(paths, tx0_edges):
+def extract(paths, tx0_edges, loss_source):
     accum = new_accumulator(len(tx0_edges) - 1, len(LOSS_LABELS))
     audit = {
         "input_files": len(paths), "input_rows": 0, "accepted_rows": 0,
         "outside_tx0_range": 0, "invalid_rows": 0, "ebrem_rows": 0,
         "tx0_edges": list(tx0_edges), "loss_edges": list(LOSS_EDGES),
+        "loss_source": loss_source,
         "loss_variable": "1-z", "mixture_variable": "z",
     }
-    required = {"g4_t_over_x0", "z", "minus_log_z", "n_ebrem_steps"}
+    required = {"g4_t_over_x0", "z", "minus_log_z", "n_ebrem_steps",
+                "p_before_GeV", "ebrem_step_loss_sum_GeV"}
 
     for path in paths:
         with open(path, newline="") as stream:
@@ -72,9 +75,20 @@ def extract(paths, tx0_edges):
                 audit["input_rows"] += 1
                 try:
                     tx0 = float(row["g4_t_over_x0"])
-                    z = float(row["z"])
-                    y = float(row["minus_log_z"])
-                    ebrem = int(row["n_ebrem_steps"]) > 0
+                    ebrem_steps = int(row["n_ebrem_steps"])
+                    ebrem = ebrem_steps > 0
+                    if loss_source == "ebrem":
+                        p_before = float(row["p_before_GeV"])
+                        ebrem_loss = float(row["ebrem_step_loss_sum_GeV"])
+                        if p_before <= 0.0:
+                            raise ValueError("non-positive p_before")
+                        fraction_loss = min(1.0, max(0.0,
+                            ebrem_loss / p_before)) if ebrem else 0.0
+                        z = 1.0 - fraction_loss
+                        y = -math.log(max(z, 1e-15))
+                    else:
+                        z = float(row["z"])
+                        y = float(row["minus_log_z"])
                 except (TypeError, ValueError):
                     audit["invalid_rows"] += 1
                     continue
@@ -86,7 +100,16 @@ def extract(paths, tx0_edges):
                 if tx0_bin is None:
                     audit["outside_tx0_range"] += 1
                     continue
-                loss_bin = find_bin(1.0 - z, LOSS_EDGES)
+                if loss_source == "ebrem" and not ebrem:
+                    loss_bin = 0
+                elif loss_source == "ebrem":
+                    # Reserve component zero as an exact no-radiation atom.
+                    # All non-zero radiative losses occupy four tail strata.
+                    tail_bin = find_bin(1.0 - z,
+                                        (0.0,) + LOSS_EDGES[2:])
+                    loss_bin = None if tail_bin is None else 1 + tail_bin
+                else:
+                    loss_bin = find_bin(1.0 - z, LOSS_EDGES)
                 if loss_bin is None:
                     audit["invalid_rows"] += 1
                     continue
@@ -103,7 +126,8 @@ def extract(paths, tx0_edges):
     for tx0_bin, components in enumerate(accum):
         total = sum(item["count"] for item in components)
         low, high = tx0_edges[tx0_bin:tx0_bin + 2]
-        for component, (label, item) in enumerate(zip(LOSS_LABELS, components)):
+        labels = EBREM_LOSS_LABELS if loss_source == "ebrem" else LOSS_LABELS
+        for component, (label, item) in enumerate(zip(labels, components)):
             count = item["count"]
             mean = item["sum_z"] / count if count else 1.0
             variance = max(0.0, item["sum_z2"] / count - mean * mean) \
@@ -128,6 +152,9 @@ def main():
     parser.add_argument("--audit", help="Audit JSON (default: OUTPUT.audit.json)")
     parser.add_argument("--max-tx0", type=float, default=3e-2,
                         help="Upper reconstruction-range edge (default: 0.03)")
+    parser.add_argument(
+        "--loss-source", choices=("total", "ebrem"), default="total",
+        help="Fit total transition loss or eBrem-attributed loss (default: total)")
     args = parser.parse_args()
 
     try:
@@ -136,7 +163,7 @@ def main():
             raise ValueError("--max-tx0 must exceed %.6g" %
                              DEFAULT_TX0_EDGES[-2])
         tx0_edges = DEFAULT_TX0_EDGES[:-1] + (args.max_tx0,)
-        rows, audit = extract(paths, tx0_edges)
+        rows, audit = extract(paths, tx0_edges, args.loss_source)
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         with open(args.output, "w", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=OUTPUT_FIELDS)

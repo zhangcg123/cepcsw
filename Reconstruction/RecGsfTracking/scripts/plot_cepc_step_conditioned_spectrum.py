@@ -37,12 +37,24 @@ def main():
     counts = np.zeros((len(knots), len(loss_edges) - 1), dtype=np.int64)
     totals = np.zeros(len(knots), dtype=np.int64)
     below = np.zeros(len(knots), dtype=np.int64)
+    ebrem_only = artifact.get("variable", "").startswith(
+        "z=1-ebrem_step_loss_sum")
 
     for path in paths:
-        for data in pd.read_csv(path, usecols=["g4_t_over_x0", "z"],
+        columns = (["g4_t_over_x0", "p_before_GeV",
+                    "ebrem_step_loss_sum_GeV", "n_ebrem_steps"]
+                   if ebrem_only else ["g4_t_over_x0", "z"])
+        for data in pd.read_csv(path, usecols=columns,
                                 chunksize=200000):
             tx0 = data["g4_t_over_x0"].to_numpy()
-            loss = 1.0 - data["z"].to_numpy()
+            if ebrem_only:
+                p_before = data["p_before_GeV"].to_numpy()
+                ebrem_loss = data["ebrem_step_loss_sum_GeV"].to_numpy()
+                has_ebrem = data["n_ebrem_steps"].to_numpy() > 0
+                loss = np.where(has_ebrem & (p_before > 0.0),
+                                np.clip(ebrem_loss / p_before, 0.0, 1.0), 0.0)
+            else:
+                loss = 1.0 - data["z"].to_numpy()
             indices = np.searchsorted(tx0_edges, tx0, side="right") - 1
             valid = ((indices >= 0) & (indices < len(knots)) &
                      (loss >= 0.0) & (loss <= 1.0))

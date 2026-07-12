@@ -23,6 +23,9 @@ def main() -> None:
         choices=("no_ebrem", "light_ebrem", "hard_ebrem"))
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--jobs", default=4, type=int)
+    parser.add_argument(
+        "--disable-bh", action="store_true",
+        help="Disable BH splitting while retaining MS and deterministic Eloss")
     args = parser.parse_args()
 
     selected: dict[int, list[int]] = {}
@@ -50,6 +53,7 @@ def main() -> None:
             "GSF_BH_MODEL": "CEPC2GeV85StepConditioned",
             "GSF_MATERIAL_PATH_MODE": "DD4hepBetweenSurfaces",
             "GSF_REVERSE_OUTPUT_MODE": "BestBranch",
+            "GSF_ELECTRON_HYPOTHESIS": "0" if args.disable_bh else "1",
         })
         log_path = args.output_dir / f"seed-{seed}.log"
         with log_path.open("w") as log:

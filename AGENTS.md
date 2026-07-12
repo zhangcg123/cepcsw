@@ -95,6 +95,13 @@ These constraints are active and mandatory:
 - Preserve unrelated working-tree changes. Stage files explicitly and keep
   source/documentation changes separate from generated ROOT files, logs,
   plots, tables, notebooks, and batch cards.
+- Work only on the `optimizing` branch. Do not switch, create, rename, or
+  delete local or remote branches unless the user explicitly revokes or
+  replaces this restriction.
+- Do not perform Git operations while carrying out the optimization work
+  unless the user explicitly requests a specific Git action. Maintain
+  `AGENTS.md` and dated `agents_record/` records so progress and rationale
+  survive long autonomous runs without relying on commits.
 - Keep `AGENTS.md` current and concise. Before replacing a focus or removing
   detail, preserve every unique item in a dated `agents_record/` entry. Do not
   lose information during status migration.
@@ -147,41 +154,43 @@ Do not lose unique information during that migration.
 
 ## 2. Current focus
 
-The active concentration is preserving hard-eBrem recovery while eliminating
-the bias and broadening introduced on tracks without true tracker eBrem. The
-step-conditioned model and reverse workflow execute; `ReverseOutputMode` now
-defaults to `BestBranch`, with `WeightedMean` retained for comparison.
+The active concentration is preserving the corrected hard-eBrem recovery while
+eliminating radiative-cluster over-selection on tracks with no true owned
+eBrem. The conditioned artifact now fits eBrem-attributed loss only, avoiding
+double counting with deterministic `ElossOn=True`. It contains an exact
+`z=1` no-eBrem atom whose lineage is protected through cutoff and KL reduction.
 
-The matched 1000-event sample contains 381 no-eBrem, 457 light-eBrem, and 162
-hard-eBrem events according to primary-electron Geant4 tracker steps and a 10%
-single-or-cumulative hard-loss boundary. On no-eBrem events, LCIO has median pT
-residual -0.0190% and central-68% width 0.2929%. Weighted reverse output gives
-+0.2307% and 0.5786%; best branch improves this to +0.1047% and 0.3446% but
-does not restore the LCIO core. On 161 successful hard-eBrem events, LCIO,
-weighted reverse, and best reverse have median residuals -10.459%, -0.0310%,
-and -0.1678%, with 59, 84, and 88 events inside 1%. Seed 74 entry 4 fails when
-all forward components are rejected at hit 4.
+Reconstruction-aligned Geant4 surface ownership classifies the matched
+1000-event sample as 407 no-eBrem, 437 light-eBrem, and 156 hard-eBrem events.
+On the 407 clean events, LCIO and reverse no-BH have central-68 widths of
+0.278607% and 0.275195%; therefore the second reverse refit does not itself
+degrade the core. Enabling BH changes only 40 events by more than 0.1%, but 15
+by more than 1%, broadening the width to 0.321295% while leaving the median near
+zero. On 155 successful hard events, LCIO versus eBrem-only reverse BestBranch
+has median residual -12.8099% versus -0.2915%, with 48 versus 74 events inside
+1%. Seed 74 entry 4 remains the known failure.
 
-This evidence means the algorithm often finds useful loss hypotheses, but the
-no-loss hypothesis is not protected well enough. The leading suspected
-mechanisms are repeated near-unity rather than exact-unity reverse corrections,
-KL merging of the identity lineage, and possible degradation intrinsic to the
-second reverse refit's reuse of forward-filtered measurement information.
+The worst clean outlier, seed 23 entry 8, proves that identity preservation is
+working: its identity reverse state has pT 1.99839 GeV and weight 0.291 for
+2.00036 GeV truth. A localized inner-hit fluctuation instead favors flexible
+radiative hypotheses; KL aggregation produces a radiative component of weight
+0.377, which post-reduction `BestBranch` publishes at 2.30485 GeV. Thus the
+remaining blocker is the semantics of choosing the heaviest KL-merged cluster,
+not a missing identity component or generic reverse-refit bias.
 
 Proceed in this order:
 
-1. Verify and, if needed, add an exact identity/no-eBrem component with retained
-   fraction 1 and near-zero variance. Derive its probability from all Geant4
-   transitions, including no-eBrem transitions, with probability approaching
-   one as `t/X0 -> 0`.
-2. Preserve that identity lineage through cutoff and KL reduction instead of
-   merging it with nearby loss components.
-3. Run the identical reverse workflow with radiative BH convolution disabled
-   on the categorized no-eBrem sample to separate BH-induced degradation from
-   reverse-refit degradation.
-4. If the no-BH reverse control still broadens the core, replace the current
-   measurement-reusing second refit with a statistically consistent
-   forward/backward message or smoother formulation.
+1. Quantify, for the 15 clean events changed by more than 1%, how unmerged
+   lineage weights become KL-cluster weights and where the selected cluster
+   first overtakes the identity.
+2. Test reduction and BestBranch semantics that retain physical-lineage meaning
+   without adding a new measurement-evidence gate. Validate any implementation
+   change first with a complete verbose seed-23/event-8 dump.
+3. Repeat complete verbose checks on hard-loss events 11, 16, and 17, then run
+   the 407 clean and 156 hard surface-owned categories. Require finite complete
+   tracks without new rejection or covariance failures.
+4. Address the known seed-74/event-4 rejection separately only after the
+   selection semantics preserve both the clean core and hard recovery.
 
 Success means retaining the demonstrated categorized hard-loss recovery while
 matching, rather than biasing or broadening, the LCIO no-eBrem core. Independent
@@ -189,10 +198,10 @@ held-out validation and broad energy/angle coverage remain required before any
 production-performance claim.
 
 Current non-goals: adding a new measurement-evidence selection threshold,
-global tuning before the identity/control diagnosis, fitting SimHit momentum,
-treating ACTS coefficients as CEPC validation, premature runtime optimization,
-or additional shared-package changes.
+rewriting the reverse refit after its no-BH control passed, fitting SimHit
+momentum, treating ACTS coefficients as CEPC validation, premature runtime
+optimization, or additional shared-package changes.
 
-The complete outgoing execution focus, categorized evidence, and rationale for
-this plan are preserved in
-`agents_record/2026-07-12-conditioned-bh-reverse-performance-and-optimization-plan.md`.
+The exact identity construction, corrected category provenance, controls,
+eventwise diagnosis, and hard-category evidence are preserved in
+`agents_record/2026-07-12-ebrem-only-identity-and-clean-control.md`.

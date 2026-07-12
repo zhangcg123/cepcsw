@@ -1347,9 +1347,10 @@ StatusCode RecGsfTracking::execute() {
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
         const double chi2 = componentFitChi2(*c);
         const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
-        info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d age=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
+        info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d age=%d noRad=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
                   % (int)rank % (int)ci % c->debugId % c->debugParentId % c->generation
-                  % c->hitsSinceSplit % c->weight % pt % k % chi2 % ndf % entries << endmsg;
+                  % c->hitsSinceSplit % (int)c->noRadiationLineage
+                  % c->weight % pt % k % chi2 % ndf % entries << endmsg;
         if (m_componentDebugDump) {
           info() << boost::format("          history=%s")
                     % truncateHistory(c->debugHistory) << endmsg;
@@ -1874,6 +1875,8 @@ StatusCode RecGsfTracking::execute() {
         reverseComp->weight = forwardComp->weight;
         reverseComp->charge = forwardComp->charge;
         reverseComp->debugId = nextReverseId++;
+        reverseComp->noRadiationLineage =
+            forwardComp->noRadiationLineage;
         reverseComp->debugHistory = "reverse(" + forwardComp->debugHistory + ")";
         reverseComp->kaltrack = new TKalTrack();
         reverseComp->kaltrack->SetOwner();
