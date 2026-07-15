@@ -22,6 +22,10 @@ DEFAULT_TX0_EDGES = (0.0, 1e-4, 5e-4, 2e-3, 5e-3, 1e-2, 1.5e-2,
 LOSS_EDGES = (0.0, 1e-4, 1e-2, 5e-2, 2e-1, 1.0 + 1e-12)
 LOSS_LABELS = ("negligible", "small", "moderate", "large", "extreme")
 EBREM_LOSS_LABELS = ("no_ebrem", "small", "moderate", "large", "extreme")
+LIGHT_SPLIT_EBREM_LOSS_EDGES = (0.0, 1e-2, 5e-2, 1e-1, 2e-1,
+                                1.0 + 1e-12)
+LIGHT_SPLIT_EBREM_LOSS_LABELS = (
+    "no_ebrem", "small", "moderate", "light_large", "large", "extreme")
 OUTPUT_FIELDS = (
     "tx0_low", "tx0_high", "tx0_center", "component", "loss_class",
     "count", "weight", "mean_z", "variance_z", "sigma_z",
@@ -52,13 +56,20 @@ def new_accumulator(n_tx0, n_loss):
              for _ in range(n_loss)] for _ in range(n_tx0)]
 
 
-def extract(paths, tx0_edges, loss_source):
-    accum = new_accumulator(len(tx0_edges) - 1, len(LOSS_LABELS))
+def extract(paths, tx0_edges, loss_source, split_light_large=False):
+    if loss_source == "ebrem" and split_light_large:
+        labels = LIGHT_SPLIT_EBREM_LOSS_LABELS
+        ebrem_edges = LIGHT_SPLIT_EBREM_LOSS_EDGES
+    else:
+        labels = EBREM_LOSS_LABELS if loss_source == "ebrem" else LOSS_LABELS
+        ebrem_edges = (0.0,) + LOSS_EDGES[2:]
+    accum = new_accumulator(len(tx0_edges) - 1, len(labels))
     audit = {
         "input_files": len(paths), "input_rows": 0, "accepted_rows": 0,
         "outside_tx0_range": 0, "invalid_rows": 0, "ebrem_rows": 0,
         "tx0_edges": list(tx0_edges), "loss_edges": list(LOSS_EDGES),
         "loss_source": loss_source,
+        "split_light_large": split_light_large,
         "loss_variable": "1-z", "mixture_variable": "z",
     }
     required = {"g4_t_over_x0", "z", "minus_log_z", "n_ebrem_steps",
@@ -104,9 +115,10 @@ def extract(paths, tx0_edges, loss_source):
                     loss_bin = 0
                 elif loss_source == "ebrem":
                     # Reserve component zero as an exact no-radiation atom.
-                    # All non-zero radiative losses occupy four tail strata.
-                    tail_bin = find_bin(1.0 - z,
-                                        (0.0,) + LOSS_EDGES[2:])
+                    # All non-zero radiative losses occupy the configured tail
+                    # strata. The opt-in light split isolates 5--10% loss from
+                    # the otherwise broad 5--20% component.
+                    tail_bin = find_bin(1.0 - z, ebrem_edges)
                     loss_bin = None if tail_bin is None else 1 + tail_bin
                 else:
                     loss_bin = find_bin(1.0 - z, LOSS_EDGES)
@@ -126,7 +138,6 @@ def extract(paths, tx0_edges, loss_source):
     for tx0_bin, components in enumerate(accum):
         total = sum(item["count"] for item in components)
         low, high = tx0_edges[tx0_bin:tx0_bin + 2]
-        labels = EBREM_LOSS_LABELS if loss_source == "ebrem" else LOSS_LABELS
         for component, (label, item) in enumerate(zip(labels, components)):
             count = item["count"]
             mean = item["sum_z"] / count if count else 1.0
@@ -155,6 +166,9 @@ def main():
     parser.add_argument(
         "--loss-source", choices=("total", "ebrem"), default="total",
         help="Fit total transition loss or eBrem-attributed loss (default: total)")
+    parser.add_argument(
+        "--split-light-large", action="store_true",
+        help="For eBrem loss, split the 5--20%% stratum at 10%%")
     args = parser.parse_args()
 
     try:
@@ -163,7 +177,10 @@ def main():
             raise ValueError("--max-tx0 must exceed %.6g" %
                              DEFAULT_TX0_EDGES[-2])
         tx0_edges = DEFAULT_TX0_EDGES[:-1] + (args.max_tx0,)
-        rows, audit = extract(paths, tx0_edges, args.loss_source)
+        if args.split_light_large and args.loss_source != "ebrem":
+            raise ValueError("--split-light-large requires --loss-source ebrem")
+        rows, audit = extract(paths, tx0_edges, args.loss_source,
+                              args.split_light_large)
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         with open(args.output, "w", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=OUTPUT_FIELDS)

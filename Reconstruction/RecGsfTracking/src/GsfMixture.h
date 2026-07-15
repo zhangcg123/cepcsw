@@ -13,18 +13,16 @@ namespace GsfMixture {
 void normalizeWeights(std::vector<GsfComponent*>& comps);
 
 /// Remove normalized components below cutoff, preserving at least the largest.
-void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff);
+void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff,
+                     bool protectIdentity = true);
 
 /// KL-distance-based mixture reduction: prune to maxN components.
 /// @param bz  B-field strength [T] for mean-vector extraction
-void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz);
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
+            bool protectIdentity = true);
+void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
+            bool protectIdentity,
             const std::function<void(const std::string&)>& logger);
-
-/// Weight-rank reduction: keep the top maxN components by normalized weight.
-void reduceTopN(std::vector<GsfComponent*>& comps, int maxN);
-void reduceTopN(std::vector<GsfComponent*>& comps, int maxN,
-                const std::function<void(const std::string&)>& logger);
 
 } // namespace GsfMixture
 

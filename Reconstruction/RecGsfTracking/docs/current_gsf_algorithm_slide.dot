@@ -1,0 +1,30 @@
+digraph SlideGSF {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad="0.22",
+    nodesep="0.35",
+    ranksep="0.58",
+    fontname="Helvetica",
+    fontsize=21,
+    labelloc="t",
+    label="Core Gaussian Sum Filter Algorithm"
+  ];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=14,
+        penwidth=1.7, width=7.6, margin="0.25,0.18"];
+  edge [color="#526777", penwidth=1.6, arrowsize=0.85];
+
+  forward [
+    color="#4e7b5c",
+    fillcolor="#e4f2e7",
+    label="Forward GSF over all hits\n\nMeasurement update\nS = H P⁻ Hᵀ + R        K = P⁻ Hᵀ S⁻¹\nx⁺ = x⁻ + K r          P⁺ = (I − K H) P⁻\n\nLikelihood reweighting\nlog wᵢ⁺ = log wᵢ⁻ − ½ (rᵀ S⁻¹ r + log det S)\n\nBethe–Heitler split and mixture control\nwᵢⱼ = wᵢ πⱼ(t/X₀)        κᵢⱼ = κᵢ / zⱼ\nremove w < ε  →  normalize  →  KL-reduce"
+  ];
+
+  reverse [
+    color="#76569b",
+    fillcolor="#eee5f8",
+    label="Reverse GSF to innermost hit\n\nInward measurement update and reweighting\nx⁺ = x⁻ + K r\nlog wᵢ⁺ = log wᵢ⁻ − ½ (rᵀ S⁻¹ r + log det S)\n\nReverse Bethe–Heitler transition\np_previous = p_current / zⱼ        κ_previous = zⱼ κ_current\n\nWeight cutoff and KL merge\nw < ε removed\nμ = Σ αᵢ μᵢ        P = Σ αᵢ[Pᵢ + (μᵢ−μ)(μᵢ−μ)ᵀ]"
+  ];
+
+  forward -> reverse;
+}

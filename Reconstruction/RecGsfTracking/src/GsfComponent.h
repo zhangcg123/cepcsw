@@ -8,9 +8,11 @@
 #include "edm4hep/TrackState.h"
 
 #include <string>
+#include <map>
+#include <utility>
 #include <vector>
 
-/// One retained-lineage transition used by the branch RTS smoother.  All
+/// One forward transition recorded by the Gaussian-sum smoother.  All
 /// quantities use KalTest's local five-parameter helix convention.
 struct GsfSmoothingStep {
   bool transitionValid = false;
@@ -34,16 +36,35 @@ struct GsfSmoothingStep {
 /// Owns a TKalTrack holding the KF state across all measurement sites.
 struct GsfComponent {
   double    weight = 1.0;
+  /// Fraction of aggregate component weight carried by its strongest real
+  /// (pre-KL-merge) lineage. Likelihood updates and global normalization leave
+  /// this fraction unchanged; moment merging updates it without summing
+  /// mutually exclusive lineage evidence.
+  double    dominantLineageFraction = 1.0;
   int       charge = 1;
   TKalTrack* kaltrack = nullptr;
   double    fitChi2 = 0.0;
   int       debugId = 0;
   int       debugParentId = -1;
   int       generation = 0;
-  int       hitsSinceSplit = 0;
   /// True only for the lineage that selected the exact no-radiation atom at
   /// every BH convolution. It is protected from cutoff and radiative merges.
   bool      noRadiationLineage = true;
+  /// Most recent reverse-process child represented by this component. These
+  /// fields are diagnostics only; KL merging retains the representative's
+  /// values and does not use them for selection.
+  int       lastReverseProcessHit = -1;
+  int       lastReverseProcessComponent = -1;
+  double    lastReverseProcessFraction = 1.0;
+  std::string forwardProcessSignature;
+  std::string reverseProcessSignature;
+  /// Diagnostic marginal fractions of the aggregate component weight carried
+  /// by each (measurement hit, BH process mode).  Empty in normal running;
+  /// populated only by the opt-in surface-lineage-mass diagnostic.  KL moment
+  /// merges combine these fractions by incoming component weight without
+  /// changing the merge distance, representative history, or selection.
+  std::map<std::pair<int, int>, double> forwardProcessModeFractions;
+  std::map<std::pair<int, int>, double> reverseProcessModeFractions;
   std::string debugHistory;
   /// State used to continue propagation after a surface-local process
   /// transition.  The Kalman history remains the pre-process measurement
@@ -54,6 +75,12 @@ struct GsfComponent {
   /// MarlinTrk transport Jacobian when the next measurement is accepted.
   TMatrixD pendingProcessJacobian{5, 5};
   std::vector<GsfSmoothingStep> smoothingSteps;
+  /// Current node in the reduction-aware forward graph used by the optional
+  /// Gaussian-sum smoother.
+  int smoothingNodeId = -1;
+  /// Pre-reduction graph nodes represented by the current KL-reduced
+  /// component, expressed as conditional mixture fractions.
+  std::map<int, double> smoothingSourceFractions;
   bool smoothedInnerValid = false;
   TMatrixD smoothedInnerMean{5, 1};
   TMatrixD smoothedInnerCovariance{5, 5};

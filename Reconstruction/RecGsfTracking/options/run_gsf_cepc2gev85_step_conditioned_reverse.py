@@ -6,8 +6,7 @@ exec(compile(
          "run_gsf_cepc2gev85_step_conditioned_event11.py").read(),
     "run_gsf_cepc2gev85_step_conditioned_event11.py", "exec"))
 
-gsf.ReductionMode = "KL"
-gsf.RetainedLineageSmoothing = False
+gsf.GaussianSumSmoothing = False
 gsf.ReverseFiltering = True
 gsf.ReverseOutputMode = os.getenv("GSF_REVERSE_OUTPUT_MODE", "BestBranch")
 gsf.ElossOn = True

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build a constrained interpolated CEPC step-conditioned BH artifact.
 
-The input is the five-stratum table emitted by
+The input is a fixed-stratum table emitted by
 extract_cepc_step_conditioned_mixture.py.  The artifact stores one knot per
 t/X0 bin and a zero-material anchor.  Evaluation is linear from zero to the
 first knot, then linear in log(t/X0), using:
@@ -164,9 +164,9 @@ def interpolate_components(knots, tx0):
     return result
 
 
-def write_artifact(path, source, knots):
+def write_artifact(path, source, knots, model_name):
     artifact = {
-        "model": MODEL_NAME,
+        "model": model_name,
         "scope": {"particle": "electron", "pt_GeV": 2.0,
                   "theta_deg": 85.0, "max_tx0": 0.03},
         "variable": "z=1-ebrem_step_loss_sum/p_before",
@@ -210,7 +210,7 @@ def write_dense_table(path, knots, points=240):
                                  "sigma_z": math.sqrt(item["variance_z"])})
 
 
-def write_plot(path, knots):
+def write_plot(path, knots, model_name):
     grid = np.concatenate(([0.0], np.geomspace(knots[0]["tx0"] / 100.0,
                                                knots[-1]["tx0"], 400)))
     evaluated = [interpolate_components(knots, value) for value in grid]
@@ -245,7 +245,7 @@ def write_plot(path, knots):
     axes[2].set_ylabel("conditional sigma(z)")
     axes[2].set_yscale("log")
     axes[2].set_xlabel("transition t/X0")
-    figure.suptitle(MODEL_NAME + " constrained interpolation\n"
+    figure.suptitle(model_name + " constrained interpolation\n"
                     "points are extracted strata; lines are artifact evaluation")
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
     figure.savefig(path, dpi=170)
@@ -276,23 +276,25 @@ def validate(knots):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", help="Five-stratum mixture CSV")
+    parser.add_argument("input", help="Fixed-stratum mixture CSV")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--model-name", default=MODEL_NAME)
+    parser.add_argument("--output-stem", default="cepc2gev85_step_conditioned")
     args = parser.parse_args()
     try:
         knots = read_table(args.input)
         os.makedirs(args.output_dir, exist_ok=True)
-        artifact = os.path.join(args.output_dir, "cepc2gev85_step_conditioned.json")
-        dense = os.path.join(args.output_dir, "cepc2gev85_step_conditioned_dense.csv")
-        plot = os.path.join(args.output_dir, "cepc2gev85_step_conditioned.png")
-        write_artifact(artifact, args.input, knots)
+        artifact = os.path.join(args.output_dir, args.output_stem + ".json")
+        dense = os.path.join(args.output_dir, args.output_stem + "_dense.csv")
+        plot = os.path.join(args.output_dir, args.output_stem + ".png")
+        write_artifact(artifact, args.input, knots, args.model_name)
         write_dense_table(dense, knots)
-        write_plot(plot, knots)
+        write_plot(plot, knots, args.model_name)
         weight_error, tail_probability = validate(knots)
     except Exception as error:
         print("error: %s" % error, file=sys.stderr)
         return 1
-    print("model: %s" % MODEL_NAME)
+    print("model: %s" % args.model_name)
     print("knots: %d; components: %d" %
           (len(knots), len(knots[0]["components"])))
     print("maximum normalization error: %.3g" % weight_error)

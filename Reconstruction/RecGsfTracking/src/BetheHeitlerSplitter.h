@@ -16,17 +16,21 @@ struct GsfComponent;
 /// CEPC2GeV85StepConditioned is the explicitly scoped five-component,
 /// transition-t/X0-conditioned execution model fitted to the 2 GeV, 85-degree
 /// primary-electron sample; it is not a general or validated CEPC model.
+/// CEPC2GeV85StepConditioned6 is a parallel six-component extraction from the
+/// same sample. It replaces the original 1--5% and 5--20% components with
+/// separate 1--5%, 5--10%, and 10--20% components.
 ///
 /// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
 ///   0.0001 ≤ tX0 < 0.002  →  1 component (single Gaussian approx)
-///   0.002 ≤ tX0 < 0.1    →  6 components (low-x parameterization)
-///   0.1 ≤ tX0             →  6 components (high-x, capped at 0.2)
+///   0.002 ≤ tX0           →  6 transformed polynomial components,
+///                            evaluated at min(tX0, 0.2)
 ///
 struct BetheHeitlerSplitter {
   enum class Model {
     ActsAtlas,
-    CEPC2GeV85StepConditioned
+    CEPC2GeV85StepConditioned,
+    CEPC2GeV85StepConditioned6
   };
 
   BetheHeitlerSplitter();

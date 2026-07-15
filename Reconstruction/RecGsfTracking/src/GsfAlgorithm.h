@@ -76,27 +76,67 @@ private:
 
   Gaudi::Property<bool>   m_doMS{this,"MSOn",true};
   Gaudi::Property<bool>   m_doDEDX{this,"ElossOn",false};
-  Gaudi::Property<int>    m_maxComponents{this,"MaxComponents",12};
+  Gaudi::Property<int>    m_maxComponents{this,"MaxComponents",24};
   Gaudi::Property<int>    m_reductionTargetComponents{this,"ReductionTargetComponents",0};
-  Gaudi::Property<std::string> m_reductionMode{this,"ReductionMode","KL"};
-  Gaudi::Property<int>    m_reductionMinHitsAfterSplit{this,"ReductionMinHitsAfterSplit",0};
   Gaudi::Property<double> m_componentWeightCutoff{this,"ComponentWeightCutoff",1e-8};
+  Gaudi::Property<bool>   m_protectIdentityLineage{
+      this, "ProtectIdentityLineage", true,
+      "Preserve an exact no-radiation lineage through cutoff and reduction"};
   Gaudi::Property<double> m_bhSplitThresh{this,"BHSplitThreshold",1e-4};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
+  Gaudi::Property<bool>   m_cmsGsfSmoothing{
+      this,"CmsGsfSmoothing",false,
+      "Run a CMSSW-like backward GSF seeded from the final forward prediction, "
+      "with collapsed-moment smoothing and innermost backward-filter output"};
+  Gaudi::Property<double> m_cmsErrorRescaling{
+      this,"CmsErrorRescaling",100.0,
+      "Multiplicative covariance scaling for the CMSSW-like backward seed"};
   Gaudi::Property<std::string> m_reverseOutputMode{
       this, "ReverseOutputMode", "BestBranch",
       "WeightedMean or BestBranch output from the reverse filter"};
-  Gaudi::Property<bool>   m_retainedLineageSmoothing{this,"RetainedLineageSmoothing",false};
+  Gaudi::Property<std::string> m_reverseSelectionMode{
+      this, "ReverseSelectionMode", "AggregateWeight",
+      "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "
+      "final reverse-branch selection"};
+  Gaudi::Property<double> m_surfaceConsistencyUninformativeFloor{
+      this, "SurfaceConsistencyUninformativeFloor", 0.05,
+      "Lower bound on the bounded surface-consistency likelihood; 0.05 "
+      "caps its final-selection Bayes factor at 20"};
+  Gaudi::Property<std::string> m_reverseInitialWeightMode{
+      this, "ReverseInitialWeightMode", "ForwardPosterior",
+      "ForwardPosterior or Uniform diagnostic reverse-start weights"};
+  Gaudi::Property<double> m_reverseKappaSeedCov{
+      this, "ReverseKappaSeedCov", 100.0,
+      "Multiplicative covariance scaling for every full-mixture reverse seed "
+      "component (legacy property name)"};
+  Gaudi::Property<bool>   m_gaussianSumSmoothing{this,"GaussianSumSmoothing",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",false};
   Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",false};
   Gaudi::Property<bool>   m_componentDebugDump{this,"ComponentDebugDump",false};
+  Gaudi::Property<bool>   m_surfaceLineageMassDump{
+      this,"SurfaceLineageMassDump",false,
+      "Opt-in propagation and verbose dump of aggregate BH-mode mass by surface"};
   Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
   Gaudi::Property<std::string> m_bhModel{
       this, "BHModel", "CEPC2GeV85StepConditioned"};
+  Gaudi::Property<bool> m_counterfactualLossScan{
+      this, "CounterfactualLossScan", false,
+      "Default-off likelihood-only scan of trial losses at a configured truth "
+      "surface and one surface inward; never enters the live GSF mixture"};
+  Gaudi::Property<std::string> m_counterfactualTruthTransitionMap{
+      this, "CounterfactualTruthTransitionMap", "",
+      "Comma-separated event:transition map used only by CounterfactualLossScan"};
+  Gaudi::Property<std::vector<double>> m_counterfactualLossFractions{
+      this, "CounterfactualLossFractions", {0.04, 0.05, 0.06, 0.07, 0.08,
+                                             0.09, 0.10, 0.12},
+      "Trial fractional momentum losses for CounterfactualLossScan"};
+  Gaudi::Property<double> m_counterfactualLossVariance{
+      this, "CounterfactualLossVariance", 2.0e-4,
+      "Retained-momentum-fraction variance assigned to trial scan components"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "CurrentSurface",

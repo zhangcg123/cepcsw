@@ -26,7 +26,7 @@ tracksys = TrackSystemSvc("TrackSystemSvc")
 gearsvc = GearSvc("GearSvc")
 
 gsf = RecGsfTracking("RecGsfTracking")
-gsf.ElectronHypothesis = True; gsf.MaxComponents = 12
+gsf.ElectronHypothesis = True; gsf.MaxComponents = 24
 gsf.BHSplitThreshold = 1e-4; gsf.MSOn = True; gsf.ElossOn = True
 gsf.VerboseDump = True; gsf.MaterialIPExtrapolation = False
 

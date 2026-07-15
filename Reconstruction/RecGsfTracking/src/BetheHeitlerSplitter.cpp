@@ -25,48 +25,28 @@ inline double poly(double x, const double* c, int degree) {
   return sum;
 }
 
-/// Low-x/x0 parameterization (6 components, 5th-degree poly, transformed)
-static const double lowData[6][3][6] = {
-  {{-2.602291, 7.77102, -17.9787, 18.1642, -3.84789, -0.619996},
-   {-0.97768, 7.66173, -15.1885, 14.2331, -2.82253, -0.499998},
-   { 0.00212652, 0.0989093, -0.401838, -1.35065, 4.16609, -2.51854}},
-  {{-1.53086, 3.42102, 3.11248, -9.55927, 5.60646, -0.126554},
-   {-7.72904, 80.7146, -300.495, 494.036, -348.391, 79.1706},
-   { 2.01418, -37.1566, 257.318, -830.857, 1279.6, -764.537}},
-  {{-2.64613, 0.333018, 37.0482, -78.5174, 55.6362, -13.0697},
-   {-5.08739, 55.3222, -213.947, 377.555, -307.269, 93.1098},
-   {-4.00144, 29.8452, -92.0532, 156.158, -146.11, 59.8256}},
-  {{-3.46268, -1.47009, 24.9061, -51.3185, 35.1081, -7.97863},
-   {-5.34997, 57.1566, -219.745, 387.278, -315.543, 95.6884},
-   {-4.80241, 32.8814, -104.929, 184.326, -178.488, 75.3148}},
-  {{-4.81887, 14.5956, -22.3837, 7.83819, 5.82193, -3.09581},
-   {-5.45581, 57.8864, -222.817, 392.928, -320.46, 97.3029},
-   {-5.00944, 32.4538, -108.483, 192.421, -187.429, 79.2258}},
-  {{-2.5476, 8.14925, -7.61825, 1.18039, 1.75554, -0.874916},
-   {-5.21871, 56.3462, -216.399, 381.145, -310.829, 94.4863},
-   {-5.83194, 31.6169, -109.537, 196.603, -193.167, 81.9951}}
-};
-
-/// High-x/x0 parameterization (6 components, 5th-degree poly, untransformed)
-static const double highData[6][3][6] = {
-  {{ 0.116785, 0.00300851, -0.00500615, 0.0162373, -0.0147852, 0.00507151},
-   { 0.929508, 0.0968065, -0.6902, 0.924948, -0.511764, 0.106812},
-   { 0.000895549, 0.00345136, -0.0319301, 0.0696704, -0.0659913, 0.0236099}},
-  {{ 0.389022, -2.44128, 5.36186, -5.71814, 2.93331, -0.585089},
-   { 0.32526, 2.93045, -9.33945, 12.6618, -7.81376, 1.82936},
-   { 0.000439302, 0.0173778, 0.113849, -0.584371, 0.758494, -0.327375}},
-  {{-0.0135153, 6.61798, -17.0068, 20.0236, -11.1439, 2.38296},
-   {-0.554228, 8.67827, -23.9133, 30.2601, -17.6788, 3.95462},
-   {-0.00209441, -0.0577078, -0.55689, 1.76433, -1.78493, 0.649452}},
-  {{ 0.0614916, 4.70061, -12.7008, 15.3499, -8.68459, 1.87726},
-   {-0.651238, 9.61423, -25.5828, 31.5933, -18.1433, 4},
-   { 6.4614e-5, 0.0279685, -0.168134, 0.52802, -0.522842, 0.192059}},
-  {{ 0.0356266, 5.44894, -14.28, 16.9637, -9.46193, 2.02694},
-   {-0.701619, 10.1539, -26.5785, 32.3834, -18.3943, 4.02389},
-   { 0.0044289, -0.0797969, 0.188953, -0.16965, 0.049072, 0.0024294}},
-  {{-0.496513, 19.0152, -79.0763, 147.496, -128.503, 42.6193},
-   {-1.1283, 14.6583, -35.5871, 40.9352, -22.1949, 4.67131},
-   { 0.00387964, -0.00746174, 0.0129534, -0.00999381, -0.00134676, 0.00495766}}
+/// Current ACTS default parameterization from
+/// Acts::makeDefaultBetheHeitlerApprox (BetheHeitler_cdf_nC6_O5.par).
+/// All three quantities use the transformed convention.
+static const double actsData[6][3][6] = {
+  {{ 3.74397e4, -1.95241e4,  3.51047e3, -2.54377e2,  1.81080e1, -3.57643},
+   { 3.56728e4, -1.78603e4,  2.81521e3, -8.93555e1, -1.14015e1,  0.255769},
+   { 3.73938e4, -1.92800e4,  3.21580e3, -1.46203e2, -5.65392,  -2.78008}},
+  {{-4.14035e4,  2.31883e4, -4.37145e3,  2.44289e2,  1.13098e1, -3.21230},
+   {-2.06936e3,  2.65334e3, -1.01413e3,  1.78338e2, -1.85556e1,  1.91430},
+   {-5.19068e4,  2.55327e4, -4.22147e3,  1.90227e2,  9.34602,  -4.80961}},
+  {{ 2.52200e3, -4.86348e3,  2.11942e3, -3.84534e2,  2.94503e1, -2.83310},
+   { 1.80405e3, -1.93347e3,  6.27196e2, -4.32429e1, -1.43533e1,  3.58782},
+   {-4.61617e4,  1.78221e4, -1.95746e3, -8.80646e1,  3.43153e1, -7.57830}},
+  {{ 4.94537e3, -2.08737e3,  1.78089e2,  2.29879e1, -5.52783,  -1.86800},
+   { 4.60220e3, -1.62269e3, -1.57552e2,  2.01796e2, -5.01636e1,  6.47438},
+   {-9.50373e4,  4.05517e4, -5.62596e3,  4.58534e1,  6.70479e1, -1.22430e1}},
+  {{-1.04129e3,  1.15222e2, -2.70356e1,  3.18611e1, -7.78800,  -1.50242},
+   {-2.71361e4,  2.00625e4, -6.19444e3,  1.10061e3, -1.29354e2,  1.08289e1},
+   { 3.15252e4, -3.31508e4,  1.20371e4, -2.23822e3,  2.44396e2, -2.09130e1}},
+  {{ 1.27751e4, -6.79813e3,  1.24650e3, -8.20622e1, -2.33476,   0.246459},
+   { 3.64336e5, -2.08457e5,  4.33028e4, -3.67825e3,  4.22914e1,  1.42701e1},
+   {-1.79298e6,  1.01843e6, -2.10037e5,  1.82222e4, -4.33573e2, -2.72725e1}}
 };
 
 /// Inverse logit transform: y = 1/(1+exp(-x))
@@ -74,7 +54,6 @@ inline double invLogit(double x) { return 1.0 / (1.0 + std::exp(-x)); }
 
 constexpr double kActsNoChangeLimit = 0.0001;
 constexpr double kActsSingleGaussianLimit = 0.002;
-constexpr double kActsLowerParameterLimit = 0.1;
 constexpr double kActsHigherLimit = 0.2;
 
 /// Same-sample execution artifact from
@@ -83,6 +62,7 @@ constexpr double kActsHigherLimit = 0.2;
 /// physics validation.
 constexpr size_t kCepcKnotCount = 8;
 constexpr size_t kCepcComponentCount = 5;
+constexpr size_t kCepc6ComponentCount = 6;
 constexpr double kCepcWeightFloor = 1e-12;
 constexpr double kCepcMeanEpsilon = 1e-9;
 constexpr double kCepcVarianceFloor = 1e-12;
@@ -123,6 +103,40 @@ static constexpr double cepcVariances[kCepcKnotCount][kCepcComponentCount] = {
     {1e-12, 6.5596673156642638e-06, 0.00011223656930814396, 0.0016551961539066351, 0.065828372132041429},
     {1e-12, 5.4917847350788307e-06, 4.9641302950043098e-05, 0.0010331026062999626, 0.058511627454352233}};
 
+/// Same Geant4 transition sample and t/X0 knots as the five-component model,
+/// with its g2/g3 loss range represented by three fixed truth strata:
+/// 1--5%, 5--10%, and 10--20%. The total probability of that range is
+/// unchanged at every knot.
+static constexpr double cepc6Weights[kCepcKnotCount][kCepc6ComponentCount] = {
+    {0.9992161956006349, 0.00053435586616364648, 0.00010720102253283032, 3.7520357886490611e-05, 3.7520357886490611e-05, 6.7206794895582076e-05},
+    {0.99698032339762332, 0.0020212351451392952, 0.00046269238262224824, 7.3056691992986567e-05, 0.0002191700759789597, 0.00024352230664328856},
+    {0.99255970834056706, 0.0040673594404900685, 0.0012896505543017289, 0.00064482527715086445, 0.00034721361077354239, 0.0010912427767168476},
+    {0.95517035265989236, 0.024905359633393107, 0.0068738792588164972, 0.0025901574018728831, 0.0034867503486750349, 0.0069735006973500697},
+    {0.91055139980431143, 0.051384022977622068, 0.01537101915853928, 0.0064072215383644228, 0.0054919041757409337, 0.010794432345421835},
+    {0.85261546772305763, 0.079049248221842089, 0.025704510668947515, 0.011254164040695059, 0.010713964166741696, 0.020662645178716129},
+    {0.81289838770153711, 0.1057367829021372, 0.032620922384701906, 0.01012373453318335, 0.011623547056617922, 0.026996625421822264},
+    {0.74696707105719251, 0.14904679376083191, 0.041594454072790304, 0.013864818024263433, 0.0051993067590987881, 0.043327556325823233}};
+
+static constexpr double cepc6Means[kCepcKnotCount][kCepc6ComponentCount] = {
+    {1, 0.99884766922776635, 0.97556244551142235, 0.92451213355707562, 0.85820475235480187, 0.53608743511241941},
+    {1, 0.99864807156942648, 0.9787054050959042, 0.92816179326230586, 0.86024706215365176, 0.61697072883970228},
+    {1, 0.99832926825823465, 0.97494882917550085, 0.92662383325981112, 0.85627094566474038, 0.58098416102467987},
+    {1, 0.99851495232738763, 0.97443366950445343, 0.93155296783396557, 0.8601911260287789, 0.53856583951698356},
+    {1, 0.99822985785928486, 0.97589057895364695, 0.92808573657958204, 0.85887270968814478, 0.52783716531564129},
+    {1, 0.99792054624476967, 0.97467254405723969, 0.92739087540549381, 0.85825377378790413, 0.54757216213392146},
+    {1, 0.99779899962903329, 0.97689828365181486, 0.92554798108943137, 0.85803519272978823, 0.4773879349825132},
+    {1, 0.99750486973143293, 0.97990463695279117, 0.9306686402578711, 0.86490567734182822, 0.54602374590582048}};
+
+static constexpr double cepc6Variances[kCepcKnotCount][kCepc6ComponentCount] = {
+    {1e-12, 4.262027532009327e-06, 0.00012485967283637489, 0.00022920596108721991, 0.00086949856754225952, 0.048919630665790581},
+    {1e-12, 4.6506375428467805e-06, 7.2068322021001663e-05, 5.9121084847735261e-05, 0.00060494972363256405, 0.018047767691370842},
+    {1e-12, 5.7493933481866932e-06, 0.00013542442016811762, 0.00021709794041835373, 0.00035790601940688394, 0.04868662435589749},
+    {1e-12, 4.3696375864321624e-06, 0.00011800267935146991, 0.00020042781311735425, 0.00073986169396511592, 0.048712889751143851},
+    {1e-12, 5.3654404840175474e-06, 0.00012498784475767355, 0.0001822534224584782, 0.00084663497922043973, 0.04706965545977787},
+    {1e-12, 6.3959788880740831e-06, 0.00012434290648866142, 0.00022810280888230228, 0.00076771182119095283, 0.041794329167051114},
+    {1e-12, 6.5596673156642638e-06, 0.00011223656930814396, 0.00018876637340781155, 0.00081059249911230591, 0.065828372132041429},
+    {1e-12, 5.4917847350788307e-06, 4.9641302950043098e-05, 0.00020993584933803877, 8.2928655291025777e-05, 0.058511627454352233}};
+
 inline double boundedLogit(double value) {
   value = std::min(1.0 - kCepcMeanEpsilon,
                    std::max(kCepcMeanEpsilon, value));
@@ -138,8 +152,12 @@ inline double stableInvLogit(double value) {
   return e / (1.0 + e);
 }
 
-std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
-  std::vector<BHComponent> result(kCepcComponentCount);
+template <size_t N>
+std::vector<BHComponent> cepcStepConditionedMixture(
+    double x, const double (&weights)[kCepcKnotCount][N],
+    const double (&means)[kCepcKnotCount][N],
+    const double (&variances)[kCepcKnotCount][N]) {
+  std::vector<BHComponent> result(N);
   if (!(x > 0.0)) {
     result[0] = {1.0, 1.0, kCepcVarianceFloor};
     for (size_t i = 1; i < result.size(); ++i)
@@ -153,10 +171,10 @@ std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
     for (size_t i = 0; i < result.size(); ++i) {
       const double zeroWeight = (i == 0) ? 1.0 : 0.0;
       result[i].weight = (1.0 - fraction) * zeroWeight +
-                         fraction * cepcWeights[0][i];
-      result[i].mean = 1.0 - fraction * (1.0 - cepcMeans[0][i]);
+                         fraction * weights[0][i];
+      result[i].mean = 1.0 - fraction * (1.0 - means[0][i]);
       result[i].var = kCepcVarianceFloor * std::exp(
-          fraction * std::log(cepcVariances[0][i] / kCepcVarianceFloor));
+          fraction * std::log(variances[0][i] / kCepcVarianceFloor));
       weightSum += result[i].weight;
     }
     for (auto& component : result) component.weight /= weightSum;
@@ -176,21 +194,20 @@ std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
 
   if (lower == upper) {
     for (size_t i = 0; i < result.size(); ++i)
-      result[i] = {cepcWeights[lower][i], cepcMeans[lower][i],
-                   cepcVariances[lower][i]};
+      result[i] = {weights[lower][i], means[lower][i], variances[lower][i]};
     return result;
   }
 
-  std::array<double, kCepcComponentCount> unnormalized{};
+  std::array<double, N> unnormalized{};
   unnormalized[0] = 1.0;
   double weightSum = 1.0;
   for (size_t i = 1; i < result.size(); ++i) {
     const double leftCoordinate = std::log(
-        std::max(cepcWeights[lower][i], kCepcWeightFloor) /
-        std::max(cepcWeights[lower][0], kCepcWeightFloor));
+        std::max(weights[lower][i], kCepcWeightFloor) /
+        std::max(weights[lower][0], kCepcWeightFloor));
     const double rightCoordinate = std::log(
-        std::max(cepcWeights[upper][i], kCepcWeightFloor) /
-        std::max(cepcWeights[upper][0], kCepcWeightFloor));
+        std::max(weights[upper][i], kCepcWeightFloor) /
+        std::max(weights[upper][0], kCepcWeightFloor));
     unnormalized[i] = std::exp((1.0 - fraction) * leftCoordinate +
                                fraction * rightCoordinate);
     weightSum += unnormalized[i];
@@ -202,14 +219,24 @@ std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
       result[i].var = kCepcVarianceFloor;
     } else {
       result[i].mean = stableInvLogit(
-          (1.0 - fraction) * boundedLogit(cepcMeans[lower][i]) +
-          fraction * boundedLogit(cepcMeans[upper][i]));
+          (1.0 - fraction) * boundedLogit(means[lower][i]) +
+          fraction * boundedLogit(means[upper][i]));
       result[i].var = std::exp(
-          (1.0 - fraction) * std::log(cepcVariances[lower][i]) +
-          fraction * std::log(cepcVariances[upper][i]));
+          (1.0 - fraction) * std::log(variances[lower][i]) +
+          fraction * std::log(variances[upper][i]));
     }
   }
   return result;
+}
+
+std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
+  return cepcStepConditionedMixture(
+      x, cepcWeights, cepcMeans, cepcVariances);
+}
+
+std::vector<BHComponent> cepc2GeV85StepConditioned6Mixture(double x) {
+  return cepcStepConditionedMixture(
+      x, cepc6Weights, cepc6Means, cepc6Variances);
 }
 
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
@@ -234,26 +261,15 @@ std::vector<BHComponent> actsAtlasMixture(double x) {
     return result;
   }
 
-  if (x < kActsLowerParameterLimit) {
-    // Low-x parameterization (transformed)
-    double weightSum = 0;
-    for (int i = 0; i < 6; i++) {
-      result[i].weight = invLogit(poly(x, lowData[i][0], 5));
-      result[i].mean   = invLogit(poly(x, lowData[i][1], 5));
-      result[i].var    = std::exp(poly(x, lowData[i][2], 5));
-      weightSum += result[i].weight;
-    }
-    for (int i = 0; i < 6; i++) result[i].weight /= weightSum;
-    return result;
-  }
-
-  // High-x parameterization (untransformed, capped at 0.2)
+  // Current ACTS default: one transformed parameterization over [0, 0.2],
+  // evaluated with highest-order-first Horner coefficients. ACTS treats 0.2
+  // as the fallback evaluation point if the caller supplies a larger value.
   double xx = std::min(x, kActsHigherLimit);
   double weightSum = 0;
   for (int i = 0; i < 6; i++) {
-    result[i].weight = poly(xx, highData[i][0], 5);
-    result[i].mean   = poly(xx, highData[i][1], 5);
-    result[i].var    = poly(xx, highData[i][2], 5);
+    result[i].weight = invLogit(poly(xx, actsData[i][0], 5));
+    result[i].mean   = invLogit(poly(xx, actsData[i][1], 5));
+    result[i].var    = std::exp(poly(xx, actsData[i][2], 5));
     weightSum += result[i].weight;
   }
   for (int i = 0; i < 6; i++) result[i].weight /= weightSum;
@@ -281,6 +297,10 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
       modelName == "cepc2GeV85StepConditioned") {
     return Model::CEPC2GeV85StepConditioned;
   }
+  if (modelName == "CEPC2GeV85StepConditioned6" ||
+      modelName == "cepc2GeV85StepConditioned6") {
+    return Model::CEPC2GeV85StepConditioned6;
+  }
   throw std::invalid_argument("Unknown Bethe-Heitler model option: " + modelName);
 }
 
@@ -289,6 +309,8 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
     case Model::ActsAtlas: return "ActsAtlas";
     case Model::CEPC2GeV85StepConditioned:
       return "CEPC2GeV85StepConditioned";
+    case Model::CEPC2GeV85StepConditioned6:
+      return "CEPC2GeV85StepConditioned6";
   }
   return "Unknown";
 }
@@ -303,6 +325,9 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
       break;
     case Model::CEPC2GeV85StepConditioned:
       mixture = cepc2GeV85StepConditionedMixture(tX0);
+      break;
+    case Model::CEPC2GeV85StepConditioned6:
+      mixture = cepc2GeV85StepConditioned6Mixture(tX0);
       break;
   }
   const double parentKappa = parent->helixAtLastSite(bz).GetKappa();

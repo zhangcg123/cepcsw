@@ -36,6 +36,7 @@
 #include <exception>
 #include <memory>
 #include <limits>
+#include <map>
 #include <set>
 
 DECLARE_COMPONENT(RecGsfTracking)
@@ -179,7 +180,8 @@ static int covIndex5(int row, int col) {
 }
 
 static TKalTrackSite* makeInitialSiteFromTrackState(
-    const DH& ts, const MatchedHit& firstHit, double bz);
+    const DH& ts, const MatchedHit& firstHit, double bz,
+    double covarianceScale = 1.0);
 
 static double normalizePhi(double phi) {
   while (phi >= M_PI) phi -= 2.0 * M_PI;
@@ -228,6 +230,52 @@ static double ptFromTrackState(const edm4hep::TrackState& ts, double bz) {
   const double alpha = bz * 2.99792458e-4;
   const double kappa = (alpha != 0.0) ? ts.omega / alpha : 0.0;
   return (kappa != 0.0) ? 1.0 / std::abs(kappa) : 0.0;
+}
+
+static int configuredTruthTransition(const std::string& mapping,
+                                     int eventIndex) {
+  std::istringstream stream(mapping);
+  std::string item;
+  while (std::getline(stream, item, ',')) {
+    const auto separator = item.find(':');
+    if (separator == std::string::npos) continue;
+    try {
+      if (std::stoi(item.substr(0, separator)) == eventIndex)
+        return std::stoi(item.substr(separator + 1));
+    } catch (...) {
+      continue;
+    }
+  }
+  return -1;
+}
+
+static bool applyCounterfactualReverseLoss(
+    GsfComponent& component, double lossFraction,
+    double retainedFractionVariance, double bz) {
+  if (!(lossFraction >= 0.0 && lossFraction < 0.99) || bz == 0.0)
+    return false;
+  if (!component.continuationValid && !component.snapshotContinuation(bz))
+    return false;
+  const double retained = 1.0 - lossFraction;
+  const double parentKappa = component.helixAtLastSite(bz).GetKappa();
+  if (component.pendingProcessJacobian.GetNrows() != 5 ||
+      component.pendingProcessJacobian.GetNcols() != 5) {
+    component.pendingProcessJacobian.ResizeTo(5, 5);
+    component.pendingProcessJacobian.UnitMatrix();
+  }
+  component.pendingProcessJacobian(2, 2) *= retained;
+  auto& continuation = component.continuationState;
+  for (int row = 0; row < 5; ++row)
+    continuation.covMatrix[covIndex5(row, 2)] *= retained;
+  continuation.covMatrix[covIndex5(2, 2)] *= retained;
+  const double alpha = bz * 2.99792458e-4;
+  continuation.covMatrix[covIndex5(2, 2)] +=
+      alpha * alpha * parentKappa * parentKappa *
+      std::max(0.0, retainedFractionVariance);
+  continuation.omega = parentKappa * retained * alpha;
+  component.continuationValid = true;
+  component.noRadiationLineage = lossFraction == 0.0;
+  return true;
 }
 
 static std::string compactTrackState(const edm4hep::TrackState& ts, double bz) {
@@ -421,49 +469,262 @@ static bool appendBaselineStateToComponent(
   return true;
 }
 
-static bool smoothRetainedLineage(GsfComponent& comp) {
-  if (comp.smoothingSteps.size() < 2) return false;
-  const size_t n = comp.smoothingSteps.size();
-  std::vector<TMatrixD> smoothedMeans(n, TMatrixD(5, 1));
-  std::vector<TMatrixD> smoothedCovariances(n, TMatrixD(5, 5));
-  smoothedMeans[n - 1] = comp.smoothingSteps[n - 1].filteredMean;
-  smoothedCovariances[n - 1] = comp.smoothingSteps[n - 1].filteredCovariance;
+struct GsfSmootherNode {
+  int surface = -1;
+  int parent = -1;
+  std::map<int, double> reductionSources;
+  bool transitionValid = false;
+  TMatrixD filteredMean{5, 1};
+  TMatrixD filteredCovariance{5, 5};
+  TMatrixD predictedMean{5, 1};
+  TMatrixD predictedCovariance{5, 5};
+  TMatrixD transitionJacobian{5, 5};
+  double smoothedWeight = 0.0;
+  bool smoothedValid = false;
+  TMatrixD smoothedMean{5, 1};
+  TMatrixD smoothedCovariance{5, 5};
+};
 
-  for (size_t next = n - 1; next > 0; --next) {
-    const size_t current = next - 1;
-    const auto& currentStep = comp.smoothingSteps[current];
-    auto& nextStep = comp.smoothingSteps[next];
-    if (!nextStep.transitionValid || nextStep.transitionJacobian.GetNrows() != 5 ||
-        nextStep.predictedCovariance.GetNrows() != 5) return false;
-    TMatrixD predictedInverse = nextStep.predictedCovariance;
-    double determinant = 0.0;
-    predictedInverse.Invert(&determinant);
-    if (!(std::abs(determinant) > 0.0) || !std::isfinite(determinant)) return false;
-    TMatrixD transitionT(TMatrixD::kTransposed, nextStep.transitionJacobian);
-    TMatrixD gain = currentStep.filteredCovariance * transitionT * predictedInverse;
-    double kappaGainNorm2 = 0.0;
-    for (int col = 0; col < 5; ++col)
-      kappaGainNorm2 += gain(2, col) * gain(2, col);
-    nextStep.rtsKappaGainNorm = std::sqrt(kappaGainNorm2);
-    TMatrixD deltaMean = smoothedMeans[next] - nextStep.predictedMean;
-    // Keep the periodic helix angle on the local branch.
-    deltaMean(1, 0) = normalizePhi(deltaMean(1, 0));
-    const TMatrixD smoothingCorrection = gain * deltaMean;
-    nextStep.rtsKappaCorrection = smoothingCorrection(2, 0);
-    smoothedMeans[current] = currentStep.filteredMean + smoothingCorrection;
-    TMatrixD gainT(TMatrixD::kTransposed, gain);
-    smoothedCovariances[current] = currentStep.filteredCovariance +
-        gain * (smoothedCovariances[next] - nextStep.predictedCovariance) * gainT;
+struct GaussianAccumulator {
+  double weight = 0.0;
+  bool haveReference = false;
+  double phiReference = 0.0;
+  TMatrixD first{5, 1};
+  TMatrixD second{5, 5};
+};
+
+struct GaussianMomentState {
+  bool valid = false;
+  TMatrixD mean{5, 1};
+  TMatrixD covariance{5, 5};
+};
+
+static void accumulateGaussian(GaussianAccumulator& accumulator,
+                               double weight, TMatrixD mean,
+                               const TMatrixD& covariance) {
+  if (!(weight > 0.0) || !std::isfinite(weight)) return;
+  if (!accumulator.haveReference) {
+    accumulator.phiReference = mean(1, 0);
+    accumulator.haveReference = true;
+  } else {
+    while (mean(1, 0) - accumulator.phiReference >= M_PI)
+      mean(1, 0) -= 2.0 * M_PI;
+    while (mean(1, 0) - accumulator.phiReference < -M_PI)
+      mean(1, 0) += 2.0 * M_PI;
   }
-  // smoothingSteps[0] is the first real measurement accepted after the seed.
-  comp.smoothedInnerMean = smoothedMeans.front();
-  comp.smoothedInnerCovariance = smoothedCovariances.front();
-  comp.smoothedInnerValid = true;
+  TMatrixD meanT(TMatrixD::kTransposed, mean);
+  TMatrixD weightedMean = mean;
+  weightedMean *= weight;
+  accumulator.first += weightedMean;
+  TMatrixD weightedSecond = covariance + mean * meanT;
+  weightedSecond *= weight;
+  accumulator.second += weightedSecond;
+  accumulator.weight += weight;
+}
+
+static bool finishGaussian(const GaussianAccumulator& accumulator,
+                           TMatrixD& mean, TMatrixD& covariance) {
+  if (!(accumulator.weight > 0.0) || !accumulator.haveReference) return false;
+  mean = accumulator.first;
+  mean *= 1.0 / accumulator.weight;
+  TMatrixD meanT(TMatrixD::kTransposed, mean);
+  covariance = accumulator.second;
+  covariance *= 1.0 / accumulator.weight;
+  covariance -= mean * meanT;
+  return true;
+}
+
+static bool momentMatchCurrentSurface(
+    const std::vector<GsfComponent*>& components, double bz,
+    TMatrixD& mean, TMatrixD& covariance) {
+  GaussianAccumulator accumulator;
+  for (const auto* component : components) {
+    if (!component) continue;
+    TMatrixD componentMean(5, 1);
+    component->helixAtLastSite(bz).PutInto(componentMean);
+    accumulateGaussian(accumulator, component->weight, componentMean,
+                       component->covAtLastSite(bz));
+  }
+  return finishGaussian(accumulator, mean, covariance);
+}
+
+static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
+                              const GaussianMomentState& backwardPredicted,
+                              GaussianMomentState& smoothed) {
+  if (!forwardUpdated.valid || !backwardPredicted.valid) return false;
+  TMatrixD covarianceSum = forwardUpdated.covariance +
+                           backwardPredicted.covariance;
+  double determinant = 0.0;
+  covarianceSum.Invert(&determinant);
+  if (!(determinant > 0.0) || !std::isfinite(determinant)) return false;
+  TMatrixD gain = forwardUpdated.covariance * covarianceSum;
+  TMatrixD delta = backwardPredicted.mean - forwardUpdated.mean;
+  while (delta(1, 0) >= M_PI) delta(1, 0) -= 2.0 * M_PI;
+  while (delta(1, 0) < -M_PI) delta(1, 0) += 2.0 * M_PI;
+  smoothed.mean = forwardUpdated.mean + gain * delta;
+  smoothed.covariance = gain * backwardPredicted.covariance;
+  TMatrixD covarianceT(TMatrixD::kTransposed, smoothed.covariance);
+  smoothed.covariance += covarianceT;
+  smoothed.covariance *= 0.5;
+  smoothed.valid = std::isfinite(smoothed.mean(2, 0)) &&
+                   std::isfinite(smoothed.covariance(2, 2));
+  return smoothed.valid;
+}
+
+static bool collapsedCurrentMixtureAtIP(
+    const std::vector<GsfComponent*>& components, double bz,
+    THelicalTrack& outHelix, TMatrixD& outCovariance) {
+  TMatrixD mean(5, 1), covariance(5, 5);
+  if (!momentMatchCurrentSurface(components, bz, mean, covariance)) return false;
+  outHelix = THelicalTrack(mean, components.front()->helixAtLastSite(bz).GetPivot(), bz);
+  outCovariance.ResizeTo(5, 5);
+  outCovariance = covariance;
+  double dphi = 0.0;
+  TMatrixD jacobian(5, 5);
+  jacobian.UnitMatrix();
+  outHelix.MoveTo(TVector3(0.0, 0.0, 0.0), dphi, &jacobian, &outCovariance);
+  return std::isfinite(outHelix.GetKappa()) &&
+         std::isfinite(outCovariance(2, 2));
+}
+
+static int appendMeasurementSmootherNode(
+    GsfComponent& component, int surface,
+    std::vector<GsfSmootherNode>& graph) {
+  if (component.smoothingSteps.empty()) return -1;
+  const auto& step = component.smoothingSteps.back();
+  GsfSmootherNode node;
+  node.surface = surface;
+  node.parent = component.smoothingNodeId;
+  node.transitionValid = node.parent < 0 || step.transitionValid;
+  node.filteredMean = step.filteredMean;
+  node.filteredCovariance = step.filteredCovariance;
+  node.predictedMean = step.predictedMean;
+  node.predictedCovariance = step.predictedCovariance;
+  node.transitionJacobian = step.transitionJacobian;
+  graph.push_back(node);
+  component.smoothingNodeId = static_cast<int>(graph.size()) - 1;
+  component.smoothingSourceFractions.clear();
+  component.smoothingSourceFractions[component.smoothingNodeId] = 1.0;
+  return component.smoothingNodeId;
+}
+
+static bool appendReductionSmootherNodes(
+    std::vector<GsfComponent*>& components, int surface, double bz,
+    std::vector<GsfSmootherNode>& graph) {
+  for (auto* component : components) {
+    if (!component || component->smoothingSourceFractions.empty()) return false;
+    if (component->smoothingSourceFractions.size() == 1 &&
+        component->smoothingSourceFractions.begin()->first ==
+            component->smoothingNodeId) continue;
+    GsfSmootherNode node;
+    node.surface = surface;
+    node.reductionSources = component->smoothingSourceFractions;
+    if (!component->continuationValid) return false;
+    trackStateToKalTest5(component->continuationState, bz, node.filteredMean,
+                         node.filteredCovariance);
+    graph.push_back(node);
+    component->smoothingNodeId = static_cast<int>(graph.size()) - 1;
+    component->smoothingSourceFractions.clear();
+    component->smoothingSourceFractions[component->smoothingNodeId] = 1.0;
+  }
+  return true;
+}
+
+static bool smoothKlReductionGraph(
+    std::vector<GsfComponent*>& components,
+    std::vector<GsfSmootherNode>& graph,
+    int& activeNodes, int& reductionNodes) {
+  if (components.empty() || graph.empty()) return false;
+  std::vector<GaussianAccumulator> accumulators(graph.size());
+  GsfMixture::normalizeWeights(components);
+  for (auto* component : components) {
+    if (!component || component->smoothingNodeId < 0 ||
+        component->smoothingNodeId >= static_cast<int>(graph.size())) return false;
+    const auto& terminal = graph[component->smoothingNodeId];
+    accumulateGaussian(accumulators[component->smoothingNodeId],
+                       component->weight, terminal.filteredMean,
+                       terminal.filteredCovariance);
+  }
+
+  activeNodes = 0;
+  reductionNodes = 0;
+  for (int id = static_cast<int>(graph.size()) - 1; id >= 0; --id) {
+    auto& node = graph[id];
+    if (!finishGaussian(accumulators[id], node.smoothedMean,
+                        node.smoothedCovariance)) continue;
+    node.smoothedWeight = accumulators[id].weight;
+    node.smoothedValid = true;
+    ++activeNodes;
+
+    if (!node.reductionSources.empty()) {
+      ++reductionNodes;
+      TMatrixD reducedInverse = node.filteredCovariance;
+      double determinant = 0.0;
+      reducedInverse.Invert(&determinant);
+      if (!(std::abs(determinant) > 0.0) || !std::isfinite(determinant))
+        return false;
+      for (const auto& source : node.reductionSources) {
+        if (source.first < 0 || source.first >= id || source.second < 0.0)
+          return false;
+        const auto& sourceNode = graph[source.first];
+        TMatrixD gain = sourceNode.filteredCovariance * reducedInverse;
+        TMatrixD delta = node.smoothedMean - node.filteredMean;
+        delta(1, 0) = normalizePhi(delta(1, 0));
+        TMatrixD mean = sourceNode.filteredMean + gain * delta;
+        TMatrixD gainT(TMatrixD::kTransposed, gain);
+        TMatrixD covariance = sourceNode.filteredCovariance +
+            gain * (node.smoothedCovariance - node.filteredCovariance) * gainT;
+        accumulateGaussian(accumulators[source.first],
+                           node.smoothedWeight * source.second,
+                           mean, covariance);
+      }
+      continue;
+    }
+
+    if (node.parent >= 0) {
+      if (!node.transitionValid || node.parent >= id) return false;
+      const auto& parent = graph[node.parent];
+      TMatrixD predictedInverse = node.predictedCovariance;
+      double determinant = 0.0;
+      predictedInverse.Invert(&determinant);
+      if (!(std::abs(determinant) > 0.0) || !std::isfinite(determinant))
+        return false;
+      TMatrixD transitionT(TMatrixD::kTransposed, node.transitionJacobian);
+      TMatrixD gain = parent.filteredCovariance * transitionT * predictedInverse;
+      TMatrixD delta = node.smoothedMean - node.predictedMean;
+      delta(1, 0) = normalizePhi(delta(1, 0));
+      TMatrixD mean = parent.filteredMean + gain * delta;
+      TMatrixD gainT(TMatrixD::kTransposed, gain);
+      TMatrixD covariance = parent.filteredCovariance +
+          gain * (node.smoothedCovariance - node.predictedCovariance) * gainT;
+      accumulateGaussian(accumulators[node.parent], node.smoothedWeight,
+                         mean, covariance);
+    }
+  }
+
+  GaussianAccumulator inner;
+  int firstSurface = std::numeric_limits<int>::max();
+  for (const auto& node : graph)
+    if (node.smoothedValid) firstSurface = std::min(firstSurface, node.surface);
+  for (const auto& node : graph) {
+    if (node.smoothedValid && node.surface == firstSurface &&
+        node.reductionSources.empty())
+      accumulateGaussian(inner, node.smoothedWeight, node.smoothedMean,
+                         node.smoothedCovariance);
+  }
+  TMatrixD innerMean(5, 1), innerCovariance(5, 5);
+  if (!finishGaussian(inner, innerMean, innerCovariance)) return false;
+  for (auto* component : components) {
+    component->smoothedInnerMean = innerMean;
+    component->smoothedInnerCovariance = innerCovariance;
+    component->smoothedInnerValid = true;
+  }
   return true;
 }
 
 static TKalTrackSite* makeInitialSiteFromTrackState(
-    const DH& ts, const MatchedHit& firstHit, double bz) {
+    const DH& ts, const MatchedHit& firstHit, double bz,
+    double covarianceScale) {
 
   const double alpha = bz * 2.99792458e-4;
   if (alpha == 0.0) return nullptr;
@@ -480,7 +741,8 @@ static TKalTrackSite* makeInitialSiteFromTrackState(
   const double scale[5] = {-1.0, 1.0, 1.0 / alpha, 1.0, 1.0};
   for (int i = 0; i < 5; ++i) {
     for (int j = 0; j < 5; ++j) {
-      cov5(i, j) = scale[i] * scale[j] * ts.covMatrix[covIndex5(i, j)];
+      cov5(i, j) = covarianceScale * scale[i] * scale[j] *
+                   ts.covMatrix[covIndex5(i, j)];
     }
   }
 
@@ -1008,10 +1270,6 @@ StatusCode RecGsfTracking::initialize() {
     error() << "ReductionTargetComponents must be 0 or in [1, MaxComponents]" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_reductionMinHitsAfterSplit.value() < 0) {
-    error() << "ReductionMinHitsAfterSplit must be non-negative" << endmsg;
-    return StatusCode::FAILURE;
-  }
   if (m_componentWeightCutoff.value() < 0.0 ||
       m_componentWeightCutoff.value() >= 1.0) {
     error() << "ComponentWeightCutoff must be in [0, 1)" << endmsg;
@@ -1019,12 +1277,6 @@ StatusCode RecGsfTracking::initialize() {
   }
   if (m_bhSplitThresh.value() < 0.0) {
     error() << "BHSplitThreshold must be non-negative" << endmsg;
-    return StatusCode::FAILURE;
-  }
-  std::string reductionMode = m_reductionMode.value();
-  std::transform(reductionMode.begin(), reductionMode.end(), reductionMode.begin(), ::tolower);
-  if (reductionMode != "kl" && reductionMode != "topn") {
-    error() << "ReductionMode must be KL or TopN" << endmsg;
     return StatusCode::FAILURE;
   }
   std::string outputMode = m_outputMode.value();
@@ -1040,6 +1292,23 @@ StatusCode RecGsfTracking::initialize() {
     error() << "ReverseOutputMode must be BestBranch or WeightedMean" << endmsg;
     return StatusCode::FAILURE;
   }
+  std::string reverseSelectionMode = m_reverseSelectionMode.value();
+  std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
+                 reverseSelectionMode.begin(), ::tolower);
+  if (reverseSelectionMode != "aggregateweight" &&
+      reverseSelectionMode != "dominantlineage" &&
+      reverseSelectionMode != "surfaceconsistency") {
+    error() << "ReverseSelectionMode must be AggregateWeight, DominantLineage, "
+               "or SurfaceConsistency"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_surfaceConsistencyUninformativeFloor.value() <= 0.0 ||
+      m_surfaceConsistencyUninformativeFloor.value() > 1.0) {
+    error() << "SurfaceConsistencyUninformativeFloor must be in (0, 1]"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
   std::string materialPathMode = m_materialPathMode.value();
   std::transform(materialPathMode.begin(), materialPathMode.end(),
                  materialPathMode.begin(), ::tolower);
@@ -1049,20 +1318,36 @@ StatusCode RecGsfTracking::initialize() {
                "DD4hepBetweenSurfaces" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_retainedLineageSmoothing.value() && reductionMode != "topn") {
-    error() << "RetainedLineageSmoothing requires ReductionMode=TopN so every "
-               "smoothed component has one real, unmerged process lineage"
-            << endmsg;
-    return StatusCode::FAILURE;
-  }
-  if (m_retainedLineageSmoothing.value() && m_reverseFiltering.value()) {
-    error() << "RetainedLineageSmoothing and ReverseFiltering are alternative "
+  if (m_gaussianSumSmoothing.value() && m_reverseFiltering.value()) {
+    error() << "GaussianSumSmoothing and ReverseFiltering are alternative "
                "backward-information workflows; enable only one"
             << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_retainedLineageSmoothing.value() && m_materialIPExtrap.value()) {
-    error() << "RetainedLineageSmoothing currently requires "
+  const int backwardWorkflowCount =
+      (m_gaussianSumSmoothing.value() ? 1 : 0) +
+      (m_reverseFiltering.value() ? 1 : 0) +
+      (m_cmsGsfSmoothing.value() ? 1 : 0);
+  if (backwardWorkflowCount > 1) {
+    error() << "GaussianSumSmoothing, ReverseFiltering, and CmsGsfSmoothing "
+               "are mutually exclusive"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (!(m_cmsErrorRescaling.value() > 0.0) ||
+      !std::isfinite(m_cmsErrorRescaling.value())) {
+    error() << "CmsErrorRescaling must be a finite positive covariance "
+               "scaling factor" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (!(m_reverseKappaSeedCov.value() > 0.0) ||
+      !std::isfinite(m_reverseKappaSeedCov.value())) {
+    error() << "ReverseKappaSeedCov must be a finite positive covariance "
+            << "scaling factor" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_gaussianSumSmoothing.value() && m_materialIPExtrap.value()) {
+    error() << "GaussianSumSmoothing currently requires "
                "MaterialIPExtrapolation=False"
             << endmsg;
     return StatusCode::FAILURE;
@@ -1148,8 +1433,8 @@ StatusCode RecGsfTracking::initialize() {
 
   info() << "GSF configuration: maxComponents=" << m_maxComponents.value()
          << " reductionTarget=" << m_reductionTargetComponents.value()
-         << " reductionMode=" << m_reductionMode.value()
-         << " reductionMinHitsAfterSplit=" << m_reductionMinHitsAfterSplit.value()
+         << " reductionMode=KL"
+         << " protectIdentityLineage=" << m_protectIdentityLineage.value()
          << " outputMode=" << m_outputMode.value()
          << " verbose=" << m_verboseDump.value() << "/"
          << m_verboseSplitDump.value() << "/"
@@ -1205,6 +1490,14 @@ StatusCode RecGsfTracking::execute() {
                  materialPathMode.begin(), ::tolower);
   const bool useDD4hepBetweenSurfaces =
       materialPathMode == "dd4hepbetweensurfaces";
+  std::string configuredReverseSelection = m_reverseSelectionMode.value();
+  std::transform(configuredReverseSelection.begin(),
+                 configuredReverseSelection.end(),
+                 configuredReverseSelection.begin(), ::tolower);
+  const bool selectSurfaceConsistency =
+      configuredReverseSelection == "surfaceconsistency";
+  const bool trackSurfaceLineageMass =
+      m_surfaceLineageMassDump.value() || selectSurfaceConsistency;
 
   for (const auto& trk : *in) {
     auto assocHits = trk.getTrackerHits();
@@ -1305,6 +1598,14 @@ StatusCode RecGsfTracking::execute() {
     initComp->kaltrack->Add(site);
 
     std::vector<GsfComponent*> comps = {initComp};
+    std::vector<GsfSmootherNode> smootherGraph;
+    std::vector<std::unique_ptr<GsfComponent>> cmsFinalPredictedOwned;
+    std::vector<GaussianMomentState> cmsForwardUpdatedMoments(hits.size());
+    if (m_cmsGsfSmoothing.value()) {
+      cmsForwardUpdatedMoments[0].valid = momentMatchCurrentSurface(
+          comps, bz, cmsForwardUpdatedMoments[0].mean,
+          cmsForwardUpdatedMoments[0].covariance);
+    }
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
@@ -1316,6 +1617,37 @@ StatusCode RecGsfTracking::execute() {
       if ((int)h.size() <= maxLen) return h;
       if (maxLen <= 3) return h.substr(0, maxLen);
       return h.substr(0, maxLen - 3) + "...";
+    };
+
+    auto formatProcessModeFractions = [](
+        const std::map<std::pair<int, int>, double>& fractions) {
+      std::ostringstream text;
+      text.setf(std::ios::fixed, std::ios::floatfield);
+      text.precision(6);
+      int currentHit = -1;
+      double radiativeMass = 0.0;
+      bool firstHit = true;
+      auto finishHit = [&]() {
+        if (currentHit >= 0) text << ",rad=" << radiativeMass << "]";
+      };
+      for (const auto& item : fractions) {
+        const int hit = item.first.first;
+        const int mode = item.first.second;
+        if (hit != currentHit) {
+          finishHit();
+          if (!firstHit) text << ";";
+          text << hit << ":[";
+          currentHit = hit;
+          radiativeMass = 0.0;
+          firstHit = false;
+        } else {
+          text << ",";
+        }
+        text << "g" << mode << "=" << item.second;
+        if (mode > 0) radiativeMass += item.second;
+      }
+      finishHit();
+      return text.str();
     };
 
     auto dumpComponents = [&](const char* label, int ih,
@@ -1347,13 +1679,31 @@ StatusCode RecGsfTracking::execute() {
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
         const double chi2 = componentFitChi2(*c);
         const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
-        info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d age=%d noRad=%d w=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
+        info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d noRad=%d procH=%d procG=%d procF=%.6g w=%.6g domFrac=%.6g domW=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
                   % (int)rank % (int)ci % c->debugId % c->debugParentId % c->generation
-                  % c->hitsSinceSplit % (int)c->noRadiationLineage
-                  % c->weight % pt % k % chi2 % ndf % entries << endmsg;
+                  % (int)c->noRadiationLineage
+                  % c->lastReverseProcessHit
+                  % c->lastReverseProcessComponent
+                  % c->lastReverseProcessFraction
+                  % c->weight % c->dominantLineageFraction
+                  % (c->weight * c->dominantLineageFraction)
+                  % pt % k % chi2 % ndf % entries << endmsg;
         if (m_componentDebugDump) {
           info() << boost::format("          history=%s")
                     % truncateHistory(c->debugHistory) << endmsg;
+          if (std::string(label).find("reverse-") == 0) {
+            info() << boost::format("          signatures forward=%s reverse=%s")
+                      % c->forwardProcessSignature
+                      % c->reverseProcessSignature << endmsg;
+          }
+          if (m_surfaceLineageMassDump) {
+            info() << boost::format(
+                "          surface-mode-mass forward=%s reverse=%s")
+                      % formatProcessModeFractions(
+                            c->forwardProcessModeFractions)
+                      % formatProcessModeFractions(
+                            c->reverseProcessModeFractions) << endmsg;
+          }
         }
       }
     };
@@ -1376,11 +1726,13 @@ StatusCode RecGsfTracking::execute() {
         auto children = splitter.split(
             initComp, seedMaterial.pathTX0, bz);
         comps.clear();
-        for (auto* child : children) {
+        for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
+          auto* child = children[childIndex];
           child->debugId = nextComponentDebugId++;
           child->debugParentId = parentDebugId;
           child->generation = 1;
-          child->hitsSinceSplit = 0;
+          if (trackSurfaceLineageMass)
+            child->forwardProcessModeFractions[{0, (int)childIndex}] = 1.0;
           comps.push_back(child);
         }
         ++nSplits;
@@ -1416,6 +1768,13 @@ StatusCode RecGsfTracking::execute() {
           ? std::min(m_reductionTargetComponents.value(), m_maxComponents.value())
           : m_maxComponents.value();
       GsfMixture::normalizeWeights(comps);
+      // CMSSW seeds its backward GSF from the forward prediction on the
+      // outermost surface, before that surface's measurement is applied.
+      if (m_cmsGsfSmoothing.value() && ih + 1 == hits.size()) {
+        cmsFinalPredictedOwned.clear();
+        for (const auto* component : comps)
+          cmsFinalPredictedOwned.emplace_back(component->clone());
+      }
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("before-hit", (int)ih, comps);
 
@@ -1471,6 +1830,12 @@ StatusCode RecGsfTracking::execute() {
             if (m_verboseDump && m_componentDebugDump) {
               warning() << "GSF baseline component update threw unknown exception" << endmsg;
             }
+          }
+
+          if (baselineAccepted && m_gaussianSumSmoothing.value() &&
+              appendMeasurementSmootherNode(
+                  *comp, static_cast<int>(ih), smootherGraph) < 0) {
+            baselineAccepted = false;
           }
 
           if (baselineAccepted) {
@@ -1644,13 +2009,69 @@ StatusCode RecGsfTracking::execute() {
       }
 
       comps = std::move(accepted);
-      for (auto* comp : comps) ++comp->hitsSinceSplit;
       compsAfterUpdate = (int)comps.size();
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/raw", (int)ih, comps);
       GsfMixture::normalizeWeights(comps);
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/norm", (int)ih, comps);
+
+      // Reduce only after every process child has reached and incorporated
+      // the target measurement.  The posterior weights now include the exact
+      // innovation likelihood, so neither the low-weight cutoff nor KL moment
+      // merging can discard/aggregate a child before the hit evaluates it.
+      const int beforeCutoff = (int)comps.size();
+      GsfMixture::removeLowWeight(
+          comps, m_componentWeightCutoff.value(),
+          m_protectIdentityLineage.value());
+      if (m_verboseDump && m_verboseSplitDump &&
+          (int)comps.size() != beforeCutoff) {
+        info() << boost::format(
+            "  FLOW hit=%3d posterior-cutoff: n=%d -> %d threshold=%.3g")
+                  % (int)ih % beforeCutoff % (int)comps.size()
+                  % m_componentWeightCutoff.value() << endmsg;
+        dumpComponents("posterior-cutoff", (int)ih, comps);
+      }
+
+      const bool shouldReduce =
+          ((int)comps.size() > m_maxComponents.value()) ||
+          (reductionTarget < m_maxComponents.value() &&
+           (int)comps.size() >= m_maxComponents.value());
+      if (shouldReduce && (int)comps.size() > reductionTarget) {
+        if (m_verboseDump && m_verboseSplitDump) {
+          info() << boost::format(
+              "  FLOW hit=%3d posterior-reduce: n=%d max=%d target=%d mode=KL")
+                    % (int)ih % (int)comps.size()
+                    % m_maxComponents.value() % reductionTarget << endmsg;
+          dumpComponents("posterior-pre-reduce", (int)ih, comps);
+        }
+        auto reductionLogger = [&](const std::string& line) {
+          if (m_verboseDump && m_verboseSplitDump) info() << line << endmsg;
+        };
+        GsfMixture::reduce(
+            comps, reductionTarget, bz,
+            m_protectIdentityLineage.value(), reductionLogger);
+        ++nReductions;
+        didReduceHit = true;
+        dumpComponents("posterior-post-reduce", (int)ih, comps);
+        GsfMixture::normalizeWeights(comps);
+        dumpComponents("posterior-post-reduce/norm", (int)ih, comps);
+      }
+      if (m_gaussianSumSmoothing.value() &&
+          !appendReductionSmootherNodes(
+              comps, static_cast<int>(ih), bz, smootherGraph)) {
+        warning() << boost::format("GSF event index %d track %d: failed to record KL reduction graph at hit %d")
+                     % (m_nEvt - 1) % (nFit + 1) % (int)ih << endmsg;
+        for (auto* component : comps) delete component;
+        comps.clear();
+        break;
+      }
+      compsAfterReduce = (int)comps.size();
+      if (m_cmsGsfSmoothing.value()) {
+        auto& forwardMoment = cmsForwardUpdatedMoments[ih];
+        forwardMoment.valid = momentMatchCurrentSurface(
+            comps, bz, forwardMoment.mean, forwardMoment.covariance);
+      }
 
       // ACTS-like surface ordering: preserve the filtered measurement state,
       // then convolve components through the material associated with this
@@ -1725,10 +2146,8 @@ StatusCode RecGsfTracking::execute() {
                     % (path.valid ? 1 : 0) << endmsg;
         }
       }
-      // Always represent an eligible owned material transition before applying
-      // the component budget.  Gating the split on the incoming mixture size
-      // skips the physical transition when the previous surface happens to
-      // leave MaxComponents branches and moves the next split one surface late.
+      // Represent the complete outgoing process mixture.  Its children remain
+      // unreduced until they have incorporated the next measurement posterior.
       if (hasNextForwardSurface && anyComponentMaterial && m_isElectron) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, component-local path tX0) — %d comps before split")
@@ -1766,11 +2185,19 @@ StatusCode RecGsfTracking::execute() {
                         % children[ci]->weight << endmsg;
             }
           }
-          for (auto* child : children) {
+          for (size_t childIndex = 0; childIndex < children.size();
+               ++childIndex) {
+            auto* child = children[childIndex];
             child->debugId = nextComponentDebugId++;
             child->debugParentId = parentDebugId;
             child->generation = childGeneration;
-            child->hitsSinceSplit = 0;
+            if (!child->forwardProcessSignature.empty())
+              child->forwardProcessSignature += ";";
+            child->forwardProcessSignature += std::to_string(ih) + ":g" +
+                std::to_string(childIndex);
+            if (trackSurfaceLineageMass)
+              child->forwardProcessModeFractions[
+                  {(int)ih, (int)childIndex}] = 1.0;
             newCps.push_back(child);
           }
         }
@@ -1789,63 +2216,11 @@ StatusCode RecGsfTracking::execute() {
         }
       }
       if ((int)comps.size() > maxCompsEver) maxCompsEver = (int)comps.size();
-
-      const int beforeCutoff = (int)comps.size();
-      GsfMixture::removeLowWeight(comps, m_componentWeightCutoff.value());
-      if (m_verboseDump && m_verboseSplitDump &&
-          (int)comps.size() != beforeCutoff) {
-        info() << boost::format("  FLOW hit=%3d cutoff: n=%d -> %d threshold=%.3g")
-                  % (int)ih % beforeCutoff % (int)comps.size()
-                  % m_componentWeightCutoff.value() << endmsg;
-        dumpComponents("after-cutoff", (int)ih, comps);
-      }
-
-      const bool shouldReduce = ((int)comps.size() > m_maxComponents.value()) ||
-          (reductionTarget < m_maxComponents.value() &&
-           (int)comps.size() >= m_maxComponents.value());
-      const bool oldEnoughToReduce = std::all_of(
-          comps.begin(), comps.end(), [&](const GsfComponent* comp) {
-            return comp->hitsSinceSplit >= m_reductionMinHitsAfterSplit.value();
-          });
-      // A just-created over-budget mixture must be reduced on this same
-      // surface.  The age delay remains applicable to mixtures carried from a
-      // previous surface, but must not defeat the split-before-budget ordering.
-      const bool mayReduceNow = oldEnoughToReduce || justSplit;
-      if (shouldReduce && !mayReduceNow && m_verboseDump && m_verboseSplitDump) {
-        info() << boost::format("  FLOW hit=%3d defer-reduce: n=%d target=%d minAge=%d requiredAge=%d")
-                  % (int)ih % (int)comps.size() % reductionTarget
-                  % (*std::min_element(comps.begin(), comps.end(),
-                        [](const GsfComponent* a, const GsfComponent* b) {
-                          return a->hitsSinceSplit < b->hitsSinceSplit;
-                        }))->hitsSinceSplit
-                  % m_reductionMinHitsAfterSplit.value() << endmsg;
-      }
-      if (shouldReduce && mayReduceNow && (int)comps.size() > reductionTarget) {
-        if (m_verboseDump && m_verboseSplitDump) {
-          info() << boost::format("  FLOW hit=%3d reduce: n=%d max=%d target=%d mode=%s")
-                    % (int)ih % (int)comps.size() % m_maxComponents.value()
-                    % reductionTarget % m_reductionMode.value() << endmsg;
-        }
-        auto reductionLogger = [&](const std::string& line) {
-          if (m_verboseDump && m_verboseSplitDump) info() << line << endmsg;
-        };
-        if (m_reductionMode.value() == "TopN" || m_reductionMode.value() == "topN" ||
-            m_reductionMode.value() == "topn") {
-          GsfMixture::reduceTopN(comps, reductionTarget, reductionLogger);
-        } else {
-          GsfMixture::reduce(comps, reductionTarget, bz, reductionLogger);
-        }
-        nReductions++;
-        didReduceHit = true;
-        dumpComponents("after-reduce", (int)ih, comps);
-        GsfMixture::normalizeWeights(comps);
-        dumpComponents("after-reduce/norm", (int)ih, comps);
-      }
-      compsAfterReduce = (int)comps.size();
       if (m_verboseDump && m_verboseSplitDump) {
-        info() << boost::format("  FLOW hit=%3d summary: begin=%2d split=%2d update=%2d reduce=%2d%s A/R/J=%d/%d/%d dchi2=[%.4g, %.4g]")
-                  % (int)ih % compsAtHitBegin % compsAfterSplit % compsAfterUpdate
+        info() << boost::format("  FLOW hit=%3d summary: begin=%2d update=%2d reduce=%2d%s split=%2d A/R/J=%d/%d/%d dchi2=[%.4g, %.4g]")
+                  % (int)ih % compsAtHitBegin % compsAfterUpdate
                   % compsAfterReduce % (didReduceHit ? " yes" : " no ")
+                  % compsAfterSplit
                   % nAccept % nRecover % nReject
                   % (nAccept > 0 ? minDChi2 : 0.0) % (nAccept > 0 ? maxDChi2 : 0.0) << endmsg;
       }
@@ -1865,18 +2240,41 @@ StatusCode RecGsfTracking::execute() {
     // the final measurement surface, then revisit preceding measurements in
     // the audited reverse order.  Reverse process convolution increases the
     // momentum according to the same retained-fraction mixture.
-    if (m_reverseFiltering.value() && !comps.empty() && hits.size() > 1) {
+    const bool runCmsSmoother = m_cmsGsfSmoothing.value();
+    const bool runReversePass = m_reverseFiltering.value() || runCmsSmoother;
+    if (runReversePass && !comps.empty() && hits.size() > 1 &&
+        (!runCmsSmoother || !cmsFinalPredictedOwned.empty())) {
       std::vector<GsfComponent*> reverseComps;
       int nextReverseId = 0;
-      for (const auto* forwardComp : comps) {
+      std::vector<const GsfComponent*> reverseSeedComponents;
+      if (runCmsSmoother) {
+        for (const auto& component : cmsFinalPredictedOwned)
+          reverseSeedComponents.push_back(component.get());
+      } else {
+        reverseSeedComponents.assign(comps.begin(), comps.end());
+      }
+      const double reverseSeedCovarianceScale = runCmsSmoother
+          ? m_cmsErrorRescaling.value() : m_reverseKappaSeedCov.value();
+      for (const auto* forwardComp : reverseSeedComponents) {
         edm4hep::TrackState finalState =
             trackStateFromComponent(*forwardComp, bz, DH::AtOther);
+        for (auto& covariance : finalState.covMatrix)
+          covariance *= reverseSeedCovarianceScale;
         auto* reverseComp = new GsfComponent();
-        reverseComp->weight = forwardComp->weight;
+        reverseComp->weight =
+            (m_reverseInitialWeightMode.value() == "Uniform" ||
+             m_reverseInitialWeightMode.value() == "uniform")
+                ? 1.0
+                : forwardComp->weight;
         reverseComp->charge = forwardComp->charge;
         reverseComp->debugId = nextReverseId++;
         reverseComp->noRadiationLineage =
             forwardComp->noRadiationLineage;
+        reverseComp->forwardProcessSignature =
+            forwardComp->forwardProcessSignature;
+        if (trackSurfaceLineageMass)
+          reverseComp->forwardProcessModeFractions =
+              forwardComp->forwardProcessModeFractions;
         reverseComp->debugHistory = "reverse(" + forwardComp->debugHistory + ")";
         reverseComp->kaltrack = new TKalTrack();
         reverseComp->kaltrack->SetOwner();
@@ -1895,6 +2293,22 @@ StatusCode RecGsfTracking::execute() {
       if (m_verboseDump && m_verboseSplitDump)
         dumpComponents("reverse-start", (int)hits.size() - 1, reverseComps);
 
+      struct CounterfactualLossBranch {
+        std::unique_ptr<GsfComponent> component;
+        int processHit = -1;
+        double lossFraction = 0.0;
+        double cumulativeLogLikelihood = 0.0;
+        int acceptedHits = 0;
+        bool valid = true;
+        bool processApplied = false;
+      };
+      std::vector<CounterfactualLossBranch> counterfactualBranches;
+      const int counterfactualTruthHit = m_counterfactualLossScan.value()
+          ? configuredTruthTransition(
+                m_counterfactualTruthTransitionMap.value(), eventIndex)
+          : -1;
+      bool counterfactualStarted = false;
+
       int reverseAcceptedTotal = 0;
       int reverseRejectedTotal = 0;
       int reverseSplits = 0;
@@ -1904,21 +2318,135 @@ StatusCode RecGsfTracking::execute() {
               ? std::min(m_reductionTargetComponents.value(),
                          m_maxComponents.value())
               : m_maxComponents.value();
-      for (int reverseHit = (int)hits.size() - 2;
+      int cmsCombinedStates = 0;
+      int cmsCombinationFailures = 0;
+      for (int reverseHit = runCmsSmoother ? (int)hits.size() - 1
+                                          : (int)hits.size() - 2;
            reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
         auto& target = hits[reverseHit];
+
+        if (!counterfactualStarted && counterfactualTruthHit == reverseHit) {
+          auto identity = std::max_element(
+              reverseComps.begin(), reverseComps.end(),
+              [](const GsfComponent* left, const GsfComponent* right) {
+                const double leftWeight = left->noRadiationLineage
+                    ? left->weight : -1.0;
+                const double rightWeight = right->noRadiationLineage
+                    ? right->weight : -1.0;
+                return leftWeight < rightWeight;
+              });
+          if (identity != reverseComps.end() &&
+              (*identity)->noRadiationLineage) {
+            auto addCounterfactual = [&](int processHit, double loss) {
+              CounterfactualLossBranch branch;
+              branch.component.reset((*identity)->clone());
+              branch.component->weight = 1.0;
+              branch.processHit = processHit;
+              branch.lossFraction = loss;
+              counterfactualBranches.push_back(std::move(branch));
+            };
+            addCounterfactual(-1, 0.0);
+            for (double loss : m_counterfactualLossFractions.value()) {
+              if (loss > 0.0 && loss < 0.99) {
+                addCounterfactual(counterfactualTruthHit, loss);
+                if (counterfactualTruthHit > 0)
+                  addCounterfactual(counterfactualTruthHit - 1, loss);
+              }
+            }
+            info() << boost::format(
+                "  COUNTERFACTUAL LOSS SCAN start truthHit=%d baseId=%d "
+                "baseWeight=%.9g branches=%d variance=%.9g")
+                      % counterfactualTruthHit % (*identity)->debugId
+                      % (*identity)->weight
+                      % (int)counterfactualBranches.size()
+                      % m_counterfactualLossVariance.value() << endmsg;
+          } else {
+            warning() << "COUNTERFACTUAL LOSS SCAN skipped: no exact identity "
+                      << "branch at truthHit=" << counterfactualTruthHit
+                      << endmsg;
+          }
+          counterfactualStarted = true;
+        }
+
+        for (auto& branch : counterfactualBranches) {
+          if (!branch.valid) continue;
+          if (!branch.processApplied && branch.processHit == reverseHit) {
+            branch.valid = applyCounterfactualReverseLoss(
+                *branch.component, branch.lossFraction,
+                m_counterfactualLossVariance.value(), bz);
+            branch.processApplied = branch.valid;
+          }
+          if (!branch.valid) continue;
+          double dchi = 0.0;
+          double updateChi2 = 0.0;
+          int updateNdf = -999;
+          edm4hep::TrackState componentState =
+              trackStateFromComponent(*branch.component, bz, DH::AtOther);
+          edm4hep::TrackState updatedState;
+          MarlinTrk::MeasurementUpdate update;
+          bool accepted = false;
+          try {
+            edm4hep::TrackerHit referenceHit = hits[reverseHit + 1].lcioHit;
+            edm4hep::TrackerHit targetHit = target.lcioHit;
+            std::unique_ptr<MarlinTrk::IMarlinTrack> reverseTrack(
+                m_gsfMarlinTrkSystem->createTrack());
+            if (reverseTrack &&
+                reverseTrack->addHit(referenceHit) ==
+                    MarlinTrk::IMarlinTrack::success &&
+                reverseTrack->initialise(componentState, bz,
+                    MarlinTrk::IMarlinTrack::backward) ==
+                    MarlinTrk::IMarlinTrack::success &&
+                reverseTrack->addAndFit(targetHit, dchi, update, DBL_MAX) ==
+                    MarlinTrk::IMarlinTrack::success && update.valid &&
+                reverseTrack->getTrackState(targetHit, updatedState,
+                    updateChi2, updateNdf) ==
+                    MarlinTrk::IMarlinTrack::success &&
+                appendBaselineStateToComponent(*branch.component, updatedState,
+                    target, bz, componentState, update)) {
+              accepted = true;
+            }
+          } catch (...) {
+            accepted = false;
+          }
+          if (!accepted) {
+            branch.valid = false;
+            info() << boost::format(
+                "  COUNTERFACTUAL LOSS SCAN reject truthHit=%d processHit=%d "
+                "loss=%.6g atHit=%d")
+                      % counterfactualTruthHit % branch.processHit
+                      % branch.lossFraction % reverseHit << endmsg;
+            continue;
+          }
+          branch.cumulativeLogLikelihood +=
+              -0.5 * (dchi + update.logDetInnovation);
+          ++branch.acceptedHits;
+          if (m_componentDebugDump.value()) {
+            info() << boost::format(
+                "  COUNTERFACTUAL LOSS SCAN update truthHit=%d processHit=%d "
+                "loss=%.6g hit=%d dchi2=%.9g logDetS=%.9g cumulativeLogL=%.9g "
+                "pT=%.9g")
+                      % counterfactualTruthHit % branch.processHit
+                      % branch.lossFraction % reverseHit % dchi
+                      % update.logDetInnovation
+                      % branch.cumulativeLogLikelihood
+                      % ptFromTrackState(updatedState, bz) << endmsg;
+          }
+        }
 
         // Propagate the full mixture through the outer-to-inner interval
         // before updating its inner bounding measurement.  This mirrors the
         // ACTS backward actor and is the direction-reversed counterpart of the
         // forward update-then-outgoing-material ordering.
+        const bool cmsOutermostHit = runCmsSmoother &&
+            reverseHit == (int)hits.size() - 1;
         std::vector<ComponentMaterialPath> reverseMaterialPaths;
         reverseMaterialPaths.reserve(reverseComps.size());
         bool anyReverseMaterial = false;
         for (const auto* component : reverseComps) {
-          reverseMaterialPaths.push_back(
-              componentGeometryTransitionMaterialPath(
-                  m_materialManager, target.layer, *component, bz, -1));
+          reverseMaterialPaths.push_back(cmsOutermostHit
+              ? ComponentMaterialPath{}
+              : componentGeometryTransitionMaterialPath(
+                    m_materialManager, target.layer, *component, bz, -1));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&
               reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
         }
@@ -1935,12 +2463,31 @@ StatusCode RecGsfTracking::execute() {
               continue;
             }
             const int parentId = parent->debugId;
+            const double alpha = bz * 2.99792458e-4;
+            const double parentPt = parent->continuationState.omega != 0.0
+                ? std::abs(alpha / parent->continuationState.omega) : 0.0;
             auto children = splitter.split(parent, materialPath.pathTX0, bz,
                                            true);
-            for (auto* child : children) {
+            for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
+              auto* child = children[childIndex];
               child->debugParentId = parentId;
               child->debugId = nextReverseId++;
-              child->debugHistory += "->reverse-material";
+              child->lastReverseProcessHit = reverseHit;
+              child->lastReverseProcessComponent = static_cast<int>(childIndex);
+              const double childPt = child->continuationState.omega != 0.0
+                  ? std::abs(alpha / child->continuationState.omega) : 0.0;
+              child->lastReverseProcessFraction = childPt > 0.0
+                  ? parentPt / childPt : 1.0;
+              if (!child->reverseProcessSignature.empty())
+                child->reverseProcessSignature += ";";
+              child->reverseProcessSignature += std::to_string(reverseHit) +
+                  ":g" + std::to_string(childIndex) + ":f" +
+                  std::to_string(child->lastReverseProcessFraction);
+              if (trackSurfaceLineageMass)
+                child->reverseProcessModeFractions[
+                    {reverseHit, (int)childIndex}] = 1.0;
+              child->debugHistory += "->reverse-material[h=" +
+                  std::to_string(reverseHit) + "]";
               reverseChildren.push_back(child);
             }
           }
@@ -1948,22 +2495,10 @@ StatusCode RecGsfTracking::execute() {
           ++reverseSplits;
           GsfMixture::normalizeWeights(reverseComps);
         }
-        GsfMixture::removeLowWeight(reverseComps,
-                                    m_componentWeightCutoff.value());
-        if ((int)reverseComps.size() > reverseReductionTarget) {
-          if (m_reductionMode.value() == "TopN" ||
-              m_reductionMode.value() == "topN" ||
-              m_reductionMode.value() == "topn") {
-            GsfMixture::reduceTopN(reverseComps, reverseReductionTarget);
-          } else {
-            GsfMixture::reduce(reverseComps, reverseReductionTarget, bz);
-          }
-          ++reverseReductions;
-          GsfMixture::normalizeWeights(reverseComps);
-        }
 
         std::vector<GsfComponent*> acceptedReverse;
         std::vector<double> reverseLogWeights;
+        GaussianAccumulator cmsBackwardPredictedAccumulator;
         for (auto* component : reverseComps) {
           double dchi = 0.0;
           double updateChi2 = 0.0;
@@ -1974,7 +2509,9 @@ StatusCode RecGsfTracking::execute() {
           MarlinTrk::MeasurementUpdate update;
           bool accepted = false;
           try {
-            edm4hep::TrackerHit referenceHit = hits[reverseHit + 1].lcioHit;
+            const int referenceIndex = std::min(
+                reverseHit + 1, (int)hits.size() - 1);
+            edm4hep::TrackerHit referenceHit = hits[referenceIndex].lcioHit;
             edm4hep::TrackerHit targetHit = target.lcioHit;
             std::unique_ptr<MarlinTrk::IMarlinTrack> reverseTrack(
                 m_gsfMarlinTrkSystem->createTrack());
@@ -1995,16 +2532,30 @@ StatusCode RecGsfTracking::execute() {
           }
 
           if (accepted) {
+            const double reversePriorWeight = component->weight;
+            if (runCmsSmoother && !cmsOutermostHit) {
+              accumulateGaussian(cmsBackwardPredictedAccumulator,
+                  reversePriorWeight,
+                  updateVector5(update.predictedState),
+                  updateMatrix5(update.predictedCovariance));
+            }
             component->fitChi2 += dchi;
             reverseLogWeights.push_back(std::log(component->weight) -
                 0.5 * (dchi + update.logDetInnovation));
             acceptedReverse.push_back(component);
             ++reverseAcceptedTotal;
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
-              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g dchi2=%.6g logDetS=%.6g")
+              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g priorWeight=%.6g dchi2=%.6g logDetS=%.6g")
                         % reverseHit % component->debugId
-                        % ptFromTrackState(updatedState, bz) % dchi
+                        % ptFromTrackState(updatedState, bz)
+                        % reversePriorWeight % dchi
                         % update.logDetInnovation << endmsg;
+              info() << boost::format("          reverse-exact-measurement: predicted=%s residual=%s H=%s R=%s S=%s")
+                        % compactMatrix(update.predictedMeasurement)
+                        % compactMatrix(update.residual)
+                        % compactMatrix(update.projector)
+                        % compactMatrix(update.measurementCovariance)
+                        % compactMatrix(update.innovationCovariance) << endmsg;
             }
           } else {
             delete component;
@@ -2021,10 +2572,91 @@ StatusCode RecGsfTracking::execute() {
         reverseComps = std::move(acceptedReverse);
         GsfMixture::normalizeWeights(reverseComps);
 
+        // Let every reverse-process child incorporate the inward target hit
+        // before cutoff or mixture reduction.  The weights and Gaussian states
+        // below are therefore target-surface posteriors.
+        if (m_verboseDump && m_verboseSplitDump)
+          dumpComponents("reverse-posterior/norm", reverseHit, reverseComps);
+        const int reverseBeforeCutoff = (int)reverseComps.size();
+        GsfMixture::removeLowWeight(
+            reverseComps, m_componentWeightCutoff.value(),
+            m_protectIdentityLineage.value());
         if (m_verboseDump && m_verboseSplitDump &&
-            (reverseHit < 3 || reverseHit == (int)hits.size() - 2)) {
+            (int)reverseComps.size() != reverseBeforeCutoff) {
+          info() << boost::format(
+              "  REVERSE FLOW hit=%3d posterior-cutoff: n=%d -> %d threshold=%.3g")
+                    % reverseHit % reverseBeforeCutoff
+                    % (int)reverseComps.size()
+                    % m_componentWeightCutoff.value() << endmsg;
+          dumpComponents("reverse-posterior-cutoff", reverseHit,
+                         reverseComps);
+        }
+        if ((int)reverseComps.size() > reverseReductionTarget) {
+          if (m_verboseDump && m_verboseSplitDump) {
+            info() << boost::format(
+                "  REVERSE FLOW hit=%3d posterior-reduce: n=%d target=%d mode=KL")
+                % reverseHit % (int)reverseComps.size()
+                % reverseReductionTarget << endmsg;
+            dumpComponents("reverse-pre-reduce", reverseHit, reverseComps);
+          }
+          auto reverseReductionLogger = [&](const std::string& line) {
+            if (m_verboseDump && m_verboseSplitDump) info() << line << endmsg;
+          };
+          GsfMixture::reduce(
+              reverseComps, reverseReductionTarget, bz,
+              m_protectIdentityLineage.value(), reverseReductionLogger);
+          ++reverseReductions;
+          if (m_verboseDump && m_verboseSplitDump)
+            dumpComponents("reverse-post-reduce", reverseHit, reverseComps);
+          GsfMixture::normalizeWeights(reverseComps);
+          if (m_verboseDump && m_verboseSplitDump)
+            dumpComponents("reverse-post-reduce/norm", reverseHit,
+                           reverseComps);
+        }
+
+        // This is the CMSSW TrajectoryStateCombiner operation: combine the
+        // collapsed forward-updated and backward-predicted states.  CEPCSW
+        // currently serializes only the IP state, so these interior smoothed
+        // moments are retained as an auditable diagnostic rather than being
+        // fed back into the multi-component recursion.
+        if (runCmsSmoother && !cmsOutermostHit && reverseHit > 0) {
+          GaussianMomentState backwardPredicted;
+          backwardPredicted.valid = finishGaussian(
+              cmsBackwardPredictedAccumulator, backwardPredicted.mean,
+              backwardPredicted.covariance);
+          GaussianMomentState smoothed;
+          if (combineCmsMoments(cmsForwardUpdatedMoments[reverseHit],
+                                backwardPredicted, smoothed)) {
+            ++cmsCombinedStates;
+            if (m_verboseDump) {
+              const double pt = smoothed.mean(2, 0) != 0.0
+                  ? 1.0 / std::abs(smoothed.mean(2, 0)) : 0.0;
+              info() << boost::format(
+                  "  CMS-GSF SMOOTH hit=%d forwardComponentsMoment=1 "
+                  "backwardComponents=%d pT=%.9g")
+                        % reverseHit % (int)reverseComps.size() % pt << endmsg;
+            }
+          } else {
+            ++cmsCombinationFailures;
+          }
+        }
+
+        if (m_verboseDump && m_verboseSplitDump) {
           dumpComponents("reverse-after-hit", reverseHit, reverseComps);
         }
+      }
+
+      for (const auto& branch : counterfactualBranches) {
+        const auto finalState = trackStateFromComponent(
+            *branch.component, bz, DH::AtOther);
+        info() << boost::format(
+            "  COUNTERFACTUAL LOSS SCAN result truthHit=%d processHit=%d "
+            "loss=%.6g valid=%d acceptedHits=%d cumulativeLogL=%.12g "
+            "finalPt=%.9g")
+                  % counterfactualTruthHit % branch.processHit
+                  % branch.lossFraction % (branch.valid ? 1 : 0)
+                  % branch.acceptedHits % branch.cumulativeLogLikelihood
+                  % ptFromTrackState(finalState, bz) << endmsg;
       }
 
       if (m_verboseDump) {
@@ -2032,13 +2664,60 @@ StatusCode RecGsfTracking::execute() {
                   % (int)reverseComps.size() % reverseAcceptedTotal
                   % reverseRejectedTotal % reverseSplits % reverseReductions
                << endmsg;
+        if (runCmsSmoother) {
+          info() << boost::format(
+              "  CMS-GSF summary: combinedInteriorStates=%d "
+              "combinationFailures=%d seedCovarianceScale=%.9g")
+                    % cmsCombinedStates % cmsCombinationFailures
+                    % reverseSeedCovarianceScale << endmsg;
+        }
       }
       GsfMixture::normalizeWeights(reverseComps);
       if (!reverseComps.empty()) {
+        std::string reverseSelectionMode = m_reverseSelectionMode.value();
+        std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
+                       reverseSelectionMode.begin(), ::tolower);
+        const bool selectDominantLineage =
+            reverseSelectionMode == "dominantlineage";
+        auto surfaceCoincidenceProbability = [](const GsfComponent* component) {
+          std::map<int, double> forwardRadiativeMass;
+          std::map<int, double> reverseRadiativeMass;
+          for (const auto& item : component->forwardProcessModeFractions) {
+            if (item.first.second > 0)
+              forwardRadiativeMass[item.first.first] += item.second;
+          }
+          for (const auto& item : component->reverseProcessModeFractions) {
+            if (item.first.second > 0)
+              reverseRadiativeMass[item.first.first] += item.second;
+          }
+          double noCoincidence = 1.0;
+          for (const auto& item : forwardRadiativeMass) {
+            const auto reverse = reverseRadiativeMass.find(item.first);
+            if (reverse == reverseRadiativeMass.end()) continue;
+            const double forwardMass = std::clamp(item.second, 0.0, 1.0);
+            const double reverseMass = std::clamp(reverse->second, 0.0, 1.0);
+            noCoincidence *= 1.0 - forwardMass * reverseMass;
+          }
+          return std::clamp(1.0 - noCoincidence, 0.0, 1.0);
+        };
+        auto surfaceConsistencyLikelihood = [&](const GsfComponent* component) {
+          const double floor =
+              m_surfaceConsistencyUninformativeFloor.value();
+          return floor + (1.0 - floor) *
+              surfaceCoincidenceProbability(component);
+        };
+        auto reverseSelectionScore = [&](const GsfComponent* component) {
+          if (selectDominantLineage)
+            return component->weight * component->dominantLineageFraction;
+          if (selectSurfaceConsistency)
+            return component->weight *
+                surfaceConsistencyLikelihood(component);
+          return component->weight;
+        };
         auto* reverseBest = *std::max_element(
             reverseComps.begin(), reverseComps.end(),
-            [](const GsfComponent* a, const GsfComponent* b) {
-              return a->weight < b->weight;
+            [&](const GsfComponent* a, const GsfComponent* b) {
+              return reverseSelectionScore(a) < reverseSelectionScore(b);
             });
         THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
         TMatrixD reverseIpCov(5, 5);
@@ -2046,7 +2725,11 @@ StatusCode RecGsfTracking::execute() {
         std::transform(reverseMode.begin(), reverseMode.end(),
                        reverseMode.begin(), ::tolower);
         bool reverseOutputOk = false;
-        if (reverseMode == "bestbranch") {
+        if (runCmsSmoother) {
+          reverseOutputOk = collapsedCurrentMixtureAtIP(
+              reverseComps, bz, reverseIp, reverseIpCov);
+          reverseOutputLabel = "CmsGsfInnermostMixture";
+        } else if (reverseMode == "bestbranch") {
           reverseOutputOk = extrapolateContinuationToIP(
               *reverseBest, bz, reverseIp, reverseIpCov);
           reverseOutputLabel = "ReverseBestBranch";
@@ -2059,12 +2742,35 @@ StatusCode RecGsfTracking::execute() {
           const double reversePt = reverseIp.GetKappa() != 0.0
               ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
           if (m_verboseDump) {
-            info() << boost::format("  REVERSE IP output: mode=%s bestId=%d bestWeight=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
-                      % reverseOutputLabel % reverseBest->debugId
-                      % reverseBest->weight % reversePt
+            info() << boost::format("  REVERSE IP output: mode=%s selection=%s bestId=%d bestWeight=%.6g dominantFraction=%.6g selectionScore=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
+                      % reverseOutputLabel % m_reverseSelectionMode.value()
+                      % reverseBest->debugId
+                      % reverseBest->weight
+                      % reverseBest->dominantLineageFraction
+                      % reverseSelectionScore(reverseBest) % reversePt
                       % (-reverseIp.GetDrho()) % reverseIp.GetDz()
                       % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
                       % reverseIp.GetTanLambda() << endmsg;
+            if (selectSurfaceConsistency) {
+              info() << boost::format(
+                  "  REVERSE surface-consistency: coincidence=%.9g "
+                  "likelihood=%.9g floor=%.9g maxBayesFactor=%.9g")
+                    % surfaceCoincidenceProbability(reverseBest)
+                    % surfaceConsistencyLikelihood(reverseBest)
+                    % m_surfaceConsistencyUninformativeFloor.value()
+                    % (1.0 / m_surfaceConsistencyUninformativeFloor.value())
+                    << endmsg;
+            }
+            if (m_componentDebugDump) {
+              info() << boost::format("  REVERSE SELECTED process-signature=%s")
+                        % reverseBest->reverseProcessSignature << endmsg;
+              info() << boost::format(
+                  "  REVERSE SELECTED forward-seed-process-signature=%s")
+                        % reverseBest->forwardProcessSignature << endmsg;
+              info() << boost::format("  REVERSE SELECTED branch id=%d full-history=%s")
+                        % reverseBest->debugId
+                        % truncateHistory(reverseBest->debugHistory) << endmsg;
+            }
           }
           reverseOutputIp = reverseIp;
           reverseOutputIpCov = reverseIpCov;
@@ -2081,54 +2787,28 @@ StatusCode RecGsfTracking::execute() {
 
     // ---- Step 5: smooth, extrapolate to IP, write output ----
     if (!comps.empty() && nProc > 0) {
-      int lineageSmoothed = 0;
-      if (m_retainedLineageSmoothing.value()) {
-        for (auto* c : comps) {
-          if (smoothRetainedLineage(*c)) {
-            ++lineageSmoothed;
-            if (m_verboseDump && m_componentDebugDump) {
-              const auto& filteredInner = c->smoothingSteps.front();
-              const double filteredPt = filteredInner.filteredMean(2, 0) != 0.0
-                  ? 1.0 / std::abs(filteredInner.filteredMean(2, 0)) : 0.0;
-              const double smoothedPt = c->smoothedInnerMean(2, 0) != 0.0
-                  ? 1.0 / std::abs(c->smoothedInnerMean(2, 0)) : 0.0;
-              info() << boost::format("  LINEAGE-SMOOTH comp id=%d steps=%d inner-pT %.9g -> %.9g inner-varK %.9g -> %.9g")
-                        % c->debugId % (int)c->smoothingSteps.size()
-                        % filteredPt % smoothedPt
-                        % filteredInner.filteredCovariance(2, 2)
-                        % c->smoothedInnerCovariance(2, 2) << endmsg;
-              for (size_t si = 1; si < c->smoothingSteps.size(); ++si) {
-                const auto& transition = c->smoothingSteps[si];
-                const bool isBh = std::abs(transition.processJacobian(2, 2) - 1.0) > 1.0e-12;
-                if (si <= 2 || isBh) {
-                  info() << boost::format("    LINEAGE-TRANS comp=%d step=%d kind=%s FbhKK=%.9g covClosure=%.3g bhQkk=%.9g rtsGainK=%.9g deltaK=%.9g")
-                            % c->debugId % (int)si % (isBh ? "BH" : "transport")
-                            % transition.processJacobian(2, 2)
-                            % transition.transportCovarianceClosure
-                            % transition.bhAddedKappaVariance
-                            % transition.rtsKappaGainNorm
-                            % transition.rtsKappaCorrection << endmsg;
-                }
-              }
-            }
-          }
-        }
-        if (m_verboseDump) {
-          info() << boost::format("  LINEAGE-SMOOTH summary: smoothed=%d total=%d")
-                    % lineageSmoothed % (int)comps.size() << endmsg;
-        }
-        if (lineageSmoothed != static_cast<int>(comps.size())) {
-          warning() << boost::format("GSF event index %d track %d: retained-lineage smoothing failed for %d/%d components; no GSF output track")
-                       % (m_nEvt - 1) % (nFit + 1)
-                       % ((int)comps.size() - lineageSmoothed)
-                       % (int)comps.size() << endmsg;
+      GsfMixture::normalizeWeights(comps);
+      if (m_gaussianSumSmoothing.value()) {
+        int activeSmootherNodes = 0;
+        int reductionSmootherNodes = 0;
+        if (!smoothKlReductionGraph(comps, smootherGraph,
+                                    activeSmootherNodes,
+                                    reductionSmootherNodes)) {
+          warning() << boost::format("GSF event index %d track %d: KL reduction-aware Gaussian-sum smoothing failed; no GSF output track")
+                       % (m_nEvt - 1) % (nFit + 1) << endmsg;
           for (auto* c : comps) delete c;
           for (auto& h : hits) delete h.kalHit;
           continue;
         }
+        if (m_verboseDump) {
+          const double innerPt = comps.front()->smoothedInnerMean(2, 0) != 0.0
+              ? 1.0 / std::abs(comps.front()->smoothedInnerMean(2, 0)) : 0.0;
+          info() << boost::format("  GSF-SMOOTHER summary: graphNodes=%d activeNodes=%d reductionNodes=%d finalComponents=%d innerPt=%.9g")
+                    % (int)smootherGraph.size() % activeSmootherNodes
+                    % reductionSmootherNodes % (int)comps.size()
+                    % innerPt << endmsg;
+        }
       }
-
-      GsfMixture::normalizeWeights(comps);
 
       // Pick best component among components with at least one real filtered hit.
       int bestIdx = -1;
@@ -2186,7 +2866,8 @@ StatusCode RecGsfTracking::execute() {
       THelicalTrack ipHelix = bestIpHelix;
       TMatrixD ipCov = bestIpCov;
       bool usedReverseOutput = false;
-      if (m_reverseFiltering.value() && reverseIpAvailable) {
+      if ((m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) &&
+          reverseIpAvailable) {
         ipHelix = reverseOutputIp;
         ipCov = reverseOutputIpCov;
         usedReverseOutput = true;

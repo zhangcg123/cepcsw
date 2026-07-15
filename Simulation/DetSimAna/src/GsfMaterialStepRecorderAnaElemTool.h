@@ -48,12 +48,16 @@ private:
   double m_trackerZ = 0.0;
 
   // ── event-level branches ──
+  int m_run_id = -1;
   int m_event_id = -1;
   int m_step_count = 0;
 
   // ── step-level vectors ──
   std::vector<int>   m_track_id;
   std::vector<int>   m_parent_id;
+  std::vector<int>   m_is_primary;
+  std::vector<int>   m_track_step_number;
+  std::vector<int>   m_recorded_step_index;
   std::vector<int>   m_pdg;
   std::vector<int>   m_charge;
   std::vector<int>   m_step_status_pre;
@@ -61,20 +65,27 @@ private:
   std::vector<int>   m_process_subtype;
   std::vector<int>   m_pre_volume_copy_no;
   std::vector<int>   m_post_volume_copy_no;
+  std::vector<int>   m_pre_sensitive;
+  std::vector<int>   m_post_sensitive;
 
   std::vector<float>  m_pre_x, m_pre_y, m_pre_z, m_pre_r;
   std::vector<float>  m_post_x, m_post_y, m_post_z, m_post_r;
   std::vector<float>  m_mid_x, m_mid_y, m_mid_z, m_mid_r;
   std::vector<float>  m_pre_px, m_pre_py, m_pre_pz, m_pre_p, m_pre_pT;
   std::vector<float>  m_post_px, m_post_py, m_post_pz, m_post_p, m_post_pT;
+  std::vector<float>  m_pre_dir_x, m_pre_dir_y, m_pre_dir_z;
+  std::vector<float>  m_post_dir_x, m_post_dir_y, m_post_dir_z;
   std::vector<float>  m_dp, m_loss, m_retained;
   std::vector<float>  m_pre_ekin, m_post_ekin, m_dekin;
   std::vector<float>  m_edep, m_nonion_edep;
   std::vector<float>  m_step_length, m_material_radlen, m_step_tX0;
+  std::vector<float>  m_track_length_pre, m_track_length_post;
   std::vector<float>  m_global_time_pre, m_global_time_post;
 
   std::vector<std::string> m_pre_volume;
   std::vector<std::string> m_post_volume;
+  std::vector<std::string> m_pre_touchable_path;
+  std::vector<std::string> m_post_touchable_path;
   std::vector<std::string> m_material;
   std::vector<std::string> m_process;
 

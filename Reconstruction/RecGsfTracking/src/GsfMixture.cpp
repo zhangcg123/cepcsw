@@ -25,7 +25,8 @@ void normalizeWeights(std::vector<GsfComponent*>& comps) {
   for (auto* c : comps) c->weight /= sum;
 }
 
-void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff) {
+void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff,
+                     bool protectIdentity) {
   if (comps.empty() || cutoff <= 0.0) return;
   normalizeWeights(comps);
   auto* largest = *std::max_element(
@@ -36,7 +37,7 @@ void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff) {
   auto out = comps.begin();
   for (auto* component : comps) {
     if (component->weight >= cutoff || component == largest ||
-        component->noRadiationLineage) {
+        (protectIdentity && component->noRadiationLineage)) {
       *out++ = component;
     } else {
       delete component;
@@ -105,9 +106,23 @@ static std::string boundedHistory(const std::string& history) {
       history.substr(history.size() - edgeLength);
 }
 
+static void mergeProcessModeFractions(
+    std::map<std::pair<int, int>, double>& keep,
+    const std::map<std::pair<int, int>, double>& drop,
+    double keepFraction, double dropFraction) {
+  if (keep.empty() && drop.empty()) return;
+  for (auto& item : keep) item.second *= keepFraction;
+  for (const auto& item : drop)
+    keep[item.first] += dropFraction * item.second;
+}
+
 static void momentMerge(GsfComponent* keep, GsfComponent* drop, double bz) {
   const double totalWeight = keep->weight + drop->weight;
   if (totalWeight <= 0.0) return;
+
+  const double dominantLineageWeight = std::max(
+      keep->weight * keep->dominantLineageFraction,
+      drop->weight * drop->dominantLineageFraction);
 
   const double wk = keep->weight / totalWeight;
   const double wd = drop->weight / totalWeight;
@@ -143,6 +158,15 @@ static void momentMerge(GsfComponent* keep, GsfComponent* drop, double bz) {
   keep->setContinuationSurfaceState(mergedMu, mergedCov, bz);
 
   keep->weight = totalWeight;
+  keep->dominantLineageFraction = dominantLineageWeight / totalWeight;
+  mergeProcessModeFractions(keep->forwardProcessModeFractions,
+                            drop->forwardProcessModeFractions, wk, wd);
+  mergeProcessModeFractions(keep->reverseProcessModeFractions,
+                            drop->reverseProcessModeFractions, wk, wd);
+  for (auto& source : keep->smoothingSourceFractions)
+    source.second *= wk;
+  for (const auto& source : drop->smoothingSourceFractions)
+    keep->smoothingSourceFractions[source.first] += wd * source.second;
   keep->fitChi2 = mergedChi2;
   if (!dropHistory.empty()) {
     keep->debugHistory = boundedHistory(
@@ -162,11 +186,13 @@ static double klDistance(GsfComponent* a, GsfComponent* b, double bz) {
 }
 
 // ============================================================================
-void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz) {
-  reduce(comps, maxN, bz, {});
+void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
+            bool protectIdentity) {
+  reduce(comps, maxN, bz, protectIdentity, {});
 }
 
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
+            bool protectIdentity,
             const std::function<void(const std::string&)>& logger) {
   if (maxN < 1) maxN = 1;
 
@@ -176,7 +202,7 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
     double bestDist = 1e30;
     for (size_t i = 0; i < comps.size(); i++) {
       for (size_t j = i + 1; j < comps.size(); j++) {
-        if (maxN > 1 &&
+        if (protectIdentity && maxN > 1 &&
             comps[i]->noRadiationLineage != comps[j]->noRadiationLineage)
           continue;
         double d = klDistance(comps[i], comps[j], bz);
@@ -193,6 +219,8 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
     const int origJ = bj;
     const double wi = comps[bi]->weight;
     const double wj = comps[bj]->weight;
+    const int idI = comps[bi]->debugId;
+    const int idJ = comps[bj]->debugId;
     const double ki = comps[bi]->helixAtLastSite(bz).GetKappa();
     const double kj = comps[bj]->helixAtLastSite(bz).GetKappa();
     const double detI = comps[bi]->covAtLastSite(bz).Determinant();
@@ -210,11 +238,13 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
       os.setf(std::ios::scientific, std::ios::floatfield);
       os.precision(4);
       os << "      reducer merge[" << mergeStep << "] pair=(" << origI << "," << origJ
+         << ") id=(" << idI << "," << idJ
          << ") symKL=" << bestDist
          << " w=(" << wi << "," << wj << ")"
          << " kappa=(" << ki << "," << kj << ")"
          << " det=(" << detI << "," << detJ << ")"
-         << " -> keep=" << bi << " w=" << comps[bi]->weight
+         << " -> keep=" << bi << " id=" << comps[bi]->debugId
+         << " w=" << comps[bi]->weight
          << " kappa=" << km;
       logger(os.str());
     }
@@ -223,52 +253,6 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
     comps.erase(comps.begin() + bj);
     mergeStep++;
   }
-}
-
-// ============================================================================
-void reduceTopN(std::vector<GsfComponent*>& comps, int maxN) {
-  reduceTopN(comps, maxN, {});
-}
-
-void reduceTopN(std::vector<GsfComponent*>& comps, int maxN,
-                const std::function<void(const std::string&)>& logger) {
-  if (maxN < 1) maxN = 1;
-  if ((int)comps.size() <= maxN) {
-    normalizeWeights(comps);
-    return;
-  }
-
-  normalizeWeights(comps);
-  std::sort(comps.begin(), comps.end(),
-            [](const GsfComponent* a, const GsfComponent* b) {
-              return a->weight > b->weight;
-            });
-
-  if (logger) {
-    std::ostringstream os;
-    os.setf(std::ios::scientific, std::ios::floatfield);
-    os.precision(4);
-    os << "      reducer topN keep=" << maxN << " from=" << comps.size();
-    logger(os.str());
-    for (size_t i = 0; i < comps.size(); i++) {
-      const double kappa = comps[i]->helixAtLastSite(0.0).GetKappa();
-      std::ostringstream line;
-      line.setf(std::ios::scientific, std::ios::floatfield);
-      line.precision(4);
-      line << "        topN[" << i << "] "
-           << (i < (size_t)maxN ? "keep" : "drop")
-           << " id=" << comps[i]->debugId
-           << " w=" << comps[i]->weight
-           << " kappa=" << kappa;
-      logger(line.str());
-    }
-  }
-
-  for (size_t i = maxN; i < comps.size(); i++) {
-    delete comps[i];
-  }
-  comps.resize(maxN);
-  normalizeWeights(comps);
 }
 
 } // namespace GsfMixture

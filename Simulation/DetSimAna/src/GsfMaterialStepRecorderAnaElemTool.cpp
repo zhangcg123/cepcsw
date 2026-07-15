@@ -1,20 +1,25 @@
 #include "GsfMaterialStepRecorderAnaElemTool.h"
 
 #include "G4Event.hh"
+#include "G4LogicalVolume.hh"
 #include "G4Material.hh"
 #include "G4ParticleDefinition.hh"
+#include "G4Run.hh"
 #include "G4Step.hh"
 #include "G4StepPoint.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4Track.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4VProcess.hh"
+#include "G4VSensitiveDetector.hh"
 #include "DD4hep/Detector.h"
+#include "DD4hep/DD4hepUnits.h"
 
 #include <TFile.h>
 #include <TTree.h>
 
 #include <cmath>
+#include <sstream>
 #include <stdexcept>
 
 DECLARE_COMPONENT(GsfMaterialStepRecorderAnaElemTool)
@@ -34,6 +39,26 @@ namespace {
 
   float gev(double v) {
     return (float)(v / CLHEP::GeV);
+  }
+
+  std::string touchablePath(const G4StepPoint* point) {
+    if (!point) return "";
+    const auto& touchable = point->GetTouchableHandle();
+    if (!touchable) return "";
+
+    std::ostringstream path;
+    const int depth = touchable->GetHistoryDepth();
+    for (int level = depth; level >= 0; --level) {
+      const auto* volume = touchable->GetVolume(level);
+      if (!volume) continue;
+      path << '/' << volume->GetName() << '[' << volume->GetCopyNo() << ']';
+    }
+    return path.str();
+  }
+
+  int isSensitive(const G4VPhysicalVolume* volume) {
+    return volume && volume->GetLogicalVolume() &&
+           volume->GetLogicalVolume()->GetSensitiveDetector() ? 1 : 0;
   }
 }
 
@@ -58,7 +83,8 @@ StatusCode GsfMaterialStepRecorderAnaElemTool::finalize() {
   return StatusCode::SUCCESS;
 }
 
-void GsfMaterialStepRecorderAnaElemTool::BeginOfRunAction(const G4Run*) {
+void GsfMaterialStepRecorderAnaElemTool::BeginOfRunAction(const G4Run* run) {
+  m_run_id = run ? run->GetRunID() : -1;
   m_geosvc = service<IGeomSvc>("GeomSvc");
   if (!m_geosvc) {
     warning() << "GeomSvc unavailable; TrackerOnly will not apply geometry bounds" << endmsg;
@@ -67,8 +93,10 @@ void GsfMaterialStepRecorderAnaElemTool::BeginOfRunAction(const G4Run*) {
 
   auto* dd4hepGeo = m_geosvc->lcdd();
   try {
-    m_trackerR = dd4hepGeo->constant<double>("tracker_region_rmax");
-    m_trackerZ = dd4hepGeo->constant<double>("tracker_region_zmax");
+    // DD4hep constants use DD4hep's internal length unit (centimetres), while
+    // Geant4 positions below are explicitly converted to millimetres.
+    m_trackerR = dd4hepGeo->constant<double>("tracker_region_rmax") / dd4hep::mm;
+    m_trackerZ = dd4hepGeo->constant<double>("tracker_region_zmax") / dd4hep::mm;
     info() << "GsfMaterialStepRecorder tracker region R=" << m_trackerR
            << " mm Z=" << m_trackerZ << " mm" << endmsg;
   } catch (std::runtime_error&) {
@@ -136,6 +164,9 @@ void GsfMaterialStepRecorderAnaElemTool::UserSteppingAction(const G4Step* step) 
 
   m_track_id.push_back(track->GetTrackID());
   m_parent_id.push_back(track->GetParentID());
+  m_is_primary.push_back(track->GetParentID() == 0 ? 1 : 0);
+  m_track_step_number.push_back(track->GetCurrentStepNumber());
+  m_recorded_step_index.push_back((int)m_recorded_step_index.size());
   m_pdg.push_back(pdg);
   m_charge.push_back((int)std::lround(particle->GetPDGCharge()));
   m_step_status_pre.push_back((int)pre->GetStepStatus());
@@ -175,6 +206,15 @@ void GsfMaterialStepRecorderAnaElemTool::UserSteppingAction(const G4Step* step) 
   m_post_p.push_back(ppost);
   m_post_pT.push_back(ppt_post);
 
+  const auto& preDir = pre->GetMomentumDirection();
+  const auto& postDir = post->GetMomentumDirection();
+  m_pre_dir_x.push_back((float)preDir.x());
+  m_pre_dir_y.push_back((float)preDir.y());
+  m_pre_dir_z.push_back((float)preDir.z());
+  m_post_dir_x.push_back((float)postDir.x());
+  m_post_dir_y.push_back((float)postDir.y());
+  m_post_dir_z.push_back((float)postDir.z());
+
   m_dp.push_back(ppost - pp);
   m_loss.push_back(pp - ppost);
   m_retained.push_back((pp > 0.0f) ? ppost / pp : 0.0f);
@@ -185,6 +225,9 @@ void GsfMaterialStepRecorderAnaElemTool::UserSteppingAction(const G4Step* step) 
   m_edep.push_back(gev(step->GetTotalEnergyDeposit()));
   m_nonion_edep.push_back(gev(step->GetNonIonizingEnergyDeposit()));
   m_step_length.push_back(toMm(step->GetStepLength()));
+  const float trackLengthPost = toMm(track->GetTrackLength());
+  m_track_length_post.push_back(trackLengthPost);
+  m_track_length_pre.push_back(trackLengthPost - m_step_length.back());
   m_global_time_pre.push_back((float)(pre->GetGlobalTime() / CLHEP::ns));
   m_global_time_post.push_back((float)(post->GetGlobalTime() / CLHEP::ns));
 
@@ -208,6 +251,8 @@ void GsfMaterialStepRecorderAnaElemTool::UserSteppingAction(const G4Step* step) 
     m_pre_volume.push_back("");
     m_pre_volume_copy_no.push_back(0);
   }
+  m_pre_sensitive.push_back(isSensitive(preVol));
+  m_pre_touchable_path.push_back(touchablePath(pre));
 
   const auto* postVol = post->GetPhysicalVolume();
   if (postVol) {
@@ -217,6 +262,8 @@ void GsfMaterialStepRecorderAnaElemTool::UserSteppingAction(const G4Step* step) 
     m_post_volume.push_back("");
     m_post_volume_copy_no.push_back(0);
   }
+  m_post_sensitive.push_back(isSensitive(postVol));
+  m_post_touchable_path.push_back(touchablePath(post));
 
   const auto* process = post->GetProcessDefinedStep();
   if (process) {
@@ -233,12 +280,16 @@ void GsfMaterialStepRecorderAnaElemTool::bookTree() {
   m_tree->SetDirectory(m_file);
 
   // ── event-level branches ──
+  m_tree->Branch("run_id",      &m_run_id);
   m_tree->Branch("event_id",    &m_event_id);
   m_tree->Branch("step_count",  &m_step_count);
 
   // ── step-level vector branches ──
   m_tree->Branch("track_id",    &m_track_id);
   m_tree->Branch("parent_id",   &m_parent_id);
+  m_tree->Branch("is_primary",  &m_is_primary);
+  m_tree->Branch("track_step_number", &m_track_step_number);
+  m_tree->Branch("recorded_step_index", &m_recorded_step_index);
   m_tree->Branch("pdg",         &m_pdg);
   m_tree->Branch("charge",      &m_charge);
   m_tree->Branch("step_status_pre",   &m_step_status_pre);
@@ -246,6 +297,8 @@ void GsfMaterialStepRecorderAnaElemTool::bookTree() {
   m_tree->Branch("process_subtype",   &m_process_subtype);
   m_tree->Branch("pre_volume_copy_no",  &m_pre_volume_copy_no);
   m_tree->Branch("post_volume_copy_no", &m_post_volume_copy_no);
+  m_tree->Branch("pre_sensitive",  &m_pre_sensitive);
+  m_tree->Branch("post_sensitive", &m_post_sensitive);
 
   m_tree->Branch("pre_x",  &m_pre_x);
   m_tree->Branch("pre_y",  &m_pre_y);
@@ -270,6 +323,12 @@ void GsfMaterialStepRecorderAnaElemTool::bookTree() {
   m_tree->Branch("post_pz", &m_post_pz);
   m_tree->Branch("post_p",  &m_post_p);
   m_tree->Branch("post_pT", &m_post_pT);
+  m_tree->Branch("pre_dir_x",  &m_pre_dir_x);
+  m_tree->Branch("pre_dir_y",  &m_pre_dir_y);
+  m_tree->Branch("pre_dir_z",  &m_pre_dir_z);
+  m_tree->Branch("post_dir_x", &m_post_dir_x);
+  m_tree->Branch("post_dir_y", &m_post_dir_y);
+  m_tree->Branch("post_dir_z", &m_post_dir_z);
   m_tree->Branch("dp",      &m_dp);
   m_tree->Branch("loss",    &m_loss);
   m_tree->Branch("retained",&m_retained);
@@ -282,21 +341,28 @@ void GsfMaterialStepRecorderAnaElemTool::bookTree() {
   m_tree->Branch("step_length", &m_step_length);
   m_tree->Branch("material_radlen", &m_material_radlen);
   m_tree->Branch("step_tX0",   &m_step_tX0);
+  m_tree->Branch("track_length_pre",  &m_track_length_pre);
+  m_tree->Branch("track_length_post", &m_track_length_post);
   m_tree->Branch("global_time_pre",  &m_global_time_pre);
   m_tree->Branch("global_time_post", &m_global_time_post);
 
   m_tree->Branch("pre_volume",  &m_pre_volume);
   m_tree->Branch("post_volume", &m_post_volume);
+  m_tree->Branch("pre_touchable_path",  &m_pre_touchable_path);
+  m_tree->Branch("post_touchable_path", &m_post_touchable_path);
   m_tree->Branch("material",    &m_material);
   m_tree->Branch("process",     &m_process);
 }
 
 void GsfMaterialStepRecorderAnaElemTool::clearVectors() {
   m_track_id.clear();        m_parent_id.clear();
+  m_is_primary.clear();      m_track_step_number.clear();
+  m_recorded_step_index.clear();
   m_pdg.clear();             m_charge.clear();
   m_step_status_pre.clear();  m_step_status_post.clear();
   m_process_subtype.clear();
   m_pre_volume_copy_no.clear(); m_post_volume_copy_no.clear();
+  m_pre_sensitive.clear(); m_post_sensitive.clear();
 
   m_pre_x.clear();  m_pre_y.clear();  m_pre_z.clear();  m_pre_r.clear();
   m_post_x.clear(); m_post_y.clear(); m_post_z.clear(); m_post_r.clear();
@@ -304,13 +370,17 @@ void GsfMaterialStepRecorderAnaElemTool::clearVectors() {
 
   m_pre_px.clear();  m_pre_py.clear();  m_pre_pz.clear();  m_pre_p.clear();  m_pre_pT.clear();
   m_post_px.clear(); m_post_py.clear(); m_post_pz.clear(); m_post_p.clear(); m_post_pT.clear();
+  m_pre_dir_x.clear(); m_pre_dir_y.clear(); m_pre_dir_z.clear();
+  m_post_dir_x.clear(); m_post_dir_y.clear(); m_post_dir_z.clear();
   m_dp.clear(); m_loss.clear(); m_retained.clear();
 
   m_pre_ekin.clear(); m_post_ekin.clear(); m_dekin.clear();
   m_edep.clear(); m_nonion_edep.clear();
   m_step_length.clear(); m_material_radlen.clear(); m_step_tX0.clear();
+  m_track_length_pre.clear(); m_track_length_post.clear();
   m_global_time_pre.clear(); m_global_time_post.clear();
 
   m_pre_volume.clear();  m_post_volume.clear();
+  m_pre_touchable_path.clear(); m_post_touchable_path.clear();
   m_material.clear();    m_process.clear();
 }

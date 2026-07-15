@@ -65,29 +65,62 @@ gearsvc = GearSvc("GearSvc")
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = electron_hypothesis
 gsf.BHModel = os.getenv("GSF_BH_MODEL", "CEPC2GeV85StepConditioned")
+gsf.CounterfactualLossScan = os.getenv(
+    "GSF_COUNTERFACTUAL_LOSS_SCAN", "0").lower() in ("1", "true", "yes")
+gsf.CounterfactualTruthTransitionMap = os.getenv(
+    "GSF_COUNTERFACTUAL_TRUTH_TRANSITION_MAP", "")
+gsf.CounterfactualLossFractions = [
+    float(value) for value in os.getenv(
+        "GSF_COUNTERFACTUAL_LOSS_FRACTIONS",
+        "0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12").split(",")
+    if value.strip()
+]
+gsf.CounterfactualLossVariance = float(os.getenv(
+    "GSF_COUNTERFACTUAL_LOSS_VARIANCE", "2.0e-4"))
 gsf.BHSplitThreshold = 1.0e-4
 gsf.MaterialPathMode = os.getenv("GSF_MATERIAL_PATH_MODE", "CurrentSurface")
 
-gsf.MaxComponents = 12
+gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "24"))
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents
-gsf.ReductionMode = "KL"
-gsf.ReductionMinHitsAfterSplit = 0
+gsf.GSFOutputMode = os.getenv("GSF_OUTPUT_MODE", "BestBranch")
 gsf.ComponentWeightCutoff = 1.0e-8
+gsf.ProtectIdentityLineage = os.getenv(
+    "GSF_PROTECT_IDENTITY_LINEAGE", "1").lower() in ("1", "true", "yes")
 
 gsf.MSOn = True
 gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "1").lower() in ("1", "true", "yes")
-gsf.KappaSeedCov = 1.0e-7
+gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "1.0e-7"))
 
 # Enables inward multi-component filtering. ReverseOutputMode controls whether
 # the published IP state is the moment-matched mixture or highest-weight branch.
-gsf.ReverseFiltering = True
+cms_gsf_smoothing = os.getenv(
+    "GSF_CMS_GSF_SMOOTHING", "0").lower() in ("1", "true", "yes")
+gsf.CmsGsfSmoothing = cms_gsf_smoothing
+gsf.ReverseFiltering = os.getenv(
+    "GSF_REVERSE_FILTERING", "0" if cms_gsf_smoothing else "1"
+).lower() in ("1", "true", "yes")
+gsf.CmsErrorRescaling = float(os.getenv("GSF_CMS_ERROR_RESCALING", "100"))
 gsf.ReverseOutputMode = os.getenv("GSF_REVERSE_OUTPUT_MODE", "BestBranch")
+gsf.ReverseSelectionMode = os.getenv(
+    "GSF_REVERSE_SELECTION_MODE", "AggregateWeight")
+gsf.SurfaceConsistencyUninformativeFloor = float(os.getenv(
+    "GSF_SURFACE_CONSISTENCY_UNINFORMATIVE_FLOOR", "0.05"))
+gsf.ReverseInitialWeightMode = os.getenv(
+    "GSF_REVERSE_INITIAL_WEIGHT_MODE", "ForwardPosterior")
+gsf.ReverseKappaSeedCov = float(os.getenv(
+    "GSF_REVERSE_KAPPA_SEED_COV", "100.0"))
+gsf.GaussianSumSmoothing = os.getenv(
+    "GSF_GAUSSIAN_SUM_SMOOTHING", "0").lower() in ("1", "true", "yes")
 gsf.MaterialIPExtrapolation = False
 
 gsf.SelectedEventIndices = selected_event_indices
 gsf.VerboseDump = verbose_components
 gsf.VerboseSplitDump = verbose_components
 gsf.ComponentDebugDump = verbose_components
+gsf.SurfaceLineageMassDump = os.getenv(
+    "GSF_SURFACE_LINEAGE_MASS_DUMP", "0").lower() in ("1", "true", "yes")
+gsf.ComponentDebugMaxHistory = int(os.getenv(
+    "GSF_COMPONENT_DEBUG_MAX_HISTORY", "240"))
 material_transition_csv = os.getenv("GSF_MATERIAL_TRANSITION_CSV", "")
 if material_transition_csv:
     gsf.MaterialTransitionCSV = material_transition_csv

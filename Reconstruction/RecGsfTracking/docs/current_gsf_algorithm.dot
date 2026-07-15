@@ -1,0 +1,107 @@
+digraph CurrentGSF {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad="0.25",
+    nodesep="0.34",
+    ranksep="0.48",
+    fontname="Helvetica",
+    labelloc="t",
+    label="CEPCSW RecGsfTracking — Current Implemented GSF Algorithm"
+  ];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10,
+        color="#40566f", fillcolor="#edf3f8", margin="0.13,0.09"];
+  edge [fontname="Helvetica", fontsize=9, color="#526777", arrowsize=0.72];
+
+  input [label="CompleteTracks\nLCIO track + associated tracker hits", fillcolor="#dceafa"];
+  select [shape=diamond, label="Event selected?", fillcolor="#f4f7fa"];
+  empty [label="Publish empty GSFTracks\nfor skipped event", fillcolor="#f4f7fa"];
+  seed [label="Extract LCIO AtIP seed\ncharge and kappa seed covariance"];
+  match [label="Match hits to KalTest measurement layers\nconvert hits and sort by increasing radius"];
+  audit [label="Optional navigation audit\ninput order • surface index • repeats • direction changes",
+         fillcolor="#eef6ef", color="#4e7b5c"];
+  init [label="Initialize one component at innermost hit\nweight = 1; filtered history + continuation state"];
+
+  subgraph cluster_forward {
+    label="Forward multi-component filter — hits 1 … N−1";
+    color="#7aa6c2"; style="rounded"; penwidth=1.2;
+    fbegin [shape=oval, label="Next outward measurement", fillcolor="#dceafa"];
+    fupdate [label="For every component:\nMarlinTrk initialise → addAndFit\nappend exact filtered state",
+             fillcolor="#dff0e3", color="#4e7b5c"];
+    flike [label="Posterior log weight\nlog w − ½[Δχ² + log det(S)]\nreject failed component updates",
+           fillcolor="#dff0e3", color="#4e7b5c"];
+    faccept [shape=diamond, label="Any accepted\ncomponents?", fillcolor="#f4f7fa"];
+    fabort [label="No GSF output for this track", fillcolor="#f8dddd", color="#a15c5c"];
+    fnorm [label="Stable log-space weight normalization"];
+    outgoing [shape=diamond, label="Another outward\nsurface?", fillcolor="#f4f7fa"];
+    material [label="Current layer t/X0 estimate\npost-hit process ownership",
+              fillcolor="#fff0d6", color="#b47a22"];
+    splitq [shape=diamond, label="Electron hypothesis and\nt/X0 > split threshold?", fillcolor="#fff0d6", color="#b47a22"];
+    split [label="Bethe–Heitler mixture convolution\ncreate weighted momentum-fraction children\nfiltered history stays at measurement surface",
+           fillcolor="#fff0d6", color="#b47a22"];
+    cutoff [label="Remove components below weight cutoff"];
+    reduceq [shape=diamond, label="Mixture exceeds\ncomponent target?", fillcolor="#f4f7fa"];
+    reduce [label="Current-surface mixture reduction\nKL moment merge\nthen renormalize"];
+    finalsurface [label="Final measurement surface:\npreserve filtered mixture; no outgoing convolution",
+                  fillcolor="#dff0e3", color="#4e7b5c"];
+
+    fbegin -> fupdate -> flike -> faccept;
+    faccept -> fabort [label="no"];
+    faccept -> fnorm [label="yes"];
+    fnorm -> outgoing;
+    outgoing -> material [label="yes"];
+    material -> splitq;
+    splitq -> split [label="yes"];
+    splitq -> cutoff [label="no"];
+    split -> cutoff;
+    cutoff -> reduceq;
+    reduceq -> reduce [label="yes"];
+    reduceq -> fbegin [label="no / next hit"];
+    reduce -> fbegin [label="next hit"];
+    outgoing -> finalsurface [label="no"];
+  }
+
+  reverseq [shape=diamond, label="ReverseFiltering enabled?", fillcolor="#eee4fa", color="#76569b"];
+
+  subgraph cluster_reverse {
+    label="Optional reverse multi-component filter — hits N−2 … 0";
+    color="#9271b5"; style="rounded"; penwidth=1.2;
+    rinit [label="Clone final-surface filtered mixture\nas reverse starting components",
+           fillcolor="#eee4fa", color="#76569b"];
+    rupdate [label="At next inward hit, for every component:\nbackward MarlinTrk initialise → addAndFit\nexact likelihood and log-space normalization",
+             fillcolor="#eee4fa", color="#76569b"];
+    rmaterial [label="Direction-reversed BH convolution\np_previous = p_current / z\nthen cutoff + current-surface KL reduction",
+               fillcolor="#fff0d6", color="#b47a22"];
+    rmore [shape=diamond, label="More inward hits?", fillcolor="#f4f7fa"];
+    rbest [label="Select highest-weight reverse component\nextrapolate continuation state to IP",
+           fillcolor="#eee4fa", color="#76569b"];
+    rinit -> rupdate -> rmaterial -> rmore;
+    rmore -> rupdate [label="yes"];
+    rmore -> rbest [label="no"];
+  }
+
+  forwardout [label="Forward fallback:\nsmooth components; BestBranch or WeightedMean\nextrapolate selected state to IP"];
+  choose [shape=diamond, label="Valid reverse IP\nstate available?", fillcolor="#f4f7fa"];
+  write [label="Write GSFTracks\nAtIP parameters + covariance\nmatching χ²/NDF + original hit relations",
+         fillcolor="#dceafa", penwidth=1.3];
+
+  input -> select;
+  select -> empty [label="no"];
+  select -> seed [label="yes"];
+  seed -> match -> audit -> init -> fbegin;
+  finalsurface -> reverseq;
+  reverseq -> rinit [label="yes"];
+  reverseq -> forwardout [label="no"];
+  rbest -> choose;
+  forwardout -> choose;
+  choose -> write [label="yes: reverse best branch"];
+  choose -> write [label="no: forward output"];
+
+  subgraph cluster_legend {
+    label="Status key"; color="#c3ccd3"; style="rounded,dashed";
+    lworkflow [label="Operational tracking workflow", fillcolor="#dff0e3", color="#4e7b5c"];
+    lphysics [label="Provisional CEPC material/BH physics\nnot yet broadly validated", fillcolor="#fff0d6", color="#b47a22"];
+    lreverse [label="Opt-in reverse workflow", fillcolor="#eee4fa", color="#76569b"];
+    lworkflow -> lphysics -> lreverse [style=invis];
+  }
+}
