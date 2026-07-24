@@ -86,16 +86,18 @@ explicit provenance. Historical detail does not override this live status.
   specific branch operation.
 - Use Git frequently during development: inspect status and diffs, and create
   focused checkpoint commits after coherent, proportionately verified core
-  implementation or project-knowledge changes. Track, commit, and push C++
-  source/header files under `Reconstruction/RecGsfTracking/src/`,
-  documentation, `AGENTS.md`, `.agents/` maintenance content, and durable
-  `agents_record/` status/history records. Also track the specifically
-  maintained workflow card `DumpGsfTrks/gsf.py.bk`, whose complete property
-  steering is part of the documentation contract. Keep other run
-  cards/options, analysis scripts, build files, generated ROOT files, logs,
-  plots, tables, notebooks, batch cards, and experiment outputs uncommitted
-  unless the user explicitly authorizes a specific exception. Do not change
-  branches unless the user explicitly requests it.
+  implementation or project-knowledge changes. Track, commit, and push all
+  C/C++ implementation and header changes across the repository, together
+  with documentation, `AGENTS.md`, `.agents/` maintenance content, and durable
+  `agents_record/` status/history records. This Git rule does not broaden the
+  separate implementation-scope law: edits outside
+  `Reconstruction/RecGsfTracking` still require explicit authorization. Also
+  track the specifically maintained workflow card `DumpGsfTrks/gsf.py.bk`,
+  whose complete property steering is part of the documentation contract.
+  Keep other run cards/options, analysis scripts, build files, generated ROOT
+  files, logs, plots, tables, notebooks, batch cards, and experiment outputs
+  uncommitted unless the user explicitly authorizes a specific exception. Do
+  not change branches unless the user explicitly requests it.
 - Keep `AGENTS.md` limited to global status, active laws, essential commands,
   and the current focus. Before replacing or removing unique detail, preserve
   it in a dated `agents_record/` entry; replace rather than append focus.

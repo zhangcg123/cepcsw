@@ -46,3 +46,11 @@ The user had already designated it as the maintained complete-property
 comparison card, so it must be versioned with the package option reference;
 otherwise the committed documentation and remote card would contradict one
 another.
+
+The user then broadened the source scope of the Git law from only
+`Reconstruction/RecGsfTracking/src/` to all C/C++ implementation and header
+files in the repository. All authorized C/C++ changes must be tracked,
+committed, and pushed. This version-control requirement does not authorize
+new edits outside `Reconstruction/RecGsfTracking`; the separate package-scope
+law continues to require explicit authorization for such implementation
+changes.
