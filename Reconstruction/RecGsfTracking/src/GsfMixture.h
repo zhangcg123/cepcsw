@@ -22,7 +22,8 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
             bool protectIdentity = true);
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
             bool protectIdentity,
-            const std::function<void(const std::string&)>& logger);
+            const std::function<void(const std::string&)>& logger,
+            const std::string& mergeCost = "SymmetricKL");
 
 } // namespace GsfMixture
 

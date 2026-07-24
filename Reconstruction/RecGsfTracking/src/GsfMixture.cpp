@@ -5,6 +5,7 @@
 #include "kaltest/TKalTrackState.h"
 
 #include <cmath>
+#include <cctype>
 #include <algorithm>
 #include <functional>
 #include <sstream>
@@ -185,6 +186,57 @@ static double klDistance(GsfComponent* a, GsfComponent* b, double bz) {
   return 0.5 * (klAB + klBA);
 }
 
+/// Runnalls upper-bound cost for replacing two weighted Gaussian components
+/// by their moment-matched Gaussian:
+///   B(i,j) = 1/2 [(wi+wj) log|Vij| - wi log|Vi| - wj log|Vj|].
+/// Unlike the symmetric component-to-component KL distance, this ranks the
+/// information loss of the actual weighted mixture approximation.
+static double runnallsMergeCost(GsfComponent* a, GsfComponent* b, double bz) {
+  const double wi = a->weight;
+  const double wj = b->weight;
+  const double totalWeight = wi + wj;
+  if (!(wi >= 0.0) || !(wj >= 0.0) || !(totalWeight > 0.0) ||
+      !std::isfinite(totalWeight))
+    return 1e30;
+
+  TMatrixD muI(5, 1), muJ(5, 1);
+  a->helixAtLastSite(bz).PutInto(muI);
+  b->helixAtLastSite(bz).PutInto(muJ);
+  muJ(1, 0) = wrapNear(muJ(1, 0), muI(1, 0));
+  const double fi = wi / totalWeight;
+  const double fj = wj / totalWeight;
+  TMatrixD mergedMean = muI;
+  mergedMean *= fi;
+  TMatrixD weightedJ = muJ;
+  weightedJ *= fj;
+  mergedMean += weightedJ;
+
+  const TMatrixD covI = a->covAtLastSite(bz);
+  const TMatrixD covJ = b->covAtLastSite(bz);
+  TMatrixD deltaI = muI - mergedMean;
+  TMatrixD deltaJ = muJ - mergedMean;
+  TMatrixD deltaIT(TMatrixD::kTransposed, deltaI);
+  TMatrixD deltaJT(TMatrixD::kTransposed, deltaJ);
+  TMatrixD mergedCovariance = covI + deltaI * deltaIT;
+  mergedCovariance *= fi;
+  TMatrixD termJ = covJ + deltaJ * deltaJT;
+  termJ *= fj;
+  mergedCovariance += termJ;
+
+  const double detI = covI.Determinant();
+  const double detJ = covJ.Determinant();
+  const double detMerged = mergedCovariance.Determinant();
+  if (!(detI > 0.0) || !(detJ > 0.0) || !(detMerged > 0.0) ||
+      !std::isfinite(detI) || !std::isfinite(detJ) ||
+      !std::isfinite(detMerged))
+    return 1e30;
+  const double cost = 0.5 *
+      (totalWeight * std::log(detMerged) - wi * std::log(detI) -
+       wj * std::log(detJ));
+  if (!std::isfinite(cost)) return 1e30;
+  return std::max(0.0, cost);
+}
+
 // ============================================================================
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
             bool protectIdentity) {
@@ -193,8 +245,14 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
 
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
             bool protectIdentity,
-            const std::function<void(const std::string&)>& logger) {
+            const std::function<void(const std::string&)>& logger,
+            const std::string& mergeCost) {
   if (maxN < 1) maxN = 1;
+  normalizeWeights(comps);
+  std::string normalizedMergeCost = mergeCost;
+  std::transform(normalizedMergeCost.begin(), normalizedMergeCost.end(),
+                 normalizedMergeCost.begin(), ::tolower);
+  const bool useRunnalls = normalizedMergeCost == "runnalls";
 
   int mergeStep = 0;
   while ((int)comps.size() > maxN) {
@@ -205,7 +263,9 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
         if (protectIdentity && maxN > 1 &&
             comps[i]->noRadiationLineage != comps[j]->noRadiationLineage)
           continue;
-        double d = klDistance(comps[i], comps[j], bz);
+        const double d = useRunnalls
+            ? runnallsMergeCost(comps[i], comps[j], bz)
+            : klDistance(comps[i], comps[j], bz);
         if (bi < 0 || d < bestDist) {
           bestDist = d;
           bi = (int)i;
@@ -239,7 +299,7 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
       os.precision(4);
       os << "      reducer merge[" << mergeStep << "] pair=(" << origI << "," << origJ
          << ") id=(" << idI << "," << idJ
-         << ") symKL=" << bestDist
+         << ") " << (useRunnalls ? "runnalls=" : "symKL=") << bestDist
          << " w=(" << wi << "," << wj << ")"
          << " kappa=(" << ki << "," << kj << ")"
          << " det=(" << detI << "," << detJ << ")"

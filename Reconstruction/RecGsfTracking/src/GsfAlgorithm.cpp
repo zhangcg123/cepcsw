@@ -1270,6 +1270,14 @@ StatusCode RecGsfTracking::initialize() {
     error() << "ReductionTargetComponents must be 0 or in [1, MaxComponents]" << endmsg;
     return StatusCode::FAILURE;
   }
+  std::string reductionMergeCost = m_reductionMergeCost.value();
+  std::transform(reductionMergeCost.begin(), reductionMergeCost.end(),
+                 reductionMergeCost.begin(), ::tolower);
+  if (reductionMergeCost != "symmetrickl" &&
+      reductionMergeCost != "runnalls") {
+    error() << "ReductionMergeCost must be SymmetricKL or Runnalls" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_componentWeightCutoff.value() < 0.0 ||
       m_componentWeightCutoff.value() >= 1.0) {
     error() << "ComponentWeightCutoff must be in [0, 1)" << endmsg;
@@ -2040,9 +2048,10 @@ StatusCode RecGsfTracking::execute() {
       if (shouldReduce && (int)comps.size() > reductionTarget) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format(
-              "  FLOW hit=%3d posterior-reduce: n=%d max=%d target=%d mode=KL")
+              "  FLOW hit=%3d posterior-reduce: n=%d max=%d target=%d cost=%s")
                     % (int)ih % (int)comps.size()
-                    % m_maxComponents.value() % reductionTarget << endmsg;
+                    % m_maxComponents.value() % reductionTarget
+                    % m_reductionMergeCost.value() << endmsg;
           dumpComponents("posterior-pre-reduce", (int)ih, comps);
         }
         auto reductionLogger = [&](const std::string& line) {
@@ -2050,7 +2059,8 @@ StatusCode RecGsfTracking::execute() {
         };
         GsfMixture::reduce(
             comps, reductionTarget, bz,
-            m_protectIdentityLineage.value(), reductionLogger);
+            m_protectIdentityLineage.value(), reductionLogger,
+            m_reductionMergeCost.value());
         ++nReductions;
         didReduceHit = true;
         dumpComponents("posterior-post-reduce", (int)ih, comps);
@@ -2594,9 +2604,10 @@ StatusCode RecGsfTracking::execute() {
         if ((int)reverseComps.size() > reverseReductionTarget) {
           if (m_verboseDump && m_verboseSplitDump) {
             info() << boost::format(
-                "  REVERSE FLOW hit=%3d posterior-reduce: n=%d target=%d mode=KL")
+                "  REVERSE FLOW hit=%3d posterior-reduce: n=%d target=%d cost=%s")
                 % reverseHit % (int)reverseComps.size()
-                % reverseReductionTarget << endmsg;
+                % reverseReductionTarget % m_reductionMergeCost.value()
+                << endmsg;
             dumpComponents("reverse-pre-reduce", reverseHit, reverseComps);
           }
           auto reverseReductionLogger = [&](const std::string& line) {
@@ -2604,7 +2615,8 @@ StatusCode RecGsfTracking::execute() {
           };
           GsfMixture::reduce(
               reverseComps, reverseReductionTarget, bz,
-              m_protectIdentityLineage.value(), reverseReductionLogger);
+              m_protectIdentityLineage.value(), reverseReductionLogger,
+              m_reductionMergeCost.value());
           ++reverseReductions;
           if (m_verboseDump && m_verboseSplitDump)
             dumpComponents("reverse-post-reduce", reverseHit, reverseComps);
