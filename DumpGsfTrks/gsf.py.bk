@@ -1,25 +1,54 @@
 #!/usr/bin/env python
-import os, sys
+"""GSF comparison card: KL smoother, reverse filter, or CMSSW-like GSF.
+
+Select exactly one workflow by editing the explicit ``method`` assignment
+near the top of this file. The accepted values are ``"smoother"``,
+``"reverse"``, and ``"cms-like"``.
+
+Every workflow reads the same ``CompleteTracks`` collection, which supplies
+the LCIO reference in the output tuple.
+"""
+
+# Maintenance contract: whenever a configurable RecGsfTracking property is
+# added, renamed, removed, or changes its default/allowed values, a dedicated
+# sub-agent must audit this card and Reconstruction/RecGsfTracking/README.md
+# together; the parent agent verifies both against src/GsfAlgorithm.h.
+
+import os
 from Gaudi.Configuration import *
 
-evtmax = 200
+evtmax = 12340
+inputseed = 12340
+
+# Explicit workflow selection. Change this source line to "smoother",
+# "reverse", or "cms-like"; no environment-variable override is used.
+method = "reverse"
 
 from Configurables import k4DataSvc
-dsvc = k4DataSvc("EventDataSvc", input="trk_v01.root")
+dsvc = k4DataSvc("EventDataSvc", input="/aifs/user/data/zhangcg/gsfdev/CEPCSW/tuples285/trk_v01.root")
 
 geometry_option = "TDR_o1_v01/TDR_o1_v01-onlyTracker.xml"
 geometry_path = os.path.join(os.getenv("DETCRDROOT"), "compact", geometry_option)
 
 from Configurables import DetGeomSvc
-geosvc = DetGeomSvc("GeomSvc"); geosvc.compact = geometry_path
+geosvc = DetGeomSvc("GeomSvc")
+geosvc.compact = geometry_path
 
 from Configurables import PodioInput
 podioinput = PodioInput("PodioReader", collections=[
     "MCParticle",
-    "VXDCollection", "ITKBarrelCollection", "TPCCollection", "OTKBarrelCollection",
-    "VXDTrackerHits", "ITKBarrelTrackerHits", "TPCTrackerHits", "OTKBarrelTrackerHits",
-    "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation",
-    "TPCTrackerHitAss", "OTKBarrelTrackerHitAssociation",
+    "VXDCollection",
+    "ITKBarrelCollection", "ITKEndcapCollection",
+    "TPCCollection",
+    "OTKBarrelCollection", "OTKEndcapCollection",
+    "VXDTrackerHits",
+    "ITKBarrelTrackerHits", "ITKEndcapTrackerHits",
+    "TPCTrackerHits",
+    "OTKBarrelTrackerHits", "OTKEndcapTrackerHits",
+    "VXDTrackerHitAssociation",
+    "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
+    "TPCTrackerHitAss",
+    "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",
     "CompleteTracks",
 ])
 
@@ -28,20 +57,101 @@ tracksys = TrackSystemSvc("TrackSystemSvc")
 gearsvc = GearSvc("GearSvc")
 
 gsf = RecGsfTracking("RecGsfTracking")
-gsf.ElectronHypothesis = True; gsf.MaxComponents = 12
-gsf.BHSplitThreshold = 0.01; gsf.MSOn = True; gsf.ElossOn = True
-gsf.VerboseDump = False; gsf.MaterialIPExtrapolation = False
+gsf.ElectronHypothesis = True
+# Common options used by the same-code smoother/reverse/CMS-like comparisons.
+gsf.BHModel = "CEPC2GeV85StepConditioned"
+gsf.MaterialPathMode = "CurrentSurface"
+gsf.BHSplitThreshold = 1.0e-4
+
+gsf.MaxComponents = 12
+gsf.ReductionTargetComponents = 0
+gsf.ReductionMergeCost = "SymmetricKL"
+gsf.ComponentWeightCutoff = 1.0e-4
+gsf.ProtectIdentityLineage = True
+
+gsf.MSOn = True
+gsf.ElossOn = True
+gsf.KappaSeedCov = 1.0e-7
+
+# Start with every backward workflow disabled. Each method block below enables
+# exactly one; the algorithm also enforces their mutual exclusivity.
+gsf.GaussianSumSmoothing = False
+gsf.ReverseFiltering = False
+gsf.CmsGsfSmoothing = False
+gsf.CmsErrorRescaling = 100.0
+gsf.MaterialIPExtrapolation = False
+
+if method == "smoother":
+    # KL reduction-aware retained-graph Gaussian-sum smoother. Its common-IP
+    # state is the moment-matched smoothed mixture.
+    gsf.GaussianSumSmoothing = True
+    gsf.GSFOutputMode = "WeightedMean"
+
+elif method == "reverse":
+    # Independent inward multi-component refit, seeded by the full final
+    # forward posterior. Publish the highest aggregate-weight reverse branch.
+    gsf.ReverseFiltering = True
+    gsf.ReverseOutputMode = "BestBranch"
+    gsf.ReverseSelectionMode = "AggregateWeight"
+    gsf.SurfaceConsistencyUninformativeFloor = 0.05
+    gsf.ReverseInitialWeightMode = "ForwardPosterior"
+    gsf.ReverseKappaSeedCov = 100.0
+    gsf.GSFOutputMode = "BestBranch"
+
+elif method in ("cms-like", "cms", "cms_like"):
+    # CMSSW-like workflow: seed from the final forward prediction, inflate the
+    # full covariance, apply the outermost hit backward, combine collapsed
+    # forward/backward moments internally, and publish the collapsed innermost
+    # backward-filtered mixture at the IP.
+    method = "cms-like"
+    gsf.CmsGsfSmoothing = True
+    gsf.CmsErrorRescaling = 100.0
+    gsf.GSFOutputMode = "BestBranch"  # CMS endpoint selection is fixed.
+
+else:
+    raise ValueError(
+        "Unknown method={!r}; choose smoother, reverse, or cms-like".format(
+            method))
+
+gsf.SelectedEventIndices = []
+gsf.VerboseDump = False
+gsf.VerboseSplitDump = False
+gsf.ComponentDebugDump = False
+gsf.SurfaceLineageMassDump = False
+gsf.ComponentDebugMaxHistory = 240
+gsf.MaterialTransitionCSV = ""
+gsf.CounterfactualLossScan = False
+gsf.CounterfactualTruthTransitionMap = ""
+gsf.CounterfactualLossFractions = [
+    0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12,
+]
+gsf.CounterfactualLossVariance = 2.0e-4
+gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
-flat.OutputFile = "gsf_flat_v01.root"
+flat.OutputFile = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_flat_{}_{}.root".format(method, inputseed)
 flat.BField = 3.0
-flat.HitCollectionNames = ["VXDTrackerHits", "ITKBarrelTrackerHits", "TPCTrackerHits", "OTKBarrelTrackerHits"]
+flat.HitCollectionNames = [
+    "VXDTrackerHits",
+    "ITKBarrelTrackerHits",
+    "ITKEndcapTrackerHits",
+    "TPCTrackerHits",
+    "OTKBarrelTrackerHits",
+    "OTKEndcapTrackerHits",
+]
 
 from Configurables import PodioOutput
-out = PodioOutput("outputalg"); out.filename = "gsf_v01.root"; out.outputCommands = ["keep *"]
+out = PodioOutput("outputalg")
+out.filename = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_{}_{}.root".format(method, inputseed)
+out.outputCommands = ["keep *"]
 
 from Configurables import ApplicationMgr, MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")
-ApplicationMgr(TopAlg=[podioinput, gsf, flat, out], EvtSel='NONE', EvtMax=evtmax,
-               ExtSvc=[dsvc, geosvc, tracksys, gearsvc, evtseeder], OutputLevel=ERROR)
+ApplicationMgr(
+    TopAlg=[podioinput, gsf, flat, out],
+    EvtSel="NONE",
+    EvtMax=evtmax,
+    ExtSvc=[dsvc, geosvc, tracksys, gearsvc, evtseeder],
+    OutputLevel=INFO,
+)

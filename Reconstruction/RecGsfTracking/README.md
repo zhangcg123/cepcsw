@@ -6,68 +6,161 @@ writes `GSFTracks`.  Each component now uses the baseline MarlinTrk
 update path.  The old alternate KF fitter and initialization experiments have
 been removed; historical comparisons remain under `agents_record/`.
 
-## Active configuration
+## Complete configuration reference
 
-### Physics and material
+Reference date: 2026-07-24. `RecGsfTracking` exposes 34 Gaudi properties in
+`src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
+without a run card. “Active reverse” means the effective no-environment-
+override configuration in `options/run_gsf_reverse_template.py`. The
+distinction matters because that template enables `ElossOn` and
+`ReverseFiltering`, whose compiled defaults are false.
 
-| Property | Default | Purpose |
-|---|---:|---|
-| `ElectronHypothesis` | `true` | Enable Bethe-Heitler splitting. |
-| `BHModel` | `"CEPC2GeV85StepConditioned"` | Select the five-component scoped CEPC model by default, the parallel six-component `CEPC2GeV85StepConditioned6`, or the `ActsAtlas` reference. |
-| `BHSplitThreshold` | `1e-4` | Minimum target-layer `t/X0` for a split. |
-| `MaterialPathMode` | `"CurrentSurface"` | Select legacy current-layer material or opt-in `DD4hepBetweenSurfaces` volume integration. |
-| `MSOn` | `true` | Enable multiple-scattering process noise. |
-| `ElossOn` | `false` | Enable the KalTest dE/dx treatment in addition to BH splitting. |
-| `KappaSeedCov` | `1e-7` | Initial curvature variance for the LCIO-derived seed site. |
+### Physics and material model
+
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
+| `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. The five-component conditioned model is active; the six-component conditioned model and `ActsAtlas` are default-off research controls. |
+| `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
+| `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
+| `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
+| `MaterialPathMode` | `CurrentSurface` | same | Material assignment: `CurrentSurface` is active; `DD4hepBetweenSurfaces` is a default-off volume-integration diagnostic. |
+| `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
+| `KappaSeedCov` | `1e-7` | same | Forward GSF seed-covariance scale; the small baseline value tightly anchors the start to `CompleteTracks`. |
 
 Material assigned to a measurement surface is owned by the outgoing
 transition from that surface. Its inner and outer normal-thickness `t/X0`
 contributions are divided by the absolute dot product of the component-local
 track tangent and DD4hep surface normal. The final measurement has no outgoing
 transition. Forward and reverse workflows apply the same current-surface
-ownership in their respective direction and are alternative published paths.
+ownership in their respective directions.
 
-Both workflows now reduce target-surface posterior mixtures. Forward process
-children from transition `i -> i+1` remain expanded through measurement
-`i+1`; reverse children from `i+1 -> i` remain expanded through measurement
-`i`. The exact innovation likelihood is applied and normalized before the
-low-weight cutoff and KL reduction. This ordering can temporarily require
-up to roughly `MaxComponents * number-of-BH-modes` measurement updates at a
-material transition.
+### Mixture population and reduction
 
-### Mixture and output
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `MaxComponents` | `12` | `12` | Posterior-reduction trigger/capacity. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 24 only as an explicit comparison. |
+| `ReductionTargetComponents` | `0` | `0` | Number retained after reduction; zero means use `MaxComponents`. Valid values are zero or `1..MaxComponents`. |
+| `ReductionMergeCost` | `SymmetricKL` | same | Pair-ranking cost for moment merging: active `SymmetricKL` or default-off weighted `Runnalls`. Runnalls was tested and rejected for promotion. |
+| `ComponentWeightCutoff` | `1e-8` | `1e-8` | Remove normalized target-measurement posterior components below this weight while retaining at least the largest and, when enabled, an identity lineage. |
+| `ProtectIdentityLineage` | `true` | `true` | Preserve at least one exact no-radiation lineage through cutoff and reduction when the target component count exceeds one. |
 
-| Property | Default | Purpose |
-|---|---:|---|
-| `MaxComponents` | `24` | Posterior-reduction trigger. It is not an instantaneous ceiling: a BH split remains expanded through the target measurement update. |
-| `ReductionTargetComponents` | `0` | Target after reduction; `0` means `MaxComponents`. |
-| `ComponentWeightCutoff` | `1e-8` | Remove normalized target-measurement posterior components below this weight while preserving at least the largest component. |
-| `ProtectIdentityLineage` | `true` | Preserve at least one exact no-radiation lineage through low-weight cutoff and reduction when the reduction target is greater than one. Disable only for controlled ablation studies. |
-| `GSFOutputMode` | `"BestBranch"` | Publish the best branch or `WeightedMean`. |
-| `MaterialIPExtrapolation` | `false` | Include material when extrapolating the selected state to the IP. |
-| `ReverseFiltering` | `false` | Experimental reverse multi-component filtering audit from the final measurement to the innermost hit. |
-| `CmsGsfSmoothing` | `false` | CMSSW-like two-filter GSF workflow. Seeds the backward mixture from the final forward prediction, rescales its covariance, applies the final hit backward, combines collapsed forward-updated and backward-predicted moments at interior surfaces, and publishes the collapsed innermost backward-filtered mixture at the IP. Mutually exclusive with the other smoothing/reverse workflows. |
-| `CmsErrorRescaling` | `100` | Full covariance multiplier for the CMSSW-like backward seed, matching CMSSW's default `ErrorRescaling`. |
-| `GaussianSumSmoothing` | `false` | Run the KL reduction-aware Gaussian-sum smoother. It records the forward reduction graph, conditions contributors through each KL merge, applies exact RTS transport links, and moment-reduces the backward mixture on each common surface. Requires geometric IP extrapolation and `ReverseFiltering=false`. Use `GSFOutputMode="WeightedMean"` to publish the smoothed mixture. The independent reverse filter remains available through `ReverseFiltering`. |
+Forward children from transition `i -> i+1` remain expanded through
+measurement `i+1`; reverse children from `i+1 -> i` remain expanded through
+measurement `i`. The exact innovation likelihood is applied and normalized
+before cutoff and reduction. A transition can therefore temporarily require
+roughly `MaxComponents * number-of-BH-modes` measurement updates.
 
-### Selection and diagnostics
+### Forward and reverse publication
 
-| Property | Default | Purpose |
-|---|---:|---|
-| `SelectedEventIndices` | `[]` | Process only listed zero-based event entries. |
-| `VerboseDump` | `false` | Print per-track truth/LCIO/GSF summaries. |
-| `VerboseSplitDump` | `false` | With `VerboseDump`, print component-flow summaries and tables. |
-| `ComponentDebugDump` | `false` | With verbose flow enabled, print every component and update detail. |
-| `ComponentDebugMaxHistory` | `240` | Maximum printed component-history length. |
-| `MaterialTransitionCSV` | `""` | Optional per-component current and crossed-cradle material audit. Empty disables it. |
-| `CounterfactualLossScan` | `false` | Run isolated likelihood-only trial-loss branches at a configured truth transition and one transition inward. The branches never enter selection, cutoff, reduction, or output. |
-| `CounterfactualTruthTransitionMap` | `""` | Comma-separated zero-based `event:transition` targets for the counterfactual scan. |
-| `CounterfactualLossFractions` | `0.04,...,0.12` | Trial fractional momentum losses. Configure explicitly for focused scans. |
-| `CounterfactualLossVariance` | `2e-4` | Retained-momentum-fraction variance used by every trial branch in a scan. |
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `GSFOutputMode` | `BestBranch` | same | Forward/output publication: `BestBranch` or moment-matched `WeightedMean`. Weighted publication is default-off. |
+| `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
+| `ReverseKappaSeedCov` | `100` | `100` | Multiply every full-mixture reverse-seed covariance by this factor. |
+| `ReverseInitialWeightMode` | `ForwardPosterior` | same | Reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. |
+| `ReverseOutputMode` | `BestBranch` | same | Publish the highest-ranked reverse branch or a moment-matched `WeightedMean`. |
+| `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
+| `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
 
-For ordinary production, defaults plus an explicitly selected `BHModel` and
-mixture policy are sufficient.  Enable diagnostics only for small selected
-event lists.
+`AggregateWeight` selects the component with the largest normalized weight.
+`DominantLineage` multiplies that weight by the fraction supplied by its
+strongest real pre-merge lineage. `SurfaceConsistency` multiplies it by a
+bounded forward/reverse radiative-surface coincidence likelihood. Both
+alternatives are retained only to reproduce rejected diagnostics.
+`ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
+
+### Alternative backward workflows
+
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `GaussianSumSmoothing` | `false` | `false` | Run the retained-graph experimental Gaussian-sum smoother. It is default-off and forfeits much of the observed hard-loss recovery. |
+| `CmsGsfSmoothing` | `false` | `false` | Run the experimental CMSSW-like backward workflow instead of ordinary reverse filtering. |
+| `CmsErrorRescaling` | `100` | `100` | Covariance scaling for the CMSSW-like backward seed; inactive unless `CmsGsfSmoothing=true`. |
+
+`ReverseFiltering`, `GaussianSumSmoothing`, and `CmsGsfSmoothing` are
+alternative workflows and must not be enabled simultaneously.
+
+### Focused-event and component diagnostics
+
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `SelectedEventIndices` | empty | empty | Empty processes the normal event stream; otherwise process only the listed zero-based input entries. |
+| `VerboseDump` | `false` | `false` | Print general filtering, track, and workflow diagnostics. |
+| `VerboseSplitDump` | `false` | `false` | Dump component populations around BH splits, cutoff, and reduction. |
+| `ComponentDebugDump` | `false` | `false` | Dump exact component states, innovation quantities, and lineage histories. |
+| `SurfaceLineageMassDump` | `false` | `false` | Propagate and print aggregate BH-mode probability mass by surface. |
+| `ComponentDebugMaxHistory` | `240` | `240` | Maximum process/lineage history retained per component for debug output. |
+| `MaterialTransitionCSV` | empty | empty | Optional path for a component-local outgoing-surface material audit; empty disables it. |
+
+The reverse template connects the first three verbose properties to
+`GSF_VERBOSE_COMPONENTS`. Comprehensive focused-event validation normally
+enables all three together. Generated logs and CSV files are outputs, not
+project-status records.
+
+### Counterfactual loss scan
+
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `CounterfactualLossScan` | `false` | `false` | Enable a truth-assisted, likelihood-only trial-loss diagnostic. |
+| `CounterfactualTruthTransitionMap` | empty | empty | Comma-separated `event:transition` locations at which to test hypothetical losses. |
+| `CounterfactualLossFractions` | `0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12` | same | Fractional momentum losses assigned to trial branches. |
+| `CounterfactualLossVariance` | `2e-4` | same | Retained-momentum-fraction variance assigned to each trial branch. |
+
+For example:
+
+```text
+CounterfactualTruthTransitionMap = "1:7,4:8"
+```
+
+This tests the configured losses at truth transition 7 for event 1 and
+transition 8 for event 4. The scan reports validity, accepted-hit count,
+cumulative measurement log-likelihood, and final hypothetical momentum.
+Trial branches never enter or reweight the live mixture and cannot become the
+published track. This is a truth-assisted mechanism study, not a production
+loss estimator. When `CounterfactualLossScan=false`, the other three
+properties have no effect.
+
+### Collection handles
+
+The data handles are configurable separately from the 34 properties:
+
+| Role | Default collection |
+|---|---|
+| input reconstructed tracks | `CompleteTracks` |
+| output refitted tracks | `GSFTracks` |
+| truth particles | `MCParticle` |
+
+### Historical `DumpGsfTrks` card compatibility
+
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 34
+properties: 33 agree with the active reverse template, while
+`ComponentWeightCutoff=1e-4` differs from the active `1e-8`. It silently
+inherits no configurable property. The cutoff mismatch remains an explicit,
+documented historical comparison choice rather than accidental default drift.
+
+### Configuration-maintenance contract
+
+The 34-property inventory above is part of the configurable interface, not a
+one-time snapshot. Any change that adds, removes, or renames a
+`RecGsfTracking` property, changes its compiled or active default, or changes
+its accepted values must include a dedicated sub-agent configuration audit.
+That audit must, in the same change:
+
+1. update this complete property reference and recount the exposed properties;
+2. update `options/run_gsf_reverse_template.py` when the active effective
+   steering changes;
+3. add or update an explicit setting in `DumpGsfTrks/gsf.py.bk`, including an
+   intentional inactive value or a documented inapplicability for
+   workflow-specific diagnostics, so the historical workflow does not
+   silently acquire a future compiled default;
+4. record any intentional difference between that card and the active
+   baseline in `DumpGsfTrks/README.md`;
+5. verify that every property declared in `src/GsfAlgorithm.h` is documented
+   here and classified as active, inactive, experimental, or diagnostic.
+
+Do not consider a configurable-property implementation complete until this
+documentation and steering audit is complete.
 
 ## Current limitation
 
