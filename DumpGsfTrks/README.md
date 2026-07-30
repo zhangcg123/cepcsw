@@ -177,26 +177,18 @@ cards are artifacts and should not be treated as source configuration.
 
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. Its main reverse-filter settings agree with the
-active baseline, but it sets
-`ComponentWeightCutoff=1e-4`; the current reverse template and C++ default use
-`1e-8`. It is therefore not an exact active-baseline card.
+active baseline, including `ComponentWeightCutoff=1e-4`. It is an exact
+active-baseline card for the GSF algorithm properties when `method="reverse"`.
 
 The authoritative explanation of all 34 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, the important compatibility result is:
-
-- `gsf.py.bk` explicitly configures all 34 properties and silently inherits
-  none;
-- 33 values agree with the active reverse template;
-- `ComponentWeightCutoff` is the sole effective mismatch: `1e-4` here versus
-  the active `1e-8`.
-
-The backup therefore removes low-weight posterior components at a threshold
-10,000 times larger than the active baseline. Use the package README for the
-complete configuration reference and the reverse template for current runs.
+For this historical workflow, `gsf.py.bk` explicitly configures all 34
+properties, silently inherits none, and agrees with the active reverse
+template. Use the package README for the complete configuration reference and
+the reverse template for current runs.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this historical workflow. When the package adds, removes,

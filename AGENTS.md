@@ -34,8 +34,8 @@ it also creates clean-track degradation and extreme tails. The KL smoother is
 largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like
 workflow has a different core/tail tradeoff and remains default-off.
 
-The active defaults are `MaxComponents=12`, `SymmetricKL` reduction ranking,
-identity-lineage protection enabled, and the five-component
+The active defaults are `MaxComponents=12`, `ComponentWeightCutoff=1e-4`,
+`SymmetricKL` reduction ranking, identity-lineage protection enabled, and the five-component
 `CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components as an
 explicit comparison setting. The weighted `Runnalls` ranking and the
 six-component `CEPC2GeV85StepConditioned6` model remain default-off controls;
@@ -156,7 +156,8 @@ hard recovery.
 
 The current baseline is the five-component conditioned BH model with
 `MaxComponents=12`, aggregate-weight final selection, identity-lineage
-protection, posterior cutoff/KL reduction, and the independent reverse refit.
+protection, `ComponentWeightCutoff=1e-4`, posterior cutoff/KL reduction, and
+the independent reverse refit.
 Keep 24 components as a comparison capacity where component retention matters.
 
 Current evidence:

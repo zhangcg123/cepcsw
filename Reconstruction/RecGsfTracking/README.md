@@ -8,7 +8,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-07-24. `RecGsfTracking` exposes 34 Gaudi properties in
+Reference date: 2026-07-30. `RecGsfTracking` exposes 34 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -42,7 +42,7 @@ ownership in their respective directions.
 | `MaxComponents` | `12` | `12` | Posterior-reduction trigger/capacity. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 24 only as an explicit comparison. |
 | `ReductionTargetComponents` | `0` | `0` | Number retained after reduction; zero means use `MaxComponents`. Valid values are zero or `1..MaxComponents`. |
 | `ReductionMergeCost` | `SymmetricKL` | same | Pair-ranking cost for moment merging: active `SymmetricKL` or default-off weighted `Runnalls`. Runnalls was tested and rejected for promotion. |
-| `ComponentWeightCutoff` | `1e-8` | `1e-8` | Remove normalized target-measurement posterior components below this weight while retaining at least the largest and, when enabled, an identity lineage. |
+| `ComponentWeightCutoff` | `1e-4` | `1e-4` | Remove normalized target-measurement posterior components below this weight while retaining at least the largest and, when enabled, an identity lineage. |
 | `ProtectIdentityLineage` | `true` | `true` | Preserve at least one exact no-radiation lineage through cutoff and reduction when the target component count exceeds one. |
 
 Forward children from transition `i -> i+1` remain expanded through
@@ -134,10 +134,8 @@ The data handles are configurable separately from the 34 properties:
 ### Historical `DumpGsfTrks` card compatibility
 
 `DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 34
-properties: 33 agree with the active reverse template, while
-`ComponentWeightCutoff=1e-4` differs from the active `1e-8`. It silently
-inherits no configurable property. The cutoff mismatch remains an explicit,
-documented historical comparison choice rather than accidental default drift.
+properties and agrees with the active reverse template, including
+`ComponentWeightCutoff=1e-4`. It silently inherits no configurable property.
 
 ### Configuration-maintenance contract
 
