@@ -162,6 +162,17 @@ Keep 24 components as a comparison capacity where component retention matters.
 
 Current evidence:
 
+- The fresh broad-electron transfer sample has 4,800 usable events from 48
+  completed 100-event GSF jobs. Seeds 32 and 36 fail during podio association
+  cleanup and are excluded in full. The topology-clean populations are 1,534
+  no-eBrem, 2,182 light-eBrem, and 539 hard-eBrem events. GSF improves global
+  ±1% containment from 71.5% to 75.0%, driven by light/hard recovery, but
+  loses 39 clean no-eBrem events from the ±1% core and produces 230 clean-
+  topology residuals above +1% and 63 above +5%.
+- The cloned `TKalTrackState` ownership leak is fixed: peak RSS is 1.66 GB for
+  five events and 1.74 GB for 20 events, and the successful production jobs
+  complete 100 events. The remaining seed-32/36 crashes are podio association
+  cleanup failures, not memory exhaustion.
 - The expanded sample has 4,990 matched events from 499 usable seed files;
   seed 464 is missing its `gsf_tuple`. Before topology exclusion it contains
   2,045 no-eBrem, 2,148 light-eBrem, and 797 hard-eBrem events; the active
@@ -183,20 +194,34 @@ Current evidence:
 
 Proceed in this order:
 
-1. Compare the 21 persistent positive-LCIO amplifications, including the 17
-   stored above +1 percentage point and nine drifted controls, directly with
-   the full 19-overshoot/18-control audit at the selected surface and mode.
-   Seek a physically interpretable discriminator before changing the model.
-2. Test any candidate first with comprehensive dumps on the overshoot/control
-   set, the five ordinary light representatives, clean 62/9, hard 1/3, and
-   hard-loss events 11, 16, and 17. Require complete finite tracks with no new
-   measurement rejection or covariance failures.
-3. Only after that gate, run the full clean/light/hard populations, report the
-   secondary-topology population separately, and use forced-BH muons plus
-   representative 10 GeV/85-degree and 10 GeV-pT/20-degree electrons as
-   transfer and safety controls.
-4. Return to seed 74/event 4 and the missing seed-464 tuple only after the
-   light-tail mechanism is resolved without sacrificing clean or hard results.
+1. Freeze reproducible event lists from the fresh 4,800-event catalogue:
+   500 topology-clean no-eBrem events and 500 topology-clean light-eBrem
+   events. Exclude all secondary-tracker-activity events and seeds 32/36.
+   Sample no-eBrem deterministically across energy/angle. Stratify light-eBrem
+   across loss size, LCIO/GSF outcome, energy, and angle so ordinary recovery,
+   missed recovery, degradation, overshoot, and positive-tail modes are all
+   represented. Store the selection lists as generated analysis outputs.
+2. Audit the existing verbose dump before adding instrumentation. For each
+   selected event, capture a compact surface-by-surface record sufficient to
+   reconstruct the selected forward and reverse trajectories: surface/hit
+   index, predicted and updated state/covariance, innovation chi-square and
+   log-determinant, component/process-mode identity and weight, reduction
+   ancestry, and final-selection score. Avoid unbounded full-debug logs for
+   1,000 events. If a new configurable diagnostic is required, follow the
+   property-law sub-agent audit and synchronize both GSF documentation and
+   `DumpGsfTrks/gsf.py.bk`.
+3. Run the 500 no-eBrem events first. Compare LCIO-preserved tracks against
+   GSF-degraded/positive-tail tracks at each surface and mode. Seek a
+   physically interpretable discriminator that preserves the original good
+   branch without using truth or an ad hoc evidence threshold at runtime.
+4. Run the 500 light-eBrem events with the same diagnostic schema. Separate
+   good/partial/missed recovery, degradation, and overshoot, and identify
+   which prior/likelihood/surface decisions distinguish genuine recovery from
+   false radiative-mode selection.
+5. Form a candidate only after both cohorts point to the same implementable
+   mechanism. Apply the existing focused-event and hard-loss 11/16/17 gates,
+   then use a same-code held-out population A/B. Report secondary topology and
+   broad energy/angle transfer controls separately.
 
 Success means reducing the light-eBrem tail and improving its core without
 weakening hard-loss recovery or broadening/biasing the no-eBrem LCIO core.
@@ -208,6 +233,9 @@ publication, global covariance tuning, global process-prior rescaling, fitting
 SimHit momentum, treating ACTS/CMSSW pedigree as CEPC validation, premature
 runtime optimization, reviving rejected selection heuristics, or making
 additional shared-package changes.
+
+The superseded immediate action order is preserved in
+`agents_record/2026-08-08-pre-500x2-state-diagnostic-action-order.md`.
 
 The complete pre-curation live file and its links are preserved in
 `agents_record/2026-07-23-AGENTS-pre-curation-snapshot.md`. The migration map
