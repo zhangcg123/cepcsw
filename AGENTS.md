@@ -186,43 +186,66 @@ Current reduction-specific evidence:
   their strongest evidence near surface 5. A simple evidence threshold is
   not a discriminator.
 
-Working hypothesis: symmetric-KL pair ranking is local in Gaussian state
-space. It does not know that two nearby states may encode different material
-surfaces or BH modes, and its moment-matched child need not correspond to any
-real pre-merge trajectory. The merge conserves pooled weight, while later
-nonlinear propagation and measurement updates treat the merged mean and
-covariance as physical. The current `AggregateWeight` publication can then
-select that pooled branch. Identity protection prevents deletion of one exact
-no-radiation lineage but does not make other merged radiative populations
-causally interpretable.
+New causal evidence separates state interpolation from mass pooling:
+
+- Three reverse-only clean failures and two reverse-only genuine light
+  recoveries were traced through every influential merge and hit. The clean
+  set includes a low-cost pooling flip, a forced high-cost pooling flip, and
+  a next-hit likelihood flip for which reduction barely changes the relevant
+  radiative state.
+- A diagnostic counterfactual retained the heavier real parent's state and
+  covariance at every merge while still summing weights. All three false
+  radiative selections persisted and both genuine recoveries survived.
+  Moment-centroid interpolation therefore changes pT modestly but is not the
+  principal selection cause.
+- Adjacent-surface merging occurs in both false and genuine cases. A strict
+  surface-history prohibition cannot distinguish them. A KL-distance ceiling
+  could stop one high-cost clean flip but not the low-cost pooling or
+  measurement-driven cases, so it is not a general solution.
+- The source counterfactual was fully reverted. A normal rebuild and fresh
+  seed 16/event 14 run exactly restored the baseline pT 30.8103 GeV and final
+  selected weight 0.3323; no experimental C++ diff remains.
+- An offline q/p-marginal Gaussian-mixture mode, using final component means,
+  variances, and weights without truth tuning, restored the +-1% core in all
+  three reverse-only clean failures: residuals +2.5510%, +1.5568%, and
+  +1.6336% became +0.0353%, -0.0249%, and +0.1716%. It retained two
+  reverse-only and four forward-supported genuine light recoveries within
+  +-1%. A forward-seeded clean false mode remained at +2.9784%, correctly
+  showing that density-mode estimation only addresses representation-induced
+  publication errors. One weak reverse-only light case worsened within the
+  core from -0.7344% to -0.9480%.
+
+Working hypothesis: reduction must conserve probability mass to approximate
+the filtering density, but `BestBranch` then interprets the largest reduced
+Gaussian's pooled weight as the posterior of one physical trajectory. Those
+are different questions after several surface/mode histories have merged.
+The primary issue is therefore representation-dependent final estimation,
+not the moment centroid alone. This does not rehabilitate the rejected
+`DominantLineage`, SurfaceConsistency, Runnalls, TopN, or 24-component
+controls.
 
 Proceed in this order:
 
-1. Build a reduction-causality cohort rather than a random option sweep: all
-   known reduction-created clean flips, matched clean controls, reverse-only
-   clean failures, reverse-only genuine light recoveries, and identity-stuck
-   light events stratified by truth transition. Exclude seeds 32/36 and all
-   secondary-tracker-activity events.
-2. Audit the existing reduction logger on a small focused event set. At every
-   influential merge capture the two parent states/covariances/weights and
-   histories, merge cost, moment child, normalized displacement from each
-   parent, lineage/surface disagreement, and selected/identity odds before and
-   after reduction. Add instrumentation only if the existing dump cannot
-   reconstruct these quantities; reuse existing diagnostic switches where
-   possible.
-3. Identify merges that materially alter the eventual decision. For each,
-   compare the next-hit exact innovation likelihood of the moment child with
-   the likelihoods its real parents would have received if continued
-   separately. This tests merge causality rather than correlation.
-4. For identity-stuck light events, run the existing truth-assisted
-   counterfactual loss scan at the true and neighboring transitions. Classify
-   whether the useful branch was absent, removed/merged, survived but lost on
-   likelihood, or could not beat identity even when forced. Truth remains
-   diagnostic only and cannot enter runtime selection.
-5. Propose a KL change only if the same repeatable merge pathology appears in
-   clean false modes and lost light recovery. Validate first on the causal
-   cohort, then events 11/16/17, and finally a same-code held-out population
-   A/B with secondary topology reported separately.
+1. Keep the filtering density and exact likelihood sequence fixed. Extend the
+   promising q/p-marginal density-mode screen to the complete causal cohort,
+   including ordinary clean controls, weak light modes, and forward-seeded
+   false modes. Do not fit a truth-residual threshold.
+2. Formulate a consistent five-parameter state and covariance from the
+   density mode. A scalar kappa mode is diagnostic only; do not publish it by
+   splicing kappa into an unrelated component. Require representation
+   stability analytically and with existing stored capacity evidence rather
+   than repeating the rejected 24-component option study.
+3. In parallel with that screen, use the existing truth-assisted loss scan on
+   identity-stuck light events to retain the separate diagnosis of absent,
+   removed/merged, likelihood-losing, and information-limited useful modes.
+   Truth remains diagnostic only.
+4. Implement nothing until the offline estimator passes both clean and light
+   causal gates and is demonstrably distinct from the rejected
+   `DominantLineage`, SurfaceConsistency, and `WeightedMean` publications.
+5. If a candidate survives, implement it default-off, follow the configurable
+   property documentation law, then run focused events, hard-loss events
+   11/16/17, and a same-code held-out population A/B with secondary topology
+   reported separately.
 
 Success means reducing reduction-created false confidence and preserving
 useful light/hard radiative branches without biasing or broadening the
@@ -237,6 +260,10 @@ tracking packages.
 
 The completed 500x2 diagnosis and outgoing focus are preserved in
 `agents_record/2026-08-08-completed-500x2-diagnostic-and-kl-focus-transition.md`.
+
+The focused merge traces, representative-parent counterfactual, and refined
+representation-dependence hypothesis are preserved in
+`agents_record/2026-08-08-kl-merge-causality-and-representative-state-counterfactual.md`.
 
 The complete pre-curation live file and its links are preserved in
 `agents_record/2026-07-23-AGENTS-pre-curation-snapshot.md`. The migration map
