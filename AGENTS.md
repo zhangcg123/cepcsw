@@ -149,13 +149,14 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The active focus is representation-stable final estimation from the reduced
-five-dimensional posterior. The scalar q/p-marginal density mode has now been
-tested on a 500-event clean/light causal cohort: it strongly suppresses false
-positive tails but loses genuine light-eBrem recoveries, so it is diagnostic
-evidence rather than an implementation candidate. The next question is
-whether the joint five-parameter state/covariance geometry separates those
-two outcomes without truth input or an ad hoc threshold.
+The active focus is calibration of the reverse measurement likelihood at
+decisive surfaces 5--8. Final-posterior publication is no longer the leading
+uncertainty: scalar and full five-dimensional density modes repair many false
+clean tails but lose the same genuine light-eBrem recoveries, and the natural
+mean/median/component-centre alternatives fail clean-track safety. The next
+question is whether reverse innovations and transported covariances make
+identity-versus-radiative likelihood ratios overconfident or directionally
+inconsistent before reduction.
 
 Freeze the production baseline exactly as committed in
 `DumpGsfTrks/gsf.py.bk` and tagged by
@@ -165,20 +166,15 @@ Freeze the production baseline exactly as committed in
 `ComponentWeightCutoff=1e-4`, forward-posterior reverse weights, reverse full
 covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
 The 24-component setting has already been tested: it preserves both genuine
-recovery and false radiative modes and does not solve selection. Do not repeat
-or promote it as a candidate.
+recovery and false radiative modes and does not solve selection.
 
-Current reduction-specific evidence:
+Current causal evidence:
 
 - In the zero-overlap held-out no-eBrem diagnosis, all 25 targeted clean-core
-  degradations selected strong g2/g4 modes at surfaces 5--9. Twenty were
-  reverse-only and five inherited radiative forward support.
-- Only 4/25 first crossed above identity immediately after reduction; 21/25
-  were already driven by forward prior or measurement likelihood. KL is
-  therefore a possible amplifier, not the sole generator of false modes.
-- The protected no-radiation GSF branch was better in 24/25 but inside +-1%
-  in only 23/25; a safety anchor must preserve the actual LCIO state, not only
-  an identity lineage inside the GSF refit.
+  degradations selected strong g2/g4 modes at surfaces 5--9. Only 4/25 first
+  crossed above identity immediately after reduction; 21/25 were already
+  driven by forward prior or measurement likelihood. KL can amplify a mode,
+  but is not its principal generator.
 - Of 52 held-out good light-eBrem recoveries, 50 selected a radiative branch;
   identity was better in only one. Of 100 misses, 92 selected identity and
   eight selected only g1. Global identity preference is not viable.
@@ -187,94 +183,80 @@ Current reduction-specific evidence:
   0.041 and median log-likelihood gain 3.89 versus 3.41. Both most often gain
   their strongest evidence near surface 5. A simple evidence threshold is
   not a discriminator.
+- A representative-parent counterfactual retained the heavier real parent's
+  state and covariance at every merge while summing weights. Three false
+  radiative selections persisted and two genuine recoveries survived.
+  Moment-centroid interpolation is not the principal selection cause.
+- In the 500-event stress test, the scalar kappa density mode retained all 213
+  ordinary clean controls and repaired 19/37 clean positive tails, but lost
+  7/50 genuine light recoveries. A direct final-mixture contrast shows the
+  full 5D mode makes effectively the same choices: 19/19 clean repairs and
+  0/7 light recoveries. Removing covariance correlations does not change the
+  result. The earlier discarded-correlation explanation is rejected.
+- Covariance-volume, non-kappa Mahalanobis-distance, process-surface, and
+  process-mode distributions overlap between false clean and genuine light
+  branches. Mean and median estimators retain more genuine recovery but fail
+  clean safety. No natural final posterior functional passes both gates.
+- The new 5,000-event Geant4 sample contains 1,166,680 primary-electron
+  transitions and 4,685 eBrem transitions. Seed-parity held-out tests find no
+  reproducible incident-momentum, polar-angle, or transition-group dependence
+  of eBrem occurrence after t/X0 conditioning. Conditional loss-shape effects
+  at surfaces 5--11 are not stable between halves; only a small outer-tracker
+  effect repeats. A multidimensional energy/angle/layer BH model is therefore
+  not supported as the next change.
 
-New causal evidence separates state interpolation from mass pooling:
-
-- Three reverse-only clean failures and two reverse-only genuine light
-  recoveries were traced through every influential merge and hit. The clean
-  set includes a low-cost pooling flip, a forced high-cost pooling flip, and
-  a next-hit likelihood flip for which reduction barely changes the relevant
-  radiative state.
-- A diagnostic counterfactual retained the heavier real parent's state and
-  covariance at every merge while still summing weights. All three false
-  radiative selections persisted and both genuine recoveries survived.
-  Moment-centroid interpolation therefore changes pT modestly but is not the
-  principal selection cause.
-- Adjacent-surface merging occurs in both false and genuine cases. A strict
-  surface-history prohibition cannot distinguish them. A KL-distance ceiling
-  could stop one high-cost clean flip but not the low-cost pooling or
-  measurement-driven cases, so it is not a general solution.
-- The source counterfactual was fully reverted. A normal rebuild and fresh
-  seed 16/event 14 run exactly restored the baseline pT 30.8103 GeV and final
-  selected weight 0.3323; no experimental C++ diff remains.
-- A same-code 500-event stress test used 250 topology-clean no-eBrem events
-  (all 37 known positive tails plus 213 preserved controls) and 250
-  outcome-stratified light-eBrem events. The scalar kappa density mode kept
-  all 213 preserved clean controls inside +-1% and recovered 19/37 clean
-  positive tails into that core.
-- On the light cohort it increased +-1% containment from 106/250 to 121/250
-  and reduced positive residuals above +1% from 64 to 39, but it lost 7/50
-  genuine good recoveries and worsened partial recovery. In all seven losses
-  it returned toward the original LCIO-like residual. Four mode-nearest
-  components were identity-lineage and three radiative-lineage, so the effect
-  is not equivalent to identity selection.
-- The scalar mode is therefore rejected as a final-state publication mode.
-  Its failure is consistent with discarding correlations between kappa and
-  the other helix parameters: a narrow LCIO-like marginal peak can beat a
-  broader but jointly supported radiative solution.
-
-Working hypothesis: reduction must conserve probability mass to approximate
-the filtering density, but neither the largest reduced Gaussian's pooled
-weight nor a one-dimensional marginal mode is a generally sufficient final
-state estimator. The former is representation-dependent after histories are
-merged; the latter can discard joint measurement constraints that distinguish
-genuine radiation from an LCIO-like narrow peak. This does not rehabilitate
-the rejected `DominantLineage`, SurfaceConsistency, Runnalls, TopN, or
-24-component controls.
+Working hypothesis: false and genuine radiative modes are already ambiguous
+under the calculated reverse likelihood before final publication. The
+remaining actionable possibility is a calibration defect in the exact
+innovation likelihood or transported covariance at surfaces 5--8, including
+direction-dependent covariance coverage or information reuse. This does not
+rehabilitate rejected final selectors, KL ranking changes, capacity 24, or a
+literal layer-conditioned BH table.
 
 Proceed in this order:
 
-1. Contrast the seven light good recoveries lost by the scalar mode with the
-   19 repaired clean positive tails. Capture the final components' complete
-   five-parameter means, covariances, weights, lineages, and the decisive
-   surface histories; keep filtering and exact likelihoods fixed.
-2. Test whether a mathematically defined joint-posterior mode or another
-   full-state density functional retains the radiative solutions that are
-   broad in kappa but supported by correlations. Define its coordinate and
-   covariance treatment before evaluating residuals. Do not splice a scalar
-   kappa mode into an unrelated component.
-3. In parallel, use the existing truth-assisted loss scan on
-   identity-stuck light events to retain the separate diagnosis of absent,
-   removed/merged, likelihood-losing, and information-limited useful modes.
-   Truth remains diagnostic only.
-4. Implement nothing until the offline estimator passes both clean and light
-   causal gates and is demonstrably distinct from the rejected
-   `DominantLineage`, SurfaceConsistency, and `WeightedMean` publications.
-5. If a candidate survives, implement it default-off, follow the configurable
-   property documentation law, then run focused events, hard-loss events
-   11/16/17, and a same-code held-out population A/B with secondary topology
-   reported separately.
+1. Reuse the frozen topology-clean no-eBrem/light-eBrem cohorts and identify
+   matched decisive-surface contrasts at 5--8. Keep truth out of runtime
+   decisions; use it only to label diagnostic outcomes.
+2. For identity and competing radiative hypotheses, measure whitened
+   innovation pulls, chi-square coverage, log-determinant calibration, and
+   cumulative likelihood ratios by surface. Compare forward and reverse
+   evaluations of the same accepted measurement where mechanically possible.
+3. Audit exact inter-surface covariance transport and measurement ownership
+   for directional consistency and accidental information reuse. Do not tune
+   a global covariance scale or add an evidence threshold.
+4. Form an implementation candidate only if one calibration discrepancy is
+   reproducible in independent clean and light cohorts and predicts both false
+   selection and genuine recovery. Otherwise record these boundary cases as
+   statistical/information-limited ambiguity under the current inputs.
+5. Gate any candidate on focused verbose events, hard-loss events 11/16/17,
+   and a same-code held-out population A/B. Report secondary topology and
+   broad energy/angle controls separately.
 
-Success means reducing reduction-created false confidence and preserving
-useful light/hard radiative branches without biasing or broadening the
-no-eBrem LCIO core. A new independent light-tail dataset remains necessary
-before any production-performance claim.
+Success means correcting a demonstrated likelihood-calibration defect while
+preserving useful light/hard radiative branches and the no-eBrem LCIO core. A
+new independent light-tail dataset remains necessary before any
+production-performance claim.
 
-Current non-goals are repeating the 24-component study, promoting Runnalls,
-an ad hoc likelihood threshold, `WeightedMean` publication, global covariance
-or process-prior rescaling, truth-dependent runtime logic, fitting SimHit
-momentum, reviving rejected final-selection heuristics, or changing shared
+Current non-goals are repeating the 24-component study, further final
+mean/median/mode publication heuristics, promoting Runnalls, an ad hoc
+likelihood threshold, global covariance or process-prior rescaling, an
+energy/angle/literal-layer BH table without held-out truth support,
+truth-dependent runtime logic, fitting SimHit momentum, or changing shared
 tracking packages.
 
-The completed 500-event q/p-marginal density-mode stress test and its rejection
-as a publication candidate are preserved in
+The completed full-posterior contrast, correction of the discarded-correlation
+hypothesis, and broad held-out BH dimension audit are preserved in
+`agents_record/2026-08-09-full-posterior-and-bh-dimension-audit.md`.
+
+The completed 500-event q/p-marginal density-mode stress test is preserved in
 `agents_record/2026-08-08-qoverp-density-mode-500-event-screen.md`.
 
 The completed 500x2 diagnosis and outgoing focus are preserved in
 `agents_record/2026-08-08-completed-500x2-diagnostic-and-kl-focus-transition.md`.
 
-The focused merge traces, representative-parent counterfactual, and refined
-representation-dependence hypothesis are preserved in
+The focused merge traces and representative-parent counterfactual are
+preserved in
 `agents_record/2026-08-08-kl-merge-causality-and-representative-state-counterfactual.md`.
 
 The complete pre-curation live file and its links are preserved in
