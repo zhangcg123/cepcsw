@@ -149,11 +149,13 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The active focus is hypothesis-driven fine-tuning of the `SymmetricKL`
-mixture reduction. The goal is to determine whether particular moment merges
-pool incompatible process-surface/mode histories into an artificial Gaussian
-trajectory that later receives misleading measurement support. This is not a
-broad comparison of capacities, merge rankings, priors, or selection modes.
+The active focus is representation-stable final estimation from the reduced
+five-dimensional posterior. The scalar q/p-marginal density mode has now been
+tested on a 500-event clean/light causal cohort: it strongly suppresses false
+positive tails but loses genuine light-eBrem recoveries, so it is diagnostic
+evidence rather than an implementation candidate. The next question is
+whether the joint five-parameter state/covariance geometry separates those
+two outcomes without truth input or an ad hoc threshold.
 
 Freeze the production baseline exactly as committed in
 `DumpGsfTrks/gsf.py.bk` and tagged by
@@ -205,37 +207,43 @@ New causal evidence separates state interpolation from mass pooling:
 - The source counterfactual was fully reverted. A normal rebuild and fresh
   seed 16/event 14 run exactly restored the baseline pT 30.8103 GeV and final
   selected weight 0.3323; no experimental C++ diff remains.
-- An offline q/p-marginal Gaussian-mixture mode, using final component means,
-  variances, and weights without truth tuning, restored the +-1% core in all
-  three reverse-only clean failures: residuals +2.5510%, +1.5568%, and
-  +1.6336% became +0.0353%, -0.0249%, and +0.1716%. It retained two
-  reverse-only and four forward-supported genuine light recoveries within
-  +-1%. A forward-seeded clean false mode remained at +2.9784%, correctly
-  showing that density-mode estimation only addresses representation-induced
-  publication errors. One weak reverse-only light case worsened within the
-  core from -0.7344% to -0.9480%.
+- A same-code 500-event stress test used 250 topology-clean no-eBrem events
+  (all 37 known positive tails plus 213 preserved controls) and 250
+  outcome-stratified light-eBrem events. The scalar kappa density mode kept
+  all 213 preserved clean controls inside +-1% and recovered 19/37 clean
+  positive tails into that core.
+- On the light cohort it increased +-1% containment from 106/250 to 121/250
+  and reduced positive residuals above +1% from 64 to 39, but it lost 7/50
+  genuine good recoveries and worsened partial recovery. In all seven losses
+  it returned toward the original LCIO-like residual. Four mode-nearest
+  components were identity-lineage and three radiative-lineage, so the effect
+  is not equivalent to identity selection.
+- The scalar mode is therefore rejected as a final-state publication mode.
+  Its failure is consistent with discarding correlations between kappa and
+  the other helix parameters: a narrow LCIO-like marginal peak can beat a
+  broader but jointly supported radiative solution.
 
 Working hypothesis: reduction must conserve probability mass to approximate
-the filtering density, but `BestBranch` then interprets the largest reduced
-Gaussian's pooled weight as the posterior of one physical trajectory. Those
-are different questions after several surface/mode histories have merged.
-The primary issue is therefore representation-dependent final estimation,
-not the moment centroid alone. This does not rehabilitate the rejected
-`DominantLineage`, SurfaceConsistency, Runnalls, TopN, or 24-component
-controls.
+the filtering density, but neither the largest reduced Gaussian's pooled
+weight nor a one-dimensional marginal mode is a generally sufficient final
+state estimator. The former is representation-dependent after histories are
+merged; the latter can discard joint measurement constraints that distinguish
+genuine radiation from an LCIO-like narrow peak. This does not rehabilitate
+the rejected `DominantLineage`, SurfaceConsistency, Runnalls, TopN, or
+24-component controls.
 
 Proceed in this order:
 
-1. Keep the filtering density and exact likelihood sequence fixed. Extend the
-   promising q/p-marginal density-mode screen to the complete causal cohort,
-   including ordinary clean controls, weak light modes, and forward-seeded
-   false modes. Do not fit a truth-residual threshold.
-2. Formulate a consistent five-parameter state and covariance from the
-   density mode. A scalar kappa mode is diagnostic only; do not publish it by
-   splicing kappa into an unrelated component. Require representation
-   stability analytically and with existing stored capacity evidence rather
-   than repeating the rejected 24-component option study.
-3. In parallel with that screen, use the existing truth-assisted loss scan on
+1. Contrast the seven light good recoveries lost by the scalar mode with the
+   19 repaired clean positive tails. Capture the final components' complete
+   five-parameter means, covariances, weights, lineages, and the decisive
+   surface histories; keep filtering and exact likelihoods fixed.
+2. Test whether a mathematically defined joint-posterior mode or another
+   full-state density functional retains the radiative solutions that are
+   broad in kappa but supported by correlations. Define its coordinate and
+   covariance treatment before evaluating residuals. Do not splice a scalar
+   kappa mode into an unrelated component.
+3. In parallel, use the existing truth-assisted loss scan on
    identity-stuck light events to retain the separate diagnosis of absent,
    removed/merged, likelihood-losing, and information-limited useful modes.
    Truth remains diagnostic only.
@@ -257,6 +265,10 @@ an ad hoc likelihood threshold, `WeightedMean` publication, global covariance
 or process-prior rescaling, truth-dependent runtime logic, fitting SimHit
 momentum, reviving rejected final-selection heuristics, or changing shared
 tracking packages.
+
+The completed 500-event q/p-marginal density-mode stress test and its rejection
+as a publication candidate are preserved in
+`agents_record/2026-08-08-qoverp-density-mode-500-event-screen.md`.
 
 The completed 500x2 diagnosis and outgoing focus are preserved in
 `agents_record/2026-08-08-completed-500x2-diagnostic-and-kl-focus-transition.md`.
