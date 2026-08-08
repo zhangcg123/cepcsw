@@ -149,93 +149,94 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The active question is why a minority of topology-clean no-eBrem/light-eBrem
-tracks select discrete radiative modes and develop positive momentum tails,
-especially around surfaces 5--8, despite favorable population-level light and
-hard recovery.
+The active focus is hypothesis-driven fine-tuning of the `SymmetricKL`
+mixture reduction. The goal is to determine whether particular moment merges
+pool incompatible process-surface/mode histories into an artificial Gaussian
+trajectory that later receives misleading measurement support. This is not a
+broad comparison of capacities, merge rankings, priors, or selection modes.
 
-The current baseline is the five-component conditioned BH model with
-`MaxComponents=12`, aggregate-weight final selection, identity-lineage
-protection, `ComponentWeightCutoff=1e-4`, posterior cutoff/KL reduction, and
-the independent reverse refit.
-Keep 24 components as a comparison capacity where component retention matters.
+Freeze the production baseline exactly as committed in
+`DumpGsfTrks/gsf.py.bk` and tagged by
+`gsf-memory-leak-fixed-2026-08-08`: five-component
+`CEPC2GeV85StepConditioned`, `MaxComponents=12`,
+`ReductionTargetComponents=0`, `SymmetricKL`, identity-lineage protection,
+`ComponentWeightCutoff=1e-4`, forward-posterior reverse weights, reverse full
+covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
+The 24-component setting has already been tested: it preserves both genuine
+recovery and false radiative modes and does not solve selection. Do not repeat
+or promote it as a candidate.
 
-Current evidence:
+Current reduction-specific evidence:
 
-- The fresh broad-electron transfer sample has 4,800 usable events from 48
-  completed 100-event GSF jobs. Seeds 32 and 36 fail during podio association
-  cleanup and are excluded in full. The topology-clean populations are 1,534
-  no-eBrem, 2,182 light-eBrem, and 539 hard-eBrem events. GSF improves global
-  ±1% containment from 71.5% to 75.0%, driven by light/hard recovery, but
-  loses 39 clean no-eBrem events from the ±1% core and produces 230 clean-
-  topology residuals above +1% and 63 above +5%.
-- The cloned `TKalTrackState` ownership leak is fixed: peak RSS is 1.66 GB for
-  five events and 1.74 GB for 20 events, and the successful production jobs
-  complete 100 events. The remaining seed-32/36 crashes are podio association
-  cleanup failures, not memory exhaustion.
-- The expanded sample has 4,990 matched events from 499 usable seed files;
-  seed 464 is missing its `gsf_tuple`. Before topology exclusion it contains
-  2,045 no-eBrem, 2,148 light-eBrem, and 797 hard-eBrem events; the active
-  single-track populations are 2,032, 2,132, and 694.
-- Recovery is strongly layer-dependent: transitions 0--4 are mostly
-  information-limited, 5--6 form the boundary, and 7--11 show strong central
-  recovery. Default optimization therefore targets remaining failures at
-  transitions 5--11.
-- The 19-overshoot/18 matched-control audit and broader transition-7--8 studies
-  point to heterogeneous prior/likelihood decisions with a recurring coupled
-  surface/mode mismatch. KL reduction is not a recurring local cause.
-- Global process-prior reweighting, rank publication, dominant-unmerged
-  lineage selection, g3 splitting, bounded noisy-OR surface scoring, a simple
-  added 5--8% truth-surface component, the six-component conditioned model,
-  and promotion of Runnalls ranking have all failed their current gates.
-- Capacity changes can preserve both genuine recovery and false radiative
-  modes. The user-selected default is 12; prior evidence favoring 24 on some
-  tail samples remains a required comparison, not a conflicting default.
+- In the zero-overlap held-out no-eBrem diagnosis, all 25 targeted clean-core
+  degradations selected strong g2/g4 modes at surfaces 5--9. Twenty were
+  reverse-only and five inherited radiative forward support.
+- Only 4/25 first crossed above identity immediately after reduction; 21/25
+  were already driven by forward prior or measurement likelihood. KL is
+  therefore a possible amplifier, not the sole generator of false modes.
+- The protected no-radiation GSF branch was better in 24/25 but inside +-1%
+  in only 23/25; a safety anchor must preserve the actual LCIO state, not only
+  an identity lineage inside the GSF refit.
+- Of 52 held-out good light-eBrem recoveries, 50 selected a radiative branch;
+  identity was better in only one. Of 100 misses, 92 selected identity and
+  eight selected only g1. Global identity preference is not viable.
+- False and genuine reverse-only radiative branches have overlapping birth
+  odds and accumulated exact likelihood support: median odds 0.037 versus
+  0.041 and median log-likelihood gain 3.89 versus 3.41. Both most often gain
+  their strongest evidence near surface 5. A simple evidence threshold is
+  not a discriminator.
+
+Working hypothesis: symmetric-KL pair ranking is local in Gaussian state
+space. It does not know that two nearby states may encode different material
+surfaces or BH modes, and its moment-matched child need not correspond to any
+real pre-merge trajectory. The merge conserves pooled weight, while later
+nonlinear propagation and measurement updates treat the merged mean and
+covariance as physical. The current `AggregateWeight` publication can then
+select that pooled branch. Identity protection prevents deletion of one exact
+no-radiation lineage but does not make other merged radiative populations
+causally interpretable.
 
 Proceed in this order:
 
-1. Freeze reproducible event lists from the fresh 4,800-event catalogue:
-   500 topology-clean no-eBrem events and 500 topology-clean light-eBrem
-   events. Exclude all secondary-tracker-activity events and seeds 32/36.
-   Sample no-eBrem deterministically across energy/angle. Stratify light-eBrem
-   across loss size, LCIO/GSF outcome, energy, and angle so ordinary recovery,
-   missed recovery, degradation, overshoot, and positive-tail modes are all
-   represented. Store the selection lists as generated analysis outputs.
-2. Audit the existing verbose dump before adding instrumentation. For each
-   selected event, capture a compact surface-by-surface record sufficient to
-   reconstruct the selected forward and reverse trajectories: surface/hit
-   index, predicted and updated state/covariance, innovation chi-square and
-   log-determinant, component/process-mode identity and weight, reduction
-   ancestry, and final-selection score. Avoid unbounded full-debug logs for
-   1,000 events. If a new configurable diagnostic is required, follow the
-   property-law sub-agent audit and synchronize both GSF documentation and
-   `DumpGsfTrks/gsf.py.bk`.
-3. Run the 500 no-eBrem events first. Compare LCIO-preserved tracks against
-   GSF-degraded/positive-tail tracks at each surface and mode. Seek a
-   physically interpretable discriminator that preserves the original good
-   branch without using truth or an ad hoc evidence threshold at runtime.
-4. Run the 500 light-eBrem events with the same diagnostic schema. Separate
-   good/partial/missed recovery, degradation, and overshoot, and identify
-   which prior/likelihood/surface decisions distinguish genuine recovery from
-   false radiative-mode selection.
-5. Form a candidate only after both cohorts point to the same implementable
-   mechanism. Apply the existing focused-event and hard-loss 11/16/17 gates,
-   then use a same-code held-out population A/B. Report secondary topology and
-   broad energy/angle transfer controls separately.
+1. Build a reduction-causality cohort rather than a random option sweep: all
+   known reduction-created clean flips, matched clean controls, reverse-only
+   clean failures, reverse-only genuine light recoveries, and identity-stuck
+   light events stratified by truth transition. Exclude seeds 32/36 and all
+   secondary-tracker-activity events.
+2. Audit the existing reduction logger on a small focused event set. At every
+   influential merge capture the two parent states/covariances/weights and
+   histories, merge cost, moment child, normalized displacement from each
+   parent, lineage/surface disagreement, and selected/identity odds before and
+   after reduction. Add instrumentation only if the existing dump cannot
+   reconstruct these quantities; reuse existing diagnostic switches where
+   possible.
+3. Identify merges that materially alter the eventual decision. For each,
+   compare the next-hit exact innovation likelihood of the moment child with
+   the likelihoods its real parents would have received if continued
+   separately. This tests merge causality rather than correlation.
+4. For identity-stuck light events, run the existing truth-assisted
+   counterfactual loss scan at the true and neighboring transitions. Classify
+   whether the useful branch was absent, removed/merged, survived but lost on
+   likelihood, or could not beat identity even when forced. Truth remains
+   diagnostic only and cannot enter runtime selection.
+5. Propose a KL change only if the same repeatable merge pathology appears in
+   clean false modes and lost light recovery. Validate first on the causal
+   cohort, then events 11/16/17, and finally a same-code held-out population
+   A/B with secondary topology reported separately.
 
-Success means reducing the light-eBrem tail and improving its core without
-weakening hard-loss recovery or broadening/biasing the no-eBrem LCIO core.
-Independent held-out validation and broad energy/angle coverage remain
-mandatory before a production-performance claim.
+Success means reducing reduction-created false confidence and preserving
+useful light/hard radiative branches without biasing or broadening the
+no-eBrem LCIO core. A new independent light-tail dataset remains necessary
+before any production-performance claim.
 
-Current non-goals are an ad hoc measurement-evidence threshold, `WeightedMean`
-publication, global covariance tuning, global process-prior rescaling, fitting
-SimHit momentum, treating ACTS/CMSSW pedigree as CEPC validation, premature
-runtime optimization, reviving rejected selection heuristics, or making
-additional shared-package changes.
+Current non-goals are repeating the 24-component study, promoting Runnalls,
+an ad hoc likelihood threshold, `WeightedMean` publication, global covariance
+or process-prior rescaling, truth-dependent runtime logic, fitting SimHit
+momentum, reviving rejected final-selection heuristics, or changing shared
+tracking packages.
 
-The superseded immediate action order is preserved in
-`agents_record/2026-08-08-pre-500x2-state-diagnostic-action-order.md`.
+The completed 500x2 diagnosis and outgoing focus are preserved in
+`agents_record/2026-08-08-completed-500x2-diagnostic-and-kl-focus-transition.md`.
 
 The complete pre-curation live file and its links are preserved in
 `agents_record/2026-07-23-AGENTS-pre-curation-snapshot.md`. The migration map
