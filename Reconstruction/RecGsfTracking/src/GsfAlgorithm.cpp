@@ -1485,6 +1485,10 @@ StatusCode RecGsfTracking::execute() {
     return StatusCode::SUCCESS;
   }
 
+  // Summaries are an event-local diagnostic view.  Keeping every summary for
+  // the full job makes memory usage grow with the number of processed tracks.
+  m_summaries.clear();
+
   info() << "GSF event index " << eventIndex
          << " (event count " << m_nEvt << ")" << endmsg;
   const auto* in = m_inputTracks.get();
@@ -1908,7 +1912,10 @@ StatusCode RecGsfTracking::execute() {
           khClone = new DDCylinderHit(*ch);
         else if (auto* ph = dynamic_cast<DDPlanarHit*>(hi.kalHit))
           khClone = new DDPlanarHit(*ph);
-        else continue;
+        else {
+          delete comp;
+          continue;
+        }
 
         auto* st = new TKalTrackSite(*khClone, kSdim);
         st->SetHitOwner();

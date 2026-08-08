@@ -57,7 +57,7 @@ public:
   StatusCode execute() override;
   StatusCode finalize() override;
 
-  /// Access summaries after processing (for scripts / tests)
+  /// Access summaries from the most recently processed event.
   const std::vector<TrackSummary>& summaries() const { return m_summaries; }
 
 private:
@@ -153,7 +153,7 @@ private:
   dd4hep::rec::MaterialManager* m_materialManager = nullptr;
 
   int m_nEvt = 0;
-  std::vector<TrackSummary> m_summaries;  // accumulated per-track data
+  std::vector<TrackSummary> m_summaries;  // current-event per-track data
 
   /// cellID → measurement layer index for O(1) hit lookup
   std::multimap<int, const DDVMeasLayer*> m_cellIDToLayer;

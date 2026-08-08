@@ -176,6 +176,7 @@ GsfComponent* GsfComponent::clone() const {
     auto* newSite = new TKalTrackSite(*newHit, kSdim);
     newSite->SetPivot(oldSite->GetPivot());
     newSite->SetHitOwner();
+    newSite->SetOwner();
 
     for (int j = 0; j < oldSite->GetEntries(); j++) {
       auto* oldSt = dynamic_cast<TKalTrackState*>(oldSite->At(j));
