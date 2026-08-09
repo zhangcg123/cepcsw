@@ -149,14 +149,12 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The active focus is calibration of the reverse measurement likelihood at
-decisive surfaces 5--8. Final-posterior publication is no longer the leading
-uncertainty: scalar and full five-dimensional density modes repair many false
-clean tails but lose the same genuine light-eBrem recoveries, and the natural
-mean/median/component-centre alternatives fail clean-track safety. The next
-question is whether reverse innovations and transported covariances make
-identity-versus-radiative likelihood ratios overconfident or directionally
-inconsistent before reduction.
+The reverse innovation-likelihood calibration audit is complete and did not
+find a reproducible GSF-specific defect. The active question is now whether an
+independent reconstructed observable, most naturally calorimeter energy or an
+E/p-like constraint, can separate genuine energy-loss recovery from false
+tracker-only radiative modes without truth at runtime. This is a design and
+scope question; it does not authorize changes outside `RecGsfTracking`.
 
 Freeze the production baseline exactly as committed in
 `DumpGsfTrks/gsf.py.bk` and tagged by
@@ -168,82 +166,77 @@ covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
 The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
-Current causal evidence:
+Current boundary evidence:
 
-- In the zero-overlap held-out no-eBrem diagnosis, all 25 targeted clean-core
-  degradations selected strong g2/g4 modes at surfaces 5--9. Only 4/25 first
-  crossed above identity immediately after reduction; 21/25 were already
-  driven by forward prior or measurement likelihood. KL can amplify a mode,
-  but is not its principal generator.
-- Of 52 held-out good light-eBrem recoveries, 50 selected a radiative branch;
-  identity was better in only one. Of 100 misses, 92 selected identity and
-  eight selected only g1. Global identity preference is not viable.
-- False and genuine reverse-only radiative branches have overlapping birth
-  odds and accumulated exact likelihood support: median odds 0.037 versus
-  0.041 and median log-likelihood gain 3.89 versus 3.41. Both most often gain
-  their strongest evidence near surface 5. A simple evidence threshold is
-  not a discriminator.
-- A representative-parent counterfactual retained the heavier real parent's
-  state and covariance at every merge while summing weights. Three false
-  radiative selections persisted and two genuine recoveries survived.
-  Moment-centroid interpolation is not the principal selection cause.
-- In the 500-event stress test, the scalar kappa density mode retained all 213
-  ordinary clean controls and repaired 19/37 clean positive tails, but lost
-  7/50 genuine light recoveries. A direct final-mixture contrast shows the
-  full 5D mode makes effectively the same choices: 19/19 clean repairs and
-  0/7 light recoveries. Removing covariance correlations does not change the
-  result. The earlier discarded-correlation explanation is rejected.
-- Covariance-volume, non-kappa Mahalanobis-distance, process-surface, and
-  process-mode distributions overlap between false clean and genuine light
-  branches. Mean and median estimators retain more genuine recovery but fail
-  clean safety. No natural final posterior functional passes both gates.
-- The new 5,000-event Geant4 sample contains 1,166,680 primary-electron
-  transitions and 4,685 eBrem transitions. Seed-parity held-out tests find no
-  reproducible incident-momentum, polar-angle, or transition-group dependence
-  of eBrem occurrence after t/X0 conditioning. Conditional loss-shape effects
-  at surfaces 5--11 are not stable between halves; only a small outer-tracker
-  effect repeats. A multidimensional energy/angle/layer BH model is therefore
-  not supported as the next change.
-
-Working hypothesis: false and genuine radiative modes are already ambiguous
-under the calculated reverse likelihood before final publication. The
-remaining actionable possibility is a calibration defect in the exact
-innovation likelihood or transported covariance at surfaces 5--8, including
-direction-dependent covariance coverage or information reuse. This does not
-rehabilitate rejected final selectors, KL ranking changes, capacity 24, or a
-literal layer-conditioned BH table.
+- Broadening `ReverseKappaSeedCov` from 100 to 1,000,000 repaired none of 19
+  selected no-eBrem false radiative tails and preserved all seven selected
+  genuine light recoveries. After 100--199 inward updates the median relative
+  identity-state pT difference was 0.00129, falling to 0.000156 after 200 or
+  more. Long tracks forget the forward seed before the decisive inner hits;
+  ACTS-like forward-posterior seeding is not the leading tail cause.
+- A first 50-event clean control suggested reverse VXD undercoverage, but an
+  independently selected 50-event control gave reverse mean two-dimensional
+  innovation chi-square 1.999, forward mean 2.004, and summed-chi-square
+  p=0.962. A VXD covariance correction is not supported.
+- A mild first-coordinate pull width near 1.17 at silicon radius about 235 mm
+  repeats across clean halves, but appears similarly in the forward fit and
+  does not predict the selected false-clean tails. It is a common measurement-
+  model monitoring item, not a reverse-GSF correction candidate.
+- Relative hit indices 5--8 are not fixed physical detector layers across the
+  broad sample. They span VXD, silicon, and TPC regions depending on trajectory
+  and missing hits; a literal layer correction based on these indices would be
+  ill-defined.
+- At the often-decisive VXD update, the event-level maximum local radiative-
+  versus-identity log-likelihood ratio has median 0.421 and range -0.078--14.529
+  for false-clean cases, versus median 1.201 and range 0.216--22.386 for genuine
+  light recoveries. The accepted measurements genuinely favor radiative states
+  in both groups, and their evidence overlaps without a truth-free threshold.
+- The ordinary reverse loop transports from `hits[reverseHit+1]`, applies the
+  process transition, updates `hits[reverseHit]` exactly once through baseline
+  `addAndFit`, and only then cuts/reduces. No accidental duplicate measurement
+  or directional ownership defect was found.
+- Earlier studies already reject KL ranking, capacity 24, final mean/median/
+  density-mode publication, representative-parent merge state, global identity
+  preference, and energy/angle/literal-layer BH expansion as solutions.
 
 Proceed in this order:
 
-1. Reuse the frozen topology-clean no-eBrem/light-eBrem cohorts and identify
-   matched decisive-surface contrasts at 5--8. Keep truth out of runtime
-   decisions; use it only to label diagnostic outcomes.
-2. For identity and competing radiative hypotheses, measure whitened
-   innovation pulls, chi-square coverage, log-determinant calibration, and
-   cumulative likelihood ratios by surface. Compare forward and reverse
-   evaluations of the same accepted measurement where mechanically possible.
-3. Audit exact inter-surface covariance transport and measurement ownership
-   for directional consistency and accidental information reuse. Do not tune
-   a global covariance scale or add an evidence threshold.
-4. Form an implementation candidate only if one calibration discrepancy is
-   reproducible in independent clean and light cohorts and predicts both false
-   selection and genuine recovery. Otherwise record these boundary cases as
-   statistical/information-limited ambiguity under the current inputs.
-5. Gate any candidate on focused verbose events, hard-loss events 11/16/17,
-   and a same-code held-out population A/B. Report secondary topology and
-   broad energy/angle controls separately.
+1. Keep the frozen tracker-only baseline unchanged and stop internal selection,
+   covariance-scale, and component-capacity tuning unless new evidence exposes
+   a specific defect.
+2. Audit read-only whether CEPCSW already provides a stable, independently
+   reconstructed calorimeter-energy or electron E/p observable at the point
+   where `RecGsfTracking` could consume it. Define the physics question and
+   validation cohorts before proposing any interface or implementation.
+3. If broader integration is explicitly authorized, first test the independent
+   observable as an offline truth-blind discriminator on the frozen false-clean
+   and genuine light/hard cohorts. Do not make a runtime cut or package change
+   from the current selected samples alone.
+4. Treat a measurement-disjoint two-filter GSF only as a separate default-off
+   formal research control. The seed-memory result does not predict that it
+   will repair the clean tails.
+5. Require a new independent light-tail dataset, focused verbose events,
+   hard-loss events 11/16/17, same-code held-out population A/B, and separate
+   secondary-topology and broad energy/angle reporting before any candidate is
+   promoted.
 
-Success means correcting a demonstrated likelihood-calibration defect while
-preserving useful light/hard radiative branches and the no-eBrem LCIO core. A
-new independent light-tail dataset remains necessary before any
-production-performance claim.
+Success means finding independent, truth-blind information that separates real
+energy-loss recovery from tracker-fit fluctuations while preserving the no-
+eBrem LCIO core and useful light/hard recovery. If no such observable exists or
+it fails held-out validation, record the present cases as an information limit
+of the current inputs rather than tuning another internal heuristic.
 
-Current non-goals are repeating the 24-component study, further final
-mean/median/mode publication heuristics, promoting Runnalls, an ad hoc
-likelihood threshold, global covariance or process-prior rescaling, an
+Current non-goals are changing source code without a new authorized design,
+repeating the 24-component study, further final mean/median/mode publication
+heuristics, promoting Runnalls, an ad hoc likelihood threshold, reverse seed or
+global covariance/process-prior rescaling, VXD/relative-index corrections, an
 energy/angle/literal-layer BH table without held-out truth support,
 truth-dependent runtime logic, fitting SimHit momentum, or changing shared
 tracking packages.
+
+The completed reverse seed, innovation coverage, physical-region, and
+measurement-ownership audit is preserved in
+`agents_record/2026-08-09-reverse-seed-and-innovation-calibration-audit.md`.
 
 The completed full-posterior contrast, correction of the discarded-correlation
 hypothesis, and broad held-out BH dimension audit are preserved in
