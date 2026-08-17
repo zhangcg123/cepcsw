@@ -176,16 +176,20 @@ Current boundary evidence:
 - The configurable two-sided gate defaults to `max(p/E,E/p)>1.1`. The final
   component likelihood is Gaussian in `log(p/E)` with width 0.15 and a 0.05
   floor, so ECAL can re-rank but cannot arbitrarily overwrite tracker evidence.
-- In six focused single-track overshoots above 3%, three activated and one was
-  repaired: seed 11 entry 41 changed from pT 22.5057 to 11.7097 GeV versus
-  truth 11.6818 GeV. The repaired event had nearly tied high- and low-momentum
-  tracker modes before ECAL re-ranking.
-- The other activated overshoots retained their tracker branches because no
-  credible alternative survived. One available transition-0--4 underestimate
-  also remained unchanged at threshold 1.05: its truth-like component had a
-  tracker score about 1265 times smaller while both momenta were consistent
-  with the reconstructed energy. A threshold alone cannot restore missing or
-  negligible posterior support.
+- In 26 focused single-track overshoots above 3%, 15 activated and four changed
+  branch. All four changes improved the truth residual; three ended within
+  0.3%, while one moved from +185.4% to -13.1%. This selected cohort is branch-
+  mechanism evidence, not clean-track safety or population validation.
+- With the 0.05 likelihood floor, ECAL supplies at most a factor-20 relative
+  boost. A competing branch below about 5% of the baseline tracker score can
+  never win. The four successful candidates had tracker-score ratios 0.989,
+  0.746, 0.194, and 0.0549; three unrepaired extreme overshoots had their
+  closest-energy alternatives at ratios 0.00267 or far smaller. The practical
+  blocker is surviving posterior support, not merely the activation threshold.
+- One available transition-0--4 underestimate also remained unchanged at
+  threshold 1.05: its truth-like component had a tracker score about 1265 times
+  smaller while both momenta were consistent with reconstructed energy. A
+  threshold alone cannot restore missing or negligible posterior support.
 - The current evidence is selected and small. The straight outer-tangent
   cluster projection, 0.10-rad phi/theta windows, energy-resolution width,
   likelihood floor, and activation threshold are not validated.
@@ -229,6 +233,11 @@ shared tracking packages.
 The complete design, property surface, mechanical validation, focused
 overshoot and early-transition results, and outgoing focus are preserved in
 `agents_record/2026-08-17-default-off-ecal-component-constraint-prototype.md`.
+
+The expanded 20-event overshoot table, combined 26-event counts, exact branch-
+choice inequality, successful and failed competitor evidence, and outgoing
+validation gate are preserved in
+`agents_record/2026-08-17-expanded-overshoot-branch-choice-diagnosis.md`.
 
 The completed reverse seed, innovation coverage, physical-region, and
 measurement-ownership audit is preserved in
