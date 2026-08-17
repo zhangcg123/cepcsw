@@ -205,6 +205,14 @@ and the paired result is written as
 `GSFTracksEcalConstrained`; the card's `keep *` output rule retains both. This
 is an experimental comparison path, not a change to the active baseline.
 
+The same card's `RecGsfFlatTuple` output retains the ordinary tracker-only
+`gsf_*` fields and adds the paired constrained `ecal_gsf_*` fields,
+`ecal_gsf_available`, `ecal_gsf_changed`, and `res_pT_ecal_gsf`. Default-off
+jobs remain valid: their ordinary fields are populated and their constrained
+fields are marked unavailable and zeroed. The constrained track copies the
+ordinary tracker hits, so the flat tuple does not duplicate the `gsf_hit_*`
+vectors.
+
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this historical workflow. When the package adds, removes,
 renames, or changes a configurable property, a dedicated sub-agent must audit

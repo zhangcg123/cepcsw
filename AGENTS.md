@@ -173,6 +173,9 @@ Current boundary evidence:
 - The feature is default-off, uses only GSF states plus `EcalCluster`, changes
   no fitted component, leaves `GSFTracks` exactly unchanged in direct on/off
   tests, and writes `GSFTracksEcalConstrained` only when enabled.
+- `RecGsfFlatTuple` now preserves the ordinary `gsf_*` fields and adds parallel
+  `ecal_gsf_*` fields, availability/change flags, and a constrained pT
+  residual. Default-off jobs write unavailable, zeroed constrained fields.
 - The configurable two-sided gate defaults to `max(p/E,E/p)>1.1`. The final
   component likelihood is Gaussian in `log(p/E)` with width 0.15 and a 0.05
   floor, so ECAL can re-rank but cannot arbitrarily overwrite tracker evidence.
@@ -233,6 +236,10 @@ shared tracking packages.
 The complete design, property surface, mechanical validation, focused
 overshoot and early-transition results, and outgoing focus are preserved in
 `agents_record/2026-08-17-default-off-ecal-component-constraint-prototype.md`.
+
+The completed paired ordinary/constrained flat-tuple branch implementation and
+enabled/default-off smoke validation are preserved in
+`agents_record/2026-08-17-flat-tuple-paired-ecal-track-output.md`.
 
 The expanded 20-event overshoot table, combined 26-event counts, exact branch-
 choice inequality, successful and failed competitor evidence, and outgoing

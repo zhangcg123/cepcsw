@@ -143,6 +143,8 @@ gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
+# The tuple always keeps ordinary gsf_* fields.  When the default-off ECAL
+# experiment is enabled, it also fills ecal_gsf_* from the paired collection.
 flat.OutputFile = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_flat_{}_{}_{}.root".format(particle, method, inputseed)
 flat.BField = 3.0
 flat.HitCollectionNames = [

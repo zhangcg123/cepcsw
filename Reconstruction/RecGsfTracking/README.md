@@ -166,6 +166,26 @@ The data handles are configurable separately from the 40 properties:
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
 
+### Flat-tuple paired-track branches
+
+`RecGsfFlatTuple` keeps the existing ordinary tracker-only branches unchanged
+and, when `GSFTracksEcalConstrained` is present in the event store, fills a
+parallel constrained-track scalar set:
+
+| Branches | Meaning |
+|---|---|
+| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Ordinary unconstrained `GSFTracks` result. |
+| `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
+| `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
+| `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
+| `res_pT_gsf`, `res_pT_ecal_gsf` | Ordinary and constrained fractional pT residuals relative to the first truth particle. |
+
+The constrained branches always exist in newly produced flat files. When the
+experiment is off or the paired collection is absent, `ecal_gsf_available=0`
+and its scalar/residual fields are zero. The constrained track deliberately
+has no duplicate hit-vector branches: the experimental collection copies the
+ordinary GSF tracker hits, so `gsf_hit_*` is the common hit information.
+
 ### Historical `DumpGsfTrks` card compatibility
 
 `DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 40
@@ -173,7 +193,8 @@ properties and agrees with the active reverse template, including
 `ComponentWeightCutoff=1e-4` and the default-off ECAL experiment. It silently
 inherits no configurable property. Its reconstructed-event input list includes
 `EcalCluster`, and `keep *` preserves the paired constrained collection when
-the experiment is explicitly enabled.
+the experiment is explicitly enabled. Its `RecGsfFlatTuple` instance writes
+both the ordinary `gsf_*` and paired `ecal_gsf_*` scalar branch sets.
 
 ### Configuration-maintenance contract
 

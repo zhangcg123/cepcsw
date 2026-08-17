@@ -12,9 +12,10 @@
 class TFile;
 class TTree;
 
-/// Post-processor: reads CompleteTracks, GSFTracks, and MCParticle
-/// from the event store and writes a flat ROOT TTree with all
-/// relevant tracking parameters and per-hit data for downstream analysis.
+/// Post-processor: reads CompleteTracks, GSFTracks, the optional paired
+/// GSFTracksEcalConstrained collection, and MCParticle from the event store and
+/// writes a flat ROOT TTree with relevant tracking parameters and per-hit data
+/// for downstream analysis.
 class RecGsfFlatTuple : public Algorithm {
 public:
   RecGsfFlatTuple(const std::string& name, ISvcLocator* svc);
@@ -64,8 +65,20 @@ private:
   int    m_gsf_ndf = 0;
   int    m_gsf_nhits = 0;
   int    m_gsf_type = 0;
+  // paired ECAL-constrained GSF AtIP
+  double m_ecal_gsf_omega = 0, m_ecal_gsf_d0 = 0, m_ecal_gsf_z0 = 0;
+  double m_ecal_gsf_phi = 0, m_ecal_gsf_tanl = 0;
+  double m_ecal_gsf_pT = 0, m_ecal_gsf_p = 0;
+  double m_ecal_gsf_eta = 0, m_ecal_gsf_theta = 0;
+  double m_ecal_gsf_chi2 = 0;
+  int    m_ecal_gsf_ndf = 0;
+  int    m_ecal_gsf_nhits = 0;
+  int    m_ecal_gsf_type = 0;
+  int    m_ecal_gsf_available = 0;
+  int    m_ecal_gsf_changed = 0;
   // resolution
   double m_res_pT_gsf = 0;     // (gsf_pT - mc_pT) / mc_pT
+  double m_res_pT_ecal_gsf = 0; // (ecal_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_lcio = 0;    // (lcio_pT - mc_pT) / mc_pT
 
   // ── per-hit data for the LCIO (CompleteTracks) track ──

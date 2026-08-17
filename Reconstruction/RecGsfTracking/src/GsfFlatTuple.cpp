@@ -114,9 +114,26 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("gsf_ndf",   &m_gsf_ndf);
   m_tree->Branch("gsf_nhits", &m_gsf_nhits);
   m_tree->Branch("gsf_type",  &m_gsf_type);
+  // paired ECAL-constrained GSF
+  m_tree->Branch("ecal_gsf_available", &m_ecal_gsf_available);
+  m_tree->Branch("ecal_gsf_changed",   &m_ecal_gsf_changed);
+  m_tree->Branch("ecal_gsf_pT",        &m_ecal_gsf_pT);
+  m_tree->Branch("ecal_gsf_p",         &m_ecal_gsf_p);
+  m_tree->Branch("ecal_gsf_eta",       &m_ecal_gsf_eta);
+  m_tree->Branch("ecal_gsf_theta",     &m_ecal_gsf_theta);
+  m_tree->Branch("ecal_gsf_phi",       &m_ecal_gsf_phi);
+  m_tree->Branch("ecal_gsf_d0",        &m_ecal_gsf_d0);
+  m_tree->Branch("ecal_gsf_z0",        &m_ecal_gsf_z0);
+  m_tree->Branch("ecal_gsf_omega",     &m_ecal_gsf_omega);
+  m_tree->Branch("ecal_gsf_tanl",      &m_ecal_gsf_tanl);
+  m_tree->Branch("ecal_gsf_chi2",      &m_ecal_gsf_chi2);
+  m_tree->Branch("ecal_gsf_ndf",       &m_ecal_gsf_ndf);
+  m_tree->Branch("ecal_gsf_nhits",     &m_ecal_gsf_nhits);
+  m_tree->Branch("ecal_gsf_type",      &m_ecal_gsf_type);
   // resolution
-  m_tree->Branch("res_pT_gsf",  &m_res_pT_gsf);
-  m_tree->Branch("res_pT_lcio", &m_res_pT_lcio);
+  m_tree->Branch("res_pT_gsf",      &m_res_pT_gsf);
+  m_tree->Branch("res_pT_ecal_gsf", &m_res_pT_ecal_gsf);
+  m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
   info() << "Output: " << m_outFileName << endmsg;
   if (!m_hitCollectionNames.value().empty())
@@ -133,6 +150,10 @@ StatusCode RecGsfFlatTuple::execute() {
   const auto* mcCol = m_inMCParticles.get();
   const auto* lcioCol = m_inCompleteTracks.get();
   const auto* gsfCol = m_inGsfTracks.get();
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> ecalGsfWrapper(
+      eventSvc(), "GSFTracksEcalConstrained");
+  const auto* ecalGsfCol = ecalGsfWrapper
+      ? ecalGsfWrapper->getData() : nullptr;
 
   // ── MC truth (first particle = primary) ──
   if (mcCol && mcCol->size() > 0) {
@@ -159,7 +180,7 @@ StatusCode RecGsfFlatTuple::execute() {
   }
 
   // ── helper: fill LCIO / GSF branches from a track ──
-  auto fillTrack = [&](edm4hep::TrackCollection* col,
+  auto fillTrack = [&](const edm4hep::TrackCollection* col,
                        double& pT, double& p, double& eta, double& theta,
                        double& phi, double& d0, double& z0,
                        double& omega, double& tanl,
@@ -208,12 +229,12 @@ StatusCode RecGsfFlatTuple::execute() {
   m_gsf_hit_r.clear(); m_gsf_hit_edep.clear(); m_gsf_hit_cellid.clear();
   m_gsf_hit_n = 0;
 
-  if (lcioCol) {
-    fillTrack(const_cast<edm4hep::TrackCollection*>(lcioCol),
-              m_lcio_pT, m_lcio_p, m_lcio_eta, m_lcio_theta,
-              m_lcio_phi, m_lcio_d0, m_lcio_z0,
-              m_lcio_omega, m_lcio_tanl,
-              m_lcio_chi2, m_lcio_ndf, m_lcio_nhits, m_lcio_type);
+  fillTrack(lcioCol,
+            m_lcio_pT, m_lcio_p, m_lcio_eta, m_lcio_theta,
+            m_lcio_phi, m_lcio_d0, m_lcio_z0,
+            m_lcio_omega, m_lcio_tanl,
+            m_lcio_chi2, m_lcio_ndf, m_lcio_nhits, m_lcio_type);
+  if (lcioCol && lcioCol->size() > 0) {
     // per-hit data from CompleteTracks
     const auto& trk = (*lcioCol)[0];
     for (const auto& th : trk.getTrackerHits()) {
@@ -229,9 +250,14 @@ StatusCode RecGsfFlatTuple::execute() {
     m_lcio_hit_n = (int)m_lcio_hit_x.size();
   }
 
+  fillTrack(nullptr,
+            m_gsf_pT, m_gsf_p, m_gsf_eta, m_gsf_theta,
+            m_gsf_phi, m_gsf_d0, m_gsf_z0,
+            m_gsf_omega, m_gsf_tanl,
+            m_gsf_chi2, m_gsf_ndf, m_gsf_nhits, m_gsf_type);
   if (gsfCol && gsfCol->size() > 0) {
     try {
-      fillTrack(const_cast<edm4hep::TrackCollection*>(gsfCol),
+      fillTrack(gsfCol,
                 m_gsf_pT, m_gsf_p, m_gsf_eta, m_gsf_theta,
                 m_gsf_phi, m_gsf_d0, m_gsf_z0,
                 m_gsf_omega, m_gsf_tanl,
@@ -261,6 +287,50 @@ StatusCode RecGsfFlatTuple::execute() {
     }
   }
 
+  m_ecal_gsf_available = ecalGsfCol && ecalGsfCol->size() > 0 ? 1 : 0;
+  try {
+    fillTrack(ecalGsfCol,
+              m_ecal_gsf_pT, m_ecal_gsf_p,
+              m_ecal_gsf_eta, m_ecal_gsf_theta,
+              m_ecal_gsf_phi, m_ecal_gsf_d0, m_ecal_gsf_z0,
+              m_ecal_gsf_omega, m_ecal_gsf_tanl,
+              m_ecal_gsf_chi2, m_ecal_gsf_ndf,
+              m_ecal_gsf_nhits, m_ecal_gsf_type);
+  } catch (const std::exception& e) {
+    warning() << "Event " << m_iev
+              << ": ECAL-constrained GSF track access failed — " << e.what()
+              << " — writing unavailable constrained fields" << endmsg;
+    m_ecal_gsf_available = 0;
+    fillTrack(nullptr,
+              m_ecal_gsf_pT, m_ecal_gsf_p,
+              m_ecal_gsf_eta, m_ecal_gsf_theta,
+              m_ecal_gsf_phi, m_ecal_gsf_d0, m_ecal_gsf_z0,
+              m_ecal_gsf_omega, m_ecal_gsf_tanl,
+              m_ecal_gsf_chi2, m_ecal_gsf_ndf,
+              m_ecal_gsf_nhits, m_ecal_gsf_type);
+  } catch (...) {
+    warning() << "Event " << m_iev
+              << ": ECAL-constrained GSF track access failed (unknown "
+                 "exception) — writing unavailable constrained fields"
+              << endmsg;
+    m_ecal_gsf_available = 0;
+    fillTrack(nullptr,
+              m_ecal_gsf_pT, m_ecal_gsf_p,
+              m_ecal_gsf_eta, m_ecal_gsf_theta,
+              m_ecal_gsf_phi, m_ecal_gsf_d0, m_ecal_gsf_z0,
+              m_ecal_gsf_omega, m_ecal_gsf_tanl,
+              m_ecal_gsf_chi2, m_ecal_gsf_ndf,
+              m_ecal_gsf_nhits, m_ecal_gsf_type);
+  }
+  m_ecal_gsf_changed = (m_ecal_gsf_available && gsfCol && gsfCol->size() > 0 &&
+      (m_ecal_gsf_omega != m_gsf_omega ||
+       m_ecal_gsf_d0 != m_gsf_d0 ||
+       m_ecal_gsf_z0 != m_gsf_z0 ||
+       m_ecal_gsf_phi != m_gsf_phi ||
+       m_ecal_gsf_tanl != m_gsf_tanl ||
+       m_ecal_gsf_chi2 != m_gsf_chi2 ||
+       m_ecal_gsf_ndf != m_gsf_ndf)) ? 1 : 0;
+
   // ── all hits from original collections ──
   m_all_hit_x.clear(); m_all_hit_y.clear(); m_all_hit_z.clear();
   m_all_hit_r.clear(); m_all_hit_edep.clear(); m_all_hit_cellid.clear();
@@ -287,8 +357,12 @@ StatusCode RecGsfFlatTuple::execute() {
   m_all_hit_n = (int)m_all_hit_x.size();
 
   // ── resolution ──
-  m_res_pT_gsf  = (m_mc_pT > 0) ? (m_gsf_pT  - m_mc_pT) / m_mc_pT : 0;
-  m_res_pT_lcio = (m_mc_pT > 0) ? (m_lcio_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_gsf =
+      (m_mc_pT > 0) ? (m_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_ecal_gsf = (m_mc_pT > 0 && m_ecal_gsf_available)
+      ? (m_ecal_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_lcio =
+      (m_mc_pT > 0) ? (m_lcio_pT - m_mc_pT) / m_mc_pT : 0;
 
   m_tree->Fill();
   return StatusCode::SUCCESS;
