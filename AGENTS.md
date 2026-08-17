@@ -183,16 +183,25 @@ Current boundary evidence:
   branch. All four changes improved the truth residual; three ended within
   0.3%, while one moved from +185.4% to -13.1%. This selected cohort is branch-
   mechanism evidence, not clean-track safety or population validation.
-- A first broad inclusive screen contains 40,091 valid paired electron events
-  from 401 usable 100-event tuples. ECAL changed 201 selections (0.501%): 149
-  reduced absolute truth error and 52 increased it. Within the changed subset,
-  width68 fell from 104.6% to 15.7%, and the count beyond 10% fell from 146 to
-  87; globally, GSF width68 stayed essentially unchanged at 0.879%.
-- Clean-track safety is not established. Of 37 changed events whose ordinary
-  GSF residual was within 1%, only six improved; 31 worsened, 22 moved outside
-  1%, and two moved outside 3%, although none crossed 10%. The largest ordinary
-  GSF overshoot, +42,661%, was unchanged, showing that the surviving-component
-  limitation remains.
+- The broad paired screen now has independent Geant4 and SimHit labels. Of
+  40,091 valid events, 35,681 are topology-clear and 4,410 form the secondary-
+  tracker-activity control. The clear sample contains 14,924 no-eBrem, 16,638
+  light-eBrem, and 4,119 hard-eBrem events under outgoing surface ownership.
+- In the topology-clear sample, ECAL changed 150 branches: 15/12 improved/
+  worsened in no-eBrem, 32/20 in light-eBrem, and 59/12 in hard-eBrem. It
+  reduces greater-than-100% tail counts from 17 to 7, 17 to 4, and 76 to 59,
+  respectively, but leaves the central width essentially unchanged.
+- Clean-track safety is not established. ECAL changed 35 topology-clear events
+  whose ordinary GSF residual was within 1%; only five improved and 30
+  worsened. Twenty-two moved outside 1%, two outside 3%, and none outside 10%.
+  The largest ordinary GSF overshoot, +42,661%, was unchanged, so surviving-
+  component support remains a hard limitation.
+- Transition and physical-region results preserve the earlier information
+  boundary: hard losses at transitions 0--4 remain poorly recovered, 5--8 are
+  mixed, and >=12 is much easier. For hard events, ordinary GSF median/width68
+  are -16.5%/24.5% for VXD-owned loss, -2.12%/29.2% for ITK, and
+  -0.0745%/1.60% for TPC. ECAL acts most usefully on hard transitions 3--6,
+  improving 45 of 55 changes there.
 - With the 0.05 likelihood floor, ECAL supplies at most a factor-20 relative
   boost. A competing branch below about 5% of the baseline tracker score can
   never win. The four successful candidates had tracker-score ratios 0.989,
@@ -203,10 +212,12 @@ Current boundary evidence:
   threshold 1.05: its truth-like component had a tracker score about 1265 times
   smaller while both momenta were consistent with reconstructed energy. A
   threshold alone cannot restore missing or negligible posterior support.
-- The broad screen is inclusive and lacks matching Geant4 loss categories and
-  secondary-topology labels for the new 100-event files. The straight outer-
-  tangent cluster projection, 0.10-rad phi/theta windows, energy-resolution
-  width, likelihood floor, and activation threshold remain unvalidated.
+- Category/transition labels were derived directly from the matching 100-event
+  SimHit and material-step files and mechanically cross-checked against the
+  established ROOT formulas and outgoing-owned transition builder. This is
+  still a studied sample, not independent held-out validation. The cluster
+  projection, 0.10-rad windows, energy width, floor, and threshold remain
+  unvalidated.
 - Previous reverse seed, innovation, measurement-ownership, KL, capacity,
   publication-mode, and BH-dimension conclusions remain unchanged; ECAL does
   not justify resuming tracker-internal heuristic tuning.
@@ -216,16 +227,15 @@ Proceed in this order:
 1. Keep the frozen tracker-only baseline unchanged and stop internal selection,
    covariance-scale, and component-capacity tuning unless new evidence exposes
    a specific defect.
-2. Keep the ECAL experiment default-off and paired. Diagnose the 52 worsened
-   changes, especially the 31 changes starting inside the ordinary GSF 1% core,
-   and the unrepaired extreme tails before tuning any property.
-3. Build Geant4 loss and secondary-topology labels for the new broad sample,
-   then run categorized same-code A/B on no-eBrem, light, hard, transition-0--4,
-   and overshoot cohorts. Audit ECAL matching and energy closure across energy
-   and angle, reporting corrected branches and false changes separately.
-4. Regenerate or replace the deleted canonical hard-event input before claiming
-   the required events 11/16/17 validation. Then repeat focused verbose checks
-   and require a new independent light-tail dataset before promotion.
+2. Keep the ECAL experiment default-off and paired. Diagnose the 44 worsened
+   topology-clear changes, especially the 30 changes starting inside the
+   ordinary GSF 1% core, and the unrepaired extreme tails before tuning.
+3. Audit ECAL matching and energy closure for false changes versus successful
+   hard transition-3--6 changes across energy, angle, and detector region.
+   Preserve no-eBrem, light, hard, and secondary-control reporting separately.
+4. Freeze any proposed selector revision before testing it on a new independent
+   broad sample. Repeat focused verbose checks and the required hard events
+   after regenerating their deleted canonical input.
 5. Treat a measurement-disjoint two-filter GSF only as a separate default-off
    formal research control. The seed-memory result does not predict that it
    will repair the clean tails.
@@ -262,6 +272,11 @@ The first 40,091-event broad paired population screen, input audit, global and
 changed-subset metrics, clean-core safety failure, and plot inventory are
 preserved in
 `agents_record/2026-08-17-broad-ecal-component-constraint-population-screen.md`.
+
+The topology-clear/secondary split, authoritative no/light/hard categories,
+dominant transition and physical-region results, clean-safety audit, and plot
+inventory are preserved in
+`agents_record/2026-08-17-topology-clear-ecal-category-transition-screen.md`.
 
 The completed reverse seed, innovation coverage, physical-region, and
 measurement-ownership audit is preserved in
