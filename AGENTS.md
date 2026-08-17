@@ -183,6 +183,16 @@ Current boundary evidence:
   branch. All four changes improved the truth residual; three ended within
   0.3%, while one moved from +185.4% to -13.1%. This selected cohort is branch-
   mechanism evidence, not clean-track safety or population validation.
+- A first broad inclusive screen contains 40,091 valid paired electron events
+  from 401 usable 100-event tuples. ECAL changed 201 selections (0.501%): 149
+  reduced absolute truth error and 52 increased it. Within the changed subset,
+  width68 fell from 104.6% to 15.7%, and the count beyond 10% fell from 146 to
+  87; globally, GSF width68 stayed essentially unchanged at 0.879%.
+- Clean-track safety is not established. Of 37 changed events whose ordinary
+  GSF residual was within 1%, only six improved; 31 worsened, 22 moved outside
+  1%, and two moved outside 3%, although none crossed 10%. The largest ordinary
+  GSF overshoot, +42,661%, was unchanged, showing that the surviving-component
+  limitation remains.
 - With the 0.05 likelihood floor, ECAL supplies at most a factor-20 relative
   boost. A competing branch below about 5% of the baseline tracker score can
   never win. The four successful candidates had tracker-score ratios 0.989,
@@ -193,9 +203,10 @@ Current boundary evidence:
   threshold 1.05: its truth-like component had a tracker score about 1265 times
   smaller while both momenta were consistent with reconstructed energy. A
   threshold alone cannot restore missing or negligible posterior support.
-- The current evidence is selected and small. The straight outer-tangent
-  cluster projection, 0.10-rad phi/theta windows, energy-resolution width,
-  likelihood floor, and activation threshold are not validated.
+- The broad screen is inclusive and lacks matching Geant4 loss categories and
+  secondary-topology labels for the new 100-event files. The straight outer-
+  tangent cluster projection, 0.10-rad phi/theta windows, energy-resolution
+  width, likelihood floor, and activation threshold remain unvalidated.
 - Previous reverse seed, innovation, measurement-ownership, KL, capacity,
   publication-mode, and BH-dimension conclusions remain unchanged; ECAL does
   not justify resuming tracker-internal heuristic tuning.
@@ -205,12 +216,13 @@ Proceed in this order:
 1. Keep the frozen tracker-only baseline unchanged and stop internal selection,
    covariance-scale, and component-capacity tuning unless new evidence exposes
    a specific defect.
-2. Keep the ECAL experiment default-off and paired. Run same-code A/B on
-   independently selected no-eBrem, light, hard, transition-0--4, and
-   overshoot cohorts; report secondary-topology events separately.
-3. Audit ECAL matching and energy closure across energy and angle before tuning
-   the threshold, windows, resolution width, or likelihood floor. Measure both
-   corrected branches and false branch changes.
+2. Keep the ECAL experiment default-off and paired. Diagnose the 52 worsened
+   changes, especially the 31 changes starting inside the ordinary GSF 1% core,
+   and the unrepaired extreme tails before tuning any property.
+3. Build Geant4 loss and secondary-topology labels for the new broad sample,
+   then run categorized same-code A/B on no-eBrem, light, hard, transition-0--4,
+   and overshoot cohorts. Audit ECAL matching and energy closure across energy
+   and angle, reporting corrected branches and false changes separately.
 4. Regenerate or replace the deleted canonical hard-event input before claiming
    the required events 11/16/17 validation. Then repeat focused verbose checks
    and require a new independent light-tail dataset before promotion.
@@ -245,6 +257,11 @@ The expanded 20-event overshoot table, combined 26-event counts, exact branch-
 choice inequality, successful and failed competitor evidence, and outgoing
 validation gate are preserved in
 `agents_record/2026-08-17-expanded-overshoot-branch-choice-diagnosis.md`.
+
+The first 40,091-event broad paired population screen, input audit, global and
+changed-subset metrics, clean-core safety failure, and plot inventory are
+preserved in
+`agents_record/2026-08-17-broad-ecal-component-constraint-population-screen.md`.
 
 The completed reverse seed, innovation coverage, physical-region, and
 measurement-ownership audit is preserved in
