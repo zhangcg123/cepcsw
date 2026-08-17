@@ -3,6 +3,7 @@
 
 #include "GaudiKernel/Algorithm.h"
 #include "k4FWCore/DataHandle.h"
+#include "edm4hep/ClusterCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
@@ -65,6 +66,10 @@ private:
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>       m_outputTracks{
       "GSFTracks", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection>       m_ecalConstrainedOutputTracks{
+      "GSFTracksEcalConstrained", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::ClusterCollection>     m_ecalClusters{
+      "EcalCluster", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection>  m_mcParticles{
       "MCParticle", Gaudi::DataHandle::Reader, this};
 
@@ -114,6 +119,28 @@ private:
       this, "ReverseKappaSeedCov", 100.0,
       "Multiplicative covariance scaling for every full-mixture reverse seed "
       "component (legacy property name)"};
+  Gaudi::Property<bool> m_ecalComponentConstraint{
+      this, "EcalComponentConstraint", false,
+      "Default-off two-sided ECAL likelihood constraint on final reverse "
+      "BestBranch selection; the unconstrained GSFTracks output is preserved"};
+  Gaudi::Property<double> m_ecalConstraintRatioThreshold{
+      this, "EcalConstraintRatioThreshold", 1.1,
+      "Activate the ECAL branch constraint when max(p/E,E/p) exceeds this "
+      "ratio"};
+  Gaudi::Property<double> m_ecalConstraintLogPSigma{
+      this, "EcalConstraintLogPSigma", 0.15,
+      "Width of the Gaussian component likelihood in log(p/E)"};
+  Gaudi::Property<double> m_ecalConstraintLikelihoodFloor{
+      this, "EcalConstraintLikelihoodFloor", 0.05,
+      "Lower bound on the ECAL component likelihood, limiting its Bayes factor"};
+  Gaudi::Property<double> m_ecalConstraintPhiWindow{
+      this, "EcalConstraintPhiWindow", 0.10,
+      "Absolute azimuth window around the extrapolated outer GSF direction "
+      "used to sum EcalCluster energy"};
+  Gaudi::Property<double> m_ecalConstraintThetaWindow{
+      this, "EcalConstraintThetaWindow", 0.10,
+      "Absolute polar-angle window around the extrapolated outer GSF "
+      "direction used to sum EcalCluster energy"};
   Gaudi::Property<bool>   m_gaussianSumSmoothing{this,"GaussianSumSmoothing",false};
   Gaudi::Property<bool>   m_verboseDump{this,"VerboseDump",false};
   Gaudi::Property<bool>   m_verboseSplitDump{this,"VerboseSplitDump",false};

@@ -19,13 +19,15 @@ from Gaudi.Configuration import *
 
 evtmax = 12340
 inputseed = 12340
+particle = 12340
+inputfilename = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/tuples285/trk_v01.root"
 
 # Explicit workflow selection. Change this source line to "smoother",
 # "reverse", or "cms-like"; no environment-variable override is used.
 method = "reverse"
 
 from Configurables import k4DataSvc
-dsvc = k4DataSvc("EventDataSvc", input="/aifs/user/data/zhangcg/gsfdev/CEPCSW/tuples285/trk_v01.root")
+dsvc = k4DataSvc("EventDataSvc", input=inputfilename)
 
 geometry_option = "TDR_o1_v01/TDR_o1_v01-onlyTracker.xml"
 geometry_path = os.path.join(os.getenv("DETCRDROOT"), "compact", geometry_option)
@@ -49,6 +51,7 @@ podioinput = PodioInput("PodioReader", collections=[
     "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
     "TPCTrackerHitAss",
     "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",
+    "EcalCluster",
     "CompleteTracks",
 ])
 
@@ -80,6 +83,22 @@ gsf.ReverseFiltering = False
 gsf.CmsGsfSmoothing = False
 gsf.CmsErrorRescaling = 100.0
 gsf.MaterialIPExtrapolation = False
+gsf.GSFOutputMode = "BestBranch"
+gsf.ReverseOutputMode = "BestBranch"
+gsf.ReverseSelectionMode = "AggregateWeight"
+gsf.SurfaceConsistencyUninformativeFloor = 0.05
+gsf.ReverseInitialWeightMode = "ForwardPosterior"
+gsf.ReverseKappaSeedCov = 100.0
+
+# Default-off research constraint.  When enabled for the reverse BestBranch
+# workflow, GSFTracks stays tracker-only and GSFTracksEcalConstrained carries
+# the paired component-selection result.  The input must contain EcalCluster.
+gsf.EcalComponentConstraint = False
+gsf.EcalConstraintRatioThreshold = 1.1
+gsf.EcalConstraintLogPSigma = 0.15
+gsf.EcalConstraintLikelihoodFloor = 0.05
+gsf.EcalConstraintPhiWindow = 0.10
+gsf.EcalConstraintThetaWindow = 0.10
 
 if method == "smoother":
     # KL reduction-aware retained-graph Gaussian-sum smoother. Its common-IP
@@ -91,12 +110,6 @@ elif method == "reverse":
     # Independent inward multi-component refit, seeded by the full final
     # forward posterior. Publish the highest aggregate-weight reverse branch.
     gsf.ReverseFiltering = True
-    gsf.ReverseOutputMode = "BestBranch"
-    gsf.ReverseSelectionMode = "AggregateWeight"
-    gsf.SurfaceConsistencyUninformativeFloor = 0.05
-    gsf.ReverseInitialWeightMode = "ForwardPosterior"
-    gsf.ReverseKappaSeedCov = 100.0
-    gsf.GSFOutputMode = "BestBranch"
 
 elif method in ("cms-like", "cms", "cms_like"):
     # CMSSW-like workflow: seed from the final forward prediction, inflate the
@@ -130,7 +143,7 @@ gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
-flat.OutputFile = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_flat_{}_{}.root".format(method, inputseed)
+flat.OutputFile = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_flat_{}_{}_{}.root".format(particle, method, inputseed)
 flat.BField = 3.0
 flat.HitCollectionNames = [
     "VXDTrackerHits",
@@ -143,7 +156,7 @@ flat.HitCollectionNames = [
 
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_{}_{}.root".format(method, inputseed)
+out.filename = "/aifs/user/data/zhangcg/gsfdev/CEPCSW/gsf_{}_{}_{}.root".format(particle, method, inputseed)
 out.outputCommands = ["keep *"]
 
 from Configurables import ApplicationMgr, MarlinEvtSeeder

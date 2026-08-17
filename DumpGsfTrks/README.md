@@ -126,17 +126,16 @@ G4MaterialStepComparison/scripts/analyze_g4step_tuple.py \
   --outdir /tmp/g4step-analysis-e2pt-theta85-seed1
 ```
 
-## Review of the historical production templates
+## Review of the production templates
 
-Review date: 2026-07-23.
+Review date: 2026-08-17.
 
 ### `sim.py.bk`
 
-The recorder is correctly attached to `DetSimAlg.AnaElems`, uses the full TDR
-geometry, writes the EDM simulation file and the independent material-step
-ROOT file, and records primary electron steps with no loss/length threshold.
-
-However, the particle gun currently contains:
+The recorder is attached to `DetSimAlg.AnaElems`, uses the full TDR geometry,
+writes the EDM simulation file and the independent material-step ROOT file,
+and records primary electron or muon steps with no loss/length threshold. The
+particle gun intentionally generates a broad sample:
 
 ```python
 gun.EnergyMins = [10]
@@ -145,50 +144,66 @@ gun.ThetaMins = [40]
 gun.ThetaMaxs = [140]
 ```
 
-The template variables `momenta_low` and `theta_low` are not used by these
-assignments. Consequently, the substitutions performed by `dump_gsftrk.sh`
-do not configure the requested monoenergetic momentum or angle. A nominal
-2 GeV, 85-degree job generated from this template would actually use uniform
-10--50 GeV and 40--140 degree gun ranges.
-
-The template also fixes `PDGs=[11,-11]`. A muon job will therefore produce an
-empty material-step tuple even if the gun particle is changed to `mu-`.
+These hardcoded ranges are intentional and are not replaced by
+`dump_gsftrk.sh`. Its legacy momentum-magnitude argument is unused, while the
+transverse-momentum and theta arguments remain filename labels only. The
+recorder PDG list is `[11, -11, 13, -13]`.
 
 ### `dump_gsftrk.sh`
 
-The script generates simulation, tracking, and GSF cards, but execution of
-the first two stages is commented out:
+The worker requires exactly six legacy-compatible arguments. In its current
+prepared-input mode, simulation, tracking, and GSF execution are commented;
+it runs the two calorimeter stages and stops after the first failed command:
 
 ```bash
-#./run.sh ...runsim...
-#./run.sh ...runtrk...
-./run.sh ...rungsf...
+tuples285/trk-<sample>.root
+  -> calorimeter digitization -> calorimeter reconstruction
 ```
 
-It therefore does not currently generate new events or material-step tuples;
-it only attempts the GSF refit using a pre-existing `trk-*.root` input.
+The tracker input defaults to the absolute path
+`$WORKDIR/tuples285/trk-<sample>.root`; `CEPCSW_TRK_INPUT_DIR` can override its
+directory. A missing or empty prepared tracker file is a hard error. The
+calorimeter-digitization output and subsequent reconstruction input are the
+same absolute `$WORKDIR/calodigi-<sample>.root` path, and the reconstruction
+output is `$WORKDIR/rec-<sample>.root`. The generated GSF card points to that
+absolute reconstruction output, although its execution is currently disabled.
 
-The script performs unvalidated textual substitutions and does not stop on
-errors (`set -euo pipefail` is absent), check input/output existence, prevent
-overwrites, validate the generated Python, or record a manifest. Generated
-cards are artifacts and should not be treated as source configuration.
+The four non-GSF cards retain the official TDR-o1-v01 `PodioInput`, algorithm,
+service, and `keep *` configuration; their workflow differences are limited to
+batch steering, plus the intentional GSF material-step recorder in the
+simulation card. Numerical-library thread counts default to one because an
+unconstrained OpenBLAS initialization exhausted the account's
+`RLIMIT_NPROC=300` during the 2026-08-17 smoke test; set `CEPCSW_JOB_THREADS`
+explicitly to override this. The script still uses exact textual substitutions
+and does not prevent output overwrites, validate ROOT collection/event
+integrity, or record a manifest. Generated cards remain artifacts rather than
+source configuration.
 
-### `gsf.py.bk` and the stale GSF-template reference
+### `gsf.py.bk`
 
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. Its main reverse-filter settings agree with the
 active baseline, including `ComponentWeightCutoff=1e-4`. It is an exact
 active-baseline card for the GSF algorithm properties when `method="reverse"`.
 
-The authoritative explanation of all 34 `RecGsfTracking` properties, their
+The authoritative explanation of all 40 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, `gsf.py.bk` explicitly configures all 34
+For this historical workflow, `gsf.py.bk` explicitly configures all 40
 properties, silently inherits none, and agrees with the active reverse
 template. Use the package README for the complete configuration reference and
 the reverse template for current runs.
+
+The card also reads `EcalCluster` from the reconstructed-event input and
+explicitly keeps the new ECAL component constraint off. When enabled, its
+cluster-energy observation accepts only clusters inside both the configured
+phi and theta windows around the extrapolated outer GSF direction. For the
+reverse `BestBranch` workflow, `GSFTracks` remains the tracker-only baseline
+and the paired result is written as
+`GSFTracksEcalConstrained`; the card's `keep *` output rule retains both. This
+is an experimental comparison path, not a change to the active baseline.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this historical workflow. When the package adds, removes,
@@ -199,37 +214,32 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-Its output names contain only `method` and `seed`, not particle, momentum, or
-angle. Reusing a seed at another production point can overwrite or mix
-outputs. The card is also configured by editing source rather than through a
-validated parameter interface.
-
-`dump_gsftrk.sh` still tries to copy `gsf_reverse_new.py.bk`, which is no
-longer present. The GSF stage therefore fails before launch in the current
-directory state.
+The maintained template defaults to `method="reverse"`. Its input path is a
+top-level `inputfilename` steering variable, which the worker replaces with
+the preceding `rec-<sample>.root` path. Its output names contain particle,
+method, and seed, but not momentum or angle; reusing the same particle and
+seed at another production point can still overwrite outputs.
 
 ### `subtrkjobs.sh`
 
-The current submission loop requests 500 electron seeds, 10 events each, at
-nominal `pT=2 GeV`, `theta=85 deg`. Because of the hard-coded gun ranges and
-disabled simulation/tracking commands described above, submitting it now
-would not create that intended sample.
+The current submission loop requests 100 electron seeds with 100 events each
+and now consumes the matching prepared `pT=2 GeV`, `theta=85 deg` tracker file
+from `tuples285`. Three sampled prepared files (seeds 1, 100, and 334) each had
+100 events and every simulated calorimeter collection required by the official
+digitization card. The earlier full-chain workflow passed a separate 10-event
+smoke test with electron seed 910817 on 2026-08-17; that test remains evidence
+for the cards, not a statement that the currently commented stages execute.
 
 ## Production readiness
 
-Do not submit `subtrkjobs.sh` or run `dump_gsftrk.sh` unchanged. Before a new
-campaign, the runner should be revised to:
+Before a new campaign, address the remaining production safeguards:
 
-1. pass explicit particle, momentum magnitude, theta, seed, event count, and
-   output directory to environment-configurable cards;
-2. enable simulation and tracking deliberately, followed by the current
-   reverse-GSF template;
-3. use unique, common sample identities for simulation, material-step,
+1. use unique, common sample identities for simulation, material-step,
    tracking, GSF EDM, flat tuple, and logs;
-4. fail on missing/stale inputs, existing outputs, nonzero stage status, or
-   tuple-integrity failures;
-5. record a manifest containing the exact commands and effective settings;
-6. smoke-test one seed and audit exact event pairing before batch submission.
+2. fail on missing/stale inputs, existing outputs, or tuple-integrity errors;
+3. verify exact collection and event pairing between every stage;
+4. record a manifest containing the exact commands and effective settings;
+5. audit the one-seed outputs before scaling up.
 
 The old tuples and stored study results document previous experiments but do
 not prove that the present templates reproduce those samples. Final physics

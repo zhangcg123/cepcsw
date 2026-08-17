@@ -1360,6 +1360,50 @@ StatusCode RecGsfTracking::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_ecalComponentConstraint.value()) {
+    if (!m_reverseFiltering.value() || m_cmsGsfSmoothing.value() ||
+        reverseOutputMode != "bestbranch") {
+      error() << "EcalComponentConstraint currently requires "
+                 "ReverseFiltering=True, CmsGsfSmoothing=False, and "
+                 "ReverseOutputMode=BestBranch"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!(m_ecalConstraintRatioThreshold.value() > 1.0) ||
+        !std::isfinite(m_ecalConstraintRatioThreshold.value())) {
+      error() << "EcalConstraintRatioThreshold must be finite and greater "
+                 "than 1"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!(m_ecalConstraintLogPSigma.value() > 0.0) ||
+        !std::isfinite(m_ecalConstraintLogPSigma.value())) {
+      error() << "EcalConstraintLogPSigma must be finite and positive"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!(m_ecalConstraintLikelihoodFloor.value() > 0.0) ||
+        m_ecalConstraintLikelihoodFloor.value() > 1.0 ||
+        !std::isfinite(m_ecalConstraintLikelihoodFloor.value())) {
+      error() << "EcalConstraintLikelihoodFloor must be finite and in (0, 1]"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!(m_ecalConstraintPhiWindow.value() > 0.0) ||
+        m_ecalConstraintPhiWindow.value() > M_PI ||
+        !std::isfinite(m_ecalConstraintPhiWindow.value())) {
+      error() << "EcalConstraintPhiWindow must be finite and in (0, pi]"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!(m_ecalConstraintThetaWindow.value() > 0.0) ||
+        m_ecalConstraintThetaWindow.value() > M_PI ||
+        !std::isfinite(m_ecalConstraintThetaWindow.value())) {
+      error() << "EcalConstraintThetaWindow must be finite and in (0, pi]"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+  }
 
   m_geosvc = service<IGeomSvc>("GeomSvc");
   m_materialManager = new dd4hep::rec::MaterialManager(
@@ -1446,7 +1490,9 @@ StatusCode RecGsfTracking::initialize() {
          << " outputMode=" << m_outputMode.value()
          << " verbose=" << m_verboseDump.value() << "/"
          << m_verboseSplitDump.value() << "/"
-         << m_componentDebugDump.value() << endmsg;
+         << m_componentDebugDump.value()
+         << " ecalConstraint=" << m_ecalComponentConstraint.value()
+         << endmsg;
 
   if (!m_materialTransitionCSV.value().empty()) {
     m_materialTransitionStream.open(m_materialTransitionCSV.value());
@@ -1482,6 +1528,8 @@ StatusCode RecGsfTracking::execute() {
                                 m_selectedEventIndices.value().end(),
                                 eventIndex) == m_selectedEventIndices.value().end()) {
     m_outputTracks.createAndPut();
+    if (m_ecalComponentConstraint.value())
+      m_ecalConstrainedOutputTracks.createAndPut();
     return StatusCode::SUCCESS;
   }
 
@@ -1495,6 +1543,9 @@ StatusCode RecGsfTracking::execute() {
   if (!in) return StatusCode::SUCCESS;
 
   auto* out = m_outputTracks.createAndPut();
+  edm4hep::TrackCollection* ecalOut = nullptr;
+  if (m_ecalComponentConstraint.value())
+    ecalOut = m_ecalConstrainedOutputTracks.createAndPut();
   int nFit = 0;
   double bz = m_field;
   std::string materialPathMode = m_materialPathMode.value();
@@ -2252,6 +2303,15 @@ StatusCode RecGsfTracking::execute() {
     double reverseOutputWeight = 0.0;
     int reverseOutputComps = 0;
     std::string reverseOutputLabel = "ReverseMixture";
+    bool ecalConstrainedIpAvailable = false;
+    bool ecalConstraintActivated = false;
+    THelicalTrack ecalConstrainedIp(
+        TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD ecalConstrainedIpCov(5, 5);
+    double ecalConstrainedChi2 = 0.0;
+    int ecalConstrainedNdf = 0;
+    double ecalConstrainedEnergy = 0.0;
+    int ecalConstrainedClusterCount = 0;
 
     // Experimental reverse GSF pass.  Initialize from the filtered mixture on
     // the final measurement surface, then revisit preceding measurements in
@@ -2799,6 +2859,183 @@ StatusCode RecGsfTracking::execute() {
           reverseOutputWeight = reverseBest->weight;
           reverseOutputComps = (int)reverseComps.size();
           reverseIpAvailable = true;
+
+          // Preserve the tracker-only result above.  The default-off ECAL
+          // experiment produces a separate paired output and changes only
+          // the final component posterior score, never a component state or
+          // covariance.  The ECAL observation is built without LCIO/PFO
+          // momentum: sum clusters around the extrapolated outer forward-GSF
+          // direction, then use a symmetric log(p/E) likelihood.
+          if (m_ecalComponentConstraint.value()) {
+            ecalConstrainedIp = reverseOutputIp;
+            ecalConstrainedIpCov = reverseOutputIpCov;
+            ecalConstrainedChi2 = reverseOutputChi2;
+            ecalConstrainedNdf = reverseOutputNdf;
+            ecalConstrainedIpAvailable = true;
+
+            const GsfComponent* outerReference = nullptr;
+            for (const auto* component : comps) {
+              if (!component || !component->kaltrack ||
+                  component->kaltrack->GetEntriesFast() <= 1)
+                continue;
+              if (!outerReference || component->weight > outerReference->weight)
+                outerReference = component;
+            }
+
+            bool ecalObservationValid = false;
+            double outerReferencePhi = 0.0;
+            if (outerReference && m_ecalClusters.isValid()) {
+              const auto outerState = trackStateFromComponent(
+                  *outerReference, bz, DH::AtOther);
+              const double x0 = outerState.referencePoint.x;
+              const double y0 = outerState.referencePoint.y;
+              const double r0sq = x0 * x0 + y0 * y0;
+              const double ux = std::cos(outerState.phi);
+              const double uy = std::sin(outerState.phi);
+              const double rdotu = x0 * ux + y0 * uy;
+              const auto* clusters = m_ecalClusters.get();
+              if (clusters && r0sq > 0.0) {
+                for (const auto& cluster : *clusters) {
+                  const auto& position = cluster.getPosition();
+                  const double clusterRadius =
+                      std::hypot(position.x, position.y);
+                  const double discriminant = rdotu * rdotu +
+                      clusterRadius * clusterRadius - r0sq;
+                  if (!(clusterRadius > std::sqrt(r0sq)) ||
+                      discriminant < 0.0)
+                    continue;
+                  const double flight = -rdotu + std::sqrt(discriminant);
+                  if (!(flight >= 0.0)) continue;
+                  const double predictedX = x0 + flight * ux;
+                  const double predictedY = y0 + flight * uy;
+                  const double predictedZ =
+                      outerState.referencePoint.z +
+                      flight * outerState.tanLambda;
+                  const double predictedPhi =
+                      std::atan2(predictedY, predictedX);
+                  const double predictedTheta = std::atan2(
+                      std::hypot(predictedX, predictedY), predictedZ);
+                  const double clusterPhi =
+                      std::atan2(position.y, position.x);
+                  const double clusterTheta =
+                      std::atan2(clusterRadius, position.z);
+                  const double deltaPhi = std::abs(
+                      normalizePhi(clusterPhi - predictedPhi));
+                  const double deltaTheta =
+                      std::abs(clusterTheta - predictedTheta);
+                  if (deltaPhi > m_ecalConstraintPhiWindow.value() ||
+                      deltaTheta > m_ecalConstraintThetaWindow.value())
+                    continue;
+                  const double energy = cluster.getEnergy();
+                  if (!std::isfinite(energy) || !(energy > 0.0)) continue;
+                  ecalConstrainedEnergy += energy;
+                  ++ecalConstrainedClusterCount;
+                  outerReferencePhi = predictedPhi;
+                }
+                ecalObservationValid = ecalConstrainedClusterCount > 0 &&
+                    std::isfinite(ecalConstrainedEnergy) &&
+                    ecalConstrainedEnergy > 0.0;
+              }
+            }
+
+            const double baselinePt = reverseIp.GetKappa() != 0.0
+                ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
+            const double baselineP = baselinePt *
+                std::sqrt(1.0 + reverseIp.GetTanLambda() *
+                                    reverseIp.GetTanLambda());
+            const double baselineRatio = ecalObservationValid && baselineP > 0.0
+                ? std::max(baselineP / ecalConstrainedEnergy,
+                           ecalConstrainedEnergy / baselineP)
+                : 0.0;
+            ecalConstraintActivated = ecalObservationValid &&
+                baselineRatio > m_ecalConstraintRatioThreshold.value();
+
+            if (ecalConstraintActivated) {
+              GsfComponent* ecalBest = reverseBest;
+              double ecalBestScore = -1.0;
+              double ecalBestLikelihood = 1.0;
+              THelicalTrack ecalBestIp(
+                  TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+              TMatrixD ecalBestCov(5, 5);
+              bool ecalBestIpValid = false;
+              for (auto* component : reverseComps) {
+                THelicalTrack componentIp(
+                    TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+                TMatrixD componentCov(5, 5);
+                if (!extrapolateContinuationToIP(
+                        *component, bz, componentIp, componentCov))
+                  continue;
+                const double componentPt = componentIp.GetKappa() != 0.0
+                    ? 1.0 / std::abs(componentIp.GetKappa()) : 0.0;
+                const double componentP = componentPt *
+                    std::sqrt(1.0 + componentIp.GetTanLambda() *
+                                        componentIp.GetTanLambda());
+                if (!(componentP > 0.0) || !std::isfinite(componentP))
+                  continue;
+                const double logResidual =
+                    std::log(componentP / ecalConstrainedEnergy);
+                const double pull =
+                    logResidual / m_ecalConstraintLogPSigma.value();
+                const double likelihood =
+                    m_ecalConstraintLikelihoodFloor.value() +
+                    (1.0 - m_ecalConstraintLikelihoodFloor.value()) *
+                        std::exp(-0.5 * pull * pull);
+                const double score =
+                    reverseSelectionScore(component) * likelihood;
+                if (m_verboseDump && m_componentDebugDump) {
+                  info() << boost::format(
+                      "  ECAL COMPONENT id=%d p=%.9g trackerScore=%.9g "
+                      "logPoverE=%.9g likelihood=%.9g constrainedScore=%.9g")
+                            % component->debugId % componentP
+                            % reverseSelectionScore(component) % logResidual
+                            % likelihood % score
+                         << endmsg;
+                }
+                if (score > ecalBestScore) {
+                  ecalBest = component;
+                  ecalBestScore = score;
+                  ecalBestLikelihood = likelihood;
+                  ecalBestIp = componentIp;
+                  ecalBestCov = componentCov;
+                  ecalBestIpValid = true;
+                }
+              }
+              if (ecalBestIpValid) {
+                ecalConstrainedIp = ecalBestIp;
+                ecalConstrainedIpCov = ecalBestCov;
+                ecalConstrainedChi2 = componentFitChi2(*ecalBest);
+                ecalConstrainedNdf = ecalBest->kaltrack
+                    ? ecalBest->kaltrack->GetNDF() : 0;
+                if (m_verboseDump) {
+                  const double constrainedPt =
+                      ecalConstrainedIp.GetKappa() != 0.0
+                          ? 1.0 / std::abs(ecalConstrainedIp.GetKappa()) : 0.0;
+                  info() << boost::format(
+                      "  ECAL CONSTRAINT selected baselineId=%d selectedId=%d "
+                      "energy=%.9g clusters=%d pOverE=%.9g threshold=%.9g "
+                      "likelihood=%.9g constrainedScore=%.9g pT=%.9g")
+                            % reverseBest->debugId % ecalBest->debugId
+                            % ecalConstrainedEnergy
+                            % ecalConstrainedClusterCount
+                            % (baselineP / ecalConstrainedEnergy)
+                            % m_ecalConstraintRatioThreshold.value()
+                            % ecalBestLikelihood % ecalBestScore
+                            % constrainedPt
+                         << endmsg;
+                }
+              }
+            } else if (m_verboseDump) {
+              info() << boost::format(
+                  "  ECAL CONSTRAINT inactive observationValid=%d energy=%.9g "
+                  "clusters=%d outerPhi=%.9g maxRatio=%.9g threshold=%.9g")
+                        % (ecalObservationValid ? 1 : 0)
+                        % ecalConstrainedEnergy
+                        % ecalConstrainedClusterCount % outerReferencePhi
+                        % baselineRatio
+                        % m_ecalConstraintRatioThreshold.value()
+                     << endmsg;
+            }
+          }
         }
       }
       for (auto* reverseComp : reverseComps) delete reverseComp;
@@ -2939,6 +3176,28 @@ StatusCode RecGsfTracking::execute() {
       ot.addToTrackStates(ts);
 
       for (const auto& h : assocHits) ot.addToTrackerHits(h);
+
+      // Paired experimental output.  When the ECAL gate is inactive or the
+      // observation is unavailable this is an exact parameter/covariance copy
+      // of the unconstrained result, making preservation directly testable.
+      if (ecalOut) {
+        auto ecalTrack = ecalOut->create();
+        ecalTrack.setType(2);
+        ecalTrack.setChi2(ecalConstrainedIpAvailable
+                              ? ecalConstrainedChi2 : outputChi2);
+        ecalTrack.setNdf(ecalConstrainedIpAvailable
+                             ? ecalConstrainedNdf : outputNdf);
+        edm4hep::TrackState ecalState;
+        ecalState.location = DH::AtIP;
+        if (ecalConstrainedIpAvailable) {
+          fillTrackState(ecalState, ecalConstrainedIp,
+                         ecalConstrainedIpCov, bz);
+        } else {
+          ecalState = ts;
+        }
+        ecalTrack.addToTrackStates(ecalState);
+        for (const auto& h : assocHits) ecalTrack.addToTrackerHits(h);
+      }
 
       // ── MC truth ──
       double t_pT = 0, t_eta = 0, t_phi = 0, t_p = 0;

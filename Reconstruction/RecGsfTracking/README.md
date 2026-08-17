@@ -1,14 +1,16 @@
 # RecGsfTracking
 
 `RecGsfTracking` refits `CompleteTracks` with a Gaussian-sum electron model and
-writes `GSFTracks`.  Each component now uses the baseline MarlinTrk
+writes the tracker-only result to `GSFTracks`. A default-off ECAL experiment
+can additionally write a paired component-selection result to
+`GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
 update path.  The old alternate KF fitter and initialization experiments have
 been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-07-30. `RecGsfTracking` exposes 34 Gaudi properties in
+Reference date: 2026-08-17. `RecGsfTracking` exposes 40 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -70,6 +72,37 @@ bounded forward/reverse radiative-surface coincidence likelihood. Both
 alternatives are retained only to reproduce rejected diagnostics.
 `ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
 
+### Experimental ECAL component constraint
+
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires ordinary reverse filtering, `ReverseOutputMode=BestBranch`, and no CMSSW-like workflow. |
+| `EcalConstraintRatioThreshold` | `1.1` | same | Activate re-ranking only when the unconstrained branch has `max(p/E,E/p)` above this value. It must be finite and greater than one. |
+| `EcalConstraintLogPSigma` | `0.15` | same | Gaussian width of the component likelihood in `log(p/E)`; it must be finite and positive. |
+| `EcalConstraintLikelihoodFloor` | `0.05` | same | Additive likelihood floor in `(0,1]`; 0.05 limits the ECAL re-ranking Bayes factor to 20. |
+| `EcalConstraintPhiWindow` | `0.10` | same | Maximum absolute azimuth difference, in radians and in `(0,pi]`, for summing positive-energy `EcalCluster` objects around the extrapolated outer forward-GSF direction. |
+| `EcalConstraintThetaWindow` | `0.10` | same | Maximum absolute polar-angle difference, in radians and in `(0,pi]`, for the same cluster-energy sum. A cluster must pass both the phi and theta windows. |
+
+The ECAL observation uses neither truth nor LCIO/PFO momentum. It sums
+`EcalCluster` energy inside both configured angular windows around the
+extrapolated outer forward-GSF direction and, after the ordinary reverse fit
+has finished, multiplies each final component's existing reverse selection
+score by
+
+```text
+floor + (1 - floor) * exp[-0.5 * (log(p_component/E) / sigma)^2].
+```
+
+This is a selection constraint, not a track--calorimeter parameter
+combination: it does not alter any fitted component state or covariance.
+`GSFTracks` always preserves the unconstrained tracker-only result. When the
+experiment is enabled, `GSFTracksEcalConstrained` is created alongside it. If
+the ECAL observation is unavailable or the symmetric ratio does not cross the
+threshold, the paired output is an exact parameter/covariance copy of the
+unconstrained result; otherwise it can publish a different existing reverse
+component. The mode is an unvalidated research control and remains inactive in
+the production baseline.
+
 ### Alternative backward workflows
 
 | Property | Compiled | Active reverse | Meaning |
@@ -123,23 +156,28 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 34 properties:
+The data handles are configurable separately from the 40 properties:
 
 | Role | Default collection |
 |---|---|
 | input reconstructed tracks | `CompleteTracks` |
 | output refitted tracks | `GSFTracks` |
+| input ECAL clusters | `EcalCluster` |
+| paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 34
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 40
 properties and agrees with the active reverse template, including
-`ComponentWeightCutoff=1e-4`. It silently inherits no configurable property.
+`ComponentWeightCutoff=1e-4` and the default-off ECAL experiment. It silently
+inherits no configurable property. Its reconstructed-event input list includes
+`EcalCluster`, and `keep *` preserves the paired constrained collection when
+the experiment is explicitly enabled.
 
 ### Configuration-maintenance contract
 
-The 34-property inventory above is part of the configurable interface, not a
+The 40-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

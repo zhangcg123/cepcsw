@@ -23,6 +23,10 @@ full Gaussian innovation likelihoods, and exact accepted inter-surface
 transport Jacobians. Forward filtering, an independent reverse
 multi-component refit, a KL reduction-aware experimental smoother, and a
 CMSSW-like experimental backward workflow are mechanically operational.
+A default-off ECAL component-re-ranking prototype is also mechanically
+operational. It preserves `GSFTracks` and writes its paired result separately;
+its focused evidence is promising only for retained bimodal alternatives and
+is not population-validated.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
@@ -149,12 +153,10 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The reverse innovation-likelihood calibration audit is complete and did not
-find a reproducible GSF-specific defect. The active question is now whether an
-independent reconstructed observable, most naturally calorimeter energy or an
-E/p-like constraint, can separate genuine energy-loss recovery from false
-tracker-only radiative modes without truth at runtime. This is a design and
-scope question; it does not authorize changes outside `RecGsfTracking`.
+The active question is whether the default-off ECAL component-re-ranking
+prototype improves held-out populations without damaging clean tracks. It is
+an experimental paired output, not a production replacement, and does not
+authorize changes outside `RecGsfTracking`.
 
 Freeze the production baseline exactly as committed in
 `DumpGsfTrks/gsf.py.bk` and tagged by
@@ -168,57 +170,46 @@ recovery and false radiative modes and does not solve selection.
 
 Current boundary evidence:
 
-- Broadening `ReverseKappaSeedCov` from 100 to 1,000,000 repaired none of 19
-  selected no-eBrem false radiative tails and preserved all seven selected
-  genuine light recoveries. After 100--199 inward updates the median relative
-  identity-state pT difference was 0.00129, falling to 0.000156 after 200 or
-  more. Long tracks forget the forward seed before the decisive inner hits;
-  ACTS-like forward-posterior seeding is not the leading tail cause.
-- A first 50-event clean control suggested reverse VXD undercoverage, but an
-  independently selected 50-event control gave reverse mean two-dimensional
-  innovation chi-square 1.999, forward mean 2.004, and summed-chi-square
-  p=0.962. A VXD covariance correction is not supported.
-- A mild first-coordinate pull width near 1.17 at silicon radius about 235 mm
-  repeats across clean halves, but appears similarly in the forward fit and
-  does not predict the selected false-clean tails. It is a common measurement-
-  model monitoring item, not a reverse-GSF correction candidate.
-- Relative hit indices 5--8 are not fixed physical detector layers across the
-  broad sample. They span VXD, silicon, and TPC regions depending on trajectory
-  and missing hits; a literal layer correction based on these indices would be
-  ill-defined.
-- At the often-decisive VXD update, the event-level maximum local radiative-
-  versus-identity log-likelihood ratio has median 0.421 and range -0.078--14.529
-  for false-clean cases, versus median 1.201 and range 0.216--22.386 for genuine
-  light recoveries. The accepted measurements genuinely favor radiative states
-  in both groups, and their evidence overlaps without a truth-free threshold.
-- The ordinary reverse loop transports from `hits[reverseHit+1]`, applies the
-  process transition, updates `hits[reverseHit]` exactly once through baseline
-  `addAndFit`, and only then cuts/reduces. No accidental duplicate measurement
-  or directional ownership defect was found.
-- Earlier studies already reject KL ranking, capacity 24, final mean/median/
-  density-mode publication, representative-parent merge state, global identity
-  preference, and energy/angle/literal-layer BH expansion as solutions.
+- The feature is default-off, uses only GSF states plus `EcalCluster`, changes
+  no fitted component, leaves `GSFTracks` exactly unchanged in direct on/off
+  tests, and writes `GSFTracksEcalConstrained` only when enabled.
+- The configurable two-sided gate defaults to `max(p/E,E/p)>1.1`. The final
+  component likelihood is Gaussian in `log(p/E)` with width 0.15 and a 0.05
+  floor, so ECAL can re-rank but cannot arbitrarily overwrite tracker evidence.
+- In six focused single-track overshoots above 3%, three activated and one was
+  repaired: seed 11 entry 41 changed from pT 22.5057 to 11.7097 GeV versus
+  truth 11.6818 GeV. The repaired event had nearly tied high- and low-momentum
+  tracker modes before ECAL re-ranking.
+- The other activated overshoots retained their tracker branches because no
+  credible alternative survived. One available transition-0--4 underestimate
+  also remained unchanged at threshold 1.05: its truth-like component had a
+  tracker score about 1265 times smaller while both momenta were consistent
+  with the reconstructed energy. A threshold alone cannot restore missing or
+  negligible posterior support.
+- The current evidence is selected and small. The straight outer-tangent
+  cluster projection, 0.10-rad phi/theta windows, energy-resolution width,
+  likelihood floor, and activation threshold are not validated.
+- Previous reverse seed, innovation, measurement-ownership, KL, capacity,
+  publication-mode, and BH-dimension conclusions remain unchanged; ECAL does
+  not justify resuming tracker-internal heuristic tuning.
 
 Proceed in this order:
 
 1. Keep the frozen tracker-only baseline unchanged and stop internal selection,
    covariance-scale, and component-capacity tuning unless new evidence exposes
    a specific defect.
-2. Audit read-only whether CEPCSW already provides a stable, independently
-   reconstructed calorimeter-energy or electron E/p observable at the point
-   where `RecGsfTracking` could consume it. Define the physics question and
-   validation cohorts before proposing any interface or implementation.
-3. If broader integration is explicitly authorized, first test the independent
-   observable as an offline truth-blind discriminator on the frozen false-clean
-   and genuine light/hard cohorts. Do not make a runtime cut or package change
-   from the current selected samples alone.
-4. Treat a measurement-disjoint two-filter GSF only as a separate default-off
+2. Keep the ECAL experiment default-off and paired. Run same-code A/B on
+   independently selected no-eBrem, light, hard, transition-0--4, and
+   overshoot cohorts; report secondary-topology events separately.
+3. Audit ECAL matching and energy closure across energy and angle before tuning
+   the threshold, windows, resolution width, or likelihood floor. Measure both
+   corrected branches and false branch changes.
+4. Regenerate or replace the deleted canonical hard-event input before claiming
+   the required events 11/16/17 validation. Then repeat focused verbose checks
+   and require a new independent light-tail dataset before promotion.
+5. Treat a measurement-disjoint two-filter GSF only as a separate default-off
    formal research control. The seed-memory result does not predict that it
    will repair the clean tails.
-5. Require a new independent light-tail dataset, focused verbose events,
-   hard-loss events 11/16/17, same-code held-out population A/B, and separate
-   secondary-topology and broad energy/angle reporting before any candidate is
-   promoted.
 
 Success means finding independent, truth-blind information that separates real
 energy-loss recovery from tracker-fit fluctuations while preserving the no-
@@ -226,13 +217,18 @@ eBrem LCIO core and useful light/hard recovery. If no such observable exists or
 it fails held-out validation, record the present cases as an information limit
 of the current inputs rather than tuning another internal heuristic.
 
-Current non-goals are changing source code without a new authorized design,
-repeating the 24-component study, further final mean/median/mode publication
-heuristics, promoting Runnalls, an ad hoc likelihood threshold, reverse seed or
-global covariance/process-prior rescaling, VXD/relative-index corrections, an
-energy/angle/literal-layer BH table without held-out truth support,
-truth-dependent runtime logic, fitting SimHit momentum, or changing shared
-tracking packages.
+Current non-goals are enabling the ECAL prototype by default, replacing track
+parameters with calorimeter energy, promoting threshold 1.1 from the selected
+sample, changing source outside `RecGsfTracking`, repeating the 24-component
+study, further final mean/median/mode heuristics, promoting Runnalls, reverse
+seed or global covariance/process-prior rescaling, VXD/relative-index
+corrections, an energy/angle/literal-layer BH table without held-out truth
+support, truth-dependent runtime logic, fitting SimHit momentum, or changing
+shared tracking packages.
+
+The complete design, property surface, mechanical validation, focused
+overshoot and early-transition results, and outgoing focus are preserved in
+`agents_record/2026-08-17-default-off-ecal-component-constraint-prototype.md`.
 
 The completed reverse seed, innovation coverage, physical-region, and
 measurement-ownership audit is preserved in
