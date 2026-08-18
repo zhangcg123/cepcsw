@@ -1284,18 +1284,44 @@ static ComponentMaterialPath geometryTransitionMaterialPath(
 
 static ComponentMaterialPath componentGeometryTransitionMaterialPath(
     dd4hep::rec::MaterialManager* manager, const DDVMeasLayer* toLayer,
-    const GsfComponent& component, double bz, int propagationDirection = 1) {
-  if (!manager || !toLayer) return {};
-  THelicalTrack helix = component.helixAtMeasurementSite(bz);
-  const auto* destination = dynamic_cast<const TVSurface*>(toLayer);
-  TVector3 crossing;
-  double phi = 0.0;
-  if (!destination ||
-      !destination->CalcXingPointWith(
-          helix, crossing, phi, propagationDirection)) {
+    const TVector3& matchedDestination, const GsfComponent& component,
+    double bz, int propagationDirection = 1) {
+  if (!manager || !toLayer || !toLayer->surface()) return {};
+  if (!std::isfinite(matchedDestination.X()) ||
+      !std::isfinite(matchedDestination.Y()) ||
+      !std::isfinite(matchedDestination.Z())) {
     return {};
   }
-  return geometryTransitionMaterialPath(manager, helix.GetPivot(), crossing);
+
+  const THelicalTrack helix = component.helixAtMeasurementSite(bz);
+  const auto* destination = dynamic_cast<const TVSurface*>(toLayer);
+  if (!destination || !destination->IsOnSurface(matchedDestination)) {
+    return {};
+  }
+
+  // The destination hit has already been matched to this measurement layer.
+  // Use its recorded global point as the material-segment endpoint.  Do not
+  // reconstruct it with HitToXv(): a one-dimensional hit does not constrain
+  // both local coordinates, so that conversion can invent a remote endpoint.
+  // Re-solving a bounded surface intersection here can instead reject an
+  // otherwise accepted transition when the component crossing is only
+  // microns outside a finite sensor patch.
+  const TVector3& start = helix.GetPivot();
+  const TVector3 displacement = matchedDestination - start;
+  if (!(displacement.Mag2() > 0.0)) return {};
+
+  TVector3 outwardTangent(-std::sin(helix.GetPhi0()),
+                          std::cos(helix.GetPhi0()),
+                          helix.GetTanLambda());
+  if (!(outwardTangent.Mag2() > 0.0)) return {};
+  outwardTangent = outwardTangent.Unit();
+  const double signedProgress = displacement.Dot(outwardTangent);
+  if ((propagationDirection > 0 && !(signedProgress > 0.0)) ||
+      (propagationDirection < 0 && !(signedProgress < 0.0))) {
+    return {};
+  }
+
+  return geometryTransitionMaterialPath(manager, start, matchedDestination);
 }
 
 // ============================================================================
@@ -1824,8 +1850,11 @@ StatusCode RecGsfTracking::execute() {
     // measurement update; the legacy current-surface mode intentionally keeps
     // its historical behavior for controlled comparison.
     if (useDD4hepBetweenSurfaces && hits.size() > 1) {
+      const auto& seedPosition = hits[1].lcioHit.getPosition();
+      const TVector3 seedDestination(
+          seedPosition.x, seedPosition.y, seedPosition.z);
       const auto seedMaterial = componentGeometryTransitionMaterialPath(
-          m_materialManager, hits[1].layer, *initComp, bz);
+          m_materialManager, hits[1].layer, seedDestination, *initComp, bz);
       if (seedMaterial.valid) {
         maxTX0Layer = std::max(maxTX0Layer, seedMaterial.pathTX0);
         totalTX0 += seedMaterial.pathTX0;
@@ -2197,11 +2226,17 @@ StatusCode RecGsfTracking::execute() {
       std::vector<ComponentMaterialPath> materialPaths;
       materialPaths.reserve(comps.size());
       bool anyComponentMaterial = false;
+      TVector3 nextMaterialDestination;
+      if (hasNextForwardSurface) {
+        const auto& position = hits[ih + 1].lcioHit.getPosition();
+        nextMaterialDestination.SetXYZ(position.x, position.y, position.z);
+      }
       for (const auto* comp : comps) {
         materialPaths.push_back(
             hasNextForwardSurface && useDD4hepBetweenSurfaces
                 ? componentGeometryTransitionMaterialPath(
-                      m_materialManager, hits[ih + 1].layer, *comp, bz)
+                      m_materialManager, hits[ih + 1].layer,
+                      nextMaterialDestination, *comp, bz)
                 : componentMaterialPath(hi.layer, *comp, bz));
         anyComponentMaterial |= materialPaths.back().valid &&
             materialPaths.back().pathTX0 > m_bhSplitThresh.value();
@@ -2224,7 +2259,8 @@ StatusCode RecGsfTracking::execute() {
           for (size_t ci = 0; ci < comps.size(); ++ci) {
             const auto& path = materialPaths[ci];
             const auto geometryPath = componentGeometryTransitionMaterialPath(
-                m_materialManager, nextHit.layer, *comps[ci], bz);
+                m_materialManager, nextHit.layer, nextMaterialDestination,
+                *comps[ci], bz);
             const auto intervalPath = componentTransitionMaterialPath(
                 m_cradle, hi.layer, nextHit.layer,
                 TVector3(toPosition.x, toPosition.y, toPosition.z),
@@ -2567,12 +2603,17 @@ StatusCode RecGsfTracking::execute() {
         std::vector<ComponentMaterialPath> reverseMaterialPaths;
         reverseMaterialPaths.reserve(reverseComps.size());
         bool anyReverseMaterial = false;
+        const auto& reverseTargetPosition = target.lcioHit.getPosition();
+        const TVector3 reverseMaterialDestination(
+            reverseTargetPosition.x, reverseTargetPosition.y,
+            reverseTargetPosition.z);
         for (const auto* component : reverseComps) {
           reverseMaterialPaths.push_back(cmsOutermostHit
               ? ComponentMaterialPath{}
               : (useDD4hepBetweenSurfaces
                     ? componentGeometryTransitionMaterialPath(
-                          m_materialManager, target.layer, *component, bz, -1)
+                          m_materialManager, target.layer,
+                          reverseMaterialDestination, *component, bz, -1)
                     : componentMaterialPathAtCrossing(
                           target.layer, *component, bz, -1)));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&

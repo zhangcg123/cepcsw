@@ -187,13 +187,24 @@ Current boundary evidence and definitions:
   runtime GSF propagation interval or one BH call.
 - `CurrentSurface` supplies surface-owned normal thickness projected by the
   component incidence. `DD4hepBetweenSurfaces` integrates geometry material
-  along a component trajectory between bounding measurement surfaces.
+  from the component's current state to the already matched target-hit point
+  between bounding measurement surfaces.
 - The BH-call population is one executed
   `split(parent, pathTX0, bz[, reverse])` per valid component path above the
   split threshold. Candidate paths, event-hit medians, hit-level split counts,
   and Geant4 transitions are not interchangeable with this population.
 - The direction-symmetry defect is fixed: `MaterialPathMode` now governs both
   outward and inward propagation. Pre-fix reverse tuples must be regenerated.
+- The bounded-target endpoint defect is fixed for `DD4hepBetweenSurfaces`:
+  the target hit now anchors the material segment while finite-point,
+  matched-surface, and propagation-direction guards remain. In the selected
+  30-event rerun, all 8,144 displayed forward and 67,918 reverse paths were
+  valid, versus 141 and 1,034 invalid evaluations before the correction.
+- On seed 107 entry 0, the restored inner VXD surface-to-surface paths agree
+  with Geant4 ownership (half current sensor, support/gap, half target sensor)
+  within 0.10% per tested interval and 0.027% in their three-interval sum.
+  This validates the endpoint/ownership mechanism, not the collapsed BH
+  response or production performance.
 - A selected 30-event DD4hep audit, explicitly using split/cutoff `1e-4` and
   ECAL off, contained 4,297 actual BH parent calls: 1,953 forward (including
   ten initial seed-material calls) and 2,344 reverse. Forty-three calls were
@@ -210,8 +221,8 @@ Current boundary evidence and definitions:
 
 Proceed in this order:
 
-1. Freeze and print exact steering for every run. Keep the production baseline
-   unchanged and use temporary cards for material controls.
+1. Keep the corrected endpoint and production baseline frozen. Print exact
+   steering and use temporary cards for further material controls.
 2. Capture every actual BH call, including the seed path, on an unbiased
    sample. Record event, direction, bounding surfaces, parent identity/weight,
    material composition, `pathTX0`, and the returned BH mixture.
@@ -234,17 +245,20 @@ predicts a same-code correction without sacrificing the no-eBrem core. If the
 exact path and BH response close correctly at the crossover, record that result
 and move downstream instead of retuning material.
 
-Current non-goals are changing source before this diagnosis, promoting
-`DD4hepBetweenSurfaces`, tuning split/cutoff thresholds, capacity, KL ranking,
-reverse seed covariance, final publication heuristics, or the ECAL selector;
-fitting SimHit momentum; truth-dependent runtime logic; changing source outside
-`RecGsfTracking`; or changing shared tracking packages.
+Current non-goals are further material-source changes before branch-local
+closure, promoting `DD4hepBetweenSurfaces`, tuning split/cutoff thresholds,
+capacity, KL ranking, reverse seed covariance, final publication heuristics,
+or the ECAL selector; fitting SimHit momentum; truth-dependent runtime logic;
+changing source outside `RecGsfTracking`; or changing shared tracking packages.
 
 The exact definitions, selected audit, steering warning, and complete ordered
 investigation are preserved in
 `agents_record/2026-08-18-runtime-material-path-and-bh-input-consistency.md`.
 The direction defect and correction are preserved in
 `agents_record/2026-08-18-material-path-mode-direction-symmetry.md`.
+The bounded-endpoint correction, invalid-path rerun, forward/reverse check,
+and representative Geant4 ownership closure are preserved in
+`agents_record/2026-08-19-dd4hep-matched-hit-material-endpoint-and-ownership-validation.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in
