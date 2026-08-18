@@ -170,7 +170,8 @@ private:
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "CurrentSurface",
-      "CurrentSurface or DD4hepBetweenSurfaces"};
+      "Forward/reverse material assignment: CurrentSurface or "
+      "DD4hepBetweenSurfaces"};
   Gaudi::Property<std::string> m_materialTransitionCSV{
       this, "MaterialTransitionCSV", "",
       "Optional component-local outgoing-surface material transition CSV"};

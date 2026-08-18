@@ -158,13 +158,17 @@ prototype improves held-out populations without damaging clean tracks. It is
 an experimental paired output, not a production replacement, and does not
 authorize changes outside `RecGsfTracking`.
 
-Freeze the production baseline exactly as committed in
-`DumpGsfTrks/gsf.py.bk` and tagged by
-`gsf-memory-leak-fixed-2026-08-08`: five-component
+Freeze the production baseline as steered in `DumpGsfTrks/gsf.py.bk`, with the
+2026-08-18 material-direction correction as the sole intentional difference
+from tag `gsf-memory-leak-fixed-2026-08-08`: five-component
 `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
 `ReductionTargetComponents=0`, `SymmetricKL`, identity-lineage protection,
 `ComponentWeightCutoff=1e-4`, forward-posterior reverse weights, reverse full
 covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
+`MaterialPathMode=CurrentSurface` now governs both outward and inward
+propagation. Before this correction, reverse propagation accidentally always
+used `DD4hepBetweenSurfaces`; pre-fix reverse tuples must therefore be rerun for
+same-code comparisons.
 The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
@@ -258,6 +262,10 @@ shared tracking packages.
 The complete design, property surface, mechanical validation, focused
 overshoot and early-transition results, and outgoing focus are preserved in
 `agents_record/2026-08-17-default-off-ecal-component-constraint-prototype.md`.
+
+The `MaterialPathMode` direction-symmetry defect, correction, focused two-mode
+runtime evidence, and comparison boundary are preserved in
+`agents_record/2026-08-18-material-path-mode-direction-symmetry.md`.
 
 The completed paired ordinary/constrained flat-tuple branch implementation and
 enabled/default-off smoke validation are preserved in

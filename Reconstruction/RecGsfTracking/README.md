@@ -26,7 +26,7 @@ distinction matters because that template enables `ElossOn` and
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
-| `MaterialPathMode` | `CurrentSurface` | same | Material assignment: `CurrentSurface` is active; `DD4hepBetweenSurfaces` is a default-off volume-integration diagnostic. |
+| `MaterialPathMode` | `CurrentSurface` | same | Material assignment for both outward and inward propagation: `CurrentSurface` is active; `DD4hepBetweenSurfaces` is a default-off volume-integration diagnostic. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
 | `KappaSeedCov` | `1e-7` | same | Forward GSF seed-covariance scale; the small baseline value tightly anchors the start to `CompleteTracks`. |
 
@@ -34,8 +34,12 @@ Material assigned to a measurement surface is owned by the outgoing
 transition from that surface. Its inner and outer normal-thickness `t/X0`
 contributions are divided by the absolute dot product of the component-local
 track tangent and DD4hep surface normal. The final measurement has no outgoing
-transition. Forward and reverse workflows apply the same current-surface
-ownership in their respective directions.
+transition. `MaterialPathMode` governs both propagation directions. In
+`CurrentSurface` mode, outward propagation evaluates the owning surface at the
+current filtered state, while inward propagation evaluates that same physical
+surface at the reverse component's target crossing before the measurement
+update. In `DD4hepBetweenSurfaces` mode, both directions integrate the complete
+DD4hep volume interval between the bounding measurement surfaces.
 
 ### Mixture population and reduction
 

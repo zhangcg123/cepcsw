@@ -1126,6 +1126,54 @@ static ComponentMaterialPath componentMaterialPath(
   return result;
 }
 
+/// Material owned by a destination measurement surface, evaluated at the
+/// component's crossing of that surface. This is the inward-propagation
+/// counterpart of componentMaterialPath(): the component is still on the
+/// outer surface, so the target surface's incidence must be evaluated at its
+/// crossing rather than at the component's current pivot.
+static ComponentMaterialPath componentMaterialPathAtCrossing(
+    const DDVMeasLayer* layer, const GsfComponent& component, double bz,
+    int propagationDirection) {
+  ComponentMaterialPath result;
+  if (!layer || !layer->surface()) return result;
+  result.normalTX0 = thicknessInX0(layer);
+  if (!(result.normalTX0 > 0.0)) return result;
+
+  const THelicalTrack helix = component.helixAtMeasurementSite(bz);
+  const auto* surface = dynamic_cast<const TVSurface*>(layer);
+  TVector3 crossing;
+  double phi = 0.0;
+  if (!surface ||
+      !surface->CalcXingPointWith(
+          helix, crossing, phi, propagationDirection)) {
+    return result;
+  }
+
+  const dd4hep::rec::Vector3D ddCrossing(
+      crossing.X() * dd4hep::mm, crossing.Y() * dd4hep::mm,
+      crossing.Z() * dd4hep::mm);
+  if (!layer->surface()->insideBounds(ddCrossing)) return result;
+
+  const TMatrixD tangentMatrix = helix.CalcDxDphi(phi);
+  TVector3 tangent(tangentMatrix(0, 0), tangentMatrix(1, 0),
+                   tangentMatrix(2, 0));
+  if (!(tangent.Mag2() > 0.0)) return result;
+  tangent = tangent.Unit();
+  TVector3 normal = surface->GetOutwardNormal(crossing);
+  if (!(normal.Mag2() > 0.0)) return result;
+  normal = normal.Unit();
+  result.absCosIncidence = std::abs(tangent.Dot(normal));
+  if (!(result.absCosIncidence > 1.0e-6) ||
+      !std::isfinite(result.absCosIncidence)) {
+    return result;
+  }
+
+  result.pathTX0 = result.normalTX0 / result.absCosIncidence;
+  result.layerCount = 1;
+  result.valid = std::isfinite(result.pathTX0) && result.pathTX0 > 0.0;
+  return result;
+}
+
 /// Diagnostic full material interval from the current measurement surface up
 /// to, but excluding, the next measurement surface. This follows the cradle's
 /// sorted layer interval and therefore includes passive support/wall layers
@@ -2522,10 +2570,28 @@ StatusCode RecGsfTracking::execute() {
         for (const auto* component : reverseComps) {
           reverseMaterialPaths.push_back(cmsOutermostHit
               ? ComponentMaterialPath{}
-              : componentGeometryTransitionMaterialPath(
-                    m_materialManager, target.layer, *component, bz, -1));
+              : (useDD4hepBetweenSurfaces
+                    ? componentGeometryTransitionMaterialPath(
+                          m_materialManager, target.layer, *component, bz, -1)
+                    : componentMaterialPathAtCrossing(
+                          target.layer, *component, bz, -1)));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&
               reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
+        }
+        if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
+          for (size_t componentIndex = 0;
+               componentIndex < reverseComps.size(); ++componentIndex) {
+            const auto& path = reverseMaterialPaths[componentIndex];
+            info() << boost::format(
+                "  MAT-REVERSE-COMP hit=%d comp=%d id=%d mode=%s "
+                "owner=outgoing-target normalTX0=%.9g absCos=%.9g "
+                "pathTX0=%.9g valid=%d")
+                      % reverseHit % componentIndex
+                      % reverseComps[componentIndex]->debugId
+                      % m_materialPathMode.value() % path.normalTX0
+                      % path.absCosIncidence % path.pathTX0
+                      % (path.valid ? 1 : 0) << endmsg;
+          }
         }
         if (anyReverseMaterial && m_isElectron) {
           BetheHeitlerSplitter splitter(m_bhModel.value());
