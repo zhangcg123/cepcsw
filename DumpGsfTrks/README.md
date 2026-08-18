@@ -183,8 +183,9 @@ source configuration.
 
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. Its main reverse-filter settings agree with the
-active baseline, including `ComponentWeightCutoff=1e-4`. It is an exact
-active-baseline card for the GSF algorithm properties when `method="reverse"`.
+active baseline, including `MaterialPathMode="DD4hepBetweenSurfaces"` and
+`ComponentWeightCutoff=1e-4`. It is an exact active-baseline card for the GSF
+algorithm properties when `method="reverse"`.
 
 The authoritative explanation of all 40 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
@@ -195,6 +196,13 @@ For this historical workflow, `gsf.py.bk` explicitly configures all 40
 properties, silently inherits none, and agrees with the active reverse
 template. Use the package README for the complete configuration reference and
 the reverse template for current runs.
+
+Generated `rungsf-*` cards are batch artifacts and preserve the explicit
+material mode in force when each card was created. Many predate the 2026-08-19
+default promotion and therefore still say `CurrentSurface`; others record
+earlier DD4hep studies. Do not reinterpret or bulk-rewrite those historical
+cards as the current default. Regenerate a card from `gsf.py.bk` for a new
+production run, and set `CurrentSurface` explicitly only for a comparison.
 
 The card also reads `EcalCluster` from the reconstructed-event input and
 explicitly keeps the new ECAL component constraint off. When enabled, its

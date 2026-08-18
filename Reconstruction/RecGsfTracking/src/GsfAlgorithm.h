@@ -169,7 +169,7 @@ private:
       "Retained-momentum-fraction variance assigned to trial scan components"};
   Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
   Gaudi::Property<std::string> m_materialPathMode{
-      this, "MaterialPathMode", "CurrentSurface",
+      this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "
       "DD4hepBetweenSurfaces"};
   Gaudi::Property<std::string> m_materialTransitionCSV{

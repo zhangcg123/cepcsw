@@ -78,7 +78,8 @@ gsf.CounterfactualLossFractions = [
 gsf.CounterfactualLossVariance = float(os.getenv(
     "GSF_COUNTERFACTUAL_LOSS_VARIANCE", "2.0e-4"))
 gsf.BHSplitThreshold = 1.0e-4
-gsf.MaterialPathMode = os.getenv("GSF_MATERIAL_PATH_MODE", "CurrentSurface")
+gsf.MaterialPathMode = os.getenv(
+    "GSF_MATERIAL_PATH_MODE", "DD4hepBetweenSurfaces")
 
 gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "12"))
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents

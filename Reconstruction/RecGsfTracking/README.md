@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-17. `RecGsfTracking` exposes 40 Gaudi properties in
+Reference date: 2026-08-19. `RecGsfTracking` exposes 40 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -26,20 +26,29 @@ distinction matters because that template enables `ElossOn` and
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
-| `MaterialPathMode` | `CurrentSurface` | same | Material assignment for both outward and inward propagation: `CurrentSurface` is active; `DD4hepBetweenSurfaces` is a default-off volume-integration diagnostic. |
+| `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the DD4hep volume interval from the component state to the matched target hit; `CurrentSurface` remains an explicit comparison control. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
 | `KappaSeedCov` | `1e-7` | same | Forward GSF seed-covariance scale; the small baseline value tightly anchors the start to `CompleteTracks`. |
 
-Material assigned to a measurement surface is owned by the outgoing
-transition from that surface. Its inner and outer normal-thickness `t/X0`
-contributions are divided by the absolute dot product of the component-local
-track tangent and DD4hep surface normal. The final measurement has no outgoing
-transition. `MaterialPathMode` governs both propagation directions. In
-`CurrentSurface` mode, outward propagation evaluates the owning surface at the
-current filtered state, while inward propagation evaluates that same physical
-surface at the reverse component's target crossing before the measurement
-update. In `DD4hepBetweenSurfaces` mode, both directions integrate the complete
-DD4hep volume interval between the bounding measurement surfaces.
+Material between consecutive accepted measurements is owned by the outgoing
+transition from the current measurement to the next one. The final
+measurement has no outgoing transition, and `MaterialPathMode` governs both
+propagation directions. In the default `DD4hepBetweenSurfaces` mode, the
+component's current measurement state is the segment start and the already
+matched target `TrackerHit` global point is the endpoint. The material manager
+integrates the complete DD4hep volume interval between them after finite-point,
+matched-surface, and propagation-direction checks. This avoids independently
+re-solving a bounded target-surface intersection after the hit was accepted.
+In the `CurrentSurface` control, the owning surface's inner and outer normal
+thicknesses are divided by the absolute dot product of the component-local
+track tangent and DD4hep surface normal. Outward propagation evaluates the
+current filtered state; inward propagation evaluates the same physical surface
+at the reverse component's target crossing before the measurement update.
+
+The DD4hep endpoint and representative inner-VXD ownership are mechanically
+validated, but the collapsed interval's BH energy-loss response and population
+momentum performance remain under study. Default status is therefore a
+steering decision, not a claim of production physics validation.
 
 ### Mixture population and reduction
 

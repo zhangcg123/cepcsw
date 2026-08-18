@@ -38,12 +38,13 @@ it also creates clean-track degradation and extreme tails. The KL smoother is
 largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like
 workflow has a different core/tail tradeoff and remains default-off.
 
-The active defaults are `MaxComponents=12`, `ComponentWeightCutoff=1e-4`,
-`SymmetricKL` reduction ranking, identity-lineage protection enabled, and the five-component
-`CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components as an
-explicit comparison setting. The weighted `Runnalls` ranking and the
-six-component `CEPC2GeV85StepConditioned6` model remain default-off controls;
-neither is validated or approved as a replacement.
+The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
+`MaxComponents=12`, `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction
+ranking, identity-lineage protection enabled, and the five-component
+`CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components and
+`CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
+ranking and the six-component `CEPC2GeV85StepConditioned6` model remain
+default-off controls; neither is validated or approved as a replacement.
 
 Geant4 pre/post-step data is the authoritative energy-loss truth.
 SimTrackerHit momentum is only a detector-level cross-check. Existing Geant4
@@ -161,25 +162,27 @@ interval-collapse granularity problem, a BH response mismatch, and a later
 measurement/selection effect. The ECAL prototype is paused and remains
 default-off; this focus does not authorize changes outside `RecGsfTracking`.
 
-Freeze the production baseline, with the
-2026-08-18 material-direction correction as the sole intentional difference
-from tag `gsf-memory-leak-fixed-2026-08-08`: five-component
+Freeze the production baseline, with the 2026-08-18 material-direction
+correction, the 2026-08-19 matched-hit endpoint correction, and the explicit
+DD4hep default promotion as the material changes since tag
+`gsf-memory-leak-fixed-2026-08-08`: five-component
 `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
 `ReductionTargetComponents=0`, `SymmetricKL`, identity-lineage protection,
 `ComponentWeightCutoff=1e-4`, forward-posterior reverse weights, reverse full
 covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
-`MaterialPathMode=CurrentSurface` now governs both outward and inward
-propagation. Before this correction, reverse propagation accidentally always
-used `DD4hepBetweenSurfaces`; pre-fix reverse tuples must therefore be rerun for
+`MaterialPathMode=DD4hepBetweenSurfaces` now governs both outward and inward
+propagation and integrates to the matched target-hit point. Before the
+direction correction, reverse propagation accidentally always used DD4hep
+regardless of steering; pre-fix reverse tuples must therefore be rerun for
 same-code comparisons.
 The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
-The committed production steering contract is `CurrentSurface`,
+The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The live
-working copy of `DumpGsfTrks/gsf.py.bk` is locally modified to DD4hep, `1e-8`,
-`1e-8`, and ECAL on. Treat those as uncommitted experimental steering, not new
-defaults, and do not silently use or overwrite them.
+working copy of `DumpGsfTrks/gsf.py.bk` also contains local experimental
+`1e-8` split/cutoff thresholds and ECAL on. Those three deviations are not new
+defaults; do not silently use or overwrite them.
 
 Current boundary evidence and definitions:
 
@@ -205,6 +208,13 @@ Current boundary evidence and definitions:
   within 0.10% per tested interval and 0.027% in their three-interval sum.
   This validates the endpoint/ownership mechanism, not the collapsed BH
   response or production performance.
+- `DD4hepBetweenSurfaces` was explicitly promoted to the compiled, reverse-
+  template, and maintained-card default on 2026-08-19 after the endpoint fix.
+  This is a steering decision, not a claim that its BH response or population
+  momentum performance is validated. A no-assignment seed-107 entry-0 smoke
+  selected DD4hep on all 2,146 displayed reverse paths, with zero invalid
+  forward or reverse paths, and finalized successfully. `CurrentSurface`
+  remains an explicit control.
 - A selected 30-event DD4hep audit, explicitly using split/cutoff `1e-4` and
   ECAL off, contained 4,297 actual BH parent calls: 1,953 forward (including
   ten initial seed-material calls) and 2,344 reverse. Forty-three calls were
@@ -245,11 +255,11 @@ predicts a same-code correction without sacrificing the no-eBrem core. If the
 exact path and BH response close correctly at the crossover, record that result
 and move downstream instead of retuning material.
 
-Current non-goals are further material-source changes before branch-local
-closure, promoting `DD4hepBetweenSurfaces`, tuning split/cutoff thresholds,
-capacity, KL ranking, reverse seed covariance, final publication heuristics,
-or the ECAL selector; fitting SimHit momentum; truth-dependent runtime logic;
-changing source outside `RecGsfTracking`; or changing shared tracking packages.
+Current non-goals are further material-source or material-mode changes before
+branch-local closure, tuning split/cutoff thresholds, capacity, KL ranking,
+reverse seed covariance, final publication heuristics, or the ECAL selector;
+fitting SimHit momentum; truth-dependent runtime logic; changing source outside
+`RecGsfTracking`; or changing shared tracking packages.
 
 The exact definitions, selected audit, steering warning, and complete ordered
 investigation are preserved in
@@ -259,6 +269,9 @@ The direction defect and correction are preserved in
 The bounded-endpoint correction, invalid-path rerun, forward/reverse check,
 and representative Geant4 ownership closure are preserved in
 `agents_record/2026-08-19-dd4hep-matched-hit-material-endpoint-and-ownership-validation.md`.
+The explicit DD4hep default decision, synchronized option surface, historical-
+card boundary, and validation requirements are preserved in
+`agents_record/2026-08-19-dd4hep-between-surfaces-default-promotion.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in
