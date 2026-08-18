@@ -153,12 +153,15 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The active question is whether the default-off ECAL component-re-ranking
-prototype improves held-out populations without damaging clean tracks. It is
-an experimental paired output, not a production replacement, and does not
-authorize changes outside `RecGsfTracking`.
+The active question is whether the exact material thickness supplied to the
+Bethe-Heitler (BH) splitter at the first wrong branch decision is consistent
+with Geant4 energy-loss truth and with the domain of the configured BH mixture.
+The investigation must distinguish a material path/ownership defect, an
+interval-collapse granularity problem, a BH response mismatch, and a later
+measurement/selection effect. The ECAL prototype is paused and remains
+default-off; this focus does not authorize changes outside `RecGsfTracking`.
 
-Freeze the production baseline as steered in `DumpGsfTrks/gsf.py.bk`, with the
+Freeze the production baseline, with the
 2026-08-18 material-direction correction as the sole intentional difference
 from tag `gsf-memory-leak-fixed-2026-08-08`: five-component
 `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
@@ -172,139 +175,79 @@ same-code comparisons.
 The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
-Current boundary evidence:
+The committed production steering contract is `CurrentSurface`,
+`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The live
+working copy of `DumpGsfTrks/gsf.py.bk` is locally modified to DD4hep, `1e-8`,
+`1e-8`, and ECAL on. Treat those as uncommitted experimental steering, not new
+defaults, and do not silently use or overwrite them.
 
-- The feature is default-off, uses only GSF states plus `EcalCluster`, changes
-  no fitted component, leaves `GSFTracks` exactly unchanged in direct on/off
-  tests, and writes `GSFTracksEcalConstrained` only when enabled.
-- `RecGsfFlatTuple` now preserves the ordinary `gsf_*` fields and adds parallel
-  `ecal_gsf_*` fields, availability/change flags, and a constrained pT
-  residual. Default-off jobs write unavailable, zeroed constrained fields.
-- The configurable two-sided gate defaults to `max(p/E,E/p)>1.1`. The final
-  component likelihood is Gaussian in `log(p/E)` with width 0.15 and a 0.05
-  floor, so ECAL can re-rank but cannot arbitrarily overwrite tracker evidence.
-- In 26 focused single-track overshoots above 3%, 15 activated and four changed
-  branch. All four changes improved the truth residual; three ended within
-  0.3%, while one moved from +185.4% to -13.1%. This selected cohort is branch-
-  mechanism evidence, not clean-track safety or population validation.
-- The broad paired screen now has independent Geant4 and SimHit labels. Of
-  40,091 valid events, 35,681 are topology-clear and 4,410 form the secondary-
-  tracker-activity control. The clear sample contains 14,924 no-eBrem, 16,638
-  light-eBrem, and 4,119 hard-eBrem events under outgoing surface ownership.
-- In the topology-clear sample, ECAL changed 150 branches: 15/12 improved/
-  worsened in no-eBrem, 32/20 in light-eBrem, and 59/12 in hard-eBrem. It
-  reduces greater-than-100% tail counts from 17 to 7, 17 to 4, and 76 to 59,
-  respectively, but leaves the central width essentially unchanged.
-- Clean-track safety is not established. ECAL changed 35 topology-clear events
-  whose ordinary GSF residual was within 1%; only five improved and 30
-  worsened. Twenty-two moved outside 1%, two outside 3%, and none outside 10%.
-  The largest ordinary GSF overshoot, +42,661%, was unchanged, so surviving-
-  component support remains a hard limitation.
-- Transition and physical-region results preserve the earlier information
-  boundary: hard losses at transitions 0--4 remain poorly recovered, 5--8 are
-  mixed, and >=12 is much easier. For hard events, ordinary GSF median/width68
-  are -16.5%/24.5% for VXD-owned loss, -2.12%/29.2% for ITK, and
-  -0.0745%/1.60% for TPC. ECAL acts most usefully on hard transitions 3--6,
-  improving 45 of 55 changes there.
-- With the 0.05 likelihood floor, ECAL supplies at most a factor-20 relative
-  boost. A competing branch below about 5% of the baseline tracker score can
-  never win. The four successful candidates had tracker-score ratios 0.989,
-  0.746, 0.194, and 0.0549; three unrepaired extreme overshoots had their
-  closest-energy alternatives at ratios 0.00267 or far smaller. The practical
-  blocker is surviving posterior support, not merely the activation threshold.
-- One available transition-0--4 underestimate also remained unchanged at
-  threshold 1.05: its truth-like component had a tracker score about 1265 times
-  smaller while both momenta were consistent with reconstructed energy. A
-  threshold alone cannot restore missing or negligible posterior support.
-- Category/transition labels were derived directly from the matching 100-event
-  SimHit and material-step files and mechanically cross-checked against the
-  established ROOT formulas and outgoing-owned transition builder. This is
-  still a studied sample, not independent held-out validation. The cluster
-  projection, 0.10-rad windows, energy width, floor, and threshold remain
-  unvalidated.
-- Previous reverse seed, innovation, measurement-ownership, KL, capacity,
-  publication-mode, and BH-dimension conclusions remain unchanged; ECAL does
-  not justify resuming tracker-internal heuristic tuning.
+Current boundary evidence and definitions:
+
+- A Geant4 pre/post step is truth-side energy-loss information. It is not one
+  runtime GSF propagation interval or one BH call.
+- `CurrentSurface` supplies surface-owned normal thickness projected by the
+  component incidence. `DD4hepBetweenSurfaces` integrates geometry material
+  along a component trajectory between bounding measurement surfaces.
+- The BH-call population is one executed
+  `split(parent, pathTX0, bz[, reverse])` per valid component path above the
+  split threshold. Candidate paths, event-hit medians, hit-level split counts,
+  and Geant4 transitions are not interchangeable with this population.
+- The direction-symmetry defect is fixed: `MaterialPathMode` now governs both
+  outward and inward propagation. Pre-fix reverse tuples must be regenerated.
+- A selected 30-event DD4hep audit, explicitly using split/cutoff `1e-4` and
+  ECAL off, contained 4,297 actual BH parent calls: 1,953 forward (including
+  ten initial seed-material calls) and 2,344 reverse. Forty-three calls were
+  above the last CEPC BH knot (`0.024494897427831779 t/X0`), 19 were at least
+  `0.03 t/X0`, the maximum was `0.0319038626 t/X0`, and none reached 0.05.
+- The CEPC model saturates above its last knot by returning the last-knot
+  mixture. The selected audit therefore does not support the broad statement
+  that “too many” calls exceed the model range, but rare saturated calls can
+  still seed the winning lineage and require branch-local diagnosis.
+- The seed-216 dispatch check contained much larger DD4hep intervals, including
+  about `0.183 t/X0`, but it was not part of the uniform 30-event population.
+- The 30 events were deliberately selected good/bad examples across no/light/
+  hard eBrem. They are mechanism evidence, not an unbiased rate or validation.
 
 Proceed in this order:
 
-1. Keep the frozen tracker-only baseline unchanged and stop internal selection,
-   covariance-scale, and component-capacity tuning unless new evidence exposes
-   a specific defect.
-2. Keep the ECAL experiment default-off and paired. Diagnose the 44 worsened
-   topology-clear changes, especially the 30 changes starting inside the
-   ordinary GSF 1% core, and the unrepaired extreme tails before tuning.
-3. Audit ECAL matching and energy closure for false changes versus successful
-   hard transition-3--6 changes across energy, angle, and detector region.
-   Preserve no-eBrem, light, hard, and secondary-control reporting separately.
-4. Freeze any proposed selector revision before testing it on a new independent
-   broad sample. Repeat focused verbose checks and the required hard events
-   after regenerating their deleted canonical input.
-5. Treat a measurement-disjoint two-filter GSF only as a separate default-off
-   formal research control. The seed-memory result does not predict that it
-   will repair the clean tails.
+1. Freeze and print exact steering for every run. Keep the production baseline
+   unchanged and use temporary cards for material controls.
+2. Capture every actual BH call, including the seed path, on an unbiased
+   sample. Record event, direction, bounding surfaces, parent identity/weight,
+   material composition, `pathTX0`, and the returned BH mixture.
+3. In bad events, locate the first surface where a truth-compatible lineage
+   loses posterior rank or is removed, and compare matched good controls.
+4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
+   and Geant4 pre/post-step truth between the same spatial boundaries. Compare
+   directions only for equivalent component states.
+5. Check BH energy-loss closure at the exact runtime input against Geant4
+   retained-energy fractions across energy, angle, and detector region,
+   treating last-knot saturation explicitly.
+6. Classify the cause as path/ownership, interval-collapse granularity, BH
+   response, or downstream measurement/selection before proposing a change.
+   Then apply the focused verbose, hard-event 11/16/17, and held-out clean-track
+   validation gates.
 
-Success means finding independent, truth-blind information that separates real
-energy-loss recovery from tracker-fit fluctuations while preserving the no-
-eBrem LCIO core and useful light/hard recovery. If no such observable exists or
-it fails held-out validation, record the present cases as an information limit
-of the current inputs rather than tuning another internal heuristic.
+Success means identifying a truth-blind discrepancy at or before the first bad
+branch decision that separates bad events from matched good controls and
+predicts a same-code correction without sacrificing the no-eBrem core. If the
+exact path and BH response close correctly at the crossover, record that result
+and move downstream instead of retuning material.
 
-Current non-goals are enabling the ECAL prototype by default, replacing track
-parameters with calorimeter energy, promoting threshold 1.1 from the selected
-sample, changing source outside `RecGsfTracking`, repeating the 24-component
-study, further final mean/median/mode heuristics, promoting Runnalls, reverse
-seed or global covariance/process-prior rescaling, VXD/relative-index
-corrections, an energy/angle/literal-layer BH table without held-out truth
-support, truth-dependent runtime logic, fitting SimHit momentum, or changing
-shared tracking packages.
+Current non-goals are changing source before this diagnosis, promoting
+`DD4hepBetweenSurfaces`, tuning split/cutoff thresholds, capacity, KL ranking,
+reverse seed covariance, final publication heuristics, or the ECAL selector;
+fitting SimHit momentum; truth-dependent runtime logic; changing source outside
+`RecGsfTracking`; or changing shared tracking packages.
 
-The complete design, property surface, mechanical validation, focused
-overshoot and early-transition results, and outgoing focus are preserved in
-`agents_record/2026-08-17-default-off-ecal-component-constraint-prototype.md`.
-
-The `MaterialPathMode` direction-symmetry defect, correction, focused two-mode
-runtime evidence, and comparison boundary are preserved in
+The exact definitions, selected audit, steering warning, and complete ordered
+investigation are preserved in
+`agents_record/2026-08-18-runtime-material-path-and-bh-input-consistency.md`.
+The direction defect and correction are preserved in
 `agents_record/2026-08-18-material-path-mode-direction-symmetry.md`.
 
-The completed paired ordinary/constrained flat-tuple branch implementation and
-enabled/default-off smoke validation are preserved in
-`agents_record/2026-08-17-flat-tuple-paired-ecal-track-output.md`.
-
-The expanded 20-event overshoot table, combined 26-event counts, exact branch-
-choice inequality, successful and failed competitor evidence, and outgoing
-validation gate are preserved in
-`agents_record/2026-08-17-expanded-overshoot-branch-choice-diagnosis.md`.
-
-The first 40,091-event broad paired population screen, input audit, global and
-changed-subset metrics, clean-core safety failure, and plot inventory are
+The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in
-`agents_record/2026-08-17-broad-ecal-component-constraint-population-screen.md`.
-
-The topology-clear/secondary split, authoritative no/light/hard categories,
-dominant transition and physical-region results, clean-safety audit, and plot
-inventory are preserved in
-`agents_record/2026-08-17-topology-clear-ecal-category-transition-screen.md`.
-
-The completed reverse seed, innovation coverage, physical-region, and
-measurement-ownership audit is preserved in
-`agents_record/2026-08-09-reverse-seed-and-innovation-calibration-audit.md`.
-
-The completed full-posterior contrast, correction of the discarded-correlation
-hypothesis, and broad held-out BH dimension audit are preserved in
-`agents_record/2026-08-09-full-posterior-and-bh-dimension-audit.md`.
-
-The completed 500-event q/p-marginal density-mode stress test is preserved in
-`agents_record/2026-08-08-qoverp-density-mode-500-event-screen.md`.
-
-The completed 500x2 diagnosis and outgoing focus are preserved in
-`agents_record/2026-08-08-completed-500x2-diagnostic-and-kl-focus-transition.md`.
-
-The focused merge traces and representative-parent counterfactual are
-preserved in
-`agents_record/2026-08-08-kl-merge-causality-and-representative-state-counterfactual.md`.
-
-The complete pre-curation live file and its links are preserved in
-`agents_record/2026-07-23-AGENTS-pre-curation-snapshot.md`. The migration map
-and curation rationale are in
-`agents_record/2026-07-23-AGENTS-curation-map.md`.
+`agents_record/2026-08-18-ecal-focus-handoff-to-material-bh.md`. Older tracker,
+BH, KL, and workflow evidence remains available under `agents_record/` and is
+historical unless explicitly reactivated.
