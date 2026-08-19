@@ -26,7 +26,7 @@ distinction matters because that template enables `ElossOn` and
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
-| `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the DD4hep volume interval from the component state to the matched target hit; `CurrentSurface` remains an explicit comparison control. |
+| `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
 | `KappaSeedCov` | `1e-7` | same | Forward GSF seed-covariance scale; the small baseline value tightly anchors the start to `CompleteTracks`. |
 
@@ -34,11 +34,19 @@ Material between consecutive accepted measurements is owned by the outgoing
 transition from the current measurement to the next one. The final
 measurement has no outgoing transition, and `MaterialPathMode` governs both
 propagation directions. In the default `DD4hepBetweenSurfaces` mode, the
-component's current measurement state is the segment start and the already
-matched target `TrackerHit` global point is the endpoint. The material manager
-integrates the complete DD4hep volume interval between them after finite-point,
-matched-surface, and propagation-direction checks. This avoids independently
-re-solving a bounded target-surface intersection after the hit was accepted.
+outward component's current measurement state is the segment start and the
+already matched target `TrackerHit` global point is the endpoint. Inward
+filtering evaluates the same bounded interval in canonical inner-to-outer
+order using the matched inner and outer hit points; the separate reverse flag
+still controls the BH response. The material manager integrates the DD4hep
+volume interval after finite-point, matched-surface, and propagation-direction
+checks. This avoids independently re-solving a bounded target-surface
+intersection after the hit was accepted. The returned material segments must
+cover the requested endpoint distance. If TGeo navigation from an exact
+boundary omits the leading volume, the query is retried from 1 micrometre
+inside the interval and the leading cap is restored from `materialAt` at its
+midpoint. A retry that still does not cover the interval is invalid rather
+than silently accepting a partial material path.
 In the `CurrentSurface` control, the owning surface's inner and outer normal
 thicknesses are divided by the absolute dot product of the component-local
 track tangent and DD4hep surface normal. Outward propagation evaluates the
@@ -265,7 +273,11 @@ and eBrem loss inside the same midpoint-to-midpoint bounds. It also evaluates
 the identical endpoints in reverse order and stores
 `dd4hep_reverse_path_tX0`, `reverse_segment_count`, `reverse_valid`, and
 `dd4hep_reverse_materials`; these are direction-closure diagnostics, not a
-second material definition. Enable the tree with:
+second material definition. Both endpoint orders enforce the same complete-
+coverage invariant used by the GSF. The tuple exposes `coverage_repaired`,
+`reverse_coverage_repaired`, the original `initial_covered_length_mm` values,
+and the final `covered_length_mm` values for auditing boundary recovery.
+Enable the tree with:
 
 ```python
 steprec.RecordDD4hepSurfaceIntervals = True

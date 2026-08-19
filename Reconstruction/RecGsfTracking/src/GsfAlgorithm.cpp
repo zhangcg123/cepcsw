@@ -38,6 +38,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <utility>
 
 DECLARE_COMPONENT(RecGsfTracking)
 
@@ -1254,38 +1255,99 @@ static ComponentMaterialPath componentTransitionMaterialPath(
 static ComponentMaterialPath geometryTransitionMaterialPath(
     dd4hep::rec::MaterialManager* manager, const TVector3& from,
     const TVector3& to) {
-  ComponentMaterialPath result;
-  if (!manager || (to - from).Mag2() <= 0.0) return result;
+  if (!manager || (to - from).Mag2() <= 0.0) return {};
   const dd4hep::rec::Vector3D p0(from.X() * dd4hep::mm,
                                   from.Y() * dd4hep::mm,
                                   from.Z() * dd4hep::mm);
   const dd4hep::rec::Vector3D p1(to.X() * dd4hep::mm,
                                   to.Y() * dd4hep::mm,
                                   to.Z() * dd4hep::mm);
-  const auto& materials = manager->materialsBetween(p0, p1);
-  for (const auto& segment : materials) {
-    const double radLength = segment.first.radLength();
-    if (!(radLength > 0.0) || !(segment.second > 0.0)) continue;
-    const double tx0 = segment.second / radLength;
-    result.pathTX0 += tx0;
-    ++result.layerCount;
-    if (!result.layerAudit.empty()) result.layerAudit += '|';
-    std::ostringstream audit;
-    audit << segment.first.name() << ':' << segment.second / dd4hep::mm
-          << ':' << tx0;
-    result.layerAudit += audit.str();
+
+  // MaterialManager can start exactly on a TGeo boundary.  In that case its
+  // zero-step recovery can advance through the first volume without recording
+  // it.  A valid segment list must cover the requested point-to-point length;
+  // use that geometry-only invariant to detect the omission, then retry from a
+  // point just inside the requested interval and restore the tiny leading cap.
+  const auto scan = [&](const dd4hep::rec::Vector3D& begin,
+                        const dd4hep::rec::Vector3D& end) {
+    ComponentMaterialPath path;
+    double coveredLength = 0.0;
+    const auto& materials = manager->materialsBetween(begin, end);
+    for (const auto& segment : materials) {
+      if (!(segment.second > 0.0)) continue;
+      coveredLength += segment.second;
+      const double radLength = segment.first.radLength();
+      if (!(radLength > 0.0)) continue;
+      const double tx0 = segment.second / radLength;
+      path.pathTX0 += tx0;
+      ++path.layerCount;
+      if (!path.layerAudit.empty()) path.layerAudit += '|';
+      std::ostringstream audit;
+      audit << segment.first.name() << ':' << segment.second / dd4hep::mm
+            << ':' << tx0;
+      path.layerAudit += audit.str();
+    }
+    path.normalTX0 = path.pathTX0;
+    path.absCosIncidence = 1.0;
+    path.valid = path.layerCount > 0 && std::isfinite(path.pathTX0) &&
+        path.pathTX0 > 0.0;
+    return std::make_pair(path, coveredLength);
+  };
+
+  const double requestedLength = (to - from).Mag() * dd4hep::mm;
+  const double coverageTolerance = std::max(
+      1.0e-3 * dd4hep::mm, 1.0e-6 * requestedLength);
+  auto original = scan(p0, p1);
+  if (original.second + coverageTolerance >= requestedLength)
+    return original.first;
+
+  const double nudgeLength = std::min(
+      1.0e-3 * dd4hep::mm, 0.01 * requestedLength);
+  const TVector3 direction = (to - from).Unit();
+  const TVector3 nudgedFrom = from +
+      (nudgeLength / dd4hep::mm) * direction;
+  const dd4hep::rec::Vector3D nudgedP0(
+      nudgedFrom.X() * dd4hep::mm, nudgedFrom.Y() * dd4hep::mm,
+      nudgedFrom.Z() * dd4hep::mm);
+  auto repaired = scan(nudgedP0, p1);
+  const double repairedRequestedLength = requestedLength - nudgeLength;
+  if (repaired.second + coverageTolerance < repairedRequestedLength) {
+    original.first.valid = false;
+    return original.first;
   }
-  result.normalTX0 = result.pathTX0;
-  result.absCosIncidence = 1.0;
-  result.valid = result.layerCount > 0 && std::isfinite(result.pathTX0) &&
-      result.pathTX0 > 0.0;
-  return result;
+
+  const TVector3 capMidpoint = from +
+      (0.5 * nudgeLength / dd4hep::mm) * direction;
+  const dd4hep::rec::Vector3D capPosition(
+      capMidpoint.X() * dd4hep::mm, capMidpoint.Y() * dd4hep::mm,
+      capMidpoint.Z() * dd4hep::mm);
+  const auto& capMaterial = manager->materialAt(capPosition);
+  const double capRadLength = capMaterial.radLength();
+  if (!(capRadLength > 0.0)) {
+    repaired.first.valid = false;
+    return repaired.first;
+  }
+  const double capTX0 = nudgeLength / capRadLength;
+  repaired.first.pathTX0 += capTX0;
+  repaired.first.normalTX0 = repaired.first.pathTX0;
+  ++repaired.first.layerCount;
+  std::ostringstream capAudit;
+  capAudit << capMaterial.name() << ':' << nudgeLength / dd4hep::mm
+           << ':' << capTX0 << ":coverage-cap";
+  repaired.first.layerAudit = capAudit.str() +
+      (repaired.first.layerAudit.empty()
+           ? std::string{} : '|' + repaired.first.layerAudit);
+  repaired.first.valid = repaired.first.layerCount > 0 &&
+      std::isfinite(repaired.first.pathTX0) &&
+      repaired.first.pathTX0 > 0.0;
+  return repaired.first;
 }
 
 static ComponentMaterialPath componentGeometryTransitionMaterialPath(
     dd4hep::rec::MaterialManager* manager, const DDVMeasLayer* toLayer,
     const TVector3& matchedDestination, const GsfComponent& component,
-    double bz, int propagationDirection = 1) {
+    double bz, int propagationDirection = 1,
+    const TVector3* canonicalReverseOuterEndpoint = nullptr) {
   if (!manager || !toLayer || !toLayer->surface()) return {};
   if (!std::isfinite(matchedDestination.X()) ||
       !std::isfinite(matchedDestination.Y()) ||
@@ -1321,6 +1383,12 @@ static ComponentMaterialPath componentGeometryTransitionMaterialPath(
     return {};
   }
 
+  if (propagationDirection < 0) {
+    const TVector3& outwardEndpoint = canonicalReverseOuterEndpoint
+        ? *canonicalReverseOuterEndpoint : start;
+    return geometryTransitionMaterialPath(
+        manager, matchedDestination, outwardEndpoint);
+  }
   return geometryTransitionMaterialPath(manager, start, matchedDestination);
 }
 
@@ -2607,13 +2675,22 @@ StatusCode RecGsfTracking::execute() {
         const TVector3 reverseMaterialDestination(
             reverseTargetPosition.x, reverseTargetPosition.y,
             reverseTargetPosition.z);
+        TVector3 reverseMaterialOuterEndpoint;
+        if (!cmsOutermostHit) {
+          const auto& reverseOuterPosition =
+              hits[static_cast<size_t>(reverseHit + 1)].lcioHit.getPosition();
+          reverseMaterialOuterEndpoint.SetXYZ(
+              reverseOuterPosition.x, reverseOuterPosition.y,
+              reverseOuterPosition.z);
+        }
         for (const auto* component : reverseComps) {
           reverseMaterialPaths.push_back(cmsOutermostHit
               ? ComponentMaterialPath{}
               : (useDD4hepBetweenSurfaces
                     ? componentGeometryTransitionMaterialPath(
                           m_materialManager, target.layer,
-                          reverseMaterialDestination, *component, bz, -1)
+                          reverseMaterialDestination, *component, bz, -1,
+                          &reverseMaterialOuterEndpoint)
                     : componentMaterialPathAtCrossing(
                           target.layer, *component, bz, -1)));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&

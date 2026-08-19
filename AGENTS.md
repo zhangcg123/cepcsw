@@ -163,18 +163,22 @@ measurement/selection effect. The ECAL prototype is paused and remains
 default-off; this focus does not authorize changes outside `RecGsfTracking`.
 
 Freeze the production baseline, with the 2026-08-18 material-direction
-correction, the 2026-08-19 matched-hit endpoint correction, and the explicit
-DD4hep default promotion as the material changes since tag
+correction, the 2026-08-19 matched-hit endpoint correction and explicit
+DD4hep default promotion, and the 2026-08-20 boundary-coverage correction as
+the material changes since tag
 `gsf-memory-leak-fixed-2026-08-08`: five-component
 `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
 `ReductionTargetComponents=0`, `SymmetricKL`, identity-lineage protection,
 `ComponentWeightCutoff=1e-4`, forward-posterior reverse weights, reverse full
 covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
 `MaterialPathMode=DD4hepBetweenSurfaces` now governs both outward and inward
-propagation and integrates to the matched target-hit point. Before the
-direction correction, reverse propagation accidentally always used DD4hep
-regardless of steering; pre-fix reverse tuples must therefore be rerun for
-same-code comparisons.
+propagation, integrates between matched hit points, and evaluates the scalar
+reverse path in canonical inner-to-outer order. Returned DD4hep segments must
+cover the full endpoint distance; a detected leading boundary omission is
+recovered by a bounded inward nudge and audited cap. Before the direction
+correction, reverse propagation accidentally always used DD4hep regardless of
+steering; pre-fix reverse tuples must therefore be rerun for same-code
+comparisons.
 The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
@@ -196,14 +200,12 @@ Current boundary evidence and definitions:
   `split(parent, pathTX0, bz[, reverse])` per valid component path above the
   split threshold. Candidate paths, event-hit medians, hit-level split counts,
   and Geant4 transitions are not interchangeable with this population.
-- The earlier mode-dispatch defect is fixed: `MaterialPathMode` now governs
-  both outward and inward propagation. This does not establish path-value
-  symmetry. A paired three-event runtime audit found that all 666 internal TPC
-  reverse intervals receive approximately half the corresponding forward
-  DD4hep thickness, while silicon and the final TPC-to-OTK interval agree.
-  Pre-fix reverse tuples must still be regenerated, and current reverse tuples
-  must not be treated as material-closed until this TPC boundary defect is
-  corrected and rerun.
+- The earlier mode-dispatch defect is fixed: `MaterialPathMode` governs both
+  outward and inward propagation. The subsequently exposed TPC path-value
+  defect is also fixed. All 666 internal-TPC intervals in a paired three-event
+  rerun now agree forward/reverse within 1.35e-9 relative, and the three event
+  totals agree within 7.1e-8%. All 5,971 forward and 7,127 reverse component
+  paths were valid.
 - The bounded-target endpoint defect is fixed for `DD4hepBetweenSurfaces`:
   the target hit now anchors the material segment while finite-point,
   matched-surface, and propagation-direction guards remain. In the selected
@@ -222,19 +224,19 @@ Current boundary evidence and definitions:
   digitized hit endpoints are not identical. The three separately handled
   seed paths are not emitted by the current GSF CSV audit. This validates the
   extractor mechanism, not BH closure.
-- In the direction-paired runtime rerun, all 5,971 forward and 7,127 reverse
-  component paths were valid and component-independent at fixed boundaries.
-  Every forward active path equalled its DD4hep audit value, but the 666 shared
-  internal TPC interval values had median reverse/forward ratio 0.500042. The
-  three shared event totals were lower inward by 7.99%, 6.27%, and 7.74%.
-  A recorder-side identical-endpoint control was symmetric for 224/232
-  intervals; its eight direction-sensitive boundary cases lost one T2KGas1
-  half-segment. This points to direction-sensitive DD4hep/TGeo boundary
-  navigation on exact TPC measurement surfaces, not to BH modelling. At the
-  production `BHSplitThreshold=1e-4`, both the roughly 4.4e-5 outward and
-  2.2e-5 inward internal-TPC paths remain below threshold, so this defect does
-  not by itself explain production BH branch choices there. It does affect
-  material closure and the live experimental `1e-8` steering.
+- The material recorder independently evaluates both endpoint orders with the
+  same coverage invariant. A three-event final-code rerun produced 696 valid
+  interval pairs, all equal within 1e-9 X0. Thirty-seven reverse queries
+  required audited boundary recovery and no forward query did. The restored
+  internal-TPC paths remain about 4.4e-5 X0, below the production
+  `BHSplitThreshold=1e-4`, so the repair closes material accounting but does
+  not add production BH branch choices there.
+- Same-input pre/post controls showed no branch-scale discontinuity and
+  retained the hit count and NDF for hard events 11, 16, and 17 and seven
+  held-out no-tracker-eBrem events. The largest relative momentum change was
+  1.3e-6. This is a focused regression check, not population momentum
+  validation; the pre-existing pathological momenta in the current tuple
+  remain.
 - `DD4hepBetweenSurfaces` was explicitly promoted to the compiled, reverse-
   template, and maintained-card default on 2026-08-19 after the endpoint fix.
   This is a steering decision, not a claim that its BH response or population
@@ -258,25 +260,20 @@ Current boundary evidence and definitions:
 
 Proceed in this order:
 
-1. Keep the corrected endpoint and production baseline frozen. Print exact
-   steering and use temporary cards for further material controls.
-2. Close the newly exposed TPC direction defect first. In a temporary build,
-   audit the exact forward/reverse endpoints and material lists, then test a
-   canonical outward evaluation of each bounded surface pair for both
-   propagation directions. Require interval-wise forward/reverse equality and
-   recorder closure before changing the production source.
-3. Capture every actual BH call, including the seed path, on an unbiased
+1. Keep the coverage-corrected endpoint and production baseline frozen. Print
+   exact steering and use temporary cards for further material controls.
+2. Capture every actual BH call, including the seed path, on an unbiased
    sample. Record event, direction, bounding surfaces, parent identity/weight,
    material composition, `pathTX0`, and the returned BH mixture.
-4. In bad events, locate the first surface where a truth-compatible lineage
+3. In bad events, locate the first surface where a truth-compatible lineage
    loses posterior rank or is removed, and compare matched good controls.
-5. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
+4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
    and Geant4 pre/post-step truth between the same spatial boundaries. Compare
    directions only for equivalent component states.
-6. Check BH energy-loss closure at the exact runtime input against Geant4
+5. Check BH energy-loss closure at the exact runtime input against Geant4
    retained-energy fractions across energy, angle, and detector region,
    treating last-knot saturation explicitly.
-7. Classify the cause as path/ownership, interval-collapse granularity, BH
+6. Classify the cause as path/ownership, interval-collapse granularity, BH
    response, or downstream measurement/selection before proposing a change.
    Then apply the focused verbose, hard-event 11/16/17, and held-out clean-track
    validation gates.
@@ -310,6 +307,9 @@ three-event GSF comparison are preserved in
 The forward/reverse runtime closure failure, identical-endpoint control, and
 review boundary for a canonical-direction correction are preserved in
 `agents_record/2026-08-19-dd4hep-forward-reverse-tpc-path-closure.md`.
+The production coverage repair, runtime/recorder direction closure, focused
+hard-event checks, and held-out no-eBrem A/B are preserved in
+`agents_record/2026-08-20-dd4hep-boundary-coverage-repair-and-direction-closure.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

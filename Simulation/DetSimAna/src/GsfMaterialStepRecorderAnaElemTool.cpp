@@ -71,6 +71,89 @@ namespace {
   bool isTpcLower(const std::string& path) {
     return path.find("/TPC_lowerlayer_log_") != std::string::npos;
   }
+
+  struct DD4hepMaterialPath {
+    double pathTX0 = 0.0;
+    double coveredLength = 0.0;
+    double initialCoveredLength = 0.0;
+    int segmentCount = 0;
+    bool valid = false;
+    bool coverageRepaired = false;
+    std::string materials;
+  };
+
+  DD4hepMaterialPath completeMaterialPath(
+      dd4hep::rec::MaterialManager* manager,
+      const dd4hep::rec::Vector3D& from,
+      const dd4hep::rec::Vector3D& to) {
+    if (!manager || (to - from).r2() <= 0.0) return {};
+
+    const auto scan = [&](const dd4hep::rec::Vector3D& begin,
+                          const dd4hep::rec::Vector3D& end) {
+      DD4hepMaterialPath path;
+      const auto& materials = manager->materialsBetween(begin, end);
+      std::ostringstream audit;
+      for (const auto& segment : materials) {
+        if (!(segment.second > 0.0)) continue;
+        path.coveredLength += segment.second;
+        const double radLength = segment.first.radLength();
+        if (!(radLength > 0.0)) continue;
+        const double tx0 = segment.second / radLength;
+        path.pathTX0 += tx0;
+        ++path.segmentCount;
+        if (audit.tellp() > 0) audit << '|';
+        audit << segment.first.name() << ':'
+              << segment.second / dd4hep::mm << ':' << tx0;
+      }
+      path.materials = audit.str();
+      path.valid = path.segmentCount > 0 && std::isfinite(path.pathTX0) &&
+          path.pathTX0 > 0.0;
+      return path;
+    };
+
+    const double requestedLength = (to - from).r();
+    const double coverageTolerance = std::max(
+        1.0e-3 * dd4hep::mm, 1.0e-6 * requestedLength);
+    auto original = scan(from, to);
+    original.initialCoveredLength = original.coveredLength;
+    if (original.coveredLength + coverageTolerance >= requestedLength)
+      return original;
+
+    const double nudgeLength = std::min(
+        1.0e-3 * dd4hep::mm, 0.01 * requestedLength);
+    const auto direction = (to - from).unit();
+    const auto nudgedFrom = from + nudgeLength * direction;
+    auto repaired = scan(nudgedFrom, to);
+    repaired.initialCoveredLength = original.coveredLength;
+    const double repairedRequestedLength = requestedLength - nudgeLength;
+    if (repaired.coveredLength + coverageTolerance <
+        repairedRequestedLength) {
+      original.valid = false;
+      return original;
+    }
+
+    const auto capPosition = from + 0.5 * nudgeLength * direction;
+    const auto& capMaterial = manager->materialAt(capPosition);
+    const double capRadLength = capMaterial.radLength();
+    if (!(capRadLength > 0.0)) {
+      repaired.valid = false;
+      return repaired;
+    }
+    const double capTX0 = nudgeLength / capRadLength;
+    repaired.pathTX0 += capTX0;
+    repaired.coveredLength += nudgeLength;
+    ++repaired.segmentCount;
+    std::ostringstream capAudit;
+    capAudit << capMaterial.name() << ':' << nudgeLength / dd4hep::mm
+             << ':' << capTX0 << ":coverage-cap";
+    repaired.materials = capAudit.str() +
+        (repaired.materials.empty()
+             ? std::string{} : '|' + repaired.materials);
+    repaired.valid = repaired.segmentCount > 0 &&
+        std::isfinite(repaired.pathTX0) && repaired.pathTX0 > 0.0;
+    repaired.coverageRepaired = repaired.valid;
+    return repaired;
+  }
 }
 
 StatusCode GsfMaterialStepRecorderAnaElemTool::initialize() {
@@ -255,42 +338,18 @@ void GsfMaterialStepRecorderAnaElemTool::buildDD4hepSurfaceIntervals() {
       const dd4hep::rec::Vector3D p1(
           to.point.x * dd4hep::mm, to.point.y * dd4hep::mm,
           to.point.z * dd4hep::mm);
-      double dd4hepTX0 = 0.0;
-      int dd4hepSegments = 0;
-      std::ostringstream dd4hepAudit;
+      DD4hepMaterialPath dd4hepPath;
       try {
-        const auto& materials = m_materialManager->materialsBetween(p0, p1);
-        for (const auto& segment : materials) {
-          const double radLength = segment.first.radLength();
-          if (!(radLength > 0.0) || !(segment.second > 0.0)) continue;
-          const double tx0 = segment.second / radLength;
-          dd4hepTX0 += tx0;
-          ++dd4hepSegments;
-          if (dd4hepAudit.tellp() > 0) dd4hepAudit << '|';
-          dd4hepAudit << segment.first.name() << ':'
-                      << segment.second / dd4hep::mm << ':' << tx0;
-        }
+        dd4hepPath = completeMaterialPath(m_materialManager, p0, p1);
       } catch (const std::exception& exception) {
         warning() << "DD4hep midpoint material query failed for event "
                   << m_event_id << " track " << track.first << " interval "
                   << interval << ": " << exception.what() << endmsg;
       }
 
-      double dd4hepReverseTX0 = 0.0;
-      int dd4hepReverseSegments = 0;
-      std::ostringstream dd4hepReverseAudit;
+      DD4hepMaterialPath dd4hepReversePath;
       try {
-        const auto& materials = m_materialManager->materialsBetween(p1, p0);
-        for (const auto& segment : materials) {
-          const double radLength = segment.first.radLength();
-          if (!(radLength > 0.0) || !(segment.second > 0.0)) continue;
-          const double tx0 = segment.second / radLength;
-          dd4hepReverseTX0 += tx0;
-          ++dd4hepReverseSegments;
-          if (dd4hepReverseAudit.tellp() > 0) dd4hepReverseAudit << '|';
-          dd4hepReverseAudit << segment.first.name() << ':'
-                             << segment.second / dd4hep::mm << ':' << tx0;
-        }
+        dd4hepReversePath = completeMaterialPath(m_materialManager, p1, p0);
       } catch (const std::exception& exception) {
         warning() << "DD4hep reverse midpoint material query failed for event "
                   << m_event_id << " track " << track.first << " interval "
@@ -329,12 +388,15 @@ void GsfMaterialStepRecorderAnaElemTool::buildDD4hepSurfaceIntervals() {
       m_dd4hep_interval_index.push_back((int)interval);
       m_dd4hep_from_track_step.push_back(from.trackStep);
       m_dd4hep_to_track_step.push_back(to.trackStep);
-      m_dd4hep_segment_count.push_back(dd4hepSegments);
-      m_dd4hep_reverse_segment_count.push_back(dd4hepReverseSegments);
-      m_dd4hep_valid.push_back(dd4hepSegments > 0 &&
-          std::isfinite(dd4hepTX0) && dd4hepTX0 > 0.0 ? 1 : 0);
-      m_dd4hep_reverse_valid.push_back(dd4hepReverseSegments > 0 &&
-          std::isfinite(dd4hepReverseTX0) && dd4hepReverseTX0 > 0.0 ? 1 : 0);
+      m_dd4hep_segment_count.push_back(dd4hepPath.segmentCount);
+      m_dd4hep_reverse_segment_count.push_back(
+          dd4hepReversePath.segmentCount);
+      m_dd4hep_valid.push_back(dd4hepPath.valid ? 1 : 0);
+      m_dd4hep_reverse_valid.push_back(dd4hepReversePath.valid ? 1 : 0);
+      m_dd4hep_coverage_repaired.push_back(
+          dd4hepPath.coverageRepaired ? 1 : 0);
+      m_dd4hep_reverse_coverage_repaired.push_back(
+          dd4hepReversePath.coverageRepaired ? 1 : 0);
       m_dd4hep_g4_step_count.push_back(g4Steps);
       m_dd4hep_ebrem_step_count.push_back(ebremSteps);
       m_dd4hep_from_x.push_back(from.point.x);
@@ -348,16 +410,24 @@ void GsfMaterialStepRecorderAnaElemTool::buildDD4hepSurfaceIntervals() {
       m_dd4hep_from_track_length_mm.push_back(from.trackLength);
       m_dd4hep_to_track_length_mm.push_back(to.trackLength);
       m_dd4hep_path_length_mm.push_back(std::sqrt(dx * dx + dy * dy + dz * dz));
-      m_dd4hep_path_tX0.push_back(dd4hepTX0);
-      m_dd4hep_reverse_path_tX0.push_back(dd4hepReverseTX0);
+      m_dd4hep_initial_covered_length_mm.push_back(
+          dd4hepPath.initialCoveredLength / dd4hep::mm);
+      m_dd4hep_reverse_initial_covered_length_mm.push_back(
+          dd4hepReversePath.initialCoveredLength / dd4hep::mm);
+      m_dd4hep_covered_length_mm.push_back(
+          dd4hepPath.coveredLength / dd4hep::mm);
+      m_dd4hep_reverse_covered_length_mm.push_back(
+          dd4hepReversePath.coveredLength / dd4hep::mm);
+      m_dd4hep_path_tX0.push_back(dd4hepPath.pathTX0);
+      m_dd4hep_reverse_path_tX0.push_back(dd4hepReversePath.pathTX0);
       m_dd4hep_g4_tX0.push_back(g4TX0);
       m_dd4hep_p_before_GeV.push_back(from.point.p);
       m_dd4hep_p_after_GeV.push_back(to.point.p);
       m_dd4hep_ebrem_loss_GeV.push_back(ebremLoss);
       m_dd4hep_surface_from.push_back(from.surface);
       m_dd4hep_surface_to.push_back(to.surface);
-      m_dd4hep_materials.push_back(dd4hepAudit.str());
-      m_dd4hep_reverse_materials.push_back(dd4hepReverseAudit.str());
+      m_dd4hep_materials.push_back(dd4hepPath.materials);
+      m_dd4hep_reverse_materials.push_back(dd4hepReversePath.materials);
     }
   }
 }
@@ -619,6 +689,10 @@ void GsfMaterialStepRecorderAnaElemTool::bookTree() {
                          &m_dd4hep_reverse_segment_count);
     m_dd4hepTree->Branch("valid", &m_dd4hep_valid);
     m_dd4hepTree->Branch("reverse_valid", &m_dd4hep_reverse_valid);
+    m_dd4hepTree->Branch("coverage_repaired",
+                         &m_dd4hep_coverage_repaired);
+    m_dd4hepTree->Branch("reverse_coverage_repaired",
+                         &m_dd4hep_reverse_coverage_repaired);
     m_dd4hepTree->Branch("g4_step_count", &m_dd4hep_g4_step_count);
     m_dd4hepTree->Branch("ebrem_step_count", &m_dd4hep_ebrem_step_count);
     m_dd4hepTree->Branch("from_x", &m_dd4hep_from_x);
@@ -634,6 +708,14 @@ void GsfMaterialStepRecorderAnaElemTool::bookTree() {
     m_dd4hepTree->Branch("to_track_length_mm",
                          &m_dd4hep_to_track_length_mm);
     m_dd4hepTree->Branch("path_length_mm", &m_dd4hep_path_length_mm);
+    m_dd4hepTree->Branch("initial_covered_length_mm",
+                         &m_dd4hep_initial_covered_length_mm);
+    m_dd4hepTree->Branch("reverse_initial_covered_length_mm",
+                         &m_dd4hep_reverse_initial_covered_length_mm);
+    m_dd4hepTree->Branch("covered_length_mm",
+                         &m_dd4hep_covered_length_mm);
+    m_dd4hepTree->Branch("reverse_covered_length_mm",
+                         &m_dd4hep_reverse_covered_length_mm);
     m_dd4hepTree->Branch("dd4hep_path_tX0", &m_dd4hep_path_tX0);
     m_dd4hepTree->Branch("dd4hep_reverse_path_tX0",
                          &m_dd4hep_reverse_path_tX0);
@@ -686,6 +768,8 @@ void GsfMaterialStepRecorderAnaElemTool::clearVectors() {
   m_dd4hep_from_track_step.clear(); m_dd4hep_to_track_step.clear();
   m_dd4hep_segment_count.clear(); m_dd4hep_reverse_segment_count.clear();
   m_dd4hep_valid.clear(); m_dd4hep_reverse_valid.clear();
+  m_dd4hep_coverage_repaired.clear();
+  m_dd4hep_reverse_coverage_repaired.clear();
   m_dd4hep_g4_step_count.clear(); m_dd4hep_ebrem_step_count.clear();
   m_dd4hep_from_x.clear(); m_dd4hep_from_y.clear();
   m_dd4hep_from_z.clear(); m_dd4hep_from_r.clear();
@@ -694,6 +778,10 @@ void GsfMaterialStepRecorderAnaElemTool::clearVectors() {
   m_dd4hep_from_track_length_mm.clear();
   m_dd4hep_to_track_length_mm.clear();
   m_dd4hep_path_length_mm.clear(); m_dd4hep_path_tX0.clear();
+  m_dd4hep_initial_covered_length_mm.clear();
+  m_dd4hep_reverse_initial_covered_length_mm.clear();
+  m_dd4hep_covered_length_mm.clear();
+  m_dd4hep_reverse_covered_length_mm.clear();
   m_dd4hep_reverse_path_tX0.clear();
   m_dd4hep_g4_tX0.clear();
   m_dd4hep_p_before_GeV.clear(); m_dd4hep_p_after_GeV.clear();

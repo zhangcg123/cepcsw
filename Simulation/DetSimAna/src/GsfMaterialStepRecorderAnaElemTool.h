@@ -109,6 +109,8 @@ private:
   std::vector<int> m_dd4hep_reverse_segment_count;
   std::vector<int> m_dd4hep_valid;
   std::vector<int> m_dd4hep_reverse_valid;
+  std::vector<int> m_dd4hep_coverage_repaired;
+  std::vector<int> m_dd4hep_reverse_coverage_repaired;
   std::vector<int> m_dd4hep_g4_step_count;
   std::vector<int> m_dd4hep_ebrem_step_count;
   std::vector<float> m_dd4hep_from_x, m_dd4hep_from_y;
@@ -118,6 +120,10 @@ private:
   std::vector<float> m_dd4hep_from_track_length_mm;
   std::vector<float> m_dd4hep_to_track_length_mm;
   std::vector<float> m_dd4hep_path_length_mm;
+  std::vector<float> m_dd4hep_initial_covered_length_mm;
+  std::vector<float> m_dd4hep_reverse_initial_covered_length_mm;
+  std::vector<float> m_dd4hep_covered_length_mm;
+  std::vector<float> m_dd4hep_reverse_covered_length_mm;
   std::vector<float> m_dd4hep_path_tX0;
   std::vector<float> m_dd4hep_reverse_path_tX0;
   std::vector<float> m_dd4hep_g4_tX0;
