@@ -11,6 +11,7 @@
 
 class TFile;
 class TTree;
+namespace dd4hep { namespace rec { class MaterialManager; } }
 
 class GsfMaterialStepRecorderAnaElemTool : public extends<AlgTool, IAnaElemTool> {
 public:
@@ -39,11 +40,17 @@ private:
       "Minimum absolute momentum loss to record [GeV]"};
   Gaudi::Property<bool> m_recordZeroLoss{this, "RecordZeroLoss", true,
       "Record steps even when post momentum is not smaller than pre momentum"};
+  Gaudi::Property<bool> m_recordDD4hepSurfaceIntervals{
+      this, "RecordDD4hepSurfaceIntervals", false,
+      "Write midpoint-to-midpoint DD4hep material intervals reconstructed "
+      "from consecutive sensitive-volume traversals"};
 
   TFile* m_file = nullptr;
   TTree* m_tree = nullptr;
+  TTree* m_dd4hepTree = nullptr;
 
   SmartIF<IGeomSvc> m_geosvc;
+  dd4hep::rec::MaterialManager* m_materialManager = nullptr;
   double m_trackerR = 0.0;
   double m_trackerZ = 0.0;
 
@@ -89,9 +96,39 @@ private:
   std::vector<std::string> m_material;
   std::vector<std::string> m_process;
 
+  // ── optional DD4hep midpoint-to-midpoint interval tree ──
+  int m_dd4hep_interval_count = 0;
+  std::vector<int> m_dd4hep_track_id;
+  std::vector<int> m_dd4hep_parent_id;
+  std::vector<int> m_dd4hep_is_primary;
+  std::vector<int> m_dd4hep_pdg;
+  std::vector<int> m_dd4hep_interval_index;
+  std::vector<int> m_dd4hep_from_track_step;
+  std::vector<int> m_dd4hep_to_track_step;
+  std::vector<int> m_dd4hep_segment_count;
+  std::vector<int> m_dd4hep_valid;
+  std::vector<int> m_dd4hep_g4_step_count;
+  std::vector<int> m_dd4hep_ebrem_step_count;
+  std::vector<float> m_dd4hep_from_x, m_dd4hep_from_y;
+  std::vector<float> m_dd4hep_from_z, m_dd4hep_from_r;
+  std::vector<float> m_dd4hep_to_x, m_dd4hep_to_y;
+  std::vector<float> m_dd4hep_to_z, m_dd4hep_to_r;
+  std::vector<float> m_dd4hep_from_track_length_mm;
+  std::vector<float> m_dd4hep_to_track_length_mm;
+  std::vector<float> m_dd4hep_path_length_mm;
+  std::vector<float> m_dd4hep_path_tX0;
+  std::vector<float> m_dd4hep_g4_tX0;
+  std::vector<float> m_dd4hep_p_before_GeV;
+  std::vector<float> m_dd4hep_p_after_GeV;
+  std::vector<float> m_dd4hep_ebrem_loss_GeV;
+  std::vector<std::string> m_dd4hep_surface_from;
+  std::vector<std::string> m_dd4hep_surface_to;
+  std::vector<std::string> m_dd4hep_materials;
+
   bool acceptPdg(int pdg) const;
   bool insideTracker(double r, double z) const;
   void bookTree();
+  void buildDD4hepSurfaceIntervals();
   void clearVectors();
 };
 

@@ -208,6 +208,14 @@ Current boundary evidence and definitions:
   within 0.10% per tested interval and 0.027% in their three-interval sum.
   This validates the endpoint/ownership mechanism, not the collapsed BH
   response or production performance.
+- The default-off material recorder can now emit midpoint-to-midpoint DD4hep
+  intervals with the same `materialsBetween` primitive used by GSF. A
+  three-event seed-107 comparison matched 693 reconstructed non-seed
+  intervals: summed DD4hep differences were at most 0.0034% in VXD/ITK and
+  0.0327% in OTK; the TPC sum differed by 0.815% because truth midpoints and
+  digitized hit endpoints are not identical. The three separately handled
+  seed paths are not emitted by the current GSF CSV audit. This validates the
+  extractor mechanism, not BH closure.
 - `DD4hepBetweenSurfaces` was explicitly promoted to the compiled, reverse-
   template, and maintained-card default on 2026-08-19 after the endpoint fix.
   This is a steering decision, not a claim that its BH response or population
@@ -272,6 +280,9 @@ and representative Geant4 ownership closure are preserved in
 The explicit DD4hep default decision, synchronized option surface, historical-
 card boundary, and validation requirements are preserved in
 `agents_record/2026-08-19-dd4hep-between-surfaces-default-promotion.md`.
+The material-recorder interval implementation, tuple contract, and paired
+three-event GSF comparison are preserved in
+`agents_record/2026-08-19-dd4hep-material-recorder-surface-interval-extraction.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

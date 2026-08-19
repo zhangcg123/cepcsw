@@ -255,6 +255,24 @@ truth. Its tuple includes true track-step order, sensitive-volume and touchable
 identifiers, track-length coordinates, and momentum directions. Tracker-region
 DD4hep constants are explicitly converted to millimetres.
 
+For BH-model dataset production, the recorder can also write a default-off
+`dd4hep_surface_tuple` using the same DD4hep `MaterialManager::materialsBetween`
+primitive and `length/radLength` sum as `DD4hepBetweenSurfaces` in the GSF. It
+uses the midpoint of each sensitive traversal as a measurement anchor, treats
+the adjacent TPC lower/upper sensitive half-volumes as one pad row, and stores
+the DD4hep material composition together with the clipped Geant4 step material
+and eBrem loss inside the same midpoint-to-midpoint bounds. Enable it with:
+
+```python
+steprec.RecordDD4hepSurfaceIntervals = True
+```
+
+This mode requires the complete raw step stream: `RecordZeroLoss=True`,
+`MinStepLengthMm=0`, and `MinAbsLossGeV=0`. Initialization fails instead of
+silently constructing incomplete intervals when those requirements are not
+met. The original `g4step_tuple` is unchanged, and no additional tree is
+created while the option remains off.
+
 Build outgoing-current transition rows with:
 
 ```bash
