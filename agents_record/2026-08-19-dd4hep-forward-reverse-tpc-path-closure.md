@@ -45,6 +45,14 @@ intervals within +0.0101%, -0.0039%, and +0.0118%. The full 232-interval
 reverse totals, including the seed, were lower than the recorder totals by
 7.6612%, 6.0387%, and 7.3961%, driven by the internal TPC intervals.
 
+The internal-TPC paths are about 4.4e-5 X0 outward and 2.2e-5 X0 inward. Both
+remain below the committed production `BHSplitThreshold=1e-4`, so this defect
+does not itself change whether those intervals execute a BH split under the
+production baseline and cannot yet be claimed as the cause of its branch
+selection failures. It does invalidate direction closure, biases accumulated
+material diagnostics, and directly affects the live experimental `1e-8`
+split/cutoff steering.
+
 This means the earlier correction is valid only at the dispatch level:
 `MaterialPathMode` does govern both directions, but it does not currently
 produce direction-symmetric path values in the TPC.

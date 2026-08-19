@@ -230,7 +230,11 @@ Current boundary evidence and definitions:
   A recorder-side identical-endpoint control was symmetric for 224/232
   intervals; its eight direction-sensitive boundary cases lost one T2KGas1
   half-segment. This points to direction-sensitive DD4hep/TGeo boundary
-  navigation on exact TPC measurement surfaces, not to BH modelling.
+  navigation on exact TPC measurement surfaces, not to BH modelling. At the
+  production `BHSplitThreshold=1e-4`, both the roughly 4.4e-5 outward and
+  2.2e-5 inward internal-TPC paths remain below threshold, so this defect does
+  not by itself explain production BH branch choices there. It does affect
+  material closure and the live experimental `1e-8` steering.
 - `DD4hepBetweenSurfaces` was explicitly promoted to the compiled, reverse-
   template, and maintained-card default on 2026-08-19 after the endpoint fix.
   This is a steering decision, not a claim that its BH response or population
