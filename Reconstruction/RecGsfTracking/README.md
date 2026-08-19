@@ -261,7 +261,11 @@ primitive and `length/radLength` sum as `DD4hepBetweenSurfaces` in the GSF. It
 uses the midpoint of each sensitive traversal as a measurement anchor, treats
 the adjacent TPC lower/upper sensitive half-volumes as one pad row, and stores
 the DD4hep material composition together with the clipped Geant4 step material
-and eBrem loss inside the same midpoint-to-midpoint bounds. Enable it with:
+and eBrem loss inside the same midpoint-to-midpoint bounds. It also evaluates
+the identical endpoints in reverse order and stores
+`dd4hep_reverse_path_tX0`, `reverse_segment_count`, `reverse_valid`, and
+`dd4hep_reverse_materials`; these are direction-closure diagnostics, not a
+second material definition. Enable the tree with:
 
 ```python
 steprec.RecordDD4hepSurfaceIntervals = True

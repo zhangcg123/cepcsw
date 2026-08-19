@@ -106,7 +106,9 @@ private:
   std::vector<int> m_dd4hep_from_track_step;
   std::vector<int> m_dd4hep_to_track_step;
   std::vector<int> m_dd4hep_segment_count;
+  std::vector<int> m_dd4hep_reverse_segment_count;
   std::vector<int> m_dd4hep_valid;
+  std::vector<int> m_dd4hep_reverse_valid;
   std::vector<int> m_dd4hep_g4_step_count;
   std::vector<int> m_dd4hep_ebrem_step_count;
   std::vector<float> m_dd4hep_from_x, m_dd4hep_from_y;
@@ -117,6 +119,7 @@ private:
   std::vector<float> m_dd4hep_to_track_length_mm;
   std::vector<float> m_dd4hep_path_length_mm;
   std::vector<float> m_dd4hep_path_tX0;
+  std::vector<float> m_dd4hep_reverse_path_tX0;
   std::vector<float> m_dd4hep_g4_tX0;
   std::vector<float> m_dd4hep_p_before_GeV;
   std::vector<float> m_dd4hep_p_after_GeV;
@@ -124,6 +127,7 @@ private:
   std::vector<std::string> m_dd4hep_surface_from;
   std::vector<std::string> m_dd4hep_surface_to;
   std::vector<std::string> m_dd4hep_materials;
+  std::vector<std::string> m_dd4hep_reverse_materials;
 
   bool acceptPdg(int pdg) const;
   bool insideTracker(double r, double z) const;

@@ -196,8 +196,14 @@ Current boundary evidence and definitions:
   `split(parent, pathTX0, bz[, reverse])` per valid component path above the
   split threshold. Candidate paths, event-hit medians, hit-level split counts,
   and Geant4 transitions are not interchangeable with this population.
-- The direction-symmetry defect is fixed: `MaterialPathMode` now governs both
-  outward and inward propagation. Pre-fix reverse tuples must be regenerated.
+- The earlier mode-dispatch defect is fixed: `MaterialPathMode` now governs
+  both outward and inward propagation. This does not establish path-value
+  symmetry. A paired three-event runtime audit found that all 666 internal TPC
+  reverse intervals receive approximately half the corresponding forward
+  DD4hep thickness, while silicon and the final TPC-to-OTK interval agree.
+  Pre-fix reverse tuples must still be regenerated, and current reverse tuples
+  must not be treated as material-closed until this TPC boundary defect is
+  corrected and rerun.
 - The bounded-target endpoint defect is fixed for `DD4hepBetweenSurfaces`:
   the target hit now anchors the material segment while finite-point,
   matched-surface, and propagation-direction guards remain. In the selected
@@ -216,6 +222,15 @@ Current boundary evidence and definitions:
   digitized hit endpoints are not identical. The three separately handled
   seed paths are not emitted by the current GSF CSV audit. This validates the
   extractor mechanism, not BH closure.
+- In the direction-paired runtime rerun, all 5,971 forward and 7,127 reverse
+  component paths were valid and component-independent at fixed boundaries.
+  Every forward active path equalled its DD4hep audit value, but the 666 shared
+  internal TPC interval values had median reverse/forward ratio 0.500042. The
+  three shared event totals were lower inward by 7.99%, 6.27%, and 7.74%.
+  A recorder-side identical-endpoint control was symmetric for 224/232
+  intervals; its eight direction-sensitive boundary cases lost one T2KGas1
+  half-segment. This points to direction-sensitive DD4hep/TGeo boundary
+  navigation on exact TPC measurement surfaces, not to BH modelling.
 - `DD4hepBetweenSurfaces` was explicitly promoted to the compiled, reverse-
   template, and maintained-card default on 2026-08-19 after the endpoint fix.
   This is a steering decision, not a claim that its BH response or population
@@ -241,18 +256,23 @@ Proceed in this order:
 
 1. Keep the corrected endpoint and production baseline frozen. Print exact
    steering and use temporary cards for further material controls.
-2. Capture every actual BH call, including the seed path, on an unbiased
+2. Close the newly exposed TPC direction defect first. In a temporary build,
+   audit the exact forward/reverse endpoints and material lists, then test a
+   canonical outward evaluation of each bounded surface pair for both
+   propagation directions. Require interval-wise forward/reverse equality and
+   recorder closure before changing the production source.
+3. Capture every actual BH call, including the seed path, on an unbiased
    sample. Record event, direction, bounding surfaces, parent identity/weight,
    material composition, `pathTX0`, and the returned BH mixture.
-3. In bad events, locate the first surface where a truth-compatible lineage
+4. In bad events, locate the first surface where a truth-compatible lineage
    loses posterior rank or is removed, and compare matched good controls.
-4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
+5. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
    and Geant4 pre/post-step truth between the same spatial boundaries. Compare
    directions only for equivalent component states.
-5. Check BH energy-loss closure at the exact runtime input against Geant4
+6. Check BH energy-loss closure at the exact runtime input against Geant4
    retained-energy fractions across energy, angle, and detector region,
    treating last-knot saturation explicitly.
-6. Classify the cause as path/ownership, interval-collapse granularity, BH
+7. Classify the cause as path/ownership, interval-collapse granularity, BH
    response, or downstream measurement/selection before proposing a change.
    Then apply the focused verbose, hard-event 11/16/17, and held-out clean-track
    validation gates.
@@ -283,6 +303,9 @@ card boundary, and validation requirements are preserved in
 The material-recorder interval implementation, tuple contract, and paired
 three-event GSF comparison are preserved in
 `agents_record/2026-08-19-dd4hep-material-recorder-surface-interval-extraction.md`.
+The forward/reverse runtime closure failure, identical-endpoint control, and
+review boundary for a canonical-direction correction are preserved in
+`agents_record/2026-08-19-dd4hep-forward-reverse-tpc-path-closure.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

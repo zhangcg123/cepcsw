@@ -39,8 +39,12 @@ For every recorded track, the extractor:
 The new tree records event/track provenance, primary status, interval and step
 indices, midpoint coordinates and track-length bounds, DD4hep path length and
 t/X0, DD4hep material composition, clipped Geant4 t/X0, boundary momenta, and
-the count and summed loss of eBrem steps. Generated ROOT files remain outputs
-and are not committed.
+the count and summed loss of eBrem steps. A follow-up direction-closure
+extension records the identical endpoint query in reverse order through
+`dd4hep_reverse_path_tX0`, `reverse_segment_count`, `reverse_valid`, and
+`dd4hep_reverse_materials`. The forward value remains the material definition;
+the reverse fields are diagnostics. Generated ROOT files remain outputs and
+are not committed.
 
 ## Mechanical validation
 
