@@ -93,6 +93,61 @@ eight unequal t/X0 values, including losses as large as 2.621 mm. This shows
 that the new decision is driven by path coverage rather than a detector-name
 or direction-specific exception.
 
+## Direct recorder-to-runtime surface-interval closure
+
+A final cross-implementation audit matched the coverage-corrected material
+recorder to the GSF runtime on the same three seed-107 events. Provenance was
+checked directly in the PODIO files: all three generator-particle PDG codes and
+momentum components were bitwise equal, and the VXD, ITK, TPC, and OTK
+SimTrackerHit collection sizes agreed event by event.
+
+The recorder supplied 696 primary surface intervals. The forward GSF audit
+supplied all 693 non-seed intervals and the reverse runtime dump supplied all
+696 intervals including the seed; there were no missing or extra keys. At each
+runtime boundary, every live component received exactly the same DD4hep
+thickness. All 5,971 forward component rows had zero difference between the
+active `path_t_over_x0` and the independently displayed
+`geometry_path_t_over_x0`. The 7,127 reverse rows were likewise
+component-independent.
+
+The recorder's forward query and the GSF forward runtime used identical
+material-name sets in all 693 paired intervals. Their summed thicknesses were:
+
+| Target region | intervals | recorder sum [X0] | runtime sum [X0] | runtime/recorder difference |
+|---|---:|---:|---:|---:|
+| VXD | 12 | 0.0165784011 | 0.0165780200 | -0.00230% |
+| ITK | 9 | 0.0821215576 | 0.0821243742 | +0.00343% |
+| TPC | 669 | 0.0598924016 | 0.0603804464 | +0.81487% |
+| OTK | 3 | 0.0493000913 | 0.0493162047 | +0.03268% |
+
+The 231 matched non-seed intervals in events 0, 1, and 2 differed in total by
++0.26893%, +0.18985%, and +0.28571%, respectively. Across all 693 intervals,
+the absolute t/X0 difference had median `4.54e-7`, 95th percentile `3.26e-6`,
+and maximum `2.23e-5`. The relative difference had median 0.983% and 95th
+percentile 6.74%; the largest relative values occur on individual TPC gas
+intervals of only about `4.5e-5 X0`, not on the material-dominant silicon
+intervals.
+
+The cross-file values are not expected to be bitwise equal because their
+endpoints are intentionally different. The recorder uses the Geant4 sensitive-
+traversal midpoint, whereas runtime GSF uses the digitized reconstructed hit.
+Taking the larger of the two endpoint displacements for each interval gave a
+median of 0.699 mm, a 95th percentile of 1.512 mm, and a maximum of 2.197 mm.
+For all 666 homogeneous internal-TPC intervals, the runtime/recorder t/X0 ratio
+followed the reconstructed-endpoint/truth-midpoint path-length ratio: the
+median absolute ratio residual was `4.05e-5` and the maximum was `9.82e-5`.
+This directly attributes the TPC spread to endpoint placement rather than a
+different material calculator or a missing volume.
+
+Using identical reconstructed endpoints removes that distinction. The 693
+paired GSF forward/reverse intervals had median relative disagreement
+`5.42e-10` and maximum `3.47e-9`. Together with the recorder's own
+forward/reverse closure, complete key matching, and identical material-name
+sets, this validates that the material tuple producer and GSF runtime implement
+the same surface-to-surface DD4hep material definition. It does not mean that
+truth-midpoint and digitized-hit intervals are the same geometrical segment;
+an exact call-by-call BH comparison must use the runtime endpoint value.
+
 ## Focused branch-safety controls
 
 Verbose post-repair reruns of the required source events 11, 16, and 17
