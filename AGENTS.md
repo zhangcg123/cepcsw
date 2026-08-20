@@ -307,13 +307,20 @@ Current boundary evidence and definitions:
   aligned to observed interval bands. Their compiled responses agree with the
   packaged JSON tables to at most `1.7e-14` over more than 1,200 audited calls,
   and the generalized interpolation leaves the current default bit-for-bit
-  unchanged on the focused rerun. In selected topology-clear bad events both
-  candidates remove one `+79.4%` no-eBrem false overshoot and retain one hard-
-  loss recovery, but improve other overshoots only modestly and do not repair
-  the tested under-recoveries. The category fit still underpredicts the
-  secondary-activity control and its thickest knot has only 12 extreme-loss
-  training entries. Neither model is population validated or approved as a
-  replacement; both continue to use only the existing `pathTX0` interface.
+  unchanged on the focused and 60-event reruns. A same-seed topology-clear
+  stress panel selected the 20 largest positive residuals, 20 most negative,
+  and 20 best remaining controls under the default. Both candidates reduce the
+  overshoot mean absolute residual from `5.365%` to about `1.306%`, principally
+  by removing one `+79.4%` no-eBrem false overshoot. Generic-grid does not
+  improve the under-group mean (`8.538% -> 8.549%`); category-aligned reduces
+  it to `8.425%`, driven mainly by one event. Good-control mean absolute
+  residual broadens from `0.0330%` to about `0.041%`, but no control crosses
+  1% and candidate maxima remain below `0.18%`. Excluding the single false
+  overshoot, all-panel mean absolute gains are only `0.025` and `0.067`
+  percentage points. The category fit still underpredicts the secondary-
+  activity control and its thickest knot has only 12 extreme-loss training
+  entries. This selected panel is not held-out population validation; neither
+  model is approved as a replacement, and both use only `pathTX0`.
 
 Proceed in this order:
 
