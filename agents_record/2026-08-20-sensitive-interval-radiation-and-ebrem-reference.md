@@ -66,6 +66,28 @@ crossing from one outer-VXD ladder to a neighboring ladder at typical radii
 about 43.23 to 43.63 mm. It is not the reverse of the same-ladder
 `VXD4-S04 -> VXD4-S05` interval.
 
+## Radiation-length distribution overlap
+
+Normalized log10(t/X0) histograms were compared with the overlap coefficient
+`sum(min(p_i, q_i))`, where zero is disjoint and one is identical. Within a
+fixed physical row, DD4hep forward/reverse overlap is at least 0.9985 and
+DD4hep/bounded-Geant4 overlap is at least 0.9915. Thus the three material
+estimators overlay within each table row at this histogram resolution.
+
+Physical rows do not all separate by thickness. The strongest cross-row
+overlaps are 0.961 for `VXD1 -> VXD2` versus `VXD2 -> VXD3`, 0.893 for
+`VXD4-S04 -> ITKB0` versus `ITKB2 -> TPC`, 0.880 for `ITKB0 -> ITKB1`
+versus `ITKB1 -> ITKB2`, and 0.835 for `VXD0 -> VXD1` versus
+`VXD3 -> VXD4-S04`. The noncanonical `ITKB1 -> TPC` has 0.524 overlap with
+`TPC -> OTKB`. TPC rows are essentially disjoint from all other categories,
+and the same-ladder VXD4 S04-to-S05 service interval is also a separate band.
+
+Therefore t/X0 alone does not identify the physical interval. It gives broad
+TPC-row, ordinary-VXD, VXD-service, ITK/bridge, and outer/high-thickness bands.
+Rows within an overlapping band must retain their labels during runtime
+closure and may be pooled for a one-dimensional BH fit only if their held-out
+retained-energy distributions also agree.
+
 ## Required GSF runtime comparison
 
 The next material/BH check must establish whether the actual GSF candidate
@@ -106,6 +128,10 @@ The generated study lives under
 - `README.md` documents definitions and interpretation;
 - `major_interval_ebrem_fractions.csv` is the numerical reference table;
 - `major_interval_ebrem_fractions.png` plots both eBrem denominators;
+- `table_interval_tx0_overlap.png` shows the row-pair overlap matrix and
+  same-row material-estimator agreement;
+- `table_interval_tx0_pairwise_overlap.csv` and
+  `table_interval_tx0_source_overlap.csv` contain the exact coefficients;
 - `coarse_interval_summary.csv` retains all 90 normalized categories;
 - `candidate_interval_bh_knots.csv` records candidate roles and exact physical
   sensitive-layer bounds.
