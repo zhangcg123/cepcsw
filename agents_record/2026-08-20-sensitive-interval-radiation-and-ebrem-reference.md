@@ -88,6 +88,22 @@ Rows within an overlapping band must retain their labels during runtime
 closure and may be pooled for a one-dimensional BH fit only if their held-out
 retained-energy distributions also agree.
 
+The table was subsequently displayed as five bands: adjacent TPC rows, thin
+VXD, outer-VXD service, ITK/tracker bridges, and outer/skipped high thickness.
+The TPC band was rebuilt from raw surface labels and directly merged only
+exact outward `row i -> row i+1` pairs for `i=0..221`: 9,119,532 intervals.
+This excludes 17,381 repeated, reverse, skipped, or other TPC-to-TPC paths
+from the earlier coarse 9,136,913-entry category.
+
+After merging each band, DD4hep forward/reverse and DD4hep/Geant4 overlap was
+respectively 0.999997/0.999989 for adjacent TPC, 0.999995/0.999866 for thin
+VXD, 1.000000/0.999974 for outer-VXD service, 1.000000/0.999415 for
+ITK/bridges, and 0.998600/0.999041 for outer/skipped high thickness. The
+constituent-row overlay retains meaningful substructure: thin VXD contains a
+lower neighboring-ladder-overlap band, ITK/bridges contains approximately
+0.008 and 0.011 X0 families, and `TPC -> OTKB` only partially overlaps the
+combined `ITKB1 -> TPC` path.
+
 ## Required GSF runtime comparison
 
 The next material/BH check must establish whether the actual GSF candidate
@@ -132,6 +148,12 @@ The generated study lives under
   same-row material-estimator agreement;
 - `table_interval_tx0_pairwise_overlap.csv` and
   `table_interval_tx0_source_overlap.csv` contain the exact coefficients;
+- `five_category_interval_member_overlays.png` and
+  `five_category_material_source_overlays.png` show the five-band row and
+  material-estimator overlays;
+- `five_category_interval_histograms.csv`,
+  `five_category_interval_audit.csv`, and
+  `five_category_material_source_overlap.csv` contain their numerical inputs;
 - `coarse_interval_summary.csv` retains all 90 normalized categories;
 - `candidate_interval_bh_knots.csv` records candidate roles and exact physical
   sensitive-layer bounds.
