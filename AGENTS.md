@@ -183,10 +183,12 @@ The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
 The committed production steering contract is `DD4hepBetweenSurfaces`,
-`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The live
-working copy of `DumpGsfTrks/gsf.py.bk` also contains local experimental
-`1e-8` split/cutoff thresholds and ECAL on. Those three deviations are not new
-defaults; do not silently use or overwrite them.
+`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
+maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
+explicitly enables an input-sample/method-specific `MaterialBHAuditCSV` under
+the configured tuple path (the project root while `tuplepath=""`). The
+algorithm and reverse-template audit defaults remain empty/off; the nonempty
+maintained-card value is campaign steering, not a new compiled default.
 
 Current boundary evidence and definitions:
 

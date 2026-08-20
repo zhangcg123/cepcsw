@@ -66,12 +66,12 @@ gsf.ElectronHypothesis = True
 gsf.BHModel = "CEPC2GeV85StepConditioned"
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
-gsf.BHSplitThreshold = 1.0e-8
+gsf.BHSplitThreshold = 1.0e-4
 
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0
 gsf.ReductionMergeCost = "SymmetricKL"
-gsf.ComponentWeightCutoff = 1.0e-8
+gsf.ComponentWeightCutoff = 1.0e-4
 gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True
@@ -95,7 +95,7 @@ gsf.ReverseKappaSeedCov = 100.0
 # Default-off research constraint.  When enabled for the reverse BestBranch
 # workflow, GSFTracks stays tracker-only and GSFTracksEcalConstrained carries
 # the paired component-selection result.  The input must contain EcalCluster.
-gsf.EcalComponentConstraint = True
+gsf.EcalComponentConstraint = False
 gsf.EcalConstraintRatioThreshold = 1.1
 gsf.EcalConstraintLogPSigma = 0.15
 gsf.EcalConstraintLikelihoodFloor = 0.05
@@ -135,7 +135,13 @@ gsf.ComponentDebugDump = False
 gsf.SurfaceLineageMassDump = False
 gsf.ComponentDebugMaxHistory = 240
 gsf.MaterialTransitionCSV = ""
-gsf.MaterialBHAuditCSV = ""
+# Campaign diagnostic: the algorithm default remains empty/off. The generated
+# input-sample/method name prevents different batch samples from overwriting it.
+gsf.MaterialBHAuditCSV = os.path.join(
+    tuplepath,
+    "gsf_material_bh_audit_{}_{}.csv".format(
+        os.path.splitext(os.path.basename(inputfilename))[0], method),
+)
 gsf.CounterfactualLossScan = False
 gsf.CounterfactualTruthTransitionMap = ""
 gsf.CounterfactualLossFractions = [

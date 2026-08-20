@@ -229,15 +229,16 @@ runtime interval or component-call information is required.
 ### Historical `DumpGsfTrks` card compatibility
 
 `DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 41
-properties and silently inherits none. It intentionally differs from the
-active production baseline in three live experimental settings:
-`BHSplitThreshold=1e-8`, `ComponentWeightCutoff=1e-8`, and
-`EcalComponentConstraint=true`. These are not compiled or production-default
-changes. `MaterialBHAuditCSV` and the legacy `MaterialTransitionCSV` are both
-explicitly empty in that maintained card. Its reconstructed-event input list
-includes `EcalCluster`, and `keep *` preserves the paired constrained
-collection. Its `RecGsfFlatTuple` instance writes both the ordinary `gsf_*`
-and paired `ecal_gsf_*` scalar branch sets.
+properties and silently inherits none. Its reverse physics settings agree with
+the production baseline, including split/cutoff `1e-4`,
+`DD4hepBetweenSurfaces`, and ECAL off. `MaterialTransitionCSV` is explicitly
+empty. For the current material/BH campaign, `MaterialBHAuditCSV` is explicitly
+set to an input-sample/method-specific filename under `tuplepath`; with the
+workflow's empty tuple path and repository-root working directory, the CSV is
+written in the project root. This campaign steering does not change the
+compiled or reverse-template default, which remains empty/off. The card's
+`RecGsfFlatTuple` instance still exposes both ordinary `gsf_*` and default-zero
+`ecal_gsf_*` scalar branch sets.
 
 ### Configuration-maintenance contract
 

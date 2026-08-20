@@ -55,6 +55,13 @@ The reverse template exposes the property as
 `MaterialBHAuditCSV=""`; batch jobs must assign unique output paths when it is
 enabled.
 
+Later on 2026-08-20, the maintained campaign card was intentionally returned
+to the production split/cutoff `1e-4` settings with ECAL off and assigned an
+input-sample/method-specific audit filename under `tuplepath`. With the empty
+tuple path used by `dump_gsftrk.sh`, that file is written under the project
+root. The algorithm and reverse-template property defaults remain empty/off;
+this is explicit campaign steering, not a default change.
+
 ## Mechanical validation
 
 The EL9/LCG 105 `RecGsfTracking` target built and installed successfully. A
