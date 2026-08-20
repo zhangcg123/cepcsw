@@ -274,24 +274,50 @@ Current boundary evidence and definitions:
   DD4hep path and material composition, split decision, returned BH mixture,
   and child state. It does not change the flat-tuple schema or the legacy
   forward-only `MaterialTransitionCSV` contract.
+- The first production-scale runtime audit contains 40,040 auditable events
+  from 411 nonempty files; 35,582 are topology clear and 4,458 have secondary
+  tracker activity. Valid, spatially matched paths close forward/reverse below
+  `4.21e-10` relative. Replacing exact runtime thickness with matched recorder
+  DD4hep or Geant4 thickness changes the aggregate BH prediction by only about
+  0.2%, so the normal endpoint-level material difference is not the principal
+  BH-response discrepancy.
+- The unbiased audit also exposes 11,175 invalid coverage groups. In the
+  topology-clear forward population, 4,790 paths in 223 events are invalid,
+  including 209 TPC-to-OTK paths and several Geant4 losses above 20%. Some
+  return a plausible nonzero material sum but fail the full-distance coverage
+  invariant and therefore never execute BH. The earlier focused all-valid
+  statement does not generalize to this population.
+- Every valid topology-clear forward candidate below `BHSplitThreshold=1e-4`
+  is internal TPC gas. The 7,867,363 such paths contain 6,080 Geant4 eBrem
+  intervals and 16.0% of the clear sample's total eBrem loss, but production
+  intentionally performs no split. On 345,997 actual clear valid BH calls,
+  the current model overpredicts eBrem probability (`0.0772` versus `0.0665`),
+  mean loss (`0.00653` versus `0.00296`), and the >20% tail (`0.00960` versus
+  `0.00405`). The secondary-activity control biases in the opposite direction;
+  inclusive calibration therefore hides a strong population dependence.
+- There are 1,533 inclusive valid forward calls above the last BH knot, 567 at
+  or above `0.03 t/X0`, and 49 at or above `0.05`; the maximum is `0.6475`.
+  Three hundred thirteen span multiple truth sensitive intervals. Constant
+  last-knot saturation is rare but is an explicit interval-collapse risk.
 
 Proceed in this order:
 
 1. Keep the coverage-corrected endpoint and production baseline frozen. Print
    exact steering and use temporary cards for further material controls.
-2. On an unbiased sample, enable `MaterialBHAuditCSV` and compare every GSF
-   candidate path before the split threshold and every actual BH call after it
-   with the truth-side sensitive-midpoint reference, keeping the seed path
-   separate. Treat the recorded consecutive GSF hit pair as authoritative;
-   use the truth table only after eventwise spatial matching.
-3. In bad events, locate the first surface where a truth-compatible lineage
+2. Reproduce the invalid coverage paths in seed/event `60:9`, `104:14`,
+   `149:57`, and `444:99` with explicit requested/covered-length diagnostics
+   and matched valid controls. Review a focused coverage repair before any
+   source change, then rerun the same-code material audit.
+3. In those and other bad events, locate the first surface where a
+   truth-compatible lineage
    loses posterior rank or is removed, and compare matched good controls.
 4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
    and Geant4 pre/post-step truth between the same spatial boundaries. Compare
    directions only for equivalent component states.
-5. Check BH energy-loss closure at the exact runtime input against Geant4
-   retained-energy fractions across energy, angle, and detector region,
-   treating last-knot saturation explicitly.
+5. After coverage closure, separate the internal-TPC split-threshold control
+   from an energy/angle/region-aware BH-response study. Treat topology activity
+   only as a reported control, never a truth-blind runtime input, and handle
+   last-knot saturation explicitly.
 6. Classify the cause as path/ownership, interval-collapse granularity, BH
    response, or downstream measurement/selection before proposing a change.
    Then apply the focused verbose, hard-event 11/16/17, and held-out clean-track
@@ -336,6 +362,10 @@ are preserved in
 The exact runtime material/BH audit schema, interval authority, focused
 mechanical validation, and non-interference A/B are preserved in
 `agents_record/2026-08-20-runtime-material-bh-audit-recorder.md`.
+The production-scale eventwise join, valid-path closure, unresolved coverage
+population, split-threshold accounting, BH-response calibration, and revised
+ordered investigation are preserved in
+`agents_record/2026-08-21-unbiased-runtime-material-bh-closure.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in
