@@ -43,8 +43,10 @@ The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 ranking, identity-lineage protection enabled, and the five-component
 `CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components and
 `CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
-ranking and the six-component `CEPC2GeV85StepConditioned6` model remain
-default-off controls; neither is validated or approved as a replacement.
+ranking, the six-component `CEPC2GeV85StepConditioned6` model, and the
+runtime-interval `CEPCRuntimeGenericGrid5Clear` and
+`CEPCRuntimeCategoryAligned5Clear` models remain default-off controls; none is
+validated or approved as a replacement.
 
 Geant4 pre/post-step data is the authoritative energy-loss truth.
 SimTrackerHit momentum is only a detector-level cross-check. Existing Geant4
@@ -299,18 +301,19 @@ Current boundary evidence and definitions:
   or above `0.03 t/X0`, and 49 at or above `0.05`; the maximum is `0.6475`.
   Three hundred thirteen span multiple truth sensitive intervals. Constant
   last-knot saturation is rare but is an explicit interval-collapse risk.
-- An analysis-only, x-only five-component candidate was fitted directly from
-  the exact runtime intervals with knots aligned to the TPC, VXD, service,
-  ITK/bridge, outer, and skipped/high-thickness bands. On 59,639 seed-held-out
-  topology-clear calls above threshold, observed/predicted mean loss is
-  `0.002993/0.002955`, versus `0.007165` from the current default. Against an
-  identical-runtime generic-grid fit, the category grid improves
-  zero-inflated NLL by about 2.3% and mean-loss bias, but gives slightly worse
-  5% and 20% tail calibration. The topology-clear fit strongly underpredicts
-  the separately reported secondary-activity control, and its thickest knot
-  has only 12 extreme-loss training entries. It is not integrated or approved
-  as a replacement; the existing splitter interface already supplies its sole
-  required input, `pathTX0`.
+- Two default-off, x-only five-component models are now integrated in parallel
+  with the unchanged production model. `CEPCRuntimeGenericGrid5Clear` uses the
+  generic logarithmic grid; `CEPCRuntimeCategoryAligned5Clear` uses knots
+  aligned to observed interval bands. Their compiled responses agree with the
+  packaged JSON tables to at most `1.7e-14` over more than 1,200 audited calls,
+  and the generalized interpolation leaves the current default bit-for-bit
+  unchanged on the focused rerun. In selected topology-clear bad events both
+  candidates remove one `+79.4%` no-eBrem false overshoot and retain one hard-
+  loss recovery, but improve other overshoots only modestly and do not repair
+  the tested under-recoveries. The category fit still underpredicts the
+  secondary-activity control and its thickest knot has only 12 extreme-loss
+  training entries. Neither model is population validated or approved as a
+  replacement; both continue to use only the existing `pathTX0` interface.
 
 Proceed in this order:
 
@@ -326,12 +329,12 @@ Proceed in this order:
 4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
    and Geant4 pre/post-step truth between the same spatial boundaries. Compare
    directions only for equivalent component states.
-5. Preserve the x-only category-aligned interval candidate as analysis-only.
-   After coverage and branch-local closure, review a default-off parallel
-   integration without changing the splitter call interface. Keep the
-   internal-TPC split-threshold control separate, test energy/angle/region only
-   as held-out diagnostics of x-only sufficiency, treat topology activity only
-   as a reported control, and handle last-knot saturation explicitly.
+5. Keep both integrated runtime-interval models default-off. After coverage
+   and branch-local closure, run same-code held-out population A/B tests before
+   considering a default change. Keep the internal-TPC split-threshold control
+   separate, test energy/angle/region only as held-out diagnostics of x-only
+   sufficiency, treat topology activity only as a reported control, and handle
+   last-knot saturation explicitly.
 6. Classify the cause as path/ownership, interval-collapse granularity, BH
    response, or downstream measurement/selection before proposing a change.
    Then apply the focused verbose, hard-event 11/16/17, and held-out clean-track
@@ -384,6 +387,9 @@ The x-only category-aligned knot design, exact-runtime interval fit,
 same-population generic-grid control, held-out closure, secondary-control
 failure, interface boundary, and integration gates are preserved in
 `agents_record/2026-08-21-category-aligned-runtime-interval-bh-fit.md`.
+The two default-off runtime selectors, packaged tables, exact response audit,
+default-regression check, and focused good/bad A/B are preserved in
+`agents_record/2026-08-21-runtime-interval-bh-model-integration-and-focused-ab.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

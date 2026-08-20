@@ -137,6 +137,12 @@ static constexpr double cepc6Variances[kCepcKnotCount][kCepc6ComponentCount] = {
     {1e-12, 6.5596673156642638e-06, 0.00011223656930814396, 0.00018876637340781155, 0.00081059249911230591, 0.065828372132041429},
     {1e-12, 5.4917847350788307e-06, 4.9641302950043098e-05, 0.00020993584933803877, 8.2928655291025777e-05, 0.058511627454352233}};
 
+// Analysis artifacts and their exact compiled representations live together
+// under data/. Runtime does not parse JSON; these tables are included so the
+// selected mixture remains deterministic and dependency-free.
+#include "../data/CEPCRuntimeGenericGrid5Clear/compiled_table.inc"
+#include "../data/CEPCRuntimeCategoryAligned5Clear/compiled_table.inc"
+
 inline double boundedLogit(double value) {
   value = std::min(1.0 - kCepcMeanEpsilon,
                    std::max(kCepcMeanEpsilon, value));
@@ -152,11 +158,11 @@ inline double stableInvLogit(double value) {
   return e / (1.0 + e);
 }
 
-template <size_t N>
+template <size_t K, size_t N>
 std::vector<BHComponent> cepcStepConditionedMixture(
-    double x, const double (&weights)[kCepcKnotCount][N],
-    const double (&means)[kCepcKnotCount][N],
-    const double (&variances)[kCepcKnotCount][N]) {
+    double x, const std::array<double, K>& knots,
+    const double (&weights)[K][N], const double (&means)[K][N],
+    const double (&variances)[K][N]) {
   std::vector<BHComponent> result(N);
   if (!(x > 0.0)) {
     result[0] = {1.0, 1.0, kCepcVarianceFloor};
@@ -165,8 +171,8 @@ std::vector<BHComponent> cepcStepConditionedMixture(
     return result;
   }
 
-  if (x < cepcTX0.front()) {
-    const double fraction = x / cepcTX0.front();
+  if (x < knots.front()) {
+    const double fraction = x / knots.front();
     double weightSum = 0.0;
     for (size_t i = 0; i < result.size(); ++i) {
       const double zeroWeight = (i == 0) ? 1.0 : 0.0;
@@ -181,15 +187,15 @@ std::vector<BHComponent> cepcStepConditionedMixture(
     return result;
   }
 
-  size_t lower = kCepcKnotCount - 1;
+  size_t lower = K - 1;
   size_t upper = lower;
   double fraction = 0.0;
-  if (x < cepcTX0.back()) {
+  if (x < knots.back()) {
     upper = 1;
-    while (upper < kCepcKnotCount && cepcTX0[upper] < x) ++upper;
+    while (upper < K && knots[upper] < x) ++upper;
     lower = upper - 1;
-    fraction = ((std::log(x) - std::log(cepcTX0[lower])) /
-                (std::log(cepcTX0[upper]) - std::log(cepcTX0[lower])));
+    fraction = ((std::log(x) - std::log(knots[lower])) /
+                (std::log(knots[upper]) - std::log(knots[lower])));
   }
 
   if (lower == upper) {
@@ -231,12 +237,26 @@ std::vector<BHComponent> cepcStepConditionedMixture(
 
 std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
   return cepcStepConditionedMixture(
-      x, cepcWeights, cepcMeans, cepcVariances);
+      x, cepcTX0, cepcWeights, cepcMeans, cepcVariances);
 }
 
 std::vector<BHComponent> cepc2GeV85StepConditioned6Mixture(double x) {
   return cepcStepConditionedMixture(
-      x, cepc6Weights, cepc6Means, cepc6Variances);
+      x, cepcTX0, cepc6Weights, cepc6Means, cepc6Variances);
+}
+
+std::vector<BHComponent> cepcRuntimeGenericGrid5ClearMixture(double x) {
+  return cepcStepConditionedMixture(
+      x, RuntimeGenericGrid5ClearTX0, RuntimeGenericGrid5ClearWeights,
+      RuntimeGenericGrid5ClearMeans, RuntimeGenericGrid5ClearVariances);
+}
+
+std::vector<BHComponent> cepcRuntimeCategoryAligned5ClearMixture(double x) {
+  return cepcStepConditionedMixture(
+      x, RuntimeCategoryAligned5ClearTX0,
+      RuntimeCategoryAligned5ClearWeights,
+      RuntimeCategoryAligned5ClearMeans,
+      RuntimeCategoryAligned5ClearVariances);
 }
 
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
@@ -301,6 +321,12 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
       modelName == "cepc2GeV85StepConditioned6") {
     return Model::CEPC2GeV85StepConditioned6;
   }
+  if (modelName == "CEPCRuntimeGenericGrid5Clear") {
+    return Model::CEPCRuntimeGenericGrid5Clear;
+  }
+  if (modelName == "CEPCRuntimeCategoryAligned5Clear") {
+    return Model::CEPCRuntimeCategoryAligned5Clear;
+  }
   throw std::invalid_argument("Unknown Bethe-Heitler model option: " + modelName);
 }
 
@@ -311,6 +337,10 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
       return "CEPC2GeV85StepConditioned";
     case Model::CEPC2GeV85StepConditioned6:
       return "CEPC2GeV85StepConditioned6";
+    case Model::CEPCRuntimeGenericGrid5Clear:
+      return "CEPCRuntimeGenericGrid5Clear";
+    case Model::CEPCRuntimeCategoryAligned5Clear:
+      return "CEPCRuntimeCategoryAligned5Clear";
   }
   return "Unknown";
 }
@@ -329,6 +359,12 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
       break;
     case Model::CEPC2GeV85StepConditioned6:
       mixture = cepc2GeV85StepConditioned6Mixture(tX0);
+      break;
+    case Model::CEPCRuntimeGenericGrid5Clear:
+      mixture = cepcRuntimeGenericGrid5ClearMixture(tX0);
+      break;
+    case Model::CEPCRuntimeCategoryAligned5Clear:
+      mixture = cepcRuntimeCategoryAligned5ClearMixture(tX0);
       break;
   }
   const double parentKappa = parent->helixAtLastSite(bz).GetKappa();

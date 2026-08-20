@@ -63,6 +63,10 @@ gearsvc = GearSvc("GearSvc")
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = True
 # Common options used by the same-code smoother/reverse/CMS-like comparisons.
+# This remains the production default. Default-off BH controls are
+# CEPC2GeV85StepConditioned6, CEPCRuntimeGenericGrid5Clear,
+# CEPCRuntimeCategoryAligned5Clear, and ActsAtlas. The two CEPCRuntime models
+# are topology-clear interval-fit candidates and are not production validated.
 gsf.BHModel = "CEPC2GeV85StepConditioned"
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"

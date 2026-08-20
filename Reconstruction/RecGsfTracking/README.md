@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-20. `RecGsfTracking` exposes 41 Gaudi properties in
+Reference date: 2026-08-21. `RecGsfTracking` exposes 41 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -22,7 +22,7 @@ distinction matters because that template enables `ElossOn` and
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
-| `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. The five-component conditioned model is active; the six-component conditioned model and `ActsAtlas` are default-off research controls. |
+| `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
@@ -278,6 +278,27 @@ components, while replacing the former 1--5% plus 5--20% pair with three
 truth-extracted 1--5%, 5--10%, and 10--20% components. Its artifact is under
 `data/CEPC2GeV85StepConditioned6/`. It is selectable for comparison and is not
 the default or a validated improvement.
+
+`CEPCRuntimeGenericGrid5Clear` and `CEPCRuntimeCategoryAligned5Clear` are
+parallel, default-off five-component models fitted to topology-clear training
+events from exact runtime `DD4hepBetweenSurfaces` intervals. Both take only
+the existing component-local `pathTX0` input and represent one exact no-eBrem
+component plus four aggregate Geant4 eBrem-loss classes: 0--1%, 1--5%, 5--20%,
+and greater than 20%. They use the same interpolation conventions as the
+five-component default. `CEPCRuntimeGenericGrid5Clear` retains the default
+model's generic logarithmic knot grid, isolating the effect of retraining on
+runtime intervals. `CEPCRuntimeCategoryAligned5Clear` instead places its knots
+at observed TPC, VXD, service, ITK/bridge, outer, and thick-interval t/X0
+bands; detector category is not a runtime input. Their source artifacts are
+under the correspondingly named `data/` directories. These models improve
+held-out interval-level closure but are not validated for final GSF momentum,
+clean-track safety, the separately reported secondary-activity control, or
+sparse high-thickness intervals. Above the last fitted knot they retain the
+existing constant-mixture extrapolation limitation.
+
+`ActsAtlas` is the ACTS default ATLAS-derived parameterization retained as a
+non-CEPC control. New steering should use one of the five canonical spellings
+listed in the property table.
 
 ## Geant4 transition dataset
 

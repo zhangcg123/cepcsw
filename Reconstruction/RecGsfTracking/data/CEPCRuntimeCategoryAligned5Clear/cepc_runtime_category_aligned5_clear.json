@@ -1,0 +1,481 @@
+{
+  "interpolation": {
+    "above_last_knot": "constant extrapolation (explicit unresolved tail limitation)",
+    "between_knots": "linear in log(t/X0)",
+    "mean_epsilon": 1e-09,
+    "means": "linear in logit(mean_z)",
+    "variance_floor": 1e-12,
+    "variances": "linear in log(variance_z)",
+    "weight_floor": 1e-12,
+    "weights": "additive log ratio relative to identity component",
+    "zero_to_first_knot": "linear in physical parameters"
+  },
+  "knot_design": {
+    "bin_edges": [
+      0.0,
+      0.00018454957547453654,
+      0.0017289857026264557,
+      0.0058241872891490925,
+      0.009573517551262173,
+      0.013514902256556617,
+      0.018036721072632607,
+      0.024387462621150238,
+      0.05
+    ],
+    "loss_strata": {
+      "extreme": ">20%",
+      "identity": "no Geant4 eBrem step",
+      "large": "5--20%",
+      "moderate": "1--5%",
+      "small": "0--1% aggregate eBrem loss"
+    },
+    "principle": "physical interval bands choose x anchors; fitting and runtime evaluation depend only on x"
+  },
+  "knots": [
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 6354884,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.9992226204859628
+        },
+        {
+          "component": 1,
+          "count": 3699,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9989154608519075,
+          "variance_z": 4.144107467740632e-06,
+          "weight": 0.0005816195029173745
+        },
+        {
+          "component": 2,
+          "count": 614,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9753091412982926,
+          "variance_z": 0.00011940294516277206,
+          "weight": 9.65434914277556e-05
+        },
+        {
+          "component": 3,
+          "count": 418,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.8956313231264232,
+          "variance_z": 0.0017517691362666232,
+          "weight": 6.572504791010072e-05
+        },
+        {
+          "component": 4,
+          "count": 213,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.6072067643353407,
+          "variance_z": 0.03362397564174835,
+          "weight": 3.3491471781941274e-05
+        }
+      ],
+      "role": "adjacent_tpc",
+      "total_count": 6359828,
+      "tx0": 4.6934641432e-05,
+      "tx0_high": 0.00018454957547453654,
+      "tx0_low": 0.0
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 80475,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.9922934648581998
+        },
+        {
+          "component": 1,
+          "count": 364,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9982131336028158,
+          "variance_z": 5.816428273686114e-06,
+          "weight": 0.004488286066584464
+        },
+        {
+          "component": 2,
+          "count": 114,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9752370119555203,
+          "variance_z": 0.0001295079302976454,
+          "weight": 0.001405672009864365
+        },
+        {
+          "component": 3,
+          "count": 88,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.8938587300985783,
+          "variance_z": 0.0017171987725420612,
+          "weight": 0.0010850801479654747
+        },
+        {
+          "component": 4,
+          "count": 59,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.48120639671778664,
+          "variance_z": 0.06557737696318094,
+          "weight": 0.0007274969173859433
+        }
+      ],
+      "role": "thin_vxd",
+      "total_count": 81100,
+      "tx0": 0.000725659017917,
+      "tx0_high": 0.0017289857026264557,
+      "tx0_low": 0.00018454957547453654
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 26806,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.9537804661092333
+        },
+        {
+          "component": 1,
+          "count": 829,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9980402050626748,
+          "variance_z": 6.160537591948234e-06,
+          "weight": 0.02949653086639388
+        },
+        {
+          "component": 2,
+          "count": 204,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.976174498105563,
+          "variance_z": 0.00010987700465636685,
+          "weight": 0.007258494929727807
+        },
+        {
+          "component": 3,
+          "count": 162,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.895218791544777,
+          "variance_z": 0.001813265104860351,
+          "weight": 0.005764098914783846
+        },
+        {
+          "component": 4,
+          "count": 104,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.5738522241878997,
+          "variance_z": 0.0488847301209856,
+          "weight": 0.003700409179861235
+        }
+      ],
+      "role": "outer_vxd_service",
+      "total_count": 28105,
+      "tx0": 0.00411955406889,
+      "tx0_high": 0.0058241872891490925,
+      "tx0_low": 0.0017289857026264557
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 52147,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.9189060600186787
+        },
+        {
+          "component": 1,
+          "count": 2938,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9981706953518549,
+          "variance_z": 5.798103360987739e-06,
+          "weight": 0.05177183738920509
+        },
+        {
+          "component": 2,
+          "count": 858,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9748019564999556,
+          "variance_z": 0.0001280516691914979,
+          "weight": 0.015119209149059896
+        },
+        {
+          "component": 3,
+          "count": 594,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.8979408103897603,
+          "variance_z": 0.0016339002621198473,
+          "weight": 0.010467144795503005
+        },
+        {
+          "component": 4,
+          "count": 212,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.6905140161173102,
+          "variance_z": 0.011589050853388017,
+          "weight": 0.0037357486475532607
+        }
+      ],
+      "role": "itk_and_vxd_itk",
+      "total_count": 56749,
+      "tx0": 0.00823418190703,
+      "tx0_high": 0.009573517551262173,
+      "tx0_low": 0.0058241872891490925
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 35282,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.8939620442394912
+        },
+        {
+          "component": 1,
+          "count": 2612,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9980572435421583,
+          "variance_z": 6.0533988152089435e-06,
+          "weight": 0.06618187346390655
+        },
+        {
+          "component": 2,
+          "count": 840,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9754464852558883,
+          "variance_z": 0.0001347525386130588,
+          "weight": 0.021283604023614667
+        },
+        {
+          "component": 3,
+          "count": 585,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.8978812009176896,
+          "variance_z": 0.0016634173158196486,
+          "weight": 0.014822509945017357
+        },
+        {
+          "component": 4,
+          "count": 148,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.6746566136051366,
+          "variance_z": 0.02413764035360494,
+          "weight": 0.003749968327970203
+        }
+      ],
+      "role": "thick_bridge",
+      "total_count": 39467,
+      "tx0": 0.0111307036132,
+      "tx0_high": 0.013514902256556617,
+      "tx0_low": 0.009573517551262173
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 27006,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.8446501735839614
+        },
+        {
+          "component": 1,
+          "count": 2996,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9979628162346329,
+          "variance_z": 6.361744466554242e-06,
+          "weight": 0.09370406280299003
+        },
+        {
+          "component": 2,
+          "count": 907,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9750637848433279,
+          "variance_z": 0.00012381377521808457,
+          "weight": 0.02836768523441654
+        },
+        {
+          "component": 3,
+          "count": 671,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.8954804838165715,
+          "variance_z": 0.0017741334457309632,
+          "weight": 0.02098645732336659
+        },
+        {
+          "component": 4,
+          "count": 393,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.5742176047133986,
+          "variance_z": 0.04585876062767241,
+          "weight": 0.01229162105526538
+        }
+      ],
+      "role": "tpc_to_otk",
+      "total_count": 31973,
+      "tx0": 0.0164097966626,
+      "tx0_high": 0.018036721072632607,
+      "tx0_low": 0.013514902256556617
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 9914,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.8081845602021684
+        },
+        {
+          "component": 1,
+          "count": 1404,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.9980742594082846,
+          "variance_z": 6.120055030978122e-06,
+          "weight": 0.1144534115920763
+        },
+        {
+          "component": 2,
+          "count": 470,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9762205574623852,
+          "variance_z": 0.00011527473423578183,
+          "weight": 0.038314176245210725
+        },
+        {
+          "component": 3,
+          "count": 326,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.8956095804253226,
+          "variance_z": 0.001835098265314028,
+          "weight": 0.026575364799869567
+        },
+        {
+          "component": 4,
+          "count": 153,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.5831819523591836,
+          "variance_z": 0.04086309210395206,
+          "weight": 0.012472487160674981
+        }
+      ],
+      "role": "skipped_or_high_interval",
+      "total_count": 12267,
+      "tx0": 0.0198249444366,
+      "tx0_high": 0.024387462621150238,
+      "tx0_low": 0.018036721072632607
+    },
+    {
+      "components": [
+        {
+          "component": 0,
+          "count": 748,
+          "is_identity": true,
+          "loss_class": "no_ebrem",
+          "mean_z": 1.0,
+          "variance_z": 1e-12,
+          "weight": 0.7532729103726082
+        },
+        {
+          "component": 1,
+          "count": 160,
+          "is_identity": false,
+          "loss_class": "small",
+          "mean_z": 0.998058285096566,
+          "variance_z": 6.679752747706935e-06,
+          "weight": 0.16112789526686808
+        },
+        {
+          "component": 2,
+          "count": 41,
+          "is_identity": false,
+          "loss_class": "moderate",
+          "mean_z": 0.9735619246363516,
+          "variance_z": 0.00012692696201344056,
+          "weight": 0.041289023162134945
+        },
+        {
+          "component": 3,
+          "count": 32,
+          "is_identity": false,
+          "loss_class": "large",
+          "mean_z": 0.9018264326767591,
+          "variance_z": 0.0014102394956984066,
+          "weight": 0.032225579053373615
+        },
+        {
+          "component": 4,
+          "count": 12,
+          "is_identity": false,
+          "loss_class": "extreme",
+          "mean_z": 0.6481744209398723,
+          "variance_z": 0.012890373827932178,
+          "weight": 0.012084592145015106
+        }
+      ],
+      "role": "thick_interval_guard",
+      "total_count": 993,
+      "tx0": 0.03,
+      "tx0_high": 0.05,
+      "tx0_low": 0.024387462621150238
+    }
+  ],
+  "model": "CEPCRuntimeCategoryAligned5ClearExperimental",
+  "runtime_selector": "CEPCRuntimeCategoryAligned5Clear",
+  "scope": {
+    "campaign": "legacy filenames; broad 10--50 GeV, theta 40--140 degrees",
+    "max_fitted_tx0": 0.05,
+    "particle": "primary electron",
+    "secondary_tracker_activity": "excluded from primary candidate; evaluated separately",
+    "seed_split": "training seed modulo 5 nonzero; heldout seed modulo 5 zero"
+  },
+  "sole_runtime_input": "DD4hepBetweenSurfaces pathTX0",
+  "status": "integrated default-off runtime-interval candidate; not production validated",
+  "training_population": "valid matched forward non-seed runtime intervals; topology-clear only",
+  "variable": "z=1-clamp(aggregate_G4_ebrem_loss/runtime_interval_p_before,0,1)"
+}

@@ -28,6 +28,11 @@ struct BetheHeitlerMixtureComponent {
 /// CEPC2GeV85StepConditioned6 is a parallel six-component extraction from the
 /// same sample. It replaces the original 1--5% and 5--20% components with
 /// separate 1--5%, 5--10%, and 10--20% components.
+/// CEPCRuntimeGenericGrid5Clear and CEPCRuntimeCategoryAligned5Clear are
+/// default-off five-component interval-level candidates fitted to exact
+/// DD4hepBetweenSurfaces runtime paths and matched aggregate Geant4 eBrem
+/// losses in the topology-clear control population. They differ only in their
+/// generic-logarithmic versus detector-interval-aligned t/X0 knot grids.
 ///
 /// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
@@ -39,7 +44,9 @@ struct BetheHeitlerSplitter {
   enum class Model {
     ActsAtlas,
     CEPC2GeV85StepConditioned,
-    CEPC2GeV85StepConditioned6
+    CEPC2GeV85StepConditioned6,
+    CEPCRuntimeGenericGrid5Clear,
+    CEPCRuntimeCategoryAligned5Clear
   };
 
   BetheHeitlerSplitter();
