@@ -38,6 +38,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <utility>
 
 DECLARE_COMPONENT(RecGsfTracking)
@@ -1133,6 +1134,9 @@ struct MaterialBHAuditCall {
   bool aboveSplitThreshold = false;
   bool electronHypothesis = false;
   std::string bhModel;
+  bool truthBHLossOverride = false;
+  double truthRetainedFraction =
+      std::numeric_limits<double>::quiet_NaN();
   bool bhExecuted = false;
   bool bhReverse = false;
 };
@@ -1186,8 +1190,11 @@ static void writeMaterialBHAuditRecord(
          << call.splitThreshold << ','
          << (call.aboveSplitThreshold ? 1 : 0) << ','
          << (call.electronHypothesis ? 1 : 0) << ','
-         << csvQuoted(call.bhModel) << ',' << (call.bhExecuted ? 1 : 0)
-         << ',' << (call.bhReverse ? 1 : 0) << ',' << childIndex << ',';
+         << csvQuoted(call.bhModel) << ','
+         << (call.truthBHLossOverride ? 1 : 0) << ',';
+  if (call.truthBHLossOverride) stream << call.truthRetainedFraction;
+  stream << ',' << (call.bhExecuted ? 1 : 0) << ','
+         << (call.bhReverse ? 1 : 0) << ',' << childIndex << ',';
 
   if (!child) {
     stream << "-1,,,,,,,\n";
@@ -1516,6 +1523,10 @@ RecGsfTracking::RecGsfTracking(const std::string& name,
 StatusCode RecGsfTracking::initialize() {
   m_nEvt = 0;
   m_materialBHNextCallId = 0;
+  m_truthBHLossOverrideCalls = 0;
+  m_truthBHLossPassthroughTracks = 0;
+  m_truthBHRetainedFractions.clear();
+  m_truthBHSelectedTracks.clear();
 
   if (m_maxComponents.value() < 1) {
     error() << "MaxComponents must be at least 1" << endmsg;
@@ -1581,6 +1592,126 @@ StatusCode RecGsfTracking::initialize() {
     error() << "MaterialPathMode must be CurrentSurface or "
                "DD4hepBetweenSurfaces" << endmsg;
     return StatusCode::FAILURE;
+  }
+  if (m_truthBHLossOverride.value()) {
+    if (!m_isElectron.value()) {
+      error() << "TruthBHLossOverride requires ElectronHypothesis=True"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (materialPathMode != "dd4hepbetweensurfaces") {
+      error() << "TruthBHLossOverride requires "
+                 "MaterialPathMode=DD4hepBetweenSurfaces so the truth rows "
+                 "and runtime BH intervals have the same ownership"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (m_truthBHLossInput.value().empty()) {
+      error() << "TruthBHLossOverride requires a nonempty TruthBHLossInput"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+
+    std::ifstream truthInput(m_truthBHLossInput.value());
+    if (!truthInput) {
+      error() << "Cannot open TruthBHLossInput "
+              << m_truthBHLossInput.value() << endmsg;
+      return StatusCode::FAILURE;
+    }
+    constexpr const char* expectedHeader =
+        "event_index,input_track_index,hit_from_index,hit_to_index,"
+        "cell_from,cell_to,truth_p_before_GeV,truth_ebrem_loss_GeV";
+    std::string line;
+    if (!std::getline(truthInput, line)) {
+      error() << "TruthBHLossInput is empty" << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    if (line != expectedHeader) {
+      error() << "TruthBHLossInput header must be exactly: "
+              << expectedHeader << endmsg;
+      return StatusCode::FAILURE;
+    }
+
+    std::size_t lineNumber = 1;
+    try {
+      while (std::getline(truthInput, line)) {
+        ++lineNumber;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+        std::vector<std::string> fields;
+        std::stringstream record(line);
+        std::string field;
+        while (std::getline(record, field, ',')) fields.push_back(field);
+        if (fields.size() != 8) {
+          throw std::invalid_argument("expected exactly 8 CSV fields");
+        }
+        auto parseInt = [](const std::string& value) {
+          std::size_t used = 0;
+          const int parsed = std::stoi(value, &used);
+          if (used != value.size())
+            throw std::invalid_argument("invalid integer field");
+          return parsed;
+        };
+        auto parseUInt64 = [](const std::string& value) {
+          std::size_t used = 0;
+          const std::uint64_t parsed = std::stoull(value, &used);
+          if (used != value.size())
+            throw std::invalid_argument("invalid unsigned integer field");
+          return parsed;
+        };
+        auto parseDouble = [](const std::string& value) {
+          std::size_t used = 0;
+          const double parsed = std::stod(value, &used);
+          if (used != value.size())
+            throw std::invalid_argument("invalid floating-point field");
+          return parsed;
+        };
+
+        const int event = parseInt(fields[0]);
+        const int track = parseInt(fields[1]);
+        const int hitFrom = parseInt(fields[2]);
+        const int hitTo = parseInt(fields[3]);
+        const std::uint64_t cellFrom = parseUInt64(fields[4]);
+        const std::uint64_t cellTo = parseUInt64(fields[5]);
+        const double pBefore = parseDouble(fields[6]);
+        const double ebremLoss = parseDouble(fields[7]);
+        if (event < 0 || track < 0 || hitFrom < 0 ||
+            hitTo != hitFrom + 1) {
+          throw std::invalid_argument(
+              "indices must be nonnegative and hit_to=hit_from+1");
+        }
+        if (!std::isfinite(pBefore) || pBefore <= 0.0 ||
+            !std::isfinite(ebremLoss) || ebremLoss < 0.0) {
+          throw std::invalid_argument(
+              "truth momentum must be positive and eBrem loss nonnegative");
+        }
+        const double retainedFraction = 1.0 - ebremLoss / pBefore;
+        if (!std::isfinite(retainedFraction) ||
+            retainedFraction <= 0.0 || retainedFraction > 1.0) {
+          throw std::invalid_argument(
+              "derived retained fraction must be in (0,1]");
+        }
+        const TruthBHLossKey key{event, track, hitFrom, hitTo,
+                                 cellFrom, cellTo};
+        if (!m_truthBHRetainedFractions
+                 .emplace(key, retainedFraction).second) {
+          throw std::invalid_argument("duplicate interval key");
+        }
+        m_truthBHSelectedTracks.emplace(event, track);
+      }
+    } catch (const std::exception& exception) {
+      error() << "Invalid TruthBHLossInput at line " << lineNumber << ": "
+              << exception.what() << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (m_truthBHRetainedFractions.empty()) {
+      error() << "TruthBHLossInput contains no interval rows" << endmsg;
+      return StatusCode::FAILURE;
+    }
+    info() << "Truth BH-loss oracle: loaded "
+           << m_truthBHRetainedFractions.size() << " exact intervals from "
+           << m_truthBHLossInput.value() << endmsg;
   }
   if (m_gaussianSumSmoothing.value() && m_reverseFiltering.value()) {
     error() << "GaussianSumSmoothing and ReverseFiltering are alternative "
@@ -1748,6 +1879,7 @@ StatusCode RecGsfTracking::initialize() {
          << m_verboseSplitDump.value() << "/"
          << m_componentDebugDump.value()
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
+         << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
 
   if (!m_materialTransitionCSV.value().empty()) {
@@ -1792,7 +1924,8 @@ StatusCode RecGsfTracking::initialize() {
         << "material_path_mode,path_valid,normal_t_over_x0,"
         << "abs_cos_incidence,path_t_over_x0,material_segment_count,"
         << "material_composition,split_threshold,above_split_threshold,"
-        << "electron_hypothesis,bh_model,bh_executed,bh_reverse,"
+        << "electron_hypothesis,bh_model,truth_bh_loss_override,"
+        << "truth_retained_fraction,bh_executed,bh_reverse,"
         << "child_index,child_component_id,child_weight,"
         << "conditional_bh_weight,retained_mean,retained_variance,"
         << "child_kappa,child_pT_GeV,child_p_GeV\n";
@@ -1885,6 +2018,46 @@ StatusCode RecGsfTracking::execute() {
     std::sort(hits.begin(), hits.end(),
               [](auto& a, auto& b) { return a.radius < b.radius; });
     if (hits.empty()) continue;
+
+    auto truthBHLossKey = [&](int hitFromIndex, int hitToIndex) {
+      const auto& fromHit = hits[static_cast<std::size_t>(hitFromIndex)];
+      const auto& toHit = hits[static_cast<std::size_t>(hitToIndex)];
+      return TruthBHLossKey{
+          eventIndex, inputTrackIndex, hitFromIndex, hitToIndex,
+          static_cast<std::uint64_t>(fromHit.lcioHit.getCellID()),
+          static_cast<std::uint64_t>(toHit.lcioHit.getCellID())};
+    };
+    auto truthRetainedFraction = [&](int hitFromIndex, int hitToIndex) {
+      return m_truthBHRetainedFractions.at(
+          truthBHLossKey(hitFromIndex, hitToIndex));
+    };
+    const bool applyTruthBHLossOverride =
+        m_truthBHLossOverride.value() &&
+        m_truthBHSelectedTracks.count({eventIndex, inputTrackIndex}) != 0;
+    if (m_truthBHLossOverride.value() && !applyTruthBHLossOverride) {
+      ++m_truthBHLossPassthroughTracks;
+      info() << "Truth BH-loss oracle has no rows for event=" << eventIndex
+             << " inputTrack=" << inputTrackIndex
+             << "; this whole unselected track uses the configured BH model"
+             << endmsg;
+    }
+    if (applyTruthBHLossOverride) {
+      for (std::size_t hitFrom = 0; hitFrom + 1 < hits.size(); ++hitFrom) {
+        const auto key = truthBHLossKey(
+            static_cast<int>(hitFrom), static_cast<int>(hitFrom + 1));
+        if (m_truthBHRetainedFractions.find(key) ==
+            m_truthBHRetainedFractions.end()) {
+          error() << "TruthBHLossInput has no exact interval for event="
+                  << eventIndex << " inputTrack=" << inputTrackIndex
+                  << " hitFrom=" << hitFrom << " hitTo=" << hitFrom + 1
+                  << " cellFrom=" << std::get<4>(key)
+                  << " cellTo=" << std::get<5>(key)
+                  << "; refusing a silent BH-model fallback" << endmsg;
+          for (auto& hit : hits) delete hit.kalHit;
+          return StatusCode::FAILURE;
+        }
+      }
+    }
 
     if (m_verboseDump && m_componentDebugDump) {
       bool inputMonotonic = true;
@@ -2106,6 +2279,11 @@ StatusCode RecGsfTracking::execute() {
           path.valid && path.pathTX0 > m_bhSplitThresh.value();
       call.electronHypothesis = m_isElectron.value();
       call.bhModel = m_bhModel.value();
+      call.truthBHLossOverride = applyTruthBHLossOverride;
+      if (call.truthBHLossOverride) {
+        call.truthRetainedFraction =
+            truthRetainedFraction(hitFromIndex, hitToIndex);
+      }
       call.bhExecuted = call.aboveSplitThreshold && call.electronHypothesis;
       call.bhReverse = bhReverse;
       return call;
@@ -2139,9 +2317,14 @@ StatusCode RecGsfTracking::execute() {
         BetheHeitlerSplitter splitter(m_bhModel.value());
         const int parentDebugId = initComp->debugId;
         std::vector<BetheHeitlerMixtureComponent> returnedMixture;
-        auto children = splitter.split(
-            initComp, seedMaterial.pathTX0, bz, false,
-            auditSeedMaterial ? &returnedMixture : nullptr);
+        auto children = applyTruthBHLossOverride
+            ? splitter.splitWithRetainedFraction(
+                  initComp, truthRetainedFraction(0, 1), bz, false,
+                  auditSeedMaterial ? &returnedMixture : nullptr)
+            : splitter.split(
+                  initComp, seedMaterial.pathTX0, bz, false,
+                  auditSeedMaterial ? &returnedMixture : nullptr);
+        if (applyTruthBHLossOverride) ++m_truthBHLossOverrideCalls;
         comps.clear();
         for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
           auto* child = children[childIndex];
@@ -2617,9 +2800,17 @@ StatusCode RecGsfTracking::execute() {
           const int childGeneration = comp->generation + 1;
           const double parentKappa = comp->helixAtLastSite(bz).GetKappa();
           std::vector<BetheHeitlerMixtureComponent> returnedMixture;
-          auto children = bhs.split(
-              comp, materialPath.pathTX0, bz, false,
-              forwardAuditCalls.empty() ? nullptr : &returnedMixture);
+          auto children = applyTruthBHLossOverride
+              ? bhs.splitWithRetainedFraction(
+                    comp, truthRetainedFraction(
+                              static_cast<int>(ih),
+                              static_cast<int>(ih + 1)),
+                    bz, false,
+                    forwardAuditCalls.empty() ? nullptr : &returnedMixture)
+              : bhs.split(
+                    comp, materialPath.pathTX0, bz, false,
+                    forwardAuditCalls.empty() ? nullptr : &returnedMixture);
+          if (applyTruthBHLossOverride) ++m_truthBHLossOverrideCalls;
           if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
             const double parentPT = (bz != 0 && parentKappa != 0)
                 ? 1.0 / std::abs(parentKappa) : 0.0;
@@ -2984,9 +3175,16 @@ StatusCode RecGsfTracking::execute() {
             const double parentPt = parent->continuationState.omega != 0.0
                 ? std::abs(alpha / parent->continuationState.omega) : 0.0;
             std::vector<BetheHeitlerMixtureComponent> returnedMixture;
-            auto children = splitter.split(
-                parent, materialPath.pathTX0, bz, true,
-                reverseAuditCalls.empty() ? nullptr : &returnedMixture);
+            auto children = applyTruthBHLossOverride
+                ? splitter.splitWithRetainedFraction(
+                      parent, truthRetainedFraction(
+                                  reverseHit, reverseHit + 1),
+                      bz, true,
+                      reverseAuditCalls.empty() ? nullptr : &returnedMixture)
+                : splitter.split(
+                      parent, materialPath.pathTX0, bz, true,
+                      reverseAuditCalls.empty() ? nullptr : &returnedMixture);
+            if (applyTruthBHLossOverride) ++m_truthBHLossOverrideCalls;
             for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
               auto* child = children[childIndex];
               child->debugParentId = parentId;
@@ -3759,6 +3957,14 @@ StatusCode RecGsfTracking::execute() {
 
 StatusCode RecGsfTracking::finalize() {
   info() << "Processed " << m_nEvt << " events" << endmsg;
+  if (m_truthBHLossOverride.value()) {
+    info() << "Truth BH-loss oracle replaced "
+           << m_truthBHLossOverrideCalls << " executed BH responses; "
+           << m_truthBHLossPassthroughTracks
+           << " input tracks had no oracle scope and used the configured BH "
+              "model"
+           << endmsg;
+  }
   if (m_materialTransitionStream.is_open()) {
     m_materialTransitionStream.close();
   }

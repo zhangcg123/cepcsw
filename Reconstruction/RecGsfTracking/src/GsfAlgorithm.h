@@ -15,6 +15,8 @@
 #include <string>
 #include <fstream>
 #include <cstdint>
+#include <set>
+#include <tuple>
 
 #include "TrackSystemSvc/HelixTrack.h"
 
@@ -154,6 +156,14 @@ private:
   Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
   Gaudi::Property<std::string> m_bhModel{
       this, "BHModel", "CEPC2GeV85StepConditioned"};
+  Gaudi::Property<bool> m_truthBHLossOverride{
+      this, "TruthBHLossOverride", false,
+      "Default-off diagnostic replacing each executed BH response on every "
+      "CSV-selected track with one exact externally supplied Geant4 eBrem "
+      "retained-momentum fraction"};
+  Gaudi::Property<std::string> m_truthBHLossInput{
+      this, "TruthBHLossInput", "",
+      "Strict consecutive-hit CSV used only by TruthBHLossOverride"};
   Gaudi::Property<bool> m_counterfactualLossScan{
       this, "CounterfactualLossScan", false,
       "Default-off likelihood-only scan of trial losses at a configured truth "
@@ -185,6 +195,12 @@ private:
   std::ofstream m_materialTransitionStream;
   std::ofstream m_materialBHAuditStream;
   std::uint64_t m_materialBHNextCallId = 0;
+  using TruthBHLossKey =
+      std::tuple<int, int, int, int, std::uint64_t, std::uint64_t>;
+  std::map<TruthBHLossKey, double> m_truthBHRetainedFractions;
+  std::set<std::pair<int, int>> m_truthBHSelectedTracks;
+  std::uint64_t m_truthBHLossOverrideCalls = 0;
+  std::uint64_t m_truthBHLossPassthroughTracks = 0;
   dd4hep::rec::MaterialManager* m_materialManager = nullptr;
 
   int m_nEvt = 0;

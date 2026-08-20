@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-21. `RecGsfTracking` exposes 41 Gaudi properties in
+Reference date: 2026-08-21. `RecGsfTracking` exposes 43 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -23,6 +23,8 @@ distinction matters because that template enables `ElossOn` and
 |---|---|---|---|
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
 | `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
+| `TruthBHLossOverride` | `false` | `false` | Enable the strict, truth-dependent BH-loss oracle described below for the complete `(event_index,input_track_index)` scopes present in its CSV. This diagnostic is never production steering. |
+| `TruthBHLossInput` | empty | empty | CSV containing exact runtime-interval Geant4 eBrem losses for `TruthBHLossOverride`; empty is valid only while the override is off. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
@@ -57,6 +59,57 @@ The DD4hep endpoint and representative inner-VXD ownership are mechanically
 validated, but the collapsed interval's BH energy-loss response and population
 momentum performance remain under study. Default status is therefore a
 steering decision, not a claim of production physics validation.
+
+### Truth BH-loss oracle
+
+`TruthBHLossOverride` is a default-off diagnostic that asks whether exact
+Geant4 eBrem loss would survive the ordinary downstream GSF measurement,
+reduction, reverse-filtering, and publication workflow. CSV presence selects
+the oracle at whole-track granularity: a particular
+`(event_index,input_track_index)` is selected when the input contains at least
+one row for that pair. On a selected track, every otherwise eligible BH call
+receives the normal component and material path, but its configured `BHModel`
+response is replaced by one child with conditional process weight one at
+
+```text
+z_truth = 1 - truth_ebrem_loss_GeV / truth_p_before_GeV.
+```
+
+The child uses only the splitter's `1e-12` numerical retained-fraction
+variance floor. The input is
+the Geant4 eBrem-attributed loss, not total pre/post momentum loss: using the
+latter would mix other processes into the oracle and overlap the independently
+configured deterministic energy-loss treatment. The rest of the GSF workflow
+is unchanged. This makes the mode a truth-dependent mechanism test, not a
+candidate reconstruction algorithm or a BH-model validation.
+
+`TruthBHLossInput` is a CSV with this exact header:
+
+```text
+event_index,input_track_index,hit_from_index,hit_to_index,cell_from,cell_to,truth_p_before_GeV,truth_ebrem_loss_GeV
+```
+
+Every accepted-hit interval uses `hit_from_index >= 0`,
+`hit_to_index = hit_from_index + 1`, and the exact bounding hit cell IDs. This
+includes `hit_from_index=0`, `hit_to_index=1`: the GSF seed already contains
+filtered hit 0, so its specially executed seed-material call consumes the
+ordinary hit-0-to-hit-1 interval rather than an IP-to-hit-0 interval. The
+normal forward loop then starts at hit 1 and consumes the later consecutive
+intervals. Preprocessing must derive these rows from the authoritative Geant4
+pre/post-step record and match them to the exact runtime accepted-hit
+intervals; neither `MCParticle` nor SimTrackerHit momentum is a substitute.
+
+The override requires `ElectronHypothesis=true` and
+`MaterialPathMode=DD4hepBetweenSurfaces`. Enabling it with an empty input or a
+malformed or duplicate row fails. Once a track is selected by any CSV row,
+missing or ambiguous coverage of any of its exact consecutive accepted-hit
+intervals—including hit 0 to hit 1—also fails rather than partially falling
+back to the ordinary BH model or assuming zero loss. Conversely, a track with
+zero CSV rows is outside the oracle scope: it is explicitly logged and counted
+and uses the ordinary configured BH model unchanged for its entire workflow.
+This all-or-nothing track boundary prevents an undocumented truth/BH hybrid
+within one fitted track while allowing a selected event to contain unrelated
+secondary tracks for which no authoritative primary truth exists.
 
 ### Mixture population and reduction
 
@@ -161,6 +214,15 @@ child weight and momentum. The seed interval is flagged separately. Reverse
 rows retain canonical inner-to-outer surface bounds while `direction=reverse`
 and `bh_reverse=1` describe the executed workflow.
 
+When `TruthBHLossOverride=true`, the same audit exposes
+`truth_bh_loss_override=1` and the exact input `truth_retained_fraction` on
+every candidate row of a CSV-selected track. Executed child rows then record
+conditional weight one, that same retained mean, and the `1e-12` variance
+floor. A zero-row, out-of-scope track records
+`truth_bh_loss_override=0` and ordinary BH child values throughout. This makes
+it possible to verify the all-or-nothing track scope and seed, forward, and
+reverse oracle dispatch without inferring them from final track momentum.
+
 `GSF_MATERIAL_BH_AUDIT_CSV` controls this output in the reverse template.
 This CSV is separate from both `MaterialTransitionCSV` and the scalar/per-hit
 `RecGsfFlatTuple` ROOT tree. Generated logs and CSV files are outputs, not
@@ -191,7 +253,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 41 properties:
+The data handles are configurable separately from the 43 properties:
 
 | Role | Default collection |
 |---|---|
@@ -228,7 +290,7 @@ runtime interval or component-call information is required.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 41
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 43
 properties and silently inherits none. Its reverse physics settings agree with
 the production baseline, including split/cutoff `1e-4`,
 `DD4hepBetweenSurfaces`, and ECAL off. `MaterialTransitionCSV` is explicitly
@@ -242,7 +304,7 @@ compiled or reverse-template default, which remains empty/off. The card's
 
 ### Configuration-maintenance contract
 
-The 41-property inventory above is part of the configurable interface, not a
+The 43-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

@@ -72,6 +72,14 @@ gsf.BHModel = "CEPC2GeV85StepConditioned"
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
 
+# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. Any
+# (event,input-track) pair present in TruthBHLossInput must cover every exact
+# accepted-hit interval; its ordinary hit-0-to-hit-1 key supplies the special
+# seed-material call. A track with zero rows uses ordinary BH in full, while a
+# partially covered selected track fails rather than silently mixing modes.
+gsf.TruthBHLossOverride = False
+gsf.TruthBHLossInput = ""
+
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0
 gsf.ReductionMergeCost = "SymmetricKL"

@@ -345,28 +345,12 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
   return "Unknown";
 }
 
-std::vector<GsfComponent*> BetheHeitlerSplitter::split(
-    GsfComponent* parent, double tX0, double bz, bool reverse,
-    std::vector<BetheHeitlerMixtureComponent>* returnedMixture) const {
+namespace {
 
-  std::vector<BHComponent> mixture;
-  switch (m_model) {
-    case Model::ActsAtlas:
-      mixture = actsAtlasMixture(tX0);
-      break;
-    case Model::CEPC2GeV85StepConditioned:
-      mixture = cepc2GeV85StepConditionedMixture(tX0);
-      break;
-    case Model::CEPC2GeV85StepConditioned6:
-      mixture = cepc2GeV85StepConditioned6Mixture(tX0);
-      break;
-    case Model::CEPCRuntimeGenericGrid5Clear:
-      mixture = cepcRuntimeGenericGrid5ClearMixture(tX0);
-      break;
-    case Model::CEPCRuntimeCategoryAligned5Clear:
-      mixture = cepcRuntimeCategoryAligned5ClearMixture(tX0);
-      break;
-  }
+std::vector<GsfComponent*> applyMixture(
+    GsfComponent* parent, const std::vector<BHComponent>& mixture, double bz,
+    bool reverse,
+    std::vector<BetheHeitlerMixtureComponent>* returnedMixture) {
   const double parentKappa = parent->helixAtLastSite(bz).GetKappa();
   const double parentWeight = parent->weight;
   const bool parentNoRadiationLineage = parent->noRadiationLineage;
@@ -452,4 +436,43 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
   }
 
   return result;
+}
+
+}  // namespace
+
+std::vector<GsfComponent*> BetheHeitlerSplitter::split(
+    GsfComponent* parent, double tX0, double bz, bool reverse,
+    std::vector<BetheHeitlerMixtureComponent>* returnedMixture) const {
+  std::vector<BHComponent> mixture;
+  switch (m_model) {
+    case Model::ActsAtlas:
+      mixture = actsAtlasMixture(tX0);
+      break;
+    case Model::CEPC2GeV85StepConditioned:
+      mixture = cepc2GeV85StepConditionedMixture(tX0);
+      break;
+    case Model::CEPC2GeV85StepConditioned6:
+      mixture = cepc2GeV85StepConditioned6Mixture(tX0);
+      break;
+    case Model::CEPCRuntimeGenericGrid5Clear:
+      mixture = cepcRuntimeGenericGrid5ClearMixture(tX0);
+      break;
+    case Model::CEPCRuntimeCategoryAligned5Clear:
+      mixture = cepcRuntimeCategoryAligned5ClearMixture(tX0);
+      break;
+  }
+  return applyMixture(parent, mixture, bz, reverse, returnedMixture);
+}
+
+std::vector<GsfComponent*> BetheHeitlerSplitter::splitWithRetainedFraction(
+    GsfComponent* parent, double retainedFraction, double bz, bool reverse,
+    std::vector<BetheHeitlerMixtureComponent>* returnedMixture) const {
+  if (!std::isfinite(retainedFraction) || retainedFraction <= 0.0 ||
+      retainedFraction > 1.0) {
+    throw std::invalid_argument(
+        "Truth BH retained-momentum fraction must be finite and in (0, 1]");
+  }
+  const std::vector<BHComponent> mixture = {
+      {1.0, retainedFraction, kCepcVarianceFloor}};
+  return applyMixture(parent, mixture, bz, reverse, returnedMixture);
 }

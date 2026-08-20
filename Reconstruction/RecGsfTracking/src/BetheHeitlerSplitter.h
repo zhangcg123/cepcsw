@@ -65,6 +65,15 @@ struct BetheHeitlerSplitter {
       GsfComponent* parent, double tX0, double bz, bool reverse = false,
       std::vector<BetheHeitlerMixtureComponent>* returnedMixture = nullptr) const;
 
+  /// Apply one deterministic retained-momentum fraction instead of querying
+  /// the configured BH parameterization.  This is the process-level primitive
+  /// used by the default-off truth-oracle diagnostic; the normal continuation
+  /// propagation and downstream GSF workflow are unchanged.
+  std::vector<GsfComponent*> splitWithRetainedFraction(
+      GsfComponent* parent, double retainedFraction, double bz,
+      bool reverse = false,
+      std::vector<BetheHeitlerMixtureComponent>* returnedMixture = nullptr) const;
+
 private:
   Model m_model = Model::CEPC2GeV85StepConditioned;
 };

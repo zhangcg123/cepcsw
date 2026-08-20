@@ -27,6 +27,10 @@ A default-off ECAL component-re-ranking prototype is also mechanically
 operational. It preserves `GSFTracks` and writes its paired result separately;
 its focused evidence is promising only for retained bimodal alternatives and
 is not population-validated.
+A separate default-off truth BH-loss oracle can replace existing BH-call
+responses on explicitly selected tracks while leaving the downstream GSF
+workflow unchanged. It is a mechanism diagnostic only and never production
+steering.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
@@ -191,6 +195,11 @@ explicitly enables an input-sample/method-specific `MaterialBHAuditCSV` under
 the configured tuple path (the project root while `tuplepath=""`). The
 algorithm and reverse-template audit defaults remain empty/off; the nonempty
 maintained-card value is campaign steering, not a new compiled default.
+`TruthBHLossOverride=false` and `TruthBHLossInput=""` are also compiled,
+reverse-template, and maintained-card defaults. When explicitly enabled, the
+CSV selects complete `(event,input-track)` scopes: selected tracks require
+every exact consecutive accepted-hit interval, while zero-row tracks are
+logged and use ordinary BH throughout.
 
 Current boundary evidence and definitions:
 
@@ -276,6 +285,15 @@ Current boundary evidence and definitions:
   DD4hep path and material composition, split decision, returned BH mixture,
   and child state. It does not change the flat-tuple schema or the legacy
   forward-only `MaterialTransitionCSV` contract.
+- The default-off truth BH-loss oracle replaces each already executed BH
+  response on a CSV-selected track with one unit-weight child at the matched
+  Geant4 eBrem retained fraction, then runs the unchanged downstream workflow.
+  A five-event focused A/B mechanically closed all 80 oracle calls. It fixed
+  the no-eBrem false overshoot in event 41 and improved event 17, but the large
+  truth losses in events 13 and 16 lie in runtime intervals below the current
+  split threshold and therefore never reach the response override. This is a
+  response-versus-gating diagnostic, not population validation or authority
+  to tune the threshold.
 - The first production-scale runtime audit contains 40,040 auditable events
   from 411 nonempty files; 35,582 are topology clear and 4,458 have secondary
   tracker activity. Valid, spatially matched paths close forward/reverse below
@@ -341,7 +359,8 @@ Proceed in this order:
    considering a default change. Keep the internal-TPC split-threshold control
    separate, test energy/angle/region only as held-out diagnostics of x-only
    sufficiency, treat topology activity only as a reported control, and handle
-   last-knot saturation explicitly.
+   last-knot saturation explicitly. Use the truth BH-loss oracle as a
+   response-only A/B and classify below-threshold truth losses separately.
 6. Classify the cause as path/ownership, interval-collapse granularity, BH
    response, or downstream measurement/selection before proposing a change.
    Then apply the focused verbose, hard-event 11/16/17, and held-out clean-track
@@ -356,7 +375,8 @@ and move downstream instead of retuning material.
 Current non-goals are further material-source or material-mode changes before
 branch-local closure, tuning split/cutoff thresholds, capacity, KL ranking,
 reverse seed covariance, final publication heuristics, or the ECAL selector;
-fitting SimHit momentum; truth-dependent runtime logic; changing source outside
+fitting SimHit momentum; truth-dependent runtime logic other than the explicit
+default-off truth BH-loss oracle diagnostic; changing source outside
 `RecGsfTracking`; or changing shared tracking packages.
 
 The exact definitions, selected audit, steering warning, and complete ordered
@@ -386,6 +406,9 @@ are preserved in
 The exact runtime material/BH audit schema, interval authority, focused
 mechanical validation, and non-interference A/B are preserved in
 `agents_record/2026-08-20-runtime-material-bh-audit-recorder.md`.
+The truth BH-loss oracle contract, all-or-nothing track scope, audit extension,
+focused A/B, and below-threshold truth-loss finding are preserved in
+`agents_record/2026-08-21-truth-bh-loss-oracle-control.md`.
 The production-scale eventwise join, valid-path closure, unresolved coverage
 population, split-threshold accounting, BH-response calibration, and revised
 ordered investigation are preserved in

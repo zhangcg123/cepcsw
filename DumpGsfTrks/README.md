@@ -186,13 +186,14 @@ The current `gsf.py.bk` contains the comparison card previously named
 with the production physics baseline: `DD4hepBetweenSurfaces`, split/cutoff
 `1e-4`, and `EcalComponentConstraint=False`.
 
-The authoritative explanation of all 41 `RecGsfTracking` properties, their
+The authoritative explanation of all 43 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, `gsf.py.bk` explicitly configures all 41
-properties and silently inherits none. Use the package README for the complete
+For this historical workflow, `gsf.py.bk` explicitly configures all 43
+properties and silently inherits none. The truth-dependent BH-loss oracle is
+explicitly off with an empty input. Use the package README for the complete
 configuration reference and the reverse template for the production-baseline
 settings.
 
