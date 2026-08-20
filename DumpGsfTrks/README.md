@@ -182,20 +182,30 @@ source configuration.
 ### `gsf.py.bk`
 
 The current `gsf.py.bk` contains the comparison card previously named
-`gsf_reverse_new.py.bk`. Its main reverse-filter settings agree with the
-active baseline, including `MaterialPathMode="DD4hepBetweenSurfaces"` and
-`ComponentWeightCutoff=1e-4`. It is an exact active-baseline card for the GSF
-algorithm properties when `method="reverse"`.
+`gsf_reverse_new.py.bk`. It keeps the active reverse workflow and
+`MaterialPathMode="DD4hepBetweenSurfaces"`, but its live working settings
+intentionally differ from the production baseline in three places:
+`BHSplitThreshold=1e-8`, `ComponentWeightCutoff=1e-8`, and
+`EcalComponentConstraint=True`. These are local experimental settings, not new
+compiled or production defaults.
 
-The authoritative explanation of all 40 `RecGsfTracking` properties, their
+The authoritative explanation of all 41 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, `gsf.py.bk` explicitly configures all 40
-properties, silently inherits none, and agrees with the active reverse
-template. Use the package README for the complete configuration reference and
-the reverse template for current runs.
+For this historical workflow, `gsf.py.bk` explicitly configures all 41
+properties and silently inherits none. Use the package README for the complete
+configuration reference and the reverse template for the production-baseline
+settings.
+
+Both runtime material outputs are explicit and default-off in this card.
+`MaterialTransitionCSV=""` preserves the legacy forward, non-seed
+material-comparison table, while `MaterialBHAuditCSV=""` disables the new
+structured seed/forward/reverse candidate and executed-BH-child audit. The
+new audit is a separate generated CSV, not a branch of `RecGsfFlatTuple`; a
+batch card must give it a unique path to enable it without overwriting another
+job's audit.
 
 Generated `rungsf-*` cards are batch artifacts and preserve the explicit
 material mode in force when each card was created. Many predate the 2026-08-19
@@ -205,7 +215,8 @@ cards as the current default. Regenerate a card from `gsf.py.bk` for a new
 production run, and set `CurrentSurface` explicitly only for a comparison.
 
 The card also reads `EcalCluster` from the reconstructed-event input and
-explicitly keeps the new ECAL component constraint off. When enabled, its
+currently enables the local ECAL component-constraint experiment. When
+enabled, its
 cluster-energy observation accepts only clusters inside both the configured
 phi and theta windows around the extrapolated outer GSF direction. For the
 reverse `BestBranch` workflow, `GSFTracks` remains the tracker-only baseline

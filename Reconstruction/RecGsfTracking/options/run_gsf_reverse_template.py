@@ -127,6 +127,7 @@ gsf.ComponentDebugMaxHistory = int(os.getenv(
 material_transition_csv = os.getenv("GSF_MATERIAL_TRANSITION_CSV", "")
 if material_transition_csv:
     gsf.MaterialTransitionCSV = material_transition_csv
+gsf.MaterialBHAuditCSV = os.getenv("GSF_MATERIAL_BH_AUDIT_CSV", "")
 gsf.OutputLevel = INFO
 
 # ---- Flat analysis tuple ---------------------------------------------------

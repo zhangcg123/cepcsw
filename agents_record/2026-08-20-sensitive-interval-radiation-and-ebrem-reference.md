@@ -4,10 +4,29 @@ Date: 2026-08-20
 
 ## Purpose
 
-This record freezes the truth-recorder interval table that must be compared
+This record preserves the truth-recorder interval table that must be compared
 with the actual intervals used by GSF at runtime before fitting or promoting a
-new Bethe-Heitler model. It is a diagnostic reference, not a model validation
-or production-default decision.
+new Bethe-Heitler model. It is a diagnostic reference, not a model validation,
+a production-default decision, or an authoritative runtime interval list.
+
+## Authority correction
+
+The authoritative runtime interval is bounded by two consecutive
+accepted/matched hits in the GSF's actual hit vector. The table below instead
+uses consecutive Geant4 sensitive-traversal midpoints. It is therefore a
+truth-side proxy taxonomy whose labels become runtime labels only after a
+same-event spatial match. In particular, a sensitive traversal absent from
+truth does not prove that the reconstructed track lacks that measurement, and
+a truth-side skipped interval must not be promoted directly to a BH knot.
+
+Two paired checks on file/seed 27 make the distinction concrete. Entry 0 has
+runtime inner hit radii 11.0825, 16.5820, 22.0814, 27.5809, 39.9423, and
+43.8796 mm, aligned with the corresponding truth anchors; its VXD3-to-S04 and
+S04-to-S05 rows are genuine runtime pairs. Entry 26 has runtime inner hit
+radii 11.0825, 43.1596, and 43.4753 mm, aligned with truth VXD0, S05, and the
+neighboring S04 anchor; its S05-to-neighbor-S04 row is a genuine runtime pair,
+while the missing intermediate layers are not GSF bounds. These checks
+validate the matching rule, not population closure.
 
 The source sample contains 411 completed files, 41,100 events, and 9,547,585
 accepted valid primary-electron intervals. An interval runs from the
@@ -22,7 +41,7 @@ thickness, not a sum across the population. An eBrem-bearing interval has
 `ebrem_step_count > 0`; multiple eBrem steps in one interval count once. The
 sample contains 39,282 eBrem-bearing intervals in total.
 
-## Frozen reference table
+## Truth-side reference table
 
 | sensitive-layer interval | median total DD4hep t/X0 | statistics: total / eBrem intervals | P(eBrem given interval) | share of all eBrem-bearing intervals |
 |---|---:|---:|---:|---:|
@@ -50,16 +69,18 @@ to 94.585%; the remaining sparse categories stay available in the complete
 
 The truth track entered an ITKB1 sensitive sensor and subsequently the first
 TPC sensitive pad row, but no ITKB2 sensitive-volume traversal was present to
-form an intermediate anchor. The interval therefore collapses the normal
-`ITKB1 -> ITKB2` and `ITKB2 -> TPC` bounds into one runtime-relevant path.
+form an intermediate truth anchor. The interval therefore collapses the
+normal `ITKB1 -> ITKB2` and `ITKB2 -> TPC` truth-side bounds. It is only a
+runtime path in events where the reconstructed GSF hit vector independently
+contains consecutive ITKB1 and TPC anchors.
 
 The observed median `0.01982494 t/X0` is 1.18% above the sum of the two normal
 medians, `0.00846299 + 0.01113070 = 0.01959370 t/X0`. Its observed 22.406%
 eBrem probability is close to the independent combined expectation,
 `1 - (1 - 0.111899)(1 - 0.132076) = 22.920%`. This is a missing-sensitive-
 anchor topology, plausibly a passage through an inactive module/stave gap,
-not evidence for a new material layer. It is a required validation row, not a
-standalone proposed BH knot.
+not evidence for a new material layer. It is a required truth-side validation
+row, not a standalone proposed BH knot or proof of a missing runtime hit.
 
 `VXD4-S05 -> VXD4-S04` also needs exact semantics: it is normally an overlap
 crossing from one outer-VXD ladder to a neighboring ladder at typical radii
@@ -106,12 +127,13 @@ combined `ITKB1 -> TPC` path.
 
 ## Required GSF runtime comparison
 
-The next material/BH check must establish whether the actual GSF candidate
-paths and executed BH calls reproduce this interval population. For the same
+The next material/BH check must establish how the actual GSF candidate paths
+and executed BH calls map onto this truth-side population. For the same
 unbiased events and exact steering:
 
-1. Normalize every runtime source/target measurement pair to the same
-   sensitive-layer labels used above. Keep the seed path separate.
+1. Start from each consecutive accepted/matched runtime hit pair, then spatially
+   match its endpoints to the truth-side sensitive-layer labels used above.
+   Keep the seed path separate. Never synthesize a runtime pair from truth.
 2. Record candidate paths before `BHSplitThreshold` and executed BH calls after
    the threshold; do not infer the former from the latter. The TPC row category
    is normally below the production `1e-4` split threshold.
@@ -120,9 +142,10 @@ unbiased events and exact steering:
 4. For every table row compare path count, valid/invalid count, median,
    16--84% and 5--95% `pathTX0`, material composition, fraction above the split
    threshold, and fraction above the last BH knot.
-5. Explicitly search for `ITKB1 -> TPC`; verify that it appears only when the
-   runtime reconstructed track lacks an ITKB2 measurement anchor and that its
-   thickness matches the combined interval rather than a new material layer.
+5. Explicitly search for `ITKB1 -> TPC`; count it only when the runtime
+   reconstructed track itself has consecutive ITKB1 and TPC anchors, and then
+   test whether its thickness matches the combined truth-side interval rather
+   than a new material layer.
 6. Preserve the expected endpoint distinction: the reference uses Geant4
    sensitive-traversal midpoints, whereas GSF uses reconstructed hit points.
    Compare population closure and paired same-event geometry without requiring

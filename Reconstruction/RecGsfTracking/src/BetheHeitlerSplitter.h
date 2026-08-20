@@ -6,6 +6,15 @@
 
 struct GsfComponent;
 
+/// Exact Gaussian-mixture parameters returned by the selected BH model.
+/// `mean` and `variance` describe the retained-momentum fraction
+/// z=p_after/p_before before it is applied to a track component.
+struct BetheHeitlerMixtureComponent {
+  double weight = 0.0;
+  double mean = 1.0;
+  double variance = 0.0;
+};
+
 /// Bethe-Heitler bremsstrahlung splitter.
 ///
 /// The default model preserves the current CEPC thin-material test behavior.
@@ -45,8 +54,9 @@ struct BetheHeitlerSplitter {
   /// @param tX0     Path length in radiation lengths
   /// @param bz      B-field strength [T] for helix-to-kappa conversion
   /// @return Vector of child components (parent is first element)
-  std::vector<GsfComponent*> split(GsfComponent* parent, double tX0, double bz,
-                                   bool reverse = false) const;
+  std::vector<GsfComponent*> split(
+      GsfComponent* parent, double tX0, double bz, bool reverse = false,
+      std::vector<BetheHeitlerMixtureComponent>* returnedMixture = nullptr) const;
 
 private:
   Model m_model = Model::CEPC2GeV85StepConditioned;

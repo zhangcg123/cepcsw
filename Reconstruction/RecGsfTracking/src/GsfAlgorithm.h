@@ -14,6 +14,7 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <cstdint>
 
 #include "TrackSystemSvc/HelixTrack.h"
 
@@ -175,9 +176,15 @@ private:
   Gaudi::Property<std::string> m_materialTransitionCSV{
       this, "MaterialTransitionCSV", "",
       "Optional component-local outgoing-surface material transition CSV"};
+  Gaudi::Property<std::string> m_materialBHAuditCSV{
+      this, "MaterialBHAuditCSV", "",
+      "Optional structured seed/forward/reverse material candidate and "
+      "executed Bethe-Heitler call CSV"};
   MarlinTrk::IMarlinTrkSystem* m_gsfMarlinTrkSystem = nullptr;
 
   std::ofstream m_materialTransitionStream;
+  std::ofstream m_materialBHAuditStream;
+  std::uint64_t m_materialBHNextCallId = 0;
   dd4hep::rec::MaterialManager* m_materialManager = nullptr;
 
   int m_nEvt = 0;

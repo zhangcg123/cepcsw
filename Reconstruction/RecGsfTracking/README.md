@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-19. `RecGsfTracking` exposes 40 Gaudi properties in
+Reference date: 2026-08-20. `RecGsfTracking` exposes 41 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -145,11 +145,25 @@ alternative workflows and must not be enabled simultaneously.
 | `ComponentDebugDump` | `false` | `false` | Dump exact component states, innovation quantities, and lineage histories. |
 | `SurfaceLineageMassDump` | `false` | `false` | Propagate and print aggregate BH-mode probability mass by surface. |
 | `ComponentDebugMaxHistory` | `240` | `240` | Maximum process/lineage history retained per component for debug output. |
-| `MaterialTransitionCSV` | empty | empty | Optional path for a component-local outgoing-surface material audit; empty disables it. |
+| `MaterialTransitionCSV` | empty | empty | Legacy forward, non-seed component material-comparison CSV used by the Geant4/DD4hep transition checks; empty disables it. |
+| `MaterialBHAuditCSV` | empty | empty | Structured runtime material/BH audit covering seed, forward, and reverse candidates plus the children returned by every executed split; empty disables it. |
 
 The reverse template connects the first three verbose properties to
 `GSF_VERBOSE_COMPONENTS`. Comprehensive focused-event validation normally
-enables all three together. Generated logs and CSV files are outputs, not
+enables all three together. `MaterialBHAuditCSV` is algorithm-owned because a
+downstream flat-tuple producer cannot reconstruct component-local paths or BH
+calls after filtering. Each candidate row records the exact accepted-hit
+bounds, component identity/weight and lineage, material mode and composition,
+`pathTX0`, split threshold, and whether the BH call executed. Executed calls
+add child rows under the same stable `call_id`, including the model's
+conditional weight, retained-fraction mean and variance, and the resulting
+child weight and momentum. The seed interval is flagged separately. Reverse
+rows retain canonical inner-to-outer surface bounds while `direction=reverse`
+and `bh_reverse=1` describe the executed workflow.
+
+`GSF_MATERIAL_BH_AUDIT_CSV` controls this output in the reverse template.
+This CSV is separate from both `MaterialTransitionCSV` and the scalar/per-hit
+`RecGsfFlatTuple` ROOT tree. Generated logs and CSV files are outputs, not
 project-status records.
 
 ### Counterfactual loss scan
@@ -177,7 +191,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 40 properties:
+The data handles are configurable separately from the 41 properties:
 
 | Role | Default collection |
 |---|---|
@@ -207,19 +221,27 @@ and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
 ordinary GSF tracker hits, so `gsf_hit_*` is the common hit information.
 
+The flat tuple does not contain the runtime material/BH audit. Its LCIO and
+GSF hit vectors reproduce associated output hits, not the subset that was
+successfully matched and used internally. Use `MaterialBHAuditCSV` when exact
+runtime interval or component-call information is required.
+
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 40
-properties and agrees with the active reverse template, including
-`ComponentWeightCutoff=1e-4` and the default-off ECAL experiment. It silently
-inherits no configurable property. Its reconstructed-event input list includes
-`EcalCluster`, and `keep *` preserves the paired constrained collection when
-the experiment is explicitly enabled. Its `RecGsfFlatTuple` instance writes
-both the ordinary `gsf_*` and paired `ecal_gsf_*` scalar branch sets.
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 41
+properties and silently inherits none. It intentionally differs from the
+active production baseline in three live experimental settings:
+`BHSplitThreshold=1e-8`, `ComponentWeightCutoff=1e-8`, and
+`EcalComponentConstraint=true`. These are not compiled or production-default
+changes. `MaterialBHAuditCSV` and the legacy `MaterialTransitionCSV` are both
+explicitly empty in that maintained card. Its reconstructed-event input list
+includes `EcalCluster`, and `keep *` preserves the paired constrained
+collection. Its `RecGsfFlatTuple` instance writes both the ordinary `gsf_*`
+and paired `ecal_gsf_*` scalar branch sets.
 
 ### Configuration-maintenance contract
 
-The 40-property inventory above is part of the configurable interface, not a
+The 41-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.
@@ -266,10 +288,13 @@ DD4hep constants are explicitly converted to millimetres.
 For BH-model dataset production, the recorder can also write a default-off
 `dd4hep_surface_tuple` using the same DD4hep `MaterialManager::materialsBetween`
 primitive and `length/radLength` sum as `DD4hepBetweenSurfaces` in the GSF. It
-uses the midpoint of each sensitive traversal as a measurement anchor, treats
-the adjacent TPC lower/upper sensitive half-volumes as one pad row, and stores
-the DD4hep material composition together with the clipped Geant4 step material
-and eBrem loss inside the same midpoint-to-midpoint bounds. It also evaluates
+uses the midpoint of each sensitive traversal as a truth-side proxy anchor,
+treats the adjacent TPC lower/upper sensitive half-volumes as one pad row, and
+stores the DD4hep material composition together with the clipped Geant4 step
+material and eBrem loss inside the same midpoint-to-midpoint bounds. These
+anchors are not guaranteed to be the consecutive accepted/matched hit bounds
+used by a runtime GSF fit; pair them eventwise before making closure claims. It
+also evaluates
 the identical endpoints in reverse order and stores
 `dd4hep_reverse_path_tX0`, `reverse_segment_count`, `reverse_valid`, and
 `dd4hep_reverse_materials`; these are direction-closure diagnostics, not a

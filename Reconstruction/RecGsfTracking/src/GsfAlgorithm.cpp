@@ -1095,6 +1095,119 @@ struct ComponentMaterialPath {
   bool valid = false;
 };
 
+struct MaterialBHAuditCall {
+  std::uint64_t callId = 0;
+  int eventIndex = -1;
+  int inputTrackIndex = -1;
+  int outputTrackIndex = -1;
+  std::string direction;
+  bool isSeed = false;
+  int hitFromIndex = -1;
+  int hitToIndex = -1;
+  int surfaceFromIndex = -1;
+  int surfaceToIndex = -1;
+  std::uint64_t cellFrom = 0;
+  std::uint64_t cellTo = 0;
+  double fromX = 0.0;
+  double fromY = 0.0;
+  double fromZ = 0.0;
+  double fromR = 0.0;
+  double toX = 0.0;
+  double toY = 0.0;
+  double toZ = 0.0;
+  double toR = 0.0;
+  int parentComponentId = -1;
+  int parentDebugParentId = -1;
+  int parentGeneration = -1;
+  double parentWeight = 0.0;
+  double parentDominantLineageFraction = 0.0;
+  bool parentNoRadiationLineage = false;
+  double parentKappa = 0.0;
+  double parentPT = 0.0;
+  double parentP = 0.0;
+  std::string parentForwardSignature;
+  std::string parentReverseSignature;
+  std::string materialPathMode;
+  ComponentMaterialPath materialPath;
+  double splitThreshold = 0.0;
+  bool aboveSplitThreshold = false;
+  bool electronHypothesis = false;
+  std::string bhModel;
+  bool bhExecuted = false;
+  bool bhReverse = false;
+};
+
+static std::string csvQuoted(const std::string& value) {
+  std::string result;
+  result.reserve(value.size() + 2);
+  result.push_back('"');
+  for (const char character : value) {
+    if (character == '"') result.push_back('"');
+    result.push_back(character);
+  }
+  result.push_back('"');
+  return result;
+}
+
+static void helixMomentum(const THelicalTrack& helix, double& kappa,
+                          double& pT, double& p) {
+  kappa = helix.GetKappa();
+  pT = kappa != 0.0 ? 1.0 / std::abs(kappa) : 0.0;
+  p = pT * std::sqrt(1.0 + helix.GetTanLambda() * helix.GetTanLambda());
+}
+
+static void writeMaterialBHAuditRecord(
+    std::ostream& stream, const MaterialBHAuditCall& call,
+    const char* recordKind, int childIndex,
+    const BetheHeitlerMixtureComponent* mixtureComponent,
+    const GsfComponent* child, double bz) {
+  stream << call.callId << ',' << csvQuoted(recordKind) << ','
+         << call.eventIndex << ',' << call.inputTrackIndex << ','
+         << call.outputTrackIndex << ',' << csvQuoted(call.direction) << ','
+         << (call.isSeed ? 1 : 0) << ',' << call.hitFromIndex << ','
+         << call.hitToIndex << ',' << call.surfaceFromIndex << ','
+         << call.surfaceToIndex << ',' << call.cellFrom << ',' << call.cellTo
+         << ',' << call.fromX << ',' << call.fromY << ',' << call.fromZ << ','
+         << call.fromR << ',' << call.toX << ',' << call.toY << ','
+         << call.toZ << ',' << call.toR << ',' << call.parentComponentId
+         << ',' << call.parentDebugParentId << ',' << call.parentGeneration
+         << ',' << call.parentWeight << ','
+         << call.parentDominantLineageFraction << ','
+         << (call.parentNoRadiationLineage ? 1 : 0) << ','
+         << call.parentKappa << ',' << call.parentPT << ',' << call.parentP
+         << ',' << csvQuoted(call.parentForwardSignature) << ','
+         << csvQuoted(call.parentReverseSignature) << ','
+         << csvQuoted(call.materialPathMode) << ','
+         << (call.materialPath.valid ? 1 : 0) << ','
+         << call.materialPath.normalTX0 << ','
+         << call.materialPath.absCosIncidence << ','
+         << call.materialPath.pathTX0 << ',' << call.materialPath.layerCount
+         << ',' << csvQuoted(call.materialPath.layerAudit) << ','
+         << call.splitThreshold << ','
+         << (call.aboveSplitThreshold ? 1 : 0) << ','
+         << (call.electronHypothesis ? 1 : 0) << ','
+         << csvQuoted(call.bhModel) << ',' << (call.bhExecuted ? 1 : 0)
+         << ',' << (call.bhReverse ? 1 : 0) << ',' << childIndex << ',';
+
+  if (!child) {
+    stream << "-1,,,,,,,\n";
+    return;
+  }
+
+  double childKappa = 0.0;
+  double childPT = 0.0;
+  double childP = 0.0;
+  helixMomentum(child->helixAtLastSite(bz), childKappa, childPT, childP);
+  stream << child->debugId << ',' << child->weight << ',';
+  if (mixtureComponent) {
+    stream << mixtureComponent->weight << ',' << mixtureComponent->mean << ','
+           << mixtureComponent->variance << ',';
+  } else {
+    stream << ",,,";
+  }
+  stream << childKappa << ',' << childPT << ',' << childP << '\n';
+}
+
 /// Material owned by the current measurement surface and traversed when
 /// continuing away from that surface. The slab thickness is projected along
 /// the component-local tangent, matching DDKalTest's surface-material
@@ -1402,6 +1515,7 @@ RecGsfTracking::RecGsfTracking(const std::string& name,
 
 StatusCode RecGsfTracking::initialize() {
   m_nEvt = 0;
+  m_materialBHNextCallId = 0;
 
   if (m_maxComponents.value() < 1) {
     error() << "MaxComponents must be at least 1" << endmsg;
@@ -1658,6 +1772,35 @@ StatusCode RecGsfTracking::initialize() {
            << endmsg;
   }
 
+  if (!m_materialBHAuditCSV.value().empty()) {
+    m_materialBHAuditStream.open(m_materialBHAuditCSV.value());
+    if (!m_materialBHAuditStream) {
+      error() << "Cannot create runtime material/BH audit CSV "
+              << m_materialBHAuditCSV.value() << endmsg;
+      return StatusCode::FAILURE;
+    }
+    m_materialBHAuditStream
+        << "call_id,record_kind,event_index,input_track_index,"
+        << "output_track_index,direction,is_seed,hit_from_index,"
+        << "hit_to_index,surface_from_index,surface_to_index,cell_from,"
+        << "cell_to,from_x_mm,from_y_mm,from_z_mm,from_r_mm,to_x_mm,"
+        << "to_y_mm,to_z_mm,to_r_mm,parent_component_id,"
+        << "parent_debug_parent_id,parent_generation,parent_weight,"
+        << "parent_dominant_lineage_fraction,parent_no_radiation_lineage,"
+        << "parent_kappa,parent_pT_GeV,parent_p_GeV,"
+        << "parent_forward_signature,parent_reverse_signature,"
+        << "material_path_mode,path_valid,normal_t_over_x0,"
+        << "abs_cos_incidence,path_t_over_x0,material_segment_count,"
+        << "material_composition,split_threshold,above_split_threshold,"
+        << "electron_hypothesis,bh_model,bh_executed,bh_reverse,"
+        << "child_index,child_component_id,child_weight,"
+        << "conditional_bh_weight,retained_mean,retained_variance,"
+        << "child_kappa,child_pT_GeV,child_p_GeV\n";
+    m_materialBHAuditStream << std::setprecision(17);
+    info() << "Runtime material/BH audit CSV: "
+           << m_materialBHAuditCSV.value() << endmsg;
+  }
+
   return StatusCode::SUCCESS;
 }
 
@@ -1689,6 +1832,7 @@ StatusCode RecGsfTracking::execute() {
   if (m_ecalComponentConstraint.value())
     ecalOut = m_ecalConstrainedOutputTracks.createAndPut();
   int nFit = 0;
+  int inputTrackIndex = -1;
   double bz = m_field;
   std::string materialPathMode = m_materialPathMode.value();
   std::transform(materialPathMode.begin(), materialPathMode.end(),
@@ -1705,6 +1849,7 @@ StatusCode RecGsfTracking::execute() {
       m_surfaceLineageMassDump.value() || selectSurfaceConsistency;
 
   for (const auto& trk : *in) {
+    ++inputTrackIndex;
     auto assocHits = trk.getTrackerHits();
     if (assocHits.size() < 5) continue;
 
@@ -1913,6 +2058,59 @@ StatusCode RecGsfTracking::execute() {
       }
     };
 
+    auto makeMaterialBHAuditCall = [&](const char* direction, bool isSeed,
+                                       int hitFromIndex, int hitToIndex,
+                                       const GsfComponent& parent,
+                                       const ComponentMaterialPath& path,
+                                       bool bhReverse) {
+      MaterialBHAuditCall call;
+      call.callId = m_materialBHNextCallId++;
+      call.eventIndex = eventIndex;
+      call.inputTrackIndex = inputTrackIndex;
+      call.outputTrackIndex = nFit;
+      call.direction = direction;
+      call.isSeed = isSeed;
+      call.hitFromIndex = hitFromIndex;
+      call.hitToIndex = hitToIndex;
+      const auto& fromHit = hits[static_cast<size_t>(hitFromIndex)];
+      const auto& toHit = hits[static_cast<size_t>(hitToIndex)];
+      call.surfaceFromIndex = fromHit.surfaceIndex;
+      call.surfaceToIndex = toHit.surfaceIndex;
+      call.cellFrom = static_cast<std::uint64_t>(fromHit.lcioHit.getCellID());
+      call.cellTo = static_cast<std::uint64_t>(toHit.lcioHit.getCellID());
+      const auto& fromPosition = fromHit.lcioHit.getPosition();
+      const auto& toPosition = toHit.lcioHit.getPosition();
+      call.fromX = fromPosition.x;
+      call.fromY = fromPosition.y;
+      call.fromZ = fromPosition.z;
+      call.fromR = fromHit.radius;
+      call.toX = toPosition.x;
+      call.toY = toPosition.y;
+      call.toZ = toPosition.z;
+      call.toR = toHit.radius;
+      call.parentComponentId = parent.debugId;
+      call.parentDebugParentId = parent.debugParentId;
+      call.parentGeneration = parent.generation;
+      call.parentWeight = parent.weight;
+      call.parentDominantLineageFraction =
+          parent.dominantLineageFraction;
+      call.parentNoRadiationLineage = parent.noRadiationLineage;
+      helixMomentum(parent.helixAtLastSite(bz), call.parentKappa,
+                    call.parentPT, call.parentP);
+      call.parentForwardSignature = parent.forwardProcessSignature;
+      call.parentReverseSignature = parent.reverseProcessSignature;
+      call.materialPathMode = m_materialPathMode.value();
+      call.materialPath = path;
+      call.splitThreshold = m_bhSplitThresh.value();
+      call.aboveSplitThreshold =
+          path.valid && path.pathTX0 > m_bhSplitThresh.value();
+      call.electronHypothesis = m_isElectron.value();
+      call.bhModel = m_bhModel.value();
+      call.bhExecuted = call.aboveSplitThreshold && call.electronHypothesis;
+      call.bhReverse = bhReverse;
+      return call;
+    };
+
     // The seed already contains the filtered hit-0 state. In full-interval
     // mode, convolve it through the hit-0 -> hit-1 material before the first
     // measurement update; the legacy current-surface mode intentionally keeps
@@ -1927,12 +2125,23 @@ StatusCode RecGsfTracking::execute() {
         maxTX0Layer = std::max(maxTX0Layer, seedMaterial.pathTX0);
         totalTX0 += seedMaterial.pathTX0;
       }
+      MaterialBHAuditCall seedAuditCall;
+      const bool auditSeedMaterial = m_materialBHAuditStream.is_open();
+      if (auditSeedMaterial) {
+        seedAuditCall = makeMaterialBHAuditCall(
+            "forward", true, 0, 1, *initComp, seedMaterial, false);
+        writeMaterialBHAuditRecord(
+            m_materialBHAuditStream, seedAuditCall, "candidate", -1,
+            nullptr, nullptr, bz);
+      }
       if (seedMaterial.valid &&
           seedMaterial.pathTX0 > m_bhSplitThresh.value() && m_isElectron) {
         BetheHeitlerSplitter splitter(m_bhModel.value());
         const int parentDebugId = initComp->debugId;
+        std::vector<BetheHeitlerMixtureComponent> returnedMixture;
         auto children = splitter.split(
-            initComp, seedMaterial.pathTX0, bz);
+            initComp, seedMaterial.pathTX0, bz, false,
+            auditSeedMaterial ? &returnedMixture : nullptr);
         comps.clear();
         for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
           auto* child = children[childIndex];
@@ -1942,6 +2151,13 @@ StatusCode RecGsfTracking::execute() {
           if (trackSurfaceLineageMass)
             child->forwardProcessModeFractions[{0, (int)childIndex}] = 1.0;
           comps.push_back(child);
+          if (auditSeedMaterial) {
+            const auto* mixtureComponent = childIndex < returnedMixture.size()
+                ? &returnedMixture[childIndex] : nullptr;
+            writeMaterialBHAuditRecord(
+                m_materialBHAuditStream, seedAuditCall, "child",
+                static_cast<int>(childIndex), mixtureComponent, child, bz);
+          }
         }
         ++nSplits;
         justSplit = true;
@@ -2356,6 +2572,20 @@ StatusCode RecGsfTracking::execute() {
           }
         }
       }
+      std::vector<MaterialBHAuditCall> forwardAuditCalls;
+      if (hasNextForwardSurface && m_materialBHAuditStream.is_open()) {
+        forwardAuditCalls.reserve(comps.size());
+        for (size_t componentIndex = 0; componentIndex < comps.size();
+             ++componentIndex) {
+          forwardAuditCalls.push_back(makeMaterialBHAuditCall(
+              "forward", false, static_cast<int>(ih),
+              static_cast<int>(ih + 1), *comps[componentIndex],
+              materialPaths[componentIndex], false));
+          writeMaterialBHAuditRecord(
+              m_materialBHAuditStream, forwardAuditCalls.back(),
+              "candidate", -1, nullptr, nullptr, bz);
+        }
+      }
       if (m_verboseDump && m_componentDebugDump && hasNextForwardSurface &&
           (ih < 3 || anyComponentMaterial)) {
         for (size_t ci = 0; ci < comps.size(); ++ci) {
@@ -2386,7 +2616,10 @@ StatusCode RecGsfTracking::execute() {
           const int parentDebugId = comp->debugId;
           const int childGeneration = comp->generation + 1;
           const double parentKappa = comp->helixAtLastSite(bz).GetKappa();
-          auto children = bhs.split(comp, materialPath.pathTX0, bz);
+          std::vector<BetheHeitlerMixtureComponent> returnedMixture;
+          auto children = bhs.split(
+              comp, materialPath.pathTX0, bz, false,
+              forwardAuditCalls.empty() ? nullptr : &returnedMixture);
           if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
             const double parentPT = (bz != 0 && parentKappa != 0)
                 ? 1.0 / std::abs(parentKappa) : 0.0;
@@ -2419,6 +2652,15 @@ StatusCode RecGsfTracking::execute() {
               child->forwardProcessModeFractions[
                   {(int)ih, (int)childIndex}] = 1.0;
             newCps.push_back(child);
+            if (!forwardAuditCalls.empty()) {
+              const auto* mixtureComponent =
+                  childIndex < returnedMixture.size()
+                      ? &returnedMixture[childIndex] : nullptr;
+              writeMaterialBHAuditRecord(
+                  m_materialBHAuditStream,
+                  forwardAuditCalls[componentIndex], "child",
+                  static_cast<int>(childIndex), mixtureComponent, child, bz);
+            }
           }
         }
         comps = std::move(newCps);
@@ -2696,6 +2938,20 @@ StatusCode RecGsfTracking::execute() {
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&
               reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
         }
+        std::vector<MaterialBHAuditCall> reverseAuditCalls;
+        if (!cmsOutermostHit && m_materialBHAuditStream.is_open()) {
+          reverseAuditCalls.reserve(reverseComps.size());
+          for (size_t componentIndex = 0;
+               componentIndex < reverseComps.size(); ++componentIndex) {
+            reverseAuditCalls.push_back(makeMaterialBHAuditCall(
+                "reverse", false, reverseHit, reverseHit + 1,
+                *reverseComps[componentIndex],
+                reverseMaterialPaths[componentIndex], true));
+            writeMaterialBHAuditRecord(
+                m_materialBHAuditStream, reverseAuditCalls.back(),
+                "candidate", -1, nullptr, nullptr, bz);
+          }
+        }
         if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
           for (size_t componentIndex = 0;
                componentIndex < reverseComps.size(); ++componentIndex) {
@@ -2727,8 +2983,10 @@ StatusCode RecGsfTracking::execute() {
             const double alpha = bz * 2.99792458e-4;
             const double parentPt = parent->continuationState.omega != 0.0
                 ? std::abs(alpha / parent->continuationState.omega) : 0.0;
-            auto children = splitter.split(parent, materialPath.pathTX0, bz,
-                                           true);
+            std::vector<BetheHeitlerMixtureComponent> returnedMixture;
+            auto children = splitter.split(
+                parent, materialPath.pathTX0, bz, true,
+                reverseAuditCalls.empty() ? nullptr : &returnedMixture);
             for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
               auto* child = children[childIndex];
               child->debugParentId = parentId;
@@ -2750,6 +3008,16 @@ StatusCode RecGsfTracking::execute() {
               child->debugHistory += "->reverse-material[h=" +
                   std::to_string(reverseHit) + "]";
               reverseChildren.push_back(child);
+              if (!reverseAuditCalls.empty()) {
+                const auto* mixtureComponent =
+                    childIndex < returnedMixture.size()
+                        ? &returnedMixture[childIndex] : nullptr;
+                writeMaterialBHAuditRecord(
+                    m_materialBHAuditStream,
+                    reverseAuditCalls[componentIndex], "child",
+                    static_cast<int>(childIndex), mixtureComponent, child,
+                    bz);
+              }
             }
           }
           reverseComps = std::move(reverseChildren);
@@ -3493,6 +3761,9 @@ StatusCode RecGsfTracking::finalize() {
   info() << "Processed " << m_nEvt << " events" << endmsg;
   if (m_materialTransitionStream.is_open()) {
     m_materialTransitionStream.close();
+  }
+  if (m_materialBHAuditStream.is_open()) {
+    m_materialBHAuditStream.close();
   }
   delete m_materialManager;
   m_materialManager = nullptr;

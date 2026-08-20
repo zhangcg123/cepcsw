@@ -316,7 +316,8 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
 }
 
 std::vector<GsfComponent*> BetheHeitlerSplitter::split(
-    GsfComponent* parent, double tX0, double bz, bool reverse) const {
+    GsfComponent* parent, double tX0, double bz, bool reverse,
+    std::vector<BetheHeitlerMixtureComponent>* returnedMixture) const {
 
   std::vector<BHComponent> mixture;
   switch (m_model) {
@@ -334,7 +335,16 @@ std::vector<GsfComponent*> BetheHeitlerSplitter::split(
   const double parentWeight = parent->weight;
   const bool parentNoRadiationLineage = parent->noRadiationLineage;
   if (!parent->continuationValid && !parent->snapshotContinuation(bz)) {
+    if (returnedMixture) returnedMixture->clear();
     return {parent};
+  }
+  if (returnedMixture) {
+    returnedMixture->clear();
+    returnedMixture->reserve(mixture.size());
+    for (const auto& component : mixture) {
+      returnedMixture->push_back(
+          {component.weight, component.mean, component.var});
+    }
   }
   std::vector<GsfComponent*> result;
   result.reserve(mixture.size());

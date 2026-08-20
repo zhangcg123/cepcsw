@@ -257,23 +257,31 @@ Current boundary evidence and definitions:
   about `0.183 t/X0`, but it was not part of the uniform 30-event population.
 - The 30 events were deliberately selected good/bad examples across no/light/
   hard eBrem. They are mechanism evidence, not an unbiased rate or validation.
-- An unbiased 41,100-event recorder reference now freezes 13 repeated
-  sensitive-midpoint interval categories plus the noncanonical
-  `ITKB1 -> TPC` missing-ITKB2-anchor row, with DD4hep t/X0, total/eBrem
-  statistics, per-interval eBrem probability, and global eBrem share. The next
-  gate is to compare GSF candidate paths before the split threshold and actual
-  BH calls after it against this exact table; similar-t/X0 categories must not
-  be silently pooled.
+- An unbiased 41,100-event recorder reference supplies 13 repeated truth-side
+  sensitive-midpoint interval categories plus an `ITKB1 -> TPC` row in which
+  the truth traversal lacks an ITKB2 anchor. It includes DD4hep t/X0,
+  total/eBrem statistics, per-interval eBrem probability, and global eBrem
+  share. This is a proxy/reference taxonomy, not the authoritative runtime
+  interval list: runtime bounds are consecutive accepted/matched GSF hits.
+  Similar-t/X0 categories must not be silently pooled, and a truth-side skipped
+  anchor must not be called a runtime skipped anchor until the reconstructed
+  hit pair is checked.
+- `MaterialBHAuditCSV` is a default-off, separate structured recorder for the
+  exact runtime candidates and executed BH calls. It records the seed path,
+  forward and reverse accepted-hit bounds, parent identity/weight/lineage,
+  DD4hep path and material composition, split decision, returned BH mixture,
+  and child state. It does not change the flat-tuple schema or the legacy
+  forward-only `MaterialTransitionCSV` contract.
 
 Proceed in this order:
 
 1. Keep the coverage-corrected endpoint and production baseline frozen. Print
    exact steering and use temporary cards for further material controls.
-2. On an unbiased sample, compare every GSF candidate path before the split
-   threshold and every actual BH call after it with the frozen sensitive-
-   interval reference, keeping the seed path separate. Record event,
-   direction, bounding surfaces, parent identity/weight, material composition,
-   `pathTX0`, and the returned BH mixture.
+2. On an unbiased sample, enable `MaterialBHAuditCSV` and compare every GSF
+   candidate path before the split threshold and every actual BH call after it
+   with the truth-side sensitive-midpoint reference, keeping the seed path
+   separate. Treat the recorded consecutive GSF hit pair as authoritative;
+   use the truth table only after eventwise spatial matching.
 3. In bad events, locate the first surface where a truth-compatible lineage
    loses posterior rank or is removed, and compare matched good controls.
 4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
@@ -319,10 +327,13 @@ review boundary for a canonical-direction correction are preserved in
 The production coverage repair, runtime/recorder direction closure, focused
 hard-event checks, and held-out no-eBrem A/B are preserved in
 `agents_record/2026-08-20-dd4hep-boundary-coverage-repair-and-direction-closure.md`.
-The frozen sensitive-interval radiation/eBrem table, exact physical bounds,
-noncanonical `ITKB1 -> TPC` interpretation, and required GSF runtime closure
+The truth-side sensitive-interval radiation/eBrem table, its proxy boundary,
+the corrected `ITKB1 -> TPC` interpretation, and required GSF runtime closure
 are preserved in
 `agents_record/2026-08-20-sensitive-interval-radiation-and-ebrem-reference.md`.
+The exact runtime material/BH audit schema, interval authority, focused
+mechanical validation, and non-interference A/B are preserved in
+`agents_record/2026-08-20-runtime-material-bh-audit-recorder.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in
