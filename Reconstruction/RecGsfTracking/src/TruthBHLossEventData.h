@@ -12,8 +12,23 @@
 #include <utility>
 #include <vector>
 
+struct TruthMaterialIntervalMatch {
+  int firstStepNumber = -1;
+  int lastStepNumber = -1;
+  double startHookFraction = -1.0;
+  double endHookFraction = -1.0;
+  edm4hep::Vector3d startPosition{};
+  edm4hep::Vector3d endPosition{};
+  int stepCount = 0;
+  double truthTX0 = 0.0;
+  double momentumBefore = 0.0;
+  double ebremLoss = 0.0;
+  double retainedFraction = 1.0;
+};
+
 struct TruthBHLossEventDataMatch {
   std::vector<double> retainedFractions;
+  std::vector<TruthMaterialIntervalMatch> materialIntervals;
   double maxEndpointDistance = 0.0;
   int g4TrackID = -1;
 };
@@ -33,6 +48,7 @@ public:
 
   bool matchTrack(const std::vector<edm4hep::TrackerHit>& orderedHits,
                   double maxEndpointDistance,
+                  bool collectMaterialIntervals,
                   TruthBHLossEventDataMatch& match,
                   std::string& error) const;
 
@@ -51,6 +67,7 @@ private:
     edm4hep::Vector3f preMomentum{};
     edm4hep::Vector3f postMomentum{};
     double momentumLoss = 0.0;
+    double stepTX0 = 0.0;
   };
 
   struct LinkRecord {

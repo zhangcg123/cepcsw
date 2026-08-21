@@ -6,6 +6,7 @@
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
+#include "GsfTruthEventData/MaterialIntervalCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TruthBHLossScopeStatus.h"
 
@@ -36,6 +37,10 @@ private:
       "MCParticle", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_inTruthBHLossStatus{
       "GSFTruthBHLossStatus", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::MaterialIntervalCollection> m_inTruthMaterialIntervals{
+      "GSFTruthMaterialIntervals", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inTruthMaterialStatus{
+      "GSFTruthMaterialRecordStatus", Gaudi::DataHandle::Reader, this};
 
   Gaudi::Property<std::string> m_outFileName{this, "OutputFile",
       "gsf_tuple.root", "Output ROOT file name"};
@@ -74,6 +79,58 @@ private:
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   int    m_truth_bh_scope_valid = 0;
+  // passive truth/DD4hep/runtime material record for its configured track
+  int    m_truth_material_scope_status =
+      truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
+  int    m_truth_material_scope_valid = 0;
+  int    m_truth_material_interval_n = 0;
+  std::vector<int> m_truth_material_input_track_index;
+  std::vector<int> m_truth_material_output_track_index;
+  std::vector<int> m_truth_material_hit_from_index;
+  std::vector<int> m_truth_material_hit_to_index;
+  std::vector<int> m_truth_material_surface_from_index;
+  std::vector<int> m_truth_material_surface_to_index;
+  std::vector<unsigned long long> m_truth_material_cell_from;
+  std::vector<unsigned long long> m_truth_material_cell_to;
+  std::vector<int> m_truth_material_track_id;
+  std::vector<int> m_truth_material_first_step;
+  std::vector<int> m_truth_material_last_step;
+  std::vector<double> m_truth_material_start_hook_fraction;
+  std::vector<double> m_truth_material_end_hook_fraction;
+  std::vector<double> m_truth_material_start_x;
+  std::vector<double> m_truth_material_start_y;
+  std::vector<double> m_truth_material_start_z;
+  std::vector<double> m_truth_material_end_x;
+  std::vector<double> m_truth_material_end_y;
+  std::vector<double> m_truth_material_end_z;
+  std::vector<int> m_truth_material_step_count;
+  std::vector<double> m_truth_material_g4_tx0;
+  std::vector<double> m_truth_material_p_before;
+  std::vector<double> m_truth_material_ebrem_loss;
+  std::vector<double> m_truth_material_retained_fraction;
+  std::vector<int> m_truth_material_dd4hep_hook_valid;
+  std::vector<int> m_truth_material_dd4hep_hook_layer_count;
+  std::vector<double> m_truth_material_dd4hep_hook_tx0;
+  std::vector<int> m_truth_material_runtime_mode;
+  std::vector<double> m_truth_material_split_threshold;
+  std::vector<int> m_truth_material_forward_candidate_count;
+  std::vector<int> m_truth_material_forward_valid_count;
+  std::vector<int> m_truth_material_forward_above_threshold_count;
+  std::vector<double> m_truth_material_forward_weighted_tx0;
+  std::vector<double> m_truth_material_forward_min_tx0;
+  std::vector<double> m_truth_material_forward_max_tx0;
+  std::vector<int> m_truth_material_forward_leading_component_id;
+  std::vector<double> m_truth_material_forward_leading_component_weight;
+  std::vector<double> m_truth_material_forward_leading_tx0;
+  std::vector<int> m_truth_material_reverse_candidate_count;
+  std::vector<int> m_truth_material_reverse_valid_count;
+  std::vector<int> m_truth_material_reverse_above_threshold_count;
+  std::vector<double> m_truth_material_reverse_weighted_tx0;
+  std::vector<double> m_truth_material_reverse_min_tx0;
+  std::vector<double> m_truth_material_reverse_max_tx0;
+  std::vector<int> m_truth_material_reverse_leading_component_id;
+  std::vector<double> m_truth_material_reverse_leading_component_weight;
+  std::vector<double> m_truth_material_reverse_leading_tx0;
   // paired ECAL-constrained GSF AtIP
   double m_ecal_gsf_omega = 0, m_ecal_gsf_d0 = 0, m_ecal_gsf_z0 = 0;
   double m_ecal_gsf_phi = 0, m_ecal_gsf_tanl = 0;

@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-22. `RecGsfTracking` exposes 45 Gaudi properties in
+Reference date: 2026-08-22. `RecGsfTracking` exposes 46 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -28,6 +28,7 @@ distinction matters because that template enables `ElossOn` and
 | `TruthBHLossInput` | empty | empty | External source path for `TruthBHLossOverride`: the strict runtime-interval CSV or material-recorder ROOT file selected by `CSV`/`G4StepTuple`. It must be empty for `EventData`, which reads the current event. Empty is otherwise valid only while the override is off. |
 | `TruthBHLossInputTrackIndex` | `0` | same | With `G4StepTuple` or `EventData`, the zero-based `CompleteTracks` index that receives the truth oracle. Other input tracks use the configured BH model. It must be nonnegative. It does not affect CSV selection. |
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | With `G4StepTuple` or `EventData`, maximum allowed endpoint discrepancy between an accepted runtime hit and its Geant4 truth hook. It must be finite and positive. It does not affect CSV input. |
+| `RecordTruthMaterialIntervals` | `false` | `false` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
@@ -171,6 +172,52 @@ The per-input-track status codes are:
 | `-2` | Runtime-hit/truth-anchor endpoint guard failed; ordinary BH used. |
 | `-3` | Exact consecutive runtime interval mapping failed; ordinary BH used. |
 | `-4` | Selected track/event was not processed, for example because of focused `SelectedEventIndices` steering or an unusable input track. |
+
+### Passive truth-material interval recorder
+
+`RecordTruthMaterialIntervals` is independent of `TruthBHLossOverride`. When
+enabled, it uses the embedded `EventData` provenance and the same exact
+reconstructed-hit association, selected input-track index, and endpoint
+integrity guard described above, but it only writes diagnostic information.
+It does not replace `pathTX0` or the configured `BHModel` response, and it does
+not alter propagation, split gating, measurement updates, reduction, reverse
+weights, or final selection.
+
+For each consecutive accepted-hit interval, the Geant4 reference integrates
+fractional boundary steps plus every complete intervening step:
+
+```text
+truth_g4_tx0 =
+    (1 - from_hook_fraction) * from_step_tx0
+  + sum(complete intermediate step_tx0)
+  + to_hook_fraction * to_step_tx0
+```
+
+When both hooks lie in one Geant4 step, the interval thickness is instead
+`(to_hook_fraction - from_hook_fraction) * step_tx0`. The DD4hep truth-hook
+value is independently integrated between those same two truth positions.
+The runtime values are the actual component-path material summaries seen in
+the ordinary forward and reverse workflows. They are stored separately by
+direction as weighted, minimum, maximum, and leading-path values; they are not
+per-BH-call child records. `GSFTruthMaterialIntervals` contains one passive
+summary per accepted-hit interval for the configured input track, while
+`GSFTruthMaterialRecordStatus` contains the per-input-track scope status. The
+flat-tuple representation uses the `truth_material_` prefix, including scalar
+scope status/validity and interval vectors. The material-record status uses
+the same numeric status table as the truth oracle above, interpreted as
+recording validity rather than permission to steer BH. Keeping these
+quantities side by side permits a later diagnostic to separate
+Geant4/DD4hep material-map
+differences from reconstructed-endpoint/component-path differences without
+using truth to steer the fit. Missing or invalid provenance is represented in
+the recorded interval validity/status; it has no effect on an otherwise
+ordinary GSF job when the truth BH-loss oracle itself is off.
+
+Because this recorder reads `GsfG4MaterialSteps` and
+`GsfSimTrackerHitG4StepLinks` from the current event, an enabled input card must
+request both collections. The compiled and active reverse-template value is
+false, so ordinary production and historical inputs do not acquire this
+simulation-only requirement.
 
 ### Mixture population and reduction
 
@@ -319,7 +366,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 45 properties:
+The data handles are configurable separately from the 46 properties:
 
 | Role | Default collection |
 |---|---|
@@ -329,6 +376,8 @@ The data handles are configurable separately from the 45 properties:
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
 | per-input-track truth-oracle status | `GSFTruthBHLossStatus` |
+| passive truth-material interval summaries | `GSFTruthMaterialIntervals` |
+| per-input-track truth-material recording status | `GSFTruthMaterialRecordStatus` |
 
 ### Flat-tuple paired-track branches
 
@@ -344,6 +393,14 @@ parallel constrained-track scalar set:
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
 | `res_pT_gsf`, `res_pT_ecal_gsf` | Ordinary and constrained fractional pT residuals relative to the first truth particle. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
+| `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
+| `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
+| `truth_material_track_id`, `truth_material_first_step`, `truth_material_last_step`, `truth_material_start_hook_fraction`, `truth_material_end_hook_fraction`, `truth_material_start_x`, `truth_material_start_y`, `truth_material_start_z`, `truth_material_end_x`, `truth_material_end_y`, `truth_material_end_z`, `truth_material_step_count` | Exact matched Geant4 track, boundary steps/fractions, hook positions in mm, and positive-length step-piece count. |
+| `truth_material_g4_tx0`, `truth_material_p_before`, `truth_material_ebrem_loss`, `truth_material_retained_fraction` | Fractionally integrated Geant4 t/X0, inner-hook momentum in GeV, subtype-3 eBrem loss in GeV, and its retained-momentum fraction. |
+| `truth_material_dd4hep_hook_valid`, `truth_material_dd4hep_hook_layer_count`, `truth_material_dd4hep_hook_tx0` | Validity, material-segment count, and DD4hep t/X0 integrated between the same two truth hooks. |
+| `truth_material_runtime_mode`, `truth_material_split_threshold` | Runtime material-mode code (`1` `CurrentSurface`, `2` `DD4hepBetweenSurfaces`) and configured BH split threshold. |
+| `truth_material_forward_candidate_count`, `truth_material_forward_valid_count`, `truth_material_forward_above_threshold_count`, `truth_material_forward_weighted_tx0`, `truth_material_forward_min_tx0`, `truth_material_forward_max_tx0`, `truth_material_forward_leading_component_id`, `truth_material_forward_leading_component_weight`, `truth_material_forward_leading_tx0` | Forward component-path population and parent-weighted/minimum/maximum/leading runtime material summaries. |
+| `truth_material_reverse_candidate_count`, `truth_material_reverse_valid_count`, `truth_material_reverse_above_threshold_count`, `truth_material_reverse_weighted_tx0`, `truth_material_reverse_min_tx0`, `truth_material_reverse_max_tx0`, `truth_material_reverse_leading_component_id`, `truth_material_reverse_leading_component_weight`, `truth_material_reverse_leading_tx0` | Equivalent reverse component-path summaries, or empty/zero counts when reverse filtering is inactive. |
 
 The constrained branches always exist in newly produced flat files. When the
 experiment is off or the paired collection is absent, `ecal_gsf_available=0`
@@ -351,15 +408,23 @@ and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
 ordinary GSF tracker hits, so `gsf_hit_*` is the common hit information.
 
-The flat tuple contains only the oracle scope status, not the runtime
-material/BH audit. Its LCIO and GSF hit vectors reproduce associated output
-hits, not the subset that was successfully matched and used internally. Use
-`MaterialBHAuditCSV` when the invalidity reason, exact runtime interval, or
-component-call information is required.
+For the BH oracle, the flat tuple contains only its scope status, not the
+component-call-level runtime material/BH audit. Its LCIO and GSF hit vectors
+reproduce associated output hits, not the subset that was successfully matched
+and used internally. The separate passive `truth_material_*` vectors do expose
+the accepted-hit interval and summarized runtime material population, but not
+individual parent/child calls or a textual invalidity reason. Use
+`MaterialBHAuditCSV` when that call-level information is required.
+
+All `truth_material_*` interval vectors have
+`truth_material_interval_n` entries and mirror the passive
+`GSFTruthMaterialIntervals` collection. They are independent of the
+component-call-level `MaterialBHAuditCSV`: the interval vectors deliberately
+store population summaries rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 45
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 46
 properties and silently inherits none. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline: split/cutoff `1e-4`,
 `DD4hepBetweenSurfaces`, and ECAL off. Its current explicit `BHModel` is the
@@ -384,9 +449,16 @@ deliberate truth-diagnostic campaign steering, not a production-default change.
 Generated truth-on cards append `truth-bh`; generated off controls append
 `truth-bh-off` to their GSF EDM, flat-tuple, and audit filenames.
 
+For the current passive material-consistency campaign, the maintained card
+also explicitly sets `RecordTruthMaterialIntervals=true`. Consequently it
+requests `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` even when
+`TruthBHLossOverride=false`. This is an intentional maintained-card diagnostic
+difference: the compiled and active reverse-template value remains false, and
+the recorded truth/DD4hep/runtime values do not affect the GSF workflow.
+
 ### Configuration-maintenance contract
 
-The 45-property inventory above is part of the configurable interface, not a
+The 46-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

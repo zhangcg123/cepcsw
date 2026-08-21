@@ -216,12 +216,12 @@ default-off `CEPCRuntimeGenericGrid5Clear` experiment, not the production
 `CEPC2GeV85StepConditioned` model; preserve that as deliberate campaign
 steering until the user changes it.
 
-The authoritative explanation of all 45 `RecGsfTracking` properties, their
+The authoritative explanation of all 46 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures all 45
+For this maintained workflow, `gsf.py.bk` explicitly configures all 46
 properties and silently inherits none. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
 submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
@@ -234,6 +234,19 @@ default; only generated truth-on cards differ from the false override base.
 This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
+
+The current material-consistency campaign also explicitly sets
+`RecordTruthMaterialIntervals=true`, while the compiled and active reverse-
+template default is false. Therefore the maintained card requests
+`GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` whether or not the truth
+BH-loss override is enabled. The property passively writes the exact Geant4
+t/X0 between associated truth hooks, the DD4hep integral between those same
+positions, and forward/reverse runtime material summaries to the final EDM and
+flat tuple. The EDM outputs are `GSFTruthMaterialIntervals` and
+`GSFTruthMaterialRecordStatus`; the flat branches use the `truth_material_`
+prefix. It never replaces a runtime path or BH response and cannot change split
+gating, component weights, or track selection. This true value is campaign
+recording, not a production-default change.
 Invalid event or track truth no longer terminates the batch job. The selected
 track instead uses ordinary BH throughout and records a negative validity code
 in `GSFTruthBHLossStatus`, `truth_bh_scope_status`/

@@ -4,7 +4,7 @@ This PODIO extension stores the Geant4 information needed by default-off GSF
 mechanism diagnostics inside the ordinary EDM event. It is not a production
 tracking input and does not make the normal GSF truth-dependent.
 
-The two collections are:
+The simulation writes two provenance collections:
 
 - `GsfG4MaterialSteps` (`gsftruth::G4MaterialStep`): selected Geant4 pre/post
   steps, including positions, momenta, process subtype, local material
@@ -58,6 +58,25 @@ edm4hep_writer.GsfTruthTrackerOnly = True
 Both collections are written into the same `sim*.root` event and survive the
 normal `keep *` chain. ROOT dictionary PCM/rootmap files are installed beside
 the generated libraries so generic PODIO readers can deserialize them.
+
+`RecGsfTracking` can additionally write
+`GSFTruthMaterialIntervals` (`gsftruth::MaterialInterval`) into its final EDM
+output when `RecordTruthMaterialIntervals=true`. Each object corresponds to
+one consecutive accepted-hit interval on the configured input track and keeps
+three quantities side by side:
+
+- fractionally integrated Geant4 step t/X0 between the exact associated truth
+  hooks, together with the truth eBrem loss;
+- DD4hep t/X0 evaluated between those same truth-hook positions;
+- direction-separated candidate, valid, above-threshold, parent-weighted,
+  minimum, maximum, and leading-component summaries of the material paths
+  already evaluated by the ordinary forward/reverse GSF.
+
+`GSFTruthMaterialRecordStatus` stores one scope code per input track. The
+recorder is passive: none of these output fields is read back by propagation,
+BH splitting, component weighting, reduction, or final selection. Missing or
+invalid provenance therefore produces an empty/invalid diagnostic scope but
+does not change an ordinary GSF fit.
 
 For the GSF truth BH-loss oracle, use
 `TruthBHLossSource="EventData"`, an empty `TruthBHLossInput`, and explicitly

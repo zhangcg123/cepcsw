@@ -8,6 +8,7 @@
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/MaterialIntervalCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
@@ -86,6 +87,10 @@ private:
       "MCParticle", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_truthBHLossStatus{
       "GSFTruthBHLossStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<gsftruth::MaterialIntervalCollection> m_truthMaterialIntervals{
+      "GSFTruthMaterialIntervals", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_truthMaterialStatus{
+      "GSFTruthMaterialRecordStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<gsftruth::G4MaterialStepCollection> m_gsfTruthSteps{
       "GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_gsfTruthLinks{
@@ -213,6 +218,11 @@ private:
       this, "TruthBHLossMaxEndpointDistance", 5.0,
       "Maximum allowed distance in mm between a runtime accepted hit and its "
       "matched Geant4 truth anchor or exact EventData hook"};
+  Gaudi::Property<bool> m_recordTruthMaterialIntervals{
+      this, "RecordTruthMaterialIntervals", false,
+      "Passively write exact Geant4, truth-hook DD4hep, and actual runtime "
+      "GSF material summaries for consecutive accepted-hit intervals; never "
+      "steers propagation, BH splitting, component weights, or selection"};
   Gaudi::Property<bool> m_counterfactualLossScan{
       this, "CounterfactualLossScan", false,
       "Default-off likelihood-only scan of trial losses at a configured truth "

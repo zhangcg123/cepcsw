@@ -35,6 +35,7 @@ gaudi_add_module(RecGsfFlatTuple
                  LINK Gaudi::GaudiKernel
                       k4FWCore::k4FWCore
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
+                      GsfTruthEventData GsfTruthEventDataDict
                       ${ROOT_LIBRARIES}
 )
 

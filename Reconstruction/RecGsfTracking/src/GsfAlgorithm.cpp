@@ -1096,6 +1096,60 @@ struct ComponentMaterialPath {
   bool valid = false;
 };
 
+struct RuntimeMaterialSummary {
+  int candidateCount = 0;
+  int validCount = 0;
+  int aboveThresholdCount = 0;
+  double validWeight = 0.0;
+  double weightedTX0Sum = 0.0;
+  double minTX0 = std::numeric_limits<double>::infinity();
+  double maxTX0 = -std::numeric_limits<double>::infinity();
+  int leadingComponentID = -1;
+  double leadingComponentWeight =
+      -std::numeric_limits<double>::infinity();
+  double leadingTX0 = std::numeric_limits<double>::quiet_NaN();
+
+  void add(const ComponentMaterialPath& path, double parentWeight,
+           int parentComponentID, double splitThreshold) {
+    ++candidateCount;
+    if (parentWeight > leadingComponentWeight) {
+      leadingComponentID = parentComponentID;
+      leadingComponentWeight = parentWeight;
+      leadingTX0 = path.valid
+          ? path.pathTX0 : std::numeric_limits<double>::quiet_NaN();
+    }
+    if (!path.valid) return;
+    ++validCount;
+    if (path.pathTX0 > splitThreshold) ++aboveThresholdCount;
+    validWeight += parentWeight;
+    weightedTX0Sum += parentWeight * path.pathTX0;
+    minTX0 = std::min(minTX0, path.pathTX0);
+    maxTX0 = std::max(maxTX0, path.pathTX0);
+  }
+
+  double weightedTX0() const {
+    return validWeight > 0.0
+        ? weightedTX0Sum / validWeight
+        : std::numeric_limits<double>::quiet_NaN();
+  }
+
+  double minimumTX0() const {
+    return validCount > 0
+        ? minTX0 : std::numeric_limits<double>::quiet_NaN();
+  }
+
+  double maximumTX0() const {
+    return validCount > 0
+        ? maxTX0 : std::numeric_limits<double>::quiet_NaN();
+  }
+
+  double leadingWeight() const {
+    return candidateCount > 0
+        ? leadingComponentWeight
+        : std::numeric_limits<double>::quiet_NaN();
+  }
+};
+
 struct MaterialBHAuditCall {
   std::uint64_t callId = 0;
   int eventIndex = -1;
@@ -1912,6 +1966,8 @@ StatusCode RecGsfTracking::execute() {
   const int eventIndex = m_nEvt - 1;
   auto* out = m_outputTracks.createAndPut();
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
+  auto* truthMaterialIntervals = m_truthMaterialIntervals.createAndPut();
+  auto* truthMaterialStatus = m_truthMaterialStatus.createAndPut();
   edm4hep::TrackCollection* ecalOut = nullptr;
   if (m_ecalComponentConstraint.value())
     ecalOut = m_ecalConstrainedOutputTracks.createAndPut();
@@ -1922,6 +1978,10 @@ StatusCode RecGsfTracking::execute() {
                                 eventIndex) == m_selectedEventIndices.value().end()) {
     truthBHLossStatus->push_back(truthBHLossStatusValue(
         m_truthBHLossOverride.value()
+            ? TruthBHLossScopeStatus::TrackNotProcessed
+            : TruthBHLossScopeStatus::Disabled));
+    truthMaterialStatus->push_back(truthBHLossStatusValue(
+        m_recordTruthMaterialIntervals.value()
             ? TruthBHLossScopeStatus::TrackNotProcessed
             : TruthBHLossScopeStatus::Disabled));
     return StatusCode::SUCCESS;
@@ -1942,6 +2002,19 @@ StatusCode RecGsfTracking::execute() {
   truthBHLossStatus->resize(in->size());
   for (std::size_t index = 0; index < in->size(); ++index)
     (*truthBHLossStatus)[index] = truthBHLossStatusValue(initialTruthStatus);
+  const auto initialMaterialStatus = m_recordTruthMaterialIntervals.value()
+      ? TruthBHLossScopeStatus::NotSelected
+      : TruthBHLossScopeStatus::Disabled;
+  truthMaterialStatus->resize(in->size());
+  for (std::size_t index = 0; index < in->size(); ++index)
+    (*truthMaterialStatus)[index] =
+        truthBHLossStatusValue(initialMaterialStatus);
+  const int materialInputTrack = m_truthBHLossInputTrackIndex.value();
+  if (m_recordTruthMaterialIntervals.value() && materialInputTrack >= 0 &&
+      materialInputTrack < static_cast<int>(truthMaterialStatus->size())) {
+    (*truthMaterialStatus)[static_cast<std::size_t>(materialInputTrack)] =
+        truthBHLossStatusValue(TruthBHLossScopeStatus::TrackNotProcessed);
+  }
 
   std::vector<TruthBHLossSurfaceInterval> tupleTruthIntervals;
   TruthBHLossEventData eventDataTruth;
@@ -1966,8 +2039,13 @@ StatusCode RecGsfTracking::execute() {
                 TruthBHLossScopeStatus::InvalidTruthEvent);
       }
     }
-  } else if (m_truthBHLossOverride.value() &&
-             m_truthBHLossUsesEventData) {
+  }
+  const bool needEventDataTruth =
+      m_recordTruthMaterialIntervals.value() ||
+      (m_truthBHLossOverride.value() && m_truthBHLossUsesEventData);
+  bool eventDataTruthEventValid = true;
+  std::string eventDataTruthEventError;
+  if (needEventDataTruth) {
     bool eventDataPrepared = false;
     try {
       const std::vector<const edm4hep::MCRecoTrackerAssociationCollection*>
@@ -1980,29 +2058,38 @@ StatusCode RecGsfTracking::execute() {
               m_otkEndcapTruthAssociations.get()};
       eventDataPrepared = eventDataTruth.prepare(
           m_gsfTruthSteps.get(), m_gsfTruthLinks.get(), associations,
-          dynamicTruthEventError);
+          eventDataTruthEventError);
     } catch (const std::exception& exception) {
-      dynamicTruthEventError =
+      eventDataTruthEventError =
           std::string("cannot retrieve embedded truth event data: ") +
           exception.what();
     } catch (...) {
-      dynamicTruthEventError =
+      eventDataTruthEventError =
           "cannot retrieve embedded truth event data: unknown exception";
     }
     if (!eventDataPrepared) {
-      dynamicTruthEventValid = false;
-      ++m_truthBHLossInvalidTruthEvents;
-      warning() << "TruthBHLossSource EventData event=" << eventIndex
-                << " is invalid: " << dynamicTruthEventError
-                << "; using the configured BH model and tagging the truth "
-                   "scope invalid"
+      eventDataTruthEventValid = false;
+      warning() << "Embedded truth material event=" << eventIndex
+                << " is invalid: " << eventDataTruthEventError
+                << "; passive records are unavailable and the configured "
+                   "GSF workflow remains unchanged"
                 << endmsg;
       const int selectedTrack = m_truthBHLossInputTrackIndex.value();
-      if (selectedTrack >= 0 &&
-          selectedTrack < static_cast<int>(truthBHLossStatus->size())) {
-        (*truthBHLossStatus)[static_cast<std::size_t>(selectedTrack)] =
-            truthBHLossStatusValue(
-                TruthBHLossScopeStatus::InvalidTruthEvent);
+      if (m_recordTruthMaterialIntervals.value() && selectedTrack >= 0 &&
+          selectedTrack < static_cast<int>(truthMaterialStatus->size())) {
+        (*truthMaterialStatus)[static_cast<std::size_t>(selectedTrack)] =
+            truthBHLossStatusValue(TruthBHLossScopeStatus::InvalidTruthEvent);
+      }
+      if (m_truthBHLossOverride.value() && m_truthBHLossUsesEventData) {
+        dynamicTruthEventValid = false;
+        dynamicTruthEventError = eventDataTruthEventError;
+        ++m_truthBHLossInvalidTruthEvents;
+        if (selectedTrack >= 0 &&
+            selectedTrack < static_cast<int>(truthBHLossStatus->size())) {
+          (*truthBHLossStatus)[static_cast<std::size_t>(selectedTrack)] =
+              truthBHLossStatusValue(
+                  TruthBHLossScopeStatus::InvalidTruthEvent);
+        }
       }
     }
   }
@@ -2052,6 +2139,20 @@ StatusCode RecGsfTracking::execute() {
     }
     (*truthBHLossStatus)[static_cast<std::size_t>(inputTrackIndex)] =
         truthBHLossStatusValue(truthBHLossScopeStatus);
+    const bool materialSourceSelectsTrack =
+        m_recordTruthMaterialIntervals.value() &&
+        inputTrackIndex == m_truthBHLossInputTrackIndex.value();
+    TruthBHLossScopeStatus truthMaterialScopeStatus =
+        m_recordTruthMaterialIntervals.value()
+            ? TruthBHLossScopeStatus::NotSelected
+            : TruthBHLossScopeStatus::Disabled;
+    if (materialSourceSelectsTrack) {
+      truthMaterialScopeStatus = eventDataTruthEventValid
+          ? TruthBHLossScopeStatus::TrackNotProcessed
+          : TruthBHLossScopeStatus::InvalidTruthEvent;
+    }
+    (*truthMaterialStatus)[static_cast<std::size_t>(inputTrackIndex)] =
+        truthBHLossStatusValue(truthMaterialScopeStatus);
 
     auto assocHits = trk.getTrackerHits();
     if (assocHits.size() < 5) continue;
@@ -2098,69 +2199,105 @@ StatusCode RecGsfTracking::execute() {
           static_cast<std::uint64_t>(toHit.lcioHit.getCellID())};
     };
     bool dynamicTruthTrackValid = false;
+    bool truthMaterialTrackMatched = false;
+    TruthBHLossEventDataMatch eventDataMatch;
+    const bool eventDataRequestedForTrack =
+        materialSourceSelectsTrack ||
+        (truthSourceSelectsTrack && m_truthBHLossUsesEventData);
 
-    if (truthSourceSelectsTrack && m_truthBHLossUsesEventData &&
-        dynamicTruthEventValid) {
+    if (eventDataRequestedForTrack && eventDataTruthEventValid) {
       std::vector<edm4hep::TrackerHit> orderedHits;
       orderedHits.reserve(hits.size());
       for (const auto& hit : hits) orderedHits.push_back(hit.lcioHit);
 
-      TruthBHLossEventDataMatch match;
       std::string matchError;
       if (!eventDataTruth.matchTrack(
-              orderedHits, m_truthBHLossMaxEndpointDistance.value(), match,
-              matchError)) {
-        truthBHLossScopeReason = matchError;
-        if (match.maxEndpointDistance >
-            m_truthBHLossMaxEndpointDistance.value()) {
-          truthBHLossScopeStatus =
-              TruthBHLossScopeStatus::EndpointDistanceExceeded;
-          ++m_truthBHLossInvalidEndpointTracks;
-        } else {
-          truthBHLossScopeStatus =
-              TruthBHLossScopeStatus::InvalidIntervalMapping;
-          ++m_truthBHLossInvalidIntervalTracks;
+              orderedHits, m_truthBHLossMaxEndpointDistance.value(),
+              materialSourceSelectsTrack, eventDataMatch, matchError)) {
+        const auto invalidStatus =
+            eventDataMatch.maxEndpointDistance >
+                    m_truthBHLossMaxEndpointDistance.value()
+                ? TruthBHLossScopeStatus::EndpointDistanceExceeded
+                : TruthBHLossScopeStatus::InvalidIntervalMapping;
+        if (materialSourceSelectsTrack) {
+          truthMaterialScopeStatus = invalidStatus;
+          (*truthMaterialStatus)[static_cast<std::size_t>(inputTrackIndex)] =
+              truthBHLossStatusValue(truthMaterialScopeStatus);
         }
-        warning() << "TruthBHLossSource EventData event=" << eventIndex
+        if (truthSourceSelectsTrack && m_truthBHLossUsesEventData) {
+          truthBHLossScopeStatus = invalidStatus;
+          truthBHLossScopeReason = matchError;
+          if (invalidStatus ==
+              TruthBHLossScopeStatus::EndpointDistanceExceeded) {
+            ++m_truthBHLossInvalidEndpointTracks;
+          } else {
+            ++m_truthBHLossInvalidIntervalTracks;
+          }
+        }
+        warning() << "Embedded truth material event=" << eventIndex
                   << " inputTrack=" << inputTrackIndex << " is invalid: "
-                  << matchError << "; using the configured BH model"
+                  << matchError << "; passive records are unavailable and "
+                     "the configured GSF workflow remains unchanged"
                   << endmsg;
-      } else if (match.retainedFractions.size() != hits.size() - 1) {
-        truthBHLossScopeStatus =
-            TruthBHLossScopeStatus::InvalidIntervalMapping;
-        truthBHLossScopeReason =
-            "EventData retained-fraction count does not match accepted hits";
-        ++m_truthBHLossInvalidIntervalTracks;
       } else {
-        bool inserted = true;
-        for (std::size_t hitFrom = 0;
-             hitFrom < match.retainedFractions.size(); ++hitFrom) {
-          inserted = dynamicTruthRetainedFractions.emplace(
-              truthBHLossKey(static_cast<int>(hitFrom),
-                             static_cast<int>(hitFrom + 1)),
-              match.retainedFractions[hitFrom]).second && inserted;
-        }
-        if (!inserted) {
-          truthBHLossScopeStatus =
-              TruthBHLossScopeStatus::InvalidIntervalMapping;
-          truthBHLossScopeReason =
-              "duplicate EventData accepted-hit interval key";
-          ++m_truthBHLossInvalidIntervalTracks;
+        const bool exactIntervalCounts =
+            eventDataMatch.retainedFractions.size() == hits.size() - 1 &&
+            (!materialSourceSelectsTrack ||
+             eventDataMatch.materialIntervals.size() == hits.size() - 1);
+        if (!exactIntervalCounts) {
+          const std::string countError =
+              "EventData interval count does not match accepted hits";
+          if (materialSourceSelectsTrack) {
+            truthMaterialScopeStatus =
+                TruthBHLossScopeStatus::InvalidIntervalMapping;
+            (*truthMaterialStatus)[static_cast<std::size_t>(inputTrackIndex)] =
+                truthBHLossStatusValue(truthMaterialScopeStatus);
+          }
+          if (truthSourceSelectsTrack && m_truthBHLossUsesEventData) {
+            truthBHLossScopeStatus =
+                TruthBHLossScopeStatus::InvalidIntervalMapping;
+            truthBHLossScopeReason = countError;
+            ++m_truthBHLossInvalidIntervalTracks;
+          }
+          warning() << "Embedded truth material event=" << eventIndex
+                    << " inputTrack=" << inputTrackIndex << " is invalid: "
+                    << countError << endmsg;
         } else {
-          dynamicTruthTrackValid = true;
-          truthBHLossScopeStatus = TruthBHLossScopeStatus::Valid;
-          truthBHLossScopeReason.clear();
-          ++m_truthBHLossDynamicTracks;
-          m_truthBHLossMaxObservedEndpointDistance = std::max(
-              m_truthBHLossMaxObservedEndpointDistance,
-              match.maxEndpointDistance);
-          if (m_verboseDump) {
-            info() << "Truth BH-loss EventData matched event=" << eventIndex
-                   << " inputTrack=" << inputTrackIndex
-                   << " G4Track=" << match.g4TrackID << " with "
-                   << match.retainedFractions.size()
-                   << " exact runtime intervals; max endpoint distance="
-                   << match.maxEndpointDistance << " mm" << endmsg;
+          truthMaterialTrackMatched = materialSourceSelectsTrack;
+          if (truthSourceSelectsTrack && m_truthBHLossUsesEventData) {
+            bool inserted = true;
+            for (std::size_t hitFrom = 0;
+                 hitFrom < eventDataMatch.retainedFractions.size();
+                 ++hitFrom) {
+              inserted = dynamicTruthRetainedFractions.emplace(
+                  truthBHLossKey(static_cast<int>(hitFrom),
+                                 static_cast<int>(hitFrom + 1)),
+                  eventDataMatch.retainedFractions[hitFrom]).second &&
+                  inserted;
+            }
+            if (!inserted) {
+              truthBHLossScopeStatus =
+                  TruthBHLossScopeStatus::InvalidIntervalMapping;
+              truthBHLossScopeReason =
+                  "duplicate EventData accepted-hit interval key";
+              ++m_truthBHLossInvalidIntervalTracks;
+            } else {
+              dynamicTruthTrackValid = true;
+              truthBHLossScopeStatus = TruthBHLossScopeStatus::Valid;
+              truthBHLossScopeReason.clear();
+              ++m_truthBHLossDynamicTracks;
+              m_truthBHLossMaxObservedEndpointDistance = std::max(
+                  m_truthBHLossMaxObservedEndpointDistance,
+                  eventDataMatch.maxEndpointDistance);
+            }
+          }
+          if (m_verboseDump && materialSourceSelectsTrack) {
+            info() << "Passive truth-material recorder matched event="
+                   << eventIndex << " inputTrack=" << inputTrackIndex
+                   << " G4Track=" << eventDataMatch.g4TrackID << " with "
+                   << eventDataMatch.materialIntervals.size()
+                   << " accepted-hit intervals; max endpoint distance="
+                   << eventDataMatch.maxEndpointDistance << " mm" << endmsg;
           }
         }
       }
@@ -2350,6 +2487,14 @@ StatusCode RecGsfTracking::execute() {
                << endmsg;
       }
     }
+
+    // These summaries mirror material values already computed by the live
+    // filter. They are filled only for the passive truth-material scope and
+    // are never read by propagation, splitting, weighting, or selection.
+    std::vector<RuntimeMaterialSummary> forwardMaterialSummaries(
+        hits.size() > 1 ? hits.size() - 1 : 0);
+    std::vector<RuntimeMaterialSummary> reverseMaterialSummaries(
+        hits.size() > 1 ? hits.size() - 1 : 0);
 
     if (m_verboseDump && m_componentDebugDump) {
       bool inputMonotonic = true;
@@ -2593,6 +2738,11 @@ StatusCode RecGsfTracking::execute() {
           seedPosition.x, seedPosition.y, seedPosition.z);
       const auto seedMaterial = componentGeometryTransitionMaterialPath(
           m_materialManager, hits[1].layer, seedDestination, *initComp, bz);
+      if (truthMaterialTrackMatched) {
+        forwardMaterialSummaries[0].add(
+            seedMaterial, initComp->weight, initComp->debugId,
+            m_bhSplitThresh.value());
+      }
       if (seedMaterial.valid) {
         maxTX0Layer = std::max(maxTX0Layer, seedMaterial.pathTX0);
         totalTX0 += seedMaterial.pathTX0;
@@ -3002,6 +3152,16 @@ StatusCode RecGsfTracking::execute() {
         anyComponentMaterial |= materialPaths.back().valid &&
             materialPaths.back().pathTX0 > m_bhSplitThresh.value();
       }
+      if (truthMaterialTrackMatched && hasNextForwardSurface) {
+        auto& summary = forwardMaterialSummaries[ih];
+        for (std::size_t componentIndex = 0;
+             componentIndex < comps.size(); ++componentIndex) {
+          summary.add(materialPaths[componentIndex],
+                      comps[componentIndex]->weight,
+                      comps[componentIndex]->debugId,
+                      m_bhSplitThresh.value());
+        }
+      }
       if (hasNextForwardSurface) {
         double weightedPathTX0 = 0.0;
         double validWeight = 0.0;
@@ -3387,6 +3547,17 @@ StatusCode RecGsfTracking::execute() {
                           target.layer, *component, bz, -1)));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&
               reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
+        }
+        if (truthMaterialTrackMatched && !cmsOutermostHit) {
+          auto& summary = reverseMaterialSummaries[
+              static_cast<std::size_t>(reverseHit)];
+          for (std::size_t componentIndex = 0;
+               componentIndex < reverseComps.size(); ++componentIndex) {
+            summary.add(reverseMaterialPaths[componentIndex],
+                        reverseComps[componentIndex]->weight,
+                        reverseComps[componentIndex]->debugId,
+                        m_bhSplitThresh.value());
+          }
         }
         std::vector<MaterialBHAuditCall> reverseAuditCalls;
         if (!cmsOutermostHit && m_materialBHAuditStream.is_open()) {
@@ -4085,6 +4256,84 @@ StatusCode RecGsfTracking::execute() {
       ot.addToTrackStates(ts);
 
       for (const auto& h : assocHits) ot.addToTrackerHits(h);
+
+      if (truthMaterialTrackMatched) {
+        const std::int16_t runtimeMaterialMode =
+            useDD4hepBetweenSurfaces ? 2 : 1;
+        for (std::size_t intervalIndex = 0;
+             intervalIndex < eventDataMatch.materialIntervals.size();
+             ++intervalIndex) {
+          const auto& truth =
+              eventDataMatch.materialIntervals[intervalIndex];
+          const auto& fromHit = hits[intervalIndex];
+          const auto& toHit = hits[intervalIndex + 1];
+          const TVector3 truthFrom(
+              truth.startPosition.x, truth.startPosition.y,
+              truth.startPosition.z);
+          const TVector3 truthTo(
+              truth.endPosition.x, truth.endPosition.y,
+              truth.endPosition.z);
+          const auto truthHookDD4hep = geometryTransitionMaterialPath(
+              m_materialManager, truthFrom, truthTo);
+          const auto& forward = forwardMaterialSummaries[intervalIndex];
+          const auto& reverse = reverseMaterialSummaries[intervalIndex];
+
+          auto record = truthMaterialIntervals->create();
+          record.setInputTrackIndex(inputTrackIndex);
+          record.setOutputTrackIndex(nFit);
+          record.setHitFromIndex(static_cast<int>(intervalIndex));
+          record.setHitToIndex(static_cast<int>(intervalIndex + 1));
+          record.setSurfaceFromIndex(fromHit.surfaceIndex);
+          record.setSurfaceToIndex(toHit.surfaceIndex);
+          record.setCellFrom(static_cast<std::uint64_t>(
+              fromHit.lcioHit.getCellID()));
+          record.setCellTo(static_cast<std::uint64_t>(
+              toHit.lcioHit.getCellID()));
+          record.setTruthTrackID(eventDataMatch.g4TrackID);
+          record.setTruthFirstStepNumber(truth.firstStepNumber);
+          record.setTruthLastStepNumber(truth.lastStepNumber);
+          record.setTruthStartHookFraction(truth.startHookFraction);
+          record.setTruthEndHookFraction(truth.endHookFraction);
+          record.setTruthStartPosition(truth.startPosition);
+          record.setTruthEndPosition(truth.endPosition);
+          record.setTruthStepCount(truth.stepCount);
+          record.setTruthG4TX0(truth.truthTX0);
+          record.setTruthMomentumBefore(truth.momentumBefore);
+          record.setTruthEbremLoss(truth.ebremLoss);
+          record.setTruthRetainedMomentumFraction(truth.retainedFraction);
+          record.setDd4hepTruthHookValid(
+              truthHookDD4hep.valid ? 1 : 0);
+          record.setDd4hepTruthHookLayerCount(truthHookDD4hep.layerCount);
+          record.setDd4hepTruthHookTX0(truthHookDD4hep.pathTX0);
+          record.setRuntimeMaterialMode(runtimeMaterialMode);
+          record.setSplitThreshold(m_bhSplitThresh.value());
+
+          record.setForwardCandidateCount(forward.candidateCount);
+          record.setForwardValidCount(forward.validCount);
+          record.setForwardAboveThresholdCount(
+              forward.aboveThresholdCount);
+          record.setForwardWeightedTX0(forward.weightedTX0());
+          record.setForwardMinTX0(forward.minimumTX0());
+          record.setForwardMaxTX0(forward.maximumTX0());
+          record.setForwardLeadingComponentID(forward.leadingComponentID);
+          record.setForwardLeadingComponentWeight(forward.leadingWeight());
+          record.setForwardLeadingTX0(forward.leadingTX0);
+
+          record.setReverseCandidateCount(reverse.candidateCount);
+          record.setReverseValidCount(reverse.validCount);
+          record.setReverseAboveThresholdCount(
+              reverse.aboveThresholdCount);
+          record.setReverseWeightedTX0(reverse.weightedTX0());
+          record.setReverseMinTX0(reverse.minimumTX0());
+          record.setReverseMaxTX0(reverse.maximumTX0());
+          record.setReverseLeadingComponentID(reverse.leadingComponentID);
+          record.setReverseLeadingComponentWeight(reverse.leadingWeight());
+          record.setReverseLeadingTX0(reverse.leadingTX0);
+        }
+        truthMaterialScopeStatus = TruthBHLossScopeStatus::Valid;
+        (*truthMaterialStatus)[static_cast<std::size_t>(inputTrackIndex)] =
+            truthBHLossStatusValue(truthMaterialScopeStatus);
+      }
 
       // Paired experimental output.  When the ECAL gate is inactive or the
       // observation is unavailable this is an exact parameter/covariance copy

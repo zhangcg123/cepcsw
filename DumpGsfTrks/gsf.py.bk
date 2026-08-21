@@ -87,7 +87,14 @@ gsf.TruthBHLossSource = "EventData"
 gsf.TruthBHLossInput = ""
 gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
-if gsf.TruthBHLossOverride and gsf.TruthBHLossSource.lower() == "eventdata":
+# Current passive material-consistency campaign.  This only records the truth
+# G4, truth-hook DD4hep, and actual runtime GSF material values in the output;
+# it does not replace a path, trigger a BH split, or alter filtering/selection.
+# The compiled and reverse-template default remains false.
+gsf.RecordTruthMaterialIntervals = True
+if (gsf.RecordTruthMaterialIntervals or
+        (gsf.TruthBHLossOverride and
+         gsf.TruthBHLossSource.lower() == "eventdata")):
     podioinput.collections += [
         "GsfG4MaterialSteps",
         "GsfSimTrackerHitG4StepLinks",

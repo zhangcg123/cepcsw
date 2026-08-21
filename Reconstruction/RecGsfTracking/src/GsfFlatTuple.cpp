@@ -5,6 +5,7 @@
 
 #include <TFile.h>
 #include <TTree.h>
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -117,6 +118,93 @@ StatusCode RecGsfFlatTuple::initialize() {
   // truth BH-loss oracle validity for CompleteTracks index 0
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
+  // passive truth/DD4hep/runtime material intervals
+  m_tree->Branch("truth_material_scope_status",
+                 &m_truth_material_scope_status);
+  m_tree->Branch("truth_material_scope_valid",
+                 &m_truth_material_scope_valid);
+  m_tree->Branch("truth_material_interval_n",
+                 &m_truth_material_interval_n);
+  m_tree->Branch("truth_material_input_track_index",
+                 &m_truth_material_input_track_index);
+  m_tree->Branch("truth_material_output_track_index",
+                 &m_truth_material_output_track_index);
+  m_tree->Branch("truth_material_hit_from_index",
+                 &m_truth_material_hit_from_index);
+  m_tree->Branch("truth_material_hit_to_index",
+                 &m_truth_material_hit_to_index);
+  m_tree->Branch("truth_material_surface_from_index",
+                 &m_truth_material_surface_from_index);
+  m_tree->Branch("truth_material_surface_to_index",
+                 &m_truth_material_surface_to_index);
+  m_tree->Branch("truth_material_cell_from", &m_truth_material_cell_from);
+  m_tree->Branch("truth_material_cell_to", &m_truth_material_cell_to);
+  m_tree->Branch("truth_material_track_id", &m_truth_material_track_id);
+  m_tree->Branch("truth_material_first_step", &m_truth_material_first_step);
+  m_tree->Branch("truth_material_last_step", &m_truth_material_last_step);
+  m_tree->Branch("truth_material_start_hook_fraction",
+                 &m_truth_material_start_hook_fraction);
+  m_tree->Branch("truth_material_end_hook_fraction",
+                 &m_truth_material_end_hook_fraction);
+  m_tree->Branch("truth_material_start_x", &m_truth_material_start_x);
+  m_tree->Branch("truth_material_start_y", &m_truth_material_start_y);
+  m_tree->Branch("truth_material_start_z", &m_truth_material_start_z);
+  m_tree->Branch("truth_material_end_x", &m_truth_material_end_x);
+  m_tree->Branch("truth_material_end_y", &m_truth_material_end_y);
+  m_tree->Branch("truth_material_end_z", &m_truth_material_end_z);
+  m_tree->Branch("truth_material_step_count",
+                 &m_truth_material_step_count);
+  m_tree->Branch("truth_material_g4_tx0", &m_truth_material_g4_tx0);
+  m_tree->Branch("truth_material_p_before", &m_truth_material_p_before);
+  m_tree->Branch("truth_material_ebrem_loss", &m_truth_material_ebrem_loss);
+  m_tree->Branch("truth_material_retained_fraction",
+                 &m_truth_material_retained_fraction);
+  m_tree->Branch("truth_material_dd4hep_hook_valid",
+                 &m_truth_material_dd4hep_hook_valid);
+  m_tree->Branch("truth_material_dd4hep_hook_layer_count",
+                 &m_truth_material_dd4hep_hook_layer_count);
+  m_tree->Branch("truth_material_dd4hep_hook_tx0",
+                 &m_truth_material_dd4hep_hook_tx0);
+  m_tree->Branch("truth_material_runtime_mode",
+                 &m_truth_material_runtime_mode);
+  m_tree->Branch("truth_material_split_threshold",
+                 &m_truth_material_split_threshold);
+  m_tree->Branch("truth_material_forward_candidate_count",
+                 &m_truth_material_forward_candidate_count);
+  m_tree->Branch("truth_material_forward_valid_count",
+                 &m_truth_material_forward_valid_count);
+  m_tree->Branch("truth_material_forward_above_threshold_count",
+                 &m_truth_material_forward_above_threshold_count);
+  m_tree->Branch("truth_material_forward_weighted_tx0",
+                 &m_truth_material_forward_weighted_tx0);
+  m_tree->Branch("truth_material_forward_min_tx0",
+                 &m_truth_material_forward_min_tx0);
+  m_tree->Branch("truth_material_forward_max_tx0",
+                 &m_truth_material_forward_max_tx0);
+  m_tree->Branch("truth_material_forward_leading_component_id",
+                 &m_truth_material_forward_leading_component_id);
+  m_tree->Branch("truth_material_forward_leading_component_weight",
+                 &m_truth_material_forward_leading_component_weight);
+  m_tree->Branch("truth_material_forward_leading_tx0",
+                 &m_truth_material_forward_leading_tx0);
+  m_tree->Branch("truth_material_reverse_candidate_count",
+                 &m_truth_material_reverse_candidate_count);
+  m_tree->Branch("truth_material_reverse_valid_count",
+                 &m_truth_material_reverse_valid_count);
+  m_tree->Branch("truth_material_reverse_above_threshold_count",
+                 &m_truth_material_reverse_above_threshold_count);
+  m_tree->Branch("truth_material_reverse_weighted_tx0",
+                 &m_truth_material_reverse_weighted_tx0);
+  m_tree->Branch("truth_material_reverse_min_tx0",
+                 &m_truth_material_reverse_min_tx0);
+  m_tree->Branch("truth_material_reverse_max_tx0",
+                 &m_truth_material_reverse_max_tx0);
+  m_tree->Branch("truth_material_reverse_leading_component_id",
+                 &m_truth_material_reverse_leading_component_id);
+  m_tree->Branch("truth_material_reverse_leading_component_weight",
+                 &m_truth_material_reverse_leading_component_weight);
+  m_tree->Branch("truth_material_reverse_leading_tx0",
+                 &m_truth_material_reverse_leading_tx0);
   // paired ECAL-constrained GSF
   m_tree->Branch("ecal_gsf_available", &m_ecal_gsf_available);
   m_tree->Branch("ecal_gsf_changed",   &m_ecal_gsf_changed);
@@ -169,6 +257,171 @@ StatusCode RecGsfFlatTuple::execute() {
   } catch (...) {
     // Older GSF producers do not provide this optional diagnostic collection.
     // Keep the disabled/invalid defaults without changing their tuple flow.
+  }
+
+  m_truth_material_scope_status =
+      truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
+  m_truth_material_scope_valid = 0;
+  m_truth_material_interval_n = 0;
+  m_truth_material_input_track_index.clear();
+  m_truth_material_output_track_index.clear();
+  m_truth_material_hit_from_index.clear();
+  m_truth_material_hit_to_index.clear();
+  m_truth_material_surface_from_index.clear();
+  m_truth_material_surface_to_index.clear();
+  m_truth_material_cell_from.clear();
+  m_truth_material_cell_to.clear();
+  m_truth_material_track_id.clear();
+  m_truth_material_first_step.clear();
+  m_truth_material_last_step.clear();
+  m_truth_material_start_hook_fraction.clear();
+  m_truth_material_end_hook_fraction.clear();
+  m_truth_material_start_x.clear();
+  m_truth_material_start_y.clear();
+  m_truth_material_start_z.clear();
+  m_truth_material_end_x.clear();
+  m_truth_material_end_y.clear();
+  m_truth_material_end_z.clear();
+  m_truth_material_step_count.clear();
+  m_truth_material_g4_tx0.clear();
+  m_truth_material_p_before.clear();
+  m_truth_material_ebrem_loss.clear();
+  m_truth_material_retained_fraction.clear();
+  m_truth_material_dd4hep_hook_valid.clear();
+  m_truth_material_dd4hep_hook_layer_count.clear();
+  m_truth_material_dd4hep_hook_tx0.clear();
+  m_truth_material_runtime_mode.clear();
+  m_truth_material_split_threshold.clear();
+  m_truth_material_forward_candidate_count.clear();
+  m_truth_material_forward_valid_count.clear();
+  m_truth_material_forward_above_threshold_count.clear();
+  m_truth_material_forward_weighted_tx0.clear();
+  m_truth_material_forward_min_tx0.clear();
+  m_truth_material_forward_max_tx0.clear();
+  m_truth_material_forward_leading_component_id.clear();
+  m_truth_material_forward_leading_component_weight.clear();
+  m_truth_material_forward_leading_tx0.clear();
+  m_truth_material_reverse_candidate_count.clear();
+  m_truth_material_reverse_valid_count.clear();
+  m_truth_material_reverse_above_threshold_count.clear();
+  m_truth_material_reverse_weighted_tx0.clear();
+  m_truth_material_reverse_min_tx0.clear();
+  m_truth_material_reverse_max_tx0.clear();
+  m_truth_material_reverse_leading_component_id.clear();
+  m_truth_material_reverse_leading_component_weight.clear();
+  m_truth_material_reverse_leading_tx0.clear();
+
+  try {
+    const auto* materialStatus = m_inTruthMaterialStatus.get();
+    if (materialStatus && !materialStatus->empty()) {
+      const auto notSelected =
+          truthBHLossStatusValue(TruthBHLossScopeStatus::NotSelected);
+      const auto selectedStatus = std::find_if(
+          materialStatus->begin(), materialStatus->end(),
+          [notSelected](std::int32_t status) {
+            return status != notSelected;
+          });
+      if (selectedStatus != materialStatus->end())
+        m_truth_material_scope_status = *selectedStatus;
+      m_truth_material_scope_valid =
+          m_truth_material_scope_status ==
+                  truthBHLossStatusValue(TruthBHLossScopeStatus::Valid)
+              ? 1
+              : 0;
+    }
+    const auto* materialIntervals = m_inTruthMaterialIntervals.get();
+    if (materialIntervals) {
+      for (const auto& interval : *materialIntervals) {
+        const auto start = interval.getTruthStartPosition();
+        const auto end = interval.getTruthEndPosition();
+        m_truth_material_input_track_index.push_back(
+            interval.getInputTrackIndex());
+        m_truth_material_output_track_index.push_back(
+            interval.getOutputTrackIndex());
+        m_truth_material_hit_from_index.push_back(
+            interval.getHitFromIndex());
+        m_truth_material_hit_to_index.push_back(interval.getHitToIndex());
+        m_truth_material_surface_from_index.push_back(
+            interval.getSurfaceFromIndex());
+        m_truth_material_surface_to_index.push_back(
+            interval.getSurfaceToIndex());
+        m_truth_material_cell_from.push_back(interval.getCellFrom());
+        m_truth_material_cell_to.push_back(interval.getCellTo());
+        m_truth_material_track_id.push_back(interval.getTruthTrackID());
+        m_truth_material_first_step.push_back(
+            interval.getTruthFirstStepNumber());
+        m_truth_material_last_step.push_back(
+            interval.getTruthLastStepNumber());
+        m_truth_material_start_hook_fraction.push_back(
+            interval.getTruthStartHookFraction());
+        m_truth_material_end_hook_fraction.push_back(
+            interval.getTruthEndHookFraction());
+        m_truth_material_start_x.push_back(start.x);
+        m_truth_material_start_y.push_back(start.y);
+        m_truth_material_start_z.push_back(start.z);
+        m_truth_material_end_x.push_back(end.x);
+        m_truth_material_end_y.push_back(end.y);
+        m_truth_material_end_z.push_back(end.z);
+        m_truth_material_step_count.push_back(interval.getTruthStepCount());
+        m_truth_material_g4_tx0.push_back(interval.getTruthG4TX0());
+        m_truth_material_p_before.push_back(
+            interval.getTruthMomentumBefore());
+        m_truth_material_ebrem_loss.push_back(interval.getTruthEbremLoss());
+        m_truth_material_retained_fraction.push_back(
+            interval.getTruthRetainedMomentumFraction());
+        m_truth_material_dd4hep_hook_valid.push_back(
+            interval.getDd4hepTruthHookValid());
+        m_truth_material_dd4hep_hook_layer_count.push_back(
+            interval.getDd4hepTruthHookLayerCount());
+        m_truth_material_dd4hep_hook_tx0.push_back(
+            interval.getDd4hepTruthHookTX0());
+        m_truth_material_runtime_mode.push_back(
+            interval.getRuntimeMaterialMode());
+        m_truth_material_split_threshold.push_back(
+            interval.getSplitThreshold());
+        m_truth_material_forward_candidate_count.push_back(
+            interval.getForwardCandidateCount());
+        m_truth_material_forward_valid_count.push_back(
+            interval.getForwardValidCount());
+        m_truth_material_forward_above_threshold_count.push_back(
+            interval.getForwardAboveThresholdCount());
+        m_truth_material_forward_weighted_tx0.push_back(
+            interval.getForwardWeightedTX0());
+        m_truth_material_forward_min_tx0.push_back(
+            interval.getForwardMinTX0());
+        m_truth_material_forward_max_tx0.push_back(
+            interval.getForwardMaxTX0());
+        m_truth_material_forward_leading_component_id.push_back(
+            interval.getForwardLeadingComponentID());
+        m_truth_material_forward_leading_component_weight.push_back(
+            interval.getForwardLeadingComponentWeight());
+        m_truth_material_forward_leading_tx0.push_back(
+            interval.getForwardLeadingTX0());
+        m_truth_material_reverse_candidate_count.push_back(
+            interval.getReverseCandidateCount());
+        m_truth_material_reverse_valid_count.push_back(
+            interval.getReverseValidCount());
+        m_truth_material_reverse_above_threshold_count.push_back(
+            interval.getReverseAboveThresholdCount());
+        m_truth_material_reverse_weighted_tx0.push_back(
+            interval.getReverseWeightedTX0());
+        m_truth_material_reverse_min_tx0.push_back(
+            interval.getReverseMinTX0());
+        m_truth_material_reverse_max_tx0.push_back(
+            interval.getReverseMaxTX0());
+        m_truth_material_reverse_leading_component_id.push_back(
+            interval.getReverseLeadingComponentID());
+        m_truth_material_reverse_leading_component_weight.push_back(
+            interval.getReverseLeadingComponentWeight());
+        m_truth_material_reverse_leading_tx0.push_back(
+            interval.getReverseLeadingTX0());
+      }
+      m_truth_material_interval_n =
+          static_cast<int>(m_truth_material_g4_tx0.size());
+    }
+  } catch (...) {
+    // Older GSF producers do not provide the passive material collections.
+    // Keep disabled/empty values and preserve their flat-tuple flow.
   }
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> ecalGsfWrapper(
       eventSvc(), "GSFTracksEcalConstrained");

@@ -58,3 +58,51 @@ datatypes:
       - gsftruth::G4MaterialStep firstStep // first stored contributing step when available
       - gsftruth::G4MaterialStep lastStep // last stored contributing step when available
       - gsftruth::G4MaterialStep hookStep // stored measurement-hook step when available
+
+  gsftruth::MaterialInterval:
+    Description: "Passive truth and runtime material summary for one accepted GSF hit interval"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t inputTrackIndex // CompleteTracks index
+      - std::int32_t outputTrackIndex // corresponding GSFTracks index, or -1
+      - std::int32_t hitFromIndex // inner accepted-hit index
+      - std::int32_t hitToIndex // outer accepted-hit index
+      - std::int32_t surfaceFromIndex // inner matched measurement-surface index
+      - std::int32_t surfaceToIndex // outer matched measurement-surface index
+      - std::uint64_t cellFrom // inner accepted-hit cell identifier
+      - std::uint64_t cellTo // outer accepted-hit cell identifier
+      - std::int32_t truthTrackID // matched primary Geant4 track identifier
+      - std::int32_t truthFirstStepNumber // step containing the inner truth hook
+      - std::int32_t truthLastStepNumber // step containing the outer truth hook
+      - double truthStartHookFraction // inner hook fraction within its step
+      - double truthEndHookFraction // outer hook fraction within its step
+      - edm4hep::Vector3d truthStartPosition // inner truth hook [mm]
+      - edm4hep::Vector3d truthEndPosition // outer truth hook [mm]
+      - std::int32_t truthStepCount // positive-length Geant4 step pieces in the interval
+      - double truthG4TX0 // fractionally integrated Geant4 step t/X0
+      - double truthMomentumBefore // momentum at the inner hook [GeV]
+      - double truthEbremLoss // process-subtype-3 momentum loss in the interval [GeV]
+      - double truthRetainedMomentumFraction // 1 - truthEbremLoss/truthMomentumBefore
+      - std::int16_t dd4hepTruthHookValid // nonzero when the hook-to-hook DD4hep path is valid
+      - std::int32_t dd4hepTruthHookLayerCount // material segments between truth hooks
+      - double dd4hepTruthHookTX0 // DD4hep t/X0 between the two truth hooks
+      - std::int16_t runtimeMaterialMode // 1 CurrentSurface, 2 DD4hepBetweenSurfaces
+      - double splitThreshold // configured runtime BH split threshold
+      - std::int32_t forwardCandidateCount // forward component paths evaluated
+      - std::int32_t forwardValidCount // valid forward component paths
+      - std::int32_t forwardAboveThresholdCount // forward paths above split threshold
+      - double forwardWeightedTX0 // parent-weighted mean valid forward path t/X0
+      - double forwardMinTX0 // minimum valid forward path t/X0
+      - double forwardMaxTX0 // maximum valid forward path t/X0
+      - std::int32_t forwardLeadingComponentID // highest-parent-weight forward component
+      - double forwardLeadingComponentWeight // its parent weight
+      - double forwardLeadingTX0 // its runtime path t/X0, or NaN when invalid
+      - std::int32_t reverseCandidateCount // reverse component paths evaluated
+      - std::int32_t reverseValidCount // valid reverse component paths
+      - std::int32_t reverseAboveThresholdCount // reverse paths above split threshold
+      - double reverseWeightedTX0 // parent-weighted mean valid reverse path t/X0
+      - double reverseMinTX0 // minimum valid reverse path t/X0
+      - double reverseMaxTX0 // maximum valid reverse path t/X0
+      - std::int32_t reverseLeadingComponentID // highest-parent-weight reverse component
+      - double reverseLeadingComponentWeight // its parent weight
+      - double reverseLeadingTX0 // its runtime path t/X0, or NaN when invalid

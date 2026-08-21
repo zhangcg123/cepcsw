@@ -72,6 +72,7 @@ bool TruthBHLossEventData::prepare(
     record.preMomentum = step.getPreMomentum();
     record.postMomentum = step.getPostMomentum();
     record.momentumLoss = step.getMomentumLoss();
+    record.stepTX0 = step.getStepTX0();
     if (!m_steps.emplace(key, record).second) {
       std::ostringstream message;
       message << "duplicate embedded G4 step track=" << key.first
@@ -153,8 +154,8 @@ bool TruthBHLossEventData::prepare(
 
 bool TruthBHLossEventData::matchTrack(
     const std::vector<edm4hep::TrackerHit>& orderedHits,
-    double maxEndpointDistance, TruthBHLossEventDataMatch& match,
-    std::string& error) const {
+    double maxEndpointDistance, bool collectMaterialIntervals,
+    TruthBHLossEventDataMatch& match, std::string& error) const {
   match = TruthBHLossEventDataMatch{};
   error.clear();
   if (orderedHits.size() < 2) {
@@ -234,6 +235,8 @@ bool TruthBHLossEventData::matchTrack(
   }
 
   match.retainedFractions.reserve(orderedHits.size() - 1);
+  if (collectMaterialIntervals)
+    match.materialIntervals.reserve(orderedHits.size() - 1);
   for (std::size_t interval = 0; interval + 1 < hitLinks.size(); ++interval) {
     const auto& from = *hitLinks[interval];
     const auto& to = *hitLinks[interval + 1];
@@ -263,7 +266,27 @@ bool TruthBHLossEventData::matchTrack(
       return false;
     }
 
-    double ebremLoss = 0.0;
+    TruthMaterialIntervalMatch materialInterval;
+    materialInterval.firstStepNumber = from.hookStepNumber;
+    materialInterval.lastStepNumber = to.hookStepNumber;
+    materialInterval.startHookFraction = from.hookFraction;
+    materialInterval.endHookFraction = to.hookFraction;
+    materialInterval.startPosition = interpolatePosition(
+        fromStep->second.prePosition, fromStep->second.postPosition,
+        from.hookFraction);
+
+    if (collectMaterialIntervals) {
+      const auto toStep = m_steps.find({to.trackID, to.hookStepNumber});
+      if (toStep == m_steps.end()) {
+        error = "interval end hook step is unavailable";
+        return false;
+      }
+      materialInterval.endPosition = interpolatePosition(
+          toStep->second.prePosition, toStep->second.postPosition,
+          to.hookFraction);
+    }
+    materialInterval.momentumBefore = momentumBefore;
+
     for (int stepNumber = from.hookStepNumber;
          stepNumber <= to.hookStepNumber; ++stepNumber) {
       const auto step = m_steps.find({from.trackID, stepNumber});
@@ -274,6 +297,29 @@ bool TruthBHLossEventData::matchTrack(
         error = message.str();
         return false;
       }
+      double pieceStartFraction = 0.0;
+      double pieceEndFraction = 1.0;
+      if (stepNumber == from.hookStepNumber)
+        pieceStartFraction = from.hookFraction;
+      if (stepNumber == to.hookStepNumber)
+        pieceEndFraction = to.hookFraction;
+      const double stepFraction = pieceEndFraction - pieceStartFraction;
+      if (collectMaterialIntervals &&
+          (!std::isfinite(step->second.stepTX0) ||
+           step->second.stepTX0 < 0.0 ||
+           !std::isfinite(stepFraction) || stepFraction < 0.0)) {
+        std::ostringstream message;
+        message << "nonphysical Geant4 t/X0 piece for step " << stepNumber
+                << ": stepTX0=" << step->second.stepTX0
+                << " fraction=" << stepFraction;
+        error = message.str();
+        return false;
+      }
+      if (collectMaterialIntervals && stepFraction > kFractionTolerance) {
+        materialInterval.truthTX0 += stepFraction * step->second.stepTX0;
+        ++materialInterval.stepCount;
+      }
+
       const bool postAfterStart =
           stepNumber > from.hookStepNumber ||
           from.hookFraction < 1.0 - kFractionTolerance;
@@ -282,22 +328,31 @@ bool TruthBHLossEventData::matchTrack(
           to.hookFraction >= 1.0 - kFractionTolerance;
       if (postAfterStart && postAtOrBeforeEnd &&
           step->second.processSubtype == 3) {
-        ebremLoss += step->second.momentumLoss;
+        materialInterval.ebremLoss += step->second.momentumLoss;
       }
     }
-    const double retainedFraction = 1.0 - ebremLoss / momentumBefore;
-    if (!std::isfinite(ebremLoss) || ebremLoss < 0.0 ||
-        !std::isfinite(retainedFraction) || retainedFraction <= 0.0 ||
-        retainedFraction > 1.0) {
+    materialInterval.retainedFraction =
+        1.0 - materialInterval.ebremLoss / momentumBefore;
+    if ((collectMaterialIntervals &&
+         (!std::isfinite(materialInterval.truthTX0) ||
+          materialInterval.truthTX0 < 0.0)) ||
+        !std::isfinite(materialInterval.ebremLoss) ||
+        materialInterval.ebremLoss < 0.0 ||
+        !std::isfinite(materialInterval.retainedFraction) ||
+        materialInterval.retainedFraction <= 0.0 ||
+        materialInterval.retainedFraction > 1.0) {
       std::ostringstream message;
       message << "nonphysical eBrem truth response for accepted hit "
               << interval << "->" << interval + 1
               << ": p_before=" << momentumBefore
-              << " GeV, eBrem_loss=" << ebremLoss << " GeV";
+              << " GeV, eBrem_loss=" << materialInterval.ebremLoss
+              << " GeV, truth_tX0=" << materialInterval.truthTX0;
       error = message.str();
       return false;
     }
-    match.retainedFractions.push_back(retainedFraction);
+    match.retainedFractions.push_back(materialInterval.retainedFraction);
+    if (collectMaterialIntervals)
+      match.materialIntervals.push_back(materialInterval);
   }
   return true;
 }
