@@ -152,9 +152,9 @@ recorder PDG list is `[11, -11, 13, -13]`.
 ### `dump_gsftrk.sh`
 
 The worker accepts six legacy-compatible arguments plus an optional seventh
-`truth_bh_override` boolean. In its current prepared-input mode, simulation,
-tracking, calorimeter digitization, and calorimeter reconstruction execution
-are commented; it generates those cards but runs only the final GSF refit:
+`truth_bh_override` boolean. In the current from-scratch campaign, all five
+stages execute in order: simulation, tracking, calorimeter digitization,
+calorimeter reconstruction, and the final GSF refit:
 
 ```bash
 ./dump_gsftrk.sh particle momentum_mag momentum_trn theta seed nevt \
@@ -171,12 +171,10 @@ with a `truth-bh` suffix so the ordinary A/B member is not overwritten. The
 material tuple must be produced by the same simulation events as the
 reconstructed input; the GSF endpoint guard rejects a mismatched tuple.
 
-`subtrkjobs.sh` passes the optional control through. For example,
-`TRUTH_BH_OVERRIDE=true bash subtrkjobs.sh` submits the truth-oracle member;
-the default remains false. Its truth-mode batch logs also receive a
-`_truth-bh` suffix. The current script does not create a missing material
-tuple: run the simulation/material-recorder stage first and retain that
-separate ROOT file.
+The current `subtrkjobs.sh` campaign sets `TRUTH_BH_OVERRIDE=true` explicitly
+and passes it to every worker. Its batch logs receive a `_truth-bh` suffix.
+The simulation stage creates and retains the paired material tuple before the
+GSF stage reads it.
 
 The four non-GSF cards retain the official TDR-o1-v01 `PodioInput`, algorithm,
 service, and `keep *` configuration; their workflow differences are limited to
@@ -206,25 +204,36 @@ diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
 For this historical workflow, `gsf.py.bk` explicitly configures all 45
-properties and silently inherits none. The truth-dependent BH-loss oracle is
-explicitly off, but the card is batch-ready for the in-process truth reader:
+properties and silently inherits none. Its explicit
+`TruthBHLossOverride=false` is the template's off-side base value. The current
+1,000-event submission passes `truth_bh_override=true`, and `dump_gsftrk.sh`
+rewrites each generated per-job card to enable the truth-dependent BH-loss
+oracle and its in-process reader:
 `TruthBHLossSource="G4StepTuple"`, `TruthBHLossInput` points through the
 top-level `truthbhinputfilename` variable to the simulation stage's per-job
 `gsf_material_steps-<sample>.root`, `TruthBHLossInputTrackIndex=0`, and
-`TruthBHLossMaxEndpointDistance=5.0` mm. The source and nonempty path are
+`TruthBHLossMaxEndpointDistance=5.0` mm. The tuple source and nonempty path are
 intentional differences from the compiled and reverse-template defaults of
-`CSV` and empty input; they have no effect while the override remains false.
+`CSV` and empty input; only generated truth-on cards differ from their false
+override default. This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
+Invalid event or track truth no longer terminates the batch job. The selected
+track instead uses ordinary BH throughout and records a negative validity code
+in `GSFTruthBHLossStatus`, `truth_bh_scope_status`/
+`truth_bh_scope_valid` in the flat tuple, and the comprehensive audit. Status
+`1` is the only valid truth-oracle scope; the full code table is maintained in
+the package README.
 
-`MaterialBHAuditCSV` is explicitly empty in the maintained card, matching the
-compiled and reverse-template default, so normal batch jobs produce no
-material CSV. Enable the comprehensive audit only in a temporary diagnostic
-card; it is a generated CSV, not a branch of `RecGsfFlatTuple`. The superseded
-forward-only material-transition CSV property was removed after the
-comprehensive audit became authoritative. Historical records and already
-generated `rungsf-*` cards may still mention it; those cards are stale and
-must be regenerated from `gsf.py.bk` before use with the current package.
+For the current 1,000-event material/BH diagnostic, `MaterialBHAuditCSV` uses
+an input-sample/method-specific filename under `tuplepath`, so parallel jobs
+do not overwrite one another. With `tuplepath=""`, each audit is written in
+the project root. This campaign setting enables the comprehensive recorder;
+the compiled and reverse-template defaults remain empty/off. The audit is a
+generated CSV, not a branch of `RecGsfFlatTuple`. The superseded forward-only
+material-transition CSV property remains removed. Historical records and
+already generated `rungsf-*` cards may still mention it; regenerate cards from
+`gsf.py.bk` before use with the current package.
 
 Generated `rungsf-*` cards are batch artifacts and preserve the explicit
 material mode in force when each card was created. Many predate the 2026-08-19
@@ -244,7 +253,8 @@ and the paired result is written as
 is an experimental comparison path, not a change to the active baseline.
 
 The same card's `RecGsfFlatTuple` output retains the ordinary tracker-only
-`gsf_*` fields and adds the paired constrained `ecal_gsf_*` fields,
+`gsf_*` fields, records `truth_bh_scope_status` and
+`truth_bh_scope_valid`, and adds the paired constrained `ecal_gsf_*` fields,
 `ecal_gsf_available`, `ecal_gsf_changed`, and `res_pT_ecal_gsf`. Default-off
 jobs remain valid: their ordinary fields are populated and their constrained
 fields are marked unavailable and zeroed. The constrained track copies the

@@ -114,6 +114,9 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("gsf_ndf",   &m_gsf_ndf);
   m_tree->Branch("gsf_nhits", &m_gsf_nhits);
   m_tree->Branch("gsf_type",  &m_gsf_type);
+  // truth BH-loss oracle validity for CompleteTracks index 0
+  m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
+  m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
   // paired ECAL-constrained GSF
   m_tree->Branch("ecal_gsf_available", &m_ecal_gsf_available);
   m_tree->Branch("ecal_gsf_changed",   &m_ecal_gsf_changed);
@@ -150,6 +153,23 @@ StatusCode RecGsfFlatTuple::execute() {
   const auto* mcCol = m_inMCParticles.get();
   const auto* lcioCol = m_inCompleteTracks.get();
   const auto* gsfCol = m_inGsfTracks.get();
+  m_truth_bh_scope_status =
+      truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
+  m_truth_bh_scope_valid = 0;
+  try {
+    const auto* truthStatus = m_inTruthBHLossStatus.get();
+    if (truthStatus && !truthStatus->empty()) {
+      m_truth_bh_scope_status = (*truthStatus)[0];
+      m_truth_bh_scope_valid =
+          m_truth_bh_scope_status ==
+                  truthBHLossStatusValue(TruthBHLossScopeStatus::Valid)
+              ? 1
+              : 0;
+    }
+  } catch (...) {
+    // Older GSF producers do not provide this optional diagnostic collection.
+    // Keep the disabled/invalid defaults without changing their tuple flow.
+  }
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> ecalGsfWrapper(
       eventSvc(), "GSFTracksEcalConstrained");
   const auto* ecalGsfCol = ecalGsfWrapper

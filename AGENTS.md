@@ -191,16 +191,22 @@ recovery and false radiative modes and does not solve selection.
 The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
-explicitly leaves `MaterialBHAuditCSV` empty/off, matching the algorithm and
-reverse-template defaults. Enable the comprehensive audit only in temporary
-diagnostic cards; normal maintained-card batch jobs produce no material CSV.
+explicitly enables one input-sample/method-specific `MaterialBHAuditCSV` for
+the current 1,000-event material/BH diagnostic. The algorithm and reverse-
+template defaults remain empty/off; this nonempty maintained-card value is
+campaign steering, not a compiled-default change.
 `TruthBHLossOverride=false` remains the compiled, reverse-template, and
-maintained-card default. The compiled and reverse-template oracle source/input
-remain `CSV`/empty. The maintained batch card instead preconfigures the
-default-off `G4StepTuple` source and its per-job material-tuple path, track 0,
-and a 5 mm endpoint guard so enabling the diagnostic needs no external CSV
-join. CSV-selected tracks still require every exact consecutive accepted-hit
+maintained `gsf.py.bk` base value. The current 1,000-event submission passes
+`truth_bh_override=true`; `dump_gsftrk.sh` rewrites each generated per-job card
+to true, reads `G4StepTuple` from the same job's material tuple, uses input
+track 0 with a 5 mm endpoint guard, and tags GSF/flat/audit outputs with
+`truth-bh`. This campaign steering is not a production-default change.
+CSV-selected tracks still require every exact consecutive accepted-hit
 interval, while zero-row tracks are logged and use ordinary BH throughout.
+Truth mapping remains all-or-nothing, but event/track validation failures no
+longer terminate the job: the complete selected track falls back to ordinary
+BH and records an explicit validity/status tag in EDM, flat-tuple, and audit
+outputs.
 
 Current boundary evidence and definitions:
 
@@ -293,9 +299,12 @@ Current boundary evidence and definitions:
   The original strict CSV source remains available. The in-process
   `G4StepTuple` source lazily reads one event at a time, reconstructs the
   recorder's sensitive-midpoint intervals, strictly matches them to ordered
-  accepted hits on one configured `CompleteTracks` index, and fails on a
-  missing/ambiguous primary, nonmonotonic match, or excessive endpoint
-  distance. It is batch plumbing for the same diagnostic, not new truth logic.
+  accepted hits on one configured `CompleteTracks` index, and invalidates the
+  whole truth scope on a missing/ambiguous primary, nonphysical loss,
+  nonmonotonic match, excessive endpoint distance, or incomplete runtime
+  coverage. An invalid scope uses ordinary BH for the whole track and emits a
+  negative status instead of failing the event. It is batch plumbing for the
+  same diagnostic, not new truth logic.
   The focused five-event gate closed all 80 oracle calls. A same-code fixed
   60-event topology-clear stress/control A/B then closed 1,156 calls and
   reduced all-panel mean absolute pT residual from 4.646% to 2.052%, its 68%
@@ -422,12 +431,18 @@ mechanical validation, and non-interference A/B are preserved in
 The removal of the superseded forward-only material recorder, the synchronized
 45-property option surface, and its no-change regression are preserved in
 `agents_record/2026-08-21-legacy-material-transition-csv-removal.md`.
+The subsequent 1,000-event campaign steering that re-enables only the
+comprehensive per-job audit is preserved in
+`agents_record/2026-08-21-1k-material-bh-audit-campaign-steering.md`.
 The truth BH-loss oracle contract, all-or-nothing track scope, audit extension,
 focused A/B, and below-threshold truth-loss finding are preserved in
 `agents_record/2026-08-21-truth-bh-loss-oracle-control.md`.
 The in-process material-tuple reader, strict matching contract, CSV-equivalence
 gate, and batch steering are preserved in
 `agents_record/2026-08-21-in-process-truth-bh-g4step-tuple-reader.md`.
+The invalid-scope ordinary-BH fallback, EDM/flat/audit validity contract, and
+focused positive/negative controls are preserved in
+`agents_record/2026-08-22-truth-bh-invalid-scope-fallback-and-validity-tag.md`.
 The production-scale eventwise join, valid-path closure, unresolved coverage
 population, split-threshold accounting, BH-response calibration, and revised
 ordered investigation are preserved in

@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-21. `RecGsfTracking` exposes 45 Gaudi properties in
+Reference date: 2026-08-22. `RecGsfTracking` exposes 45 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -23,7 +23,7 @@ distinction matters because that template enables `ElossOn` and
 |---|---|---|---|
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
 | `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
-| `TruthBHLossOverride` | `false` | `false` | Enable the strict, truth-dependent BH-loss oracle described below. This diagnostic is never production steering. |
+| `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
 | `TruthBHLossSource` | `CSV` | same | Oracle input interpretation: a prejoined strict `CSV`, or a per-event `G4StepTuple` read and matched inside the algorithm. |
 | `TruthBHLossInput` | empty | empty | Source path for `TruthBHLossOverride`: the strict runtime-interval CSV or the material recorder ROOT file selected by `TruthBHLossSource`. Empty is valid only while the override is off. |
 | `TruthBHLossInputTrackIndex` | `0` | same | With `G4StepTuple`, the zero-based `CompleteTracks` index that receives the unique primary-electron truth oracle. Other input tracks use the configured BH model. It must be nonnegative. It does not affect CSV selection. |
@@ -117,24 +117,41 @@ requires a strictly increasing anchor sequence and a maximum endpoint distance
 no larger than `TruthBHLossMaxEndpointDistance`, and sums Geant4 process
 subtype-3 eBrem loss across all truth intervals spanned by each runtime hit
 pair. This source selects only `TruthBHLossInputTrackIndex`; every other input
-track uses the configured BH model. Any missing event, ambiguous primary,
-malformed tuple, nonmonotonic match, excessive endpoint distance, or incomplete
-runtime interval coverage fails instead of silently mixing truth and model
-responses. The material tuple and reconstructed input must come from the same
-simulation events. The reader loads one indexed event at a time; no external
-CSV join is needed for batch jobs.
+track uses the configured BH model. A missing event, ambiguous primary,
+nonphysical loss, malformed event, nonmonotonic match, excessive endpoint
+distance, or incomplete runtime interval coverage invalidates the whole truth
+scope before filtering starts. The selected track then completes with the
+ordinary configured BH model; it never mixes accepted truth intervals with BH
+responses. The fallback is tagged in `GSFTruthBHLossStatus`, the flat tuple,
+and every runtime material/BH audit row. The material tuple and reconstructed
+input must come from the same simulation events. The reader loads one indexed
+event at a time; no external CSV join is needed for batch jobs.
 
 The override requires `ElectronHypothesis=true` and
 `MaterialPathMode=DD4hepBetweenSurfaces`. Enabling it with an empty input or a
-malformed source fails. In CSV mode, once a track is selected by any row,
-missing or ambiguous coverage of any of its exact consecutive accepted-hit
-intervals—including hit 0 to hit 1—also fails rather than partially falling
-back to the ordinary BH model or assuming zero loss. Conversely, a track with
-zero CSV rows is outside the oracle scope: it is explicitly logged and counted
-and uses the ordinary configured BH model unchanged for its entire workflow.
-This all-or-nothing track boundary prevents an undocumented truth/BH hybrid
-within one fitted track while allowing a selected event to contain unrelated
-secondary tracks for which no authoritative primary truth exists.
+source that cannot be opened or whose CSV schema cannot be parsed still fails
+at initialization. In CSV mode, once a track is selected by any row, missing
+coverage of any exact consecutive accepted-hit interval—including hit 0 to hit
+1—invalidates the scope before filtering and falls back to the ordinary BH
+model for the whole track. It never assumes zero loss. Conversely, a track
+with zero CSV rows is outside the oracle scope: it is explicitly logged and
+counted and uses the ordinary configured BH model unchanged for its entire
+workflow. This all-or-nothing track boundary prevents an undocumented
+truth/BH hybrid within one fitted track while allowing a selected event to
+contain unrelated secondary tracks for which no authoritative primary truth
+exists.
+
+The per-input-track status codes are:
+
+| Status | Meaning |
+|---:|---|
+| `1` | Complete truth scope validated before filtering; eligible BH calls use the truth response. |
+| `2` | Input track was not selected by the configured truth source; ordinary BH used. |
+| `0` | Truth override disabled. |
+| `-1` | Event-level `G4StepTuple` truth is invalid or unavailable; ordinary BH used. |
+| `-2` | Runtime-hit/truth-anchor endpoint guard failed; ordinary BH used. |
+| `-3` | Exact consecutive runtime interval mapping failed; ordinary BH used. |
+| `-4` | Selected track/event was not processed, for example because of focused `SelectedEventIndices` steering or an unusable input track. |
 
 ### Mixture population and reduction
 
@@ -246,6 +263,9 @@ floor. A zero-row, out-of-scope track records
 `truth_bh_loss_override=0` and ordinary BH child values throughout. This makes
 it possible to verify the all-or-nothing track scope and seed, forward, and
 reverse oracle dispatch without inferring them from final track momentum.
+Every row also records `truth_bh_scope_status`, `truth_bh_scope_valid`, and a
+quoted `truth_bh_scope_reason`. Invalid scopes therefore retain their reason
+while their material candidates and ordinary BH children are still audited.
 
 `GSF_MATERIAL_BH_AUDIT_CSV` controls this output in the reverse template.
 This CSV is separate from the scalar/per-hit `RecGsfFlatTuple` ROOT tree.
@@ -289,6 +309,7 @@ The data handles are configurable separately from the 45 properties:
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
+| per-input-track truth-oracle status | `GSFTruthBHLossStatus` |
 
 ### Flat-tuple paired-track branches
 
@@ -303,6 +324,7 @@ parallel constrained-track scalar set:
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
 | `res_pT_gsf`, `res_pT_ecal_gsf` | Ordinary and constrained fractional pT residuals relative to the first truth particle. |
+| `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 
 The constrained branches always exist in newly produced flat files. When the
 experiment is off or the paired collection is absent, `ecal_gsf_available=0`
@@ -310,10 +332,11 @@ and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
 ordinary GSF tracker hits, so `gsf_hit_*` is the common hit information.
 
-The flat tuple does not contain the runtime material/BH audit. Its LCIO and
-GSF hit vectors reproduce associated output hits, not the subset that was
-successfully matched and used internally. Use `MaterialBHAuditCSV` when exact
-runtime interval or component-call information is required.
+The flat tuple contains only the oracle scope status, not the runtime
+material/BH audit. Its LCIO and GSF hit vectors reproduce associated output
+hits, not the subset that was successfully matched and used internally. Use
+`MaterialBHAuditCSV` when the invalidity reason, exact runtime interval, or
+component-call information is required.
 
 ### Historical `DumpGsfTrks` card compatibility
 
@@ -322,22 +345,26 @@ properties and silently inherits none. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline: split/cutoff `1e-4`,
 `DD4hepBetweenSurfaces`, and ECAL off. Its current explicit `BHModel` is the
 user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather
-than the production `CEPC2GeV85StepConditioned` model. `MaterialBHAuditCSV` is
-explicitly empty in the maintained card, matching the compiled and
-reverse-template default. Exact runtime material/BH audits should be enabled
-only in temporary diagnostic cards. The card's `RecGsfFlatTuple` instance
-still exposes both ordinary `gsf_*` and default-zero `ecal_gsf_*` scalar branch
-sets.
+than the production `CEPC2GeV85StepConditioned` model. For the current
+1,000-event material/BH diagnostic, `MaterialBHAuditCSV` is explicitly set to
+an input-sample/method-specific filename under `tuplepath`. This campaign
+steering does not change the compiled or reverse-template default, which
+remains empty/off. The card's `RecGsfFlatTuple` instance still exposes both
+ordinary `gsf_*` and default-zero `ecal_gsf_*` scalar branch sets.
 
-The maintained batch card deliberately differs from the compiled and active
-reverse-template oracle inputs while keeping the oracle off: it sets
-`TruthBHLossSource="G4StepTuple"` and points `TruthBHLossInput` at the
-sample-qualified `gsf_material_steps-<sample>.root` produced by its simulation
-stage. It explicitly keeps `TruthBHLossInputTrackIndex=0` and
+The maintained `gsf.py.bk` template keeps the compiled and active
+reverse-template `TruthBHLossOverride=false` base value. For the current
+1,000-event diagnostic, `subtrkjobs.sh` passes `truth_bh_override=true` and
+`dump_gsftrk.sh` rewrites each generated per-job card to true. The template
+uses `TruthBHLossSource="G4StepTuple"` and points `TruthBHLossInput` at the
+sample-qualified
+`gsf_material_steps-<sample>.root` produced by its simulation stage. It keeps
+`TruthBHLossInputTrackIndex=0` and
 `TruthBHLossMaxEndpointDistance=5.0`. The compiled and active reverse-template
-values remain `CSV`, empty input, track index 0, and 5.0 mm. Turning on the
-maintained-card override is therefore a deliberate truth diagnostic, not a
-production-default change.
+values remain false, `CSV`, empty input, track index 0, and 5.0 mm. This is
+deliberate truth-diagnostic campaign steering, not a production-default change.
+Generated truth-on cards append `truth-bh`; generated off controls append
+`truth-bh-off` to their GSF EDM, flat-tuple, and audit filenames.
 
 ### Configuration-maintenance contract
 

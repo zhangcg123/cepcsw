@@ -1135,6 +1135,9 @@ struct MaterialBHAuditCall {
   bool electronHypothesis = false;
   std::string bhModel;
   bool truthBHLossOverride = false;
+  TruthBHLossScopeStatus truthBHLossScopeStatus =
+      TruthBHLossScopeStatus::Disabled;
+  std::string truthBHLossScopeReason;
   double truthRetainedFraction =
       std::numeric_limits<double>::quiet_NaN();
   bool bhExecuted = false;
@@ -1191,7 +1194,10 @@ static void writeMaterialBHAuditRecord(
          << (call.aboveSplitThreshold ? 1 : 0) << ','
          << (call.electronHypothesis ? 1 : 0) << ','
          << csvQuoted(call.bhModel) << ','
-         << (call.truthBHLossOverride ? 1 : 0) << ',';
+         << (call.truthBHLossOverride ? 1 : 0) << ','
+         << truthBHLossStatusValue(call.truthBHLossScopeStatus) << ','
+         << (truthBHLossStatusIsValid(call.truthBHLossScopeStatus) ? 1 : 0)
+         << ',' << csvQuoted(call.truthBHLossScopeReason) << ',';
   if (call.truthBHLossOverride) stream << call.truthRetainedFraction;
   stream << ',' << (call.bhExecuted ? 1 : 0) << ','
          << (call.bhReverse ? 1 : 0) << ',' << childIndex << ',';
@@ -1451,6 +1457,9 @@ StatusCode RecGsfTracking::initialize() {
   m_truthBHLossOverrideCalls = 0;
   m_truthBHLossPassthroughTracks = 0;
   m_truthBHLossTupleTracks = 0;
+  m_truthBHLossInvalidTruthEvents = 0;
+  m_truthBHLossInvalidEndpointTracks = 0;
+  m_truthBHLossInvalidIntervalTracks = 0;
   m_truthBHLossMaxObservedEndpointDistance = 0.0;
   m_truthBHRetainedFractions.clear();
   m_truthBHSelectedTracks.clear();
@@ -1867,7 +1876,9 @@ StatusCode RecGsfTracking::initialize() {
         << "abs_cos_incidence,path_t_over_x0,material_segment_count,"
         << "material_composition,split_threshold,above_split_threshold,"
         << "electron_hypothesis,bh_model,truth_bh_loss_override,"
-        << "truth_retained_fraction,bh_executed,bh_reverse,"
+        << "truth_bh_scope_status,truth_bh_scope_valid,"
+        << "truth_bh_scope_reason,truth_retained_fraction,bh_executed,"
+        << "bh_reverse,"
         << "child_index,child_component_id,child_weight,"
         << "conditional_bh_weight,retained_mean,retained_variance,"
         << "child_kappa,child_pT_GeV,child_p_GeV\n";
@@ -1883,13 +1894,20 @@ StatusCode RecGsfTracking::initialize() {
 StatusCode RecGsfTracking::execute() {
   m_nEvt++;
   const int eventIndex = m_nEvt - 1;
+  auto* out = m_outputTracks.createAndPut();
+  auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
+  edm4hep::TrackCollection* ecalOut = nullptr;
+  if (m_ecalComponentConstraint.value())
+    ecalOut = m_ecalConstrainedOutputTracks.createAndPut();
+
   const bool selectedOnly = !m_selectedEventIndices.value().empty();
   if (selectedOnly && std::find(m_selectedEventIndices.value().begin(),
                                 m_selectedEventIndices.value().end(),
                                 eventIndex) == m_selectedEventIndices.value().end()) {
-    m_outputTracks.createAndPut();
-    if (m_ecalComponentConstraint.value())
-      m_ecalConstrainedOutputTracks.createAndPut();
+    truthBHLossStatus->push_back(truthBHLossStatusValue(
+        m_truthBHLossOverride.value()
+            ? TruthBHLossScopeStatus::TrackNotProcessed
+            : TruthBHLossScopeStatus::Disabled));
     return StatusCode::SUCCESS;
   }
 
@@ -1902,23 +1920,37 @@ StatusCode RecGsfTracking::execute() {
   const auto* in = m_inputTracks.get();
   if (!in) return StatusCode::SUCCESS;
 
+  const auto initialTruthStatus = m_truthBHLossOverride.value()
+      ? TruthBHLossScopeStatus::NotSelected
+      : TruthBHLossScopeStatus::Disabled;
+  truthBHLossStatus->resize(in->size());
+  for (std::size_t index = 0; index < in->size(); ++index)
+    (*truthBHLossStatus)[index] = truthBHLossStatusValue(initialTruthStatus);
+
   std::vector<TruthBHLossSurfaceInterval> tupleTruthIntervals;
+  bool tupleTruthEventValid = true;
+  std::string tupleTruthEventError;
   if (m_truthBHLossOverride.value() && m_truthBHLossUsesTuple) {
-    std::string truthError;
     if (!m_truthBHLossTupleReader ||
         !m_truthBHLossTupleReader->readPrimaryElectronIntervals(
-            eventIndex, tupleTruthIntervals, truthError)) {
-      error() << "TruthBHLossInput G4StepTuple event read failed: "
-              << truthError << endmsg;
-      return StatusCode::FAILURE;
+            eventIndex, tupleTruthIntervals, tupleTruthEventError)) {
+      tupleTruthEventValid = false;
+      ++m_truthBHLossInvalidTruthEvents;
+      warning() << "TruthBHLossInput G4StepTuple event=" << eventIndex
+                << " is invalid: " << tupleTruthEventError
+                << "; using the configured BH model and tagging the truth "
+                   "scope invalid"
+                << endmsg;
+      const int selectedTrack = m_truthBHLossInputTrackIndex.value();
+      if (selectedTrack >= 0 &&
+          selectedTrack < static_cast<int>(truthBHLossStatus->size())) {
+        (*truthBHLossStatus)[static_cast<std::size_t>(selectedTrack)] =
+            truthBHLossStatusValue(
+                TruthBHLossScopeStatus::InvalidTruthEvent);
+      }
     }
   }
   std::map<TruthBHLossKey, double> tupleTruthRetainedFractions;
-
-  auto* out = m_outputTracks.createAndPut();
-  edm4hep::TrackCollection* ecalOut = nullptr;
-  if (m_ecalComponentConstraint.value())
-    ecalOut = m_ecalConstrainedOutputTracks.createAndPut();
   int nFit = 0;
   int inputTrackIndex = -1;
   double bz = m_field;
@@ -1938,6 +1970,32 @@ StatusCode RecGsfTracking::execute() {
 
   for (const auto& trk : *in) {
     ++inputTrackIndex;
+    const bool truthSourceSelectsTrack =
+        m_truthBHLossOverride.value() &&
+        (m_truthBHLossUsesTuple
+             ? inputTrackIndex == m_truthBHLossInputTrackIndex.value()
+             : m_truthBHSelectedTracks.count(
+                   {eventIndex, inputTrackIndex}) != 0);
+    TruthBHLossScopeStatus truthBHLossScopeStatus =
+        m_truthBHLossOverride.value()
+            ? TruthBHLossScopeStatus::NotSelected
+            : TruthBHLossScopeStatus::Disabled;
+    std::string truthBHLossScopeReason;
+    if (truthSourceSelectsTrack) {
+      if (m_truthBHLossUsesTuple && !tupleTruthEventValid) {
+        truthBHLossScopeStatus =
+            TruthBHLossScopeStatus::InvalidTruthEvent;
+        truthBHLossScopeReason = tupleTruthEventError;
+      } else {
+        // Replaced by Valid or a precise negative reason once the complete
+        // accepted-hit interval map has been checked.
+        truthBHLossScopeStatus =
+            TruthBHLossScopeStatus::TrackNotProcessed;
+      }
+    }
+    (*truthBHLossStatus)[static_cast<std::size_t>(inputTrackIndex)] =
+        truthBHLossStatusValue(truthBHLossScopeStatus);
+
     auto assocHits = trk.getTrackerHits();
     if (assocHits.size() < 5) continue;
 
@@ -1982,102 +2040,138 @@ StatusCode RecGsfTracking::execute() {
           static_cast<std::uint64_t>(fromHit.lcioHit.getCellID()),
           static_cast<std::uint64_t>(toHit.lcioHit.getCellID())};
     };
-    const bool tupleTruthTrack =
-        m_truthBHLossOverride.value() && m_truthBHLossUsesTuple &&
-        inputTrackIndex == m_truthBHLossInputTrackIndex.value();
-    if (tupleTruthTrack) {
-      std::vector<std::array<double, 3>> truthAnchors;
-      truthAnchors.reserve(tupleTruthIntervals.size() + 1);
-      truthAnchors.push_back(tupleTruthIntervals.front().from);
-      for (std::size_t interval = 0; interval < tupleTruthIntervals.size();
-           ++interval) {
-        if (tupleTruthIntervals[interval].intervalIndex !=
-            static_cast<int>(interval)) {
-          error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
-                  << " has nonconsecutive sensitive interval indices"
-                  << endmsg;
-          for (auto& hit : hits) delete hit.kalHit;
-          return StatusCode::FAILURE;
-        }
-        truthAnchors.push_back(tupleTruthIntervals[interval].to);
-      }
-
-      std::vector<std::size_t> matchedAnchor;
-      matchedAnchor.reserve(hits.size());
+    const bool tupleTruthTrackRequested =
+        truthSourceSelectsTrack && m_truthBHLossUsesTuple;
+    bool tupleTruthTrackValid = false;
+    if (tupleTruthTrackRequested && tupleTruthEventValid) {
+      std::map<TruthBHLossKey, double> candidateRetainedFractions;
       double maxEndpointDistance = 0.0;
-      for (const auto& hit : hits) {
-        const auto& position = hit.lcioHit.getPosition();
-        std::size_t bestAnchor = 0;
-        double bestDistance2 = std::numeric_limits<double>::infinity();
-        for (std::size_t anchor = 0; anchor < truthAnchors.size(); ++anchor) {
-          const double dx = position.x - truthAnchors[anchor][0];
-          const double dy = position.y - truthAnchors[anchor][1];
-          const double dz = position.z - truthAnchors[anchor][2];
-          const double distance2 = dx * dx + dy * dy + dz * dz;
-          if (distance2 < bestDistance2) {
-            bestDistance2 = distance2;
-            bestAnchor = anchor;
+      auto invalidateTupleTrack = [&](TruthBHLossScopeStatus status,
+                                      const std::string& reason) {
+        truthBHLossScopeStatus = status;
+        truthBHLossScopeReason = reason;
+        warning() << "TruthBHLossInput G4StepTuple event=" << eventIndex
+                  << " inputTrack=" << inputTrackIndex << " is invalid: "
+                  << reason << "; using the configured BH model" << endmsg;
+      };
+
+      auto prepareTupleTrack = [&]() -> bool {
+        if (tupleTruthIntervals.empty()) {
+          invalidateTupleTrack(
+              TruthBHLossScopeStatus::InvalidIntervalMapping,
+              "no sensitive-midpoint truth intervals");
+          return false;
+        }
+
+        std::vector<std::array<double, 3>> truthAnchors;
+        truthAnchors.reserve(tupleTruthIntervals.size() + 1);
+        truthAnchors.push_back(tupleTruthIntervals.front().from);
+        for (std::size_t interval = 0; interval < tupleTruthIntervals.size();
+             ++interval) {
+          if (tupleTruthIntervals[interval].intervalIndex !=
+              static_cast<int>(interval)) {
+            invalidateTupleTrack(
+                TruthBHLossScopeStatus::InvalidIntervalMapping,
+                "nonconsecutive sensitive interval indices");
+            return false;
+          }
+          truthAnchors.push_back(tupleTruthIntervals[interval].to);
+        }
+
+        std::vector<std::size_t> matchedAnchor;
+        matchedAnchor.reserve(hits.size());
+        for (const auto& hit : hits) {
+          const auto& position = hit.lcioHit.getPosition();
+          std::size_t bestAnchor = 0;
+          double bestDistance2 = std::numeric_limits<double>::infinity();
+          for (std::size_t anchor = 0; anchor < truthAnchors.size();
+               ++anchor) {
+            const double dx = position.x - truthAnchors[anchor][0];
+            const double dy = position.y - truthAnchors[anchor][1];
+            const double dz = position.z - truthAnchors[anchor][2];
+            const double distance2 = dx * dx + dy * dy + dz * dz;
+            if (distance2 < bestDistance2) {
+              bestDistance2 = distance2;
+              bestAnchor = anchor;
+            }
+          }
+          maxEndpointDistance = std::max(
+              maxEndpointDistance, std::sqrt(bestDistance2));
+          matchedAnchor.push_back(bestAnchor);
+        }
+        m_truthBHLossMaxObservedEndpointDistance = std::max(
+            m_truthBHLossMaxObservedEndpointDistance, maxEndpointDistance);
+        if (maxEndpointDistance >
+            m_truthBHLossMaxEndpointDistance.value()) {
+          std::ostringstream reason;
+          reason << "maximum runtime-hit/truth-anchor distance "
+                 << maxEndpointDistance << " mm exceeds "
+                 << m_truthBHLossMaxEndpointDistance.value() << " mm";
+          invalidateTupleTrack(
+              TruthBHLossScopeStatus::EndpointDistanceExceeded,
+              reason.str());
+          return false;
+        }
+
+        for (std::size_t hitFrom = 0; hitFrom + 1 < hits.size(); ++hitFrom) {
+          const auto firstTruthInterval = matchedAnchor[hitFrom];
+          const auto afterLastTruthInterval = matchedAnchor[hitFrom + 1];
+          if (firstTruthInterval >= afterLastTruthInterval ||
+              afterLastTruthInterval > tupleTruthIntervals.size()) {
+            std::ostringstream reason;
+            reason << "hit " << hitFrom << "->" << hitFrom + 1
+                   << " has nonmonotonic truth anchors "
+                   << firstTruthInterval << "->"
+                   << afterLastTruthInterval;
+            invalidateTupleTrack(
+                TruthBHLossScopeStatus::InvalidIntervalMapping,
+                reason.str());
+            return false;
+          }
+          double ebremLoss = 0.0;
+          for (std::size_t interval = firstTruthInterval;
+               interval < afterLastTruthInterval; ++interval)
+            ebremLoss += tupleTruthIntervals[interval].ebremLossGeV;
+          const double momentumBefore =
+              tupleTruthIntervals[firstTruthInterval].momentumBeforeGeV;
+          const double retainedFraction = 1.0 - ebremLoss / momentumBefore;
+          if (!std::isfinite(retainedFraction) ||
+              retainedFraction <= 0.0 || retainedFraction > 1.0 ||
+              !candidateRetainedFractions.emplace(
+                  truthBHLossKey(static_cast<int>(hitFrom),
+                                 static_cast<int>(hitFrom + 1)),
+                  retainedFraction).second) {
+            std::ostringstream reason;
+            reason << "hit " << hitFrom << "->" << hitFrom + 1
+                   << " produced an invalid or duplicate truth interval";
+            invalidateTupleTrack(
+                TruthBHLossScopeStatus::InvalidIntervalMapping,
+                reason.str());
+            return false;
           }
         }
-        const double distance = std::sqrt(bestDistance2);
-        maxEndpointDistance = std::max(maxEndpointDistance, distance);
-        matchedAnchor.push_back(bestAnchor);
-      }
-      if (maxEndpointDistance > m_truthBHLossMaxEndpointDistance.value()) {
-        error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
-                << " inputTrack=" << inputTrackIndex
-                << " maximum runtime-hit/truth-anchor distance "
-                << maxEndpointDistance << " mm exceeds "
-                << m_truthBHLossMaxEndpointDistance.value() << " mm"
-                << endmsg;
-        for (auto& hit : hits) delete hit.kalHit;
-        return StatusCode::FAILURE;
-      }
+        return true;
+      };
 
-      for (std::size_t hitFrom = 0; hitFrom + 1 < hits.size(); ++hitFrom) {
-        const auto firstTruthInterval = matchedAnchor[hitFrom];
-        const auto afterLastTruthInterval = matchedAnchor[hitFrom + 1];
-        if (firstTruthInterval >= afterLastTruthInterval ||
-            afterLastTruthInterval > tupleTruthIntervals.size()) {
-          error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
-                  << " inputTrack=" << inputTrackIndex << " hit="
-                  << hitFrom << "->" << hitFrom + 1
-                  << " has nonmonotonic truth anchors "
-                  << firstTruthInterval << "->"
-                  << afterLastTruthInterval << endmsg;
-          for (auto& hit : hits) delete hit.kalHit;
-          return StatusCode::FAILURE;
+      tupleTruthTrackValid = prepareTupleTrack();
+      if (tupleTruthTrackValid) {
+        tupleTruthRetainedFractions.insert(
+            candidateRetainedFractions.begin(),
+            candidateRetainedFractions.end());
+        truthBHLossScopeStatus = TruthBHLossScopeStatus::Valid;
+        truthBHLossScopeReason.clear();
+        ++m_truthBHLossTupleTracks;
+        if (m_verboseDump) {
+          info() << "Truth BH-loss G4StepTuple matched event=" << eventIndex
+                 << " inputTrack=" << inputTrackIndex << " with "
+                 << hits.size() - 1 << " runtime intervals; max endpoint "
+                 << "distance=" << maxEndpointDistance << " mm" << endmsg;
         }
-        double ebremLoss = 0.0;
-        for (std::size_t interval = firstTruthInterval;
-             interval < afterLastTruthInterval; ++interval)
-          ebremLoss += tupleTruthIntervals[interval].ebremLossGeV;
-        const double momentumBefore =
-            tupleTruthIntervals[firstTruthInterval].momentumBeforeGeV;
-        const double retainedFraction = 1.0 - ebremLoss / momentumBefore;
-        if (!std::isfinite(retainedFraction) || retainedFraction <= 0.0 ||
-            retainedFraction > 1.0 ||
-            !tupleTruthRetainedFractions.emplace(
-                truthBHLossKey(static_cast<int>(hitFrom),
-                               static_cast<int>(hitFrom + 1)),
-                retainedFraction).second) {
-          error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
-                  << " inputTrack=" << inputTrackIndex << " hit="
-                  << hitFrom << "->" << hitFrom + 1
-                  << " produced an invalid or duplicate truth interval"
-                  << endmsg;
-          for (auto& hit : hits) delete hit.kalHit;
-          return StatusCode::FAILURE;
-        }
-      }
-      ++m_truthBHLossTupleTracks;
-      m_truthBHLossMaxObservedEndpointDistance = std::max(
-          m_truthBHLossMaxObservedEndpointDistance, maxEndpointDistance);
-      if (m_verboseDump) {
-        info() << "Truth BH-loss G4StepTuple matched event=" << eventIndex
-               << " inputTrack=" << inputTrackIndex << " with "
-               << hits.size() - 1 << " runtime intervals; max endpoint "
-               << "distance=" << maxEndpointDistance << " mm" << endmsg;
+      } else if (truthBHLossScopeStatus ==
+                 TruthBHLossScopeStatus::EndpointDistanceExceeded) {
+        ++m_truthBHLossInvalidEndpointTracks;
+      } else {
+        ++m_truthBHLossInvalidIntervalTracks;
       }
     }
 
@@ -2087,34 +2181,47 @@ StatusCode RecGsfTracking::execute() {
       return truthRetainedFractions.at(
           truthBHLossKey(hitFromIndex, hitToIndex));
     };
-    const bool applyTruthBHLossOverride =
-        m_truthBHLossOverride.value() &&
-        (m_truthBHLossUsesTuple
-             ? tupleTruthTrack
-             : m_truthBHSelectedTracks.count(
-                   {eventIndex, inputTrackIndex}) != 0);
-    if (m_truthBHLossOverride.value() && !applyTruthBHLossOverride) {
-      ++m_truthBHLossPassthroughTracks;
-      info() << "Truth BH-loss oracle has no rows for event=" << eventIndex
-             << " inputTrack=" << inputTrackIndex
-             << "; this whole unselected track uses the configured BH model"
-             << endmsg;
-    }
+    bool applyTruthBHLossOverride =
+        truthSourceSelectsTrack &&
+        (!m_truthBHLossUsesTuple || tupleTruthTrackValid);
+    if (applyTruthBHLossOverride && !m_truthBHLossUsesTuple)
+      truthBHLossScopeStatus = TruthBHLossScopeStatus::Valid;
+
     if (applyTruthBHLossOverride) {
       for (std::size_t hitFrom = 0; hitFrom + 1 < hits.size(); ++hitFrom) {
         const auto key = truthBHLossKey(
             static_cast<int>(hitFrom), static_cast<int>(hitFrom + 1));
         if (truthRetainedFractions.find(key) ==
             truthRetainedFractions.end()) {
-          error() << "TruthBHLossInput has no exact interval for event="
-                  << eventIndex << " inputTrack=" << inputTrackIndex
-                  << " hitFrom=" << hitFrom << " hitTo=" << hitFrom + 1
-                  << " cellFrom=" << std::get<4>(key)
-                  << " cellTo=" << std::get<5>(key)
-                  << "; refusing a silent BH-model fallback" << endmsg;
-          for (auto& hit : hits) delete hit.kalHit;
-          return StatusCode::FAILURE;
+          std::ostringstream reason;
+          reason << "no exact interval for hit " << hitFrom << "->"
+                 << hitFrom + 1 << " cell " << std::get<4>(key) << "->"
+                 << std::get<5>(key);
+          truthBHLossScopeStatus =
+              TruthBHLossScopeStatus::InvalidIntervalMapping;
+          truthBHLossScopeReason = reason.str();
+          applyTruthBHLossOverride = false;
+          ++m_truthBHLossInvalidIntervalTracks;
+          warning() << "TruthBHLossInput event=" << eventIndex
+                    << " inputTrack=" << inputTrackIndex << " has "
+                    << truthBHLossScopeReason
+                    << "; using the configured BH model for the whole track"
+                    << endmsg;
+          break;
         }
+      }
+    }
+    (*truthBHLossStatus)[static_cast<std::size_t>(inputTrackIndex)] =
+        truthBHLossStatusValue(truthBHLossScopeStatus);
+
+    if (m_truthBHLossOverride.value() && !applyTruthBHLossOverride) {
+      ++m_truthBHLossPassthroughTracks;
+      if (truthBHLossScopeStatus == TruthBHLossScopeStatus::NotSelected) {
+        info() << "Truth BH-loss oracle has no scope for event=" << eventIndex
+               << " inputTrack=" << inputTrackIndex
+               << "; this whole unselected track uses the configured BH "
+                  "model"
+               << endmsg;
       }
     }
 
@@ -2339,6 +2446,8 @@ StatusCode RecGsfTracking::execute() {
       call.electronHypothesis = m_isElectron.value();
       call.bhModel = m_bhModel.value();
       call.truthBHLossOverride = applyTruthBHLossOverride;
+      call.truthBHLossScopeStatus = truthBHLossScopeStatus;
+      call.truthBHLossScopeReason = truthBHLossScopeReason;
       if (call.truthBHLossOverride) {
         call.truthRetainedFraction =
             truthRetainedFraction(hitFromIndex, hitToIndex);
@@ -3994,6 +4103,12 @@ StatusCode RecGsfTracking::finalize() {
              << " selected input tracks; maximum observed runtime-hit/truth-"
                 "anchor distance was "
              << m_truthBHLossMaxObservedEndpointDistance << " mm" << endmsg;
+      info() << "Truth BH-loss G4StepTuple fallback tags: invalid truth "
+             << "events=" << m_truthBHLossInvalidTruthEvents
+             << ", endpoint-distance tracks="
+             << m_truthBHLossInvalidEndpointTracks
+             << ", interval-map tracks="
+             << m_truthBHLossInvalidIntervalTracks << endmsg;
     }
   }
   if (m_materialBHAuditStream.is_open()) {

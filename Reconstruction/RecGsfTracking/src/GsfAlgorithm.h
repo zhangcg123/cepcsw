@@ -6,8 +6,10 @@
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "TruthBHLossTupleReader.h"
+#include "TruthBHLossScopeStatus.h"
 
 #include "DetInterface/IGeomSvc.h"
 
@@ -78,6 +80,8 @@ private:
       "EcalCluster", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection>  m_mcParticles{
       "MCParticle", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_truthBHLossStatus{
+      "GSFTruthBHLossStatus", Gaudi::DataHandle::Writer, this};
 
   SmartIF<IGeomSvc> m_geosvc;
   double m_field = 0.0;
@@ -162,15 +166,16 @@ private:
   Gaudi::Property<bool> m_truthBHLossOverride{
       this, "TruthBHLossOverride", false,
       "Default-off diagnostic replacing each executed BH response on every "
-      "selected track with one exact externally supplied Geant4 eBrem "
-      "retained-momentum fraction"};
+      "fully validated selected track with one exact externally supplied "
+      "Geant4 eBrem retained-momentum fraction; invalid truth scopes use the "
+      "configured BH model and emit a negative status tag"};
   Gaudi::Property<std::string> m_truthBHLossSource{
       this, "TruthBHLossSource", "CSV",
       "CSV or G4StepTuple source used only by TruthBHLossOverride"};
   Gaudi::Property<std::string> m_truthBHLossInput{
       this, "TruthBHLossInput", "",
-      "Strict consecutive-hit CSV or GsfMaterialStepRecorder ROOT tuple used "
-      "only by TruthBHLossOverride"};
+      "Consecutive-hit CSV or GsfMaterialStepRecorder ROOT tuple validated "
+      "as one all-or-nothing track scope by TruthBHLossOverride"};
   Gaudi::Property<int> m_truthBHLossInputTrackIndex{
       this, "TruthBHLossInputTrackIndex", 0,
       "CompleteTracks index receiving the primary-electron G4StepTuple truth "
@@ -215,6 +220,9 @@ private:
   std::uint64_t m_truthBHLossOverrideCalls = 0;
   std::uint64_t m_truthBHLossPassthroughTracks = 0;
   std::uint64_t m_truthBHLossTupleTracks = 0;
+  std::uint64_t m_truthBHLossInvalidTruthEvents = 0;
+  std::uint64_t m_truthBHLossInvalidEndpointTracks = 0;
+  std::uint64_t m_truthBHLossInvalidIntervalTracks = 0;
   double m_truthBHLossMaxObservedEndpointDistance = 0.0;
   dd4hep::rec::MaterialManager* m_materialManager = nullptr;
 

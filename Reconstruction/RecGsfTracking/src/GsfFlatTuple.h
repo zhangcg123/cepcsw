@@ -6,7 +6,10 @@
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/TrackerHitCollection.h"
+#include "podio/UserDataCollection.h"
+#include "TruthBHLossScopeStatus.h"
 
+#include <cstdint>
 #include <vector>
 
 class TFile;
@@ -31,6 +34,8 @@ private:
       "GSFTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection> m_inMCParticles{
       "MCParticle", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inTruthBHLossStatus{
+      "GSFTruthBHLossStatus", Gaudi::DataHandle::Reader, this};
 
   Gaudi::Property<std::string> m_outFileName{this, "OutputFile",
       "gsf_tuple.root", "Output ROOT file name"};
@@ -65,6 +70,10 @@ private:
   int    m_gsf_ndf = 0;
   int    m_gsf_nhits = 0;
   int    m_gsf_type = 0;
+  // truth BH-loss oracle scope for CompleteTracks index 0
+  int    m_truth_bh_scope_status =
+      truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
+  int    m_truth_bh_scope_valid = 0;
   // paired ECAL-constrained GSF AtIP
   double m_ecal_gsf_omega = 0, m_ecal_gsf_d0 = 0, m_ecal_gsf_z0 = 0;
   double m_ecal_gsf_phi = 0, m_ecal_gsf_tanl = 0;

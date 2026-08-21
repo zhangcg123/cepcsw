@@ -76,11 +76,13 @@ gsf.BHModel = "CEPCRuntimeGenericGrid5Clear" #"CEPC2GeV85StepConditioned"
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
 
-# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only.  The maintained
-# batch card points at the same job's material-step ROOT tuple, but the override
-# remains explicitly off.  When enabled, it maps the primary-electron truth to
-# CompleteTracks index 0 and requires every accepted-hit interval to match
-# ordered sensitive-midpoint anchors within the configured distance guard.
+# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. This template
+# keeps the explicit off-side value; dump_gsftrk.sh replaces it from its
+# truth_bh_override argument, and the current submission passes true. When
+# enabled, it maps the primary-electron truth to CompleteTracks index 0. Every
+# accepted-hit interval must match ordered sensitive-midpoint anchors within
+# the guard. An invalid scope uses ordinary BH for the whole track and is tagged
+# in GSFTruthBHLossStatus, the flat tuple, and the BH audit.
 gsf.TruthBHLossOverride = False
 gsf.TruthBHLossSource = "G4StepTuple"
 gsf.TruthBHLossInput = truthbhinputfilename
@@ -147,10 +149,12 @@ else:
         "Unknown method={!r}; choose smoother, reverse, or cms-like".format(
             method))
 
-# Keep truth-oracle diagnostics paired with, but separate from, the ordinary
-# GSF output.  With the default-off override this is exactly ``method`` and
-# preserves the established filenames.
-outputmethod = method + ("-truth-bh" if gsf.TruthBHLossOverride else "")
+# Keep both sides of the truth-oracle A/B explicitly tagged.  In particular,
+# never let an override-off control reuse the historical untagged ``reverse``
+# filenames.
+outputmethod = method + (
+    "-truth-bh" if gsf.TruthBHLossOverride else "-truth-bh-off"
+)
 
 gsf.SelectedEventIndices = []
 gsf.VerboseDump = False
@@ -158,9 +162,14 @@ gsf.VerboseSplitDump = False
 gsf.ComponentDebugDump = False
 gsf.SurfaceLineageMassDump = False
 gsf.ComponentDebugMaxHistory = 240
-# Focused diagnostic only. Enable this explicitly in a temporary card when an
-# exact runtime material/BH audit is required; normal batch jobs write no CSV.
-gsf.MaterialBHAuditCSV = ""
+# Current material/BH diagnostic campaign: keep one comprehensive runtime
+# audit per input sample and method. The algorithm and reverse-template
+# defaults remain empty/off.
+gsf.MaterialBHAuditCSV = os.path.join(
+    tuplepath,
+    "gsf_material_bh_audit_{}_{}.csv".format(
+        os.path.splitext(os.path.basename(inputfilename))[0], outputmethod),
+)
 gsf.CounterfactualLossScan = False
 gsf.CounterfactualTruthTransitionMap = ""
 gsf.CounterfactualLossFractions = [
@@ -171,8 +180,9 @@ gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
-# The tuple always keeps ordinary gsf_* fields.  When the default-off ECAL
-# experiment is enabled, it also fills ecal_gsf_* from the paired collection.
+# The tuple always keeps ordinary gsf_* fields and the truth-oracle validity
+# tag. When the default-off ECAL experiment is enabled, it also fills
+# ecal_gsf_* from the paired collection.
 flat.OutputFile = os.path.join(
     tuplepath,
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),
