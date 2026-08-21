@@ -288,12 +288,17 @@ Current boundary evidence and definitions:
 - The default-off truth BH-loss oracle replaces each already executed BH
   response on a CSV-selected track with one unit-weight child at the matched
   Geant4 eBrem retained fraction, then runs the unchanged downstream workflow.
-  A five-event focused A/B mechanically closed all 80 oracle calls. It fixed
-  the no-eBrem false overshoot in event 41 and improved event 17, but the large
-  truth losses in events 13 and 16 lie in runtime intervals below the current
-  split threshold and therefore never reach the response override. This is a
-  response-versus-gating diagnostic, not population validation or authority
-  to tune the threshold.
+  The focused five-event gate closed all 80 oracle calls. A same-code fixed
+  60-event topology-clear stress/control A/B then closed 1,156 calls and
+  reduced all-panel mean absolute pT residual from 4.646% to 2.052%, its 68%
+  absolute quantile from 0.580% to 0.317%, and the count above 3% from eight to
+  two. Overshoots and underestimates improved strongly, but good-control mean
+  absolute residual broadened from 0.0330% to 0.0912%. Forty-three truth-loss
+  intervals in 35 events reached a BH call; eleven loss intervals in ten
+  events remained below threshold. Event 13 consequently worsened from
+  -4.05% to -13.98%, while event 35 remained at -92.97%. This is selected
+  response-versus-gating evidence, not held-out validation or authority to
+  tune the threshold.
 - The first production-scale runtime audit contains 40,040 auditable events
   from 411 nonempty files; 35,582 are topology clear and 4,458 have secondary
   tracker activity. Valid, spatially matched paths close forward/reverse below

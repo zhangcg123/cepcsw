@@ -126,5 +126,94 @@ tune the threshold. The next branch-local work must distinguish why those
 low-`pathTX0` intervals contain large Geant4 eBrem losses before proposing a
 material, granularity, threshold, or response change.
 
+## Sixty-event topology-clear stress/control A/B
+
+The exact fixed 60-event panel previously used for the three-model BH response
+comparison was reproduced with current code. It contains the 20 largest
+positive default residuals, 20 most negative default residuals, and 20
+smallest-absolute-residual remaining controls from
+`rec-e--2.0-85-1.root`. All are topology clear under the established
+classification. The selection is deliberately based on the default result;
+it is a stress/control panel, not an unbiased or held-out population.
+
+Fresh default and oracle runs used identical frozen production steering and
+enabled the same runtime BH audit. The current default reproduced the earlier
+60 stored GSF pT values exactly: the maximum absolute drift was zero. The
+truth map supplied 13,898 exact primary-track accepted-hit intervals. All
+endpoint matches were monotonic; maximum truth-sensitive-midpoint to runtime-
+hit distances ranged up to 2.96 mm. Both applications finalized successfully
+and all 60 selected primary tracks fitted. Events 35 and 65 each contained an
+additional reconstructed input track outside the authoritative primary truth
+scope; those two tracks were explicitly logged and used ordinary BH for their
+whole workflow.
+
+Absolute pT residual metrics were:
+
+| Group | Mode | Mean | Median | 68% quantile | Maximum | `>1%` | `>3%` |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Overshoot | default | 5.365% | 0.379% | 0.567% | 79.418% | 5 | 4 |
+| Overshoot | truth oracle | 0.321% | 0.224% | 0.321% | 1.354% | 1 | 0 |
+| Underestimate | default | 8.538% | 0.926% | 1.661% | 92.974% | 9 | 4 |
+| Underestimate | truth oracle | 5.744% | 0.392% | 0.462% | 92.974% | 4 | 2 |
+| Good control | default | 0.0330% | 0.0316% | 0.0404% | 0.0744% | 0 | 0 |
+| Good control | truth oracle | 0.0912% | 0.0613% | 0.0832% | 0.3429% | 0 | 0 |
+| All 60 | default | 4.646% | 0.320% | 0.580% | 92.974% | 14 | 8 |
+| All 60 | truth oracle | 2.052% | 0.184% | 0.317% | 92.974% | 5 | 2 |
+
+Excluding the dominant no-eBrem false overshoot at event 41, all-panel mean
+absolute residual still improved from 3.378% to 2.081%. Eventwise, 34 tracks
+improved, 17 worsened, and nine were unchanged. The group counts were 16/1/3
+improved/worsened/unchanged for overshoots, 16/2/2 for underestimates, and
+2/14/4 for good controls. The oracle therefore provides strong selected bad-
+event evidence while also exposing a real small clean-control broadening.
+
+The largest absolute-residual gains were:
+
+| Event | Group | Default residual | Oracle residual | Absolute gain |
+|---:|---|---:|---:|---:|
+| 41 | overshoot | +79.418% | -0.323% | 79.095 points |
+| 57 | underestimate | -36.463% | -1.695% | 34.769 points |
+| 33 | underestimate | -21.618% | -0.953% | 20.664 points |
+| 27 | overshoot | +11.958% | +0.106% | 11.852 points |
+| 19 | overshoot | +5.424% | -0.580% | 4.843 points |
+| 96 | overshoot | +4.018% | -0.259% | 3.759 points |
+
+The main counterexample was event 13: its 6.2999 GeV truth loss belongs to one
+valid interval with `pathTX0` below `1e-4`, so no nonidentity truth response
+was injected. Replacing all other executed calls by their truth identity
+response worsened the residual from -4.048% to -13.984%. Event 35 also had no
+reachable material loss and remained at -92.974%. These are not failures of
+the supplied retained fraction; they demonstrate that a response-only oracle
+cannot repair losses that never reach the splitter or failures downstream of
+the response.
+
+The audit contained 1,156 oracle child calls over the 60 selected primaries.
+Eighty-six were nonidentity calls: the same 43 nonzero-loss intervals were
+used once in the outward and once in the reverse workflow. Across the exact
+primary truth map:
+
+| Truth-loss reachability | Intervals | Events | Summed eBrem loss |
+|---|---:|---:|---:|
+| Reached an executed BH call | 43 | 35 | 75.249 GeV |
+| Valid but below `BHSplitThreshold` | 11 | 10 | 8.583 GeV |
+
+No nonzero-loss interval in this selected panel was classified as an invalid
+material path. Thirty-five events had at least one injected loss; their mean
+absolute residual improved from 2.783% to 0.330%, and their >3% count fell
+from five to zero. Five events contained loss only in unreached intervals;
+their mean worsened from 19.509% to 21.480%, driven by event 13 while event 35
+remained unchanged. Twenty events had no truth eBrem. Their aggregate mean
+improved because of event 41; excluding it, mean changed from 0.230% to
+0.204%, while the median broadened from 0.058% to 0.136%. This mixed clean
+behavior prevents a production-safety claim.
+
+The result supports a precise conclusion: when a genuine loss is presented at
+an executed BH call, the ordinary downstream GSF usually preserves enough of
+the exact response to improve the selected bad tracks. The remaining failure
+classes are below-threshold/gating cases, non-BH failures, and smaller clean-
+track changes. The result does not establish that the current material
+threshold, ordinary BH prior, or final selection should be changed, and it is
+not held-out validation.
+
 Generated ROOT files, CSV maps/audits, and logs were kept under `/tmp` and are
 not project status artifacts.
