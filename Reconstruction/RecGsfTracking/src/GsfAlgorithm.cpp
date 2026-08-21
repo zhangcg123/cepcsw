@@ -2048,17 +2048,32 @@ StatusCode RecGsfTracking::execute() {
   if (needEventDataTruth) {
     bool eventDataPrepared = false;
     try {
-      const std::vector<const edm4hep::MCRecoTrackerAssociationCollection*>
-          associations{
-              m_vxdTruthAssociations.get(),
-              m_itkBarrelTruthAssociations.get(),
-              m_itkEndcapTruthAssociations.get(),
-              m_tpcTruthAssociations.get(),
-              m_otkBarrelTruthAssociations.get(),
-              m_otkEndcapTruthAssociations.get()};
-      eventDataPrepared = eventDataTruth.prepare(
-          m_gsfTruthSteps.get(), m_gsfTruthLinks.get(), associations,
-          eventDataTruthEventError);
+      std::vector<const edm4hep::MCRecoTrackerAssociationCollection*>
+          associations;
+      auto appendAvailableAssociation = [&associations](auto& handle) {
+        try {
+          if (const auto* collection = handle.get())
+            associations.push_back(collection);
+        } catch (...) {
+          // An unrequested detector collection is harmless unless the
+          // selected track contains one of its hits; matchTrack then rejects
+          // that track through the strict all-or-nothing association check.
+        }
+      };
+      appendAvailableAssociation(m_vxdTruthAssociations);
+      appendAvailableAssociation(m_itkBarrelTruthAssociations);
+      appendAvailableAssociation(m_itkEndcapTruthAssociations);
+      appendAvailableAssociation(m_tpcTruthAssociations);
+      appendAvailableAssociation(m_otkBarrelTruthAssociations);
+      appendAvailableAssociation(m_otkEndcapTruthAssociations);
+      if (associations.empty()) {
+        eventDataTruthEventError =
+            "no requested tracker truth-association collection is available";
+      } else {
+        eventDataPrepared = eventDataTruth.prepare(
+            m_gsfTruthSteps.get(), m_gsfTruthLinks.get(), associations,
+            eventDataTruthEventError);
+      }
     } catch (const std::exception& exception) {
       eventDataTruthEventError =
           std::string("cannot retrieve embedded truth event data: ") +

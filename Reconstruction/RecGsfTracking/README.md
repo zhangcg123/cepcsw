@@ -28,7 +28,7 @@ distinction matters because that template enables `ElossOn` and
 | `TruthBHLossInput` | empty | empty | External source path for `TruthBHLossOverride`: the strict runtime-interval CSV or material-recorder ROOT file selected by `CSV`/`G4StepTuple`. It must be empty for `EventData`, which reads the current event. Empty is otherwise valid only while the override is off. |
 | `TruthBHLossInputTrackIndex` | `0` | same | With `G4StepTuple` or `EventData`, the zero-based `CompleteTracks` index that receives the truth oracle. Other input tracks use the configured BH model. It must be nonnegative. It does not affect CSV selection. |
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | With `G4StepTuple` or `EventData`, maximum allowed endpoint discrepancy between an accepted runtime hit and its Geant4 truth hook. It must be finite and positive. It does not affect CSV input. |
-| `RecordTruthMaterialIntervals` | `false` | `false` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
+| `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
@@ -216,8 +216,14 @@ ordinary GSF job when the truth BH-loss oracle itself is off.
 Because this recorder reads `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` from the current event, an enabled input card must
 request both collections. The compiled and active reverse-template value is
-false, so ordinary production and historical inputs do not acquire this
-simulation-only requirement.
+true, so the maintained simulation workflow and reverse template request both
+by default. A control using a historical input without embedded provenance must
+set `RecordTruthMaterialIntervals=false` explicitly and omit those collection
+requests. Disabling the recorder changes only diagnostic output availability.
+Unrequested association collections for detector regions unused by the
+selected track are tolerated. The selected track itself remains strict: every
+accepted hit must resolve through one available standard truth association or
+the complete recording scope is marked invalid.
 
 ### Mixture population and reduction
 
@@ -449,12 +455,11 @@ deliberate truth-diagnostic campaign steering, not a production-default change.
 Generated truth-on cards append `truth-bh`; generated off controls append
 `truth-bh-off` to their GSF EDM, flat-tuple, and audit filenames.
 
-For the current passive material-consistency campaign, the maintained card
-also explicitly sets `RecordTruthMaterialIntervals=true`. Consequently it
-requests `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` even when
-`TruthBHLossOverride=false`. This is an intentional maintained-card diagnostic
-difference: the compiled and active reverse-template value remains false, and
-the recorded truth/DD4hep/runtime values do not affect the GSF workflow.
+The maintained card explicitly sets `RecordTruthMaterialIntervals=true`, in
+agreement with the compiled and active reverse-template default. Consequently
+it requests `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` even when
+`TruthBHLossOverride=false`. The recorded truth/DD4hep/runtime values remain
+passive and do not affect the GSF workflow.
 
 ### Configuration-maintenance contract
 

@@ -219,7 +219,7 @@ private:
       "Maximum allowed distance in mm between a runtime accepted hit and its "
       "matched Geant4 truth anchor or exact EventData hook"};
   Gaudi::Property<bool> m_recordTruthMaterialIntervals{
-      this, "RecordTruthMaterialIntervals", false,
+      this, "RecordTruthMaterialIntervals", true,
       "Passively write exact Geant4, truth-hook DD4hep, and actual runtime "
       "GSF material summaries for consecutive accepted-hit intervals; never "
       "steers propagation, BH splitting, component weights, or selection"};

@@ -54,6 +54,7 @@ podioinput = PodioInput("PodioReader", collections=[
     "OTKBarrelTrackerHits",
     "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation",
     "TPCTrackerHitAss", "OTKBarrelTrackerHitAssociation",
+    "GsfG4MaterialSteps", "GsfSimTrackerHitG4StepLinks",
     "CompleteTracks",
 ])
 
@@ -80,6 +81,8 @@ gsf.CounterfactualLossVariance = float(os.getenv(
 gsf.BHSplitThreshold = 1.0e-4
 gsf.MaterialPathMode = os.getenv(
     "GSF_MATERIAL_PATH_MODE", "DD4hepBetweenSurfaces")
+# Default-on, output-only material provenance. It does not steer the fit.
+gsf.RecordTruthMaterialIntervals = True
 
 gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "12"))
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents

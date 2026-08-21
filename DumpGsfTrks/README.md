@@ -235,18 +235,19 @@ This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 
-The current material-consistency campaign also explicitly sets
-`RecordTruthMaterialIntervals=true`, while the compiled and active reverse-
-template default is false. Therefore the maintained card requests
-`GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` whether or not the truth
-BH-loss override is enabled. The property passively writes the exact Geant4
-t/X0 between associated truth hooks, the DD4hep integral between those same
-positions, and forward/reverse runtime material summaries to the final EDM and
-flat tuple. The EDM outputs are `GSFTruthMaterialIntervals` and
+The maintained card explicitly sets `RecordTruthMaterialIntervals=true`, in
+agreement with the compiled and active reverse-template default. It therefore
+requests `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` whether or not
+the truth BH-loss override is enabled. The property passively writes the exact
+Geant4 t/X0 between associated truth hooks, the DD4hep integral between those
+same positions, and forward/reverse runtime material summaries to the final
+EDM and flat tuple. The EDM outputs are `GSFTruthMaterialIntervals` and
 `GSFTruthMaterialRecordStatus`; the flat branches use the `truth_material_`
 prefix. It never replaces a runtime path or BH response and cannot change split
-gating, component weights, or track selection. This true value is campaign
-recording, not a production-default change.
+gating, component weights, or track selection. Historical inputs without the
+embedded collections require an explicit
+`RecordTruthMaterialIntervals=false` control card; this affects diagnostic
+availability only.
 Invalid event or track truth no longer terminates the batch job. The selected
 track instead uses ordinary BH throughout and records a negative validity code
 in `GSFTruthBHLossStatus`, `truth_bh_scope_status`/

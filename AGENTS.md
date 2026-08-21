@@ -37,12 +37,11 @@ default-off oracle's current batch source follows the standard reconstructed-
 hit truth associations into those collections, so the maintained workflow no
 longer requires a side material tuple. The CSV and `G4StepTuple` readers remain
 historical controls.
-A separate default-off passive interval recorder can now persist, in the final
+A passive interval recorder now persists, in the final
 GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual
 forward/reverse component paths. These values never steer the GSF. The
-maintained material-consistency card enables recording for its current
-campaign; the compiled and active reverse-template default remains off.
+compiled, active reverse-template, and maintained-card default is on.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
@@ -223,11 +222,11 @@ Truth mapping remains all-or-nothing, but event/track validation failures no
 longer terminate the job: the complete selected track falls back to ordinary
 BH and records an explicit validity/status tag in EDM, flat-tuple, and audit
 outputs.
-`RecordTruthMaterialIntervals=false` remains the compiled and active reverse-
-template default. The maintained card explicitly sets it true and writes
+`RecordTruthMaterialIntervals=true` is the compiled, active reverse-template,
+and maintained-card default. It writes
 `GSFTruthMaterialIntervals`, `GSFTruthMaterialRecordStatus`, and 50
-`truth_material_*` flat branches. This campaign setting is passive recording,
-not production steering or a physics-impact test.
+`truth_material_*` flat branches. This remains passive recording, not
+production steering or a physics-impact test.
 
 Current boundary evidence and definitions:
 
@@ -314,7 +313,7 @@ Current boundary evidence and definitions:
   and child state. It does not change the flat-tuple schema. The superseded
   forward-only `MaterialTransitionCSV` recorder has been removed from the
   active source interface; its historical files and evidence remain valid.
-- The default-off passive truth-material recorder writes one final EDM object
+- The default-on passive truth-material recorder writes one final EDM object
   per consecutive accepted-hit interval. It keeps fractionally integrated
   Geant4 t/X0/eBrem truth, DD4hep t/X0 between the same exact hooks, and
   direction-separated summaries of runtime component paths. A one-event
@@ -501,6 +500,9 @@ default-regression check, and focused good/bad A/B are preserved in
 The passive final-event interval schema, explicit non-steering boundary,
 maintained-card difference, and exact recorder-on/off gate are preserved in
 `agents_record/2026-08-22-passive-truth-material-interval-final-tuple.md`.
+The subsequent explicit default-on decision and unchanged non-steering
+boundary are preserved in
+`agents_record/2026-08-22-passive-truth-material-recorder-default-promotion.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in
