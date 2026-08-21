@@ -51,21 +51,15 @@ mkdir -p "${tupledir}"
 
 simcard=${jobpath}/runsim-${sample}.py
 trkcard=${jobpath}/runtrk-${sample}.py
-digicard=${jobpath}/runcalodigi-${sample}.py
-reccard=${jobpath}/runcalorec-${sample}.py
 gsfcard=${jobpath}/rungsf-${sample}${truthsuffix}.py
 
 simname=sim-${sample}.root
 trkname=trk-${sample}.root
-diginame=calodigi-${sample}.root
-recname=rec-${sample}.root
 simfile=${tupledir}/${simname}
 trkfile=${tupledir}/${trkname}
-digifile=${tupledir}/${diginame}
-recfile=${tupledir}/${recname}
 
 # These cards are single-event-loop jobs. Avoid BLAS/OpenMP thread expansion
-# exhausting the batch/account process limit during calorimeter reconstruction.
+# exhausting the batch/account process limit.
 job_threads=${CEPCSW_JOB_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${job_threads}
 export OMP_NUM_THREADS=${job_threads}
@@ -95,36 +89,13 @@ if [ "${gsf_only}" = false ]; then
     sed -i "s#sim_v01.root#${simname}#g" "${trkcard}"
     sed -i "s#rec_v01.root#${trkname}#g" "${trkcard}"
     ./run.sh "${trkcard}"
-
-    # Stage 3: calorimeter digitization
-    if [ ! -s "${trkfile}" ]; then
-        echo "Missing tracker input: ${trkfile}" >&2
-        exit 1
-    fi
-    cp "${jobpath}/calodigi.py.bk" "${digicard}"
-    sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${digicard}"
-    sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${digicard}"
-    sed -i "s/digitizationseed = 12340/digitizationseed = ${seed}/g" "${digicard}"
-    sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${digicard}"
-    sed -i "s#trk.root#${trkname}#g" "${digicard}"
-    sed -i "s#calodigi.root#${diginame}#g" "${digicard}"
-    ./run.sh "${digicard}"
-
-    # Stage 4: calorimeter reconstruction
-    cp "${jobpath}/rec.py.bk" "${reccard}"
-    sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${reccard}"
-    sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${reccard}"
-    sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${reccard}"
-    sed -i "s#calodigi.root#${diginame}#g" "${reccard}"
-    sed -i "s#rec.root#${recname}#g" "${reccard}"
-    ./run.sh "${reccard}"
 else
-    echo "GSF-only control: reusing ${recfile}"
+    echo "GSF-only control: reusing ${trkfile}"
 fi
 
-# Stage 5: GSF track refit
-if [ ! -s "${recfile}" ]; then
-    echo "Missing reconstructed GSF input: ${recfile}" >&2
+# Stage 3: GSF track refit directly from tracking output
+if [ ! -s "${trkfile}" ]; then
+    echo "Missing tracker GSF input: ${trkfile}" >&2
     exit 1
 fi
 cp "${jobpath}/gsf.py.bk" "${gsfcard}"
@@ -132,7 +103,7 @@ sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${gsfcard}"
 sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${gsfcard}"
 sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${gsfcard}"
 sed -i "s/particle = 12340/particle = '${particle}'/g" "${gsfcard}"
-sed -i "s#trk_v01.root#${recname}#g" "${gsfcard}"
+sed -i "s#trk_v01.root#${trkname}#g" "${gsfcard}"
 if [ "${truth_bh_override}" = true ]; then
     truth_bh_python=True
 else

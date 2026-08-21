@@ -36,6 +36,10 @@ The normal simulation event can now optionally embed exact
 default-off oracle's current batch source follows the standard reconstructed-
 hit truth associations into those collections, so the maintained workflow no
 longer requires or supports a side material tuple or prejoined CSV input.
+The active `dump_gsftrk.sh` worker runs simulation, tracker reconstruction,
+and then GSF directly on the `trk-<sample>.root` output. Calorimeter
+digitization/reconstruction and `EcalCluster` are not part of this worker while
+the ECAL prototype is paused.
 A passive interval recorder now persists, in the final
 GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual
@@ -213,9 +217,9 @@ card to true and reads the embedded `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` collections through the event's exact tracker-hit
 associations, uses input track 0 with a 5 mm integrity guard, and tags
 GSF/flat outputs with `truth-bh`. The standard simulation writer creates
-the collections; `trk`, `calodigi`, and `rec` preserve them. No side material
-tuple is part of this maintained workflow. This campaign steering is not a
-production-default change.
+the collections and `trk` preserves them before its output is passed directly
+to GSF. No calorimeter stage or side material tuple is part of this maintained
+worker. This campaign steering is not a production-default change.
 Truth mapping remains all-or-nothing, but event/track validation failures no
 longer terminate the job: the complete selected track falls back to ordinary
 BH and records an explicit validity/status tag in EDM and the flat tuple.
@@ -506,6 +510,9 @@ The subsequent removal of the CSV and side-ROOT truth-oracle readers, the
 embedded-only oracle contract, and synchronized 43-property surface are
 preserved in
 `agents_record/2026-08-22-retired-material-helper-readers.md`.
+The maintained worker's simplification from the former five-stage calorimeter
+chain to direct `sim -> trk -> GSF` input is preserved in
+`agents_record/2026-08-22-direct-tracker-to-gsf-workflow.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

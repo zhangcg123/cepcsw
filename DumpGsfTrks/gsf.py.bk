@@ -52,7 +52,6 @@ podioinput = PodioInput("PodioReader", collections=[
     "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
     "TPCTrackerHitAss",
     "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",
-    "EcalCluster",
     "CompleteTracks",
 ])
 
@@ -121,9 +120,10 @@ gsf.SurfaceConsistencyUninformativeFloor = 0.05
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
 gsf.ReverseKappaSeedCov = 100.0
 
-# Default-off research constraint.  When enabled for the reverse BestBranch
-# workflow, GSFTracks stays tracker-only and GSFTracksEcalConstrained carries
-# the paired component-selection result.  The input must contain EcalCluster.
+# Default-off research constraint.  When enabled from a separate reconstructed-
+# event card that supplies EcalCluster, GSFTracks stays tracker-only and
+# GSFTracksEcalConstrained carries the paired component-selection result.  The
+# maintained tracker-direct worker keeps this off and does not request clusters.
 gsf.EcalComponentConstraint = False
 gsf.EcalConstraintRatioThreshold = 1.1
 gsf.EcalConstraintLogPSigma = 0.15

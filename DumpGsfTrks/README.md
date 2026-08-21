@@ -1,6 +1,6 @@
 # GSF event-production workflow
 
-This directory contains the maintained cards for the five-stage
+This directory contains the maintained cards for the three-stage
 single-particle workflow:
 
 ```text
@@ -8,20 +8,17 @@ particle gun + Geant4 simulation
   -> sim-<particle>-<pT>-<theta>-<seed>.root
   -> digitization and tracking
   -> trk-<particle>-<pT>-<theta>-<seed>.root (CompleteTracks)
-  -> calorimeter digitization
-  -> calodigi-<particle>-<pT>-<theta>-<seed>.root
-  -> calorimeter reconstruction
-  -> rec-<particle>-<pT>-<theta>-<seed>.root
   -> GSF refit
   -> GSF EDM and flat tuples
 ```
 
 The simulation event itself carries the optional truth-diagnostic provenance.
-`keep *` preserves it through tracking and calorimeter processing, so the GSF
-truth-oracle control needs no side ROOT tuple or event-number join. The normal
-GSF remains truth-blind. The default-on passive material recorder and the
-optional default-off `TruthBHLossOverride=true` control read the embedded
-provenance directly from EventData.
+`keep *` preserves it through tracking, so the GSF truth-oracle control needs
+no side ROOT tuple or event-number join. The normal GSF remains truth-blind.
+The default-on passive material recorder and the optional default-off
+`TruthBHLossOverride=true` control read the embedded provenance directly from
+the tracker output's EventData. Calorimeter digitization and reconstruction are
+not part of the maintained GSF worker at present.
 
 ## Embedded Geant4 truth provenance
 
@@ -135,11 +132,11 @@ simulation card intentionally uses its hardcoded broad gun ranges; see below.
 After the job, require all of the following before scaling up:
 
 1. the Gaudi job terminates successfully;
-2. all five stage outputs exist and have the requested event count;
+2. all three stage outputs exist and have the requested event count;
 3. `podio-dump sim-<sample>.root` lists nonempty `GsfG4MaterialSteps` and
    `GsfSimTrackerHitG4StepLinks` for the selected primary;
-4. those two collections remain present in `trk-`, `calodigi-`, `rec-`, and
-   GSF EDM output through `keep *`;
+4. those two collections remain present in the `trk-` and GSF EDM outputs
+   through `keep *`;
 5. every link used by the selected track has complete status, one exact
    SimTrackerHit relation, and consistent first/last/hook step relations;
 6. output filenames contain the full particle, momentum/angle, and seed
@@ -175,8 +172,8 @@ embedded-truth PDG list is `[11, -11, 13, -13]`.
 
 The worker accepts six legacy-compatible arguments, an optional seventh
 `truth_bh_override` boolean, and an optional eighth `gsf_only` boolean. With
-`gsf_only=false`, all five stages execute in order: simulation, tracking,
-calorimeter digitization, calorimeter reconstruction, and the final GSF refit:
+`gsf_only=false`, all three stages execute in order: simulation, tracking, and
+the final GSF refit:
 
 ```bash
 ./dump_gsftrk.sh particle momentum_mag momentum_trn theta seed nevt \
@@ -184,28 +181,29 @@ calorimeter digitization, calorimeter reconstruction, and the final GSF refit:
 ```
 
 The generated GSF card requires and reads
-`$WORKDIR/rec-<sample>.root`. With the optional argument omitted or false, the
+`$WORKDIR/trk-<sample>.root`. With the optional argument omitted or false, the
 truth oracle remains off and the generated card and GSF/flat outputs use
 the explicit `truth-bh-off` suffix. With it true, the worker enables the
 in-process `EventData` oracle and uses the `truth-bh` suffix. The paired names
 prevent either A/B member from overwriting the other. The worker neither
 creates nor checks a side material tuple. With `gsf_only=true`, it reuses the
-sample-qualified `rec-<sample>.root` and runs only the final GSF step.
+sample-qualified `trk-<sample>.root` and runs only the final GSF step.
 
 Campaign submission scripts may set `TRUTH_BH_OVERRIDE=true` explicitly and
 pass it to every worker. Truth-on and truth-off outputs receive distinct
 suffixes.
 
-The four non-GSF cards retain the official TDR-o1-v01 `PodioInput`, algorithm,
-service, and `keep *` configuration; their workflow differences are limited to
-batch steering, plus the intentional embedded GSF truth collections in the
-standard simulation writer. Numerical-library thread counts default to one because an
-unconstrained OpenBLAS initialization exhausted the account's
-`RLIMIT_NPROC=300` during the 2026-08-17 smoke test; set `CEPCSW_JOB_THREADS`
-explicitly to override this. The script still uses exact textual substitutions
-and does not prevent ordinary-mode output overwrites, validate ROOT
-collection/event integrity, or record a manifest. Generated cards remain
-artifacts rather than source configuration.
+The simulation and tracking cards retain the official TDR-o1-v01 `PodioInput`,
+algorithm, service, and `keep *` configuration; their workflow differences are
+limited to batch steering, plus the intentional embedded GSF truth collections
+in the standard simulation writer. The retained `calodigi.py.bk` and
+`rec.py.bk` cards are not invoked by `dump_gsftrk.sh`. Numerical-library thread
+counts default to one because an unconstrained OpenBLAS initialization
+previously exhausted the account's `RLIMIT_NPROC=300`; set
+`CEPCSW_JOB_THREADS` explicitly to override this. The script still uses exact
+textual substitutions and does not prevent ordinary-mode output overwrites,
+validate ROOT collection/event integrity, or record a manifest. Generated
+cards remain artifacts rather than source configuration.
 
 ### `gsf.py.bk`
 
@@ -274,15 +272,12 @@ Generated cards that assign the removed `TruthBHLossSource` or
 algorithm. They are retained only as experiment artifacts and must not be run;
 regenerate them from the maintained card to use embedded EventData.
 
-The card still reads `EcalCluster` from the reconstructed-event input but keeps
-the local ECAL component-constraint experiment off. When explicitly enabled,
-its
-cluster-energy observation accepts only clusters inside both the configured
-phi and theta windows around the extrapolated outer GSF direction. For the
-reverse `BestBranch` workflow, `GSFTracks` remains the tracker-only baseline
-and the paired result is written as
-`GSFTracksEcalConstrained`; the card's `keep *` output rule retains both. This
-is an experimental comparison path, not a change to the active baseline.
+The maintained card no longer requests `EcalCluster`, because its direct
+tracker input does not contain calorimeter reconstruction and the local ECAL
+component-constraint experiment remains off. The algorithm still supports that
+default-off experiment, but reactivating it requires a separate reconstructed-
+event input card that explicitly supplies `EcalCluster`; it is not part of this
+worker. `GSFTracks` remains the tracker-only baseline.
 
 The same card's `RecGsfFlatTuple` output retains the ordinary tracker-only
 `gsf_*` fields, records `truth_bh_scope_status` and
@@ -304,18 +299,16 @@ authoritative property meanings and full inventory remain in
 
 The maintained template defaults to `method="reverse"`. Its input path is a
 top-level `inputfilename` steering variable, which the worker replaces with
-the preceding `rec-<sample>.root` path. Its output names contain particle,
+the preceding `trk-<sample>.root` path. Its output names contain particle,
 method, and seed, but not momentum or angle; reusing the same particle and
 seed at another production point can still overwrite outputs.
 
 ### `subtrkjobs.sh`
 
-The current loop requests six electron jobs, seeds 5 through 10, with 100
-events each, `TRUTH_BH_OVERRIDE=true`, and `GSF_ONLY=false`. It therefore runs
-the full five-stage chain and requests 6 GB per batch job. The comment in the
-script that calls this “ten jobs” is stale; the brace range is authoritative.
-Its `pT=2 GeV`, `theta=85 deg` values label the sample but do not override the
-maintained simulation card's broad gun ranges.
+`subtrkjobs.sh` passes its truth-oracle and GSF-only controls through to this
+worker. Any submission with `GSF_ONLY=false` now runs the three-stage
+simulation-to-tracking-to-GSF chain. Its momentum and theta arguments label the
+sample but do not override the maintained simulation card's broad gun ranges.
 
 ## Production readiness
 
