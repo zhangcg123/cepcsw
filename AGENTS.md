@@ -202,17 +202,17 @@ recovery and false radiative modes and does not solve selection.
 The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
-explicitly enables one input-sample/method-specific `MaterialBHAuditCSV` for
-the current 1,000-event material/BH diagnostic. The algorithm and reverse-
-template defaults remain empty/off; this nonempty maintained-card value is
-campaign steering, not a compiled-default change.
+explicitly steers all 45 supported properties. The retired side material ROOT
+producer and runtime material/BH audit CSV are absent from the current source
+and cards; embedded simulation provenance plus the default-on final
+truth-material EDM/flat-tuple records are the maintained recording path.
 `TruthBHLossOverride=false` remains the compiled, reverse-template, and
 maintained `gsf.py.bk` base value. A truth-on batch submission passes
 `truth_bh_override=true`; `dump_gsftrk.sh` then rewrites each generated per-job
 card to true and reads the embedded `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` collections through the event's exact tracker-hit
 associations, uses input track 0 with a 5 mm integrity guard, and tags
-GSF/flat/audit outputs with `truth-bh`. The standard simulation writer creates
+GSF/flat outputs with `truth-bh`. The standard simulation writer creates
 the collections; `trk`, `calodigi`, and `rec` preserve them. No side material
 tuple is part of this maintained workflow. This campaign steering is not a
 production-default change.
@@ -220,8 +220,7 @@ CSV-selected tracks still require every exact consecutive accepted-hit
 interval, while zero-row tracks are logged and use ordinary BH throughout.
 Truth mapping remains all-or-nothing, but event/track validation failures no
 longer terminate the job: the complete selected track falls back to ordinary
-BH and records an explicit validity/status tag in EDM, flat-tuple, and audit
-outputs.
+BH and records an explicit validity/status tag in EDM and the flat tuple.
 `RecordTruthMaterialIntervals=true` is the compiled, active reverse-template,
 and maintained-card default. It writes
 `GSFTruthMaterialIntervals`, `GSFTruthMaterialRecordStatus`, and 50
@@ -306,13 +305,11 @@ Current boundary evidence and definitions:
   Similar-t/X0 categories must not be silently pooled, and a truth-side skipped
   anchor must not be called a runtime skipped anchor until the reconstructed
   hit pair is checked.
-- `MaterialBHAuditCSV` is a default-off, separate structured recorder for the
-  exact runtime candidates and executed BH calls. It records the seed path,
-  forward and reverse accepted-hit bounds, parent identity/weight/lineage,
-  DD4hep path and material composition, split decision, returned BH mixture,
-  and child state. It does not change the flat-tuple schema. The superseded
-  forward-only `MaterialTransitionCSV` recorder has been removed from the
-  active source interface; its historical files and evidence remain valid.
+- The former `MaterialBHAuditCSV` component-call recorder and the side
+  `GsfMaterialStepRecorderAnaElemTool` ROOT producer are retired from the
+  active source interface and maintained cards. Historical files, readers,
+  records, and Git history remain available for reproducing earlier studies;
+  stale cards assigning either removed interface must be regenerated.
 - The default-on passive truth-material recorder writes one final EDM object
   per consecutive accepted-hit interval. It keeps fractionally integrated
   Geant4 t/X0/eBrem truth, DD4hep t/X0 between the same exact hooks, and
@@ -503,6 +500,10 @@ maintained-card difference, and exact recorder-on/off gate are preserved in
 The subsequent explicit default-on decision and unchanged non-steering
 boundary are preserved in
 `agents_record/2026-08-22-passive-truth-material-recorder-default-promotion.md`.
+The removal of the side material ROOT producer and runtime BH-audit CSV,
+retained historical-reader boundary, synchronized 45-property surface, and
+one-event final-tuple smoke check are preserved in
+`agents_record/2026-08-22-retired-side-material-helper-outputs.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

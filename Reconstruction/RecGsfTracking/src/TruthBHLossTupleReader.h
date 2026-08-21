@@ -15,7 +15,8 @@ struct TruthBHLossSurfaceInterval {
 };
 
 /// Lazy reader for the Geant4 pre/post-step tuple written by
-/// GsfMaterialStepRecorderAnaElemTool.  It reconstructs the same consecutive
+/// the retired GsfMaterialStepRecorderAnaElemTool. It reconstructs the same
+/// consecutive
 /// sensitive-midpoint intervals as the recorder without loading a whole batch
 /// file into memory.
 class TruthBHLossTupleReader {

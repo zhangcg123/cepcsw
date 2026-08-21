@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build primary-electron material transitions from G4 step tuples.
 
-The input is produced by GsfMaterialStepRecorderAnaElemTool.  A transition uses
+The historical input was produced by the retired
+GsfMaterialStepRecorderAnaElemTool. A transition uses
 outgoing-current ownership: it starts at the Geant4 entry into one sensitive
 element and ends immediately before entry into the next sensitive element on
 the same primary track.  All Geant4 steps in that half-open interval are

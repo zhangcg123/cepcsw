@@ -106,15 +106,15 @@ Important interpretations:
 
 ### Legacy side recorder
 
-`Simulation/DetSimAna/src/GsfMaterialStepRecorderAnaElemTool.{h,cpp}` remains
-available only for reproducing historical `G4StepTuple` studies. It is not in
-`sim.py.bk`, `DetSimAlg.AnaElems`, or the maintained batch dependency chain.
-When explicitly configured, it writes `g4step_tuple` in `RECREATE` mode with
-vector branches for run/event/track identifiers, pre/post/midpoint positions,
-momenta and retained fraction, energy deposits, local `step_tX0`, material and
-process labels, sensitive flags, and touchable paths. Its `event_id` restarts
-per job, so historical joins require the file/sample identity as well. The
-legacy analyzer remains
+The side `GsfMaterialStepRecorderAnaElemTool` implementation and its standalone
+test card have been removed from the current source tree. Historical
+`G4StepTuple` files remain readable by compatibility paths; their schema and
+the retired producer are preserved in Git history and dated project records.
+Those files contain vector branches for run/event/track identifiers,
+pre/post/midpoint positions, momenta and retained fraction, energy deposits,
+local `step_tX0`, material and process labels, sensitive flags, and touchable
+paths. Their `event_id` restarts per job, so historical joins require the
+file/sample identity as well. The legacy analyzer remains
 `G4MaterialStepComparison/scripts/analyze_g4step_tuple.py`. This compatibility
 path does not justify generating a side tuple for the current workflow.
 
@@ -183,7 +183,7 @@ calorimeter digitization, calorimeter reconstruction, and the final GSF refit:
 
 The generated GSF card requires and reads
 `$WORKDIR/rec-<sample>.root`. With the optional argument omitted or false, the
-truth oracle remains off and the generated card and GSF/flat/audit outputs use
+truth oracle remains off and the generated card and GSF/flat outputs use
 the explicit `truth-bh-off` suffix. With it true, the worker enables the
 in-process `EventData` oracle and uses the `truth-bh` suffix. The paired names
 prevent either A/B member from overwriting the other. The worker neither
@@ -216,12 +216,12 @@ default-off `CEPCRuntimeGenericGrid5Clear` experiment, not the production
 `CEPC2GeV85StepConditioned` model; preserve that as deliberate campaign
 steering until the user changes it.
 
-The authoritative explanation of all 46 `RecGsfTracking` properties, their
+The authoritative explanation of all 45 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures all 46
+For this maintained workflow, `gsf.py.bk` explicitly configures all 45
 properties and silently inherits none. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
 submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
@@ -251,19 +251,16 @@ availability only.
 Invalid event or track truth no longer terminates the batch job. The selected
 track instead uses ordinary BH throughout and records a negative validity code
 in `GSFTruthBHLossStatus`, `truth_bh_scope_status`/
-`truth_bh_scope_valid` in the flat tuple, and the comprehensive audit. Status
-`1` is the only valid truth-oracle scope; the full code table is maintained in
-the package README.
+`truth_bh_scope_valid` in the flat tuple. Status `1` is the only valid truth-
+oracle scope; the full code table is maintained in the package README.
 
-For the current 1,000-event material/BH diagnostic, `MaterialBHAuditCSV` uses
-an input-sample/method-specific filename under `tuplepath`, so parallel jobs
-do not overwrite one another. With `tuplepath=""`, each audit is written in
-the project root. This campaign setting enables the comprehensive recorder;
-the compiled and reverse-template defaults remain empty/off. The audit is a
-generated CSV, not a branch of `RecGsfFlatTuple`. The superseded forward-only
-material-transition CSV property remains removed. Historical records and
-already generated `rungsf-*` cards may still mention it; regenerate cards from
-`gsf.py.bk` before use with the current package.
+Side material ROOT generation and the public runtime BH-audit CSV option are
+retired from the maintained workflow. Historical tuples, audit CSVs, readers,
+and project records remain available for reproducing earlier studies, but
+stale cards that assign the removed audit property must be regenerated. The
+current recording path is the ordinary GSF EDM with
+`GSFTruthMaterialIntervals`/`GSFTruthMaterialRecordStatus` and the final flat
+tuple's `truth_material_*` branches.
 
 Generated `rungsf-*` cards are batch artifacts and preserve the explicit
 material mode in force when each card was created. Many predate the 2026-08-19
@@ -320,7 +317,7 @@ maintained simulation card's broad gun ranges.
 Before a new campaign, address the remaining production safeguards:
 
 1. use unique, common sample identities for simulation, tracking, GSF EDM,
-   flat tuple, audit CSV, and logs;
+   flat tuple, and logs;
 2. fail on missing/stale inputs, existing outputs, or tuple-integrity errors;
 3. verify exact collection and event pairing between every stage;
 4. record a manifest containing the exact commands and effective settings;

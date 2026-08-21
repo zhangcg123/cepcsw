@@ -80,8 +80,8 @@ gsf.BHSplitThreshold = 1.0e-4
 # associations to the embedded SimTrackerHit-to-Geant4-step provenance. Every
 # accepted-hit endpoint must pass the configured integrity guard. An invalid
 # scope uses ordinary BH for the whole track and is tagged in
-# GSFTruthBHLossStatus, the flat tuple, and the BH audit. No side material ROOT
-# file is read by this EventData source.
+# GSFTruthBHLossStatus and the flat tuple. No side material ROOT file or
+# runtime BH-audit CSV is produced by this maintained workflow.
 gsf.TruthBHLossOverride = False
 gsf.TruthBHLossSource = "EventData"
 gsf.TruthBHLossInput = ""
@@ -173,14 +173,6 @@ gsf.VerboseSplitDump = False
 gsf.ComponentDebugDump = False
 gsf.SurfaceLineageMassDump = False
 gsf.ComponentDebugMaxHistory = 240
-# Current material/BH diagnostic campaign: keep one comprehensive runtime
-# audit per input sample and method. The algorithm and reverse-template
-# defaults remain empty/off.
-gsf.MaterialBHAuditCSV = os.path.join(
-    tuplepath,
-    "gsf_material_bh_audit_{}_{}.csv".format(
-        os.path.splitext(os.path.basename(inputfilename))[0], outputmethod),
-)
 gsf.CounterfactualLossScan = False
 gsf.CounterfactualTruthTransitionMap = ""
 gsf.CounterfactualLossFractions = [

@@ -2,7 +2,6 @@
 gaudi_add_module(DetSimAna
                  SOURCES src/Edm4hepWriterAnaElemTool.cpp
                          src/ExampleAnaDoseElemTool.cpp
-                         src/GsfMaterialStepRecorderAnaElemTool.cpp
                  LINK DetSimInterface
                       DetSimSDLib
                       GsfTruthEventData GsfTruthEventDataDict

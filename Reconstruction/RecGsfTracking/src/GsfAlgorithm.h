@@ -22,7 +22,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <fstream>
 #include <cstdint>
 #include <set>
 #include <tuple>
@@ -206,7 +205,7 @@ private:
       "TruthBHLossOverride"};
   Gaudi::Property<std::string> m_truthBHLossInput{
       this, "TruthBHLossInput", "",
-      "Consecutive-hit CSV or GsfMaterialStepRecorder ROOT tuple validated "
+      "Consecutive-hit CSV or legacy G4StepTuple ROOT file validated "
       "as one all-or-nothing track scope by TruthBHLossOverride; unused by "
       "EventData"};
   Gaudi::Property<int> m_truthBHLossInputTrackIndex{
@@ -242,14 +241,8 @@ private:
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "
       "DD4hepBetweenSurfaces"};
-  Gaudi::Property<std::string> m_materialBHAuditCSV{
-      this, "MaterialBHAuditCSV", "",
-      "Optional structured seed/forward/reverse material candidate and "
-      "executed Bethe-Heitler call CSV"};
   MarlinTrk::IMarlinTrkSystem* m_gsfMarlinTrkSystem = nullptr;
 
-  std::ofstream m_materialBHAuditStream;
-  std::uint64_t m_materialBHNextCallId = 0;
   using TruthBHLossKey =
       std::tuple<int, int, int, int, std::uint64_t, std::uint64_t>;
   std::map<TruthBHLossKey, double> m_truthBHRetainedFractions;
