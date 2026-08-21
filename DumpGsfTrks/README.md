@@ -151,22 +151,32 @@ recorder PDG list is `[11, -11, 13, -13]`.
 
 ### `dump_gsftrk.sh`
 
-The worker requires exactly six legacy-compatible arguments. In its current
-prepared-input mode, simulation, tracking, and GSF execution are commented;
-it runs the two calorimeter stages and stops after the first failed command:
+The worker accepts six legacy-compatible arguments plus an optional seventh
+`truth_bh_override` boolean. In its current prepared-input mode, simulation,
+tracking, calorimeter digitization, and calorimeter reconstruction execution
+are commented; it generates those cards but runs only the final GSF refit:
 
 ```bash
-tuples285/trk-<sample>.root
-  -> calorimeter digitization -> calorimeter reconstruction
+./dump_gsftrk.sh particle momentum_mag momentum_trn theta seed nevt \
+  [truth_bh_override]
 ```
 
-The tracker input defaults to the absolute path
-`$WORKDIR/tuples285/trk-<sample>.root`; `CEPCSW_TRK_INPUT_DIR` can override its
-directory. A missing or empty prepared tracker file is a hard error. The
-calorimeter-digitization output and subsequent reconstruction input are the
-same absolute `$WORKDIR/calodigi-<sample>.root` path, and the reconstruction
-output is `$WORKDIR/rec-<sample>.root`. The generated GSF card points to that
-absolute reconstruction output, although its execution is currently disabled.
+The generated GSF card requires and reads
+`$WORKDIR/rec-<sample>.root`. With the optional argument omitted or false, the
+truth oracle remains off and established output names are unchanged. With it
+true, the worker also requires the paired nonempty
+`$WORKDIR/gsf_material_steps-<sample>.root`, enables the in-process
+`G4StepTuple` oracle, and writes the generated card and GSF/flat/audit outputs
+with a `truth-bh` suffix so the ordinary A/B member is not overwritten. The
+material tuple must be produced by the same simulation events as the
+reconstructed input; the GSF endpoint guard rejects a mismatched tuple.
+
+`subtrkjobs.sh` passes the optional control through. For example,
+`TRUTH_BH_OVERRIDE=true bash subtrkjobs.sh` submits the truth-oracle member;
+the default remains false. Its truth-mode batch logs also receive a
+`_truth-bh` suffix. The current script does not create a missing material
+tuple: run the simulation/material-recorder stage first and retain that
+separate ROOT file.
 
 The four non-GSF cards retain the official TDR-o1-v01 `PodioInput`, algorithm,
 service, and `keep *` configuration; their workflow differences are limited to
@@ -175,27 +185,37 @@ simulation card. Numerical-library thread counts default to one because an
 unconstrained OpenBLAS initialization exhausted the account's
 `RLIMIT_NPROC=300` during the 2026-08-17 smoke test; set `CEPCSW_JOB_THREADS`
 explicitly to override this. The script still uses exact textual substitutions
-and does not prevent output overwrites, validate ROOT collection/event
-integrity, or record a manifest. Generated cards remain artifacts rather than
-source configuration.
+and does not prevent ordinary-mode output overwrites, validate ROOT
+collection/event integrity, or record a manifest. Generated cards remain
+artifacts rather than source configuration.
 
 ### `gsf.py.bk`
 
 The current `gsf.py.bk` contains the comparison card previously named
-`gsf_reverse_new.py.bk`. It keeps the active reverse workflow and now agrees
-with the production physics baseline: `DD4hepBetweenSurfaces`, split/cutoff
-`1e-4`, and `EcalComponentConstraint=False`.
+`gsf_reverse_new.py.bk`. It keeps the active reverse workflow and agrees with
+the production material, split/cutoff, and ECAL settings:
+`DD4hepBetweenSurfaces`, split/cutoff `1e-4`, and
+`EcalComponentConstraint=False`. Its current explicit `BHModel` is the
+default-off `CEPCRuntimeGenericGrid5Clear` experiment, not the production
+`CEPC2GeV85StepConditioned` model; preserve that as deliberate campaign
+steering until the user changes it.
 
-The authoritative explanation of all 43 `RecGsfTracking` properties, their
+The authoritative explanation of all 46 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, `gsf.py.bk` explicitly configures all 43
+For this historical workflow, `gsf.py.bk` explicitly configures all 46
 properties and silently inherits none. The truth-dependent BH-loss oracle is
-explicitly off with an empty input. Use the package README for the complete
-configuration reference and the reverse template for the production-baseline
-settings.
+explicitly off, but the card is batch-ready for the in-process truth reader:
+`TruthBHLossSource="G4StepTuple"`, `TruthBHLossInput` points through the
+top-level `truthbhinputfilename` variable to the simulation stage's per-job
+`gsf_material_steps-<sample>.root`, `TruthBHLossInputTrackIndex=0`, and
+`TruthBHLossMaxEndpointDistance=5.0` mm. The source and nonempty path are
+intentional differences from the compiled and reverse-template defaults of
+`CSV` and empty input; they have no effect while the override remains false.
+Use the package README for the complete configuration reference and the
+reverse template for the production-baseline settings.
 
 Both runtime material outputs are explicit. `MaterialTransitionCSV=""` keeps
 the legacy forward, non-seed comparison table off. For the current campaign,

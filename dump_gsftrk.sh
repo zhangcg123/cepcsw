@@ -1,44 +1,136 @@
 #!/bin/bash
 
+if [ "$#" -lt 6 ] || [ "$#" -gt 7 ]; then
+    echo "Usage: $0 particle momentum_mag momentum_trn theta seed nevt [truth_bh_override]" >&2
+    exit 2
+fi
+
 particle=$1
 momenta_mag=$2
 momenta_trn=$3
 theta=$4
 seed=$5
 nevt=$6
+truth_bh_override=${7:-false}
+case "${truth_bh_override,,}" in
+    1|true|yes|on) truth_bh_override=true ;;
+    0|false|no|off) truth_bh_override=false ;;
+    *)
+        echo "truth_bh_override must be true/false, yes/no, on/off, or 1/0" >&2
+        exit 2
+        ;;
+esac
 
 WORKDIR=${CEPCSW_GSFDEV_DIR:-/aifs/user/data/zhangcg/gsfdev/CEPCSW}
+jobpath=${WORKDIR}/DumpGsfTrks
+sample=${particle}-${momenta_trn}-${theta}-${seed}
+if [ "${truth_bh_override}" = true ]; then
+    truthsuffix=-truth-bh
+else
+    truthsuffix=
+fi
+
+# Common ROOT-output location for every processing stage.  Leave empty to
+# write directly under WORKDIR; set to a relative path to use a subdirectory.
+tuplepath=""
+if [ -n "${tuplepath}" ]; then
+    tupledir=${WORKDIR}/${tuplepath}
+else
+    tupledir=${WORKDIR}
+fi
+mkdir -p "${tupledir}"
+
+simcard=${jobpath}/runsim-${sample}.py
+trkcard=${jobpath}/runtrk-${sample}.py
+digicard=${jobpath}/runcalodigi-${sample}.py
+reccard=${jobpath}/runcalorec-${sample}.py
+gsfcard=${jobpath}/rungsf-${sample}${truthsuffix}.py
+
+simname=sim-${sample}.root
+materialname=gsf_material_steps-${sample}.root
+trkname=trk-${sample}.root
+diginame=calodigi-${sample}.root
+recname=rec-${sample}.root
+simfile=${tupledir}/${simname}
+materialfile=${tupledir}/${materialname}
+trkfile=${tupledir}/${trkname}
+digifile=${tupledir}/${diginame}
+recfile=${tupledir}/${recname}
+
+# These cards are single-event-loop jobs. Avoid BLAS/OpenMP thread expansion
+# exhausting the batch/account process limit during calorimeter reconstruction.
+job_threads=${CEPCSW_JOB_THREADS:-1}
+export OPENBLAS_NUM_THREADS=${job_threads}
+export OMP_NUM_THREADS=${job_threads}
+export MKL_NUM_THREADS=${job_threads}
+export BLIS_NUM_THREADS=${job_threads}
+export NUMEXPR_NUM_THREADS=${job_threads}
+
 cd "${WORKDIR}"
-
 source setup.sh
+set -u
 
-jobpath=${WORKDIR}/DumpGsfTrks/
+# Stage 1: simulation
+cp "${jobpath}/sim.py.bk" "${simcard}"
+sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${simcard}"
+sed -i "s/particlename = 'mu-'/particlename = '${particle}'/g" "${simcard}"
+sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${simcard}"
+sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${simcard}"
+sed -i "s#sim_v01.root#${simname}#g" "${simcard}"
+sed -i "s#gsf_material_steps.root#${materialname}#g" "${simcard}"
+#./run.sh "${simcard}"
 
-momenta_low=${momenta_trn}
-momenta_hig=${momenta_mag}
+# Stage 2: tracker digitization and reconstruction
+cp "${jobpath}/trk.py.bk" "${trkcard}"
+sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${trkcard}"
+sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${trkcard}"
+sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${trkcard}"
+sed -i "s#sim_v01.root#${simname}#g" "${trkcard}"
+sed -i "s#rec_v01.root#${trkname}#g" "${trkcard}"
+#./run.sh "${trkcard}"
 
-# ── Stage 1: Simulation ──
-cp ${jobpath}/sim.py.bk ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/particlename = 'mu-'/particlename = '${particle}'/g" ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/inputseed = 12340/inputseed = ${seed}/g" ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/sim_v01.root/sim-${particle}-${momenta_low}-${theta}-${seed}.root/g" ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/momenta_low = 12340/momenta_low = ${momenta_hig}/g" ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/theta_low = 12340/theta_low = ${theta}/g" ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
-./run.sh ${jobpath}/runsim-${particle}-${momenta_low}-${theta}-${seed}.py
+# Stage 3: calorimeter digitization
+if [ ! -s "${trkfile}" ]; then
+    echo "Missing tracker input: ${trkfile}" >&2
+    exit 1
+fi
+cp "${jobpath}/calodigi.py.bk" "${digicard}"
+sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${digicard}"
+sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${digicard}"
+sed -i "s/digitizationseed = 12340/digitizationseed = ${seed}/g" "${digicard}"
+sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${digicard}"
+sed -i "s#trk.root#${trkname}#g" "${digicard}"
+sed -i "s#calodigi.root#${diginame}#g" "${digicard}"
+#./run.sh "${digicard}"
 
-# ── Stage 2: Digitization + Tracking → CompleteTracks ──
-cp ${jobpath}/trk.py.bk ${jobpath}/runtrk-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/sim_v01.root/sim-${particle}-${momenta_low}-${theta}-${seed}.root/g" ${jobpath}/runtrk-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/inputseed = 12340/inputseed = ${seed}/g" ${jobpath}/runtrk-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" ${jobpath}/runtrk-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/rec_v01.root/trk-${particle}-${momenta_low}-${theta}-${seed}.root/g" ${jobpath}/runtrk-${particle}-${momenta_low}-${theta}-${seed}.py
-./run.sh ${jobpath}/runtrk-${particle}-${momenta_low}-${theta}-${seed}.py
+# Stage 4: calorimeter reconstruction
+cp "${jobpath}/rec.py.bk" "${reccard}"
+sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${reccard}"
+sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${reccard}"
+sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${reccard}"
+sed -i "s#calodigi.root#${diginame}#g" "${reccard}"
+sed -i "s#rec.root#${recname}#g" "${reccard}"
+#./run.sh "${reccard}"
 
-# ── Stage 3: GSF refit ──
-cp ${jobpath}/gsf.py.bk ${jobpath}/rungsf-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/trk_v01.root/trk-${particle}-${momenta_low}-${theta}-${seed}.root/g" ${jobpath}/rungsf-${particle}-${momenta_low}-${theta}-${seed}.py
-#sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" ${jobpath}/rungsf-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/gsf_v01.root/gsf-${particle}-${momenta_low}-${theta}-${seed}.root/g" ${jobpath}/rungsf-${particle}-${momenta_low}-${theta}-${seed}.py
-sed -i "s/gsf_flat_v01.root/gsf_flat-${particle}-${momenta_low}-${theta}-${seed}.root/g" ${jobpath}/rungsf-${particle}-${momenta_low}-${theta}-${seed}.py
-./run.sh ${jobpath}/rungsf-${particle}-${momenta_low}-${theta}-${seed}.py
+# Stage 5: GSF track refit
+if [ ! -s "${recfile}" ]; then
+    echo "Missing reconstructed GSF input: ${recfile}" >&2
+    exit 1
+fi
+cp "${jobpath}/gsf.py.bk" "${gsfcard}"
+sed -i "s#tuplepath = \"\"#tuplepath = \"${tuplepath}\"#g" "${gsfcard}"
+sed -i "s/evtmax = 12340/evtmax = ${nevt}/g" "${gsfcard}"
+sed -i "s/inputseed = 12340/inputseed = ${seed}/g" "${gsfcard}"
+sed -i "s/particle = 12340/particle = '${particle}'/g" "${gsfcard}"
+sed -i "s#trk_v01.root#${recname}#g" "${gsfcard}"
+sed -i "s#gsf_material_steps.root#${materialname}#g" "${gsfcard}"
+if [ "${truth_bh_override}" = true ]; then
+    if [ ! -s "${materialfile}" ]; then
+        echo "Missing paired Geant4 material tuple: ${materialfile}" >&2
+        exit 1
+    fi
+    sed -i \
+        "s/gsf.TruthBHLossOverride = False/gsf.TruthBHLossOverride = True/g" \
+        "${gsfcard}"
+fi
+./run.sh "${gsfcard}"

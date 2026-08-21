@@ -7,11 +7,13 @@
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
+#include "TruthBHLossTupleReader.h"
 
 #include "DetInterface/IGeomSvc.h"
 
 #include <vector>
 #include <map>
+#include <memory>
 #include <string>
 #include <fstream>
 #include <cstdint>
@@ -57,6 +59,7 @@ struct TrackSummary {
 class RecGsfTracking : public Algorithm {
 public:
   RecGsfTracking(const std::string& name, ISvcLocator* svc);
+  ~RecGsfTracking() override;
   StatusCode initialize() override;
   StatusCode execute() override;
   StatusCode finalize() override;
@@ -159,11 +162,23 @@ private:
   Gaudi::Property<bool> m_truthBHLossOverride{
       this, "TruthBHLossOverride", false,
       "Default-off diagnostic replacing each executed BH response on every "
-      "CSV-selected track with one exact externally supplied Geant4 eBrem "
+      "selected track with one exact externally supplied Geant4 eBrem "
       "retained-momentum fraction"};
+  Gaudi::Property<std::string> m_truthBHLossSource{
+      this, "TruthBHLossSource", "CSV",
+      "CSV or G4StepTuple source used only by TruthBHLossOverride"};
   Gaudi::Property<std::string> m_truthBHLossInput{
       this, "TruthBHLossInput", "",
-      "Strict consecutive-hit CSV used only by TruthBHLossOverride"};
+      "Strict consecutive-hit CSV or GsfMaterialStepRecorder ROOT tuple used "
+      "only by TruthBHLossOverride"};
+  Gaudi::Property<int> m_truthBHLossInputTrackIndex{
+      this, "TruthBHLossInputTrackIndex", 0,
+      "CompleteTracks index receiving the primary-electron G4StepTuple truth "
+      "oracle; other tracks use the configured BH model"};
+  Gaudi::Property<double> m_truthBHLossMaxEndpointDistance{
+      this, "TruthBHLossMaxEndpointDistance", 5.0,
+      "Maximum allowed distance in mm between a runtime accepted hit and its "
+      "nearest ordered Geant4 sensitive-midpoint anchor"};
   Gaudi::Property<bool> m_counterfactualLossScan{
       this, "CounterfactualLossScan", false,
       "Default-off likelihood-only scan of trial losses at a configured truth "
@@ -199,8 +214,12 @@ private:
       std::tuple<int, int, int, int, std::uint64_t, std::uint64_t>;
   std::map<TruthBHLossKey, double> m_truthBHRetainedFractions;
   std::set<std::pair<int, int>> m_truthBHSelectedTracks;
+  std::unique_ptr<TruthBHLossTupleReader> m_truthBHLossTupleReader;
+  bool m_truthBHLossUsesTuple = false;
   std::uint64_t m_truthBHLossOverrideCalls = 0;
   std::uint64_t m_truthBHLossPassthroughTracks = 0;
+  std::uint64_t m_truthBHLossTupleTracks = 0;
+  double m_truthBHLossMaxObservedEndpointDistance = 0.0;
   dd4hep::rec::MaterialManager* m_materialManager = nullptr;
 
   int m_nEvt = 0;

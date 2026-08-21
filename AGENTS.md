@@ -195,11 +195,13 @@ explicitly enables an input-sample/method-specific `MaterialBHAuditCSV` under
 the configured tuple path (the project root while `tuplepath=""`). The
 algorithm and reverse-template audit defaults remain empty/off; the nonempty
 maintained-card value is campaign steering, not a new compiled default.
-`TruthBHLossOverride=false` and `TruthBHLossInput=""` are also compiled,
-reverse-template, and maintained-card defaults. When explicitly enabled, the
-CSV selects complete `(event,input-track)` scopes: selected tracks require
-every exact consecutive accepted-hit interval, while zero-row tracks are
-logged and use ordinary BH throughout.
+`TruthBHLossOverride=false` remains the compiled, reverse-template, and
+maintained-card default. The compiled and reverse-template oracle source/input
+remain `CSV`/empty. The maintained batch card instead preconfigures the
+default-off `G4StepTuple` source and its per-job material-tuple path, track 0,
+and a 5 mm endpoint guard so enabling the diagnostic needs no external CSV
+join. CSV-selected tracks still require every exact consecutive accepted-hit
+interval, while zero-row tracks are logged and use ordinary BH throughout.
 
 Current boundary evidence and definitions:
 
@@ -286,8 +288,14 @@ Current boundary evidence and definitions:
   and child state. It does not change the flat-tuple schema or the legacy
   forward-only `MaterialTransitionCSV` contract.
 - The default-off truth BH-loss oracle replaces each already executed BH
-  response on a CSV-selected track with one unit-weight child at the matched
+  response on a truth-selected track with one unit-weight child at the matched
   Geant4 eBrem retained fraction, then runs the unchanged downstream workflow.
+  The original strict CSV source remains available. The in-process
+  `G4StepTuple` source lazily reads one event at a time, reconstructs the
+  recorder's sensitive-midpoint intervals, strictly matches them to ordered
+  accepted hits on one configured `CompleteTracks` index, and fails on a
+  missing/ambiguous primary, nonmonotonic match, or excessive endpoint
+  distance. It is batch plumbing for the same diagnostic, not new truth logic.
   The focused five-event gate closed all 80 oracle calls. A same-code fixed
   60-event topology-clear stress/control A/B then closed 1,156 calls and
   reduced all-panel mean absolute pT residual from 4.646% to 2.052%, its 68%
@@ -414,6 +422,9 @@ mechanical validation, and non-interference A/B are preserved in
 The truth BH-loss oracle contract, all-or-nothing track scope, audit extension,
 focused A/B, and below-threshold truth-loss finding are preserved in
 `agents_record/2026-08-21-truth-bh-loss-oracle-control.md`.
+The in-process material-tuple reader, strict matching contract, CSV-equivalence
+gate, and batch steering are preserved in
+`agents_record/2026-08-21-in-process-truth-bh-g4step-tuple-reader.md`.
 The production-scale eventwise join, valid-path closure, unresolved coverage
 population, split-threshold accounting, BH-response calibration, and revised
 ordered investigation are preserved in

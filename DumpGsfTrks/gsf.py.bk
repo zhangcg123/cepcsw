@@ -22,6 +22,9 @@ evtmax = 12340
 inputseed = 12340
 particle = 12340
 inputfilename = os.path.join(tuplepath, "trk_v01.root")
+# Per-job Geant4 material-step truth written by sim.py.bk.  The batch worker
+# replaces this basename with the same sample-qualified name used in simulation.
+truthbhinputfilename = os.path.join(tuplepath, "gsf_material_steps.root")
 
 # Explicit workflow selection. Change this source line to "smoother",
 # "reverse", or "cms-like"; no environment-variable override is used.
@@ -63,22 +66,26 @@ gearsvc = GearSvc("GearSvc")
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = True
 # Common options used by the same-code smoother/reverse/CMS-like comparisons.
-# This remains the production default. Default-off BH controls are
+# The production default is CEPC2GeV85StepConditioned. Default-off BH controls are
 # CEPC2GeV85StepConditioned6, CEPCRuntimeGenericGrid5Clear,
 # CEPCRuntimeCategoryAligned5Clear, and ActsAtlas. The two CEPCRuntime models
-# are topology-clear interval-fit candidates and are not production validated.
-gsf.BHModel = "CEPC2GeV85StepConditioned"
+# are topology-clear interval-fit candidates and are not production validated;
+# this maintained campaign card currently selects the generic-grid control.
+gsf.BHModel = "CEPCRuntimeGenericGrid5Clear" #"CEPC2GeV85StepConditioned"
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
 
-# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. Any
-# (event,input-track) pair present in TruthBHLossInput must cover every exact
-# accepted-hit interval; its ordinary hit-0-to-hit-1 key supplies the special
-# seed-material call. A track with zero rows uses ordinary BH in full, while a
-# partially covered selected track fails rather than silently mixing modes.
+# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only.  The maintained
+# batch card points at the same job's material-step ROOT tuple, but the override
+# remains explicitly off.  When enabled, it maps the primary-electron truth to
+# CompleteTracks index 0 and requires every accepted-hit interval to match
+# ordered sensitive-midpoint anchors within the configured distance guard.
 gsf.TruthBHLossOverride = False
-gsf.TruthBHLossInput = ""
+gsf.TruthBHLossSource = "G4StepTuple"
+gsf.TruthBHLossInput = truthbhinputfilename
+gsf.TruthBHLossInputTrackIndex = 0
+gsf.TruthBHLossMaxEndpointDistance = 5.0
 
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0
@@ -140,6 +147,11 @@ else:
         "Unknown method={!r}; choose smoother, reverse, or cms-like".format(
             method))
 
+# Keep truth-oracle diagnostics paired with, but separate from, the ordinary
+# GSF output.  With the default-off override this is exactly ``method`` and
+# preserves the established filenames.
+outputmethod = method + ("-truth-bh" if gsf.TruthBHLossOverride else "")
+
 gsf.SelectedEventIndices = []
 gsf.VerboseDump = False
 gsf.VerboseSplitDump = False
@@ -152,7 +164,7 @@ gsf.MaterialTransitionCSV = ""
 gsf.MaterialBHAuditCSV = os.path.join(
     tuplepath,
     "gsf_material_bh_audit_{}_{}.csv".format(
-        os.path.splitext(os.path.basename(inputfilename))[0], method),
+        os.path.splitext(os.path.basename(inputfilename))[0], outputmethod),
 )
 gsf.CounterfactualLossScan = False
 gsf.CounterfactualTruthTransitionMap = ""
@@ -168,7 +180,7 @@ flat = RecGsfFlatTuple("RecGsfFlatTuple")
 # experiment is enabled, it also fills ecal_gsf_* from the paired collection.
 flat.OutputFile = os.path.join(
     tuplepath,
-    "gsf_flat_{}_{}_{}.root".format(particle, method, inputseed),
+    "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),
 )
 flat.BField = 3.0
 flat.HitCollectionNames = [
@@ -184,7 +196,7 @@ from Configurables import PodioOutput
 out = PodioOutput("outputalg")
 out.filename = os.path.join(
     tuplepath,
-    "gsf_{}_{}_{}.root".format(particle, method, inputseed),
+    "gsf_{}_{}_{}.root".format(particle, outputmethod, inputseed),
 )
 out.outputCommands = ["keep *"]
 

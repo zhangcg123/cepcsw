@@ -1520,13 +1520,18 @@ RecGsfTracking::RecGsfTracking(const std::string& name,
                                          ISvcLocator* svc)
   : Algorithm(name, svc) {}
 
+RecGsfTracking::~RecGsfTracking() = default;
+
 StatusCode RecGsfTracking::initialize() {
   m_nEvt = 0;
   m_materialBHNextCallId = 0;
   m_truthBHLossOverrideCalls = 0;
   m_truthBHLossPassthroughTracks = 0;
+  m_truthBHLossTupleTracks = 0;
+  m_truthBHLossMaxObservedEndpointDistance = 0.0;
   m_truthBHRetainedFractions.clear();
   m_truthBHSelectedTracks.clear();
+  m_truthBHLossTupleReader.reset();
 
   if (m_maxComponents.value() < 1) {
     error() << "MaxComponents must be at least 1" << endmsg;
@@ -1593,6 +1598,24 @@ StatusCode RecGsfTracking::initialize() {
                "DD4hepBetweenSurfaces" << endmsg;
     return StatusCode::FAILURE;
   }
+  std::string truthBHLossSource = m_truthBHLossSource.value();
+  std::transform(truthBHLossSource.begin(), truthBHLossSource.end(),
+                 truthBHLossSource.begin(), ::tolower);
+  if (truthBHLossSource != "csv" && truthBHLossSource != "g4steptuple") {
+    error() << "TruthBHLossSource must be CSV or G4StepTuple" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  m_truthBHLossUsesTuple = truthBHLossSource == "g4steptuple";
+  if (m_truthBHLossInputTrackIndex.value() < 0) {
+    error() << "TruthBHLossInputTrackIndex must be nonnegative" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (!(m_truthBHLossMaxEndpointDistance.value() > 0.0) ||
+      !std::isfinite(m_truthBHLossMaxEndpointDistance.value())) {
+    error() << "TruthBHLossMaxEndpointDistance must be finite and positive"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_truthBHLossOverride.value()) {
     if (!m_isElectron.value()) {
       error() << "TruthBHLossOverride requires ElectronHypothesis=True"
@@ -1612,106 +1635,123 @@ StatusCode RecGsfTracking::initialize() {
       return StatusCode::FAILURE;
     }
 
-    std::ifstream truthInput(m_truthBHLossInput.value());
-    if (!truthInput) {
-      error() << "Cannot open TruthBHLossInput "
-              << m_truthBHLossInput.value() << endmsg;
-      return StatusCode::FAILURE;
-    }
-    constexpr const char* expectedHeader =
-        "event_index,input_track_index,hit_from_index,hit_to_index,"
-        "cell_from,cell_to,truth_p_before_GeV,truth_ebrem_loss_GeV";
-    std::string line;
-    if (!std::getline(truthInput, line)) {
-      error() << "TruthBHLossInput is empty" << endmsg;
-      return StatusCode::FAILURE;
-    }
-    if (!line.empty() && line.back() == '\r') line.pop_back();
-    if (line != expectedHeader) {
-      error() << "TruthBHLossInput header must be exactly: "
-              << expectedHeader << endmsg;
-      return StatusCode::FAILURE;
-    }
-
-    std::size_t lineNumber = 1;
-    try {
-      while (std::getline(truthInput, line)) {
-        ++lineNumber;
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (line.empty()) continue;
-        std::vector<std::string> fields;
-        std::stringstream record(line);
-        std::string field;
-        while (std::getline(record, field, ',')) fields.push_back(field);
-        if (fields.size() != 8) {
-          throw std::invalid_argument("expected exactly 8 CSV fields");
-        }
-        auto parseInt = [](const std::string& value) {
-          std::size_t used = 0;
-          const int parsed = std::stoi(value, &used);
-          if (used != value.size())
-            throw std::invalid_argument("invalid integer field");
-          return parsed;
-        };
-        auto parseUInt64 = [](const std::string& value) {
-          std::size_t used = 0;
-          const std::uint64_t parsed = std::stoull(value, &used);
-          if (used != value.size())
-            throw std::invalid_argument("invalid unsigned integer field");
-          return parsed;
-        };
-        auto parseDouble = [](const std::string& value) {
-          std::size_t used = 0;
-          const double parsed = std::stod(value, &used);
-          if (used != value.size())
-            throw std::invalid_argument("invalid floating-point field");
-          return parsed;
-        };
-
-        const int event = parseInt(fields[0]);
-        const int track = parseInt(fields[1]);
-        const int hitFrom = parseInt(fields[2]);
-        const int hitTo = parseInt(fields[3]);
-        const std::uint64_t cellFrom = parseUInt64(fields[4]);
-        const std::uint64_t cellTo = parseUInt64(fields[5]);
-        const double pBefore = parseDouble(fields[6]);
-        const double ebremLoss = parseDouble(fields[7]);
-        if (event < 0 || track < 0 || hitFrom < 0 ||
-            hitTo != hitFrom + 1) {
-          throw std::invalid_argument(
-              "indices must be nonnegative and hit_to=hit_from+1");
-        }
-        if (!std::isfinite(pBefore) || pBefore <= 0.0 ||
-            !std::isfinite(ebremLoss) || ebremLoss < 0.0) {
-          throw std::invalid_argument(
-              "truth momentum must be positive and eBrem loss nonnegative");
-        }
-        const double retainedFraction = 1.0 - ebremLoss / pBefore;
-        if (!std::isfinite(retainedFraction) ||
-            retainedFraction <= 0.0 || retainedFraction > 1.0) {
-          throw std::invalid_argument(
-              "derived retained fraction must be in (0,1]");
-        }
-        const TruthBHLossKey key{event, track, hitFrom, hitTo,
-                                 cellFrom, cellTo};
-        if (!m_truthBHRetainedFractions
-                 .emplace(key, retainedFraction).second) {
-          throw std::invalid_argument("duplicate interval key");
-        }
-        m_truthBHSelectedTracks.emplace(event, track);
+    if (m_truthBHLossUsesTuple) {
+      m_truthBHLossTupleReader = std::make_unique<TruthBHLossTupleReader>();
+      std::string tupleError;
+      if (!m_truthBHLossTupleReader->open(
+              m_truthBHLossInput.value(), tupleError)) {
+        error() << "Cannot initialize TruthBHLossInput G4StepTuple: "
+                << tupleError << endmsg;
+        return StatusCode::FAILURE;
       }
-    } catch (const std::exception& exception) {
-      error() << "Invalid TruthBHLossInput at line " << lineNumber << ": "
-              << exception.what() << endmsg;
-      return StatusCode::FAILURE;
+      info() << "Truth BH-loss oracle: opened "
+             << m_truthBHLossTupleReader->entries()
+             << "-event G4StepTuple " << m_truthBHLossInput.value()
+             << "; runtime input track "
+             << m_truthBHLossInputTrackIndex.value()
+             << " will be matched in-process" << endmsg;
+    } else {
+      std::ifstream truthInput(m_truthBHLossInput.value());
+      if (!truthInput) {
+        error() << "Cannot open TruthBHLossInput "
+                << m_truthBHLossInput.value() << endmsg;
+        return StatusCode::FAILURE;
+      }
+      constexpr const char* expectedHeader =
+          "event_index,input_track_index,hit_from_index,hit_to_index,"
+          "cell_from,cell_to,truth_p_before_GeV,truth_ebrem_loss_GeV";
+      std::string line;
+      if (!std::getline(truthInput, line)) {
+        error() << "TruthBHLossInput is empty" << endmsg;
+        return StatusCode::FAILURE;
+      }
+      if (!line.empty() && line.back() == '\r') line.pop_back();
+      if (line != expectedHeader) {
+        error() << "TruthBHLossInput header must be exactly: "
+                << expectedHeader << endmsg;
+        return StatusCode::FAILURE;
+      }
+
+      std::size_t lineNumber = 1;
+      try {
+        while (std::getline(truthInput, line)) {
+          ++lineNumber;
+          if (!line.empty() && line.back() == '\r') line.pop_back();
+          if (line.empty()) continue;
+          std::vector<std::string> fields;
+          std::stringstream record(line);
+          std::string field;
+          while (std::getline(record, field, ',')) fields.push_back(field);
+          if (fields.size() != 8) {
+            throw std::invalid_argument("expected exactly 8 CSV fields");
+          }
+          auto parseInt = [](const std::string& value) {
+            std::size_t used = 0;
+            const int parsed = std::stoi(value, &used);
+            if (used != value.size())
+              throw std::invalid_argument("invalid integer field");
+            return parsed;
+          };
+          auto parseUInt64 = [](const std::string& value) {
+            std::size_t used = 0;
+            const std::uint64_t parsed = std::stoull(value, &used);
+            if (used != value.size())
+              throw std::invalid_argument("invalid unsigned integer field");
+            return parsed;
+          };
+          auto parseDouble = [](const std::string& value) {
+            std::size_t used = 0;
+            const double parsed = std::stod(value, &used);
+            if (used != value.size())
+              throw std::invalid_argument("invalid floating-point field");
+            return parsed;
+          };
+
+          const int event = parseInt(fields[0]);
+          const int track = parseInt(fields[1]);
+          const int hitFrom = parseInt(fields[2]);
+          const int hitTo = parseInt(fields[3]);
+          const std::uint64_t cellFrom = parseUInt64(fields[4]);
+          const std::uint64_t cellTo = parseUInt64(fields[5]);
+          const double pBefore = parseDouble(fields[6]);
+          const double ebremLoss = parseDouble(fields[7]);
+          if (event < 0 || track < 0 || hitFrom < 0 ||
+              hitTo != hitFrom + 1) {
+            throw std::invalid_argument(
+                "indices must be nonnegative and hit_to=hit_from+1");
+          }
+          if (!std::isfinite(pBefore) || pBefore <= 0.0 ||
+              !std::isfinite(ebremLoss) || ebremLoss < 0.0) {
+            throw std::invalid_argument(
+                "truth momentum must be positive and eBrem loss nonnegative");
+          }
+          const double retainedFraction = 1.0 - ebremLoss / pBefore;
+          if (!std::isfinite(retainedFraction) ||
+              retainedFraction <= 0.0 || retainedFraction > 1.0) {
+            throw std::invalid_argument(
+                "derived retained fraction must be in (0,1]");
+          }
+          const TruthBHLossKey key{event, track, hitFrom, hitTo,
+                                   cellFrom, cellTo};
+          if (!m_truthBHRetainedFractions
+                   .emplace(key, retainedFraction).second) {
+            throw std::invalid_argument("duplicate interval key");
+          }
+          m_truthBHSelectedTracks.emplace(event, track);
+        }
+      } catch (const std::exception& exception) {
+        error() << "Invalid TruthBHLossInput at line " << lineNumber << ": "
+                << exception.what() << endmsg;
+        return StatusCode::FAILURE;
+      }
+      if (m_truthBHRetainedFractions.empty()) {
+        error() << "TruthBHLossInput contains no interval rows" << endmsg;
+        return StatusCode::FAILURE;
+      }
+      info() << "Truth BH-loss oracle: loaded "
+             << m_truthBHRetainedFractions.size() << " exact CSV intervals from "
+             << m_truthBHLossInput.value() << endmsg;
     }
-    if (m_truthBHRetainedFractions.empty()) {
-      error() << "TruthBHLossInput contains no interval rows" << endmsg;
-      return StatusCode::FAILURE;
-    }
-    info() << "Truth BH-loss oracle: loaded "
-           << m_truthBHRetainedFractions.size() << " exact intervals from "
-           << m_truthBHLossInput.value() << endmsg;
   }
   if (m_gaussianSumSmoothing.value() && m_reverseFiltering.value()) {
     error() << "GaussianSumSmoothing and ReverseFiltering are alternative "
@@ -1880,6 +1920,7 @@ StatusCode RecGsfTracking::initialize() {
          << m_componentDebugDump.value()
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
+         << " truthBHLossSource=" << m_truthBHLossSource.value()
          << endmsg;
 
   if (!m_materialTransitionCSV.value().empty()) {
@@ -1960,6 +2001,19 @@ StatusCode RecGsfTracking::execute() {
   const auto* in = m_inputTracks.get();
   if (!in) return StatusCode::SUCCESS;
 
+  std::vector<TruthBHLossSurfaceInterval> tupleTruthIntervals;
+  if (m_truthBHLossOverride.value() && m_truthBHLossUsesTuple) {
+    std::string truthError;
+    if (!m_truthBHLossTupleReader ||
+        !m_truthBHLossTupleReader->readPrimaryElectronIntervals(
+            eventIndex, tupleTruthIntervals, truthError)) {
+      error() << "TruthBHLossInput G4StepTuple event read failed: "
+              << truthError << endmsg;
+      return StatusCode::FAILURE;
+    }
+  }
+  std::map<TruthBHLossKey, double> tupleTruthRetainedFractions;
+
   auto* out = m_outputTracks.createAndPut();
   edm4hep::TrackCollection* ecalOut = nullptr;
   if (m_ecalComponentConstraint.value())
@@ -2027,13 +2081,117 @@ StatusCode RecGsfTracking::execute() {
           static_cast<std::uint64_t>(fromHit.lcioHit.getCellID()),
           static_cast<std::uint64_t>(toHit.lcioHit.getCellID())};
     };
+    const bool tupleTruthTrack =
+        m_truthBHLossOverride.value() && m_truthBHLossUsesTuple &&
+        inputTrackIndex == m_truthBHLossInputTrackIndex.value();
+    if (tupleTruthTrack) {
+      std::vector<std::array<double, 3>> truthAnchors;
+      truthAnchors.reserve(tupleTruthIntervals.size() + 1);
+      truthAnchors.push_back(tupleTruthIntervals.front().from);
+      for (std::size_t interval = 0; interval < tupleTruthIntervals.size();
+           ++interval) {
+        if (tupleTruthIntervals[interval].intervalIndex !=
+            static_cast<int>(interval)) {
+          error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
+                  << " has nonconsecutive sensitive interval indices"
+                  << endmsg;
+          for (auto& hit : hits) delete hit.kalHit;
+          return StatusCode::FAILURE;
+        }
+        truthAnchors.push_back(tupleTruthIntervals[interval].to);
+      }
+
+      std::vector<std::size_t> matchedAnchor;
+      matchedAnchor.reserve(hits.size());
+      double maxEndpointDistance = 0.0;
+      for (const auto& hit : hits) {
+        const auto& position = hit.lcioHit.getPosition();
+        std::size_t bestAnchor = 0;
+        double bestDistance2 = std::numeric_limits<double>::infinity();
+        for (std::size_t anchor = 0; anchor < truthAnchors.size(); ++anchor) {
+          const double dx = position.x - truthAnchors[anchor][0];
+          const double dy = position.y - truthAnchors[anchor][1];
+          const double dz = position.z - truthAnchors[anchor][2];
+          const double distance2 = dx * dx + dy * dy + dz * dz;
+          if (distance2 < bestDistance2) {
+            bestDistance2 = distance2;
+            bestAnchor = anchor;
+          }
+        }
+        const double distance = std::sqrt(bestDistance2);
+        maxEndpointDistance = std::max(maxEndpointDistance, distance);
+        matchedAnchor.push_back(bestAnchor);
+      }
+      if (maxEndpointDistance > m_truthBHLossMaxEndpointDistance.value()) {
+        error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
+                << " inputTrack=" << inputTrackIndex
+                << " maximum runtime-hit/truth-anchor distance "
+                << maxEndpointDistance << " mm exceeds "
+                << m_truthBHLossMaxEndpointDistance.value() << " mm"
+                << endmsg;
+        for (auto& hit : hits) delete hit.kalHit;
+        return StatusCode::FAILURE;
+      }
+
+      for (std::size_t hitFrom = 0; hitFrom + 1 < hits.size(); ++hitFrom) {
+        const auto firstTruthInterval = matchedAnchor[hitFrom];
+        const auto afterLastTruthInterval = matchedAnchor[hitFrom + 1];
+        if (firstTruthInterval >= afterLastTruthInterval ||
+            afterLastTruthInterval > tupleTruthIntervals.size()) {
+          error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
+                  << " inputTrack=" << inputTrackIndex << " hit="
+                  << hitFrom << "->" << hitFrom + 1
+                  << " has nonmonotonic truth anchors "
+                  << firstTruthInterval << "->"
+                  << afterLastTruthInterval << endmsg;
+          for (auto& hit : hits) delete hit.kalHit;
+          return StatusCode::FAILURE;
+        }
+        double ebremLoss = 0.0;
+        for (std::size_t interval = firstTruthInterval;
+             interval < afterLastTruthInterval; ++interval)
+          ebremLoss += tupleTruthIntervals[interval].ebremLossGeV;
+        const double momentumBefore =
+            tupleTruthIntervals[firstTruthInterval].momentumBeforeGeV;
+        const double retainedFraction = 1.0 - ebremLoss / momentumBefore;
+        if (!std::isfinite(retainedFraction) || retainedFraction <= 0.0 ||
+            retainedFraction > 1.0 ||
+            !tupleTruthRetainedFractions.emplace(
+                truthBHLossKey(static_cast<int>(hitFrom),
+                               static_cast<int>(hitFrom + 1)),
+                retainedFraction).second) {
+          error() << "TruthBHLossInput G4StepTuple event=" << eventIndex
+                  << " inputTrack=" << inputTrackIndex << " hit="
+                  << hitFrom << "->" << hitFrom + 1
+                  << " produced an invalid or duplicate truth interval"
+                  << endmsg;
+          for (auto& hit : hits) delete hit.kalHit;
+          return StatusCode::FAILURE;
+        }
+      }
+      ++m_truthBHLossTupleTracks;
+      m_truthBHLossMaxObservedEndpointDistance = std::max(
+          m_truthBHLossMaxObservedEndpointDistance, maxEndpointDistance);
+      if (m_verboseDump) {
+        info() << "Truth BH-loss G4StepTuple matched event=" << eventIndex
+               << " inputTrack=" << inputTrackIndex << " with "
+               << hits.size() - 1 << " runtime intervals; max endpoint "
+               << "distance=" << maxEndpointDistance << " mm" << endmsg;
+      }
+    }
+
+    const auto& truthRetainedFractions = m_truthBHLossUsesTuple
+        ? tupleTruthRetainedFractions : m_truthBHRetainedFractions;
     auto truthRetainedFraction = [&](int hitFromIndex, int hitToIndex) {
-      return m_truthBHRetainedFractions.at(
+      return truthRetainedFractions.at(
           truthBHLossKey(hitFromIndex, hitToIndex));
     };
     const bool applyTruthBHLossOverride =
         m_truthBHLossOverride.value() &&
-        m_truthBHSelectedTracks.count({eventIndex, inputTrackIndex}) != 0;
+        (m_truthBHLossUsesTuple
+             ? tupleTruthTrack
+             : m_truthBHSelectedTracks.count(
+                   {eventIndex, inputTrackIndex}) != 0);
     if (m_truthBHLossOverride.value() && !applyTruthBHLossOverride) {
       ++m_truthBHLossPassthroughTracks;
       info() << "Truth BH-loss oracle has no rows for event=" << eventIndex
@@ -2045,8 +2203,8 @@ StatusCode RecGsfTracking::execute() {
       for (std::size_t hitFrom = 0; hitFrom + 1 < hits.size(); ++hitFrom) {
         const auto key = truthBHLossKey(
             static_cast<int>(hitFrom), static_cast<int>(hitFrom + 1));
-        if (m_truthBHRetainedFractions.find(key) ==
-            m_truthBHRetainedFractions.end()) {
+        if (truthRetainedFractions.find(key) ==
+            truthRetainedFractions.end()) {
           error() << "TruthBHLossInput has no exact interval for event="
                   << eventIndex << " inputTrack=" << inputTrackIndex
                   << " hitFrom=" << hitFrom << " hitTo=" << hitFrom + 1
@@ -3964,6 +4122,13 @@ StatusCode RecGsfTracking::finalize() {
            << " input tracks had no oracle scope and used the configured BH "
               "model"
            << endmsg;
+    if (m_truthBHLossUsesTuple) {
+      info() << "Truth BH-loss G4StepTuple matched "
+             << m_truthBHLossTupleTracks
+             << " selected input tracks; maximum observed runtime-hit/truth-"
+                "anchor distance was "
+             << m_truthBHLossMaxObservedEndpointDistance << " mm" << endmsg;
+    }
   }
   if (m_materialTransitionStream.is_open()) {
     m_materialTransitionStream.close();
@@ -3973,6 +4138,7 @@ StatusCode RecGsfTracking::finalize() {
   }
   delete m_materialManager;
   m_materialManager = nullptr;
+  m_truthBHLossTupleReader.reset();
   m_detectors.clear();
   if (m_cradle) { m_cradle->SetOwner(true); delete m_cradle; m_cradle = nullptr; }
   return Algorithm::finalize();
