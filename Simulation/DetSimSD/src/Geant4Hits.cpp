@@ -55,12 +55,16 @@ Geant4Hit::Contribution Geant4Hit::extractContribution(G4Step* step) {
 
 /// Default constructor
 Geant4TrackerHit::Geant4TrackerHit()
-  : Geant4Hit(), position(), momentum(), length(0.0), truth(), energyDeposit(0.0) {
+  : Geant4Hit(), position(), momentum(), length(0.0), truth(), energyDeposit(0.0),
+    firstStepNumber(-1), lastStepNumber(-1), hookStepNumber(-1),
+    hookStepFraction(-1.0), hookKind(0), provenanceType(0) {
 }
 
 /// Standard initializing constructor
 Geant4TrackerHit::Geant4TrackerHit(int track_id, int pdg_id, double deposit, double time_stamp)
-  : Geant4Hit(), position(), momentum(), length(0.0), truth(track_id, pdg_id, deposit, time_stamp), energyDeposit(deposit) {
+  : Geant4Hit(), position(), momentum(), length(0.0), truth(track_id, pdg_id, deposit, time_stamp), energyDeposit(deposit),
+    firstStepNumber(-1), lastStepNumber(-1), hookStepNumber(-1),
+    hookStepFraction(-1.0), hookKind(0), provenanceType(0) {
 }
 
 /// Assignment operator
@@ -71,6 +75,12 @@ Geant4TrackerHit& Geant4TrackerHit::operator=(const Geant4TrackerHit& c) {
     length = c.length;
     truth = c.truth;
     energyDeposit = c.energyDeposit;
+    firstStepNumber = c.firstStepNumber;
+    lastStepNumber = c.lastStepNumber;
+    hookStepNumber = c.hookStepNumber;
+    hookStepFraction = c.hookStepFraction;
+    hookKind = c.hookKind;
+    provenanceType = c.provenanceType;
   }
   return *this;
 }
@@ -82,6 +92,12 @@ Geant4TrackerHit& Geant4TrackerHit::clear() {
   length = 0.0;
   truth.clear();
   energyDeposit = 0.0;
+  firstStepNumber = -1;
+  lastStepNumber = -1;
+  hookStepNumber = -1;
+  hookStepFraction = -1.0;
+  hookKind = 0;
+  provenanceType = 0;
   return *this;
 }
 
@@ -96,6 +112,12 @@ Geant4TrackerHit& Geant4TrackerHit::storePoint(G4Step* step, G4StepPoint* pnt) {
   truth.deposit = step->GetTotalEnergyDeposit();
   truth.time = trk->GetGlobalTime();
   energyDeposit = step->GetTotalEnergyDeposit();
+  firstStepNumber = trk->GetCurrentStepNumber();
+  lastStepNumber = trk->GetCurrentStepNumber();
+  hookStepNumber = trk->GetCurrentStepNumber();
+  hookStepFraction = (pnt == step->GetPreStepPoint()) ? 0.0 : 1.0;
+  hookKind = (pnt == step->GetPreStepPoint()) ? 1 : 2;
+  provenanceType = 1;
   position.SetXYZ(pos.x(), pos.y(), pos.z());
   momentum.SetXYZ(mom.x(), mom.y(), mom.z());
   length = 0;
@@ -132,4 +154,3 @@ void* Geant4CalorimeterHit::operator new(size_t) {
 void Geant4CalorimeterHit::operator delete(void *p) {
   CalorimeterHitAllocator->FreeSingle((Geant4CalorimeterHit*) p);
 }
-

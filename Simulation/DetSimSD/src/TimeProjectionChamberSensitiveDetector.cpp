@@ -46,12 +46,17 @@ void TimeProjectionChamberSensitiveDetector::Initialize(G4HCofThisEvent* HCE){
   CumulativeEnergyDeposit = 0.0;
   globalTimeAtPadRingCentre=0.0;
   pathLengthInPadRow=0.0;
+  PadRowFirstStepNumber=-1;
+  PadRowLastStepNumber=-1;
+  PadRowHookStepNumber=-1;
   CumulativePathLength=0.0;
   CrossingOfPadRingCentre.SetXYZ(0,0,0);// = dd4hep::Position(0,0,0);
   MomentumAtPadRingCentre.SetXYZ(0,0,0);// = dd4hep::sim::Momentum(0,0,0);
   
   CumulativeMeanPosition.SetXYZ(0,0,0);// = dd4hep::Position(0,0,0);
   CumulativeMeanMomentum.SetXYZ(0,0,0);// = dd4hep::sim::Momentum(0,0,0);
+  CumulativeFirstStepNumber=-1;
+  CumulativeLastStepNumber=-1;
   
   PreviousPostStepPosition.SetXYZ(0,0,0);// = dd4hep::Position(0,0,0);
   CurrentPDGEncoding=0;
@@ -105,6 +110,11 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
   
   float ptSQRD = Momentum.X()*Momentum.X()+Momentum.Y()*Momentum.Y();
   if( ptSQRD >= (m_lowPtCut*m_lowPtCut) ){
+    const int currentStepNumber = h.track->GetCurrentStepNumber();
+    if (PadRowFirstStepNumber < 0) {
+      PadRowFirstStepNumber = currentStepNumber;
+    }
+    PadRowLastStepNumber = currentStepNumber;
     // Step finishes at a geometric boundry
     if(step->GetPostStepPoint()->GetStepStatus() == fGeomBoundary){
     //if(h.postStepStatus() == "GeomBoundary"){
@@ -119,6 +129,7 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
         dEInPadRow               += h.deposit();
         globalTimeAtPadRingCentre = h.trkTime();
         pathLengthInPadRow       += h.stepLength();
+        PadRowHookStepNumber      = currentStepNumber;
         
         //	    G4cout << "step must have ended on the boundry between these two pad ring halfs" << G4endl;
         //	    G4cout << "CrossingOfPadRingCentre = "   
@@ -155,6 +166,12 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
 	  hit->position      = CrossingOfPadRingCentre;
 	  hit->momentum      = MomentumAtPadRingCentre;
 	  hit->length        = h.stepLength()+pathLengthInPadRow;
+          hit->firstStepNumber = PadRowFirstStepNumber;
+          hit->lastStepNumber = PadRowLastStepNumber;
+          hit->hookStepNumber = PadRowHookStepNumber;
+          hit->hookStepFraction = 1.0;
+          hit->hookKind = 2;
+          hit->provenanceType = 3;
           m_hc->insert(hit);
         }
         
@@ -164,6 +181,9 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
         pathLengthInPadRow        = 0.0;
         CrossingOfPadRingCentre.SetXYZ(0.,0.,0.);
         MomentumAtPadRingCentre.SetXYZ(0.,0.,0.);
+        PadRowFirstStepNumber = -1;
+        PadRowLastStepNumber = -1;
+        PadRowHookStepNumber = -1;
         return true;
       }
     }
@@ -220,6 +240,12 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
 	hit->position      = PostPosition;
 	hit->momentum      = PostMomentum;
 	hit->length        = h.stepLength();
+	hit->firstStepNumber = currentStepNumber;
+	hit->lastStepNumber = currentStepNumber;
+	hit->hookStepNumber = currentStepNumber;
+	hit->hookStepFraction = 1.0;
+	hit->hookKind = 2;
+	hit->provenanceType = 4;
 	m_spaceHC->insert(hit);
 	
         // add dE and pathlegth and return
@@ -300,6 +326,12 @@ void TimeProjectionChamberSensitiveDetector::DepositLowPtHit(){
   hit->position      = CumulativeMeanPosition;
   hit->momentum      = CumulativeMeanMomentum;
   hit->length        = CumulativePathLength;
+  hit->firstStepNumber = CumulativeFirstStepNumber;
+  hit->lastStepNumber = CumulativeLastStepNumber;
+  hit->hookStepNumber = -1;
+  hit->hookStepFraction = -1.0;
+  hit->hookKind = 0;
+  hit->provenanceType = 5;
   m_lowPtHC->insert(hit);
   // reset the cumulative variables after positioning the hit
   ResetCumulativeVariables();
@@ -311,6 +343,8 @@ void TimeProjectionChamberSensitiveDetector::ResetCumulativeVariables(){
   CumulativeNumSteps = 0;
   CumulativeEnergyDeposit = 0;
   CumulativePathLength = 0;
+  CumulativeFirstStepNumber = -1;
+  CumulativeLastStepNumber = -1;
 }
 
 void TimeProjectionChamberSensitiveDetector::CumulateLowPtStep(dd4hep::sim::Geant4StepHandler& h){
@@ -321,6 +355,10 @@ void TimeProjectionChamberSensitiveDetector::CumulateLowPtStep(dd4hep::sim::Gean
   //double           hit_len   = direction.R();
   dd4hep::Position meanMomentum = 0.5*(h.preMom() + h.postMom());
   
+  if (CumulativeNumSteps == 0) {
+    CumulativeFirstStepNumber = h.track->GetCurrentStepNumber();
+  }
+  CumulativeLastStepNumber = h.track->GetCurrentStepNumber();
   ++CumulativeNumSteps;    
   CumulativeMeanPosition   = ( (CumulativeMeanPosition*(CumulativeNumSteps-1)) + meanPosition ) / CumulativeNumSteps;
   CumulativeMeanMomentum   = ( (CumulativeMeanMomentum*(CumulativeNumSteps-1)) + meanMomentum ) / CumulativeNumSteps;

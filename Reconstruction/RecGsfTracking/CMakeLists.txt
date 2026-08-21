@@ -3,6 +3,7 @@ gaudi_add_module(RecGsfTracking
                         src/GsfComponent.cpp
                         src/GsfMixture.cpp
                         src/BetheHeitlerSplitter.cpp
+                        src/TruthBHLossEventData.cpp
                         src/TruthBHLossTupleReader.cpp
                         src/GsfAlgorithm.cpp
                  LINK ${DDKalTest_LIBRARIES}
@@ -12,6 +13,7 @@ gaudi_add_module(RecGsfTracking
                       Gaudi::GaudiKernel
                       k4FWCore::k4FWCore
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
+                      GsfTruthEventData GsfTruthEventDataDict
                       ${LCIO_LIBRARIES}
                       DataHelperLib
                       ${ROOT_LIBRARIES}

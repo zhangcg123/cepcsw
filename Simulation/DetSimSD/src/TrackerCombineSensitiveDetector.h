@@ -76,6 +76,15 @@ namespace dd4hep {
 	hit->position = pos;
 	hit->momentum = path.Unit()*mom.R();
 	hit->length   = hit_len;
+	hit->firstStepNumber = pre.firstStepNumber;
+	hit->lastStepNumber = post.lastStepNumber;
+	// The combined hit represents the midpoint of the complete sensitive
+	// traversal. The exact containing step is resolved by the event writer
+	// from this bounded step range and the persisted hit position.
+	hit->hookStepNumber = -1;
+	hit->hookStepFraction = -1.0;
+	hit->hookKind = 4;
+	hit->provenanceType = 2;
 	clear();
 	c->insert(hit);
 	return hit;

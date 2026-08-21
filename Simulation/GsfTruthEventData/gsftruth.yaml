@@ -1,0 +1,60 @@
+---
+schema_version: 1
+
+options:
+  getSyntax: True
+  exposePODMembers: False
+  includeSubfolder: True
+
+datatypes:
+  gsftruth::G4MaterialStep:
+    Description: "One Geant4 tracker-material step used for GSF truth diagnostics"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t trackID // Geant4 track identifier
+      - std::int32_t parentID // Geant4 parent-track identifier
+      - std::int32_t stepNumber // Geant4 track-local step number
+      - std::int32_t pdg // PDG code of the stepped particle
+      - std::int32_t charge // rounded particle charge
+      - std::int32_t preStepStatus // Geant4 pre-step status
+      - std::int32_t postStepStatus // Geant4 post-step status
+      - std::int32_t processSubtype // subtype of the process defining the post-step point
+      - std::int32_t preVolumeCopyNo // pre-step physical-volume copy number
+      - std::int32_t postVolumeCopyNo // post-step physical-volume copy number
+      - std::int16_t preSensitive // nonzero when the pre-step volume is sensitive
+      - std::int16_t postSensitive // nonzero when the post-step volume is sensitive
+      - edm4hep::Vector3d prePosition // pre-step position [mm]
+      - edm4hep::Vector3d postPosition // post-step position [mm]
+      - edm4hep::Vector3f preMomentum // pre-step momentum [GeV]
+      - edm4hep::Vector3f postMomentum // post-step momentum [GeV]
+      - float momentumLoss // pre-minus-post momentum magnitude [GeV]
+      - float retainedMomentumFraction // post/pre momentum magnitude
+      - float preKineticEnergy // pre-step kinetic energy [GeV]
+      - float postKineticEnergy // post-step kinetic energy [GeV]
+      - float energyDeposit // total deposited energy [GeV]
+      - float nonIonizingEnergyDeposit // non-ionizing deposited energy [GeV]
+      - float stepLength // Geant4 step length [mm]
+      - float materialRadiationLength // pre-step material radiation length [mm]
+      - float stepTX0 // step length divided by material radiation length
+      - float preTrackLength // accumulated track length at the pre-step point [mm]
+      - float postTrackLength // accumulated track length at the post-step point [mm]
+      - float preGlobalTime // pre-step global time [ns]
+      - float postGlobalTime // post-step global time [ns]
+
+  gsftruth::SimTrackerHitG4StepLink:
+    Description: "Exact Geant4 step provenance of one EDM4hep SimTrackerHit"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t trackID // Geant4 track identifier
+      - std::int32_t firstStepNumber // first contributing Geant4 step
+      - std::int32_t lastStepNumber // last contributing Geant4 step
+      - std::int32_t hookStepNumber // step containing the SimTrackerHit measurement hook
+      - std::int16_t hookKind // 0 unknown, 1 pre-point, 2 post-point, 3 step midpoint, 4 traversal midpoint
+      - float hookFraction // fraction from pre to post point in hookStep, or -1 when unresolved
+      - std::int16_t provenanceType // 1 per-step, 2 combined traversal, 3 TPC pad row, 4 TPC space point, 5 TPC low-pT accumulation
+      - std::int32_t status // provenance validity bit mask
+    OneToOneRelations:
+      - edm4hep::SimTrackerHit simHit // exact simulated hit created from the transient Geant4 hit
+      - gsftruth::G4MaterialStep firstStep // first stored contributing step when available
+      - gsftruth::G4MaterialStep lastStep // last stored contributing step when available
+      - gsftruth::G4MaterialStep hookStep // stored measurement-hook step when available

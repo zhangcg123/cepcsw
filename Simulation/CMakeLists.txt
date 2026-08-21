@@ -1,4 +1,5 @@
 
+add_subdirectory(GsfTruthEventData)
 add_subdirectory(DetSimAna)
 add_subdirectory(DetSimCore)
 add_subdirectory(DetSimDedx)

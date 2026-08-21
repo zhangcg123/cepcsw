@@ -31,6 +31,12 @@ A separate default-off truth BH-loss oracle can replace existing BH-call
 responses on explicitly selected tracks while leaving the downstream GSF
 workflow unchanged. It is a mechanism diagnostic only and never production
 steering.
+The normal simulation event can now optionally embed exact
+`SimTrackerHit -> Geant4-step` provenance in two PODIO collections. The
+default-off oracle's current batch source follows the standard reconstructed-
+hit truth associations into those collections, so the maintained workflow no
+longer requires a side material tuple. The CSV and `G4StepTuple` readers remain
+historical controls.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
@@ -196,11 +202,15 @@ the current 1,000-event material/BH diagnostic. The algorithm and reverse-
 template defaults remain empty/off; this nonempty maintained-card value is
 campaign steering, not a compiled-default change.
 `TruthBHLossOverride=false` remains the compiled, reverse-template, and
-maintained `gsf.py.bk` base value. The current 1,000-event submission passes
-`truth_bh_override=true`; `dump_gsftrk.sh` rewrites each generated per-job card
-to true, reads `G4StepTuple` from the same job's material tuple, uses input
-track 0 with a 5 mm endpoint guard, and tags GSF/flat/audit outputs with
-`truth-bh`. This campaign steering is not a production-default change.
+maintained `gsf.py.bk` base value. A truth-on batch submission passes
+`truth_bh_override=true`; `dump_gsftrk.sh` then rewrites each generated per-job
+card to true and reads the embedded `GsfG4MaterialSteps` and
+`GsfSimTrackerHitG4StepLinks` collections through the event's exact tracker-hit
+associations, uses input track 0 with a 5 mm integrity guard, and tags
+GSF/flat/audit outputs with `truth-bh`. The standard simulation writer creates
+the collections; `trk`, `calodigi`, and `rec` preserve them. No side material
+tuple is part of this maintained workflow. This campaign steering is not a
+production-default change.
 CSV-selected tracks still require every exact consecutive accepted-hit
 interval, while zero-row tracks are logged and use ordinary BH throughout.
 Truth mapping remains all-or-nothing, but event/track validation failures no
@@ -296,15 +306,25 @@ Current boundary evidence and definitions:
 - The default-off truth BH-loss oracle replaces each already executed BH
   response on a truth-selected track with one unit-weight child at the matched
   Geant4 eBrem retained fraction, then runs the unchanged downstream workflow.
-  The original strict CSV source remains available. The in-process
-  `G4StepTuple` source lazily reads one event at a time, reconstructs the
-  recorder's sensitive-midpoint intervals, strictly matches them to ordered
-  accepted hits on one configured `CompleteTracks` index, and invalidates the
-  whole truth scope on a missing/ambiguous primary, nonphysical loss,
-  nonmonotonic match, excessive endpoint distance, or incomplete runtime
-  coverage. An invalid scope uses ordinary BH for the whole track and emits a
-  negative status instead of failing the event. It is batch plumbing for the
-  same diagnostic, not new truth logic.
+  The current `EventData` source follows each accepted reconstructed hit
+  through its standard truth association to the exact `SimTrackerHit`, then
+  through an embedded link to the exact Geant4 step range and hook. Spatial
+  distance is only an integrity guard; it does not choose the truth hit or
+  step. Missing, ambiguous, incomplete, nonmonotonic, or nonphysical selected-
+  track provenance invalidates the whole truth scope. An invalid scope uses
+  ordinary BH for the whole track and emits a negative status instead of
+  failing the event. The original strict CSV and side-file `G4StepTuple`
+  sources remain available for historical reproduction. They are batch
+  plumbing for the same diagnostic, not new truth logic.
+  A one-event 2 GeV, 85 degree mechanical chain persisted 629 selected Geant4
+  steps and 233 complete SimTrackerHit links, preserved both counts through
+  tracking, calorimeter digitization, and calorimeter reconstruction, then
+  read the reconstructed event, exactly matched 231 accepted-hit anchors, and
+  closed 18 oracle calls with status 1. No side material tuple was produced,
+  and a truth-off historical input without the new collections still ran.
+  A forced 0.1 mm endpoint-guard failure also completed with ordinary BH,
+  replaced zero calls, and persisted status -2. This is a mechanism gate, not
+  population validation.
   The focused five-event gate closed all 80 oracle calls. A same-code fixed
   60-event topology-clear stress/control A/B then closed 1,156 calls and
   reduced all-panel mean absolute pT residual from 4.646% to 2.052%, its 68%
@@ -443,6 +463,10 @@ gate, and batch steering are preserved in
 The invalid-scope ordinary-BH fallback, EDM/flat/audit validity contract, and
 focused positive/negative controls are preserved in
 `agents_record/2026-08-22-truth-bh-invalid-scope-fallback-and-validity-tag.md`.
+The embedded PODIO data model, exact SimTrackerHit-to-Geant4-step provenance,
+maintained no-side-tuple workflow, EventData oracle source, and one-event
+mechanical validation are preserved in
+`agents_record/2026-08-22-embedded-simhit-g4-step-event-provenance.md`.
 The production-scale eventwise join, valid-path closure, unresolved coverage
 population, split-threshold accounting, BH-response calibration, and revised
 ordered investigation are preserved in

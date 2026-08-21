@@ -64,6 +64,12 @@ DriftChamberSensitiveDetector::ProcessHits(G4Step* step, G4TouchableHistory*) {
     hit->position = position;
     hit->momentum = (h.preMom() + h.postMom() )/2;
     hit->length   = hit_len;
+    hit->firstStepNumber = h.track->GetCurrentStepNumber();
+    hit->lastStepNumber = h.track->GetCurrentStepNumber();
+    hit->hookStepNumber = h.track->GetCurrentStepNumber();
+    hit->hookStepFraction = 0.5;
+    hit->hookKind = 3;
+    hit->provenanceType = 1;
     m_hc->insert(hit);
 
     return true;

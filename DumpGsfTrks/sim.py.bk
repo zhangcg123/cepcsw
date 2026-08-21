@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import os
+import sys
 from Gaudi.Configuration import *
 
+tuplepath = ""
 momenta_low = 12340
 theta_low = 12340
 inputseed = 12340
@@ -60,10 +62,10 @@ gun.PositionXs = [0]
 gun.PositionYs = [0]
 gun.PositionZs = [0]
 gun.Particles = [particlename]
-gun.EnergyMins = [momenta_low]
-gun.EnergyMaxs = [momenta_low]
-gun.ThetaMins  = [theta_low]
-gun.ThetaMaxs  = [theta_low]
+gun.EnergyMins = [10]
+gun.EnergyMaxs = [50]
+gun.ThetaMins  = [40]
+gun.ThetaMaxs  = [140]
 gun.PhiMins    = [0]
 gun.PhiMaxs    = [360]
 
@@ -89,6 +91,10 @@ from Configurables import Edm4hepWriterAnaElemTool
 edm4hep_writer = Edm4hepWriterAnaElemTool("Edm4hepWriterAnaElemTool")
 edm4hep_writer.TrackerCollections = ["VXD", "ITKBarrel", "ITKEndcap", "TPC", "TPCLowPt", "TPCSpacePoint",
                                      "OTKBarrel", "OTKEndcap", "COIL", "MuonBarrel", "MuonEndcap"]
+edm4hep_writer.WriteGsfTruthEventData = True
+edm4hep_writer.GsfTruthPDGs = [11, -11, 13, -13]
+edm4hep_writer.GsfTruthPrimaryOnly = True
+edm4hep_writer.GsfTruthTrackerOnly = True
 
 from Configurables import DetSimAlg
 detsimalg = DetSimAlg("DetSimAlg")
@@ -100,7 +106,7 @@ detsimalg.RunCmds = [
 detsimalg.AnaElems = [
     # example_anatool.name()
     # "ExampleAnaElemTool"
-    "Edm4hepWriterAnaElemTool"
+    "Edm4hepWriterAnaElemTool",
 ]
 detsimalg.RootDetElem = "WorldDetElemTool"
 
@@ -139,7 +145,7 @@ evtseeder = MarlinEvtSeeder("EventSeeder")
 # output
 from Configurables import PodioOutput
 out = PodioOutput("outputalg")
-out.filename = "sim_v01.root"
+out.filename = os.path.join(tuplepath, "sim_v01.root")
 out.outputCommands = ["keep *"]
 
 # ApplicationMgr

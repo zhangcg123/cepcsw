@@ -146,6 +146,19 @@ namespace dd4hep {
       Contribution truth;
       /// Energy deposit of the hit
       double energyDeposit;
+      /// First and last Geant4 track-local steps contributing to this hit.
+      int firstStepNumber;
+      int lastStepNumber;
+      /// Step containing the measurement hook represented by the hit.
+      int hookStepNumber;
+      /// Position of the hook within hookStep: 0=pre, 1=post, 0.5=midpoint.
+      double hookStepFraction;
+      /// Hook convention: 0 unknown, 1 pre, 2 post, 3 step midpoint,
+      /// 4 combined sensitive-traversal midpoint.
+      int hookKind;
+      /// Provenance producer: 1 per-step, 2 combined traversal, 3 TPC pad
+      /// row, 4 TPC space point, 5 TPC low-pT accumulation.
+      int provenanceType;
 
     public:
       /// Default constructor

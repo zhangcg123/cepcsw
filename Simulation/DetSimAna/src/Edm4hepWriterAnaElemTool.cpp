@@ -1,8 +1,14 @@
 #include "Edm4hepWriterAnaElemTool.h"
 
 #include "G4Step.hh"
+#include "G4StepPoint.hh"
 #include "G4Event.hh"
 #include "G4THitsCollection.hh"
+#include "G4LogicalVolume.hh"
+#include "G4Material.hh"
+#include "G4ParticleDefinition.hh"
+#include "G4Track.hh"
+#include "G4VPhysicalVolume.hh"
 #include "G4EventManager.hh"
 #include "G4TrackingManager.hh"
 #include "G4SteppingManager.hh"
@@ -18,7 +24,20 @@
 
 #include "edm4hep/EDM4hepVersion.h"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <set>
+#include <utility>
+
 DECLARE_COMPONENT(Edm4hepWriterAnaElemTool)
+
+namespace {
+bool isSensitiveVolume(const G4VPhysicalVolume* volume) {
+    return volume && volume->GetLogicalVolume() &&
+           volume->GetLogicalVolume()->GetSensitiveDetector();
+}
+}
 
 void
 Edm4hepWriterAnaElemTool::BeginOfRunAction(const G4Run*) {
@@ -124,6 +143,7 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
 
     // reset
     m_track2primary.clear();
+    m_gsfTruthSteps.clear();
  
 }
 
@@ -131,6 +151,92 @@ void
 Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
 
     msg() << "mcCol size (after simulation) : " << mcCol->size() << endmsg;
+
+    gsftruth::SimTrackerHitG4StepLinkCollection* gsfTruthLinks = nullptr;
+    std::map<std::pair<int, int>, gsftruth::G4MaterialStep> gsfTruthStepByKey;
+    std::set<int> gsfTruthTrackIDs;
+    if (m_writeGsfTruthEventData.value()) {
+        auto* gsfTruthSteps = m_gsfTruthStepCol.createAndPut();
+        gsfTruthLinks = m_gsfTruthLinkCol.createAndPut();
+        for (const auto& record : m_gsfTruthSteps) {
+            auto stored = gsfTruthSteps->create();
+            stored.setTrackID(record.trackID);
+            stored.setParentID(record.parentID);
+            stored.setStepNumber(record.stepNumber);
+            stored.setPdg(record.pdg);
+            stored.setCharge(record.charge);
+            stored.setPreStepStatus(record.preStepStatus);
+            stored.setPostStepStatus(record.postStepStatus);
+            stored.setProcessSubtype(record.processSubtype);
+            stored.setPreVolumeCopyNo(record.preVolumeCopyNo);
+            stored.setPostVolumeCopyNo(record.postVolumeCopyNo);
+            stored.setPreSensitive(record.preSensitive);
+            stored.setPostSensitive(record.postSensitive);
+            stored.setPrePosition(record.prePosition);
+            stored.setPostPosition(record.postPosition);
+            stored.setPreMomentum(record.preMomentum);
+            stored.setPostMomentum(record.postMomentum);
+            stored.setMomentumLoss(record.momentumLoss);
+            stored.setRetainedMomentumFraction(record.retainedMomentumFraction);
+            stored.setPreKineticEnergy(record.preKineticEnergy);
+            stored.setPostKineticEnergy(record.postKineticEnergy);
+            stored.setEnergyDeposit(record.energyDeposit);
+            stored.setNonIonizingEnergyDeposit(record.nonIonizingEnergyDeposit);
+            stored.setStepLength(record.stepLength);
+            stored.setMaterialRadiationLength(record.materialRadiationLength);
+            stored.setStepTX0(record.stepTX0);
+            stored.setPreTrackLength(record.preTrackLength);
+            stored.setPostTrackLength(record.postTrackLength);
+            stored.setPreGlobalTime(record.preGlobalTime);
+            stored.setPostGlobalTime(record.postGlobalTime);
+            gsfTruthStepByKey.emplace(
+                std::make_pair(record.trackID, record.stepNumber),
+                static_cast<gsftruth::G4MaterialStep>(stored));
+            gsfTruthTrackIDs.insert(record.trackID);
+        }
+    }
+
+    const auto resolveTraversalHook = [&](const dd4hep::sim::Geant4TrackerHit& hit,
+                                          int& hookStepNumber,
+                                          float& hookFraction) {
+        if (hookStepNumber >= 0 || hit.hookKind != 4 ||
+            hit.firstStepNumber < 0 || hit.lastStepNumber < hit.firstStepNumber) {
+            return;
+        }
+        const double hx = hit.position.x() / CLHEP::mm;
+        const double hy = hit.position.y() / CLHEP::mm;
+        const double hz = hit.position.z() / CLHEP::mm;
+        double bestDistance2 = std::numeric_limits<double>::infinity();
+        for (const auto& record : m_gsfTruthSteps) {
+            if (record.trackID != hit.truth.trackID ||
+                record.stepNumber < hit.firstStepNumber ||
+                record.stepNumber > hit.lastStepNumber) {
+                continue;
+            }
+            const double dx = record.postPosition.x - record.prePosition.x;
+            const double dy = record.postPosition.y - record.prePosition.y;
+            const double dz = record.postPosition.z - record.prePosition.z;
+            const double length2 = dx * dx + dy * dy + dz * dz;
+            double fraction = 0.0;
+            if (length2 > 0.0) {
+                fraction = ((hx - record.prePosition.x) * dx +
+                            (hy - record.prePosition.y) * dy +
+                            (hz - record.prePosition.z) * dz) / length2;
+                fraction = std::clamp(fraction, 0.0, 1.0);
+            }
+            const double cx = record.prePosition.x + fraction * dx;
+            const double cy = record.prePosition.y + fraction * dy;
+            const double cz = record.prePosition.z + fraction * dz;
+            const double distance2 = (hx - cx) * (hx - cx) +
+                                     (hy - cy) * (hy - cy) +
+                                     (hz - cz) * (hz - cz);
+            if (distance2 < bestDistance2) {
+                bestDistance2 = distance2;
+                hookStepNumber = record.stepNumber;
+                hookFraction = static_cast<float>(fraction);
+            }
+        }
+    };
 
     // Note about this part: DD4hep readout name is same to the collection name in Geant4.
     // However, some collections are created in Geant4 only, which should be also saved into EDM4hep.
@@ -307,6 +413,49 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
                     if (pritrkid != trackID) {
                         // If the track is a secondary, then the primary track id and current track id is different
                         edm_trk_hit.setProducedBySecondary(true);
+                    }
+
+                    if (gsfTruthLinks && gsfTruthTrackIDs.count(trackID) != 0) {
+                        int hookStepNumber = trk_hit->hookStepNumber;
+                        float hookFraction = static_cast<float>(trk_hit->hookStepFraction);
+                        resolveTraversalHook(*trk_hit, hookStepNumber, hookFraction);
+
+                        auto link = gsfTruthLinks->create();
+                        link.setTrackID(trackID);
+                        link.setFirstStepNumber(trk_hit->firstStepNumber);
+                        link.setLastStepNumber(trk_hit->lastStepNumber);
+                        link.setHookStepNumber(hookStepNumber);
+                        link.setHookKind(static_cast<std::int16_t>(trk_hit->hookKind));
+                        link.setHookFraction(hookFraction);
+                        link.setProvenanceType(
+                            static_cast<std::int16_t>(trk_hit->provenanceType));
+                        link.setSimHit(edm_trk_hit);
+
+                        int status = 0;
+                        if (trk_hit->firstStepNumber >= 0 &&
+                            trk_hit->lastStepNumber >= trk_hit->firstStepNumber) {
+                            status |= 1 << 0;
+                        }
+                        const auto first = gsfTruthStepByKey.find(
+                            {trackID, trk_hit->firstStepNumber});
+                        if (first != gsfTruthStepByKey.end()) {
+                            link.setFirstStep(first->second);
+                            status |= 1 << 1;
+                        }
+                        const auto last = gsfTruthStepByKey.find(
+                            {trackID, trk_hit->lastStepNumber});
+                        if (last != gsfTruthStepByKey.end()) {
+                            link.setLastStep(last->second);
+                            status |= 1 << 2;
+                        }
+                        if (hookStepNumber >= 0) status |= 1 << 3;
+                        const auto hook = gsfTruthStepByKey.find(
+                            {trackID, hookStepNumber});
+                        if (hook != gsfTruthStepByKey.end()) {
+                            link.setHookStep(hook->second);
+                            status |= 1 << 4;
+                        }
+                        link.setStatus(status);
                     }
                 }
 
@@ -605,6 +754,9 @@ Edm4hepWriterAnaElemTool::PostUserTrackingAction(const G4Track* track) {
 
 void
 Edm4hepWriterAnaElemTool::UserSteppingAction(const G4Step* aStep) {
+    if (m_writeGsfTruthEventData.value()) {
+        recordGsfTruthStep(aStep);
+    }
     auto aTrack = aStep->GetTrack();
     // try to get user track info
     auto trackinfo = dynamic_cast<CommonUserTrackInfo*>(aTrack->GetUserInformation());
@@ -634,6 +786,94 @@ Edm4hepWriterAnaElemTool::UserSteppingAction(const G4Step* aStep) {
                     << endmsg;
         }
     }
+}
+
+bool Edm4hepWriterAnaElemTool::acceptGsfTruthPdg(int pdg) const {
+    return std::find(m_gsfTruthPdgs.value().begin(),
+                     m_gsfTruthPdgs.value().end(), pdg) !=
+           m_gsfTruthPdgs.value().end();
+}
+
+bool Edm4hepWriterAnaElemTool::insideGsfTruthTracker(
+    const G4ThreeVector& position) const {
+    if (R <= 0.0 || Z <= 0.0) return true;
+    return position.perp() < R && std::fabs(position.z()) < Z;
+}
+
+void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
+    if (!step || !step->GetTrack()) return;
+    const auto* track = step->GetTrack();
+    const auto* particle = track->GetDefinition();
+    const auto* pre = step->GetPreStepPoint();
+    const auto* post = step->GetPostStepPoint();
+    if (!particle || !pre || !post) return;
+    if (!acceptGsfTruthPdg(particle->GetPDGEncoding())) return;
+    if (m_gsfTruthPrimaryOnly.value() && track->GetParentID() != 0) return;
+    if (m_gsfTruthTrackerOnly.value() &&
+        !insideGsfTruthTracker(pre->GetPosition()) &&
+        !insideGsfTruthTracker(post->GetPosition())) {
+        return;
+    }
+
+    GsfTruthStepRecord record;
+    record.trackID = track->GetTrackID();
+    record.parentID = track->GetParentID();
+    record.stepNumber = track->GetCurrentStepNumber();
+    record.pdg = particle->GetPDGEncoding();
+    record.charge = static_cast<int>(std::lround(particle->GetPDGCharge()));
+    record.preStepStatus = static_cast<int>(pre->GetStepStatus());
+    record.postStepStatus = static_cast<int>(post->GetStepStatus());
+    const auto* process = post->GetProcessDefinedStep();
+    record.processSubtype = process ? process->GetProcessSubType() : 0;
+    const auto* preVolume = pre->GetPhysicalVolume();
+    const auto* postVolume = post->GetPhysicalVolume();
+    record.preVolumeCopyNo = preVolume ? preVolume->GetCopyNo() : 0;
+    record.postVolumeCopyNo = postVolume ? postVolume->GetCopyNo() : 0;
+    record.preSensitive = isSensitiveVolume(preVolume) ? 1 : 0;
+    record.postSensitive = isSensitiveVolume(postVolume) ? 1 : 0;
+
+    const auto& prePosition = pre->GetPosition();
+    const auto& postPosition = post->GetPosition();
+    record.prePosition = edm4hep::Vector3d(
+        prePosition.x() / CLHEP::mm,
+        prePosition.y() / CLHEP::mm,
+        prePosition.z() / CLHEP::mm);
+    record.postPosition = edm4hep::Vector3d(
+        postPosition.x() / CLHEP::mm,
+        postPosition.y() / CLHEP::mm,
+        postPosition.z() / CLHEP::mm);
+
+    const auto& preMomentum = pre->GetMomentum();
+    const auto& postMomentum = post->GetMomentum();
+    record.preMomentum = edm4hep::Vector3f(
+        preMomentum.x() / CLHEP::GeV,
+        preMomentum.y() / CLHEP::GeV,
+        preMomentum.z() / CLHEP::GeV);
+    record.postMomentum = edm4hep::Vector3f(
+        postMomentum.x() / CLHEP::GeV,
+        postMomentum.y() / CLHEP::GeV,
+        postMomentum.z() / CLHEP::GeV);
+    const double preP = preMomentum.mag() / CLHEP::GeV;
+    const double postP = postMomentum.mag() / CLHEP::GeV;
+    record.momentumLoss = static_cast<float>(preP - postP);
+    record.retainedMomentumFraction =
+        preP > 0.0 ? static_cast<float>(postP / preP) : 0.0f;
+    record.preKineticEnergy = pre->GetKineticEnergy() / CLHEP::GeV;
+    record.postKineticEnergy = post->GetKineticEnergy() / CLHEP::GeV;
+    record.energyDeposit = step->GetTotalEnergyDeposit() / CLHEP::GeV;
+    record.nonIonizingEnergyDeposit =
+        step->GetNonIonizingEnergyDeposit() / CLHEP::GeV;
+    record.stepLength = step->GetStepLength() / CLHEP::mm;
+    const auto* material = pre->GetMaterial();
+    record.materialRadiationLength =
+        material ? material->GetRadlen() / CLHEP::mm : 0.0f;
+    record.stepTX0 = record.materialRadiationLength > 0.0f
+        ? record.stepLength / record.materialRadiationLength : 0.0f;
+    record.postTrackLength = track->GetTrackLength() / CLHEP::mm;
+    record.preTrackLength = record.postTrackLength - record.stepLength;
+    record.preGlobalTime = pre->GetGlobalTime() / CLHEP::ns;
+    record.postGlobalTime = post->GetGlobalTime() / CLHEP::ns;
+    m_gsfTruthSteps.push_back(record);
 }
 
 StatusCode
@@ -672,5 +912,4 @@ Edm4hepWriterAnaElemTool::finalize() {
 
     return sc;
 }
-
 

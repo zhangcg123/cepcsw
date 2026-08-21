@@ -5,6 +5,7 @@ gaudi_add_module(DetSimAna
                          src/GsfMaterialStepRecorderAnaElemTool.cpp
                  LINK DetSimInterface
                       DetSimSDLib
+                      GsfTruthEventData GsfTruthEventDataDict
                       ${DD4hep_COMPONENT_LIBRARIES} 
                       Gaudi::GaudiKernel
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict

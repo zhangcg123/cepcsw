@@ -22,9 +22,6 @@ evtmax = 12340
 inputseed = 12340
 particle = 12340
 inputfilename = os.path.join(tuplepath, "trk_v01.root")
-# Per-job Geant4 material-step truth written by sim.py.bk.  The batch worker
-# replaces this basename with the same sample-qualified name used in simulation.
-truthbhinputfilename = os.path.join(tuplepath, "gsf_material_steps.root")
 
 # Explicit workflow selection. Change this source line to "smoother",
 # "reverse", or "cms-like"; no environment-variable override is used.
@@ -78,16 +75,23 @@ gsf.BHSplitThreshold = 1.0e-4
 
 # Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. This template
 # keeps the explicit off-side value; dump_gsftrk.sh replaces it from its
-# truth_bh_override argument, and the current submission passes true. When
-# enabled, it maps the primary-electron truth to CompleteTracks index 0. Every
-# accepted-hit interval must match ordered sensitive-midpoint anchors within
-# the guard. An invalid scope uses ordinary BH for the whole track and is tagged
-# in GSFTruthBHLossStatus, the flat tuple, and the BH audit.
+# truth_bh_override argument for an explicitly truth-on submission. When
+# enabled, it maps CompleteTracks index 0 through the standard tracker-hit
+# associations to the embedded SimTrackerHit-to-Geant4-step provenance. Every
+# accepted-hit endpoint must pass the configured integrity guard. An invalid
+# scope uses ordinary BH for the whole track and is tagged in
+# GSFTruthBHLossStatus, the flat tuple, and the BH audit. No side material ROOT
+# file is read by this EventData source.
 gsf.TruthBHLossOverride = False
-gsf.TruthBHLossSource = "G4StepTuple"
-gsf.TruthBHLossInput = truthbhinputfilename
+gsf.TruthBHLossSource = "EventData"
+gsf.TruthBHLossInput = ""
 gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
+if gsf.TruthBHLossOverride and gsf.TruthBHLossSource.lower() == "eventdata":
+    podioinput.collections += [
+        "GsfG4MaterialSteps",
+        "GsfSimTrackerHitG4StepLinks",
+    ]
 
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0

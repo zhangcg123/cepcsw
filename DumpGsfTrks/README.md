@@ -1,46 +1,76 @@
-# GSF Event Production and Geant4 Material-Step Tuples
+# GSF event-production workflow
 
-This directory contains template cards used by the historical three-stage
+This directory contains the maintained cards for the five-stage
 single-particle workflow:
 
 ```text
 particle gun + Geant4 simulation
   -> sim-<particle>-<pT>-<theta>-<seed>.root
-  -> gsf_material_steps-<particle>-<pT>-<theta>-<seed>.root
   -> digitization and tracking
   -> trk-<particle>-<pT>-<theta>-<seed>.root (CompleteTracks)
+  -> calorimeter digitization
+  -> calodigi-<particle>-<pT>-<theta>-<seed>.root
+  -> calorimeter reconstruction
+  -> rec-<particle>-<pT>-<theta>-<seed>.root
   -> GSF refit
   -> GSF EDM and flat tuples
 ```
 
-The material-step tuple is produced during simulation, not during tracking or
-GSF refitting. The current batch orchestration is stale and must not be used
-unchanged for a new production campaign; see the review findings below.
+The simulation event itself carries the optional truth-diagnostic provenance.
+`keep *` preserves it through tracking and calorimeter processing, so the GSF
+truth-oracle control needs no side ROOT tuple or event-number join. The normal
+GSF remains truth-blind; only the explicit default-off
+`TruthBHLossOverride=true`, `TruthBHLossSource="EventData"` control reads it.
 
-## Authoritative recorder
+## Embedded Geant4 truth provenance
 
-The implementation is:
+The implementation spans:
 
 ```text
-Simulation/DetSimAna/src/GsfMaterialStepRecorderAnaElemTool.h
-Simulation/DetSimAna/src/GsfMaterialStepRecorderAnaElemTool.cpp
+Simulation/GsfTruthEventData/gsftruth.yaml
+Simulation/DetSimSD/include/DetSimSD/Geant4Hits.h
+Simulation/DetSimAna/src/Edm4hepWriterAnaElemTool.{h,cpp}
 ```
 
-It is registered as `GsfMaterialStepRecorderAnaElemTool` and called through
-`DetSimAlg.AnaElems`. It writes a ROOT file in `RECREATE` mode containing one
-`g4step_tuple` entry per Geant4 event. Step quantities are stored in vectors;
-`step_count` is their common length.
+With `Edm4hepWriterAnaElemTool.WriteGsfTruthEventData=True`, simulation writes
+two PODIO collections into the ordinary event:
 
-For each accepted `G4Step`, the recorder stores:
+- `GsfG4MaterialSteps`: selected Geant4 pre/post material steps;
+- `GsfSimTrackerHitG4StepLinks`: one relation from a persisted
+  `SimTrackerHit` to its exact contributing step range and measurement hook.
 
-- run, event, track, parent, primary, and track-step identifiers;
-- pre/post/midpoint positions and pre/post momentum vectors;
-- `loss = pre_p - post_p`, `dp = post_p - pre_p`, and
-  `retained = post_p/pre_p`;
-- kinetic-energy change, deposited energy, step length, material radiation
-  length, and `step_tX0 = step_length/material_radlen`;
-- material, process name/subtype, volume/copy number, sensitive flag, and full
-  pre/post touchable path.
+The transient detector hit records the first/last contributing Geant4 step
+and the hook convention when the hit is made. Combined silicon hits expose a
+bounded contributing-step range; the writer resolves their traversal-midpoint
+hook only inside that exact range. TPC pad-row hits record their center-crossing
+step directly. The GSF then follows
+
+```text
+CompleteTracks TrackerHit
+  -> MCRecoTrackerAssociation
+  -> exact SimTrackerHit
+  -> GsfSimTrackerHitG4StepLink
+  -> ordered GsfG4MaterialSteps
+```
+
+No nearest-hit or global distance search chooses the truth correspondence. The
+configured 5 mm distance remains only an integrity guard between the accepted
+reconstructed hit and its already-associated exact G4 hook.
+
+For each selected `G4Step`, `GsfG4MaterialSteps` stores:
+
+- Geant4 track, parent, track-local step, PDG, and charge identifiers;
+- pre/post positions and momentum vectors, `momentumLoss = pre_p - post_p`,
+  and `retainedMomentumFraction = post_p/pre_p`;
+- pre/post kinetic energy, total and non-ionizing deposited energy, step
+  length, pre-material radiation length, and
+  `stepTX0 = stepLength/materialRadiationLength`;
+- process subtype, pre/post volume copy numbers, sensitive flags, step
+  statuses, accumulated track lengths, and global times.
+
+Run and event identity come from the containing PODIO frame. Material names
+and touchable paths remain available only in the legacy side recorder; they
+are not duplicated in this compact event-data model.
 
 This is the authoritative material-loss truth for GSF/BH studies.
 `SimTrackerHit::getMomentum()` remains a sensitive-hit cross-check and is not a
@@ -48,94 +78,84 @@ pre/post-material-step pair.
 
 ### Selection semantics
 
-The production-oriented settings in `sim.py.bk` and the maintained smoke-test
-card are:
+The maintained settings in `sim.py.bk` are:
 
 ```python
-steprec.PDGs = [11, -11]
-steprec.PrimaryOnly = True
-steprec.TrackerOnly = True
-steprec.MinStepLengthMm = 0.0
-steprec.MinAbsLossGeV = 0.0
-steprec.RecordZeroLoss = True
+edm4hep_writer.WriteGsfTruthEventData = True
+edm4hep_writer.GsfTruthPDGs = [11, -11, 13, -13]
+edm4hep_writer.GsfTruthPrimaryOnly = True
+edm4hep_writer.GsfTruthTrackerOnly = True
 ```
 
 Important interpretations:
 
-- `PrimaryOnly=True` records the primary electron/positron only. It excludes
-  secondary electrons and photons, but the primary's momentum change across
-  an eBrem step is retained.
-- `TrackerOnly=True` is a geometric cylinder cut using
-  `tracker_region_rmax/zmax`. It is not a test that the current volume is a
-  tracker subdetector. Material inside those bounds can be recorded.
+- `GsfTruthPrimaryOnly=True` records only primary tracks with a configured PDG.
+  It excludes secondary electrons and photons, but the primary's momentum
+  change across an eBrem step is retained.
+- `GsfTruthTrackerOnly=True` uses the writer's tracker envelope. It is not a
+  sensitive-volume test; support and gap material inside that envelope remains
+  available between tracker hits.
 - A step is retained when either endpoint is inside that cylinder.
-- Zero-loss and momentum-gain steps are retained with the current settings.
-  Physics analyses must select the desired particle, process, ancestry, and
-  volume at the same vector index.
+- Zero-loss and momentum-gain steps are retained. Physics analyses must select
+  the desired particle, process, and ancestry.
 - `step_tX0` uses the Geant4 step length and the pre-step material radiation
   length. Geant4 limits a material-boundary step to its current material, so
   this is the appropriate local convention.
-- `event_id` restarts in each job. Use `(production point, seed/file,
-  event_id)` as the event identity; never join different files on `event_id`
-  alone.
+- Relations are event-local PODIO object relations, so no `event_id` join is
+  involved.
+
+### Legacy side recorder
+
+`Simulation/DetSimAna/src/GsfMaterialStepRecorderAnaElemTool.{h,cpp}` remains
+available only for reproducing historical `G4StepTuple` studies. It is not in
+`sim.py.bk`, `DetSimAlg.AnaElems`, or the maintained batch dependency chain.
+When explicitly configured, it writes `g4step_tuple` in `RECREATE` mode with
+vector branches for run/event/track identifiers, pre/post/midpoint positions,
+momenta and retained fraction, energy deposits, local `step_tX0`, material and
+process labels, sensitive flags, and touchable paths. Its `event_id` restarts
+per job, so historical joins require the file/sample identity as well. The
+legacy analyzer remains
+`G4MaterialStepComparison/scripts/analyze_g4step_tuple.py`. This compatibility
+path does not justify generating a side tuple for the current workflow.
 
 ## Maintained smoke test
 
-Use the environment-configurable card below to verify a build before mass
-production:
+Run one complete event before mass production:
 
 ```bash
 source setup.sh
-GSF_STEPREC_EVTMAX=5 \
-GSF_STEPREC_SEED=1 \
-GSF_STEPREC_ENERGY_GEV=2.00764 \
-GSF_STEPREC_THETA_DEG=85 \
-GSF_STEPREC_OUTPUT=/tmp/gsf-material-steps-e2pt-theta85-seed1.root \
-GSF_STEPREC_EDM_OUTPUT=/tmp/sim-e2pt-theta85-seed1.root \
-build.105.0.0.x86_64-el9-gcc11-opt/run gaudirun.py \
-  Reconstruction/RecGsfTracking/options/run_gsf_material_step_recorder_test.py
+./dump_gsftrk.sh e- 20 20 85 910817 1 true
 ```
 
-`GtGunTool.EnergyMins/Maxs` are total momentum/energy settings for this
-ultrarelativistic single-electron use. For a requested transverse momentum,
-the gun magnitude is
-
-```text
-p = pT / sin(theta).
-```
-
-For `pT=2 GeV` and `theta=85 deg`, this is approximately `2.00764 GeV`.
+The momentum and theta arguments remain sample labels because the maintained
+simulation card intentionally uses its hardcoded broad gun ranges; see below.
 
 After the job, require all of the following before scaling up:
 
 1. the Gaudi job terminates successfully;
-2. both ROOT files exist and are nonempty;
-3. `g4step_tuple` exists and has exactly the requested number of event
-   entries;
-4. every event has equal vector-branch lengths equal to `step_count`;
-5. primary-electron steps exist and their momentum, position, `retained`, and
-   `step_tX0` values are finite;
+2. all five stage outputs exist and have the requested event count;
+3. `podio-dump sim-<sample>.root` lists nonempty `GsfG4MaterialSteps` and
+   `GsfSimTrackerHitG4StepLinks` for the selected primary;
+4. those two collections remain present in `trk-`, `calodigi-`, `rec-`, and
+   GSF EDM output through `keep *`;
+5. every link used by the selected track has complete status, one exact
+   SimTrackerHit relation, and consistent first/last/hook step relations;
 6. output filenames contain the full particle, momentum/angle, and seed
-   identity and do not already exist unless replacement is intentional.
-
-The general tuple analyzer is:
-
-```bash
-G4MaterialStepComparison/scripts/analyze_g4step_tuple.py \
-  --sample electron=/tmp/gsf-material-steps-e2pt-theta85-seed1.root \
-  --outdir /tmp/g4step-analysis-e2pt-theta85-seed1
-```
+   identity and do not already exist unless replacement is intentional;
+7. the truth-on GSF log reports a valid `EventData` scope and the output
+   `GSFTruthBHLossStatus` is `1` for the selected track.
 
 ## Review of the production templates
 
-Review date: 2026-08-17.
+Review date: 2026-08-22.
 
 ### `sim.py.bk`
 
-The recorder is attached to `DetSimAlg.AnaElems`, uses the full TDR geometry,
-writes the EDM simulation file and the independent material-step ROOT file,
-and records primary electron or muon steps with no loss/length threshold. The
-particle gun intentionally generates a broad sample:
+The standard `Edm4hepWriterAnaElemTool` is the only active analysis element.
+It uses the full TDR geometry, writes the EDM simulation file, and embeds
+primary electron or muon steps and exact SimTrackerHit provenance in that
+file. It does not create an independent material-step ROOT file. The particle
+gun intentionally generates a broad sample:
 
 ```python
 gun.EnergyMins = [10]
@@ -147,39 +167,37 @@ gun.ThetaMaxs = [140]
 These hardcoded ranges are intentional and are not replaced by
 `dump_gsftrk.sh`. Its legacy momentum-magnitude argument is unused, while the
 transverse-momentum and theta arguments remain filename labels only. The
-recorder PDG list is `[11, -11, 13, -13]`.
+embedded-truth PDG list is `[11, -11, 13, -13]`.
 
 ### `dump_gsftrk.sh`
 
-The worker accepts six legacy-compatible arguments plus an optional seventh
-`truth_bh_override` boolean. In the current from-scratch campaign, all five
-stages execute in order: simulation, tracking, calorimeter digitization,
-calorimeter reconstruction, and the final GSF refit:
+The worker accepts six legacy-compatible arguments, an optional seventh
+`truth_bh_override` boolean, and an optional eighth `gsf_only` boolean. With
+`gsf_only=false`, all five stages execute in order: simulation, tracking,
+calorimeter digitization, calorimeter reconstruction, and the final GSF refit:
 
 ```bash
 ./dump_gsftrk.sh particle momentum_mag momentum_trn theta seed nevt \
-  [truth_bh_override]
+  [truth_bh_override] [gsf_only]
 ```
 
 The generated GSF card requires and reads
 `$WORKDIR/rec-<sample>.root`. With the optional argument omitted or false, the
-truth oracle remains off and established output names are unchanged. With it
-true, the worker also requires the paired nonempty
-`$WORKDIR/gsf_material_steps-<sample>.root`, enables the in-process
-`G4StepTuple` oracle, and writes the generated card and GSF/flat/audit outputs
-with a `truth-bh` suffix so the ordinary A/B member is not overwritten. The
-material tuple must be produced by the same simulation events as the
-reconstructed input; the GSF endpoint guard rejects a mismatched tuple.
+truth oracle remains off and the generated card and GSF/flat/audit outputs use
+the explicit `truth-bh-off` suffix. With it true, the worker enables the
+in-process `EventData` oracle and uses the `truth-bh` suffix. The paired names
+prevent either A/B member from overwriting the other. The worker neither
+creates nor checks a side material tuple. With `gsf_only=true`, it reuses the
+sample-qualified `rec-<sample>.root` and runs only the final GSF step.
 
-The current `subtrkjobs.sh` campaign sets `TRUTH_BH_OVERRIDE=true` explicitly
-and passes it to every worker. Its batch logs receive a `_truth-bh` suffix.
-The simulation stage creates and retains the paired material tuple before the
-GSF stage reads it.
+Campaign submission scripts may set `TRUTH_BH_OVERRIDE=true` explicitly and
+pass it to every worker. Truth-on and truth-off outputs receive distinct
+suffixes.
 
 The four non-GSF cards retain the official TDR-o1-v01 `PodioInput`, algorithm,
 service, and `keep *` configuration; their workflow differences are limited to
-batch steering, plus the intentional GSF material-step recorder in the
-simulation card. Numerical-library thread counts default to one because an
+batch steering, plus the intentional embedded GSF truth collections in the
+standard simulation writer. Numerical-library thread counts default to one because an
 unconstrained OpenBLAS initialization exhausted the account's
 `RLIMIT_NPROC=300` during the 2026-08-17 smoke test; set `CEPCSW_JOB_THREADS`
 explicitly to override this. The script still uses exact textual substitutions
@@ -203,19 +221,17 @@ compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, `gsf.py.bk` explicitly configures all 45
+For this maintained workflow, `gsf.py.bk` explicitly configures all 45
 properties and silently inherits none. Its explicit
-`TruthBHLossOverride=false` is the template's off-side base value. The current
-1,000-event submission passes `truth_bh_override=true`, and `dump_gsftrk.sh`
-rewrites each generated per-job card to enable the truth-dependent BH-loss
-oracle and its in-process reader:
-`TruthBHLossSource="G4StepTuple"`, `TruthBHLossInput` points through the
-top-level `truthbhinputfilename` variable to the simulation stage's per-job
-`gsf_material_steps-<sample>.root`, `TruthBHLossInputTrackIndex=0`, and
-`TruthBHLossMaxEndpointDistance=5.0` mm. The tuple source and nonempty path are
-intentional differences from the compiled and reverse-template defaults of
-`CSV` and empty input; only generated truth-on cards differ from their false
-override default. This remains a diagnostic campaign, not production steering.
+`TruthBHLossOverride=false` is the template's off-side base value. A truth-on
+submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
+generated per-job card to enable the truth-dependent BH-loss oracle. The card
+uses `TruthBHLossSource="EventData"`, an empty `TruthBHLossInput`,
+`TruthBHLossInputTrackIndex=0`, and
+`TruthBHLossMaxEndpointDistance=5.0` mm. `EventData` is an intentional
+maintained-card difference from the compiled and reverse-template `CSV`
+default; only generated truth-on cards differ from the false override base.
+This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 Invalid event or track truth no longer terminates the batch job. The selected
@@ -262,7 +278,7 @@ ordinary tracker hits, so the flat tuple does not duplicate the `gsf_hit_*`
 vectors.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
-comparison card for this historical workflow. When the package adds, removes,
+comparison card for this workflow. When the package adds, removes,
 renames, or changes a configurable property, a dedicated sub-agent must audit
 this workflow in the same change.
 `DumpGsfTrks/gsf.py.bk` must explicitly steer the property, and any deliberate
@@ -278,20 +294,19 @@ seed at another production point can still overwrite outputs.
 
 ### `subtrkjobs.sh`
 
-The current submission loop requests 100 electron seeds with 100 events each
-and now consumes the matching prepared `pT=2 GeV`, `theta=85 deg` tracker file
-from `tuples285`. Three sampled prepared files (seeds 1, 100, and 334) each had
-100 events and every simulated calorimeter collection required by the official
-digitization card. The earlier full-chain workflow passed a separate 10-event
-smoke test with electron seed 910817 on 2026-08-17; that test remains evidence
-for the cards, not a statement that the currently commented stages execute.
+The current loop requests six electron jobs, seeds 5 through 10, with 100
+events each, `TRUTH_BH_OVERRIDE=true`, and `GSF_ONLY=false`. It therefore runs
+the full five-stage chain and requests 6 GB per batch job. The comment in the
+script that calls this “ten jobs” is stale; the brace range is authoritative.
+Its `pT=2 GeV`, `theta=85 deg` values label the sample but do not override the
+maintained simulation card's broad gun ranges.
 
 ## Production readiness
 
 Before a new campaign, address the remaining production safeguards:
 
-1. use unique, common sample identities for simulation, material-step,
-   tracking, GSF EDM, flat tuple, and logs;
+1. use unique, common sample identities for simulation, tracking, GSF EDM,
+   flat tuple, audit CSV, and logs;
 2. fail on missing/stale inputs, existing outputs, or tuple-integrity errors;
 3. verify exact collection and event pairing between every stage;
 4. record a manifest containing the exact commands and effective settings;

@@ -6,9 +6,13 @@
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "TruthBHLossTupleReader.h"
+#include "TruthBHLossEventData.h"
 #include "TruthBHLossScopeStatus.h"
 
 #include "DetInterface/IGeomSvc.h"
@@ -82,6 +86,28 @@ private:
       "MCParticle", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_truthBHLossStatus{
       "GSFTruthBHLossStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<gsftruth::G4MaterialStepCollection> m_gsfTruthSteps{
+      "GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_gsfTruthLinks{
+      "GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+      m_vxdTruthAssociations{
+          "VXDTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+      m_itkBarrelTruthAssociations{
+          "ITKBarrelTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+      m_itkEndcapTruthAssociations{
+          "ITKEndcapTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+      m_tpcTruthAssociations{
+          "TPCTrackerHitAss", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+      m_otkBarrelTruthAssociations{
+          "OTKBarrelTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection>
+      m_otkEndcapTruthAssociations{
+          "OTKEndcapTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
 
   SmartIF<IGeomSvc> m_geosvc;
   double m_field = 0.0;
@@ -171,19 +197,22 @@ private:
       "configured BH model and emit a negative status tag"};
   Gaudi::Property<std::string> m_truthBHLossSource{
       this, "TruthBHLossSource", "CSV",
-      "CSV or G4StepTuple source used only by TruthBHLossOverride"};
+      "CSV, G4StepTuple, or EventData source used only by "
+      "TruthBHLossOverride"};
   Gaudi::Property<std::string> m_truthBHLossInput{
       this, "TruthBHLossInput", "",
       "Consecutive-hit CSV or GsfMaterialStepRecorder ROOT tuple validated "
-      "as one all-or-nothing track scope by TruthBHLossOverride"};
+      "as one all-or-nothing track scope by TruthBHLossOverride; unused by "
+      "EventData"};
   Gaudi::Property<int> m_truthBHLossInputTrackIndex{
       this, "TruthBHLossInputTrackIndex", 0,
-      "CompleteTracks index receiving the primary-electron G4StepTuple truth "
+      "CompleteTracks index receiving the primary-electron G4StepTuple or "
+      "EventData truth "
       "oracle; other tracks use the configured BH model"};
   Gaudi::Property<double> m_truthBHLossMaxEndpointDistance{
       this, "TruthBHLossMaxEndpointDistance", 5.0,
       "Maximum allowed distance in mm between a runtime accepted hit and its "
-      "nearest ordered Geant4 sensitive-midpoint anchor"};
+      "matched Geant4 truth anchor or exact EventData hook"};
   Gaudi::Property<bool> m_counterfactualLossScan{
       this, "CounterfactualLossScan", false,
       "Default-off likelihood-only scan of trial losses at a configured truth "
@@ -217,9 +246,10 @@ private:
   std::set<std::pair<int, int>> m_truthBHSelectedTracks;
   std::unique_ptr<TruthBHLossTupleReader> m_truthBHLossTupleReader;
   bool m_truthBHLossUsesTuple = false;
+  bool m_truthBHLossUsesEventData = false;
   std::uint64_t m_truthBHLossOverrideCalls = 0;
   std::uint64_t m_truthBHLossPassthroughTracks = 0;
-  std::uint64_t m_truthBHLossTupleTracks = 0;
+  std::uint64_t m_truthBHLossDynamicTracks = 0;
   std::uint64_t m_truthBHLossInvalidTruthEvents = 0;
   std::uint64_t m_truthBHLossInvalidEndpointTracks = 0;
   std::uint64_t m_truthBHLossInvalidIntervalTracks = 0;

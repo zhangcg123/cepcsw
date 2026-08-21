@@ -56,11 +56,16 @@ class TimeProjectionChamberSensitiveDetector: public DDG4SensitiveDetector {
   double                dEInPadRow;
   double                globalTimeAtPadRingCentre;
   double                pathLengthInPadRow;
+  int                   PadRowFirstStepNumber;
+  int                   PadRowLastStepNumber;
+  int                   PadRowHookStepNumber;
   double                CumulativePathLength;
   double                CumulativeEnergyDeposit;
   dd4hep::Position      CumulativeMeanPosition; 
   dd4hep::sim::Momentum CumulativeMeanMomentum; 
   int                   CumulativeNumSteps;
+  int                   CumulativeFirstStepNumber;
+  int                   CumulativeLastStepNumber;
   
   dd4hep::Position PreviousPostStepPosition; //< the end point of the previous step
   int    CurrentPDGEncoding; //< the PDG encoding of the particle causing the cumulative energy deposit

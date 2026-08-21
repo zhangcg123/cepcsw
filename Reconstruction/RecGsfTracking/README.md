@@ -24,10 +24,10 @@ distinction matters because that template enables `ElossOn` and
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
 | `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
-| `TruthBHLossSource` | `CSV` | same | Oracle input interpretation: a prejoined strict `CSV`, or a per-event `G4StepTuple` read and matched inside the algorithm. |
-| `TruthBHLossInput` | empty | empty | Source path for `TruthBHLossOverride`: the strict runtime-interval CSV or the material recorder ROOT file selected by `TruthBHLossSource`. Empty is valid only while the override is off. |
-| `TruthBHLossInputTrackIndex` | `0` | same | With `G4StepTuple`, the zero-based `CompleteTracks` index that receives the unique primary-electron truth oracle. Other input tracks use the configured BH model. It must be nonnegative. It does not affect CSV selection. |
-| `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | With `G4StepTuple`, maximum allowed distance from any accepted runtime hit to its nearest Geant4 sensitive-midpoint anchor. It must be finite and positive. It does not affect CSV input. |
+| `TruthBHLossSource` | `CSV` | same | Oracle input interpretation: a prejoined strict `CSV`, a side-file `G4StepTuple`, or embedded `EventData` joined through the event's tracker-hit associations. |
+| `TruthBHLossInput` | empty | empty | External source path for `TruthBHLossOverride`: the strict runtime-interval CSV or material-recorder ROOT file selected by `CSV`/`G4StepTuple`. It must be empty for `EventData`, which reads the current event. Empty is otherwise valid only while the override is off. |
+| `TruthBHLossInputTrackIndex` | `0` | same | With `G4StepTuple` or `EventData`, the zero-based `CompleteTracks` index that receives the truth oracle. Other input tracks use the configured BH model. It must be nonnegative. It does not affect CSV selection. |
+| `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | With `G4StepTuple` or `EventData`, maximum allowed endpoint discrepancy between an accepted runtime hit and its Geant4 truth hook. It must be finite and positive. It does not affect CSV input. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
@@ -68,8 +68,9 @@ steering decision, not a claim of production physics validation.
 `TruthBHLossOverride` is a default-off diagnostic that asks whether exact
 Geant4 eBrem loss would survive the ordinary downstream GSF measurement,
 reduction, reverse-filtering, and publication workflow. `TruthBHLossSource`
-chooses either the original prejoined `CSV` contract or direct eventwise
-matching from the material recorder's `G4StepTuple`. On a selected track,
+chooses the original prejoined `CSV` contract, eventwise matching from the
+material recorder's side-file `G4StepTuple`, or the embedded `EventData`
+provenance stored in the current EDM event. On a selected track,
 every otherwise eligible BH call
 receives the normal component and material path, but its configured `BHModel`
 response is replaced by one child with conditional process weight one at
@@ -127,10 +128,28 @@ and every runtime material/BH audit row. The material tuple and reconstructed
 input must come from the same simulation events. The reader loads one indexed
 event at a time; no external CSV join is needed for batch jobs.
 
+For `TruthBHLossSource="EventData"`, `TruthBHLossInput` must be empty. The
+current input event must contain `GsfG4MaterialSteps` and
+`GsfSimTrackerHitG4StepLinks` together with the standard reconstructed-to-
+simulated tracker-hit association collections. The algorithm maps every
+accepted `CompleteTracks` hit through its `MCRecoTrackerAssociation` to the
+exact `SimTrackerHit`, follows the embedded provenance link to the contributing
+Geant4 step range and measurement hook, and derives the interval eBrem loss
+from those ordered steps. The 5 mm endpoint guard remains an independent
+integrity check. Missing or ambiguous associations, provenance, step bounds,
+or required interval coverage invalidate the whole selected truth scope and
+fall back to ordinary BH. Absence of either required PODIO collection from the
+input file is instead an input/card contract error: truth-on cards must request
+both collections explicitly. Because these collections travel with the ordinary
+event through `keep *`, this source requires neither a side material ROOT file
+nor an event-number join.
+
 The override requires `ElectronHypothesis=true` and
-`MaterialPathMode=DD4hepBetweenSurfaces`. Enabling it with an empty input or a
-source that cannot be opened or whose CSV schema cannot be parsed still fails
-at initialization. In CSV mode, once a track is selected by any row, missing
+`MaterialPathMode=DD4hepBetweenSurfaces`. For `CSV` and `G4StepTuple`, enabling
+it with an empty input, a source that cannot be opened, or a CSV whose schema
+cannot be parsed still fails at initialization. `EventData` instead requires
+an empty `TruthBHLossInput` and validates its collections per event. In CSV
+mode, once a track is selected by any row, missing
 coverage of any exact consecutive accepted-hit interval—including hit 0 to hit
 1—invalidates the scope before filtering and falls back to the ordinary BH
 model for the whole track. It never assumes zero loss. Conversely, a track
@@ -148,7 +167,7 @@ The per-input-track status codes are:
 | `1` | Complete truth scope validated before filtering; eligible BH calls use the truth response. |
 | `2` | Input track was not selected by the configured truth source; ordinary BH used. |
 | `0` | Truth override disabled. |
-| `-1` | Event-level `G4StepTuple` truth is invalid or unavailable; ordinary BH used. |
+| `-1` | Event-level `G4StepTuple` or embedded `EventData` truth is invalid or unavailable; ordinary BH used. |
 | `-2` | Runtime-hit/truth-anchor endpoint guard failed; ordinary BH used. |
 | `-3` | Exact consecutive runtime interval mapping failed; ordinary BH used. |
 | `-4` | Selected track/event was not processed, for example because of focused `SelectedEventIndices` steering or an unusable input track. |
@@ -353,12 +372,11 @@ remains empty/off. The card's `RecGsfFlatTuple` instance still exposes both
 ordinary `gsf_*` and default-zero `ecal_gsf_*` scalar branch sets.
 
 The maintained `gsf.py.bk` template keeps the compiled and active
-reverse-template `TruthBHLossOverride=false` base value. For the current
-1,000-event diagnostic, `subtrkjobs.sh` passes `truth_bh_override=true` and
-`dump_gsftrk.sh` rewrites each generated per-job card to true. The template
-uses `TruthBHLossSource="G4StepTuple"` and points `TruthBHLossInput` at the
-sample-qualified
-`gsf_material_steps-<sample>.root` produced by its simulation stage. It keeps
+reverse-template `TruthBHLossOverride=false` base value. For a truth-oracle
+diagnostic, the generated per-job card may set it true. The template uses
+`TruthBHLossSource="EventData"`, keeps `TruthBHLossInput` empty, and reads
+`GsfG4MaterialSteps` plus `GsfSimTrackerHitG4StepLinks` from the ordinary input
+event; no side `gsf_material_steps-<sample>.root` is required. It keeps
 `TruthBHLossInputTrackIndex=0` and
 `TruthBHLossMaxEndpointDistance=5.0`. The compiled and active reverse-template
 values remain false, `CSV`, empty input, track index 0, and 5.0 mm. This is
