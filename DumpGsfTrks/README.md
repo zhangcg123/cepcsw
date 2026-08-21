@@ -200,12 +200,12 @@ default-off `CEPCRuntimeGenericGrid5Clear` experiment, not the production
 `CEPC2GeV85StepConditioned` model; preserve that as deliberate campaign
 steering until the user changes it.
 
-The authoritative explanation of all 46 `RecGsfTracking` properties, their
+The authoritative explanation of all 45 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this historical workflow, `gsf.py.bk` explicitly configures all 46
+For this historical workflow, `gsf.py.bk` explicitly configures all 45
 properties and silently inherits none. The truth-dependent BH-loss oracle is
 explicitly off, but the card is batch-ready for the in-process truth reader:
 `TruthBHLossSource="G4StepTuple"`, `TruthBHLossInput` points through the
@@ -217,14 +217,14 @@ intentional differences from the compiled and reverse-template defaults of
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 
-Both runtime material outputs are explicit. `MaterialTransitionCSV=""` keeps
-the legacy forward, non-seed comparison table off. For the current campaign,
-`MaterialBHAuditCSV` uses an input-sample/method-specific filename under
-`tuplepath`, so parallel jobs do not overwrite one another. With
-`tuplepath=""`, `dump_gsftrk.sh` runs from `WORKDIR` and the audit lands in the
-project root. This nonempty card setting enables the default-off algorithm
-diagnostic; it does not change the compiled default. The audit is a generated
-CSV, not a branch of `RecGsfFlatTuple`.
+`MaterialBHAuditCSV` is explicitly empty in the maintained card, matching the
+compiled and reverse-template default, so normal batch jobs produce no
+material CSV. Enable the comprehensive audit only in a temporary diagnostic
+card; it is a generated CSV, not a branch of `RecGsfFlatTuple`. The superseded
+forward-only material-transition CSV property was removed after the
+comprehensive audit became authoritative. Historical records and already
+generated `rungsf-*` cards may still mention it; those cards are stale and
+must be regenerated from `gsf.py.bk` before use with the current package.
 
 Generated `rungsf-*` cards are batch artifacts and preserve the explicit
 material mode in force when each card was created. Many predate the 2026-08-19

@@ -124,9 +124,6 @@ gsf.SurfaceLineageMassDump = os.getenv(
     "GSF_SURFACE_LINEAGE_MASS_DUMP", "0").lower() in ("1", "true", "yes")
 gsf.ComponentDebugMaxHistory = int(os.getenv(
     "GSF_COMPONENT_DEBUG_MAX_HISTORY", "240"))
-material_transition_csv = os.getenv("GSF_MATERIAL_TRANSITION_CSV", "")
-if material_transition_csv:
-    gsf.MaterialTransitionCSV = material_transition_csv
 gsf.MaterialBHAuditCSV = os.getenv("GSF_MATERIAL_BH_AUDIT_CSV", "")
 gsf.OutputLevel = INFO
 

@@ -191,10 +191,9 @@ recovery and false radiative modes and does not solve selection.
 The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
-explicitly enables an input-sample/method-specific `MaterialBHAuditCSV` under
-the configured tuple path (the project root while `tuplepath=""`). The
-algorithm and reverse-template audit defaults remain empty/off; the nonempty
-maintained-card value is campaign steering, not a new compiled default.
+explicitly leaves `MaterialBHAuditCSV` empty/off, matching the algorithm and
+reverse-template defaults. Enable the comprehensive audit only in temporary
+diagnostic cards; normal maintained-card batch jobs produce no material CSV.
 `TruthBHLossOverride=false` remains the compiled, reverse-template, and
 maintained-card default. The compiled and reverse-template oracle source/input
 remain `CSV`/empty. The maintained batch card instead preconfigures the
@@ -285,8 +284,9 @@ Current boundary evidence and definitions:
   exact runtime candidates and executed BH calls. It records the seed path,
   forward and reverse accepted-hit bounds, parent identity/weight/lineage,
   DD4hep path and material composition, split decision, returned BH mixture,
-  and child state. It does not change the flat-tuple schema or the legacy
-  forward-only `MaterialTransitionCSV` contract.
+  and child state. It does not change the flat-tuple schema. The superseded
+  forward-only `MaterialTransitionCSV` recorder has been removed from the
+  active source interface; its historical files and evidence remain valid.
 - The default-off truth BH-loss oracle replaces each already executed BH
   response on a truth-selected track with one unit-weight child at the matched
   Geant4 eBrem retained fraction, then runs the unchanged downstream workflow.
@@ -419,6 +419,9 @@ are preserved in
 The exact runtime material/BH audit schema, interval authority, focused
 mechanical validation, and non-interference A/B are preserved in
 `agents_record/2026-08-20-runtime-material-bh-audit-recorder.md`.
+The removal of the superseded forward-only material recorder, the synchronized
+45-property option surface, and its no-change regression are preserved in
+`agents_record/2026-08-21-legacy-material-transition-csv-removal.md`.
 The truth BH-loss oracle contract, all-or-nothing track scope, audit extension,
 focused A/B, and below-threshold truth-loss finding are preserved in
 `agents_record/2026-08-21-truth-bh-loss-oracle-control.md`.

@@ -158,14 +158,9 @@ gsf.VerboseSplitDump = False
 gsf.ComponentDebugDump = False
 gsf.SurfaceLineageMassDump = False
 gsf.ComponentDebugMaxHistory = 240
-gsf.MaterialTransitionCSV = ""
-# Campaign diagnostic: the algorithm default remains empty/off. The generated
-# input-sample/method name prevents different batch samples from overwriting it.
-gsf.MaterialBHAuditCSV = os.path.join(
-    tuplepath,
-    "gsf_material_bh_audit_{}_{}.csv".format(
-        os.path.splitext(os.path.basename(inputfilename))[0], outputmethod),
-)
+# Focused diagnostic only. Enable this explicitly in a temporary card when an
+# exact runtime material/BH audit is required; normal batch jobs write no CSV.
+gsf.MaterialBHAuditCSV = ""
 gsf.CounterfactualLossScan = False
 gsf.CounterfactualTruthTransitionMap = ""
 gsf.CounterfactualLossFractions = [

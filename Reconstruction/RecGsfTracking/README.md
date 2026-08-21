@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-21. `RecGsfTracking` exposes 46 Gaudi properties in
+Reference date: 2026-08-21. `RecGsfTracking` exposes 45 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -223,7 +223,6 @@ alternative workflows and must not be enabled simultaneously.
 | `ComponentDebugDump` | `false` | `false` | Dump exact component states, innovation quantities, and lineage histories. |
 | `SurfaceLineageMassDump` | `false` | `false` | Propagate and print aggregate BH-mode probability mass by surface. |
 | `ComponentDebugMaxHistory` | `240` | `240` | Maximum process/lineage history retained per component for debug output. |
-| `MaterialTransitionCSV` | empty | empty | Legacy forward, non-seed component material-comparison CSV used by the Geant4/DD4hep transition checks; empty disables it. |
 | `MaterialBHAuditCSV` | empty | empty | Structured runtime material/BH audit covering seed, forward, and reverse candidates plus the children returned by every executed split; empty disables it. |
 
 The reverse template connects the first three verbose properties to
@@ -249,9 +248,12 @@ it possible to verify the all-or-nothing track scope and seed, forward, and
 reverse oracle dispatch without inferring them from final track momentum.
 
 `GSF_MATERIAL_BH_AUDIT_CSV` controls this output in the reverse template.
-This CSV is separate from both `MaterialTransitionCSV` and the scalar/per-hit
-`RecGsfFlatTuple` ROOT tree. Generated logs and CSV files are outputs, not
-project-status records.
+This CSV is separate from the scalar/per-hit `RecGsfFlatTuple` ROOT tree.
+Generated logs and CSV files are outputs, not project-status records. The
+superseded forward-only material-transition CSV property was removed after
+this audit became authoritative. Historical records may still mention it;
+already generated cards that assign it are stale and must be regenerated from
+their maintained template before use with the current package.
 
 ### Counterfactual loss scan
 
@@ -278,7 +280,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 46 properties:
+The data handles are configurable separately from the 45 properties:
 
 | Role | Default collection |
 |---|---|
@@ -315,19 +317,17 @@ runtime interval or component-call information is required.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 46
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 45
 properties and silently inherits none. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline: split/cutoff `1e-4`,
 `DD4hepBetweenSurfaces`, and ECAL off. Its current explicit `BHModel` is the
 user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather
-than the production `CEPC2GeV85StepConditioned` model. `MaterialTransitionCSV`
-is explicitly empty. For the current material/BH campaign,
-`MaterialBHAuditCSV` is explicitly set to an input-sample/method-specific
-filename under `tuplepath`; with the workflow's empty tuple path and
-repository-root working directory, the CSV is written in the project root.
-This campaign steering does not change the compiled or reverse-template
-default, which remains empty/off. The card's `RecGsfFlatTuple` instance still
-exposes both ordinary `gsf_*` and default-zero `ecal_gsf_*` scalar branch sets.
+than the production `CEPC2GeV85StepConditioned` model. `MaterialBHAuditCSV` is
+explicitly empty in the maintained card, matching the compiled and
+reverse-template default. Exact runtime material/BH audits should be enabled
+only in temporary diagnostic cards. The card's `RecGsfFlatTuple` instance
+still exposes both ordinary `gsf_*` and default-zero `ecal_gsf_*` scalar branch
+sets.
 
 The maintained batch card deliberately differs from the compiled and active
 reverse-template oracle inputs while keeping the oracle off: it sets
@@ -341,7 +341,7 @@ production-default change.
 
 ### Configuration-maintenance contract
 
-The 46-property inventory above is part of the configurable interface, not a
+The 45-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

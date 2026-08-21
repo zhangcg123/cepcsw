@@ -1295,83 +1295,6 @@ static ComponentMaterialPath componentMaterialPathAtCrossing(
   return result;
 }
 
-/// Diagnostic full material interval from the current measurement surface up
-/// to, but excluding, the next measurement surface. This follows the cradle's
-/// sorted layer interval and therefore includes passive support/wall layers
-/// that componentMaterialPath(currentLayer) cannot see. It is deliberately
-/// not used by the BH splitter until matched G4 transitions validate it.
-static ComponentMaterialPath componentTransitionMaterialPath(
-    const TKalDetCradle* cradle, const DDVMeasLayer* fromLayer,
-    const DDVMeasLayer* toLayer, const TVector3& destinationPoint,
-    const GsfComponent& component, double bz) {
-  ComponentMaterialPath result = componentMaterialPath(
-      fromLayer, component, bz);
-  if (!cradle || !fromLayer || !toLayer) return result;
-  const int fromIndex = fromLayer->GetIndex();
-  const int toIndex = toLayer->GetIndex();
-  if (toIndex <= fromIndex) return result;
-
-  THelicalTrack helix = component.helixAtMeasurementSite(bz);
-  const TVector3 start = helix.GetPivot();
-  const double destinationDistance = (destinationPoint - start).Mag();
-  if (result.valid) {
-    std::ostringstream audit;
-    audit << fromIndex << ':' << fromLayer->GetName() << ':'
-          << (fromLayer->IsActive() ? 1 : 0) << ':'
-          << result.normalTX0 << ':' << result.pathTX0;
-    result.layerAudit = audit.str();
-  }
-
-  for (int index = fromIndex + 1; index < toIndex; ++index) {
-    const auto* layer = dynamic_cast<const DDVMeasLayer*>(cradle->At(index));
-    const auto* surface = dynamic_cast<const TVSurface*>(layer);
-    if (!layer || !surface || !layer->surface()) continue;
-    // The next actual measurement hit defines the active destination. Other
-    // active layers interleaved in cradle sorting belong to different bounded
-    // ladders/modules and must not be assigned to this transition.
-    if (layer->IsActive()) continue;
-
-    TVector3 crossing;
-    double phi = 0.0;
-    if (!surface->CalcXingPointWith(helix, crossing, phi, 1)) continue;
-    if ((crossing - start).Mag() - 1.0 > destinationDistance) continue;
-    const dd4hep::rec::Vector3D ddCrossing(
-        crossing.X() * dd4hep::mm, crossing.Y() * dd4hep::mm,
-        crossing.Z() * dd4hep::mm);
-    if (!layer->surface()->insideBounds(ddCrossing)) continue;
-
-    const double normalTX0 = thicknessInX0(layer);
-    if (!(normalTX0 > 0.0)) continue;
-    const TMatrixD tangentMatrix = helix.CalcDxDphi(phi);
-    TVector3 tangent(tangentMatrix(0, 0), tangentMatrix(1, 0),
-                     tangentMatrix(2, 0));
-    if (!(tangent.Mag2() > 0.0)) continue;
-    tangent = tangent.Unit();
-    TVector3 normal = surface->GetOutwardNormal(crossing);
-    if (!(normal.Mag2() > 0.0)) continue;
-    normal = normal.Unit();
-    const double absCos = std::abs(tangent.Dot(normal));
-    if (!(absCos > 1.0e-6) || !std::isfinite(absCos)) continue;
-
-    result.normalTX0 += normalTX0;
-    const double layerPathTX0 = normalTX0 / absCos;
-    result.pathTX0 += layerPathTX0;
-    ++result.layerCount;
-    if (!result.layerAudit.empty()) result.layerAudit += '|';
-    std::ostringstream audit;
-    audit << index << ':' << layer->GetName() << ':'
-          << (layer->IsActive() ? 1 : 0) << ':'
-          << normalTX0 << ':' << layerPathTX0;
-    result.layerAudit += audit.str();
-  }
-
-  result.absCosIncidence = result.pathTX0 > 0.0
-      ? result.normalTX0 / result.pathTX0 : 0.0;
-  result.valid = result.layerCount > 0 && std::isfinite(result.pathTX0) &&
-      result.pathTX0 > 0.0;
-  return result;
-}
-
 static ComponentMaterialPath geometryTransitionMaterialPath(
     dd4hep::rec::MaterialManager* manager, const TVector3& from,
     const TVector3& to) {
@@ -1922,28 +1845,6 @@ StatusCode RecGsfTracking::initialize() {
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << " truthBHLossSource=" << m_truthBHLossSource.value()
          << endmsg;
-
-  if (!m_materialTransitionCSV.value().empty()) {
-    m_materialTransitionStream.open(m_materialTransitionCSV.value());
-    if (!m_materialTransitionStream) {
-      error() << "Cannot create material transition CSV "
-              << m_materialTransitionCSV.value() << endmsg;
-      return StatusCode::FAILURE;
-    }
-    m_materialTransitionStream
-        << "event_index,track_index,hit_index,component_id,component_weight,"
-        << "surface_from_index,surface_to_index,cell_from,cell_to,"
-        << "from_x_mm,from_y_mm,from_z_mm,from_r_mm,"
-        << "to_x_mm,to_y_mm,to_z_mm,to_r_mm,"
-        << "normal_t_over_x0,abs_cos_incidence,path_t_over_x0,valid,"
-        << "interval_normal_t_over_x0,interval_effective_abs_cos,"
-        << "interval_path_t_over_x0,interval_layer_count,interval_valid,"
-        << "interval_layers,geometry_path_t_over_x0,geometry_segment_count,"
-        << "geometry_valid,geometry_materials\n";
-    m_materialTransitionStream << std::setprecision(17);
-    info() << "Material transition CSV: " << m_materialTransitionCSV.value()
-           << endmsg;
-  }
 
   if (!m_materialBHAuditCSV.value().empty()) {
     m_materialBHAuditStream.open(m_materialBHAuditCSV.value());
@@ -2877,41 +2778,6 @@ StatusCode RecGsfTracking::execute() {
         }
         if (validWeight > 0.0) totalTX0 += weightedPathTX0 / validWeight;
 
-        if (m_materialTransitionStream) {
-          const auto& fromPosition = hi.lcioHit.getPosition();
-          const auto& nextHit = hits[ih + 1];
-          const auto& toPosition = nextHit.lcioHit.getPosition();
-          for (size_t ci = 0; ci < comps.size(); ++ci) {
-            const auto& path = materialPaths[ci];
-            const auto geometryPath = componentGeometryTransitionMaterialPath(
-                m_materialManager, nextHit.layer, nextMaterialDestination,
-                *comps[ci], bz);
-            const auto intervalPath = componentTransitionMaterialPath(
-                m_cradle, hi.layer, nextHit.layer,
-                TVector3(toPosition.x, toPosition.y, toPosition.z),
-                *comps[ci], bz);
-            m_materialTransitionStream
-                << eventIndex << ',' << nFit << ',' << ih << ','
-                << comps[ci]->debugId << ',' << comps[ci]->weight << ','
-                << hi.surfaceIndex << ',' << nextHit.surfaceIndex << ','
-                << (long long)hi.lcioHit.getCellID() << ','
-                << (long long)nextHit.lcioHit.getCellID() << ','
-                << fromPosition.x << ',' << fromPosition.y << ','
-                << fromPosition.z << ',' << hi.radius << ','
-                << toPosition.x << ',' << toPosition.y << ','
-                << toPosition.z << ',' << nextHit.radius << ','
-                << path.normalTX0 << ',' << path.absCosIncidence << ','
-                << path.pathTX0 << ',' << (path.valid ? 1 : 0) << ','
-                << intervalPath.normalTX0 << ','
-                << intervalPath.absCosIncidence << ','
-                << intervalPath.pathTX0 << ',' << intervalPath.layerCount << ','
-                << (intervalPath.valid ? 1 : 0) << ','
-                << intervalPath.layerAudit << ',' << geometryPath.pathTX0 << ','
-                << geometryPath.layerCount << ','
-                << (geometryPath.valid ? 1 : 0) << ','
-                << geometryPath.layerAudit << '\n';
-          }
-        }
       }
       std::vector<MaterialBHAuditCall> forwardAuditCalls;
       if (hasNextForwardSurface && m_materialBHAuditStream.is_open()) {
@@ -4129,9 +3995,6 @@ StatusCode RecGsfTracking::finalize() {
                 "anchor distance was "
              << m_truthBHLossMaxObservedEndpointDistance << " mm" << endmsg;
     }
-  }
-  if (m_materialTransitionStream.is_open()) {
-    m_materialTransitionStream.close();
   }
   if (m_materialBHAuditStream.is_open()) {
     m_materialBHAuditStream.close();
