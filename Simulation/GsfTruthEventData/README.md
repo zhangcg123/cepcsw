@@ -78,8 +78,8 @@ BH splitting, component weighting, reduction, or final selection. Missing or
 invalid provenance therefore produces an empty/invalid diagnostic scope but
 does not change an ordinary GSF fit.
 
-For the GSF truth BH-loss oracle, use
-`TruthBHLossSource="EventData"`, an empty `TruthBHLossInput`, and explicitly
-enable `TruthBHLossOverride`. GSF joins through tracker-hit associations; a
-distance threshold is used only as an integrity guard after the association,
+For the GSF truth BH-loss oracle, explicitly enable `TruthBHLossOverride`.
+Embedded event data is the only supported source; no external input-path or
+source-selector property remains. GSF joins through tracker-hit associations;
+a distance threshold is used only as an integrity guard after the association,
 never to select a truth hit or step.

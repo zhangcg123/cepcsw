@@ -73,18 +73,17 @@ gsf.BHModel = "CEPCRuntimeGenericGrid5Clear" #"CEPC2GeV85StepConditioned"
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
 
-# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. This template
-# keeps the explicit off-side value; dump_gsftrk.sh replaces it from its
-# truth_bh_override argument for an explicitly truth-on submission. When
-# enabled, it maps CompleteTracks index 0 through the standard tracker-hit
+# Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. Embedded
+# EventData is its fixed source; no helper-file source/input steering remains.
+# This template keeps the explicit off-side value; dump_gsftrk.sh replaces it
+# from its truth_bh_override argument for an explicitly truth-on submission.
+# When enabled, it maps CompleteTracks index 0 through the standard tracker-hit
 # associations to the embedded SimTrackerHit-to-Geant4-step provenance. Every
 # accepted-hit endpoint must pass the configured integrity guard. An invalid
 # scope uses ordinary BH for the whole track and is tagged in
 # GSFTruthBHLossStatus and the flat tuple. No side material ROOT file or
 # runtime BH-audit CSV is produced by this maintained workflow.
 gsf.TruthBHLossOverride = False
-gsf.TruthBHLossSource = "EventData"
-gsf.TruthBHLossInput = ""
 gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
 # Default-on passive material-consistency record.  This only records the truth
@@ -92,9 +91,7 @@ gsf.TruthBHLossMaxEndpointDistance = 5.0
 # it does not replace a path, trigger a BH split, or alter filtering/selection.
 # The compiled and active reverse-template defaults are also true.
 gsf.RecordTruthMaterialIntervals = True
-if (gsf.RecordTruthMaterialIntervals or
-        (gsf.TruthBHLossOverride and
-         gsf.TruthBHLossSource.lower() == "eventdata")):
+if gsf.RecordTruthMaterialIntervals or gsf.TruthBHLossOverride:
     podioinput.collections += [
         "GsfG4MaterialSteps",
         "GsfSimTrackerHitG4StepLinks",

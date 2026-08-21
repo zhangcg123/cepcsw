@@ -19,8 +19,9 @@ particle gun + Geant4 simulation
 The simulation event itself carries the optional truth-diagnostic provenance.
 `keep *` preserves it through tracking and calorimeter processing, so the GSF
 truth-oracle control needs no side ROOT tuple or event-number join. The normal
-GSF remains truth-blind; only the explicit default-off
-`TruthBHLossOverride=true`, `TruthBHLossSource="EventData"` control reads it.
+GSF remains truth-blind. The default-on passive material recorder and the
+optional default-off `TruthBHLossOverride=true` control read the embedded
+provenance directly from EventData.
 
 ## Embedded Geant4 truth provenance
 
@@ -108,9 +109,10 @@ Important interpretations:
 
 The side `GsfMaterialStepRecorderAnaElemTool` implementation and its standalone
 test card have been removed from the current source tree. Historical
-`G4StepTuple` files remain readable by compatibility paths; their schema and
-the retired producer are preserved in Git history and dated project records.
-Those files contain vector branches for run/event/track identifiers,
+`G4StepTuple` files are no longer accepted by `RecGsfTracking`; their schema,
+retired producer, and retired oracle reader are preserved in Git history and
+dated project records. Standalone historical analysis tools may still inspect
+those files. They contain vector branches for run/event/track identifiers,
 pre/post/midpoint positions, momenta and retained fraction, energy deposits,
 local `step_tX0`, material and process labels, sensitive flags, and touchable
 paths. Their `event_id` restarts per job, so historical joins require the
@@ -216,22 +218,21 @@ default-off `CEPCRuntimeGenericGrid5Clear` experiment, not the production
 `CEPC2GeV85StepConditioned` model; preserve that as deliberate campaign
 steering until the user changes it.
 
-The authoritative explanation of all 45 `RecGsfTracking` properties, their
+The authoritative explanation of all 43 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures all 45
+For this maintained workflow, `gsf.py.bk` explicitly configures all 43
 properties and silently inherits none. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
 submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
 generated per-job card to enable the truth-dependent BH-loss oracle. The card
-uses `TruthBHLossSource="EventData"`, an empty `TruthBHLossInput`,
-`TruthBHLossInputTrackIndex=0`, and
-`TruthBHLossMaxEndpointDistance=5.0` mm. `EventData` is an intentional
-maintained-card difference from the compiled and reverse-template `CSV`
-default; only generated truth-on cards differ from the false override base.
-This remains a diagnostic campaign, not production steering.
+uses the fixed embedded-EventData source with
+`TruthBHLossInputTrackIndex=0` and
+`TruthBHLossMaxEndpointDistance=5.0` mm. No source selector or helper-file
+input property remains. Only generated truth-on cards differ from the false
+override base. This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 
@@ -255,10 +256,10 @@ in `GSFTruthBHLossStatus`, `truth_bh_scope_status`/
 oracle scope; the full code table is maintained in the package README.
 
 Side material ROOT generation and the public runtime BH-audit CSV option are
-retired from the maintained workflow. Historical tuples, audit CSVs, readers,
-and project records remain available for reproducing earlier studies, but
-stale cards that assign the removed audit property must be regenerated. The
-current recording path is the ordinary GSF EDM with
+retired from the maintained workflow. Historical tuples, audit CSVs,
+standalone analysis tools, and project records remain available for
+reproducing earlier studies, but stale cards that assign removed helper-input
+properties must be regenerated. The current recording path is the ordinary GSF EDM with
 `GSFTruthMaterialIntervals`/`GSFTruthMaterialRecordStatus` and the final flat
 tuple's `truth_material_*` branches.
 
@@ -268,6 +269,10 @@ default promotion and therefore still say `CurrentSurface`; others record
 earlier DD4hep studies. Do not reinterpret or bulk-rewrite those historical
 cards as the current default. Regenerate a card from `gsf.py.bk` for a new
 production run, and set `CurrentSurface` explicitly only for a comparison.
+Generated cards that assign the removed `TruthBHLossSource` or
+`TruthBHLossInput` properties are also incompatible with the current
+algorithm. They are retained only as experiment artifacts and must not be run;
+regenerate them from the maintained card to use embedded EventData.
 
 The card still reads `EcalCluster` from the reconstructed-event input but keeps
 the local ECAL component-constraint experiment off. When explicitly enabled,

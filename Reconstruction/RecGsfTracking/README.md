@@ -10,7 +10,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-22. `RecGsfTracking` exposes 45 Gaudi properties in
+Reference date: 2026-08-22. `RecGsfTracking` exposes 43 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -24,10 +24,8 @@ distinction matters because that template enables `ElossOn` and
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
 | `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
-| `TruthBHLossSource` | `CSV` | same | Oracle input interpretation: a prejoined strict `CSV`, a side-file `G4StepTuple`, or embedded `EventData` joined through the event's tracker-hit associations. |
-| `TruthBHLossInput` | empty | empty | External source path for `TruthBHLossOverride`: the strict runtime-interval CSV or material-recorder ROOT file selected by `CSV`/`G4StepTuple`. It must be empty for `EventData`, which reads the current event. Empty is otherwise valid only while the override is off. |
-| `TruthBHLossInputTrackIndex` | `0` | same | With `G4StepTuple` or `EventData`, the zero-based `CompleteTracks` index that receives the truth oracle. Other input tracks use the configured BH model. It must be nonnegative. It does not affect CSV selection. |
-| `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | With `G4StepTuple` or `EventData`, maximum allowed endpoint discrepancy between an accepted runtime hit and its Geant4 truth hook. It must be finite and positive. It does not affect CSV input. |
+| `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used by the embedded-EventData truth oracle and passive material recorder. Other input tracks use the configured BH model and have no interval record. It must be nonnegative. |
+| `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
 | `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
@@ -68,11 +66,9 @@ steering decision, not a claim of production physics validation.
 
 `TruthBHLossOverride` is a default-off diagnostic that asks whether exact
 Geant4 eBrem loss would survive the ordinary downstream GSF measurement,
-reduction, reverse-filtering, and publication workflow. `TruthBHLossSource`
-chooses the original prejoined `CSV` contract, eventwise matching from the
-material recorder's side-file `G4StepTuple`, or the embedded `EventData`
-provenance stored in the current EDM event. On a selected track,
-every otherwise eligible BH call
+reduction, reverse-filtering, and publication workflow. Its only supported
+truth source is the embedded `EventData` provenance stored in the current EDM
+event. On the configured input track, every otherwise eligible BH call
 receives the normal component and material path, but its configured `BHModel`
 response is replaced by one child with conditional process weight one at
 
@@ -88,49 +84,7 @@ configured deterministic energy-loss treatment. The rest of the GSF workflow
 is unchanged. This makes the mode a truth-dependent mechanism test, not a
 candidate reconstruction algorithm or a BH-model validation.
 
-For `TruthBHLossSource="CSV"`, `TruthBHLossInput` is a CSV with this exact
-header:
-
-```text
-event_index,input_track_index,hit_from_index,hit_to_index,cell_from,cell_to,truth_p_before_GeV,truth_ebrem_loss_GeV
-```
-
-Every accepted-hit interval uses `hit_from_index >= 0`,
-`hit_to_index = hit_from_index + 1`, and the exact bounding hit cell IDs. This
-includes `hit_from_index=0`, `hit_to_index=1`: the GSF seed already contains
-filtered hit 0, so its specially executed seed-material call consumes the
-ordinary hit-0-to-hit-1 interval rather than an IP-to-hit-0 interval. The
-normal forward loop then starts at hit 1 and consumes the later consecutive
-intervals. Preprocessing must derive these rows from the authoritative Geant4
-pre/post-step record and match them to the exact runtime accepted-hit
-intervals; neither `MCParticle` nor SimTrackerHit momentum is a substitute.
-CSV presence selects the oracle at whole-track granularity: a particular
-`(event_index,input_track_index)` is selected when the input contains at least
-one row for that pair.
-
-For `TruthBHLossSource="G4StepTuple"`, `TruthBHLossInput` is the ROOT file
-written by the retired `GsfMaterialStepRecorderAnaElemTool` and must contain
-the required `g4step_tuple` pre/post-step branches. The algorithm indexes it
-by `event_id`, requires exactly one primary electron or positron Geant4 track
-in each processed event, reconstructs sensitive-traversal midpoint anchors in
-track step order, and treats each TPC lower/upper sensitive half-volume pair
-as one pad-row anchor. It nearest-matches every accepted runtime hit to those
-anchors, requires a strictly increasing anchor sequence and a maximum endpoint
-distance no larger than `TruthBHLossMaxEndpointDistance`, and sums Geant4
-process subtype-3 eBrem loss across all truth intervals spanned by each runtime
-hit pair. This source selects only `TruthBHLossInputTrackIndex`; every other
-input track uses the configured BH model. A missing event, ambiguous primary,
-nonphysical loss, malformed event, nonmonotonic match, excessive endpoint
-distance, or incomplete runtime interval coverage invalidates the whole truth
-scope before filtering starts. The selected track then completes with the
-ordinary configured BH model; it never mixes accepted truth intervals with BH
-responses. The fallback is tagged in `GSFTruthBHLossStatus` and the flat tuple.
-For historical `G4StepTuple` reproduction, the material tuple and reconstructed
-input must come from the same simulation events. The reader loads one indexed
-event at a time; no external CSV join is needed.
-
-For `TruthBHLossSource="EventData"`, `TruthBHLossInput` must be empty. The
-current input event must contain `GsfG4MaterialSteps` and
+The current input event must contain `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` together with the standard reconstructed-to-
 simulated tracker-hit association collections. The algorithm maps every
 accepted `CompleteTracks` hit through its `MCRecoTrackerAssociation` to the
@@ -146,29 +100,22 @@ event through `keep *`, this source requires neither a side material ROOT file
 nor an event-number join.
 
 The override requires `ElectronHypothesis=true` and
-`MaterialPathMode=DD4hepBetweenSurfaces`. For `CSV` and `G4StepTuple`, enabling
-it with an empty input, a source that cannot be opened, or a CSV whose schema
-cannot be parsed still fails at initialization. `EventData` instead requires
-an empty `TruthBHLossInput` and validates its collections per event. In CSV
-mode, once a track is selected by any row, missing
-coverage of any exact consecutive accepted-hit interval—including hit 0 to hit
-1—invalidates the scope before filtering and falls back to the ordinary BH
-model for the whole track. It never assumes zero loss. Conversely, a track
-with zero CSV rows is outside the oracle scope: it is explicitly logged and
-counted and uses the ordinary configured BH model unchanged for its entire
-workflow. This all-or-nothing track boundary prevents an undocumented
-truth/BH hybrid within one fitted track while allowing a selected event to
-contain unrelated secondary tracks for which no authoritative primary truth
-exists.
+`MaterialPathMode=DD4hepBetweenSurfaces`. The embedded collections are
+validated per event. Missing coverage of any exact consecutive accepted-hit
+interval—including hit 0 to hit 1—invalidates the selected track's complete
+scope before filtering and falls back to the ordinary BH model for that whole
+track; it never assumes zero loss. Other input tracks are outside the oracle
+scope and use the configured BH model unchanged. This all-or-nothing boundary
+prevents an undocumented truth/BH hybrid within one fitted track.
 
 The per-input-track status codes are:
 
 | Status | Meaning |
 |---:|---|
 | `1` | Complete truth scope validated before filtering; eligible BH calls use the truth response. |
-| `2` | Input track was not selected by the configured truth source; ordinary BH used. |
+| `2` | Input track is not `TruthBHLossInputTrackIndex`; ordinary BH used. |
 | `0` | Truth override disabled. |
-| `-1` | Event-level `G4StepTuple` or embedded `EventData` truth is invalid or unavailable; ordinary BH used. |
+| `-1` | Embedded `EventData` truth is invalid or unavailable; ordinary BH used. |
 | `-2` | Runtime-hit/truth-anchor endpoint guard failed; ordinary BH used. |
 | `-3` | Exact consecutive runtime interval mapping failed; ordinary BH used. |
 | `-4` | Selected track/event was not processed, for example because of focused `SelectedEventIndices` steering or an unusable input track. |
@@ -317,11 +264,12 @@ The reverse template connects the first three verbose properties to
 `GSF_VERBOSE_COMPONENTS`. Comprehensive focused-event validation normally
 enables all three together.
 
-The former public runtime material/BH-audit CSV option and writer are retired.
-Historical audit CSVs, analysis readers, and project records remain valid for
-reproducing earlier component-call studies, but stale cards that assign the
-removed property must be regenerated. The maintained recording path is now the
-default-on `GSFTruthMaterialIntervals` EDM collection and matching
+The former public runtime material/BH-audit CSV option and writer are retired,
+and the runtime CSV and side-ROOT readers have also been removed. Historical
+audit CSVs and project records remain valid as evidence, but current code does
+not consume those helper files and stale cards that assign removed properties
+must be regenerated. The maintained recording path is now the default-on
+`GSFTruthMaterialIntervals` EDM collection and matching
 `truth_material_*` final flat-tuple vectors. They preserve accepted-hit truth,
 truth-hook DD4hep, and summarized forward/reverse runtime material values, not
 one row per BH parent or child.
@@ -351,7 +299,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 45 properties:
+The data handles are configurable separately from the 43 properties:
 
 | Role | Default collection |
 |---|---|
@@ -409,7 +357,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 45
+`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 43
 properties and silently inherits none. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline: split/cutoff `1e-4`,
 `DD4hepBetweenSurfaces`, and ECAL off. Its current explicit `BHModel` is the
@@ -421,14 +369,15 @@ default-zero `ecal_gsf_*` scalar branch sets.
 
 The maintained `gsf.py.bk` template keeps the compiled and active
 reverse-template `TruthBHLossOverride=false` base value. For a truth-oracle
-diagnostic, the generated per-job card may set it true. The template uses
-`TruthBHLossSource="EventData"`, keeps `TruthBHLossInput` empty, and reads
-`GsfG4MaterialSteps` plus `GsfSimTrackerHitG4StepLinks` from the ordinary input
-event; no side `gsf_material_steps-<sample>.root` is required. It keeps
+diagnostic, the generated per-job card may set it true. Embedded EventData is
+the fixed source; there is no source selector or helper-file input property.
+The card reads `GsfG4MaterialSteps` plus
+`GsfSimTrackerHitG4StepLinks` from the ordinary input event, keeps
 `TruthBHLossInputTrackIndex=0` and
-`TruthBHLossMaxEndpointDistance=5.0`. The compiled and active reverse-template
-values remain false, `CSV`, empty input, track index 0, and 5.0 mm. This is
-deliberate truth-diagnostic campaign steering, not a production-default change.
+`TruthBHLossMaxEndpointDistance=5.0`, and requires no side material file. The
+compiled and active reverse-template values remain false, track index 0, and
+5.0 mm. This is deliberate truth-diagnostic campaign steering, not a
+production-default change.
 Generated truth-on cards append `truth-bh`; generated off controls append
 `truth-bh-off` to their GSF EDM and flat-tuple filenames.
 
@@ -440,7 +389,7 @@ passive and do not affect the GSF workflow.
 
 ### Configuration-maintenance contract
 
-The 45-property inventory above is part of the configurable interface, not a
+The 43-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.
@@ -503,10 +452,11 @@ listed in the property table.
 The maintained workflow no longer schedules
 `GsfMaterialStepRecorderAnaElemTool` or produces its side material ROOT file.
 The producer source and standalone test card are removed; the implementation
-is available in Git history, while historical tuples and compatibility readers
-remain for earlier studies. Those tuples recorded authoritative Geant4
-pre/post-step truth, including true track-step order, sensitive-volume and
-touchable identifiers, track-length coordinates, and momentum directions.
+is available in Git history. Historical tuples remain useful as evidence, but
+the current GSF truth oracle no longer reads them. Standalone historical
+analysis tools may still inspect those files. The tuples recorded authoritative
+Geant4 pre/post-step truth, including true track-step order, sensitive-volume
+and touchable identifiers, track-length coordinates, and momentum directions.
 Tracker-region DD4hep constants were explicitly converted to millimetres.
 
 For historical BH-model dataset reproduction, the recorder could also write a
@@ -531,21 +481,12 @@ The retired producer required `RecordDD4hepSurfaceIntervals=True`, together
 with `RecordZeroLoss=True`, `MinStepLengthMm=0`, and `MinAbsLossGeV=0`, for
 that historical tree. These are no longer active run-card properties.
 
-Build outgoing-current transition rows with:
-
-```bash
-source setup.sh
-build.105.0.0.x86_64-el9-gcc11-opt/run python3 \
-  Reconstruction/RecGsfTracking/scripts/build_g4_transition_dataset.py \
-  'path/to/gsf_material_steps*.root' \
-  --output /tmp/gsf_transitions.csv
-```
-
-The builder aggregates primary-electron steps from entry into one sensitive
-element to entry into the next. It maps the CEPC TPC lower/upper sensitive
-half-layer pair to one reconstructed pad-row anchor. `g4_t_over_x0` remains a
-Geant4 diagnostic; `reco_t_over_x0` is intentionally empty until the rows are
-matched to the owned `RecGsfTracking` surface transitions.
+The former `build_g4_transition_dataset.py` helper was removed with the
+helper-file workflow. Historical transition CSVs and their derivation records
+remain under project history; reproducing that builder requires the historical
+revision. `g4_t_over_x0` in those files was a Geant4 diagnostic, while
+`reco_t_over_x0` remained empty until rows were matched to owned GSF surface
+transitions.
 
 Historical studies compared a G4 transition CSV with the retired GSF material
 audit using

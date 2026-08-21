@@ -35,8 +35,7 @@ The normal simulation event can now optionally embed exact
 `SimTrackerHit -> Geant4-step` provenance in two PODIO collections. The
 default-off oracle's current batch source follows the standard reconstructed-
 hit truth associations into those collections, so the maintained workflow no
-longer requires a side material tuple. The CSV and `G4StepTuple` readers remain
-historical controls.
+longer requires or supports a side material tuple or prejoined CSV input.
 A passive interval recorder now persists, in the final
 GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual
@@ -202,9 +201,10 @@ recovery and false radiative modes and does not solve selection.
 The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
-explicitly steers all 45 supported properties. The retired side material ROOT
+explicitly steers all 43 supported properties. The retired side material ROOT
 producer and runtime material/BH audit CSV are absent from the current source
-and cards; embedded simulation provenance plus the default-on final
+and cards. Their CSV and `G4StepTuple` truth-oracle readers are also removed;
+embedded simulation provenance plus the default-on final
 truth-material EDM/flat-tuple records are the maintained recording path.
 `TruthBHLossOverride=false` remains the compiled, reverse-template, and
 maintained `gsf.py.bk` base value. A truth-on batch submission passes
@@ -216,8 +216,6 @@ GSF/flat outputs with `truth-bh`. The standard simulation writer creates
 the collections; `trk`, `calodigi`, and `rec` preserve them. No side material
 tuple is part of this maintained workflow. This campaign steering is not a
 production-default change.
-CSV-selected tracks still require every exact consecutive accepted-hit
-interval, while zero-row tracks are logged and use ordinary BH throughout.
 Truth mapping remains all-or-nothing, but event/track validation failures no
 longer terminate the job: the complete selected track falls back to ordinary
 BH and records an explicit validity/status tag in EDM and the flat tuple.
@@ -255,13 +253,13 @@ Current boundary evidence and definitions:
   within 0.10% per tested interval and 0.027% in their three-interval sum.
   This validates the endpoint/ownership mechanism, not the collapsed BH
   response or production performance.
-- The default-off material recorder can now emit midpoint-to-midpoint DD4hep
-  intervals with the same `materialsBetween` primitive used by GSF. A
+- The retired default-off material recorder emitted midpoint-to-midpoint
+  DD4hep intervals with the same `materialsBetween` primitive used by GSF. A
   three-event seed-107 comparison matched 693 reconstructed non-seed
   intervals: summed DD4hep differences were at most 0.0034% in VXD/ITK and
   0.0327% in OTK; the TPC sum differed by 0.815% because truth midpoints and
   digitized hit endpoints are not identical. The three separately handled
-  seed paths are not emitted by the current GSF CSV audit. This validates the
+  seed paths were not emitted by the historical GSF CSV audit. This validates the
   extractor mechanism, not BH closure.
 - The material recorder independently evaluates both endpoint orders with the
   same coverage invariant. A three-event final-code rerun produced 696 valid
@@ -307,9 +305,10 @@ Current boundary evidence and definitions:
   hit pair is checked.
 - The former `MaterialBHAuditCSV` component-call recorder and the side
   `GsfMaterialStepRecorderAnaElemTool` ROOT producer are retired from the
-  active source interface and maintained cards. Historical files, readers,
-  records, and Git history remain available for reproducing earlier studies;
-  stale cards assigning either removed interface must be regenerated.
+  active source interface and maintained cards. The corresponding CSV and
+  side-ROOT runtime readers are also removed. Historical files, records, and
+  Git history remain available for interpreting earlier studies; stale cards
+  assigning any removed interface must be regenerated.
 - The default-on passive truth-material recorder writes one final EDM object
   per consecutive accepted-hit interval. It keeps fractionally integrated
   Geant4 t/X0/eBrem truth, DD4hep t/X0 between the same exact hooks, and
@@ -329,9 +328,8 @@ Current boundary evidence and definitions:
   step. Missing, ambiguous, incomplete, nonmonotonic, or nonphysical selected-
   track provenance invalidates the whole truth scope. An invalid scope uses
   ordinary BH for the whole track and emits a negative status instead of
-  failing the event. The original strict CSV and side-file `G4StepTuple`
-  sources remain available for historical reproduction. They are batch
-  plumbing for the same diagnostic, not new truth logic.
+  failing the event. Embedded `EventData` is now the only supported oracle
+  source; there is no source-selector or external-input-path property.
   A one-event 2 GeV, 85 degree mechanical chain persisted 629 selected Geant4
   steps and 233 complete SimTrackerHit links, preserved both counts through
   tracking, calorimeter digitization, and calorimeter reconstruction, then
@@ -504,6 +502,10 @@ The removal of the side material ROOT producer and runtime BH-audit CSV,
 retained historical-reader boundary, synchronized 45-property surface, and
 one-event final-tuple smoke check are preserved in
 `agents_record/2026-08-22-retired-side-material-helper-outputs.md`.
+The subsequent removal of the CSV and side-ROOT truth-oracle readers, the
+embedded-only oracle contract, and synchronized 43-property surface are
+preserved in
+`agents_record/2026-08-22-retired-material-helper-readers.md`.
 
 The paused ECAL boundary, deferred work, and links to its complete evidence are
 preserved in

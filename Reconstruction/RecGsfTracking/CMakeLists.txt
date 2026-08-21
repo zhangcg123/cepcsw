@@ -4,7 +4,6 @@ gaudi_add_module(RecGsfTracking
                         src/GsfMixture.cpp
                         src/BetheHeitlerSplitter.cpp
                         src/TruthBHLossEventData.cpp
-                        src/TruthBHLossTupleReader.cpp
                         src/GsfAlgorithm.cpp
                  LINK ${DDKalTest_LIBRARIES}
                       ${KalTest_LIBRARIES}

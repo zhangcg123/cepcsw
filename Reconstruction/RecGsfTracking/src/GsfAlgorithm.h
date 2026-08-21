@@ -12,7 +12,6 @@
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
-#include "TruthBHLossTupleReader.h"
 #include "TruthBHLossEventData.h"
 #include "TruthBHLossScopeStatus.h"
 
@@ -20,10 +19,8 @@
 
 #include <vector>
 #include <map>
-#include <memory>
 #include <string>
 #include <cstdint>
-#include <set>
 #include <tuple>
 
 #include "TrackSystemSvc/HelixTrack.h"
@@ -196,27 +193,17 @@ private:
   Gaudi::Property<bool> m_truthBHLossOverride{
       this, "TruthBHLossOverride", false,
       "Default-off diagnostic replacing each executed BH response on every "
-      "fully validated selected track with one exact externally supplied "
+      "fully validated selected track with one exact embedded-event "
       "Geant4 eBrem retained-momentum fraction; invalid truth scopes use the "
       "configured BH model and emit a negative status tag"};
-  Gaudi::Property<std::string> m_truthBHLossSource{
-      this, "TruthBHLossSource", "CSV",
-      "CSV, G4StepTuple, or EventData source used only by "
-      "TruthBHLossOverride"};
-  Gaudi::Property<std::string> m_truthBHLossInput{
-      this, "TruthBHLossInput", "",
-      "Consecutive-hit CSV or legacy G4StepTuple ROOT file validated "
-      "as one all-or-nothing track scope by TruthBHLossOverride; unused by "
-      "EventData"};
   Gaudi::Property<int> m_truthBHLossInputTrackIndex{
       this, "TruthBHLossInputTrackIndex", 0,
-      "CompleteTracks index receiving the primary-electron G4StepTuple or "
-      "EventData truth "
-      "oracle; other tracks use the configured BH model"};
+      "CompleteTracks index receiving the embedded-event truth oracle; other "
+      "tracks use the configured BH model"};
   Gaudi::Property<double> m_truthBHLossMaxEndpointDistance{
       this, "TruthBHLossMaxEndpointDistance", 5.0,
       "Maximum allowed distance in mm between a runtime accepted hit and its "
-      "matched Geant4 truth anchor or exact EventData hook"};
+      "exact embedded-event Geant4 truth hook"};
   Gaudi::Property<bool> m_recordTruthMaterialIntervals{
       this, "RecordTruthMaterialIntervals", true,
       "Passively write exact Geant4, truth-hook DD4hep, and actual runtime "
@@ -245,11 +232,6 @@ private:
 
   using TruthBHLossKey =
       std::tuple<int, int, int, int, std::uint64_t, std::uint64_t>;
-  std::map<TruthBHLossKey, double> m_truthBHRetainedFractions;
-  std::set<std::pair<int, int>> m_truthBHSelectedTracks;
-  std::unique_ptr<TruthBHLossTupleReader> m_truthBHLossTupleReader;
-  bool m_truthBHLossUsesTuple = false;
-  bool m_truthBHLossUsesEventData = false;
   std::uint64_t m_truthBHLossOverrideCalls = 0;
   std::uint64_t m_truthBHLossPassthroughTracks = 0;
   std::uint64_t m_truthBHLossDynamicTracks = 0;
