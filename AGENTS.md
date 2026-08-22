@@ -186,16 +186,30 @@ The user-authorized `test_new` branch temporarily isolates the downstream-
 selection part of this question in a separate, unscheduled
 `RecGsfGlobalLossRefitter`. It reads `CompleteTracks`, compares identity with
 all exactly-one-radiative-interval histories after consuming every inward hit,
-and writes `GlobalLossTracks`; no ready workflow instantiates it. The exact-
-default event-3/4 gate preserves the clean identity with a log-evidence
-threshold of 3 and moves the known-loss momentum toward truth, but selects the
-adjacent wrong interval and underestimates the truth loss. Treat it as a
-diagnostic instrument, not a candidate replacement. Do not integrate it into
-the maintained cards, add multi-loss histories, or tune its evidence gate
-until the interval-5/6 likelihood crossover is understood. The complete
-formula, option/output contract, steering, tests, and paused material-focus
-resume point are preserved in
+and writes `GlobalLossTracks`; no ready workflow instantiates it. A frozen-code
+30-event diagnostic now includes 25 topology-clear events and five secondary-
+activity controls. In a selected ten-event topology-clear hard-loss panel at
+truth intervals 5--7, it published radiation in nine events but selected the
+exact truth interval in only four, the adjacent wrong interval in five, and
+identity in one. It produced genuine recoveries, including file 19 entry 4
+from -31.98% to -1.52%, but also a catastrophic tail in file 66 entry 66:
+truth interval 5 had `z=0.2077`, while the method selected interval 4 and
+profiled to the lower bound `z=0.05`, publishing 169.23 GeV for 40.68 GeV
+truth (+315.96%) with log Bayes factor +113.3. Consuming all hits therefore
+does not remove the adjacent-interval or loss-magnitude ambiguity.
+
+Treat the global refitter as a diagnostic instrument, not a candidate
+replacement. Do not integrate it into maintained cards, add multi-loss
+histories, or tune its evidence gate or retained-fraction floor. First
+decompose the file-66 entry-66 per-hit likelihood crossover between selected
+interval 4 and truth-compatible interval 5, using file 19 entry 4 and file 66
+entry 22 as correct-history controls. The formula, option/output contract, and
+initial event-3/4 gate are preserved in
 `agents_record/2026-08-22-global-one-loss-evidence-refitter.md`.
+The expanded sample selection, all event tables, exact steering, aggregate
+results, catastrophic boundary-profile tail, and ordered next diagnostic are
+preserved in
+`agents_record/2026-08-22-global-one-loss-expanded-event-gate.md`.
 The exact broken-session Git/worktree snapshot, completed validation, unresolved
 interval-5/6 crossover, and fresh-session restart procedure are preserved in
 `agents_record/2026-08-22-test-new-session-recovery-handoff.md`.
