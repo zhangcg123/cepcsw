@@ -182,6 +182,21 @@ interval-collapse granularity problem, a BH response mismatch, and a later
 measurement/selection effect. The ECAL prototype is paused and remains
 default-off; this focus does not authorize changes outside `RecGsfTracking`.
 
+The user-authorized `test_new` branch temporarily isolates the downstream-
+selection part of this question in a separate, unscheduled
+`RecGsfGlobalLossRefitter`. It reads `CompleteTracks`, compares identity with
+all exactly-one-radiative-interval histories after consuming every inward hit,
+and writes `GlobalLossTracks`; no ready workflow instantiates it. The exact-
+default event-3/4 gate preserves the clean identity with a log-evidence
+threshold of 3 and moves the known-loss momentum toward truth, but selects the
+adjacent wrong interval and underestimates the truth loss. Treat it as a
+diagnostic instrument, not a candidate replacement. Do not integrate it into
+the maintained cards, add multi-loss histories, or tune its evidence gate
+until the interval-5/6 likelihood crossover is understood. The complete
+formula, option/output contract, steering, tests, and paused material-focus
+resume point are preserved in
+`agents_record/2026-08-22-global-one-loss-evidence-refitter.md`.
+
 Freeze the production baseline, with the 2026-08-18 material-direction
 correction, the 2026-08-19 matched-hit endpoint correction and explicit
 DD4hep default promotion, and the 2026-08-20 boundary-coverage correction as

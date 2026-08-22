@@ -440,28 +440,43 @@ std::vector<GsfComponent*> applyMixture(
 
 }  // namespace
 
+std::vector<BetheHeitlerMixtureComponent>
+BetheHeitlerSplitter::mixture(double tX0) const {
+  std::vector<BHComponent> internal;
+  switch (m_model) {
+    case Model::ActsAtlas:
+      internal = actsAtlasMixture(tX0);
+      break;
+    case Model::CEPC2GeV85StepConditioned:
+      internal = cepc2GeV85StepConditionedMixture(tX0);
+      break;
+    case Model::CEPC2GeV85StepConditioned6:
+      internal = cepc2GeV85StepConditioned6Mixture(tX0);
+      break;
+    case Model::CEPCRuntimeGenericGrid5Clear:
+      internal = cepcRuntimeGenericGrid5ClearMixture(tX0);
+      break;
+    case Model::CEPCRuntimeCategoryAligned5Clear:
+      internal = cepcRuntimeCategoryAligned5ClearMixture(tX0);
+      break;
+  }
+  std::vector<BetheHeitlerMixtureComponent> result;
+  result.reserve(internal.size());
+  for (const auto& component : internal)
+    result.push_back({component.weight, component.mean, component.var});
+  return result;
+}
+
 std::vector<GsfComponent*> BetheHeitlerSplitter::split(
     GsfComponent* parent, double tX0, double bz, bool reverse,
     std::vector<BetheHeitlerMixtureComponent>* returnedMixture) const {
-  std::vector<BHComponent> mixture;
-  switch (m_model) {
-    case Model::ActsAtlas:
-      mixture = actsAtlasMixture(tX0);
-      break;
-    case Model::CEPC2GeV85StepConditioned:
-      mixture = cepc2GeV85StepConditionedMixture(tX0);
-      break;
-    case Model::CEPC2GeV85StepConditioned6:
-      mixture = cepc2GeV85StepConditioned6Mixture(tX0);
-      break;
-    case Model::CEPCRuntimeGenericGrid5Clear:
-      mixture = cepcRuntimeGenericGrid5ClearMixture(tX0);
-      break;
-    case Model::CEPCRuntimeCategoryAligned5Clear:
-      mixture = cepcRuntimeCategoryAligned5ClearMixture(tX0);
-      break;
-  }
-  return applyMixture(parent, mixture, bz, reverse, returnedMixture);
+  const auto publicMixture = mixture(tX0);
+  std::vector<BHComponent> internal;
+  internal.reserve(publicMixture.size());
+  for (const auto& component : publicMixture)
+    internal.push_back({component.weight, component.mean,
+                        component.variance});
+  return applyMixture(parent, internal, bz, reverse, returnedMixture);
 }
 
 std::vector<GsfComponent*> BetheHeitlerSplitter::splitWithRetainedFraction(

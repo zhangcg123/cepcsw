@@ -8,6 +8,112 @@ can additionally write a paired component-selection result to
 update path.  The old alternate KF fitter and initialization experiments have
 been removed; historical comparisons remain under `agents_record/`.
 
+## Experimental global one-loss refitter
+
+`RecGsfGlobalLossRefitter` is a separate, default-unscheduled algorithm on the
+`test_new` branch. It reads `CompleteTracks` directly and writes
+`GlobalLossTracks`; it neither calls `RecGsfTracking` nor changes `GSFTracks`.
+No maintained dump card, reverse template, submission script, or flat-tuple
+workflow instantiates it. This separation is intentional: the implementation
+can be tested without changing any ready production or diagnostic workflow.
+
+For each usable input track, available hits that map to active measurement
+layers are ordered by radius from the interaction point outward. The refitter
+starts from `CompleteTracks::AtLastHit`, scales its
+full covariance, and consumes every inner measurement through the same exact
+MarlinTrk
+`addHit(reference) -> initialise(state) -> addAndFit(target)` operation used by
+the GSF. It compares the identity history `H0` with a bank `H(j,k)` containing
+exactly one radiative transition: matched-hit interval `j` and non-identity
+BH mode `k`. Material is the coverage-checked DD4hep thickness between those
+two matched hit points. There is no KL reduction and no multi-loss history in
+this first implementation.
+
+For a radiative history, the retained fraction `z` is continuous rather than
+fixed to a BH component mean. The history evidence is
+
+```text
+log Z(j,k) = log P(H(j,k))
+           + log integral L(all inward hits | H(j,k), z)
+                          N(z | mean(j,k), variance(j,k)) dz .
+```
+
+The integral covers the configured physical, finite-sigma window and is
+evaluated by Simpson quadrature. The history prior is the product of identity
+weights at every other scanned interval and the selected mode weight at
+interval `j`:
+
+```text
+log P(H0)    = sum_i log w(i, identity)
+log P(H(j,k)) = log P(H0) - log w(j, identity) + log w(j,k) .
+```
+
+For every radiative mode, the reported candidate `z` maximizes the likelihood
+times the Gaussian mode density within the same window; history selection then
+carries that candidate optimum into the winning output. The best radiative
+history is published only when
+
+```text
+log Z(best radiative) - log Z(identity)
+    >= MinimumRadiativeLogBayesFactor .
+```
+
+The default threshold is 3, approximately a 20:1 evidence requirement. This
+is a conservative clean-track guard, not a population-validated operating
+point. Setting it to 0 gives the direct maximum-evidence-history decision,
+with an exact evidence tie resolved in favor of the radiative history.
+
+The algorithm exposes 14 algorithm-specific steering properties:
+
+| Property | Compiled default | Meaning and allowed values |
+|---|---:|---|
+| `ElectronHypothesis` | `true` | Must remain true; this experimental history prior requires an electron BH model. |
+| `BHModel` | `CEPC2GeV85StepConditioned` | Accepted canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, and `CEPCRuntimeCategoryAligned5Clear`. The first two also accept `cepc2GeV85StepConditioned` and `cepc2GeV85StepConditioned6`. Unknown names fail initialization. `ActsAtlas` and its `actsAtlas`/`ACTS`/`Acts` aliases parse but are then explicitly rejected because this one-loss prior requires an exact identity atom. |
+| `BHSplitThreshold` | `1e-4` | Finite, nonnegative minimum DD4hep interval t/X0 included in the hypothesis bank; the comparison is strictly `pathTX0 > threshold`. |
+| `MSOn` | `true` | Enable KalTest multiple scattering in every hypothesis refit. |
+| `ElossOn` | `false` | Enable the baseline deterministic KalTest energy-loss treatment; independent of the fitted radiative jump. |
+| `OuterSeedCovarianceScale` | `100` | Finite positive multiplier applied to the complete `AtLastHit` covariance. |
+| `ProcessSigmaWindow` | `3` | Finite positive half-width, in BH-mode standard deviations, of the evidence/profile interval. |
+| `ProfileGridPoints` | `9` | Odd Simpson grid size, at least 3. |
+| `ProfileRefinementIterations` | `6` | Nonnegative local interval-halving iterations applied to every radiative mode's reported-`z` profile after its Simpson evidence grid. These evaluations refine the posterior-kernel maximum but do not change the already accumulated evidence integral. |
+| `MinimumRetainedFraction` | `0.05` | Physical lower bound strictly between 0 and 1. The upper bound is just below 1. |
+| `MinimumRadiativeLogBayesFactor` | `3` | Any finite evidence difference is accepted. The best radiative history is published when its evidence minus identity is at least this value; 0 selects radiative for a non-smaller evidence, while a negative value deliberately weakens the clean-track gate. |
+| `CandidateIntervalIndices` | `[]` | Optional zero-based interval allow-list over the radius-sorted matched-hit vector after unavailable/unmatched input hits are removed. Empty scans every valid interval above threshold. Entries are not range-validated; negative or out-of-range values simply match no interval. |
+| `SelectedEventIndices` | `[]` | Optional zero-based event allow-list for focused diagnostics. Empty processes all events. Entries are not range-validated; negative or out-of-range values simply match no event. |
+| `VerboseDump` | `false` | Print identity evidence, every interval/mode profile, and the final decision. |
+
+Each successful output track contains one `AtIP` state, type `2`, and copies
+the input tracker-hit relations. `GlobalLossStatus` has one entry per
+`CompleteTracks` input track. Every other diagnostic collection has one entry
+per `GlobalLossTracks` output track, and `GlobalLossInputTrackIndex` maps that
+output-aligned row back to the input-track/status row:
+
+| Collection | Meaning |
+|---|---|
+| `CompleteTracks` | Input track collection. |
+| `GlobalLossTracks` | Successful independently refitted tracks. This collection is not `GSFTracks` and is produced only when this separate algorithm is scheduled. |
+| `GlobalLossStatus` | Per-input-track status: `0` output written; `-1` event not selected; `1` fewer than five associated hits; `2` no usable `AtLastHit`; `3` fewer than five matched hits; `4` no valid hypothesis fit. |
+| `GlobalLossInputTrackIndex` | Original `CompleteTracks` index for each successful output row. |
+| `GlobalLossSelectedInterval`, `GlobalLossSelectedMode` | Selected radius-sorted matched-hit interval and BH mode; both are `-1` for identity. |
+| `GlobalLossRetainedFraction`, `GlobalLossSelectedTX0` | Profiled `z` and selected interval t/X0; identity receives 1 and 0. |
+| `GlobalLossLogLikelihood`, `GlobalLossLogPrior`, `GlobalLossLogPosteriorEvidence` | Selected profile likelihood; selected discrete-history log mass plus `-0.5` Gaussian pull squared at the reported `z` (the Gaussian normalization is omitted from this diagnostic kernel); and selected marginalized history evidence. |
+| `GlobalLossIdentityLogEvidence`, `GlobalLossBestRadiativeLogEvidence`, `GlobalLossRadiativeLogBayesFactor` | The two decision evidences and their radiative-minus-identity difference, retained even when the clean-track gate publishes identity. If a side has no valid fit, its evidence and the corresponding difference use signed infinity consistently with the implementation. |
+
+The focused zero-based event 3/4 gate from
+`trk-e--20-85-822751.root`, using the compiled five-component model and
+`ElossOn=false`, established mechanism but not validation. Event 3 has a
+truth-matched 6.425% eBrem loss in interval 5 and truth pT 35.813 GeV. The
+identity refit gives 33.544 GeV; the best radiative evidence is higher by
+4.273 and publishes 34.306 GeV. However, it chooses interval 6 and only 2.641%
+loss. In the no-eBrem event 4, the best false-radiative evidence is higher by
+only 0.380, so the default evidence gate retains identity at 48.788 GeV.
+Increasing the outer covariance scale from 100 to `1e6`, switching deterministic
+energy loss, and comparing the runtime-generic and production BH models did
+not remove the interval/magnitude error. The present conclusion is therefore
+limited: all-hit evidence can protect this clean control and move one loss
+case in the correct momentum direction, but it has not demonstrated correct
+loss localization or magnitude and is not ready for workflow integration.
+
 ## Complete configuration reference
 
 Reference date: 2026-08-22. `RecGsfTracking` exposes 43 Gaudi properties in

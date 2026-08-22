@@ -1,4 +1,5 @@
 #include "GsfAlgorithm.h"
+#include "GlobalLossRefitter.h"
 #include "GsfComponent.h"
 #include "GsfMixture.h"
 #include "BetheHeitlerSplitter.h"
@@ -41,6 +42,7 @@
 #include <utility>
 
 DECLARE_COMPONENT(RecGsfTracking)
+DECLARE_COMPONENT(RecGsfGlobalLossRefitter)
 
 using DH = edm4hep::TrackState;
 
@@ -3896,5 +3898,602 @@ StatusCode RecGsfTracking::finalize() {
   m_materialManager = nullptr;
   m_detectors.clear();
   if (m_cradle) { m_cradle->SetOwner(true); delete m_cradle; m_cradle = nullptr; }
+  return Algorithm::finalize();
+}
+
+// ============================================================================
+// Experimental one-loss global profile refitter
+// ============================================================================
+
+namespace {
+
+struct GlobalLossFitResult {
+  bool valid = false;
+  double logLikelihood = -std::numeric_limits<double>::infinity();
+  double chi2 = 0.0;
+  int ndf = 0;
+  edm4hep::TrackState ipState;
+};
+
+struct GlobalLossSelection {
+  bool valid = false;
+  int interval = -1;
+  int mode = 0;
+  double retainedFraction = 1.0;
+  double tx0 = 0.0;
+  double logLikelihood = -std::numeric_limits<double>::infinity();
+  double logPrior = -std::numeric_limits<double>::infinity();
+  double score = -std::numeric_limits<double>::infinity();
+  GlobalLossFitResult fit;
+};
+
+}  // namespace
+
+RecGsfGlobalLossRefitter::RecGsfGlobalLossRefitter(
+    const std::string& name, ISvcLocator* svc)
+    : Algorithm(name, svc) {}
+
+RecGsfGlobalLossRefitter::~RecGsfGlobalLossRefitter() = default;
+
+StatusCode RecGsfGlobalLossRefitter::initialize() {
+  m_eventIndex = 0;
+  if (!m_isElectron.value()) {
+    error() << "RecGsfGlobalLossRefitter currently supports only the electron "
+               "hypothesis"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_bhSplitThreshold.value() < 0.0 ||
+      !std::isfinite(m_bhSplitThreshold.value()) ||
+      !(m_outerSeedCovarianceScale.value() > 0.0) ||
+      !std::isfinite(m_outerSeedCovarianceScale.value()) ||
+      !(m_processSigmaWindow.value() > 0.0) ||
+      !std::isfinite(m_processSigmaWindow.value()) ||
+      m_profileGridPoints.value() < 3 ||
+      m_profileGridPoints.value() % 2 == 0 ||
+      m_profileRefinementIterations.value() < 0 ||
+      !(m_minimumRetainedFraction.value() > 0.0) ||
+      !(m_minimumRetainedFraction.value() < 1.0) ||
+      !std::isfinite(m_minimumRadiativeLogBayesFactor.value())) {
+    error() << "Invalid global-loss profile configuration: require a "
+               "finite nonnegative split threshold, finite positive "
+               "covariance and "
+               "sigma scales, an odd ProfileGridPoints >= 3, nonnegative "
+               "refinement iterations, MinimumRetainedFraction in (0,1), "
+               "and a finite MinimumRadiativeLogBayesFactor"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  BetheHeitlerSplitter::Model bhModel;
+  try {
+    bhModel = BetheHeitlerSplitter::modelFromName(m_bhModel.value());
+  } catch (const std::exception& exception) {
+    error() << exception.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (bhModel == BetheHeitlerSplitter::Model::ActsAtlas) {
+    error() << "RecGsfGlobalLossRefitter requires a BH model with an explicit "
+               "identity atom; ActsAtlas is not supported by this one-loss "
+               "profile prior"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  m_geosvc = service<IGeomSvc>("GeomSvc");
+  if (!m_geosvc) {
+    error() << "Failed to find GeomSvc" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  m_materialManager = new dd4hep::rec::MaterialManager(
+      m_geosvc->lcdd()->world().volume());
+  m_field = m_geosvc->lcdd()
+                ->field()
+                .magneticField(dd4hep::Position(0, 0, 0))
+                .z() / dd4hep::tesla;
+
+  auto trackSystemSvc = service<ITrackSystemSvc>("TrackSystemSvc");
+  if (!trackSystemSvc) {
+    error() << "Failed to find TrackSystemSvc" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  m_trackSystem = trackSystemSvc->getTrackSystem(this, "KalTest");
+  if (!m_trackSystem) {
+    error() << "Failed to create the KalTest track system" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  m_trackSystem->setOption(
+      MarlinTrk::IMarlinTrkSystem::CFG::useQMS, m_doMS.value());
+  m_trackSystem->setOption(
+      MarlinTrk::IMarlinTrkSystem::CFG::usedEdx, m_doDEDX.value());
+  m_trackSystem->setOption(
+      MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, true);
+  m_trackSystem->init();
+
+  m_cradle = new TKalDetCradle();
+  m_cradle->SetOwner(true);
+  auto detector = m_geosvc->lcdd();
+  std::vector<dd4hep::DetElement> detectors = detector->detectors("tracker");
+  for (auto& passive : detector->detectors("passive"))
+    detectors.push_back(passive);
+  for (auto& calorimeter : detector->detectors("calorimeter")) {
+    std::string name = calorimeter.name();
+    std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+    if (name.find("ecal") != std::string::npos)
+      detectors.push_back(calorimeter);
+  }
+
+  double minimumSurfaceOrder = std::numeric_limits<double>::infinity();
+  for (auto& element : detectors) {
+    auto* kalDetector = new DDKalDetector(element);
+    m_detectors.push_back(kalDetector);
+    m_cradle->Install(*kalDetector);
+    for (int index = 0; index < kalDetector->GetEntriesFast(); ++index) {
+      auto* surface = dynamic_cast<const TVSurface*>(kalDetector->At(index));
+      auto* cylinder =
+          dynamic_cast<DDCylinderMeasLayer*>(kalDetector->At(index));
+      if (surface && cylinder &&
+          surface->GetSortingPolicy() < minimumSurfaceOrder) {
+        minimumSurfaceOrder = surface->GetSortingPolicy();
+        m_ipLayer = cylinder;
+      }
+    }
+  }
+  m_cradle->Close();
+  if (m_doMS.value())
+    m_cradle->SwitchOnMS();
+  else
+    m_cradle->SwitchOffMS();
+  if (m_doDEDX.value())
+    m_cradle->SwitchOnDEDX();
+  else
+    m_cradle->SwitchOffDEDX();
+
+  for (auto* kalDetector : m_detectors) {
+    for (int index = 0; index < kalDetector->GetEntriesFast(); ++index) {
+      auto* layer =
+          dynamic_cast<const DDVMeasLayer*>(kalDetector->At(index));
+      if (!layer || !layer->IsActive()) continue;
+      for (auto cellID : layer->getCellIDs())
+        m_cellIDToLayer.insert({cellID, layer});
+    }
+  }
+
+  info() << "Experimental global-loss refitter: input=CompleteTracks "
+         << "output=GlobalLossTracks BHModel=" << m_bhModel.value()
+         << " splitThreshold=" << m_bhSplitThreshold.value()
+         << " outerCovarianceScale=" << m_outerSeedCovarianceScale.value()
+         << " profileGrid=" << m_profileGridPoints.value()
+         << " refinements=" << m_profileRefinementIterations.value()
+         << " radiativeLogBayesGate="
+         << m_minimumRadiativeLogBayesFactor.value()
+         << "; hypothesis bank=no loss plus exactly one radiative interval"
+         << endmsg;
+  return StatusCode::SUCCESS;
+}
+
+StatusCode RecGsfGlobalLossRefitter::execute() {
+  const int eventIndex = m_eventIndex++;
+  auto* output = m_outputTracks.createAndPut();
+  auto* status = m_status.createAndPut();
+  auto* outputInputIndex = m_inputTrackIndex.createAndPut();
+  auto* selectedInterval = m_selectedInterval.createAndPut();
+  auto* selectedMode = m_selectedMode.createAndPut();
+  auto* retainedFraction = m_retainedFraction.createAndPut();
+  auto* selectedTX0 = m_selectedTX0.createAndPut();
+  auto* logLikelihood = m_logLikelihood.createAndPut();
+  auto* logPrior = m_logPrior.createAndPut();
+  auto* logPosteriorEvidence = m_logPosteriorEvidence.createAndPut();
+  auto* identityLogEvidence = m_identityLogEvidence.createAndPut();
+  auto* bestRadiativeLogEvidence =
+      m_bestRadiativeLogEvidence.createAndPut();
+  auto* radiativeLogBayesFactor =
+      m_radiativeLogBayesFactor.createAndPut();
+
+  const auto* input = m_inputTracks.get();
+  if (!input) return StatusCode::SUCCESS;
+  status->resize(input->size());
+  std::fill(status->begin(), status->end(), std::int32_t{-1});
+
+  const auto& selectedEvents = m_selectedEventIndices.value();
+  if (!selectedEvents.empty() &&
+      std::find(selectedEvents.begin(), selectedEvents.end(), eventIndex) ==
+          selectedEvents.end()) {
+    return StatusCode::SUCCESS;
+  }
+
+  BetheHeitlerSplitter splitter(m_bhModel.value());
+  int inputIndex = -1;
+  for (const auto& track : *input) {
+    ++inputIndex;
+    const auto associatedHits = track.getTrackerHits();
+    if (associatedHits.size() < 5) {
+      (*status)[static_cast<std::size_t>(inputIndex)] = 1;
+      continue;
+    }
+
+    edm4hep::TrackState outerState;
+    if (!getTrackStateAt(track, DH::AtLastHit, outerState) ||
+        outerState.omega == 0.0) {
+      (*status)[static_cast<std::size_t>(inputIndex)] = 2;
+      continue;
+    }
+
+    std::vector<MatchedHit> hits;
+    std::size_t inputOrder = 0;
+    for (const auto& hit : associatedHits) {
+      const std::size_t thisInputOrder = inputOrder++;
+      if (!hit.isAvailable()) continue;
+      auto* layer = findLayer(hit, m_cellIDToLayer, m_cradle);
+      if (!layer) continue;
+      auto* kalHit = layer->ConvertLCIOTrkHit(
+          const_cast<edm4hep::TrackerHit&>(hit));
+      if (!kalHit) continue;
+      const auto position = hit.getPosition();
+      const auto* surface = dynamic_cast<const TVSurface*>(layer);
+      hits.push_back({hit, layer, kalHit,
+                      std::hypot(position.x, position.y), thisInputOrder,
+                      layer->GetIndex(),
+                      surface ? surface->GetSortingPolicy() : 0.0});
+    }
+    std::sort(hits.begin(), hits.end(),
+              [](const MatchedHit& left, const MatchedHit& right) {
+                return left.radius < right.radius;
+              });
+    auto releaseHits = [&hits]() {
+      for (auto& hit : hits) delete hit.kalHit;
+      hits.clear();
+    };
+    if (hits.size() < 5) {
+      (*status)[static_cast<std::size_t>(inputIndex)] = 3;
+      releaseHits();
+      continue;
+    }
+
+    const int charge = outerState.omega > 0.0 ? 1 : -1;
+    auto fitHypothesis = [&](int processInterval,
+                             double retained) -> GlobalLossFitResult {
+      GlobalLossFitResult result;
+      auto component = std::make_unique<GsfComponent>();
+      component->weight = 1.0;
+      component->charge = charge;
+      component->kaltrack = new TKalTrack();
+      component->kaltrack->SetOwner();
+      auto* seedSite = makeInitialSiteFromTrackState(
+          outerState, hits.back(), m_field,
+          m_outerSeedCovarianceScale.value());
+      if (!seedSite) return result;
+      component->kaltrack->Add(seedSite);
+      if (!component->snapshotContinuation(m_field, DH::AtLastHit))
+        return result;
+
+      bool processApplied = processInterval < 0;
+      double fitChi2 = 0.0;
+      double cumulativeLogLikelihood = 0.0;
+      int measurementDimensions = 0;
+      for (int reverseHit = static_cast<int>(hits.size()) - 2;
+           reverseHit >= 0; --reverseHit) {
+        if (!processApplied && reverseHit == processInterval) {
+          // z is the profiled latent realization.  Its BH variance belongs in
+          // the prior below, not in p(measurements|z), so only a numerical
+          // variance floor is propagated here.
+          if (!applyCounterfactualReverseLoss(
+                  *component, 1.0 - retained, 1.0e-12, m_field))
+            return result;
+          processApplied = true;
+        }
+
+        const auto processInput = trackStateFromComponent(
+            *component, m_field, DH::AtOther);
+        edm4hep::TrackState updatedState;
+        MarlinTrk::MeasurementUpdate update;
+        double deltaChi2 = 0.0;
+        double updateChi2 = 0.0;
+        int updateNdf = 0;
+        bool accepted = false;
+        try {
+          std::unique_ptr<MarlinTrk::IMarlinTrack> marlinTrack(
+              m_trackSystem->createTrack());
+          edm4hep::TrackerHit referenceHit =
+              hits[static_cast<std::size_t>(reverseHit + 1)].lcioHit;
+          edm4hep::TrackerHit targetHit =
+              hits[static_cast<std::size_t>(reverseHit)].lcioHit;
+          accepted = marlinTrack &&
+              marlinTrack->addHit(referenceHit) ==
+                  MarlinTrk::IMarlinTrack::success &&
+              marlinTrack->initialise(
+                  processInput, m_field,
+                  MarlinTrk::IMarlinTrack::backward) ==
+                  MarlinTrk::IMarlinTrack::success &&
+              marlinTrack->addAndFit(
+                  targetHit, deltaChi2, update, DBL_MAX) ==
+                  MarlinTrk::IMarlinTrack::success &&
+              update.valid && std::isfinite(update.logDetInnovation) &&
+              marlinTrack->getTrackState(
+                  targetHit, updatedState, updateChi2, updateNdf) ==
+                  MarlinTrk::IMarlinTrack::success &&
+              appendBaselineStateToComponent(
+                  *component, updatedState,
+                  hits[static_cast<std::size_t>(reverseHit)], m_field,
+                  processInput, update);
+        } catch (...) {
+          accepted = false;
+        }
+        if (!accepted || !std::isfinite(deltaChi2)) return result;
+        fitChi2 += deltaChi2;
+        cumulativeLogLikelihood +=
+            -0.5 * (deltaChi2 + update.logDetInnovation);
+        measurementDimensions +=
+            hits[static_cast<std::size_t>(reverseHit)].kalHit->GetDimension();
+      }
+      if (!processApplied || !std::isfinite(cumulativeLogLikelihood))
+        return result;
+
+      THelicalTrack ipHelix(TMatrixD(5, 1), TVector3(0, 0, 0), m_field);
+      TMatrixD ipCovariance(5, 5);
+      if (!extrapolateContinuationToIP(
+              *component, m_field, ipHelix, ipCovariance))
+        return result;
+      result.ipState.location = DH::AtIP;
+      fillTrackState(result.ipState, ipHelix, ipCovariance, m_field);
+      result.logLikelihood = cumulativeLogLikelihood;
+      result.chi2 = fitChi2;
+      result.ndf = std::max(0, measurementDimensions - 5);
+      result.valid = true;
+      return result;
+    };
+
+    struct IntervalPrior {
+      int interval = -1;
+      double tx0 = 0.0;
+      int identityMode = -1;
+      std::vector<BetheHeitlerMixtureComponent> mixture;
+    };
+    std::vector<IntervalPrior> intervals;
+    double identityLogPrior = 0.0;
+    const auto& allowedIntervals = m_candidateIntervalIndices.value();
+    for (int interval = 0;
+         interval + 1 < static_cast<int>(hits.size()); ++interval) {
+      if (!allowedIntervals.empty() &&
+          std::find(allowedIntervals.begin(), allowedIntervals.end(),
+                    interval) == allowedIntervals.end())
+        continue;
+      const auto from = hits[static_cast<std::size_t>(interval)]
+                            .lcioHit.getPosition();
+      const auto to = hits[static_cast<std::size_t>(interval + 1)]
+                          .lcioHit.getPosition();
+      const auto path = geometryTransitionMaterialPath(
+          m_materialManager, TVector3(from.x, from.y, from.z),
+          TVector3(to.x, to.y, to.z));
+      if (!path.valid || !(path.pathTX0 > m_bhSplitThreshold.value()))
+        continue;
+      IntervalPrior prior;
+      prior.interval = interval;
+      prior.tx0 = path.pathTX0;
+      prior.mixture = splitter.mixture(path.pathTX0);
+      double closestIdentityDistance =
+          std::numeric_limits<double>::infinity();
+      for (int mode = 0; mode < static_cast<int>(prior.mixture.size());
+           ++mode) {
+        const double distance =
+            std::abs(prior.mixture[static_cast<std::size_t>(mode)].mean - 1.0);
+        if (distance < closestIdentityDistance) {
+          closestIdentityDistance = distance;
+          prior.identityMode = mode;
+        }
+      }
+      if (prior.identityMode < 0 || closestIdentityDistance > 1.0e-8)
+        continue;
+      const double identityWeight =
+          prior.mixture[static_cast<std::size_t>(prior.identityMode)].weight;
+      if (!(identityWeight > 0.0) || !std::isfinite(identityWeight))
+        continue;
+      identityLogPrior += std::log(identityWeight);
+      intervals.push_back(std::move(prior));
+    }
+
+    GlobalLossSelection best;
+    best.fit = fitHypothesis(-1, 1.0);
+    if (best.fit.valid) {
+      best.valid = true;
+      best.interval = -1;
+      best.mode = -1;
+      best.retainedFraction = 1.0;
+      best.logLikelihood = best.fit.logLikelihood;
+      best.logPrior = identityLogPrior;
+      best.score = best.logLikelihood + best.logPrior;
+      if (m_verboseDump.value()) {
+        info() << boost::format(
+            "GLOBAL LOSS IDENTITY event=%d track=%d logL=%.9g "
+            "logPrior=%.9g logEvidence=%.9g pT=%.9g")
+                      % eventIndex % inputIndex % best.logLikelihood
+                      % best.logPrior % best.score
+                      % ptFromTrackState(best.fit.ipState, m_field)
+               << endmsg;
+      }
+    }
+    GlobalLossSelection identity = best;
+    GlobalLossSelection bestRadiative;
+
+    for (const auto& interval : intervals) {
+      const double identityWeight =
+          interval.mixture[static_cast<std::size_t>(interval.identityMode)]
+              .weight;
+      for (int mode = 0;
+           mode < static_cast<int>(interval.mixture.size()); ++mode) {
+        if (mode == interval.identityMode) continue;
+        const auto& component =
+            interval.mixture[static_cast<std::size_t>(mode)];
+        if (!(component.weight > 0.0) || !(component.variance > 0.0) ||
+            !std::isfinite(component.weight) ||
+            !std::isfinite(component.mean) ||
+            !std::isfinite(component.variance))
+          continue;
+        const double sigma = std::sqrt(component.variance);
+        const double lower = std::max(
+            m_minimumRetainedFraction.value(),
+            component.mean - m_processSigmaWindow.value() * sigma);
+        const double upper = std::min(
+            1.0 - 1.0e-8,
+            component.mean + m_processSigmaWindow.value() * sigma);
+        if (!(upper > lower)) continue;
+
+        const double historyLogMass = identityLogPrior -
+            std::log(identityWeight) + std::log(component.weight);
+        GlobalLossSelection modeBest;
+        double bestPosteriorKernel =
+            -std::numeric_limits<double>::infinity();
+        std::vector<double> logQuadratureTerms;
+        auto evaluate = [&](double z, double quadratureMeasure = 0.0) {
+          z = std::clamp(z, lower, upper);
+          auto fit = fitHypothesis(interval.interval, z);
+          if (!fit.valid) return;
+          const double pull = (z - component.mean) / sigma;
+          const double posteriorKernel =
+              fit.logLikelihood - 0.5 * pull * pull;
+          if (quadratureMeasure > 0.0) {
+            constexpr double twoPi = 2.0 * M_PI;
+            logQuadratureTerms.push_back(
+                posteriorKernel - std::log(sigma * std::sqrt(twoPi)) +
+                std::log(quadratureMeasure));
+          }
+          if (!modeBest.valid || posteriorKernel > bestPosteriorKernel) {
+            bestPosteriorKernel = posteriorKernel;
+            modeBest.valid = true;
+            modeBest.interval = interval.interval;
+            modeBest.mode = mode;
+            modeBest.retainedFraction = z;
+            modeBest.tx0 = interval.tx0;
+            modeBest.logLikelihood = fit.logLikelihood;
+            modeBest.logPrior = historyLogMass - 0.5 * pull * pull;
+            modeBest.fit = std::move(fit);
+          }
+        };
+
+        const int gridPoints = m_profileGridPoints.value();
+        const double gridStep = (upper - lower) / (gridPoints - 1);
+        for (int point = 0; point < gridPoints; ++point) {
+          const int simpsonCoefficient =
+              (point == 0 || point == gridPoints - 1)
+                  ? 1
+                  : (point % 2 == 0 ? 2 : 4);
+          evaluate(lower + gridStep * point,
+                   gridStep * simpsonCoefficient / 3.0);
+        }
+        if (logQuadratureTerms.empty() || !modeBest.valid) continue;
+        const double maximumLogTerm = *std::max_element(
+            logQuadratureTerms.begin(), logQuadratureTerms.end());
+        double scaledIntegral = 0.0;
+        for (double term : logQuadratureTerms)
+          scaledIntegral += std::exp(term - maximumLogTerm);
+        const double logMarginalLikelihood =
+            maximumLogTerm + std::log(scaledIntegral);
+        const double modeLogPosteriorEvidence =
+            historyLogMass + logMarginalLikelihood;
+
+        evaluate(component.mean);
+        double step = gridStep;
+        for (int refinement = 0;
+             refinement < m_profileRefinementIterations.value() &&
+             modeBest.valid;
+             ++refinement) {
+          step *= 0.5;
+          const double center = modeBest.retainedFraction;
+          evaluate(center - step);
+          evaluate(center + step);
+        }
+        modeBest.score = modeLogPosteriorEvidence;
+
+        if (m_verboseDump.value() && modeBest.valid) {
+          info() << boost::format(
+              "GLOBAL LOSS event=%d track=%d interval=%d mode=%d "
+              "tX0=%.9g zMean=%.9g zSigma=%.9g zBest=%.9g "
+              "logL=%.9g logPriorAtBest=%.9g logEvidence=%.9g pT=%.9g")
+                    % eventIndex % inputIndex % interval.interval % mode
+                    % interval.tx0 % component.mean % sigma
+                    % modeBest.retainedFraction % modeBest.logLikelihood
+                    % modeBest.logPrior % modeBest.score
+                    % ptFromTrackState(modeBest.fit.ipState, m_field)
+                 << endmsg;
+        }
+        if (modeBest.valid &&
+            (!bestRadiative.valid ||
+             modeBest.score > bestRadiative.score))
+          bestRadiative = std::move(modeBest);
+      }
+    }
+
+    const double identityEvidence = identity.valid
+        ? identity.score : -std::numeric_limits<double>::infinity();
+    const double radiativeEvidence = bestRadiative.valid
+        ? bestRadiative.score : -std::numeric_limits<double>::infinity();
+    const double radiativeLogBayes = identity.valid && bestRadiative.valid
+        ? radiativeEvidence - identityEvidence
+        : (bestRadiative.valid
+               ? std::numeric_limits<double>::infinity()
+               : -std::numeric_limits<double>::infinity());
+    if (bestRadiative.valid &&
+        (!identity.valid ||
+         radiativeLogBayes >=
+             m_minimumRadiativeLogBayesFactor.value())) {
+      best = std::move(bestRadiative);
+    } else {
+      best = std::move(identity);
+    }
+
+    if (!best.valid) {
+      (*status)[static_cast<std::size_t>(inputIndex)] = 4;
+      releaseHits();
+      continue;
+    }
+
+    auto outputTrack = output->create();
+    outputTrack.setType(2);
+    outputTrack.setChi2(best.fit.chi2);
+    outputTrack.setNdf(best.fit.ndf);
+    outputTrack.addToTrackStates(best.fit.ipState);
+    for (const auto& hit : associatedHits)
+      outputTrack.addToTrackerHits(hit);
+
+    (*status)[static_cast<std::size_t>(inputIndex)] = 0;
+    outputInputIndex->push_back(inputIndex);
+    selectedInterval->push_back(best.interval);
+    selectedMode->push_back(best.mode);
+    retainedFraction->push_back(best.retainedFraction);
+    selectedTX0->push_back(best.tx0);
+    logLikelihood->push_back(best.logLikelihood);
+    logPrior->push_back(best.logPrior);
+    logPosteriorEvidence->push_back(best.score);
+    identityLogEvidence->push_back(identityEvidence);
+    bestRadiativeLogEvidence->push_back(radiativeEvidence);
+    radiativeLogBayesFactor->push_back(radiativeLogBayes);
+
+    info() << boost::format(
+        "GLOBAL LOSS SELECTED event=%d track=%d interval=%d mode=%d "
+        "tX0=%.9g retained=%.9g loss=%.6g%% logL=%.9g "
+        "logPriorAtBest=%.9g logEvidence=%.9g radiativeLogBayes=%.9g "
+        "pT=%.9g")
+              % eventIndex % inputIndex % best.interval % best.mode % best.tx0
+              % best.retainedFraction % (100.0 * (1.0 - best.retainedFraction))
+              % best.logLikelihood % best.logPrior % best.score
+              % radiativeLogBayes
+              % ptFromTrackState(best.fit.ipState, m_field)
+           << endmsg;
+    releaseHits();
+  }
+  return StatusCode::SUCCESS;
+}
+
+StatusCode RecGsfGlobalLossRefitter::finalize() {
+  info() << "RecGsfGlobalLossRefitter processed " << m_eventIndex
+         << " events" << endmsg;
+  delete m_materialManager;
+  m_materialManager = nullptr;
+  m_detectors.clear();
+  if (m_cradle) {
+    m_cradle->SetOwner(true);
+    delete m_cradle;
+    m_cradle = nullptr;
+  }
   return Algorithm::finalize();
 }
