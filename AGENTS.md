@@ -196,6 +196,9 @@ until the interval-5/6 likelihood crossover is understood. The complete
 formula, option/output contract, steering, tests, and paused material-focus
 resume point are preserved in
 `agents_record/2026-08-22-global-one-loss-evidence-refitter.md`.
+The exact broken-session Git/worktree snapshot, completed validation, unresolved
+interval-5/6 crossover, and fresh-session restart procedure are preserved in
+`agents_record/2026-08-22-test-new-session-recovery-handoff.md`.
 
 Freeze the production baseline, with the 2026-08-18 material-direction
 correction, the 2026-08-19 matched-hit endpoint correction and explicit
