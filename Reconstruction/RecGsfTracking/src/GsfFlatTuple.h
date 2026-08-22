@@ -16,10 +16,11 @@
 class TFile;
 class TTree;
 
-/// Post-processor: reads CompleteTracks, GSFTracks, the optional paired
-/// GSFTracksEcalConstrained collection, and MCParticle from the event store and
-/// writes a flat ROOT TTree with relevant tracking parameters and per-hit data
-/// for downstream analysis.
+/// Post-processor: reads CompleteTracks, either GSFTracks or the explicitly
+/// selected GlobalLossTracks collection, the optional paired
+/// GSFTracksEcalConstrained collection, and MCParticle from the event store.
+/// It writes a flat ROOT TTree with relevant tracking parameters and per-hit
+/// data for downstream analysis.
 class RecGsfFlatTuple : public Algorithm {
 public:
   RecGsfFlatTuple(const std::string& name, ISvcLocator* svc);
@@ -33,6 +34,8 @@ private:
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>      m_inGsfTracks{
       "GSFTracks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::TrackCollection>      m_inGlobalLossTracks{
+      "GlobalLossTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection> m_inMCParticles{
       "MCParticle", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_inTruthBHLossStatus{
@@ -45,6 +48,10 @@ private:
   Gaudi::Property<std::string> m_outFileName{this, "OutputFile",
       "gsf_tuple.root", "Output ROOT file name"};
   Gaudi::Property<double> m_bField{this, "BField", 3.0, "Magnetic field [T]"};
+  Gaudi::Property<bool> m_useGlobalLossTracks{
+      this, "UseGlobalLossTracks", false,
+      "Fill the existing gsf_* branches from GlobalLossTracks instead of "
+      "GSFTracks"};
   Gaudi::Property<std::vector<std::string>> m_hitCollectionNames{
       this, "HitCollectionNames", {}, "Tracker hit collections to dump (all hits)"};
 

@@ -226,7 +226,11 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("res_pT_ecal_gsf", &m_res_pT_ecal_gsf);
   m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
-  info() << "Output: " << m_outFileName << endmsg;
+  info() << "Output: " << m_outFileName
+         << " trackSource="
+         << (m_useGlobalLossTracks.value() ? "GlobalLossTracks"
+                                           : "GSFTracks")
+         << endmsg;
   if (!m_hitCollectionNames.value().empty())
     info() << "Hit collections to dump: " << m_hitCollectionNames.value().size()
            << endmsg;
@@ -240,7 +244,9 @@ StatusCode RecGsfFlatTuple::execute() {
 
   const auto* mcCol = m_inMCParticles.get();
   const auto* lcioCol = m_inCompleteTracks.get();
-  const auto* gsfCol = m_inGsfTracks.get();
+  const auto* gsfCol = m_useGlobalLossTracks.value()
+                           ? m_inGlobalLossTracks.get()
+                           : m_inGsfTracks.get();
   m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   m_truth_bh_scope_valid = 0;

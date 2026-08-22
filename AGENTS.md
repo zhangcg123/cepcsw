@@ -23,6 +23,14 @@ full Gaussian innovation likelihoods, and exact accepted inter-surface
 transport Jacobians. Forward filtering, an independent reverse
 multi-component refit, a KL reduction-aware experimental smoother, and a
 CMSSW-like experimental backward workflow are mechanically operational.
+The separate experimental `RecGsfGlobalLossRefitter` is also mechanically
+available as the fourth explicit `method="global-loss"` choice in the
+maintained `DumpGsfTrks/gsf.py.bk`. It consumes `CompleteTracks`, writes
+`GlobalLossTracks`, and is scheduled instead of `RecGsfTracking`; the flat
+tuple maps that collection into the existing `gsf_*` schema. This availability
+does not validate the method or make it the production candidate. The card
+default remains `reverse`, and the three established `RecGsfTracking`
+workflows are unchanged.
 A default-off ECAL component-re-ranking prototype is also mechanically
 operational. It preserves `GSFTracks` and writes its paired result separately;
 its focused evidence is promising only for retained bimodal alternatives and
@@ -182,12 +190,14 @@ interval-collapse granularity problem, a BH response mismatch, and a later
 measurement/selection effect. The ECAL prototype is paused and remains
 default-off; this focus does not authorize changes outside `RecGsfTracking`.
 
-The user-authorized `test_new` branch temporarily isolates the downstream-
-selection part of this question in a separate, unscheduled
-`RecGsfGlobalLossRefitter`. It reads `CompleteTracks`, compares identity with
-all exactly-one-radiative-interval histories after consuming every inward hit,
-and writes `GlobalLossTracks`; no ready workflow instantiates it. A frozen-code
-30-event diagnostic now includes 25 topology-clear events and five secondary-
+`RecGsfGlobalLossRefitter` isolates the downstream-selection part of this
+question in a separate algorithm. It reads `CompleteTracks`, compares identity
+with all exactly-one-radiative-interval histories after consuming every inward
+hit, and writes `GlobalLossTracks`. The maintained card now exposes it through
+the exclusive `method="global-loss"` selector and maps its result into the
+stable flat `gsf_*` schema; `reverse` remains the default and the existing
+`RecGsfTracking` workflows remain unchanged. A frozen-code 30-event
+diagnostic includes 25 topology-clear events and five secondary-
 activity controls. In a selected ten-event topology-clear hard-loss panel at
 truth intervals 5--7, it published radiation in nine events but selected the
 exact truth interval in only four, the adjacent wrong interval in five, and
@@ -199,8 +209,9 @@ truth (+315.96%) with log Bayes factor +113.3. Consuming all hits therefore
 does not remove the adjacent-interval or loss-magnitude ambiguity.
 
 Treat the global refitter as a diagnostic instrument, not a candidate
-replacement. Do not integrate it into maintained cards, add multi-loss
-histories, or tune its evidence gate or retained-fraction floor. First
+replacement. The maintained-card selector is only mechanical availability, not
+a physics endorsement. Do not add multi-loss histories or tune its evidence
+gate or retained-fraction floor. First
 decompose the file-66 entry-66 per-hit likelihood crossover between selected
 interval 4 and truth-compatible interval 5, using file 19 entry 4 and file 66
 entry 22 as correct-history controls. The formula, option/output contract, and
@@ -213,6 +224,9 @@ preserved in
 The exact broken-session Git/worktree snapshot, completed validation, unresolved
 interval-5/6 crossover, and fresh-session restart procedure are preserved in
 `agents_record/2026-08-22-test-new-session-recovery-handoff.md`.
+The separate-workflow integration, explicit steering, stable flat-schema
+adapter, regression gates, and unchanged-default boundary are preserved in
+`agents_record/2026-08-22-global-one-loss-maintained-card-integration.md`.
 
 Freeze the production baseline, with the 2026-08-18 material-direction
 correction, the 2026-08-19 matched-hit endpoint correction and explicit
@@ -551,3 +565,7 @@ preserved in
 `agents_record/2026-08-18-ecal-focus-handoff-to-material-bh.md`. Older tracker,
 BH, KL, and workflow evidence remains available under `agents_record/` and is
 historical unless explicitly reactivated.
+
+The separate-workflow integration, explicit steering, stable flat-schema
+adapter, unchanged reverse regression, and global-loss smoke gate are preserved
+in `agents_record/2026-08-22-global-one-loss-maintained-card-integration.md`.

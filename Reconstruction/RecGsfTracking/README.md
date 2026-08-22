@@ -10,12 +10,17 @@ been removed; historical comparisons remain under `agents_record/`.
 
 ## Experimental global one-loss refitter
 
-`RecGsfGlobalLossRefitter` is a separate, default-unscheduled algorithm on the
-`test_new` branch. It reads `CompleteTracks` directly and writes
-`GlobalLossTracks`; it neither calls `RecGsfTracking` nor changes `GSFTracks`.
-No maintained dump card, reverse template, submission script, or flat-tuple
-workflow instantiates it. This separation is intentional: the implementation
-can be tested without changing any ready production or diagnostic workflow.
+`RecGsfGlobalLossRefitter` is a separate experimental algorithm. It reads
+`CompleteTracks` directly and writes `GlobalLossTracks`; it neither calls
+`RecGsfTracking` nor changes `GSFTracks`. The maintained
+`DumpGsfTrks/gsf.py.bk` exposes it as the fourth explicit
+`method="global-loss"` choice. That choice schedules the global refitter
+instead of `RecGsfTracking`, tags both outputs with `global-loss`, and sets
+`RecGsfFlatTuple.UseGlobalLossTracks=true` so the established `gsf_*`
+analysis schema is filled from `GlobalLossTracks`. The existing `smoother`,
+`reverse`, and `cms-like` paths remain exclusive alternatives and continue
+to write `GSFTracks`; `reverse` remains the card default. No batch script
+selects global loss automatically.
 
 For each usable input track, available hits that map to active measurement
 layers are ordered by radius from the interaction point outward. The refitter
@@ -112,7 +117,8 @@ energy loss, and comparing the runtime-generic and production BH models did
 not remove the interval/magnitude error. The present conclusion is therefore
 limited: all-hit evidence can protect this clean control and move one loss
 case in the correct momentum direction, but it has not demonstrated correct
-loss localization or magnitude and is not ready for workflow integration.
+loss localization or magnitude and is not ready as a production/default
+replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
@@ -420,13 +426,17 @@ The data handles are configurable separately from the 43 properties:
 
 ### Flat-tuple paired-track branches
 
-`RecGsfFlatTuple` keeps the existing ordinary tracker-only branches unchanged
-and, when `GSFTracksEcalConstrained` is present in the event store, fills a
-parallel constrained-track scalar set:
+`RecGsfFlatTuple` keeps one stable tracker-result schema. Its
+`UseGlobalLossTracks` property defaults to `false`, in which case `gsf_*`
+comes from `GSFTracks`. Setting it to `true` makes the same fields come from
+`GlobalLossTracks`; the maintained card does this only for
+`method="global-loss"`. When `GSFTracksEcalConstrained` is present in the
+ordinary GSF event store, the tuple also fills a parallel constrained-track
+scalar set:
 
 | Branches | Meaning |
 |---|---|
-| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Ordinary unconstrained `GSFTracks` result. |
+| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | `GSFTracks` by default, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
@@ -472,6 +482,17 @@ than the production `CEPC2GeV85StepConditioned` model. The retired runtime
 BH-audit CSV is no longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside the ordinary `gsf_*` and
 default-zero `ecal_gsf_*` scalar branch sets.
+
+The same card also exposes `method="global-loss"`. It explicitly assigns all
+14 `RecGsfGlobalLossRefitter` properties to their documented experimental
+base values, including the production five-component BH model, split threshold
+`1e-4`, covariance scale 100, evidence gate 3, empty event/interval
+allow-lists, and verbose output off. It schedules the global refitter instead
+of `RecGsfTracking`, does not request the truth-provenance collections used
+only by the ordinary GSF oracle/recorder, writes `GlobalLossTracks`, and fills
+the stable flat `gsf_*` fields through
+`RecGsfFlatTuple.UseGlobalLossTracks=true`. This selector does not change the
+card's default `method="reverse"`.
 
 The maintained `gsf.py.bk` template keeps the compiled and active
 reverse-template `TruthBHLossOverride=false` base value. For a truth-oracle
