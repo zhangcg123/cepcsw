@@ -248,6 +248,27 @@ comparisons.
 The 24-component setting has already been tested: it preserves both genuine
 recovery and false radiative modes and does not solve selection.
 
+A same-code topology-clear no-eBrem control now establishes that the
+independent reverse pass is a correlated refit rather than an independent
+second measurement of the track. It seeds from the final forward posterior
+and reuses the inward hits. In a five-event `ReverseKappaSeedCov` sweep, the
+mean absolute displacement from LCIO increased monotonically from `0.0137%`
+at scale 1 to `0.2688%` at scale 100 as the forward-posterior memory was
+diluted. On the 95-event clean core, scale 1 retained essentially the LCIO
+uncertainty and undercoverage (median relative-sigma ratio `0.985`; pull RMS
+`1.531` versus `1.519`), while scale 100 broadened the reported uncertainty
+by a median factor `1.618` and reduced pull RMS to `1.165`. Therefore the
+apparently favorable scale-1 central values are baseline preservation, not
+independent truth recovery; covariance inflation mitigates but does not
+mathematically remove the correlated prior because its means, components, and
+default weights still come from the forward posterior. Keep the production
+scale 100 frozen and do not tune this property as a performance fix. The
+identity-lineage non-equivalence and the covariance/Kappa validation are
+preserved in
+`agents_record/2026-08-24-no-ebrem-identity-lineage-kf-non-equivalence.md`
+and
+`agents_record/2026-08-24-reverse-kappa-correlated-prior-validation-handoff.md`.
+
 The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
