@@ -452,8 +452,7 @@ StatusCode RecGsfFlatTuple::execute() {
       ? ecalGsfWrapper->getData() : nullptr;
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> weightedGsfWrapper(
       eventSvc(), "GSFTracksWeightedMean");
-  const auto* weightedGsfCol = !m_useGlobalLossTracks.value() &&
-          weightedGsfWrapper
+  const auto* weightedGsfCol = weightedGsfWrapper
       ? weightedGsfWrapper->getData() : nullptr;
 
   // ── MC truth (first particle = primary) ──

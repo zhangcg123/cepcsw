@@ -464,6 +464,11 @@ tuple also fills the corresponding parallel scalar set:
 | `truth_material_forward_candidate_count`, `truth_material_forward_valid_count`, `truth_material_forward_above_threshold_count`, `truth_material_forward_weighted_tx0`, `truth_material_forward_min_tx0`, `truth_material_forward_max_tx0`, `truth_material_forward_leading_component_id`, `truth_material_forward_leading_component_weight`, `truth_material_forward_leading_tx0` | Forward component-path population and parent-weighted/minimum/maximum/leading runtime material summaries. |
 | `truth_material_reverse_candidate_count`, `truth_material_reverse_valid_count`, `truth_material_reverse_above_threshold_count`, `truth_material_reverse_weighted_tx0`, `truth_material_reverse_min_tx0`, `truth_material_reverse_max_tx0`, `truth_material_reverse_leading_component_id`, `truth_material_reverse_leading_component_weight`, `truth_material_reverse_leading_tx0` | Equivalent reverse component-path summaries, or empty/zero counts when reverse filtering is inactive. |
 
+The weighted branch set has no method/configuration switch. The flat tuple
+always creates it and fills it only when `GSFTracksWeightedMean` is present;
+CMS-like and global-loss do not produce that collection, so all weighted
+values and both flags remain zero.
+
 The constrained branches always exist in newly produced flat files. When the
 experiment is off or the paired collection is absent, `ecal_gsf_available=0`
 and its scalar/residual fields are zero. The constrained track deliberately

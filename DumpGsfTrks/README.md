@@ -310,6 +310,9 @@ jobs remain valid: their ordinary fields are populated and their constrained
 fields are marked unavailable and zeroed. The constrained track copies the
 ordinary tracker hits, so the flat tuple does not duplicate the `gsf_hit_*`
 vectors.
+There is no method switch for the weighted flat schema: the branches always
+exist, are populated only from an available `GSFTracksWeightedMean`
+collection, and remain unavailable/zero for CMS-like and global-loss jobs.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this workflow. When the package adds, removes,
