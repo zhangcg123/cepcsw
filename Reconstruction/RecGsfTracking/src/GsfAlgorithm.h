@@ -79,6 +79,11 @@ private:
       "GSFTracksBestBranch", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_weightedMeanOutputTracks{
       "GSFTracksWeightedMean", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection>       m_fullMixtureModeOutputTracks{
+      "GSFTracksFullMixtureMode", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_fullMixtureModeStatus{
+          "GSFFullMixtureModeStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_ecalConstrainedOutputTracks{
       "GSFTracksEcalConstrained", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection>     m_ecalClusters{
@@ -227,8 +232,8 @@ private:
       "Retained-momentum-fraction variance assigned to trial scan components"};
   Gaudi::Property<std::string> m_outputMode{
       this, "GSFOutputMode", "BestBranch",
-      "Forward-only output selector; smoother/reverse always write BestBranch "
-      "to GSFTracksBestBranch and WeightedMean to GSFTracksWeightedMean"};
+      "Forward-only output selector; smoother/reverse always write BestBranch, "
+      "WeightedMean, and FullMixtureMode to separate collections"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "

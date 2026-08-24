@@ -3,6 +3,7 @@
 #include "GsfComponent.h"
 #include "GsfMixture.h"
 #include "BetheHeitlerSplitter.h"
+#include "FullMixtureModeStatus.h"
 
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
@@ -29,6 +30,10 @@
 #include "edm4hep/TrackerHit.h"
 #include "edm4hep/MCParticle.h"
 
+#include "TDecompChol.h"
+#include "TMatrixDSym.h"
+#include "TVectorD.h"
+
 #include <boost/format.hpp>
 #include <cmath>
 #include <iomanip>
@@ -40,6 +45,7 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <functional>
 
 DECLARE_COMPONENT(RecGsfTracking)
 DECLARE_COMPONENT(RecGsfGlobalLossRefitter)
@@ -1033,6 +1039,416 @@ static bool weightedReverseMixtureAtIP(
   return true;
 }
 
+// The FullMixtureMode endpoint is the maximum of the complete five-dimensional
+// Gaussian-mixture density at the IP. It is neither a component selector nor a
+// one-dimensional kappa splice. The deterministic multistart search below uses
+// every component mean, the global moment, and every pairwise weighted midpoint
+// as seeds, then solves the Gaussian-mixture stationary-point equation and
+// finishes with local Newton refinement.
+struct PreparedModeComponent {
+  double weight = 0.0;
+  TMatrixD mean{5, 1};
+  TMatrixD precision{5, 5};
+  double logNormalizer = 0.0;
+};
+
+struct MixtureModeEvaluation {
+  bool valid = false;
+  double logDensity = -std::numeric_limits<double>::infinity();
+  std::vector<double> responsibilities;
+  TMatrixD gradient{5, 1};
+  TMatrixD hessian{5, 5};
+};
+
+struct FullMixtureModeDiagnostics {
+  int inputComponents = 0;
+  int usableComponents = 0;
+  int starts = 0;
+  int maxima = 0;
+  int iterations = 0;
+  double logDensity = -std::numeric_limits<double>::infinity();
+  double scaledGradient = std::numeric_limits<double>::infinity();
+};
+
+static bool finiteMatrix(const TMatrixD& matrix) {
+  for (int row = 0; row < matrix.GetNrows(); ++row)
+    for (int column = 0; column < matrix.GetNcols(); ++column)
+      if (!std::isfinite(matrix(row, column))) return false;
+  return true;
+}
+
+static bool invertPositiveDefinite(const TMatrixD& matrix,
+                                   TMatrixD& inverse,
+                                   double* logDeterminant = nullptr) {
+  if (matrix.GetNrows() != matrix.GetNcols() || !finiteMatrix(matrix))
+    return false;
+  const int dimension = matrix.GetNrows();
+  TMatrixDSym symmetric(dimension);
+  for (int row = 0; row < dimension; ++row) {
+    for (int column = 0; column <= row; ++column) {
+      const double value =
+          0.5 * (matrix(row, column) + matrix(column, row));
+      symmetric(row, column) = value;
+    }
+  }
+  TDecompChol decomposition(symmetric);
+  if (!decomposition.Decompose()) return false;
+  if (logDeterminant) {
+    double value = 0.0;
+    const auto& upper = decomposition.GetU();
+    for (int index = 0; index < dimension; ++index) {
+      const double diagonal = upper(index, index);
+      if (!(diagonal > 0.0) || !std::isfinite(diagonal)) return false;
+      value += 2.0 * std::log(diagonal);
+    }
+    *logDeterminant = value;
+  }
+  Bool_t inversionOk = false;
+  const TMatrixDSym symmetricInverse = decomposition.Invert(inversionOk);
+  if (!inversionOk) return false;
+  inverse.ResizeTo(dimension, dimension);
+  for (int row = 0; row < dimension; ++row)
+    for (int column = 0; column < dimension; ++column)
+      inverse(row, column) = symmetricInverse(row, column);
+  return finiteMatrix(inverse);
+}
+
+static bool solvePositiveDefinite(const TMatrixD& matrix,
+                                  const TMatrixD& rightHandSide,
+                                  TMatrixD& solution) {
+  if (matrix.GetNrows() != matrix.GetNcols() ||
+      rightHandSide.GetNcols() != 1 ||
+      rightHandSide.GetNrows() != matrix.GetNrows() ||
+      !finiteMatrix(matrix) || !finiteMatrix(rightHandSide)) {
+    return false;
+  }
+  const int dimension = matrix.GetNrows();
+  TMatrixDSym symmetric(dimension);
+  for (int row = 0; row < dimension; ++row)
+    for (int column = 0; column <= row; ++column)
+      symmetric(row, column) =
+          0.5 * (matrix(row, column) + matrix(column, row));
+  TDecompChol decomposition(symmetric);
+  if (!decomposition.Decompose()) return false;
+  TVectorD vector(dimension);
+  for (int index = 0; index < dimension; ++index)
+    vector(index) = rightHandSide(index, 0);
+  if (!decomposition.Solve(vector)) return false;
+  solution.ResizeTo(dimension, 1);
+  for (int index = 0; index < dimension; ++index)
+    solution(index, 0) = vector(index);
+  return finiteMatrix(solution);
+}
+
+static MixtureModeEvaluation evaluateMixtureModeDensity(
+    const std::vector<PreparedModeComponent>& components,
+    const TMatrixD& position) {
+  MixtureModeEvaluation result;
+  if (components.empty() || position.GetNrows() != 5 ||
+      position.GetNcols() != 1 || !finiteMatrix(position)) {
+    return result;
+  }
+
+  std::vector<double> logTerms;
+  std::vector<TMatrixD> scores;
+  logTerms.reserve(components.size());
+  scores.reserve(components.size());
+  double maximumLogTerm = -std::numeric_limits<double>::infinity();
+  for (const auto& component : components) {
+    const TMatrixD displacement = component.mean - position;
+    const TMatrixD score = component.precision * displacement;
+    double quadratic = 0.0;
+    for (int index = 0; index < 5; ++index)
+      quadratic += displacement(index, 0) * score(index, 0);
+    if (!std::isfinite(quadratic)) return result;
+    const double logTerm = component.logNormalizer - 0.5 * quadratic;
+    if (!std::isfinite(logTerm)) return result;
+    logTerms.push_back(logTerm);
+    scores.push_back(score);
+    maximumLogTerm = std::max(maximumLogTerm, logTerm);
+  }
+
+  double exponentialSum = 0.0;
+  result.responsibilities.resize(components.size(), 0.0);
+  for (std::size_t index = 0; index < components.size(); ++index) {
+    const double value = std::exp(logTerms[index] - maximumLogTerm);
+    result.responsibilities[index] = value;
+    exponentialSum += value;
+  }
+  if (!(exponentialSum > 0.0) || !std::isfinite(exponentialSum))
+    return result;
+  result.logDensity = maximumLogTerm + std::log(exponentialSum);
+  result.gradient.Zero();
+  result.hessian.Zero();
+  for (std::size_t componentIndex = 0;
+       componentIndex < components.size(); ++componentIndex) {
+    const double responsibility =
+        result.responsibilities[componentIndex] / exponentialSum;
+    result.responsibilities[componentIndex] = responsibility;
+    const auto& score = scores[componentIndex];
+    const auto& precision = components[componentIndex].precision;
+    for (int row = 0; row < 5; ++row) {
+      result.gradient(row, 0) += responsibility * score(row, 0);
+      for (int column = 0; column < 5; ++column) {
+        result.hessian(row, column) += responsibility *
+            (score(row, 0) * score(column, 0) -
+             precision(row, column));
+      }
+    }
+  }
+  for (int row = 0; row < 5; ++row)
+    for (int column = 0; column < 5; ++column)
+      result.hessian(row, column) -=
+          result.gradient(row, 0) * result.gradient(column, 0);
+  result.valid = finiteMatrix(result.gradient) &&
+                 finiteMatrix(result.hessian) &&
+                 std::isfinite(result.logDensity);
+  return result;
+}
+
+static double scaledVectorNorm(const TMatrixD& vector,
+                               const TMatrixD& scales,
+                               bool gradientUnits) {
+  double maximum = 0.0;
+  for (int index = 0; index < 5; ++index) {
+    const double value = gradientUnits
+        ? std::abs(vector(index, 0) * scales(index, 0))
+        : std::abs(vector(index, 0) / scales(index, 0));
+    maximum = std::max(maximum, value);
+  }
+  return maximum;
+}
+
+static FullMixtureModeStatus findFullMixtureModeAtIP(
+    const std::vector<GsfComponent*>& components, double bz,
+    const std::function<bool(GsfComponent&, THelicalTrack&,
+                             TMatrixD&)>& extrapolate,
+    THelicalTrack& outputHelix, TMatrixD& outputCovariance,
+    FullMixtureModeDiagnostics& diagnostics) {
+  diagnostics = {};
+  diagnostics.inputComponents = static_cast<int>(components.size());
+  std::vector<PreparedModeComponent> prepared;
+  prepared.reserve(components.size());
+  double sumWeight = 0.0;
+  double phiReference = 0.0;
+  bool havePhiReference = false;
+  int positiveWeightComponents = 0;
+
+  for (auto* component : components) {
+    if (!component || !(component->weight > 0.0) ||
+        !std::isfinite(component->weight)) {
+      continue;
+    }
+    ++positiveWeightComponents;
+    THelicalTrack helix(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD covariance(5, 5);
+    if (!extrapolate(*component, helix, covariance))
+      return FullMixtureModeStatus::IncompleteComponentSet;
+    PreparedModeComponent entry;
+    helixToMean(helix, entry.mean);
+    if (!havePhiReference) {
+      phiReference = entry.mean(1, 0);
+      havePhiReference = true;
+    } else {
+      wrapPhiNear(entry.mean(1, 0), phiReference);
+    }
+    double logDeterminant = 0.0;
+    if (!finiteMatrix(entry.mean) ||
+        !invertPositiveDefinite(covariance, entry.precision,
+                                &logDeterminant)) {
+      return FullMixtureModeStatus::IncompleteComponentSet;
+    }
+    entry.weight = component->weight;
+    entry.logNormalizer = -0.5 *
+        (5.0 * std::log(2.0 * M_PI) + logDeterminant);
+    prepared.push_back(std::move(entry));
+    sumWeight += component->weight;
+  }
+  diagnostics.usableComponents = static_cast<int>(prepared.size());
+  if (positiveWeightComponents == 0 || prepared.empty() ||
+      !(sumWeight > 0.0) || !std::isfinite(sumWeight)) {
+    return FullMixtureModeStatus::IncompleteComponentSet;
+  }
+  for (auto& component : prepared) {
+    component.weight /= sumWeight;
+    component.logNormalizer += std::log(component.weight);
+  }
+
+  TMatrixD weightedMean(5, 1);
+  weightedMean.Zero();
+  for (const auto& component : prepared) {
+    TMatrixD contribution = component.mean;
+    contribution *= component.weight;
+    weightedMean += contribution;
+  }
+  TMatrixD scales(5, 1);
+  scales.Zero();
+  for (const auto& component : prepared) {
+    TMatrixD covariance;
+    if (!invertPositiveDefinite(component.precision, covariance))
+      return FullMixtureModeStatus::IncompleteComponentSet;
+    const TMatrixD displacement = component.mean - weightedMean;
+    for (int index = 0; index < 5; ++index) {
+      scales(index, 0) += component.weight *
+          (covariance(index, index) +
+           displacement(index, 0) * displacement(index, 0));
+    }
+  }
+  for (int index = 0; index < 5; ++index) {
+    if (!(scales(index, 0) > 0.0) || !std::isfinite(scales(index, 0)))
+      return FullMixtureModeStatus::IncompleteComponentSet;
+    scales(index, 0) = std::sqrt(scales(index, 0));
+  }
+
+  std::vector<TMatrixD> starts;
+  starts.reserve(1 + prepared.size() +
+                 prepared.size() * (prepared.size() - 1) / 2);
+  starts.push_back(weightedMean);
+  for (const auto& component : prepared) starts.push_back(component.mean);
+  for (std::size_t first = 0; first < prepared.size(); ++first) {
+    for (std::size_t second = first + 1; second < prepared.size(); ++second) {
+      const double pairWeight =
+          prepared[first].weight + prepared[second].weight;
+      TMatrixD midpoint = prepared[first].mean;
+      midpoint *= prepared[first].weight / pairWeight;
+      TMatrixD secondTerm = prepared[second].mean;
+      secondTerm *= prepared[second].weight / pairWeight;
+      midpoint += secondTerm;
+      starts.push_back(std::move(midpoint));
+    }
+  }
+  diagnostics.starts = static_cast<int>(starts.size());
+
+  bool foundMaximum = false;
+  TMatrixD bestPosition(5, 1);
+  TMatrixD bestCovariance(5, 5);
+  double bestLogDensity = -std::numeric_limits<double>::infinity();
+  double bestScaledGradient = std::numeric_limits<double>::infinity();
+
+  for (const auto& start : starts) {
+    TMatrixD position = start;
+    auto evaluation = evaluateMixtureModeDensity(prepared, position);
+    if (!evaluation.valid) continue;
+    int iterations = 0;
+
+    // Generalized Gaussian mean-shift fixed point.
+    for (; iterations < 200; ++iterations) {
+      TMatrixD precisionSum(5, 5);
+      TMatrixD weightedPrecisionMean(5, 1);
+      precisionSum.Zero();
+      weightedPrecisionMean.Zero();
+      for (std::size_t componentIndex = 0;
+           componentIndex < prepared.size(); ++componentIndex) {
+        const double responsibility =
+            evaluation.responsibilities[componentIndex];
+        TMatrixD precisionTerm = prepared[componentIndex].precision;
+        precisionTerm *= responsibility;
+        precisionSum += precisionTerm;
+        TMatrixD meanTerm =
+            prepared[componentIndex].precision *
+            prepared[componentIndex].mean;
+        meanTerm *= responsibility;
+        weightedPrecisionMean += meanTerm;
+      }
+      TMatrixD fixedPoint;
+      if (!solvePositiveDefinite(precisionSum, weightedPrecisionMean,
+                                 fixedPoint)) {
+        break;
+      }
+      TMatrixD direction = fixedPoint - position;
+      if (scaledVectorNorm(direction, scales, false) < 1.0e-10) {
+        position = fixedPoint;
+        evaluation = evaluateMixtureModeDensity(prepared, position);
+        break;
+      }
+      bool accepted = false;
+      double stepScale = 1.0;
+      for (int lineSearch = 0; lineSearch < 24; ++lineSearch) {
+        TMatrixD proposal = direction;
+        proposal *= stepScale;
+        proposal += position;
+        auto proposalEvaluation =
+            evaluateMixtureModeDensity(prepared, proposal);
+        if (proposalEvaluation.valid &&
+            proposalEvaluation.logDensity + 1.0e-13 >=
+                evaluation.logDensity) {
+          position = std::move(proposal);
+          evaluation = std::move(proposalEvaluation);
+          accepted = true;
+          break;
+        }
+        stepScale *= 0.5;
+      }
+      if (!accepted) break;
+    }
+
+    // Local Newton refinement of log p(x).
+    for (int newton = 0; newton < 40; ++newton, ++iterations) {
+      if (!evaluation.valid) break;
+      const double gradientNorm =
+          scaledVectorNorm(evaluation.gradient, scales, true);
+      if (gradientNorm < 1.0e-8) break;
+      TMatrixD negativeHessian = evaluation.hessian;
+      negativeHessian *= -1.0;
+      TMatrixD step;
+      if (!solvePositiveDefinite(negativeHessian, evaluation.gradient,
+                                 step)) {
+        break;
+      }
+      bool accepted = false;
+      double stepScale = 1.0;
+      for (int lineSearch = 0; lineSearch < 24; ++lineSearch) {
+        TMatrixD proposal = step;
+        proposal *= stepScale;
+        proposal += position;
+        auto proposalEvaluation =
+            evaluateMixtureModeDensity(prepared, proposal);
+        if (proposalEvaluation.valid &&
+            proposalEvaluation.logDensity + 1.0e-13 >=
+                evaluation.logDensity) {
+          position = std::move(proposal);
+          evaluation = std::move(proposalEvaluation);
+          accepted = true;
+          break;
+        }
+        stepScale *= 0.5;
+      }
+      if (!accepted) break;
+    }
+    diagnostics.iterations = std::max(diagnostics.iterations, iterations);
+    if (!evaluation.valid) continue;
+    const double gradientNorm =
+        scaledVectorNorm(evaluation.gradient, scales, true);
+    TMatrixD negativeHessian = evaluation.hessian;
+    negativeHessian *= -1.0;
+    TMatrixD localCovariance;
+    if (gradientNorm > 1.0e-5 ||
+        !invertPositiveDefinite(negativeHessian, localCovariance)) {
+      continue;
+    }
+    ++diagnostics.maxima;
+    if (!foundMaximum || evaluation.logDensity > bestLogDensity) {
+      foundMaximum = true;
+      bestPosition = position;
+      bestCovariance = localCovariance;
+      bestLogDensity = evaluation.logDensity;
+      bestScaledGradient = gradientNorm;
+    }
+  }
+
+  if (!foundMaximum) return FullMixtureModeStatus::OptimizationFailed;
+  TMatrixD localPrecision;
+  if (!invertPositiveDefinite(bestCovariance, localPrecision)) {
+    return FullMixtureModeStatus::InvalidLocalCovariance;
+  }
+  diagnostics.logDensity = bestLogDensity;
+  diagnostics.scaledGradient = bestScaledGradient;
+  outputCovariance.ResizeTo(5, 5);
+  outputCovariance = bestCovariance;
+  outputHelix = THelicalTrack(bestPosition, TVector3(0, 0, 0), bz);
+  return FullMixtureModeStatus::Success;
+}
+
 /// Fill an edm4hep TrackState from a THelicalTrack + 5x5 cov
 static void fillTrackState(edm4hep::TrackState& ts,
                             const THelicalTrack& h,
@@ -1647,9 +2063,10 @@ StatusCode RecGsfTracking::initialize() {
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
   if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
-    info() << "Dual GSF publication: BestBranch -> GSFTracksBestBranch, "
-              "WeightedMean -> GSFTracksWeightedMean; GSFOutputMode does not "
-              "select between these collections"
+    info() << "Three-view GSF publication: BestBranch -> GSFTracksBestBranch, "
+              "WeightedMean -> GSFTracksWeightedMean, FullMixtureMode -> "
+              "GSFTracksFullMixtureMode; GSFOutputMode does not select "
+              "between these collections"
            << endmsg;
   }
 
@@ -1666,8 +2083,14 @@ StatusCode RecGsfTracking::execute() {
       ? m_bestBranchOutputTracks.createAndPut()
       : m_outputTracks.createAndPut();
   edm4hep::TrackCollection* weightedMeanOut = nullptr;
+  edm4hep::TrackCollection* fullMixtureModeOut = nullptr;
+  podio::UserDataCollection<std::int32_t>* fullMixtureModeStatusOut = nullptr;
   if (publishPairedEndpoints)
     weightedMeanOut = m_weightedMeanOutputTracks.createAndPut();
+  if (publishPairedEndpoints) {
+    fullMixtureModeOut = m_fullMixtureModeOutputTracks.createAndPut();
+    fullMixtureModeStatusOut = m_fullMixtureModeStatus.createAndPut();
+  }
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
   auto* truthMaterialIntervals = m_truthMaterialIntervals.createAndPut();
   auto* truthMaterialStatus = m_truthMaterialStatus.createAndPut();
@@ -2748,6 +3171,13 @@ StatusCode RecGsfTracking::execute() {
     THelicalTrack reverseWeightedIp(
         TMatrixD(5, 1), TVector3(0, 0, 0), bz);
     TMatrixD reverseWeightedIpCov(5, 5);
+    bool reverseFullMixtureModeIpAvailable = false;
+    THelicalTrack reverseFullMixtureModeIp(
+        TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD reverseFullMixtureModeIpCov(5, 5);
+    FullMixtureModeStatus reverseFullMixtureModeStatus =
+        FullMixtureModeStatus::MethodEndpointUnavailable;
+    FullMixtureModeDiagnostics reverseFullMixtureModeDiagnostics;
     double reverseOutputChi2 = 0.0;
     int reverseOutputNdf = 0;
     double reverseOutputWeight = 0.0;
@@ -3314,6 +3744,27 @@ StatusCode RecGsfTracking::execute() {
                          "collection will preserve the BestBranch state"
                       << endmsg;
           }
+          reverseFullMixtureModeStatus = findFullMixtureModeAtIP(
+              reverseComps, bz,
+              [bz](GsfComponent& component, THelicalTrack& helix,
+                   TMatrixD& covariance) {
+                return extrapolateContinuationToIP(
+                    component, bz, helix, covariance);
+              },
+              reverseFullMixtureModeIp, reverseFullMixtureModeIpCov,
+              reverseFullMixtureModeDiagnostics);
+          reverseFullMixtureModeIpAvailable =
+              reverseFullMixtureModeStatus ==
+              FullMixtureModeStatus::Success;
+          if (!reverseFullMixtureModeIpAvailable) {
+            warning() << "Reverse FullMixtureMode publication failed with "
+                         "status "
+                      << fullMixtureModeStatusValue(
+                             reverseFullMixtureModeStatus)
+                      << "; the paired collection will preserve the "
+                         "BestBranch state"
+                      << endmsg;
+          }
         }
         if (reverseOutputOk) {
           const double reversePt = reverseIp.GetKappa() != 0.0
@@ -3371,6 +3822,23 @@ StatusCode RecGsfTracking::execute() {
                       % reverseWeightedIp.GetDz()
                       % normalizePhi(reverseWeightedIp.GetPhi0() + M_PI / 2.0)
                       % reverseWeightedIp.GetTanLambda() << endmsg;
+          }
+          if (!runCmsSmoother && m_verboseDump &&
+              reverseFullMixtureModeIpAvailable) {
+            const double modePt = reverseFullMixtureModeIp.GetKappa() != 0.0
+                ? 1.0 / std::abs(reverseFullMixtureModeIp.GetKappa()) : 0.0;
+            info() << boost::format(
+                "  REVERSE IP paired output: mode=FullMixtureMode "
+                "components=%d starts=%d maxima=%d iterations=%d "
+                "logDensity=%.9g scaledGradient=%.3g pT=%.9g")
+                      % reverseFullMixtureModeDiagnostics.usableComponents
+                      % reverseFullMixtureModeDiagnostics.starts
+                      % reverseFullMixtureModeDiagnostics.maxima
+                      % reverseFullMixtureModeDiagnostics.iterations
+                      % reverseFullMixtureModeDiagnostics.logDensity
+                      % reverseFullMixtureModeDiagnostics.scaledGradient
+                      % modePt
+                   << endmsg;
           }
 
           // Preserve the tracker-only result above.  The default-off ECAL
@@ -3625,10 +4093,11 @@ StatusCode RecGsfTracking::execute() {
       }
 
       // Extrapolate to IP (method selected by MaterialIPExtrapolation).
-      // Smoother and ordinary reverse workflows publish both endpoint views:
+      // Smoother and ordinary reverse workflows publish three endpoint views:
       // BestBranch is written to GSFTracksBestBranch, while the paired
-      // moment-matched state is written to GSFTracksWeightedMean. The legacy
-      // selector remains effective only for the forward-only workflow.
+      // moment-matched state is written to GSFTracksWeightedMean and the joint
+      // density maximum to GSFTracksFullMixtureMode. The legacy selector
+      // remains effective only for the forward-only workflow.
       THelicalTrack bestIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
       TMatrixD bestIpCov(5, 5);
       extrapolateToIP_component(best, m_materialIPExtrap, m_cradle, m_ipLayer,
@@ -3638,6 +4107,10 @@ StatusCode RecGsfTracking::execute() {
       TMatrixD ipCov = bestIpCov;
       THelicalTrack weightedIpHelix = bestIpHelix;
       TMatrixD weightedIpCov = bestIpCov;
+      THelicalTrack fullMixtureModeIpHelix = bestIpHelix;
+      TMatrixD fullMixtureModeIpCov = bestIpCov;
+      FullMixtureModeStatus fullMixtureModeStatus =
+          FullMixtureModeStatus::MethodEndpointUnavailable;
       bool usedReverseOutput = false;
       bool pairedWeightedOutputAvailable = false;
       if (m_reverseFiltering.value() && reverseIpAvailable) {
@@ -3648,6 +4121,11 @@ StatusCode RecGsfTracking::execute() {
             ? reverseWeightedIp : reverseOutputIp;
         weightedIpCov = reverseWeightedIpAvailable
             ? reverseWeightedIpCov : reverseOutputIpCov;
+        fullMixtureModeIpHelix = reverseFullMixtureModeIpAvailable
+            ? reverseFullMixtureModeIp : reverseOutputIp;
+        fullMixtureModeIpCov = reverseFullMixtureModeIpAvailable
+            ? reverseFullMixtureModeIpCov : reverseOutputIpCov;
+        fullMixtureModeStatus = reverseFullMixtureModeStatus;
         pairedWeightedOutputAvailable = true;
       } else if (m_cmsGsfSmoothing.value() && reverseIpAvailable) {
         ipHelix = reverseOutputIp;
@@ -3661,9 +4139,45 @@ StatusCode RecGsfTracking::execute() {
                        "collection will preserve the BestBranch state"
                     << endmsg;
         }
+        FullMixtureModeDiagnostics smootherModeDiagnostics;
+        fullMixtureModeStatus = findFullMixtureModeAtIP(
+            comps, bz,
+            [&](GsfComponent& component, THelicalTrack& helix,
+                TMatrixD& covariance) {
+              return extrapolateToIP_component(
+                  &component, m_materialIPExtrap, m_cradle, m_ipLayer,
+                  bz, helix, covariance);
+            },
+            fullMixtureModeIpHelix, fullMixtureModeIpCov,
+            smootherModeDiagnostics);
+        if (fullMixtureModeStatus != FullMixtureModeStatus::Success) {
+          fullMixtureModeIpHelix = bestIpHelix;
+          fullMixtureModeIpCov = bestIpCov;
+          warning() << "Smoother FullMixtureMode publication failed with "
+                       "status "
+                    << fullMixtureModeStatusValue(fullMixtureModeStatus)
+                    << "; the paired collection will preserve the "
+                       "BestBranch state"
+                    << endmsg;
+        } else if (m_verboseDump) {
+          const double modePt = fullMixtureModeIpHelix.GetKappa() != 0.0
+              ? 1.0 / std::abs(fullMixtureModeIpHelix.GetKappa()) : 0.0;
+          info() << boost::format(
+              "  SMOOTHER IP paired output: mode=FullMixtureMode "
+              "components=%d starts=%d maxima=%d iterations=%d "
+              "logDensity=%.9g scaledGradient=%.3g pT=%.9g")
+                    % smootherModeDiagnostics.usableComponents
+                    % smootherModeDiagnostics.starts
+                    % smootherModeDiagnostics.maxima
+                    % smootherModeDiagnostics.iterations
+                    % smootherModeDiagnostics.logDensity
+                    % smootherModeDiagnostics.scaledGradient
+                    % modePt
+                 << endmsg;
+        }
         pairedWeightedOutputAvailable = true;
       } else if (m_reverseFiltering.value()) {
-        warning() << "Reverse endpoint unavailable; both published "
+        warning() << "Reverse endpoint unavailable; all three published "
                      "collections will preserve the forward BestBranch state"
                   << endmsg;
         pairedWeightedOutputAvailable = true;
@@ -3732,6 +4246,24 @@ StatusCode RecGsfTracking::execute() {
         fillTrackState(weightedState, weightedIpHelix, weightedIpCov, bz);
         weightedTrack.addToTrackStates(weightedState);
         for (const auto& h : assocHits) weightedTrack.addToTrackerHits(h);
+      }
+
+      if (fullMixtureModeOut && fullMixtureModeStatusOut &&
+          pairedWeightedOutputAvailable) {
+        auto modeTrack = fullMixtureModeOut->create();
+        modeTrack.setType(2);
+        // A density mode has no unique component fit quality. Keep the same
+        // selected-component metadata convention used by WeightedMean.
+        modeTrack.setChi2(outputChi2);
+        modeTrack.setNdf(outputNdf);
+        edm4hep::TrackState modeState;
+        modeState.location = DH::AtIP;
+        fillTrackState(modeState, fullMixtureModeIpHelix,
+                       fullMixtureModeIpCov, bz);
+        modeTrack.addToTrackStates(modeState);
+        for (const auto& h : assocHits) modeTrack.addToTrackerHits(h);
+        fullMixtureModeStatusOut->push_back(
+            fullMixtureModeStatusValue(fullMixtureModeStatus));
       }
 
       if (truthMaterialTrackMatched) {
@@ -3922,7 +4454,7 @@ StatusCode RecGsfTracking::execute() {
                   % (sum.bestWeight * sum.finalComps) << endmsg;
         info() << boost::format("  output         | mode %s")
                   % (pairedWeightedOutputAvailable
-                         ? "BestBranch + WeightedMean"
+                         ? "BestBranch + WeightedMean + FullMixtureMode"
                          : (usedReverseOutput ? reverseOutputLabel :
                             (usedWeightedOutput ? "WeightedMean" :
                                                   "BestBranch")))

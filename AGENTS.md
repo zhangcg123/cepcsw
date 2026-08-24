@@ -17,9 +17,16 @@ Geant4 pre/post-material-step truth
 ```
 
 `RecGsfTracking` builds, installs, and reads `CompleteTracks`. Smoother and
-reverse runs write BestBranch to `GSFTracksBestBranch` and the paired moment-matched
-endpoint to `GSFTracksWeightedMean`; CMS-like retains its fixed single
-`GSFTracks` output. Its component measurement updates use the baseline-compatible
+reverse runs write three row-aligned endpoint views: BestBranch to
+`GSFTracksBestBranch`, the moment-matched endpoint to
+`GSFTracksWeightedMean`, and the maximum of the complete five-dimensional IP
+mixture density to `GSFTracksFullMixtureMode`; CMS-like retains its fixed
+single `GSFTracks` output. FullMixtureMode is automatic/default-on for those
+two workflows, has a persisted optimization-status collection and flat-tuple
+fields, and is mechanically available but not physics-validated. Its
+definition, output/fallback contract, and focused mechanical gates are in
+`agents_record/2026-08-24-full-mixture-mode-endpoint.md`. Its
+component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
 transport Jacobians. Forward filtering, an independent reverse
@@ -61,8 +68,8 @@ compiled, active reverse-template, and maintained-card default is on.
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
 `ReverseKappaSeedCov` (default 100), repeats measurement updates inward, and
-publishes both the selected branch and moment-matched mixture in separate,
-row-aligned collections. It has demonstrated interaction-point momentum recovery in many
+publishes the selected branch, moment-matched mixture, and full joint-density
+mode in separate row-aligned collections. It has demonstrated interaction-point momentum recovery in many
 hard-bremsstrahlung events and favorable central light/hard performance, but
 it also creates clean-track degradation and extreme tails. The KL smoother is
 largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like

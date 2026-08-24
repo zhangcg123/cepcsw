@@ -155,6 +155,24 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("weighted_gsf_ndf",       &m_weighted_gsf_ndf);
   m_tree->Branch("weighted_gsf_nhits",     &m_weighted_gsf_nhits);
   m_tree->Branch("weighted_gsf_type",      &m_weighted_gsf_type);
+  // paired smoother/reverse full five-dimensional mixture-density mode GSF
+  m_tree->Branch("fullmixture_gsf_available",
+                 &m_fullmixture_gsf_available);
+  m_tree->Branch("fullmixture_gsf_changed", &m_fullmixture_gsf_changed);
+  m_tree->Branch("fullmixture_gsf_status",  &m_fullmixture_gsf_status);
+  m_tree->Branch("fullmixture_gsf_pT",      &m_fullmixture_gsf_pT);
+  m_tree->Branch("fullmixture_gsf_p",       &m_fullmixture_gsf_p);
+  m_tree->Branch("fullmixture_gsf_eta",     &m_fullmixture_gsf_eta);
+  m_tree->Branch("fullmixture_gsf_theta",   &m_fullmixture_gsf_theta);
+  m_tree->Branch("fullmixture_gsf_phi",     &m_fullmixture_gsf_phi);
+  m_tree->Branch("fullmixture_gsf_d0",      &m_fullmixture_gsf_d0);
+  m_tree->Branch("fullmixture_gsf_z0",      &m_fullmixture_gsf_z0);
+  m_tree->Branch("fullmixture_gsf_omega",   &m_fullmixture_gsf_omega);
+  m_tree->Branch("fullmixture_gsf_tanl",    &m_fullmixture_gsf_tanl);
+  m_tree->Branch("fullmixture_gsf_chi2",    &m_fullmixture_gsf_chi2);
+  m_tree->Branch("fullmixture_gsf_ndf",     &m_fullmixture_gsf_ndf);
+  m_tree->Branch("fullmixture_gsf_nhits",   &m_fullmixture_gsf_nhits);
+  m_tree->Branch("fullmixture_gsf_type",    &m_fullmixture_gsf_type);
   // truth BH-loss oracle validity for CompleteTracks index 0
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
@@ -265,6 +283,7 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("res_pT_gsf",      &m_res_pT_gsf);
   m_tree->Branch("res_pT_bestbranch_gsf", &m_res_pT_bestbranch_gsf);
   m_tree->Branch("res_pT_weighted_gsf", &m_res_pT_weighted_gsf);
+  m_tree->Branch("res_pT_fullmixture_gsf", &m_res_pT_fullmixture_gsf);
   m_tree->Branch("res_pT_ecal_gsf", &m_res_pT_ecal_gsf);
   m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
@@ -273,6 +292,7 @@ StatusCode RecGsfFlatTuple::initialize() {
          << (m_useGlobalLossTracks.value() ? "GlobalLossTracks"
                                            : "GSFTracks")
          << " bestBranchSource=GSFTracksBestBranch"
+         << " fullMixtureModeSource=GSFTracksFullMixtureMode"
          << endmsg;
   if (!m_hitCollectionNames.value().empty())
     info() << "Hit collections to dump: " << m_hitCollectionNames.value().size()
@@ -487,6 +507,18 @@ StatusCode RecGsfFlatTuple::execute() {
       eventSvc(), "GSFTracksWeightedMean");
   const auto* weightedGsfCol = weightedGsfWrapper
       ? weightedGsfWrapper->getData() : nullptr;
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> fullMixtureGsfWrapper(
+      eventSvc(), "GSFTracksFullMixtureMode");
+  const auto* fullMixtureGsfCol = fullMixtureGsfWrapper
+      ? fullMixtureGsfWrapper->getData() : nullptr;
+  SmartDataPtr<DataWrapper<podio::UserDataCollection<std::int32_t>>>
+      fullMixtureStatusWrapper(eventSvc(), "GSFFullMixtureModeStatus");
+  const auto* fullMixtureStatus = fullMixtureStatusWrapper
+      ? fullMixtureStatusWrapper->getData() : nullptr;
+  m_fullmixture_gsf_status =
+      fullMixtureModeStatusValue(FullMixtureModeStatus::NotApplicable);
+  if (fullMixtureStatus && !fullMixtureStatus->empty())
+    m_fullmixture_gsf_status = (*fullMixtureStatus)[0];
 
   // ── MC truth (first particle = primary) ──
   if (mcCol && mcCol->size() > 0) {
@@ -745,6 +777,55 @@ StatusCode RecGsfFlatTuple::execute() {
         m_weighted_gsf_chi2 != m_bestbranch_gsf_chi2 ||
         m_weighted_gsf_ndf != m_bestbranch_gsf_ndf)) ? 1 : 0;
 
+  m_fullmixture_gsf_available =
+      fullMixtureGsfCol && fullMixtureGsfCol->size() > 0 ? 1 : 0;
+  try {
+    fillTrack(fullMixtureGsfCol,
+              m_fullmixture_gsf_pT, m_fullmixture_gsf_p,
+              m_fullmixture_gsf_eta, m_fullmixture_gsf_theta,
+              m_fullmixture_gsf_phi, m_fullmixture_gsf_d0,
+              m_fullmixture_gsf_z0, m_fullmixture_gsf_omega,
+              m_fullmixture_gsf_tanl, m_fullmixture_gsf_chi2,
+              m_fullmixture_gsf_ndf, m_fullmixture_gsf_nhits,
+              m_fullmixture_gsf_type);
+  } catch (const std::exception& e) {
+    warning() << "Event " << m_iev
+              << ": FullMixtureMode GSF track access failed — " << e.what()
+              << " — writing unavailable full-mixture fields" << endmsg;
+    m_fullmixture_gsf_available = 0;
+    fillTrack(nullptr,
+              m_fullmixture_gsf_pT, m_fullmixture_gsf_p,
+              m_fullmixture_gsf_eta, m_fullmixture_gsf_theta,
+              m_fullmixture_gsf_phi, m_fullmixture_gsf_d0,
+              m_fullmixture_gsf_z0, m_fullmixture_gsf_omega,
+              m_fullmixture_gsf_tanl, m_fullmixture_gsf_chi2,
+              m_fullmixture_gsf_ndf, m_fullmixture_gsf_nhits,
+              m_fullmixture_gsf_type);
+  } catch (...) {
+    warning() << "Event " << m_iev
+              << ": FullMixtureMode GSF track access failed (unknown "
+                 "exception) — writing unavailable full-mixture fields"
+              << endmsg;
+    m_fullmixture_gsf_available = 0;
+    fillTrack(nullptr,
+              m_fullmixture_gsf_pT, m_fullmixture_gsf_p,
+              m_fullmixture_gsf_eta, m_fullmixture_gsf_theta,
+              m_fullmixture_gsf_phi, m_fullmixture_gsf_d0,
+              m_fullmixture_gsf_z0, m_fullmixture_gsf_omega,
+              m_fullmixture_gsf_tanl, m_fullmixture_gsf_chi2,
+              m_fullmixture_gsf_ndf, m_fullmixture_gsf_nhits,
+              m_fullmixture_gsf_type);
+  }
+  m_fullmixture_gsf_changed =
+      (m_fullmixture_gsf_available && m_bestbranch_gsf_available &&
+       (m_fullmixture_gsf_omega != m_bestbranch_gsf_omega ||
+        m_fullmixture_gsf_d0 != m_bestbranch_gsf_d0 ||
+        m_fullmixture_gsf_z0 != m_bestbranch_gsf_z0 ||
+        m_fullmixture_gsf_phi != m_bestbranch_gsf_phi ||
+        m_fullmixture_gsf_tanl != m_bestbranch_gsf_tanl ||
+        m_fullmixture_gsf_chi2 != m_bestbranch_gsf_chi2 ||
+        m_fullmixture_gsf_ndf != m_bestbranch_gsf_ndf)) ? 1 : 0;
+
   m_ecal_gsf_available = ecalGsfCol && ecalGsfCol->size() > 0 ? 1 : 0;
   try {
     fillTrack(ecalGsfCol,
@@ -824,6 +905,9 @@ StatusCode RecGsfFlatTuple::execute() {
           ? (m_bestbranch_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_weighted_gsf = (m_mc_pT > 0 && m_weighted_gsf_available)
       ? (m_weighted_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_fullmixture_gsf =
+      (m_mc_pT > 0 && m_fullmixture_gsf_available)
+          ? (m_fullmixture_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_ecal_gsf = (m_mc_pT > 0 && m_ecal_gsf_available)
       ? (m_ecal_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_lcio =

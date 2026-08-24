@@ -1,9 +1,10 @@
 # RecGsfTracking
 
 `RecGsfTracking` refits `CompleteTracks` with a Gaussian-sum electron model.
-The smoother and reverse workflows always write the selected BestBranch to
-`GSFTracksBestBranch` and the moment-matched endpoint to
-`GSFTracksWeightedMean`. A
+The smoother and reverse workflows always write three row-aligned endpoint
+views: the selected branch to `GSFTracksBestBranch`, the moment-matched state
+to `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional
+mixture density to `GSFTracksFullMixtureMode`. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -21,8 +22,8 @@ instead of `RecGsfTracking`, tags both outputs with `global-loss`, and sets
 `RecGsfFlatTuple.UseGlobalLossTracks=true` so the established `gsf_*`
 analysis schema is filled from `GlobalLossTracks`. The existing `smoother`,
 `reverse`, and `cms-like` paths remain exclusive alternatives. Smoother and
-reverse write both tracker endpoint collections; CMS-like retains its fixed
-single `GSFTracks` endpoint. `reverse` remains the card default. No batch
+reverse write all three tracker endpoint collections; CMS-like retains its
+fixed single `GSFTracks` endpoint. `reverse` remains the card default. No batch
 script selects global loss automatically.
 
 For each usable input track, available hits that map to active measurement
@@ -322,13 +323,33 @@ alternatives are retained only to reproduce rejected diagnostics.
 `ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
 
 Smoother and reverse have no output selector. Every successful track is
-written row-for-row to both collections: `GSFTracksBestBranch` is BestBranch and
-`GSFTracksWeightedMean` is the normalized final-mixture moment match.
-`ReverseSelectionMode` affects only BestBranch. The weighted track retains the
-selected branch's chi-square/NDF because a moment-matched mixture has no unique
-branch fit quality. The current KL smoother assigns one common smoothed inner
-mean/covariance to every survivor, so its two endpoint states are expected to
-be numerically identical; both are saved to keep the output contract uniform.
+written row-for-row to three collections: `GSFTracksBestBranch` is
+BestBranch, `GSFTracksWeightedMean` is the normalized final-mixture moment
+match, and `GSFTracksFullMixtureMode` is the joint density maximum of the full
+mixture at the IP. `ReverseSelectionMode` affects only BestBranch. It does not
+alter the components entering either of the other two views.
+
+FullMixtureMode maximizes the complete five-dimensional Gaussian-mixture PDF
+in the local IP helix coordinates `(drho, phi0, kappa, dz, tanLambda)`. This is
+not a one-dimensional `q/p` mode inserted into otherwise averaged parameters,
+and it is not another component selector. Each surviving component is first
+extrapolated to the IP. A deterministic multistart search uses the mixture
+mean, every component mean, and all pairwise weight-interpolated means; a
+Gaussian mean-shift iteration followed by Newton refinement locates stationary
+maxima, and the highest-density valid maximum is published. Its covariance is
+the local Laplace covariance, the inverse negative Hessian of `log p(x)` at
+that maximum. This coordinate-dependent experimental summary is mechanically
+available by default but is not yet performance-validated.
+
+Neither WeightedMean nor FullMixtureMode has a unique branch chi-square/NDF,
+so both retain the selected BestBranch fit-quality metadata. A failed mode
+search publishes an exact BestBranch parameter/covariance fallback and records
+a negative status in `GSFFullMixtureModeStatus`; consumers must inspect that
+status rather than treating every persisted mode track as a successful
+optimization. The current KL smoother assigns one common smoothed inner
+mean/covariance to every survivor, so its three endpoint states are expected
+to be numerically identical; all are saved to keep the output contract
+uniform.
 
 ### Experimental ECAL component constraint
 
@@ -430,6 +451,8 @@ The data handles are configurable separately from the 42 properties:
 | generic forward/CMS-like output tracks | `GSFTracks` |
 | selected smoother/reverse BestBranch output tracks | `GSFTracksBestBranch` |
 | paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
+| paired smoother/reverse full-mixture density-mode tracks | `GSFTracksFullMixtureMode` |
+| per-output-track full-mixture-mode status | `GSFFullMixtureModeStatus` |
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
@@ -444,7 +467,8 @@ The data handles are configurable separately from the 42 properties:
 `UseGlobalLossTracks` property defaults to `false`, in which case the generic
 `gsf_*` fields come from an optional `GSFTracks` collection. Setting it to
 `true` makes those generic fields come from `GlobalLossTracks`; the maintained
-card does this only for `method="global-loss"`. When `GSFTracksWeightedMean` or
+card does this only for `method="global-loss"`. When
+`GSFTracksWeightedMean`, `GSFTracksFullMixtureMode`, or
 `GSFTracksEcalConstrained` is present in the ordinary GSF event store, the
 tuple also fills the corresponding parallel scalar set:
 
@@ -455,10 +479,13 @@ tuple also fills the corresponding parallel scalar set:
 | `bestbranch_gsf_available` | One when `GSFTracksBestBranch` is present for the row; zero for forward, CMS-like, and global-loss. |
 | `weighted_gsf_pT`, `weighted_gsf_p`, `weighted_gsf_eta`, `weighted_gsf_theta`, `weighted_gsf_phi`, `weighted_gsf_d0`, `weighted_gsf_z0`, `weighted_gsf_omega`, `weighted_gsf_tanl`, `weighted_gsf_chi2`, `weighted_gsf_ndf`, `weighted_gsf_nhits`, `weighted_gsf_type` | Paired `GSFTracksWeightedMean` result for smoother/reverse. The chi-square/NDF are inherited from BestBranch. |
 | `weighted_gsf_available`, `weighted_gsf_changed` | Presence tag and exact scalar comparison against the BestBranch fields. They are zero for CMS-like and global-loss output. |
+| `fullmixture_gsf_pT`, `fullmixture_gsf_p`, `fullmixture_gsf_eta`, `fullmixture_gsf_theta`, `fullmixture_gsf_phi`, `fullmixture_gsf_d0`, `fullmixture_gsf_z0`, `fullmixture_gsf_omega`, `fullmixture_gsf_tanl`, `fullmixture_gsf_chi2`, `fullmixture_gsf_ndf`, `fullmixture_gsf_nhits`, `fullmixture_gsf_type` | Paired full five-dimensional mixture-density mode from `GSFTracksFullMixtureMode`. The chi-square/NDF are inherited from BestBranch. |
+| `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward, CMS-like, and global-loss output. |
+| `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
-| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, and constrained fractional pT residuals relative to the first truth particle. |
+| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, FullMixtureMode, and constrained fractional pT residuals relative to the first truth particle. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 | `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
@@ -474,6 +501,13 @@ always creates it and fills it only when `GSFTracksWeightedMean` is present;
 CMS-like and global-loss do not produce that collection, so all weighted
 values and both flags remain zero.
 
+The full-mixture branch set follows the same presence-driven rule and has no
+configuration switch. It is filled only from `GSFTracksFullMixtureMode` and
+its status collection. Forward, CMS-like, and global-loss jobs leave it
+unavailable/zero with status zero. A negative status with
+`fullmixture_gsf_available=1` means the row-aligned track is the deliberate
+BestBranch fallback, not a successfully found density mode.
+
 The BestBranch branch set is likewise presence-driven: it is populated only
 from `GSFTracksBestBranch` and remains unavailable/zero for forward,
 CMS-like, and global-loss jobs. The generic `gsf_*` fields remain available
@@ -488,8 +522,8 @@ and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
 BestBranch tracker hits. Smoother/reverse hits are therefore recorded once as
 `bestbranch_gsf_hit_*`; generic forward/CMS-like/global-loss hits remain in
-`gsf_hit_*`. WeightedMean also shares the BestBranch hit list and has no
-duplicate hit-vector branches.
+`gsf_hit_*`. WeightedMean and FullMixtureMode also share the BestBranch hit
+list and have no duplicate hit-vector branches.
 
 For the BH oracle, the flat tuple contains its scope status. Its LCIO and GSF
 hit vectors reproduce associated output hits, not the subset that was
@@ -517,8 +551,8 @@ user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than
 independent global-loss refitter. The retired runtime
 BH-audit CSV is no longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
-`bestbranch_gsf_*`, paired `weighted_gsf_*`, generic `gsf_*`, and default-zero
-`ecal_gsf_*` scalar branch sets.
+`bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
+`gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
 
 The same card also exposes `method="global-loss"`. It explicitly assigns all
 14 `RecGsfGlobalLossRefitter` properties to their documented experimental

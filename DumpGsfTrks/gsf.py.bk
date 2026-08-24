@@ -115,7 +115,7 @@ gsf.CmsGsfSmoothing = False
 gsf.CmsErrorRescaling = 100.0
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse methods below
-# always persist both endpoint representations and do not select one here.
+# always persist all three endpoint representations and do not select one here.
 gsf.GSFOutputMode = "BestBranch"
 gsf.ReverseSelectionMode = "AggregateWeight"
 gsf.SurfaceConsistencyUninformativeFloor = 0.05
@@ -138,16 +138,18 @@ use_global_loss_tracks = False  # True maps GlobalLossTracks into generic gsf_*.
 
 if method == "smoother":
     # KL reduction-aware retained-graph Gaussian-sum smoother. Its common-IP
-    # state is persisted both as GSFTracksBestBranch and as
-    # GSFTracksWeightedMean; these are currently expected to be identical.
+    # state is persisted as GSFTracksBestBranch, GSFTracksWeightedMean, and
+    # GSFTracksFullMixtureMode; these are currently expected to be identical.
     gsf.GaussianSumSmoothing = True
 
 elif method == "reverse":
     # Independent inward multi-component refit, seeded by the full final
     # forward posterior. Persist the selected branch in GSFTracksBestBranch and
-    # the full-mixture moment match in GSFTracksWeightedMean.
+    # the two automatic full-mixture summaries in GSFTracksWeightedMean and
+    # GSFTracksFullMixtureMode. The latter is the joint five-dimensional PDF
+    # maximum; GSFFullMixtureModeStatus tags optimization success/fallback.
     gsf.ReverseFiltering = True
-    gsf.ReverseSelectionMode = "AggregateWeight"
+    gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
     gsf.ReverseInitialWeightMode = "ForwardPosterior"
     gsf.ReverseKappaSeedCov = 1.0
@@ -217,11 +219,12 @@ gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
-# The tuple uses explicit endpoint schemas. Smoother/reverse BestBranch and
-# WeightedMean fill bestbranch_gsf_* and weighted_gsf_* respectively. CMS-like
-# fills generic gsf_* from GSFTracks; global-loss maps GlobalLossTracks into
-# those same generic fields. Missing method-specific collections leave their
-# corresponding branch set unavailable/zero.
+# The tuple uses explicit endpoint schemas. Smoother/reverse BestBranch,
+# WeightedMean, and FullMixtureMode fill bestbranch_gsf_*, weighted_gsf_*, and
+# fullmixture_gsf_* respectively. CMS-like fills generic gsf_* from GSFTracks;
+# global-loss maps GlobalLossTracks into those same generic fields. Missing
+# method-specific collections leave their corresponding branch set
+# unavailable/zero.
 flat.OutputFile = os.path.join(
     tuplepath,
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),

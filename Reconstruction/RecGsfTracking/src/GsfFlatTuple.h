@@ -9,6 +9,7 @@
 #include "GsfTruthEventData/MaterialIntervalCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TruthBHLossScopeStatus.h"
+#include "FullMixtureModeStatus.h"
 
 #include <cstdint>
 #include <vector>
@@ -17,8 +18,9 @@ class TFile;
 class TTree;
 
 /// Post-processor: reads CompleteTracks, the optional method-specific
-/// GSFTracks, GSFTracksBestBranch, GSFTracksWeightedMean, and
-/// GSFTracksEcalConstrained collections, or the explicitly selected
+/// GSFTracks, GSFTracksBestBranch, GSFTracksWeightedMean,
+/// GSFTracksFullMixtureMode, and GSFTracksEcalConstrained collections, or the
+/// explicitly selected
 /// GlobalLossTracks collection, plus MCParticle from the event store.
 /// It writes a flat ROOT TTree with relevant tracking parameters and per-hit
 /// data for downstream analysis.
@@ -104,6 +106,20 @@ private:
   int    m_weighted_gsf_type = 0;
   int    m_weighted_gsf_available = 0;
   int    m_weighted_gsf_changed = 0;
+  // paired smoother/reverse full five-dimensional mixture-density mode AtIP
+  double m_fullmixture_gsf_omega = 0, m_fullmixture_gsf_d0 = 0;
+  double m_fullmixture_gsf_z0 = 0, m_fullmixture_gsf_phi = 0;
+  double m_fullmixture_gsf_tanl = 0;
+  double m_fullmixture_gsf_pT = 0, m_fullmixture_gsf_p = 0;
+  double m_fullmixture_gsf_eta = 0, m_fullmixture_gsf_theta = 0;
+  double m_fullmixture_gsf_chi2 = 0;
+  int    m_fullmixture_gsf_ndf = 0;
+  int    m_fullmixture_gsf_nhits = 0;
+  int    m_fullmixture_gsf_type = 0;
+  int    m_fullmixture_gsf_available = 0;
+  int    m_fullmixture_gsf_changed = 0;
+  int    m_fullmixture_gsf_status =
+      fullMixtureModeStatusValue(FullMixtureModeStatus::NotApplicable);
   // truth BH-loss oracle scope for CompleteTracks index 0
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
@@ -175,6 +191,7 @@ private:
   double m_res_pT_gsf = 0;     // (gsf_pT - mc_pT) / mc_pT
   double m_res_pT_bestbranch_gsf = 0;
   double m_res_pT_weighted_gsf = 0; // (weighted_gsf_pT - mc_pT) / mc_pT
+  double m_res_pT_fullmixture_gsf = 0;
   double m_res_pT_ecal_gsf = 0; // (ecal_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_lcio = 0;    // (lcio_pT - mc_pT) / mc_pT
 
