@@ -100,7 +100,8 @@ gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "1").lower() in ("1", "true", "yes")
 gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "1.0e-7"))
 
 # Enables inward multi-component filtering. It publishes the selected branch
-# to GSFTracks and the moment-matched mixture to GSFTracksWeightedMean.
+# to GSFTracksBestBranch and the moment-matched mixture to
+# GSFTracksWeightedMean.
 cms_gsf_smoothing = os.getenv(
     "GSF_CMS_GSF_SMOOTHING", "0").lower() in ("1", "true", "yes")
 gsf.CmsGsfSmoothing = cms_gsf_smoothing

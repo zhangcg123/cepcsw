@@ -295,24 +295,31 @@ component-constraint experiment remains off. The algorithm still supports that
 default-off experiment, but reactivating it requires a separate reconstructed-
 event input card that explicitly supplies `EcalCluster`; it is not part of this
 worker. For `method="smoother"` and `method="reverse"`, there is no
-endpoint-output selector: `GSFTracks` always stores BestBranch and
+endpoint-output selector: `GSFTracksBestBranch` always stores BestBranch and
 `GSFTracksWeightedMean` stores the moment-matched mixture. The removed
 `ReverseOutputMode` property must not appear in regenerated cards. CMS-like
 and global-loss retain their existing single-output behavior.
 
-The same card's `RecGsfFlatTuple` output retains BestBranch in the ordinary
-`gsf_*` fields, records the paired `weighted_gsf_*` fields plus
+The same card's `RecGsfFlatTuple` output records BestBranch in
+`bestbranch_gsf_*`, the paired moment match in `weighted_gsf_*`, plus
+`bestbranch_gsf_available`,
 `weighted_gsf_available`, `weighted_gsf_changed`, and
-`res_pT_weighted_gsf`, and records `truth_bh_scope_status` and
+their two residuals, and records `truth_bh_scope_status` and
 `truth_bh_scope_valid`, and adds the paired constrained `ecal_gsf_*` fields,
 `ecal_gsf_available`, `ecal_gsf_changed`, and `res_pT_ecal_gsf`. Default-off
 jobs remain valid: their ordinary fields are populated and their constrained
 fields are marked unavailable and zeroed. The constrained track copies the
-ordinary tracker hits, so the flat tuple does not duplicate the `gsf_hit_*`
-vectors.
+BestBranch tracker hits, so the flat tuple records those once as
+`bestbranch_gsf_hit_*`; CMS-like/global-loss keep generic `gsf_hit_*` vectors.
 There is no method switch for the weighted flat schema: the branches always
 exist, are populated only from an available `GSFTracksWeightedMean`
 collection, and remain unavailable/zero for CMS-like and global-loss jobs.
+The BestBranch schema follows the same presence-only rule for
+`GSFTracksBestBranch`; it is unavailable/zero for CMS-like and global-loss.
+Those two methods retain their generic `gsf_*` fields from `GSFTracks` and
+`GlobalLossTracks`, respectively.
+Existing smoother/reverse ROOT files are not renamed in place: regenerate
+them to obtain `GSFTracksBestBranch` and `bestbranch_gsf_*`.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this workflow. When the package adds, removes,

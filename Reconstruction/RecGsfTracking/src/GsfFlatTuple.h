@@ -16,10 +16,10 @@
 class TFile;
 class TTree;
 
-/// Post-processor: reads CompleteTracks, either GSFTracks or the explicitly
-/// selected GlobalLossTracks collection, the optional paired
-/// GSFTracksWeightedMean and GSFTracksEcalConstrained collections, and
-/// MCParticle from the event store.
+/// Post-processor: reads CompleteTracks, the optional method-specific
+/// GSFTracks, GSFTracksBestBranch, GSFTracksWeightedMean, and
+/// GSFTracksEcalConstrained collections, or the explicitly selected
+/// GlobalLossTracks collection, plus MCParticle from the event store.
 /// It writes a flat ROOT TTree with relevant tracking parameters and per-hit
 /// data for downstream analysis.
 class RecGsfFlatTuple : public Algorithm {
@@ -33,8 +33,6 @@ public:
 private:
   DataHandle<edm4hep::TrackCollection>      m_inCompleteTracks{
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackCollection>      m_inGsfTracks{
-      "GSFTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>      m_inGlobalLossTracks{
       "GlobalLossTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection> m_inMCParticles{
@@ -51,8 +49,8 @@ private:
   Gaudi::Property<double> m_bField{this, "BField", 3.0, "Magnetic field [T]"};
   Gaudi::Property<bool> m_useGlobalLossTracks{
       this, "UseGlobalLossTracks", false,
-      "Fill the existing gsf_* branches from GlobalLossTracks instead of "
-      "GSFTracks"};
+      "Fill generic gsf_* branches from GlobalLossTracks instead of the "
+      "optional GSFTracks collection"};
   Gaudi::Property<std::vector<std::string>> m_hitCollectionNames{
       this, "HitCollectionNames", {}, "Tracker hit collections to dump (all hits)"};
 
@@ -75,7 +73,7 @@ private:
   int    m_lcio_ndf = 0;
   int    m_lcio_nhits = 0;
   int    m_lcio_type = 0;
-  // GSF AtIP
+  // Generic CMS-like/forward or explicitly selected global-loss AtIP
   double m_gsf_omega = 0, m_gsf_d0 = 0, m_gsf_z0 = 0;
   double m_gsf_phi = 0, m_gsf_tanl = 0;
   double m_gsf_pT = 0, m_gsf_p = 0, m_gsf_eta = 0, m_gsf_theta = 0;
@@ -83,6 +81,17 @@ private:
   int    m_gsf_ndf = 0;
   int    m_gsf_nhits = 0;
   int    m_gsf_type = 0;
+  // paired smoother/reverse BestBranch AtIP
+  double m_bestbranch_gsf_omega = 0, m_bestbranch_gsf_d0 = 0;
+  double m_bestbranch_gsf_z0 = 0, m_bestbranch_gsf_phi = 0;
+  double m_bestbranch_gsf_tanl = 0;
+  double m_bestbranch_gsf_pT = 0, m_bestbranch_gsf_p = 0;
+  double m_bestbranch_gsf_eta = 0, m_bestbranch_gsf_theta = 0;
+  double m_bestbranch_gsf_chi2 = 0;
+  int    m_bestbranch_gsf_ndf = 0;
+  int    m_bestbranch_gsf_nhits = 0;
+  int    m_bestbranch_gsf_type = 0;
+  int    m_bestbranch_gsf_available = 0;
   // paired smoother/reverse WeightedMean AtIP
   double m_weighted_gsf_omega = 0, m_weighted_gsf_d0 = 0;
   double m_weighted_gsf_z0 = 0, m_weighted_gsf_phi = 0;
@@ -164,6 +173,7 @@ private:
   int    m_ecal_gsf_changed = 0;
   // resolution
   double m_res_pT_gsf = 0;     // (gsf_pT - mc_pT) / mc_pT
+  double m_res_pT_bestbranch_gsf = 0;
   double m_res_pT_weighted_gsf = 0; // (weighted_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_ecal_gsf = 0; // (ecal_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_lcio = 0;    // (lcio_pT - mc_pT) / mc_pT
@@ -177,7 +187,7 @@ private:
   std::vector<float>    m_lcio_hit_edep;
   std::vector<unsigned long long> m_lcio_hit_cellid;
 
-  // ── per-hit data for the GSF track ──
+  // ── per-hit data for generic forward/CMS/global GSF track ──
   int                   m_gsf_hit_n = 0;
   std::vector<float>    m_gsf_hit_x;
   std::vector<float>    m_gsf_hit_y;
@@ -185,6 +195,15 @@ private:
   std::vector<float>    m_gsf_hit_r;
   std::vector<float>    m_gsf_hit_edep;
   std::vector<unsigned long long> m_gsf_hit_cellid;
+
+  // ── per-hit data for smoother/reverse BestBranch track ──
+  int                   m_bestbranch_gsf_hit_n = 0;
+  std::vector<float>    m_bestbranch_gsf_hit_x;
+  std::vector<float>    m_bestbranch_gsf_hit_y;
+  std::vector<float>    m_bestbranch_gsf_hit_z;
+  std::vector<float>    m_bestbranch_gsf_hit_r;
+  std::vector<float>    m_bestbranch_gsf_hit_edep;
+  std::vector<unsigned long long> m_bestbranch_gsf_hit_cellid;
 
   // ── all tracker hits from original collections ──
   int                   m_all_hit_n = 0;

@@ -2,7 +2,8 @@
 
 `RecGsfTracking` refits `CompleteTracks` with a Gaussian-sum electron model.
 The smoother and reverse workflows always write the selected BestBranch to
-`GSFTracks` and the moment-matched endpoint to `GSFTracksWeightedMean`. A
+`GSFTracksBestBranch` and the moment-matched endpoint to
+`GSFTracksWeightedMean`. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -13,7 +14,7 @@ been removed; historical comparisons remain under `agents_record/`.
 
 `RecGsfGlobalLossRefitter` is a separate experimental algorithm. It reads
 `CompleteTracks` directly and writes `GlobalLossTracks`; it neither calls
-`RecGsfTracking` nor changes `GSFTracks`. The maintained
+`RecGsfTracking` nor changes its method-specific GSF collections. The maintained
 `DumpGsfTrks/gsf.py.bk` exposes it as the fourth explicit
 `method="global-loss"` choice. That choice schedules the global refitter
 instead of `RecGsfTracking`, tags both outputs with `global-loss`, and sets
@@ -321,7 +322,7 @@ alternatives are retained only to reproduce rejected diagnostics.
 `ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
 
 Smoother and reverse have no output selector. Every successful track is
-written row-for-row to both collections: `GSFTracks` is BestBranch and
+written row-for-row to both collections: `GSFTracksBestBranch` is BestBranch and
 `GSFTracksWeightedMean` is the normalized final-mixture moment match.
 `ReverseSelectionMode` affects only BestBranch. The weighted track retains the
 selected branch's chi-square/NDF because a moment-matched mixture has no unique
@@ -352,7 +353,7 @@ floor + (1 - floor) * exp[-0.5 * (log(p_component/E) / sigma)^2].
 
 This is a selection constraint, not a track--calorimeter parameter
 combination: it does not alter any fitted component state or covariance.
-`GSFTracks` always preserves the unconstrained tracker-only result. When the
+`GSFTracksBestBranch` always preserves the unconstrained tracker-only result. When the
 experiment is enabled, `GSFTracksEcalConstrained` is created alongside it. If
 the ECAL observation is unavailable or the symmetric ratio does not cross the
 threshold, the paired output is an exact parameter/covariance copy of the
@@ -426,7 +427,8 @@ The data handles are configurable separately from the 42 properties:
 | Role | Default collection |
 |---|---|
 | input reconstructed tracks | `CompleteTracks` |
-| selected BestBranch output tracks | `GSFTracks` |
+| generic forward/CMS-like output tracks | `GSFTracks` |
+| selected smoother/reverse BestBranch output tracks | `GSFTracksBestBranch` |
 | paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
@@ -437,23 +439,26 @@ The data handles are configurable separately from the 42 properties:
 
 ### Flat-tuple paired-track branches
 
-`RecGsfFlatTuple` keeps one stable tracker-result schema. Its
-`UseGlobalLossTracks` property defaults to `false`, in which case `gsf_*`
-comes from `GSFTracks`. Setting it to `true` makes the same fields come from
-`GlobalLossTracks`; the maintained card does this only for
-`method="global-loss"`. When `GSFTracksWeightedMean` or
+`RecGsfFlatTuple` keeps method-explicit tracker-result schemas. The
+`bestbranch_gsf_*` fields come only from `GSFTracksBestBranch`. Its
+`UseGlobalLossTracks` property defaults to `false`, in which case the generic
+`gsf_*` fields come from an optional `GSFTracks` collection. Setting it to
+`true` makes those generic fields come from `GlobalLossTracks`; the maintained
+card does this only for `method="global-loss"`. When `GSFTracksWeightedMean` or
 `GSFTracksEcalConstrained` is present in the ordinary GSF event store, the
 tuple also fills the corresponding parallel scalar set:
 
 | Branches | Meaning |
 |---|---|
-| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | BestBranch from `GSFTracks` by default, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. |
+| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Generic forward/CMS-like result from `GSFTracks`, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. These are zero for smoother/reverse. |
+| `bestbranch_gsf_pT`, `bestbranch_gsf_p`, `bestbranch_gsf_eta`, `bestbranch_gsf_theta`, `bestbranch_gsf_phi`, `bestbranch_gsf_d0`, `bestbranch_gsf_z0`, `bestbranch_gsf_omega`, `bestbranch_gsf_tanl`, `bestbranch_gsf_chi2`, `bestbranch_gsf_ndf`, `bestbranch_gsf_nhits`, `bestbranch_gsf_type` | Smoother/reverse BestBranch from `GSFTracksBestBranch`. |
+| `bestbranch_gsf_available` | One when `GSFTracksBestBranch` is present for the row; zero for forward, CMS-like, and global-loss. |
 | `weighted_gsf_pT`, `weighted_gsf_p`, `weighted_gsf_eta`, `weighted_gsf_theta`, `weighted_gsf_phi`, `weighted_gsf_d0`, `weighted_gsf_z0`, `weighted_gsf_omega`, `weighted_gsf_tanl`, `weighted_gsf_chi2`, `weighted_gsf_ndf`, `weighted_gsf_nhits`, `weighted_gsf_type` | Paired `GSFTracksWeightedMean` result for smoother/reverse. The chi-square/NDF are inherited from BestBranch. |
 | `weighted_gsf_available`, `weighted_gsf_changed` | Presence tag and exact scalar comparison against the BestBranch fields. They are zero for CMS-like and global-loss output. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
-| `res_pT_gsf`, `res_pT_weighted_gsf`, `res_pT_ecal_gsf` | BestBranch, WeightedMean, and constrained fractional pT residuals relative to the first truth particle. |
+| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, and constrained fractional pT residuals relative to the first truth particle. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 | `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
@@ -469,11 +474,22 @@ always creates it and fills it only when `GSFTracksWeightedMean` is present;
 CMS-like and global-loss do not produce that collection, so all weighted
 values and both flags remain zero.
 
+The BestBranch branch set is likewise presence-driven: it is populated only
+from `GSFTracksBestBranch` and remains unavailable/zero for forward,
+CMS-like, and global-loss jobs. The generic `gsf_*` fields remain available
+for those non-paired workflows and are zero for smoother/reverse.
+This is an intentional schema rename for newly produced smoother/reverse
+files; historical EDM/flat files retain their original `GSFTracks`/`gsf_*`
+names and must not be silently interpreted as the new schema.
+
 The constrained branches always exist in newly produced flat files. When the
 experiment is off or the paired collection is absent, `ecal_gsf_available=0`
 and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
-ordinary GSF tracker hits, so `gsf_hit_*` is the common hit information.
+BestBranch tracker hits. Smoother/reverse hits are therefore recorded once as
+`bestbranch_gsf_hit_*`; generic forward/CMS-like/global-loss hits remain in
+`gsf_hit_*`. WeightedMean also shares the BestBranch hit list and has no
+duplicate hit-vector branches.
 
 For the BH oracle, the flat tuple contains its scope status. Its LCIO and GSF
 hit vectors reproduce associated output hits, not the subset that was
@@ -500,8 +516,9 @@ user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than
 `CEPC2GeV85StepConditioned` model, and it feeds both ordinary GSF and the
 independent global-loss refitter. The retired runtime
 BH-audit CSV is no longer steered. The card's `RecGsfFlatTuple` instance writes
-the default-on `truth_material_*` vectors alongside BestBranch `gsf_*`, paired
-`weighted_gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
+the default-on `truth_material_*` vectors alongside BestBranch
+`bestbranch_gsf_*`, paired `weighted_gsf_*`, generic `gsf_*`, and default-zero
+`ecal_gsf_*` scalar branch sets.
 
 The same card also exposes `method="global-loss"`. It explicitly assigns all
 14 `RecGsfGlobalLossRefitter` properties to their documented experimental

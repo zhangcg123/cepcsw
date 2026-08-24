@@ -75,6 +75,8 @@ private:
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>       m_outputTracks{
       "GSFTracks", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection>       m_bestBranchOutputTracks{
+      "GSFTracksBestBranch", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_weightedMeanOutputTracks{
       "GSFTracksWeightedMean", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_ecalConstrainedOutputTracks{
@@ -158,7 +160,8 @@ private:
   Gaudi::Property<bool> m_ecalComponentConstraint{
       this, "EcalComponentConstraint", false,
       "Default-off two-sided ECAL likelihood constraint on final reverse "
-      "BestBranch selection; the unconstrained GSFTracks output is preserved"};
+      "BestBranch selection; the unconstrained GSFTracksBestBranch output is "
+      "preserved"};
   Gaudi::Property<double> m_ecalConstraintRatioThreshold{
       this, "EcalConstraintRatioThreshold", 1.1,
       "Activate the ECAL branch constraint when max(p/E,E/p) exceeds this "
@@ -225,7 +228,7 @@ private:
   Gaudi::Property<std::string> m_outputMode{
       this, "GSFOutputMode", "BestBranch",
       "Forward-only output selector; smoother/reverse always write BestBranch "
-      "to GSFTracks and WeightedMean to GSFTracksWeightedMean"};
+      "to GSFTracksBestBranch and WeightedMean to GSFTracksWeightedMean"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "

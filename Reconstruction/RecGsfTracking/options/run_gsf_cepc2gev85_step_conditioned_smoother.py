@@ -9,5 +9,5 @@ exec(compile(
 gsf.GaussianSumSmoothing = True
 gsf.ReverseFiltering = False
 gsf.MaterialIPExtrapolation = False
-# Both endpoint views are published: GSFTracks carries BestBranch and
+# Both endpoint views are published: GSFTracksBestBranch carries BestBranch and
 # GSFTracksWeightedMean carries the moment-matched Gaussian sum.

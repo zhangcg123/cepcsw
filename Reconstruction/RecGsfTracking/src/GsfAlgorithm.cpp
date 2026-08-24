@@ -1647,7 +1647,7 @@ StatusCode RecGsfTracking::initialize() {
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
   if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
-    info() << "Dual GSF publication: BestBranch -> GSFTracks, "
+    info() << "Dual GSF publication: BestBranch -> GSFTracksBestBranch, "
               "WeightedMean -> GSFTracksWeightedMean; GSFOutputMode does not "
               "select between these collections"
            << endmsg;
@@ -1660,9 +1660,13 @@ StatusCode RecGsfTracking::initialize() {
 StatusCode RecGsfTracking::execute() {
   m_nEvt++;
   const int eventIndex = m_nEvt - 1;
-  auto* out = m_outputTracks.createAndPut();
+  const bool publishPairedEndpoints =
+      m_gaussianSumSmoothing.value() || m_reverseFiltering.value();
+  auto* out = publishPairedEndpoints
+      ? m_bestBranchOutputTracks.createAndPut()
+      : m_outputTracks.createAndPut();
   edm4hep::TrackCollection* weightedMeanOut = nullptr;
-  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value())
+  if (publishPairedEndpoints)
     weightedMeanOut = m_weightedMeanOutputTracks.createAndPut();
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
   auto* truthMaterialIntervals = m_truthMaterialIntervals.createAndPut();
@@ -3622,7 +3626,7 @@ StatusCode RecGsfTracking::execute() {
 
       // Extrapolate to IP (method selected by MaterialIPExtrapolation).
       // Smoother and ordinary reverse workflows publish both endpoint views:
-      // BestBranch remains the stable GSFTracks result, while the paired
+      // BestBranch is written to GSFTracksBestBranch, while the paired
       // moment-matched state is written to GSFTracksWeightedMean. The legacy
       // selector remains effective only for the forward-only workflow.
       THelicalTrack bestIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);

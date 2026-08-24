@@ -123,7 +123,7 @@ gsf.ReverseInitialWeightMode = "ForwardPosterior"
 gsf.ReverseKappaSeedCov = 100.0
 
 # Default-off research constraint.  When enabled from a separate reconstructed-
-# event card that supplies EcalCluster, GSFTracks stays tracker-only and
+# event card that supplies EcalCluster, GSFTracksBestBranch stays tracker-only and
 # GSFTracksEcalConstrained carries the paired component-selection result.  The
 # maintained tracker-direct worker keeps this off and does not request clusters.
 gsf.EcalComponentConstraint = False
@@ -134,17 +134,17 @@ gsf.EcalConstraintPhiWindow = 0.10
 gsf.EcalConstraintThetaWindow = 0.10
 
 refitter = gsf  # Algorithm scheduled below; global-loss replaces this object.
-use_global_loss_tracks = False  # False reads GSFTracks; global-loss sets True.
+use_global_loss_tracks = False  # True maps GlobalLossTracks into generic gsf_*.
 
 if method == "smoother":
     # KL reduction-aware retained-graph Gaussian-sum smoother. Its common-IP
-    # state is persisted both as GSFTracks (BestBranch view) and as
+    # state is persisted both as GSFTracksBestBranch and as
     # GSFTracksWeightedMean; these are currently expected to be identical.
     gsf.GaussianSumSmoothing = True
 
 elif method == "reverse":
     # Independent inward multi-component refit, seeded by the full final
-    # forward posterior. Always persist the selected branch in GSFTracks and
+    # forward posterior. Persist the selected branch in GSFTracksBestBranch and
     # the full-mixture moment match in GSFTracksWeightedMean.
     gsf.ReverseFiltering = True
     gsf.ReverseSelectionMode = "AggregateWeight"
@@ -166,7 +166,7 @@ elif method in ("global-loss", "global_loss", "global"):
     # Independent all-hit evidence refitter. It compares identity with every
     # exactly-one-radiative-interval history and writes GlobalLossTracks. It is
     # selected instead of RecGsfTracking, so the established GSF workflows and
-    # their GSFTracks collection remain untouched in their own jobs.
+    # their method-specific GSF collections remain untouched in their own jobs.
     method = "global-loss"
     global_loss = RecGsfGlobalLossRefitter("RecGsfGlobalLossRefitter")
     global_loss.ElectronHypothesis = True
@@ -217,10 +217,11 @@ gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
-# The tuple keeps one stable gsf_* schema. For global-loss those fields are
-# explicitly sourced from GlobalLossTracks; for every established workflow
-# they remain sourced from GSFTracks. The optional ECAL fields remain paired
-# only with the established GSF workflows.
+# The tuple uses explicit endpoint schemas. Smoother/reverse BestBranch and
+# WeightedMean fill bestbranch_gsf_* and weighted_gsf_* respectively. CMS-like
+# fills generic gsf_* from GSFTracks; global-loss maps GlobalLossTracks into
+# those same generic fields. Missing method-specific collections leave their
+# corresponding branch set unavailable/zero.
 flat.OutputFile = os.path.join(
     tuplepath,
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),

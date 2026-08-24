@@ -17,7 +17,7 @@ Geant4 pre/post-material-step truth
 ```
 
 `RecGsfTracking` builds, installs, and reads `CompleteTracks`. Smoother and
-reverse runs write BestBranch to `GSFTracks` and the paired moment-matched
+reverse runs write BestBranch to `GSFTracksBestBranch` and the paired moment-matched
 endpoint to `GSFTracksWeightedMean`; CMS-like retains its fixed single
 `GSFTracks` output. Its component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
@@ -34,7 +34,7 @@ does not validate the method or make it the production candidate. The card
 default remains `reverse`, and the three established `RecGsfTracking`
 workflows are unchanged.
 A default-off ECAL component-re-ranking prototype is also mechanically
-operational. It preserves `GSFTracks` and writes its paired result separately;
+operational. It preserves `GSFTracksBestBranch` and writes its paired result separately;
 its focused evidence is promising only for retained bimodal alternatives and
 is not population-validated.
 A separate default-off truth BH-loss oracle can replace existing BH-call

@@ -78,6 +78,15 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("gsf_hit_r",     &m_gsf_hit_r);
   m_tree->Branch("gsf_hit_edep",  &m_gsf_hit_edep);
   m_tree->Branch("gsf_hit_cellid",&m_gsf_hit_cellid);
+  // smoother/reverse BestBranch per-hit
+  m_tree->Branch("bestbranch_gsf_hit_n", &m_bestbranch_gsf_hit_n);
+  m_tree->Branch("bestbranch_gsf_hit_x", &m_bestbranch_gsf_hit_x);
+  m_tree->Branch("bestbranch_gsf_hit_y", &m_bestbranch_gsf_hit_y);
+  m_tree->Branch("bestbranch_gsf_hit_z", &m_bestbranch_gsf_hit_z);
+  m_tree->Branch("bestbranch_gsf_hit_r", &m_bestbranch_gsf_hit_r);
+  m_tree->Branch("bestbranch_gsf_hit_edep", &m_bestbranch_gsf_hit_edep);
+  m_tree->Branch("bestbranch_gsf_hit_cellid",
+                 &m_bestbranch_gsf_hit_cellid);
   // all hits from original collections
   m_tree->Branch("all_hit_n",     &m_all_hit_n);
   m_tree->Branch("all_hit_x",     &m_all_hit_x);
@@ -115,6 +124,21 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("gsf_ndf",   &m_gsf_ndf);
   m_tree->Branch("gsf_nhits", &m_gsf_nhits);
   m_tree->Branch("gsf_type",  &m_gsf_type);
+  // paired smoother/reverse BestBranch GSF
+  m_tree->Branch("bestbranch_gsf_available", &m_bestbranch_gsf_available);
+  m_tree->Branch("bestbranch_gsf_pT",        &m_bestbranch_gsf_pT);
+  m_tree->Branch("bestbranch_gsf_p",         &m_bestbranch_gsf_p);
+  m_tree->Branch("bestbranch_gsf_eta",       &m_bestbranch_gsf_eta);
+  m_tree->Branch("bestbranch_gsf_theta",     &m_bestbranch_gsf_theta);
+  m_tree->Branch("bestbranch_gsf_phi",       &m_bestbranch_gsf_phi);
+  m_tree->Branch("bestbranch_gsf_d0",        &m_bestbranch_gsf_d0);
+  m_tree->Branch("bestbranch_gsf_z0",        &m_bestbranch_gsf_z0);
+  m_tree->Branch("bestbranch_gsf_omega",     &m_bestbranch_gsf_omega);
+  m_tree->Branch("bestbranch_gsf_tanl",      &m_bestbranch_gsf_tanl);
+  m_tree->Branch("bestbranch_gsf_chi2",      &m_bestbranch_gsf_chi2);
+  m_tree->Branch("bestbranch_gsf_ndf",       &m_bestbranch_gsf_ndf);
+  m_tree->Branch("bestbranch_gsf_nhits",     &m_bestbranch_gsf_nhits);
+  m_tree->Branch("bestbranch_gsf_type",      &m_bestbranch_gsf_type);
   // paired smoother/reverse WeightedMean GSF
   m_tree->Branch("weighted_gsf_available", &m_weighted_gsf_available);
   m_tree->Branch("weighted_gsf_changed",   &m_weighted_gsf_changed);
@@ -239,14 +263,16 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("ecal_gsf_type",      &m_ecal_gsf_type);
   // resolution
   m_tree->Branch("res_pT_gsf",      &m_res_pT_gsf);
+  m_tree->Branch("res_pT_bestbranch_gsf", &m_res_pT_bestbranch_gsf);
   m_tree->Branch("res_pT_weighted_gsf", &m_res_pT_weighted_gsf);
   m_tree->Branch("res_pT_ecal_gsf", &m_res_pT_ecal_gsf);
   m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
   info() << "Output: " << m_outFileName
-         << " trackSource="
+         << " genericTrackSource="
          << (m_useGlobalLossTracks.value() ? "GlobalLossTracks"
                                            : "GSFTracks")
+         << " bestBranchSource=GSFTracksBestBranch"
          << endmsg;
   if (!m_hitCollectionNames.value().empty())
     info() << "Hit collections to dump: " << m_hitCollectionNames.value().size()
@@ -261,9 +287,16 @@ StatusCode RecGsfFlatTuple::execute() {
 
   const auto* mcCol = m_inMCParticles.get();
   const auto* lcioCol = m_inCompleteTracks.get();
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> genericGsfWrapper(
+      eventSvc(), "GSFTracks");
   const auto* gsfCol = m_useGlobalLossTracks.value()
                            ? m_inGlobalLossTracks.get()
-                           : m_inGsfTracks.get();
+                           : (genericGsfWrapper
+                                  ? genericGsfWrapper->getData() : nullptr);
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> bestBranchGsfWrapper(
+      eventSvc(), "GSFTracksBestBranch");
+  const auto* bestBranchGsfCol = bestBranchGsfWrapper
+      ? bestBranchGsfWrapper->getData() : nullptr;
   m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   m_truth_bh_scope_valid = 0;
@@ -528,6 +561,11 @@ StatusCode RecGsfFlatTuple::execute() {
   m_gsf_hit_x.clear(); m_gsf_hit_y.clear(); m_gsf_hit_z.clear();
   m_gsf_hit_r.clear(); m_gsf_hit_edep.clear(); m_gsf_hit_cellid.clear();
   m_gsf_hit_n = 0;
+  m_bestbranch_gsf_hit_x.clear(); m_bestbranch_gsf_hit_y.clear();
+  m_bestbranch_gsf_hit_z.clear(); m_bestbranch_gsf_hit_r.clear();
+  m_bestbranch_gsf_hit_edep.clear();
+  m_bestbranch_gsf_hit_cellid.clear();
+  m_bestbranch_gsf_hit_n = 0;
 
   fillTrack(lcioCol,
             m_lcio_pT, m_lcio_p, m_lcio_eta, m_lcio_theta,
@@ -562,30 +600,104 @@ StatusCode RecGsfFlatTuple::execute() {
                 m_gsf_phi, m_gsf_d0, m_gsf_z0,
                 m_gsf_omega, m_gsf_tanl,
                 m_gsf_chi2, m_gsf_ndf, m_gsf_nhits, m_gsf_type);
-      // per-hit data from GSFTracks
-      const auto& trk = (*gsfCol)[0];
-      auto trackerHits = trk.getTrackerHits();
-      if (trackerHits.size() > 0) {
-        for (const auto& th : trackerHits) {
-          if (!th.isAvailable()) continue;
-          auto& pos = th.getPosition();
-          m_gsf_hit_x.push_back((float)pos.x);
-          m_gsf_hit_y.push_back((float)pos.y);
-          m_gsf_hit_z.push_back((float)pos.z);
-          m_gsf_hit_r.push_back((float)std::hypot(pos.x, pos.y));
-          m_gsf_hit_edep.push_back(th.getEDep());
-          m_gsf_hit_cellid.push_back(th.getCellID());
-        }
-      }
-      m_gsf_hit_n = (int)m_gsf_hit_x.size();
     } catch (const std::exception& e) {
-      warning() << "Event " << m_iev << ": GSF track access failed — " << e.what() << " — skipping GSF per-hit data" << endmsg;
-      m_gsf_hit_n = 0;
+      warning() << "Event " << m_iev << ": generic GSF track access failed — "
+                << e.what() << " — writing empty generic fields" << endmsg;
+      fillTrack(nullptr,
+                m_gsf_pT, m_gsf_p, m_gsf_eta, m_gsf_theta,
+                m_gsf_phi, m_gsf_d0, m_gsf_z0,
+                m_gsf_omega, m_gsf_tanl,
+                m_gsf_chi2, m_gsf_ndf, m_gsf_nhits, m_gsf_type);
     } catch (...) {
-      warning() << "Event " << m_iev << ": GSF track access failed (unknown exception) — skipping GSF per-hit data" << endmsg;
-      m_gsf_hit_n = 0;
+      warning() << "Event " << m_iev
+                << ": generic GSF track access failed (unknown exception) — "
+                   "writing empty generic fields" << endmsg;
+      fillTrack(nullptr,
+                m_gsf_pT, m_gsf_p, m_gsf_eta, m_gsf_theta,
+                m_gsf_phi, m_gsf_d0, m_gsf_z0,
+                m_gsf_omega, m_gsf_tanl,
+                m_gsf_chi2, m_gsf_ndf, m_gsf_nhits, m_gsf_type);
     }
   }
+
+  m_bestbranch_gsf_available =
+      bestBranchGsfCol && bestBranchGsfCol->size() > 0 ? 1 : 0;
+  try {
+    fillTrack(bestBranchGsfCol,
+              m_bestbranch_gsf_pT, m_bestbranch_gsf_p,
+              m_bestbranch_gsf_eta, m_bestbranch_gsf_theta,
+              m_bestbranch_gsf_phi, m_bestbranch_gsf_d0,
+              m_bestbranch_gsf_z0, m_bestbranch_gsf_omega,
+              m_bestbranch_gsf_tanl, m_bestbranch_gsf_chi2,
+              m_bestbranch_gsf_ndf, m_bestbranch_gsf_nhits,
+              m_bestbranch_gsf_type);
+  } catch (const std::exception& e) {
+    warning() << "Event " << m_iev << ": BestBranch GSF track access failed — "
+              << e.what() << " — writing unavailable BestBranch fields"
+              << endmsg;
+    m_bestbranch_gsf_available = 0;
+    fillTrack(nullptr,
+              m_bestbranch_gsf_pT, m_bestbranch_gsf_p,
+              m_bestbranch_gsf_eta, m_bestbranch_gsf_theta,
+              m_bestbranch_gsf_phi, m_bestbranch_gsf_d0,
+              m_bestbranch_gsf_z0, m_bestbranch_gsf_omega,
+              m_bestbranch_gsf_tanl, m_bestbranch_gsf_chi2,
+              m_bestbranch_gsf_ndf, m_bestbranch_gsf_nhits,
+              m_bestbranch_gsf_type);
+  } catch (...) {
+    warning() << "Event " << m_iev
+              << ": BestBranch GSF track access failed (unknown exception) — "
+                 "writing unavailable BestBranch fields" << endmsg;
+    m_bestbranch_gsf_available = 0;
+    fillTrack(nullptr,
+              m_bestbranch_gsf_pT, m_bestbranch_gsf_p,
+              m_bestbranch_gsf_eta, m_bestbranch_gsf_theta,
+              m_bestbranch_gsf_phi, m_bestbranch_gsf_d0,
+              m_bestbranch_gsf_z0, m_bestbranch_gsf_omega,
+              m_bestbranch_gsf_tanl, m_bestbranch_gsf_chi2,
+              m_bestbranch_gsf_ndf, m_bestbranch_gsf_nhits,
+              m_bestbranch_gsf_type);
+  }
+
+  auto fillHitBranches = [&](
+      const edm4hep::TrackCollection* collection, const char* label,
+      int& count, std::vector<float>& xs, std::vector<float>& ys,
+      std::vector<float>& zs, std::vector<float>& rs,
+      std::vector<float>& edeps,
+      std::vector<unsigned long long>& cellids) {
+    if (!collection || collection->size() == 0) return;
+    try {
+      const auto& trk = (*collection)[0];
+      for (const auto& th : trk.getTrackerHits()) {
+        if (!th.isAvailable()) continue;
+        auto& pos = th.getPosition();
+        xs.push_back((float)pos.x);
+        ys.push_back((float)pos.y);
+        zs.push_back((float)pos.z);
+        rs.push_back((float)std::hypot(pos.x, pos.y));
+        edeps.push_back(th.getEDep());
+        cellids.push_back(th.getCellID());
+      }
+    } catch (const std::exception& e) {
+      warning() << "Event " << m_iev << ": " << label
+                << " hit access failed — "
+                << e.what() << " — skipping GSF per-hit data" << endmsg;
+    } catch (...) {
+      warning() << "Event " << m_iev << ": " << label
+                << " hit access failed (unknown exception) — "
+                   "skipping GSF per-hit data" << endmsg;
+    }
+    count = (int)xs.size();
+  };
+  fillHitBranches(gsfCol, "generic GSF", m_gsf_hit_n,
+                  m_gsf_hit_x, m_gsf_hit_y, m_gsf_hit_z, m_gsf_hit_r,
+                  m_gsf_hit_edep, m_gsf_hit_cellid);
+  fillHitBranches(bestBranchGsfCol, "BestBranch GSF",
+                  m_bestbranch_gsf_hit_n,
+                  m_bestbranch_gsf_hit_x, m_bestbranch_gsf_hit_y,
+                  m_bestbranch_gsf_hit_z, m_bestbranch_gsf_hit_r,
+                  m_bestbranch_gsf_hit_edep,
+                  m_bestbranch_gsf_hit_cellid);
 
   m_weighted_gsf_available =
       weightedGsfCol && weightedGsfCol->size() > 0 ? 1 : 0;
@@ -624,14 +736,14 @@ StatusCode RecGsfFlatTuple::execute() {
               m_weighted_gsf_nhits, m_weighted_gsf_type);
   }
   m_weighted_gsf_changed =
-      (m_weighted_gsf_available && gsfCol && gsfCol->size() > 0 &&
-       (m_weighted_gsf_omega != m_gsf_omega ||
-        m_weighted_gsf_d0 != m_gsf_d0 ||
-        m_weighted_gsf_z0 != m_gsf_z0 ||
-        m_weighted_gsf_phi != m_gsf_phi ||
-        m_weighted_gsf_tanl != m_gsf_tanl ||
-        m_weighted_gsf_chi2 != m_gsf_chi2 ||
-        m_weighted_gsf_ndf != m_gsf_ndf)) ? 1 : 0;
+      (m_weighted_gsf_available && m_bestbranch_gsf_available &&
+       (m_weighted_gsf_omega != m_bestbranch_gsf_omega ||
+        m_weighted_gsf_d0 != m_bestbranch_gsf_d0 ||
+        m_weighted_gsf_z0 != m_bestbranch_gsf_z0 ||
+        m_weighted_gsf_phi != m_bestbranch_gsf_phi ||
+        m_weighted_gsf_tanl != m_bestbranch_gsf_tanl ||
+        m_weighted_gsf_chi2 != m_bestbranch_gsf_chi2 ||
+        m_weighted_gsf_ndf != m_bestbranch_gsf_ndf)) ? 1 : 0;
 
   m_ecal_gsf_available = ecalGsfCol && ecalGsfCol->size() > 0 ? 1 : 0;
   try {
@@ -668,14 +780,15 @@ StatusCode RecGsfFlatTuple::execute() {
               m_ecal_gsf_chi2, m_ecal_gsf_ndf,
               m_ecal_gsf_nhits, m_ecal_gsf_type);
   }
-  m_ecal_gsf_changed = (m_ecal_gsf_available && gsfCol && gsfCol->size() > 0 &&
-      (m_ecal_gsf_omega != m_gsf_omega ||
-       m_ecal_gsf_d0 != m_gsf_d0 ||
-       m_ecal_gsf_z0 != m_gsf_z0 ||
-       m_ecal_gsf_phi != m_gsf_phi ||
-       m_ecal_gsf_tanl != m_gsf_tanl ||
-       m_ecal_gsf_chi2 != m_gsf_chi2 ||
-       m_ecal_gsf_ndf != m_gsf_ndf)) ? 1 : 0;
+  m_ecal_gsf_changed =
+      (m_ecal_gsf_available && m_bestbranch_gsf_available &&
+       (m_ecal_gsf_omega != m_bestbranch_gsf_omega ||
+        m_ecal_gsf_d0 != m_bestbranch_gsf_d0 ||
+        m_ecal_gsf_z0 != m_bestbranch_gsf_z0 ||
+        m_ecal_gsf_phi != m_bestbranch_gsf_phi ||
+        m_ecal_gsf_tanl != m_bestbranch_gsf_tanl ||
+        m_ecal_gsf_chi2 != m_bestbranch_gsf_chi2 ||
+        m_ecal_gsf_ndf != m_bestbranch_gsf_ndf)) ? 1 : 0;
 
   // ── all hits from original collections ──
   m_all_hit_x.clear(); m_all_hit_y.clear(); m_all_hit_z.clear();
@@ -704,7 +817,11 @@ StatusCode RecGsfFlatTuple::execute() {
 
   // ── resolution ──
   m_res_pT_gsf =
-      (m_mc_pT > 0) ? (m_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+      (m_mc_pT > 0 && gsfCol && gsfCol->size() > 0)
+          ? (m_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_bestbranch_gsf =
+      (m_mc_pT > 0 && m_bestbranch_gsf_available)
+          ? (m_bestbranch_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_weighted_gsf = (m_mc_pT > 0 && m_weighted_gsf_available)
       ? (m_weighted_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_ecal_gsf = (m_mc_pT > 0 && m_ecal_gsf_available)
