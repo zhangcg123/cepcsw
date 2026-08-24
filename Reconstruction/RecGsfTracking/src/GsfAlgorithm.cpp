@@ -1423,13 +1423,6 @@ StatusCode RecGsfTracking::initialize() {
     error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
     return StatusCode::FAILURE;
   }
-  std::string reverseOutputMode = m_reverseOutputMode.value();
-  std::transform(reverseOutputMode.begin(), reverseOutputMode.end(),
-                 reverseOutputMode.begin(), ::tolower);
-  if (reverseOutputMode != "bestbranch" && reverseOutputMode != "weightedmean") {
-    error() << "ReverseOutputMode must be BestBranch or WeightedMean" << endmsg;
-    return StatusCode::FAILURE;
-  }
   std::string reverseSelectionMode = m_reverseSelectionMode.value();
   std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
                  reverseSelectionMode.begin(), ::tolower);
@@ -1522,11 +1515,9 @@ StatusCode RecGsfTracking::initialize() {
     return StatusCode::FAILURE;
   }
   if (m_ecalComponentConstraint.value()) {
-    if (!m_reverseFiltering.value() || m_cmsGsfSmoothing.value() ||
-        reverseOutputMode != "bestbranch") {
+    if (!m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) {
       error() << "EcalComponentConstraint currently requires "
-                 "ReverseFiltering=True, CmsGsfSmoothing=False, and "
-                 "ReverseOutputMode=BestBranch"
+                 "ReverseFiltering=True and CmsGsfSmoothing=False"
               << endmsg;
       return StatusCode::FAILURE;
     }
@@ -1655,6 +1646,12 @@ StatusCode RecGsfTracking::initialize() {
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
+  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
+    info() << "Dual GSF publication: BestBranch -> GSFTracks, "
+              "WeightedMean -> GSFTracksWeightedMean; GSFOutputMode does not "
+              "select between these collections"
+           << endmsg;
+  }
 
   return StatusCode::SUCCESS;
 }
@@ -1664,6 +1661,9 @@ StatusCode RecGsfTracking::execute() {
   m_nEvt++;
   const int eventIndex = m_nEvt - 1;
   auto* out = m_outputTracks.createAndPut();
+  edm4hep::TrackCollection* weightedMeanOut = nullptr;
+  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value())
+    weightedMeanOut = m_weightedMeanOutputTracks.createAndPut();
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
   auto* truthMaterialIntervals = m_truthMaterialIntervals.createAndPut();
   auto* truthMaterialStatus = m_truthMaterialStatus.createAndPut();
@@ -2740,6 +2740,10 @@ StatusCode RecGsfTracking::execute() {
     bool reverseIpAvailable = false;
     THelicalTrack reverseOutputIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
     TMatrixD reverseOutputIpCov(5, 5);
+    bool reverseWeightedIpAvailable = false;
+    THelicalTrack reverseWeightedIp(
+        TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD reverseWeightedIpCov(5, 5);
     double reverseOutputChi2 = 0.0;
     int reverseOutputNdf = 0;
     double reverseOutputWeight = 0.0;
@@ -3290,22 +3294,22 @@ StatusCode RecGsfTracking::execute() {
             });
         THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
         TMatrixD reverseIpCov(5, 5);
-        std::string reverseMode = m_reverseOutputMode.value();
-        std::transform(reverseMode.begin(), reverseMode.end(),
-                       reverseMode.begin(), ::tolower);
         bool reverseOutputOk = false;
         if (runCmsSmoother) {
           reverseOutputOk = collapsedCurrentMixtureAtIP(
               reverseComps, bz, reverseIp, reverseIpCov);
           reverseOutputLabel = "CmsGsfInnermostMixture";
-        } else if (reverseMode == "bestbranch") {
+        } else {
           reverseOutputOk = extrapolateContinuationToIP(
               *reverseBest, bz, reverseIp, reverseIpCov);
           reverseOutputLabel = "ReverseBestBranch";
-        } else {
-          reverseOutputOk = weightedReverseMixtureAtIP(
-              reverseComps, bz, reverseIp, reverseIpCov);
-          reverseOutputLabel = "ReverseMixture";
+          reverseWeightedIpAvailable = weightedReverseMixtureAtIP(
+              reverseComps, bz, reverseWeightedIp, reverseWeightedIpCov);
+          if (!reverseWeightedIpAvailable) {
+            warning() << "Reverse WeightedMean publication failed; the paired "
+                         "collection will preserve the BestBranch state"
+                      << endmsg;
+          }
         }
         if (reverseOutputOk) {
           const double reversePt = reverseIp.GetKappa() != 0.0
@@ -3349,6 +3353,21 @@ StatusCode RecGsfTracking::execute() {
           reverseOutputWeight = reverseBest->weight;
           reverseOutputComps = (int)reverseComps.size();
           reverseIpAvailable = true;
+
+          if (!runCmsSmoother && m_verboseDump &&
+              reverseWeightedIpAvailable) {
+            const double weightedPt = reverseWeightedIp.GetKappa() != 0.0
+                ? 1.0 / std::abs(reverseWeightedIp.GetKappa()) : 0.0;
+            info() << boost::format(
+                "  REVERSE IP paired output: mode=ReverseWeightedMean "
+                "components=%d pT=%.6g d0=%.6g z0=%.6g phi=%.6g "
+                "tanL=%.6g")
+                      % (int)reverseComps.size() % weightedPt
+                      % (-reverseWeightedIp.GetDrho())
+                      % reverseWeightedIp.GetDz()
+                      % normalizePhi(reverseWeightedIp.GetPhi0() + M_PI / 2.0)
+                      % reverseWeightedIp.GetTanLambda() << endmsg;
+          }
 
           // Preserve the tracker-only result above.  The default-off ECAL
           // experiment produces a separate paired output and changes only
@@ -3602,8 +3621,10 @@ StatusCode RecGsfTracking::execute() {
       }
 
       // Extrapolate to IP (method selected by MaterialIPExtrapolation).
-      // By default publish the highest-weight branch. Optionally publish the
-      // moment-matched weighted mixture at IP.
+      // Smoother and ordinary reverse workflows publish both endpoint views:
+      // BestBranch remains the stable GSFTracks result, while the paired
+      // moment-matched state is written to GSFTracksWeightedMean. The legacy
+      // selector remains effective only for the forward-only workflow.
       THelicalTrack bestIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
       TMatrixD bestIpCov(5, 5);
       extrapolateToIP_component(best, m_materialIPExtrap, m_cradle, m_ipLayer,
@@ -3611,16 +3632,42 @@ StatusCode RecGsfTracking::execute() {
 
       THelicalTrack ipHelix = bestIpHelix;
       TMatrixD ipCov = bestIpCov;
+      THelicalTrack weightedIpHelix = bestIpHelix;
+      TMatrixD weightedIpCov = bestIpCov;
       bool usedReverseOutput = false;
-      if ((m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) &&
-          reverseIpAvailable) {
+      bool pairedWeightedOutputAvailable = false;
+      if (m_reverseFiltering.value() && reverseIpAvailable) {
         ipHelix = reverseOutputIp;
         ipCov = reverseOutputIpCov;
         usedReverseOutput = true;
+        weightedIpHelix = reverseWeightedIpAvailable
+            ? reverseWeightedIp : reverseOutputIp;
+        weightedIpCov = reverseWeightedIpAvailable
+            ? reverseWeightedIpCov : reverseOutputIpCov;
+        pairedWeightedOutputAvailable = true;
+      } else if (m_cmsGsfSmoothing.value() && reverseIpAvailable) {
+        ipHelix = reverseOutputIp;
+        ipCov = reverseOutputIpCov;
+        usedReverseOutput = true;
+      } else if (m_gaussianSumSmoothing.value()) {
+        if (!weightedMixtureAtIP(comps, m_materialIPExtrap, m_cradle,
+                                 m_ipLayer, bz, weightedIpHelix,
+                                 weightedIpCov)) {
+          warning() << "Smoother WeightedMean publication failed; the paired "
+                       "collection will preserve the BestBranch state"
+                    << endmsg;
+        }
+        pairedWeightedOutputAvailable = true;
+      } else if (m_reverseFiltering.value()) {
+        warning() << "Reverse endpoint unavailable; both published "
+                     "collections will preserve the forward BestBranch state"
+                  << endmsg;
+        pairedWeightedOutputAvailable = true;
       }
-      const std::string outputMode = m_outputMode.value();
       bool usedWeightedOutput = false;
-      if (outputMode == "WeightedMean" && !usedReverseOutput) {
+      const std::string outputMode = m_outputMode.value();
+      if (!pairedWeightedOutputAvailable && !usedReverseOutput &&
+          outputMode == "WeightedMean") {
         THelicalTrack mixIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
         TMatrixD mixIpCov(5, 5);
         if (weightedMixtureAtIP(comps, m_materialIPExtrap, m_cradle, m_ipLayer,
@@ -3632,7 +3679,8 @@ StatusCode RecGsfTracking::execute() {
           warning() << "GSFOutputMode=WeightedMean failed; falling back to BestBranch"
                     << endmsg;
         }
-      } else if (outputMode != "BestBranch") {
+      } else if (!pairedWeightedOutputAvailable && !usedReverseOutput &&
+                 outputMode != "BestBranch") {
         warning() << "Unknown GSFOutputMode '" << outputMode
                   << "'; falling back to BestBranch" << endmsg;
       }
@@ -3666,6 +3714,21 @@ StatusCode RecGsfTracking::execute() {
       ot.addToTrackStates(ts);
 
       for (const auto& h : assocHits) ot.addToTrackerHits(h);
+
+      if (weightedMeanOut && pairedWeightedOutputAvailable) {
+        auto weightedTrack = weightedMeanOut->create();
+        weightedTrack.setType(2);
+        // A moment-matched mixture has no unique branch chi2/NDF. Preserve
+        // the same selected-branch fit-quality metadata used historically
+        // when WeightedMean was the single published endpoint.
+        weightedTrack.setChi2(outputChi2);
+        weightedTrack.setNdf(outputNdf);
+        edm4hep::TrackState weightedState;
+        weightedState.location = DH::AtIP;
+        fillTrackState(weightedState, weightedIpHelix, weightedIpCov, bz);
+        weightedTrack.addToTrackStates(weightedState);
+        for (const auto& h : assocHits) weightedTrack.addToTrackerHits(h);
+      }
 
       if (truthMaterialTrackMatched) {
         const std::int16_t runtimeMaterialMode =
@@ -3854,8 +3917,11 @@ StatusCode RecGsfTracking::execute() {
                   % sum.bestWeight % (1.0 / sum.finalComps)
                   % (sum.bestWeight * sum.finalComps) << endmsg;
         info() << boost::format("  output         | mode %s")
-                  % (usedReverseOutput ? reverseOutputLabel :
-                     (usedWeightedOutput ? "WeightedMean" : "BestBranch"))
+                  % (pairedWeightedOutputAvailable
+                         ? "BestBranch + WeightedMean"
+                         : (usedReverseOutput ? reverseOutputLabel :
+                            (usedWeightedOutput ? "WeightedMean" :
+                                                  "BestBranch")))
                << endmsg;
         info() << boost::format("  material       | max-tX0 %.2e  total-tX0 %.2e")
                   % maxTX0Layer % totalTX0 << endmsg;

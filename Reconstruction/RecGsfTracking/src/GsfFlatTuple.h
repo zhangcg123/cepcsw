@@ -18,7 +18,8 @@ class TTree;
 
 /// Post-processor: reads CompleteTracks, either GSFTracks or the explicitly
 /// selected GlobalLossTracks collection, the optional paired
-/// GSFTracksEcalConstrained collection, and MCParticle from the event store.
+/// GSFTracksWeightedMean and GSFTracksEcalConstrained collections, and
+/// MCParticle from the event store.
 /// It writes a flat ROOT TTree with relevant tracking parameters and per-hit
 /// data for downstream analysis.
 class RecGsfFlatTuple : public Algorithm {
@@ -82,6 +83,18 @@ private:
   int    m_gsf_ndf = 0;
   int    m_gsf_nhits = 0;
   int    m_gsf_type = 0;
+  // paired smoother/reverse WeightedMean AtIP
+  double m_weighted_gsf_omega = 0, m_weighted_gsf_d0 = 0;
+  double m_weighted_gsf_z0 = 0, m_weighted_gsf_phi = 0;
+  double m_weighted_gsf_tanl = 0;
+  double m_weighted_gsf_pT = 0, m_weighted_gsf_p = 0;
+  double m_weighted_gsf_eta = 0, m_weighted_gsf_theta = 0;
+  double m_weighted_gsf_chi2 = 0;
+  int    m_weighted_gsf_ndf = 0;
+  int    m_weighted_gsf_nhits = 0;
+  int    m_weighted_gsf_type = 0;
+  int    m_weighted_gsf_available = 0;
+  int    m_weighted_gsf_changed = 0;
   // truth BH-loss oracle scope for CompleteTracks index 0
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
@@ -151,6 +164,7 @@ private:
   int    m_ecal_gsf_changed = 0;
   // resolution
   double m_res_pT_gsf = 0;     // (gsf_pT - mc_pT) / mc_pT
+  double m_res_pT_weighted_gsf = 0; // (weighted_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_ecal_gsf = 0; // (ecal_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_lcio = 0;    // (lcio_pT - mc_pT) / mc_pT
 

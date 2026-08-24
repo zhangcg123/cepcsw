@@ -115,6 +115,22 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("gsf_ndf",   &m_gsf_ndf);
   m_tree->Branch("gsf_nhits", &m_gsf_nhits);
   m_tree->Branch("gsf_type",  &m_gsf_type);
+  // paired smoother/reverse WeightedMean GSF
+  m_tree->Branch("weighted_gsf_available", &m_weighted_gsf_available);
+  m_tree->Branch("weighted_gsf_changed",   &m_weighted_gsf_changed);
+  m_tree->Branch("weighted_gsf_pT",        &m_weighted_gsf_pT);
+  m_tree->Branch("weighted_gsf_p",         &m_weighted_gsf_p);
+  m_tree->Branch("weighted_gsf_eta",       &m_weighted_gsf_eta);
+  m_tree->Branch("weighted_gsf_theta",     &m_weighted_gsf_theta);
+  m_tree->Branch("weighted_gsf_phi",       &m_weighted_gsf_phi);
+  m_tree->Branch("weighted_gsf_d0",        &m_weighted_gsf_d0);
+  m_tree->Branch("weighted_gsf_z0",        &m_weighted_gsf_z0);
+  m_tree->Branch("weighted_gsf_omega",     &m_weighted_gsf_omega);
+  m_tree->Branch("weighted_gsf_tanl",      &m_weighted_gsf_tanl);
+  m_tree->Branch("weighted_gsf_chi2",      &m_weighted_gsf_chi2);
+  m_tree->Branch("weighted_gsf_ndf",       &m_weighted_gsf_ndf);
+  m_tree->Branch("weighted_gsf_nhits",     &m_weighted_gsf_nhits);
+  m_tree->Branch("weighted_gsf_type",      &m_weighted_gsf_type);
   // truth BH-loss oracle validity for CompleteTracks index 0
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
@@ -223,6 +239,7 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("ecal_gsf_type",      &m_ecal_gsf_type);
   // resolution
   m_tree->Branch("res_pT_gsf",      &m_res_pT_gsf);
+  m_tree->Branch("res_pT_weighted_gsf", &m_res_pT_weighted_gsf);
   m_tree->Branch("res_pT_ecal_gsf", &m_res_pT_ecal_gsf);
   m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
@@ -433,6 +450,11 @@ StatusCode RecGsfFlatTuple::execute() {
       eventSvc(), "GSFTracksEcalConstrained");
   const auto* ecalGsfCol = ecalGsfWrapper
       ? ecalGsfWrapper->getData() : nullptr;
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> weightedGsfWrapper(
+      eventSvc(), "GSFTracksWeightedMean");
+  const auto* weightedGsfCol = !m_useGlobalLossTracks.value() &&
+          weightedGsfWrapper
+      ? weightedGsfWrapper->getData() : nullptr;
 
   // ── MC truth (first particle = primary) ──
   if (mcCol && mcCol->size() > 0) {
@@ -566,6 +588,52 @@ StatusCode RecGsfFlatTuple::execute() {
     }
   }
 
+  m_weighted_gsf_available =
+      weightedGsfCol && weightedGsfCol->size() > 0 ? 1 : 0;
+  try {
+    fillTrack(weightedGsfCol,
+              m_weighted_gsf_pT, m_weighted_gsf_p,
+              m_weighted_gsf_eta, m_weighted_gsf_theta,
+              m_weighted_gsf_phi, m_weighted_gsf_d0, m_weighted_gsf_z0,
+              m_weighted_gsf_omega, m_weighted_gsf_tanl,
+              m_weighted_gsf_chi2, m_weighted_gsf_ndf,
+              m_weighted_gsf_nhits, m_weighted_gsf_type);
+  } catch (const std::exception& e) {
+    warning() << "Event " << m_iev
+              << ": WeightedMean GSF track access failed — " << e.what()
+              << " — writing unavailable weighted fields" << endmsg;
+    m_weighted_gsf_available = 0;
+    fillTrack(nullptr,
+              m_weighted_gsf_pT, m_weighted_gsf_p,
+              m_weighted_gsf_eta, m_weighted_gsf_theta,
+              m_weighted_gsf_phi, m_weighted_gsf_d0, m_weighted_gsf_z0,
+              m_weighted_gsf_omega, m_weighted_gsf_tanl,
+              m_weighted_gsf_chi2, m_weighted_gsf_ndf,
+              m_weighted_gsf_nhits, m_weighted_gsf_type);
+  } catch (...) {
+    warning() << "Event " << m_iev
+              << ": WeightedMean GSF track access failed (unknown "
+                 "exception) — writing unavailable weighted fields"
+              << endmsg;
+    m_weighted_gsf_available = 0;
+    fillTrack(nullptr,
+              m_weighted_gsf_pT, m_weighted_gsf_p,
+              m_weighted_gsf_eta, m_weighted_gsf_theta,
+              m_weighted_gsf_phi, m_weighted_gsf_d0, m_weighted_gsf_z0,
+              m_weighted_gsf_omega, m_weighted_gsf_tanl,
+              m_weighted_gsf_chi2, m_weighted_gsf_ndf,
+              m_weighted_gsf_nhits, m_weighted_gsf_type);
+  }
+  m_weighted_gsf_changed =
+      (m_weighted_gsf_available && gsfCol && gsfCol->size() > 0 &&
+       (m_weighted_gsf_omega != m_gsf_omega ||
+        m_weighted_gsf_d0 != m_gsf_d0 ||
+        m_weighted_gsf_z0 != m_gsf_z0 ||
+        m_weighted_gsf_phi != m_gsf_phi ||
+        m_weighted_gsf_tanl != m_gsf_tanl ||
+        m_weighted_gsf_chi2 != m_gsf_chi2 ||
+        m_weighted_gsf_ndf != m_gsf_ndf)) ? 1 : 0;
+
   m_ecal_gsf_available = ecalGsfCol && ecalGsfCol->size() > 0 ? 1 : 0;
   try {
     fillTrack(ecalGsfCol,
@@ -638,6 +706,8 @@ StatusCode RecGsfFlatTuple::execute() {
   // ── resolution ──
   m_res_pT_gsf =
       (m_mc_pT > 0) ? (m_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_weighted_gsf = (m_mc_pT > 0 && m_weighted_gsf_available)
+      ? (m_weighted_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_ecal_gsf = (m_mc_pT > 0 && m_ecal_gsf_available)
       ? (m_ecal_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_lcio =

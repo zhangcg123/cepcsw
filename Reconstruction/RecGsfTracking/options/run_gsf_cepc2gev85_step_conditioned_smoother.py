@@ -9,6 +9,5 @@ exec(compile(
 gsf.GaussianSumSmoothing = True
 gsf.ReverseFiltering = False
 gsf.MaterialIPExtrapolation = False
-# Publish the Gaussian sum, including between-path covariance, rather than
-# discarding it in favor of the single largest smoothed path.
-gsf.GSFOutputMode = "WeightedMean"
+# Both endpoint views are published: GSFTracks carries BestBranch and
+# GSFTracksWeightedMean carries the moment-matched Gaussian sum.

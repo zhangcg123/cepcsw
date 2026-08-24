@@ -28,6 +28,10 @@ inputfilename = os.path.join(tuplepath, "trk_v01.root")
 # "reverse", "cms-like", or "global-loss"; no environment override is used.
 method = "reverse"
 
+# One selector governs every workflow that consumes a Bethe-Heitler model,
+# including the independent global-loss refitter.
+bh_model = "CEPCRuntimeGenericGrid5Clear"
+
 from Configurables import k4DataSvc
 dsvc = k4DataSvc("EventDataSvc", input=inputfilename)
 
@@ -54,6 +58,8 @@ podioinput = PodioInput("PodioReader", collections=[
     "TPCTrackerHitAss",
     "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",
     "CompleteTracks",
+    "GsfG4MaterialSteps",
+    "GsfSimTrackerHitG4StepLinks",
 ])
 
 from Configurables import RecGsfTracking, RecGsfGlobalLossRefitter, TrackSystemSvc, GearSvc
@@ -68,7 +74,7 @@ gsf.ElectronHypothesis = True
 # CEPCRuntimeCategoryAligned5Clear, and ActsAtlas. The two CEPCRuntime models
 # are topology-clear interval-fit candidates and are not production validated;
 # this maintained campaign card currently selects the generic-grid control.
-gsf.BHModel = "CEPCRuntimeGenericGrid5Clear" #"CEPC2GeV85StepConditioned"
+gsf.BHModel = bh_model
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
@@ -86,17 +92,10 @@ gsf.BHSplitThreshold = 1.0e-4
 gsf.TruthBHLossOverride = False
 gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
-# Default-on passive material-consistency record.  This only records the truth
-# G4, truth-hook DD4hep, and actual runtime GSF material values in the output;
-# it does not replace a path, trigger a BH split, or alter filtering/selection.
-# The compiled and active reverse-template defaults are also true.
-gsf.RecordTruthMaterialIntervals = True
-if method not in ("global-loss", "global_loss", "global") and (
-        gsf.RecordTruthMaterialIntervals or gsf.TruthBHLossOverride):
-    podioinput.collections += [
-        "GsfG4MaterialSteps",
-        "GsfSimTrackerHitG4StepLinks",
-    ]
+# RecordTruthMaterialIntervals deliberately inherits its compiled default true.
+# Its two embedded provenance collections are unconditional PodioInput members
+# above, so ordinary maintained cards do not need conditional truth-input
+# steering. The recorder remains passive and cannot alter filtering/selection.
 
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0
@@ -108,15 +107,16 @@ gsf.MSOn = True
 gsf.ElossOn = True
 gsf.KappaSeedCov = 1.0e-7
 
-# Start with every backward workflow disabled. Each method block below enables
-# exactly one; the algorithm also enforces their mutual exclusivity.
+# Initialize the neutral backward-workflow baseline before selecting a method.
+# Each branch below repeats only the options that belong to that method.
 gsf.GaussianSumSmoothing = False
 gsf.ReverseFiltering = False
 gsf.CmsGsfSmoothing = False
 gsf.CmsErrorRescaling = 100.0
 gsf.MaterialIPExtrapolation = False
+# Forward-only compatibility setting. The smoother/reverse methods below
+# always persist both endpoint representations and do not select one here.
 gsf.GSFOutputMode = "BestBranch"
-gsf.ReverseOutputMode = "BestBranch"
 gsf.ReverseSelectionMode = "AggregateWeight"
 gsf.SurfaceConsistencyUninformativeFloor = 0.05
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
@@ -133,19 +133,24 @@ gsf.EcalConstraintLikelihoodFloor = 0.05
 gsf.EcalConstraintPhiWindow = 0.10
 gsf.EcalConstraintThetaWindow = 0.10
 
-refitter = gsf
-use_global_loss_tracks = False
+refitter = gsf  # Algorithm scheduled below; global-loss replaces this object.
+use_global_loss_tracks = False  # False reads GSFTracks; global-loss sets True.
 
 if method == "smoother":
     # KL reduction-aware retained-graph Gaussian-sum smoother. Its common-IP
-    # state is the moment-matched smoothed mixture.
+    # state is persisted both as GSFTracks (BestBranch view) and as
+    # GSFTracksWeightedMean; these are currently expected to be identical.
     gsf.GaussianSumSmoothing = True
-    gsf.GSFOutputMode = "WeightedMean"
 
 elif method == "reverse":
     # Independent inward multi-component refit, seeded by the full final
-    # forward posterior. Publish the highest aggregate-weight reverse branch.
+    # forward posterior. Always persist the selected branch in GSFTracks and
+    # the full-mixture moment match in GSFTracksWeightedMean.
     gsf.ReverseFiltering = True
+    gsf.ReverseSelectionMode = "AggregateWeight"
+    gsf.SurfaceConsistencyUninformativeFloor = 0.05
+    gsf.ReverseInitialWeightMode = "ForwardPosterior"
+    gsf.ReverseKappaSeedCov = 1.0
 
 elif method in ("cms-like", "cms", "cms_like"):
     # CMSSW-like workflow: seed from the final forward prediction, inflate the
@@ -165,7 +170,7 @@ elif method in ("global-loss", "global_loss", "global"):
     method = "global-loss"
     global_loss = RecGsfGlobalLossRefitter("RecGsfGlobalLossRefitter")
     global_loss.ElectronHypothesis = True
-    global_loss.BHModel = "CEPC2GeV85StepConditioned"
+    global_loss.BHModel = bh_model
     global_loss.BHSplitThreshold = 1.0e-4
     global_loss.MSOn = True
     global_loss.ElossOn = False

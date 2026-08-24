@@ -88,7 +88,9 @@ gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "12"))
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents
 gsf.ReductionMergeCost = os.getenv(
     "GSF_REDUCTION_MERGE_COST", "SymmetricKL")
-gsf.GSFOutputMode = os.getenv("GSF_OUTPUT_MODE", "BestBranch")
+# Forward-only compatibility property. Reverse publication below always saves
+# BestBranch and WeightedMean in separate collections.
+gsf.GSFOutputMode = "BestBranch"
 gsf.ComponentWeightCutoff = 1.0e-4
 gsf.ProtectIdentityLineage = os.getenv(
     "GSF_PROTECT_IDENTITY_LINEAGE", "1").lower() in ("1", "true", "yes")
@@ -97,8 +99,8 @@ gsf.MSOn = True
 gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "1").lower() in ("1", "true", "yes")
 gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "1.0e-7"))
 
-# Enables inward multi-component filtering. ReverseOutputMode controls whether
-# the published IP state is the moment-matched mixture or highest-weight branch.
+# Enables inward multi-component filtering. It publishes the selected branch
+# to GSFTracks and the moment-matched mixture to GSFTracksWeightedMean.
 cms_gsf_smoothing = os.getenv(
     "GSF_CMS_GSF_SMOOTHING", "0").lower() in ("1", "true", "yes")
 gsf.CmsGsfSmoothing = cms_gsf_smoothing
@@ -106,7 +108,6 @@ gsf.ReverseFiltering = os.getenv(
     "GSF_REVERSE_FILTERING", "0" if cms_gsf_smoothing else "1"
 ).lower() in ("1", "true", "yes")
 gsf.CmsErrorRescaling = float(os.getenv("GSF_CMS_ERROR_RESCALING", "100"))
-gsf.ReverseOutputMode = os.getenv("GSF_REVERSE_OUTPUT_MODE", "BestBranch")
 gsf.ReverseSelectionMode = os.getenv(
     "GSF_REVERSE_SELECTION_MODE", "AggregateWeight")
 gsf.SurfaceConsistencyUninformativeFloor = float(os.getenv(

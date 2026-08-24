@@ -75,6 +75,8 @@ private:
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection>       m_outputTracks{
       "GSFTracks", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection>       m_weightedMeanOutputTracks{
+      "GSFTracksWeightedMean", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_ecalConstrainedOutputTracks{
       "GSFTracksEcalConstrained", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection>     m_ecalClusters{
@@ -138,9 +140,6 @@ private:
   Gaudi::Property<double> m_cmsErrorRescaling{
       this,"CmsErrorRescaling",100.0,
       "Multiplicative covariance scaling for the CMSSW-like backward seed"};
-  Gaudi::Property<std::string> m_reverseOutputMode{
-      this, "ReverseOutputMode", "BestBranch",
-      "WeightedMean or BestBranch output from the reverse filter"};
   Gaudi::Property<std::string> m_reverseSelectionMode{
       this, "ReverseSelectionMode", "AggregateWeight",
       "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "
@@ -223,7 +222,10 @@ private:
   Gaudi::Property<double> m_counterfactualLossVariance{
       this, "CounterfactualLossVariance", 2.0e-4,
       "Retained-momentum-fraction variance assigned to trial scan components"};
-  Gaudi::Property<std::string> m_outputMode{this,"GSFOutputMode","BestBranch"};
+  Gaudi::Property<std::string> m_outputMode{
+      this, "GSFOutputMode", "BestBranch",
+      "Forward-only output selector; smoother/reverse always write BestBranch "
+      "to GSFTracks and WeightedMean to GSFTracksWeightedMean"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "

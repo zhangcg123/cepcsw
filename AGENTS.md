@@ -16,8 +16,10 @@ Geant4 pre/post-material-step truth
   -> validated interaction-point track parameters
 ```
 
-`RecGsfTracking` builds, installs, reads `CompleteTracks`, and writes
-`GSFTracks`. Its component measurement updates use the baseline-compatible
+`RecGsfTracking` builds, installs, and reads `CompleteTracks`. Smoother and
+reverse runs write BestBranch to `GSFTracks` and the paired moment-matched
+endpoint to `GSFTracksWeightedMean`; CMS-like retains its fixed single
+`GSFTracks` output. Its component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
 transport Jacobians. Forward filtering, an independent reverse
@@ -44,10 +46,12 @@ The normal simulation event can now optionally embed exact
 default-off oracle's current batch source follows the standard reconstructed-
 hit truth associations into those collections, so the maintained workflow no
 longer requires or supports a side material tuple or prejoined CSV input.
-The active `dump_gsftrk.sh` worker runs simulation, tracker reconstruction,
-and then GSF directly on the `trk-<sample>.root` output. Calorimeter
-digitization/reconstruction and `EcalCluster` are not part of this worker while
-the ECAL prototype is paused.
+The active `dump_gsftrk.sh` worker accepts one `STAGES` subset of `sim`, `trk`,
+and `gsf` (default `trk,gsf`) and executes selected stages in physical order.
+Each stage consumes a predecessor produced in the same job or, when that
+predecessor is omitted, the corresponding existing tuple from the input tuple
+path. Calorimeter digitization/reconstruction and `EcalCluster` are not part of
+this worker while the ECAL prototype is paused.
 A passive interval recorder now persists, in the final
 GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual
@@ -57,8 +61,8 @@ compiled, active reverse-template, and maintained-card default is on.
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
 `ReverseKappaSeedCov` (default 100), repeats measurement updates inward, and
-publishes either the highest-weight branch or an optional moment-matched
-mixture. It has demonstrated interaction-point momentum recovery in many
+publishes both the selected branch and moment-matched mixture in separate,
+row-aligned collections. It has demonstrated interaction-point momentum recovery in many
 hard-bremsstrahlung events and favorable central light/hard performance, but
 it also creates clean-track degradation and extreme tails. The KL smoother is
 largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like
@@ -126,7 +130,9 @@ explicit provenance. Historical detail does not override this live status.
   separate implementation-scope law: edits outside
   `Reconstruction/RecGsfTracking` still require explicit authorization. Also
   track the specifically maintained workflow card `DumpGsfTrks/gsf.py.bk`,
-  whose complete property steering is part of the documentation contract.
+  whose complete property steering is part of the documentation contract
+  except for the deliberate inherited
+  `RecordTruthMaterialIntervals=true` default.
   Keep other run cards/options, analysis scripts, build files, generated ROOT
   files, logs, plots, tables, notebooks, batch cards, and experiment outputs
   uncommitted unless the user explicitly authorizes a specific exception. Do
@@ -165,7 +171,7 @@ For the normal focused EL9/LCG 105 development cycle:
 ```bash
 source setup.sh
 cmake --build build.105.0.0.x86_64-el9-gcc11-opt \
-  --target RecGsfTracking -j4
+  --target RecGsfTracking RecGsfFlatTuple -j4
 cmake --install build.105.0.0.x86_64-el9-gcc11-opt
 ```
 
@@ -272,7 +278,8 @@ and
 The committed production steering contract is `DD4hepBetweenSurfaces`,
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
-explicitly steers all 43 supported properties. The retired side material ROOT
+explicitly steers 41 of the 42 supported properties while deliberately inheriting the
+compiled `RecordTruthMaterialIntervals=true` default. The retired side material ROOT
 producer and runtime material/BH audit CSV are absent from the current source
 and cards. Their CSV and `G4StepTuple` truth-oracle readers are also removed;
 embedded simulation provenance plus the default-on final
@@ -290,8 +297,9 @@ worker. This campaign steering is not a production-default change.
 Truth mapping remains all-or-nothing, but event/track validation failures no
 longer terminate the job: the complete selected track falls back to ordinary
 BH and records an explicit validity/status tag in EDM and the flat tuple.
-`RecordTruthMaterialIntervals=true` is the compiled, active reverse-template,
-and maintained-card default. It writes
+`RecordTruthMaterialIntervals=true` is the compiled and active reverse-template
+default and is deliberately inherited by the maintained card. Its two embedded
+provenance collections are unconditional base `PodioInput` members. It writes
 `GSFTruthMaterialIntervals`, `GSFTruthMaterialRecordStatus`, and 50
 `truth_material_*` flat branches. This remains passive recording, not
 production steering or a physics-impact test.

@@ -1,14 +1,14 @@
 # GSF event-production workflow
 
-This directory contains the maintained cards for the three-stage
-single-particle workflow:
+This directory contains the maintained cards for single-particle event
+production. The active batch worker can run any selected subset of:
 
 ```text
 particle gun + Geant4 simulation
   -> sim-<particle>-<pT>-<theta>-<seed>.root
   -> digitization and tracking
   -> trk-<particle>-<pT>-<theta>-<seed>.root (CompleteTracks)
-  -> GSF refit
+  -> manually configured GSF refit
   -> GSF EDM and flat tuples
 ```
 
@@ -123,17 +123,22 @@ Run one complete event before mass production:
 
 ```bash
 source setup.sh
-./dump_gsftrk.sh e- 20 20 85 910817 1 true
+./dump_gsftrk.sh e- 2.008 2.0 85 1 1 true \
+  gsf_kappa_smoke sim_large_20260823 \
+  trk,gsf CEPC2GeV85StepConditioned
 ```
 
-The momentum and theta arguments remain sample labels because the maintained
-simulation card intentionally uses its hardcoded broad gun ranges; see below.
+The transverse-momentum, theta, and seed arguments identify the existing
+`sim-<sample>.root` filename and must match it. The legacy momentum-magnitude
+argument remains unused.
 
 After the job, require all of the following before scaling up:
 
 1. the Gaudi job terminates successfully;
-2. all three stage outputs exist and have the requested event count;
-3. `podio-dump sim-<sample>.root` lists nonempty `GsfG4MaterialSteps` and
+2. the tracker output and all requested GSF EDM/flat outputs exist and have
+   the requested event count;
+3. `podio-dump <input_tuplepath>/sim-<sample>.root` lists nonempty
+   `GsfG4MaterialSteps` and
    `GsfSimTrackerHitG4StepLinks` for the selected primary;
 4. those two collections remain present in the `trk-` and GSF EDM outputs
    through `keep *`;
@@ -170,34 +175,39 @@ embedded-truth PDG list is `[11, -11, 13, -13]`.
 
 ### `dump_gsftrk.sh`
 
-The worker accepts six legacy-compatible arguments, an optional seventh
-`truth_bh_override` boolean, and an optional eighth `gsf_only` boolean. With
-`gsf_only=false`, all three stages execute in order: simulation, tracking, and
-the final GSF refit:
+The worker executes the stages selected by the comma-separated `stages`
+argument in the fixed physical order `sim -> trk -> gsf`. The GSF stage runs
+the one configuration manually maintained in `gsf.py.bk`; there is no
+GSF-configuration-list control:
 
 ```bash
 ./dump_gsftrk.sh particle momentum_mag momentum_trn theta seed nevt \
-  [truth_bh_override] [gsf_only]
+  truth_bh_override output_tuplepath input_tuplepath \
+  stages [bh_model]
 ```
 
-The generated GSF card requires and reads
-`$WORKDIR/trk-<sample>.root`. With the optional argument omitted or false, the
-truth oracle remains off and the generated card and GSF/flat outputs use
-the explicit `truth-bh-off` suffix. With it true, the worker enables the
-in-process `EventData` oracle and uses the `truth-bh` suffix. The paired names
-prevent either A/B member from overwriting the other. The worker neither
-creates nor checks a side material tuple. With `gsf_only=true`, it reuses the
-sample-qualified `trk-<sample>.root` and runs only the final GSF step.
+Both tuple paths are required, relative to `WORKDIR`, and must differ.
+Every selected stage writes below `output_tuplepath`. When its predecessor is
+also selected, a stage reads that newly produced file; otherwise it reads the
+required existing predecessor from `input_tuplepath`. Thus `trk,gsf` reads an
+existing simulation tuple, while `gsf` reads an existing tracker tuple.
+`sim,trk,gsf`, any two-stage subset, and each individual stage are supported.
+Select the refitter with `method` and set its method-specific properties
+directly in `gsf.py.bk` before submitting a campaign.
+
+`truth_bh_override` is a single boolean. With false, outputs use the explicit
+`truth-bh-off` suffix; with true, they use `truth-bh`. Separate submissions
+are required for a truth-on/truth-off comparison.
 
 Campaign submission scripts may set `TRUTH_BH_OVERRIDE=true` explicitly and
 pass it to every worker. Truth-on and truth-off outputs receive distinct
 suffixes.
 
-The simulation and tracking cards retain the official TDR-o1-v01 `PodioInput`,
-algorithm, service, and `keep *` configuration; their workflow differences are
-limited to batch steering, plus the intentional embedded GSF truth collections
-in the standard simulation writer. The retained `calodigi.py.bk` and
-`rec.py.bk` cards are not invoked by `dump_gsftrk.sh`. Numerical-library thread
+The simulation and tracking cards retain their official TDR-o1-v01
+configuration, including tracking's `PodioInput`, services, and `keep *`.
+`sim.py.bk` is invoked only when `sim` is selected. The retained
+`calodigi.py.bk` and `rec.py.bk` cards are not invoked by `dump_gsftrk.sh`.
+Numerical-library thread
 counts default to one because an unconstrained OpenBLAS initialization
 previously exhausted the account's `RLIMIT_NPROC=300`; set
 `CEPCSW_JOB_THREADS` explicitly to override this. The script still uses exact
@@ -208,21 +218,26 @@ cards remain artifacts rather than source configuration.
 ### `gsf.py.bk`
 
 The current `gsf.py.bk` contains the comparison card previously named
-`gsf_reverse_new.py.bk`. It keeps the active reverse workflow and agrees with
+`gsf_reverse_new.py.bk`. It keeps the established reverse workflow alongside the experimental global-loss
+workflow and agrees with
 the production material, split/cutoff, and ECAL settings:
 `DD4hepBetweenSurfaces`, split/cutoff `1e-4`, and
-`EcalComponentConstraint=False`. Its current explicit `BHModel` is the
-default-off `CEPCRuntimeGenericGrid5Clear` experiment, not the production
-`CEPC2GeV85StepConditioned` model; preserve that as deliberate campaign
-steering until the user changes it.
+`EcalComponentConstraint=False`. Its top-level `bh_model` selector is the
+default-off
+`CEPCRuntimeGenericGrid5Clear` experiment, not the production
+`CEPC2GeV85StepConditioned` model. The same selector feeds ordinary GSF and
+the independent global-loss refitter so method comparisons cannot silently use
+different BH models; preserve it as deliberate campaign steering until the user
+changes it.
 
-The authoritative explanation of all 43 `RecGsfTracking` properties, their
+The authoritative explanation of all 42 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures all 43
-properties and silently inherits none. Its explicit
+For this maintained workflow, `gsf.py.bk` explicitly configures 41 of the 42
+properties. It deliberately inherits only the compiled
+`RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
 submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
 generated per-job card to enable the truth-dependent BH-loss oracle. The card
@@ -234,10 +249,11 @@ override base. This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 
-The maintained card explicitly sets `RecordTruthMaterialIntervals=true`, in
-agreement with the compiled and active reverse-template default. It therefore
-requests `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` whether or not
-the truth BH-loss override is enabled. The property passively writes the exact
+The maintained card inherits the compiled and active reverse-template
+`RecordTruthMaterialIntervals=true` default. `GsfG4MaterialSteps` and
+`GsfSimTrackerHitG4StepLinks` are unconditional members of its base
+`PodioInput` collection list, whether or not the truth BH-loss override is
+enabled. The property passively writes the exact
 Geant4 t/X0 between associated truth hooks, the DD4hep integral between those
 same positions, and forward/reverse runtime material summaries to the final
 EDM and flat tuple. The EDM outputs are `GSFTruthMaterialIntervals` and
@@ -268,19 +284,26 @@ earlier DD4hep studies. Do not reinterpret or bulk-rewrite those historical
 cards as the current default. Regenerate a card from `gsf.py.bk` for a new
 production run, and set `CurrentSurface` explicitly only for a comparison.
 Generated cards that assign the removed `TruthBHLossSource` or
-`TruthBHLossInput` properties are also incompatible with the current
-algorithm. They are retained only as experiment artifacts and must not be run;
-regenerate them from the maintained card to use embedded EventData.
+`TruthBHLossInput` properties, or the removed `ReverseOutputMode` selector,
+are incompatible with the current algorithm. They are retained only as
+experiment artifacts and must not be run; regenerate them from the maintained
+card to use embedded EventData and paired reverse publication.
 
 The maintained card no longer requests `EcalCluster`, because its direct
 tracker input does not contain calorimeter reconstruction and the local ECAL
 component-constraint experiment remains off. The algorithm still supports that
 default-off experiment, but reactivating it requires a separate reconstructed-
 event input card that explicitly supplies `EcalCluster`; it is not part of this
-worker. `GSFTracks` remains the tracker-only baseline.
+worker. For `method="smoother"` and `method="reverse"`, there is no
+endpoint-output selector: `GSFTracks` always stores BestBranch and
+`GSFTracksWeightedMean` stores the moment-matched mixture. The removed
+`ReverseOutputMode` property must not appear in regenerated cards. CMS-like
+and global-loss retain their existing single-output behavior.
 
-The same card's `RecGsfFlatTuple` output retains the ordinary tracker-only
-`gsf_*` fields, records `truth_bh_scope_status` and
+The same card's `RecGsfFlatTuple` output retains BestBranch in the ordinary
+`gsf_*` fields, records the paired `weighted_gsf_*` fields plus
+`weighted_gsf_available`, `weighted_gsf_changed`, and
+`res_pT_weighted_gsf`, and records `truth_bh_scope_status` and
 `truth_bh_scope_valid`, and adds the paired constrained `ecal_gsf_*` fields,
 `ecal_gsf_available`, `ecal_gsf_changed`, and `res_pT_ecal_gsf`. Default-off
 jobs remain valid: their ordinary fields are populated and their constrained
@@ -292,12 +315,18 @@ Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this workflow. When the package adds, removes,
 renames, or changes a configurable property, a dedicated sub-agent must audit
 this workflow in the same change.
-`DumpGsfTrks/gsf.py.bk` must explicitly steer the property, and any deliberate
+`DumpGsfTrks/gsf.py.bk` must explicitly steer the property unless the user has
+deliberately designated it as a maintained inherited default, as for
+`RecordTruthMaterialIntervals=true`; any such exception or deliberate
 difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-The maintained template defaults to `method="reverse"`. Its input path is a
+The maintained template currently selects `method="reverse"`. It currently
+sets `ReverseKappaSeedCov=1.0` for the ongoing correlated-prior
+campaign, while the compiled default and active reverse template remain 100.
+This is explicit campaign steering, not a production-default change. Its input
+path is a
 top-level `inputfilename` steering variable, which the worker replaces with
 the preceding `trk-<sample>.root` path. Its output names contain particle,
 method, and seed, but not momentum or angle; reusing the same particle and
@@ -305,10 +334,25 @@ seed at another production point can still overwrite outputs.
 
 ### `subtrkjobs.sh`
 
-`subtrkjobs.sh` passes its truth-oracle and GSF-only controls through to this
-worker. Any submission with `GSF_ONLY=false` now runs the three-stage
-simulation-to-tracking-to-GSF chain. Its momentum and theta arguments label the
-sample but do not override the maintained simulation card's broad gun ranges.
+`subtrkjobs.sh` requires separate `INPUT_TUPLEPATH` and `OUTPUT_TUPLEPATH`
+values. Its `STAGES` control accepts a comma-separated subset of `sim`, `trk`,
+and `gsf`, defaulting to `trk,gsf`. It passes `BH_MODEL` and
+`TRUTH_BH_OVERRIDE` to each worker; the GSF method and its method-specific
+settings come directly from the manually maintained `gsf.py.bk`. Set
+`TRUTH_BH_OVERRIDE` to either `true` or `false`.
+Batch size and seed selection remain ordinary campaign controls. Set
+`SEED_FIRST` and `SEED_LAST` to select the inclusive seed range; the worker
+receives each selected seed because it is part of the input and output tuple
+identity.
+Batch stdout and stderr are written to
+`<output_tuplepath>/outlog/`, keeping each campaign's logs with its tuples.
+Generated per-job simulation, tracking, and GSF Python cards are written to
+`<output_tuplepath>/runcards/`. The maintained `.py.bk` templates remain in
+`DumpGsfTrks/`; generated cards are campaign artifacts and are not committed.
+Campaign-option validation is centralized in `subtrkjobs.sh`; the worker does
+not repeat its truth-boolean, tuple-path, or BH-model allow-list checks. It
+retains only argument-count and runtime-state checks such as input existence,
+overwrite protection, and stage completion.
 
 ## Production readiness
 

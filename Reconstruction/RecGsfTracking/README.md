@@ -1,8 +1,9 @@
 # RecGsfTracking
 
-`RecGsfTracking` refits `CompleteTracks` with a Gaussian-sum electron model and
-writes the tracker-only result to `GSFTracks`. A default-off ECAL experiment
-can additionally write a paired component-selection result to
+`RecGsfTracking` refits `CompleteTracks` with a Gaussian-sum electron model.
+The smoother and reverse workflows always write the selected BestBranch to
+`GSFTracks` and the moment-matched endpoint to `GSFTracksWeightedMean`. A
+default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
 update path.  The old alternate KF fitter and initialization experiments have
@@ -18,9 +19,10 @@ been removed; historical comparisons remain under `agents_record/`.
 instead of `RecGsfTracking`, tags both outputs with `global-loss`, and sets
 `RecGsfFlatTuple.UseGlobalLossTracks=true` so the established `gsf_*`
 analysis schema is filled from `GlobalLossTracks`. The existing `smoother`,
-`reverse`, and `cms-like` paths remain exclusive alternatives and continue
-to write `GSFTracks`; `reverse` remains the card default. No batch script
-selects global loss automatically.
+`reverse`, and `cms-like` paths remain exclusive alternatives. Smoother and
+reverse write both tracker endpoint collections; CMS-like retains its fixed
+single `GSFTracks` endpoint. `reverse` remains the card default. No batch
+script selects global loss automatically.
 
 For each usable input track, available hits that map to active measurement
 layers are ordered by radius from the interaction point outward. The refitter
@@ -122,7 +124,7 @@ replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-22. `RecGsfTracking` exposes 43 Gaudi properties in
+Reference date: 2026-08-24. `RecGsfTracking` exposes 42 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -304,11 +306,10 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `GSFOutputMode` | `BestBranch` | same | Forward/output publication: `BestBranch` or moment-matched `WeightedMean`. Weighted publication is default-off. |
+| `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother or reverse output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `ReverseKappaSeedCov` | `100` | `100` | Multiply every full-mixture reverse-seed covariance by this factor. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. |
-| `ReverseOutputMode` | `BestBranch` | same | Publish the highest-ranked reverse branch or a moment-matched `WeightedMean`. |
 | `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
 | `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
 
@@ -319,11 +320,20 @@ bounded forward/reverse radiative-surface coincidence likelihood. Both
 alternatives are retained only to reproduce rejected diagnostics.
 `ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
 
+Smoother and reverse have no output selector. Every successful track is
+written row-for-row to both collections: `GSFTracks` is BestBranch and
+`GSFTracksWeightedMean` is the normalized final-mixture moment match.
+`ReverseSelectionMode` affects only BestBranch. The weighted track retains the
+selected branch's chi-square/NDF because a moment-matched mixture has no unique
+branch fit quality. The current KL smoother assigns one common smoothed inner
+mean/covariance to every survivor, so its two endpoint states are expected to
+be numerically identical; both are saved to keep the output contract uniform.
+
 ### Experimental ECAL component constraint
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires ordinary reverse filtering, `ReverseOutputMode=BestBranch`, and no CMSSW-like workflow. |
+| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires ordinary reverse filtering and no CMSSW-like workflow. It starts from the BestBranch publication. |
 | `EcalConstraintRatioThreshold` | `1.1` | same | Activate re-ranking only when the unconstrained branch has `max(p/E,E/p)` above this value. It must be finite and greater than one. |
 | `EcalConstraintLogPSigma` | `0.15` | same | Gaussian width of the component likelihood in `log(p/E)`; it must be finite and positive. |
 | `EcalConstraintLikelihoodFloor` | `0.05` | same | Additive likelihood floor in `(0,1]`; 0.05 limits the ECAL re-ranking Bayes factor to 20. |
@@ -411,12 +421,13 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 43 properties:
+The data handles are configurable separately from the 42 properties:
 
 | Role | Default collection |
 |---|---|
 | input reconstructed tracks | `CompleteTracks` |
-| output refitted tracks | `GSFTracks` |
+| selected BestBranch output tracks | `GSFTracks` |
+| paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
@@ -430,17 +441,19 @@ The data handles are configurable separately from the 43 properties:
 `UseGlobalLossTracks` property defaults to `false`, in which case `gsf_*`
 comes from `GSFTracks`. Setting it to `true` makes the same fields come from
 `GlobalLossTracks`; the maintained card does this only for
-`method="global-loss"`. When `GSFTracksEcalConstrained` is present in the
-ordinary GSF event store, the tuple also fills a parallel constrained-track
-scalar set:
+`method="global-loss"`. When `GSFTracksWeightedMean` or
+`GSFTracksEcalConstrained` is present in the ordinary GSF event store, the
+tuple also fills the corresponding parallel scalar set:
 
 | Branches | Meaning |
 |---|---|
-| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | `GSFTracks` by default, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. |
+| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | BestBranch from `GSFTracks` by default, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. |
+| `weighted_gsf_pT`, `weighted_gsf_p`, `weighted_gsf_eta`, `weighted_gsf_theta`, `weighted_gsf_phi`, `weighted_gsf_d0`, `weighted_gsf_z0`, `weighted_gsf_omega`, `weighted_gsf_tanl`, `weighted_gsf_chi2`, `weighted_gsf_ndf`, `weighted_gsf_nhits`, `weighted_gsf_type` | Paired `GSFTracksWeightedMean` result for smoother/reverse. The chi-square/NDF are inherited from BestBranch. |
+| `weighted_gsf_available`, `weighted_gsf_changed` | Presence tag and exact scalar comparison against the BestBranch fields. They are zero for CMS-like and global-loss output. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
-| `res_pT_gsf`, `res_pT_ecal_gsf` | Ordinary and constrained fractional pT residuals relative to the first truth particle. |
+| `res_pT_gsf`, `res_pT_weighted_gsf`, `res_pT_ecal_gsf` | BestBranch, WeightedMean, and constrained fractional pT residuals relative to the first truth particle. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 | `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
@@ -473,26 +486,29 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` with `method="reverse"` explicitly configures all 43
-properties and silently inherits none. Its reverse material, split/cutoff, and
+`DumpGsfTrks/gsf.py.bk` explicitly configures 41 of the 42 `RecGsfTracking`
+properties. It deliberately inherits only the compiled
+`RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline: split/cutoff `1e-4`,
-`DD4hepBetweenSurfaces`, and ECAL off. Its current explicit `BHModel` is the
-user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather
-than the production `CEPC2GeV85StepConditioned` model. The retired runtime
+`DD4hepBetweenSurfaces`, and ECAL off. Its top-level `bh_model` selector is the
+user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than the production
+`CEPC2GeV85StepConditioned` model, and it feeds both ordinary GSF and the
+independent global-loss refitter. The retired runtime
 BH-audit CSV is no longer steered. The card's `RecGsfFlatTuple` instance writes
-the default-on `truth_material_*` vectors alongside the ordinary `gsf_*` and
-default-zero `ecal_gsf_*` scalar branch sets.
+the default-on `truth_material_*` vectors alongside BestBranch `gsf_*`, paired
+`weighted_gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
 
 The same card also exposes `method="global-loss"`. It explicitly assigns all
 14 `RecGsfGlobalLossRefitter` properties to their documented experimental
-base values, including the production five-component BH model, split threshold
+base values, including the shared top-level BH-model selection, split threshold
 `1e-4`, covariance scale 100, evidence gate 3, empty event/interval
 allow-lists, and verbose output off. It schedules the global refitter instead
 of `RecGsfTracking`, does not request the truth-provenance collections used
 only by the ordinary GSF oracle/recorder, writes `GlobalLossTracks`, and fills
 the stable flat `gsf_*` fields through
-`RecGsfFlatTuple.UseGlobalLossTracks=true`. This selector does not change the
-card's default `method="reverse"`.
+`RecGsfFlatTuple.UseGlobalLossTracks=true`. The maintained template currently
+selects `method="reverse"`; choosing `method="global-loss"`
+reuses the same top-level BH-model value.
 
 The maintained `gsf.py.bk` template keeps the compiled and active
 reverse-template `TruthBHLossOverride=false` base value. For a truth-oracle
@@ -508,15 +524,15 @@ production-default change.
 Generated truth-on cards append `truth-bh`; generated off controls append
 `truth-bh-off` to their GSF EDM and flat-tuple filenames.
 
-The maintained card explicitly sets `RecordTruthMaterialIntervals=true`, in
-agreement with the compiled and active reverse-template default. Consequently
-it requests `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` even when
-`TruthBHLossOverride=false`. The recorded truth/DD4hep/runtime values remain
-passive and do not affect the GSF workflow.
+The maintained card inherits the compiled and active reverse-template
+`RecordTruthMaterialIntervals=true` default. It unconditionally requests
+`GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` in its base `PodioInput`
+list, including when `TruthBHLossOverride=false`. The recorded
+truth/DD4hep/runtime values remain passive and do not affect the GSF workflow.
 
 ### Configuration-maintenance contract
 
-The 43-property inventory above is part of the configurable interface, not a
+The 42-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.
