@@ -8,10 +8,10 @@ The next session starts from two connected reverse-GSF design questions:
 
 1. Persist the posterior-weight evolution for every evaluated reverse
    component, rather than only the final surviving mixture.
-2. Make the within-component Bethe-Heitler (BH) uncertainty injected into the
-   prediction covariance explicitly scalable, then determine whether that
-   uncertainty is obscuring measurement discrimination or protecting a wrong
-   branch.
+2. Make the newly added within-component Bethe-Heitler (BH) variance in each
+   child continuation covariance explicitly scalable, then determine whether
+   its later contribution to the next-hit prediction is obscuring measurement
+   discrimination or protecting a wrong branch.
 
 No implementation was made before the disconnect. The production baseline and
 the newly added default-on final-mixture component record remain unchanged.
@@ -43,24 +43,33 @@ then the weight cutoff and KL reduction are applied. Consequently, local
 chi-square is only one part of the weight update; the prediction-covariance
 volume also contributes through `log(det(S))`.
 
-For retained momentum fraction `z` with one BH-mode variance `Var(z)`, the
-current first-order covariance mapping is
+For retained momentum fraction `z` with one BH-component variance `Var(z)`,
+the current first-order curvature-variance calculation is
 
 ```text
 forward: kappa_after  = kappa_before / mean(z)
-         Q_BH(kappa)  = kappa_before^2 * Var(z) / mean(z)^4
+         bhKappaVar   = kappa_before^2 * Var(z) / mean(z)^4
 
 reverse: kappa_before = mean(z) * kappa_after
-         Q_BH(kappa)  = kappa_after^2 * Var(z)
-
-P_new = F * P_old * F^T + Q_BH
+         bhKappaVar   = kappa_after^2 * Var(z)
 ```
 
-The track-state covariance is stored in `omega = alpha*kappa`, so the code
-adds `alpha^2 * Q_BH(kappa)` to the omega variance. Cross-covariances involving
-curvature receive the deterministic Jacobian scaling. The BH mode spread is
-kept as separate components until a KL merge; it is not part of this
-within-mode `Q_BH` term.
+`BetheHeitlerSplitter` first applies the deterministic kappa transformation to
+the child continuation covariance. Because the track state stores
+`omega = alpha*kappa`, it then performs this distinct addition:
+
+```text
+child_continuation_covariance(omega, omega) +=
+    alpha^2 * bhKappaVar
+```
+
+Cross-covariances involving curvature receive only the deterministic Jacobian
+scaling. The splitter does not update a next-hit predicted covariance at this
+point. Subsequent inter-surface propagation carries the child continuation
+covariance, including this newly added term, into the next measurement's
+predicted covariance and innovation covariance. The spread between different
+BH component means remains represented by separate components until a KL
+merge; it is not this within-component variance addition.
 
 This is a first-order delta-method approximation, not an exact transformed
 moment calculation. It omits second-order terms such as
@@ -96,10 +105,10 @@ final flat tuple. The implementation must not silently truncate the population
 needed to explain a crossover. It should remain package-local and must not
 change the live weights or component lifecycle.
 
-## Requirement 2: scale only injected BH process variance
+## Requirement 2: scale only the new BH-component variance addition
 
-The hypothesis is that a broad within-mode `Q_BH` changes both terms of the
-measurement likelihood:
+The hypothesis is that a broad within-BH-component variance addition later
+changes both terms of the measurement likelihood after propagation:
 
 ```text
 larger S -> potentially smaller local_dchi2
@@ -111,14 +120,18 @@ discrimination, preserve an incorrect broad component, or conversely penalize
 it; this must be measured from the complete posterior evolution rather than
 inferred from final weights.
 
-The clean experimental control is a scale on the added within-mode variance:
+The clean experimental control is a direct variance scale at the exact
+splitter addition:
 
 ```text
-P_new = F * P_old * F^T + bh_variance_scale * Q_BH
+child_continuation_covariance(omega, omega) +=
+    bh_component_variance_scale * alpha^2 * bhKappaVar
 ```
 
-For an explicitly named variance scale, `0` removes only the added within-mode
-BH variance and `1` exactly reproduces current behavior. It must not change:
+For this explicitly named variance scale, `0` removes only the variance newly
+introduced from the selected BH component and `1` exactly reproduces current
+behavior. The scale must not be applied later to the whole predicted
+covariance. It also must not change:
 
 - the BH component means;
 - the BH component prior weights;
@@ -127,11 +140,12 @@ BH variance and `1` exactly reproduces current behavior. It must not change:
 - multiple-scattering or measurement covariance;
 - final selection or publication rules.
 
-If the eventual property is instead described as a sigma scale, the variance
-term must be multiplied by its square; the naming/semantics must be settled
-before coding. Any new property triggers the project-law requirement for a
-dedicated option-surface sub-agent and synchronized updates to the package
-README and maintained `DumpGsfTrks/gsf.py.bk`.
+The intended property is a variance scale, not a sigma scale, so it multiplies
+the added variance directly. Its exact public name and whether the first
+implementation should expose one common scale or direction-specific controls
+must be reviewed before coding. Any new property triggers the project-law
+requirement for a dedicated option-surface sub-agent and synchronized updates
+to the package README and maintained `DumpGsfTrks/gsf.py.bk`.
 
 ## Ordered restart
 

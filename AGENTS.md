@@ -213,12 +213,14 @@ The immediate next-session checkpoint is the reverse posterior itself. First
 design a passive record for every evaluated component at every inward
 measurement, including its prior/BH weight, exact local `dchi2`,
 `logDetInnovation`, normalized pre-cutoff posterior, and rejection/reduction
-fate. Then add a reviewed control that scales only the within-BH-mode process
-variance injected into the prediction covariance, with scale 1 reproducing
-the current implementation; do not change BH means, mode priors, deterministic
+fate. Then add a reviewed control that scales only the BH-component variance
+term newly added to each child continuation covariance by
+`BetheHeitlerSplitter`, before that covariance is propagated into the next-hit
+prediction. Scale 1 must reproduce the current implementation. Do not scale
+the whole predicted covariance or change BH means, mode priors, deterministic
 covariance transport, or production defaults. Instrumentation precedes the
-scale study because the larger innovation covariance changes both chi-square
-and determinant terms. The exact mechanics, proposed audit fields, property-
+scale study because the propagated added variance changes both chi-square and
+determinant terms. The exact mechanics, proposed audit fields, property-
 maintenance boundary, validation order, and non-goals are preserved in
 `agents_record/2026-08-25-reverse-posterior-weight-and-bh-variance-handoff.md`.
 
