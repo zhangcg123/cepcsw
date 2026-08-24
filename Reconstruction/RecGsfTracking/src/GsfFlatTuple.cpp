@@ -7,6 +7,7 @@
 #include <TTree.h>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 DECLARE_COMPONENT(RecGsfFlatTuple)
@@ -173,6 +174,32 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("fullmixture_gsf_ndf",     &m_fullmixture_gsf_ndf);
   m_tree->Branch("fullmixture_gsf_nhits",   &m_fullmixture_gsf_nhits);
   m_tree->Branch("fullmixture_gsf_type",    &m_fullmixture_gsf_type);
+  // Positive-weight components of the final smoother/reverse mixture at IP.
+  // These vectors are automatic outputs, not a configurable diagnostic.
+  m_tree->Branch("final_mixture_component_available",
+                 &m_final_mixture_component_available);
+  m_tree->Branch("final_mixture_component_n",
+                 &m_final_mixture_component_n);
+  m_tree->Branch("final_mixture_component_input_track_index",
+                 &m_final_mixture_component_input_track_index);
+  m_tree->Branch("final_mixture_component_output_track_index",
+                 &m_final_mixture_component_output_track_index);
+  m_tree->Branch("final_mixture_component_index",
+                 &m_final_mixture_component_index);
+  m_tree->Branch("final_mixture_component_id",
+                 &m_final_mixture_component_id);
+  m_tree->Branch("final_mixture_component_source",
+                 &m_final_mixture_component_source);
+  m_tree->Branch("final_mixture_component_valid",
+                 &m_final_mixture_component_valid);
+  m_tree->Branch("final_mixture_component_weight",
+                 &m_final_mixture_component_weight);
+  m_tree->Branch("final_mixture_component_kappa",
+                 &m_final_mixture_component_kappa);
+  m_tree->Branch("final_mixture_component_kappa_variance",
+                 &m_final_mixture_component_kappa_variance);
+  m_tree->Branch("final_mixture_component_pT",
+                 &m_final_mixture_component_pT);
   // truth BH-loss oracle validity for CompleteTracks index 0
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
@@ -317,6 +344,87 @@ StatusCode RecGsfFlatTuple::execute() {
       eventSvc(), "GSFTracksBestBranch");
   const auto* bestBranchGsfCol = bestBranchGsfWrapper
       ? bestBranchGsfWrapper->getData() : nullptr;
+  m_final_mixture_component_available = 0;
+  m_final_mixture_component_n = 0;
+  m_final_mixture_component_input_track_index.clear();
+  m_final_mixture_component_output_track_index.clear();
+  m_final_mixture_component_index.clear();
+  m_final_mixture_component_id.clear();
+  m_final_mixture_component_source.clear();
+  m_final_mixture_component_valid.clear();
+  m_final_mixture_component_weight.clear();
+  m_final_mixture_component_kappa.clear();
+  m_final_mixture_component_kappa_variance.clear();
+  m_final_mixture_component_pT.clear();
+  try {
+    const auto* inputTrackIndices =
+        m_inFinalMixtureComponentInputTrackIndex.get();
+    const auto* outputTrackIndices =
+        m_inFinalMixtureComponentOutputTrackIndex.get();
+    const auto* componentIndices = m_inFinalMixtureComponentIndex.get();
+    const auto* componentIDs = m_inFinalMixtureComponentID.get();
+    const auto* componentSources = m_inFinalMixtureComponentSource.get();
+    const auto* componentValidity = m_inFinalMixtureComponentValid.get();
+    const auto* componentWeights = m_inFinalMixtureComponentWeight.get();
+    const auto* componentKappas = m_inFinalMixtureComponentKappa.get();
+    const auto* componentKappaVariances =
+        m_inFinalMixtureComponentKappaVariance.get();
+    const std::size_t componentCount = componentWeights
+        ? componentWeights->size() : 0;
+    const bool consistent = inputTrackIndices && outputTrackIndices &&
+        componentIndices && componentIDs && componentSources &&
+        componentValidity && componentKappas && componentKappaVariances &&
+        inputTrackIndices->size() == componentCount &&
+        outputTrackIndices->size() == componentCount &&
+        componentIndices->size() == componentCount &&
+        componentIDs->size() == componentCount &&
+        componentSources->size() == componentCount &&
+        componentValidity->size() == componentCount &&
+        componentKappas->size() == componentCount &&
+        componentKappaVariances->size() == componentCount;
+    if (!consistent) {
+      warning() << "Event " << m_iev
+                << ": inconsistent final-mixture component collections; "
+                   "writing empty component vectors"
+                << endmsg;
+    } else {
+      m_final_mixture_component_input_track_index.assign(
+          inputTrackIndices->begin(), inputTrackIndices->end());
+      m_final_mixture_component_output_track_index.assign(
+          outputTrackIndices->begin(), outputTrackIndices->end());
+      m_final_mixture_component_index.assign(
+          componentIndices->begin(), componentIndices->end());
+      m_final_mixture_component_id.assign(
+          componentIDs->begin(), componentIDs->end());
+      m_final_mixture_component_source.assign(
+          componentSources->begin(), componentSources->end());
+      m_final_mixture_component_valid.assign(
+          componentValidity->begin(), componentValidity->end());
+      m_final_mixture_component_weight.assign(
+          componentWeights->begin(), componentWeights->end());
+      m_final_mixture_component_kappa.assign(
+          componentKappas->begin(), componentKappas->end());
+      m_final_mixture_component_kappa_variance.assign(
+          componentKappaVariances->begin(),
+          componentKappaVariances->end());
+      m_final_mixture_component_pT.reserve(componentCount);
+      for (std::size_t componentIndex = 0;
+           componentIndex < componentCount; ++componentIndex) {
+        const double kappa = (*componentKappas)[componentIndex];
+        m_final_mixture_component_pT.push_back(
+            (*componentValidity)[componentIndex] == 1 &&
+                    std::isfinite(kappa) && std::abs(kappa) > 1.0e-15
+                ? 1.0 / std::abs(kappa)
+                : std::numeric_limits<double>::quiet_NaN());
+      }
+      m_final_mixture_component_n =
+          static_cast<int>(componentCount);
+      m_final_mixture_component_available = componentCount > 0 ? 1 : 0;
+    }
+  } catch (...) {
+    // Older producers and non-mixture methods do not provide these optional
+    // automatic collections. Keep the vectors empty without changing flow.
+  }
   m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   m_truth_bh_scope_valid = 0;

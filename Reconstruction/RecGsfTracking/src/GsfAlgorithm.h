@@ -84,6 +84,34 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_fullMixtureModeStatus{
           "GSFFullMixtureModeStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_finalMixtureComponentInputTrackIndex{
+          "GSFFinalMixtureComponentInputTrackIndex",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_finalMixtureComponentOutputTrackIndex{
+          "GSFFinalMixtureComponentOutputTrackIndex",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_finalMixtureComponentIndex{
+          "GSFFinalMixtureComponentIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_finalMixtureComponentID{
+          "GSFFinalMixtureComponentID", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_finalMixtureComponentSource{
+          "GSFFinalMixtureComponentSource", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_finalMixtureComponentValid{
+          "GSFFinalMixtureComponentValid", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_finalMixtureComponentWeight{
+      "GSFFinalMixtureComponentWeight", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_finalMixtureComponentKappa{
+      "GSFFinalMixtureComponentKappa", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_finalMixtureComponentKappaVariance{
+          "GSFFinalMixtureComponentKappaVariance",
+          Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_ecalConstrainedOutputTracks{
       "GSFTracksEcalConstrained", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection>     m_ecalClusters{

@@ -45,6 +45,34 @@ private:
       "GSFTruthMaterialIntervals", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_inTruthMaterialStatus{
       "GSFTruthMaterialRecordStatus", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inFinalMixtureComponentInputTrackIndex{
+          "GSFFinalMixtureComponentInputTrackIndex",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inFinalMixtureComponentOutputTrackIndex{
+          "GSFFinalMixtureComponentOutputTrackIndex",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inFinalMixtureComponentIndex{
+          "GSFFinalMixtureComponentIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inFinalMixtureComponentID{
+          "GSFFinalMixtureComponentID", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inFinalMixtureComponentSource{
+          "GSFFinalMixtureComponentSource", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inFinalMixtureComponentValid{
+          "GSFFinalMixtureComponentValid", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inFinalMixtureComponentWeight{
+      "GSFFinalMixtureComponentWeight", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inFinalMixtureComponentKappa{
+      "GSFFinalMixtureComponentKappa", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inFinalMixtureComponentKappaVariance{
+          "GSFFinalMixtureComponentKappaVariance",
+          Gaudi::DataHandle::Reader, this};
 
   Gaudi::Property<std::string> m_outFileName{this, "OutputFile",
       "gsf_tuple.root", "Output ROOT file name"};
@@ -120,6 +148,19 @@ private:
   int    m_fullmixture_gsf_changed = 0;
   int    m_fullmixture_gsf_status =
       fullMixtureModeStatusValue(FullMixtureModeStatus::NotApplicable);
+  // Positive-weight components of the final smoother/reverse mixture at IP.
+  int    m_final_mixture_component_available = 0;
+  int    m_final_mixture_component_n = 0;
+  std::vector<int> m_final_mixture_component_input_track_index;
+  std::vector<int> m_final_mixture_component_output_track_index;
+  std::vector<int> m_final_mixture_component_index;
+  std::vector<int> m_final_mixture_component_id;
+  std::vector<int> m_final_mixture_component_source;
+  std::vector<int> m_final_mixture_component_valid;
+  std::vector<double> m_final_mixture_component_weight;
+  std::vector<double> m_final_mixture_component_kappa;
+  std::vector<double> m_final_mixture_component_kappa_variance;
+  std::vector<double> m_final_mixture_component_pT;
   // truth BH-loss oracle scope for CompleteTracks index 0
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);

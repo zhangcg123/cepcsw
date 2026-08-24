@@ -5,6 +5,10 @@ The smoother and reverse workflows always write three row-aligned endpoint
 views: the selected branch to `GSFTracksBestBranch`, the moment-matched state
 to `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional
 mixture density to `GSFTracksFullMixtureMode`. A
+default-on automatic component record also persists every positive-weight
+final smoother/reverse component's normalized weight, IP kappa mean, and
+kappa variance so the transverse-momentum marginal can be reconstructed from
+the flat tuple without rerunning verbose diagnostics. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -351,6 +355,17 @@ mean/covariance to every survivor, so its three endpoint states are expected
 to be numerically identical; all are saved to keep the output contract
 uniform.
 
+The final component record is automatic and has no configuration property.
+For every successfully published smoother or reverse track, all finite,
+positive-weight survivors are normalized within that track and independently
+extrapolated to the same IP endpoint used by the method. The EDM stores each
+component's normalized weight, kappa mean, kappa variance, method source, and
+validity, together with both the input- and output-track indices. It is passive
+output only: recording does not alter reduction, selection, endpoint
+publication, or any component state. Ordinary forward, CMS-like, and
+global-loss workflows do not expose a final multi-component endpoint and
+therefore produce no component rows.
+
 ### Experimental ECAL component constraint
 
 | Property | Compiled | Active reverse | Meaning |
@@ -453,6 +468,9 @@ The data handles are configurable separately from the 42 properties:
 | paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
 | paired smoother/reverse full-mixture density-mode tracks | `GSFTracksFullMixtureMode` |
 | per-output-track full-mixture-mode status | `GSFFullMixtureModeStatus` |
+| final-mixture component track mapping | `GSFFinalMixtureComponentInputTrackIndex`, `GSFFinalMixtureComponentOutputTrackIndex` |
+| final-mixture component identity/method/status | `GSFFinalMixtureComponentIndex`, `GSFFinalMixtureComponentID`, `GSFFinalMixtureComponentSource`, `GSFFinalMixtureComponentValid` |
+| final-mixture component PDF parameters | `GSFFinalMixtureComponentWeight`, `GSFFinalMixtureComponentKappa`, `GSFFinalMixtureComponentKappaVariance` |
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
@@ -482,6 +500,10 @@ tuple also fills the corresponding parallel scalar set:
 | `fullmixture_gsf_pT`, `fullmixture_gsf_p`, `fullmixture_gsf_eta`, `fullmixture_gsf_theta`, `fullmixture_gsf_phi`, `fullmixture_gsf_d0`, `fullmixture_gsf_z0`, `fullmixture_gsf_omega`, `fullmixture_gsf_tanl`, `fullmixture_gsf_chi2`, `fullmixture_gsf_ndf`, `fullmixture_gsf_nhits`, `fullmixture_gsf_type` | Paired full five-dimensional mixture-density mode from `GSFTracksFullMixtureMode`. The chi-square/NDF are inherited from BestBranch. |
 | `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward, CMS-like, and global-loss output. |
 | `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
+| `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
+| `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
+| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother, `2` reverse filter), and IP-state validity. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
+| `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
@@ -507,6 +529,24 @@ its status collection. Forward, CMS-like, and global-loss jobs leave it
 unavailable/zero with status zero. A negative status with
 `fullmixture_gsf_available=1` means the row-aligned track is the deliberate
 BestBranch fallback, not a successfully found density mode.
+
+The `final_mixture_component_*` vectors are likewise automatic/default-on and
+presence-driven. Weights are normalized independently for each
+`(input_track_index, output_track_index)` group and sum to one when all final
+positive-weight components were captured. For `pT > 0`, the saved one-
+dimensional kappa marginals reconstruct the transverse-momentum density as
+
+```text
+f(pT) = sum_i w_i / pT^2 * [
+          N(+1/pT | kappa_i, variance_i)
+        + N(-1/pT | kappa_i, variance_i)] .
+```
+
+Use only entries with `valid=1`. If any component for a track is invalid, the
+saved valid subset is not the complete final mixture and must not silently be
+presented as such. The component vectors describe the mixture underlying all
+three endpoint summaries; they are not a fourth published track and do not
+duplicate hit vectors.
 
 The BestBranch branch set is likewise presence-driven: it is populated only
 from `GSFTracksBestBranch` and remains unavailable/zero for forward,

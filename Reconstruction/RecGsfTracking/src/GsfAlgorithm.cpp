@@ -1113,6 +1113,71 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
   return finiteMatrix(inverse);
 }
 
+enum class FinalMixtureComponentSource : std::int32_t {
+  GaussianSumSmoother = 1,
+  ReverseFiltering = 2,
+};
+
+struct FinalMixtureComponentRecord {
+  std::int32_t componentIndex = -1;
+  std::int32_t componentID = -1;
+  std::int32_t source = 0;
+  std::int32_t valid = 0;
+  double weight = 0.0;
+  double kappa = std::numeric_limits<double>::quiet_NaN();
+  double kappaVariance = std::numeric_limits<double>::quiet_NaN();
+};
+
+static std::vector<FinalMixtureComponentRecord>
+captureFinalMixtureComponentsAtIP(
+    const std::vector<GsfComponent*>& components, double bz,
+    FinalMixtureComponentSource source,
+    const std::function<bool(GsfComponent&, THelicalTrack&,
+                             TMatrixD&)>& extrapolate) {
+  double sumWeight = 0.0;
+  for (const auto* component : components) {
+    if (component && component->weight > 0.0 &&
+        std::isfinite(component->weight)) {
+      sumWeight += component->weight;
+    }
+  }
+  std::vector<FinalMixtureComponentRecord> records;
+  if (!(sumWeight > 0.0) || !std::isfinite(sumWeight)) return records;
+  records.reserve(components.size());
+  for (std::size_t componentIndex = 0;
+       componentIndex < components.size(); ++componentIndex) {
+    auto* component = components[componentIndex];
+    if (!component || !(component->weight > 0.0) ||
+        !std::isfinite(component->weight)) {
+      continue;
+    }
+    FinalMixtureComponentRecord record;
+    record.componentIndex = static_cast<std::int32_t>(componentIndex);
+    record.componentID = component->debugId;
+    record.source = static_cast<std::int32_t>(source);
+    record.weight = component->weight / sumWeight;
+
+    THelicalTrack componentIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
+    TMatrixD componentIpCovariance(5, 5);
+    if (extrapolate(*component, componentIp, componentIpCovariance)) {
+      TMatrixD componentIpMean;
+      helixToMean(componentIp, componentIpMean);
+      TMatrixD componentIpPrecision;
+      record.kappa = componentIp.GetKappa();
+      record.kappaVariance = componentIpCovariance(2, 2);
+      record.valid = finiteMatrix(componentIpMean) &&
+                     record.kappaVariance > 0.0 &&
+                     std::isfinite(record.kappaVariance) &&
+                     invertPositiveDefinite(componentIpCovariance,
+                                            componentIpPrecision)
+                         ? 1
+                         : 0;
+    }
+    records.push_back(record);
+  }
+  return records;
+}
+
 static bool solvePositiveDefinite(const TMatrixD& matrix,
                                   const TMatrixD& rightHandSide,
                                   TMatrixD& solution) {
@@ -2091,6 +2156,39 @@ StatusCode RecGsfTracking::execute() {
     fullMixtureModeOut = m_fullMixtureModeOutputTracks.createAndPut();
     fullMixtureModeStatusOut = m_fullMixtureModeStatus.createAndPut();
   }
+  auto* finalMixtureComponentInputTrackIndex =
+      m_finalMixtureComponentInputTrackIndex.createAndPut();
+  auto* finalMixtureComponentOutputTrackIndex =
+      m_finalMixtureComponentOutputTrackIndex.createAndPut();
+  auto* finalMixtureComponentIndex =
+      m_finalMixtureComponentIndex.createAndPut();
+  auto* finalMixtureComponentID = m_finalMixtureComponentID.createAndPut();
+  auto* finalMixtureComponentSource =
+      m_finalMixtureComponentSource.createAndPut();
+  auto* finalMixtureComponentValid =
+      m_finalMixtureComponentValid.createAndPut();
+  auto* finalMixtureComponentWeight =
+      m_finalMixtureComponentWeight.createAndPut();
+  auto* finalMixtureComponentKappa =
+      m_finalMixtureComponentKappa.createAndPut();
+  auto* finalMixtureComponentKappaVariance =
+      m_finalMixtureComponentKappaVariance.createAndPut();
+  auto persistFinalMixtureComponents = [&](const auto& records,
+                                           std::int32_t inputTrackIndex,
+                                           std::int32_t outputTrackIndex) {
+    for (const auto& record : records) {
+      finalMixtureComponentInputTrackIndex->push_back(inputTrackIndex);
+      finalMixtureComponentOutputTrackIndex->push_back(outputTrackIndex);
+      finalMixtureComponentIndex->push_back(record.componentIndex);
+      finalMixtureComponentID->push_back(record.componentID);
+      finalMixtureComponentSource->push_back(record.source);
+      finalMixtureComponentValid->push_back(record.valid);
+      finalMixtureComponentWeight->push_back(record.weight);
+      finalMixtureComponentKappa->push_back(record.kappa);
+      finalMixtureComponentKappaVariance->push_back(
+          record.kappaVariance);
+    }
+  };
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
   auto* truthMaterialIntervals = m_truthMaterialIntervals.createAndPut();
   auto* truthMaterialStatus = m_truthMaterialStatus.createAndPut();
@@ -3178,6 +3276,8 @@ StatusCode RecGsfTracking::execute() {
     FullMixtureModeStatus reverseFullMixtureModeStatus =
         FullMixtureModeStatus::MethodEndpointUnavailable;
     FullMixtureModeDiagnostics reverseFullMixtureModeDiagnostics;
+    std::vector<FinalMixtureComponentRecord>
+        finalMixtureComponentRecords;
     double reverseOutputChi2 = 0.0;
     int reverseOutputNdf = 0;
     double reverseOutputWeight = 0.0;
@@ -3767,6 +3867,17 @@ StatusCode RecGsfTracking::execute() {
           }
         }
         if (reverseOutputOk) {
+          if (!runCmsSmoother && m_reverseFiltering.value()) {
+            finalMixtureComponentRecords =
+                captureFinalMixtureComponentsAtIP(
+                    reverseComps, bz,
+                    FinalMixtureComponentSource::ReverseFiltering,
+                    [bz](GsfComponent& component, THelicalTrack& helix,
+                         TMatrixD& covariance) {
+                      return extrapolateContinuationToIP(
+                          component, bz, helix, covariance);
+                    });
+          }
           const double reversePt = reverseIp.GetKappa() != 0.0
               ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
           if (m_verboseDump) {
@@ -4139,6 +4250,14 @@ StatusCode RecGsfTracking::execute() {
                        "collection will preserve the BestBranch state"
                     << endmsg;
         }
+        finalMixtureComponentRecords = captureFinalMixtureComponentsAtIP(
+            comps, bz, FinalMixtureComponentSource::GaussianSumSmoother,
+            [&](GsfComponent& component, THelicalTrack& helix,
+                TMatrixD& covariance) {
+              return extrapolateToIP_component(
+                  &component, m_materialIPExtrap, m_cradle, m_ipLayer,
+                  bz, helix, covariance);
+            });
         FullMixtureModeDiagnostics smootherModeDiagnostics;
         fullMixtureModeStatus = findFullMixtureModeAtIP(
             comps, bz,
@@ -4265,6 +4384,9 @@ StatusCode RecGsfTracking::execute() {
         fullMixtureModeStatusOut->push_back(
             fullMixtureModeStatusValue(fullMixtureModeStatus));
       }
+
+      persistFinalMixtureComponents(
+          finalMixtureComponentRecords, inputTrackIndex, nFit);
 
       if (truthMaterialTrackMatched) {
         const std::int16_t runtimeMaterialMode =

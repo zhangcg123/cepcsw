@@ -26,6 +26,12 @@ two workflows, has a persisted optimization-status collection and flat-tuple
 fields, and is mechanically available but not physics-validated. Its
 definition, output/fallback contract, and focused mechanical gates are in
 `agents_record/2026-08-24-full-mixture-mode-endpoint.md`. Its
+underlying positive-weight final components are also persisted automatically
+with input/output track mapping, normalized weight, IP kappa, kappa variance,
+method source, and validity. The flat `final_mixture_component_*` vectors are
+sufficient to reconstruct the one-dimensional pT marginal and are empty for
+forward, CMS-like, and global-loss; their contract and gates are in
+`agents_record/2026-08-25-final-mixture-component-flat-tuple.md`. Its
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface

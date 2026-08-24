@@ -148,6 +148,8 @@ elif method == "reverse":
     # the two automatic full-mixture summaries in GSFTracksWeightedMean and
     # GSFTracksFullMixtureMode. The latter is the joint five-dimensional PDF
     # maximum; GSFFullMixtureModeStatus tags optimization success/fallback.
+    # The final positive-weight component weights, IP kappas, and kappa
+    # variances are also recorded automatically; there is no steering switch.
     gsf.ReverseFiltering = True
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
@@ -224,7 +226,8 @@ flat = RecGsfFlatTuple("RecGsfFlatTuple")
 # fullmixture_gsf_* respectively. CMS-like fills generic gsf_* from GSFTracks;
 # global-loss maps GlobalLossTracks into those same generic fields. Missing
 # method-specific collections leave their corresponding branch set
-# unavailable/zero.
+# unavailable/zero. The always-created final_mixture_component_* vectors carry
+# all final smoother/reverse output tracks and are empty for the other methods.
 flat.OutputFile = os.path.join(
     tuplepath,
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),

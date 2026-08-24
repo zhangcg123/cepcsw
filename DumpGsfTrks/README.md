@@ -324,6 +324,14 @@ collection, and remain unavailable/zero for CMS-like and global-loss jobs.
 The FullMixtureMode schema follows the same presence-only rule and is populated
 only from `GSFTracksFullMixtureMode`; a negative status marks the deliberate
 BestBranch fallback. It has no duplicate hit-vector branches.
+The flat tuple also creates `final_mixture_component_*` vectors automatically,
+with no run-card property. For every final positive-weight smoother/reverse
+component they store the input/output track mapping, component index and ID,
+source/validity codes, normalized weight, IP kappa, kappa variance, and derived
+pT. They contain every published output track in the event and are empty for
+forward, CMS-like, and global-loss jobs. These vectors are sufficient to
+reconstruct the final one-dimensional pT marginal; the exact transformation
+and branch contract are maintained in the package README.
 The BestBranch schema follows the same presence-only rule for
 `GSFTracksBestBranch`; it is unavailable/zero for CMS-like and global-loss.
 Those two methods retain their generic `gsf_*` fields from `GSFTracks` and
