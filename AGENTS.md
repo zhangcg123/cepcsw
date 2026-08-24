@@ -230,7 +230,12 @@ transport, or production defaults. The original mechanics and variance-study
 boundary are preserved in
 `agents_record/2026-08-25-reverse-posterior-weight-and-bh-variance-handoff.md`;
 the implemented graph contract and validation are preserved in
-`agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`.
+`agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`. The maintained
+reverse posterior/reduction lineage and ordinal weight-cell audit is
+`Reconstruction/RecGsfTracking/scripts/plot_component_lineage.py`; its visual
+semantics, fate-3/fate-4 distinction, reference gate, and reproduction command
+are preserved in
+`agents_record/2026-08-25-reverse-lineage-and-weight-cell-plotting.md`.
 
 `RecGsfGlobalLossRefitter` isolates the downstream-selection part of this
 question in a separate algorithm. It reads `CompleteTracks`, compares identity
