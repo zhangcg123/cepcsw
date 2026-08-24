@@ -32,6 +32,13 @@ method source, and validity. The flat `final_mixture_component_*` vectors are
 sufficient to reconstruct the one-dimensional pT marginal and are empty for
 forward, CMS-like, and global-loss; their contract and gates are in
 `agents_record/2026-08-25-final-mixture-component-flat-tuple.md`. Its
+complete component lineage is now also persisted automatically for smoother
+and reverse jobs. The `lineage_node_*` and `lineage_edge_*` flat vectors keep
+every evaluated seed, BH child, measurement result, and KL output, including
+states later rejected, cut, or merged; forward, CMS-like, and global-loss
+leave them empty. Split/merge diamonds remain directed acyclic graphs, and
+the graph never steers the fit. Its schema, code maps, and mechanical gates
+are in `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`. Its
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
@@ -209,20 +216,21 @@ interval-collapse granularity problem, a BH response mismatch, and a later
 measurement/selection effect. The ECAL prototype is paused and remains
 default-off; this focus does not authorize changes outside `RecGsfTracking`.
 
-The immediate next-session checkpoint is the reverse posterior itself. First
-design a passive record for every evaluated component at every inward
-measurement, including its prior/BH weight, exact local `dchi2`,
-`logDetInnovation`, normalized pre-cutoff posterior, and rejection/reduction
-fate. Then add a reviewed control that scales only the BH-component variance
-term newly added to each child continuation covariance by
-`BetheHeitlerSplitter`, before that covariance is propagated into the next-hit
-prediction. Scale 1 must reproduce the current implementation. Do not scale
-the whole predicted covariance or change BH means, mode priors, deterministic
-covariance transport, or production defaults. Instrumentation precedes the
-scale study because the propagated added variance changes both chi-square and
-determinant terms. The exact mechanics, proposed audit fields, property-
-maintenance boundary, validation order, and non-goals are preserved in
-`agents_record/2026-08-25-reverse-posterior-weight-and-bh-variance-handoff.md`.
+The immediate checkpoint is now to use the completed passive component-
+lineage DAG to locate the first inward measurement where a truth-compatible
+lineage loses posterior rank, is cut, or is merged in bad events, with matched
+good controls. Decompose that crossover into prior/BH weight, exact local
+`dchi2`, and `logDetInnovation`; do not infer it from final weights alone.
+Only after this unscaled baseline is understood should a reviewed control
+scale the BH-component variance term newly added to each child continuation
+covariance by `BetheHeitlerSplitter` before propagation to the next hit. Scale
+1 must reproduce the recorded baseline. Do not scale the whole predicted
+covariance or change BH means, mode priors, deterministic covariance
+transport, or production defaults. The original mechanics and variance-study
+boundary are preserved in
+`agents_record/2026-08-25-reverse-posterior-weight-and-bh-variance-handoff.md`;
+the implemented graph contract and validation are preserved in
+`agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`.
 
 `RecGsfGlobalLossRefitter` isolates the downstream-selection part of this
 question in a separate algorithm. It reads `CompleteTracks`, compares identity
@@ -511,9 +519,10 @@ Proceed in this order:
    `149:57`, and `444:99` with explicit requested/covered-length diagnostics
    and matched valid controls. Review a focused coverage repair before any
    source change, then rerun the same-code material audit.
-3. In those and other bad events, locate the first surface where a
-   truth-compatible lineage
-   loses posterior rank or is removed, and compare matched good controls.
+3. In those and other bad events, use the persisted component-lineage DAG to
+   locate the first surface where a truth-compatible lineage loses posterior
+   rank or is removed. Decompose its prior, `dchi2`, and innovation-
+   determinant terms, and compare matched good controls.
 4. At that crossover, compare `CurrentSurface`, DD4hep interval composition,
    and Geant4 pre/post-step truth between the same spatial boundaries. Compare
    directions only for equivalent component states.

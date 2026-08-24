@@ -200,6 +200,75 @@ StatusCode RecGsfFlatTuple::initialize() {
                  &m_final_mixture_component_kappa_variance);
   m_tree->Branch("final_mixture_component_pT",
                  &m_final_mixture_component_pT);
+  // Complete component ancestry, including evaluated nodes later rejected,
+  // cut, or consumed by a many-to-one KL merge.
+  m_tree->Branch("lineage_graph_available", &m_lineage_graph_available);
+  m_tree->Branch("lineage_node_n", &m_lineage_node_n);
+  m_tree->Branch("lineage_node_input_track_index",
+                 &m_lineage_node_input_track_index);
+  m_tree->Branch("lineage_node_output_track_index",
+                 &m_lineage_node_output_track_index);
+  m_tree->Branch("lineage_node_id", &m_lineage_node_id);
+  m_tree->Branch("lineage_node_source", &m_lineage_node_source);
+  m_tree->Branch("lineage_node_operation", &m_lineage_node_operation);
+  m_tree->Branch("lineage_node_hit_index", &m_lineage_node_hit_index);
+  m_tree->Branch("lineage_node_surface_index",
+                 &m_lineage_node_surface_index);
+  m_tree->Branch("lineage_node_component_id",
+                 &m_lineage_node_component_id);
+  m_tree->Branch("lineage_node_generation", &m_lineage_node_generation);
+  m_tree->Branch("lineage_node_bh_component_index",
+                 &m_lineage_node_bh_component_index);
+  m_tree->Branch("lineage_node_measurement_status",
+                 &m_lineage_node_measurement_status);
+  m_tree->Branch("lineage_node_fate", &m_lineage_node_fate);
+  m_tree->Branch("lineage_node_no_radiation",
+                 &m_lineage_node_no_radiation);
+  m_tree->Branch("lineage_node_best_branch",
+                 &m_lineage_node_best_branch);
+  m_tree->Branch("lineage_node_final_mixture",
+                 &m_lineage_node_final_mixture);
+  m_tree->Branch("lineage_node_valid", &m_lineage_node_valid);
+  m_tree->Branch("lineage_node_weight", &m_lineage_node_weight);
+  m_tree->Branch("lineage_node_prior_weight",
+                 &m_lineage_node_prior_weight);
+  m_tree->Branch("lineage_node_bh_weight", &m_lineage_node_bh_weight);
+  m_tree->Branch("lineage_node_bh_mean", &m_lineage_node_bh_mean);
+  m_tree->Branch("lineage_node_bh_variance",
+                 &m_lineage_node_bh_variance);
+  m_tree->Branch("lineage_node_material_tx0",
+                 &m_lineage_node_material_tx0);
+  m_tree->Branch("lineage_node_dchi2", &m_lineage_node_dchi2);
+  m_tree->Branch("lineage_node_logdet_innovation",
+                 &m_lineage_node_logdet_innovation);
+  m_tree->Branch("lineage_node_log_unnormalized_posterior",
+                 &m_lineage_node_log_unnormalized_posterior);
+  m_tree->Branch("lineage_node_normalized_posterior",
+                 &m_lineage_node_normalized_posterior);
+  m_tree->Branch("lineage_node_predicted_kappa",
+                 &m_lineage_node_predicted_kappa);
+  m_tree->Branch("lineage_node_predicted_kappa_variance",
+                 &m_lineage_node_predicted_kappa_variance);
+  m_tree->Branch("lineage_node_predicted_pT",
+                 &m_lineage_node_predicted_pT);
+  m_tree->Branch("lineage_node_filtered_kappa",
+                 &m_lineage_node_filtered_kappa);
+  m_tree->Branch("lineage_node_filtered_kappa_variance",
+                 &m_lineage_node_filtered_kappa_variance);
+  m_tree->Branch("lineage_node_filtered_pT",
+                 &m_lineage_node_filtered_pT);
+  m_tree->Branch("lineage_node_dominant_lineage_fraction",
+                 &m_lineage_node_dominant_lineage_fraction);
+  m_tree->Branch("lineage_node_merge_cost", &m_lineage_node_merge_cost);
+  m_tree->Branch("lineage_edge_n", &m_lineage_edge_n);
+  m_tree->Branch("lineage_edge_input_track_index",
+                 &m_lineage_edge_input_track_index);
+  m_tree->Branch("lineage_edge_output_track_index",
+                 &m_lineage_edge_output_track_index);
+  m_tree->Branch("lineage_edge_from_node_id",
+                 &m_lineage_edge_from_node_id);
+  m_tree->Branch("lineage_edge_to_node_id", &m_lineage_edge_to_node_id);
+  m_tree->Branch("lineage_edge_operation", &m_lineage_edge_operation);
   // truth BH-loss oracle validity for CompleteTracks index 0
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
@@ -424,6 +493,245 @@ StatusCode RecGsfFlatTuple::execute() {
   } catch (...) {
     // Older producers and non-mixture methods do not provide these optional
     // automatic collections. Keep the vectors empty without changing flow.
+  }
+  m_lineage_graph_available = 0;
+  m_lineage_node_n = 0;
+  m_lineage_edge_n = 0;
+  m_lineage_node_input_track_index.clear();
+  m_lineage_node_output_track_index.clear();
+  m_lineage_node_id.clear();
+  m_lineage_node_source.clear();
+  m_lineage_node_operation.clear();
+  m_lineage_node_hit_index.clear();
+  m_lineage_node_surface_index.clear();
+  m_lineage_node_component_id.clear();
+  m_lineage_node_generation.clear();
+  m_lineage_node_bh_component_index.clear();
+  m_lineage_node_measurement_status.clear();
+  m_lineage_node_fate.clear();
+  m_lineage_node_no_radiation.clear();
+  m_lineage_node_best_branch.clear();
+  m_lineage_node_final_mixture.clear();
+  m_lineage_node_valid.clear();
+  m_lineage_node_weight.clear();
+  m_lineage_node_prior_weight.clear();
+  m_lineage_node_bh_weight.clear();
+  m_lineage_node_bh_mean.clear();
+  m_lineage_node_bh_variance.clear();
+  m_lineage_node_material_tx0.clear();
+  m_lineage_node_dchi2.clear();
+  m_lineage_node_logdet_innovation.clear();
+  m_lineage_node_log_unnormalized_posterior.clear();
+  m_lineage_node_normalized_posterior.clear();
+  m_lineage_node_predicted_kappa.clear();
+  m_lineage_node_predicted_kappa_variance.clear();
+  m_lineage_node_predicted_pT.clear();
+  m_lineage_node_filtered_kappa.clear();
+  m_lineage_node_filtered_kappa_variance.clear();
+  m_lineage_node_filtered_pT.clear();
+  m_lineage_node_dominant_lineage_fraction.clear();
+  m_lineage_node_merge_cost.clear();
+  m_lineage_edge_input_track_index.clear();
+  m_lineage_edge_output_track_index.clear();
+  m_lineage_edge_from_node_id.clear();
+  m_lineage_edge_to_node_id.clear();
+  m_lineage_edge_operation.clear();
+  try {
+    const auto* nodeInputTrackIndices =
+        m_inLineageNodeInputTrackIndex.get();
+    const auto* nodeOutputTrackIndices =
+        m_inLineageNodeOutputTrackIndex.get();
+    const auto* nodeIds = m_inLineageNodeId.get();
+    const auto* nodeSources = m_inLineageNodeSource.get();
+    const auto* nodeOperations = m_inLineageNodeOperation.get();
+    const auto* nodeHitIndices = m_inLineageNodeHitIndex.get();
+    const auto* nodeSurfaceIndices = m_inLineageNodeSurfaceIndex.get();
+    const auto* nodeComponentIds = m_inLineageNodeComponentId.get();
+    const auto* nodeGenerations = m_inLineageNodeGeneration.get();
+    const auto* nodeBhComponentIndices =
+        m_inLineageNodeBhComponentIndex.get();
+    const auto* nodeMeasurementStatuses =
+        m_inLineageNodeMeasurementStatus.get();
+    const auto* nodeFates = m_inLineageNodeFate.get();
+    const auto* nodeNoRadiation = m_inLineageNodeNoRadiation.get();
+    const auto* nodeBestBranch = m_inLineageNodeBestBranch.get();
+    const auto* nodeFinalMixture = m_inLineageNodeFinalMixture.get();
+    const auto* nodeValidity = m_inLineageNodeValid.get();
+    const auto* nodeWeights = m_inLineageNodeWeight.get();
+    const auto* nodePriorWeights = m_inLineageNodePriorWeight.get();
+    const auto* nodeBhWeights = m_inLineageNodeBhWeight.get();
+    const auto* nodeBhMeans = m_inLineageNodeBhMean.get();
+    const auto* nodeBhVariances = m_inLineageNodeBhVariance.get();
+    const auto* nodeMaterialTX0 = m_inLineageNodeMaterialTX0.get();
+    const auto* nodeDChi2 = m_inLineageNodeDChi2.get();
+    const auto* nodeLogDetInnovation =
+        m_inLineageNodeLogDetInnovation.get();
+    const auto* nodeLogUnnormalizedPosterior =
+        m_inLineageNodeLogUnnormalizedPosterior.get();
+    const auto* nodeNormalizedPosterior =
+        m_inLineageNodeNormalizedPosterior.get();
+    const auto* nodePredictedKappa = m_inLineageNodePredictedKappa.get();
+    const auto* nodePredictedKappaVariance =
+        m_inLineageNodePredictedKappaVariance.get();
+    const auto* nodeFilteredKappa = m_inLineageNodeFilteredKappa.get();
+    const auto* nodeFilteredKappaVariance =
+        m_inLineageNodeFilteredKappaVariance.get();
+    const auto* nodeDominantLineageFraction =
+        m_inLineageNodeDominantLineageFraction.get();
+    const auto* nodeMergeCost = m_inLineageNodeMergeCost.get();
+    const std::size_t nodeCount = nodeIds ? nodeIds->size() : 0;
+    auto nodeSizeIsConsistent = [nodeCount](const auto* collection) {
+      return collection && collection->size() == nodeCount;
+    };
+    const bool nodesConsistent = nodeSizeIsConsistent(nodeInputTrackIndices) &&
+        nodeSizeIsConsistent(nodeOutputTrackIndices) &&
+        nodeSizeIsConsistent(nodeSources) &&
+        nodeSizeIsConsistent(nodeOperations) &&
+        nodeSizeIsConsistent(nodeHitIndices) &&
+        nodeSizeIsConsistent(nodeSurfaceIndices) &&
+        nodeSizeIsConsistent(nodeComponentIds) &&
+        nodeSizeIsConsistent(nodeGenerations) &&
+        nodeSizeIsConsistent(nodeBhComponentIndices) &&
+        nodeSizeIsConsistent(nodeMeasurementStatuses) &&
+        nodeSizeIsConsistent(nodeFates) &&
+        nodeSizeIsConsistent(nodeNoRadiation) &&
+        nodeSizeIsConsistent(nodeBestBranch) &&
+        nodeSizeIsConsistent(nodeFinalMixture) &&
+        nodeSizeIsConsistent(nodeValidity) &&
+        nodeSizeIsConsistent(nodeWeights) &&
+        nodeSizeIsConsistent(nodePriorWeights) &&
+        nodeSizeIsConsistent(nodeBhWeights) &&
+        nodeSizeIsConsistent(nodeBhMeans) &&
+        nodeSizeIsConsistent(nodeBhVariances) &&
+        nodeSizeIsConsistent(nodeMaterialTX0) &&
+        nodeSizeIsConsistent(nodeDChi2) &&
+        nodeSizeIsConsistent(nodeLogDetInnovation) &&
+        nodeSizeIsConsistent(nodeLogUnnormalizedPosterior) &&
+        nodeSizeIsConsistent(nodeNormalizedPosterior) &&
+        nodeSizeIsConsistent(nodePredictedKappa) &&
+        nodeSizeIsConsistent(nodePredictedKappaVariance) &&
+        nodeSizeIsConsistent(nodeFilteredKappa) &&
+        nodeSizeIsConsistent(nodeFilteredKappaVariance) &&
+        nodeSizeIsConsistent(nodeDominantLineageFraction) &&
+        nodeSizeIsConsistent(nodeMergeCost);
+
+    const auto* edgeInputTrackIndices =
+        m_inLineageEdgeInputTrackIndex.get();
+    const auto* edgeOutputTrackIndices =
+        m_inLineageEdgeOutputTrackIndex.get();
+    const auto* edgeFromNodeIds = m_inLineageEdgeFromNodeId.get();
+    const auto* edgeToNodeIds = m_inLineageEdgeToNodeId.get();
+    const auto* edgeOperations = m_inLineageEdgeOperation.get();
+    const std::size_t edgeCount = edgeFromNodeIds
+        ? edgeFromNodeIds->size() : 0;
+    auto edgeSizeIsConsistent = [edgeCount](const auto* collection) {
+      return collection && collection->size() == edgeCount;
+    };
+    const bool edgesConsistent = edgeSizeIsConsistent(edgeInputTrackIndices) &&
+        edgeSizeIsConsistent(edgeOutputTrackIndices) &&
+        edgeSizeIsConsistent(edgeToNodeIds) &&
+        edgeSizeIsConsistent(edgeOperations);
+
+    if (!nodesConsistent || !edgesConsistent) {
+      warning() << "Event " << m_iev
+                << ": inconsistent component-lineage graph collections; "
+                   "writing an empty lineage graph"
+                << endmsg;
+    } else {
+      m_lineage_node_input_track_index.assign(
+          nodeInputTrackIndices->begin(), nodeInputTrackIndices->end());
+      m_lineage_node_output_track_index.assign(
+          nodeOutputTrackIndices->begin(), nodeOutputTrackIndices->end());
+      m_lineage_node_id.assign(nodeIds->begin(), nodeIds->end());
+      m_lineage_node_source.assign(nodeSources->begin(), nodeSources->end());
+      m_lineage_node_operation.assign(
+          nodeOperations->begin(), nodeOperations->end());
+      m_lineage_node_hit_index.assign(
+          nodeHitIndices->begin(), nodeHitIndices->end());
+      m_lineage_node_surface_index.assign(
+          nodeSurfaceIndices->begin(), nodeSurfaceIndices->end());
+      m_lineage_node_component_id.assign(
+          nodeComponentIds->begin(), nodeComponentIds->end());
+      m_lineage_node_generation.assign(
+          nodeGenerations->begin(), nodeGenerations->end());
+      m_lineage_node_bh_component_index.assign(
+          nodeBhComponentIndices->begin(), nodeBhComponentIndices->end());
+      m_lineage_node_measurement_status.assign(
+          nodeMeasurementStatuses->begin(), nodeMeasurementStatuses->end());
+      m_lineage_node_fate.assign(nodeFates->begin(), nodeFates->end());
+      m_lineage_node_no_radiation.assign(
+          nodeNoRadiation->begin(), nodeNoRadiation->end());
+      m_lineage_node_best_branch.assign(
+          nodeBestBranch->begin(), nodeBestBranch->end());
+      m_lineage_node_final_mixture.assign(
+          nodeFinalMixture->begin(), nodeFinalMixture->end());
+      m_lineage_node_valid.assign(nodeValidity->begin(), nodeValidity->end());
+      m_lineage_node_weight.assign(nodeWeights->begin(), nodeWeights->end());
+      m_lineage_node_prior_weight.assign(
+          nodePriorWeights->begin(), nodePriorWeights->end());
+      m_lineage_node_bh_weight.assign(
+          nodeBhWeights->begin(), nodeBhWeights->end());
+      m_lineage_node_bh_mean.assign(nodeBhMeans->begin(), nodeBhMeans->end());
+      m_lineage_node_bh_variance.assign(
+          nodeBhVariances->begin(), nodeBhVariances->end());
+      m_lineage_node_material_tx0.assign(
+          nodeMaterialTX0->begin(), nodeMaterialTX0->end());
+      m_lineage_node_dchi2.assign(nodeDChi2->begin(), nodeDChi2->end());
+      m_lineage_node_logdet_innovation.assign(
+          nodeLogDetInnovation->begin(), nodeLogDetInnovation->end());
+      m_lineage_node_log_unnormalized_posterior.assign(
+          nodeLogUnnormalizedPosterior->begin(),
+          nodeLogUnnormalizedPosterior->end());
+      m_lineage_node_normalized_posterior.assign(
+          nodeNormalizedPosterior->begin(), nodeNormalizedPosterior->end());
+      m_lineage_node_predicted_kappa.assign(
+          nodePredictedKappa->begin(), nodePredictedKappa->end());
+      m_lineage_node_predicted_kappa_variance.assign(
+          nodePredictedKappaVariance->begin(),
+          nodePredictedKappaVariance->end());
+      m_lineage_node_filtered_kappa.assign(
+          nodeFilteredKappa->begin(), nodeFilteredKappa->end());
+      m_lineage_node_filtered_kappa_variance.assign(
+          nodeFilteredKappaVariance->begin(),
+          nodeFilteredKappaVariance->end());
+      m_lineage_node_dominant_lineage_fraction.assign(
+          nodeDominantLineageFraction->begin(),
+          nodeDominantLineageFraction->end());
+      m_lineage_node_merge_cost.assign(
+          nodeMergeCost->begin(), nodeMergeCost->end());
+      m_lineage_node_predicted_pT.reserve(nodeCount);
+      m_lineage_node_filtered_pT.reserve(nodeCount);
+      for (std::size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex) {
+        const double predictedKappa = (*nodePredictedKappa)[nodeIndex];
+        const double filteredKappa = (*nodeFilteredKappa)[nodeIndex];
+        m_lineage_node_predicted_pT.push_back(
+            std::isfinite(predictedKappa) &&
+                    std::abs(predictedKappa) > 1.0e-15
+                ? 1.0 / std::abs(predictedKappa)
+                : std::numeric_limits<double>::quiet_NaN());
+        m_lineage_node_filtered_pT.push_back(
+            std::isfinite(filteredKappa) &&
+                    std::abs(filteredKappa) > 1.0e-15
+                ? 1.0 / std::abs(filteredKappa)
+                : std::numeric_limits<double>::quiet_NaN());
+      }
+      m_lineage_edge_input_track_index.assign(
+          edgeInputTrackIndices->begin(), edgeInputTrackIndices->end());
+      m_lineage_edge_output_track_index.assign(
+          edgeOutputTrackIndices->begin(), edgeOutputTrackIndices->end());
+      m_lineage_edge_from_node_id.assign(
+          edgeFromNodeIds->begin(), edgeFromNodeIds->end());
+      m_lineage_edge_to_node_id.assign(
+          edgeToNodeIds->begin(), edgeToNodeIds->end());
+      m_lineage_edge_operation.assign(
+          edgeOperations->begin(), edgeOperations->end());
+      m_lineage_node_n = static_cast<int>(nodeCount);
+      m_lineage_edge_n = static_cast<int>(edgeCount);
+      m_lineage_graph_available = nodeCount > 0 ? 1 : 0;
+    }
+  } catch (...) {
+    // Older producers and methods without a final mixture do not provide a
+    // lineage graph. Keep the default-on tuple branches present and empty.
   }
   m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);

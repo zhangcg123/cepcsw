@@ -47,6 +47,10 @@ struct GsfComponent {
   int       debugId = 0;
   int       debugParentId = -1;
   int       generation = 0;
+  /// Current immutable node in the passive component-lineage DAG.  The node
+  /// record outlives this component when the component is rejected, removed,
+  /// or consumed by a KL merge.  This identifier never steers the fit.
+  int       lineageNodeId = -1;
   /// True only for the lineage that selected the exact no-radiation atom at
   /// every BH convolution. It is protected from cutoff and radiative merges.
   bool      noRadiationLineage = true;

@@ -112,6 +112,100 @@ private:
       m_finalMixtureComponentKappaVariance{
           "GSFFinalMixtureComponentKappaVariance",
           Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeInputTrackIndex{
+          "GSFLineageNodeInputTrackIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeOutputTrackIndex{
+          "GSFLineageNodeOutputTrackIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeId{
+      "GSFLineageNodeId", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeSource{
+      "GSFLineageNodeSource", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeOperation{
+      "GSFLineageNodeOperation", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeHitIndex{
+      "GSFLineageNodeHitIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeSurfaceIndex{
+      "GSFLineageNodeSurfaceIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeComponentId{
+      "GSFLineageNodeComponentId", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeGeneration{
+      "GSFLineageNodeGeneration", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeBhComponentIndex{
+          "GSFLineageNodeBHComponentIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeMeasurementStatus{
+          "GSFLineageNodeMeasurementStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeFate{
+      "GSFLineageNodeFate", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeNoRadiation{
+          "GSFLineageNodeNoRadiation", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeBestBranch{
+          "GSFLineageNodeBestBranch", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeFinalMixture{
+          "GSFLineageNodeFinalMixture", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageNodeValid{
+      "GSFLineageNodeValid", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeWeight{
+      "GSFLineageNodeWeight", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodePriorWeight{
+      "GSFLineageNodePriorWeight", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeBhWeight{
+      "GSFLineageNodeBHWeight", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeBhMean{
+      "GSFLineageNodeBHMean", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeBhVariance{
+      "GSFLineageNodeBHVariance", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeMaterialTX0{
+      "GSFLineageNodeMaterialTX0", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeDChi2{
+      "GSFLineageNodeDChi2", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeLogDetInnovation{
+          "GSFLineageNodeLogDetInnovation", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeLogUnnormalizedPosterior{
+          "GSFLineageNodeLogUnnormalizedPosterior",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeNormalizedPosterior{
+          "GSFLineageNodeNormalizedPosterior",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodePredictedKappa{
+      "GSFLineageNodePredictedKappa", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodePredictedKappaVariance{
+          "GSFLineageNodePredictedKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeFilteredKappa{
+      "GSFLineageNodeFilteredKappa", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeFilteredKappaVariance{
+          "GSFLineageNodeFilteredKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeDominantLineageFraction{
+          "GSFLineageNodeDominantLineageFraction",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeMergeCost{
+      "GSFLineageNodeMergeCost", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageEdgeInputTrackIndex{
+          "GSFLineageEdgeInputTrackIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageEdgeOutputTrackIndex{
+          "GSFLineageEdgeOutputTrackIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageEdgeFromNodeId{
+      "GSFLineageEdgeFromNodeId", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageEdgeToNodeId{
+      "GSFLineageEdgeToNodeId", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_lineageEdgeOperation{
+      "GSFLineageEdgeOperation", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_ecalConstrainedOutputTracks{
       "GSFTracksEcalConstrained", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection>     m_ecalClusters{

@@ -27,7 +27,8 @@ void normalizeWeights(std::vector<GsfComponent*>& comps) {
 }
 
 void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff,
-                     bool protectIdentity) {
+                     bool protectIdentity,
+                     const RemovalObserver& observer) {
   if (comps.empty() || cutoff <= 0.0) return;
   normalizeWeights(comps);
   auto* largest = *std::max_element(
@@ -41,6 +42,7 @@ void removeLowWeight(std::vector<GsfComponent*>& comps, double cutoff,
         (protectIdentity && component->noRadiationLineage)) {
       *out++ = component;
     } else {
+      if (observer) observer(*component);
       delete component;
     }
   }
@@ -246,7 +248,8 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
 void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
             bool protectIdentity,
             const std::function<void(const std::string&)>& logger,
-            const std::string& mergeCost) {
+            const std::string& mergeCost,
+            const MergeObserver& observer) {
   if (maxN < 1) maxN = 1;
   normalizeWeights(comps);
   std::string normalizedMergeCost = mergeCost;
@@ -290,7 +293,12 @@ void reduce(std::vector<GsfComponent*>& comps, int maxN, double bz,
     // real measurement history as the representative branch.
     if (comps[bi]->weight < comps[bj]->weight)
       std::swap(bi, bj);
+    const int keepSourceNodeId = comps[bi]->lineageNodeId;
+    const int dropSourceNodeId = comps[bj]->lineageNodeId;
     momentMerge(comps[bi], comps[bj], bz);
+    if (observer) {
+      observer(*comps[bi], keepSourceNodeId, dropSourceNodeId, bestDist);
+    }
 
     if (logger) {
       const double km = comps[bi]->helixAtLastSite(bz).GetKappa();

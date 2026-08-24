@@ -332,6 +332,15 @@ pT. They contain every published output track in the event and are empty for
 forward, CMS-like, and global-loss jobs. These vectors are sufficient to
 reconstruct the final one-dimensional pT marginal; the exact transformation
 and branch contract are maintained in the package README.
+It also creates `lineage_node_*` and `lineage_edge_*` vectors automatically
+for smoother/reverse jobs, with no card property. These preserve every
+evaluated seed, BH child, measurement result, and KL output, including nodes
+later rejected, removed by cutoff, or consumed by a merge. Edge records retain
+split, measurement, two-parent merge, and forward-to-reverse-seed ancestry.
+Forward, CMS-like, and global-loss jobs keep the branches present but empty.
+The numeric code maps, graph key, state fields, and reconstruction contract
+are maintained in `Reconstruction/RecGsfTracking/README.md`; the workflow
+uses `keep *`, so no explicit output-command list is required here.
 The BestBranch schema follows the same presence-only rule for
 `GSFTracksBestBranch`; it is unavailable/zero for CMS-like and global-loss.
 Those two methods retain their generic `gsf_*` fields from `GSFTracks` and

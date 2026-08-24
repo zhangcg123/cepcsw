@@ -138,6 +138,7 @@ GsfComponent* GsfComponent::clone() const {
   c->debugId = debugId;
   c->debugParentId = debugParentId;
   c->generation = generation;
+  c->lineageNodeId = lineageNodeId;
   c->noRadiationLineage = noRadiationLineage;
   c->lastReverseProcessHit = lastReverseProcessHit;
   c->lastReverseProcessComponent = lastReverseProcessComponent;

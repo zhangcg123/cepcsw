@@ -73,6 +73,105 @@ private:
       m_inFinalMixtureComponentKappaVariance{
           "GSFFinalMixtureComponentKappaVariance",
           Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeInputTrackIndex{
+          "GSFLineageNodeInputTrackIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeOutputTrackIndex{
+          "GSFLineageNodeOutputTrackIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageNodeId{
+      "GSFLineageNodeId", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageNodeSource{
+      "GSFLineageNodeSource", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageNodeOperation{
+      "GSFLineageNodeOperation", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageNodeHitIndex{
+      "GSFLineageNodeHitIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeSurfaceIndex{
+          "GSFLineageNodeSurfaceIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeComponentId{
+          "GSFLineageNodeComponentId", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeGeneration{
+          "GSFLineageNodeGeneration", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeBhComponentIndex{
+          "GSFLineageNodeBHComponentIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeMeasurementStatus{
+          "GSFLineageNodeMeasurementStatus", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageNodeFate{
+      "GSFLineageNodeFate", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeNoRadiation{
+          "GSFLineageNodeNoRadiation", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeBestBranch{
+          "GSFLineageNodeBestBranch", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeFinalMixture{
+          "GSFLineageNodeFinalMixture", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageNodeValid{
+      "GSFLineageNodeValid", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeWeight{
+      "GSFLineageNodeWeight", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodePriorWeight{
+      "GSFLineageNodePriorWeight", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeBhWeight{
+      "GSFLineageNodeBHWeight", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeBhMean{
+      "GSFLineageNodeBHMean", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeBhVariance{
+      "GSFLineageNodeBHVariance", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeMaterialTX0{
+      "GSFLineageNodeMaterialTX0", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeDChi2{
+      "GSFLineageNodeDChi2", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeLogDetInnovation{
+          "GSFLineageNodeLogDetInnovation", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeLogUnnormalizedPosterior{
+          "GSFLineageNodeLogUnnormalizedPosterior",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeNormalizedPosterior{
+          "GSFLineageNodeNormalizedPosterior",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodePredictedKappa{
+      "GSFLineageNodePredictedKappa", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodePredictedKappaVariance{
+          "GSFLineageNodePredictedKappaVariance",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeFilteredKappa{
+      "GSFLineageNodeFilteredKappa", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeFilteredKappaVariance{
+          "GSFLineageNodeFilteredKappaVariance",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeDominantLineageFraction{
+          "GSFLineageNodeDominantLineageFraction",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeMergeCost{
+      "GSFLineageNodeMergeCost", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageEdgeInputTrackIndex{
+          "GSFLineageEdgeInputTrackIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageEdgeOutputTrackIndex{
+          "GSFLineageEdgeOutputTrackIndex", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageEdgeFromNodeId{
+          "GSFLineageEdgeFromNodeId", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_inLineageEdgeToNodeId{
+      "GSFLineageEdgeToNodeId", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageEdgeOperation{
+          "GSFLineageEdgeOperation", Gaudi::DataHandle::Reader, this};
 
   Gaudi::Property<std::string> m_outFileName{this, "OutputFile",
       "gsf_tuple.root", "Output ROOT file name"};
@@ -161,6 +260,49 @@ private:
   std::vector<double> m_final_mixture_component_kappa;
   std::vector<double> m_final_mixture_component_kappa_variance;
   std::vector<double> m_final_mixture_component_pT;
+  // Complete passive component-lineage DAG for smoother/reverse workflows.
+  int m_lineage_graph_available = 0;
+  int m_lineage_node_n = 0;
+  std::vector<int> m_lineage_node_input_track_index;
+  std::vector<int> m_lineage_node_output_track_index;
+  std::vector<int> m_lineage_node_id;
+  std::vector<int> m_lineage_node_source;
+  std::vector<int> m_lineage_node_operation;
+  std::vector<int> m_lineage_node_hit_index;
+  std::vector<int> m_lineage_node_surface_index;
+  std::vector<int> m_lineage_node_component_id;
+  std::vector<int> m_lineage_node_generation;
+  std::vector<int> m_lineage_node_bh_component_index;
+  std::vector<int> m_lineage_node_measurement_status;
+  std::vector<int> m_lineage_node_fate;
+  std::vector<int> m_lineage_node_no_radiation;
+  std::vector<int> m_lineage_node_best_branch;
+  std::vector<int> m_lineage_node_final_mixture;
+  std::vector<int> m_lineage_node_valid;
+  std::vector<double> m_lineage_node_weight;
+  std::vector<double> m_lineage_node_prior_weight;
+  std::vector<double> m_lineage_node_bh_weight;
+  std::vector<double> m_lineage_node_bh_mean;
+  std::vector<double> m_lineage_node_bh_variance;
+  std::vector<double> m_lineage_node_material_tx0;
+  std::vector<double> m_lineage_node_dchi2;
+  std::vector<double> m_lineage_node_logdet_innovation;
+  std::vector<double> m_lineage_node_log_unnormalized_posterior;
+  std::vector<double> m_lineage_node_normalized_posterior;
+  std::vector<double> m_lineage_node_predicted_kappa;
+  std::vector<double> m_lineage_node_predicted_kappa_variance;
+  std::vector<double> m_lineage_node_predicted_pT;
+  std::vector<double> m_lineage_node_filtered_kappa;
+  std::vector<double> m_lineage_node_filtered_kappa_variance;
+  std::vector<double> m_lineage_node_filtered_pT;
+  std::vector<double> m_lineage_node_dominant_lineage_fraction;
+  std::vector<double> m_lineage_node_merge_cost;
+  int m_lineage_edge_n = 0;
+  std::vector<int> m_lineage_edge_input_track_index;
+  std::vector<int> m_lineage_edge_output_track_index;
+  std::vector<int> m_lineage_edge_from_node_id;
+  std::vector<int> m_lineage_edge_to_node_id;
+  std::vector<int> m_lineage_edge_operation;
   // truth BH-loss oracle scope for CompleteTracks index 0
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);

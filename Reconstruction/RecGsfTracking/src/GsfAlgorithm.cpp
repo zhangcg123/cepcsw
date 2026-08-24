@@ -1118,6 +1118,256 @@ enum class FinalMixtureComponentSource : std::int32_t {
   ReverseFiltering = 2,
 };
 
+enum class LineageNodeSource : std::int32_t {
+  ForwardFiltering = 1,
+  ReverseFiltering = 2,
+};
+
+enum class LineageNodeOperation : std::int32_t {
+  Seed = 1,
+  BetheHeitlerSplit = 2,
+  Measurement = 3,
+  KlMerge = 4,
+};
+
+enum class LineageNodeFate : std::int32_t {
+  Active = 0,
+  Advanced = 1,
+  MeasurementRejected = 2,
+  WeightCutoff = 3,
+  KlMerged = 4,
+  FinalSurvivor = 5,
+  TrackAbandoned = 6,
+};
+
+enum class LineageEdgeOperation : std::int32_t {
+  BetheHeitlerSplit = 1,
+  Measurement = 2,
+  KlMerge = 3,
+  ReverseSeed = 4,
+};
+
+struct LineageNodeRecord {
+  std::int32_t nodeId = -1;
+  std::int32_t source = 0;
+  std::int32_t operation = 0;
+  std::int32_t hitIndex = -1;
+  std::int32_t surfaceIndex = -1;
+  std::int32_t componentId = -1;
+  std::int32_t generation = 0;
+  std::int32_t bhComponentIndex = -1;
+  std::int32_t measurementStatus = -1;
+  std::int32_t fate = static_cast<std::int32_t>(LineageNodeFate::Active);
+  std::int32_t noRadiationLineage = 0;
+  std::int32_t bestBranch = 0;
+  std::int32_t finalMixture = 0;
+  std::int32_t valid = 0;
+  double weight = std::numeric_limits<double>::quiet_NaN();
+  double priorWeight = std::numeric_limits<double>::quiet_NaN();
+  double bhWeight = std::numeric_limits<double>::quiet_NaN();
+  double bhMean = std::numeric_limits<double>::quiet_NaN();
+  double bhVariance = std::numeric_limits<double>::quiet_NaN();
+  double materialTX0 = std::numeric_limits<double>::quiet_NaN();
+  double dchi2 = std::numeric_limits<double>::quiet_NaN();
+  double logDetInnovation = std::numeric_limits<double>::quiet_NaN();
+  double logUnnormalizedPosterior =
+      std::numeric_limits<double>::quiet_NaN();
+  double normalizedPosterior = std::numeric_limits<double>::quiet_NaN();
+  double predictedKappa = std::numeric_limits<double>::quiet_NaN();
+  double predictedKappaVariance = std::numeric_limits<double>::quiet_NaN();
+  double filteredKappa = std::numeric_limits<double>::quiet_NaN();
+  double filteredKappaVariance = std::numeric_limits<double>::quiet_NaN();
+  double dominantLineageFraction =
+      std::numeric_limits<double>::quiet_NaN();
+  double mergeCost = std::numeric_limits<double>::quiet_NaN();
+};
+
+struct LineageEdgeRecord {
+  std::int32_t fromNodeId = -1;
+  std::int32_t toNodeId = -1;
+  std::int32_t operation = 0;
+};
+
+class LineageGraphRecorder {
+public:
+  LineageGraphRecorder(bool enabled, double bz) : m_enabled(enabled), m_bz(bz) {}
+
+  bool enabled() const { return m_enabled; }
+  const std::vector<LineageNodeRecord>& nodes() const { return m_nodes; }
+  const std::vector<LineageEdgeRecord>& edges() const { return m_edges; }
+
+  int seed(GsfComponent& component, LineageNodeSource source, int hitIndex,
+           int surfaceIndex) {
+    return appendNode(component, source, LineageNodeOperation::Seed,
+                      hitIndex, surfaceIndex);
+  }
+
+  int split(GsfComponent& child, int parentNodeId, LineageNodeSource source,
+            int hitIndex, int surfaceIndex, int bhComponentIndex,
+            const BetheHeitlerMixtureComponent& bh, double materialTX0) {
+    const int nodeId = appendNode(child, source,
+        LineageNodeOperation::BetheHeitlerSplit, hitIndex, surfaceIndex);
+    if (nodeId < 0) return nodeId;
+    auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
+    node.priorWeight = validNode(parentNodeId)
+        ? m_nodes[static_cast<std::size_t>(parentNodeId)].weight
+        : std::numeric_limits<double>::quiet_NaN();
+    node.bhComponentIndex = bhComponentIndex;
+    node.bhWeight = bh.weight;
+    node.bhMean = bh.mean;
+    node.bhVariance = bh.variance;
+    node.materialTX0 = materialTX0;
+    addEdge(parentNodeId, nodeId, LineageEdgeOperation::BetheHeitlerSplit);
+    return nodeId;
+  }
+
+  int measurement(GsfComponent& component, int parentNodeId,
+                  LineageNodeSource source, int hitIndex, int surfaceIndex,
+                  int status, double priorWeight, double dchi2,
+                  double logDetInnovation, double logPosterior,
+                  const MarlinTrk::MeasurementUpdate* update) {
+    const int nodeId = appendNode(component, source,
+        LineageNodeOperation::Measurement, hitIndex, surfaceIndex);
+    if (nodeId < 0) return nodeId;
+    auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
+    node.measurementStatus = status;
+    node.priorWeight = priorWeight;
+    node.dchi2 = dchi2;
+    node.logDetInnovation = logDetInnovation;
+    node.logUnnormalizedPosterior = logPosterior;
+    if (update && update->predictedState.rows >= 5 &&
+        update->predictedState.cols == 1 &&
+        update->predictedState.values.size() >= 5) {
+      node.predictedKappa = update->predictedState.values[2];
+    }
+    if (update && update->predictedCovariance.rows >= 5 &&
+        update->predictedCovariance.cols >= 5 &&
+        update->predictedCovariance.values.size() >=
+            static_cast<std::size_t>(update->predictedCovariance.rows *
+                                     update->predictedCovariance.cols)) {
+      node.predictedKappaVariance =
+          update->predictedCovariance.values[
+              2 * update->predictedCovariance.cols + 2];
+    }
+    addEdge(parentNodeId, nodeId, LineageEdgeOperation::Measurement);
+    if (status == 0) mark(nodeId, LineageNodeFate::MeasurementRejected);
+    return nodeId;
+  }
+
+  int merge(GsfComponent& merged, int keepSourceNodeId,
+            int dropSourceNodeId, LineageNodeSource source, int hitIndex,
+            int surfaceIndex, double mergeCost) {
+    mark(keepSourceNodeId, LineageNodeFate::KlMerged);
+    mark(dropSourceNodeId, LineageNodeFate::KlMerged);
+    const int nodeId = appendNode(merged, source,
+        LineageNodeOperation::KlMerge, hitIndex, surfaceIndex);
+    if (nodeId < 0) return nodeId;
+    auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
+    node.mergeCost = mergeCost;
+    addEdge(keepSourceNodeId, nodeId, LineageEdgeOperation::KlMerge, false);
+    addEdge(dropSourceNodeId, nodeId, LineageEdgeOperation::KlMerge, false);
+    return nodeId;
+  }
+
+  int reverseSeed(GsfComponent& component, int forwardNodeId, int hitIndex,
+                  int surfaceIndex) {
+    const int nodeId = seed(component, LineageNodeSource::ReverseFiltering,
+                            hitIndex, surfaceIndex);
+    addEdge(forwardNodeId, nodeId, LineageEdgeOperation::ReverseSeed);
+    return nodeId;
+  }
+
+  void setNormalizedPosterior(int nodeId, double weight) {
+    if (!validNode(nodeId)) return;
+    auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
+    node.normalizedPosterior = weight;
+    node.weight = weight;
+  }
+
+  void setWeight(int nodeId, double weight) {
+    if (validNode(nodeId))
+      m_nodes[static_cast<std::size_t>(nodeId)].weight = weight;
+  }
+
+  void mark(int nodeId, LineageNodeFate fate) {
+    if (!validNode(nodeId)) return;
+    m_nodes[static_cast<std::size_t>(nodeId)].fate =
+        static_cast<std::int32_t>(fate);
+  }
+
+  void markFinal(const std::vector<GsfComponent*>& components,
+                 const GsfComponent* best) {
+    for (const auto* component : components) {
+      if (!component || !validNode(component->lineageNodeId)) continue;
+      auto& node = m_nodes[static_cast<std::size_t>(component->lineageNodeId)];
+      node.fate = static_cast<std::int32_t>(
+          LineageNodeFate::FinalSurvivor);
+      node.finalMixture = 1;
+      node.bestBranch = component == best ? 1 : 0;
+      node.weight = component->weight;
+    }
+  }
+
+  void markAbandoned(const std::vector<GsfComponent*>& components) {
+    for (const auto* component : components)
+      if (component) mark(component->lineageNodeId,
+                          LineageNodeFate::TrackAbandoned);
+  }
+
+private:
+  bool validNode(int nodeId) const {
+    return m_enabled && nodeId >= 0 &&
+        nodeId < static_cast<int>(m_nodes.size());
+  }
+
+  int appendNode(GsfComponent& component, LineageNodeSource source,
+                 LineageNodeOperation operation, int hitIndex,
+                 int surfaceIndex) {
+    if (!m_enabled) {
+      component.lineageNodeId = -1;
+      return -1;
+    }
+    LineageNodeRecord node;
+    node.nodeId = static_cast<std::int32_t>(m_nodes.size());
+    node.source = static_cast<std::int32_t>(source);
+    node.operation = static_cast<std::int32_t>(operation);
+    node.hitIndex = hitIndex;
+    node.surfaceIndex = surfaceIndex;
+    node.componentId = component.debugId;
+    node.generation = component.generation;
+    node.noRadiationLineage = component.noRadiationLineage ? 1 : 0;
+    node.weight = component.weight;
+    node.dominantLineageFraction = component.dominantLineageFraction;
+    const auto helix = component.helixAtLastSite(m_bz);
+    const auto covariance = component.covAtLastSite(m_bz);
+    node.filteredKappa = helix.GetKappa();
+    if (covariance.GetNrows() >= 5 && covariance.GetNcols() >= 5)
+      node.filteredKappaVariance = covariance(2, 2);
+    node.valid = std::isfinite(node.filteredKappa) &&
+        std::isfinite(node.filteredKappaVariance) ? 1 : 0;
+    m_nodes.push_back(node);
+    component.lineageNodeId = node.nodeId;
+    return node.nodeId;
+  }
+
+  void addEdge(int fromNodeId, int toNodeId, LineageEdgeOperation operation,
+               bool advanceSource = true) {
+    if (!validNode(fromNodeId) || !validNode(toNodeId)) return;
+    m_edges.push_back({fromNodeId, toNodeId,
+                       static_cast<std::int32_t>(operation)});
+    if (advanceSource &&
+        m_nodes[static_cast<std::size_t>(fromNodeId)].fate ==
+            static_cast<std::int32_t>(LineageNodeFate::Active)) {
+      mark(fromNodeId, LineageNodeFate::Advanced);
+    }
+  }
+
+  bool m_enabled = false;
+  double m_bz = 0.0;
+  std::vector<LineageNodeRecord> m_nodes;
+  std::vector<LineageEdgeRecord> m_edges;
+};
+
 struct FinalMixtureComponentRecord {
   std::int32_t componentIndex = -1;
   std::int32_t componentID = -1;
@@ -2173,6 +2423,57 @@ StatusCode RecGsfTracking::execute() {
       m_finalMixtureComponentKappa.createAndPut();
   auto* finalMixtureComponentKappaVariance =
       m_finalMixtureComponentKappaVariance.createAndPut();
+  auto* lineageNodeInputTrackIndex =
+      m_lineageNodeInputTrackIndex.createAndPut();
+  auto* lineageNodeOutputTrackIndex =
+      m_lineageNodeOutputTrackIndex.createAndPut();
+  auto* lineageNodeId = m_lineageNodeId.createAndPut();
+  auto* lineageNodeSource = m_lineageNodeSource.createAndPut();
+  auto* lineageNodeOperation = m_lineageNodeOperation.createAndPut();
+  auto* lineageNodeHitIndex = m_lineageNodeHitIndex.createAndPut();
+  auto* lineageNodeSurfaceIndex = m_lineageNodeSurfaceIndex.createAndPut();
+  auto* lineageNodeComponentId = m_lineageNodeComponentId.createAndPut();
+  auto* lineageNodeGeneration = m_lineageNodeGeneration.createAndPut();
+  auto* lineageNodeBhComponentIndex =
+      m_lineageNodeBhComponentIndex.createAndPut();
+  auto* lineageNodeMeasurementStatus =
+      m_lineageNodeMeasurementStatus.createAndPut();
+  auto* lineageNodeFate = m_lineageNodeFate.createAndPut();
+  auto* lineageNodeNoRadiation = m_lineageNodeNoRadiation.createAndPut();
+  auto* lineageNodeBestBranch = m_lineageNodeBestBranch.createAndPut();
+  auto* lineageNodeFinalMixture = m_lineageNodeFinalMixture.createAndPut();
+  auto* lineageNodeValid = m_lineageNodeValid.createAndPut();
+  auto* lineageNodeWeight = m_lineageNodeWeight.createAndPut();
+  auto* lineageNodePriorWeight = m_lineageNodePriorWeight.createAndPut();
+  auto* lineageNodeBhWeight = m_lineageNodeBhWeight.createAndPut();
+  auto* lineageNodeBhMean = m_lineageNodeBhMean.createAndPut();
+  auto* lineageNodeBhVariance = m_lineageNodeBhVariance.createAndPut();
+  auto* lineageNodeMaterialTX0 = m_lineageNodeMaterialTX0.createAndPut();
+  auto* lineageNodeDChi2 = m_lineageNodeDChi2.createAndPut();
+  auto* lineageNodeLogDetInnovation =
+      m_lineageNodeLogDetInnovation.createAndPut();
+  auto* lineageNodeLogUnnormalizedPosterior =
+      m_lineageNodeLogUnnormalizedPosterior.createAndPut();
+  auto* lineageNodeNormalizedPosterior =
+      m_lineageNodeNormalizedPosterior.createAndPut();
+  auto* lineageNodePredictedKappa =
+      m_lineageNodePredictedKappa.createAndPut();
+  auto* lineageNodePredictedKappaVariance =
+      m_lineageNodePredictedKappaVariance.createAndPut();
+  auto* lineageNodeFilteredKappa =
+      m_lineageNodeFilteredKappa.createAndPut();
+  auto* lineageNodeFilteredKappaVariance =
+      m_lineageNodeFilteredKappaVariance.createAndPut();
+  auto* lineageNodeDominantLineageFraction =
+      m_lineageNodeDominantLineageFraction.createAndPut();
+  auto* lineageNodeMergeCost = m_lineageNodeMergeCost.createAndPut();
+  auto* lineageEdgeInputTrackIndex =
+      m_lineageEdgeInputTrackIndex.createAndPut();
+  auto* lineageEdgeOutputTrackIndex =
+      m_lineageEdgeOutputTrackIndex.createAndPut();
+  auto* lineageEdgeFromNodeId = m_lineageEdgeFromNodeId.createAndPut();
+  auto* lineageEdgeToNodeId = m_lineageEdgeToNodeId.createAndPut();
+  auto* lineageEdgeOperation = m_lineageEdgeOperation.createAndPut();
   auto persistFinalMixtureComponents = [&](const auto& records,
                                            std::int32_t inputTrackIndex,
                                            std::int32_t outputTrackIndex) {
@@ -2187,6 +2488,55 @@ StatusCode RecGsfTracking::execute() {
       finalMixtureComponentKappa->push_back(record.kappa);
       finalMixtureComponentKappaVariance->push_back(
           record.kappaVariance);
+    }
+  };
+  auto persistLineageGraph = [&](const LineageGraphRecorder& graph,
+                                 std::int32_t inputTrackIndex,
+                                 std::int32_t outputTrackIndex) {
+    for (const auto& node : graph.nodes()) {
+      lineageNodeInputTrackIndex->push_back(inputTrackIndex);
+      lineageNodeOutputTrackIndex->push_back(outputTrackIndex);
+      lineageNodeId->push_back(node.nodeId);
+      lineageNodeSource->push_back(node.source);
+      lineageNodeOperation->push_back(node.operation);
+      lineageNodeHitIndex->push_back(node.hitIndex);
+      lineageNodeSurfaceIndex->push_back(node.surfaceIndex);
+      lineageNodeComponentId->push_back(node.componentId);
+      lineageNodeGeneration->push_back(node.generation);
+      lineageNodeBhComponentIndex->push_back(node.bhComponentIndex);
+      lineageNodeMeasurementStatus->push_back(node.measurementStatus);
+      lineageNodeFate->push_back(node.fate);
+      lineageNodeNoRadiation->push_back(node.noRadiationLineage);
+      lineageNodeBestBranch->push_back(node.bestBranch);
+      lineageNodeFinalMixture->push_back(node.finalMixture);
+      lineageNodeValid->push_back(node.valid);
+      lineageNodeWeight->push_back(node.weight);
+      lineageNodePriorWeight->push_back(node.priorWeight);
+      lineageNodeBhWeight->push_back(node.bhWeight);
+      lineageNodeBhMean->push_back(node.bhMean);
+      lineageNodeBhVariance->push_back(node.bhVariance);
+      lineageNodeMaterialTX0->push_back(node.materialTX0);
+      lineageNodeDChi2->push_back(node.dchi2);
+      lineageNodeLogDetInnovation->push_back(node.logDetInnovation);
+      lineageNodeLogUnnormalizedPosterior->push_back(
+          node.logUnnormalizedPosterior);
+      lineageNodeNormalizedPosterior->push_back(node.normalizedPosterior);
+      lineageNodePredictedKappa->push_back(node.predictedKappa);
+      lineageNodePredictedKappaVariance->push_back(
+          node.predictedKappaVariance);
+      lineageNodeFilteredKappa->push_back(node.filteredKappa);
+      lineageNodeFilteredKappaVariance->push_back(
+          node.filteredKappaVariance);
+      lineageNodeDominantLineageFraction->push_back(
+          node.dominantLineageFraction);
+      lineageNodeMergeCost->push_back(node.mergeCost);
+    }
+    for (const auto& edge : graph.edges()) {
+      lineageEdgeInputTrackIndex->push_back(inputTrackIndex);
+      lineageEdgeOutputTrackIndex->push_back(outputTrackIndex);
+      lineageEdgeFromNodeId->push_back(edge.fromNodeId);
+      lineageEdgeToNodeId->push_back(edge.toNodeId);
+      lineageEdgeOperation->push_back(edge.operation);
     }
   };
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
@@ -2608,6 +2958,12 @@ StatusCode RecGsfTracking::execute() {
                 % minimumStepCosine << endmsg;
     }
 
+    // The complete component-lineage DAG is an automatic passive output for
+    // the two workflows that publish a final mixture.  Forward-only and
+    // CMS-like runs keep the collections present but empty.
+    LineageGraphRecorder lineageGraph(
+        m_reverseFiltering.value() || m_gaussianSumSmoothing.value(), bz);
+
     // ---- Step 3: compute kappa seed ----
     double alpha = bz * 2.99792458e-4;
     double kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;
@@ -2626,6 +2982,9 @@ StatusCode RecGsfTracking::execute() {
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
+    initComp->lineageNodeId = lineageGraph.seed(
+        *initComp, LineageNodeSource::ForwardFiltering, 0,
+        hits[0].surfaceIndex);
 
     std::vector<GsfComponent*> comps = {initComp};
     std::vector<GsfSmootherNode> smootherGraph;
@@ -2761,10 +3120,14 @@ StatusCode RecGsfTracking::execute() {
           seedMaterial.pathTX0 > m_bhSplitThresh.value() && m_isElectron) {
         BetheHeitlerSplitter splitter(m_bhModel.value());
         const int parentDebugId = initComp->debugId;
+        const int parentLineageNodeId = initComp->lineageNodeId;
+        std::vector<BetheHeitlerMixtureComponent> appliedMixture;
         auto children = applyTruthBHLossOverride
             ? splitter.splitWithRetainedFraction(
-                  initComp, truthRetainedFraction(0, 1), bz, false)
-            : splitter.split(initComp, seedMaterial.pathTX0, bz, false);
+                  initComp, truthRetainedFraction(0, 1), bz, false,
+                  &appliedMixture)
+            : splitter.split(initComp, seedMaterial.pathTX0, bz, false,
+                             &appliedMixture);
         if (applyTruthBHLossOverride) ++m_truthBHLossOverrideCalls;
         comps.clear();
         for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
@@ -2772,6 +3135,13 @@ StatusCode RecGsfTracking::execute() {
           child->debugId = nextComponentDebugId++;
           child->debugParentId = parentDebugId;
           child->generation = 1;
+          if (childIndex < appliedMixture.size()) {
+            child->lineageNodeId = lineageGraph.split(
+                *child, parentLineageNodeId,
+                LineageNodeSource::ForwardFiltering, 0,
+                hits[0].surfaceIndex, static_cast<int>(childIndex),
+                appliedMixture[childIndex], seedMaterial.pathTX0);
+          }
           if (trackSurfaceLineageMass)
             child->forwardProcessModeFractions[{0, (int)childIndex}] = 1.0;
           comps.push_back(child);
@@ -2828,6 +3198,7 @@ StatusCode RecGsfTracking::execute() {
       int nAccept = 0, nRecover = 0, nReject = 0;
       double minDChi2 = 1e300, maxDChi2 = -1e300;
       for (auto* comp : comps) {
+        const int parentLineageNodeId = comp->lineageNodeId;
         if (m_gsfMarlinTrkSystem) {
           bool baselineAccepted = false;
           double dchi = 0.0;
@@ -2878,6 +3249,18 @@ StatusCode RecGsfTracking::execute() {
                   *comp, static_cast<int>(ih), smootherGraph) < 0) {
             baselineAccepted = false;
           }
+
+          const double unavailable =
+              std::numeric_limits<double>::quiet_NaN();
+          comp->lineageNodeId = lineageGraph.measurement(
+              *comp, parentLineageNodeId,
+              LineageNodeSource::ForwardFiltering, static_cast<int>(ih),
+              hi.surfaceIndex, baselineAccepted ? 1 : 0, beforeWeight,
+              measurementUpdate.valid ? dchi : unavailable,
+              measurementUpdate.valid
+                  ? measurementUpdate.logDetInnovation : unavailable,
+              baselineAccepted ? posteriorLogWeight : unavailable,
+              &measurementUpdate);
 
           if (baselineAccepted) {
             comp->fitChi2 += dchi;
@@ -2942,6 +3325,13 @@ StatusCode RecGsfTracking::execute() {
         else if (auto* ph = dynamic_cast<DDPlanarHit*>(hi.kalHit))
           khClone = new DDPlanarHit(*ph);
         else {
+          comp->lineageNodeId = lineageGraph.measurement(
+              *comp, parentLineageNodeId,
+              LineageNodeSource::ForwardFiltering, static_cast<int>(ih),
+              hi.surfaceIndex, 0, comp->weight,
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::quiet_NaN(), nullptr);
           delete comp;
           continue;
         }
@@ -2953,6 +3343,12 @@ StatusCode RecGsfTracking::execute() {
           double dchi = st->GetDeltaChi2();
           const double oldWeight = comp->weight;
           const double posteriorLogWeight = std::log(oldWeight) - 0.5 * std::min(dchi, 100.0);
+          comp->lineageNodeId = lineageGraph.measurement(
+              *comp, parentLineageNodeId,
+              LineageNodeSource::ForwardFiltering, static_cast<int>(ih),
+              hi.surfaceIndex, 1, oldWeight, dchi,
+              std::numeric_limits<double>::quiet_NaN(), posteriorLogWeight,
+              nullptr);
           nAccept++;
           minDChi2 = std::min(minDChi2, dchi);
           maxDChi2 = std::max(maxDChi2, dchi);
@@ -2988,6 +3384,13 @@ StatusCode RecGsfTracking::execute() {
           }
           if (!recovered) {
             nReject++;
+            comp->lineageNodeId = lineageGraph.measurement(
+                *comp, parentLineageNodeId,
+                LineageNodeSource::ForwardFiltering, static_cast<int>(ih),
+                hi.surfaceIndex, 0, comp->weight,
+                std::numeric_limits<double>::quiet_NaN(),
+                std::numeric_limits<double>::quiet_NaN(),
+                std::numeric_limits<double>::quiet_NaN(), nullptr);
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump &&
                 (justSplit || (int)comps.size() > 1)) {
               info() << boost::format("      hit-update reject comp at hit=%d") % (int)ih << endmsg;
@@ -2996,6 +3399,13 @@ StatusCode RecGsfTracking::execute() {
             delete comp;
           } else {
             nRecover++;
+            comp->lineageNodeId = lineageGraph.measurement(
+                *comp, parentLineageNodeId,
+                LineageNodeSource::ForwardFiltering, static_cast<int>(ih),
+                hi.surfaceIndex, 2, comp->weight,
+                std::numeric_limits<double>::quiet_NaN(),
+                std::numeric_limits<double>::quiet_NaN(),
+                std::log(comp->weight), nullptr);
             if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
               dchi2s.push_back(-1.0);
             }
@@ -3057,6 +3467,9 @@ StatusCode RecGsfTracking::execute() {
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/raw", (int)ih, comps);
       GsfMixture::normalizeWeights(comps);
+      for (const auto* component : comps)
+        lineageGraph.setNormalizedPosterior(
+            component->lineageNodeId, component->weight);
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("after-hit/norm", (int)ih, comps);
 
@@ -3065,9 +3478,13 @@ StatusCode RecGsfTracking::execute() {
       // innovation likelihood, so neither the low-weight cutoff nor KL moment
       // merging can discard/aggregate a child before the hit evaluates it.
       const int beforeCutoff = (int)comps.size();
+      auto cutoffObserver = [&](const GsfComponent& component) {
+        lineageGraph.mark(component.lineageNodeId,
+                          LineageNodeFate::WeightCutoff);
+      };
       GsfMixture::removeLowWeight(
           comps, m_componentWeightCutoff.value(),
-          m_protectIdentityLineage.value());
+          m_protectIdentityLineage.value(), cutoffObserver);
       if (m_verboseDump && m_verboseSplitDump &&
           (int)comps.size() != beforeCutoff) {
         info() << boost::format(
@@ -3093,14 +3510,26 @@ StatusCode RecGsfTracking::execute() {
         auto reductionLogger = [&](const std::string& line) {
           if (m_verboseDump && m_verboseSplitDump) info() << line << endmsg;
         };
+        auto reductionObserver = [&](GsfComponent& merged,
+                                     int keepSourceNodeId,
+                                     int dropSourceNodeId,
+                                     double mergeCost) {
+          merged.lineageNodeId = lineageGraph.merge(
+              merged, keepSourceNodeId, dropSourceNodeId,
+              LineageNodeSource::ForwardFiltering,
+              static_cast<int>(ih), hi.surfaceIndex, mergeCost);
+        };
         GsfMixture::reduce(
             comps, reductionTarget, bz,
             m_protectIdentityLineage.value(), reductionLogger,
-            m_reductionMergeCost.value());
+            m_reductionMergeCost.value(), reductionObserver);
         ++nReductions;
         didReduceHit = true;
         dumpComponents("posterior-post-reduce", (int)ih, comps);
         GsfMixture::normalizeWeights(comps);
+        for (const auto* component : comps)
+          lineageGraph.setWeight(component->lineageNodeId,
+                                 component->weight);
         dumpComponents("posterior-post-reduce/norm", (int)ih, comps);
       }
       if (m_gaussianSumSmoothing.value() &&
@@ -3192,15 +3621,18 @@ StatusCode RecGsfTracking::execute() {
             continue;
           }
           const int parentDebugId = comp->debugId;
+          const int parentLineageNodeId = comp->lineageNodeId;
           const int childGeneration = comp->generation + 1;
           const double parentKappa = comp->helixAtLastSite(bz).GetKappa();
+          std::vector<BetheHeitlerMixtureComponent> appliedMixture;
           auto children = applyTruthBHLossOverride
               ? bhs.splitWithRetainedFraction(
                     comp, truthRetainedFraction(
                               static_cast<int>(ih),
                               static_cast<int>(ih + 1)),
-                    bz, false)
-              : bhs.split(comp, materialPath.pathTX0, bz, false);
+                    bz, false, &appliedMixture)
+              : bhs.split(comp, materialPath.pathTX0, bz, false,
+                          &appliedMixture);
           if (applyTruthBHLossOverride) ++m_truthBHLossOverrideCalls;
           if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
             const double parentPT = (bz != 0 && parentKappa != 0)
@@ -3226,6 +3658,14 @@ StatusCode RecGsfTracking::execute() {
             child->debugId = nextComponentDebugId++;
             child->debugParentId = parentDebugId;
             child->generation = childGeneration;
+            if (childIndex < appliedMixture.size()) {
+              child->lineageNodeId = lineageGraph.split(
+                  *child, parentLineageNodeId,
+                  LineageNodeSource::ForwardFiltering,
+                  static_cast<int>(ih), hi.surfaceIndex,
+                  static_cast<int>(childIndex),
+                  appliedMixture[childIndex], materialPath.pathTX0);
+            }
             if (!child->forwardProcessSignature.empty())
               child->forwardProcessSignature += ";";
             child->forwardProcessSignature += std::to_string(ih) + ":g" +
@@ -3344,9 +3784,16 @@ StatusCode RecGsfTracking::execute() {
         reverseComp->kaltrack->Add(reverseSite);
         reverseComp->continuationState = finalState;
         reverseComp->continuationValid = true;
+        reverseComp->lineageNodeId = lineageGraph.reverseSeed(
+            *reverseComp, forwardComp->lineageNodeId,
+            static_cast<int>(hits.size()) - 1,
+            hits.back().surfaceIndex);
         reverseComps.push_back(reverseComp);
       }
       GsfMixture::normalizeWeights(reverseComps);
+      for (const auto* component : reverseComps)
+        lineageGraph.setWeight(component->lineageNodeId,
+                               component->weight);
       if (m_verboseDump && m_verboseSplitDump)
         dumpComponents("reverse-start", (int)hits.size() - 1, reverseComps);
 
@@ -3563,20 +4010,32 @@ StatusCode RecGsfTracking::execute() {
               continue;
             }
             const int parentId = parent->debugId;
+            const int parentLineageNodeId = parent->lineageNodeId;
+            const int childGeneration = parent->generation + 1;
             const double alpha = bz * 2.99792458e-4;
             const double parentPt = parent->continuationState.omega != 0.0
                 ? std::abs(alpha / parent->continuationState.omega) : 0.0;
+            std::vector<BetheHeitlerMixtureComponent> appliedMixture;
             auto children = applyTruthBHLossOverride
                 ? splitter.splitWithRetainedFraction(
                       parent, truthRetainedFraction(
                                   reverseHit, reverseHit + 1),
-                      bz, true)
-                : splitter.split(parent, materialPath.pathTX0, bz, true);
+                      bz, true, &appliedMixture)
+                : splitter.split(parent, materialPath.pathTX0, bz, true,
+                                 &appliedMixture);
             if (applyTruthBHLossOverride) ++m_truthBHLossOverrideCalls;
             for (size_t childIndex = 0; childIndex < children.size(); ++childIndex) {
               auto* child = children[childIndex];
               child->debugParentId = parentId;
               child->debugId = nextReverseId++;
+              child->generation = childGeneration;
+              if (childIndex < appliedMixture.size()) {
+                child->lineageNodeId = lineageGraph.split(
+                    *child, parentLineageNodeId,
+                    LineageNodeSource::ReverseFiltering, reverseHit,
+                    target.surfaceIndex, static_cast<int>(childIndex),
+                    appliedMixture[childIndex], materialPath.pathTX0);
+              }
               child->lastReverseProcessHit = reverseHit;
               child->lastReverseProcessComponent = static_cast<int>(childIndex);
               const double childPt = child->continuationState.omega != 0.0
@@ -3605,6 +4064,8 @@ StatusCode RecGsfTracking::execute() {
         std::vector<double> reverseLogWeights;
         GaussianAccumulator cmsBackwardPredictedAccumulator;
         for (auto* component : reverseComps) {
+          const int parentLineageNodeId = component->lineageNodeId;
+          const double reversePriorWeight = component->weight;
           double dchi = 0.0;
           double updateChi2 = 0.0;
           int updateNdf = -999;
@@ -3636,8 +4097,21 @@ StatusCode RecGsfTracking::execute() {
             accepted = false;
           }
 
+          const double unavailable =
+              std::numeric_limits<double>::quiet_NaN();
+          const double reverseLogPosterior = accepted
+              ? std::log(reversePriorWeight) -
+                    0.5 * (dchi + update.logDetInnovation)
+              : unavailable;
+          component->lineageNodeId = lineageGraph.measurement(
+              *component, parentLineageNodeId,
+              LineageNodeSource::ReverseFiltering, reverseHit,
+              target.surfaceIndex, accepted ? 1 : 0, reversePriorWeight,
+              update.valid ? dchi : unavailable,
+              update.valid ? update.logDetInnovation : unavailable,
+              reverseLogPosterior, &update);
+
           if (accepted) {
-            const double reversePriorWeight = component->weight;
             if (runCmsSmoother && !cmsOutermostHit) {
               accumulateGaussian(cmsBackwardPredictedAccumulator,
                   reversePriorWeight,
@@ -3645,8 +4119,7 @@ StatusCode RecGsfTracking::execute() {
                   updateMatrix5(update.predictedCovariance));
             }
             component->fitChi2 += dchi;
-            reverseLogWeights.push_back(std::log(component->weight) -
-                0.5 * (dchi + update.logDetInnovation));
+            reverseLogWeights.push_back(reverseLogPosterior);
             acceptedReverse.push_back(component);
             ++reverseAcceptedTotal;
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
@@ -3676,6 +4149,9 @@ StatusCode RecGsfTracking::execute() {
               std::exp(reverseLogWeights[i] - maxReverseLog);
         reverseComps = std::move(acceptedReverse);
         GsfMixture::normalizeWeights(reverseComps);
+        for (const auto* component : reverseComps)
+          lineageGraph.setNormalizedPosterior(
+              component->lineageNodeId, component->weight);
 
         // Let every reverse-process child incorporate the inward target hit
         // before cutoff or mixture reduction.  The weights and Gaussian states
@@ -3683,9 +4159,13 @@ StatusCode RecGsfTracking::execute() {
         if (m_verboseDump && m_verboseSplitDump)
           dumpComponents("reverse-posterior/norm", reverseHit, reverseComps);
         const int reverseBeforeCutoff = (int)reverseComps.size();
+        auto reverseCutoffObserver = [&](const GsfComponent& component) {
+          lineageGraph.mark(component.lineageNodeId,
+                            LineageNodeFate::WeightCutoff);
+        };
         GsfMixture::removeLowWeight(
             reverseComps, m_componentWeightCutoff.value(),
-            m_protectIdentityLineage.value());
+            m_protectIdentityLineage.value(), reverseCutoffObserver);
         if (m_verboseDump && m_verboseSplitDump &&
             (int)reverseComps.size() != reverseBeforeCutoff) {
           info() << boost::format(
@@ -3708,14 +4188,26 @@ StatusCode RecGsfTracking::execute() {
           auto reverseReductionLogger = [&](const std::string& line) {
             if (m_verboseDump && m_verboseSplitDump) info() << line << endmsg;
           };
+          auto reverseReductionObserver = [&](GsfComponent& merged,
+                                              int keepSourceNodeId,
+                                              int dropSourceNodeId,
+                                              double mergeCost) {
+            merged.lineageNodeId = lineageGraph.merge(
+                merged, keepSourceNodeId, dropSourceNodeId,
+                LineageNodeSource::ReverseFiltering, reverseHit,
+                target.surfaceIndex, mergeCost);
+          };
           GsfMixture::reduce(
               reverseComps, reverseReductionTarget, bz,
               m_protectIdentityLineage.value(), reverseReductionLogger,
-              m_reductionMergeCost.value());
+              m_reductionMergeCost.value(), reverseReductionObserver);
           ++reverseReductions;
           if (m_verboseDump && m_verboseSplitDump)
             dumpComponents("reverse-post-reduce", reverseHit, reverseComps);
           GsfMixture::normalizeWeights(reverseComps);
+          for (const auto* component : reverseComps)
+            lineageGraph.setWeight(component->lineageNodeId,
+                                   component->weight);
           if (m_verboseDump && m_verboseSplitDump)
             dumpComponents("reverse-post-reduce/norm", reverseHit,
                            reverseComps);
@@ -3867,6 +4359,8 @@ StatusCode RecGsfTracking::execute() {
           }
         }
         if (reverseOutputOk) {
+          if (!runCmsSmoother && m_reverseFiltering.value())
+            lineageGraph.markFinal(reverseComps, reverseBest);
           if (!runCmsSmoother && m_reverseFiltering.value()) {
             finalMixtureComponentRecords =
                 captureFinalMixtureComponentsAtIP(
@@ -4130,6 +4624,9 @@ StatusCode RecGsfTracking::execute() {
           }
         }
       }
+      if (!runCmsSmoother && m_reverseFiltering.value() &&
+          !reverseIpAvailable)
+        lineageGraph.markAbandoned(reverseComps);
       for (auto* reverseComp : reverseComps) delete reverseComp;
     }
 
@@ -4144,6 +4641,8 @@ StatusCode RecGsfTracking::execute() {
                                     reductionSmootherNodes)) {
           warning() << boost::format("GSF event index %d track %d: KL reduction-aware Gaussian-sum smoothing failed; no GSF output track")
                        % (m_nEvt - 1) % (nFit + 1) << endmsg;
+          lineageGraph.markAbandoned(comps);
+          persistLineageGraph(lineageGraph, inputTrackIndex, -1);
           for (auto* c : comps) delete c;
           for (auto& h : hits) delete h.kalHit;
           continue;
@@ -4168,12 +4667,18 @@ StatusCode RecGsfTracking::execute() {
       if (bestIdx < 0) {
         warning() << "GSF event index " << (m_nEvt - 1)
                   << ": no component has a filtered hit; no GSF output track" << endmsg;
+        lineageGraph.markAbandoned(comps);
+        persistLineageGraph(lineageGraph, inputTrackIndex, -1);
         for (auto* c : comps) delete c;
         for (auto& h : hits) delete h.kalHit;
         continue;
       }
 
       auto* best = comps[bestIdx];
+      if (m_gaussianSumSmoothing.value() && !m_reverseFiltering.value())
+        lineageGraph.markFinal(comps, best);
+      if (m_reverseFiltering.value() && !reverseIpAvailable)
+        lineageGraph.markFinal(comps, best);
       dumpComponents("final-smoothed", -1, comps);
       if (m_verboseDump && m_verboseSplitDump) {
         const double bestKappa = best->helixAtLastSite(bz).GetKappa();
@@ -4387,6 +4892,7 @@ StatusCode RecGsfTracking::execute() {
 
       persistFinalMixtureComponents(
           finalMixtureComponentRecords, inputTrackIndex, nFit);
+      persistLineageGraph(lineageGraph, inputTrackIndex, nFit);
 
       if (truthMaterialTrackMatched) {
         const std::int16_t runtimeMaterialMode =
@@ -4587,6 +5093,12 @@ StatusCode RecGsfTracking::execute() {
       }
 
       nFit++;
+    } else {
+      // Keep the complete evaluated graph even when this input track cannot
+      // publish a GSF endpoint.  The -1 mapping distinguishes it from every
+      // row-aligned output track without discarding its diagnostic history.
+      lineageGraph.markAbandoned(comps);
+      persistLineageGraph(lineageGraph, inputTrackIndex, -1);
     }
 
     for (auto* c : comps) delete c;

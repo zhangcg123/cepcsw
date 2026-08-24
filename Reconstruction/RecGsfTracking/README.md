@@ -471,6 +471,9 @@ The data handles are configurable separately from the 42 properties:
 | final-mixture component track mapping | `GSFFinalMixtureComponentInputTrackIndex`, `GSFFinalMixtureComponentOutputTrackIndex` |
 | final-mixture component identity/method/status | `GSFFinalMixtureComponentIndex`, `GSFFinalMixtureComponentID`, `GSFFinalMixtureComponentSource`, `GSFFinalMixtureComponentValid` |
 | final-mixture component PDF parameters | `GSFFinalMixtureComponentWeight`, `GSFFinalMixtureComponentKappa`, `GSFFinalMixtureComponentKappaVariance` |
+| component-lineage node mapping and identity | `GSFLineageNodeInputTrackIndex`, `GSFLineageNodeOutputTrackIndex`, `GSFLineageNodeId`, `GSFLineageNodeSource`, `GSFLineageNodeOperation`, `GSFLineageNodeHitIndex`, `GSFLineageNodeSurfaceIndex`, `GSFLineageNodeComponentId`, `GSFLineageNodeGeneration` |
+| component-lineage decision and state data | `GSFLineageNodeBHComponentIndex`, `GSFLineageNodeMeasurementStatus`, `GSFLineageNodeFate`, `GSFLineageNodeNoRadiation`, `GSFLineageNodeBestBranch`, `GSFLineageNodeFinalMixture`, `GSFLineageNodeValid`, plus the `GSFLineageNode*` weight, BH, material, innovation, kappa/covariance, lineage-fraction, and merge-cost collections described below |
+| component-lineage edges | `GSFLineageEdgeInputTrackIndex`, `GSFLineageEdgeOutputTrackIndex`, `GSFLineageEdgeFromNodeId`, `GSFLineageEdgeToNodeId`, `GSFLineageEdgeOperation` |
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
 | truth particles | `MCParticle` |
@@ -504,6 +507,14 @@ tuple also fills the corresponding parallel scalar set:
 | `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
 | `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother, `2` reverse filter), and IP-state validity. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
+| `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; forward, CMS-like, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
+| `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
+| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward or `2` reverse. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, or `4` KL-merge output. Smoother graphs contain the forward construction used by the smoother; reverse graphs additionally link each final forward component to its reverse seed. |
+| `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
+| `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Per-evaluated-component measurement decision. Status is `-1` not a measurement, `0` rejected, `1` accepted through the exact update, or `2` accepted through the legacy recovery path. Exact innovation values are finite when supplied by the accepted MarlinTrk update. The normalized posterior is captured before cutoff and KL reduction. |
+| `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, or `6` abandoned because its reverse endpoint or complete output track failed. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |
+| `lineage_node_weight`, `lineage_node_predicted_kappa`, `lineage_node_predicted_kappa_variance`, `lineage_node_predicted_pT`, `lineage_node_filtered_kappa`, `lineage_node_filtered_kappa_variance`, `lineage_node_filtered_pT`, `lineage_node_dominant_lineage_fraction`, `lineage_node_merge_cost` | Node-local statistical state. Predicted quantities exist for measurement nodes with an exact innovation object; filtered quantities are the post-operation continuation state. pT is derived as `1/abs(kappa)`. Merge cost is finite only for a KL output. |
+| `lineage_edge_input_track_index`, `lineage_edge_output_track_index`, `lineage_edge_from_node_id`, `lineage_edge_to_node_id`, `lineage_edge_operation` | Directed graph connectivity. Edge operation is `1` BH split, `2` measurement, `3` KL merge, or `4` forward-final to reverse-seed. Every KL output has two incoming merge edges. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
@@ -547,6 +558,24 @@ saved valid subset is not the complete final mixture and must not silently be
 presented as such. The component vectors describe the mixture underlying all
 three endpoint summaries; they are not a fourth published track and do not
 duplicate hit vectors.
+
+The `lineage_node_*` and `lineage_edge_*` vectors are also automatic,
+default-on, and passive for smoother/reverse jobs. They record immutable
+snapshots rather than pointers to live `GsfComponent` objects. A rejected
+measurement node, a posterior-cutoff node, and both inputs consumed by a KL
+merge therefore remain available after their C++ components are deleted. A
+split followed by a merge is represented by a diverging and reconverging
+diamond: this is the requested visual loop shape, while edge direction remains
+acyclic in node-creation order. Reconstruct one track's graph by selecting its
+`input_track_index`, then joining every edge endpoint to `node_id` in that
+same group. Do not join bare node IDs across different input tracks.
+
+This graph is diagnostic evidence, not another GSF result and not an
+additional selector. It never feeds propagation, covariance, posterior
+normalization, cutoff, reduction, or publication. Complete graph persistence
+can materially increase tuple size; this is deliberate because silent
+truncation would remove exactly the rejected/pruned alternatives needed to
+explain the first wrong branch decision.
 
 The BestBranch branch set is likewise presence-driven: it is populated only
 from `GSFTracksBestBranch` and remains unavailable/zero for forward,

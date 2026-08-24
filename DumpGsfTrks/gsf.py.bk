@@ -150,6 +150,9 @@ elif method == "reverse":
     # maximum; GSFFullMixtureModeStatus tags optimization success/fallback.
     # The final positive-weight component weights, IP kappas, and kappa
     # variances are also recorded automatically; there is no steering switch.
+    # The complete component-lineage DAG is likewise automatic/default-on in
+    # the EDM and flat tuple. It retains evaluated nodes after measurement
+    # rejection, weight cutoff, or KL merging; no run-card switch is needed.
     gsf.ReverseFiltering = True
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
@@ -228,6 +231,8 @@ flat = RecGsfFlatTuple("RecGsfFlatTuple")
 # method-specific collections leave their corresponding branch set
 # unavailable/zero. The always-created final_mixture_component_* vectors carry
 # all final smoother/reverse output tracks and are empty for the other methods.
+# The lineage_node_* and lineage_edge_* vectors automatically carry the full
+# passive smoother/reverse component DAG and are empty for the other methods.
 flat.OutputFile = os.path.join(
     tuplepath,
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),
