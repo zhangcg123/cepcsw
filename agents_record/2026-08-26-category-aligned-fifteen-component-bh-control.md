@@ -108,6 +108,44 @@ Authoritative artifacts:
   the finer proposal geometry can alter lineage selection; it is not a
   population-performance conclusion.
 
+## Low-cutoff, max-150 scale gate
+
+A paired run used the same first ten input events, reverse seed covariance 1,
+`SymmetricKL`, truth override off, `ComponentWeightCutoff=1e-3`, and
+`MaxComponents=150`. Residual below means `(pT_reco-pT_truth)/pT_truth` and
+uses FullMixtureMode.
+
+| event | LCIO residual | 9-component residual | 15-component residual |
+|---:|---:|---:|---:|
+| 0 | -0.00085170 | -0.00088062 | -0.00080342 |
+| 1 | -0.00027673 | -0.00033763 | -0.00024708 |
+| 2 | -0.00860261 | -0.00867451 | -0.00861398 |
+| 3 | -0.00106972 | -0.00108082 | -0.00103631 |
+| 4 | -0.01086499 | +0.00037918 | -0.01080112 |
+| 5 | -0.20794018 | +0.01845087 | +0.00733272 |
+| 6 | -0.00148332 | -0.00145459 | -0.00135611 |
+| 7 | -0.00262772 | -0.00265735 | -0.00253162 |
+| 8 | +0.00007701 | +0.00009211 | +0.00016192 |
+| 9 | +0.00033116 | +0.00031524 | +0.00045597 |
+
+For FullMixtureMode, mean absolute residual changed from 0.0034323 (BH9) to
+0.0033340 (BH15), the 68% absolute quantile worsened from 0.0015989 to
+0.0031078, and the maximum absolute residual improved from 0.0184509 to
+0.0108011. These aggregate changes are driven by an opposing pair: BH15
+improves event 5 but loses BH9's recovery of event 4. Ten events are not a
+population-performance result.
+
+The computational cost is substantial:
+
+| model | wall time | peak RSS | final IP components/event | lineage nodes |
+|---|---:|---:|---:|---:|
+| BH9 | 3:45.65 | 3,763,540 KiB | 23--76 | 158,514 |
+| BH15 | 7:27.09 | 6,294,816 KiB | 59--102 | 451,624 |
+
+BH15 therefore used 2,531,276 KiB more peak memory (+67.3%), nearly doubled
+wall time, and recorded 2.85 times as many lineage nodes. Both jobs completed,
+and FullMixtureMode optimization status was successful for all ten events.
+
 ## Required next gate
 
 Use same-code paired reruns on the established topology-clear no/light/hard
