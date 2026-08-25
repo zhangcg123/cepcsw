@@ -80,6 +80,22 @@ Authoritative artifacts:
   for events 11, 16, and 17 respectively. Event 17 remains a recovery and event
   16 remains a severe underestimate; these three events do not validate the
   new model.
+- A direct same-code rerun compared the nine- and fifteen-component banks with
+  the same input, selected events, `MaxComponents=30`, `ReverseKappaSeedCov=1`,
+  `SymmetricKL`, and 5e-3 weight cutoff. FullMixtureMode gave:
+
+  | event | truth pT | LCIO residual | 9-component residual | 15-component residual |
+  |---:|---:|---:|---:|---:|
+  | 11 | 40.7316 | +0.4024% | +0.4035% | +0.4121% |
+  | 16 | 37.8940 | -51.7263% | -51.7201% | -51.7203% |
+  | 17 | 18.7970 | -21.2285% | +0.1700% | +0.2008% |
+
+  Thus this focused FullMixtureMode gate contains no improvement from the
+  fifteen-component geometry. Event 17 remains a strong recovery relative to
+  LCIO under both models, but the nine-component endpoint is 0.0309 percentage
+  points closer to truth. BestBranch moves differently for event 17
+  (+0.3049% to +0.2155%), which reinforces that proposal coverage and endpoint
+  selection must be diagnosed separately.
 - A same-template first-ten-event run with `MaxComponents=30` and verbose
   output disabled completed successfully. Peak RSS was 2,881,488 KiB versus
   2,495,396 KiB for the stored nine-component/max-30 control: +386,092 KiB
