@@ -2,8 +2,10 @@
 """Plot one reverse component-lineage graph and its ordinal weight maps.
 
 The script consumes the automatic ``lineage_node_*`` and ``lineage_edge_*``
-branches written by RecGsfFlatTuple.  It is intentionally diagnostic: it does
-not rerun, steer, or reinterpret the GSF.
+branches written by RecGsfFlatTuple.  When the passive ``truth_material_*``
+vectors are present and valid, it marks the reverse measurement column that
+consumes every truth interval with positive Geant4 eBrem loss.  It is
+intentionally diagnostic: it does not rerun, steer, or reinterpret the GSF.
 """
 
 from __future__ import annotations
@@ -54,6 +56,21 @@ EDGE_FIELDS = (
     "to_node_id",
     "operation",
 )
+TRUTH_MATERIAL_FIELDS = (
+    "input_track_index",
+    "hit_from_index",
+    "hit_to_index",
+    "ebrem_loss",
+    "p_before",
+)
+
+TRUTH_EBREM_COLOR = "#00c9e8"
+
+
+def truth_marker_size(fractional_loss: float) -> float:
+    """Return a visible, bounded marker area for one truth interval."""
+    fraction = max(0.0, fractional_loss) if np.isfinite(fractional_loss) else 0.0
+    return 38.0 + 142.0 * min(fraction / 0.20, 1.0)
 
 
 def arguments() -> argparse.Namespace:
@@ -144,7 +161,41 @@ def load_graph(args: argparse.Namespace):
         if from_id in nodes and to_id in nodes:
             edges.append((from_id, to_id, int(operation)))
 
-    return root_file, nodes, edges
+    truth_ebrem = []
+    required_truth_branches = [
+        "truth_material_" + field for field in TRUTH_MATERIAL_FIELDS
+    ]
+    if (tree.GetBranch("truth_material_scope_valid") and
+            all(tree.GetBranch(name) for name in required_truth_branches) and
+            bool(getattr(tree, "truth_material_scope_valid"))):
+        truth_columns = {
+            field: branch_values(tree, "truth_material_" + field)
+            for field in TRUTH_MATERIAL_FIELDS
+        }
+        truth_lengths = {len(values) for values in truth_columns.values()}
+        if len(truth_lengths) != 1:
+            raise RuntimeError(
+                f"inconsistent truth-material-vector lengths: {truth_lengths}")
+        for index, track in enumerate(truth_columns["input_track_index"]):
+            if int(track) != args.input_track:
+                continue
+            loss = float(truth_columns["ebrem_loss"][index])
+            if not np.isfinite(loss) or loss <= 0.0:
+                continue
+            momentum_before = float(truth_columns["p_before"][index])
+            fractional_loss = (
+                loss / momentum_before
+                if np.isfinite(momentum_before) and momentum_before > 0.0
+                else float("nan")
+            )
+            truth_ebrem.append({
+                "hit_from": int(truth_columns["hit_from_index"][index]),
+                "hit_to": int(truth_columns["hit_to_index"][index]),
+                "loss": loss,
+                "fractional_loss": fractional_loss,
+            })
+
+    return root_file, nodes, edges, truth_ebrem
 
 
 def classify(nodes):
@@ -197,7 +248,8 @@ def save_figure(fig, stem: Path, dpi: int) -> None:
 
 def plot_posterior_reduced_lineage(
         nodes, edges, posterior_by_hit, reduced_by_hit,
-        min_hit: int, max_hit: int, stem: Path, dpi: int) -> dict:
+        truth_ebrem, min_hit: int, max_hit: int, stem: Path,
+        dpi: int) -> dict:
     parents_by_to = graph_connectivity(edges)
     max_posterior_count = max(len(ids) for ids in posterior_by_hit.values())
     max_y = max_posterior_count - 1
@@ -324,6 +376,21 @@ def plot_posterior_reduced_lineage(
         s=135, color="#ffbf00", edgecolors="#5b4300", marker="*",
         linewidths=0.8, alpha=1.0, zorder=7)
 
+    matched_truth_ebrem = [
+        interval for interval in truth_ebrem
+        if min_hit <= interval["hit_from"] <= max_hit
+    ]
+    if matched_truth_ebrem:
+        ax.scatter(
+            [max_hit - interval["hit_from"]
+             for interval in matched_truth_ebrem],
+            [1.012] * len(matched_truth_ebrem),
+            s=[truth_marker_size(interval["fractional_loss"])
+               for interval in matched_truth_ebrem],
+            transform=ax.get_xaxis_transform(), clip_on=False,
+            color=TRUTH_EBREM_COLOR, edgecolors="black", marker="o",
+            linewidths=0.8, alpha=1.0, zorder=9)
+
     depths = list(range(max_hit - min_hit + 1))
     ax.set_xticks(depths)
     ax.set_xticklabels([
@@ -336,7 +403,7 @@ def plot_posterior_reduced_lineage(
     ax.set_yticks([])
     ax.grid(axis="x", color="#d8d8d8", linewidth=0.7)
     ax.margins(x=0.025, y=0.04)
-    ax.legend(handles=[
+    legend_handles = [
         Line2D([0], [0], color="black", ls="-", lw=1.2,
                label="previous reduced state → next posterior"),
         Line2D([0], [0], color="black", ls=":", lw=1.2,
@@ -353,7 +420,13 @@ def plot_posterior_reduced_lineage(
         Line2D([0], [0], color="#ffbf00", markeredgecolor="#5b4300",
                lw=0, marker="*", markersize=10,
                label="published BestBranch"),
-    ], loc="upper left", ncol=2, fontsize=9,
+    ]
+    if matched_truth_ebrem:
+        legend_handles.append(Line2D(
+            [0], [0], color=TRUTH_EBREM_COLOR, markeredgecolor="black",
+            lw=0, marker="o", markersize=7,
+            label="truth eBrem interval (size ∝ fractional loss)"))
+    ax.legend(handles=legend_handles, loc="upper left", ncol=2, fontsize=9,
        frameon=True, framealpha=1.0)
     fig.suptitle(
         "Reverse posterior lineage with sparse reduction layers",
@@ -377,13 +450,14 @@ def plot_posterior_reduced_lineage(
         "cutoff_or_rejected": len(cutoff_ids),
         "propagation_edges": len(propagation_segments),
         "reduction_edges": len(reduction_segments),
+        "truth_ebrem_markers": len(matched_truth_ebrem),
     }
 
 
 def plot_weight_cells(
         nodes, groups, max_hit: int, weight_field: str, cmap_name: str,
         title: str, color_label: str, caption: str, stem: Path, dpi: int,
-        posterior: bool) -> dict:
+        posterior: bool, truth_ebrem) -> dict:
     hits = sorted(groups, reverse=True)
     x_values = [max_hit - hit for hit in hits]
     max_count = max(len(groups[hit]) for hit in hits)
@@ -443,6 +517,22 @@ def plot_weight_cells(
             linewidths=0.8, alpha=1.0, zorder=5,
             label="published BestBranch")
 
+    hit_to_column = {hit: column for column, hit in enumerate(hits)}
+    matched_truth_ebrem = [
+        interval for interval in truth_ebrem
+        if interval["hit_from"] in hit_to_column
+    ]
+    if matched_truth_ebrem:
+        ax.scatter(
+            [hit_to_column[interval["hit_from"]]
+             for interval in matched_truth_ebrem],
+            [max_count + 0.35] * len(matched_truth_ebrem),
+            s=[truth_marker_size(interval["fractional_loss"])
+               for interval in matched_truth_ebrem],
+            color=TRUTH_EBREM_COLOR, edgecolors="black", marker="o",
+            linewidths=0.8, alpha=1.0, clip_on=False, zorder=7,
+            label="truth eBrem interval (size ∝ fractional loss)")
+
     ax.set_xticks(range(len(hits)))
     ax.set_xticklabels([
         f"{depth}\n(hit {hit})" for depth, hit in zip(x_values, hits)
@@ -453,7 +543,7 @@ def plot_weight_cells(
     ax.set_ylabel("ordinal $p_T$ rank  (equal spacing; low → high)")
     ax.set_title(title, fontsize=15, pad=12)
     ax.set_xlim(-0.5, len(hits) - 0.5)
-    ax.set_ylim(-0.5, max_count - 0.5)
+    ax.set_ylim(-0.5, max_count + (1.25 if matched_truth_ebrem else -0.5))
     ax.legend(loc="upper right", frameon=True, framealpha=1.0)
     colorbar = fig.colorbar(image, ax=ax, pad=0.02)
     colorbar.set_label(color_label)
@@ -464,6 +554,7 @@ def plot_weight_cells(
         "layers": len(hits),
         "max_rows": max_count,
         "nodes": sum(len(groups[hit]) for hit in hits),
+        "truth_ebrem_markers": len(matched_truth_ebrem),
     }
 
 
@@ -472,12 +563,13 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stem = args.stem or (
         f"reverse-lineage-entry{args.entry}-track{args.input_track}")
-    _, nodes, edges = load_graph(args)
+    _, nodes, edges, truth_ebrem = load_graph(args)
     posterior_by_hit, reduced_by_hit, min_hit, max_hit = classify(nodes)
 
     lineage_summary = plot_posterior_reduced_lineage(
-        nodes, edges, posterior_by_hit, reduced_by_hit, min_hit, max_hit,
-        args.output_dir / f"{stem}-posterior-reduced", args.dpi)
+        nodes, edges, posterior_by_hit, reduced_by_hit, truth_ebrem,
+        min_hit, max_hit, args.output_dir / f"{stem}-posterior-reduced",
+        args.dpi)
     posterior_summary = plot_weight_cells(
         nodes, posterior_by_hit, max_hit, "normalized_posterior", "Reds",
         "Reverse posterior weight cells before cutoff/KL",
@@ -485,7 +577,7 @@ def main() -> None:
         "Each column is independently ordered from low to high pT; rows are "
         "ordinal and do not imply lineage continuity.",
         args.output_dir / f"{stem}-posterior-weight-cells", args.dpi,
-        posterior=True)
+        posterior=True, truth_ebrem=truth_ebrem)
     reduced_summary = plot_weight_cells(
         nodes, reduced_by_hit, max_hit, "weight", "Purples",
         "Reverse reduced-mixture weight cells after cutoff/KL",
@@ -493,7 +585,7 @@ def main() -> None:
         "Each column is independently ordered from low to high pT; rows are "
         "ordinal and do not imply lineage continuity.",
         args.output_dir / f"{stem}-reduced-weight-cells", args.dpi,
-        posterior=False)
+        posterior=False, truth_ebrem=truth_ebrem)
 
     operation_counts = Counter(int(node["operation"])
                                for node in nodes.values())
@@ -508,6 +600,14 @@ def main() -> None:
     print(f"lineage_plot={lineage_summary}")
     print(f"posterior_cells={posterior_summary}")
     print(f"reduced_cells={reduced_summary}")
+    print("truth_ebrem_intervals=" + repr([
+        {
+            "hit_from": interval["hit_from"],
+            "hit_to": interval["hit_to"],
+            "fractional_loss_pct": 100.0 * interval["fractional_loss"],
+        }
+        for interval in truth_ebrem
+    ]))
     if len(best_nodes) == 1:
         print("bestbranch_filtered_pT="
               f"{float(best_nodes[0]['filtered_pT']):.12g} GeV "

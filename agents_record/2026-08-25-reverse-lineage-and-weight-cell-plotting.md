@@ -135,6 +135,40 @@ light cells can still be valid small-weight components. The posterior and
 reduced maps have independent maxima and must not be compared by raw color
 shade without reading their color bars.
 
+## Truth eBrem interval markers
+
+When the selected flat-tuple entry contains a valid passive truth-material
+record, all three plots add cyan circles with black outlines for its positive
+Geant4 eBrem-loss intervals. The script requires
+`truth_material_scope_valid=true`, selects the same
+`truth_material_input_track_index` requested with `--input-track`, and reads
+the interval bounds and loss from the `truth_material_*` vectors. Missing,
+invalid, or older truth-material records produce no circles and do not make
+the plotting command fail.
+
+The truth record describes one forward accepted-hit interval
+`hit_from_index -> hit_to_index`. During the reverse refit that material is
+consumed while propagating from the outer `hit_to_index` anchor to the inner
+`hit_from_index` measurement. The circle is therefore placed above the
+reverse measurement column for `hit_from_index`. It marks an interval, not an
+exact sub-sensor Geant4 step position; the current lineage x axis has no finer
+coordinate. Multiple losses assigned to different accepted-hit intervals
+produce separate circles.
+
+Circle area is a bounded linear function of the interval fractional loss
+`truth_material_ebrem_loss / truth_material_p_before`: it rises from 38 points
+squared at zero to 180 points squared at 20% loss and then saturates. Marker
+area communicates loss magnitude only; it does not encode component weight,
+posterior rank, or whether a reconstructed branch followed the truth loss.
+
+The focused implementation gate used the new nine-component/max-30 tuple.
+Entry 5, input track 0, contains one truth interval from hit 6 to hit 7 with
+an 18.731118% fractional eBrem loss. Each of its three plots showed exactly
+one marker at the hit-6 reverse column. Entry 0, input track 0, contains no
+positive truth eBrem interval and reproduced all three views with zero
+markers. These are plotting/mechanical gates only. The circles are passive
+simulation truth and never steer the GSF.
+
 ## Reference mechanical gate
 
 The final plotting gate used
