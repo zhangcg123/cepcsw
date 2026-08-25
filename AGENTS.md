@@ -89,7 +89,7 @@ largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like
 workflow has a different core/tail tradeoff and remains default-off.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
-`MaxComponents=12`, `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction
+`MaxComponents=12`, `ComponentWeightCutoff=5e-3`, `SymmetricKL` reduction
 ranking, identity-lineage protection enabled, and the five-component
 `CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components and
 `CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
@@ -283,7 +283,7 @@ the material changes since tag
 `gsf-memory-leak-fixed-2026-08-08`: five-component
 `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
 `ReductionTargetComponents=0`, `SymmetricKL`, identity-lineage protection,
-`ComponentWeightCutoff=1e-4`, forward-posterior reverse weights, reverse full
+`ComponentWeightCutoff=5e-3`, forward-posterior reverse weights, reverse full
 covariance scale 100, `AggregateWeight`, and reverse `BestBranch` publication.
 `MaterialPathMode=DD4hepBetweenSurfaces` now governs both outward and inward
 propagation, integrates between matched hit points, and evaluates the scalar
@@ -318,7 +318,7 @@ and
 `agents_record/2026-08-24-reverse-kappa-correlated-prior-validation-handoff.md`.
 
 The committed production steering contract is `DD4hepBetweenSurfaces`,
-`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`, and ECAL off. The
+`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=5e-3`, and ECAL off. The
 maintained `DumpGsfTrks/gsf.py.bk` now agrees with those physics settings and
 explicitly steers 41 of the 42 supported properties while deliberately inheriting the
 compiled `RecordTruthMaterialIntervals=true` default. The retired side material ROOT
@@ -561,7 +561,8 @@ exact path and BH response close correctly at the crossover, record that result
 and move downstream instead of retuning material.
 
 Current non-goals are further material-source or material-mode changes before
-branch-local closure, tuning split/cutoff thresholds, capacity, KL ranking,
+branch-local closure, further split/cutoff tuning after the explicit
+`ComponentWeightCutoff=5e-3` promotion, capacity or KL-ranking changes,
 reverse seed covariance, final publication heuristics, or the ECAL selector;
 fitting SimHit momentum; truth-dependent runtime logic other than the explicit
 default-off truth BH-loss oracle diagnostic; changing source outside

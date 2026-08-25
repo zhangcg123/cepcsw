@@ -101,7 +101,7 @@ gsf.TruthBHLossMaxEndpointDistance = 5.0
 gsf.MaxComponents = 12
 gsf.ReductionTargetComponents = 0
 gsf.ReductionMergeCost = "SymmetricKL"
-gsf.ComponentWeightCutoff = 1.0e-4
+gsf.ComponentWeightCutoff = 5.0e-3
 gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True

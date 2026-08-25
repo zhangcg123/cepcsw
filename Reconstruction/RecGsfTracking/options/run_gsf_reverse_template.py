@@ -91,7 +91,7 @@ gsf.ReductionMergeCost = os.getenv(
 # Forward-only compatibility property. Reverse publication below always saves
 # BestBranch and WeightedMean in separate collections.
 gsf.GSFOutputMode = "BestBranch"
-gsf.ComponentWeightCutoff = 1.0e-4
+gsf.ComponentWeightCutoff = 5.0e-3
 gsf.ProtectIdentityLineage = os.getenv(
     "GSF_PROTECT_IDENTITY_LINEAGE", "1").lower() in ("1", "true", "yes")
 

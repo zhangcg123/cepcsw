@@ -221,7 +221,8 @@ The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. It keeps the established reverse workflow alongside the experimental global-loss
 workflow and agrees with
 the production material, split/cutoff, and ECAL settings:
-`DD4hepBetweenSurfaces`, split/cutoff `1e-4`, and
+`DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
+`ComponentWeightCutoff=5e-3`, and
 `EcalComponentConstraint=False`. Its top-level `bh_model` selector is the
 default-off
 `CEPCRuntimeGenericGrid5Clear` experiment, not the production

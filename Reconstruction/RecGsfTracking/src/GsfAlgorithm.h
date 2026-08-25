@@ -254,7 +254,7 @@ private:
   Gaudi::Property<std::string> m_reductionMergeCost{
       this, "ReductionMergeCost", "SymmetricKL",
       "SymmetricKL or weighted Runnalls Gaussian merge cost"};
-  Gaudi::Property<double> m_componentWeightCutoff{this,"ComponentWeightCutoff",1e-4};
+  Gaudi::Property<double> m_componentWeightCutoff{this,"ComponentWeightCutoff",5e-3};
   Gaudi::Property<bool>   m_protectIdentityLineage{
       this, "ProtectIdentityLineage", true,
       "Preserve an exact no-radiation lineage through cutoff and reduction"};
