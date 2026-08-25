@@ -135,6 +135,14 @@ For FullMixtureMode, mean absolute residual changed from 0.0034323 (BH9) to
 improves event 5 but loses BH9's recovery of event 4. Ten events are not a
 population-performance result.
 
+An exact six-tracker-collection SimHit-association check subsequently showed
+that event 5 has secondary tracker activity. On the nine topology-clear rows,
+BH9 versus BH15 mean absolute residual is 0.0017636 versus 0.0028897 and the
+68% absolute quantile is 0.0012453 versus 0.0018733. The apparent inclusive
+mean gain is therefore driven by a control event and is not topology-clear
+improvement. Event 5 remains reported separately: BH9 is +0.0184509 and BH15
+is +0.0073327.
+
 The computational cost is substantial:
 
 | model | wall time | peak RSS | final IP components/event | lineage nodes |
@@ -145,6 +153,55 @@ The computational cost is substantial:
 BH15 therefore used 2,531,276 KiB more peak memory (+67.3%), nearly doubled
 wall time, and recorded 2.85 times as many lineage nodes. Both jobs completed,
 and FullMixtureMode optimization status was successful for all ten events.
+
+## Independent events 30--49
+
+The same low-cutoff/max-150 A/B was repeated on 20 entries not used by the
+first-ten or focused-event gates. The exact matching simulation file marks
+events 32 and 34 as secondary-activity controls; the other 18 are topology
+clear. FullMixtureMode residuals are:
+
+| event | population | LCIO | BH9 | BH15 |
+|---:|---|---:|---:|---:|
+| 30 | clear | -0.00608035 | -0.00605838 | -0.00596453 |
+| 31 | clear | -0.00041936 | -0.00057124 | -0.00046953 |
+| 32 | secondary | +0.00411964 | +0.00402806 | +0.00411634 |
+| 33 | clear | -0.30661516 | -0.21529104 | -0.21503992 |
+| 34 | secondary | -0.66039212 | -0.66042988 | -0.66042977 |
+| 35 | clear | -0.92972695 | -0.92972784 | -0.92972779 |
+| 36 | clear | -0.00015368 | -0.00014298 | -0.00006926 |
+| 37 | clear | -0.11160841 | +0.00629811 | +0.00466104 |
+| 38 | clear | -0.00105661 | -0.00107106 | -0.00098469 |
+| 39 | clear | +0.00109158 | +0.00105228 | +0.00117371 |
+| 40 | clear | -0.01832843 | -0.01835953 | -0.01829304 |
+| 41 | clear | -0.00262278 | -0.00272866 | -0.00266338 |
+| 42 | clear | +0.00066866 | +0.00067727 | +0.00075690 |
+| 43 | clear | +0.00084730 | +0.00084653 | +0.00092446 |
+| 44 | clear | -0.00254048 | -0.00255364 | -0.00241014 |
+| 45 | clear | -0.30076034 | -0.01221386 | -0.02083914 |
+| 46 | clear | -0.00314612 | -0.00314801 | -0.00308962 |
+| 47 | clear | -0.19623377 | +0.00435692 | +0.00295251 |
+| 48 | clear | -0.00171155 | -0.00176247 | -0.00166193 |
+| 49 | clear | -0.03292462 | -0.00637203 | -0.00598562 |
+
+On the 18 topology-clear rows, BH15 is closer in 14 and BH9 in four. BH15
+improves the median absolute residual (0.0030211 to 0.0028079) and 68% absolute
+quantile (0.0061926 to 0.0053910), but its mean absolute residual worsens from
+0.0674018 to 0.0676482 because event 45 moves from -0.0122139 to -0.0208391.
+Event 35 remains a -0.9297 catastrophic underestimate under both models. The
+two secondary controls are essentially unchanged.
+
+Across all 27 topology-clear rows from the first-ten and new-20 gates, BH15 is
+closer in 20 and BH9 in seven, but BH15 remains worse in mean absolute residual
+(0.0460620 versus 0.0455224), median absolute residual (0.0024101 versus
+0.0017625), and 68% absolute quantile (0.0041582 versus 0.0039701). Thus more
+individual small improvements do not yet translate into a better residual
+distribution because occasional lost recoveries dominate.
+
+The new-20 BH9 run used 3,327,444 KiB peak RSS and 6:29.36 wall time; BH15 used
+6,225,872 KiB and 12:13.42. BH15 retained 32--93 final IP components versus
+20--54 for BH9 and recorded 746,163 lineage nodes versus 248,774. Both jobs
+completed, and FullMixtureMode status was successful for every selected event.
 
 ## Required next gate
 
