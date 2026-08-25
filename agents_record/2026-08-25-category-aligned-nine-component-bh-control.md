@@ -99,3 +99,54 @@ The focused BestBranch endpoint comparison was:
 This is an interface and focused-mechanics gate only. It does not establish
 held-out population improvement, clean-track safety, lineage survival, or
 tail control.
+
+## Ten-event Category5/max12 versus Category9/max30 combination test
+
+A subsequent same-code combination A/B processed seed-1 entries 0--9 from
+`trk_large_20260823/trk-e--2.0-85-1.root`. Both jobs used the reverse method,
+`DD4hepBetweenSurfaces`, `ComponentWeightCutoff=1e-4`, SymmetricKL,
+identity-lineage protection, reverse covariance scale 100, and truth override
+off. The control selected `CEPCRuntimeCategoryAligned5Clear` with
+`MaxComponents=12`; the candidate selected
+`CEPCRuntimeCategoryAligned9Clear` with `MaxComponents=30`. All ten entries
+are topology clear: eight are tracker-light-eBrem, one is hard-eBrem, and one
+has no tracker eBrem.
+
+BestBranch results were:
+
+| configuration | mean absolute residual | median absolute residual | 68% absolute quantile | RMS | maximum absolute residual | within 1% |
+|---|---:|---:|---:|---:|---:|---:|
+| LCIO | 2.3413% | 0.1277% | 0.3345% | 6.5911% | 20.7940% | 8/10 |
+| Category5/max12 | 0.2308% | 0.1991% | 0.2365% | 0.3081% | 0.7322% | 10/10 |
+| Category9/max30 | 0.3667% | 0.1607% | 0.1794% | 0.6725% | 1.9574% | 9/10 |
+
+The candidate improved three events, was numerically unchanged in three, and
+worsened four by absolute BestBranch residual. The central median and 68%
+quantile improved, but entry 5 changed from +0.2903% to +1.9574%; this single
+tail makes the candidate mean absolute residual and RMS worse. Its LCIO value
+was -20.7940%, so both GSF configurations still made a genuine recovery.
+
+The jobs ran sequentially under `/usr/bin/time -v`, with a one-second RSS
+sampler. The resource comparison was:
+
+| configuration | wall time | CPU user time | peak RSS | late-window median RSS | flat-tuple size |
+|---|---:|---:|---:|---:|---:|
+| Category5/max12 | 169.39 s | 160.21 s | 1.647 GiB | 1.604 GiB | 5.67 MiB |
+| Category9/max30 | 236.54 s | 224.29 s | 2.380 GiB | 2.229 GiB | 12.38 MiB |
+
+The candidate therefore used 0.733 GiB more peak RSS (+44.5%) and 39.6% more
+wall time. Its lineage contained 158,863 nodes versus 63,812, with 43,173
+versus 10,790 BH split children. The largest split call site contained the
+expected 270 children (`30*9`), versus 60 (`12*5`) in the control. After the
+startup ramp the candidate RSS oscillated around a plateau rather than growing
+without bound; a late-window linear slope was +8.6 MiB/min. Ten events are
+insufficient to exclude a slow leak, but they show no severe event-by-event
+runaway.
+
+This comparison changes both the BH proposal bank and retained-component cap,
+so it cannot attribute physics or resource differences to either factor
+independently. A causal comparison requires the four combinations of
+Category5/Category9 and max12/max30 on the same events. Generated outputs are
+under
+`TrackingPerformanceStudies/bh_category5_max12_vs_category9_max30_10event_2026-08-25/`
+and remain uncommitted.
