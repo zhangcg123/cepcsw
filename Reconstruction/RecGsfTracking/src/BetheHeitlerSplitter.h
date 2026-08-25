@@ -33,6 +33,10 @@ struct BetheHeitlerMixtureComponent {
 /// DD4hepBetweenSurfaces runtime paths and matched aggregate Geant4 eBrem
 /// losses in the topology-clear control population. They differ only in their
 /// generic-logarithmic versus detector-interval-aligned t/X0 knot grids.
+/// CEPCRuntimeCategoryAligned9Clear keeps the latter knot grid and fitted
+/// per-cell loss probabilities, but replaces the four broad radiative modes
+/// with fixed proposals centered at 1, 3, 5, 7, 9, 15, 30, and 70 percent
+/// aggregate loss. It is a default-off experimental control.
 ///
 /// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
@@ -46,7 +50,8 @@ struct BetheHeitlerSplitter {
     CEPC2GeV85StepConditioned,
     CEPC2GeV85StepConditioned6,
     CEPCRuntimeGenericGrid5Clear,
-    CEPCRuntimeCategoryAligned5Clear
+    CEPCRuntimeCategoryAligned5Clear,
+    CEPCRuntimeCategoryAligned9Clear
   };
 
   BetheHeitlerSplitter();

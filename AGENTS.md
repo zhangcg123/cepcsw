@@ -95,7 +95,8 @@ ranking, identity-lineage protection enabled, and the five-component
 `CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
 ranking, the six-component `CEPC2GeV85StepConditioned6` model, and the
 runtime-interval `CEPCRuntimeGenericGrid5Clear` and
-`CEPCRuntimeCategoryAligned5Clear` models remain default-off controls; none is
+`CEPCRuntimeCategoryAligned5Clear` five-component models and the finer
+`CEPCRuntimeCategoryAligned9Clear` model remain default-off controls; none is
 validated or approved as a replacement.
 
 Geant4 pre/post-step data is the authoritative energy-loss truth.
@@ -515,6 +516,16 @@ Current boundary evidence and definitions:
   activity control and its thickest knot has only 12 extreme-loss training
   entries. This selected panel is not held-out population validation; neither
   model is approved as a replacement, and both use only `pathTX0`.
+- The default-off `CEPCRuntimeCategoryAligned9Clear` control keeps the same
+  category-aligned t/X0 knots and total radiative probability as its
+  five-component predecessor, but redistributes the radiative weight among
+  fixed loss proposals at 1%, 3%, 5%, 7%, 9%, 15%, 30%, and 70%. Its compiled
+  responses exactly matched the packaged JSON on 5,481 recorded BH children
+  from focused reverse events 11, 16, and 17. Several thin/thick-grid cells
+  have fewer than 25 training entries, and the focused endpoint changes do not
+  constitute physics validation. The design, statistics, plots, and gate are
+  preserved in
+  `agents_record/2026-08-25-category-aligned-nine-component-bh-control.md`.
 
 Proceed in this order:
 

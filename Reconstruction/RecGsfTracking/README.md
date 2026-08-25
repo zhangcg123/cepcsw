@@ -81,7 +81,7 @@ The algorithm exposes 14 algorithm-specific steering properties:
 | Property | Compiled default | Meaning and allowed values |
 |---|---:|---|
 | `ElectronHypothesis` | `true` | Must remain true; this experimental history prior requires an electron BH model. |
-| `BHModel` | `CEPC2GeV85StepConditioned` | Accepted canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, and `CEPCRuntimeCategoryAligned5Clear`. The first two also accept `cepc2GeV85StepConditioned` and `cepc2GeV85StepConditioned6`. Unknown names fail initialization. `ActsAtlas` and its `actsAtlas`/`ACTS`/`Acts` aliases parse but are then explicitly rejected because this one-loss prior requires an exact identity atom. |
+| `BHModel` | `CEPC2GeV85StepConditioned` | Accepted canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `CEPCRuntimeCategoryAligned9Clear`. The first two also accept `cepc2GeV85StepConditioned` and `cepc2GeV85StepConditioned6`. Unknown names fail initialization. `ActsAtlas` and its `actsAtlas`/`ACTS`/`Acts` aliases parse but are then explicitly rejected because this one-loss prior requires an exact identity atom. |
 | `BHSplitThreshold` | `1e-4` | Finite, nonnegative minimum DD4hep interval t/X0 included in the hypothesis bank; the comparison is strictly `pathTX0 > threshold`. |
 | `MSOn` | `true` | Enable KalTest multiple scattering in every hypothesis refit. |
 | `ElossOn` | `false` | Enable the baseline deterministic KalTest energy-loss treatment; independent of the fitted radiative jump. |
@@ -142,7 +142,7 @@ distinction matters because that template enables `ElossOn` and
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
-| `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
+| `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, `CEPCRuntimeCategoryAligned9Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
 | `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used by the embedded-EventData truth oracle and passive material recorder. Other input tracks use the configured BH model and have no interval record. It must be nonnegative. |
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
@@ -711,8 +711,20 @@ clean-track safety, the separately reported secondary-activity control, or
 sparse high-thickness intervals. Above the last fitted knot they retain the
 existing constant-mixture extrapolation limitation.
 
+`CEPCRuntimeCategoryAligned9Clear` is a parallel, default-off nine-component
+proposal bank derived from the same topology-clear exact runtime intervals and
+the same category-aligned t/X0 knots as
+`CEPCRuntimeCategoryAligned5Clear`. It keeps an exact no-eBrem identity atom
+and uses fixed fractional-loss proposal centers at 1%, 3%, 5%, 7%, 9%, 15%,
+30%, and 70%; the component probabilities at each knot are fitted from the
+corresponding Geant4 interval-loss population. It exists to provide finer
+loss-magnitude coverage, not as a validated BH replacement. It remains
+experimental and default-off, and requires held-out interval closure, lineage
+survival, clean-track safety, and final-track population validation. Its source
+artifact is under `data/CEPCRuntimeCategoryAligned9Clear/`.
+
 `ActsAtlas` is the ACTS default ATLAS-derived parameterization retained as a
-non-CEPC control. New steering should use one of the five canonical spellings
+non-CEPC control. New steering should use one of the six canonical values
 listed in the property table.
 
 ## Historical Geant4 transition dataset
