@@ -71,9 +71,9 @@ gsf.ElectronHypothesis = True
 # Common options used by the same-code smoother/reverse/CMS-like comparisons.
 # The production default is CEPC2GeV85StepConditioned. Default-off BH controls are
 # CEPC2GeV85StepConditioned6, CEPCRuntimeGenericGrid5Clear,
-# CEPCRuntimeCategoryAligned5Clear, CEPCRuntimeCategoryAligned9Clear, and
-# ActsAtlas. The three CEPCRuntime models are topology-clear interval-fit
-# candidates and are not production validated;
+# CEPCRuntimeCategoryAligned5Clear, CEPCRuntimeCategoryAligned9Clear,
+# CEPCRuntimeCategoryAligned15Clear, and ActsAtlas. The four CEPCRuntime models
+# are topology-clear interval-fit candidates and are not production validated;
 # this maintained campaign card currently selects the generic-grid control.
 gsf.BHModel = bh_model
 # Production default; use CurrentSurface only as an explicit material control.

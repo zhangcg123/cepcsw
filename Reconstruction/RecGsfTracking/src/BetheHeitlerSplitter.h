@@ -37,6 +37,11 @@ struct BetheHeitlerMixtureComponent {
 /// per-cell loss probabilities, but replaces the four broad radiative modes
 /// with fixed proposals centered at 1, 3, 5, 7, 9, 15, 30, and 70 percent
 /// aggregate loss. It is a default-off experimental control.
+/// CEPCRuntimeCategoryAligned15Clear keeps the same t/X0 knot grid and total
+/// radiative probability, but uses one exact identity atom plus fourteen
+/// nonuniform radiative proposals: five in 0--1%, six in 1--6%, one in
+/// 6--10%, and two in 10--100%. Adjacent two-sigma proposal bounds meet. It is
+/// also a default-off experimental control.
 ///
 /// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
@@ -51,7 +56,8 @@ struct BetheHeitlerSplitter {
     CEPC2GeV85StepConditioned6,
     CEPCRuntimeGenericGrid5Clear,
     CEPCRuntimeCategoryAligned5Clear,
-    CEPCRuntimeCategoryAligned9Clear
+    CEPCRuntimeCategoryAligned9Clear,
+    CEPCRuntimeCategoryAligned15Clear
   };
 
   BetheHeitlerSplitter();

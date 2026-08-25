@@ -96,8 +96,9 @@ ranking, identity-lineage protection enabled, and the five-component
 ranking, the six-component `CEPC2GeV85StepConditioned6` model, and the
 runtime-interval `CEPCRuntimeGenericGrid5Clear` and
 `CEPCRuntimeCategoryAligned5Clear` five-component models and the finer
-`CEPCRuntimeCategoryAligned9Clear` model remain default-off controls; none is
-validated or approved as a replacement.
+`CEPCRuntimeCategoryAligned9Clear` and
+`CEPCRuntimeCategoryAligned15Clear` models remain default-off controls; none
+is validated or approved as a replacement.
 
 Geant4 pre/post-step data is the authoritative energy-loss truth.
 SimTrackerHit momentum is only a detector-level cross-check. Existing Geant4
@@ -526,6 +527,17 @@ Current boundary evidence and definitions:
   constitute physics validation. The design, statistics, plots, and gate are
   preserved in
   `agents_record/2026-08-25-category-aligned-nine-component-bh-control.md`.
+- The parallel default-off `CEPCRuntimeCategoryAligned15Clear` control keeps
+  the same eight t/X0 knots and total knot-local radiative probability, but
+  uses one exact identity atom plus five radiative proposals in 0--1%, six in
+  1--6%, one in 6--10%, and two in 10--100%. Proposal spacing grows toward the
+  tail and adjacent two-sigma bounds meet. Runtime lineage exactly reproduced
+  all packaged weights, means, and variances on 9,525 focused BH children. A
+  same-template ten-event `MaxComponents=30` smoke used 2,881,488 KiB peak RSS,
+  15.5% above its stored nine-component control. This is mechanics and memory
+  evidence only; design, statistics, exact component geometry, and gates are
+  preserved in
+  `agents_record/2026-08-26-category-aligned-fifteen-component-bh-control.md`.
 
 Proceed in this order:
 

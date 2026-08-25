@@ -143,6 +143,7 @@ static constexpr double cepc6Variances[kCepcKnotCount][kCepc6ComponentCount] = {
 #include "../data/CEPCRuntimeGenericGrid5Clear/compiled_table.inc"
 #include "../data/CEPCRuntimeCategoryAligned5Clear/compiled_table.inc"
 #include "../data/CEPCRuntimeCategoryAligned9Clear/compiled_table.inc"
+#include "../data/CEPCRuntimeCategoryAligned15Clear/compiled_table.inc"
 
 inline double boundedLogit(double value) {
   value = std::min(1.0 - kCepcMeanEpsilon,
@@ -268,6 +269,14 @@ std::vector<BHComponent> cepcRuntimeCategoryAligned9ClearMixture(double x) {
       RuntimeCategoryAligned9ClearVariances);
 }
 
+std::vector<BHComponent> cepcRuntimeCategoryAligned15ClearMixture(double x) {
+  return cepcStepConditionedMixture(
+      x, RuntimeCategoryAligned15ClearTX0,
+      RuntimeCategoryAligned15ClearWeights,
+      RuntimeCategoryAligned15ClearMeans,
+      RuntimeCategoryAligned15ClearVariances);
+}
+
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
 /// Returns up to 6 (weight, mean, var) tuples.
 std::vector<BHComponent> actsAtlasMixture(double x) {
@@ -339,6 +348,9 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
   if (modelName == "CEPCRuntimeCategoryAligned9Clear") {
     return Model::CEPCRuntimeCategoryAligned9Clear;
   }
+  if (modelName == "CEPCRuntimeCategoryAligned15Clear") {
+    return Model::CEPCRuntimeCategoryAligned15Clear;
+  }
   throw std::invalid_argument("Unknown Bethe-Heitler model option: " + modelName);
 }
 
@@ -355,6 +367,8 @@ const char* BetheHeitlerSplitter::modelName(Model model) {
       return "CEPCRuntimeCategoryAligned5Clear";
     case Model::CEPCRuntimeCategoryAligned9Clear:
       return "CEPCRuntimeCategoryAligned9Clear";
+    case Model::CEPCRuntimeCategoryAligned15Clear:
+      return "CEPCRuntimeCategoryAligned15Clear";
   }
   return "Unknown";
 }
@@ -475,6 +489,9 @@ BetheHeitlerSplitter::mixture(double tX0) const {
       break;
     case Model::CEPCRuntimeCategoryAligned9Clear:
       internal = cepcRuntimeCategoryAligned9ClearMixture(tX0);
+      break;
+    case Model::CEPCRuntimeCategoryAligned15Clear:
+      internal = cepcRuntimeCategoryAligned15ClearMixture(tX0);
       break;
   }
   std::vector<BetheHeitlerMixtureComponent> result;
