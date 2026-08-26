@@ -265,7 +265,8 @@ private:
   Gaudi::Property<bool>   m_cmsGsfSmoothing{
       this,"CmsGsfSmoothing",false,
       "Run a CMSSW-like backward GSF seeded from the final forward prediction, "
-      "with collapsed-moment smoothing and innermost backward-filter output"};
+      "with collapsed-moment smoothing and automatic BestBranch, "
+      "WeightedMean, and FullMixtureMode endpoint publication"};
   Gaudi::Property<double> m_cmsErrorRescaling{
       this,"CmsErrorRescaling",100.0,
       "Multiplicative covariance scaling for the CMSSW-like backward seed"};
@@ -354,8 +355,8 @@ private:
       "Retained-momentum-fraction variance assigned to trial scan components"};
   Gaudi::Property<std::string> m_outputMode{
       this, "GSFOutputMode", "BestBranch",
-      "Forward-only output selector; smoother/reverse always write BestBranch, "
-      "WeightedMean, and FullMixtureMode to separate collections"};
+      "Forward-only output selector; smoother/reverse/CMS-like always write "
+      "BestBranch, WeightedMean, and FullMixtureMode to separate collections"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "

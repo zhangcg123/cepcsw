@@ -16,21 +16,24 @@ Geant4 pre/post-material-step truth
   -> validated interaction-point track parameters
 ```
 
-`RecGsfTracking` builds, installs, and reads `CompleteTracks`. Smoother and
-reverse runs write three row-aligned endpoint views: BestBranch to
+`RecGsfTracking` builds, installs, and reads `CompleteTracks`. Smoother,
+reverse, and CMS-like runs write three row-aligned endpoint views: BestBranch to
 `GSFTracksBestBranch`, the moment-matched endpoint to
 `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional IP
-mixture density to `GSFTracksFullMixtureMode`; CMS-like retains its fixed
-single `GSFTracks` output. FullMixtureMode is automatic/default-on for those
-two workflows, has a persisted optimization-status collection and flat-tuple
+mixture density to `GSFTracksFullMixtureMode`. CMS-like's WeightedMean
+preserves its former fixed `GSFTracks` endpoint. FullMixtureMode is
+automatic/default-on for all three workflows, has a persisted
+optimization-status collection and flat-tuple
 fields, and is mechanically available but not physics-validated. Its
 definition, output/fallback contract, and focused mechanical gates are in
 `agents_record/2026-08-24-full-mixture-mode-endpoint.md`. Its
+CMS-like extension and exact historical-WeightedMean compatibility gate are
+in `agents_record/2026-08-27-cms-like-three-endpoint-publication.md`. Its
 underlying positive-weight final components are also persisted automatically
 with input/output track mapping, normalized weight, IP kappa, kappa variance,
 method source, and validity. The flat `final_mixture_component_*` vectors are
 sufficient to reconstruct the one-dimensional pT marginal and are empty for
-forward, CMS-like, and global-loss; their contract and gates are in
+forward and global-loss; their contract and gates are in
 `agents_record/2026-08-25-final-mixture-component-flat-tuple.md`. Its
 complete component lineage is now also persisted automatically for smoother
 and reverse jobs. The `lineage_node_*` and `lineage_edge_*` flat vectors keep

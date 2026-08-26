@@ -1116,6 +1116,7 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
 enum class FinalMixtureComponentSource : std::int32_t {
   GaussianSumSmoother = 1,
   ReverseFiltering = 2,
+  CmsLikeBackward = 3,
 };
 
 enum class LineageNodeSource : std::int32_t {
@@ -2377,7 +2378,8 @@ StatusCode RecGsfTracking::initialize() {
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
-  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
+  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value() ||
+      m_cmsGsfSmoothing.value()) {
     info() << "Three-view GSF publication: BestBranch -> GSFTracksBestBranch, "
               "WeightedMean -> GSFTracksWeightedMean, FullMixtureMode -> "
               "GSFTracksFullMixtureMode; GSFOutputMode does not select "
@@ -2393,7 +2395,8 @@ StatusCode RecGsfTracking::execute() {
   m_nEvt++;
   const int eventIndex = m_nEvt - 1;
   const bool publishPairedEndpoints =
-      m_gaussianSumSmoothing.value() || m_reverseFiltering.value();
+      m_gaussianSumSmoothing.value() || m_reverseFiltering.value() ||
+      m_cmsGsfSmoothing.value();
   auto* out = publishPairedEndpoints
       ? m_bestBranchOutputTracks.createAndPut()
       : m_outputTracks.createAndPut();
@@ -4321,14 +4324,23 @@ StatusCode RecGsfTracking::execute() {
         THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
         TMatrixD reverseIpCov(5, 5);
         bool reverseOutputOk = false;
+        reverseOutputOk = extrapolateContinuationToIP(
+            *reverseBest, bz, reverseIp, reverseIpCov);
+        reverseOutputLabel = runCmsSmoother
+            ? "CmsGsfBestBranch" : "ReverseBestBranch";
         if (runCmsSmoother) {
-          reverseOutputOk = collapsedCurrentMixtureAtIP(
-              reverseComps, bz, reverseIp, reverseIpCov);
-          reverseOutputLabel = "CmsGsfInnermostMixture";
+          // Preserve the historical single CMS-like endpoint exactly as the
+          // explicit WeightedMean view: moment-match the surviving mixture at
+          // the innermost surface, then move that one Gaussian to the IP.
+          reverseWeightedIpAvailable = collapsedCurrentMixtureAtIP(
+              reverseComps, bz, reverseWeightedIp, reverseWeightedIpCov);
+          if (!reverseWeightedIpAvailable) {
+            warning() << "CMS-like WeightedMean publication failed; the "
+                         "paired collection will preserve the BestBranch "
+                         "state"
+                      << endmsg;
+          }
         } else {
-          reverseOutputOk = extrapolateContinuationToIP(
-              *reverseBest, bz, reverseIp, reverseIpCov);
-          reverseOutputLabel = "ReverseBestBranch";
           reverseWeightedIpAvailable = weightedReverseMixtureAtIP(
               reverseComps, bz, reverseWeightedIp, reverseWeightedIpCov);
           if (!reverseWeightedIpAvailable) {
@@ -4336,36 +4348,38 @@ StatusCode RecGsfTracking::execute() {
                          "collection will preserve the BestBranch state"
                       << endmsg;
           }
-          reverseFullMixtureModeStatus = findFullMixtureModeAtIP(
-              reverseComps, bz,
-              [bz](GsfComponent& component, THelicalTrack& helix,
-                   TMatrixD& covariance) {
-                return extrapolateContinuationToIP(
-                    component, bz, helix, covariance);
-              },
-              reverseFullMixtureModeIp, reverseFullMixtureModeIpCov,
-              reverseFullMixtureModeDiagnostics);
-          reverseFullMixtureModeIpAvailable =
-              reverseFullMixtureModeStatus ==
-              FullMixtureModeStatus::Success;
-          if (!reverseFullMixtureModeIpAvailable) {
-            warning() << "Reverse FullMixtureMode publication failed with "
-                         "status "
-                      << fullMixtureModeStatusValue(
-                             reverseFullMixtureModeStatus)
-                      << "; the paired collection will preserve the "
-                         "BestBranch state"
-                      << endmsg;
-          }
+        }
+        reverseFullMixtureModeStatus = findFullMixtureModeAtIP(
+            reverseComps, bz,
+            [bz](GsfComponent& component, THelicalTrack& helix,
+                 TMatrixD& covariance) {
+              return extrapolateContinuationToIP(
+                  component, bz, helix, covariance);
+            },
+            reverseFullMixtureModeIp, reverseFullMixtureModeIpCov,
+            reverseFullMixtureModeDiagnostics);
+        reverseFullMixtureModeIpAvailable =
+            reverseFullMixtureModeStatus ==
+            FullMixtureModeStatus::Success;
+        if (!reverseFullMixtureModeIpAvailable) {
+          warning() << (runCmsSmoother ? "CMS-like" : "Reverse")
+                    << " FullMixtureMode publication failed with status "
+                    << fullMixtureModeStatusValue(
+                           reverseFullMixtureModeStatus)
+                    << "; the paired collection will preserve the "
+                       "BestBranch state"
+                    << endmsg;
         }
         if (reverseOutputOk) {
           if (!runCmsSmoother && m_reverseFiltering.value())
             lineageGraph.markFinal(reverseComps, reverseBest);
-          if (!runCmsSmoother && m_reverseFiltering.value()) {
+          if (m_reverseFiltering.value() || runCmsSmoother) {
             finalMixtureComponentRecords =
                 captureFinalMixtureComponentsAtIP(
                     reverseComps, bz,
-                    FinalMixtureComponentSource::ReverseFiltering,
+                    runCmsSmoother
+                        ? FinalMixtureComponentSource::CmsLikeBackward
+                        : FinalMixtureComponentSource::ReverseFiltering,
                     [bz](GsfComponent& component, THelicalTrack& helix,
                          TMatrixD& covariance) {
                       return extrapolateContinuationToIP(
@@ -4414,22 +4428,22 @@ StatusCode RecGsfTracking::execute() {
           reverseOutputComps = (int)reverseComps.size();
           reverseIpAvailable = true;
 
-          if (!runCmsSmoother && m_verboseDump &&
-              reverseWeightedIpAvailable) {
+          if (m_verboseDump && reverseWeightedIpAvailable) {
             const double weightedPt = reverseWeightedIp.GetKappa() != 0.0
                 ? 1.0 / std::abs(reverseWeightedIp.GetKappa()) : 0.0;
             info() << boost::format(
-                "  REVERSE IP paired output: mode=ReverseWeightedMean "
+                "  REVERSE IP paired output: mode=%s "
                 "components=%d pT=%.6g d0=%.6g z0=%.6g phi=%.6g "
                 "tanL=%.6g")
+                      % (runCmsSmoother ? "CmsGsfWeightedMean"
+                                        : "ReverseWeightedMean")
                       % (int)reverseComps.size() % weightedPt
                       % (-reverseWeightedIp.GetDrho())
                       % reverseWeightedIp.GetDz()
                       % normalizePhi(reverseWeightedIp.GetPhi0() + M_PI / 2.0)
                       % reverseWeightedIp.GetTanLambda() << endmsg;
           }
-          if (!runCmsSmoother && m_verboseDump &&
-              reverseFullMixtureModeIpAvailable) {
+          if (m_verboseDump && reverseFullMixtureModeIpAvailable) {
             const double modePt = reverseFullMixtureModeIp.GetKappa() != 0.0
                 ? 1.0 / std::abs(reverseFullMixtureModeIp.GetKappa()) : 0.0;
             info() << boost::format(
@@ -4709,7 +4723,7 @@ StatusCode RecGsfTracking::execute() {
       }
 
       // Extrapolate to IP (method selected by MaterialIPExtrapolation).
-      // Smoother and ordinary reverse workflows publish three endpoint views:
+      // Smoother, reverse, and CMS-like workflows publish three endpoint views:
       // BestBranch is written to GSFTracksBestBranch, while the paired
       // moment-matched state is written to GSFTracksWeightedMean and the joint
       // density maximum to GSFTracksFullMixtureMode. The legacy selector
@@ -4729,7 +4743,8 @@ StatusCode RecGsfTracking::execute() {
           FullMixtureModeStatus::MethodEndpointUnavailable;
       bool usedReverseOutput = false;
       bool pairedWeightedOutputAvailable = false;
-      if (m_reverseFiltering.value() && reverseIpAvailable) {
+      if ((m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) &&
+          reverseIpAvailable) {
         ipHelix = reverseOutputIp;
         ipCov = reverseOutputIpCov;
         usedReverseOutput = true;
@@ -4743,10 +4758,6 @@ StatusCode RecGsfTracking::execute() {
             ? reverseFullMixtureModeIpCov : reverseOutputIpCov;
         fullMixtureModeStatus = reverseFullMixtureModeStatus;
         pairedWeightedOutputAvailable = true;
-      } else if (m_cmsGsfSmoothing.value() && reverseIpAvailable) {
-        ipHelix = reverseOutputIp;
-        ipCov = reverseOutputIpCov;
-        usedReverseOutput = true;
       } else if (m_gaussianSumSmoothing.value()) {
         if (!weightedMixtureAtIP(comps, m_materialIPExtrap, m_cradle,
                                  m_ipLayer, bz, weightedIpHelix,
@@ -4800,9 +4811,10 @@ StatusCode RecGsfTracking::execute() {
                  << endmsg;
         }
         pairedWeightedOutputAvailable = true;
-      } else if (m_reverseFiltering.value()) {
-        warning() << "Reverse endpoint unavailable; all three published "
-                     "collections will preserve the forward BestBranch state"
+      } else if (m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) {
+        warning() << (m_cmsGsfSmoothing.value() ? "CMS-like" : "Reverse")
+                  << " endpoint unavailable; all three published collections "
+                     "will preserve the forward BestBranch state"
                   << endmsg;
         pairedWeightedOutputAvailable = true;
       }

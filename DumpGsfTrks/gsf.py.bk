@@ -115,8 +115,9 @@ gsf.ReverseFiltering = False
 gsf.CmsGsfSmoothing = False
 gsf.CmsErrorRescaling = 100.0
 gsf.MaterialIPExtrapolation = False
-# Forward-only compatibility setting. The smoother/reverse methods below
-# always persist all three endpoint representations and do not select one here.
+# Forward-only compatibility setting. The smoother/reverse/CMS-like methods
+# below always persist all three endpoint representations and do not select one
+# here.
 gsf.GSFOutputMode = "BestBranch"
 gsf.ReverseSelectionMode = "AggregateWeight"
 gsf.SurfaceConsistencyUninformativeFloor = 0.05
@@ -163,12 +164,12 @@ elif method == "reverse":
 elif method in ("cms-like", "cms", "cms_like"):
     # CMSSW-like workflow: seed from the final forward prediction, inflate the
     # full covariance, apply the outermost hit backward, combine collapsed
-    # forward/backward moments internally, and publish the collapsed innermost
-    # backward-filtered mixture at the IP.
+    # forward/backward moments internally, and publish BestBranch, WeightedMean,
+    # and FullMixtureMode. WeightedMean preserves the historical single CMS-like
+    # endpoint: collapse at the innermost surface, then move that Gaussian to IP.
     method = "cms-like"
     gsf.CmsGsfSmoothing = True
     gsf.CmsErrorRescaling = 100.0
-    gsf.GSFOutputMode = "BestBranch"  # CMS endpoint selection is fixed.
 
 elif method in ("global-loss", "global_loss", "global"):
     # Independent all-hit evidence refitter. It compares identity with every
@@ -225,13 +226,14 @@ gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
-# The tuple uses explicit endpoint schemas. Smoother/reverse BestBranch,
+# The tuple uses explicit endpoint schemas. Smoother/reverse/CMS-like BestBranch,
 # WeightedMean, and FullMixtureMode fill bestbranch_gsf_*, weighted_gsf_*, and
-# fullmixture_gsf_* respectively. CMS-like fills generic gsf_* from GSFTracks;
-# global-loss maps GlobalLossTracks into those same generic fields. Missing
+# fullmixture_gsf_* respectively. Global-loss maps GlobalLossTracks into the
+# generic gsf_* fields. Missing
 # method-specific collections leave their corresponding branch set
 # unavailable/zero. The always-created final_mixture_component_* vectors carry
-# all final smoother/reverse output tracks and are empty for the other methods.
+# all final smoother/reverse/CMS-like output tracks and are empty for forward
+# and global-loss.
 # The lineage_node_* and lineage_edge_* vectors automatically carry the full
 # passive smoother/reverse component DAG and are empty for the other methods.
 flat.OutputFile = os.path.join(
