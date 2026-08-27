@@ -567,3 +567,77 @@ truth-like F/B preferences in this panel. Nine of sixteen comparable late
 losses still prefer identity. The result is consistent with Reverse placing
 the collapsed correction at the outer state, but it remains selected-sample,
 correlated-state evidence rather than a calibrated location efficiency.
+
+### Adjacent-surface audit of the Reverse local chi-square
+
+The Reverse source and recorded DAG were rechecked after questioning whether
+the local chi-square above had been read at the wrong surface. For a truth
+interval `i -> i+1`, the loop sets `target=hits[i]`, constructs the material
+path from the state at `hits[i+1]` to that target, calls
+`split(..., reverse=true)` with `truthRetainedFraction(i,i+1)`, and then calls
+`addAndFit(targetHit,...)`. The measurement node records `hit_index=i` and the
+exact returned `dchi`. Thus the displayed local value is at the inner bounding
+hit `i`. The split node also carries `hit_index=i` as the interval owner/target
+label even though the correction is applied to the outer continuation before
+inward propagation; that label can visually suggest an off-by-one if read as
+a physical process point.
+
+The lineage was traced one hit outward and one hit inward. At outer hit `i+1`
+the two children do not exist yet, so only their common pre-split parent's
+local chi-square can be shown. At inner hit `i-1`, the table reports the
+highest-posterior measurement descendant reachable separately from the
+identity and matched-loss nodes at `i`. It is not claimed to be the unchanged
+Gaussian: another BH split and/or KL merge can occur between the two hits.
+No reported identity/truth descendant pair shared the same downstream node.
+`cut` means the selected truth-like node at `i` had no descendant at `i-1`.
+
+The original eight-event panel gives:
+
+```text
+event   interval   outer i+1 common   at i identity/truth   at i-1 identity-desc/truth-desc
+63/62    0->1           4.6686          1.1362 / 1.1206          no inner hit
+98/15    4->5           4.4819          5.3077 / 5.3074          2.7722 / 3.0588
+59/72    3->4           1.9520          0.5423 / 0.1214          0.9467 / 1.7160
+41/72    6->7           3.5186          1.2391 / 1.7594          0.2804 / 3.6362
+12/2     6->7           1.1240          0.3824 / 1.9210          0.6297 / 1.4366
+32/31    8->9           0.4218          2.5454 / 3.0122          4.8247 / cut
+9/57   226->227         outer seed      5.1390 / 5.1046          0.7372 / 0.6783
+49/25  229->230         outer seed      2.3872 / 2.5012          1.6998 / 1.7042
+```
+
+The twenty-event extension gives:
+
+```text
+event   interval   outer i+1 common   at i identity/truth   at i-1 identity-desc/truth-desc
+70/19    9->10          0.3123          1.9599 / 1.7396          2.8347 / 2.9600
+74/35  231->232         outer seed      4.6466 / 4.7453          0.0500 / 0.0561
+67/46    8->9           0.2514          0.3286 / 0.5030          1.9241 / 0.1453
+80/17    5->6           6.4202          0.3217 / 1.3641          0.5093 / 0.5211
+78/87    5->6           2.7944          0.0791 / 2.5573          2.6851 / 2.9412
+28/91    4->5           0.1029          2.5932 / 2.5936          0.2148 / 0.3892
+32/89    7->8           0.3510          1.1525 / 3.8383          2.0872 / 0.2078
+79/1     9->10          0.8842          0.1266 / 0.3048          4.5397 / 4.0719
+65/66    8->9           4.8905          0.7426 / 0.9466          2.0977 / cut
+92/11    5->6           1.4975         20.0124 / 29.1997         70.2500 / cut
+83/4   232->233         outer seed      0.7865 / 0.7925          0.8880 / 0.8842
+94/34  231->232         outer seed      0.9762 / 1.0155          2.8272 / 2.7700
+59/71    3->4           1.4273          0.3371 / 0.0326          5.2153 / 1.5174
+89/18  231->232         outer seed      5.0150 / 4.9947          2.9325 / 2.9457
+23/84    5->6           5.1537          3.0932 / 5.4895          3.6448 / 4.3502
+5/83     6->7           0.2979          2.9997 / 0.4986          2.3655 / 1.8482
+58/34  232->233         outer seed      1.3287 / 1.3888          2.3623 / 2.2859
+44/73    5->6           0.3155          1.2731 / 3.4105          2.7638 / 3.2091
+13/57  155->156         no BH split     no identity/truth pair   no pair
+48/94  231->232         outer seed      3.3233 / 3.2029          0.6401 / 0.7196
+```
+
+The matched-loss descendant has lower local chi-square at `i-1` in 9/23
+comparable events. Several preferences reverse between adjacent hits: events
+67/46, 32/89, 79/1, 83/4, 94/34, and 58/34 favor identity at `i` but the
+matched-loss family at `i-1`; events 98/15, 59/72, 70/19, 89/18, and 48/94
+move the other way. This demonstrates that one measurement's local ordering
+is unstable under the next propagation/update. It does not reveal an
+off-by-one readout: the stored `dchi2` at `i` exactly matches the source's
+target-hit update. A true shifted-split test would require constructing the
+radiative hypothesis at a different interval boundary; the common parent
+chi-square at `i+1` cannot serve as that counterfactual.
