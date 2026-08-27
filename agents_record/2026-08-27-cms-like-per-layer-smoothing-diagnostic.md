@@ -323,3 +323,68 @@ identity in six of seven events. This is expected because scaling changes the
 backward seed covariance only; it does not remove the forward-derived seed
 mean, components, or weights and therefore does not make the messages
 independent.
+
+### Reverse-corrected 4--6% loss control
+
+Eight topology-clear, single-interval events were selected from the 4--6%
+truth-eBrem category because Reverse FullMixtureMode substantially improved
+their stored LCIO residual. They were rerun from the current build with the
+original `CEPCRuntimeCategoryAligned15Clear` model, `MaxComponents=10`, cutoff
+`1e-4`, reverse seed covariance scale 1, truth override off, and CMS backward
+scales 1 and 100. The fifteen-component model was retained because the
+five-component production control has no approximately-5% child; its relevant
+means bracket 5% near 2.2% and 10.5%.
+
+The same-code Reverse rerun reproduced the selection:
+
+```text
+event   truth loss   matched BH mean   LCIO residual   Reverse FullMixture
+48/43     5.643%         5.35%            -5.170%            +0.323%
+52/44     4.650%         4.10%            -4.738%            -0.116%
+66/46     4.995%         5.35%            -4.602%            +0.116%
+61/36     5.444%         5.35%            -4.628%            -0.291%
+33/10     5.417%         5.35%            -4.723%            +0.526%
+74/45     4.520%         4.10%            -4.299%            -0.177%
+34/98     5.090%         5.35%            -4.052%            +0.009%
+99/96     5.692%         5.35%            -4.371%            +0.537%
+```
+
+Raw local hit-compatibility chi-squares for identity versus the matched-loss
+sibling from the dominant identity parent were:
+
+```text
+event   Reverse scale 1       CMS scale 1          CMS scale 100
+48/43   0.5744 / 1.1096      0.5648 / 1.1333      1.9072 / 0.6170
+52/44   0.6736 / 0.4896      0.6703 / 0.4893      0.6140 / 0.3697
+66/46   0.8661 / 2.3264      0.8649 / 2.3597      1.2515 / 0.8350
+61/36   9.5179 / 11.6139     9.5506 / 11.6505     5.2153 / 6.4407
+33/10   0.4813 / 1.8336      0.4748 / 1.8528      5.8625 / 0.3931
+74/45   0.6380 / 7.4896      0.6426 / 7.5332      0.6625 / 6.4395
+34/98   4.4636 / 5.5959      4.2840 / 5.4006      0.2724 / 0.1437
+99/96   8.6923 / 10.2097     8.6498 / 10.1649     0.3281 / 0.4073
+```
+
+The raw five-dimensional `F_updated` versus `B_pred` chi-squares were:
+
+```text
+event   CMS scale 1 identity/truth     CMS scale 100 identity/truth
+48/43      116.8658 /  6.4788              124.4372 /  5.4051
+52/44       12.8667 / 14.8060               12.9559 / 14.6130
+66/46       36.9934 / 18.7509               41.7723 / 13.7258
+61/36       37.4933 / 29.8557               38.7322 / 18.9279
+33/10       17.1645 /  6.0602               26.2816 /  4.7452
+74/45       27.3926 / 15.6183               28.1589 / 13.9928
+34/98       37.1515 / 20.8775               49.1501 /  3.8631
+99/96       37.8823 / 20.5009               47.1273 /  3.1103
+```
+
+At scale 1, the Reverse and CMS backward local chi-square prefers the matched
+loss sibling in only one of eight events. Scale 100 changes the CMS local
+preference to the matched sibling in five of eight. The full F/B chi-square
+prefers it in seven of eight at both scales and generally more strongly at
+scale 100. Nevertheless, the audited matched sibling from the dominant
+identity parent has lineage fate 3 (weight cutoff) in all eight Reverse runs.
+The correct final pT therefore cannot be attributed simply to survival of this
+one locally matched child; other parent lineages, interval histories, and the
+final mixture endpoint remain involved. The F/B score also remains correlated
+and is not a calibrated likelihood despite its favorable 5% ordering.
