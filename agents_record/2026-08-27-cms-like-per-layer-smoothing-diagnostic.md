@@ -388,3 +388,73 @@ The correct final pT therefore cannot be attributed simply to survival of this
 one locally matched child; other parent lineages, interval histories, and the
 final mixture endpoint remain involved. The F/B score also remains correlated
 and is not a calibrated likelihood despite its favorable 5% ordering.
+
+### Finer-BH approximately-2% loss control
+
+The earlier eight-event approximately-2% panel was rerun from the same current
+build with `CEPCRuntimeCategoryAligned15Clear`, `MaxComponents=10`, component
+weight cutoff `1e-4`, truth override off, Reverse seed covariance scale 1, and
+CMS-like backward covariance scales 1 and 100. The source tree was not changed.
+The BH15 child nearest truth had a 2.25% mean in all eight intervals. Depending
+on interval thickness, its raw BH prior weight was only 0.0374--0.7192%, while
+the identity prior was 78.94--98.85%.
+
+The pT residuals `(pT_reco-pT_truth)/pT_truth` were:
+
+```text
+event   truth loss    LCIO       Reverse FullMix   CMS FullMix s1   CMS FullMix s100
+63/62     2.068%     -2.2918%       -2.2919%          -2.2907%          -2.2935%
+98/15     1.952%     -2.0899%       -2.0790%          -2.0830%          -2.1145%
+59/72     1.972%     -1.9449%       -1.9369%          -1.9373%          -1.9556%
+41/72     1.980%     -1.3823%       -1.3787%          -1.3878%          -1.4125%
+12/2      2.019%     -2.0305%       -2.0131%          -2.0098%          -2.0185%
+32/31     1.934%     -1.5041%       +0.7131%          +0.1437%          +0.1858%
+9/57      1.906%     +0.0635%       +0.0540%          +0.0247%          +0.0236%
+49/25     2.016%     -0.1496%       -0.1366%          -0.1320%          -0.1089%
+```
+
+Relative to the corresponding five-component runs, the BH15 FullMixtureMode
+residual changed by less than 0.021 percentage point in seven of eight events.
+Event 32/31 was the exception: Reverse changed from +0.7956% to +0.7131%, CMS
+scale 1 from +0.3323% to +0.1437%, and CMS scale 100 from +0.3345% to +0.1858%.
+The selected-panel mean absolute residual changed from 1.340% to 1.325% for
+Reverse, 1.279% to 1.251% for CMS scale 1, and 1.289% to 1.264% for CMS scale
+100. This is a selected mechanism panel, not a population performance result.
+
+Raw local hit-compatibility chi-squares for identity versus the 2.25% sibling
+from the same dominant identity parent were:
+
+```text
+event   Reverse scale 1       CMS scale 1          CMS scale 100
+63/62   1.1362 / 1.1206      1.1304 / 1.1150      1.1413 / 1.1258
+98/15   5.3077 / 5.3074      5.3043 / 5.3040      5.3351 / 5.3348
+59/72   0.5423 / 0.1214      0.5343 / 0.1257      0.6266 / 0.0926
+41/72   1.2391 / 1.7594      1.2441 / 1.7669      1.1034 / 1.5665
+12/2    0.3824 / 1.9210      0.3848 / 1.9346      0.3774 / 1.7606
+32/31   2.5454 / 3.0122      2.5638 / 3.0332      0.1452 / 0.1439
+9/57    5.1390 / 5.1046      5.1397 / 5.1052      2.2277 / 2.1952
+49/25   2.3872 / 2.5012      2.4360 / 2.5540      2.7484 / 2.8610
+```
+
+The matched child had lower local chi-square in four of eight events at scale
+1 and five of eight at CMS scale 100. The raw five-dimensional
+`F_updated`-versus-`B_pred` chi-squares were:
+
+```text
+event   CMS scale 1 identity/truth     CMS scale 100 identity/truth
+98/15      8.4777 /   8.7007              8.5277 /  8.7396
+59/72      9.2562 /  11.9663              9.2726 / 11.7841
+41/72      2.0722 /   8.0216              2.0231 /  7.0315
+12/2       1.6879 /  17.3373              1.7384 / 16.1982
+32/31     23.4787 /   7.8625             27.7917 /  6.8381
+9/57       0.0220 / 103.9331              0.1401 /  7.0533
+49/25      0.4499 /  90.5648              1.3822 /  6.1528
+```
+
+Event 63/62 has no interior F/B comparison. Only event 32/31 prefers the
+matched-loss child under the full F/B chi-square at either covariance scale.
+Thus the finer grid does supply a loss mean much closer to 2%, but that is not
+the dominant limitation in this panel. The very small radiative prior and the
+correlated forward/backward state evidence still leave most endpoints near the
+identity/LCIO solution. BH15 representation alone does not solve 2% loss
+selection.
