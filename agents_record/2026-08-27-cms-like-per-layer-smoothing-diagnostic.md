@@ -177,3 +177,62 @@ the evidence-only column but loses it again when the inherited prior is
 restored. Only after that pattern is demonstrated on focused and held-out
 events should any reviewed experiment feed a per-layer smoothing score back
 into live component weights.
+
+## 2026-08-28 full-state compatibility extension and 2% gate
+
+The passive schema was extended with the raw compatibility of the
+forward-updated moment match and each backward-predicted component:
+
+```text
+delta = mu_Fupdated - mu_Bpred
+Csum = C_Fupdated + C_Bpred
+all_hit_compatibility_dchi2 = delta^T Csum^-1 delta
+all_hit_compatibility_logdet = log(det(Csum))
+all_hit_log_overlap = -0.5 *
+    [5*log(2*pi) + all_hit_compatibility_logdet
+                 + all_hit_compatibility_dchi2]
+```
+
+The new row-aligned EDM collections are:
+
+- `GSFLineageNodeCmsSmoothAllHitCompatibilityDChi2`
+- `GSFLineageNodeCmsSmoothAllHitCompatibilityLogDet`
+- `GSFLineageNodeCmsSmoothAllHitLogOverlap`
+
+`RecGsfFlatTuple` mirrors them as:
+
+- `lineage_node_cms_smooth_all_hit_compatibility_dchi2`
+- `lineage_node_cms_smooth_all_hit_compatibility_logdet`
+- `lineage_node_cms_smooth_all_hit_log_overlap`
+
+They are finite under the existing `cms_smooth_valid=1` contract and NaN
+elsewhere. They are passive and do not modify the product state, component
+weight, reduction, or endpoint publication. No configurable property was
+added.
+
+A focused CMS-like rerun of job 12 entry 2 used
+`CEPC2GeV85StepConditioned`, `MaxComponents=10`,
+`ComponentWeightCutoff=1e-4`, `ReverseKappaSeedCov=1`, and
+`CmsErrorRescaling=1`. All pre-existing endpoint scalars and all pre-existing
+CMS smoothing vectors were bit-for-bit equal to the pre-extension output. The
+three new vectors had the common 5,306-node lineage length and 1,960 finite
+accepted-interior entries. Events 11, 16, and 17 also completed with 2,012,
+1,883, and 1,780 finite entries, respectively.
+
+For sibling radiative and identity hypotheses define
+
+```text
+delta_score = score_radiative - score_identity
+relative_factor = exp(-0.5 * delta_score)
+```
+
+where `score = dchi2 + logdet`. Directly differencing the separately stored
+`all_hit_log_overlap` reproduced `relative_factor` for every evaluable member
+of an eight-event approximately-2% truth-loss panel. This closes the
+mechanical definition. The population result was not uniformly favorable:
+six of seven evaluable events preferred identity more strongly under this
+full-state compatibility, while one event preferred the radiative sibling by
+a factor near 980. The remaining event lost energy in the first accepted
+interval and has no interior forward-updated/backward-predicted comparison.
+This sharp two-sided behavior makes the quantity a useful diagnostic, not a
+validated replacement for live weighting.

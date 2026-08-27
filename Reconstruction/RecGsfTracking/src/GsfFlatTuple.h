@@ -198,6 +198,18 @@ private:
           "GSFLineageNodeCmsSmoothAllOtherLogOverlap",
           Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothAllHitCompatibilityDChi2{
+          "GSFLineageNodeCmsSmoothAllHitCompatibilityDChi2",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothAllHitCompatibilityLogDet{
+          "GSFLineageNodeCmsSmoothAllHitCompatibilityLogDet",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothAllHitLogOverlap{
+          "GSFLineageNodeCmsSmoothAllHitLogOverlap",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
       m_inLineageNodeCmsSmoothLocalDChi2{
           "GSFLineageNodeCmsSmoothLocalDChi2",
           Gaudi::DataHandle::Reader, this};
@@ -378,6 +390,11 @@ private:
   std::vector<double> m_lineage_node_cms_smooth_all_hit_kappa_variance;
   std::vector<double> m_lineage_node_cms_smooth_all_hit_pT;
   std::vector<double> m_lineage_node_cms_smooth_all_other_log_overlap;
+  std::vector<double>
+      m_lineage_node_cms_smooth_all_hit_compatibility_dchi2;
+  std::vector<double>
+      m_lineage_node_cms_smooth_all_hit_compatibility_logdet;
+  std::vector<double> m_lineage_node_cms_smooth_all_hit_log_overlap;
   std::vector<double> m_lineage_node_cms_smooth_local_dchi2;
   std::vector<double> m_lineage_node_cms_smooth_local_logdet_innovation;
   std::vector<double> m_lineage_node_cms_smooth_local_log_likelihood;

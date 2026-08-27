@@ -286,6 +286,14 @@ StatusCode RecGsfFlatTuple::initialize() {
                  &m_lineage_node_cms_smooth_all_hit_pT);
   m_tree->Branch("lineage_node_cms_smooth_all_other_log_overlap",
                  &m_lineage_node_cms_smooth_all_other_log_overlap);
+  m_tree->Branch(
+      "lineage_node_cms_smooth_all_hit_compatibility_dchi2",
+      &m_lineage_node_cms_smooth_all_hit_compatibility_dchi2);
+  m_tree->Branch(
+      "lineage_node_cms_smooth_all_hit_compatibility_logdet",
+      &m_lineage_node_cms_smooth_all_hit_compatibility_logdet);
+  m_tree->Branch("lineage_node_cms_smooth_all_hit_log_overlap",
+                 &m_lineage_node_cms_smooth_all_hit_log_overlap);
   m_tree->Branch("lineage_node_cms_smooth_local_dchi2",
                  &m_lineage_node_cms_smooth_local_dchi2);
   m_tree->Branch("lineage_node_cms_smooth_local_logdet_innovation",
@@ -583,6 +591,9 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_cms_smooth_all_hit_kappa_variance.clear();
   m_lineage_node_cms_smooth_all_hit_pT.clear();
   m_lineage_node_cms_smooth_all_other_log_overlap.clear();
+  m_lineage_node_cms_smooth_all_hit_compatibility_dchi2.clear();
+  m_lineage_node_cms_smooth_all_hit_compatibility_logdet.clear();
+  m_lineage_node_cms_smooth_all_hit_log_overlap.clear();
   m_lineage_node_cms_smooth_local_dchi2.clear();
   m_lineage_node_cms_smooth_local_logdet_innovation.clear();
   m_lineage_node_cms_smooth_local_log_likelihood.clear();
@@ -658,6 +669,12 @@ StatusCode RecGsfFlatTuple::execute() {
         m_inLineageNodeCmsSmoothAllHitKappaVariance.get();
     const auto* nodeCmsSmoothAllOtherLogOverlap =
         m_inLineageNodeCmsSmoothAllOtherLogOverlap.get();
+    const auto* nodeCmsSmoothAllHitCompatibilityDChi2 =
+        m_inLineageNodeCmsSmoothAllHitCompatibilityDChi2.get();
+    const auto* nodeCmsSmoothAllHitCompatibilityLogDet =
+        m_inLineageNodeCmsSmoothAllHitCompatibilityLogDet.get();
+    const auto* nodeCmsSmoothAllHitLogOverlap =
+        m_inLineageNodeCmsSmoothAllHitLogOverlap.get();
     const auto* nodeCmsSmoothLocalDChi2 =
         m_inLineageNodeCmsSmoothLocalDChi2.get();
     const auto* nodeCmsSmoothLocalLogDetInnovation =
@@ -717,6 +734,9 @@ StatusCode RecGsfFlatTuple::execute() {
         nodeSizeIsConsistent(nodeCmsSmoothAllHitKappa) &&
         nodeSizeIsConsistent(nodeCmsSmoothAllHitKappaVariance) &&
         nodeSizeIsConsistent(nodeCmsSmoothAllOtherLogOverlap) &&
+        nodeSizeIsConsistent(nodeCmsSmoothAllHitCompatibilityDChi2) &&
+        nodeSizeIsConsistent(nodeCmsSmoothAllHitCompatibilityLogDet) &&
+        nodeSizeIsConsistent(nodeCmsSmoothAllHitLogOverlap) &&
         nodeSizeIsConsistent(nodeCmsSmoothLocalDChi2) &&
         nodeSizeIsConsistent(nodeCmsSmoothLocalLogDetInnovation) &&
         nodeSizeIsConsistent(nodeCmsSmoothLocalLogLikelihood) &&
@@ -838,6 +858,15 @@ StatusCode RecGsfFlatTuple::execute() {
       m_lineage_node_cms_smooth_all_other_log_overlap.assign(
           nodeCmsSmoothAllOtherLogOverlap->begin(),
           nodeCmsSmoothAllOtherLogOverlap->end());
+      m_lineage_node_cms_smooth_all_hit_compatibility_dchi2.assign(
+          nodeCmsSmoothAllHitCompatibilityDChi2->begin(),
+          nodeCmsSmoothAllHitCompatibilityDChi2->end());
+      m_lineage_node_cms_smooth_all_hit_compatibility_logdet.assign(
+          nodeCmsSmoothAllHitCompatibilityLogDet->begin(),
+          nodeCmsSmoothAllHitCompatibilityLogDet->end());
+      m_lineage_node_cms_smooth_all_hit_log_overlap.assign(
+          nodeCmsSmoothAllHitLogOverlap->begin(),
+          nodeCmsSmoothAllHitLogOverlap->end());
       m_lineage_node_cms_smooth_local_dchi2.assign(
           nodeCmsSmoothLocalDChi2->begin(),
           nodeCmsSmoothLocalDChi2->end());

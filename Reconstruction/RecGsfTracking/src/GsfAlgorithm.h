@@ -234,6 +234,18 @@ private:
           "GSFLineageNodeCmsSmoothAllOtherLogOverlap",
           Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllHitCompatibilityDChi2{
+          "GSFLineageNodeCmsSmoothAllHitCompatibilityDChi2",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllHitCompatibilityLogDet{
+          "GSFLineageNodeCmsSmoothAllHitCompatibilityLogDet",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllHitLogOverlap{
+          "GSFLineageNodeCmsSmoothAllHitLogOverlap",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
       m_lineageNodeCmsSmoothLocalDChi2{
           "GSFLineageNodeCmsSmoothLocalDChi2",
           Gaudi::DataHandle::Writer, this};

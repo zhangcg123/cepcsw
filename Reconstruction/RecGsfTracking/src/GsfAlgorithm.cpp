@@ -559,6 +559,11 @@ struct CmsPerLayerSmoothingDiagnostic {
   double allHitKappa = std::numeric_limits<double>::quiet_NaN();
   double allHitKappaVariance = std::numeric_limits<double>::quiet_NaN();
   double allOtherLogOverlap = std::numeric_limits<double>::quiet_NaN();
+  double allHitCompatibilityDChi2 =
+      std::numeric_limits<double>::quiet_NaN();
+  double allHitCompatibilityLogDet =
+      std::numeric_limits<double>::quiet_NaN();
+  double allHitLogOverlap = std::numeric_limits<double>::quiet_NaN();
   double localDChi2 = std::numeric_limits<double>::quiet_NaN();
   double localLogDetInnovation = std::numeric_limits<double>::quiet_NaN();
   double localLogLikelihood = std::numeric_limits<double>::quiet_NaN();
@@ -686,7 +691,9 @@ static bool captureCmsMeasurementLinearization(
 static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
                               const GaussianMomentState& backwardPredicted,
                               GaussianMomentState& smoothed,
-                              double* logOverlap = nullptr) {
+                              double* logOverlap = nullptr,
+                              double* overlapDChi2 = nullptr,
+                              double* overlapLogDet = nullptr) {
   if (!forwardUpdated.valid || !backwardPredicted.valid) return false;
   TMatrixD covarianceSum = forwardUpdated.covariance +
                            backwardPredicted.covariance;
@@ -697,14 +704,19 @@ static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
   TMatrixD delta = backwardPredicted.mean - forwardUpdated.mean;
   while (delta(1, 0) >= M_PI) delta(1, 0) -= 2.0 * M_PI;
   while (delta(1, 0) < -M_PI) delta(1, 0) += 2.0 * M_PI;
-  if (logOverlap) {
+  if (logOverlap || overlapDChi2 || overlapLogDet) {
     const TMatrixD scaledDelta = covarianceSum * delta;
     double quadratic = 0.0;
     for (int index = 0; index < 5; ++index)
       quadratic += delta(index, 0) * scaledDelta(index, 0);
     if (!(quadratic >= 0.0) || !std::isfinite(quadratic)) return false;
-    *logOverlap = -0.5 *
-        (5.0 * std::log(2.0 * M_PI) + std::log(determinant) + quadratic);
+    const double logDet = std::log(determinant);
+    if (overlapDChi2) *overlapDChi2 = quadratic;
+    if (overlapLogDet) *overlapLogDet = logDet;
+    if (logOverlap) {
+      *logOverlap = -0.5 *
+          (5.0 * std::log(2.0 * M_PI) + logDet + quadratic);
+    }
   }
   smoothed.mean = forwardUpdated.mean + gain * delta;
   smoothed.covariance = gain * backwardPredicted.covariance;
@@ -1420,6 +1432,12 @@ struct LineageNodeRecord {
       std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothAllOtherLogOverlap =
       std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothAllHitCompatibilityDChi2 =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothAllHitCompatibilityLogDet =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothAllHitLogOverlap =
+      std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothLocalDChi2 =
       std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothLocalLogDetInnovation =
@@ -1572,6 +1590,11 @@ public:
     node.cmsSmoothAllHitKappa = diagnostic.allHitKappa;
     node.cmsSmoothAllHitKappaVariance = diagnostic.allHitKappaVariance;
     node.cmsSmoothAllOtherLogOverlap = diagnostic.allOtherLogOverlap;
+    node.cmsSmoothAllHitCompatibilityDChi2 =
+        diagnostic.allHitCompatibilityDChi2;
+    node.cmsSmoothAllHitCompatibilityLogDet =
+        diagnostic.allHitCompatibilityLogDet;
+    node.cmsSmoothAllHitLogOverlap = diagnostic.allHitLogOverlap;
     node.cmsSmoothLocalDChi2 = diagnostic.localDChi2;
     node.cmsSmoothLocalLogDetInnovation =
         diagnostic.localLogDetInnovation;
@@ -2795,6 +2818,12 @@ StatusCode RecGsfTracking::execute() {
       m_lineageNodeCmsSmoothAllHitKappaVariance.createAndPut();
   auto* lineageNodeCmsSmoothAllOtherLogOverlap =
       m_lineageNodeCmsSmoothAllOtherLogOverlap.createAndPut();
+  auto* lineageNodeCmsSmoothAllHitCompatibilityDChi2 =
+      m_lineageNodeCmsSmoothAllHitCompatibilityDChi2.createAndPut();
+  auto* lineageNodeCmsSmoothAllHitCompatibilityLogDet =
+      m_lineageNodeCmsSmoothAllHitCompatibilityLogDet.createAndPut();
+  auto* lineageNodeCmsSmoothAllHitLogOverlap =
+      m_lineageNodeCmsSmoothAllHitLogOverlap.createAndPut();
   auto* lineageNodeCmsSmoothLocalDChi2 =
       m_lineageNodeCmsSmoothLocalDChi2.createAndPut();
   auto* lineageNodeCmsSmoothLocalLogDetInnovation =
@@ -2891,6 +2920,12 @@ StatusCode RecGsfTracking::execute() {
           node.cmsSmoothAllHitKappaVariance);
       lineageNodeCmsSmoothAllOtherLogOverlap->push_back(
           node.cmsSmoothAllOtherLogOverlap);
+      lineageNodeCmsSmoothAllHitCompatibilityDChi2->push_back(
+          node.cmsSmoothAllHitCompatibilityDChi2);
+      lineageNodeCmsSmoothAllHitCompatibilityLogDet->push_back(
+          node.cmsSmoothAllHitCompatibilityLogDet);
+      lineageNodeCmsSmoothAllHitLogOverlap->push_back(
+          node.cmsSmoothAllHitLogOverlap);
       lineageNodeCmsSmoothLocalDChi2->push_back(
           node.cmsSmoothLocalDChi2);
       lineageNodeCmsSmoothLocalLogDetInnovation->push_back(
@@ -4614,7 +4649,10 @@ StatusCode RecGsfTracking::execute() {
                 forwardPredicted, backward.state, allOther,
                 &diagnostic.allOtherLogOverlap);
             const bool haveAllHit = combineCmsMoments(
-                forwardUpdated, backward.state, allHit);
+                forwardUpdated, backward.state, allHit,
+                &diagnostic.allHitLogOverlap,
+                &diagnostic.allHitCompatibilityDChi2,
+                &diagnostic.allHitCompatibilityLogDet);
             if (haveAllOther) {
               diagnostic.allOtherKappa = allOther.mean(2, 0);
               diagnostic.allOtherKappaVariance =
