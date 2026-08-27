@@ -35,13 +35,17 @@ method source, and validity. The flat `final_mixture_component_*` vectors are
 sufficient to reconstruct the one-dimensional pT marginal and are empty for
 forward and global-loss; their contract and gates are in
 `agents_record/2026-08-25-final-mixture-component-flat-tuple.md`. Its
-complete component lineage is now also persisted automatically for smoother
-and reverse jobs. The `lineage_node_*` and `lineage_edge_*` flat vectors keep
+complete component lineage is now also persisted automatically for smoother,
+reverse, and CMS-like jobs. The `lineage_node_*` and `lineage_edge_*` flat vectors keep
 every evaluated seed, BH child, measurement result, and KL output, including
-states later rejected, cut, or merged; forward, CMS-like, and global-loss
-leave them empty. Split/merge diamonds remain directed acyclic graphs, and
-the graph never steers the fit. Its schema, code maps, and mechanical gates
-are in `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`. Its
+states later rejected, cut, or merged; CMS-like additionally records each
+forward×backward product candidate and its two source states, while forward
+and global-loss leave the graph empty. Split/merge/product structures remain
+directed acyclic graphs, and the graph never steers the fit. Its base schema
+and reverse gates are in
+`agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`; the CMS-like
+extension is in
+`agents_record/2026-08-27-cms-like-component-lineage.md`. Its
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface

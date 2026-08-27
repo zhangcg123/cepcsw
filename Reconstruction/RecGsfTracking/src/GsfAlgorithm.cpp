@@ -508,6 +508,14 @@ struct GaussianMomentState {
   TMatrixD covariance{5, 5};
 };
 
+struct CmsGaussianComponentState {
+  double weight = 0.0;
+  int componentId = -1;
+  int lineageNodeId = -1;
+  bool noRadiationLineage = false;
+  GaussianMomentState state;
+};
+
 static void accumulateGaussian(GaussianAccumulator& accumulator,
                                double weight, TMatrixD mean,
                                const TMatrixD& covariance) {
@@ -543,23 +551,10 @@ static bool finishGaussian(const GaussianAccumulator& accumulator,
   return true;
 }
 
-static bool momentMatchCurrentSurface(
-    const std::vector<GsfComponent*>& components, double bz,
-    TMatrixD& mean, TMatrixD& covariance) {
-  GaussianAccumulator accumulator;
-  for (const auto* component : components) {
-    if (!component) continue;
-    TMatrixD componentMean(5, 1);
-    component->helixAtLastSite(bz).PutInto(componentMean);
-    accumulateGaussian(accumulator, component->weight, componentMean,
-                       component->covAtLastSite(bz));
-  }
-  return finishGaussian(accumulator, mean, covariance);
-}
-
 static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
                               const GaussianMomentState& backwardPredicted,
-                              GaussianMomentState& smoothed) {
+                              GaussianMomentState& smoothed,
+                              double* logOverlap = nullptr) {
   if (!forwardUpdated.valid || !backwardPredicted.valid) return false;
   TMatrixD covarianceSum = forwardUpdated.covariance +
                            backwardPredicted.covariance;
@@ -570,6 +565,15 @@ static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
   TMatrixD delta = backwardPredicted.mean - forwardUpdated.mean;
   while (delta(1, 0) >= M_PI) delta(1, 0) -= 2.0 * M_PI;
   while (delta(1, 0) < -M_PI) delta(1, 0) += 2.0 * M_PI;
+  if (logOverlap) {
+    const TMatrixD scaledDelta = covarianceSum * delta;
+    double quadratic = 0.0;
+    for (int index = 0; index < 5; ++index)
+      quadratic += delta(index, 0) * scaledDelta(index, 0);
+    if (!(quadratic >= 0.0) || !std::isfinite(quadratic)) return false;
+    *logOverlap = -0.5 *
+        (5.0 * std::log(2.0 * M_PI) + std::log(determinant) + quadratic);
+  }
   smoothed.mean = forwardUpdated.mean + gain * delta;
   smoothed.covariance = gain * backwardPredicted.covariance;
   TMatrixD covarianceT(TMatrixD::kTransposed, smoothed.covariance);
@@ -580,20 +584,23 @@ static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
   return smoothed.valid;
 }
 
-static bool collapsedCurrentMixtureAtIP(
-    const std::vector<GsfComponent*>& components, double bz,
-    THelicalTrack& outHelix, TMatrixD& outCovariance) {
-  TMatrixD mean(5, 1), covariance(5, 5);
-  if (!momentMatchCurrentSurface(components, bz, mean, covariance)) return false;
-  outHelix = THelicalTrack(mean, components.front()->helixAtLastSite(bz).GetPivot(), bz);
-  outCovariance.ResizeTo(5, 5);
-  outCovariance = covariance;
-  double dphi = 0.0;
-  TMatrixD jacobian(5, 5);
-  jacobian.UnitMatrix();
-  outHelix.MoveTo(TVector3(0.0, 0.0, 0.0), dphi, &jacobian, &outCovariance);
-  return std::isfinite(outHelix.GetKappa()) &&
-         std::isfinite(outCovariance(2, 2));
+static bool initializeCmsCombinedComponent(
+    GsfComponent& component, const GaussianMomentState& state,
+    const TVector3& pivot, double bz, double weight, int componentId,
+    bool noRadiationLineage) {
+  if (!state.valid || !(weight > 0.0) || !std::isfinite(weight) || bz == 0.0)
+    return false;
+  component.weight = weight;
+  component.debugId = componentId;
+  component.noRadiationLineage = noRadiationLineage;
+  component.debugHistory = "cms-forward-backward-combination";
+  component.continuationValid = true;
+  component.continuationState.location = DH::AtOther;
+  component.continuationState.referencePoint = {
+      static_cast<float>(pivot.X()), static_cast<float>(pivot.Y()),
+      static_cast<float>(pivot.Z())};
+  return component.setContinuationSurfaceState(
+      state.mean, state.covariance, bz);
 }
 
 static int appendMeasurementSmootherNode(
@@ -1116,12 +1123,14 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
 enum class FinalMixtureComponentSource : std::int32_t {
   GaussianSumSmoother = 1,
   ReverseFiltering = 2,
-  CmsLikeBackward = 3,
+  CmsLikeCombined = 3,
+  CmsLikeBackwardFallback = 4,
 };
 
 enum class LineageNodeSource : std::int32_t {
   ForwardFiltering = 1,
   ReverseFiltering = 2,
+  CmsLikeCombination = 3,
 };
 
 enum class LineageNodeOperation : std::int32_t {
@@ -1129,6 +1138,7 @@ enum class LineageNodeOperation : std::int32_t {
   BetheHeitlerSplit = 2,
   Measurement = 3,
   KlMerge = 4,
+  CmsProduct = 5,
 };
 
 enum class LineageNodeFate : std::int32_t {
@@ -1139,6 +1149,7 @@ enum class LineageNodeFate : std::int32_t {
   KlMerged = 4,
   FinalSurvivor = 5,
   TrackAbandoned = 6,
+  CmsInternalMessage = 7,
 };
 
 enum class LineageEdgeOperation : std::int32_t {
@@ -1146,6 +1157,7 @@ enum class LineageEdgeOperation : std::int32_t {
   Measurement = 2,
   KlMerge = 3,
   ReverseSeed = 4,
+  CmsProduct = 5,
 };
 
 struct LineageNodeRecord {
@@ -1278,6 +1290,16 @@ public:
     return nodeId;
   }
 
+  int cmsProduct(GsfComponent& component, int forwardNodeId,
+                 int backwardNodeId, int hitIndex, int surfaceIndex) {
+    const int nodeId = appendNode(
+        component, LineageNodeSource::CmsLikeCombination,
+        LineageNodeOperation::CmsProduct, hitIndex, surfaceIndex);
+    addEdge(forwardNodeId, nodeId, LineageEdgeOperation::CmsProduct, false);
+    addEdge(backwardNodeId, nodeId, LineageEdgeOperation::CmsProduct, false);
+    return nodeId;
+  }
+
   void setNormalizedPosterior(int nodeId, double weight) {
     if (!validNode(nodeId)) return;
     auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
@@ -1313,6 +1335,18 @@ public:
     for (const auto* component : components)
       if (component) mark(component->lineageNodeId,
                           LineageNodeFate::TrackAbandoned);
+  }
+
+  void markCmsInternalMessage(
+      const std::vector<GsfComponent*>& components) {
+    for (const auto* component : components) {
+      if (!component || !validNode(component->lineageNodeId)) continue;
+      auto& node =
+          m_nodes[static_cast<std::size_t>(component->lineageNodeId)];
+      if (node.fate == static_cast<std::int32_t>(LineageNodeFate::Active))
+        node.fate = static_cast<std::int32_t>(
+            LineageNodeFate::CmsInternalMessage);
+    }
   }
 
 private:
@@ -2962,10 +2996,12 @@ StatusCode RecGsfTracking::execute() {
     }
 
     // The complete component-lineage DAG is an automatic passive output for
-    // the two workflows that publish a final mixture.  Forward-only and
-    // CMS-like runs keep the collections present but empty.
+    // every multi-component workflow. Forward-only runs keep the collections
+    // present but empty.
     LineageGraphRecorder lineageGraph(
-        m_reverseFiltering.value() || m_gaussianSumSmoothing.value(), bz);
+        m_reverseFiltering.value() || m_gaussianSumSmoothing.value() ||
+            m_cmsGsfSmoothing.value(),
+        bz);
 
     // ---- Step 3: compute kappa seed ----
     double alpha = bz * 2.99792458e-4;
@@ -2992,12 +3028,7 @@ StatusCode RecGsfTracking::execute() {
     std::vector<GsfComponent*> comps = {initComp};
     std::vector<GsfSmootherNode> smootherGraph;
     std::vector<std::unique_ptr<GsfComponent>> cmsFinalPredictedOwned;
-    std::vector<GaussianMomentState> cmsForwardUpdatedMoments(hits.size());
-    if (m_cmsGsfSmoothing.value()) {
-      cmsForwardUpdatedMoments[0].valid = momentMatchCurrentSurface(
-          comps, bz, cmsForwardUpdatedMoments[0].mean,
-          cmsForwardUpdatedMoments[0].covariance);
-    }
+    std::vector<CmsGaussianComponentState> cmsInnermostForwardComponents;
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
@@ -3546,9 +3577,29 @@ StatusCode RecGsfTracking::execute() {
       }
       compsAfterReduce = (int)comps.size();
       if (m_cmsGsfSmoothing.value()) {
-        auto& forwardMoment = cmsForwardUpdatedMoments[ih];
-        forwardMoment.valid = momentMatchCurrentSurface(
-            comps, bz, forwardMoment.mean, forwardMoment.covariance);
+        if (ih == 1) {
+          cmsInnermostForwardComponents.clear();
+          cmsInnermostForwardComponents.reserve(comps.size());
+          for (const auto* component : comps) {
+            if (!component || !(component->weight > 0.0) ||
+                !std::isfinite(component->weight)) {
+              continue;
+            }
+            CmsGaussianComponentState snapshot;
+            snapshot.weight = component->weight;
+            snapshot.componentId = component->debugId;
+            snapshot.lineageNodeId = component->lineageNodeId;
+            snapshot.noRadiationLineage =
+                component->noRadiationLineage;
+            component->helixAtLastSite(bz).PutInto(snapshot.state.mean);
+            snapshot.state.covariance = component->covAtLastSite(bz);
+            snapshot.state.valid =
+                std::isfinite(snapshot.state.mean(2, 0)) &&
+                std::isfinite(snapshot.state.covariance(2, 2));
+            if (snapshot.state.valid)
+              cmsInnermostForwardComponents.push_back(std::move(snapshot));
+          }
+        }
       }
 
       // ACTS-like surface ordering: preserve the filtered measurement state,
@@ -3719,6 +3770,10 @@ StatusCode RecGsfTracking::execute() {
     FullMixtureModeStatus reverseFullMixtureModeStatus =
         FullMixtureModeStatus::MethodEndpointUnavailable;
     FullMixtureModeDiagnostics reverseFullMixtureModeDiagnostics;
+    std::vector<GsfComponent*> cmsCombinedComponents;
+    int cmsCombinedSurface = -1;
+    int cmsPairCandidates = 0;
+    int cmsPairFailures = 0;
     std::vector<FinalMixtureComponentRecord>
         finalMixtureComponentRecords;
     double reverseOutputChi2 = 0.0;
@@ -3825,8 +3880,6 @@ StatusCode RecGsfTracking::execute() {
               ? std::min(m_reductionTargetComponents.value(),
                          m_maxComponents.value())
               : m_maxComponents.value();
-      int cmsCombinedStates = 0;
-      int cmsCombinationFailures = 0;
       for (int reverseHit = runCmsSmoother ? (int)hits.size() - 1
                                           : (int)hits.size() - 2;
            reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
@@ -4065,7 +4118,8 @@ StatusCode RecGsfTracking::execute() {
 
         std::vector<GsfComponent*> acceptedReverse;
         std::vector<double> reverseLogWeights;
-        GaussianAccumulator cmsBackwardPredictedAccumulator;
+        std::vector<CmsGaussianComponentState>
+            cmsBackwardPredictedComponents;
         for (auto* component : reverseComps) {
           const int parentLineageNodeId = component->lineageNodeId;
           const double reversePriorWeight = component->weight;
@@ -4116,10 +4170,24 @@ StatusCode RecGsfTracking::execute() {
 
           if (accepted) {
             if (runCmsSmoother && !cmsOutermostHit) {
-              accumulateGaussian(cmsBackwardPredictedAccumulator,
-                  reversePriorWeight,
-                  updateVector5(update.predictedState),
-                  updateMatrix5(update.predictedCovariance));
+              CmsGaussianComponentState snapshot;
+              snapshot.weight = reversePriorWeight;
+              snapshot.componentId = component->debugId;
+              // The product consumes the backward-predicted fields persisted
+              // on this accepted measurement node, not its filtered fields.
+              snapshot.lineageNodeId = component->lineageNodeId;
+              snapshot.noRadiationLineage =
+                  component->noRadiationLineage;
+              snapshot.state.mean = updateVector5(update.predictedState);
+              snapshot.state.covariance =
+                  updateMatrix5(update.predictedCovariance);
+              snapshot.state.valid =
+                  std::isfinite(snapshot.state.mean(2, 0)) &&
+                  std::isfinite(snapshot.state.covariance(2, 2));
+              if (snapshot.state.valid) {
+                cmsBackwardPredictedComponents.push_back(
+                    std::move(snapshot));
+              }
             }
             component->fitChi2 += dchi;
             reverseLogWeights.push_back(reverseLogPosterior);
@@ -4216,30 +4284,109 @@ StatusCode RecGsfTracking::execute() {
                            reverseComps);
         }
 
-        // This is the CMSSW TrajectoryStateCombiner operation: combine the
-        // collapsed forward-updated and backward-predicted states.  CEPCSW
-        // currently serializes only the IP state, so these interior smoothed
-        // moments are retained as an auditable diagnostic rather than being
-        // fed back into the multi-component recursion.
-        if (runCmsSmoother && !cmsOutermostHit && reverseHit > 0) {
-          GaussianMomentState backwardPredicted;
-          backwardPredicted.valid = finishGaussian(
-              cmsBackwardPredictedAccumulator, backwardPredicted.mean,
-              backwardPredicted.covariance);
-          GaussianMomentState smoothed;
-          if (combineCmsMoments(cmsForwardUpdatedMoments[reverseHit],
-                                backwardPredicted, smoothed)) {
-            ++cmsCombinedStates;
-            if (m_verboseDump) {
-              const double pt = smoothed.mean(2, 0) != 0.0
-                  ? 1.0 / std::abs(smoothed.mean(2, 0)) : 0.0;
-              info() << boost::format(
-                  "  CMS-GSF SMOOTH hit=%d forwardComponentsMoment=1 "
-                  "backwardComponents=%d pT=%.9g")
-                        % reverseHit % (int)reverseComps.size() % pt << endmsg;
+        // The CMS-like endpoint is the full Gaussian product of the
+        // forward-updated and backward-predicted mixtures at the innermost
+        // shared fitted surface.  The backward posterior normally remains an
+        // internal message; the final backward mixture is retained as the
+        // explicit endpoint fallback when no valid product component forms.
+        if (runCmsSmoother && reverseHit == 1) {
+          std::vector<double> cmsPairLogWeights;
+          cmsPairCandidates = static_cast<int>(
+              cmsInnermostForwardComponents.size() *
+              cmsBackwardPredictedComponents.size());
+          cmsCombinedComponents.reserve(
+              static_cast<std::size_t>(cmsPairCandidates));
+          cmsPairLogWeights.reserve(
+              static_cast<std::size_t>(cmsPairCandidates));
+          int combinedComponentId = 0;
+          for (const auto& forward : cmsInnermostForwardComponents) {
+            for (const auto& backward : cmsBackwardPredictedComponents) {
+              GaussianMomentState combined;
+              double logOverlap = 0.0;
+              if (!combineCmsMoments(
+                      forward.state, backward.state, combined,
+                      &logOverlap)) {
+                ++cmsPairFailures;
+                continue;
+              }
+              const double logWeight = std::log(forward.weight) +
+                  std::log(backward.weight) + logOverlap;
+              if (!std::isfinite(logWeight)) {
+                ++cmsPairFailures;
+                continue;
+              }
+              auto* component = new GsfComponent();
+              if (!initializeCmsCombinedComponent(
+                      *component, combined, reverseMaterialDestination, bz,
+                      1.0, combinedComponentId++,
+                      forward.noRadiationLineage &&
+                          backward.noRadiationLineage)) {
+                delete component;
+                ++cmsPairFailures;
+                continue;
+              }
+              component->debugHistory =
+                  "cms-combine(f=" +
+                  std::to_string(forward.componentId) + ",b=" +
+                  std::to_string(backward.componentId) + ")";
+              component->lineageNodeId = lineageGraph.cmsProduct(
+                  *component, forward.lineageNodeId,
+                  backward.lineageNodeId, reverseHit,
+                  target.surfaceIndex);
+              cmsCombinedComponents.push_back(component);
+              cmsPairLogWeights.push_back(logWeight);
             }
-          } else {
-            ++cmsCombinationFailures;
+          }
+          if (!cmsCombinedComponents.empty()) {
+            const double maximumLogWeight = *std::max_element(
+                cmsPairLogWeights.begin(), cmsPairLogWeights.end());
+            for (std::size_t pairIndex = 0;
+                 pairIndex < cmsCombinedComponents.size(); ++pairIndex) {
+              cmsCombinedComponents[pairIndex]->weight = std::exp(
+                  cmsPairLogWeights[pairIndex] - maximumLogWeight);
+            }
+            GsfMixture::normalizeWeights(cmsCombinedComponents);
+            for (const auto* component : cmsCombinedComponents)
+              lineageGraph.setWeight(component->lineageNodeId,
+                                     component->weight);
+            auto cmsCutoffObserver = [&](const GsfComponent& component) {
+              lineageGraph.mark(component.lineageNodeId,
+                                LineageNodeFate::WeightCutoff);
+            };
+            GsfMixture::removeLowWeight(
+                cmsCombinedComponents, m_componentWeightCutoff.value(),
+                m_protectIdentityLineage.value(), cmsCutoffObserver);
+            if (static_cast<int>(cmsCombinedComponents.size()) >
+                reverseReductionTarget) {
+              auto cmsReductionObserver = [&](GsfComponent& merged,
+                                              int keepSourceNodeId,
+                                              int dropSourceNodeId,
+                                              double mergeCost) {
+                merged.lineageNodeId = lineageGraph.merge(
+                    merged, keepSourceNodeId, dropSourceNodeId,
+                    LineageNodeSource::CmsLikeCombination, reverseHit,
+                    target.surfaceIndex, mergeCost);
+              };
+              GsfMixture::reduce(
+                  cmsCombinedComponents, reverseReductionTarget, bz,
+                  m_protectIdentityLineage.value(), {},
+                  m_reductionMergeCost.value(), cmsReductionObserver);
+            }
+            GsfMixture::normalizeWeights(cmsCombinedComponents);
+            for (const auto* component : cmsCombinedComponents)
+              lineageGraph.setWeight(component->lineageNodeId,
+                                     component->weight);
+            cmsCombinedSurface = reverseHit;
+          }
+          if (m_verboseDump) {
+            info() << boost::format(
+                "  CMS-GSF COMBINE hit=%d forward=%d backward=%d "
+                "pairs=%d failures=%d retained=%d")
+                      % reverseHit
+                      % (int)cmsInnermostForwardComponents.size()
+                      % (int)cmsBackwardPredictedComponents.size()
+                      % cmsPairCandidates % cmsPairFailures
+                      % (int)cmsCombinedComponents.size() << endmsg;
           }
         }
 
@@ -4268,14 +4415,27 @@ StatusCode RecGsfTracking::execute() {
                << endmsg;
         if (runCmsSmoother) {
           info() << boost::format(
-              "  CMS-GSF summary: combinedInteriorStates=%d "
-              "combinationFailures=%d seedCovarianceScale=%.9g")
-                    % cmsCombinedStates % cmsCombinationFailures
+              "  CMS-GSF summary: combinedSurface=%d pairCandidates=%d "
+              "pairFailures=%d retainedComponents=%d "
+              "seedCovarianceScale=%.9g")
+                    % cmsCombinedSurface % cmsPairCandidates % cmsPairFailures
+                    % (int)cmsCombinedComponents.size()
                     % reverseSeedCovarianceScale << endmsg;
         }
       }
       GsfMixture::normalizeWeights(reverseComps);
-      if (!reverseComps.empty()) {
+      const bool cmsUsingCombinedMixture =
+          runCmsSmoother && !cmsCombinedComponents.empty();
+      auto& endpointComponents = cmsUsingCombinedMixture
+          ? cmsCombinedComponents : reverseComps;
+      if (runCmsSmoother && !cmsUsingCombinedMixture &&
+          !reverseComps.empty()) {
+        warning() << "CMS-like forward/backward product mixture unavailable; "
+                     "falling back to the final backward mixture"
+                  << endmsg;
+      }
+      GsfMixture::normalizeWeights(endpointComponents);
+      if (!endpointComponents.empty()) {
         std::string reverseSelectionMode = m_reverseSelectionMode.value();
         std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
                        reverseSelectionMode.begin(), ::tolower);
@@ -4309,6 +4469,7 @@ StatusCode RecGsfTracking::execute() {
               surfaceCoincidenceProbability(component);
         };
         auto reverseSelectionScore = [&](const GsfComponent* component) {
+          if (cmsUsingCombinedMixture) return component->weight;
           if (selectDominantLineage)
             return component->weight * component->dominantLineageFraction;
           if (selectSurfaceConsistency)
@@ -4317,7 +4478,7 @@ StatusCode RecGsfTracking::execute() {
           return component->weight;
         };
         auto* reverseBest = *std::max_element(
-            reverseComps.begin(), reverseComps.end(),
+            endpointComponents.begin(), endpointComponents.end(),
             [&](const GsfComponent* a, const GsfComponent* b) {
               return reverseSelectionScore(a) < reverseSelectionScore(b);
             });
@@ -4327,30 +4488,21 @@ StatusCode RecGsfTracking::execute() {
         reverseOutputOk = extrapolateContinuationToIP(
             *reverseBest, bz, reverseIp, reverseIpCov);
         reverseOutputLabel = runCmsSmoother
-            ? "CmsGsfBestBranch" : "ReverseBestBranch";
-        if (runCmsSmoother) {
-          // Preserve the historical single CMS-like endpoint exactly as the
-          // explicit WeightedMean view: moment-match the surviving mixture at
-          // the innermost surface, then move that one Gaussian to the IP.
-          reverseWeightedIpAvailable = collapsedCurrentMixtureAtIP(
-              reverseComps, bz, reverseWeightedIp, reverseWeightedIpCov);
-          if (!reverseWeightedIpAvailable) {
-            warning() << "CMS-like WeightedMean publication failed; the "
-                         "paired collection will preserve the BestBranch "
-                         "state"
-                      << endmsg;
-          }
-        } else {
-          reverseWeightedIpAvailable = weightedReverseMixtureAtIP(
-              reverseComps, bz, reverseWeightedIp, reverseWeightedIpCov);
-          if (!reverseWeightedIpAvailable) {
-            warning() << "Reverse WeightedMean publication failed; the paired "
-                         "collection will preserve the BestBranch state"
-                      << endmsg;
-          }
+            ? (cmsUsingCombinedMixture
+                   ? "CmsGsfCombinedBestBranch"
+                   : "CmsGsfBackwardFallbackBestBranch")
+            : "ReverseBestBranch";
+        reverseWeightedIpAvailable = weightedReverseMixtureAtIP(
+            endpointComponents, bz, reverseWeightedIp,
+            reverseWeightedIpCov);
+        if (!reverseWeightedIpAvailable) {
+          warning() << (runCmsSmoother ? "CMS-like combined" : "Reverse")
+                    << " WeightedMean publication failed; the paired "
+                       "collection will preserve the BestBranch state"
+                    << endmsg;
         }
         reverseFullMixtureModeStatus = findFullMixtureModeAtIP(
-            reverseComps, bz,
+            endpointComponents, bz,
             [bz](GsfComponent& component, THelicalTrack& helix,
                  TMatrixD& covariance) {
               return extrapolateContinuationToIP(
@@ -4371,14 +4523,21 @@ StatusCode RecGsfTracking::execute() {
                     << endmsg;
         }
         if (reverseOutputOk) {
-          if (!runCmsSmoother && m_reverseFiltering.value())
-            lineageGraph.markFinal(reverseComps, reverseBest);
+          if (runCmsSmoother) {
+            lineageGraph.markCmsInternalMessage(comps);
+            if (cmsUsingCombinedMixture)
+              lineageGraph.markCmsInternalMessage(reverseComps);
+          }
+          lineageGraph.markFinal(endpointComponents, reverseBest);
           if (m_reverseFiltering.value() || runCmsSmoother) {
             finalMixtureComponentRecords =
                 captureFinalMixtureComponentsAtIP(
-                    reverseComps, bz,
+                    endpointComponents, bz,
                     runCmsSmoother
-                        ? FinalMixtureComponentSource::CmsLikeBackward
+                        ? (cmsUsingCombinedMixture
+                               ? FinalMixtureComponentSource::CmsLikeCombined
+                               : FinalMixtureComponentSource::
+                                     CmsLikeBackwardFallback)
                         : FinalMixtureComponentSource::ReverseFiltering,
                     [bz](GsfComponent& component, THelicalTrack& helix,
                          TMatrixD& covariance) {
@@ -4398,7 +4557,7 @@ StatusCode RecGsfTracking::execute() {
                       % (-reverseIp.GetDrho()) % reverseIp.GetDz()
                       % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
                       % reverseIp.GetTanLambda() << endmsg;
-            if (selectSurfaceConsistency) {
+            if (!cmsUsingCombinedMixture && selectSurfaceConsistency) {
               info() << boost::format(
                   "  REVERSE surface-consistency: coincidence=%.9g "
                   "likelihood=%.9g floor=%.9g maxBayesFactor=%.9g")
@@ -4408,7 +4567,7 @@ StatusCode RecGsfTracking::execute() {
                     % (1.0 / m_surfaceConsistencyUninformativeFloor.value())
                     << endmsg;
             }
-            if (m_componentDebugDump) {
+            if (!cmsUsingCombinedMixture && m_componentDebugDump) {
               info() << boost::format("  REVERSE SELECTED process-signature=%s")
                         % reverseBest->reverseProcessSignature << endmsg;
               info() << boost::format(
@@ -4421,11 +4580,24 @@ StatusCode RecGsfTracking::execute() {
           }
           reverseOutputIp = reverseIp;
           reverseOutputIpCov = reverseIpCov;
-          reverseOutputChi2 = componentFitChi2(*reverseBest);
-          reverseOutputNdf = reverseBest->kaltrack
-              ? reverseBest->kaltrack->GetNDF() : 0;
+          if (cmsUsingCombinedMixture) {
+            const auto forwardMetadataBest = std::max_element(
+                comps.begin(), comps.end(),
+                [](const GsfComponent* left, const GsfComponent* right) {
+                  return left->weight < right->weight;
+                });
+            if (forwardMetadataBest != comps.end()) {
+              reverseOutputChi2 = componentFitChi2(**forwardMetadataBest);
+              reverseOutputNdf = (*forwardMetadataBest)->kaltrack
+                  ? (*forwardMetadataBest)->kaltrack->GetNDF() : 0;
+            }
+          } else {
+            reverseOutputChi2 = componentFitChi2(*reverseBest);
+            reverseOutputNdf = reverseBest->kaltrack
+                ? reverseBest->kaltrack->GetNDF() : 0;
+          }
           reverseOutputWeight = reverseBest->weight;
-          reverseOutputComps = (int)reverseComps.size();
+          reverseOutputComps = (int)endpointComponents.size();
           reverseIpAvailable = true;
 
           if (m_verboseDump && reverseWeightedIpAvailable) {
@@ -4437,11 +4609,22 @@ StatusCode RecGsfTracking::execute() {
                 "tanL=%.6g")
                       % (runCmsSmoother ? "CmsGsfWeightedMean"
                                         : "ReverseWeightedMean")
-                      % (int)reverseComps.size() % weightedPt
+                      % (int)endpointComponents.size() % weightedPt
                       % (-reverseWeightedIp.GetDrho())
                       % reverseWeightedIp.GetDz()
                       % normalizePhi(reverseWeightedIp.GetPhi0() + M_PI / 2.0)
                       % reverseWeightedIp.GetTanLambda() << endmsg;
+            if (runCmsSmoother) {
+              if (cmsUsingCombinedMixture) {
+                info() << "  CMS-GSF all endpoints source: forward/backward "
+                          "component-product mixture at hit="
+                       << cmsCombinedSurface << endmsg;
+              } else {
+                info() << "  CMS-GSF all endpoints source: terminal backward "
+                          "mixture fallback"
+                       << endmsg;
+              }
+            }
           }
           if (m_verboseDump && reverseFullMixtureModeIpAvailable) {
             const double modePt = reverseFullMixtureModeIp.GetKappa() != 0.0
@@ -4558,7 +4741,7 @@ StatusCode RecGsfTracking::execute() {
                   TMatrixD(5, 1), TVector3(0, 0, 0), bz);
               TMatrixD ecalBestCov(5, 5);
               bool ecalBestIpValid = false;
-              for (auto* component : reverseComps) {
+              for (auto* component : endpointComponents) {
                 THelicalTrack componentIp(
                     TMatrixD(5, 1), TVector3(0, 0, 0), bz);
                 TMatrixD componentCov(5, 5);
@@ -4603,9 +4786,12 @@ StatusCode RecGsfTracking::execute() {
               if (ecalBestIpValid) {
                 ecalConstrainedIp = ecalBestIp;
                 ecalConstrainedIpCov = ecalBestCov;
-                ecalConstrainedChi2 = componentFitChi2(*ecalBest);
-                ecalConstrainedNdf = ecalBest->kaltrack
-                    ? ecalBest->kaltrack->GetNDF() : 0;
+                ecalConstrainedChi2 = runCmsSmoother
+                    ? reverseOutputChi2 : componentFitChi2(*ecalBest);
+                ecalConstrainedNdf = runCmsSmoother
+                    ? reverseOutputNdf
+                    : (ecalBest->kaltrack
+                           ? ecalBest->kaltrack->GetNDF() : 0);
                 if (m_verboseDump) {
                   const double constrainedPt =
                       ecalConstrainedIp.GetKappa() != 0.0
@@ -4638,10 +4824,16 @@ StatusCode RecGsfTracking::execute() {
           }
         }
       }
-      if (!runCmsSmoother && m_reverseFiltering.value() &&
-          !reverseIpAvailable)
-        lineageGraph.markAbandoned(reverseComps);
+      if ((m_reverseFiltering.value() || runCmsSmoother) &&
+          !reverseIpAvailable) {
+        if (runCmsSmoother && !cmsCombinedComponents.empty())
+          lineageGraph.markAbandoned(cmsCombinedComponents);
+        else
+          lineageGraph.markAbandoned(reverseComps);
+      }
       for (auto* reverseComp : reverseComps) delete reverseComp;
+      for (auto* combinedComponent : cmsCombinedComponents)
+        delete combinedComponent;
     }
 
     // ---- Step 5: smooth, extrapolate to IP, write output ----
