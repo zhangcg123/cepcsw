@@ -236,3 +236,47 @@ a factor near 980. The remaining event lost energy in the first accepted
 interval and has no interior forward-updated/backward-predicted comparison.
 This sharp two-sided behavior makes the quantity a useful diagnostic, not a
 validated replacement for live weighting.
+
+### Interpretation correction from the kappa-only audit
+
+The interval and reverse-BH alignment were rechecked in source. A truth
+interval `i -> i+1` is applied by the reverse loop at `reverseHit=i` before
+updating hit `i`; `BetheHeitlerSplitter(reverse=true)` maps
+`kappa_child = kappa_parent * retained_fraction`, which is the intended
+outer-to-inner restoration of the pre-loss momentum. The analysis also chose
+the recorded BH child whose retained-fraction mean is nearest the exact truth
+fraction. The observed identity preference is therefore not an index or loss-
+sign mistake.
+
+It is also not primarily caused by the other four helix coordinates. Repeating
+the comparison with only kappa and its marginal variance gave the following
+identity/truth-like chi-squares for the seven evaluable events:
+
+```text
+event   identity     truth-like
+98/15   0.002491     0.443095
+59/72   0.008383     0.098949
+41/72   0.003225     1.924286
+12/2    0.028545     4.212290
+32/31   2.214134     1.524469
+9/57    0.017386     4.838264
+49/25   0.126395     7.516719
+```
+
+The decisive limitation is that this run used `CmsErrorRescaling=1` and the
+CMS-like backward seed is cloned from the final forward prediction. It already
+carries the forward-fit mean, covariance, component identities, and weights
+derived from the inner measurements. The subsequently propagated `B_pred` is
+therefore correlated with `F_updated`; it is not an independent outer-hit
+message. Moreover, `F_updated` is one moment match after normal cutoff and KL
+reduction rather than a forward state conditioned on the same backward
+lineage. In six events the identity `B_pred` consequently already remains
+close to the forward pre-loss kappa, and applying the approximately-2% reverse
+correction moves the nominally truth-like child away from it. Event 32/31 is
+the lone opposite case.
+
+Thus the recorded full-state overlap is mechanically correct for the two
+states supplied to it, but it must not be described as an independent two-
+filter likelihood or global Bayes evidence. A physics-valid test requires a
+backward message initialized independently of the forward fit (and preferably
+lineage-conditioned forward messages), not merely another covariance rescale.
