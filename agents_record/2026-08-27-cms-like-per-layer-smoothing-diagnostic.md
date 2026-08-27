@@ -474,15 +474,15 @@ inner sensitive traversal, intervening support/gap, then upstream half of the
 outer sensitive traversal. The exact results were:
 
 ```text
-event   interval/radii [mm]       eBrem u     exact region                         Reverse local identity/truth
-63/62   VXD0->VXD1 11.08->16.58   0.99775     outer sensor, before outer hit       1.1362 / 1.1206
-98/15   VXD S04->S05 40.20->44.16 0.00509     inner sensor, after inner hit         5.3077 / 5.3074
-59/72   VXD->ITKB0 43.83->234.67  0.99819     gap/support, just before outer hit    0.5423 / 0.1214
-41/72   ITKB0->ITKB1 236.22->345.88 0.00204   gap/support, just after inner hit     1.2391 / 1.7594
-12/2    ITKB1->ITKB2 344.57->556.70 0.99378   gap/support, just before outer hit    0.3824 / 1.9210
-32/31   ITKB2->TPC 555.22->637.50 0.54424     middle gap/support                    2.5454 / 3.0122
-9/57    last TPC->OTK 1747.50->1808.88 0.98925 gap/support, just before outer hit   5.1390 / 5.1046
-49/25   last TPC->OTK 1747.50->1807.66 0.98860 gap/support, just before outer hit   2.3872 / 2.5012
+event   interval/radii [mm]       eBrem u   exact region                 Reverse local id/truth    CMS F/B id/truth
+63/62   VXD0->VXD1 11.08->16.58   0.99775   outer sensor before hit       1.1362 / 1.1206           unavailable
+98/15   VXD S04->S05 40.20->44.16 0.00509   inner sensor after hit        5.3077 / 5.3074            8.4777 /   8.7007
+59/72   VXD->ITKB0 43.83->234.67  0.99819   gap just before outer hit     0.5423 / 0.1214            9.2562 /  11.9663
+41/72   ITKB0->ITKB1 236.22->345.88 0.00204 gap just after inner hit      1.2391 / 1.7594            2.0722 /   8.0216
+12/2    ITKB1->ITKB2 344.57->556.70 0.99378 gap just before outer hit     0.3824 / 1.9210            1.6879 /  17.3373
+32/31   ITKB2->TPC 555.22->637.50 0.54424   middle gap                    2.5454 / 3.0122           23.4787 /   7.8625
+9/57    last TPC->OTK 1747.50->1808.88 0.98925 gap just before outer hit   5.1390 / 5.1046            0.0220 / 103.9331
+49/25   last TPC->OTK 1747.50->1807.66 0.98860 gap just before outer hit   2.3872 / 2.5012            0.4499 /  90.5648
 ```
 
 Only event 63/62 has its loss inside the second sensitive half of the runtime
@@ -506,3 +506,64 @@ reverse misplacement. Event 41/72 is consistent with that effect, but event
 loss. In-interval collapse location can contribute event by event, but it is
 not the primary explanation for the persistent identity preference in this
 2% panel.
+
+### Unbiased 20-event extension of the location table
+
+Twenty additional topology-clear events were selected solely by having one
+positive truth-loss interval with cumulative eBrem loss in 1.898--2.056%.
+Selection did not use the GSF endpoint or lineage outcome. The same current
+build, BH15 model, `MaxComponents=10`, cutoff `1e-4`, truth override off,
+Reverse scale 1, and CMS-like scale 1 were used. For the two intervals with
+multiple eBrem steps, the displayed coordinate is the dominant step and the
+minor step is noted separately. The CMS F/B column is the raw five-dimensional
+`F_updated`-versus-`B_pred` chi-square; lower is preferred.
+
+```text
+event   loss     dominant u/region                         Reverse local id/truth     CMS F/B id/truth
+70/19   1.997%   0.00025 inner sensor after hit (*)        1.9599 / 1.7396            17.3102 /  17.9282
+74/35   1.994%   0.98872 gap near outer hit                4.6466 / 4.7453             1.2414 /  79.2687
+67/46   1.985%   0.53857 middle gap                        0.3286 / 0.5030             8.7868 /   3.5281
+80/17   1.981%   0.99954 gap near outer hit                0.3217 / 1.3641             9.3478 /   8.2602
+78/87   1.980%   0.38639 gap (*)                           0.0791 / 2.5573             1.6312 /   6.4038
+28/91   2.021%   0.06002 gap near inner hit                2.5932 / 2.5936             3.6924 /   3.8272
+32/89   1.977%   0.99217 gap near outer hit                1.1525 / 3.8383            13.2317 /   9.1501
+79/1    1.970%   0.54369 middle gap                        0.1266 / 0.3048            10.4482 /  12.9715
+65/66   1.966%   0.54718 middle gap                        0.7426 / 0.9466            13.7209 /   9.4696
+92/11   2.038%   0.99979 outer sensor before hit          20.0124 / 29.1997           87.5611 / 128.5085
+83/4    2.041%   0.45476 middle gap                        0.7865 / 0.7925             0.5953 /  76.2745
+94/34   2.041%   0.46055 middle gap                        0.9762 / 1.0155             0.4481 /  95.4161
+59/71   1.952%   0.99998 outer sensor before hit           0.3371 / 0.0326             6.3118 /   6.0136
+89/18   2.056%   0.99497 gap near outer hit                5.0150 / 4.9947             0.1553 /  76.2262
+23/84   1.935%   0.00192 gap near inner hit                3.0932 / 5.4895             5.2636 /   9.6297
+5/83    2.069%   0.99879 gap near outer hit                2.9997 / 0.4986             6.9041 /   1.6621
+58/34   1.931%   0.46029 middle gap                        1.3287 / 1.3888             2.4614 / 107.4517
+44/73   1.929%   0.99819 gap near outer hit                1.2731 / 3.4105             2.2986 /   4.4332
+13/57   1.928%   0.61603 outer TPC sensor before hit       2.3957 / no BH child        unavailable
+48/94   1.898%   0.44394 middle gap                        3.3233 / 3.2029             0.2487 /  72.9567
+```
+
+`(*)` Event 70/19 also has a 0.099% step at `u=0.53738`; its dominant 1.898%
+step is at `u=0.00025`. Event 78/87 also has a 0.041% step at `u=0.07955`;
+its dominant 1.939% step is at `u=0.38639`.
+
+Event 13/57 is an internal TPC-row interval. Exact Geant4 and DD4hep thickness
+are both `4.26123e-5`; forward/reverse runtime weighted thickness is
+`4.33264e-5`, below `BHSplitThreshold=1e-4`. Both directions therefore record
+zero above-threshold paths and create no radiative child. This is a gating
+case, not a failed choice between identity and a truth-like sibling.
+
+In the 20 new events, the matched child has lower Reverse local chi-square in
+5/19 comparable events and lower CMS F/B chi-square in 6/19. Combining the
+original eight and the new twenty gives 9/27 local preferences and 7/26 F/B
+preferences; event 13/57 has no child, while first-interval event 63/62 has no
+interior F/B comparison.
+
+Using the dominant eBrem step, the combined sample has ten early (`u<0.5`)
+and eighteen late (`u>=0.5`) events. The local preference rate is 3/10 early
+and 6/17 late. The F/B truth-like preference is 0/10 early and 7/16 late.
+Thus a late loss does not explain why the F/B score rejects the truth-like
+child; it is actually a necessary but insufficient condition for all seven
+truth-like F/B preferences in this panel. Nine of sixteen comparable late
+losses still prefer identity. The result is consistent with Reverse placing
+the collapsed correction at the outer state, but it remains selected-sample,
+correlated-state evidence rather than a calibrated location efficiency.
