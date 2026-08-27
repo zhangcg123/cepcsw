@@ -280,3 +280,46 @@ states supplied to it, but it must not be described as an independent two-
 filter likelihood or global Bayes evidence. A physics-valid test requires a
 backward message initialized independently of the forward fit (and preferably
 lineage-conditioned forward messages), not merely another covariance rescale.
+
+### `CmsErrorRescaling=100` control
+
+The same eight approximately-2% events were rerun with only the CMS backward
+seed covariance scale changed from 1 to 100. The five-component
+`CEPC2GeV85StepConditioned` model, `MaxComponents=10`, weight cutoff `1e-4`,
+truth override off, event selection, and passive scoring implementation were
+unchanged.
+
+The raw CMS backward hit-compatibility chi-squares were:
+
+```text
+event   scale-1 identity/truth-like    scale-100 identity/truth-like
+63/62   1.130426 / 1.113171            1.141309 / 1.123976
+98/15   5.304280 / 5.303995            5.335069 / 5.334745
+59/72   0.534329 / 0.175043            0.626631 / 0.135749
+41/72   1.244140 / 1.791716            1.103385 / 1.590813
+12/2    0.384767 / 1.606363            0.377419 / 1.468550
+32/31   2.563757 / 3.077609            0.145240 / 0.145324
+9/57    5.139733 / 5.103443            2.227657 / 2.193533
+49/25   2.436005 / 2.543042            2.748358 / 2.850650
+```
+
+The raw five-dimensional `F_updated` versus `B_pred` chi-squares were:
+
+```text
+event   scale-1 identity/truth-like    scale-100 identity/truth-like
+98/15    8.478697 /  8.882631           8.528287 /  8.915902
+59/72    9.266170 / 11.592032           9.282520 / 11.472329
+41/72    2.071528 /  4.773061           2.022923 /  4.386237
+12/2     1.688702 /  5.576647           1.738400 /  5.348761
+32/31   23.040780 /  7.374187          27.325259 /  6.759769
+9/57     0.023051 /  4.842729           0.140692 /  3.179806
+49/25    0.455837 /  7.686619           1.389332 /  4.045387
+```
+
+Event 63/62 has no interior F/B comparison. Covariance inflation changes the
+magnitudes, notably making the event-32/31 truth-like preference stronger and
+reducing several identity/truth separations, but the F/B preference remains
+identity in six of seven events. This is expected because scaling changes the
+backward seed covariance only; it does not remove the forward-derived seed
+mean, components, or weights and therefore does not make the messages
+independent.
