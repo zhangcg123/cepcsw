@@ -458,3 +458,51 @@ the dominant limitation in this panel. The very small radiative prior and the
 correlated forward/backward state evidence still leave most endpoints near the
 identity/LCIO solution. BH15 representation alone does not solve 2% loss
 selection.
+
+### Exact in-interval eBrem positions for the 2% panel
+
+The embedded provenance was then used to place each Geant4 subtype-3 eBrem
+step inside the exact accepted-hit interval. This is not a radial nearest-hit
+classification. The flat interval supplies the two exact truth hooks, and the
+input event's `GsfSimTrackerHitG4StepLinks` supplies each sensitive
+traversal's first/hook/last step. The eBrem process is located at the Geant4
+post-step point. The normalized interval coordinate is zero at the inner hit
+hook and one at the outer hit hook.
+
+The runtime interval remains midpoint-to-midpoint: downstream half of the
+inner sensitive traversal, intervening support/gap, then upstream half of the
+outer sensitive traversal. The exact results were:
+
+```text
+event   interval/radii [mm]       eBrem u     exact region                         Reverse local identity/truth
+63/62   VXD0->VXD1 11.08->16.58   0.99775     outer sensor, before outer hit       1.1362 / 1.1206
+98/15   VXD S04->S05 40.20->44.16 0.00509     inner sensor, after inner hit         5.3077 / 5.3074
+59/72   VXD->ITKB0 43.83->234.67  0.99819     gap/support, just before outer hit    0.5423 / 0.1214
+41/72   ITKB0->ITKB1 236.22->345.88 0.00204   gap/support, just after inner hit     1.2391 / 1.7594
+12/2    ITKB1->ITKB2 344.57->556.70 0.99378   gap/support, just before outer hit    0.3824 / 1.9210
+32/31   ITKB2->TPC 555.22->637.50 0.54424     middle gap/support                    2.5454 / 3.0122
+9/57    last TPC->OTK 1747.50->1808.88 0.98925 gap/support, just before outer hit   5.1390 / 5.1046
+49/25   last TPC->OTK 1747.50->1807.66 0.98860 gap/support, just before outer hit   2.3872 / 2.5012
+```
+
+Only event 63/62 has its loss inside the second sensitive half of the runtime
+interval, namely before the downstream measurement midpoint. Its truth-like
+child is already slightly better by local chi-square; it fails to dominate
+because its BH prior is 0.0374% against a 98.85% identity prior, not because
+the local hit rejects it. Event 98/15 is the sole loss inside the first
+sensitive half and is also a near local tie. The other six losses occur in
+non-sensitive support/gap material.
+
+If “second half” means simply `u>0.5`, six events qualify. Their matched child
+wins the Reverse local chi-square in three and loses in three. The location
+therefore does not explain the panel globally. The geometry trend expected
+from the implementation is actually directional: forward filtering convolves
+after the inner hit and therefore places all interval loss at the inner
+anchor, while reverse filtering convolves at the outer state before inward
+propagation. A physical loss near the outer hook is geometrically closer to
+the reverse approximation; a loss just after the inner hook is the larger
+reverse misplacement. Event 41/72 is consistent with that effect, but event
+12/2 is a clear counterexample, and event 32/31 recovers despite a mid-gap
+loss. In-interval collapse location can contribute event by event, but it is
+not the primary explanation for the persistent identity preference in this
+2% panel.
