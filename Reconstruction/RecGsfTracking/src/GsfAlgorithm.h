@@ -195,6 +195,73 @@ private:
   DataHandle<podio::UserDataCollection<double>> m_lineageNodeMergeCost{
       "GSFLineageNodeMergeCost", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeCmsSmoothValid{
+          "GSFLineageNodeCmsSmoothValid", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardPredictedKappa{
+          "GSFLineageNodeCmsSmoothForwardPredictedKappa",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardPredictedKappaVariance{
+          "GSFLineageNodeCmsSmoothForwardPredictedKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardUpdatedKappa{
+          "GSFLineageNodeCmsSmoothForwardUpdatedKappa",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardUpdatedKappaVariance{
+          "GSFLineageNodeCmsSmoothForwardUpdatedKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllOtherKappa{
+          "GSFLineageNodeCmsSmoothAllOtherKappa",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllOtherKappaVariance{
+          "GSFLineageNodeCmsSmoothAllOtherKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllHitKappa{
+          "GSFLineageNodeCmsSmoothAllHitKappa",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllHitKappaVariance{
+          "GSFLineageNodeCmsSmoothAllHitKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothAllOtherLogOverlap{
+          "GSFLineageNodeCmsSmoothAllOtherLogOverlap",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothLocalDChi2{
+          "GSFLineageNodeCmsSmoothLocalDChi2",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothLocalLogDetInnovation{
+          "GSFLineageNodeCmsSmoothLocalLogDetInnovation",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothLocalLogLikelihood{
+          "GSFLineageNodeCmsSmoothLocalLogLikelihood",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothLogEvidence{
+          "GSFLineageNodeCmsSmoothLogEvidence",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothLogWeightWithPrior{
+          "GSFLineageNodeCmsSmoothLogWeightWithPrior",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothNormalizedEvidence{
+          "GSFLineageNodeCmsSmoothNormalizedEvidence",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothNormalizedWeightWithPrior{
+          "GSFLineageNodeCmsSmoothNormalizedWeightWithPrior",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
       m_lineageEdgeInputTrackIndex{
           "GSFLineageEdgeInputTrackIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
