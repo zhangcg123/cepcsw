@@ -98,10 +98,10 @@ gsf.TruthBHLossMaxEndpointDistance = 5.0
 # above, so ordinary maintained cards do not need conditional truth-input
 # steering. The recorder remains passive and cannot alter filtering/selection.
 
-gsf.MaxComponents = 12
+gsf.MaxComponents = 10
 gsf.ReductionTargetComponents = 0
 gsf.ReductionMergeCost = "SymmetricKL"
-gsf.ComponentWeightCutoff = 5.0e-3
+gsf.ComponentWeightCutoff = 1.0e-4
 gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True

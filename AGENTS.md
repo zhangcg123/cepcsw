@@ -110,10 +110,10 @@ default 100.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
-`MaxComponents=12`, `ComponentWeightCutoff=5e-3`, `SymmetricKL` reduction
+`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction
 ranking, identity-lineage protection enabled, and the five-component
-`CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components and
-`CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
+`CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 12 and 24 components
+and `CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
 ranking, the six-component `CEPC2GeV85StepConditioned6` model, and the
 runtime-interval `CEPCRuntimeGenericGrid5Clear` and
 `CEPCRuntimeCategoryAligned5Clear` five-component models and the finer
@@ -275,9 +275,11 @@ FullMixtureMode fallback rather than treating its finite fallback output as a
 physics success.
 
 Freeze production defaults and endpoint definitions during this study:
-`DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
-`ComponentWeightCutoff=5e-3`, `SymmetricKL`, identity protection,
-`KappaSeedCov=-1`, and positive inward scale 100. The material/BH consistency
-and narrowly scoped BH-component-variance questions remain active; ECAL and
-global-loss remain paused diagnostics. Historical detail lives in dated
-`agents_record/` entries and does not override this live focus.
+`DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`, `MaxComponents=10`,
+`ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
+`KappaSeedCov=-1`, and maintained fresh inward selection -1; the compiled and
+active-template inward default 100 remains the copied-mixture control. The
+material/BH consistency and narrowly scoped BH-component-variance questions
+remain active; ECAL and global-loss remain paused diagnostics. Historical
+detail lives in dated `agents_record/` entries and does not override this live
+focus.

@@ -249,12 +249,12 @@ private:
 
   Gaudi::Property<bool>   m_doMS{this,"MSOn",true};
   Gaudi::Property<bool>   m_doDEDX{this,"ElossOn",false};
-  Gaudi::Property<int>    m_maxComponents{this,"MaxComponents",12};
+  Gaudi::Property<int>    m_maxComponents{this,"MaxComponents",10};
   Gaudi::Property<int>    m_reductionTargetComponents{this,"ReductionTargetComponents",0};
   Gaudi::Property<std::string> m_reductionMergeCost{
       this, "ReductionMergeCost", "SymmetricKL",
       "SymmetricKL or weighted Runnalls Gaussian merge cost"};
-  Gaudi::Property<double> m_componentWeightCutoff{this,"ComponentWeightCutoff",5e-3};
+  Gaudi::Property<double> m_componentWeightCutoff{this,"ComponentWeightCutoff",1e-4};
   Gaudi::Property<bool>   m_protectIdentityLineage{
       this, "ProtectIdentityLineage", true,
       "Preserve an exact no-radiation lineage through cutoff and reduction"};

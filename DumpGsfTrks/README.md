@@ -222,7 +222,7 @@ The current `gsf.py.bk` contains the comparison card previously named
 workflow and agrees with
 the production material, split/cutoff, and ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
-`ComponentWeightCutoff=5e-3`, and
+`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
 `EcalComponentConstraint=False`. Its top-level `bh_model` selector is the
 default-off
 `CEPCRuntimeGenericGrid5Clear` experiment, not the production
@@ -231,12 +231,12 @@ the independent global-loss refitter so method comparisons cannot silently use
 different BH models; preserve it as deliberate campaign steering until the user
 changes it.
 
-The authoritative explanation of all 41 `RecGsfTracking` properties, their
+The authoritative explanation of all 40 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 40 of the 41
+For this maintained workflow, `gsf.py.bk` explicitly configures 39 of the 40
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on

@@ -161,7 +161,7 @@ replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-28. `RecGsfTracking` exposes 42 Gaudi properties in
+Reference date: 2026-08-29. `RecGsfTracking` exposes 40 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -327,10 +327,10 @@ the complete recording scope is marked invalid.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `MaxComponents` | `12` | `12` | Posterior-reduction trigger/capacity. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 24 only as an explicit comparison. |
+| `MaxComponents` | `10` | `10` | Posterior-reduction trigger/capacity for the live forward/reverse mixtures and reduction target for passive interior `B_smoothed` products. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 12 and 24 only as explicit comparisons. |
 | `ReductionTargetComponents` | `0` | `0` | Number retained after reduction; zero means use `MaxComponents`. Valid values are zero or `1..MaxComponents`. |
 | `ReductionMergeCost` | `SymmetricKL` | same | Pair-ranking cost for moment merging: active `SymmetricKL` ranks pairs by their unweighted symmetric component-to-component KL distance; default-off `Runnalls` ranks the information-loss bound of the weighted mixture approximation. Both perform the same weight-aware moment merge after choosing a pair. Runnalls was tested and rejected for promotion. |
-| `ComponentWeightCutoff` | `5e-3` | `5e-3` | Remove normalized target-measurement posterior components below this weight while retaining at least the largest and, when enabled, an identity lineage. This cutoff is applied before component-count reduction and is independent of `BHSplitThreshold`. |
+| `ComponentWeightCutoff` | `1e-4` | `1e-4` | Remove normalized target-measurement posterior components below this weight in the live forward/reverse mixtures, and normalized Gaussian-overlap weights below it in passive interior `B_smoothed` products, while retaining at least the largest and, when enabled, an identity lineage. This cutoff is applied before component-count reduction and is independent of `BHSplitThreshold`. |
 | `ProtectIdentityLineage` | `true` | `true` | Preserve at least one exact no-radiation lineage through cutoff and reduction when the target component count exceeds one. |
 
 Forward children from transition `i -> i+1` remain expanded through
@@ -654,11 +654,11 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 40 of the 41 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 39 of the 40 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
-`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=5e-3`,
+`BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
 `DD4hepBetweenSurfaces`, and ECAL off. Its top-level `bh_model` selector is the
 user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than the production
 `CEPC2GeV85StepConditioned` model, and it feeds both ordinary GSF and the
@@ -702,7 +702,7 @@ truth/DD4hep/runtime values remain passive and do not affect the GSF workflow.
 
 ### Configuration-maintenance contract
 
-The 42-property inventory above is part of the configurable interface, not a
+The 40-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

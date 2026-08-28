@@ -84,14 +84,14 @@ gsf.MaterialPathMode = os.getenv(
 # Default-on, output-only material provenance. It does not steer the fit.
 gsf.RecordTruthMaterialIntervals = True
 
-gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "12"))
+gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "10"))
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents
 gsf.ReductionMergeCost = os.getenv(
     "GSF_REDUCTION_MERGE_COST", "SymmetricKL")
 # Forward-only compatibility property. Reverse publication below always saves
 # BestBranch and WeightedMean in separate collections.
 gsf.GSFOutputMode = "BestBranch"
-gsf.ComponentWeightCutoff = 5.0e-3
+gsf.ComponentWeightCutoff = 1.0e-4
 gsf.ProtectIdentityLineage = os.getenv(
     "GSF_PROTECT_IDENTITY_LINEAGE", "1").lower() in ("1", "true", "yes")
 
