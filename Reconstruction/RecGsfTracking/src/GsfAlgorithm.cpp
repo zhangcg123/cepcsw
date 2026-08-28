@@ -460,12 +460,80 @@ struct GaussianMomentState {
   TMatrixD covariance{5, 5};
 };
 
-struct CmsGaussianComponentState {
+struct GaussianComponentSnapshot {
   double weight = 0.0;
   int componentId = -1;
   int lineageNodeId = -1;
   bool noRadiationLineage = false;
   GaussianMomentState state;
+};
+
+/// Common transient result of the single outward GSF pass used by the
+/// reverse and CMS-like workflows.  When CMS history is requested, filtered
+/// mixtures are captured after the measurement posterior, cutoff, and KL
+/// reduction, but before the outgoing material convolution.  The final live
+/// components are the shared inward seed source; the snapshots remain
+/// immutable inputs to the CMS-like endpoint product and never steer either
+/// filter.
+class SharedForwardFilterResult {
+public:
+  SharedForwardFilterResult(std::size_t hitCount, double bz, bool enabled,
+                            bool captureFilteredHistory)
+      : m_bz(bz), m_enabled(enabled),
+        m_captureFilteredHistory(captureFilteredHistory),
+        m_filtered(hitCount) {}
+
+  void captureFiltered(std::size_t hitIndex,
+                       const std::vector<GsfComponent*>& components) {
+    if (!m_enabled || !m_captureFilteredHistory ||
+        hitIndex >= m_filtered.size()) {
+      return;
+    }
+    auto& snapshots = m_filtered[hitIndex];
+    snapshots.clear();
+    snapshots.reserve(components.size());
+    for (const auto* component : components) {
+      if (!component || !(component->weight > 0.0) ||
+          !std::isfinite(component->weight)) {
+        continue;
+      }
+      GaussianComponentSnapshot snapshot;
+      snapshot.weight = component->weight;
+      snapshot.componentId = component->debugId;
+      snapshot.lineageNodeId = component->lineageNodeId;
+      snapshot.noRadiationLineage = component->noRadiationLineage;
+      component->helixAtLastSite(m_bz).PutInto(snapshot.state.mean);
+      snapshot.state.covariance = component->covAtLastSite(m_bz);
+      snapshot.state.valid = std::isfinite(snapshot.state.mean(2, 0)) &&
+          std::isfinite(snapshot.state.covariance(2, 2));
+      if (snapshot.state.valid) snapshots.push_back(std::move(snapshot));
+    }
+  }
+
+  void complete(const std::vector<GsfComponent*>& components) {
+    m_finalComponents.clear();
+    if (!m_enabled) return;
+    m_finalComponents.reserve(components.size());
+    for (const auto* component : components)
+      if (component) m_finalComponents.push_back(component);
+  }
+
+  const std::vector<GaussianComponentSnapshot>& filteredAt(
+      std::size_t hitIndex) const {
+    static const std::vector<GaussianComponentSnapshot> empty;
+    return hitIndex < m_filtered.size() ? m_filtered[hitIndex] : empty;
+  }
+
+  const std::vector<const GsfComponent*>& finalComponents() const {
+    return m_finalComponents;
+  }
+
+private:
+  double m_bz = 0.0;
+  bool m_enabled = false;
+  bool m_captureFilteredHistory = false;
+  std::vector<std::vector<GaussianComponentSnapshot>> m_filtered;
+  std::vector<const GsfComponent*> m_finalComponents;
 };
 
 static void accumulateGaussian(GaussianAccumulator& accumulator,
@@ -1154,8 +1222,6 @@ struct LineageNodeRecord {
   double dominantLineageFraction =
       std::numeric_limits<double>::quiet_NaN();
   double mergeCost = std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothIdentityCompatibilityDChi2 =
-      std::numeric_limits<double>::quiet_NaN();
 };
 
 struct LineageEdgeRecord {
@@ -1273,12 +1339,6 @@ public:
   void setWeight(int nodeId, double weight) {
     if (validNode(nodeId))
       m_nodes[static_cast<std::size_t>(nodeId)].weight = weight;
-  }
-
-  void setCmsIdentityCompatibilityDChi2(int nodeId, double dchi2) {
-    if (validNode(nodeId))
-      m_nodes[static_cast<std::size_t>(nodeId)]
-          .cmsSmoothIdentityCompatibilityDChi2 = dchi2;
   }
 
   void mark(int nodeId, LineageNodeFate fate) {
@@ -2479,8 +2539,6 @@ StatusCode RecGsfTracking::execute() {
   auto* lineageNodeDominantLineageFraction =
       m_lineageNodeDominantLineageFraction.createAndPut();
   auto* lineageNodeMergeCost = m_lineageNodeMergeCost.createAndPut();
-  auto* lineageNodeCmsSmoothIdentityCompatibilityDChi2 =
-      m_lineageNodeCmsSmoothIdentityCompatibilityDChi2.createAndPut();
   auto* lineageEdgeInputTrackIndex =
       m_lineageEdgeInputTrackIndex.createAndPut();
   auto* lineageEdgeOutputTrackIndex =
@@ -2544,8 +2602,6 @@ StatusCode RecGsfTracking::execute() {
       lineageNodeDominantLineageFraction->push_back(
           node.dominantLineageFraction);
       lineageNodeMergeCost->push_back(node.mergeCost);
-      lineageNodeCmsSmoothIdentityCompatibilityDChi2->push_back(
-          node.cmsSmoothIdentityCompatibilityDChi2);
     }
     for (const auto& edge : graph.edges()) {
       lineageEdgeInputTrackIndex->push_back(inputTrackIndex);
@@ -3033,10 +3089,10 @@ StatusCode RecGsfTracking::execute() {
 
     std::vector<GsfComponent*> comps = {initComp};
     std::vector<GsfSmootherNode> smootherGraph;
-    std::vector<std::unique_ptr<GsfComponent>> cmsFinalPredictedOwned;
-    std::vector<CmsGaussianComponentState> cmsInnermostForwardComponents;
-    std::vector<CmsGaussianComponentState>
-        cmsForwardIdentityUpdatedComponents(hits.size());
+    SharedForwardFilterResult sharedForwardResult(
+        hits.size(), bz,
+        m_reverseFiltering.value() || m_cmsGsfSmoothing.value(),
+        m_cmsGsfSmoothing.value());
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
@@ -3142,6 +3198,8 @@ StatusCode RecGsfTracking::execute() {
       }
     };
 
+    sharedForwardResult.captureFiltered(0, comps);
+
     // The seed already contains the filtered hit-0 state. In full-interval
     // mode, convolve it through the hit-0 -> hit-1 material before the first
     // measurement update; the legacy current-surface mode intentionally keeps
@@ -3224,13 +3282,6 @@ StatusCode RecGsfTracking::execute() {
           ? std::min(m_reductionTargetComponents.value(), m_maxComponents.value())
           : m_maxComponents.value();
       GsfMixture::normalizeWeights(comps);
-      // CMSSW seeds its backward GSF from the forward prediction on the
-      // outermost surface, before that surface's measurement is applied.
-      if (m_cmsGsfSmoothing.value() && ih + 1 == hits.size()) {
-        cmsFinalPredictedOwned.clear();
-        for (const auto* component : comps)
-          cmsFinalPredictedOwned.emplace_back(component->clone());
-      }
       if (justSplit || (int)comps.size() > 1)
         dumpComponents("before-hit", (int)ih, comps);
 
@@ -3587,55 +3638,7 @@ StatusCode RecGsfTracking::execute() {
         break;
       }
       compsAfterReduce = (int)comps.size();
-      if (m_cmsGsfSmoothing.value()) {
-        const GsfComponent* forwardIdentity = nullptr;
-        for (const auto* component : comps) {
-          if (!component || !component->noRadiationLineage ||
-              !(component->weight > 0.0) ||
-              !std::isfinite(component->weight)) {
-            continue;
-          }
-          if (!forwardIdentity ||
-              component->weight > forwardIdentity->weight) {
-            forwardIdentity = component;
-          }
-        }
-        if (forwardIdentity) {
-          auto& snapshot = cmsForwardIdentityUpdatedComponents[ih];
-          snapshot.weight = forwardIdentity->weight;
-          snapshot.componentId = forwardIdentity->debugId;
-          snapshot.lineageNodeId = forwardIdentity->lineageNodeId;
-          snapshot.noRadiationLineage = true;
-          forwardIdentity->helixAtLastSite(bz).PutInto(snapshot.state.mean);
-          snapshot.state.covariance = forwardIdentity->covAtLastSite(bz);
-          snapshot.state.valid =
-              std::isfinite(snapshot.state.mean(2, 0)) &&
-              std::isfinite(snapshot.state.covariance(2, 2));
-        }
-        if (ih == 1) {
-          cmsInnermostForwardComponents.clear();
-          cmsInnermostForwardComponents.reserve(comps.size());
-          for (const auto* component : comps) {
-            if (!component || !(component->weight > 0.0) ||
-                !std::isfinite(component->weight)) {
-              continue;
-            }
-            CmsGaussianComponentState snapshot;
-            snapshot.weight = component->weight;
-            snapshot.componentId = component->debugId;
-            snapshot.lineageNodeId = component->lineageNodeId;
-            snapshot.noRadiationLineage =
-                component->noRadiationLineage;
-            component->helixAtLastSite(bz).PutInto(snapshot.state.mean);
-            snapshot.state.covariance = component->covAtLastSite(bz);
-            snapshot.state.valid =
-                std::isfinite(snapshot.state.mean(2, 0)) &&
-                std::isfinite(snapshot.state.covariance(2, 2));
-            if (snapshot.state.valid)
-              cmsInnermostForwardComponents.push_back(std::move(snapshot));
-          }
-        }
-      }
+      sharedForwardResult.captureFiltered(ih, comps);
 
       // ACTS-like surface ordering: preserve the filtered measurement state,
       // then convolve components through the material associated with this
@@ -3791,6 +3794,8 @@ StatusCode RecGsfTracking::execute() {
       nProc++;
     }
 
+    sharedForwardResult.complete(comps);
+
     bool reverseIpAvailable = false;
     THelicalTrack reverseOutputIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
     TMatrixD reverseOutputIpCov(5, 5);
@@ -3826,23 +3831,19 @@ StatusCode RecGsfTracking::execute() {
     double ecalConstrainedEnergy = 0.0;
     int ecalConstrainedClusterCount = 0;
 
-    // Experimental reverse GSF pass.  Initialize from the filtered mixture on
-    // the final measurement surface, then revisit preceding measurements in
-    // the audited reverse order.  Reverse process convolution increases the
-    // momentum according to the same retained-fraction mixture.
+    // Shared inward GSF pass.  Reverse and CMS-like both initialize from the
+    // common post-measurement, post-reduction forward mixture on the final
+    // surface, then revisit the preceding measurements in the audited reverse
+    // order.  The CMS-like distinction is its later forward/backward endpoint
+    // product, not a second outward filter or a different seed population.
     const bool runCmsSmoother = m_cmsGsfSmoothing.value();
     const bool runReversePass = m_reverseFiltering.value() || runCmsSmoother;
-    if (runReversePass && !comps.empty() && hits.size() > 1 &&
-        (!runCmsSmoother || !cmsFinalPredictedOwned.empty())) {
+    if (runReversePass && !sharedForwardResult.finalComponents().empty() &&
+        hits.size() > 1) {
       std::vector<GsfComponent*> reverseComps;
       int nextReverseId = 0;
-      std::vector<const GsfComponent*> reverseSeedComponents;
-      if (runCmsSmoother) {
-        for (const auto& component : cmsFinalPredictedOwned)
-          reverseSeedComponents.push_back(component.get());
-      } else {
-        reverseSeedComponents.assign(comps.begin(), comps.end());
-      }
+      const auto& reverseSeedComponents =
+          sharedForwardResult.finalComponents();
       const double reverseSeedCovarianceScale = runCmsSmoother
           ? m_cmsErrorRescaling.value() : m_reverseKappaSeedCov.value();
       for (const auto* forwardComp : reverseSeedComponents) {
@@ -3915,8 +3916,7 @@ StatusCode RecGsfTracking::execute() {
               ? std::min(m_reductionTargetComponents.value(),
                          m_maxComponents.value())
               : m_maxComponents.value();
-      for (int reverseHit = runCmsSmoother ? (int)hits.size() - 1
-                                          : (int)hits.size() - 2;
+      for (int reverseHit = (int)hits.size() - 2;
            reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
         auto& target = hits[reverseHit];
 
@@ -4032,8 +4032,6 @@ StatusCode RecGsfTracking::execute() {
         // before updating its inner bounding measurement.  This mirrors the
         // ACTS backward actor and is the direction-reversed counterpart of the
         // forward update-then-outgoing-material ordering.
-        const bool cmsOutermostHit = runCmsSmoother &&
-            reverseHit == (int)hits.size() - 1;
         std::vector<ComponentMaterialPath> reverseMaterialPaths;
         reverseMaterialPaths.reserve(reverseComps.size());
         bool anyReverseMaterial = false;
@@ -4042,27 +4040,24 @@ StatusCode RecGsfTracking::execute() {
             reverseTargetPosition.x, reverseTargetPosition.y,
             reverseTargetPosition.z);
         TVector3 reverseMaterialOuterEndpoint;
-        if (!cmsOutermostHit) {
-          const auto& reverseOuterPosition =
-              hits[static_cast<size_t>(reverseHit + 1)].lcioHit.getPosition();
-          reverseMaterialOuterEndpoint.SetXYZ(
-              reverseOuterPosition.x, reverseOuterPosition.y,
-              reverseOuterPosition.z);
-        }
+        const auto& reverseOuterPosition =
+            hits[static_cast<size_t>(reverseHit + 1)].lcioHit.getPosition();
+        reverseMaterialOuterEndpoint.SetXYZ(
+            reverseOuterPosition.x, reverseOuterPosition.y,
+            reverseOuterPosition.z);
         for (const auto* component : reverseComps) {
-          reverseMaterialPaths.push_back(cmsOutermostHit
-              ? ComponentMaterialPath{}
-              : (useDD4hepBetweenSurfaces
-                    ? componentGeometryTransitionMaterialPath(
-                          m_materialManager, target.layer,
-                          reverseMaterialDestination, *component, bz, -1,
-                          &reverseMaterialOuterEndpoint)
-                    : componentMaterialPathAtCrossing(
-                          target.layer, *component, bz, -1)));
+          reverseMaterialPaths.push_back(
+              useDD4hepBetweenSurfaces
+                  ? componentGeometryTransitionMaterialPath(
+                        m_materialManager, target.layer,
+                        reverseMaterialDestination, *component, bz, -1,
+                        &reverseMaterialOuterEndpoint)
+                  : componentMaterialPathAtCrossing(
+                        target.layer, *component, bz, -1));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&
               reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
         }
-        if (truthMaterialTrackMatched && !cmsOutermostHit) {
+        if (truthMaterialTrackMatched) {
           auto& summary = reverseMaterialSummaries[
               static_cast<std::size_t>(reverseHit)];
           for (std::size_t componentIndex = 0;
@@ -4153,7 +4148,7 @@ StatusCode RecGsfTracking::execute() {
 
         std::vector<GsfComponent*> acceptedReverse;
         std::vector<double> reverseLogWeights;
-        std::vector<CmsGaussianComponentState>
+        std::vector<GaussianComponentSnapshot>
             cmsBackwardPredictedComponents;
         for (auto* component : reverseComps) {
           const int parentLineageNodeId = component->lineageNodeId;
@@ -4204,8 +4199,8 @@ StatusCode RecGsfTracking::execute() {
               reverseLogPosterior, &update);
 
           if (accepted) {
-            if (runCmsSmoother && !cmsOutermostHit) {
-              CmsGaussianComponentState snapshot;
+            if (runCmsSmoother) {
+              GaussianComponentSnapshot snapshot;
               snapshot.weight = reversePriorWeight;
               snapshot.componentId = component->debugId;
               // The product consumes the backward-predicted fields persisted
@@ -4258,42 +4253,6 @@ StatusCode RecGsfTracking::execute() {
         for (const auto* component : reverseComps)
           lineageGraph.setNormalizedPosterior(
               component->lineageNodeId, component->weight);
-
-        // Passive CMS identity-compatibility diagnostic.  Every accepted
-        // backward-predicted candidate at this hit is compared with the same
-        // surviving forward-updated identity state.  The ordinary
-        // backward-prediction-versus-measurement chi-square is already stored
-        // in lineage_node_dchi2 on this same measurement node.  This additional
-        // five-dimensional compatibility never replaces live weights or
-        // propagated states.
-        if (runCmsSmoother && !cmsOutermostHit && reverseHit >= 0 &&
-            static_cast<std::size_t>(reverseHit) <
-                cmsForwardIdentityUpdatedComponents.size()) {
-          const auto& forwardIdentity =
-              cmsForwardIdentityUpdatedComponents[reverseHit];
-          int validComparisons = 0;
-          if (forwardIdentity.state.valid) {
-            for (const auto& backward : cmsBackwardPredictedComponents) {
-              GaussianMomentState identityProduct;
-              double compatibilityDChi2 =
-                  std::numeric_limits<double>::quiet_NaN();
-              if (combineCmsMoments(
-                      forwardIdentity.state, backward.state, identityProduct,
-                      nullptr, &compatibilityDChi2, nullptr)) {
-                lineageGraph.setCmsIdentityCompatibilityDChi2(
-                    backward.lineageNodeId, compatibilityDChi2);
-                ++validComparisons;
-              }
-            }
-          }
-          if (m_verboseDump && m_componentDebugDump) {
-            info() << boost::format(
-                "  CMS-IDENTITY-COMPATIBILITY hit=%d candidates=%d valid=%d")
-                      % reverseHit
-                      % (int)cmsBackwardPredictedComponents.size()
-                      % validComparisons << endmsg;
-          }
-        }
 
         // Let every reverse-process child incorporate the inward target hit
         // before cutoff or mixture reduction.  The weights and Gaussian states
@@ -4361,16 +4320,18 @@ StatusCode RecGsfTracking::execute() {
         // internal message; the final backward mixture is retained as the
         // explicit endpoint fallback when no valid product component forms.
         if (runCmsSmoother && reverseHit == 1) {
+          const auto& innermostForwardComponents =
+              sharedForwardResult.filteredAt(1);
           std::vector<double> cmsPairLogWeights;
           cmsPairCandidates = static_cast<int>(
-              cmsInnermostForwardComponents.size() *
+              innermostForwardComponents.size() *
               cmsBackwardPredictedComponents.size());
           cmsCombinedComponents.reserve(
               static_cast<std::size_t>(cmsPairCandidates));
           cmsPairLogWeights.reserve(
               static_cast<std::size_t>(cmsPairCandidates));
           int combinedComponentId = 0;
-          for (const auto& forward : cmsInnermostForwardComponents) {
+          for (const auto& forward : innermostForwardComponents) {
             for (const auto& backward : cmsBackwardPredictedComponents) {
               GaussianMomentState combined;
               double logOverlap = 0.0;
@@ -4454,7 +4415,7 @@ StatusCode RecGsfTracking::execute() {
                 "  CMS-GSF COMBINE hit=%d forward=%d backward=%d "
                 "pairs=%d failures=%d retained=%d")
                       % reverseHit
-                      % (int)cmsInnermostForwardComponents.size()
+                      % (int)innermostForwardComponents.size()
                       % (int)cmsBackwardPredictedComponents.size()
                       % cmsPairCandidates % cmsPairFailures
                       % (int)cmsCombinedComponents.size() << endmsg;

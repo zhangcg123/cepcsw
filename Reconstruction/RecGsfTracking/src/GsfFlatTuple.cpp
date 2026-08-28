@@ -260,9 +260,6 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("lineage_node_dominant_lineage_fraction",
                  &m_lineage_node_dominant_lineage_fraction);
   m_tree->Branch("lineage_node_merge_cost", &m_lineage_node_merge_cost);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_identity_compatibility_dchi2",
-      &m_lineage_node_cms_smooth_identity_compatibility_dchi2);
   m_tree->Branch("lineage_edge_n", &m_lineage_edge_n);
   m_tree->Branch("lineage_edge_input_track_index",
                  &m_lineage_edge_input_track_index);
@@ -534,7 +531,6 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_filtered_pT.clear();
   m_lineage_node_dominant_lineage_fraction.clear();
   m_lineage_node_merge_cost.clear();
-  m_lineage_node_cms_smooth_identity_compatibility_dchi2.clear();
   m_lineage_edge_input_track_index.clear();
   m_lineage_edge_output_track_index.clear();
   m_lineage_edge_from_node_id.clear();
@@ -583,8 +579,6 @@ StatusCode RecGsfFlatTuple::execute() {
     const auto* nodeDominantLineageFraction =
         m_inLineageNodeDominantLineageFraction.get();
     const auto* nodeMergeCost = m_inLineageNodeMergeCost.get();
-    const auto* nodeCmsSmoothIdentityCompatibilityDChi2 =
-        m_inLineageNodeCmsSmoothIdentityCompatibilityDChi2.get();
     const std::size_t nodeCount = nodeIds ? nodeIds->size() : 0;
     auto nodeSizeIsConsistent = [nodeCount](const auto* collection) {
       return collection && collection->size() == nodeCount;
@@ -619,8 +613,7 @@ StatusCode RecGsfFlatTuple::execute() {
         nodeSizeIsConsistent(nodeFilteredKappa) &&
         nodeSizeIsConsistent(nodeFilteredKappaVariance) &&
         nodeSizeIsConsistent(nodeDominantLineageFraction) &&
-        nodeSizeIsConsistent(nodeMergeCost) &&
-        nodeSizeIsConsistent(nodeCmsSmoothIdentityCompatibilityDChi2);
+        nodeSizeIsConsistent(nodeMergeCost);
 
     const auto* edgeInputTrackIndices =
         m_inLineageEdgeInputTrackIndex.get();
@@ -706,9 +699,6 @@ StatusCode RecGsfFlatTuple::execute() {
           nodeDominantLineageFraction->end());
       m_lineage_node_merge_cost.assign(
           nodeMergeCost->begin(), nodeMergeCost->end());
-      m_lineage_node_cms_smooth_identity_compatibility_dchi2.assign(
-          nodeCmsSmoothIdentityCompatibilityDChi2->begin(),
-          nodeCmsSmoothIdentityCompatibilityDChi2->end());
       m_lineage_node_predicted_pT.reserve(nodeCount);
       m_lineage_node_filtered_pT.reserve(nodeCount);
       for (std::size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex) {

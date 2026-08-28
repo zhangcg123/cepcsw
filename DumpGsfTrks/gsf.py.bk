@@ -164,11 +164,10 @@ elif method == "reverse":
     gsf.ReverseKappaSeedCov = 1.0
 
 elif method in ("cms-like", "cms", "cms_like"):
-    # CMSSW-like workflow: seed from the final forward prediction, inflate the
-    # full covariance, apply the outermost hit backward, combine collapsed
-    # forward/backward moments internally, and publish BestBranch, WeightedMean,
-    # and FullMixtureMode. WeightedMean preserves the historical single CMS-like
-    # endpoint: collapse at the innermost surface, then move that Gaussian to IP.
+    # CMS-like endpoint workflow: use the same final filtered forward seed
+    # population and inward hit range as reverse, scale its full covariance,
+    # then form the forward/backward product endpoint at hit 1. Publish
+    # BestBranch, WeightedMean, and FullMixtureMode from that common endpoint.
     method = "cms-like"
     gsf.CmsGsfSmoothing = True
     gsf.CmsErrorRescaling = 100.0

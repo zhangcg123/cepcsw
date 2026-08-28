@@ -9,13 +9,14 @@ default-on automatic component record also persists every positive-weight
 final smoother/reverse/CMS-like component's normalized weight, IP kappa mean, and
 kappa variance so the transverse-momentum marginal can be reconstructed from
 the flat tuple without rerunning verbose diagnostics. A
-default-on passive CMS-like diagnostic also evaluates every accepted interior
-backward-predicted component against the same surviving forward-updated
-identity state at that layer. It records only the resulting five-dimensional
-compatibility chi-square. The ordinary `lineage_node_dchi2` on the same node
-remains the backward-predicted-state versus current-measurement chi-square,
-with the same meaning as in reverse filtering. Neither quantity replaces live
-component weights or states. A
+single outward GSF pass supplies both reverse and CMS-like. A common transient
+`SharedForwardFilterResult` retains its final filtered population for either
+inward workflow and, only for CMS-like, snapshots the post-update,
+post-cutoff, post-reduction filtered history used by the product endpoint.
+Both inward workflows first revisit hit `N-2`; reverse scales the seed
+covariance with `ReverseKappaSeedCov`, while CMS-like uses
+`CmsErrorRescaling` and additionally forms its forward/backward product
+endpoint at hit 1. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -348,14 +349,13 @@ match, and `GSFTracksFullMixtureMode` is the joint density maximum of the full
 mixture at the IP. `ReverseSelectionMode` affects only BestBranch. It does not
 alter the components entering either of the other two views.
 
-For CMS-like, `GSFTracksWeightedMean` deliberately preserves the historical
-single `GSFTracks` endpoint bit-for-bit: the surviving backward mixture is
-moment-matched at the innermost surface and that one Gaussian is then moved to
-the IP. The CMS-like BestBranch and FullMixtureMode instead extrapolate the
-selected component and every positive-weight component, respectively, to the
-IP before publication. Newly produced CMS-like jobs therefore leave the
-legacy generic `GSFTracks` collection absent; historical CMS-like files retain
-their original collection and flat `gsf_*` fields.
+For CMS-like, the endpoint mixture is the reduced Gaussian product of the
+stored forward filtered mixture and the backward predicted mixture at hit 1.
+BestBranch, WeightedMean, and FullMixtureMode are all derived from that same
+product mixture. If no valid product can be formed, all three views fall back
+to the final backward mixture. Newly produced CMS-like jobs leave the legacy
+generic `GSFTracks` collection absent; historical CMS-like files retain their
+original collection and flat `gsf_*` fields.
 
 FullMixtureMode maximizes the complete five-dimensional Gaussian-mixture PDF
 in the local IP helix coordinates `(drho, phi0, kappa, dz, tanLambda)`. This is
@@ -394,7 +394,7 @@ produce no component rows.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires ordinary reverse filtering and no CMSSW-like workflow. It starts from the BestBranch publication. |
+| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires ordinary reverse filtering and no CMS-like workflow. It starts from the BestBranch publication. |
 | `EcalConstraintRatioThreshold` | `1.1` | same | Activate re-ranking only when the unconstrained branch has `max(p/E,E/p)` above this value. It must be finite and greater than one. |
 | `EcalConstraintLogPSigma` | `0.15` | same | Gaussian width of the component likelihood in `log(p/E)`; it must be finite and positive. |
 | `EcalConstraintLikelihoodFloor` | `0.05` | same | Additive likelihood floor in `(0,1]`; 0.05 limits the ECAL re-ranking Bayes factor to 20. |
@@ -426,8 +426,8 @@ the production baseline.
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `GaussianSumSmoothing` | `false` | `false` | Run the retained-graph experimental Gaussian-sum smoother. It is default-off and forfeits much of the observed hard-loss recovery. |
-| `CmsGsfSmoothing` | `false` | `false` | Run the experimental CMSSW-like backward workflow instead of ordinary reverse filtering. |
-| `CmsErrorRescaling` | `100` | `100` | Covariance scaling for the CMSSW-like backward seed; inactive unless `CmsGsfSmoothing=true`. |
+| `CmsGsfSmoothing` | `false` | `false` | Run the experimental CMS-like endpoint workflow from the shared final filtered forward mixture instead of ordinary reverse publication. |
+| `CmsErrorRescaling` | `100` | `100` | Full-covariance scale for the CMS-like copy of the shared inward seed population; inactive unless `CmsGsfSmoothing=true`. |
 
 `ReverseFiltering`, `GaussianSumSmoothing`, and `CmsGsfSmoothing` are
 alternative workflows and must not be enabled simultaneously.
@@ -497,7 +497,6 @@ The data handles are configurable separately from the 42 properties:
 | final-mixture component PDF parameters | `GSFFinalMixtureComponentWeight`, `GSFFinalMixtureComponentKappa`, `GSFFinalMixtureComponentKappaVariance` |
 | component-lineage node mapping and identity | `GSFLineageNodeInputTrackIndex`, `GSFLineageNodeOutputTrackIndex`, `GSFLineageNodeId`, `GSFLineageNodeSource`, `GSFLineageNodeOperation`, `GSFLineageNodeHitIndex`, `GSFLineageNodeSurfaceIndex`, `GSFLineageNodeComponentId`, `GSFLineageNodeGeneration` |
 | component-lineage decision and state data | `GSFLineageNodeBHComponentIndex`, `GSFLineageNodeMeasurementStatus`, `GSFLineageNodeFate`, `GSFLineageNodeNoRadiation`, `GSFLineageNodeBestBranch`, `GSFLineageNodeFinalMixture`, `GSFLineageNodeValid`, plus the `GSFLineageNode*` weight, BH, material, innovation, kappa/covariance, lineage-fraction, and merge-cost collections described below |
-| CMS-like fixed-identity compatibility diagnostic | `GSFLineageNodeCmsSmoothIdentityCompatibilityDChi2` |
 | component-lineage edges | `GSFLineageEdgeInputTrackIndex`, `GSFLineageEdgeOutputTrackIndex`, `GSFLineageEdgeFromNodeId`, `GSFLineageEdgeToNodeId`, `GSFLineageEdgeOperation` |
 | input ECAL clusters | `EcalCluster` |
 | paired ECAL-constrained output tracks | `GSFTracksEcalConstrained` |
@@ -539,7 +538,6 @@ tuple also fills the corresponding parallel scalar set:
 | `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Per-evaluated-component measurement decision. Status is `-1` not a measurement, `0` rejected, `1` accepted through the exact update, or `2` accepted through the legacy recovery path. Exact innovation values are finite when supplied by the accepted MarlinTrk update. The normalized posterior is captured before cutoff and KL reduction. |
 | `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, `6` abandoned because its endpoint or complete output track failed, or `7` a terminal forward/backward CMS message that was evaluated but was not the published product-mixture endpoint. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |
 | `lineage_node_weight`, `lineage_node_predicted_kappa`, `lineage_node_predicted_kappa_variance`, `lineage_node_predicted_pT`, `lineage_node_filtered_kappa`, `lineage_node_filtered_kappa_variance`, `lineage_node_filtered_pT`, `lineage_node_dominant_lineage_fraction`, `lineage_node_merge_cost` | Node-local statistical state. Predicted quantities exist for measurement nodes with an exact innovation object; filtered quantities are the post-operation continuation state. pT is derived as `1/abs(kappa)`. Merge cost is finite only for a KL output. |
-| `lineage_node_cms_smooth_identity_compatibility_dchi2` | The only CMS-specific local score retained. On each accepted interior CMS backward measurement node it is the full five-dimensional compatibility chi-square between the fixed surviving forward-updated identity state and that node's backward-predicted component: `(mu_F-mu_B)^T (C_F+C_B)^-1 (mu_F-mu_B)`. Finite means available; NaN means not applicable or invalid. Compare identity and radiative siblings at the same hit so the forward reference is fixed. The ordinary `lineage_node_dchi2` on the same node is instead the backward-predicted-state versus current-measurement chi-square used by the live reverse-style update. Because the former is five-dimensional and the latter has the measurement dimension, compare their within-score sibling ordering rather than their absolute numerical values. Both are passive diagnostics and exclude no additional steering term. |
 | `lineage_edge_input_track_index`, `lineage_edge_output_track_index`, `lineage_edge_from_node_id`, `lineage_edge_to_node_id`, `lineage_edge_operation` | Directed graph connectivity. Edge operation is `1` BH split, `2` measurement, `3` KL merge, `4` forward-to-backward seed, or `5` CMS forward/backward state to product candidate. Every KL output has two incoming merge edges; every CMS product candidate has exactly two incoming product edges. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |

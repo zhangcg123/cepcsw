@@ -158,10 +158,6 @@ private:
           Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>> m_inLineageNodeMergeCost{
       "GSFLineageNodeMergeCost", Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothIdentityCompatibilityDChi2{
-          "GSFLineageNodeCmsSmoothIdentityCompatibilityDChi2",
-          Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_inLineageEdgeInputTrackIndex{
           "GSFLineageEdgeInputTrackIndex", Gaudi::DataHandle::Reader, this};
@@ -301,8 +297,6 @@ private:
   std::vector<double> m_lineage_node_filtered_pT;
   std::vector<double> m_lineage_node_dominant_lineage_fraction;
   std::vector<double> m_lineage_node_merge_cost;
-  std::vector<double>
-      m_lineage_node_cms_smooth_identity_compatibility_dchi2;
   int m_lineage_edge_n = 0;
   std::vector<int> m_lineage_edge_input_track_index;
   std::vector<int> m_lineage_edge_output_track_index;

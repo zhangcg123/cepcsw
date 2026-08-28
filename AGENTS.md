@@ -20,8 +20,9 @@ Geant4 pre/post-material-step truth
 reverse, and CMS-like runs write three row-aligned endpoint views: BestBranch to
 `GSFTracksBestBranch`, the moment-matched endpoint to
 `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional IP
-mixture density to `GSFTracksFullMixtureMode`. CMS-like's WeightedMean
-preserves its former fixed `GSFTracks` endpoint. FullMixtureMode is
+mixture density to `GSFTracksFullMixtureMode`. CMS-like forms all three views
+from its hit-1 forward-by-backward product mixture and falls back to its final
+backward mixture only when no product can be formed. FullMixtureMode is
 automatic/default-on for all three workflows, has a persisted
 optimization-status collection and flat-tuple
 fields, and is mechanically available but not physics-validated. Its
@@ -45,15 +46,15 @@ directed acyclic graphs, and the graph never steers the fit. Its base schema
 and reverse gates are in
 `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`; the CMS-like
 extension is in
-`agents_record/2026-08-27-cms-like-component-lineage.md`. Accepted interior
-CMS-like backward measurement nodes now retain only one CMS-specific passive
-score: the full-state compatibility chi-square between each backward-predicted
-candidate and the same surviving forward-updated identity state. The ordinary
-`lineage_node_dchi2` on that node remains the reverse-style backward-
-prediction-versus-measurement chi-square. Neither score steers the fit; the
-removed broader diagnostic schema remains historical evidence in the 2026-08-27
-records, and the live simplification is recorded in
-`agents_record/2026-08-28-cms-identity-chi2-schema-simplification.md`. Its
+`agents_record/2026-08-27-cms-like-component-lineage.md`. Reverse and CMS-like
+now consume one transient `SharedForwardFilterResult`: the same post-update,
+post-cutoff, post-reduction outward mixtures and the same final filtered seed
+population. Both inward passes first revisit hit `N-2`; their seed covariance
+scales remain independently configurable, and only CMS-like forms the hit-1
+forward/backward product endpoint. The former CMS-only identity-compatibility
+diagnostic is retired from EDM and flat tuples; its evidence remains
+historical. The shared mechanics and gates are in
+`agents_record/2026-08-28-shared-forward-reverse-cms-framework.md`. Its
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
@@ -67,7 +68,7 @@ curvature-only diagnostic override and do not restore the former
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md`. Forward filtering,
 an independent reverse
 multi-component refit, a KL reduction-aware experimental smoother, and a
-CMSSW-like experimental backward workflow are mechanically operational.
+CMS-like experimental product-endpoint workflow are mechanically operational.
 The separate experimental `RecGsfGlobalLossRefitter` is also mechanically
 available as the fourth explicit `method="global-loss"` choice in the
 maintained `DumpGsfTrks/gsf.py.bk`. It consumes `CompleteTracks`, writes
@@ -108,7 +109,7 @@ publishes the selected branch, moment-matched mixture, and full joint-density
 mode in separate row-aligned collections. It has demonstrated interaction-point momentum recovery in many
 hard-bremsstrahlung events and favorable central light/hard performance, but
 it also creates clean-track degradation and extreme tails. The KL smoother is
-largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like
+largely LCIO-like and forfeits much of the hard-loss recovery. The CMS-like
 workflow has a different core/tail tradeoff and remains default-off.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
@@ -234,16 +235,17 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate implementation checkpoint is the newly shared standard-KF-style
-forward initializer used by reverse, smoother, and CMS-like. Its class-level
-mechanics and events 11/16/17 gate are complete. The next required evidence is
-a same-code topology-clear population rerun with explicit no/light/hard-loss
-and early-transition categories; until then, the initializer is mechanically
-available but not a validated performance improvement. Do not tune
-`ReverseKappaSeedCov` or CMS error rescaling to compensate for seed behavior.
-The outgoing curvature-only diagnostic and rationale for this design are
-preserved in
-`agents_record/2026-08-28-forward-kappa-seed-covariance-standard-kf-gate.md`.
+The immediate implementation checkpoint is the shared reverse/CMS forward and
+inward framework. One outward pass now supplies the same final filtered seed
+population to both methods; at equal covariance scaling, their forward and
+inward statistical node sequences agree through events 11, 16, and 17. Reverse
+is exact against its pre-change focused reference. CMS-like alone adds the
+hit-1 product endpoint, and the obsolete CMS-only compatibility diagnostic is
+absent. The next required evidence is a same-code topology-clear population
+rerun with explicit no/light/hard-loss and early-transition categories. Until
+then, this is a mechanical simplification, not a CMS physics improvement. The
+implementation contract and completed gates are preserved in
+`agents_record/2026-08-28-shared-forward-reverse-cms-framework.md`.
 
 The active question is whether the exact material thickness supplied to the
 Bethe-Heitler (BH) splitter at the first wrong branch decision is consistent

@@ -194,10 +194,6 @@ private:
           Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>> m_lineageNodeMergeCost{
       "GSFLineageNodeMergeCost", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_lineageNodeCmsSmoothIdentityCompatibilityDChi2{
-          "GSFLineageNodeCmsSmoothIdentityCompatibilityDChi2",
-          Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_lineageEdgeInputTrackIndex{
           "GSFLineageEdgeInputTrackIndex", Gaudi::DataHandle::Writer, this};
@@ -268,12 +264,13 @@ private:
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
   Gaudi::Property<bool>   m_cmsGsfSmoothing{
       this,"CmsGsfSmoothing",false,
-      "Run a CMSSW-like backward GSF seeded from the final forward prediction, "
-      "with collapsed-moment smoothing and automatic BestBranch, "
+      "Run the CMS-like forward/backward endpoint workflow from the shared "
+      "final filtered forward mixture, with automatic BestBranch, "
       "WeightedMean, and FullMixtureMode endpoint publication"};
   Gaudi::Property<double> m_cmsErrorRescaling{
       this,"CmsErrorRescaling",100.0,
-      "Multiplicative covariance scaling for the CMSSW-like backward seed"};
+      "Multiplicative covariance scaling for the CMS-like copy of the shared "
+      "final filtered forward seed"};
   Gaudi::Property<std::string> m_reverseSelectionMode{
       this, "ReverseSelectionMode", "AggregateWeight",
       "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "
