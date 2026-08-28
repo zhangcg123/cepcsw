@@ -103,6 +103,10 @@ interaction-point momentum recovery in many
 hard-bremsstrahlung events and favorable central light/hard performance, but
 it also creates clean-track degradation and extreme tails. The KL smoother is
 largely LCIO-like and forfeits much of the hard-loss recovery.
+The maintained comparison card now deliberately selects
+`InwardSeedCovarianceScale=-1` for the fresh-inward-seed campaign. This is
+campaign steering only; it does not change the compiled or active-template
+default 100.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
@@ -239,6 +243,10 @@ the measurements: the geometric prefit uses first/middle/last hit positions
 that the loose-covariance fit later consumes. The implementation contract and
 focused gates are in
 `agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`.
+The maintained `DumpGsfTrks/gsf.py.bk` now selects `-1` for the fresh mode;
+`ReverseInitialWeightMode` is explicitly retained but inert because this mode
+has one unit-weight inward root. The steering decision is recorded in
+`agents_record/2026-08-29-maintained-fresh-inward-seed-steering.md`.
 
 Focused same-code reverse runs on hard-loss events 11, 16, and 17 establish
 that scale 100 reproduces its pre-change endpoint exactly and that

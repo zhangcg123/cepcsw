@@ -375,13 +375,15 @@ inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
 the removed `CmsGsfSmoothing` property are stale experiment artifacts and must
 be regenerated rather than edited in place.
 
-The maintained template currently selects `method="reverse"`. It currently
-sets `InwardSeedCovarianceScale=1.0` for the ongoing correlated-prior
-campaign, while the compiled default and active reverse template remain 100.
+The maintained template currently selects `method="reverse"`. It now sets
+`InwardSeedCovarianceScale=-1.0` for the fresh-inward-seed campaign, while the
+compiled default and active reverse template remain 100.
 Positive values copy and scale the complete final forward mixture. A finite
 value at or below zero instead selects one fresh standard-KF-style backward
 seed, with an explicit outermost-hit update before recursion starts at `N-2`.
-The maintained value 1 therefore keeps the copied-mixture campaign behavior.
+The maintained value -1 is only a mode selector, not a negative covariance
+multiplier. It creates one unit-weight inward root, so the explicitly retained
+`ReverseInitialWeightMode="ForwardPosterior"` setting is inert in this card.
 Former method-specific seed-covariance properties were removed when the
 inward filter was consolidated; stale cards must use the common property.
 This is explicit campaign steering, not a production-default change. Its input

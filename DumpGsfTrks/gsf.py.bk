@@ -115,8 +115,9 @@ gsf.KappaSeedCov = -1.0  # <=0 uses the standard forward Var(omega)=1e-4.
 gsf.GaussianSumSmoothing = False
 gsf.ReverseFiltering = False
 # Positive: copy/scale the final forward mixture. <=0: one fresh backward
-# standard-KF-style seed with the outermost hit already updated.
-gsf.InwardSeedCovarianceScale = 1.0
+# standard-KF-style seed with the outermost hit already updated. The value -1
+# is a mode selector, not a negative covariance multiplier.
+gsf.InwardSeedCovarianceScale = -1.0
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse methods
 # below always persist all three endpoint representations and do not select one
@@ -147,8 +148,10 @@ if method == "smoother":
     gsf.GaussianSumSmoothing = True
 
 elif method == "reverse":
-    # Independent inward multi-component refit, seeded by the full final
-    # forward posterior. Persist the selected branch in GSFTracksBestBranch and
+    # Independent inward multi-component refit. With the maintained nonpositive
+    # inward-scale steering it starts from one fresh standard-KF-style seed;
+    # positive values instead copy the full final forward posterior. Persist
+    # the selected branch in GSFTracksBestBranch and
     # the two automatic full-mixture summaries in GSFTracksWeightedMean and
     # GSFTracksFullMixtureMode. The latter is the joint five-dimensional PDF
     # maximum; GSFFullMixtureModeStatus tags optimization success/fallback.
@@ -157,11 +160,14 @@ elif method == "reverse":
     # The complete component-lineage DAG is likewise automatic/default-on in
     # the EDM and flat tuple. It retains evaluated nodes after measurement
     # rejection, weight cutoff, or KL merging. It also records every passive
-    # B_smoothed[i] = F_updated[i] x B_predicted[i] at every inward surface;
-    # this passive smoothed-mixture record has no switch.
+    # interior B_smoothed[i] = F_updated[i] x B_predicted[i] products; the
+    # boundary states reuse B_updated[0] and F_updated[N-1]. This passive
+    # smoothed-mixture record has no switch.
     gsf.ReverseFiltering = True
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
+    # Inert for the maintained fresh single-component inward seed; retained
+    # explicitly for positive-scale copied-mixture comparison cards.
     gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
 elif method in ("global-loss", "global_loss", "global"):
