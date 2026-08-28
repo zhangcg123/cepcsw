@@ -428,7 +428,10 @@ private:
       "Opt-in propagation and verbose dump of aggregate BH-mode mass by surface"};
   Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
-  Gaudi::Property<double> m_kappaSeedCov{this,"KappaSeedCov",1e-7};
+  Gaudi::Property<double> m_kappaSeedCov{
+      this, "KappaSeedCov", -1.0,
+      "Legacy diagnostic override for the fresh prefit kappa variance; "
+      "values <= 0 use the standard KF Var(omega)=1e-4 covariance"};
   Gaudi::Property<std::string> m_bhModel{
       this, "BHModel", "CEPC2GeV85StepConditioned"};
   Gaudi::Property<bool> m_truthBHLossOverride{

@@ -106,7 +106,9 @@ gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True
 gsf.ElossOn = True
-gsf.KappaSeedCov = 1.0e-7
+# Use the exact standard-KF prefit curvature variance; positive values are a
+# legacy diagnostic override in kappa units.
+gsf.KappaSeedCov = -1.0
 
 # Initialize the neutral backward-workflow baseline before selecting a method.
 # Each branch below repeats only the options that belong to that method.

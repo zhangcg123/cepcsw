@@ -1,6 +1,7 @@
 gaudi_add_module(RecGsfTracking
                  SOURCES
                         src/GsfComponent.cpp
+                        src/GsfTrackInitializer.cpp
                         src/GsfMixture.cpp
                         src/BetheHeitlerSplitter.cpp
                         src/TruthBHLossEventData.cpp

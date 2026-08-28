@@ -19,8 +19,16 @@ These quantities never replace live component weights or states. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
-update path.  The old alternate KF fitter and initialization experiments have
-been removed; historical comparisons remain under `agents_record/`.
+update path. All forward GSF workflows use a dedicated standard-KF-style
+initializer: a temporary prefit through the first, middle, and last available
+two-dimensional hits, followed by the loose covariance
+`Var(d0)=1e6`, `Var(phi)=1e2`, `Var(omega)=1e-4`, `Var(z0)=1e6`, and
+`Var(tanLambda)=1e2`, pivot transport to the first hit, and an explicit
+MarlinTrk update with that first hit. `KappaSeedCov` is retained only as a
+legacy diagnostic override of the prefit curvature variance; it does not
+restore the former `CompleteTracks`-anchored seed. The old alternate KF fitter
+and other initialization experiments have been removed; historical
+comparisons remain under `agents_record/`.
 
 ## Experimental global one-loss refitter
 
@@ -137,7 +145,7 @@ replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-26. `RecGsfTracking` exposes 42 Gaudi properties in
+Reference date: 2026-08-28. `RecGsfTracking` exposes 42 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -159,7 +167,7 @@ distinction matters because that template enables `ElossOn` and
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
-| `KappaSeedCov` | `1e-7` | same | Forward GSF seed-covariance scale; the small baseline value tightly anchors the start to `CompleteTracks`. |
+| `KappaSeedCov` | `-1` | same | Legacy diagnostic override for the standard-KF-style forward initializer. Any finite value `<=0` selects the exact standard-KF `Var(omega)=1e-4`; a finite positive value instead sets `Var(omega)=KappaSeedCov * alpha^2` before pivot transport, where `kappa=omega/alpha`. It changes only this curvature entry; the first/middle/last two-dimensional-hit prefit, other four loose covariance entries, and explicit first-hit update remain unchanged. |
 
 Material between consecutive accepted measurements is owned by the outgoing
 transition from the current measurement to the next one. The final

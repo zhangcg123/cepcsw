@@ -56,7 +56,15 @@ fit; their contract and focused gate are in
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
-transport Jacobians. Forward filtering, an independent reverse
+transport Jacobians. Every forward GSF pass now starts through the dedicated
+`GsfTrackInitializer`: a first/middle/last two-dimensional-hit prefit, the full
+loose `FullLDCTracking` covariance, and an explicit first-hit MarlinTrk update.
+This common start is inherited by reverse, smoother, and CMS-like. The default
+`KappaSeedCov=-1` selects exact `Var(omega)=1e-4`; positive values remain a
+curvature-only diagnostic override and do not restore the former
+`CompleteTracks`-anchored seed. The implementation and focused gate are in
+`agents_record/2026-08-28-standard-kf-gsf-initializer.md`. Forward filtering,
+an independent reverse
 multi-component refit, a KL reduction-aware experimental smoother, and a
 CMSSW-like experimental backward workflow are mechanically operational.
 The separate experimental `RecGsfGlobalLossRefitter` is also mechanically
@@ -103,6 +111,7 @@ largely LCIO-like and forfeits much of the hard-loss recovery. The CMSSW-like
 workflow has a different core/tail tradeoff and remains default-off.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
+`KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
 `MaxComponents=12`, `ComponentWeightCutoff=5e-3`, `SymmetricKL` reduction
 ranking, identity-lineage protection enabled, and the five-component
 `CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 24 components and
@@ -223,6 +232,17 @@ Use a small `SelectedEventIndices` list for component diagnostics. Generated
 ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
+
+The immediate implementation checkpoint is the newly shared standard-KF-style
+forward initializer used by reverse, smoother, and CMS-like. Its class-level
+mechanics and events 11/16/17 gate are complete. The next required evidence is
+a same-code topology-clear population rerun with explicit no/light/hard-loss
+and early-transition categories; until then, the initializer is mechanically
+available but not a validated performance improvement. Do not tune
+`ReverseKappaSeedCov` or CMS error rescaling to compensate for seed behavior.
+The outgoing curvature-only diagnostic and rationale for this design are
+preserved in
+`agents_record/2026-08-28-forward-kappa-seed-covariance-standard-kf-gate.md`.
 
 The active question is whether the exact material thickness supplied to the
 Bethe-Heitler (BH) splitter at the first wrong branch decision is consistent

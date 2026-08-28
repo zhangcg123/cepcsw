@@ -97,7 +97,7 @@ gsf.ProtectIdentityLineage = os.getenv(
 
 gsf.MSOn = True
 gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "1").lower() in ("1", "true", "yes")
-gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "1.0e-7"))
+gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "-1.0"))
 
 # Enables inward multi-component filtering. It publishes the selected branch
 # to GSFTracksBestBranch and the moment-matched mixture to

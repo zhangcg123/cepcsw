@@ -1,6 +1,7 @@
 #include "GsfAlgorithm.h"
 #include "GlobalLossRefitter.h"
 #include "GsfComponent.h"
+#include "GsfTrackInitializer.h"
 #include "GsfMixture.h"
 #include "BetheHeitlerSplitter.h"
 #include "FullMixtureModeStatus.h"
@@ -132,55 +133,6 @@ static const DDVMeasLayer* findLayer(
     }
   }
   return best;
-}
-
-/// Build initial TKalTrack site, at the innermost hit.
-static TKalTrackSite* makeInitialSite(
-    const LcioSeed& seed, const MatchedHit& firstHit, double bz,
-    double kappaSeed, double kappaCov) {
-
-  TVector3 pivot = firstHit.layer->HitToXv(*firstHit.kalHit);
-  THelicalTrack helix(-seed.d0, seed.phi - M_PI / 2., kappaSeed,
-                       seed.z0, seed.tanl,
-                       pivot.X(), pivot.Y(), pivot.Z(), bz);
-
-  TKalMatrix sv(kSdim, 1);
-  sv(0, 0) = helix.GetDrho();
-  sv(1, 0) = helix.GetPhi0();
-  sv(2, 0) = helix.GetKappa();
-  sv(3, 0) = helix.GetDz();
-  sv(4, 0) = helix.GetTanLambda();
-  sv(5, 0) = 0.0;
-
-  TKalMatrix cv(kSdim, kSdim);
-  cv.Zero();
-  cv(0, 0) = 100.0;
-  cv(1, 1) = 0.01;
-  cv(2, 2) = kappaCov;
-  cv(3, 3) = 100.0;
-  cv(4, 4) = 0.01;
-  cv(5, 5) = 1e6;
-
-  // Clone hit with huge errors → dummy initial site
-  TVTrackHit* dummyHit = nullptr;
-  if (auto* ch = dynamic_cast<DDCylinderHit*>(firstHit.kalHit))
-    dummyHit = new DDCylinderHit(*ch);
-  else if (auto* ph = dynamic_cast<DDPlanarHit*>(firstHit.kalHit))
-    dummyHit = new DDPlanarHit(*ph);
-
-  dummyHit->operator()(0, 1) = 1e16;
-  if (dummyHit->GetDimension() > 1)
-    dummyHit->operator()(1, 1) = 1e16;
-
-  auto& site = *new TKalTrackSite(*dummyHit, kSdim);
-  site.SetHitOwner();
-  site.SetOwner();
-  site.SetPivot(pivot);
-
-  site.Add(new TKalTrackState(sv, cv, site, TVKalSite::kPredicted));
-  site.Add(new TKalTrackState(sv, cv, site, TVKalSite::kFiltered));
-
-  return &site;
 }
 
 static int covIndex5(int row, int col) {
@@ -2612,6 +2564,12 @@ StatusCode RecGsfTracking::initialize() {
             << "scaling factor" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (!std::isfinite(m_kappaSeedCov.value())) {
+    error() << "KappaSeedCov must be finite; values <= 0 select the standard "
+               "KF curvature variance"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_gaussianSumSmoothing.value() && m_materialIPExtrap.value()) {
     error() << "GaussianSumSmoothing currently requires "
                "MaterialIPExtrapolation=False"
@@ -3206,7 +3164,6 @@ StatusCode RecGsfTracking::execute() {
     // ---- Step 1: seed from LCIO ----
     LcioSeed seed = extractSeed(trk);
     if (seed.omega == 0) continue;
-    int charge = (seed.omega > 0) ? 1 : -1;
 
     // ---- Step 2: match hits to measurement layers ----
     std::vector<MatchedHit> hits;
@@ -3452,14 +3409,41 @@ StatusCode RecGsfTracking::execute() {
             m_cmsGsfSmoothing.value(),
         bz);
 
-    // ---- Step 3: compute kappa seed ----
-    double alpha = bz * 2.99792458e-4;
-    double kappaSeed = (bz != 0) ? (seed.omega / alpha) : 1e-5;
+    // ---- Step 3: standard-KF-style fresh prefit and first-hit update ----
+    std::vector<edm4hep::TrackerHit> orderedHits;
+    orderedHits.reserve(hits.size());
+    for (const auto& hit : hits) orderedHits.push_back(hit.lcioHit);
+    GsfTrackInitializer initializer(m_gsfMarlinTrkSystem);
+    auto initialization = initializer.initialize(
+        orderedHits, *hits.front().layer, *hits.front().kalHit, bz,
+        m_kappaSeedCov.value());
+    if (!initialization.valid()) {
+      warning() << "GSF standard-KF-style initialization failed for event="
+                << eventIndex << " inputTrack=" << inputTrackIndex << ": "
+                << initialization.error << endmsg;
+      for (auto& hit : hits) delete hit.kalHit;
+      continue;
+    }
+    const int charge = initialization.firstFilteredState.omega > 0.0 ? 1 : -1;
+    if (m_verboseDump) {
+      info() << boost::format(
+          "  INIT standard-kf-prefit twoDHits=%d firstHitDChi2=%.9g "
+          "firstHitNdf=%d firstHitDim=%d prefitOmega=%.9g filteredOmega=%.9g "
+          "prefitVarOmega=%.9g prefitVarKappa=%.9g")
+            % initialization.twoDimensionalHitCount
+            % initialization.firstHitDeltaChi2
+            % initialization.firstHitNdf
+            % initialization.firstHitMeasurementDimension
+            % initialization.prefitState.omega
+            % initialization.firstFilteredState.omega
+            % initialization.prefitOmegaVariance
+            % initialization.prefitKappaVariance << endmsg;
+    }
 
     // ---- Step 4: forward GSF filter ----
     const bool fitBackwards = !MarlinTrk::IMarlinTrack::backward;
     const size_t gsfStartHit = 1;
-    TKalTrackSite* site = makeInitialSite(seed, hits[0], bz, kappaSeed, m_kappaSeedCov);
+    TKalTrackSite* site = initialization.site;
     int nextComponentDebugId = 0;
     auto* initComp = new GsfComponent();
     initComp->pendingProcessJacobian.UnitMatrix();
@@ -3467,6 +3451,7 @@ StatusCode RecGsfTracking::execute() {
     initComp->charge = charge;
     initComp->debugId = nextComponentDebugId++;
     initComp->debugHistory = "seed";
+    initComp->fitChi2 = initialization.firstHitDeltaChi2;
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
@@ -3554,7 +3539,10 @@ StatusCode RecGsfTracking::execute() {
         const double pt = (k != 0.0) ? 1.0 / std::abs(k) : 0.0;
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
         const double chi2 = componentFitChi2(*c);
-        const int ndf = c->kaltrack ? c->kaltrack->GetNDF() : 0;
+        const int ndf = c->kaltrack
+            ? c->kaltrack->GetNDF() +
+                  initialization.firstHitMeasurementDimension
+            : 0;
         info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d noRad=%d procH=%d procG=%d procF=%.6g w=%.6g domFrac=%.6g domW=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
                   % (int)rank % (int)ci % c->debugId % c->debugParentId % c->generation
                   % (int)c->noRadiationLineage
@@ -5237,12 +5225,16 @@ StatusCode RecGsfTracking::execute() {
             if (forwardMetadataBest != comps.end()) {
               reverseOutputChi2 = componentFitChi2(**forwardMetadataBest);
               reverseOutputNdf = (*forwardMetadataBest)->kaltrack
-                  ? (*forwardMetadataBest)->kaltrack->GetNDF() : 0;
+                  ? (*forwardMetadataBest)->kaltrack->GetNDF() +
+                        initialization.firstHitMeasurementDimension
+                  : 0;
             }
           } else {
             reverseOutputChi2 = componentFitChi2(*reverseBest);
             reverseOutputNdf = reverseBest->kaltrack
-                ? reverseBest->kaltrack->GetNDF() : 0;
+                ? reverseBest->kaltrack->GetNDF() +
+                      initialization.firstHitMeasurementDimension
+                : 0;
           }
           reverseOutputWeight = reverseBest->weight;
           reverseOutputComps = (int)endpointComponents.size();
@@ -5439,7 +5431,9 @@ StatusCode RecGsfTracking::execute() {
                 ecalConstrainedNdf = runCmsSmoother
                     ? reverseOutputNdf
                     : (ecalBest->kaltrack
-                           ? ecalBest->kaltrack->GetNDF() : 0);
+                           ? ecalBest->kaltrack->GetNDF() +
+                                 initialization.firstHitMeasurementDimension
+                           : 0);
                 if (m_verboseDump) {
                   const double constrainedPt =
                       ecalConstrainedIp.GetKappa() != 0.0
@@ -5698,7 +5692,9 @@ StatusCode RecGsfTracking::execute() {
       const double outputChi2 = usedReverseOutput
           ? reverseOutputChi2 : componentFitChi2(*best);
       const int outputNdf = usedReverseOutput
-          ? reverseOutputNdf : best->kaltrack->GetNDF();
+          ? reverseOutputNdf
+          : best->kaltrack->GetNDF() +
+                initialization.firstHitMeasurementDimension;
       ot.setChi2(outputChi2);
       ot.setNdf(outputNdf);
 
