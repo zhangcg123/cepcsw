@@ -295,17 +295,14 @@ tracker input does not contain calorimeter reconstruction and the local ECAL
 component-constraint experiment remains off. The algorithm still supports that
 default-off experiment, but reactivating it requires a separate reconstructed-
 event input card that explicitly supplies `EcalCluster`; it is not part of this
-worker. For `method="smoother"`, `method="reverse"`, or `method="cms-like"`,
-there is no
+worker. For `method="smoother"` or `method="reverse"`, there is no
 endpoint-output selector: `GSFTracksBestBranch` always stores BestBranch and
 `GSFTracksWeightedMean` stores the moment-matched mixture, while
 `GSFTracksFullMixtureMode` stores the maximum of the complete
 five-dimensional final-mixture PDF. The latter is automatic/default-on and
 `GSFFullMixtureModeStatus` distinguishes a successful mode (`1`) from a
 tagged BestBranch fallback (negative status). The removed
-`ReverseOutputMode` property must not appear in regenerated cards. CMS-like's
-WeightedMean deliberately preserves its historical single endpoint, while its
-BestBranch and FullMixtureMode are now published in parallel. Global-loss
+`ReverseOutputMode` property must not appear in regenerated cards. Global-loss
 retains its existing single-output behavior.
 
 The same card's `RecGsfFlatTuple` output records BestBranch in
@@ -329,11 +326,11 @@ The FullMixtureMode schema follows the same presence-only rule and is populated
 only from `GSFTracksFullMixtureMode`; a negative status marks the deliberate
 BestBranch fallback. It has no duplicate hit-vector branches.
 The flat tuple also creates `final_mixture_component_*` vectors automatically,
-with no run-card property. For every final positive-weight smoother/reverse/
-CMS-like component they store the input/output track mapping, component index
+with no run-card property. For every final positive-weight smoother/reverse
+component they store the input/output track mapping, component index
 and ID, source/validity codes, normalized weight, IP kappa, kappa variance, and
-derived pT. The source code is `1` for smoother and `2` for the common
-reverse/CMS-like terminal `B_updated[0]` endpoint. Historical code `3`
+derived pT. The source code is `1` for smoother and `2` for the reverse
+terminal `B_updated[0]` endpoint. Historical code `3`
 means the retired CMS-like `B_smoothed[1]` endpoint, and historical code `4`
 means its terminal-backward fallback.
 They contain every published output track in the event and are empty
@@ -341,7 +338,7 @@ for forward and global-loss jobs. These vectors are sufficient to
 reconstruct the final one-dimensional pT marginal; the exact transformation
 and branch contract are maintained in the package README.
 It also creates `lineage_node_*` and `lineage_edge_*` vectors automatically
-for smoother, reverse, and CMS-like jobs, with no card property. These preserve
+for smoother and reverse jobs, with no card property. These preserve
 every evaluated seed, BH child, measurement result, and KL output, including nodes
 later rejected, removed by cutoff, or consumed by a merge. They also preserve
 every evaluated two-filter smoothing candidate for
@@ -355,8 +352,8 @@ uses `keep *`, so no explicit output-command list is required here.
 The BestBranch schema follows the same presence-only rule for
 `GSFTracksBestBranch`; it is unavailable/zero for forward and global-loss.
 Those two methods retain their generic `gsf_*` fields from `GSFTracks` and
-`GlobalLossTracks`, respectively. Existing smoother/reverse/CMS-like ROOT
-files are not renamed in place: regenerate them to obtain
+`GlobalLossTracks`, respectively. Existing smoother/reverse ROOT files are not
+renamed in place: regenerate them to obtain
 `GSFTracksBestBranch` and `bestbranch_gsf_*`.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
@@ -370,6 +367,12 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
+After retirement of the duplicate CMS-like steering alias, `RecGsfTracking`
+has 40 compiled properties. This card explicitly steers 39 and deliberately
+inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
+the removed `CmsGsfSmoothing` property are stale experiment artifacts and must
+be regenerated rather than edited in place.
+
 The maintained template currently selects `method="reverse"`. It currently
 sets `InwardSeedCovarianceScale=1.0` for the ongoing correlated-prior
 campaign, while the compiled default and active reverse template remain 100.
@@ -377,9 +380,8 @@ Positive values copy and scale the complete final forward mixture. A finite
 value at or below zero instead selects one fresh standard-KF-style backward
 seed, with an explicit outermost-hit update before recursion starts at `N-2`.
 The maintained value 1 therefore keeps the copied-mixture campaign behavior.
-The former method-specific `ReverseKappaSeedCov` and `CmsErrorRescaling`
-properties were removed when reverse and CMS-like began using the same inward
-filter; stale cards must replace either name with the common property.
+Former method-specific seed-covariance properties were removed when the
+inward filter was consolidated; stale cards must use the common property.
 This is explicit campaign steering, not a production-default change. Its input
 path is a
 top-level `inputfilename` steering variable, which the worker replaces with

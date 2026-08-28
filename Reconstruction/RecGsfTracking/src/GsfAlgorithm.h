@@ -262,11 +262,6 @@ private:
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
-  Gaudi::Property<bool>   m_cmsGsfSmoothing{
-      this,"CmsGsfSmoothing",false,
-      "Run the CMS-like alias of the common inward filter, publish terminal "
-      "B_updated[0], and retain every B_smoothed[i] only as a passive "
-      "diagnostic"};
   Gaudi::Property<double> m_inwardSeedCovarianceScale{
       this, "InwardSeedCovarianceScale", 100.0,
       "Positive values multiply every full covariance copied from the shared "
@@ -357,7 +352,7 @@ private:
       "Retained-momentum-fraction variance assigned to trial scan components"};
   Gaudi::Property<std::string> m_outputMode{
       this, "GSFOutputMode", "BestBranch",
-      "Forward-only output selector; smoother/reverse/CMS-like always write "
+      "Forward-only output selector; smoother/reverse always write "
       "BestBranch, WeightedMean, and FullMixtureMode to separate collections"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",

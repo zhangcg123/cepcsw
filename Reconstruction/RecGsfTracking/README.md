@@ -1,15 +1,15 @@
 # RecGsfTracking
 
 `RecGsfTracking` refits `CompleteTracks` with a Gaussian-sum electron model.
-The smoother, reverse, and CMS-like workflows always write three row-aligned endpoint
+The smoother and reverse workflows always write three row-aligned endpoint
 views: the selected branch to `GSFTracksBestBranch`, the moment-matched state
 to `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional
 mixture density to `GSFTracksFullMixtureMode`. A
 default-on automatic component record also persists every positive-weight
-final smoother/reverse/CMS-like component's normalized weight, IP kappa mean, and
+final smoother/reverse component's normalized weight, IP kappa mean, and
 kappa variance so the transverse-momentum marginal can be reconstructed from
 the flat tuple without rerunning verbose diagnostics. A
-single outward GSF pass supplies both reverse and CMS-like. A common transient
+single outward GSF pass supplies reverse. A transient
 `SharedForwardFilterResult` retains its final filtered population and the
 post-update, post-cutoff, post-reduction filtered history. One common
 `runGsfInwardFilter` path first revisits hit `N-2`, performs the live
@@ -18,9 +18,8 @@ After that live recursion is complete, it also forms and records the passive
 two-filter smoothed mixture
 `B_smoothed[i] = F_updated[i] x B_predicted[i]` at every successfully
 processed inward surface. These smoothed mixtures are unconditional for
-reverse and CMS-like, are reduced independently, and never feed the backward
-recursion or endpoint publication. Reverse and CMS-like both publish the same
-terminal backward mixture,
+reverse, are reduced independently, and never feed the backward recursion or
+endpoint publication. Reverse publishes the terminal backward mixture,
 `B_updated[0] = measurement[0] x B_predicted[0]`.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
 the final forward population into the common inward filter and scale every
@@ -28,9 +27,8 @@ component covariance; values at or below zero instead construct one fresh,
 unit-weight backward seed with the standard prefit and an explicit outermost-
 hit update. That mode is independent of the final forward mixture, although
 the geometric prefit still uses first/middle/last hit positions that the loose-
-covariance fit later consumes. The former
-`ReverseKappaSeedCov` and `CmsErrorRescaling` properties were removed rather
-than retained as duplicate controls. A
+covariance fit later consumes. Former method-specific seed-covariance
+properties were removed rather than retained as duplicate controls. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -52,12 +50,12 @@ comparisons remain under `agents_record/`.
 `RecGsfGlobalLossRefitter` is a separate experimental algorithm. It reads
 `CompleteTracks` directly and writes `GlobalLossTracks`; it neither calls
 `RecGsfTracking` nor changes its method-specific GSF collections. The maintained
-`DumpGsfTrks/gsf.py.bk` exposes it as the fourth explicit
+`DumpGsfTrks/gsf.py.bk` exposes it as the third explicit
 `method="global-loss"` choice. That choice schedules the global refitter
 instead of `RecGsfTracking`, tags both outputs with `global-loss`, and sets
 `RecGsfFlatTuple.UseGlobalLossTracks=true` so the established `gsf_*`
-analysis schema is filled from `GlobalLossTracks`. The existing `smoother`,
-`reverse`, and `cms-like` paths remain exclusive alternatives. All three write
+analysis schema is filled from `GlobalLossTracks`. The existing `smoother`
+and `reverse` paths remain exclusive alternatives. Both write
 the common BestBranch, WeightedMean, and FullMixtureMode tracker endpoint
 collections; `reverse` remains the card default. No batch script selects
 global loss automatically.
@@ -344,9 +342,9 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother, reverse, or CMS-like output. The maintained card pins it to `BestBranch` for explicit compatibility. |
+| `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother or reverse output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
-| `InwardSeedCovarianceScale` | `100` | `100` | For reverse and CMS-like, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card's value 1 is separate correlated-prior campaign steering, not an active-template default change. |
+| `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card's value 1 is separate correlated-prior campaign steering, not an active-template default change. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 | `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
 | `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
@@ -361,22 +359,21 @@ Fresh inward initialization has no inherited forward-process metadata, so
 to ordinary weight ranking in that mode.
 `ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
 
-Smoother, reverse, and CMS-like have no output selector. Every successful track is
+Smoother and reverse have no output selector. Every successful track is
 written row-for-row to three collections: `GSFTracksBestBranch` is
 BestBranch, `GSFTracksWeightedMean` is the normalized final-mixture moment
 match, and `GSFTracksFullMixtureMode` is the joint density maximum of the full
 mixture at the IP. `ReverseSelectionMode` affects only BestBranch. It does not
 alter the components entering either of the other two views.
 
-For both inward methods, every accepted backward prediction is paired with all
+For reverse, every accepted backward prediction is paired with all
 stored forward filtered components at the same hit. The resulting reduced
 two-filter smoothed mixture is persisted in the lineage record after the live
 inward filter has finished. Every `B_smoothed[i]` is diagnostic-only: it is
 never propagated and never supplies BestBranch, WeightedMean, or
-FullMixtureMode. Both reverse and CMS-like derive all three views from
-`B_updated[0]`. Newly produced CMS-like jobs leave the legacy
-generic `GSFTracks` collection absent; historical CMS-like files retain their
-original collection and flat `gsf_*` fields.
+FullMixtureMode. Reverse derives all three views from `B_updated[0]`.
+Historical CMS-like files retain their original collections and flat fields;
+they are not an active workflow and are not renamed in place.
 
 FullMixtureMode maximizes the complete five-dimensional Gaussian-mixture PDF
 in the local IP helix coordinates `(drho, phi0, kappa, dz, tanLambda)`. This is
@@ -401,7 +398,7 @@ to be numerically identical; all are saved to keep the output contract
 uniform.
 
 The final component record is automatic and has no configuration property.
-For every successfully published smoother, reverse, or CMS-like track, all finite,
+For every successfully published smoother or reverse track, all finite,
 positive-weight survivors are normalized within that track and independently
 extrapolated to the same IP endpoint used by the method. The EDM stores each
 component's normalized weight, kappa mean, kappa variance, method source, and
@@ -415,7 +412,7 @@ produce no component rows.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires ordinary reverse filtering and no CMS-like workflow. It starts from the BestBranch publication. |
+| `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires reverse filtering and starts from the BestBranch publication. |
 | `EcalConstraintRatioThreshold` | `1.1` | same | Activate re-ranking only when the unconstrained branch has `max(p/E,E/p)` above this value. It must be finite and greater than one. |
 | `EcalConstraintLogPSigma` | `0.15` | same | Gaussian width of the component likelihood in `log(p/E)`; it must be finite and positive. |
 | `EcalConstraintLikelihoodFloor` | `0.05` | same | Additive likelihood floor in `(0,1]`; 0.05 limits the ECAL re-ranking Bayes factor to 20. |
@@ -447,15 +444,9 @@ the production baseline.
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `GaussianSumSmoothing` | `false` | `false` | Run the retained-graph experimental Gaussian-sum smoother. It is default-off and forfeits much of the observed hard-loss recovery. |
-| `CmsGsfSmoothing` | `false` | `false` | Run the CMS-like alias of the common inward filter. It publishes the same terminal `B_updated[0]` mixture as reverse and retains every `B_smoothed[i]` only as a passive lineage diagnostic. |
-
-`ReverseFiltering`, `GaussianSumSmoothing`, and `CmsGsfSmoothing` are
-alternative workflows and must not be enabled simultaneously. Reverse and
-CMS-like both use `InwardSeedCovarianceScale`, the same inward filter, and the
-same endpoint publication. Their distinct flags remain only as steering labels
-for compatibility and comparison workflows. A positive inward scale copies
-the final forward mixture; a nonpositive scale gives either flag the same
-fresh backward root.
+`ReverseFiltering` and `GaussianSumSmoothing` are alternative workflows and
+must not be enabled simultaneously. A positive inward scale copies the final
+forward mixture; a nonpositive scale gives reverse a fresh backward root.
 
 ### Focused-event and component diagnostics
 
@@ -507,15 +498,15 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 42 properties:
+The data handles are configurable separately from the 40 properties:
 
 | Role | Default collection |
 |---|---|
 | input reconstructed tracks | `CompleteTracks` |
 | generic forward output tracks | `GSFTracks` |
-| selected smoother/reverse/CMS-like BestBranch output tracks | `GSFTracksBestBranch` |
-| paired smoother/reverse/CMS-like moment-matched tracks | `GSFTracksWeightedMean` |
-| paired smoother/reverse/CMS-like full-mixture density-mode tracks | `GSFTracksFullMixtureMode` |
+| selected smoother/reverse BestBranch output tracks | `GSFTracksBestBranch` |
+| paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
+| paired smoother/reverse full-mixture density-mode tracks | `GSFTracksFullMixtureMode` |
 | per-output-track full-mixture-mode status | `GSFFullMixtureModeStatus` |
 | final-mixture component track mapping | `GSFFinalMixtureComponentInputTrackIndex`, `GSFFinalMixtureComponentOutputTrackIndex` |
 | final-mixture component identity/method/status | `GSFFinalMixtureComponentIndex`, `GSFFinalMixtureComponentID`, `GSFFinalMixtureComponentSource`, `GSFFinalMixtureComponentValid` |
@@ -544,21 +535,21 @@ tuple also fills the corresponding parallel scalar set:
 
 | Branches | Meaning |
 |---|---|
-| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Generic forward result from `GSFTracks`, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. These are zero for smoother/reverse/CMS-like. |
-| `bestbranch_gsf_pT`, `bestbranch_gsf_p`, `bestbranch_gsf_eta`, `bestbranch_gsf_theta`, `bestbranch_gsf_phi`, `bestbranch_gsf_d0`, `bestbranch_gsf_z0`, `bestbranch_gsf_omega`, `bestbranch_gsf_tanl`, `bestbranch_gsf_chi2`, `bestbranch_gsf_ndf`, `bestbranch_gsf_nhits`, `bestbranch_gsf_type` | Smoother/reverse/CMS-like BestBranch from `GSFTracksBestBranch`. |
+| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Generic forward result from `GSFTracks`, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. These are zero for smoother/reverse. |
+| `bestbranch_gsf_pT`, `bestbranch_gsf_p`, `bestbranch_gsf_eta`, `bestbranch_gsf_theta`, `bestbranch_gsf_phi`, `bestbranch_gsf_d0`, `bestbranch_gsf_z0`, `bestbranch_gsf_omega`, `bestbranch_gsf_tanl`, `bestbranch_gsf_chi2`, `bestbranch_gsf_ndf`, `bestbranch_gsf_nhits`, `bestbranch_gsf_type` | Smoother/reverse BestBranch from `GSFTracksBestBranch`. |
 | `bestbranch_gsf_available` | One when `GSFTracksBestBranch` is present for the row; zero for forward and global-loss. |
-| `weighted_gsf_pT`, `weighted_gsf_p`, `weighted_gsf_eta`, `weighted_gsf_theta`, `weighted_gsf_phi`, `weighted_gsf_d0`, `weighted_gsf_z0`, `weighted_gsf_omega`, `weighted_gsf_tanl`, `weighted_gsf_chi2`, `weighted_gsf_ndf`, `weighted_gsf_nhits`, `weighted_gsf_type` | Paired `GSFTracksWeightedMean` result for smoother/reverse/CMS-like. The chi-square/NDF are inherited from BestBranch. |
+| `weighted_gsf_pT`, `weighted_gsf_p`, `weighted_gsf_eta`, `weighted_gsf_theta`, `weighted_gsf_phi`, `weighted_gsf_d0`, `weighted_gsf_z0`, `weighted_gsf_omega`, `weighted_gsf_tanl`, `weighted_gsf_chi2`, `weighted_gsf_ndf`, `weighted_gsf_nhits`, `weighted_gsf_type` | Paired `GSFTracksWeightedMean` result for smoother/reverse. The chi-square/NDF are inherited from BestBranch. |
 | `weighted_gsf_available`, `weighted_gsf_changed` | Presence tag and exact scalar comparison against the BestBranch fields. They are zero for forward and global-loss output. |
 | `fullmixture_gsf_pT`, `fullmixture_gsf_p`, `fullmixture_gsf_eta`, `fullmixture_gsf_theta`, `fullmixture_gsf_phi`, `fullmixture_gsf_d0`, `fullmixture_gsf_z0`, `fullmixture_gsf_omega`, `fullmixture_gsf_tanl`, `fullmixture_gsf_chi2`, `fullmixture_gsf_ndf`, `fullmixture_gsf_nhits`, `fullmixture_gsf_type` | Paired full five-dimensional mixture-density mode from `GSFTracksFullMixtureMode`. The chi-square/NDF are inherited from BestBranch. |
 | `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward and global-loss output. |
 | `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
-| `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse/CMS-like component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
+| `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
 | `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
-| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` common terminal inward mixture), and IP-state validity. New reverse and CMS-like tuples both use source `2`. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
+| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` reverse terminal inward mixture), and IP-state validity. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
-| `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother, reverse, and CMS-like populate them automatically, while forward, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
+| `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother and reverse populate them automatically, while forward, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
-| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` the common two-filter smoothed mixture. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse and CMS-like additionally link each copied forward state to its backward seed; with a nonpositive scale, they instead contain one source-2 operation-1 root at hit `N-1` with no forward parent. Both modes record operation-5 candidates at every successfully processed inward surface. Each smoothing candidate has one source-1 and one source-2 parent. Its source-2 measurement parent contributes the persisted predicted fields, not its filtered posterior fields. Numeric source and operation codes are unchanged by the terminology update. |
+| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` the two-filter smoothed mixture. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates at every successfully processed inward surface. Each smoothing candidate has one source-1 and one source-2 parent. Its source-2 measurement parent contributes the persisted predicted fields, not its filtered posterior fields. Numeric source and operation codes are unchanged by the terminology update. |
 | `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
 | `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Per-evaluated-component measurement decision. Status is `-1` not a measurement, `0` rejected, `1` accepted through the exact update, or `2` accepted through the legacy recovery path. Exact innovation values are finite when supplied by the accepted MarlinTrk update. The normalized posterior is captured before cutoff and KL reduction. |
 | `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, `6` abandoned because its endpoint or complete output track failed, or `7` a smoothed-mixture survivor retained for diagnostics but not included in the published endpoint. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |
@@ -609,7 +600,7 @@ three endpoint summaries; they are not a fourth published track and do not
 duplicate hit vectors.
 
 The `lineage_node_*` and `lineage_edge_*` vectors are also automatic,
-default-on, and passive for smoother/reverse/CMS-like jobs. They record immutable
+default-on, and passive for smoother/reverse jobs. They record immutable
 snapshots rather than pointers to live `GsfComponent` objects. A rejected
 measurement node, a posterior-cutoff node, and both inputs consumed by a KL
 merge therefore remain available after their C++ components are deleted. A
@@ -629,7 +620,7 @@ explain the first wrong branch decision.
 The BestBranch branch set is likewise presence-driven: it is populated only
 from `GSFTracksBestBranch` and remains unavailable/zero for forward and
 global-loss jobs. The generic `gsf_*` fields remain available for those two
-non-paired workflows and are zero for smoother/reverse/CMS-like. This is an
+non-paired workflows and are zero for smoother/reverse. This is an
 intentional schema rename for newly produced backward-workflow files;
 historical smoother/reverse/CMS-like EDM/flat files retain their original
 `GSFTracks`/`gsf_*` names and must not be silently interpreted as the new
@@ -639,7 +630,7 @@ The constrained branches always exist in newly produced flat files. When the
 experiment is off or the paired collection is absent, `ecal_gsf_available=0`
 and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
-BestBranch tracker hits. Smoother/reverse/CMS-like hits are therefore recorded
+BestBranch tracker hits. Smoother/reverse hits are therefore recorded
 once as `bestbranch_gsf_hit_*`; generic forward/global-loss hits remain in
 `gsf_hit_*`. WeightedMean and FullMixtureMode also share the BestBranch hit
 list and have no duplicate hit-vector branches.

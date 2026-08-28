@@ -99,15 +99,11 @@ gsf.MSOn = True
 gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "1").lower() in ("1", "true", "yes")
 gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "-1.0"))
 
-# Enables inward multi-component filtering. It publishes the selected branch
-# to GSFTracksBestBranch and the moment-matched mixture to
-# GSFTracksWeightedMean.
-cms_gsf_smoothing = os.getenv(
-    "GSF_CMS_GSF_SMOOTHING", "0").lower() in ("1", "true", "yes")
-gsf.CmsGsfSmoothing = cms_gsf_smoothing
+# Enables inward multi-component filtering. It publishes BestBranch,
+# WeightedMean, and FullMixtureMode to their separate row-aligned collections
+# and records every B_smoothed[i] only as a passive lineage diagnostic.
 gsf.ReverseFiltering = os.getenv(
-    "GSF_REVERSE_FILTERING", "0" if cms_gsf_smoothing else "1"
-).lower() in ("1", "true", "yes")
+    "GSF_REVERSE_FILTERING", "1").lower() in ("1", "true", "yes")
 # Positive copies/scales the final forward mixture; <=0 constructs one fresh
 # backward prefit seed and consumes the outermost hit before inward recursion.
 gsf.InwardSeedCovarianceScale = float(os.getenv(

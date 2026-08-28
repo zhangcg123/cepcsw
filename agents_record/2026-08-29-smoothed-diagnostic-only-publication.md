@@ -1,5 +1,10 @@
 # Smoothed mixtures become diagnostic-only
 
+Status note (2026-08-29): the diagnostic-only decision remains active, but the
+exactly equivalent CMS-like steering alias was retired. See
+`2026-08-29-cms-like-workflow-retirement.md`. The evidence below is preserved
+as the pre-retirement equivalence gate.
+
 Date: 2026-08-29
 
 ## Decision

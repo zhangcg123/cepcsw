@@ -202,7 +202,7 @@ private:
   int    m_lcio_ndf = 0;
   int    m_lcio_nhits = 0;
   int    m_lcio_type = 0;
-  // Generic CMS-like/forward or explicitly selected global-loss AtIP
+  // Generic forward or explicitly selected global-loss AtIP
   double m_gsf_omega = 0, m_gsf_d0 = 0, m_gsf_z0 = 0;
   double m_gsf_phi = 0, m_gsf_tanl = 0;
   double m_gsf_pT = 0, m_gsf_p = 0, m_gsf_eta = 0, m_gsf_theta = 0;
@@ -387,7 +387,7 @@ private:
   std::vector<float>    m_lcio_hit_edep;
   std::vector<unsigned long long> m_lcio_hit_cellid;
 
-  // ── per-hit data for generic forward/CMS/global GSF track ──
+  // ── per-hit data for generic forward/global GSF track ──
   int                   m_gsf_hit_n = 0;
   std::vector<float>    m_gsf_hit_x;
   std::vector<float>    m_gsf_hit_y;

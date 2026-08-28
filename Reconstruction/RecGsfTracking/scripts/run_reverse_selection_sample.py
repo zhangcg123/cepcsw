@@ -35,7 +35,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--input-dir", type=Path, default=Path("tuples285"))
     parser.add_argument("--input-pattern", default="trk-e--2.0-85-{seed}.root",
                         help="Filename pattern below --input-dir")
-    parser.add_argument("--workflow", choices=("reverse", "smoother", "cms"),
+    parser.add_argument("--workflow", choices=("reverse", "smoother"),
                         default="reverse")
     parser.add_argument("--resume", action="store_true",
                         help="Skip seeds with a tuple and successful completion log")
@@ -96,7 +96,6 @@ def main() -> None:
             "GSF_REVERSE_FILTERING": "1" if args.workflow == "reverse" else "0",
             "GSF_GAUSSIAN_SUM_SMOOTHING": (
                 "1" if args.workflow == "smoother" else "0"),
-            "GSF_CMS_GSF_SMOOTHING": "1" if args.workflow == "cms" else "0",
             "GSF_OUTPUT_MODE": (
                 "WeightedMean" if args.workflow == "smoother" else "BestBranch"),
             "GSF_SURFACE_CONSISTENCY_UNINFORMATIVE_FLOOR": str(

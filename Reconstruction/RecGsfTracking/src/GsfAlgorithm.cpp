@@ -469,7 +469,7 @@ struct GaussianComponentSnapshot {
 };
 
 /// Common transient result of the single outward GSF pass used by the
-/// reverse and CMS-like workflows.  Filtered mixtures are captured after the
+/// reverse workflow.  Filtered mixtures are captured after the
 /// measurement posterior, cutoff, and KL reduction, but before the outgoing
 /// material convolution.  The final live components are the shared inward
 /// seed source; the snapshots remain immutable inputs to the passive
@@ -547,10 +547,10 @@ struct GsfSmoothedSurfaceInput {
   bool valid = false;
 };
 
-/// Complete result of the one common inward GSF pass.  Both reverse and
-/// CMS-like publication paths consume terminalBackward = B_updated[0].  Every
-/// smoothed surface result is retained only for the passive lineage/tuple
-/// diagnostic and never becomes a publication endpoint.
+/// Complete result of the inward GSF pass.  Reverse publication consumes
+/// terminalBackward = B_updated[0].  Every smoothed surface result is retained
+/// only for the passive lineage/tuple diagnostic and never becomes a
+/// publication endpoint.
 struct GsfInwardFilterResult {
   std::vector<GsfComponent*> terminalBackward;
   std::vector<GsfSmoothedSurfaceResult> smoothedSurfaces;
@@ -1181,8 +1181,6 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
 enum class FinalMixtureComponentSource : std::int32_t {
   GaussianSumSmoother = 1,
   ReverseFiltering = 2,
-  HistoricalCmsLikeSmoothed = 3,
-  HistoricalCmsLikeBackwardFallback = 4,
 };
 
 enum class LineageNodeSource : std::int32_t {
@@ -2404,16 +2402,6 @@ StatusCode RecGsfTracking::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
-  const int backwardWorkflowCount =
-      (m_gaussianSumSmoothing.value() ? 1 : 0) +
-      (m_reverseFiltering.value() ? 1 : 0) +
-      (m_cmsGsfSmoothing.value() ? 1 : 0);
-  if (backwardWorkflowCount > 1) {
-    error() << "GaussianSumSmoothing, ReverseFiltering, and CmsGsfSmoothing "
-               "are mutually exclusive"
-            << endmsg;
-    return StatusCode::FAILURE;
-  }
   if (!std::isfinite(m_inwardSeedCovarianceScale.value())) {
     error() << "InwardSeedCovarianceScale must be finite; positive values "
                "scale the copied forward mixture and values <= 0 select a "
@@ -2433,9 +2421,9 @@ StatusCode RecGsfTracking::initialize() {
     return StatusCode::FAILURE;
   }
   if (m_ecalComponentConstraint.value()) {
-    if (!m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) {
+    if (!m_reverseFiltering.value()) {
       error() << "EcalComponentConstraint currently requires "
-                 "ReverseFiltering=True and CmsGsfSmoothing=False"
+                 "ReverseFiltering=True"
               << endmsg;
       return StatusCode::FAILURE;
     }
@@ -2564,8 +2552,7 @@ StatusCode RecGsfTracking::initialize() {
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
-  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value() ||
-      m_cmsGsfSmoothing.value()) {
+  if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
     info() << "Three-view GSF publication: BestBranch -> GSFTracksBestBranch, "
               "WeightedMean -> GSFTracksWeightedMean, FullMixtureMode -> "
               "GSFTracksFullMixtureMode; GSFOutputMode does not select "
@@ -2581,8 +2568,7 @@ StatusCode RecGsfTracking::execute() {
   m_nEvt++;
   const int eventIndex = m_nEvt - 1;
   const bool publishPairedEndpoints =
-      m_gaussianSumSmoothing.value() || m_reverseFiltering.value() ||
-      m_cmsGsfSmoothing.value();
+      m_gaussianSumSmoothing.value() || m_reverseFiltering.value();
   auto* out = publishPairedEndpoints
       ? m_bestBranchOutputTracks.createAndPut()
       : m_outputTracks.createAndPut();
@@ -3150,8 +3136,7 @@ StatusCode RecGsfTracking::execute() {
     // every multi-component workflow. Forward-only runs keep the collections
     // present but empty.
     LineageGraphRecorder lineageGraph(
-        m_reverseFiltering.value() || m_gaussianSumSmoothing.value() ||
-            m_cmsGsfSmoothing.value(),
+        m_reverseFiltering.value() || m_gaussianSumSmoothing.value(),
         bz);
 
     // ---- Step 3: standard-KF-style fresh prefit and first-hit update ----
@@ -3208,8 +3193,7 @@ StatusCode RecGsfTracking::execute() {
     std::vector<GsfComponent*> comps = {initComp};
     std::vector<GsfSmootherNode> smootherGraph;
     SharedForwardFilterResult sharedForwardResult(
-        hits.size(), bz,
-        m_reverseFiltering.value() || m_cmsGsfSmoothing.value());
+        hits.size(), bz, m_reverseFiltering.value());
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
@@ -3944,16 +3928,14 @@ StatusCode RecGsfTracking::execute() {
     double ecalConstrainedEnergy = 0.0;
     int ecalConstrainedClusterCount = 0;
 
-    // One shared inward GSF function supplies both reverse and CMS-like.  Its
-    // live recursion always uses material/BH propagation plus the local hit;
+    // The reverse inward GSF uses material/BH propagation plus the local hit;
     // every two-filter smoothed mixture F_updated x B_predicted is returned
-    // independently.
-    const bool runCmsSmoother = m_cmsGsfSmoothing.value();
-    const bool runReversePass = m_reverseFiltering.value() || runCmsSmoother;
+    // independently as a passive diagnostic.
     auto runGsfInwardFilter = [&]() -> GsfInwardFilterResult {
       GsfInwardFilterResult inwardFilterResult(hits.size());
       std::vector<GsfSmoothedSurfaceInput> smoothedSurfaceInputs(hits.size());
-      if (!runReversePass || sharedForwardResult.finalComponents().empty() ||
+      if (!m_reverseFiltering.value() ||
+          sharedForwardResult.finalComponents().empty() ||
           hits.size() <= 1) {
         return inwardFilterResult;
       }
@@ -4503,8 +4485,8 @@ StatusCode RecGsfTracking::execute() {
       // Materialize every passive two-filter smoothed mixture
       // F_updated[i] x B_predicted[i] only after the common live inward
       // recursion is complete.  This makes the smoothed record unconditional
-      // for reverse and CMS-like while ensuring its matrix algebra and
-      // reduction cannot influence a later backward step.
+      // for reverse while ensuring its matrix algebra and reduction cannot
+      // influence a later backward step.
       for (int hitIndex = static_cast<int>(hits.size()) - 2;
            hitIndex >= 0; --hitIndex) {
         auto& smoothedInput = smoothedSurfaceInputs[
@@ -4534,11 +4516,6 @@ StatusCode RecGsfTracking::execute() {
         }
       }
 
-      // The hit-1 entry is reported only as a compact diagnostic.  Like every
-      // other B_smoothed[i], it never participates in endpoint publication.
-      const auto& cmsSmoothedDiagnostic =
-          inwardFilterResult.smoothedSurfaces[1];
-
       for (const auto& branch : counterfactualBranches) {
         const auto finalState = trackStateFromComponent(
             *branch.component, bz, DH::AtOther);
@@ -4561,18 +4538,6 @@ StatusCode RecGsfTracking::execute() {
                   % (inwardFilterResult.freshSeedInitialization
                          ? "fresh-standard-kf" : "forward-copy")
                << endmsg;
-        if (runCmsSmoother) {
-          info() << boost::format(
-              "  CMS-GSF diagnostic: smoothedSurface=1 pairCandidates=%d "
-              "pairFailures=%d retainedComponents=%d "
-              "seedMode=%s seedCovarianceScale=%.9g")
-                    % cmsSmoothedDiagnostic.pairCandidates
-                    % cmsSmoothedDiagnostic.pairFailures
-                    % (int)cmsSmoothedDiagnostic.components.size()
-                    % (inwardFilterResult.freshSeedInitialization
-                           ? "fresh-standard-kf" : "forward-copy")
-                    % inwardSeedCovarianceScale << endmsg;
-        }
       }
 
       return inwardFilterResult;
@@ -4580,10 +4545,11 @@ StatusCode RecGsfTracking::execute() {
 
     auto inwardFilterResult = runGsfInwardFilter();
     auto& reverseComps = inwardFilterResult.terminalBackward;
-    if (runReversePass && !sharedForwardResult.finalComponents().empty() &&
+    if (m_reverseFiltering.value() &&
+        !sharedForwardResult.finalComponents().empty() &&
         hits.size() > 1) {
       GsfMixture::normalizeWeights(reverseComps);
-      // Reverse and CMS-like publish the same terminal inward posterior:
+      // Reverse publishes the terminal inward posterior:
       // B_updated[0] = measurement[0] x B_predicted[0].  The independently
       // materialized B_smoothed[i] mixtures remain diagnostic-only.
       auto& endpointComponents = reverseComps;
@@ -4646,8 +4612,7 @@ StatusCode RecGsfTracking::execute() {
             endpointComponents, bz, reverseWeightedIp,
             reverseWeightedIpCov);
         if (!reverseWeightedIpAvailable) {
-          warning() << (runCmsSmoother ? "CMS-like smoothed" : "Reverse")
-                    << " WeightedMean publication failed; the paired "
+          warning() << "Reverse WeightedMean publication failed; the paired "
                        "collection will preserve the BestBranch state"
                     << endmsg;
         }
@@ -4664,8 +4629,7 @@ StatusCode RecGsfTracking::execute() {
             reverseFullMixtureModeStatus ==
             FullMixtureModeStatus::Success;
         if (!reverseFullMixtureModeIpAvailable) {
-          warning() << (runCmsSmoother ? "CMS-like" : "Reverse")
-                    << " FullMixtureMode publication failed with status "
+          warning() << "Reverse FullMixtureMode publication failed with status "
                     << fullMixtureModeStatusValue(
                            reverseFullMixtureModeStatus)
                     << "; the paired collection will preserve the "
@@ -4674,7 +4638,7 @@ StatusCode RecGsfTracking::execute() {
         }
         if (reverseOutputOk) {
           lineageGraph.markFinal(endpointComponents, reverseBest);
-          if (m_reverseFiltering.value() || runCmsSmoother) {
+          if (m_reverseFiltering.value()) {
             finalMixtureComponentRecords =
                 captureFinalMixtureComponentsAtIP(
                     endpointComponents, bz,
@@ -4736,18 +4700,12 @@ StatusCode RecGsfTracking::execute() {
                 "  REVERSE IP paired output: mode=%s "
                 "components=%d pT=%.6g d0=%.6g z0=%.6g phi=%.6g "
                 "tanL=%.6g")
-                      % (runCmsSmoother ? "CmsGsfWeightedMean"
-                                        : "ReverseWeightedMean")
+                      % "ReverseWeightedMean"
                       % (int)endpointComponents.size() % weightedPt
                       % (-reverseWeightedIp.GetDrho())
                       % reverseWeightedIp.GetDz()
                       % normalizePhi(reverseWeightedIp.GetPhi0() + M_PI / 2.0)
                       % reverseWeightedIp.GetTanLambda() << endmsg;
-            if (runCmsSmoother) {
-              info() << "  CMS-GSF all endpoints source: terminal "
-                        "B_updated[0] mixture"
-                     << endmsg;
-            }
           }
           if (m_verboseDump && reverseFullMixtureModeIpAvailable) {
             const double modePt = reverseFullMixtureModeIp.GetKappa() != 0.0
@@ -4909,14 +4867,11 @@ StatusCode RecGsfTracking::execute() {
               if (ecalBestIpValid) {
                 ecalConstrainedIp = ecalBestIp;
                 ecalConstrainedIpCov = ecalBestCov;
-                ecalConstrainedChi2 = runCmsSmoother
-                    ? reverseOutputChi2 : componentFitChi2(*ecalBest);
-                ecalConstrainedNdf = runCmsSmoother
-                    ? reverseOutputNdf
-                    : (ecalBest->kaltrack
-                           ? ecalBest->kaltrack->GetNDF() +
-                                 inwardFilterResult.seedMeasurementDimension
-                           : 0);
+                ecalConstrainedChi2 = componentFitChi2(*ecalBest);
+                ecalConstrainedNdf = ecalBest->kaltrack
+                    ? ecalBest->kaltrack->GetNDF() +
+                          inwardFilterResult.seedMeasurementDimension
+                    : 0;
                 if (m_verboseDump) {
                   const double constrainedPt =
                       ecalConstrainedIp.GetKappa() != 0.0
@@ -4949,8 +4904,7 @@ StatusCode RecGsfTracking::execute() {
           }
         }
       }
-      if ((m_reverseFiltering.value() || runCmsSmoother) &&
-          !reverseIpAvailable) {
+      if (m_reverseFiltering.value() && !reverseIpAvailable) {
         lineageGraph.markAbandoned(reverseComps);
       }
       for (auto* reverseComp : reverseComps) delete reverseComp;
@@ -5038,7 +4992,7 @@ StatusCode RecGsfTracking::execute() {
       }
 
       // Extrapolate to IP (method selected by MaterialIPExtrapolation).
-      // Smoother, reverse, and CMS-like workflows publish three endpoint views:
+      // Smoother and reverse workflows publish three endpoint views:
       // BestBranch is written to GSFTracksBestBranch, while the paired
       // moment-matched state is written to GSFTracksWeightedMean and the joint
       // density maximum to GSFTracksFullMixtureMode. The legacy selector
@@ -5058,8 +5012,7 @@ StatusCode RecGsfTracking::execute() {
           FullMixtureModeStatus::MethodEndpointUnavailable;
       bool usedReverseOutput = false;
       bool pairedWeightedOutputAvailable = false;
-      if ((m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) &&
-          reverseIpAvailable) {
+      if (m_reverseFiltering.value() && reverseIpAvailable) {
         ipHelix = reverseOutputIp;
         ipCov = reverseOutputIpCov;
         usedReverseOutput = true;
@@ -5126,9 +5079,9 @@ StatusCode RecGsfTracking::execute() {
                  << endmsg;
         }
         pairedWeightedOutputAvailable = true;
-      } else if (m_reverseFiltering.value() || m_cmsGsfSmoothing.value()) {
-        warning() << (m_cmsGsfSmoothing.value() ? "CMS-like" : "Reverse")
-                  << " endpoint unavailable; all three published collections "
+      } else if (m_reverseFiltering.value()) {
+        warning() << "Reverse endpoint unavailable; all three published "
+                     "collections "
                      "will preserve the forward BestBranch state"
                   << endmsg;
         pairedWeightedOutputAvailable = true;
