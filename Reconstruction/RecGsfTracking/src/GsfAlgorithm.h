@@ -264,8 +264,8 @@ private:
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
   Gaudi::Property<bool>   m_cmsGsfSmoothing{
       this,"CmsGsfSmoothing",false,
-      "Run the CMS-like forward/backward endpoint workflow from the shared "
-      "final filtered forward mixture, with automatic BestBranch, "
+      "Run the CMS-like two-filter smoothed endpoint workflow from the shared "
+      "forward and inward filters, with automatic BestBranch, "
       "WeightedMean, and FullMixtureMode endpoint publication"};
   Gaudi::Property<double> m_inwardSeedCovarianceScale{
       this, "InwardSeedCovarianceScale", 100.0,

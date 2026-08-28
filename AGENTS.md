@@ -21,8 +21,9 @@ reverse, and CMS-like runs write three row-aligned endpoint views: BestBranch to
 `GSFTracksBestBranch`, the moment-matched endpoint to
 `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional IP
 mixture density to `GSFTracksFullMixtureMode`. CMS-like forms all three views
-from its hit-1 forward-by-backward product mixture and falls back to its final
-backward mixture only when no product can be formed. FullMixtureMode is
+from its hit-1 two-filter smoothed mixture
+`B_smoothed[1] = F_updated[1] x B_predicted[1]` and falls back to its final
+backward mixture only when no smoothed mixture can be formed. FullMixtureMode is
 automatic/default-on for all three workflows, has a persisted
 optimization-status collection and flat-tuple
 fields, and is mechanically available but not physics-validated. Its
@@ -40,9 +41,9 @@ complete component lineage is now also persisted automatically for smoother,
 reverse, and CMS-like jobs. The `lineage_node_*` and `lineage_edge_*` flat vectors keep
 every evaluated seed, BH child, measurement result, and KL output, including
 states later rejected, cut, or merged. Reverse and CMS-like also record every
-same-surface forward-updated×backward-predicted product candidate and its two
+same-surface two-filter smoothing candidate and its two
 source states, while forward and global-loss leave the graph empty.
-Split/merge/product structures remain
+Split/merge/smoothing structures remain
 directed acyclic graphs, and the graph never steers the fit. Its base schema
 and reverse gates are in
 `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`; the CMS-like
@@ -56,17 +57,20 @@ population; a finite value at or below zero instead builds one fresh,
 unit-weight standard-KF-style seed and explicitly updates the outermost hit.
 Both modes then first revisit hit `N-2`; the duplicate method-specific scale
 properties are removed. After the live recursion, the common filter always
-materializes the passive `F_updated[i] x B_predicted[i]` side mixture at every
-successfully processed inward surface. Reverse still publishes the terminal
-backward mixture; CMS-like publishes the hit-1 side mixture and falls back to
+materializes the passive two-filter smoothed mixture
+`B_smoothed[i] = F_updated[i] x B_predicted[i]` at every successfully
+processed inward surface. Reverse still publishes the terminal backward
+mixture; CMS-like publishes `B_smoothed[1]` and falls back to
 the terminal backward mixture when necessary. The former CMS-only
 identity-compatibility diagnostic is retired from EDM and flat tuples; its
 evidence remains historical. The shared mechanics and gates are in
 `agents_record/2026-08-28-shared-forward-reverse-cms-framework.md` and
 `agents_record/2026-08-29-common-inward-filter-side-products.md`. The fresh
 inward mode and its exact compatibility gates are in
-`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`. Its
-component measurement updates use the baseline-compatible
+`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`. The
+current smoothed-mixture terminology and unchanged numeric-schema map are in
+`agents_record/2026-08-29-two-filter-smoothed-mixture-terminology.md`. The
+common filter's component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
 transport Jacobians. Every forward GSF pass now starts through the dedicated
@@ -80,7 +84,7 @@ values remain a curvature-only diagnostic override and do not restore the former
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md`. Forward filtering,
 an independent reverse
 multi-component refit, a KL reduction-aware experimental smoother, and a
-CMS-like experimental product-endpoint workflow are mechanically operational.
+CMS-like experimental smoothed-endpoint workflow are mechanically operational.
 The separate experimental `RecGsfGlobalLossRefitter` is also mechanically
 available as the fourth explicit `method="global-loss"` choice in the
 maintained `DumpGsfTrks/gsf.py.bk`. It consumes `CompleteTracks`, writes
@@ -267,7 +271,7 @@ scale 0 and scale -1 are exactly equivalent. Every fresh run contains one
 source-2 seed at the outermost hit, no copied-seed edge, and first targets
 `N-2`; build, install, verbose component execution, and flat-lineage checks
 pass. These are mechanical gates only. CMS-like still differs from reverse at
-publication because it uses the hit-1 forward/backward product endpoint.
+publication because it uses the hit-1 smoothed-mixture endpoint.
 
 The next required evidence is a same-code topology-clear population rerun of
 copied scale 100 versus fresh scale 0 for both reverse and CMS-like, split into

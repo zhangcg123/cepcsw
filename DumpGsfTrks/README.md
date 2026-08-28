@@ -332,17 +332,21 @@ The flat tuple also creates `final_mixture_component_*` vectors automatically,
 with no run-card property. For every final positive-weight smoother/reverse/
 CMS-like component they store the input/output track mapping, component index
 and ID, source/validity codes, normalized weight, IP kappa, kappa variance, and
-derived pT. The source code is `1` for smoother, `2` for reverse, and `3` for
-CMS-like. They contain every published output track in the event and are empty
+derived pT. The source code is `1` for smoother, `2` for reverse, `3` for the
+CMS-like `B_smoothed[1]` endpoint, and `4` for its terminal-backward fallback.
+They contain every published output track in the event and are empty
 for forward and global-loss jobs. These vectors are sufficient to
 reconstruct the final one-dimensional pT marginal; the exact transformation
 and branch contract are maintained in the package README.
 It also creates `lineage_node_*` and `lineage_edge_*` vectors automatically
-for smoother/reverse jobs, with no card property. These preserve every
-evaluated seed, BH child, measurement result, and KL output, including nodes
-later rejected, removed by cutoff, or consumed by a merge. Edge records retain
-split, measurement, two-parent merge, and forward-to-reverse-seed ancestry.
-Forward, CMS-like, and global-loss jobs keep the branches present but empty.
+for smoother, reverse, and CMS-like jobs, with no card property. These preserve
+every evaluated seed, BH child, measurement result, and KL output, including nodes
+later rejected, removed by cutoff, or consumed by a merge. They also preserve
+every evaluated two-filter smoothing candidate for
+`B_smoothed[i] = F_updated[i] x B_predicted[i]`. Edge records retain split,
+measurement, two-parent merge, forward-to-reverse-seed, and two-parent
+smoothing ancestry. Forward and global-loss jobs keep the branches present but
+empty.
 The numeric code maps, graph key, state fields, and reconstruction contract
 are maintained in `Reconstruction/RecGsfTracking/README.md`; the workflow
 uses `keep *`, so no explicit output-command list is required here.
