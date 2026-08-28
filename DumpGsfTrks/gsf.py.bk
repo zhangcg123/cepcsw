@@ -115,7 +115,7 @@ gsf.KappaSeedCov = -1.0
 gsf.GaussianSumSmoothing = False
 gsf.ReverseFiltering = False
 gsf.CmsGsfSmoothing = False
-gsf.CmsErrorRescaling = 100.0
+gsf.InwardSeedCovarianceScale = 1.0
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse/CMS-like methods
 # below always persist all three endpoint representations and do not select one
@@ -124,7 +124,6 @@ gsf.GSFOutputMode = "BestBranch"
 gsf.ReverseSelectionMode = "AggregateWeight"
 gsf.SurfaceConsistencyUninformativeFloor = 0.05
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
-gsf.ReverseKappaSeedCov = 100.0
 
 # Default-off research constraint.  When enabled from a separate reconstructed-
 # event card that supplies EcalCluster, GSFTracksBestBranch stays tracker-only and
@@ -162,7 +161,6 @@ elif method == "reverse":
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
     gsf.ReverseInitialWeightMode = "ForwardPosterior"
-    gsf.ReverseKappaSeedCov = 1.0
 
 elif method in ("cms-like", "cms", "cms_like"):
     # CMS-like endpoint workflow: use the same final filtered forward seed
@@ -172,7 +170,6 @@ elif method in ("cms-like", "cms", "cms_like"):
     # the hit-1 member. The products have no run-card switch.
     method = "cms-like"
     gsf.CmsGsfSmoothing = True
-    gsf.CmsErrorRescaling = 100.0
 
 elif method in ("global-loss", "global_loss", "global"):
     # Independent all-hit evidence refitter. It compares identity with every

@@ -30,7 +30,8 @@ def main() -> None:
         "--reverse-initial-weight-mode", default="ForwardPosterior",
         choices=("ForwardPosterior", "Uniform"))
     parser.add_argument("--disable-reverse", action="store_true")
-    parser.add_argument("--reverse-kappa-seed-cov", type=float, default=100.0)
+    parser.add_argument(
+        "--inward-seed-covariance-scale", type=float, default=100.0)
     parser.add_argument("--verbose-components", action="store_true")
     parser.add_argument(
         "--eventwise-selection", type=Path,
@@ -76,7 +77,8 @@ def main() -> None:
             "GSF_REVERSE_OUTPUT_MODE": "BestBranch",
             "GSF_REVERSE_INITIAL_WEIGHT_MODE": args.reverse_initial_weight_mode,
             "GSF_REVERSE_FILTERING": "0" if args.disable_reverse else "1",
-            "GSF_REVERSE_KAPPA_SEED_COV": str(args.reverse_kappa_seed_cov),
+            "GSF_INWARD_SEED_COVARIANCE_SCALE": str(
+                args.inward_seed_covariance_scale),
             "GSF_VERBOSE_COMPONENTS": "1" if args.verbose_components else "0",
             "GSF_ELECTRON_HYPOTHESIS": "0" if args.disable_bh else "1",
         })

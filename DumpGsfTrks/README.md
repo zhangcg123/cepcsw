@@ -231,12 +231,12 @@ the independent global-loss refitter so method comparisons cannot silently use
 different BH models; preserve it as deliberate campaign steering until the user
 changes it.
 
-The authoritative explanation of all 42 `RecGsfTracking` properties, their
+The authoritative explanation of all 41 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 41 of the 42
+For this maintained workflow, `gsf.py.bk` explicitly configures 40 of the 41
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -365,8 +365,11 @@ authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
 The maintained template currently selects `method="reverse"`. It currently
-sets `ReverseKappaSeedCov=1.0` for the ongoing correlated-prior
+sets `InwardSeedCovarianceScale=1.0` for the ongoing correlated-prior
 campaign, while the compiled default and active reverse template remain 100.
+The former method-specific `ReverseKappaSeedCov` and `CmsErrorRescaling`
+properties were removed when reverse and CMS-like began using the same inward
+filter; stale cards must replace either name with the common property.
 This is explicit campaign steering, not a production-default change. Its input
 path is a
 top-level `inputfilename` steering variable, which the worker replaces with

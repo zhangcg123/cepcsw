@@ -267,10 +267,10 @@ private:
       "Run the CMS-like forward/backward endpoint workflow from the shared "
       "final filtered forward mixture, with automatic BestBranch, "
       "WeightedMean, and FullMixtureMode endpoint publication"};
-  Gaudi::Property<double> m_cmsErrorRescaling{
-      this,"CmsErrorRescaling",100.0,
-      "Multiplicative covariance scaling for the CMS-like copy of the shared "
-      "final filtered forward seed"};
+  Gaudi::Property<double> m_inwardSeedCovarianceScale{
+      this, "InwardSeedCovarianceScale", 100.0,
+      "Multiplicative full-covariance scaling for every component copied "
+      "from the shared final forward mixture into the common inward filter"};
   Gaudi::Property<std::string> m_reverseSelectionMode{
       this, "ReverseSelectionMode", "AggregateWeight",
       "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "
@@ -282,10 +282,6 @@ private:
   Gaudi::Property<std::string> m_reverseInitialWeightMode{
       this, "ReverseInitialWeightMode", "ForwardPosterior",
       "ForwardPosterior or Uniform diagnostic reverse-start weights"};
-  Gaudi::Property<double> m_reverseKappaSeedCov{
-      this, "ReverseKappaSeedCov", 100.0,
-      "Multiplicative covariance scaling for every full-mixture reverse seed "
-      "component (legacy property name)"};
   Gaudi::Property<bool> m_ecalComponentConstraint{
       this, "EcalComponentConstraint", false,
       "Default-off two-sided ECAL likelihood constraint on final reverse "

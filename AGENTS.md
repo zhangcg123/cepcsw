@@ -51,8 +51,9 @@ extension is in
 now consume one transient `SharedForwardFilterResult` and one common inward
 filter: the same post-update, post-cutoff, post-reduction outward mixtures,
 the same final filtered seed population, and the same measured-hit backward
-recursion. Both first revisit hit `N-2`; their seed covariance scales remain
-independently configurable. After the live recursion, the common filter always
+recursion. Both first revisit hit `N-2` and use the same
+`InwardSeedCovarianceScale`; the duplicate method-specific scale properties
+are removed. After the live recursion, the common filter always
 materializes the passive `F_updated[i] x B_predicted[i]` side mixture at every
 successfully processed inward surface. Reverse still publishes the terminal
 backward mixture; CMS-like publishes the hit-1 side mixture and falls back to
@@ -110,9 +111,10 @@ compiled, active reverse-template, and maintained-card default is on.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
-`ReverseKappaSeedCov` (default 100), repeats measurement updates inward, and
-publishes the selected branch, moment-matched mixture, and full joint-density
-mode in separate row-aligned collections. It has demonstrated interaction-point momentum recovery in many
+`InwardSeedCovarianceScale` (default 100), repeats measurement updates inward,
+and publishes the selected branch, moment-matched mixture, and full
+joint-density mode in separate row-aligned collections. It has demonstrated
+interaction-point momentum recovery in many
 hard-bremsstrahlung events and favorable central light/hard performance, but
 it also creates clean-track degradation and extreme tails. The KL smoother is
 largely LCIO-like and forfeits much of the hard-loss recovery. The CMS-like
@@ -251,6 +253,9 @@ fallback. The side mixtures always enter the default-on lineage EDM and flat
 tuple, have no option switch, and never steer the live filter. The exact
 contract and focused gates are in
 `agents_record/2026-08-29-common-inward-filter-side-products.md`.
+The duplicate reverse/CMS seed-covariance properties are retired in favor of
+the one common control; its migration and exact focused regression gate are in
+`agents_record/2026-08-29-inward-seed-covariance-property-unification.md`.
 
 The focused job-98 entry-15 gate records all 232 inward surfaces and 18,375
 product candidates while reproducing the reverse endpoint and all 8,496 live
@@ -274,8 +279,9 @@ remain paused diagnostics.
 Freeze all production defaults and method endpoints during this study:
 `DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`,
 `MaxComponents=12`, `ComponentWeightCutoff=5e-3`, `SymmetricKL`,
-identity protection, the standard `KappaSeedCov=-1` initializer, and reverse
-covariance scale 100. No property or flat-tuple schema change belongs to the
-common-inward checkpoint. Historical material, BH, truth-oracle, ECAL,
+identity protection, the standard `KappaSeedCov=-1` initializer, and common
+inward covariance scale 100. The duplicate historical scale properties are
+removed; no flat-tuple schema change belongs to the common-inward checkpoint.
+Historical material, BH, truth-oracle, ECAL,
 global-loss, lineage, and population evidence lives in its dated
 `agents_record/` entries and does not override this live focus.

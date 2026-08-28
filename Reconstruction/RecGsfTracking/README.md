@@ -20,8 +20,10 @@ inward surface. These side mixtures are unconditional for reverse and CMS-like,
 are reduced independently, and never feed the backward recursion. Reverse
 publishes the terminal backward mixture; CMS-like publishes the recorded hit-1
 product and falls back to the terminal mixture when that product is unavailable.
-Reverse scales the common inward seed covariance with `ReverseKappaSeedCov`,
-while CMS-like uses `CmsErrorRescaling`. A
+Both use the single `InwardSeedCovarianceScale` property when copying the final
+forward population into the common inward filter. The former
+`ReverseKappaSeedCov` and `CmsErrorRescaling` properties were removed rather
+than retained as duplicate controls. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -335,7 +337,7 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 |---|---|---|---|
 | `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother, reverse, or CMS-like output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
-| `ReverseKappaSeedCov` | `100` | `100` | Multiply every full-mixture reverse-seed covariance by this factor. |
+| `InwardSeedCovarianceScale` | `100` | `100` | Multiply every element of every full-mixture inward-seed covariance by this factor for both reverse and CMS-like. The maintained comparison card's value 1 is separate correlated-prior campaign steering, not an active-template default change. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. |
 | `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
 | `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
@@ -436,10 +438,12 @@ the production baseline.
 |---|---|---|---|
 | `GaussianSumSmoothing` | `false` | `false` | Run the retained-graph experimental Gaussian-sum smoother. It is default-off and forfeits much of the observed hard-loss recovery. |
 | `CmsGsfSmoothing` | `false` | `false` | Run the experimental CMS-like endpoint workflow from the shared final filtered forward mixture instead of ordinary reverse publication. |
-| `CmsErrorRescaling` | `100` | `100` | Full-covariance scale for the CMS-like copy of the shared inward seed population; inactive unless `CmsGsfSmoothing=true`. |
 
 `ReverseFiltering`, `GaussianSumSmoothing`, and `CmsGsfSmoothing` are
-alternative workflows and must not be enabled simultaneously.
+alternative workflows and must not be enabled simultaneously. Reverse and
+CMS-like both use `InwardSeedCovarianceScale`; their distinct flags remain
+necessary because they publish different endpoints, not because they run
+different inward filters.
 
 ### Focused-event and component diagnostics
 
@@ -644,7 +648,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 41 of the 42 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 40 of the 41 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:

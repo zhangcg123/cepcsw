@@ -108,15 +108,14 @@ gsf.CmsGsfSmoothing = cms_gsf_smoothing
 gsf.ReverseFiltering = os.getenv(
     "GSF_REVERSE_FILTERING", "0" if cms_gsf_smoothing else "1"
 ).lower() in ("1", "true", "yes")
-gsf.CmsErrorRescaling = float(os.getenv("GSF_CMS_ERROR_RESCALING", "100"))
+gsf.InwardSeedCovarianceScale = float(os.getenv(
+    "GSF_INWARD_SEED_COVARIANCE_SCALE", "100.0"))
 gsf.ReverseSelectionMode = os.getenv(
     "GSF_REVERSE_SELECTION_MODE", "AggregateWeight")
 gsf.SurfaceConsistencyUninformativeFloor = float(os.getenv(
     "GSF_SURFACE_CONSISTENCY_UNINFORMATIVE_FLOOR", "0.05"))
 gsf.ReverseInitialWeightMode = os.getenv(
     "GSF_REVERSE_INITIAL_WEIGHT_MODE", "ForwardPosterior")
-gsf.ReverseKappaSeedCov = float(os.getenv(
-    "GSF_REVERSE_KAPPA_SEED_COV", "100.0"))
 gsf.GaussianSumSmoothing = os.getenv(
     "GSF_GAUSSIAN_SUM_SMOOTHING", "0").lower() in ("1", "true", "yes")
 gsf.MaterialIPExtrapolation = False

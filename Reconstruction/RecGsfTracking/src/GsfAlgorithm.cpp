@@ -2411,16 +2411,10 @@ StatusCode RecGsfTracking::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
-  if (!(m_cmsErrorRescaling.value() > 0.0) ||
-      !std::isfinite(m_cmsErrorRescaling.value())) {
-    error() << "CmsErrorRescaling must be a finite positive covariance "
-               "scaling factor" << endmsg;
-    return StatusCode::FAILURE;
-  }
-  if (!(m_reverseKappaSeedCov.value() > 0.0) ||
-      !std::isfinite(m_reverseKappaSeedCov.value())) {
-    error() << "ReverseKappaSeedCov must be a finite positive covariance "
-            << "scaling factor" << endmsg;
+  if (!(m_inwardSeedCovarianceScale.value() > 0.0) ||
+      !std::isfinite(m_inwardSeedCovarianceScale.value())) {
+    error() << "InwardSeedCovarianceScale must be a finite positive "
+               "covariance scaling factor" << endmsg;
     return StatusCode::FAILURE;
   }
   if (!std::isfinite(m_kappaSeedCov.value())) {
@@ -3962,15 +3956,15 @@ StatusCode RecGsfTracking::execute() {
       int nextReverseId = 0;
       const auto& reverseSeedComponents =
           sharedForwardResult.finalComponents();
-      const double reverseSeedCovarianceScale = runCmsSmoother
-          ? m_cmsErrorRescaling.value() : m_reverseKappaSeedCov.value();
+      const double inwardSeedCovarianceScale =
+          m_inwardSeedCovarianceScale.value();
       inwardFilterResult.seedCovarianceScale =
-          reverseSeedCovarianceScale;
+          inwardSeedCovarianceScale;
       for (const auto* forwardComp : reverseSeedComponents) {
         edm4hep::TrackState finalState =
             trackStateFromComponent(*forwardComp, bz, DH::AtOther);
         for (auto& covariance : finalState.covMatrix)
-          covariance *= reverseSeedCovarianceScale;
+          covariance *= inwardSeedCovarianceScale;
         auto* reverseComp = new GsfComponent();
         reverseComp->weight =
             (m_reverseInitialWeightMode.value() == "Uniform" ||
@@ -4514,7 +4508,7 @@ StatusCode RecGsfTracking::execute() {
               "seedCovarianceScale=%.9g")
                     % cmsCombinedSurface % cmsPairCandidates % cmsPairFailures
                     % (int)cmsCombinedComponents.size()
-                    % reverseSeedCovarianceScale << endmsg;
+                    % inwardSeedCovarianceScale << endmsg;
         }
       }
 
