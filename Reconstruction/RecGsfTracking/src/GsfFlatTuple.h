@@ -209,6 +209,38 @@ private:
       m_inLineageNodeCmsSmoothAllHitLogOverlap{
           "GSFLineageNodeCmsSmoothAllHitLogOverlap",
           Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeCmsSmoothIdentityCompatibilityValid{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityValid",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_inLineageNodeCmsSmoothForwardIdentityNodeId{
+          "GSFLineageNodeCmsSmoothForwardIdentityNodeId",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothForwardIdentityWeight{
+          "GSFLineageNodeCmsSmoothForwardIdentityWeight",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothForwardIdentityUpdatedKappa{
+          "GSFLineageNodeCmsSmoothForwardIdentityUpdatedKappa",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance{
+          "GSFLineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothIdentityCompatibilityDChi2{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityDChi2",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothIdentityCompatibilityLogDet{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityLogDet",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeCmsSmoothIdentityCompatibilityLogOverlap{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityLogOverlap",
+          Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>>
       m_inLineageNodeCmsSmoothLocalDChi2{
           "GSFLineageNodeCmsSmoothLocalDChi2",
@@ -395,6 +427,22 @@ private:
   std::vector<double>
       m_lineage_node_cms_smooth_all_hit_compatibility_logdet;
   std::vector<double> m_lineage_node_cms_smooth_all_hit_log_overlap;
+  std::vector<int>
+      m_lineage_node_cms_smooth_identity_compatibility_valid;
+  std::vector<int>
+      m_lineage_node_cms_smooth_forward_identity_node_id;
+  std::vector<double>
+      m_lineage_node_cms_smooth_forward_identity_weight;
+  std::vector<double>
+      m_lineage_node_cms_smooth_forward_identity_updated_kappa;
+  std::vector<double>
+      m_lineage_node_cms_smooth_forward_identity_updated_kappa_variance;
+  std::vector<double>
+      m_lineage_node_cms_smooth_identity_compatibility_dchi2;
+  std::vector<double>
+      m_lineage_node_cms_smooth_identity_compatibility_logdet;
+  std::vector<double>
+      m_lineage_node_cms_smooth_identity_compatibility_log_overlap;
   std::vector<double> m_lineage_node_cms_smooth_local_dchi2;
   std::vector<double> m_lineage_node_cms_smooth_local_logdet_innovation;
   std::vector<double> m_lineage_node_cms_smooth_local_log_likelihood;

@@ -2,6 +2,16 @@
 
 Date: 2026-08-27
 
+Interpretation correction (2026-08-28): every historical `double_*` or
+"F/B compatibility" value in this record uses the moment-matched
+`F_upd(i)` defined below. It does not hold the forward side to the identity
+lineage. Those values remain valid for their stated moment-matched question,
+but they must not be described as
+`F_updated_identity` versus `B_pred_identity/radiative`. The separate passive
+identity-controlled channel, regression gate, and corrected comparison are
+documented in
+`agents_record/2026-08-28-cms-like-forward-identity-compatibility.md`.
+
 ## Outcome
 
 The CMS-like workflow now records a default-on, passive per-layer smoothing

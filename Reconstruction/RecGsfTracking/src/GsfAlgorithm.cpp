@@ -564,6 +564,20 @@ struct CmsPerLayerSmoothingDiagnostic {
   double allHitCompatibilityLogDet =
       std::numeric_limits<double>::quiet_NaN();
   double allHitLogOverlap = std::numeric_limits<double>::quiet_NaN();
+  bool identityCompatibilityValid = false;
+  int forwardIdentityNodeId = -1;
+  double forwardIdentityWeight =
+      std::numeric_limits<double>::quiet_NaN();
+  double forwardIdentityUpdatedKappa =
+      std::numeric_limits<double>::quiet_NaN();
+  double forwardIdentityUpdatedKappaVariance =
+      std::numeric_limits<double>::quiet_NaN();
+  double identityCompatibilityDChi2 =
+      std::numeric_limits<double>::quiet_NaN();
+  double identityCompatibilityLogDet =
+      std::numeric_limits<double>::quiet_NaN();
+  double identityCompatibilityLogOverlap =
+      std::numeric_limits<double>::quiet_NaN();
   double localDChi2 = std::numeric_limits<double>::quiet_NaN();
   double localLogDetInnovation = std::numeric_limits<double>::quiet_NaN();
   double localLogLikelihood = std::numeric_limits<double>::quiet_NaN();
@@ -1438,6 +1452,20 @@ struct LineageNodeRecord {
       std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothAllHitLogOverlap =
       std::numeric_limits<double>::quiet_NaN();
+  std::int32_t cmsSmoothIdentityCompatibilityValid = 0;
+  std::int32_t cmsSmoothForwardIdentityNodeId = -1;
+  double cmsSmoothForwardIdentityWeight =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothForwardIdentityUpdatedKappa =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothForwardIdentityUpdatedKappaVariance =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothIdentityCompatibilityDChi2 =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothIdentityCompatibilityLogDet =
+      std::numeric_limits<double>::quiet_NaN();
+  double cmsSmoothIdentityCompatibilityLogOverlap =
+      std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothLocalDChi2 =
       std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothLocalLogDetInnovation =
@@ -1595,6 +1623,22 @@ public:
     node.cmsSmoothAllHitCompatibilityLogDet =
         diagnostic.allHitCompatibilityLogDet;
     node.cmsSmoothAllHitLogOverlap = diagnostic.allHitLogOverlap;
+    node.cmsSmoothIdentityCompatibilityValid =
+        diagnostic.identityCompatibilityValid ? 1 : 0;
+    node.cmsSmoothForwardIdentityNodeId =
+        diagnostic.forwardIdentityNodeId;
+    node.cmsSmoothForwardIdentityWeight =
+        diagnostic.forwardIdentityWeight;
+    node.cmsSmoothForwardIdentityUpdatedKappa =
+        diagnostic.forwardIdentityUpdatedKappa;
+    node.cmsSmoothForwardIdentityUpdatedKappaVariance =
+        diagnostic.forwardIdentityUpdatedKappaVariance;
+    node.cmsSmoothIdentityCompatibilityDChi2 =
+        diagnostic.identityCompatibilityDChi2;
+    node.cmsSmoothIdentityCompatibilityLogDet =
+        diagnostic.identityCompatibilityLogDet;
+    node.cmsSmoothIdentityCompatibilityLogOverlap =
+        diagnostic.identityCompatibilityLogOverlap;
     node.cmsSmoothLocalDChi2 = diagnostic.localDChi2;
     node.cmsSmoothLocalLogDetInnovation =
         diagnostic.localLogDetInnovation;
@@ -2824,6 +2868,22 @@ StatusCode RecGsfTracking::execute() {
       m_lineageNodeCmsSmoothAllHitCompatibilityLogDet.createAndPut();
   auto* lineageNodeCmsSmoothAllHitLogOverlap =
       m_lineageNodeCmsSmoothAllHitLogOverlap.createAndPut();
+  auto* lineageNodeCmsSmoothIdentityCompatibilityValid =
+      m_lineageNodeCmsSmoothIdentityCompatibilityValid.createAndPut();
+  auto* lineageNodeCmsSmoothForwardIdentityNodeId =
+      m_lineageNodeCmsSmoothForwardIdentityNodeId.createAndPut();
+  auto* lineageNodeCmsSmoothForwardIdentityWeight =
+      m_lineageNodeCmsSmoothForwardIdentityWeight.createAndPut();
+  auto* lineageNodeCmsSmoothForwardIdentityUpdatedKappa =
+      m_lineageNodeCmsSmoothForwardIdentityUpdatedKappa.createAndPut();
+  auto* lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance =
+      m_lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance.createAndPut();
+  auto* lineageNodeCmsSmoothIdentityCompatibilityDChi2 =
+      m_lineageNodeCmsSmoothIdentityCompatibilityDChi2.createAndPut();
+  auto* lineageNodeCmsSmoothIdentityCompatibilityLogDet =
+      m_lineageNodeCmsSmoothIdentityCompatibilityLogDet.createAndPut();
+  auto* lineageNodeCmsSmoothIdentityCompatibilityLogOverlap =
+      m_lineageNodeCmsSmoothIdentityCompatibilityLogOverlap.createAndPut();
   auto* lineageNodeCmsSmoothLocalDChi2 =
       m_lineageNodeCmsSmoothLocalDChi2.createAndPut();
   auto* lineageNodeCmsSmoothLocalLogDetInnovation =
@@ -2926,6 +2986,22 @@ StatusCode RecGsfTracking::execute() {
           node.cmsSmoothAllHitCompatibilityLogDet);
       lineageNodeCmsSmoothAllHitLogOverlap->push_back(
           node.cmsSmoothAllHitLogOverlap);
+      lineageNodeCmsSmoothIdentityCompatibilityValid->push_back(
+          node.cmsSmoothIdentityCompatibilityValid);
+      lineageNodeCmsSmoothForwardIdentityNodeId->push_back(
+          node.cmsSmoothForwardIdentityNodeId);
+      lineageNodeCmsSmoothForwardIdentityWeight->push_back(
+          node.cmsSmoothForwardIdentityWeight);
+      lineageNodeCmsSmoothForwardIdentityUpdatedKappa->push_back(
+          node.cmsSmoothForwardIdentityUpdatedKappa);
+      lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance->push_back(
+          node.cmsSmoothForwardIdentityUpdatedKappaVariance);
+      lineageNodeCmsSmoothIdentityCompatibilityDChi2->push_back(
+          node.cmsSmoothIdentityCompatibilityDChi2);
+      lineageNodeCmsSmoothIdentityCompatibilityLogDet->push_back(
+          node.cmsSmoothIdentityCompatibilityLogDet);
+      lineageNodeCmsSmoothIdentityCompatibilityLogOverlap->push_back(
+          node.cmsSmoothIdentityCompatibilityLogOverlap);
       lineageNodeCmsSmoothLocalDChi2->push_back(
           node.cmsSmoothLocalDChi2);
       lineageNodeCmsSmoothLocalLogDetInnovation->push_back(
@@ -3404,6 +3480,8 @@ StatusCode RecGsfTracking::execute() {
     std::vector<CmsGaussianComponentState> cmsInnermostForwardComponents;
     std::vector<GaussianMomentState> cmsForwardPredictedMoments(hits.size());
     std::vector<GaussianMomentState> cmsForwardUpdatedMoments(hits.size());
+    std::vector<CmsGaussianComponentState>
+        cmsForwardIdentityUpdatedComponents(hits.size());
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
     double totalTX0 = 0.0, maxTX0Layer = 0.0;
     bool justSplit = false;
@@ -3963,6 +4041,30 @@ StatusCode RecGsfTracking::execute() {
             finishGaussianState(cmsForwardPredictedAccumulator);
         cmsForwardUpdatedMoments[ih] =
             momentMatchComponents(comps, bz);
+        const GsfComponent* forwardIdentity = nullptr;
+        for (const auto* component : comps) {
+          if (!component || !component->noRadiationLineage ||
+              !(component->weight > 0.0) ||
+              !std::isfinite(component->weight)) {
+            continue;
+          }
+          if (!forwardIdentity ||
+              component->weight > forwardIdentity->weight) {
+            forwardIdentity = component;
+          }
+        }
+        if (forwardIdentity) {
+          auto& snapshot = cmsForwardIdentityUpdatedComponents[ih];
+          snapshot.weight = forwardIdentity->weight;
+          snapshot.componentId = forwardIdentity->debugId;
+          snapshot.lineageNodeId = forwardIdentity->lineageNodeId;
+          snapshot.noRadiationLineage = true;
+          forwardIdentity->helixAtLastSite(bz).PutInto(snapshot.state.mean);
+          snapshot.state.covariance = forwardIdentity->covAtLastSite(bz);
+          snapshot.state.valid =
+              std::isfinite(snapshot.state.mean(2, 0)) &&
+              std::isfinite(snapshot.state.covariance(2, 2));
+        }
         if (ih == 1) {
           cmsInnermostForwardComponents.clear();
           cmsInnermostForwardComponents.reserve(comps.size());
@@ -4661,6 +4763,26 @@ StatusCode RecGsfTracking::execute() {
             if (haveAllHit) {
               diagnostic.allHitKappa = allHit.mean(2, 0);
               diagnostic.allHitKappaVariance = allHit.covariance(2, 2);
+            }
+            if (static_cast<std::size_t>(reverseHit) <
+                    cmsForwardIdentityUpdatedComponents.size()) {
+              const auto& forwardIdentity =
+                  cmsForwardIdentityUpdatedComponents[reverseHit];
+              if (forwardIdentity.state.valid) {
+                diagnostic.forwardIdentityNodeId =
+                    forwardIdentity.lineageNodeId;
+                diagnostic.forwardIdentityWeight = forwardIdentity.weight;
+                diagnostic.forwardIdentityUpdatedKappa =
+                    forwardIdentity.state.mean(2, 0);
+                diagnostic.forwardIdentityUpdatedKappaVariance =
+                    forwardIdentity.state.covariance(2, 2);
+                GaussianMomentState identityProduct;
+                diagnostic.identityCompatibilityValid = combineCmsMoments(
+                    forwardIdentity.state, backward.state, identityProduct,
+                    &diagnostic.identityCompatibilityLogOverlap,
+                    &diagnostic.identityCompatibilityDChi2,
+                    &diagnostic.identityCompatibilityLogDet);
+              }
             }
             const bool haveLocalLikelihood = haveAllOther &&
                 evaluateCmsSmoothedMeasurement(

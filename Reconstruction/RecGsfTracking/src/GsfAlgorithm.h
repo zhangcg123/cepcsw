@@ -245,6 +245,38 @@ private:
       m_lineageNodeCmsSmoothAllHitLogOverlap{
           "GSFLineageNodeCmsSmoothAllHitLogOverlap",
           Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeCmsSmoothIdentityCompatibilityValid{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityValid",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_lineageNodeCmsSmoothForwardIdentityNodeId{
+          "GSFLineageNodeCmsSmoothForwardIdentityNodeId",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardIdentityWeight{
+          "GSFLineageNodeCmsSmoothForwardIdentityWeight",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardIdentityUpdatedKappa{
+          "GSFLineageNodeCmsSmoothForwardIdentityUpdatedKappa",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance{
+          "GSFLineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothIdentityCompatibilityDChi2{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityDChi2",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothIdentityCompatibilityLogDet{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityLogDet",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeCmsSmoothIdentityCompatibilityLogOverlap{
+          "GSFLineageNodeCmsSmoothIdentityCompatibilityLogOverlap",
+          Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>>
       m_lineageNodeCmsSmoothLocalDChi2{
           "GSFLineageNodeCmsSmoothLocalDChi2",
