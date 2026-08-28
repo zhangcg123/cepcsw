@@ -1,5 +1,10 @@
 # Common inward filter and unconditional side products
 
+Status: the common inward filter and unconditional passive records remain
+active. The former CMS-like hit-1 publication described below is superseded by
+`2026-08-29-smoothed-diagnostic-only-publication.md`; the original evidence is
+preserved here for provenance.
+
 ## Decision
 
 Reverse and CMS-like now use one `runGsfInwardFilter` implementation for the

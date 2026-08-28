@@ -21,9 +21,8 @@ reverse, and CMS-like runs write three row-aligned endpoint views: BestBranch to
 `GSFTracksBestBranch`, the moment-matched endpoint to
 `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional IP
 mixture density to `GSFTracksFullMixtureMode`. CMS-like forms all three views
-from its hit-1 two-filter smoothed mixture
-`B_smoothed[1] = F_updated[1] x B_predicted[1]` and falls back to its final
-backward mixture only when no smoothed mixture can be formed. FullMixtureMode is
+from the same terminal inward mixture as reverse,
+`B_updated[0] = measurement[0] x B_predicted[0]`. FullMixtureMode is
 automatic/default-on for all three workflows, has a persisted
 optimization-status collection and flat-tuple
 fields, and is mechanically available but not physics-validated. Its
@@ -60,8 +59,9 @@ properties are removed. After the live recursion, the common filter always
 materializes the passive two-filter smoothed mixture
 `B_smoothed[i] = F_updated[i] x B_predicted[i]` at every successfully
 processed inward surface. Reverse still publishes the terminal backward
-mixture; CMS-like publishes `B_smoothed[1]` and falls back to
-the terminal backward mixture when necessary. The former CMS-only
+mixture, and CMS-like now publishes that same `B_updated[0]` mixture. Every
+`B_smoothed[i]` remains passive diagnostic state and publishes nothing. The
+former CMS-only
 identity-compatibility diagnostic is retired from EDM and flat tuples; its
 evidence remains historical. The shared mechanics and gates are in
 `agents_record/2026-08-28-shared-forward-reverse-cms-framework.md` and
@@ -70,6 +70,8 @@ inward mode and its exact compatibility gates are in
 `agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`. The
 current smoothed-mixture terminology and unchanged numeric-schema map are in
 `agents_record/2026-08-29-two-filter-smoothed-mixture-terminology.md`. The
+diagnostic-only boundary and unified terminal publication are in
+`agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`. The
 common filter's component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
@@ -84,7 +86,8 @@ values remain a curvature-only diagnostic override and do not restore the former
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md`. Forward filtering,
 an independent reverse
 multi-component refit, a KL reduction-aware experimental smoother, and a
-CMS-like experimental smoothed-endpoint workflow are mechanically operational.
+CMS-like compatibility alias of the common inward workflow are mechanically
+operational.
 The separate experimental `RecGsfGlobalLossRefitter` is also mechanically
 available as the fourth explicit `method="global-loss"` choice in the
 maintained `DumpGsfTrks/gsf.py.bk`. It consumes `CompleteTracks`, writes
@@ -270,15 +273,25 @@ establish that scale 100 reproduces its pre-change endpoint exactly and that
 scale 0 and scale -1 are exactly equivalent. Every fresh run contains one
 source-2 seed at the outermost hit, no copied-seed edge, and first targets
 `N-2`; build, install, verbose component execution, and flat-lineage checks
-pass. These are mechanical gates only. CMS-like still differs from reverse at
-publication because it uses the hit-1 smoothed-mixture endpoint.
+pass. These are mechanical gates only. CMS-like no longer defines a distinct
+endpoint: both flags publish terminal `B_updated[0]`, while every
+`B_smoothed[i]` remains a passive lineage diagnostic.
+
+The post-unification same-code gate on events 11, 16, and 17 compared 900
+endpoint/status scalars and 882 final-component/lineage vectors with zero
+reverse/CMS mismatches. Each flag retained 30,285 source-3 smoothed nodes and
+58,176 smoothing edges; no source-3 node was marked BestBranch or final-mixture
+membership, and every published final component used source code 2. The exact
+mechanical gate is preserved in
+`agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`.
 
 The next required evidence is a same-code topology-clear population rerun of
-copied scale 100 versus fresh scale 0 for both reverse and CMS-like, split into
+copied scale 100 versus fresh scale 0 for the common inward workflow, split into
 no/light/hard loss and early-transition categories, with the 133-event
 secondary-activity set reported separately. Audit clean-track safety, tails,
 endpoint-mode failures, and local lineage rank changes before considering the
-fresh mode as a default. In particular, investigate the focused event-16
+fresh mode as a default. The CMS-like flag needs only an exact-alias regression,
+not a duplicate population study. In particular, investigate the focused event-16
 FullMixtureMode fallback rather than treating its finite fallback output as a
 physics success.
 

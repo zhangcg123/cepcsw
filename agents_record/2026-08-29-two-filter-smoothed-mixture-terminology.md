@@ -2,6 +2,11 @@
 
 Date: 2026-08-29
 
+Status: the **smoothed-mixture name and numeric lineage map remain active**,
+but its former CMS-like hit-1 publication contract is superseded by
+`2026-08-29-smoothed-diagnostic-only-publication.md`. The remainder below is
+preserved as the exact terminology-refactor checkpoint.
+
 ## Decision
 
 The same-surface Gaussian mixture formerly described in current code as the

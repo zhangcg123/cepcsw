@@ -19,9 +19,9 @@ two-filter smoothed mixture
 `B_smoothed[i] = F_updated[i] x B_predicted[i]` at every successfully
 processed inward surface. These smoothed mixtures are unconditional for
 reverse and CMS-like, are reduced independently, and never feed the backward
-recursion. Reverse publishes the terminal backward mixture; CMS-like publishes
-the recorded `B_smoothed[1]` mixture and falls back to the terminal mixture
-when that smoothed mixture is unavailable.
+recursion or endpoint publication. Reverse and CMS-like both publish the same
+terminal backward mixture,
+`B_updated[0] = measurement[0] x B_predicted[0]`.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
 the final forward population into the common inward filter and scale every
 component covariance; values at or below zero instead construct one fresh,
@@ -371,12 +371,10 @@ alter the components entering either of the other two views.
 For both inward methods, every accepted backward prediction is paired with all
 stored forward filtered components at the same hit. The resulting reduced
 two-filter smoothed mixture is persisted in the lineage record after the live
-inward filter has finished, so it is available even when it is not the
-publication endpoint. For CMS-like, the endpoint mixture is
-`B_smoothed[1]`, the hit-1 member of this common smoothed record.
-BestBranch, WeightedMean, and FullMixtureMode are all derived from that same
-smoothed mixture. If no valid smoothed mixture can be formed, all three views
-fall back to the final backward mixture. Newly produced CMS-like jobs leave the legacy
+inward filter has finished. Every `B_smoothed[i]` is diagnostic-only: it is
+never propagated and never supplies BestBranch, WeightedMean, or
+FullMixtureMode. Both reverse and CMS-like derive all three views from
+`B_updated[0]`. Newly produced CMS-like jobs leave the legacy
 generic `GSFTracks` collection absent; historical CMS-like files retain their
 original collection and flat `gsf_*` fields.
 
@@ -449,15 +447,15 @@ the production baseline.
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `GaussianSumSmoothing` | `false` | `false` | Run the retained-graph experimental Gaussian-sum smoother. It is default-off and forfeits much of the observed hard-loss recovery. |
-| `CmsGsfSmoothing` | `false` | `false` | Run the experimental CMS-like endpoint workflow from the shared final filtered forward mixture instead of ordinary reverse publication. |
+| `CmsGsfSmoothing` | `false` | `false` | Run the CMS-like alias of the common inward filter. It publishes the same terminal `B_updated[0]` mixture as reverse and retains every `B_smoothed[i]` only as a passive lineage diagnostic. |
 
 `ReverseFiltering`, `GaussianSumSmoothing`, and `CmsGsfSmoothing` are
 alternative workflows and must not be enabled simultaneously. Reverse and
-CMS-like both use `InwardSeedCovarianceScale`; their distinct flags remain
-necessary because they publish different endpoints, not because they run
-different inward filters. A positive inward scale copies the final forward
-mixture; a nonpositive scale gives either workflow the same fresh backward
-root.
+CMS-like both use `InwardSeedCovarianceScale`, the same inward filter, and the
+same endpoint publication. Their distinct flags remain only as steering labels
+for compatibility and comparison workflows. A positive inward scale copies
+the final forward mixture; a nonpositive scale gives either flag the same
+fresh backward root.
 
 ### Focused-event and component diagnostics
 
@@ -556,7 +554,7 @@ tuple also fills the corresponding parallel scalar set:
 | `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
 | `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse/CMS-like component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
 | `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
-| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother, `2` reverse filter, `3` CMS-like two-filter smoothed mixture, `4` CMS-like terminal-backward fallback), and IP-state validity. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
+| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` common terminal inward mixture), and IP-state validity. New reverse and CMS-like tuples both use source `2`. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
 | `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother, reverse, and CMS-like populate them automatically, while forward, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |

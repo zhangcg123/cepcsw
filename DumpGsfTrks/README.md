@@ -332,8 +332,10 @@ The flat tuple also creates `final_mixture_component_*` vectors automatically,
 with no run-card property. For every final positive-weight smoother/reverse/
 CMS-like component they store the input/output track mapping, component index
 and ID, source/validity codes, normalized weight, IP kappa, kappa variance, and
-derived pT. The source code is `1` for smoother, `2` for reverse, `3` for the
-CMS-like `B_smoothed[1]` endpoint, and `4` for its terminal-backward fallback.
+derived pT. The source code is `1` for smoother and `2` for the common
+reverse/CMS-like terminal `B_updated[0]` endpoint. Historical code `3`
+means the retired CMS-like `B_smoothed[1]` endpoint, and historical code `4`
+means its terminal-backward fallback.
 They contain every published output track in the event and are empty
 for forward and global-loss jobs. These vectors are sufficient to
 reconstruct the final one-dimensional pT marginal; the exact transformation

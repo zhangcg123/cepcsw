@@ -166,11 +166,10 @@ elif method == "reverse":
     gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
 elif method in ("cms-like", "cms", "cms_like"):
-    # CMS-like endpoint workflow: use the same final filtered forward seed
-    # population and inward hit range as reverse, scale its full covariance,
-    # record the same B_smoothed[i] = F_updated[i] x B_predicted[i] mixtures as
-    # reverse, then publish BestBranch, WeightedMean, and FullMixtureMode from
-    # B_smoothed[1]. The smoothed mixtures have no run-card switch.
+    # CMS-like compatibility alias: run the same inward filter as reverse and
+    # publish BestBranch, WeightedMean, and FullMixtureMode from terminal
+    # B_updated[0]. Every B_smoothed[i] = F_updated[i] x B_predicted[i]
+    # remains a passive lineage/flat-tuple diagnostic and publishes nothing.
     method = "cms-like"
     gsf.CmsGsfSmoothing = True
 
