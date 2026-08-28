@@ -156,7 +156,8 @@ elif method == "reverse":
     # variances are also recorded automatically; there is no steering switch.
     # The complete component-lineage DAG is likewise automatic/default-on in
     # the EDM and flat tuple. It retains evaluated nodes after measurement
-    # rejection, weight cutoff, or KL merging; no run-card switch is needed.
+    # rejection, weight cutoff, or KL merging. It also records every passive
+    # F_updated[i] x B_predicted[i] inward side mixture; no switch is needed.
     gsf.ReverseFiltering = True
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
@@ -166,8 +167,9 @@ elif method == "reverse":
 elif method in ("cms-like", "cms", "cms_like"):
     # CMS-like endpoint workflow: use the same final filtered forward seed
     # population and inward hit range as reverse, scale its full covariance,
-    # then form the forward/backward product endpoint at hit 1. Publish
-    # BestBranch, WeightedMean, and FullMixtureMode from that common endpoint.
+    # record the same per-surface F_updated x B_predicted side mixtures as
+    # reverse, then publish BestBranch, WeightedMean, and FullMixtureMode from
+    # the hit-1 member. The products have no run-card switch.
     method = "cms-like"
     gsf.CmsGsfSmoothing = True
     gsf.CmsErrorRescaling = 100.0
