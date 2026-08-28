@@ -558,6 +558,8 @@ struct GsfInwardFilterResult {
   int splits = 0;
   int reductions = 0;
   double seedCovarianceScale = 1.0;
+  int seedMeasurementDimension = 0;
+  bool freshSeedInitialization = false;
 
   explicit GsfInwardFilterResult(std::size_t hitCount)
       : surfaces(std::max<std::size_t>(hitCount, 2)) {}
@@ -2411,10 +2413,10 @@ StatusCode RecGsfTracking::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
-  if (!(m_inwardSeedCovarianceScale.value() > 0.0) ||
-      !std::isfinite(m_inwardSeedCovarianceScale.value())) {
-    error() << "InwardSeedCovarianceScale must be a finite positive "
-               "covariance scaling factor" << endmsg;
+  if (!std::isfinite(m_inwardSeedCovarianceScale.value())) {
+    error() << "InwardSeedCovarianceScale must be finite; positive values "
+               "scale the copied forward mixture and values <= 0 select a "
+               "fresh backward initialization" << endmsg;
     return StatusCode::FAILURE;
   }
   if (!std::isfinite(m_kappaSeedCov.value())) {
@@ -3158,6 +3160,7 @@ StatusCode RecGsfTracking::execute() {
     GsfTrackInitializer initializer(m_gsfMarlinTrkSystem);
     auto initialization = initializer.initialize(
         orderedHits, *hits.front().layer, *hits.front().kalHit, bz,
+        GsfTrackInitializationDirection::Outward,
         m_kappaSeedCov.value());
     if (!initialization.valid()) {
       warning() << "GSF standard-KF-style initialization failed for event="
@@ -3166,18 +3169,18 @@ StatusCode RecGsfTracking::execute() {
       for (auto& hit : hits) delete hit.kalHit;
       continue;
     }
-    const int charge = initialization.firstFilteredState.omega > 0.0 ? 1 : -1;
+    const int charge = initialization.seedFilteredState.omega > 0.0 ? 1 : -1;
     if (m_verboseDump) {
       info() << boost::format(
           "  INIT standard-kf-prefit twoDHits=%d firstHitDChi2=%.9g "
           "firstHitNdf=%d firstHitDim=%d prefitOmega=%.9g filteredOmega=%.9g "
           "prefitVarOmega=%.9g prefitVarKappa=%.9g")
             % initialization.twoDimensionalHitCount
-            % initialization.firstHitDeltaChi2
-            % initialization.firstHitNdf
-            % initialization.firstHitMeasurementDimension
+            % initialization.seedHitDeltaChi2
+            % initialization.seedHitNdf
+            % initialization.seedHitMeasurementDimension
             % initialization.prefitState.omega
-            % initialization.firstFilteredState.omega
+            % initialization.seedFilteredState.omega
             % initialization.prefitOmegaVariance
             % initialization.prefitKappaVariance << endmsg;
     }
@@ -3193,7 +3196,7 @@ StatusCode RecGsfTracking::execute() {
     initComp->charge = charge;
     initComp->debugId = nextComponentDebugId++;
     initComp->debugHistory = "seed";
-    initComp->fitChi2 = initialization.firstHitDeltaChi2;
+    initComp->fitChi2 = initialization.seedHitDeltaChi2;
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
     initComp->kaltrack->Add(site);
@@ -3280,7 +3283,7 @@ StatusCode RecGsfTracking::execute() {
         const double chi2 = componentFitChi2(*c);
         const int ndf = c->kaltrack
             ? c->kaltrack->GetNDF() +
-                  initialization.firstHitMeasurementDimension
+                  initialization.seedHitMeasurementDimension
             : 0;
         info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d noRad=%d procH=%d procG=%d procF=%.6g w=%.6g domFrac=%.6g domW=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
                   % (int)rank % (int)ci % c->debugId % c->debugParentId % c->generation
@@ -3960,43 +3963,97 @@ StatusCode RecGsfTracking::execute() {
           m_inwardSeedCovarianceScale.value();
       inwardFilterResult.seedCovarianceScale =
           inwardSeedCovarianceScale;
-      for (const auto* forwardComp : reverseSeedComponents) {
-        edm4hep::TrackState finalState =
-            trackStateFromComponent(*forwardComp, bz, DH::AtOther);
-        for (auto& covariance : finalState.covMatrix)
-          covariance *= inwardSeedCovarianceScale;
+      inwardFilterResult.seedMeasurementDimension =
+          initialization.seedHitMeasurementDimension;
+      if (inwardSeedCovarianceScale > 0.0) {
+        for (const auto* forwardComp : reverseSeedComponents) {
+          edm4hep::TrackState finalState =
+              trackStateFromComponent(*forwardComp, bz, DH::AtOther);
+          for (auto& covariance : finalState.covMatrix)
+            covariance *= inwardSeedCovarianceScale;
+          auto* reverseComp = new GsfComponent();
+          reverseComp->weight =
+              (m_reverseInitialWeightMode.value() == "Uniform" ||
+               m_reverseInitialWeightMode.value() == "uniform")
+                  ? 1.0
+                  : forwardComp->weight;
+          reverseComp->charge = forwardComp->charge;
+          reverseComp->debugId = nextReverseId++;
+          reverseComp->noRadiationLineage =
+              forwardComp->noRadiationLineage;
+          reverseComp->forwardProcessSignature =
+              forwardComp->forwardProcessSignature;
+          if (trackSurfaceLineageMass)
+            reverseComp->forwardProcessModeFractions =
+                forwardComp->forwardProcessModeFractions;
+          reverseComp->debugHistory =
+              "reverse(" + forwardComp->debugHistory + ")";
+          reverseComp->kaltrack = new TKalTrack();
+          reverseComp->kaltrack->SetOwner();
+          auto* reverseSite = makeInitialSiteFromTrackState(
+              finalState, hits.back(), bz);
+          if (!reverseSite) {
+            delete reverseComp;
+            continue;
+          }
+          reverseComp->kaltrack->Add(reverseSite);
+          reverseComp->continuationState = finalState;
+          reverseComp->continuationValid = true;
+          reverseComp->lineageNodeId = lineageGraph.reverseSeed(
+              *reverseComp, forwardComp->lineageNodeId,
+              static_cast<int>(hits.size()) - 1,
+              hits.back().surfaceIndex);
+          reverseComps.push_back(reverseComp);
+        }
+      } else {
+        inwardFilterResult.freshSeedInitialization = true;
+        auto inwardInitialization = initializer.initialize(
+            orderedHits, *hits.back().layer, *hits.back().kalHit, bz,
+            GsfTrackInitializationDirection::Inward,
+            m_kappaSeedCov.value());
+        if (!inwardInitialization.valid()) {
+          warning() << "GSF standard-KF-style inward initialization failed "
+                    << "for event=" << eventIndex
+                    << " inputTrack=" << inputTrackIndex << ": "
+                    << inwardInitialization.error << endmsg;
+          return inwardFilterResult;
+        }
+        inwardFilterResult.seedMeasurementDimension =
+            inwardInitialization.seedHitMeasurementDimension;
         auto* reverseComp = new GsfComponent();
-        reverseComp->weight =
-            (m_reverseInitialWeightMode.value() == "Uniform" ||
-             m_reverseInitialWeightMode.value() == "uniform")
-                ? 1.0
-                : forwardComp->weight;
-        reverseComp->charge = forwardComp->charge;
+        reverseComp->weight = 1.0;
+        reverseComp->charge =
+            inwardInitialization.seedFilteredState.omega > 0.0 ? 1 : -1;
         reverseComp->debugId = nextReverseId++;
-        reverseComp->noRadiationLineage =
-            forwardComp->noRadiationLineage;
-        reverseComp->forwardProcessSignature =
-            forwardComp->forwardProcessSignature;
-        if (trackSurfaceLineageMass)
-          reverseComp->forwardProcessModeFractions =
-              forwardComp->forwardProcessModeFractions;
-        reverseComp->debugHistory = "reverse(" + forwardComp->debugHistory + ")";
+        reverseComp->noRadiationLineage = true;
+        reverseComp->debugHistory = "inward-standard-kf-seed";
+        reverseComp->fitChi2 = inwardInitialization.seedHitDeltaChi2;
         reverseComp->kaltrack = new TKalTrack();
         reverseComp->kaltrack->SetOwner();
-        auto* reverseSite = makeInitialSiteFromTrackState(
-            finalState, hits.back(), bz);
-        if (!reverseSite) {
-          delete reverseComp;
-          continue;
-        }
-        reverseComp->kaltrack->Add(reverseSite);
-        reverseComp->continuationState = finalState;
+        reverseComp->kaltrack->Add(inwardInitialization.site);
+        reverseComp->continuationState =
+            inwardInitialization.seedFilteredState;
         reverseComp->continuationValid = true;
-        reverseComp->lineageNodeId = lineageGraph.reverseSeed(
-            *reverseComp, forwardComp->lineageNodeId,
+        reverseComp->lineageNodeId = lineageGraph.seed(
+            *reverseComp, LineageNodeSource::ReverseFiltering,
             static_cast<int>(hits.size()) - 1,
             hits.back().surfaceIndex);
         reverseComps.push_back(reverseComp);
+        if (m_verboseDump) {
+          info() << boost::format(
+              "  INWARD INIT standard-kf-prefit twoDHits=%d "
+              "outerHitDChi2=%.9g outerHitNdf=%d outerHitDim=%d "
+              "prefitOmega=%.9g filteredOmega=%.9g "
+              "prefitVarOmega=%.9g prefitVarKappa=%.9g")
+                    % inwardInitialization.twoDimensionalHitCount
+                    % inwardInitialization.seedHitDeltaChi2
+                    % inwardInitialization.seedHitNdf
+                    % inwardInitialization.seedHitMeasurementDimension
+                    % inwardInitialization.prefitState.omega
+                    % inwardInitialization.seedFilteredState.omega
+                    % inwardInitialization.prefitOmegaVariance
+                    % inwardInitialization.prefitKappaVariance << endmsg;
+        }
       }
       GsfMixture::normalizeWeights(reverseComps);
       for (const auto* component : reverseComps)
@@ -4497,17 +4554,23 @@ StatusCode RecGsfTracking::execute() {
       }
 
       if (m_verboseDump) {
-        info() << boost::format("  REVERSE summary: finalComps=%d accepted=%d rejected=%d splits=%d reductions=%d")
+        info() << boost::format(
+            "  REVERSE summary: finalComps=%d accepted=%d rejected=%d "
+            "splits=%d reductions=%d seedMode=%s")
                   % (int)reverseComps.size() % reverseAcceptedTotal
                   % reverseRejectedTotal % reverseSplits % reverseReductions
+                  % (inwardFilterResult.freshSeedInitialization
+                         ? "fresh-standard-kf" : "forward-copy")
                << endmsg;
         if (runCmsSmoother) {
           info() << boost::format(
               "  CMS-GSF summary: combinedSurface=%d pairCandidates=%d "
               "pairFailures=%d retainedComponents=%d "
-              "seedCovarianceScale=%.9g")
+              "seedMode=%s seedCovarianceScale=%.9g")
                     % cmsCombinedSurface % cmsPairCandidates % cmsPairFailures
                     % (int)cmsCombinedComponents.size()
+                    % (inwardFilterResult.freshSeedInitialization
+                           ? "fresh-standard-kf" : "forward-copy")
                     % inwardSeedCovarianceScale << endmsg;
         }
       }
@@ -4692,14 +4755,14 @@ StatusCode RecGsfTracking::execute() {
               reverseOutputChi2 = componentFitChi2(**forwardMetadataBest);
               reverseOutputNdf = (*forwardMetadataBest)->kaltrack
                   ? (*forwardMetadataBest)->kaltrack->GetNDF() +
-                        initialization.firstHitMeasurementDimension
+                        initialization.seedHitMeasurementDimension
                   : 0;
             }
           } else {
             reverseOutputChi2 = componentFitChi2(*reverseBest);
             reverseOutputNdf = reverseBest->kaltrack
                 ? reverseBest->kaltrack->GetNDF() +
-                      initialization.firstHitMeasurementDimension
+                      inwardFilterResult.seedMeasurementDimension
                 : 0;
           }
           reverseOutputWeight = reverseBest->weight;
@@ -4898,7 +4961,7 @@ StatusCode RecGsfTracking::execute() {
                     ? reverseOutputNdf
                     : (ecalBest->kaltrack
                            ? ecalBest->kaltrack->GetNDF() +
-                                 initialization.firstHitMeasurementDimension
+                                 inwardFilterResult.seedMeasurementDimension
                            : 0);
                 if (m_verboseDump) {
                   const double constrainedPt =
@@ -5161,7 +5224,7 @@ StatusCode RecGsfTracking::execute() {
       const int outputNdf = usedReverseOutput
           ? reverseOutputNdf
           : best->kaltrack->GetNDF() +
-                initialization.firstHitMeasurementDimension;
+                initialization.seedHitMeasurementDimension;
       ot.setChi2(outputChi2);
       ot.setNdf(outputNdf);
 

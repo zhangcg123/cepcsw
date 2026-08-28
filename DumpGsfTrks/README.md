@@ -367,6 +367,10 @@ authoritative property meanings and full inventory remain in
 The maintained template currently selects `method="reverse"`. It currently
 sets `InwardSeedCovarianceScale=1.0` for the ongoing correlated-prior
 campaign, while the compiled default and active reverse template remain 100.
+Positive values copy and scale the complete final forward mixture. A finite
+value at or below zero instead selects one fresh standard-KF-style backward
+seed, with an explicit outermost-hit update before recursion starts at `N-2`.
+The maintained value 1 therefore keeps the copied-mixture campaign behavior.
 The former method-specific `ReverseKappaSeedCov` and `CmsErrorRescaling`
 properties were removed when reverse and CMS-like began using the same inward
 filter; stale cards must replace either name with the common property.

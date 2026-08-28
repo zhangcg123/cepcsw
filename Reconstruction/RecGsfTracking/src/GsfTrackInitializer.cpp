@@ -113,9 +113,10 @@ TKalTrackSite* makeSiteFromTrackState(
 
 GsfTrackInitializationResult GsfTrackInitializer::initialize(
     const std::vector<edm4hep::TrackerHit>& orderedHits,
-    const DDVMeasLayer& firstLayer,
-    const DDVTrackHit& firstKalHit,
+    const DDVMeasLayer& seedLayer,
+    const DDVTrackHit& seedKalHit,
     double bz,
+    GsfTrackInitializationDirection direction,
     double kappaCovarianceOverride) const {
   GsfTrackInitializationResult result;
   if (!m_trackSystem) {
@@ -146,9 +147,12 @@ GsfTrackInitializationResult GsfTrackInitializer::initialize(
   }
 
   std::vector<edm4hep::TrackerHit> mutableHits = orderedHits;
+  const bool fitDirection =
+      direction == GsfTrackInitializationDirection::Inward
+          ? MarlinTrk::IMarlinTrack::backward
+          : MarlinTrk::IMarlinTrack::forward;
   if (MarlinTrk::createPrefit(
-          mutableHits, &result.prefitState, bz,
-          MarlinTrk::IMarlinTrack::forward) !=
+          mutableHits, &result.prefitState, bz, fitDirection) !=
       MarlinTrk::IMarlinTrack::success) {
     result.error = "standard three-hit helix prefit failed";
     return result;
@@ -166,38 +170,40 @@ GsfTrackInitializationResult GsfTrackInitializer::initialize(
     return result;
   }
 
-  edm4hep::TrackerHit firstHit = orderedHits.front();
-  if (track->addHit(firstHit) != MarlinTrk::IMarlinTrack::success ||
+  edm4hep::TrackerHit seedHit =
+      direction == GsfTrackInitializationDirection::Inward
+          ? orderedHits.back() : orderedHits.front();
+  if (track->addHit(seedHit) != MarlinTrk::IMarlinTrack::success ||
       track->initialise(
-          result.prefitState, bz, MarlinTrk::IMarlinTrack::forward) !=
+          result.prefitState, bz, fitDirection) !=
           MarlinTrk::IMarlinTrack::success) {
-    result.error = "baseline first-hit track initialization failed";
+    result.error = "baseline seed-hit track initialization failed";
     return result;
   }
 
   MarlinTrk::MeasurementUpdate update;
   if (track->addAndFit(
-          firstHit, result.firstHitDeltaChi2, update, DBL_MAX) !=
+          seedHit, result.seedHitDeltaChi2, update, DBL_MAX) !=
           MarlinTrk::IMarlinTrack::success ||
       !update.valid) {
-    result.error = "baseline first-hit measurement update failed";
+    result.error = "baseline seed-hit measurement update failed";
     return result;
   }
-  result.firstHitMeasurementDimension = update.residual.rows;
-  if (result.firstHitMeasurementDimension <= 0)
-    result.firstHitMeasurementDimension = firstKalHit.GetDimension();
+  result.seedHitMeasurementDimension = update.residual.rows;
+  if (result.seedHitMeasurementDimension <= 0)
+    result.seedHitMeasurementDimension = seedKalHit.GetDimension();
 
   double chi2 = 0.0;
   if (track->getTrackState(
-          firstHit, result.firstFilteredState, chi2,
-          result.firstHitNdf) != MarlinTrk::IMarlinTrack::success) {
-    result.error = "failed to retrieve the first filtered state";
+          seedHit, result.seedFilteredState, chi2,
+          result.seedHitNdf) != MarlinTrk::IMarlinTrack::success) {
+    result.error = "failed to retrieve the seed filtered state";
     return result;
   }
 
   result.site = makeSiteFromTrackState(
-      result.firstFilteredState, firstLayer, firstKalHit, bz);
+      result.seedFilteredState, seedLayer, seedKalHit, bz);
   if (!result.site)
-    result.error = "failed to construct the GSF first-hit site";
+    result.error = "failed to construct the GSF seed-hit site";
   return result;
 }

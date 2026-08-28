@@ -20,22 +20,28 @@ class IMarlinTrkSystem;
 struct GsfTrackInitializationResult {
   TKalTrackSite* site = nullptr;
   edm4hep::TrackState prefitState;
-  edm4hep::TrackState firstFilteredState;
-  double firstHitDeltaChi2 = 0.0;
+  edm4hep::TrackState seedFilteredState;
+  double seedHitDeltaChi2 = 0.0;
   double prefitOmegaVariance = 0.0;
   double prefitKappaVariance = 0.0;
-  int firstHitNdf = 0;
-  int firstHitMeasurementDimension = 0;
+  int seedHitNdf = 0;
+  int seedHitMeasurementDimension = 0;
   int twoDimensionalHitCount = 0;
   std::string error;
 
   bool valid() const { return site != nullptr; }
 };
 
+enum class GsfTrackInitializationDirection {
+  Outward,
+  Inward,
+};
+
 /// Build a fresh GSF seed using the same initialization convention as the
 /// standard KalTest refit: a first/middle/last two-dimensional-hit helix,
-/// the full loose LCIO covariance, and an explicit first-hit update through
-/// the baseline MarlinTrk interface.
+/// the full loose LCIO covariance, and an explicit update of the first
+/// measurement consumed in the requested fit direction through the baseline
+/// MarlinTrk interface.
 class GsfTrackInitializer {
 public:
   explicit GsfTrackInitializer(MarlinTrk::IMarlinTrkSystem* trackSystem)
@@ -43,9 +49,10 @@ public:
 
   GsfTrackInitializationResult initialize(
       const std::vector<edm4hep::TrackerHit>& orderedHits,
-      const DDVMeasLayer& firstLayer,
-      const DDVTrackHit& firstKalHit,
+      const DDVMeasLayer& seedLayer,
+      const DDVTrackHit& seedKalHit,
       double bz,
+      GsfTrackInitializationDirection direction,
       double kappaCovarianceOverride = -1.0) const;
 
 private:

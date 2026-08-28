@@ -20,8 +20,13 @@ inward surface. These side mixtures are unconditional for reverse and CMS-like,
 are reduced independently, and never feed the backward recursion. Reverse
 publishes the terminal backward mixture; CMS-like publishes the recorded hit-1
 product and falls back to the terminal mixture when that product is unavailable.
-Both use the single `InwardSeedCovarianceScale` property when copying the final
-forward population into the common inward filter. The former
+Both use the single `InwardSeedCovarianceScale` property. Positive values copy
+the final forward population into the common inward filter and scale every
+component covariance; values at or below zero instead construct one fresh,
+unit-weight backward seed with the standard prefit and an explicit outermost-
+hit update. That mode is independent of the final forward mixture, although
+the geometric prefit still uses first/middle/last hit positions that the loose-
+covariance fit later consumes. The former
 `ReverseKappaSeedCov` and `CmsErrorRescaling` properties were removed rather
 than retained as duplicate controls. A
 default-off ECAL experiment can additionally write a paired component-selection result to
@@ -34,7 +39,9 @@ two-dimensional hits, followed by the loose covariance
 `Var(tanLambda)=1e2`, pivot transport to the first hit, and an explicit
 MarlinTrk update with that first hit. `KappaSeedCov` is retained only as a
 legacy diagnostic override of the prefit curvature variance; it does not
-restore the former `CompleteTracks`-anchored seed. The old alternate KF fitter
+restore the former `CompleteTracks`-anchored seed. The same initializer and
+curvature convention are used at the outermost hit when fresh inward
+initialization is selected. The old alternate KF fitter
 and other initialization experiments have been removed; historical
 comparisons remain under `agents_record/`.
 
@@ -175,7 +182,7 @@ distinction matters because that template enables `ElossOn` and
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
-| `KappaSeedCov` | `-1` | same | Legacy diagnostic override for the standard-KF-style forward initializer. Any finite value `<=0` selects the exact standard-KF `Var(omega)=1e-4`; a finite positive value instead sets `Var(omega)=KappaSeedCov * alpha^2` before pivot transport, where `kappa=omega/alpha`. It changes only this curvature entry; the first/middle/last two-dimensional-hit prefit, other four loose covariance entries, and explicit first-hit update remain unchanged. |
+| `KappaSeedCov` | `-1` | same | Legacy diagnostic override for the standard-KF-style outward initializer and for the fresh inward initializer selected by `InwardSeedCovarianceScale<=0`. Any finite value `<=0` selects the exact standard-KF `Var(omega)=1e-4`; a finite positive value instead sets `Var(omega)=KappaSeedCov * alpha^2` before pivot transport, where `kappa=omega/alpha`. It changes only this curvature entry; the first/middle/last two-dimensional-hit prefit, other four loose covariance entries, and explicit seed-hit update remain unchanged. It is irrelevant to the copied-mixture inward seed selected by a positive inward scale. |
 
 Material between consecutive accepted measurements is owned by the outgoing
 transition from the current measurement to the next one. The final
@@ -337,8 +344,8 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 |---|---|---|---|
 | `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother, reverse, or CMS-like output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
-| `InwardSeedCovarianceScale` | `100` | `100` | Multiply every element of every full-mixture inward-seed covariance by this factor for both reverse and CMS-like. The maintained comparison card's value 1 is separate correlated-prior campaign steering, not an active-template default change. |
-| `ReverseInitialWeightMode` | `ForwardPosterior` | same | Reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. |
+| `InwardSeedCovarianceScale` | `100` | `100` | For reverse and CMS-like, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card's value 1 is separate correlated-prior campaign steering, not an active-template default change. |
+| `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 | `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
 | `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
 
@@ -347,6 +354,9 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 strongest real pre-merge lineage. `SurfaceConsistency` multiplies it by a
 bounded forward/reverse radiative-surface coincidence likelihood. Both
 alternatives are retained only to reproduce rejected diagnostics.
+Fresh inward initialization has no inherited forward-process metadata, so
+`SurfaceConsistency` supplies the same floor to every component and reduces
+to ordinary weight ranking in that mode.
 `ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
 
 Smoother, reverse, and CMS-like have no output selector. Every successful track is
@@ -443,7 +453,9 @@ the production baseline.
 alternative workflows and must not be enabled simultaneously. Reverse and
 CMS-like both use `InwardSeedCovarianceScale`; their distinct flags remain
 necessary because they publish different endpoints, not because they run
-different inward filters.
+different inward filters. A positive inward scale copies the final forward
+mixture; a nonpositive scale gives either workflow the same fresh backward
+root.
 
 ### Focused-event and component diagnostics
 
@@ -546,12 +558,12 @@ tuple also fills the corresponding parallel scalar set:
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
 | `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother, reverse, and CMS-like populate them automatically, while forward, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
-| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` the common inward forward×backward side mixture. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` inward product candidate. Smoother graphs contain the forward construction used by the smoother; reverse and CMS-like graphs additionally link the forward state to every backward seed and record operation-5 candidates at every successfully processed inward surface. Each product candidate has one source-1 and one source-2 parent. Its source-2 measurement parent contributes the persisted predicted fields, not its filtered posterior fields. |
+| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` the common inward forward×backward side mixture. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` inward product candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse and CMS-like additionally link each copied forward state to its backward seed; with a nonpositive scale, they instead contain one source-2 operation-1 root at hit `N-1` with no forward parent. Both modes record operation-5 candidates at every successfully processed inward surface. Each product candidate has one source-1 and one source-2 parent. Its source-2 measurement parent contributes the persisted predicted fields, not its filtered posterior fields. |
 | `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
 | `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Per-evaluated-component measurement decision. Status is `-1` not a measurement, `0` rejected, `1` accepted through the exact update, or `2` accepted through the legacy recovery path. Exact innovation values are finite when supplied by the accepted MarlinTrk update. The normalized posterior is captured before cutoff and KL reduction. |
 | `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, `6` abandoned because its endpoint or complete output track failed, or `7` an inward side-mixture survivor retained for diagnostics but not included in the published endpoint. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |
 | `lineage_node_weight`, `lineage_node_predicted_kappa`, `lineage_node_predicted_kappa_variance`, `lineage_node_predicted_pT`, `lineage_node_filtered_kappa`, `lineage_node_filtered_kappa_variance`, `lineage_node_filtered_pT`, `lineage_node_dominant_lineage_fraction`, `lineage_node_merge_cost` | Node-local statistical state. Predicted quantities exist for measurement nodes with an exact innovation object; filtered quantities are the post-operation continuation state. pT is derived as `1/abs(kappa)`. Merge cost is finite only for a KL output. |
-| `lineage_edge_input_track_index`, `lineage_edge_output_track_index`, `lineage_edge_from_node_id`, `lineage_edge_to_node_id`, `lineage_edge_operation` | Directed graph connectivity. Edge operation is `1` BH split, `2` measurement, `3` KL merge, `4` forward-to-backward seed, or `5` forward/backward state to an inward product candidate. Every KL output has two incoming merge edges; every inward product candidate has exactly two incoming product edges. |
+| `lineage_edge_input_track_index`, `lineage_edge_output_track_index`, `lineage_edge_from_node_id`, `lineage_edge_to_node_id`, `lineage_edge_operation` | Directed graph connectivity. Edge operation is `1` BH split, `2` measurement, `3` KL merge, `4` copied forward-to-backward seed, or `5` forward/backward state to an inward product candidate. Edge operation 4 exists only for positive inward scale; a fresh nonpositive-scale inward root has no incoming edge. Every KL output has two incoming merge edges; every inward product candidate has exactly two incoming product edges. |
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |

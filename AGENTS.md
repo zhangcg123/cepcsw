@@ -49,11 +49,13 @@ and reverse gates are in
 extension is in
 `agents_record/2026-08-27-cms-like-component-lineage.md`. Reverse and CMS-like
 now consume one transient `SharedForwardFilterResult` and one common inward
-filter: the same post-update, post-cutoff, post-reduction outward mixtures,
-the same final filtered seed population, and the same measured-hit backward
-recursion. Both first revisit hit `N-2` and use the same
-`InwardSeedCovarianceScale`; the duplicate method-specific scale properties
-are removed. After the live recursion, the common filter always
+filter: the same post-update, post-cutoff, post-reduction outward mixtures and
+the same measured-hit backward recursion. A positive
+`InwardSeedCovarianceScale` copies and scales the final filtered forward
+population; a finite value at or below zero instead builds one fresh,
+unit-weight standard-KF-style seed and explicitly updates the outermost hit.
+Both modes then first revisit hit `N-2`; the duplicate method-specific scale
+properties are removed. After the live recursion, the common filter always
 materializes the passive `F_updated[i] x B_predicted[i]` side mixture at every
 successfully processed inward surface. Reverse still publishes the terminal
 backward mixture; CMS-like publishes the hit-1 side mixture and falls back to
@@ -61,16 +63,19 @@ the terminal backward mixture when necessary. The former CMS-only
 identity-compatibility diagnostic is retired from EDM and flat tuples; its
 evidence remains historical. The shared mechanics and gates are in
 `agents_record/2026-08-28-shared-forward-reverse-cms-framework.md` and
-`agents_record/2026-08-29-common-inward-filter-side-products.md`. Its
+`agents_record/2026-08-29-common-inward-filter-side-products.md`. The fresh
+inward mode and its exact compatibility gates are in
+`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`. Its
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface
 transport Jacobians. Every forward GSF pass now starts through the dedicated
 `GsfTrackInitializer`: a first/middle/last two-dimensional-hit prefit, the full
 loose `FullLDCTracking` covariance, and an explicit first-hit MarlinTrk update.
-This common start is inherited by reverse, smoother, and CMS-like. The default
-`KappaSeedCov=-1` selects exact `Var(omega)=1e-4`; positive values remain a
-curvature-only diagnostic override and do not restore the former
+This common outward start is inherited by reverse, smoother, and CMS-like; the
+same initializer is reused at the outermost hit for a requested fresh inward
+start. The default `KappaSeedCov=-1` selects exact `Var(omega)=1e-4`; positive
+values remain a curvature-only diagnostic override and do not restore the former
 `CompleteTracks`-anchored seed. The implementation and focused gate are in
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md`. Forward filtering,
 an independent reverse
@@ -243,45 +248,40 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate implementation checkpoint is the one common inward GSF path for
-reverse and CMS-like. A single live backward recursion now returns the terminal
-backward mixture and, after that recursion is complete, unconditionally
-materializes the passive `F_updated[i] x B_predicted[i]` side mixture at every
-successfully processed inward surface. Reverse publishes the terminal mixture;
-CMS-like publishes the hit-1 side mixture with the established terminal
-fallback. The side mixtures always enter the default-on lineage EDM and flat
-tuple, have no option switch, and never steer the live filter. The exact
-contract and focused gates are in
-`agents_record/2026-08-29-common-inward-filter-side-products.md`.
-The duplicate reverse/CMS seed-covariance properties are retired in favor of
-the one common control; its migration and exact focused regression gate are in
-`agents_record/2026-08-29-inward-seed-covariance-property-unification.md`.
+The immediate checkpoint is the new two-mode common inward initialization for
+reverse and CMS-like. A positive `InwardSeedCovarianceScale` preserves the
+existing correlated-prior path by copying and scaling the complete final
+forward mixture. A finite value at or below zero constructs one fresh
+standard-KF-style seed, updates hit `N-1` once in the backward direction, and
+starts live recursion at `N-2`. The fresh lineage is one source-2 seed root
+with no forward parent; `ReverseInitialWeightMode` is irrelevant there. This
+is independent of the final forward mixture, not statistically independent of
+the measurements: the geometric prefit uses first/middle/last hit positions
+that the loose-covariance fit later consumes. The implementation contract and
+focused gates are in
+`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`.
 
-The focused job-98 entry-15 gate records all 232 inward surfaces and 18,375
-product candidates while reproducing the reverse endpoint and all 8,496 live
-forward/backward statistical nodes exactly across the refactor. Same-code
-five-component runs on hard-loss events 11, 16, and 17 complete for both
-methods and retain the same ordered live-filter structure; CMS-like alone
-publishes source-3 hit-1 products. This is mechanical validation only. The next
-required evidence is a topology-clear population rerun split into no/light/hard
-loss and early-transition categories, with the 133-event secondary-activity
-control reported separately.
+Focused same-code reverse and CMS-like runs on hard-loss events 11, 16, and 17
+establish that scale 100 reproduces its pre-change endpoint exactly and that
+scale 0 and scale -1 are exactly equivalent. Every fresh run contains one
+source-2 seed at the outermost hit, no copied-seed edge, and first targets
+`N-2`; build, install, verbose component execution, and flat-lineage checks
+pass. These are mechanical gates only. CMS-like still differs from reverse at
+publication because it uses the hit-1 forward/backward product endpoint.
 
-Use the common side record to find the first surface where a truth-compatible
-lineage changes rank between the backward-only posterior and the
-forward-by-backward product. Attribute the change to BH prior weight, exact
-local `dchi2`, and `logDetInnovation`; do not infer it from final weights
-alone. Keep product mixtures passive until a reviewed population result
-justifies any steering use. The related material/BH consistency and narrowly
-scoped BH-component-variance questions remain active; ECAL and global-loss
-remain paused diagnostics.
+The next required evidence is a same-code topology-clear population rerun of
+copied scale 100 versus fresh scale 0 for both reverse and CMS-like, split into
+no/light/hard loss and early-transition categories, with the 133-event
+secondary-activity set reported separately. Audit clean-track safety, tails,
+endpoint-mode failures, and local lineage rank changes before considering the
+fresh mode as a default. In particular, investigate the focused event-16
+FullMixtureMode fallback rather than treating its finite fallback output as a
+physics success.
 
-Freeze all production defaults and method endpoints during this study:
-`DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`,
-`MaxComponents=12`, `ComponentWeightCutoff=5e-3`, `SymmetricKL`,
-identity protection, the standard `KappaSeedCov=-1` initializer, and common
-inward covariance scale 100. The duplicate historical scale properties are
-removed; no flat-tuple schema change belongs to the common-inward checkpoint.
-Historical material, BH, truth-oracle, ECAL,
-global-loss, lineage, and population evidence lives in its dated
+Freeze production defaults and endpoint definitions during this study:
+`DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`, `MaxComponents=12`,
+`ComponentWeightCutoff=5e-3`, `SymmetricKL`, identity protection,
+`KappaSeedCov=-1`, and positive inward scale 100. The material/BH consistency
+and narrowly scoped BH-component-variance questions remain active; ECAL and
+global-loss remain paused diagnostics. Historical detail lives in dated
 `agents_record/` entries and does not override this live focus.

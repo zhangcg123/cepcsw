@@ -269,8 +269,9 @@ private:
       "WeightedMean, and FullMixtureMode endpoint publication"};
   Gaudi::Property<double> m_inwardSeedCovarianceScale{
       this, "InwardSeedCovarianceScale", 100.0,
-      "Multiplicative full-covariance scaling for every component copied "
-      "from the shared final forward mixture into the common inward filter"};
+      "Positive values multiply every full covariance copied from the shared "
+      "final forward mixture; values at or below zero select a fresh standard-"
+      "KF-style backward initialization"};
   Gaudi::Property<std::string> m_reverseSelectionMode{
       this, "ReverseSelectionMode", "AggregateWeight",
       "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "
@@ -316,8 +317,9 @@ private:
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
   Gaudi::Property<double> m_kappaSeedCov{
       this, "KappaSeedCov", -1.0,
-      "Legacy diagnostic override for the fresh prefit kappa variance; "
-      "values <= 0 use the standard KF Var(omega)=1e-4 covariance"};
+      "Legacy diagnostic override for the outward and fresh inward prefit "
+      "kappa variance; values <= 0 use the standard KF Var(omega)=1e-4 "
+      "covariance"};
   Gaudi::Property<std::string> m_bhModel{
       this, "BHModel", "CEPC2GeV85StepConditioned"};
   Gaudi::Property<bool> m_truthBHLossOverride{

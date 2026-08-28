@@ -108,6 +108,8 @@ gsf.CmsGsfSmoothing = cms_gsf_smoothing
 gsf.ReverseFiltering = os.getenv(
     "GSF_REVERSE_FILTERING", "0" if cms_gsf_smoothing else "1"
 ).lower() in ("1", "true", "yes")
+# Positive copies/scales the final forward mixture; <=0 constructs one fresh
+# backward prefit seed and consumes the outermost hit before inward recursion.
 gsf.InwardSeedCovarianceScale = float(os.getenv(
     "GSF_INWARD_SEED_COVARIANCE_SCALE", "100.0"))
 gsf.ReverseSelectionMode = os.getenv(

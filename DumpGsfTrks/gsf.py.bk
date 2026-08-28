@@ -115,6 +115,8 @@ gsf.KappaSeedCov = -1.0
 gsf.GaussianSumSmoothing = False
 gsf.ReverseFiltering = False
 gsf.CmsGsfSmoothing = False
+# Positive: copy/scale the final forward mixture. <=0: one fresh backward
+# standard-KF-style seed with the outermost hit already updated.
 gsf.InwardSeedCovarianceScale = 1.0
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse/CMS-like methods
