@@ -260,78 +260,9 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("lineage_node_dominant_lineage_fraction",
                  &m_lineage_node_dominant_lineage_fraction);
   m_tree->Branch("lineage_node_merge_cost", &m_lineage_node_merge_cost);
-  m_tree->Branch("lineage_node_cms_smooth_valid",
-                 &m_lineage_node_cms_smooth_valid);
-  m_tree->Branch("lineage_node_cms_smooth_forward_predicted_kappa",
-                 &m_lineage_node_cms_smooth_forward_predicted_kappa);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_forward_predicted_kappa_variance",
-      &m_lineage_node_cms_smooth_forward_predicted_kappa_variance);
-  m_tree->Branch("lineage_node_cms_smooth_forward_updated_kappa",
-                 &m_lineage_node_cms_smooth_forward_updated_kappa);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_forward_updated_kappa_variance",
-      &m_lineage_node_cms_smooth_forward_updated_kappa_variance);
-  m_tree->Branch("lineage_node_cms_smooth_all_other_kappa",
-                 &m_lineage_node_cms_smooth_all_other_kappa);
-  m_tree->Branch("lineage_node_cms_smooth_all_other_kappa_variance",
-                 &m_lineage_node_cms_smooth_all_other_kappa_variance);
-  m_tree->Branch("lineage_node_cms_smooth_all_other_pT",
-                 &m_lineage_node_cms_smooth_all_other_pT);
-  m_tree->Branch("lineage_node_cms_smooth_all_hit_kappa",
-                 &m_lineage_node_cms_smooth_all_hit_kappa);
-  m_tree->Branch("lineage_node_cms_smooth_all_hit_kappa_variance",
-                 &m_lineage_node_cms_smooth_all_hit_kappa_variance);
-  m_tree->Branch("lineage_node_cms_smooth_all_hit_pT",
-                 &m_lineage_node_cms_smooth_all_hit_pT);
-  m_tree->Branch("lineage_node_cms_smooth_all_other_log_overlap",
-                 &m_lineage_node_cms_smooth_all_other_log_overlap);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_all_hit_compatibility_dchi2",
-      &m_lineage_node_cms_smooth_all_hit_compatibility_dchi2);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_all_hit_compatibility_logdet",
-      &m_lineage_node_cms_smooth_all_hit_compatibility_logdet);
-  m_tree->Branch("lineage_node_cms_smooth_all_hit_log_overlap",
-                 &m_lineage_node_cms_smooth_all_hit_log_overlap);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_identity_compatibility_valid",
-      &m_lineage_node_cms_smooth_identity_compatibility_valid);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_forward_identity_node_id",
-      &m_lineage_node_cms_smooth_forward_identity_node_id);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_forward_identity_weight",
-      &m_lineage_node_cms_smooth_forward_identity_weight);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_forward_identity_updated_kappa",
-      &m_lineage_node_cms_smooth_forward_identity_updated_kappa);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_forward_identity_updated_kappa_variance",
-      &m_lineage_node_cms_smooth_forward_identity_updated_kappa_variance);
   m_tree->Branch(
       "lineage_node_cms_smooth_identity_compatibility_dchi2",
       &m_lineage_node_cms_smooth_identity_compatibility_dchi2);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_identity_compatibility_logdet",
-      &m_lineage_node_cms_smooth_identity_compatibility_logdet);
-  m_tree->Branch(
-      "lineage_node_cms_smooth_identity_compatibility_log_overlap",
-      &m_lineage_node_cms_smooth_identity_compatibility_log_overlap);
-  m_tree->Branch("lineage_node_cms_smooth_local_dchi2",
-                 &m_lineage_node_cms_smooth_local_dchi2);
-  m_tree->Branch("lineage_node_cms_smooth_local_logdet_innovation",
-                 &m_lineage_node_cms_smooth_local_logdet_innovation);
-  m_tree->Branch("lineage_node_cms_smooth_local_log_likelihood",
-                 &m_lineage_node_cms_smooth_local_log_likelihood);
-  m_tree->Branch("lineage_node_cms_smooth_log_evidence",
-                 &m_lineage_node_cms_smooth_log_evidence);
-  m_tree->Branch("lineage_node_cms_smooth_log_weight_with_prior",
-                 &m_lineage_node_cms_smooth_log_weight_with_prior);
-  m_tree->Branch("lineage_node_cms_smooth_normalized_evidence",
-                 &m_lineage_node_cms_smooth_normalized_evidence);
-  m_tree->Branch("lineage_node_cms_smooth_normalized_weight_with_prior",
-                 &m_lineage_node_cms_smooth_normalized_weight_with_prior);
   m_tree->Branch("lineage_edge_n", &m_lineage_edge_n);
   m_tree->Branch("lineage_edge_input_track_index",
                  &m_lineage_edge_input_track_index);
@@ -603,36 +534,7 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_filtered_pT.clear();
   m_lineage_node_dominant_lineage_fraction.clear();
   m_lineage_node_merge_cost.clear();
-  m_lineage_node_cms_smooth_valid.clear();
-  m_lineage_node_cms_smooth_forward_predicted_kappa.clear();
-  m_lineage_node_cms_smooth_forward_predicted_kappa_variance.clear();
-  m_lineage_node_cms_smooth_forward_updated_kappa.clear();
-  m_lineage_node_cms_smooth_forward_updated_kappa_variance.clear();
-  m_lineage_node_cms_smooth_all_other_kappa.clear();
-  m_lineage_node_cms_smooth_all_other_kappa_variance.clear();
-  m_lineage_node_cms_smooth_all_other_pT.clear();
-  m_lineage_node_cms_smooth_all_hit_kappa.clear();
-  m_lineage_node_cms_smooth_all_hit_kappa_variance.clear();
-  m_lineage_node_cms_smooth_all_hit_pT.clear();
-  m_lineage_node_cms_smooth_all_other_log_overlap.clear();
-  m_lineage_node_cms_smooth_all_hit_compatibility_dchi2.clear();
-  m_lineage_node_cms_smooth_all_hit_compatibility_logdet.clear();
-  m_lineage_node_cms_smooth_all_hit_log_overlap.clear();
-  m_lineage_node_cms_smooth_identity_compatibility_valid.clear();
-  m_lineage_node_cms_smooth_forward_identity_node_id.clear();
-  m_lineage_node_cms_smooth_forward_identity_weight.clear();
-  m_lineage_node_cms_smooth_forward_identity_updated_kappa.clear();
-  m_lineage_node_cms_smooth_forward_identity_updated_kappa_variance.clear();
   m_lineage_node_cms_smooth_identity_compatibility_dchi2.clear();
-  m_lineage_node_cms_smooth_identity_compatibility_logdet.clear();
-  m_lineage_node_cms_smooth_identity_compatibility_log_overlap.clear();
-  m_lineage_node_cms_smooth_local_dchi2.clear();
-  m_lineage_node_cms_smooth_local_logdet_innovation.clear();
-  m_lineage_node_cms_smooth_local_log_likelihood.clear();
-  m_lineage_node_cms_smooth_log_evidence.clear();
-  m_lineage_node_cms_smooth_log_weight_with_prior.clear();
-  m_lineage_node_cms_smooth_normalized_evidence.clear();
-  m_lineage_node_cms_smooth_normalized_weight_with_prior.clear();
   m_lineage_edge_input_track_index.clear();
   m_lineage_edge_output_track_index.clear();
   m_lineage_edge_from_node_id.clear();
@@ -681,62 +583,8 @@ StatusCode RecGsfFlatTuple::execute() {
     const auto* nodeDominantLineageFraction =
         m_inLineageNodeDominantLineageFraction.get();
     const auto* nodeMergeCost = m_inLineageNodeMergeCost.get();
-    const auto* nodeCmsSmoothValid =
-        m_inLineageNodeCmsSmoothValid.get();
-    const auto* nodeCmsSmoothForwardPredictedKappa =
-        m_inLineageNodeCmsSmoothForwardPredictedKappa.get();
-    const auto* nodeCmsSmoothForwardPredictedKappaVariance =
-        m_inLineageNodeCmsSmoothForwardPredictedKappaVariance.get();
-    const auto* nodeCmsSmoothForwardUpdatedKappa =
-        m_inLineageNodeCmsSmoothForwardUpdatedKappa.get();
-    const auto* nodeCmsSmoothForwardUpdatedKappaVariance =
-        m_inLineageNodeCmsSmoothForwardUpdatedKappaVariance.get();
-    const auto* nodeCmsSmoothAllOtherKappa =
-        m_inLineageNodeCmsSmoothAllOtherKappa.get();
-    const auto* nodeCmsSmoothAllOtherKappaVariance =
-        m_inLineageNodeCmsSmoothAllOtherKappaVariance.get();
-    const auto* nodeCmsSmoothAllHitKappa =
-        m_inLineageNodeCmsSmoothAllHitKappa.get();
-    const auto* nodeCmsSmoothAllHitKappaVariance =
-        m_inLineageNodeCmsSmoothAllHitKappaVariance.get();
-    const auto* nodeCmsSmoothAllOtherLogOverlap =
-        m_inLineageNodeCmsSmoothAllOtherLogOverlap.get();
-    const auto* nodeCmsSmoothAllHitCompatibilityDChi2 =
-        m_inLineageNodeCmsSmoothAllHitCompatibilityDChi2.get();
-    const auto* nodeCmsSmoothAllHitCompatibilityLogDet =
-        m_inLineageNodeCmsSmoothAllHitCompatibilityLogDet.get();
-    const auto* nodeCmsSmoothAllHitLogOverlap =
-        m_inLineageNodeCmsSmoothAllHitLogOverlap.get();
-    const auto* nodeCmsSmoothIdentityCompatibilityValid =
-        m_inLineageNodeCmsSmoothIdentityCompatibilityValid.get();
-    const auto* nodeCmsSmoothForwardIdentityNodeId =
-        m_inLineageNodeCmsSmoothForwardIdentityNodeId.get();
-    const auto* nodeCmsSmoothForwardIdentityWeight =
-        m_inLineageNodeCmsSmoothForwardIdentityWeight.get();
-    const auto* nodeCmsSmoothForwardIdentityUpdatedKappa =
-        m_inLineageNodeCmsSmoothForwardIdentityUpdatedKappa.get();
-    const auto* nodeCmsSmoothForwardIdentityUpdatedKappaVariance =
-        m_inLineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance.get();
     const auto* nodeCmsSmoothIdentityCompatibilityDChi2 =
         m_inLineageNodeCmsSmoothIdentityCompatibilityDChi2.get();
-    const auto* nodeCmsSmoothIdentityCompatibilityLogDet =
-        m_inLineageNodeCmsSmoothIdentityCompatibilityLogDet.get();
-    const auto* nodeCmsSmoothIdentityCompatibilityLogOverlap =
-        m_inLineageNodeCmsSmoothIdentityCompatibilityLogOverlap.get();
-    const auto* nodeCmsSmoothLocalDChi2 =
-        m_inLineageNodeCmsSmoothLocalDChi2.get();
-    const auto* nodeCmsSmoothLocalLogDetInnovation =
-        m_inLineageNodeCmsSmoothLocalLogDetInnovation.get();
-    const auto* nodeCmsSmoothLocalLogLikelihood =
-        m_inLineageNodeCmsSmoothLocalLogLikelihood.get();
-    const auto* nodeCmsSmoothLogEvidence =
-        m_inLineageNodeCmsSmoothLogEvidence.get();
-    const auto* nodeCmsSmoothLogWeightWithPrior =
-        m_inLineageNodeCmsSmoothLogWeightWithPrior.get();
-    const auto* nodeCmsSmoothNormalizedEvidence =
-        m_inLineageNodeCmsSmoothNormalizedEvidence.get();
-    const auto* nodeCmsSmoothNormalizedWeightWithPrior =
-        m_inLineageNodeCmsSmoothNormalizedWeightWithPrior.get();
     const std::size_t nodeCount = nodeIds ? nodeIds->size() : 0;
     auto nodeSizeIsConsistent = [nodeCount](const auto* collection) {
       return collection && collection->size() == nodeCount;
@@ -772,35 +620,7 @@ StatusCode RecGsfFlatTuple::execute() {
         nodeSizeIsConsistent(nodeFilteredKappaVariance) &&
         nodeSizeIsConsistent(nodeDominantLineageFraction) &&
         nodeSizeIsConsistent(nodeMergeCost) &&
-        nodeSizeIsConsistent(nodeCmsSmoothValid) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardPredictedKappa) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardPredictedKappaVariance) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardUpdatedKappa) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardUpdatedKappaVariance) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllOtherKappa) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllOtherKappaVariance) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllHitKappa) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllHitKappaVariance) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllOtherLogOverlap) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllHitCompatibilityDChi2) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllHitCompatibilityLogDet) &&
-        nodeSizeIsConsistent(nodeCmsSmoothAllHitLogOverlap) &&
-        nodeSizeIsConsistent(nodeCmsSmoothIdentityCompatibilityValid) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardIdentityNodeId) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardIdentityWeight) &&
-        nodeSizeIsConsistent(nodeCmsSmoothForwardIdentityUpdatedKappa) &&
-        nodeSizeIsConsistent(
-            nodeCmsSmoothForwardIdentityUpdatedKappaVariance) &&
-        nodeSizeIsConsistent(nodeCmsSmoothIdentityCompatibilityDChi2) &&
-        nodeSizeIsConsistent(nodeCmsSmoothIdentityCompatibilityLogDet) &&
-        nodeSizeIsConsistent(nodeCmsSmoothIdentityCompatibilityLogOverlap) &&
-        nodeSizeIsConsistent(nodeCmsSmoothLocalDChi2) &&
-        nodeSizeIsConsistent(nodeCmsSmoothLocalLogDetInnovation) &&
-        nodeSizeIsConsistent(nodeCmsSmoothLocalLogLikelihood) &&
-        nodeSizeIsConsistent(nodeCmsSmoothLogEvidence) &&
-        nodeSizeIsConsistent(nodeCmsSmoothLogWeightWithPrior) &&
-        nodeSizeIsConsistent(nodeCmsSmoothNormalizedEvidence) &&
-        nodeSizeIsConsistent(nodeCmsSmoothNormalizedWeightWithPrior);
+        nodeSizeIsConsistent(nodeCmsSmoothIdentityCompatibilityDChi2);
 
     const auto* edgeInputTrackIndices =
         m_inLineageEdgeInputTrackIndex.get();
@@ -886,98 +706,14 @@ StatusCode RecGsfFlatTuple::execute() {
           nodeDominantLineageFraction->end());
       m_lineage_node_merge_cost.assign(
           nodeMergeCost->begin(), nodeMergeCost->end());
-      m_lineage_node_cms_smooth_valid.assign(
-          nodeCmsSmoothValid->begin(), nodeCmsSmoothValid->end());
-      m_lineage_node_cms_smooth_forward_predicted_kappa.assign(
-          nodeCmsSmoothForwardPredictedKappa->begin(),
-          nodeCmsSmoothForwardPredictedKappa->end());
-      m_lineage_node_cms_smooth_forward_predicted_kappa_variance.assign(
-          nodeCmsSmoothForwardPredictedKappaVariance->begin(),
-          nodeCmsSmoothForwardPredictedKappaVariance->end());
-      m_lineage_node_cms_smooth_forward_updated_kappa.assign(
-          nodeCmsSmoothForwardUpdatedKappa->begin(),
-          nodeCmsSmoothForwardUpdatedKappa->end());
-      m_lineage_node_cms_smooth_forward_updated_kappa_variance.assign(
-          nodeCmsSmoothForwardUpdatedKappaVariance->begin(),
-          nodeCmsSmoothForwardUpdatedKappaVariance->end());
-      m_lineage_node_cms_smooth_all_other_kappa.assign(
-          nodeCmsSmoothAllOtherKappa->begin(),
-          nodeCmsSmoothAllOtherKappa->end());
-      m_lineage_node_cms_smooth_all_other_kappa_variance.assign(
-          nodeCmsSmoothAllOtherKappaVariance->begin(),
-          nodeCmsSmoothAllOtherKappaVariance->end());
-      m_lineage_node_cms_smooth_all_hit_kappa.assign(
-          nodeCmsSmoothAllHitKappa->begin(),
-          nodeCmsSmoothAllHitKappa->end());
-      m_lineage_node_cms_smooth_all_hit_kappa_variance.assign(
-          nodeCmsSmoothAllHitKappaVariance->begin(),
-          nodeCmsSmoothAllHitKappaVariance->end());
-      m_lineage_node_cms_smooth_all_other_log_overlap.assign(
-          nodeCmsSmoothAllOtherLogOverlap->begin(),
-          nodeCmsSmoothAllOtherLogOverlap->end());
-      m_lineage_node_cms_smooth_all_hit_compatibility_dchi2.assign(
-          nodeCmsSmoothAllHitCompatibilityDChi2->begin(),
-          nodeCmsSmoothAllHitCompatibilityDChi2->end());
-      m_lineage_node_cms_smooth_all_hit_compatibility_logdet.assign(
-          nodeCmsSmoothAllHitCompatibilityLogDet->begin(),
-          nodeCmsSmoothAllHitCompatibilityLogDet->end());
-      m_lineage_node_cms_smooth_all_hit_log_overlap.assign(
-          nodeCmsSmoothAllHitLogOverlap->begin(),
-          nodeCmsSmoothAllHitLogOverlap->end());
-      m_lineage_node_cms_smooth_identity_compatibility_valid.assign(
-          nodeCmsSmoothIdentityCompatibilityValid->begin(),
-          nodeCmsSmoothIdentityCompatibilityValid->end());
-      m_lineage_node_cms_smooth_forward_identity_node_id.assign(
-          nodeCmsSmoothForwardIdentityNodeId->begin(),
-          nodeCmsSmoothForwardIdentityNodeId->end());
-      m_lineage_node_cms_smooth_forward_identity_weight.assign(
-          nodeCmsSmoothForwardIdentityWeight->begin(),
-          nodeCmsSmoothForwardIdentityWeight->end());
-      m_lineage_node_cms_smooth_forward_identity_updated_kappa.assign(
-          nodeCmsSmoothForwardIdentityUpdatedKappa->begin(),
-          nodeCmsSmoothForwardIdentityUpdatedKappa->end());
-      m_lineage_node_cms_smooth_forward_identity_updated_kappa_variance.assign(
-          nodeCmsSmoothForwardIdentityUpdatedKappaVariance->begin(),
-          nodeCmsSmoothForwardIdentityUpdatedKappaVariance->end());
       m_lineage_node_cms_smooth_identity_compatibility_dchi2.assign(
           nodeCmsSmoothIdentityCompatibilityDChi2->begin(),
           nodeCmsSmoothIdentityCompatibilityDChi2->end());
-      m_lineage_node_cms_smooth_identity_compatibility_logdet.assign(
-          nodeCmsSmoothIdentityCompatibilityLogDet->begin(),
-          nodeCmsSmoothIdentityCompatibilityLogDet->end());
-      m_lineage_node_cms_smooth_identity_compatibility_log_overlap.assign(
-          nodeCmsSmoothIdentityCompatibilityLogOverlap->begin(),
-          nodeCmsSmoothIdentityCompatibilityLogOverlap->end());
-      m_lineage_node_cms_smooth_local_dchi2.assign(
-          nodeCmsSmoothLocalDChi2->begin(),
-          nodeCmsSmoothLocalDChi2->end());
-      m_lineage_node_cms_smooth_local_logdet_innovation.assign(
-          nodeCmsSmoothLocalLogDetInnovation->begin(),
-          nodeCmsSmoothLocalLogDetInnovation->end());
-      m_lineage_node_cms_smooth_local_log_likelihood.assign(
-          nodeCmsSmoothLocalLogLikelihood->begin(),
-          nodeCmsSmoothLocalLogLikelihood->end());
-      m_lineage_node_cms_smooth_log_evidence.assign(
-          nodeCmsSmoothLogEvidence->begin(),
-          nodeCmsSmoothLogEvidence->end());
-      m_lineage_node_cms_smooth_log_weight_with_prior.assign(
-          nodeCmsSmoothLogWeightWithPrior->begin(),
-          nodeCmsSmoothLogWeightWithPrior->end());
-      m_lineage_node_cms_smooth_normalized_evidence.assign(
-          nodeCmsSmoothNormalizedEvidence->begin(),
-          nodeCmsSmoothNormalizedEvidence->end());
-      m_lineage_node_cms_smooth_normalized_weight_with_prior.assign(
-          nodeCmsSmoothNormalizedWeightWithPrior->begin(),
-          nodeCmsSmoothNormalizedWeightWithPrior->end());
       m_lineage_node_predicted_pT.reserve(nodeCount);
       m_lineage_node_filtered_pT.reserve(nodeCount);
-      m_lineage_node_cms_smooth_all_other_pT.reserve(nodeCount);
-      m_lineage_node_cms_smooth_all_hit_pT.reserve(nodeCount);
       for (std::size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex) {
         const double predictedKappa = (*nodePredictedKappa)[nodeIndex];
         const double filteredKappa = (*nodeFilteredKappa)[nodeIndex];
-        const double allOtherKappa = (*nodeCmsSmoothAllOtherKappa)[nodeIndex];
-        const double allHitKappa = (*nodeCmsSmoothAllHitKappa)[nodeIndex];
         m_lineage_node_predicted_pT.push_back(
             std::isfinite(predictedKappa) &&
                     std::abs(predictedKappa) > 1.0e-15
@@ -987,16 +723,6 @@ StatusCode RecGsfFlatTuple::execute() {
             std::isfinite(filteredKappa) &&
                     std::abs(filteredKappa) > 1.0e-15
                 ? 1.0 / std::abs(filteredKappa)
-                : std::numeric_limits<double>::quiet_NaN());
-        m_lineage_node_cms_smooth_all_other_pT.push_back(
-            std::isfinite(allOtherKappa) &&
-                    std::abs(allOtherKappa) > 1.0e-15
-                ? 1.0 / std::abs(allOtherKappa)
-                : std::numeric_limits<double>::quiet_NaN());
-        m_lineage_node_cms_smooth_all_hit_pT.push_back(
-            std::isfinite(allHitKappa) &&
-                    std::abs(allHitKappa) > 1.0e-15
-                ? 1.0 / std::abs(allHitKappa)
                 : std::numeric_limits<double>::quiet_NaN());
       }
       m_lineage_edge_input_track_index.assign(

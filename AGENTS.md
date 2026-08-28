@@ -45,14 +45,15 @@ directed acyclic graphs, and the graph never steers the fit. Its base schema
 and reverse gates are in
 `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`; the CMS-like
 extension is in
-`agents_record/2026-08-27-cms-like-component-lineage.md`. Its
-accepted interior CMS-like backward measurement nodes now also carry a
-default-on passive per-layer smoothing diagnostic: moment-matched forward
-prediction/update messages, all-other/all-hit states, an accepted-update-
-anchored local chi-square and innovation likelihood, and normalized scores
-with and without the inherited backward prior. These values never steer the
-fit; their contract and focused gate are in
-`agents_record/2026-08-27-cms-like-per-layer-smoothing-diagnostic.md`. Its
+`agents_record/2026-08-27-cms-like-component-lineage.md`. Accepted interior
+CMS-like backward measurement nodes now retain only one CMS-specific passive
+score: the full-state compatibility chi-square between each backward-predicted
+candidate and the same surviving forward-updated identity state. The ordinary
+`lineage_node_dchi2` on that node remains the reverse-style backward-
+prediction-versus-measurement chi-square. Neither score steers the fit; the
+removed broader diagnostic schema remains historical evidence in the 2026-08-27
+records, and the live simplification is recorded in
+`agents_record/2026-08-28-cms-identity-chi2-schema-simplification.md`. Its
 component measurement updates use the baseline-compatible
 MarlinTrk `initialise -> addAndFit` path, exact accepted innovation quantities,
 full Gaussian innovation likelihoods, and exact accepted inter-surface

@@ -158,116 +158,9 @@ private:
           Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>> m_inLineageNodeMergeCost{
       "GSFLineageNodeMergeCost", Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>>
-      m_inLineageNodeCmsSmoothValid{
-          "GSFLineageNodeCmsSmoothValid", Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardPredictedKappa{
-          "GSFLineageNodeCmsSmoothForwardPredictedKappa",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardPredictedKappaVariance{
-          "GSFLineageNodeCmsSmoothForwardPredictedKappaVariance",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardUpdatedKappa{
-          "GSFLineageNodeCmsSmoothForwardUpdatedKappa",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardUpdatedKappaVariance{
-          "GSFLineageNodeCmsSmoothForwardUpdatedKappaVariance",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllOtherKappa{
-          "GSFLineageNodeCmsSmoothAllOtherKappa",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllOtherKappaVariance{
-          "GSFLineageNodeCmsSmoothAllOtherKappaVariance",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllHitKappa{
-          "GSFLineageNodeCmsSmoothAllHitKappa",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllHitKappaVariance{
-          "GSFLineageNodeCmsSmoothAllHitKappaVariance",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllOtherLogOverlap{
-          "GSFLineageNodeCmsSmoothAllOtherLogOverlap",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllHitCompatibilityDChi2{
-          "GSFLineageNodeCmsSmoothAllHitCompatibilityDChi2",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllHitCompatibilityLogDet{
-          "GSFLineageNodeCmsSmoothAllHitCompatibilityLogDet",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothAllHitLogOverlap{
-          "GSFLineageNodeCmsSmoothAllHitLogOverlap",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>>
-      m_inLineageNodeCmsSmoothIdentityCompatibilityValid{
-          "GSFLineageNodeCmsSmoothIdentityCompatibilityValid",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>>
-      m_inLineageNodeCmsSmoothForwardIdentityNodeId{
-          "GSFLineageNodeCmsSmoothForwardIdentityNodeId",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardIdentityWeight{
-          "GSFLineageNodeCmsSmoothForwardIdentityWeight",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardIdentityUpdatedKappa{
-          "GSFLineageNodeCmsSmoothForwardIdentityUpdatedKappa",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance{
-          "GSFLineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance",
-          Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>>
       m_inLineageNodeCmsSmoothIdentityCompatibilityDChi2{
           "GSFLineageNodeCmsSmoothIdentityCompatibilityDChi2",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothIdentityCompatibilityLogDet{
-          "GSFLineageNodeCmsSmoothIdentityCompatibilityLogDet",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothIdentityCompatibilityLogOverlap{
-          "GSFLineageNodeCmsSmoothIdentityCompatibilityLogOverlap",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothLocalDChi2{
-          "GSFLineageNodeCmsSmoothLocalDChi2",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothLocalLogDetInnovation{
-          "GSFLineageNodeCmsSmoothLocalLogDetInnovation",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothLocalLogLikelihood{
-          "GSFLineageNodeCmsSmoothLocalLogLikelihood",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothLogEvidence{
-          "GSFLineageNodeCmsSmoothLogEvidence",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothLogWeightWithPrior{
-          "GSFLineageNodeCmsSmoothLogWeightWithPrior",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothNormalizedEvidence{
-          "GSFLineageNodeCmsSmoothNormalizedEvidence",
-          Gaudi::DataHandle::Reader, this};
-  DataHandle<podio::UserDataCollection<double>>
-      m_inLineageNodeCmsSmoothNormalizedWeightWithPrior{
-          "GSFLineageNodeCmsSmoothNormalizedWeightWithPrior",
           Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_inLineageEdgeInputTrackIndex{
@@ -408,49 +301,8 @@ private:
   std::vector<double> m_lineage_node_filtered_pT;
   std::vector<double> m_lineage_node_dominant_lineage_fraction;
   std::vector<double> m_lineage_node_merge_cost;
-  std::vector<int> m_lineage_node_cms_smooth_valid;
-  std::vector<double> m_lineage_node_cms_smooth_forward_predicted_kappa;
-  std::vector<double>
-      m_lineage_node_cms_smooth_forward_predicted_kappa_variance;
-  std::vector<double> m_lineage_node_cms_smooth_forward_updated_kappa;
-  std::vector<double>
-      m_lineage_node_cms_smooth_forward_updated_kappa_variance;
-  std::vector<double> m_lineage_node_cms_smooth_all_other_kappa;
-  std::vector<double> m_lineage_node_cms_smooth_all_other_kappa_variance;
-  std::vector<double> m_lineage_node_cms_smooth_all_other_pT;
-  std::vector<double> m_lineage_node_cms_smooth_all_hit_kappa;
-  std::vector<double> m_lineage_node_cms_smooth_all_hit_kappa_variance;
-  std::vector<double> m_lineage_node_cms_smooth_all_hit_pT;
-  std::vector<double> m_lineage_node_cms_smooth_all_other_log_overlap;
-  std::vector<double>
-      m_lineage_node_cms_smooth_all_hit_compatibility_dchi2;
-  std::vector<double>
-      m_lineage_node_cms_smooth_all_hit_compatibility_logdet;
-  std::vector<double> m_lineage_node_cms_smooth_all_hit_log_overlap;
-  std::vector<int>
-      m_lineage_node_cms_smooth_identity_compatibility_valid;
-  std::vector<int>
-      m_lineage_node_cms_smooth_forward_identity_node_id;
-  std::vector<double>
-      m_lineage_node_cms_smooth_forward_identity_weight;
-  std::vector<double>
-      m_lineage_node_cms_smooth_forward_identity_updated_kappa;
-  std::vector<double>
-      m_lineage_node_cms_smooth_forward_identity_updated_kappa_variance;
   std::vector<double>
       m_lineage_node_cms_smooth_identity_compatibility_dchi2;
-  std::vector<double>
-      m_lineage_node_cms_smooth_identity_compatibility_logdet;
-  std::vector<double>
-      m_lineage_node_cms_smooth_identity_compatibility_log_overlap;
-  std::vector<double> m_lineage_node_cms_smooth_local_dchi2;
-  std::vector<double> m_lineage_node_cms_smooth_local_logdet_innovation;
-  std::vector<double> m_lineage_node_cms_smooth_local_log_likelihood;
-  std::vector<double> m_lineage_node_cms_smooth_log_evidence;
-  std::vector<double> m_lineage_node_cms_smooth_log_weight_with_prior;
-  std::vector<double> m_lineage_node_cms_smooth_normalized_evidence;
-  std::vector<double>
-      m_lineage_node_cms_smooth_normalized_weight_with_prior;
   int m_lineage_edge_n = 0;
   std::vector<int> m_lineage_edge_input_track_index;
   std::vector<int> m_lineage_edge_output_track_index;

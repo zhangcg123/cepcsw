@@ -347,21 +347,6 @@ static TMatrixD updateVector5(const MarlinTrk::MeasurementUpdate::Matrix& source
   return result;
 }
 
-static TMatrixD updateMatrixDynamic(
-    const MarlinTrk::MeasurementUpdate::Matrix& source) {
-  TMatrixD result(std::max(0, source.rows), std::max(0, source.cols));
-  result.Zero();
-  if (source.rows <= 0 || source.cols <= 0 ||
-      source.values.size() <
-          static_cast<size_t>(source.rows * source.cols)) {
-    return result;
-  }
-  for (int row = 0; row < source.rows; ++row)
-    for (int column = 0; column < source.cols; ++column)
-      result(row, column) = source.values[row * source.cols + column];
-  return result;
-}
-
 static void trackStateToKalTest5(const edm4hep::TrackState& ts, double bz,
                                  TMatrixD& mean, TMatrixD& covariance) {
   const double alpha = bz * 2.99792458e-4;
@@ -475,69 +460,12 @@ struct GaussianMomentState {
   TMatrixD covariance{5, 5};
 };
 
-struct CmsMeasurementLinearization {
-  bool valid = false;
-  TMatrixD referencePredictedMean{5, 1};
-  TMatrixD referencePredictedCovariance{5, 5};
-  TMatrixD residual{1, 1};
-  TMatrixD projector{1, 5};
-  TMatrixD measurementCovariance{1, 1};
-  TMatrixD referenceInnovationCovariance{1, 1};
-  double referenceDChi2 = std::numeric_limits<double>::quiet_NaN();
-  double referenceLogDetInnovation =
-      std::numeric_limits<double>::quiet_NaN();
-};
-
 struct CmsGaussianComponentState {
   double weight = 0.0;
   int componentId = -1;
   int lineageNodeId = -1;
   bool noRadiationLineage = false;
   GaussianMomentState state;
-  CmsMeasurementLinearization measurement;
-};
-
-struct CmsPerLayerSmoothingDiagnostic {
-  int lineageNodeId = -1;
-  bool valid = false;
-  double forwardPredictedKappa = std::numeric_limits<double>::quiet_NaN();
-  double forwardPredictedKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double forwardUpdatedKappa = std::numeric_limits<double>::quiet_NaN();
-  double forwardUpdatedKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double allOtherKappa = std::numeric_limits<double>::quiet_NaN();
-  double allOtherKappaVariance = std::numeric_limits<double>::quiet_NaN();
-  double allHitKappa = std::numeric_limits<double>::quiet_NaN();
-  double allHitKappaVariance = std::numeric_limits<double>::quiet_NaN();
-  double allOtherLogOverlap = std::numeric_limits<double>::quiet_NaN();
-  double allHitCompatibilityDChi2 =
-      std::numeric_limits<double>::quiet_NaN();
-  double allHitCompatibilityLogDet =
-      std::numeric_limits<double>::quiet_NaN();
-  double allHitLogOverlap = std::numeric_limits<double>::quiet_NaN();
-  bool identityCompatibilityValid = false;
-  int forwardIdentityNodeId = -1;
-  double forwardIdentityWeight =
-      std::numeric_limits<double>::quiet_NaN();
-  double forwardIdentityUpdatedKappa =
-      std::numeric_limits<double>::quiet_NaN();
-  double forwardIdentityUpdatedKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double identityCompatibilityDChi2 =
-      std::numeric_limits<double>::quiet_NaN();
-  double identityCompatibilityLogDet =
-      std::numeric_limits<double>::quiet_NaN();
-  double identityCompatibilityLogOverlap =
-      std::numeric_limits<double>::quiet_NaN();
-  double localDChi2 = std::numeric_limits<double>::quiet_NaN();
-  double localLogDetInnovation = std::numeric_limits<double>::quiet_NaN();
-  double localLogLikelihood = std::numeric_limits<double>::quiet_NaN();
-  double logEvidence = std::numeric_limits<double>::quiet_NaN();
-  double logWeightWithPrior = std::numeric_limits<double>::quiet_NaN();
-  double normalizedEvidence = std::numeric_limits<double>::quiet_NaN();
-  double normalizedWeightWithPrior =
-      std::numeric_limits<double>::quiet_NaN();
 };
 
 static void accumulateGaussian(GaussianAccumulator& accumulator,
@@ -575,84 +503,7 @@ static bool finishGaussian(const GaussianAccumulator& accumulator,
   return true;
 }
 
-static GaussianMomentState finishGaussianState(
-    const GaussianAccumulator& accumulator) {
-  GaussianMomentState result;
-  result.valid = finishGaussian(
-      accumulator, result.mean, result.covariance) &&
-      std::isfinite(result.mean(2, 0)) &&
-      std::isfinite(result.covariance(2, 2));
-  return result;
-}
-
-static GaussianMomentState momentMatchComponents(
-    const std::vector<GsfComponent*>& components, double bz) {
-  GaussianAccumulator accumulator;
-  for (const auto* component : components) {
-    if (!component) continue;
-    TMatrixD mean(5, 1);
-    component->helixAtLastSite(bz).PutInto(mean);
-    accumulateGaussian(accumulator, component->weight, mean,
-                       component->covAtLastSite(bz));
-  }
-  return finishGaussianState(accumulator);
-}
-
 static bool finiteMatrix(const TMatrixD& matrix);
-
-static bool captureCmsMeasurementLinearization(
-    const MarlinTrk::MeasurementUpdate& update, double dchi2,
-    CmsMeasurementLinearization& result) {
-  const int dimension = update.residual.rows;
-  if (!update.valid || dimension <= 0 || update.residual.cols != 1 ||
-      update.projector.rows != dimension || update.projector.cols < 5 ||
-      update.measurementCovariance.rows != dimension ||
-      update.measurementCovariance.cols != dimension ||
-      update.innovationCovariance.rows != dimension ||
-      update.innovationCovariance.cols != dimension ||
-      update.predictedState.rows < 5 || update.predictedState.cols != 1 ||
-      update.predictedCovariance.rows < 5 ||
-      update.predictedCovariance.cols < 5) {
-    return false;
-  }
-  result.referencePredictedMean = updateVector5(update.predictedState);
-  result.referencePredictedCovariance =
-      updateMatrix5(update.predictedCovariance);
-  const TMatrixD residual = updateMatrixDynamic(update.residual);
-  result.residual.ResizeTo(residual);
-  result.residual = residual;
-  const TMatrixD projector = updateMatrixDynamic(update.projector);
-  result.projector.ResizeTo(projector);
-  result.projector = projector;
-  if (result.projector.GetNcols() > 5) {
-    TMatrixD firstFive(dimension, 5);
-    for (int row = 0; row < dimension; ++row)
-      for (int column = 0; column < 5; ++column)
-        firstFive(row, column) = result.projector(row, column);
-    result.projector.ResizeTo(firstFive);
-    result.projector = firstFive;
-  }
-  const TMatrixD measurementCovariance =
-      updateMatrixDynamic(update.measurementCovariance);
-  result.measurementCovariance.ResizeTo(measurementCovariance);
-  result.measurementCovariance = measurementCovariance;
-  const TMatrixD referenceInnovationCovariance =
-      updateMatrixDynamic(update.innovationCovariance);
-  result.referenceInnovationCovariance.ResizeTo(
-      referenceInnovationCovariance);
-  result.referenceInnovationCovariance =
-      referenceInnovationCovariance;
-  result.referenceDChi2 = dchi2;
-  result.referenceLogDetInnovation = update.logDetInnovation;
-  result.valid = std::isfinite(dchi2) &&
-      std::isfinite(update.logDetInnovation) &&
-      finiteMatrix(result.referencePredictedMean) &&
-      finiteMatrix(result.referencePredictedCovariance) &&
-      finiteMatrix(result.residual) && finiteMatrix(result.projector) &&
-      finiteMatrix(result.measurementCovariance) &&
-      finiteMatrix(result.referenceInnovationCovariance);
-  return result.valid;
-}
 
 static bool combineCmsMoments(const GaussianMomentState& forwardUpdated,
                               const GaussianMomentState& backwardPredicted,
@@ -1230,82 +1081,6 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
   return finiteMatrix(inverse);
 }
 
-static bool evaluateCmsSmoothedMeasurement(
-    const GaussianMomentState& state,
-    const CmsMeasurementLinearization& measurement,
-    double& dchi2, double& logDetInnovation,
-    double& logLikelihood) {
-  if (!state.valid || !measurement.valid ||
-      measurement.projector.GetNcols() != 5 ||
-      measurement.referencePredictedMean.GetNrows() != 5 ||
-      state.mean.GetNrows() != 5 || state.mean.GetNcols() != 1 ||
-      state.covariance.GetNrows() != 5 ||
-      state.covariance.GetNcols() != 5) {
-    return false;
-  }
-  const int dimension = measurement.projector.GetNrows();
-  if (dimension <= 0 || measurement.residual.GetNrows() != dimension ||
-      measurement.residual.GetNcols() != 1 ||
-      measurement.measurementCovariance.GetNrows() != dimension ||
-      measurement.measurementCovariance.GetNcols() != dimension ||
-      measurement.referenceInnovationCovariance.GetNrows() != dimension ||
-      measurement.referenceInnovationCovariance.GetNcols() != dimension ||
-      measurement.referencePredictedCovariance.GetNrows() != 5 ||
-      measurement.referencePredictedCovariance.GetNcols() != 5) {
-    return false;
-  }
-
-  TMatrixD stateDelta = state.mean - measurement.referencePredictedMean;
-  while (stateDelta(1, 0) >= M_PI) stateDelta(1, 0) -= 2.0 * M_PI;
-  while (stateDelta(1, 0) < -M_PI) stateDelta(1, 0) += 2.0 * M_PI;
-  const TMatrixD residual =
-      measurement.residual - measurement.projector * stateDelta;
-  TMatrixD projectorT(TMatrixD::kTransposed, measurement.projector);
-  const TMatrixD innovation = measurement.referenceInnovationCovariance +
-      measurement.projector *
-          (state.covariance - measurement.referencePredictedCovariance) *
-          projectorT;
-  auto gaussianScore = [&](const TMatrixD& scoreResidual,
-                           const TMatrixD& scoreInnovation,
-                           double& scoreDChi2,
-                           double& scoreLogDet) {
-    TMatrixD inverseInnovation = scoreInnovation;
-    double determinant = 0.0;
-    inverseInnovation.Invert(&determinant);
-    if (!(determinant > 0.0) || !std::isfinite(determinant) ||
-        !finiteMatrix(inverseInnovation)) return false;
-    scoreLogDet = std::log(determinant);
-    const TMatrixD scaledResidual = inverseInnovation * scoreResidual;
-    scoreDChi2 = 0.0;
-    for (int index = 0; index < dimension; ++index)
-      scoreDChi2 += scoreResidual(index, 0) * scaledResidual(index, 0);
-    return scoreDChi2 >= 0.0 && std::isfinite(scoreDChi2) &&
-        std::isfinite(scoreLogDet);
-  };
-
-  double rawDChi2 = 0.0;
-  double rawLogDet = 0.0;
-  double rawReferenceDChi2 = 0.0;
-  double rawReferenceLogDet = 0.0;
-  if (!gaussianScore(residual, innovation, rawDChi2, rawLogDet) ||
-      !gaussianScore(measurement.residual,
-                     measurement.referenceInnovationCovariance,
-                     rawReferenceDChi2, rawReferenceLogDet)) {
-    return false;
-  }
-  // KalTest's accepted GetDeltaChi2 is the convention used by the live
-  // component weights.  Preserve that exact reference and transport only the
-  // change of the linearized Gaussian score to the smoothed state.
-  dchi2 = measurement.referenceDChi2 + rawDChi2 - rawReferenceDChi2;
-  logDetInnovation = measurement.referenceLogDetInnovation +
-      rawLogDet - rawReferenceLogDet;
-  dchi2 = std::max(0.0, dchi2);
-  if (!std::isfinite(dchi2) || !std::isfinite(logDetInnovation)) return false;
-  logLikelihood = -0.5 *
-      (dimension * std::log(2.0 * M_PI) + logDetInnovation + dchi2);
-  return std::isfinite(logLikelihood);
-}
-
 enum class FinalMixtureComponentSource : std::int32_t {
   GaussianSumSmoother = 1,
   ReverseFiltering = 2,
@@ -1379,58 +1154,7 @@ struct LineageNodeRecord {
   double dominantLineageFraction =
       std::numeric_limits<double>::quiet_NaN();
   double mergeCost = std::numeric_limits<double>::quiet_NaN();
-  std::int32_t cmsSmoothValid = 0;
-  double cmsSmoothForwardPredictedKappa =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothForwardPredictedKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothForwardUpdatedKappa =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothForwardUpdatedKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllOtherKappa =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllOtherKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllHitKappa =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllHitKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllOtherLogOverlap =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllHitCompatibilityDChi2 =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllHitCompatibilityLogDet =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothAllHitLogOverlap =
-      std::numeric_limits<double>::quiet_NaN();
-  std::int32_t cmsSmoothIdentityCompatibilityValid = 0;
-  std::int32_t cmsSmoothForwardIdentityNodeId = -1;
-  double cmsSmoothForwardIdentityWeight =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothForwardIdentityUpdatedKappa =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothForwardIdentityUpdatedKappaVariance =
-      std::numeric_limits<double>::quiet_NaN();
   double cmsSmoothIdentityCompatibilityDChi2 =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothIdentityCompatibilityLogDet =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothIdentityCompatibilityLogOverlap =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothLocalDChi2 =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothLocalLogDetInnovation =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothLocalLogLikelihood =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothLogEvidence =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothLogWeightWithPrior =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothNormalizedEvidence =
-      std::numeric_limits<double>::quiet_NaN();
-  double cmsSmoothNormalizedWeightWithPrior =
       std::numeric_limits<double>::quiet_NaN();
 };
 
@@ -1551,55 +1275,10 @@ public:
       m_nodes[static_cast<std::size_t>(nodeId)].weight = weight;
   }
 
-  void setCmsPerLayerSmoothing(
-      const CmsPerLayerSmoothingDiagnostic& diagnostic) {
-    if (!validNode(diagnostic.lineageNodeId)) return;
-    auto& node =
-        m_nodes[static_cast<std::size_t>(diagnostic.lineageNodeId)];
-    node.cmsSmoothValid = diagnostic.valid ? 1 : 0;
-    node.cmsSmoothForwardPredictedKappa =
-        diagnostic.forwardPredictedKappa;
-    node.cmsSmoothForwardPredictedKappaVariance =
-        diagnostic.forwardPredictedKappaVariance;
-    node.cmsSmoothForwardUpdatedKappa = diagnostic.forwardUpdatedKappa;
-    node.cmsSmoothForwardUpdatedKappaVariance =
-        diagnostic.forwardUpdatedKappaVariance;
-    node.cmsSmoothAllOtherKappa = diagnostic.allOtherKappa;
-    node.cmsSmoothAllOtherKappaVariance =
-        diagnostic.allOtherKappaVariance;
-    node.cmsSmoothAllHitKappa = diagnostic.allHitKappa;
-    node.cmsSmoothAllHitKappaVariance = diagnostic.allHitKappaVariance;
-    node.cmsSmoothAllOtherLogOverlap = diagnostic.allOtherLogOverlap;
-    node.cmsSmoothAllHitCompatibilityDChi2 =
-        diagnostic.allHitCompatibilityDChi2;
-    node.cmsSmoothAllHitCompatibilityLogDet =
-        diagnostic.allHitCompatibilityLogDet;
-    node.cmsSmoothAllHitLogOverlap = diagnostic.allHitLogOverlap;
-    node.cmsSmoothIdentityCompatibilityValid =
-        diagnostic.identityCompatibilityValid ? 1 : 0;
-    node.cmsSmoothForwardIdentityNodeId =
-        diagnostic.forwardIdentityNodeId;
-    node.cmsSmoothForwardIdentityWeight =
-        diagnostic.forwardIdentityWeight;
-    node.cmsSmoothForwardIdentityUpdatedKappa =
-        diagnostic.forwardIdentityUpdatedKappa;
-    node.cmsSmoothForwardIdentityUpdatedKappaVariance =
-        diagnostic.forwardIdentityUpdatedKappaVariance;
-    node.cmsSmoothIdentityCompatibilityDChi2 =
-        diagnostic.identityCompatibilityDChi2;
-    node.cmsSmoothIdentityCompatibilityLogDet =
-        diagnostic.identityCompatibilityLogDet;
-    node.cmsSmoothIdentityCompatibilityLogOverlap =
-        diagnostic.identityCompatibilityLogOverlap;
-    node.cmsSmoothLocalDChi2 = diagnostic.localDChi2;
-    node.cmsSmoothLocalLogDetInnovation =
-        diagnostic.localLogDetInnovation;
-    node.cmsSmoothLocalLogLikelihood = diagnostic.localLogLikelihood;
-    node.cmsSmoothLogEvidence = diagnostic.logEvidence;
-    node.cmsSmoothLogWeightWithPrior = diagnostic.logWeightWithPrior;
-    node.cmsSmoothNormalizedEvidence = diagnostic.normalizedEvidence;
-    node.cmsSmoothNormalizedWeightWithPrior =
-        diagnostic.normalizedWeightWithPrior;
+  void setCmsIdentityCompatibilityDChi2(int nodeId, double dchi2) {
+    if (validNode(nodeId))
+      m_nodes[static_cast<std::size_t>(nodeId)]
+          .cmsSmoothIdentityCompatibilityDChi2 = dchi2;
   }
 
   void mark(int nodeId, LineageNodeFate fate) {
@@ -2800,62 +2479,8 @@ StatusCode RecGsfTracking::execute() {
   auto* lineageNodeDominantLineageFraction =
       m_lineageNodeDominantLineageFraction.createAndPut();
   auto* lineageNodeMergeCost = m_lineageNodeMergeCost.createAndPut();
-  auto* lineageNodeCmsSmoothValid =
-      m_lineageNodeCmsSmoothValid.createAndPut();
-  auto* lineageNodeCmsSmoothForwardPredictedKappa =
-      m_lineageNodeCmsSmoothForwardPredictedKappa.createAndPut();
-  auto* lineageNodeCmsSmoothForwardPredictedKappaVariance =
-      m_lineageNodeCmsSmoothForwardPredictedKappaVariance.createAndPut();
-  auto* lineageNodeCmsSmoothForwardUpdatedKappa =
-      m_lineageNodeCmsSmoothForwardUpdatedKappa.createAndPut();
-  auto* lineageNodeCmsSmoothForwardUpdatedKappaVariance =
-      m_lineageNodeCmsSmoothForwardUpdatedKappaVariance.createAndPut();
-  auto* lineageNodeCmsSmoothAllOtherKappa =
-      m_lineageNodeCmsSmoothAllOtherKappa.createAndPut();
-  auto* lineageNodeCmsSmoothAllOtherKappaVariance =
-      m_lineageNodeCmsSmoothAllOtherKappaVariance.createAndPut();
-  auto* lineageNodeCmsSmoothAllHitKappa =
-      m_lineageNodeCmsSmoothAllHitKappa.createAndPut();
-  auto* lineageNodeCmsSmoothAllHitKappaVariance =
-      m_lineageNodeCmsSmoothAllHitKappaVariance.createAndPut();
-  auto* lineageNodeCmsSmoothAllOtherLogOverlap =
-      m_lineageNodeCmsSmoothAllOtherLogOverlap.createAndPut();
-  auto* lineageNodeCmsSmoothAllHitCompatibilityDChi2 =
-      m_lineageNodeCmsSmoothAllHitCompatibilityDChi2.createAndPut();
-  auto* lineageNodeCmsSmoothAllHitCompatibilityLogDet =
-      m_lineageNodeCmsSmoothAllHitCompatibilityLogDet.createAndPut();
-  auto* lineageNodeCmsSmoothAllHitLogOverlap =
-      m_lineageNodeCmsSmoothAllHitLogOverlap.createAndPut();
-  auto* lineageNodeCmsSmoothIdentityCompatibilityValid =
-      m_lineageNodeCmsSmoothIdentityCompatibilityValid.createAndPut();
-  auto* lineageNodeCmsSmoothForwardIdentityNodeId =
-      m_lineageNodeCmsSmoothForwardIdentityNodeId.createAndPut();
-  auto* lineageNodeCmsSmoothForwardIdentityWeight =
-      m_lineageNodeCmsSmoothForwardIdentityWeight.createAndPut();
-  auto* lineageNodeCmsSmoothForwardIdentityUpdatedKappa =
-      m_lineageNodeCmsSmoothForwardIdentityUpdatedKappa.createAndPut();
-  auto* lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance =
-      m_lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance.createAndPut();
   auto* lineageNodeCmsSmoothIdentityCompatibilityDChi2 =
       m_lineageNodeCmsSmoothIdentityCompatibilityDChi2.createAndPut();
-  auto* lineageNodeCmsSmoothIdentityCompatibilityLogDet =
-      m_lineageNodeCmsSmoothIdentityCompatibilityLogDet.createAndPut();
-  auto* lineageNodeCmsSmoothIdentityCompatibilityLogOverlap =
-      m_lineageNodeCmsSmoothIdentityCompatibilityLogOverlap.createAndPut();
-  auto* lineageNodeCmsSmoothLocalDChi2 =
-      m_lineageNodeCmsSmoothLocalDChi2.createAndPut();
-  auto* lineageNodeCmsSmoothLocalLogDetInnovation =
-      m_lineageNodeCmsSmoothLocalLogDetInnovation.createAndPut();
-  auto* lineageNodeCmsSmoothLocalLogLikelihood =
-      m_lineageNodeCmsSmoothLocalLogLikelihood.createAndPut();
-  auto* lineageNodeCmsSmoothLogEvidence =
-      m_lineageNodeCmsSmoothLogEvidence.createAndPut();
-  auto* lineageNodeCmsSmoothLogWeightWithPrior =
-      m_lineageNodeCmsSmoothLogWeightWithPrior.createAndPut();
-  auto* lineageNodeCmsSmoothNormalizedEvidence =
-      m_lineageNodeCmsSmoothNormalizedEvidence.createAndPut();
-  auto* lineageNodeCmsSmoothNormalizedWeightWithPrior =
-      m_lineageNodeCmsSmoothNormalizedWeightWithPrior.createAndPut();
   auto* lineageEdgeInputTrackIndex =
       m_lineageEdgeInputTrackIndex.createAndPut();
   auto* lineageEdgeOutputTrackIndex =
@@ -2919,61 +2544,8 @@ StatusCode RecGsfTracking::execute() {
       lineageNodeDominantLineageFraction->push_back(
           node.dominantLineageFraction);
       lineageNodeMergeCost->push_back(node.mergeCost);
-      lineageNodeCmsSmoothValid->push_back(node.cmsSmoothValid);
-      lineageNodeCmsSmoothForwardPredictedKappa->push_back(
-          node.cmsSmoothForwardPredictedKappa);
-      lineageNodeCmsSmoothForwardPredictedKappaVariance->push_back(
-          node.cmsSmoothForwardPredictedKappaVariance);
-      lineageNodeCmsSmoothForwardUpdatedKappa->push_back(
-          node.cmsSmoothForwardUpdatedKappa);
-      lineageNodeCmsSmoothForwardUpdatedKappaVariance->push_back(
-          node.cmsSmoothForwardUpdatedKappaVariance);
-      lineageNodeCmsSmoothAllOtherKappa->push_back(
-          node.cmsSmoothAllOtherKappa);
-      lineageNodeCmsSmoothAllOtherKappaVariance->push_back(
-          node.cmsSmoothAllOtherKappaVariance);
-      lineageNodeCmsSmoothAllHitKappa->push_back(
-          node.cmsSmoothAllHitKappa);
-      lineageNodeCmsSmoothAllHitKappaVariance->push_back(
-          node.cmsSmoothAllHitKappaVariance);
-      lineageNodeCmsSmoothAllOtherLogOverlap->push_back(
-          node.cmsSmoothAllOtherLogOverlap);
-      lineageNodeCmsSmoothAllHitCompatibilityDChi2->push_back(
-          node.cmsSmoothAllHitCompatibilityDChi2);
-      lineageNodeCmsSmoothAllHitCompatibilityLogDet->push_back(
-          node.cmsSmoothAllHitCompatibilityLogDet);
-      lineageNodeCmsSmoothAllHitLogOverlap->push_back(
-          node.cmsSmoothAllHitLogOverlap);
-      lineageNodeCmsSmoothIdentityCompatibilityValid->push_back(
-          node.cmsSmoothIdentityCompatibilityValid);
-      lineageNodeCmsSmoothForwardIdentityNodeId->push_back(
-          node.cmsSmoothForwardIdentityNodeId);
-      lineageNodeCmsSmoothForwardIdentityWeight->push_back(
-          node.cmsSmoothForwardIdentityWeight);
-      lineageNodeCmsSmoothForwardIdentityUpdatedKappa->push_back(
-          node.cmsSmoothForwardIdentityUpdatedKappa);
-      lineageNodeCmsSmoothForwardIdentityUpdatedKappaVariance->push_back(
-          node.cmsSmoothForwardIdentityUpdatedKappaVariance);
       lineageNodeCmsSmoothIdentityCompatibilityDChi2->push_back(
           node.cmsSmoothIdentityCompatibilityDChi2);
-      lineageNodeCmsSmoothIdentityCompatibilityLogDet->push_back(
-          node.cmsSmoothIdentityCompatibilityLogDet);
-      lineageNodeCmsSmoothIdentityCompatibilityLogOverlap->push_back(
-          node.cmsSmoothIdentityCompatibilityLogOverlap);
-      lineageNodeCmsSmoothLocalDChi2->push_back(
-          node.cmsSmoothLocalDChi2);
-      lineageNodeCmsSmoothLocalLogDetInnovation->push_back(
-          node.cmsSmoothLocalLogDetInnovation);
-      lineageNodeCmsSmoothLocalLogLikelihood->push_back(
-          node.cmsSmoothLocalLogLikelihood);
-      lineageNodeCmsSmoothLogEvidence->push_back(
-          node.cmsSmoothLogEvidence);
-      lineageNodeCmsSmoothLogWeightWithPrior->push_back(
-          node.cmsSmoothLogWeightWithPrior);
-      lineageNodeCmsSmoothNormalizedEvidence->push_back(
-          node.cmsSmoothNormalizedEvidence);
-      lineageNodeCmsSmoothNormalizedWeightWithPrior->push_back(
-          node.cmsSmoothNormalizedWeightWithPrior);
     }
     for (const auto& edge : graph.edges()) {
       lineageEdgeInputTrackIndex->push_back(inputTrackIndex);
@@ -3463,8 +3035,6 @@ StatusCode RecGsfTracking::execute() {
     std::vector<GsfSmootherNode> smootherGraph;
     std::vector<std::unique_ptr<GsfComponent>> cmsFinalPredictedOwned;
     std::vector<CmsGaussianComponentState> cmsInnermostForwardComponents;
-    std::vector<GaussianMomentState> cmsForwardPredictedMoments(hits.size());
-    std::vector<GaussianMomentState> cmsForwardUpdatedMoments(hits.size());
     std::vector<CmsGaussianComponentState>
         cmsForwardIdentityUpdatedComponents(hits.size());
     int nProc = 0, nSplits = 0, nReductions = 0, maxCompsEver = 1;
@@ -3667,7 +3237,6 @@ StatusCode RecGsfTracking::execute() {
       std::vector<GsfComponent*> accepted;
       std::vector<double> dchi2s;
       std::vector<double> acceptedLogWeights;
-      GaussianAccumulator cmsForwardPredictedAccumulator;
       if (m_verboseDump && m_verboseSplitDump && (justSplit || (int)comps.size() > 1)) {
         dchi2s.reserve(comps.size());
       }
@@ -3739,12 +3308,6 @@ StatusCode RecGsfTracking::execute() {
               &measurementUpdate);
 
           if (baselineAccepted) {
-            if (m_cmsGsfSmoothing.value()) {
-              accumulateGaussian(
-                  cmsForwardPredictedAccumulator, beforeWeight,
-                  updateVector5(measurementUpdate.predictedState),
-                  updateMatrix5(measurementUpdate.predictedCovariance));
-            }
             comp->fitChi2 += dchi;
             const double afterKappa = comp->helixAtLastSite(bz).GetKappa();
             const double afterPt = (afterKappa != 0.0) ? 1.0 / std::abs(afterKappa) : 0.0;
@@ -4025,10 +3588,6 @@ StatusCode RecGsfTracking::execute() {
       }
       compsAfterReduce = (int)comps.size();
       if (m_cmsGsfSmoothing.value()) {
-        cmsForwardPredictedMoments[ih] =
-            finishGaussianState(cmsForwardPredictedAccumulator);
-        cmsForwardUpdatedMoments[ih] =
-            momentMatchComponents(comps, bz);
         const GsfComponent* forwardIdentity = nullptr;
         for (const auto* component : comps) {
           if (!component || !component->noRadiationLineage ||
@@ -4660,9 +4219,7 @@ StatusCode RecGsfTracking::execute() {
               snapshot.state.valid =
                   std::isfinite(snapshot.state.mean(2, 0)) &&
                   std::isfinite(snapshot.state.covariance(2, 2));
-              captureCmsMeasurementLinearization(
-                  update, dchi, snapshot.measurement);
-              if (snapshot.state.valid && snapshot.measurement.valid) {
+              if (snapshot.state.valid) {
                 cmsBackwardPredictedComponents.push_back(
                     std::move(snapshot));
               }
@@ -4702,161 +4259,39 @@ StatusCode RecGsfTracking::execute() {
           lineageGraph.setNormalizedPosterior(
               component->lineageNodeId, component->weight);
 
-        // Passive CMSSW-style per-layer smoothing diagnostic.  The moment-
-        // matched forward prediction and each backward-predicted component
-        // form an all-other-hits state.  The current hit is then evaluated
-        // with the exact accepted MarlinTrk linearization, while the forward-
-        // updated message gives the corresponding all-hit smoothed state.
-        // These scores are persisted on the existing backward measurement
-        // lineage nodes and never replace live weights or propagated states.
+        // Passive CMS identity-compatibility diagnostic.  Every accepted
+        // backward-predicted candidate at this hit is compared with the same
+        // surviving forward-updated identity state.  The ordinary
+        // backward-prediction-versus-measurement chi-square is already stored
+        // in lineage_node_dchi2 on this same measurement node.  This additional
+        // five-dimensional compatibility never replaces live weights or
+        // propagated states.
         if (runCmsSmoother && !cmsOutermostHit && reverseHit >= 0 &&
             static_cast<std::size_t>(reverseHit) <
-                cmsForwardPredictedMoments.size() &&
-            cmsForwardPredictedMoments[reverseHit].valid &&
-            cmsForwardUpdatedMoments[reverseHit].valid) {
-          std::vector<CmsPerLayerSmoothingDiagnostic> diagnostics;
-          diagnostics.reserve(cmsBackwardPredictedComponents.size());
-          double maximumReferenceDChi2Difference = 0.0;
-          double maximumReferenceLogDetDifference = 0.0;
-          for (const auto& backward : cmsBackwardPredictedComponents) {
-            CmsPerLayerSmoothingDiagnostic diagnostic;
-            diagnostic.lineageNodeId = backward.lineageNodeId;
-            const auto& forwardPredicted =
-                cmsForwardPredictedMoments[reverseHit];
-            const auto& forwardUpdated =
-                cmsForwardUpdatedMoments[reverseHit];
-            diagnostic.forwardPredictedKappa =
-                forwardPredicted.mean(2, 0);
-            diagnostic.forwardPredictedKappaVariance =
-                forwardPredicted.covariance(2, 2);
-            diagnostic.forwardUpdatedKappa = forwardUpdated.mean(2, 0);
-            diagnostic.forwardUpdatedKappaVariance =
-                forwardUpdated.covariance(2, 2);
-
-            GaussianMomentState allOther;
-            GaussianMomentState allHit;
-            const bool haveAllOther = combineCmsMoments(
-                forwardPredicted, backward.state, allOther,
-                &diagnostic.allOtherLogOverlap);
-            const bool haveAllHit = combineCmsMoments(
-                forwardUpdated, backward.state, allHit,
-                &diagnostic.allHitLogOverlap,
-                &diagnostic.allHitCompatibilityDChi2,
-                &diagnostic.allHitCompatibilityLogDet);
-            if (haveAllOther) {
-              diagnostic.allOtherKappa = allOther.mean(2, 0);
-              diagnostic.allOtherKappaVariance =
-                  allOther.covariance(2, 2);
-            }
-            if (haveAllHit) {
-              diagnostic.allHitKappa = allHit.mean(2, 0);
-              diagnostic.allHitKappaVariance = allHit.covariance(2, 2);
-            }
-            if (static_cast<std::size_t>(reverseHit) <
-                    cmsForwardIdentityUpdatedComponents.size()) {
-              const auto& forwardIdentity =
-                  cmsForwardIdentityUpdatedComponents[reverseHit];
-              if (forwardIdentity.state.valid) {
-                diagnostic.forwardIdentityNodeId =
-                    forwardIdentity.lineageNodeId;
-                diagnostic.forwardIdentityWeight = forwardIdentity.weight;
-                diagnostic.forwardIdentityUpdatedKappa =
-                    forwardIdentity.state.mean(2, 0);
-                diagnostic.forwardIdentityUpdatedKappaVariance =
-                    forwardIdentity.state.covariance(2, 2);
-                GaussianMomentState identityProduct;
-                diagnostic.identityCompatibilityValid = combineCmsMoments(
-                    forwardIdentity.state, backward.state, identityProduct,
-                    &diagnostic.identityCompatibilityLogOverlap,
-                    &diagnostic.identityCompatibilityDChi2,
-                    &diagnostic.identityCompatibilityLogDet);
+                cmsForwardIdentityUpdatedComponents.size()) {
+          const auto& forwardIdentity =
+              cmsForwardIdentityUpdatedComponents[reverseHit];
+          int validComparisons = 0;
+          if (forwardIdentity.state.valid) {
+            for (const auto& backward : cmsBackwardPredictedComponents) {
+              GaussianMomentState identityProduct;
+              double compatibilityDChi2 =
+                  std::numeric_limits<double>::quiet_NaN();
+              if (combineCmsMoments(
+                      forwardIdentity.state, backward.state, identityProduct,
+                      nullptr, &compatibilityDChi2, nullptr)) {
+                lineageGraph.setCmsIdentityCompatibilityDChi2(
+                    backward.lineageNodeId, compatibilityDChi2);
+                ++validComparisons;
               }
             }
-            const bool haveLocalLikelihood = haveAllOther &&
-                evaluateCmsSmoothedMeasurement(
-                    allOther, backward.measurement,
-                    diagnostic.localDChi2,
-                    diagnostic.localLogDetInnovation,
-                    diagnostic.localLogLikelihood);
-            diagnostic.valid = haveAllOther && haveAllHit &&
-                haveLocalLikelihood && backward.weight > 0.0 &&
-                std::isfinite(backward.weight) &&
-                std::isfinite(diagnostic.allOtherLogOverlap);
-            if (diagnostic.valid) {
-              diagnostic.logEvidence =
-                  diagnostic.allOtherLogOverlap +
-                  diagnostic.localLogLikelihood;
-              diagnostic.logWeightWithPrior =
-                  std::log(backward.weight) + diagnostic.logEvidence;
-            }
-
-            double referenceDChi2 = 0.0;
-            double referenceLogDet = 0.0;
-            double referenceLogLikelihood = 0.0;
-            if (evaluateCmsSmoothedMeasurement(
-                    backward.state, backward.measurement,
-                    referenceDChi2, referenceLogDet,
-                    referenceLogLikelihood)) {
-              maximumReferenceDChi2Difference = std::max(
-                  maximumReferenceDChi2Difference,
-                  std::abs(referenceDChi2 -
-                           backward.measurement.referenceDChi2));
-              maximumReferenceLogDetDifference = std::max(
-                  maximumReferenceLogDetDifference,
-                  std::abs(referenceLogDet -
-                           backward.measurement
-                               .referenceLogDetInnovation));
-            }
-            diagnostics.push_back(std::move(diagnostic));
           }
-
-          auto normalizeDiagnostic = [&](bool includePrior) {
-            double maximum = -std::numeric_limits<double>::infinity();
-            for (const auto& diagnostic : diagnostics) {
-              const double value = includePrior
-                  ? diagnostic.logWeightWithPrior
-                  : diagnostic.logEvidence;
-              if (diagnostic.valid && std::isfinite(value))
-                maximum = std::max(maximum, value);
-            }
-            if (!std::isfinite(maximum)) return;
-            double sum = 0.0;
-            for (const auto& diagnostic : diagnostics) {
-              const double value = includePrior
-                  ? diagnostic.logWeightWithPrior
-                  : diagnostic.logEvidence;
-              if (diagnostic.valid && std::isfinite(value))
-                sum += std::exp(value - maximum);
-            }
-            if (!(sum > 0.0) || !std::isfinite(sum)) return;
-            for (auto& diagnostic : diagnostics) {
-              const double value = includePrior
-                  ? diagnostic.logWeightWithPrior
-                  : diagnostic.logEvidence;
-              if (!diagnostic.valid || !std::isfinite(value)) continue;
-              const double normalized = std::exp(value - maximum) / sum;
-              if (includePrior)
-                diagnostic.normalizedWeightWithPrior = normalized;
-              else
-                diagnostic.normalizedEvidence = normalized;
-            }
-          };
-          normalizeDiagnostic(false);
-          normalizeDiagnostic(true);
-          for (const auto& diagnostic : diagnostics)
-            lineageGraph.setCmsPerLayerSmoothing(diagnostic);
           if (m_verboseDump && m_componentDebugDump) {
             info() << boost::format(
-                "  CMS-PER-LAYER-SMOOTH hit=%d candidates=%d valid=%d "
-                "referenceDChi2Closure=%.6g referenceLogDetClosure=%.6g")
-                      % reverseHit % (int)diagnostics.size()
-                      % (int)std::count_if(
-                            diagnostics.begin(), diagnostics.end(),
-                            [](const auto& diagnostic) {
-                              return diagnostic.valid;
-                            })
-                      % maximumReferenceDChi2Difference
-                      % maximumReferenceLogDetDifference << endmsg;
+                "  CMS-IDENTITY-COMPATIBILITY hit=%d candidates=%d valid=%d")
+                      % reverseHit
+                      % (int)cmsBackwardPredictedComponents.size()
+                      % validComparisons << endmsg;
           }
         }
 
