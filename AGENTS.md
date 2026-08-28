@@ -31,12 +31,16 @@ Positive-weight final components and complete component lineage are persisted
 automatically for smoother and reverse. The `final_mixture_component_*`,
 `lineage_node_*`, and `lineage_edge_*` flat vectors retain the final mixture
 and every evaluated seed, BH child, measurement result, KL output, cutoff, and
-merge. Reverse additionally records every passive same-surface two-filter
-mixture `B_smoothed[i] = F_updated[i] x B_predicted[i]`; these diagnostics
-never feed recursion or endpoint publication. Their contracts are in
+merge. Reverse additionally records passive same-surface two-filter products
+`B_smoothed[i] = F_updated[i] x B_predicted[i]` only at interior surfaces.
+The boundaries reuse live mixtures: `B_smoothed[0] = B_updated[0]` and
+`B_smoothed[N-1] = F_updated[N-1]`. Interior products never feed recursion or
+endpoint publication. Their contracts are in
 `agents_record/2026-08-25-final-mixture-component-flat-tuple.md`,
 `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`, and
-`agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`.
+`agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`; the
+explicit boundary correction and focused gate are in
+`agents_record/2026-08-29-smoothed-boundary-state-contract.md`.
 
 Reverse consumes one `SharedForwardFilterResult` and publishes the terminal
 inward mixture `B_updated[0] = measurement[0] x B_predicted[0]`. A positive
@@ -242,8 +246,9 @@ scale 0 and scale -1 are exactly equivalent. Every fresh run contains one
 source-2 seed at the outermost hit, no copied-seed edge, and first targets
 `N-2`; build, install, verbose component execution, and flat-lineage checks
 pass. These are mechanical gates only. Reverse publishes terminal
-`B_updated[0]`, while every `B_smoothed[i]` remains a passive lineage
-diagnostic.
+`B_updated[0]`, which is also `B_smoothed[0]`; the outer boundary
+`B_smoothed[N-1]` is the final forward mixture, and only interior smoothed
+products remain passive lineage diagnostics.
 
 The pre-retirement exact-alias gate on events 11, 16, and 17 compared 900
 endpoint/status scalars and 882 final-component/lineage vectors with zero

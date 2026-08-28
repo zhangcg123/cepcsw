@@ -341,8 +341,10 @@ It also creates `lineage_node_*` and `lineage_edge_*` vectors automatically
 for smoother and reverse jobs, with no card property. These preserve
 every evaluated seed, BH child, measurement result, and KL output, including nodes
 later rejected, removed by cutoff, or consumed by a merge. They also preserve
-every evaluated two-filter smoothing candidate for
-`B_smoothed[i] = F_updated[i] x B_predicted[i]`. Edge records retain split,
+every evaluated interior two-filter smoothing candidate for
+`B_smoothed[i] = F_updated[i] x B_predicted[i]`, `0 < i < N-1`. The boundary
+states reuse the existing live nodes: `B_smoothed[0] = B_updated[0]` and
+`B_smoothed[N-1] = F_updated[N-1]`. Edge records retain split,
 measurement, two-parent merge, forward-to-reverse-seed, and two-parent
 smoothing ancestry. Forward and global-loss jobs keep the branches present but
 empty.

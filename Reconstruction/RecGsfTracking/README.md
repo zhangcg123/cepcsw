@@ -14,12 +14,13 @@ single outward GSF pass supplies reverse. A transient
 post-update, post-cutoff, post-reduction filtered history. One common
 `runGsfInwardFilter` path first revisits hit `N-2`, performs the live
 backward-predicted-by-hit update, and returns the terminal backward mixture.
-After that live recursion is complete, it also forms and records the passive
-two-filter smoothed mixture
-`B_smoothed[i] = F_updated[i] x B_predicted[i]` at every successfully
-processed inward surface. These smoothed mixtures are unconditional for
-reverse, are reduced independently, and never feed the backward recursion or
-endpoint publication. Reverse publishes the terminal backward mixture,
+After that live recursion is complete, it forms and records the passive
+two-filter product `B_smoothed[i] = F_updated[i] x B_predicted[i]` only at
+successfully processed interior surfaces `0 < i < N-1`. The boundary states
+are the existing live mixtures: `B_smoothed[0] = B_updated[0]` and
+`B_smoothed[N-1] = F_updated[N-1]`. Interior products are reduced
+independently and never feed the backward recursion or endpoint publication.
+Reverse publishes the inner boundary state,
 `B_updated[0] = measurement[0] x B_predicted[0]`.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
 the final forward population into the common inward filter and scale every
@@ -366,12 +367,14 @@ match, and `GSFTracksFullMixtureMode` is the joint density maximum of the full
 mixture at the IP. `ReverseSelectionMode` affects only BestBranch. It does not
 alter the components entering either of the other two views.
 
-For reverse, every accepted backward prediction is paired with all
-stored forward filtered components at the same hit. The resulting reduced
-two-filter smoothed mixture is persisted in the lineage record after the live
-inward filter has finished. Every `B_smoothed[i]` is diagnostic-only: it is
-never propagated and never supplies BestBranch, WeightedMean, or
-FullMixtureMode. Reverse derives all three views from `B_updated[0]`.
+For reverse, at every interior hit `0 < i < N-1`, every accepted backward
+prediction is paired with all stored forward filtered components at that hit.
+The resulting reduced two-filter product is persisted in the lineage record
+after the live inward filter has finished and remains diagnostic-only. At the
+boundaries no product node is synthesized: `B_smoothed[0]` is the terminal
+`B_updated[0]`, while `B_smoothed[N-1]` is the final `F_updated[N-1]`.
+Reverse derives all three endpoint views from `B_updated[0]`; no interior
+smoothed product is propagated or published.
 Historical CMS-like files retain their original collections and flat fields;
 they are not an active workflow and are not renamed in place.
 
@@ -549,7 +552,7 @@ tuple also fills the corresponding parallel scalar set:
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
 | `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother and reverse populate them automatically, while forward, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
-| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` the two-filter smoothed mixture. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates at every successfully processed inward surface. Each smoothing candidate has one source-1 and one source-2 parent. Its source-2 measurement parent contributes the persisted predicted fields, not its filtered posterior fields. Numeric source and operation codes are unchanged by the terminology update. |
+| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` an interior two-filter smoothed product. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates only at successfully processed interior surfaces `0 < i < N-1`; `B_smoothed[0]` is represented by the terminal source-2 nodes and `B_smoothed[N-1]` by the final source-1 nodes. Each explicit smoothing candidate has one source-1 and one source-2 parent. Its source-2 measurement parent contributes the persisted predicted fields, not its filtered posterior fields. Numeric source and operation codes are unchanged. |
 | `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
 | `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Per-evaluated-component measurement decision. Status is `-1` not a measurement, `0` rejected, `1` accepted through the exact update, or `2` accepted through the legacy recovery path. Exact innovation values are finite when supplied by the accepted MarlinTrk update. The normalized posterior is captured before cutoff and KL reduction. |
 | `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, `6` abandoned because its endpoint or complete output track failed, or `7` a smoothed-mixture survivor retained for diagnostics but not included in the published endpoint. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |

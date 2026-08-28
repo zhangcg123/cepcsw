@@ -530,10 +530,12 @@ private:
   std::vector<const GsfComponent*> m_finalComponents;
 };
 
-/// One reduced two-filter smoothed mixture
-/// F_updated[i] x B_predicted[i] at a fitted surface.  It is retained
-/// independently of endpoint publication and never feeds the live inward
-/// recursion.
+/// One reduced interior two-filter smoothed mixture
+/// F_updated[i] x B_predicted[i], 0 < i < N-1.  The boundary smoothed states
+/// are represented by the existing live mixtures: B_smoothed[0] is
+/// B_updated[0], and B_smoothed[N-1] is F_updated[N-1].  Interior products are
+/// retained independently of endpoint publication and never feed the live
+/// inward recursion.
 struct GsfSmoothedSurfaceResult {
   std::vector<GsfComponent*> components;
   int pairCandidates = 0;
@@ -548,9 +550,10 @@ struct GsfSmoothedSurfaceInput {
 };
 
 /// Complete result of the inward GSF pass.  Reverse publication consumes
-/// terminalBackward = B_updated[0].  Every smoothed surface result is retained
-/// only for the passive lineage/tuple diagnostic and never becomes a
-/// publication endpoint.
+/// terminalBackward = B_updated[0] = B_smoothed[0].  Explicit smoothed-surface
+/// results contain only the passive interior products; the outer boundary
+/// B_smoothed[N-1] is the final forward mixture already held by
+/// SharedForwardFilterResult.
 struct GsfInwardFilterResult {
   std::vector<GsfComponent*> terminalBackward;
   std::vector<GsfSmoothedSurfaceResult> smoothedSurfaces;
@@ -4355,7 +4358,7 @@ StatusCode RecGsfTracking::execute() {
               update.valid ? update.logDetInnovation : unavailable,
               reverseLogPosterior, &update);
 
-          if (accepted) {
+          if (accepted && reverseHit > 0) {
             GaussianComponentSnapshot snapshot;
             snapshot.weight = reversePriorWeight;
             snapshot.componentId = component->debugId;
@@ -4469,26 +4472,33 @@ StatusCode RecGsfTracking::execute() {
                            reverseComps);
         }
 
-        auto& smoothedInput = smoothedSurfaceInputs[
-            static_cast<std::size_t>(reverseHit)];
-        smoothedInput.backwardPredicted =
-            std::move(backwardPredictedComponents);
-        smoothedInput.pivot = reverseMaterialDestination;
-        smoothedInput.surfaceIndex = target.surfaceIndex;
-        smoothedInput.valid = true;
+        // Boundary convention: B_smoothed[0] is the live B_updated[0], so an
+        // additional F_updated[0] x B_predicted[0] product would be a distinct,
+        // redundant state.  Save explicit product inputs only for interior
+        // surfaces.  The other boundary, B_smoothed[N-1], is F_updated[N-1].
+        if (reverseHit > 0) {
+          auto& smoothedInput = smoothedSurfaceInputs[
+              static_cast<std::size_t>(reverseHit)];
+          smoothedInput.backwardPredicted =
+              std::move(backwardPredictedComponents);
+          smoothedInput.pivot = reverseMaterialDestination;
+          smoothedInput.surfaceIndex = target.surfaceIndex;
+          smoothedInput.valid = true;
+        }
 
         if (m_verboseDump && m_verboseSplitDump) {
           dumpComponents("reverse-after-hit", reverseHit, reverseComps);
         }
       }
 
-      // Materialize every passive two-filter smoothed mixture
-      // F_updated[i] x B_predicted[i] only after the common live inward
-      // recursion is complete.  This makes the smoothed record unconditional
-      // for reverse while ensuring its matrix algebra and reduction cannot
-      // influence a later backward step.
+      // Materialize only the passive interior two-filter products
+      // F_updated[i] x B_predicted[i], 0 < i < N-1, after the common live
+      // inward recursion is complete.  The boundary states are already exact
+      // live mixtures: B_smoothed[0] = B_updated[0] and
+      // B_smoothed[N-1] = F_updated[N-1].  This keeps interior matrix algebra
+      // and reduction from influencing a later backward step.
       for (int hitIndex = static_cast<int>(hits.size()) - 2;
-           hitIndex >= 0; --hitIndex) {
+           hitIndex >= 1; --hitIndex) {
         auto& smoothedInput = smoothedSurfaceInputs[
             static_cast<std::size_t>(hitIndex)];
         if (!smoothedInput.valid) continue;
@@ -4549,9 +4559,11 @@ StatusCode RecGsfTracking::execute() {
         !sharedForwardResult.finalComponents().empty() &&
         hits.size() > 1) {
       GsfMixture::normalizeWeights(reverseComps);
-      // Reverse publishes the terminal inward posterior:
-      // B_updated[0] = measurement[0] x B_predicted[0].  The independently
-      // materialized B_smoothed[i] mixtures remain diagnostic-only.
+      // Reverse publishes the terminal inward posterior, which is also the
+      // inner boundary smoothed state:
+      // B_smoothed[0] = B_updated[0] = measurement[0] x B_predicted[0].
+      // Explicit F_updated[i] x B_predicted[i] products exist only at interior
+      // surfaces; B_smoothed[N-1] is the final forward mixture.
       auto& endpointComponents = reverseComps;
       for (const auto& surface : inwardFilterResult.smoothedSurfaces)
         lineageGraph.markInwardInternalMessage(surface.components);
