@@ -164,3 +164,50 @@ Before claiming a correct two-filter construction, the next reviewed design
 choice is whether to adopt a fresh geometric prefit, the full loose covariance,
 and an explicit first-hit update. The persistent late-loss failure should be
 diagnosed separately rather than attributed to the forward seed alone.
+
+## Follow-up: backward covariance scale 100
+
+The same 28 events were then rerun with the forward broad seed unchanged and
+only the CMS-like backward seed covariance multiplier changed:
+
+```text
+KappaSeedCov = 123.6
+CmsErrorRescaling: 1 -> 100
+```
+
+All 28 jobs completed. The three matched configurations now give:
+
+| configuration | forward kappa variance | backward covariance scale | identity-controlled truth wins | median truth-minus-identity chi2 |
+|---|---:|---:|---:|---:|
+| A | `1e-7` | 1 | 4/26 | +17.54 |
+| B | `123.6` | 1 | 9/26 | +3.039 |
+| C | `123.6` | 100 | 9/26 | +2.659 |
+
+Configuration C leaves the identity-controlled and log-determinant-adjusted
+truth-like win counts unchanged at 9/26. The live backward measurement chi2
+truth-like win count increases from 9/27 in B to 13/27 in C, but this is not
+an independent-message probability.
+
+Backward inflation moves 23/26 identity-controlled raw chi2 differences in
+the truth-like direction. Most of that aggregate change comes from the eight
+late-loss events: their truth-minus-identity differences contract from
+`68--101 chi2` to `2.7--6.8 chi2`, but all eight still prefer identity. Their
+log-determinant-adjusted differences are likewise positive (`2.70--6.83`).
+The inflation therefore makes the two backward hypotheses less distinguishable
+at those surfaces; it does not reverse their ordering.
+
+| CMS-like endpoint | A mean abs | B mean abs | C mean abs | A median abs | B median abs | C median abs |
+|---|---:|---:|---:|---:|---:|---:|
+| BestBranch | 1.1209% | 1.2369% | 1.2062% | 1.3540% | 1.4755% | 1.4968% |
+| WeightedMean | 1.1665% | 1.1332% | 1.1261% | 1.3722% | 1.1110% | 1.1028% |
+| FullMixtureMode | 1.2004% | 1.1230% | 1.1811% | 1.5161% | 1.3975% | 1.4938% |
+
+Relative to B, C improves the WeightedMean aggregate slightly, but worsens
+FullMixtureMode and improves that endpoint event-by-event in only 11/28
+events. Event 32/89 is the clearest reversal: B publishes a `+0.162%`
+FullMixtureMode residual, while C returns to `-1.830%`, close to the original
+underestimate. This selected panel therefore does not identify backward scale
+100 as a better endpoint setting. It mainly demonstrates the expected loss of
+compatibility discrimination under covariance inflation.
+
+No compiled or maintained-card default was changed by either focused gate.
