@@ -1343,10 +1343,26 @@ public:
   }
 
   int smoothedMixture(GsfComponent& component, int forwardNodeId,
-                      int backwardNodeId, int hitIndex, int surfaceIndex) {
+                      int backwardNodeId, int hitIndex, int surfaceIndex,
+                      double pairPriorWeight, double overlapDChi2,
+                      double overlapLogDet, double logPosterior,
+                      const GaussianMomentState& backwardPredicted) {
     const int nodeId = appendNode(
         component, LineageNodeSource::SmoothedMixture,
         LineageNodeOperation::Smoothing, hitIndex, surfaceIndex);
+    if (nodeId < 0) return nodeId;
+    auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
+    node.priorWeight = pairPriorWeight;
+    node.dchi2 = overlapDChi2;
+    node.logDetInnovation = overlapLogDet;
+    node.logUnnormalizedPosterior = logPosterior;
+    if (backwardPredicted.valid &&
+        backwardPredicted.mean.GetNrows() >= 5 &&
+        backwardPredicted.covariance.GetNrows() >= 5 &&
+        backwardPredicted.covariance.GetNcols() >= 5) {
+      node.predictedKappa = backwardPredicted.mean(2, 0);
+      node.predictedKappaVariance = backwardPredicted.covariance(2, 2);
+    }
     addEdge(
         forwardNodeId, nodeId, LineageEdgeOperation::Smoothing, false);
     addEdge(
@@ -1476,11 +1492,18 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
     for (const auto& backward : backwardPredicted) {
       GaussianMomentState smoothed;
       double logOverlap = 0.0;
+      double overlapDChi2 = 0.0;
+      double overlapLogDet = 0.0;
       if (!formSmoothedGaussian(
-              forward.state, backward.state, smoothed, &logOverlap)) {
+              forward.state, backward.state, smoothed, &logOverlap,
+              &overlapDChi2, &overlapLogDet)) {
         ++result.pairFailures;
         continue;
       }
+      const double pairPriorWeight = forward.weight * backward.weight;
+      // Preserve the established arithmetic ordering exactly: multiplying the
+      // priors before taking the logarithm can perturb passive KL tie-breaking
+      // at roundoff scale.
       const double logWeight = std::log(forward.weight) +
           std::log(backward.weight) + logOverlap;
       if (!std::isfinite(logWeight)) {
@@ -1503,7 +1526,8 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
           ",b=" + std::to_string(backward.componentId) + ")";
       component->lineageNodeId = lineageGraph.smoothedMixture(
           *component, forward.lineageNodeId, backward.lineageNodeId,
-          hitIndex, surfaceIndex);
+          hitIndex, surfaceIndex, pairPriorWeight, overlapDChi2,
+          overlapLogDet, logWeight, backward.state);
       result.components.push_back(component);
       pairLogWeights.push_back(logWeight);
     }
@@ -1520,7 +1544,8 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
   }
   GsfMixture::normalizeWeights(result.components);
   for (const auto* component : result.components)
-    lineageGraph.setWeight(component->lineageNodeId, component->weight);
+    lineageGraph.setNormalizedPosterior(
+        component->lineageNodeId, component->weight);
 
   auto cutoffObserver = [&](const GsfComponent& component) {
     lineageGraph.mark(

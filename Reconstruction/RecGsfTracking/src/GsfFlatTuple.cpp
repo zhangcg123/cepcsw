@@ -257,6 +257,12 @@ StatusCode RecGsfFlatTuple::initialize() {
                  &m_lineage_node_filtered_kappa_variance);
   m_tree->Branch("lineage_node_filtered_pT",
                  &m_lineage_node_filtered_pT);
+  m_tree->Branch("lineage_node_smoothed_kappa",
+                 &m_lineage_node_smoothed_kappa);
+  m_tree->Branch("lineage_node_smoothed_kappa_variance",
+                 &m_lineage_node_smoothed_kappa_variance);
+  m_tree->Branch("lineage_node_smoothed_pT",
+                 &m_lineage_node_smoothed_pT);
   m_tree->Branch("lineage_node_dominant_lineage_fraction",
                  &m_lineage_node_dominant_lineage_fraction);
   m_tree->Branch("lineage_node_merge_cost", &m_lineage_node_merge_cost);
@@ -529,6 +535,9 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_filtered_kappa.clear();
   m_lineage_node_filtered_kappa_variance.clear();
   m_lineage_node_filtered_pT.clear();
+  m_lineage_node_smoothed_kappa.clear();
+  m_lineage_node_smoothed_kappa_variance.clear();
+  m_lineage_node_smoothed_pT.clear();
   m_lineage_node_dominant_lineage_fraction.clear();
   m_lineage_node_merge_cost.clear();
   m_lineage_edge_input_track_index.clear();
@@ -701,9 +710,14 @@ StatusCode RecGsfFlatTuple::execute() {
           nodeMergeCost->begin(), nodeMergeCost->end());
       m_lineage_node_predicted_pT.reserve(nodeCount);
       m_lineage_node_filtered_pT.reserve(nodeCount);
+      m_lineage_node_smoothed_kappa.reserve(nodeCount);
+      m_lineage_node_smoothed_kappa_variance.reserve(nodeCount);
+      m_lineage_node_smoothed_pT.reserve(nodeCount);
       for (std::size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex) {
         const double predictedKappa = (*nodePredictedKappa)[nodeIndex];
         const double filteredKappa = (*nodeFilteredKappa)[nodeIndex];
+        const double filteredKappaVariance =
+            (*nodeFilteredKappaVariance)[nodeIndex];
         m_lineage_node_predicted_pT.push_back(
             std::isfinite(predictedKappa) &&
                     std::abs(predictedKappa) > 1.0e-15
@@ -713,6 +727,18 @@ StatusCode RecGsfFlatTuple::execute() {
             std::isfinite(filteredKappa) &&
                     std::abs(filteredKappa) > 1.0e-15
                 ? 1.0 / std::abs(filteredKappa)
+                : std::numeric_limits<double>::quiet_NaN());
+        const bool isSmoothed = (*nodeSources)[nodeIndex] == 3;
+        const double smoothedKappa = isSmoothed
+            ? filteredKappa : std::numeric_limits<double>::quiet_NaN();
+        m_lineage_node_smoothed_kappa.push_back(smoothedKappa);
+        m_lineage_node_smoothed_kappa_variance.push_back(
+            isSmoothed ? filteredKappaVariance
+                       : std::numeric_limits<double>::quiet_NaN());
+        m_lineage_node_smoothed_pT.push_back(
+            std::isfinite(smoothedKappa) &&
+                    std::abs(smoothedKappa) > 1.0e-15
+                ? 1.0 / std::abs(smoothedKappa)
                 : std::numeric_limits<double>::quiet_NaN());
       }
       m_lineage_edge_input_track_index.assign(

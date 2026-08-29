@@ -295,6 +295,11 @@ private:
   std::vector<double> m_lineage_node_filtered_kappa;
   std::vector<double> m_lineage_node_filtered_kappa_variance;
   std::vector<double> m_lineage_node_filtered_pT;
+  // Explicit source-3 naming for the two-filter product state. The generic
+  // filtered_* vectors remain available for schema compatibility.
+  std::vector<double> m_lineage_node_smoothed_kappa;
+  std::vector<double> m_lineage_node_smoothed_kappa_variance;
+  std::vector<double> m_lineage_node_smoothed_pT;
   std::vector<double> m_lineage_node_dominant_lineage_fraction;
   std::vector<double> m_lineage_node_merge_cost;
   int m_lineage_edge_n = 0;

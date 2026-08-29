@@ -36,6 +36,9 @@ merge. Reverse additionally records passive same-surface two-filter products
 Each product is formed inside its reverse-surface step from buffered
 `B_predicted[i]` candidates, immediately before the same buffered measurement
 results are committed to live `B_updated[i]`.
+Direct product candidates persist their pair prior, five-dimensional overlap
+chi-square/log-determinant, log weight, normalized pre-pruning posterior,
+backward-predicted state, and explicitly named smoothed state.
 The boundaries reuse live mixtures: `B_smoothed[0] = B_updated[0]` and
 `B_smoothed[N-1] = F_updated[N-1]`. Interior products never feed recursion or
 endpoint publication. Their contracts are in
@@ -45,7 +48,9 @@ endpoint publication. Their contracts are in
 explicit boundary correction and focused gate are in
 `agents_record/2026-08-29-smoothed-boundary-state-contract.md`, and the inline
 construction regression is in
-`agents_record/2026-08-29-inline-smoothed-surface-construction.md`.
+`agents_record/2026-08-29-inline-smoothed-surface-construction.md`; the
+surface-local evidence schema is in
+`agents_record/2026-08-29-smoothed-surface-local-evidence.md`.
 
 Reverse consumes one `SharedForwardFilterResult` and publishes the terminal
 inward mixture `B_updated[0] = measurement[0] x B_predicted[0]`. A positive
