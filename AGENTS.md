@@ -33,6 +33,9 @@ automatically for smoother and reverse. The `final_mixture_component_*`,
 and every evaluated seed, BH child, measurement result, KL output, cutoff, and
 merge. Reverse additionally records passive same-surface two-filter products
 `B_smoothed[i] = F_updated[i] x B_predicted[i]` only at interior surfaces.
+Each product is formed inside its reverse-surface step from buffered
+`B_predicted[i]` candidates, immediately before the same buffered measurement
+results are committed to live `B_updated[i]`.
 The boundaries reuse live mixtures: `B_smoothed[0] = B_updated[0]` and
 `B_smoothed[N-1] = F_updated[N-1]`. Interior products never feed recursion or
 endpoint publication. Their contracts are in
@@ -40,7 +43,9 @@ endpoint publication. Their contracts are in
 `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`, and
 `agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`; the
 explicit boundary correction and focused gate are in
-`agents_record/2026-08-29-smoothed-boundary-state-contract.md`.
+`agents_record/2026-08-29-smoothed-boundary-state-contract.md`, and the inline
+construction regression is in
+`agents_record/2026-08-29-inline-smoothed-surface-construction.md`.
 
 Reverse consumes one `SharedForwardFilterResult` and publishes the terminal
 inward mixture `B_updated[0] = measurement[0] x B_predicted[0]`. A positive

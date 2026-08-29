@@ -542,13 +542,6 @@ struct GsfSmoothedSurfaceResult {
   int pairFailures = 0;
 };
 
-struct GsfSmoothedSurfaceInput {
-  std::vector<GaussianComponentSnapshot> backwardPredicted;
-  TVector3 pivot;
-  int surfaceIndex = -1;
-  bool valid = false;
-};
-
 /// Complete result of the inward GSF pass.  Reverse publication consumes
 /// terminalBackward = B_updated[0] = B_smoothed[0].  Explicit smoothed-surface
 /// results contain only the passive interior products; the outer boundary
@@ -3936,7 +3929,6 @@ StatusCode RecGsfTracking::execute() {
     // independently as a passive diagnostic.
     auto runGsfInwardFilter = [&]() -> GsfInwardFilterResult {
       GsfInwardFilterResult inwardFilterResult(hits.size());
-      std::vector<GsfSmoothedSurfaceInput> smoothedSurfaceInputs(hits.size());
       if (!m_reverseFiltering.value() ||
           sharedForwardResult.finalComponents().empty() ||
           hits.size() <= 1) {
@@ -4306,21 +4298,34 @@ StatusCode RecGsfTracking::execute() {
           GsfMixture::normalizeWeights(reverseComps);
         }
 
-        std::vector<GsfComponent*> acceptedReverse;
-        std::vector<double> reverseLogWeights;
-        std::vector<GaussianComponentSnapshot>
-            backwardPredictedComponents;
-        for (auto* component : reverseComps) {
-          const int parentLineageNodeId = component->lineageNodeId;
-          const double reversePriorWeight = component->weight;
+        struct ReverseMeasurementCandidate {
+          GsfComponent* component = nullptr;
+          int parentLineageNodeId = -1;
+          double priorWeight = 0.0;
           double dchi = 0.0;
           double updateChi2 = 0.0;
           int updateNdf = -999;
-          edm4hep::TrackState componentState =
-              trackStateFromComponent(*component, bz, DH::AtOther);
+          edm4hep::TrackState componentState;
           edm4hep::TrackState updatedState;
           MarlinTrk::MeasurementUpdate update;
-          bool accepted = false;
+          bool evaluated = false;
+        };
+        std::vector<ReverseMeasurementCandidate> reverseCandidates;
+        reverseCandidates.reserve(reverseComps.size());
+        std::vector<GaussianComponentSnapshot> backwardPredictedComponents;
+        backwardPredictedComponents.reserve(reverseComps.size());
+
+        // Evaluate each temporary MarlinTrk update without mutating the live
+        // reverse component.  The exact predicted and updated states returned
+        // by the same baseline operation are buffered so B_smoothed[i] and
+        // B_updated[i] can branch independently from B_predicted[i].
+        for (auto* component : reverseComps) {
+          ReverseMeasurementCandidate candidate;
+          candidate.component = component;
+          candidate.parentLineageNodeId = component->lineageNodeId;
+          candidate.priorWeight = component->weight;
+          candidate.componentState =
+              trackStateFromComponent(*component, bz, DH::AtOther);
           try {
             const int referenceIndex = std::min(
                 reverseHit + 1, (int)hits.size() - 1);
@@ -4330,68 +4335,126 @@ StatusCode RecGsfTracking::execute() {
                 m_gsfMarlinTrkSystem->createTrack());
             if (reverseTrack &&
                 reverseTrack->addHit(referenceHit) == MarlinTrk::IMarlinTrack::success &&
-                reverseTrack->initialise(componentState, bz,
+                reverseTrack->initialise(candidate.componentState, bz,
                     MarlinTrk::IMarlinTrack::backward) == MarlinTrk::IMarlinTrack::success &&
-                reverseTrack->addAndFit(targetHit, dchi, update, DBL_MAX) ==
-                    MarlinTrk::IMarlinTrack::success && update.valid &&
-                reverseTrack->getTrackState(targetHit, updatedState,
-                    updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
-                appendBaselineStateToComponent(*component, updatedState,
-                    target, bz, componentState, update)) {
-              accepted = true;
+                reverseTrack->addAndFit(
+                    targetHit, candidate.dchi, candidate.update, DBL_MAX) ==
+                    MarlinTrk::IMarlinTrack::success &&
+                candidate.update.valid &&
+                reverseTrack->getTrackState(
+                    targetHit, candidate.updatedState, candidate.updateChi2,
+                    candidate.updateNdf) == MarlinTrk::IMarlinTrack::success) {
+              candidate.evaluated = true;
             }
           } catch (...) {
-            accepted = false;
+            candidate.evaluated = false;
           }
 
-          const double unavailable =
-              std::numeric_limits<double>::quiet_NaN();
-          const double reverseLogPosterior = accepted
-              ? std::log(reversePriorWeight) -
-                    0.5 * (dchi + update.logDetInnovation)
-              : unavailable;
-          component->lineageNodeId = lineageGraph.measurement(
-              *component, parentLineageNodeId,
-              LineageNodeSource::ReverseFiltering, reverseHit,
-              target.surfaceIndex, accepted ? 1 : 0, reversePriorWeight,
-              update.valid ? dchi : unavailable,
-              update.valid ? update.logDetInnovation : unavailable,
-              reverseLogPosterior, &update);
-
-          if (accepted && reverseHit > 0) {
+          if (candidate.evaluated && reverseHit > 0) {
             GaussianComponentSnapshot snapshot;
-            snapshot.weight = reversePriorWeight;
+            snapshot.weight = candidate.priorWeight;
             snapshot.componentId = component->debugId;
-            // The smoothed mixture consumes the backward-predicted fields
-            // persisted on this measurement node, never its filtered fields.
-            snapshot.lineageNodeId = component->lineageNodeId;
+            // This is the pre-measurement backward message.  Its smoothing edge
+            // must originate from the split/previous-update node, not from the
+            // measurement node that will be created for B_updated[i] below.
+            snapshot.lineageNodeId = candidate.parentLineageNodeId;
             snapshot.noRadiationLineage = component->noRadiationLineage;
-            snapshot.state.mean = updateVector5(update.predictedState);
+            snapshot.state.mean = updateVector5(
+                candidate.update.predictedState);
             snapshot.state.covariance =
-                updateMatrix5(update.predictedCovariance);
+                updateMatrix5(candidate.update.predictedCovariance);
             snapshot.state.valid =
                 std::isfinite(snapshot.state.mean(2, 0)) &&
                 std::isfinite(snapshot.state.covariance(2, 2));
             if (snapshot.state.valid)
               backwardPredictedComponents.push_back(std::move(snapshot));
           }
+
+          reverseCandidates.push_back(std::move(candidate));
+        }
+
+        // The interior smoothed message is a passive sibling of the live
+        // measurement update:
+        //   B_smoothed[i] = F_updated[i] x B_predicted[i]
+        // It is materialized immediately from immutable prediction snapshots,
+        // before any component is committed to B_updated[i].
+        if (reverseHit > 0) {
+          auto& smoothedSurface = inwardFilterResult.smoothedSurfaces[
+              static_cast<std::size_t>(reverseHit)];
+          smoothedSurface = buildSmoothedSurfaceMixture(
+              sharedForwardResult.filteredAt(
+                  static_cast<std::size_t>(reverseHit)),
+              backwardPredictedComponents, reverseHit, target.surfaceIndex,
+              reverseMaterialDestination, bz, reverseReductionTarget,
+              m_componentWeightCutoff.value(),
+              m_protectIdentityLineage.value(),
+              m_reductionMergeCost.value(), lineageGraph);
+          if (m_verboseDump) {
+            info() << boost::format(
+                "  SMOOTHED MIXTURE hit=%d forward=%d backward=%d "
+                "pairs=%d failures=%d retained=%d")
+                      % reverseHit
+                      % (int)sharedForwardResult.filteredAt(
+                            static_cast<std::size_t>(reverseHit)).size()
+                      % (int)backwardPredictedComponents.size()
+                      % smoothedSurface.pairCandidates
+                      % smoothedSurface.pairFailures
+                      % (int)smoothedSurface.components.size() << endmsg;
+          }
+        }
+
+        std::vector<GsfComponent*> acceptedReverse;
+        std::vector<double> reverseLogWeights;
+        acceptedReverse.reserve(reverseCandidates.size());
+        reverseLogWeights.reserve(reverseCandidates.size());
+        for (auto& candidate : reverseCandidates) {
+          auto* component = candidate.component;
+          bool accepted = false;
+          if (candidate.evaluated) {
+            try {
+              accepted = appendBaselineStateToComponent(
+                  *component, candidate.updatedState, target, bz,
+                  candidate.componentState, candidate.update);
+            } catch (...) {
+              accepted = false;
+            }
+          }
+
+          const double unavailable =
+              std::numeric_limits<double>::quiet_NaN();
+          const double reverseLogPosterior = accepted
+              ? std::log(candidate.priorWeight) -
+                    0.5 * (candidate.dchi +
+                           candidate.update.logDetInnovation)
+              : unavailable;
+          component->lineageNodeId = lineageGraph.measurement(
+              *component, candidate.parentLineageNodeId,
+              LineageNodeSource::ReverseFiltering, reverseHit,
+              target.surfaceIndex, accepted ? 1 : 0,
+              candidate.priorWeight,
+              candidate.update.valid ? candidate.dchi : unavailable,
+              candidate.update.valid
+                  ? candidate.update.logDetInnovation : unavailable,
+              reverseLogPosterior, &candidate.update);
+
           if (accepted) {
-            component->fitChi2 += dchi;
+            component->fitChi2 += candidate.dchi;
             reverseLogWeights.push_back(reverseLogPosterior);
             acceptedReverse.push_back(component);
             ++reverseAcceptedTotal;
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
               info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g priorWeight=%.6g dchi2=%.6g logDetS=%.6g")
                         % reverseHit % component->debugId
-                        % ptFromTrackState(updatedState, bz)
-                        % reversePriorWeight % dchi
-                        % update.logDetInnovation << endmsg;
+                        % ptFromTrackState(candidate.updatedState, bz)
+                        % candidate.priorWeight % candidate.dchi
+                        % candidate.update.logDetInnovation << endmsg;
               info() << boost::format("          reverse-exact-measurement: predicted=%s residual=%s H=%s R=%s S=%s")
-                        % compactMatrix(update.predictedMeasurement)
-                        % compactMatrix(update.residual)
-                        % compactMatrix(update.projector)
-                        % compactMatrix(update.measurementCovariance)
-                        % compactMatrix(update.innovationCovariance) << endmsg;
+                        % compactMatrix(candidate.update.predictedMeasurement)
+                        % compactMatrix(candidate.update.residual)
+                        % compactMatrix(candidate.update.projector)
+                        % compactMatrix(candidate.update.measurementCovariance)
+                        % compactMatrix(candidate.update.innovationCovariance)
+                     << endmsg;
             }
           } else {
             delete component;
@@ -4472,57 +4535,8 @@ StatusCode RecGsfTracking::execute() {
                            reverseComps);
         }
 
-        // Boundary convention: B_smoothed[0] is the live B_updated[0], so an
-        // additional F_updated[0] x B_predicted[0] product would be a distinct,
-        // redundant state.  Save explicit product inputs only for interior
-        // surfaces.  The other boundary, B_smoothed[N-1], is F_updated[N-1].
-        if (reverseHit > 0) {
-          auto& smoothedInput = smoothedSurfaceInputs[
-              static_cast<std::size_t>(reverseHit)];
-          smoothedInput.backwardPredicted =
-              std::move(backwardPredictedComponents);
-          smoothedInput.pivot = reverseMaterialDestination;
-          smoothedInput.surfaceIndex = target.surfaceIndex;
-          smoothedInput.valid = true;
-        }
-
         if (m_verboseDump && m_verboseSplitDump) {
           dumpComponents("reverse-after-hit", reverseHit, reverseComps);
-        }
-      }
-
-      // Materialize only the passive interior two-filter products
-      // F_updated[i] x B_predicted[i], 0 < i < N-1, after the common live
-      // inward recursion is complete.  The boundary states are already exact
-      // live mixtures: B_smoothed[0] = B_updated[0] and
-      // B_smoothed[N-1] = F_updated[N-1].  This keeps interior matrix algebra
-      // and reduction from influencing a later backward step.
-      for (int hitIndex = static_cast<int>(hits.size()) - 2;
-           hitIndex >= 1; --hitIndex) {
-        auto& smoothedInput = smoothedSurfaceInputs[
-            static_cast<std::size_t>(hitIndex)];
-        if (!smoothedInput.valid) continue;
-        auto& smoothedSurface = inwardFilterResult.smoothedSurfaces[
-            static_cast<std::size_t>(hitIndex)];
-        smoothedSurface = buildSmoothedSurfaceMixture(
-            sharedForwardResult.filteredAt(
-                static_cast<std::size_t>(hitIndex)),
-            smoothedInput.backwardPredicted, hitIndex,
-            smoothedInput.surfaceIndex, smoothedInput.pivot, bz,
-            reverseReductionTarget, m_componentWeightCutoff.value(),
-            m_protectIdentityLineage.value(),
-            m_reductionMergeCost.value(), lineageGraph);
-        if (m_verboseDump) {
-          info() << boost::format(
-              "  SMOOTHED MIXTURE hit=%d forward=%d backward=%d "
-              "pairs=%d failures=%d retained=%d")
-                    % hitIndex
-                    % (int)sharedForwardResult.filteredAt(
-                          static_cast<std::size_t>(hitIndex)).size()
-                    % (int)smoothedInput.backwardPredicted.size()
-                    % smoothedSurface.pairCandidates
-                    % smoothedSurface.pairFailures
-                    % (int)smoothedSurface.components.size() << endmsg;
         }
       }
 

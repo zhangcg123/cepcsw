@@ -1,9 +1,12 @@
 # Smoothed mixtures become diagnostic-only
 
 Status note (2026-08-29): the diagnostic-only decision remains active, but the
-exactly equivalent CMS-like steering alias was retired. See
-`2026-08-29-cms-like-workflow-retirement.md`. The evidence below is preserved
-as the pre-retirement equivalence gate.
+exactly equivalent CMS-like steering alias was retired. The later inline
+construction change also supersedes the deferred post-recursion mechanics
+described under "Active mechanics" below. See
+`2026-08-29-cms-like-workflow-retirement.md` and
+`2026-08-29-inline-smoothed-surface-construction.md`. The evidence below is
+preserved as the pre-retirement and pre-inline-construction gate.
 
 Date: 2026-08-29
 
