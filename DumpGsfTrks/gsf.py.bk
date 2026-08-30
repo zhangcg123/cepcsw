@@ -118,6 +118,10 @@ gsf.ReverseFiltering = False
 # standard-KF-style seed with the outermost hit already updated. The value -1
 # is a mode selector, not a negative covariance multiplier.
 gsf.InwardSeedCovarianceScale = -1.0
+# Live reverse-component weighting. LocalMeasurement is the compiled/default
+# control. The maintained reverse campaign explicitly selects the experimental
+# SmoothedMarginal mode below; propagated means/covariances remain B_updated.
+gsf.InwardWeightMode = "LocalMeasurement"
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse methods
 # below always persist all three endpoint representations and do not select one
@@ -159,11 +163,16 @@ elif method == "reverse":
     # variances are also recorded automatically; there is no steering switch.
     # The complete component-lineage DAG is likewise automatic/default-on in
     # the EDM and flat tuple. It retains evaluated nodes after measurement
-    # rejection, weight cutoff, or KL merging. It also records every passive
-    # interior B_smoothed[i] = F_updated[i] x B_predicted[i] products; the
-    # boundary states reuse B_updated[0] and F_updated[N-1]. This passive
-    # smoothed-mixture record has no switch.
+    # rejection, weight cutoff, or KL merging. It also records every retained
+    # interior B_smoothed[i] = F_updated[i] x B_predicted[i] product; the
+    # boundary states reuse B_updated[0] and F_updated[N-1]. SmoothedMarginal
+    # sums the unreduced pair posterior over forward partners for each
+    # backward candidate and attaches that weight to its B_updated state before
+    # cutoff/KL and the next inward propagation. It deliberately reuses
+    # overlapping forward evidence at successive surfaces and is not a
+    # calibrated Bayesian posterior.
     gsf.ReverseFiltering = True
+    gsf.InwardWeightMode = "SmoothedMarginal"
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
     # Inert for the maintained fresh single-component inward seed; retained

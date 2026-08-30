@@ -231,12 +231,12 @@ the independent global-loss refitter so method comparisons cannot silently use
 different BH models; preserve it as deliberate campaign steering until the user
 changes it.
 
-The authoritative explanation of all 40 `RecGsfTracking` properties, their
+The authoritative explanation of all 41 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 39 of the 40
+For this maintained workflow, `gsf.py.bk` explicitly configures 40 of the 41
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -369,8 +369,8 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After retirement of the duplicate CMS-like steering alias, `RecGsfTracking`
-has 40 compiled properties. This card explicitly steers 39 and deliberately
+After adding the inward-weight selector, `RecGsfTracking` has 41 compiled
+properties. This card explicitly steers 40 and deliberately
 inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
 the removed `CmsGsfSmoothing` property are stale experiment artifacts and must
 be regenerated rather than edited in place.
@@ -386,7 +386,18 @@ multiplier. It creates one unit-weight inward root, so the explicitly retained
 `ReverseInitialWeightMode="ForwardPosterior"` setting is inert in this card.
 Former method-specific seed-covariance properties were removed when the
 inward filter was consolidated; stale cards must use the common property.
-This is explicit campaign steering, not a production-default change. Its input
+The reverse branch also deliberately sets
+`InwardWeightMode="SmoothedMarginal"`. It keeps each propagated mean and
+covariance equal to the hit-updated `B_updated` state, but replaces its
+interior live weight with the unreduced `F_updated x B_predicted` direct-pair
+weights marginalized over forward partners. The compiled and active reverse-
+template default remains `LocalMeasurement`. This experimental maintained-
+card choice deliberately reuses overlapping forward evidence at successive
+surfaces and is not a calibrated posterior or a validated production-default
+change.
+
+The fresh-seed choice is explicit campaign steering, not a production-default
+change. Its input
 path is a
 top-level `inputfilename` steering variable, which the worker replaces with
 the preceding `trk-<sample>.root` path. Its output names contain particle,

@@ -472,8 +472,10 @@ struct GaussianComponentSnapshot {
 /// reverse workflow.  Filtered mixtures are captured after the
 /// measurement posterior, cutoff, and KL reduction, but before the outgoing
 /// material convolution.  The final live components are the shared inward
-/// seed source; the snapshots remain immutable inputs to the passive
-/// two-filter smoothed mixtures and never steer either filter.
+/// seed source; the snapshots remain immutable inputs to the two-filter
+/// smoothed mixtures.  Their states never enter either filter, while the
+/// explicit SmoothedMarginal mode may use their overlap weights to reweight
+/// the live B_updated states.
 class SharedForwardFilterResult {
 public:
   SharedForwardFilterResult(std::size_t hitCount, double bz, bool enabled)
@@ -534,17 +536,19 @@ private:
 /// F_updated[i] x B_predicted[i], 0 < i < N-1.  The boundary smoothed states
 /// are represented by the existing live mixtures: B_smoothed[0] is
 /// B_updated[0], and B_smoothed[N-1] is F_updated[N-1].  Interior products are
-/// retained independently of endpoint publication and never feed the live
-/// inward recursion.
+/// retained independently of endpoint publication.  Their direct pre-pruning
+/// pair weights are also marginalized by backward component so the explicit
+/// SmoothedMarginal inward-weight mode can attach them to B_updated states.
 struct GsfSmoothedSurfaceResult {
   std::vector<GsfComponent*> components;
+  std::map<int, double> backwardMarginalWeights;
   int pairCandidates = 0;
   int pairFailures = 0;
 };
 
 /// Complete result of the inward GSF pass.  Reverse publication consumes
 /// terminalBackward = B_updated[0] = B_smoothed[0].  Explicit smoothed-surface
-/// results contain only the passive interior products; the outer boundary
+/// results contain only the non-propagated interior products; the outer boundary
 /// B_smoothed[N-1] is the final forward mixture already held by
 /// SharedForwardFilterResult.
 struct GsfInwardFilterResult {
@@ -1486,6 +1490,9 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
   result.components.reserve(static_cast<std::size_t>(result.pairCandidates));
   std::vector<double> pairLogWeights;
   pairLogWeights.reserve(static_cast<std::size_t>(result.pairCandidates));
+  std::vector<int> pairBackwardComponentIds;
+  pairBackwardComponentIds.reserve(
+      static_cast<std::size_t>(result.pairCandidates));
 
   int smoothedComponentId = 0;
   for (const auto& forward : forwardUpdated) {
@@ -1502,7 +1509,7 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
       }
       const double pairPriorWeight = forward.weight * backward.weight;
       // Preserve the established arithmetic ordering exactly: multiplying the
-      // priors before taking the logarithm can perturb passive KL tie-breaking
+      // priors before taking the logarithm can perturb product KL tie-breaking
       // at roundoff scale.
       const double logWeight = std::log(forward.weight) +
           std::log(backward.weight) + logOverlap;
@@ -1530,6 +1537,7 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
           overlapLogDet, logWeight, backward.state);
       result.components.push_back(component);
       pairLogWeights.push_back(logWeight);
+      pairBackwardComponentIds.push_back(backward.componentId);
     }
   }
 
@@ -1543,9 +1551,14 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
         pairLogWeights[pairIndex] - maximumLogWeight);
   }
   GsfMixture::normalizeWeights(result.components);
-  for (const auto* component : result.components)
+  for (std::size_t pairIndex = 0;
+       pairIndex < result.components.size(); ++pairIndex) {
+    const auto* component = result.components[pairIndex];
+    result.backwardMarginalWeights[
+        pairBackwardComponentIds[pairIndex]] += component->weight;
     lineageGraph.setNormalizedPosterior(
         component->lineageNodeId, component->weight);
+  }
 
   auto cutoffObserver = [&](const GsfComponent& component) {
     lineageGraph.mark(
@@ -2429,6 +2442,16 @@ StatusCode RecGsfTracking::initialize() {
                "fresh backward initialization" << endmsg;
     return StatusCode::FAILURE;
   }
+  std::string inwardWeightMode = m_inwardWeightMode.value();
+  std::transform(inwardWeightMode.begin(), inwardWeightMode.end(),
+                 inwardWeightMode.begin(), ::tolower);
+  if (inwardWeightMode != "localmeasurement" &&
+      inwardWeightMode != "smoothedmarginal") {
+    error() << "InwardWeightMode must be LocalMeasurement or "
+               "SmoothedMarginal"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (!std::isfinite(m_kappaSeedCov.value())) {
     error() << "KappaSeedCov must be finite; values <= 0 select the standard "
                "KF curvature variance"
@@ -2567,6 +2590,7 @@ StatusCode RecGsfTracking::initialize() {
          << " reductionMode=KL"
          << " protectIdentityLineage=" << m_protectIdentityLineage.value()
          << " outputMode=" << m_outputMode.value()
+         << " inwardWeightMode=" << m_inwardWeightMode.value()
          << " verbose=" << m_verboseDump.value() << "/"
          << m_verboseSplitDump.value() << "/"
          << m_componentDebugDump.value()
@@ -3949,9 +3973,11 @@ StatusCode RecGsfTracking::execute() {
     double ecalConstrainedEnergy = 0.0;
     int ecalConstrainedClusterCount = 0;
 
-    // The reverse inward GSF uses material/BH propagation plus the local hit;
-    // every two-filter smoothed mixture F_updated x B_predicted is returned
-    // independently as a passive diagnostic.
+    // The reverse inward GSF always propagates the locally updated B_updated
+    // states.  LocalMeasurement weights them with the target-hit likelihood;
+    // SmoothedMarginal instead attaches the forward-marginalized interior
+    // F_updated x B_predicted pair weights.  The complete smoothed mixtures
+    // remain independently recorded and never replace the propagated states.
     auto runGsfInwardFilter = [&]() -> GsfInwardFilterResult {
       GsfInwardFilterResult inwardFilterResult(hits.size());
       if (!m_reverseFiltering.value() ||
@@ -4093,6 +4119,11 @@ StatusCode RecGsfTracking::execute() {
               ? std::min(m_reductionTargetComponents.value(),
                          m_maxComponents.value())
               : m_maxComponents.value();
+      std::string inwardWeightMode = m_inwardWeightMode.value();
+      std::transform(inwardWeightMode.begin(), inwardWeightMode.end(),
+                     inwardWeightMode.begin(), ::tolower);
+      const bool useSmoothedMarginalWeights =
+          inwardWeightMode == "smoothedmarginal";
       for (int reverseHit = (int)hits.size() - 2;
            reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
         auto& target = hits[reverseHit];
@@ -4398,11 +4429,13 @@ StatusCode RecGsfTracking::execute() {
           reverseCandidates.push_back(std::move(candidate));
         }
 
-        // The interior smoothed message is a passive sibling of the live
+        // The interior smoothed state is a non-propagated sibling of the live
         // measurement update:
         //   B_smoothed[i] = F_updated[i] x B_predicted[i]
         // It is materialized immediately from immutable prediction snapshots,
-        // before any component is committed to B_updated[i].
+        // before any component is committed to B_updated[i].  The explicit
+        // SmoothedMarginal mode uses only its direct pair weights, marginalized
+        // by backward parent; the propagated state remains B_updated[i].
         if (reverseHit > 0) {
           auto& smoothedSurface = inwardFilterResult.smoothedSurfaces[
               static_cast<std::size_t>(reverseHit)];
@@ -4447,10 +4480,30 @@ StatusCode RecGsfTracking::execute() {
 
           const double unavailable =
               std::numeric_limits<double>::quiet_NaN();
-          const double reverseLogPosterior = accepted
+          const double localMeasurementLogPosterior = accepted
               ? std::log(candidate.priorWeight) -
                     0.5 * (candidate.dchi +
                            candidate.update.logDetInnovation)
+              : unavailable;
+          double smoothedMarginalWeight = unavailable;
+          if (accepted && useSmoothedMarginalWeights && reverseHit > 0) {
+            const auto& marginalWeights =
+                inwardFilterResult.smoothedSurfaces[
+                    static_cast<std::size_t>(reverseHit)]
+                    .backwardMarginalWeights;
+            const auto marginal = marginalWeights.find(component->debugId);
+            if (marginal != marginalWeights.end() &&
+                marginal->second > 0.0 &&
+                std::isfinite(marginal->second)) {
+              smoothedMarginalWeight = marginal->second;
+            } else {
+              accepted = false;
+            }
+          }
+          const double selectedReverseLogWeight = accepted
+              ? (useSmoothedMarginalWeights && reverseHit > 0
+                    ? std::log(smoothedMarginalWeight)
+                    : localMeasurementLogPosterior)
               : unavailable;
           component->lineageNodeId = lineageGraph.measurement(
               *component, candidate.parentLineageNodeId,
@@ -4460,19 +4513,22 @@ StatusCode RecGsfTracking::execute() {
               candidate.update.valid ? candidate.dchi : unavailable,
               candidate.update.valid
                   ? candidate.update.logDetInnovation : unavailable,
-              reverseLogPosterior, &candidate.update);
+              localMeasurementLogPosterior, &candidate.update);
 
           if (accepted) {
             component->fitChi2 += candidate.dchi;
-            reverseLogWeights.push_back(reverseLogPosterior);
+            reverseLogWeights.push_back(selectedReverseLogWeight);
             acceptedReverse.push_back(component);
             ++reverseAcceptedTotal;
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
-              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g priorWeight=%.6g dchi2=%.6g logDetS=%.6g")
+              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g priorWeight=%.6g dchi2=%.6g logDetS=%.6g weightMode=%s smoothedMarginal=%.6g")
                         % reverseHit % component->debugId
                         % ptFromTrackState(candidate.updatedState, bz)
                         % candidate.priorWeight % candidate.dchi
-                        % candidate.update.logDetInnovation << endmsg;
+                        % candidate.update.logDetInnovation
+                        % (useSmoothedMarginalWeights && reverseHit > 0
+                               ? "SmoothedMarginal" : "LocalMeasurement")
+                        % smoothedMarginalWeight << endmsg;
               info() << boost::format("          reverse-exact-measurement: predicted=%s residual=%s H=%s R=%s S=%s")
                         % compactMatrix(candidate.update.predictedMeasurement)
                         % compactMatrix(candidate.update.residual)
@@ -4501,8 +4557,10 @@ StatusCode RecGsfTracking::execute() {
               component->lineageNodeId, component->weight);
 
         // Let every reverse-process child incorporate the inward target hit
-        // before cutoff or mixture reduction.  The weights and Gaussian states
-        // below are therefore target-surface posteriors.
+        // before cutoff or mixture reduction.  The Gaussian states below are
+        // always B_updated target-surface states.  Their normalized weights
+        // are either local-measurement posteriors or the selected interior
+        // smoothed marginals.
         if (m_verboseDump && m_verboseSplitDump)
           dumpComponents("reverse-posterior/norm", reverseHit, reverseComps);
         const int reverseBeforeCutoff = (int)reverseComps.size();
@@ -4598,7 +4656,7 @@ StatusCode RecGsfTracking::execute() {
         !sharedForwardResult.finalComponents().empty() &&
         hits.size() > 1) {
       GsfMixture::normalizeWeights(reverseComps);
-      // Reverse publishes the terminal inward posterior, which is also the
+      // Reverse publishes the terminal inward mixture, which is also the
       // inner boundary smoothed state:
       // B_smoothed[0] = B_updated[0] = measurement[0] x B_predicted[0].
       // Explicit F_updated[i] x B_predicted[i] products exist only at interior

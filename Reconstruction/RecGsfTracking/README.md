@@ -14,12 +14,20 @@ single outward GSF pass supplies reverse. A transient
 post-update, post-cutoff, post-reduction filtered history. One common
 `runGsfInwardFilter` path first revisits hit `N-2`, performs the live
 backward-predicted-by-hit update, and returns the terminal backward mixture.
-After that live recursion is complete, it forms and records the passive
-two-filter product `B_smoothed[i] = F_updated[i] x B_predicted[i]` only at
-successfully processed interior surfaces `0 < i < N-1`. The boundary states
-are the existing live mixtures: `B_smoothed[0] = B_updated[0]` and
-`B_smoothed[N-1] = F_updated[N-1]`. Interior products are reduced
-independently and never feed the backward recursion or endpoint publication.
+Inside each interior reverse-surface step it also forms and records the
+two-filter product `B_smoothed[i] = F_updated[i] x B_predicted[i]` immediately
+before committing the corresponding measurement results to live
+`B_updated[i]`. The boundary states are the existing live mixtures:
+`B_smoothed[0] = B_updated[0]` and
+`B_smoothed[N-1] = F_updated[N-1]`. Product states are reduced independently
+and never propagate or publish. The compiled `InwardWeightMode` default,
+`LocalMeasurement`, also keeps their weights diagnostic-only. Experimental
+`SmoothedMarginal` instead marginalizes the normalized unreduced direct-pair
+weights over every forward partner and attaches the result to the matching
+live `B_updated[i]` state before its cutoff, reduction, and next propagation.
+This intentionally reuses overlapping forward evidence at successive
+surfaces and is an algorithmic overlap score, not a calibrated Bayesian
+posterior.
 Reverse publishes the inner boundary state,
 `B_updated[0] = measurement[0] x B_predicted[0]`.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
@@ -161,7 +169,7 @@ replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-29. `RecGsfTracking` exposes 40 Gaudi properties in
+Reference date: 2026-08-31. `RecGsfTracking` exposes 41 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -327,10 +335,10 @@ the complete recording scope is marked invalid.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `MaxComponents` | `10` | `10` | Posterior-reduction trigger/capacity for the live forward/reverse mixtures and reduction target for passive interior `B_smoothed` products. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 12 and 24 only as explicit comparisons. |
+| `MaxComponents` | `10` | `10` | Posterior-reduction trigger/capacity for the live forward/reverse mixtures and reduction target for retained interior `B_smoothed` products. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 12 and 24 only as explicit comparisons. |
 | `ReductionTargetComponents` | `0` | `0` | Number retained after reduction; zero means use `MaxComponents`. Valid values are zero or `1..MaxComponents`. |
 | `ReductionMergeCost` | `SymmetricKL` | same | Pair-ranking cost for moment merging: active `SymmetricKL` ranks pairs by their unweighted symmetric component-to-component KL distance; default-off `Runnalls` ranks the information-loss bound of the weighted mixture approximation. Both perform the same weight-aware moment merge after choosing a pair. Runnalls was tested and rejected for promotion. |
-| `ComponentWeightCutoff` | `1e-4` | `1e-4` | Remove normalized target-measurement posterior components below this weight in the live forward/reverse mixtures, and normalized Gaussian-overlap weights below it in passive interior `B_smoothed` products, while retaining at least the largest and, when enabled, an identity lineage. This cutoff is applied before component-count reduction and is independent of `BHSplitThreshold`. |
+| `ComponentWeightCutoff` | `1e-4` | `1e-4` | Remove normalized target-measurement posterior components below this weight in the live forward and `LocalMeasurement` reverse mixtures; `SmoothedMarginal` instead cuts the selected forward-marginalized live reverse weights. It separately cuts normalized Gaussian-overlap weights in the retained interior `B_smoothed` product, while preserving at least the largest and, when enabled, an identity lineage. The live marginal is computed from all valid direct pairs before that product cutoff or KL reduction. This cutoff precedes live component-count reduction and is independent of `BHSplitThreshold`. |
 | `ProtectIdentityLineage` | `true` | `true` | Preserve at least one exact no-radiation lineage through cutoff and reduction when the target component count exceeds one. |
 
 Forward children from transition `i -> i+1` remain expanded through
@@ -346,6 +354,7 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 | `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother or reverse output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
+| `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weights while always propagating the measurement-updated `B_updated` means and covariances. `LocalMeasurement` uses `prior(B_predicted) x likelihood(hit|B_predicted)`. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch selects `SmoothedMarginal`; the compiled and active reverse-template default remains `LocalMeasurement`. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 | `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
 | `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
@@ -369,12 +378,16 @@ alter the components entering either of the other two views.
 
 For reverse, at every interior hit `0 < i < N-1`, every accepted backward
 prediction is paired with all stored forward filtered components at that hit.
-The resulting reduced two-filter product is persisted in the lineage record
-after the live inward filter has finished and remains diagnostic-only. At the
-boundaries no product node is synthesized: `B_smoothed[0]` is the terminal
-`B_updated[0]`, while `B_smoothed[N-1]` is the final `F_updated[N-1]`.
-Reverse derives all three endpoint views from `B_updated[0]`; no interior
-smoothed product is propagated or published.
+The resulting two-filter product is built before the live update is committed
+and is persisted in the lineage record. Its direct-pair weights are normalized
+before the product's own cutoff and KL reduction. `SmoothedMarginal` sums
+those direct weights by backward parent and uses that marginal as the live
+weight of the corresponding measurement-updated `B_updated[i]` state;
+`LocalMeasurement` leaves the product fully diagnostic. At the boundaries no
+product node is synthesized: `B_smoothed[0]` is the terminal `B_updated[0]`,
+while `B_smoothed[N-1]` is the final `F_updated[N-1]`. Reverse derives all
+three endpoint views from `B_updated[0]`; no interior smoothed state is
+propagated or published.
 Historical CMS-like files retain their original collections and flat fields;
 they are not an active workflow and are not renamed in place.
 
@@ -501,7 +514,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 40 properties:
+The data handles are configurable separately from the 41 properties:
 
 | Role | Default collection |
 |---|---|
@@ -554,7 +567,7 @@ tuple also fills the corresponding parallel scalar set:
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
 | `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` an interior two-filter smoothed product. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates only at successfully processed interior surfaces `0 < i < N-1`; `B_smoothed[0]` is represented by the terminal source-2 nodes and `B_smoothed[N-1]` by the final source-1 nodes. Each explicit smoothing candidate has one source-1 `F_updated[i]` parent and one source-2 pre-measurement parent representing `B_predicted[i]`; the exact transported backward prediction is persisted on the source-3 candidate itself. Numeric source and operation codes are unchanged. |
 | `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
-| `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Surface-local evidence. For source-1/source-2 operation-3 nodes, status is `0` rejected, `1` accepted through the exact measurement update, or `2` accepted through the legacy recovery path; `dchi2` and `logdet_innovation` are the measurement innovation terms. For a source-3 operation-5 candidate, status remains `-1` because no detector measurement is performed, `prior_weight=w_F*w_B`, `dchi2` is the five-dimensional `F_updated`/`B_predicted` compatibility quadratic, `logdet_innovation=log(det(C_F+C_B))`, and `log_unnormalized_posterior` is the exact pair log weight used by the algorithm. In both cases `normalized_posterior` is captured before cutoff and KL reduction. Split, seed, and KL-output nodes retain NaN for non-applicable evidence fields. |
+| `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Surface-local evidence. For source-1/source-2 operation-3 nodes, status is `0` rejected, `1` accepted through the exact measurement update, or `2` accepted through the legacy recovery path; `dchi2` and `logdet_innovation` are the measurement innovation terms, and `log_unnormalized_posterior` always preserves the local `prior(B_predicted) x likelihood(hit|B_predicted)` log score. `normalized_posterior` is the actual selected pre-pruning live weight: the normalized local score in `LocalMeasurement`, or the normalized forward-marginalized product weight in interior `SmoothedMarginal` steps. For a source-3 operation-5 candidate, status remains `-1` because no detector measurement is performed, `prior_weight=w_F*w_B`, `dchi2` is the five-dimensional `F_updated`/`B_predicted` compatibility quadratic, `logdet_innovation=log(det(C_F+C_B))`, and `log_unnormalized_posterior` is the exact pair log weight used by the algorithm. Its `normalized_posterior` is the direct pair weight before the product cutoff and KL reduction. Split, seed, and KL-output nodes retain NaN for non-applicable evidence fields. |
 | `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, `6` abandoned because its endpoint or complete output track failed, or `7` a smoothed-mixture survivor retained for diagnostics but not included in the published endpoint. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |
 | `lineage_node_weight`, `lineage_node_predicted_kappa`, `lineage_node_predicted_kappa_variance`, `lineage_node_predicted_pT`, `lineage_node_filtered_kappa`, `lineage_node_filtered_kappa_variance`, `lineage_node_filtered_pT`, `lineage_node_smoothed_kappa`, `lineage_node_smoothed_kappa_variance`, `lineage_node_smoothed_pT`, `lineage_node_dominant_lineage_fraction`, `lineage_node_merge_cost` | Node-local statistical state. For measurement nodes, predicted quantities are the pre-update state and filtered quantities are the post-update state. For source-3 operation-5 candidates, predicted quantities are the exact `B_predicted[i]` input and the explicit `smoothed_*` quantities are the `F_updated[i] x B_predicted[i]` product. Source-3 KL outputs also populate `smoothed_*`; other sources receive NaN in those aliases. The legacy generic `filtered_*` values remain populated for source 3 for schema compatibility and equal `smoothed_*`. pT is derived as `1/abs(kappa)`. Merge cost is finite only for a KL output. `weight` is the current/final node weight, while `normalized_posterior` preserves the direct candidate's pre-pruning posterior. |
 | `lineage_edge_input_track_index`, `lineage_edge_output_track_index`, `lineage_edge_from_node_id`, `lineage_edge_to_node_id`, `lineage_edge_operation` | Directed graph connectivity. Edge operation is `1` BH split, `2` measurement, `3` KL merge, `4` copied forward-to-backward seed, or `5` a forward/backward state entering a smoothed-mixture candidate. Edge operation 4 exists only for positive inward scale; a fresh nonpositive-scale inward root has no incoming edge. Every KL output has two incoming merge edges; every smoothed-mixture candidate has exactly two incoming smoothing edges. Numeric codes are unchanged. |
@@ -602,8 +615,8 @@ presented as such. The component vectors describe the mixture underlying all
 three endpoint summaries; they are not a fourth published track and do not
 duplicate hit vectors.
 
-The `lineage_node_*` and `lineage_edge_*` vectors are also automatic,
-default-on, and passive for smoother/reverse jobs. They record immutable
+The `lineage_node_*` and `lineage_edge_*` vectors are also automatic and
+default-on for smoother/reverse jobs. They record immutable
 snapshots rather than pointers to live `GsfComponent` objects. A rejected
 measurement node, a posterior-cutoff node, and both inputs consumed by a KL
 merge therefore remain available after their C++ components are deleted. A
@@ -613,12 +626,15 @@ acyclic in node-creation order. Reconstruct one track's graph by selecting its
 `input_track_index`, then joining every edge endpoint to `node_id` in that
 same group. Do not join bare node IDs across different input tracks.
 
-This graph is diagnostic evidence, not another GSF result and not an
-additional selector. It never feeds propagation, covariance, posterior
-normalization, cutoff, reduction, or publication. Complete graph persistence
-can materially increase tuple size; this is deliberate because silent
-truncation would remove exactly the rejected/pruned alternatives needed to
-explain the first wrong branch decision.
+The persisted graph is diagnostic evidence, not another GSF result and not an
+additional selector. Persisting it never changes propagation, covariance,
+posterior normalization, cutoff, reduction, or publication. Under
+`SmoothedMarginal`, however, the same transient direct-pair overlap weights
+that are recorded in source-3 nodes are marginalized to steer live source-2
+weights; source-3 states themselves remain non-propagated. Complete graph
+persistence can materially increase tuple size; this is deliberate because
+silent truncation would remove exactly the rejected/pruned alternatives
+needed to explain the first wrong branch decision.
 
 The BestBranch branch set is likewise presence-driven: it is populated only
 from `GSFTracksBestBranch` and remains unavailable/zero for forward and
@@ -654,7 +670,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 39 of the 40 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 40 of the 41 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
@@ -702,7 +718,7 @@ truth/DD4hep/runtime values remain passive and do not affect the GSF workflow.
 
 ### Configuration-maintenance contract
 
-The 40-property inventory above is part of the configurable interface, not a
+The 41-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

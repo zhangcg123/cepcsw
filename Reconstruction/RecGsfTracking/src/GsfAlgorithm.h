@@ -267,6 +267,12 @@ private:
       "Positive values multiply every full covariance copied from the shared "
       "final forward mixture; values at or below zero select a fresh standard-"
       "KF-style backward initialization"};
+  Gaudi::Property<std::string> m_inwardWeightMode{
+      this, "InwardWeightMode", "LocalMeasurement",
+      "LocalMeasurement uses the B_predicted x hit likelihood posterior; "
+      "SmoothedMarginal propagates B_updated states with weights obtained by "
+      "marginalizing each interior F_updated x B_predicted product over its "
+      "forward partners"};
   Gaudi::Property<std::string> m_reverseSelectionMode{
       this, "ReverseSelectionMode", "AggregateWeight",
       "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "

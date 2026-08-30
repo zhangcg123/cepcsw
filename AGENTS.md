@@ -31,7 +31,7 @@ Positive-weight final components and complete component lineage are persisted
 automatically for smoother and reverse. The `final_mixture_component_*`,
 `lineage_node_*`, and `lineage_edge_*` flat vectors retain the final mixture
 and every evaluated seed, BH child, measurement result, KL output, cutoff, and
-merge. Reverse additionally records passive same-surface two-filter products
+merge. Reverse additionally records same-surface two-filter products
 `B_smoothed[i] = F_updated[i] x B_predicted[i]` only at interior surfaces.
 Each product is formed inside its reverse-surface step from buffered
 `B_predicted[i]` candidates, immediately before the same buffered measurement
@@ -40,8 +40,16 @@ Direct product candidates persist their pair prior, five-dimensional overlap
 chi-square/log-determinant, log weight, normalized pre-pruning posterior,
 backward-predicted state, and explicitly named smoothed state.
 The boundaries reuse live mixtures: `B_smoothed[0] = B_updated[0]` and
-`B_smoothed[N-1] = F_updated[N-1]`. Interior products never feed recursion or
-endpoint publication. Their contracts are in
+`B_smoothed[N-1] = F_updated[N-1]`. Interior product states never propagate or
+publish. The compiled/default `InwardWeightMode=LocalMeasurement` also leaves
+their weights diagnostic-only. Experimental `SmoothedMarginal` instead sums
+the normalized unreduced direct-pair weights over all forward partners for
+each backward candidate and attaches that marginal to the corresponding live
+`B_updated[i]` state before cutoff, reduction, and further inward propagation.
+It deliberately reuses overlapping forward evidence at successive surfaces
+and is not a calibrated Bayesian posterior. Its active contract is in
+`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`; the original
+passive contracts are in
 `agents_record/2026-08-25-final-mixture-component-flat-tuple.md`,
 `agents_record/2026-08-25-component-lineage-dag-flat-tuple.md`, and
 `agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`; the
@@ -116,7 +124,9 @@ largely LCIO-like and forfeits much of the hard-loss recovery.
 The maintained comparison card now deliberately selects
 `InwardSeedCovarianceScale=-1` for the fresh-inward-seed campaign. This is
 campaign steering only; it does not change the compiled or active-template
-default 100.
+default 100. Its reverse branch also selects the experimental
+`InwardWeightMode=SmoothedMarginal`; the compiled and active-template default
+remains `LocalMeasurement`.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
@@ -241,55 +251,47 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate checkpoint is the two-mode reverse inward initialization. A
-positive `InwardSeedCovarianceScale` preserves the existing correlated-prior
-path by copying and scaling the complete final
-forward mixture. A finite value at or below zero constructs one fresh
-standard-KF-style seed, updates hit `N-1` once in the backward direction, and
-starts live recursion at `N-2`. The fresh lineage is one source-2 seed root
-with no forward parent; `ReverseInitialWeightMode` is irrelevant there. This
-is independent of the final forward mixture, not statistically independent of
-the measurements: the geometric prefit uses first/middle/last hit positions
-that the loose-covariance fit later consumes. The implementation contract and
-focused gates are in
-`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`.
-The maintained `DumpGsfTrks/gsf.py.bk` now selects `-1` for the fresh mode;
-`ReverseInitialWeightMode` is explicitly retained but inert because this mode
-has one unit-weight inward root. The steering decision is recorded in
-`agents_record/2026-08-29-maintained-fresh-inward-seed-steering.md`.
+The immediate checkpoint is experimental live inward weighting from the
+same-surface two-filter products. `InwardWeightMode=SmoothedMarginal` keeps
+the propagated means and covariances exactly equal to the ordinary
+measurement-updated `B_updated[i]` states. At each interior surface it replaces
+their local-measurement weights by the normalized unreduced
+`F_updated[i] x B_predicted[i]` pair weights marginalized over all valid
+forward partners. Hit 0 retains the ordinary local-measurement weight, and
+source-3 product states never propagate or publish. The mode has no silent
+fallback when a candidate lacks a positive marginal.
 
-Focused same-code reverse runs on hard-loss events 11, 16, and 17 establish
-that scale 100 reproduces its pre-change endpoint exactly and that
-scale 0 and scale -1 are exactly equivalent. Every fresh run contains one
-source-2 seed at the outermost hit, no copied-seed edge, and first targets
-`N-2`; build, install, verbose component execution, and flat-lineage checks
-pass. These are mechanical gates only. Reverse publishes terminal
-`B_updated[0]`, which is also `B_smoothed[0]`; the outer boundary
-`B_smoothed[N-1]` is the final forward mixture, and only interior smoothed
-products remain passive lineage diagnostics.
+This weighting is a deliberate mechanism test, not a calibrated smoother:
+successive surfaces reuse overlapping forward-hit evidence, while the live
+state still contains only the backward measurement update. The compiled and
+active reverse-template default remains `LocalMeasurement`. The maintained
+`DumpGsfTrks/gsf.py.bk` reverse branch explicitly selects
+`SmoothedMarginal` together with the fresh inward seed
+`InwardSeedCovarianceScale=-1`. The exact contract, superseded fresh-seed
+checkpoint, and validation record are in
+`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
 
-The pre-retirement exact-alias gate on events 11, 16, and 17 compared 900
-endpoint/status scalars and 882 final-component/lineage vectors with zero
-reverse/CMS mismatches. Each alias retained 30,285 source-3 smoothed nodes and
-58,176 smoothing edges; no source-3 node was published. That evidence is now
-historical and explains why the duplicate flag was removed. The exact gate is
-preserved in `agents_record/2026-08-29-smoothed-diagnostic-only-publication.md`.
+The focused mechanical gate passes. `LocalMeasurement` reproduces 192/192
+stored endpoint/final-component values exactly on events 11, 16, and 17. A
+verbose event-11 run constructs each interior product before its live update
+and propagates only source-2 states. Across the four tested input tracks, all
+4,367 accepted interior source-2 measurement nodes reproduce the saved
+source-3 backward marginal to at worst `8.9e-16`; every hit-0 weight reproduces
+the local score exactly, and no source-3 node publishes. The three focused
+SmoothedMarginal jobs complete, but their changed endpoints are mechanism
+evidence only.
 
-The next required evidence is a same-code topology-clear population rerun of
-copied scale 100 versus fresh scale 0 for the common inward workflow, split into
-no/light/hard loss and early-transition categories, with the 133-event
-secondary-activity set reported separately. Audit clean-track safety, tails,
-endpoint-mode failures, and local lineage rank changes before considering the
-fresh mode as a default. In particular, investigate the focused event-16
-FullMixtureMode fallback rather than treating its finite fallback output as a
-physics success.
+The next gate is a topology-clear population A/B against `LocalMeasurement`,
+split into no/light/hard loss and early-transition categories, with the
+133-event secondary-activity set reported separately. Audit clean-track
+safety, tails, endpoint-mode failures, and local lineage-rank changes before
+considering any default change.
 
-Freeze production defaults and endpoint definitions during this study:
-`DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`, `MaxComponents=10`,
-`ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
-`KappaSeedCov=-1`, and maintained fresh inward selection -1; the compiled and
-active-template inward default 100 remains the copied-mixture control. The
-material/BH consistency and narrowly scoped BH-component-variance questions
-remain active; ECAL and global-loss remain paused diagnostics. Historical
-detail lives in dated `agents_record/` entries and does not override this live
-focus.
+Freeze the other production controls and endpoint definitions during this
+study: `DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`,
+`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
+protection, and `KappaSeedCov=-1`. Keep `LocalMeasurement` as the compiled and
+active-template control; the maintained smoothed-marginal steering is
+experimental. Material/BH consistency and narrowly scoped BH-component-
+variance questions remain active; ECAL and global-loss remain paused
+diagnostics. Historical detail does not override this live focus.
