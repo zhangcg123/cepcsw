@@ -140,3 +140,52 @@ member. These checks establish mechanical implementation and persistence, not
 physics improvement. The required next evidence is a same-code topology-clear
 population A/B against `LocalMeasurement`, including clean-track tails and the
 separately reported 133-event secondary-activity control population.
+
+## Targeted 50-track negative-peak gate
+
+A first deliberately biased mechanism sample was run before the required
+inclusive population gate. The source population was the topology-clear
+`CEPCRuntimeCategoryAligned5Clear` batch, not the frozen production-BH
+configuration. It contains 194 tracks with total Geant4 eBrem loss in 1--2%
+and stored LocalMeasurement FullMixtureMode residual in `[-1.5,-0.5]%`. The
+first 50 rows in deterministic `(job,entry)` order were selected, spanning 22
+input files. The exact old cards fix fresh inward seed `-1`,
+`MaxComponents=10`, cutoff `1e-4`, `SymmetricKL`, and identity protection; the
+new run changes only `InwardWeightMode=SmoothedMarginal`.
+
+This is not yet the final same-code population A/B required by project law:
+the LocalMeasurement side is the stored pre-feature batch. The current binary
+has already established exact LocalMeasurement endpoint/component regression
+on events 11, 16, and 17, but the complete 50-track control was not rerun.
+
+All 50 SmoothedMarginal fits completed and all FullMixtureMode statuses were
+successful (`1`). Residuals are percent of truth pT.
+
+| Endpoint | Median | width68 | RMS about zero | Mean absolute residual | `|r| <= 0.5%` | `|r| <= 1%` |
+|---|---:|---:|---:|---:|---:|---:|
+| LCIO | -1.1157 | 0.2483 | 1.1452 | 1.1236 | 0/50 | 13/50 |
+| stored LocalMeasurement FullMixtureMode | -1.0840 | 0.2421 | 1.1270 | 1.1040 | 0/50 | 14/50 |
+| SmoothedMarginal FullMixtureMode | -1.0001 | 0.8113 | 1.0224 | 0.9545 | 9/50 | 23/50 |
+
+The new FullMixtureMode has smaller absolute residual on 39 tracks and larger
+absolute residual on 11. This does not mean that the negative peak was solved:
+37/50 remain in the original negative window, only 2/50 reach `|r|<=0.25%`,
+10/50 overshoot above `+0.25%`, and one lies between those windows. Its range
+is `[-1.4604,+1.4807]%`; the broadening from width68 `0.2421%` to `0.8113%`
+is the central result.
+
+The other endpoint summaries expose a stronger instability. SmoothedMarginal
+BestBranch reaches `+101.175%` residual with RMS `20.027%`, and WeightedMean
+reaches `+79.848%` with RMS `11.848%`. For job 11 entry 77, FullMixtureMode is
+`+1.4807%` while BestBranch and WeightedMean are `+101.175%` and `+79.848%`.
+FullMixtureMode happens to suppress those most extreme endpoint choices; it
+does not make the live weighting safe.
+
+Therefore this gate is evidence that the marginal weights actively move the
+mixture, sometimes in the desired direction, but overcorrect a subset and do
+not remove the selected negative peak. Do not make SmoothedMarginal a compiled
+or production default from this result. The next evidence remains a direct
+same-code LocalMeasurement/SmoothedMarginal population A/B including
+no-eBrem clean-track safety, unselected light/hard categories, tails, endpoint
+failures, and the separately reported secondary-activity control. The job-11
+entry-77 lineage is a focused overshoot diagnostic.

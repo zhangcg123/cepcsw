@@ -281,11 +281,23 @@ the local score exactly, and no source-3 node publishes. The three focused
 SmoothedMarginal jobs complete, but their changed endpoints are mechanism
 evidence only.
 
-The next gate is a topology-clear population A/B against `LocalMeasurement`,
-split into no/light/hard loss and early-transition categories, with the
-133-event secondary-activity set reported separately. Audit clean-track
-safety, tails, endpoint-mode failures, and local lineage-rank changes before
-considering any default change.
+A targeted 50-track negative-peak gate is also complete. It deliberately uses
+the topology-clear `CEPCRuntimeCategoryAligned5Clear` control: 1--2% truth-loss
+tracks whose stored LocalMeasurement FullMixtureMode residual is
+`[-1.5,-0.5]%`. SmoothedMarginal improves absolute FullMixtureMode residual on
+39/50, but only 2 reach `|r|<=0.25%`; 37 remain in the negative window and 10
+overshoot above `+0.25%`. Its width68 worsens from `0.242%` to `0.811%`.
+BestBranch and WeightedMean develop isolated `+101%` and `+80%` tails. This is
+a selected mechanism gate using a stored LocalMeasurement baseline, not the
+required same-code representative-population validation; exact details are in
+the dated record above.
+
+The next gate remains a direct same-code topology-clear population A/B against
+`LocalMeasurement`, split into no/light/hard loss and early-transition
+categories, with the 133-event secondary-activity set reported separately.
+Audit clean-track safety, tails, endpoint-mode failures, local lineage-rank
+changes, and the job-11 entry-77 overshoot before considering any default
+change.
 
 Freeze the other production controls and endpoint definitions during this
 study: `DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`,
