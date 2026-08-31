@@ -60,119 +60,6 @@ initialization is selected. The old alternate KF fitter
 and other initialization experiments have been removed; historical
 comparisons remain under `agents_record/`.
 
-## Experimental global one-loss refitter
-
-`RecGsfGlobalLossRefitter` is a separate experimental algorithm. It reads
-`CompleteTracks` directly and writes `GlobalLossTracks`; it neither calls
-`RecGsfTracking` nor changes its method-specific GSF collections. The maintained
-`DumpGsfTrks/gsf.py.bk` exposes it as the third explicit
-`method="global-loss"` choice. That choice schedules the global refitter
-instead of `RecGsfTracking`, tags both outputs with `global-loss`, and sets
-`RecGsfFlatTuple.UseGlobalLossTracks=true` so the established `gsf_*`
-analysis schema is filled from `GlobalLossTracks`. The existing `smoother`
-and `reverse` paths remain exclusive alternatives. Both write
-the common BestBranch, WeightedMean, and FullMixtureMode tracker endpoint
-collections; `reverse` remains the card default. No batch script selects
-global loss automatically.
-
-For each usable input track, available hits that map to active measurement
-layers are ordered by radius from the interaction point outward. The refitter
-starts from `CompleteTracks::AtLastHit`, scales its
-full covariance, and consumes every inner measurement through the same exact
-MarlinTrk
-`addHit(reference) -> initialise(state) -> addAndFit(target)` operation used by
-the GSF. It compares the identity history `H0` with a bank `H(j,k)` containing
-exactly one radiative transition: matched-hit interval `j` and non-identity
-BH mode `k`. Material is the coverage-checked DD4hep thickness between those
-two matched hit points. There is no KL reduction and no multi-loss history in
-this first implementation.
-
-For a radiative history, the retained fraction `z` is continuous rather than
-fixed to a BH component mean. The history evidence is
-
-```text
-log Z(j,k) = log P(H(j,k))
-           + log integral L(all inward hits | H(j,k), z)
-                          N(z | mean(j,k), variance(j,k)) dz .
-```
-
-The integral covers the configured physical, finite-sigma window and is
-evaluated by Simpson quadrature. The history prior is the product of identity
-weights at every other scanned interval and the selected mode weight at
-interval `j`:
-
-```text
-log P(H0)    = sum_i log w(i, identity)
-log P(H(j,k)) = log P(H0) - log w(j, identity) + log w(j,k) .
-```
-
-For every radiative mode, the reported candidate `z` maximizes the likelihood
-times the Gaussian mode density within the same window; history selection then
-carries that candidate optimum into the winning output. The best radiative
-history is published only when
-
-```text
-log Z(best radiative) - log Z(identity)
-    >= MinimumRadiativeLogBayesFactor .
-```
-
-The default threshold is 3, approximately a 20:1 evidence requirement. This
-is a conservative clean-track guard, not a population-validated operating
-point. Setting it to 0 gives the direct maximum-evidence-history decision,
-with an exact evidence tie resolved in favor of the radiative history.
-
-The algorithm exposes 14 algorithm-specific steering properties:
-
-| Property | Compiled default | Meaning and allowed values |
-|---|---:|---|
-| `ElectronHypothesis` | `true` | Must remain true; this experimental history prior requires an electron BH model. |
-| `BHModel` | `CEPC2GeV85StepConditioned` | Accepted canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, `CEPCRuntimeCategoryAligned9Clear`, and `CEPCRuntimeCategoryAligned15Clear`. The first two also accept `cepc2GeV85StepConditioned` and `cepc2GeV85StepConditioned6`. Unknown names fail initialization. `ActsAtlas` and its `actsAtlas`/`ACTS`/`Acts` aliases parse but are then explicitly rejected because this one-loss prior requires an exact identity atom. |
-| `BHSplitThreshold` | `1e-4` | Finite, nonnegative minimum DD4hep interval t/X0 included in the hypothesis bank; the comparison is strictly `pathTX0 > threshold`. |
-| `MSOn` | `true` | Enable KalTest multiple scattering in every hypothesis refit. |
-| `ElossOn` | `false` | Enable the baseline deterministic KalTest energy-loss treatment; independent of the fitted radiative jump. |
-| `OuterSeedCovarianceScale` | `100` | Finite positive multiplier applied to the complete `AtLastHit` covariance. |
-| `ProcessSigmaWindow` | `3` | Finite positive half-width, in BH-mode standard deviations, of the evidence/profile interval. |
-| `ProfileGridPoints` | `9` | Odd Simpson grid size, at least 3. |
-| `ProfileRefinementIterations` | `6` | Nonnegative local interval-halving iterations applied to every radiative mode's reported-`z` profile after its Simpson evidence grid. These evaluations refine the posterior-kernel maximum but do not change the already accumulated evidence integral. |
-| `MinimumRetainedFraction` | `0.05` | Physical lower bound strictly between 0 and 1. The upper bound is just below 1. |
-| `MinimumRadiativeLogBayesFactor` | `3` | Any finite evidence difference is accepted. The best radiative history is published when its evidence minus identity is at least this value; 0 selects radiative for a non-smaller evidence, while a negative value deliberately weakens the clean-track gate. |
-| `CandidateIntervalIndices` | `[]` | Optional zero-based interval allow-list over the radius-sorted matched-hit vector after unavailable/unmatched input hits are removed. Empty scans every valid interval above threshold. Entries are not range-validated; negative or out-of-range values simply match no interval. |
-| `SelectedEventIndices` | `[]` | Optional zero-based event allow-list for focused diagnostics. Empty processes all events. Entries are not range-validated; negative or out-of-range values simply match no event. |
-| `VerboseDump` | `false` | Print identity evidence, every interval/mode profile, and the final decision. |
-
-Each successful output track contains one `AtIP` state, type `2`, and copies
-the input tracker-hit relations. `GlobalLossStatus` has one entry per
-`CompleteTracks` input track. Every other diagnostic collection has one entry
-per `GlobalLossTracks` output track, and `GlobalLossInputTrackIndex` maps that
-output-aligned row back to the input-track/status row:
-
-| Collection | Meaning |
-|---|---|
-| `CompleteTracks` | Input track collection. |
-| `GlobalLossTracks` | Successful independently refitted tracks. This collection is not `GSFTracks` and is produced only when this separate algorithm is scheduled. |
-| `GlobalLossStatus` | Per-input-track status: `0` output written; `-1` event not selected; `1` fewer than five associated hits; `2` no usable `AtLastHit`; `3` fewer than five matched hits; `4` no valid hypothesis fit. |
-| `GlobalLossInputTrackIndex` | Original `CompleteTracks` index for each successful output row. |
-| `GlobalLossSelectedInterval`, `GlobalLossSelectedMode` | Selected radius-sorted matched-hit interval and BH mode; both are `-1` for identity. |
-| `GlobalLossRetainedFraction`, `GlobalLossSelectedTX0` | Profiled `z` and selected interval t/X0; identity receives 1 and 0. |
-| `GlobalLossLogLikelihood`, `GlobalLossLogPrior`, `GlobalLossLogPosteriorEvidence` | Selected profile likelihood; selected discrete-history log mass plus `-0.5` Gaussian pull squared at the reported `z` (the Gaussian normalization is omitted from this diagnostic kernel); and selected marginalized history evidence. |
-| `GlobalLossIdentityLogEvidence`, `GlobalLossBestRadiativeLogEvidence`, `GlobalLossRadiativeLogBayesFactor` | The two decision evidences and their radiative-minus-identity difference, retained even when the clean-track gate publishes identity. If a side has no valid fit, its evidence and the corresponding difference use signed infinity consistently with the implementation. |
-
-The focused zero-based event 3/4 gate from
-`trk-e--20-85-822751.root`, using the compiled five-component model and
-`ElossOn=false`, established mechanism but not validation. Event 3 has a
-truth-matched 6.425% eBrem loss in interval 5 and truth pT 35.813 GeV. The
-identity refit gives 33.544 GeV; the best radiative evidence is higher by
-4.273 and publishes 34.306 GeV. However, it chooses interval 6 and only 2.641%
-loss. In the no-eBrem event 4, the best false-radiative evidence is higher by
-only 0.380, so the default evidence gate retains identity at 48.788 GeV.
-Increasing the outer covariance scale from 100 to `1e6`, switching deterministic
-energy loss, and comparing the runtime-generic and production BH models did
-not remove the interval/magnitude error. The present conclusion is therefore
-limited: all-hit evidence can protect this clean control and move one loss
-case in the correct momentum direction, but it has not demonstrated correct
-loss localization or magnitude and is not ready as a production/default
-replacement. Its maintained-card availability is mechanical, not validation.
-
 ## Complete configuration reference
 
 Reference date: 2026-08-31. `RecGsfTracking` exposes 39 Gaudi properties in
@@ -428,9 +315,8 @@ extrapolated to the same IP endpoint used by the method. The EDM stores each
 component's normalized weight, kappa mean, kappa variance, method source, and
 validity, together with both the input- and output-track indices. It is passive
 output only: recording does not alter reduction, selection, endpoint
-publication, or any component state. Ordinary forward and global-loss
-workflows do not expose this final multi-component endpoint and therefore
-produce no component rows.
+publication, or any component state. Ordinary forward workflows do not expose
+this final multi-component endpoint and therefore produce no component rows.
 
 ### Experimental ECAL component constraint
 
@@ -525,30 +411,27 @@ The data handles are configurable separately from the 39 properties:
 ### Flat-tuple paired-track branches
 
 `RecGsfFlatTuple` keeps method-explicit tracker-result schemas. The
-`bestbranch_gsf_*` fields come only from `GSFTracksBestBranch`. Its
-`UseGlobalLossTracks` property defaults to `false`, in which case the generic
-`gsf_*` fields come from an optional `GSFTracks` collection. Setting it to
-`true` makes those generic fields come from `GlobalLossTracks`; the maintained
-card does this only for `method="global-loss"`. When
+`bestbranch_gsf_*` fields come only from `GSFTracksBestBranch`, while the
+generic `gsf_*` fields come from an optional `GSFTracks` collection. When
 `GSFTracksWeightedMean`, `GSFTracksFullMixtureMode`, or
 `GSFTracksEcalConstrained` is present in the ordinary GSF event store, the
 tuple also fills the corresponding parallel scalar set:
 
 | Branches | Meaning |
 |---|---|
-| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Generic forward result from `GSFTracks`, or `GlobalLossTracks` when `UseGlobalLossTracks=true`. These are zero for smoother/reverse. |
+| `gsf_pT`, `gsf_p`, `gsf_eta`, `gsf_theta`, `gsf_phi`, `gsf_d0`, `gsf_z0`, `gsf_omega`, `gsf_tanl`, `gsf_chi2`, `gsf_ndf`, `gsf_nhits`, `gsf_type` | Generic forward result from `GSFTracks`. These are zero for smoother/reverse. |
 | `bestbranch_gsf_pT`, `bestbranch_gsf_p`, `bestbranch_gsf_eta`, `bestbranch_gsf_theta`, `bestbranch_gsf_phi`, `bestbranch_gsf_d0`, `bestbranch_gsf_z0`, `bestbranch_gsf_omega`, `bestbranch_gsf_tanl`, `bestbranch_gsf_chi2`, `bestbranch_gsf_ndf`, `bestbranch_gsf_nhits`, `bestbranch_gsf_type` | Smoother/reverse BestBranch from `GSFTracksBestBranch`. |
-| `bestbranch_gsf_available` | One when `GSFTracksBestBranch` is present for the row; zero for forward and global-loss. |
+| `bestbranch_gsf_available` | One when `GSFTracksBestBranch` is present for the row; zero for forward. |
 | `weighted_gsf_pT`, `weighted_gsf_p`, `weighted_gsf_eta`, `weighted_gsf_theta`, `weighted_gsf_phi`, `weighted_gsf_d0`, `weighted_gsf_z0`, `weighted_gsf_omega`, `weighted_gsf_tanl`, `weighted_gsf_chi2`, `weighted_gsf_ndf`, `weighted_gsf_nhits`, `weighted_gsf_type` | Paired `GSFTracksWeightedMean` result for smoother/reverse. The chi-square/NDF are inherited from BestBranch. |
-| `weighted_gsf_available`, `weighted_gsf_changed` | Presence tag and exact scalar comparison against the BestBranch fields. They are zero for forward and global-loss output. |
+| `weighted_gsf_available`, `weighted_gsf_changed` | Presence tag and exact scalar comparison against the BestBranch fields. They are zero for forward output. |
 | `fullmixture_gsf_pT`, `fullmixture_gsf_p`, `fullmixture_gsf_eta`, `fullmixture_gsf_theta`, `fullmixture_gsf_phi`, `fullmixture_gsf_d0`, `fullmixture_gsf_z0`, `fullmixture_gsf_omega`, `fullmixture_gsf_tanl`, `fullmixture_gsf_chi2`, `fullmixture_gsf_ndf`, `fullmixture_gsf_nhits`, `fullmixture_gsf_type` | Paired full five-dimensional mixture-density mode from `GSFTracksFullMixtureMode`. The chi-square/NDF are inherited from BestBranch. |
-| `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward and global-loss output. |
+| `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward output. |
 | `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
 | `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
 | `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
 | `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` reverse terminal inward mixture), and IP-state validity. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
-| `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother and reverse populate them automatically, while forward, global-loss, unprocessed rows, and older EDM inputs leave them zero/empty. |
+| `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother and reverse populate them automatically, while forward, unprocessed rows, and older EDM inputs leave them zero/empty. |
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
 | `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` an interior two-filter smoothed product. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates only at successfully processed interior surfaces `0 < i < N-1`; `B_smoothed[0]` is represented by the terminal source-2 nodes and `B_smoothed[N-1]` by the final source-1 nodes. Each explicit smoothing candidate has one source-1 `F_updated[i]` parent and one source-2 pre-measurement parent representing `B_predicted[i]`; the exact transported backward prediction is persisted on the source-3 candidate itself. Numeric source and operation codes are unchanged. |
 | `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
@@ -572,13 +455,13 @@ tuple also fills the corresponding parallel scalar set:
 
 The weighted branch set has no method/configuration switch. The flat tuple
 always creates it and fills it only when `GSFTracksWeightedMean` is present;
-forward and global-loss do not produce that collection, so all weighted
-values and both flags remain zero.
+forward does not produce that collection, so all weighted values and both
+flags remain zero.
 
 The full-mixture branch set follows the same presence-driven rule and has no
 configuration switch. It is filled only from `GSFTracksFullMixtureMode` and
-its status collection. Forward and global-loss jobs leave it
-unavailable/zero with status zero. A negative status with
+its status collection. Forward jobs leave it unavailable/zero with status
+zero. A negative status with
 `fullmixture_gsf_available=1` means the row-aligned track is the deliberate
 BestBranch fallback, not a successfully found density mode.
 
@@ -622,9 +505,9 @@ silent truncation would remove exactly the rejected/pruned alternatives
 needed to explain the first wrong branch decision.
 
 The BestBranch branch set is likewise presence-driven: it is populated only
-from `GSFTracksBestBranch` and remains unavailable/zero for forward and
-global-loss jobs. The generic `gsf_*` fields remain available for those two
-non-paired workflows and are zero for smoother/reverse. This is an
+from `GSFTracksBestBranch` and remains unavailable/zero for forward jobs. The
+generic `gsf_*` fields remain available for that non-paired workflow and are
+zero for smoother/reverse. This is an
 intentional schema rename for newly produced backward-workflow files;
 historical smoother/reverse/CMS-like EDM/flat files retain their original
 `GSFTracks`/`gsf_*` names and must not be silently interpreted as the new
@@ -635,8 +518,8 @@ experiment is off or the paired collection is absent, `ecal_gsf_available=0`
 and its scalar/residual fields are zero. The constrained track deliberately
 has no duplicate hit-vector branches: the experimental collection copies the
 BestBranch tracker hits. Smoother/reverse hits are therefore recorded
-once as `bestbranch_gsf_hit_*`; generic forward/global-loss hits remain in
-`gsf_hit_*`. WeightedMean and FullMixtureMode also share the BestBranch hit
+once as `bestbranch_gsf_hit_*`; generic forward hits remain in `gsf_hit_*`.
+WeightedMean and FullMixtureMode also share the BestBranch hit
 list and have no duplicate hit-vector branches.
 
 For the BH oracle, the flat tuple contains its scope status. Its LCIO and GSF
@@ -666,24 +549,14 @@ its common steering and enables `InwardBHSplitting=true` only in the reverse
 branch. These are campaign controls; both compiled and active reverse-template
 defaults remain true. Its top-level `bh_model` selector is the
 user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than the production
-`CEPC2GeV85StepConditioned` model, and it feeds both ordinary GSF and the
-independent global-loss refitter. The retired runtime
-BH-audit CSV is no longer steered. The card's `RecGsfFlatTuple` instance writes
+`CEPC2GeV85StepConditioned` model. The retired runtime BH-audit CSV is no
+longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
 `bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
 `gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
 
-The same card also exposes `method="global-loss"`. It explicitly assigns all
-14 `RecGsfGlobalLossRefitter` properties to their documented experimental
-base values, including the shared top-level BH-model selection, split threshold
-`1e-4`, covariance scale 100, evidence gate 3, empty event/interval
-allow-lists, and verbose output off. It schedules the global refitter instead
-of `RecGsfTracking`, does not request the truth-provenance collections used
-only by the ordinary GSF oracle/recorder, writes `GlobalLossTracks`, and fills
-the stable flat `gsf_*` fields through
-`RecGsfFlatTuple.UseGlobalLossTracks=true`. The maintained template currently
-selects `method="reverse"`; choosing `method="global-loss"`
-reuses the same top-level BH-model value.
+The maintained template exposes only `method="smoother"` and
+`method="reverse"`; it currently selects reverse.
 
 The maintained `gsf.py.bk` template keeps the compiled and active
 reverse-template `TruthBHLossOverride=false` base value. For a truth-oracle

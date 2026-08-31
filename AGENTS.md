@@ -79,14 +79,6 @@ remain interpretable; the migration and exact reverse regression gate are in
 `agents_record/2026-08-29-cms-like-workflow-retirement.md`. Forward filtering,
 an independent reverse multi-component refit, and a KL reduction-aware
 experimental smoother remain mechanically operational.
-The separate experimental `RecGsfGlobalLossRefitter` is also mechanically
-available as the third explicit `method="global-loss"` choice in the
-maintained `DumpGsfTrks/gsf.py.bk`. It consumes `CompleteTracks`, writes
-`GlobalLossTracks`, and is scheduled instead of `RecGsfTracking`; the flat
-tuple maps that collection into the existing `gsf_*` schema. This availability
-does not validate the method or make it the production candidate. The card
-default remains `reverse`, and the two established `RecGsfTracking`
-workflows are unchanged.
 A default-off ECAL component-re-ranking prototype is also mechanically
 operational. It preserves `GSFTracksBestBranch` and writes its paired result separately;
 its focused evidence is promising only for retained bimodal alternatives and
@@ -259,53 +251,42 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate checkpoint is directional BH hypothesis generation. The new
-boolean controls independently gate child creation in the shared outward pass
-and independent reverse inward pass. Compiled and active reverse-template
-behavior remains `ForwardBHSplitting=true, InwardBHSplitting=true`. The
-maintained `DumpGsfTrks/gsf.py.bk` reverse branch now selects
-`ForwardBHSplitting=false, InwardBHSplitting=true`, together with fresh inward
-seed `InwardSeedCovarianceScale=-1` and experimental
-`InwardWeightMode=SmoothedMarginal`.
+The immediate design question is a hit-0 global comparison within the reverse
+GSF, replacing premature surface-local competition without reviving the
+retired standalone global-loss profiler. The proposed bounded hypothesis bank
+keeps one no-radiation identity backbone. At each eligible inward material
+interval only that backbone emits the configured non-identity BH children.
+Each emitted child represents exactly one radiative interval, is never split
+again, and is propagated through every remaining inner measurement to hit 0
+without KL merging or posterior-weight pruning against other histories.
 
-The mechanical gate passes. On hard event 11, the true/true, false/true,
-true/false, and false/false configurations persist 460/480, 0/480, 460/0,
-and 0/0 forward/inward split nodes respectively. All four retain populated
-material-path summaries. With fresh-seed `LocalMeasurement`, false/true
-reproduces all 192 stored BestBranch, WeightedMean, FullMixtureMode, and
-final-component values exactly on events 11, 16, and 17. A false/true
-`SmoothedMarginal` event-11 smoke run also completes, but changes the endpoint
-slightly because each same-surface product has only the unsplit outward state
-as its forward partner. The exact semantics and validation table are in
-`agents_record/2026-08-31-directional-bh-splitting-controls.md`.
+At hit 0, compare the identity and all single-loss histories using one complete
+path score: the BH log-prior for the full interval history plus the accumulated
+measurement log-likelihood from all hits. This is intended to test whether a
+low-prior light-loss child that is ambiguous at its adjacent measurement can
+be recovered by the remaining inner hits. It deliberately excludes multiple-
+loss histories in its first form, limiting the bank to approximately
+`1 + N_intervals * (N_BH_components - 1)` candidates instead of exponential
+branching.
 
-The preceding complete SmoothedMarginal population result closes that mode as
-a default candidate for now. Among 7,310 topology-clear matched events its
-FullMixtureMode inclusive width68 is effectively unchanged versus
-LocalMeasurement (`0.535%` versus `0.534%`), while abs-q68 worsens from
-`0.347%` to `0.483%` and residuals above 100% increase from 9 to 37.
-No-eBrem safety and light-loss absolute containment worsen; the hard-loss
-width improves but its absolute containment and catastrophic tails worsen.
-SmoothedMarginal remains useful as mechanism evidence only. Its detailed
-contract and selected 50-track evidence remain in
-`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`; the complete
-population disposition is preserved in the directional-control record.
+This method is not implemented or validated. Before editing the live reverse
+filter, review the state/weight ownership, exact interval at which the loss
+operator is applied, full-path prior normalization, endpoint publication, and
+memory contract. In particular, retaining every intermediate lineage node
+would scale roughly as `N_intervals^2 * N_BH_components`; the fit may keep the
+active state bank while persisting only the history summaries needed to audit
+the hit-0 decision. The retired `RecGsfGlobalLossRefitter` and its maintained-
+card/flat-tuple adapters are not the implementation base; their historical
+evidence remains under `agents_record/`.
 
-The next gate is a direct same-code population study using distinct output
-paths. First verify the expected endpoint equivalence of true/true and
-false/true under fresh-seed `LocalMeasurement`, while measuring component-graph
-size and memory. Then compare those split settings under `SmoothedMarginal`,
-where the outward switch changes the live overlap weights. Categorize
-topology-clear no/light/hard loss and early transitions, audit endpoint status
-and tails, and report the stable 133-event secondary-activity set separately.
-Do not promote either the directional campaign setting or SmoothedMarginal
-from mechanical evidence.
-
-Freeze the other production controls and endpoint definitions during this
-study: `DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`,
-`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
-protection, and `KappaSeedCov=-1`. Keep true/true and `LocalMeasurement` as the
-compiled and active-template controls. Material/BH consistency and narrowly
-scoped BH-component-variance questions remain active; ECAL and global-loss
-remain paused diagnostics. Historical detail does not override this live
-focus.
+The completed directional-splitting and SmoothedMarginal studies remain
+controls, not defaults. Their exact mechanical and population evidence is in
+`agents_record/2026-08-31-directional-bh-splitting-controls.md` and
+`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
+Freeze the production controls and existing endpoint definitions while the
+hit-0 method is designed: `DD4hepBetweenSurfaces`,
+`CEPC2GeV85StepConditioned`, `MaxComponents=10`,
+`ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
+`KappaSeedCov=-1`, compiled directional gates true/true, and
+`InwardWeightMode=LocalMeasurement`. ECAL remains paused. Historical detail
+does not override this live focus.

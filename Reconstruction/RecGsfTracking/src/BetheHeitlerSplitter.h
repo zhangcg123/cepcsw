@@ -67,9 +67,7 @@ struct BetheHeitlerSplitter {
   static Model modelFromName(const std::string& modelName);
   static const char* modelName(Model model);
 
-  /// Return the configured mixture without applying it to a track state.
-  /// This is used by hypothesis-level diagnostics/refitters that must score
-  /// the BH prior before choosing which deterministic process to propagate.
+  /// Return the configured mixture for a material interval.
   std::vector<BetheHeitlerMixtureComponent> mixture(double tX0) const;
 
   /// Split a component at a surface with radiation thickness tX0.

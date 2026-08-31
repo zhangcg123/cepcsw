@@ -390,9 +390,7 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
   info() << "Output: " << m_outFileName
-         << " genericTrackSource="
-         << (m_useGlobalLossTracks.value() ? "GlobalLossTracks"
-                                           : "GSFTracks")
+         << " genericTrackSource=GSFTracks"
          << " bestBranchSource=GSFTracksBestBranch"
          << " fullMixtureModeSource=GSFTracksFullMixtureMode"
          << endmsg;
@@ -411,10 +409,8 @@ StatusCode RecGsfFlatTuple::execute() {
   const auto* lcioCol = m_inCompleteTracks.get();
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> genericGsfWrapper(
       eventSvc(), "GSFTracks");
-  const auto* gsfCol = m_useGlobalLossTracks.value()
-                           ? m_inGlobalLossTracks.get()
-                           : (genericGsfWrapper
-                                  ? genericGsfWrapper->getData() : nullptr);
+  const auto* gsfCol = genericGsfWrapper
+                           ? genericGsfWrapper->getData() : nullptr;
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> bestBranchGsfWrapper(
       eventSvc(), "GSFTracksBestBranch");
   const auto* bestBranchGsfCol = bestBranchGsfWrapper

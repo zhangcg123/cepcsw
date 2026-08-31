@@ -218,8 +218,8 @@ cards remain artifacts rather than source configuration.
 ### `gsf.py.bk`
 
 The current `gsf.py.bk` contains the comparison card previously named
-`gsf_reverse_new.py.bk`. It keeps the established reverse workflow alongside the experimental global-loss
-workflow and agrees with the production material-path, threshold/cutoff, and
+`gsf_reverse_new.py.bk`. It keeps the established smoother and reverse
+workflows and agrees with the production material-path, threshold/cutoff, and
 ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
@@ -233,10 +233,8 @@ evaluation, and passive material recording remain active. Its top-level
 `bh_model` selector is the
 default-off
 `CEPCRuntimeGenericGrid5Clear` experiment, not the production
-`CEPC2GeV85StepConditioned` model. The same selector feeds ordinary GSF and
-the independent global-loss refitter so method comparisons cannot silently use
-different BH models; preserve it as deliberate campaign steering until the user
-changes it.
+`CEPC2GeV85StepConditioned` model; preserve it as deliberate campaign steering
+until the user changes it.
 
 The authoritative explanation of all 39 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
@@ -309,8 +307,7 @@ endpoint-output selector: `GSFTracksBestBranch` always stores BestBranch and
 five-dimensional final-mixture PDF. The latter is automatic/default-on and
 `GSFFullMixtureModeStatus` distinguishes a successful mode (`1`) from a
 tagged BestBranch fallback (negative status). The removed
-`ReverseOutputMode` property must not appear in regenerated cards. Global-loss
-retains its existing single-output behavior.
+`ReverseOutputMode` property must not appear in regenerated cards.
 
 The same card's `RecGsfFlatTuple` output records BestBranch in
 `bestbranch_gsf_*`, the paired moment match in `weighted_gsf_*`, plus
@@ -325,10 +322,10 @@ their residuals, the full-mixture mode in `fullmixture_gsf_*` with
 jobs remain valid: their ordinary fields are populated and their constrained
 fields are marked unavailable and zeroed. The constrained track copies the
 BestBranch tracker hits, so the flat tuple records those once as
-`bestbranch_gsf_hit_*`; global-loss keeps generic `gsf_hit_*` vectors.
+`bestbranch_gsf_hit_*`; forward GSF keeps generic `gsf_hit_*` vectors.
 There is no method switch for the weighted flat schema: the branches always
 exist, are populated only from an available `GSFTracksWeightedMean`
-collection, and remain unavailable/zero for forward and global-loss jobs.
+collection, and remain unavailable/zero for forward jobs.
 The FullMixtureMode schema follows the same presence-only rule and is populated
 only from `GSFTracksFullMixtureMode`; a negative status marks the deliberate
 BestBranch fallback. It has no duplicate hit-vector branches.
@@ -340,8 +337,8 @@ derived pT. The source code is `1` for smoother and `2` for the reverse
 terminal `B_updated[0]` endpoint. Historical code `3`
 means the retired CMS-like `B_smoothed[1]` endpoint, and historical code `4`
 means its terminal-backward fallback.
-They contain every published output track in the event and are empty
-for forward and global-loss jobs. These vectors are sufficient to
+They contain every published output track in the event and are empty for
+forward jobs. These vectors are sufficient to
 reconstruct the final one-dimensional pT marginal; the exact transformation
 and branch contract are maintained in the package README.
 It also creates `lineage_node_*` and `lineage_edge_*` vectors automatically
@@ -353,16 +350,14 @@ every evaluated interior two-filter smoothing candidate for
 states reuse the existing live nodes: `B_smoothed[0] = B_updated[0]` and
 `B_smoothed[N-1] = F_updated[N-1]`. Edge records retain split,
 measurement, two-parent merge, forward-to-reverse-seed, and two-parent
-smoothing ancestry. Forward and global-loss jobs keep the branches present but
-empty.
+smoothing ancestry. Forward jobs keep the branches present but empty.
 The numeric code maps, graph key, state fields, and reconstruction contract
 are maintained in `Reconstruction/RecGsfTracking/README.md`; the workflow
 uses `keep *`, so no explicit output-command list is required here.
 The BestBranch schema follows the same presence-only rule for
-`GSFTracksBestBranch`; it is unavailable/zero for forward and global-loss.
-Those two methods retain their generic `gsf_*` fields from `GSFTracks` and
-`GlobalLossTracks`, respectively. Existing smoother/reverse ROOT files are not
-renamed in place: regenerate them to obtain
+`GSFTracksBestBranch`; it is unavailable/zero for forward. Forward retains its
+generic `gsf_*` fields from `GSFTracks`. Existing smoother/reverse ROOT files
+are not renamed in place: regenerate them to obtain
 `GSFTracksBestBranch` and `bestbranch_gsf_*`.
 
 Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
@@ -385,6 +380,14 @@ the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 must be regenerated rather than edited in place. Existing tuples remain
 interpretable because the retired counterfactual scanner persisted no EDM or
 flat-tuple schema.
+
+The separate `RecGsfGlobalLossRefitter` is also retired. Generated cards that
+import it, select `method="global-loss"`, or assign
+`RecGsfFlatTuple.UseGlobalLossTracks` are stale and must be regenerated. The
+maintained card now accepts only `method="smoother"` and `method="reverse"`.
+Historical global-loss ROOT outputs and dated records remain available, but
+the current flat-tuple producer no longer maps `GlobalLossTracks` into
+`gsf_*`.
 
 The maintained template currently selects `method="reverse"`. It now sets
 `InwardSeedCovarianceScale=-1.0` for the fresh-inward-seed campaign, while the

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-"""GSF comparison card with three explicitly selectable refit workflows.
+"""GSF comparison card with two explicitly selectable refit workflows.
 
 Select exactly one workflow by editing the explicit ``method`` assignment
-near the top of this file. The accepted values are ``"smoother"``,
-``"reverse"``, and ``"global-loss"``. The last is the
-separate, experimental all-hit global one-loss refitter.
+near the top of this file. The accepted values are ``"smoother"`` and
+``"reverse"``.
 
 Every workflow reads the same ``CompleteTracks`` collection, which supplies
 the LCIO reference in the output tuple.
@@ -25,11 +24,10 @@ particle = 12340
 inputfilename = os.path.join(tuplepath, "trk_v01.root")
 
 # Explicit workflow selection. Change this source line to "smoother",
-# "reverse", or "global-loss"; no environment override is used.
+# "reverse"; no environment override is used.
 method = "reverse"
 
-# One selector governs every workflow that consumes a Bethe-Heitler model,
-# including the independent global-loss refitter.
+# One selector governs every workflow that consumes a Bethe-Heitler model.
 bh_model = "CEPCRuntimeGenericGrid5Clear"
 
 from Configurables import k4DataSvc
@@ -62,7 +60,7 @@ podioinput = PodioInput("PodioReader", collections=[
     "GsfSimTrackerHitG4StepLinks",
 ])
 
-from Configurables import RecGsfTracking, RecGsfGlobalLossRefitter, TrackSystemSvc, GearSvc
+from Configurables import RecGsfTracking, TrackSystemSvc, GearSvc
 tracksys = TrackSystemSvc("TrackSystemSvc")
 gearsvc = GearSvc("GearSvc")
 
@@ -148,9 +146,6 @@ gsf.EcalConstraintLikelihoodFloor = 0.05
 gsf.EcalConstraintPhiWindow = 0.10
 gsf.EcalConstraintThetaWindow = 0.10
 
-refitter = gsf  # Algorithm scheduled below; global-loss replaces this object.
-use_global_loss_tracks = False  # True maps GlobalLossTracks into generic gsf_*.
-
 if method == "smoother":
     # KL reduction-aware retained-graph Gaussian-sum smoother. Its common-IP
     # state is persisted as GSFTracksBestBranch, GSFTracksWeightedMean, and
@@ -186,44 +181,15 @@ elif method == "reverse":
     # explicitly for positive-scale copied-mixture comparison cards.
     gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
-elif method in ("global-loss", "global_loss", "global"):
-    # Independent all-hit evidence refitter. It compares identity with every
-    # exactly-one-radiative-interval history and writes GlobalLossTracks. It is
-    # selected instead of RecGsfTracking, so the established GSF workflows and
-    # their method-specific GSF collections remain untouched in their own jobs.
-    method = "global-loss"
-    global_loss = RecGsfGlobalLossRefitter("RecGsfGlobalLossRefitter")
-    global_loss.ElectronHypothesis = True
-    global_loss.BHModel = bh_model
-    global_loss.BHSplitThreshold = 1.0e-4
-    global_loss.MSOn = True
-    global_loss.ElossOn = False
-    global_loss.OuterSeedCovarianceScale = 100.0
-    global_loss.ProcessSigmaWindow = 3.0
-    global_loss.ProfileGridPoints = 9
-    global_loss.ProfileRefinementIterations = 6
-    global_loss.MinimumRetainedFraction = 0.05
-    global_loss.MinimumRadiativeLogBayesFactor = 3.0
-    global_loss.CandidateIntervalIndices = []
-    global_loss.SelectedEventIndices = []
-    global_loss.VerboseDump = False
-    global_loss.OutputLevel = INFO
-    refitter = global_loss
-    use_global_loss_tracks = True
-
 else:
     raise ValueError(
-        "Unknown method={!r}; choose smoother, reverse, or global-loss".format(
+        "Unknown method={!r}; choose smoother or reverse".format(
             method))
 
-# Keep ordinary GSF truth-oracle A/B sides explicitly tagged. Global-loss does
-# not use that oracle and therefore receives its own unambiguous method tag.
-if use_global_loss_tracks:
-    outputmethod = method
-else:
-    outputmethod = method + (
-        "-truth-bh" if gsf.TruthBHLossOverride else "-truth-bh-off"
-    )
+# Keep ordinary GSF truth-oracle A/B sides explicitly tagged.
+outputmethod = method + (
+    "-truth-bh" if gsf.TruthBHLossOverride else "-truth-bh-off"
+)
 
 gsf.SelectedEventIndices = []
 gsf.VerboseDump = False
@@ -237,12 +203,10 @@ from Configurables import RecGsfFlatTuple
 flat = RecGsfFlatTuple("RecGsfFlatTuple")
 # The tuple uses explicit endpoint schemas. Smoother/reverse BestBranch,
 # WeightedMean, and FullMixtureMode fill bestbranch_gsf_*, weighted_gsf_*, and
-# fullmixture_gsf_* respectively. Global-loss maps GlobalLossTracks into the
-# generic gsf_* fields. Missing
-# method-specific collections leave their corresponding branch set
+# fullmixture_gsf_* respectively. Missing method-specific collections leave
+# their corresponding branch set
 # unavailable/zero. The always-created final_mixture_component_* vectors carry
-# all final smoother/reverse output tracks and are empty for forward
-# and global-loss.
+# all final smoother/reverse output tracks and are empty for forward.
 # The lineage_node_* and lineage_edge_* vectors automatically carry the full
 # passive smoother/reverse component DAG and are empty for the other methods.
 flat.OutputFile = os.path.join(
@@ -250,7 +214,6 @@ flat.OutputFile = os.path.join(
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),
 )
 flat.BField = 3.0
-flat.UseGlobalLossTracks = use_global_loss_tracks
 flat.HitCollectionNames = [
     "VXDTrackerHits",
     "ITKBarrelTrackerHits",
@@ -271,7 +234,7 @@ out.outputCommands = ["keep *"]
 from Configurables import ApplicationMgr, MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")
 ApplicationMgr(
-    TopAlg=[podioinput, refitter, flat, out],
+    TopAlg=[podioinput, gsf, flat, out],
     EvtSel="NONE",
     EvtMax=evtmax,
     ExtSvc=[dsvc, geosvc, tracksys, gearsvc, evtseeder],
