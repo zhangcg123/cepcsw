@@ -251,6 +251,14 @@ StatusCode RecGsfFlatTuple::initialize() {
                  &m_lineage_node_predicted_kappa_variance);
   m_tree->Branch("lineage_node_predicted_pT",
                  &m_lineage_node_predicted_pT);
+  m_tree->Branch("lineage_node_fb_delta_kappa",
+                 &m_lineage_node_fb_delta_kappa);
+  m_tree->Branch("lineage_node_fb_delta_kappa_variance",
+                 &m_lineage_node_fb_delta_kappa_variance);
+  m_tree->Branch("lineage_node_fb_delta_pT",
+                 &m_lineage_node_fb_delta_pT);
+  m_tree->Branch("lineage_node_fb_delta_pT_variance",
+                 &m_lineage_node_fb_delta_pT_variance);
   m_tree->Branch("lineage_node_filtered_kappa",
                  &m_lineage_node_filtered_kappa);
   m_tree->Branch("lineage_node_filtered_kappa_variance",
@@ -528,6 +536,10 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_predicted_kappa.clear();
   m_lineage_node_predicted_kappa_variance.clear();
   m_lineage_node_predicted_pT.clear();
+  m_lineage_node_fb_delta_kappa.clear();
+  m_lineage_node_fb_delta_kappa_variance.clear();
+  m_lineage_node_fb_delta_pT.clear();
+  m_lineage_node_fb_delta_pT_variance.clear();
   m_lineage_node_filtered_kappa.clear();
   m_lineage_node_filtered_kappa_variance.clear();
   m_lineage_node_filtered_pT.clear();
@@ -578,6 +590,21 @@ StatusCode RecGsfFlatTuple::execute() {
     const auto* nodePredictedKappa = m_inLineageNodePredictedKappa.get();
     const auto* nodePredictedKappaVariance =
         m_inLineageNodePredictedKappaVariance.get();
+    const podio::UserDataCollection<double>* nodeFBDeltaKappa = nullptr;
+    const podio::UserDataCollection<double>* nodeFBDeltaKappaVariance =
+        nullptr;
+    const podio::UserDataCollection<double>* nodeFBDeltaPT = nullptr;
+    const podio::UserDataCollection<double>* nodeFBDeltaPTVariance = nullptr;
+    try {
+      nodeFBDeltaKappa = m_inLineageNodeFBDeltaKappa.get();
+      nodeFBDeltaKappaVariance =
+          m_inLineageNodeFBDeltaKappaVariance.get();
+      nodeFBDeltaPT = m_inLineageNodeFBDeltaPT.get();
+      nodeFBDeltaPTVariance = m_inLineageNodeFBDeltaPTVariance.get();
+    } catch (...) {
+      // Older lineage producers do not contain these passive fields. Preserve
+      // the graph and expose row-aligned NaNs in the new flat branches.
+    }
     const auto* nodeFilteredKappa = m_inLineageNodeFilteredKappa.get();
     const auto* nodeFilteredKappaVariance =
         m_inLineageNodeFilteredKappaVariance.get();
@@ -694,6 +721,32 @@ StatusCode RecGsfFlatTuple::execute() {
       m_lineage_node_predicted_kappa_variance.assign(
           nodePredictedKappaVariance->begin(),
           nodePredictedKappaVariance->end());
+      const bool fbDeltasConsistent =
+          nodeFBDeltaKappa && nodeFBDeltaKappaVariance && nodeFBDeltaPT &&
+          nodeFBDeltaPTVariance && nodeFBDeltaKappa->size() == nodeCount &&
+          nodeFBDeltaKappaVariance->size() == nodeCount &&
+          nodeFBDeltaPT->size() == nodeCount &&
+          nodeFBDeltaPTVariance->size() == nodeCount;
+      if (fbDeltasConsistent) {
+        m_lineage_node_fb_delta_kappa.assign(
+            nodeFBDeltaKappa->begin(), nodeFBDeltaKappa->end());
+        m_lineage_node_fb_delta_kappa_variance.assign(
+            nodeFBDeltaKappaVariance->begin(),
+            nodeFBDeltaKappaVariance->end());
+        m_lineage_node_fb_delta_pT.assign(
+            nodeFBDeltaPT->begin(), nodeFBDeltaPT->end());
+        m_lineage_node_fb_delta_pT_variance.assign(
+            nodeFBDeltaPTVariance->begin(),
+            nodeFBDeltaPTVariance->end());
+      } else {
+        const double unavailable =
+            std::numeric_limits<double>::quiet_NaN();
+        m_lineage_node_fb_delta_kappa.assign(nodeCount, unavailable);
+        m_lineage_node_fb_delta_kappa_variance.assign(
+            nodeCount, unavailable);
+        m_lineage_node_fb_delta_pT.assign(nodeCount, unavailable);
+        m_lineage_node_fb_delta_pT_variance.assign(nodeCount, unavailable);
+      }
       m_lineage_node_filtered_kappa.assign(
           nodeFilteredKappa->begin(), nodeFilteredKappa->end());
       m_lineage_node_filtered_kappa_variance.assign(

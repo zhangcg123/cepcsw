@@ -1186,6 +1186,10 @@ struct LineageNodeRecord {
   double normalizedPosterior = std::numeric_limits<double>::quiet_NaN();
   double predictedKappa = std::numeric_limits<double>::quiet_NaN();
   double predictedKappaVariance = std::numeric_limits<double>::quiet_NaN();
+  double fbDeltaKappa = std::numeric_limits<double>::quiet_NaN();
+  double fbDeltaKappaVariance = std::numeric_limits<double>::quiet_NaN();
+  double fbDeltaPt = std::numeric_limits<double>::quiet_NaN();
+  double fbDeltaPtVariance = std::numeric_limits<double>::quiet_NaN();
   double filteredKappa = std::numeric_limits<double>::quiet_NaN();
   double filteredKappaVariance = std::numeric_limits<double>::quiet_NaN();
   double dominantLineageFraction =
@@ -1292,6 +1296,7 @@ public:
                       int backwardNodeId, int hitIndex, int surfaceIndex,
                       double pairPriorWeight, double overlapDChi2,
                       double overlapLogDet, double logPosterior,
+                      const GaussianMomentState& forwardUpdated,
                       const GaussianMomentState& backwardPredicted) {
     const int nodeId = appendNode(
         component, LineageNodeSource::SmoothedMixture,
@@ -1302,6 +1307,42 @@ public:
     node.dchi2 = overlapDChi2;
     node.logDetInnovation = overlapLogDet;
     node.logUnnormalizedPosterior = logPosterior;
+    if (forwardUpdated.valid && backwardPredicted.valid &&
+        forwardUpdated.mean.GetNrows() >= 5 &&
+        forwardUpdated.covariance.GetNrows() >= 5 &&
+        forwardUpdated.covariance.GetNcols() >= 5 &&
+        backwardPredicted.mean.GetNrows() >= 5 &&
+        backwardPredicted.covariance.GetNrows() >= 5 &&
+        backwardPredicted.covariance.GetNcols() >= 5) {
+      const double forwardKappa = forwardUpdated.mean(2, 0);
+      const double backwardKappa = backwardPredicted.mean(2, 0);
+      const double forwardVariance = forwardUpdated.covariance(2, 2);
+      const double backwardVariance = backwardPredicted.covariance(2, 2);
+      if (std::isfinite(forwardKappa) && std::isfinite(backwardKappa)) {
+        node.fbDeltaKappa = backwardKappa - forwardKappa;
+        if (std::abs(forwardKappa) > 1.0e-15 &&
+            std::abs(backwardKappa) > 1.0e-15) {
+          node.fbDeltaPt = 1.0 / std::abs(backwardKappa) -
+                           1.0 / std::abs(forwardKappa);
+        }
+      }
+      if (std::isfinite(forwardVariance) && forwardVariance >= 0.0 &&
+          std::isfinite(backwardVariance) && backwardVariance >= 0.0) {
+        node.fbDeltaKappaVariance = forwardVariance + backwardVariance;
+        if (std::isfinite(forwardKappa) &&
+            std::isfinite(backwardKappa) &&
+            std::abs(forwardKappa) > 1.0e-15 &&
+            std::abs(backwardKappa) > 1.0e-15) {
+          const double forwardDerivative =
+              1.0 / (forwardKappa * forwardKappa);
+          const double backwardDerivative =
+              1.0 / (backwardKappa * backwardKappa);
+          node.fbDeltaPtVariance =
+              forwardDerivative * forwardDerivative * forwardVariance +
+              backwardDerivative * backwardDerivative * backwardVariance;
+        }
+      }
+    }
     if (backwardPredicted.valid &&
         backwardPredicted.mean.GetNrows() >= 5 &&
         backwardPredicted.covariance.GetNrows() >= 5 &&
@@ -1476,7 +1517,7 @@ static GsfSmoothedSurfaceResult buildSmoothedSurfaceMixture(
       component->lineageNodeId = lineageGraph.smoothedMixture(
           *component, forward.lineageNodeId, backward.lineageNodeId,
           hitIndex, surfaceIndex, pairPriorWeight, overlapDChi2,
-          overlapLogDet, logWeight, backward.state);
+          overlapLogDet, logWeight, forward.state, backward.state);
       result.components.push_back(component);
       pairLogWeights.push_back(logWeight);
       pairBackwardComponentIds.push_back(backward.componentId);
@@ -2624,6 +2665,13 @@ StatusCode RecGsfTracking::execute() {
       m_lineageNodePredictedKappa.createAndPut();
   auto* lineageNodePredictedKappaVariance =
       m_lineageNodePredictedKappaVariance.createAndPut();
+  auto* lineageNodeFBDeltaKappa =
+      m_lineageNodeFBDeltaKappa.createAndPut();
+  auto* lineageNodeFBDeltaKappaVariance =
+      m_lineageNodeFBDeltaKappaVariance.createAndPut();
+  auto* lineageNodeFBDeltaPT = m_lineageNodeFBDeltaPT.createAndPut();
+  auto* lineageNodeFBDeltaPTVariance =
+      m_lineageNodeFBDeltaPTVariance.createAndPut();
   auto* lineageNodeFilteredKappa =
       m_lineageNodeFilteredKappa.createAndPut();
   auto* lineageNodeFilteredKappaVariance =
@@ -2688,6 +2736,11 @@ StatusCode RecGsfTracking::execute() {
       lineageNodePredictedKappa->push_back(node.predictedKappa);
       lineageNodePredictedKappaVariance->push_back(
           node.predictedKappaVariance);
+      lineageNodeFBDeltaKappa->push_back(node.fbDeltaKappa);
+      lineageNodeFBDeltaKappaVariance->push_back(
+          node.fbDeltaKappaVariance);
+      lineageNodeFBDeltaPT->push_back(node.fbDeltaPt);
+      lineageNodeFBDeltaPTVariance->push_back(node.fbDeltaPtVariance);
       lineageNodeFilteredKappa->push_back(node.filteredKappa);
       lineageNodeFilteredKappaVariance->push_back(
           node.filteredKappaVariance);

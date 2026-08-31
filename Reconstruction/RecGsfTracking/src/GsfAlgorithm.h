@@ -182,6 +182,18 @@ private:
       m_lineageNodePredictedKappaVariance{
           "GSFLineageNodePredictedKappaVariance",
           Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeFBDeltaKappa{
+      "GSFLineageNodeFBDeltaKappa", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeFBDeltaKappaVariance{
+          "GSFLineageNodeFBDeltaKappaVariance",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>> m_lineageNodeFBDeltaPT{
+      "GSFLineageNodeFBDeltaPT", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeFBDeltaPTVariance{
+          "GSFLineageNodeFBDeltaPTVariance",
+          Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>> m_lineageNodeFilteredKappa{
       "GSFLineageNodeFilteredKappa", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>>

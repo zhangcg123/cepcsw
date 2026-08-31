@@ -39,6 +39,10 @@ results are committed to live `B_updated[i]`.
 Direct product candidates persist their pair prior, five-dimensional overlap
 chi-square/log-determinant, log weight, normalized pre-pruning posterior,
 backward-predicted state, and explicitly named smoothed state.
+They also persist the signed forward/backward differences
+`B_predicted-F_updated` in kappa and transverse momentum, with passive
+independence-approximation variances; the exact schema contract is in
+`agents_record/2026-09-01-forward-backward-delta-diagnostics.md`.
 The boundaries reuse live mixtures: `B_smoothed[0] = B_updated[0]` and
 `B_smoothed[N-1] = F_updated[N-1]`. Interior product states never propagate or
 publish. The compiled/default `InwardWeightMode=LocalMeasurement` also leaves

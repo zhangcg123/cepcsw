@@ -143,6 +143,18 @@ private:
       m_inLineageNodePredictedKappaVariance{
           "GSFLineageNodePredictedKappaVariance",
           Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeFBDeltaKappa{
+      "GSFLineageNodeFBDeltaKappa", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeFBDeltaKappaVariance{
+          "GSFLineageNodeFBDeltaKappaVariance",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>> m_inLineageNodeFBDeltaPT{
+      "GSFLineageNodeFBDeltaPT", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeFBDeltaPTVariance{
+          "GSFLineageNodeFBDeltaPTVariance",
+          Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>> m_inLineageNodeFilteredKappa{
       "GSFLineageNodeFilteredKappa", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>>
@@ -285,6 +297,10 @@ private:
   std::vector<double> m_lineage_node_predicted_kappa;
   std::vector<double> m_lineage_node_predicted_kappa_variance;
   std::vector<double> m_lineage_node_predicted_pT;
+  std::vector<double> m_lineage_node_fb_delta_kappa;
+  std::vector<double> m_lineage_node_fb_delta_kappa_variance;
+  std::vector<double> m_lineage_node_fb_delta_pT;
+  std::vector<double> m_lineage_node_fb_delta_pT_variance;
   std::vector<double> m_lineage_node_filtered_kappa;
   std::vector<double> m_lineage_node_filtered_kappa_variance;
   std::vector<double> m_lineage_node_filtered_pT;
