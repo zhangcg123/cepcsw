@@ -127,6 +127,14 @@ campaign steering only; it does not change the compiled or active-template
 default 100. Its reverse branch also selects the experimental
 `InwardWeightMode=SmoothedMarginal`; the compiled and active-template default
 remains `LocalMeasurement`.
+Directional BH child creation is independently configurable. The compiled and
+active reverse-template defaults are
+`ForwardBHSplitting=true, InwardBHSplitting=true`, preserving established
+behavior. The maintained reverse campaign deliberately uses
+`ForwardBHSplitting=false, InwardBHSplitting=true` to isolate radiative
+hypothesis generation in the inward pass. These gates do not disable material
+path evaluation, passive interval recording, deterministic energy loss,
+multiple scattering, propagation, or measurement updates.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
@@ -251,59 +259,53 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate checkpoint is experimental live inward weighting from the
-same-surface two-filter products. `InwardWeightMode=SmoothedMarginal` keeps
-the propagated means and covariances exactly equal to the ordinary
-measurement-updated `B_updated[i]` states. At each interior surface it replaces
-their local-measurement weights by the normalized unreduced
-`F_updated[i] x B_predicted[i]` pair weights marginalized over all valid
-forward partners. Hit 0 retains the ordinary local-measurement weight, and
-source-3 product states never propagate or publish. The mode has no silent
-fallback when a candidate lacks a positive marginal.
+The immediate checkpoint is directional BH hypothesis generation. The new
+boolean controls independently gate child creation in the shared outward pass
+and independent reverse inward pass. Compiled and active reverse-template
+behavior remains `ForwardBHSplitting=true, InwardBHSplitting=true`. The
+maintained `DumpGsfTrks/gsf.py.bk` reverse branch now selects
+`ForwardBHSplitting=false, InwardBHSplitting=true`, together with fresh inward
+seed `InwardSeedCovarianceScale=-1` and experimental
+`InwardWeightMode=SmoothedMarginal`.
 
-This weighting is a deliberate mechanism test, not a calibrated smoother:
-successive surfaces reuse overlapping forward-hit evidence, while the live
-state still contains only the backward measurement update. The compiled and
-active reverse-template default remains `LocalMeasurement`. The maintained
-`DumpGsfTrks/gsf.py.bk` reverse branch explicitly selects
-`SmoothedMarginal` together with the fresh inward seed
-`InwardSeedCovarianceScale=-1`. The exact contract, superseded fresh-seed
-checkpoint, and validation record are in
-`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
+The mechanical gate passes. On hard event 11, the true/true, false/true,
+true/false, and false/false configurations persist 460/480, 0/480, 460/0,
+and 0/0 forward/inward split nodes respectively. All four retain populated
+material-path summaries. With fresh-seed `LocalMeasurement`, false/true
+reproduces all 192 stored BestBranch, WeightedMean, FullMixtureMode, and
+final-component values exactly on events 11, 16, and 17. A false/true
+`SmoothedMarginal` event-11 smoke run also completes, but changes the endpoint
+slightly because each same-surface product has only the unsplit outward state
+as its forward partner. The exact semantics and validation table are in
+`agents_record/2026-08-31-directional-bh-splitting-controls.md`.
 
-The focused mechanical gate passes. `LocalMeasurement` reproduces 192/192
-stored endpoint/final-component values exactly on events 11, 16, and 17. A
-verbose event-11 run constructs each interior product before its live update
-and propagates only source-2 states. Across the four tested input tracks, all
-4,367 accepted interior source-2 measurement nodes reproduce the saved
-source-3 backward marginal to at worst `8.9e-16`; every hit-0 weight reproduces
-the local score exactly, and no source-3 node publishes. The three focused
-SmoothedMarginal jobs complete, but their changed endpoints are mechanism
-evidence only.
+The preceding complete SmoothedMarginal population result closes that mode as
+a default candidate for now. Among 7,310 topology-clear matched events its
+FullMixtureMode inclusive width68 is effectively unchanged versus
+LocalMeasurement (`0.535%` versus `0.534%`), while abs-q68 worsens from
+`0.347%` to `0.483%` and residuals above 100% increase from 9 to 37.
+No-eBrem safety and light-loss absolute containment worsen; the hard-loss
+width improves but its absolute containment and catastrophic tails worsen.
+SmoothedMarginal remains useful as mechanism evidence only. Its detailed
+contract and selected 50-track evidence remain in
+`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`; the complete
+population disposition is preserved in the directional-control record.
 
-A targeted 50-track negative-peak gate is also complete. It deliberately uses
-the topology-clear `CEPCRuntimeCategoryAligned5Clear` control: 1--2% truth-loss
-tracks whose stored LocalMeasurement FullMixtureMode residual is
-`[-1.5,-0.5]%`. SmoothedMarginal improves absolute FullMixtureMode residual on
-39/50, but only 2 reach `|r|<=0.25%`; 37 remain in the negative window and 10
-overshoot above `+0.25%`. Its width68 worsens from `0.242%` to `0.811%`.
-BestBranch and WeightedMean develop isolated `+101%` and `+80%` tails. This is
-a selected mechanism gate using a stored LocalMeasurement baseline, not the
-required same-code representative-population validation; exact details are in
-the dated record above.
-
-The next gate remains a direct same-code topology-clear population A/B against
-`LocalMeasurement`, split into no/light/hard loss and early-transition
-categories, with the 133-event secondary-activity set reported separately.
-Audit clean-track safety, tails, endpoint-mode failures, local lineage-rank
-changes, and the job-11 entry-77 overshoot before considering any default
-change.
+The next gate is a direct same-code population study using distinct output
+paths. First verify the expected endpoint equivalence of true/true and
+false/true under fresh-seed `LocalMeasurement`, while measuring component-graph
+size and memory. Then compare those split settings under `SmoothedMarginal`,
+where the outward switch changes the live overlap weights. Categorize
+topology-clear no/light/hard loss and early transitions, audit endpoint status
+and tails, and report the stable 133-event secondary-activity set separately.
+Do not promote either the directional campaign setting or SmoothedMarginal
+from mechanical evidence.
 
 Freeze the other production controls and endpoint definitions during this
 study: `DD4hepBetweenSurfaces`, `CEPC2GeV85StepConditioned`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
-protection, and `KappaSeedCov=-1`. Keep `LocalMeasurement` as the compiled and
-active-template control; the maintained smoothed-marginal steering is
-experimental. Material/BH consistency and narrowly scoped BH-component-
-variance questions remain active; ECAL and global-loss remain paused
-diagnostics. Historical detail does not override this live focus.
+protection, and `KappaSeedCov=-1`. Keep true/true and `LocalMeasurement` as the
+compiled and active-template controls. Material/BH consistency and narrowly
+scoped BH-component-variance questions remain active; ECAL and global-loss
+remain paused diagnostics. Historical detail does not override this live
+focus.

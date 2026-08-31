@@ -79,6 +79,12 @@ gsf.BHModel = bh_model
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
+# Independent BH-process gates. This maintained reverse campaign deliberately
+# suppresses outward splitting so the inward refit alone generates radiative
+# hypotheses. Material-path evaluation/recording remains enabled in both
+# directions. The compiled defaults are True/True.
+gsf.ForwardBHSplitting = False
+gsf.InwardBHSplitting = False  # Neutral base; enabled only in reverse below.
 
 # Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. Embedded
 # EventData is its fixed source; no helper-file source/input steering remains.
@@ -121,7 +127,7 @@ gsf.InwardSeedCovarianceScale = -1.0
 # Live reverse-component weighting. LocalMeasurement is the compiled/default
 # control. The maintained reverse campaign explicitly selects the experimental
 # SmoothedMarginal mode below; propagated means/covariances remain B_updated.
-gsf.InwardWeightMode = "LocalMeasurement"
+gsf.InwardWeightMode = "SmoothedMarginal" #"LocalMeasurement"
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse methods
 # below always persist all three endpoint representations and do not select one
@@ -172,6 +178,7 @@ elif method == "reverse":
     # overlapping forward evidence at successive surfaces and is not a
     # calibrated Bayesian posterior.
     gsf.ReverseFiltering = True
+    gsf.InwardBHSplitting = True
     gsf.InwardWeightMode = "SmoothedMarginal"
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05

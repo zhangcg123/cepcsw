@@ -28,6 +28,12 @@ live `B_updated[i]` state before its cutoff, reduction, and next propagation.
 This intentionally reuses overlapping forward evidence at successive
 surfaces and is an algorithmic overlap score, not a calibrated Bayesian
 posterior.
+The independent boolean properties `ForwardBHSplitting` and
+`InwardBHSplitting` gate only BH component creation in the shared outward
+filter and reverse inward filter, respectively. Both compile to `true` to
+preserve the established workflow. Disabling either gate leaves its material-
+path evaluation, passive interval recording, propagation, and measurement
+updates active. `InwardBHSplitting` is inert unless `ReverseFiltering=true`.
 Reverse publishes the inner boundary state,
 `B_updated[0] = measurement[0] x B_predicted[0]`.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
@@ -169,7 +175,7 @@ replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-31. `RecGsfTracking` exposes 41 Gaudi properties in
+Reference date: 2026-08-31. `RecGsfTracking` exposes 43 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -187,6 +193,8 @@ distinction matters because that template enables `ElossOn` and
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
 | `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
+| `ForwardBHSplitting` | `true` | same | Enable BH component creation in the shared outward filter, including the initial hit-0 to hit-1 interval and every later outgoing accepted-hit interval above `BHSplitThreshold`. When false, the outward state still propagates, updates measurements, evaluates DD4hep paths, and contributes passive material summaries, but it remains unsplit by BH. This does not disable deterministic `ElossOn` or `MSOn`. |
+| `InwardBHSplitting` | `true` | same | Enable BH component creation in the independent reverse inward filter for every outer-to-inner interval above `BHSplitThreshold`. It is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`, which only consumes the retained forward graph. When false, the inward state still propagates, updates measurements, forms requested same-surface products, and contributes passive material summaries, but creates no new inward BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
@@ -514,7 +522,7 @@ properties have no effect.
 
 ### Collection handles
 
-The data handles are configurable separately from the 41 properties:
+The data handles are configurable separately from the 43 properties:
 
 | Role | Default collection |
 |---|---|
@@ -670,12 +678,16 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 40 of the 41 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 42 of the 43 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
-`DD4hepBetweenSurfaces`, and ECAL off. Its top-level `bh_model` selector is the
+`DD4hepBetweenSurfaces`, and ECAL off. For the current backward-only BH
+mechanism campaign, the card deliberately sets `ForwardBHSplitting=false` in
+its common steering and enables `InwardBHSplitting=true` only in the reverse
+branch. These are campaign controls; both compiled and active reverse-template
+defaults remain true. Its top-level `bh_model` selector is the
 user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than the production
 `CEPC2GeV85StepConditioned` model, and it feeds both ordinary GSF and the
 independent global-loss refitter. The retired runtime
@@ -715,10 +727,16 @@ The maintained card inherits the compiled and active reverse-template
 `GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` in its base `PodioInput`
 list, including when `TruthBHLossOverride=false`. The recorded
 truth/DD4hep/runtime values remain passive and do not affect the GSF workflow.
+Their directional `*_above_threshold_count` values describe thickness-eligible
+material paths, not executed BH splits, so they remain populated when a split
+gate is false. Use lineage operation 2 or the verbose split counters to audit
+actual child creation. Likewise, the truth BH-loss oracle replaces only split
+calls that are enabled and executed; disabling both directional gates executes
+no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 41-property inventory above is part of the configurable interface, not a
+The 43-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

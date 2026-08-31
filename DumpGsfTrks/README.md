@@ -219,11 +219,18 @@ cards remain artifacts rather than source configuration.
 
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. It keeps the established reverse workflow alongside the experimental global-loss
-workflow and agrees with
-the production material, split/cutoff, and ECAL settings:
+workflow and agrees with the production material-path, threshold/cutoff, and
+ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
-`EcalComponentConstraint=False`. Its top-level `bh_model` selector is the
+`EcalComponentConstraint=False`. For the current backward-only BH mechanism
+campaign it deliberately differs from the compiled and active reverse-template
+`true/true` directional defaults: common steering sets
+`ForwardBHSplitting=False`, and the reverse branch sets
+`InwardBHSplitting=True`. Disabling the forward gate suppresses BH child
+creation only; deterministic energy loss, multiple scattering, material-path
+evaluation, and passive material recording remain active. Its top-level
+`bh_model` selector is the
 default-off
 `CEPCRuntimeGenericGrid5Clear` experiment, not the production
 `CEPC2GeV85StepConditioned` model. The same selector feeds ordinary GSF and
@@ -231,12 +238,12 @@ the independent global-loss refitter so method comparisons cannot silently use
 different BH models; preserve it as deliberate campaign steering until the user
 changes it.
 
-The authoritative explanation of all 41 `RecGsfTracking` properties, their
+The authoritative explanation of all 43 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 40 of the 41
+For this maintained workflow, `gsf.py.bk` explicitly configures 42 of the 43
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -369,8 +376,8 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After adding the inward-weight selector, `RecGsfTracking` has 41 compiled
-properties. This card explicitly steers 40 and deliberately
+After adding the directional BH-splitting selectors, `RecGsfTracking` has 43
+compiled properties. This card explicitly steers 42 and deliberately
 inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
 the removed `CmsGsfSmoothing` property are stale experiment artifacts and must
 be regenerated rather than edited in place.
@@ -395,6 +402,18 @@ template default remains `LocalMeasurement`. This experimental maintained-
 card choice deliberately reuses overlapping forward evidence at successive
 surfaces and is not a calibrated posterior or a validated production-default
 change.
+
+This same reverse branch is the maintained backward-only BH test:
+`ForwardBHSplitting=False`, `InwardBHSplitting=True`. The two switches control
+only BH child creation in the shared outward and independent inward filters.
+The inward switch is inert for non-reverse methods; it does not control the
+retained-graph smoother. With a positive inward seed scale, turning inward
+splitting off does not remove components copied from the final forward
+mixture. Passive above-threshold material counts can therefore remain nonzero
+when a directional gate is off and must not be interpreted as executed split
+counts. The output filename does not encode these switches, so campaigns with
+different settings need distinct output tuple paths to prevent overwrites and
+mislabeling.
 
 The fresh-seed choice is explicit campaign steering, not a production-default
 change. Its input

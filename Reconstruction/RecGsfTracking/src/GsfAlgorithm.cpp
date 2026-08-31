@@ -2589,6 +2589,8 @@ StatusCode RecGsfTracking::initialize() {
          << " reductionTarget=" << m_reductionTargetComponents.value()
          << " reductionMode=KL"
          << " protectIdentityLineage=" << m_protectIdentityLineage.value()
+         << " forwardBHSplitting=" << m_forwardBHSplitting.value()
+         << " inwardBHSplitting=" << m_inwardBHSplitting.value()
          << " outputMode=" << m_outputMode.value()
          << " inwardWeightMode=" << m_inwardWeightMode.value()
          << " verbose=" << m_verboseDump.value() << "/"
@@ -3365,7 +3367,7 @@ StatusCode RecGsfTracking::execute() {
         maxTX0Layer = std::max(maxTX0Layer, seedMaterial.pathTX0);
         totalTX0 += seedMaterial.pathTX0;
       }
-      if (seedMaterial.valid &&
+      if (m_forwardBHSplitting.value() && seedMaterial.valid &&
           seedMaterial.pathTX0 > m_bhSplitThresh.value() && m_isElectron) {
         BetheHeitlerSplitter splitter(m_bhModel.value());
         const int parentDebugId = initComp->debugId;
@@ -3843,7 +3845,8 @@ StatusCode RecGsfTracking::execute() {
       }
       // Represent the complete outgoing process mixture.  Its children remain
       // unreduced until they have incorporated the next measurement posterior.
-      if (hasNextForwardSurface && anyComponentMaterial && m_isElectron) {
+      if (m_forwardBHSplitting.value() && hasNextForwardSurface &&
+          anyComponentMaterial && m_isElectron) {
         if (m_verboseDump && m_verboseSplitDump) {
           info() << boost::format("  ── BH Split after hit %d (r=%.1f mm, component-local path tX0) — %d comps before split")
                     % ih % hi.radius % (int)comps.size() << endmsg;
@@ -4291,7 +4294,7 @@ StatusCode RecGsfTracking::execute() {
                       % (path.valid ? 1 : 0) << endmsg;
           }
         }
-        if (anyReverseMaterial && m_isElectron) {
+        if (m_inwardBHSplitting.value() && anyReverseMaterial && m_isElectron) {
           BetheHeitlerSplitter splitter(m_bhModel.value());
           std::vector<GsfComponent*> reverseChildren;
           for (size_t componentIndex = 0;
