@@ -40,19 +40,12 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--resume", action="store_true",
                         help="Skip seeds with a tuple and successful completion log")
     parser.add_argument("--verbose-components", action="store_true")
-    parser.add_argument("--counterfactual-loss-scan", action="store_true")
-    parser.add_argument(
-        "--counterfactual-loss-fractions",
-        default="0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12")
-    parser.add_argument("--counterfactual-loss-variance", type=float,
-                        default=2.0e-4)
     return parser.parse_args()
 
 
 def main() -> None:
     args = arguments()
     selected: dict[int, list[int]] = {}
-    truth_transitions: dict[int, dict[int, int]] = {}
     source = args.event_list or args.outcomes
     with source.open(newline="") as stream:
         for row in csv.DictReader(stream):
@@ -63,12 +56,6 @@ def main() -> None:
                     row["category"] == args.category
                                    and not int(row["excluded_secondary_topology"])):
                 selected.setdefault(int(row["seed"]), []).append(int(row["entry"]))
-                if args.counterfactual_loss_scan:
-                    if "dominant_transition_index" not in row:
-                        raise RuntimeError(
-                            "counterfactual scan requires dominant_transition_index")
-                    truth_transitions.setdefault(int(row["seed"]), {})[
-                        int(row["entry"])] = int(row["dominant_transition_index"])
     args.output_dir.mkdir(parents=True, exist_ok=True)
     option = "Reconstruction/RecGsfTracking/options/run_gsf_reverse_template.py"
     runner = "build.105.0.0.x86_64-el9-gcc11-opt/run"
@@ -101,15 +88,6 @@ def main() -> None:
             "GSF_SURFACE_CONSISTENCY_UNINFORMATIVE_FLOOR": str(
                 args.surface_consistency_uninformative_floor),
             "GSF_VERBOSE_COMPONENTS": "1" if args.verbose_components else "0",
-            "GSF_COUNTERFACTUAL_LOSS_SCAN": (
-                "1" if args.counterfactual_loss_scan else "0"),
-            "GSF_COUNTERFACTUAL_TRUTH_TRANSITION_MAP": ",".join(
-                f"{entry}:{transition}" for entry, transition in
-                sorted(truth_transitions.get(seed, {}).items())),
-            "GSF_COUNTERFACTUAL_LOSS_FRACTIONS":
-                args.counterfactual_loss_fractions,
-            "GSF_COUNTERFACTUAL_LOSS_VARIANCE": str(
-                args.counterfactual_loss_variance),
         })
         log_path = args.output_dir / f"seed-{seed}.log"
         with log_path.open("w") as log:

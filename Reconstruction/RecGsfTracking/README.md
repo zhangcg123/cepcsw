@@ -175,7 +175,7 @@ replacement. Its maintained-card availability is mechanical, not validation.
 
 ## Complete configuration reference
 
-Reference date: 2026-08-31. `RecGsfTracking` exposes 43 Gaudi properties in
+Reference date: 2026-08-31. `RecGsfTracking` exposes 39 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -497,32 +497,9 @@ must be regenerated. The maintained recording path is now the default-on
 truth-hook DD4hep, and summarized forward/reverse runtime material values, not
 one row per BH parent or child.
 
-### Counterfactual loss scan
-
-| Property | Compiled | Active reverse | Meaning |
-|---|---|---|---|
-| `CounterfactualLossScan` | `false` | `false` | Enable a truth-assisted, likelihood-only trial-loss diagnostic. |
-| `CounterfactualTruthTransitionMap` | empty | empty | Comma-separated `event:transition` locations at which to test hypothetical losses. |
-| `CounterfactualLossFractions` | `0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12` | same | Fractional momentum losses assigned to trial branches. |
-| `CounterfactualLossVariance` | `2e-4` | same | Retained-momentum-fraction variance assigned to each trial branch. |
-
-For example:
-
-```text
-CounterfactualTruthTransitionMap = "1:7,4:8"
-```
-
-This tests the configured losses at truth transition 7 for event 1 and
-transition 8 for event 4. The scan reports validity, accepted-hit count,
-cumulative measurement log-likelihood, and final hypothetical momentum.
-Trial branches never enter or reweight the live mixture and cannot become the
-published track. This is a truth-assisted mechanism study, not a production
-loss estimator. When `CounterfactualLossScan=false`, the other three
-properties have no effect.
-
 ### Collection handles
 
-The data handles are configurable separately from the 43 properties:
+The data handles are configurable separately from the 39 properties:
 
 | Role | Default collection |
 |---|---|
@@ -678,7 +655,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 42 of the 43 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 38 of the 39 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
@@ -736,7 +713,7 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 43-property inventory above is part of the configurable interface, not a
+The 39-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

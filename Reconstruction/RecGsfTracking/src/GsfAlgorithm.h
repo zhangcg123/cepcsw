@@ -350,20 +350,6 @@ private:
       "Passively write exact Geant4, truth-hook DD4hep, and actual runtime "
       "GSF material summaries for consecutive accepted-hit intervals; never "
       "steers propagation, BH splitting, component weights, or selection"};
-  Gaudi::Property<bool> m_counterfactualLossScan{
-      this, "CounterfactualLossScan", false,
-      "Default-off likelihood-only scan of trial losses at a configured truth "
-      "surface and one surface inward; never enters the live GSF mixture"};
-  Gaudi::Property<std::string> m_counterfactualTruthTransitionMap{
-      this, "CounterfactualTruthTransitionMap", "",
-      "Comma-separated event:transition map used only by CounterfactualLossScan"};
-  Gaudi::Property<std::vector<double>> m_counterfactualLossFractions{
-      this, "CounterfactualLossFractions", {0.04, 0.05, 0.06, 0.07, 0.08,
-                                             0.09, 0.10, 0.12},
-      "Trial fractional momentum losses for CounterfactualLossScan"};
-  Gaudi::Property<double> m_counterfactualLossVariance{
-      this, "CounterfactualLossVariance", 2.0e-4,
-      "Retained-momentum-fraction variance assigned to trial scan components"};
   Gaudi::Property<std::string> m_outputMode{
       this, "GSFOutputMode", "BestBranch",
       "Forward-only output selector; smoother/reverse always write "

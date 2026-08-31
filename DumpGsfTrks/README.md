@@ -238,12 +238,12 @@ the independent global-loss refitter so method comparisons cannot silently use
 different BH models; preserve it as deliberate campaign steering until the user
 changes it.
 
-The authoritative explanation of all 43 `RecGsfTracking` properties, their
+The authoritative explanation of all 39 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 42 of the 43
+For this maintained workflow, `gsf.py.bk` explicitly configures 38 of the 39
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -376,11 +376,15 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After adding the directional BH-splitting selectors, `RecGsfTracking` has 43
-compiled properties. This card explicitly steers 42 and deliberately
+After retiring the counterfactual loss scanner, `RecGsfTracking` has 39
+compiled properties. This card explicitly steers 38 and deliberately
 inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
-the removed `CmsGsfSmoothing` property are stale experiment artifacts and must
-be regenerated rather than edited in place.
+the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
+`CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
+`CounterfactualLossVariance` properties are stale experiment artifacts and
+must be regenerated rather than edited in place. Existing tuples remain
+interpretable because the retired counterfactual scanner persisted no EDM or
+flat-tuple schema.
 
 The maintained template currently selects `method="reverse"`. It now sets
 `InwardSeedCovarianceScale=-1.0` for the fresh-inward-seed campaign, while the

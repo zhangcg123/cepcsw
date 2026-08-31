@@ -231,12 +231,6 @@ gsf.VerboseSplitDump = False
 gsf.ComponentDebugDump = False
 gsf.SurfaceLineageMassDump = False
 gsf.ComponentDebugMaxHistory = 240
-gsf.CounterfactualLossScan = False
-gsf.CounterfactualTruthTransitionMap = ""
-gsf.CounterfactualLossFractions = [
-    0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12,
-]
-gsf.CounterfactualLossVariance = 2.0e-4
 gsf.OutputLevel = INFO
 
 from Configurables import RecGsfFlatTuple

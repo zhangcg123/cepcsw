@@ -66,18 +66,6 @@ gearsvc = GearSvc("GearSvc")
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = electron_hypothesis
 gsf.BHModel = os.getenv("GSF_BH_MODEL", "CEPC2GeV85StepConditioned")
-gsf.CounterfactualLossScan = os.getenv(
-    "GSF_COUNTERFACTUAL_LOSS_SCAN", "0").lower() in ("1", "true", "yes")
-gsf.CounterfactualTruthTransitionMap = os.getenv(
-    "GSF_COUNTERFACTUAL_TRUTH_TRANSITION_MAP", "")
-gsf.CounterfactualLossFractions = [
-    float(value) for value in os.getenv(
-        "GSF_COUNTERFACTUAL_LOSS_FRACTIONS",
-        "0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12").split(",")
-    if value.strip()
-]
-gsf.CounterfactualLossVariance = float(os.getenv(
-    "GSF_COUNTERFACTUAL_LOSS_VARIANCE", "2.0e-4"))
 gsf.BHSplitThreshold = 1.0e-4
 gsf.MaterialPathMode = os.getenv(
     "GSF_MATERIAL_PATH_MODE", "DD4hepBetweenSurfaces")

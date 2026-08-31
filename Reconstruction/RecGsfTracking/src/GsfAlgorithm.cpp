@@ -193,24 +193,7 @@ static double ptFromTrackState(const edm4hep::TrackState& ts, double bz) {
   return (kappa != 0.0) ? 1.0 / std::abs(kappa) : 0.0;
 }
 
-static int configuredTruthTransition(const std::string& mapping,
-                                     int eventIndex) {
-  std::istringstream stream(mapping);
-  std::string item;
-  while (std::getline(stream, item, ',')) {
-    const auto separator = item.find(':');
-    if (separator == std::string::npos) continue;
-    try {
-      if (std::stoi(item.substr(0, separator)) == eventIndex)
-        return std::stoi(item.substr(separator + 1));
-    } catch (...) {
-      continue;
-    }
-  }
-  return -1;
-}
-
-static bool applyCounterfactualReverseLoss(
+static bool applyReverseLossHypothesis(
     GsfComponent& component, double lossFraction,
     double retainedFractionVariance, double bz) {
   if (!(lossFraction >= 0.0 && lossFraction < 0.99) || bz == 0.0)
@@ -4095,22 +4078,6 @@ StatusCode RecGsfTracking::execute() {
       if (m_verboseDump && m_verboseSplitDump)
         dumpComponents("reverse-start", (int)hits.size() - 1, reverseComps);
 
-      struct CounterfactualLossBranch {
-        std::unique_ptr<GsfComponent> component;
-        int processHit = -1;
-        double lossFraction = 0.0;
-        double cumulativeLogLikelihood = 0.0;
-        int acceptedHits = 0;
-        bool valid = true;
-        bool processApplied = false;
-      };
-      std::vector<CounterfactualLossBranch> counterfactualBranches;
-      const int counterfactualTruthHit = m_counterfactualLossScan.value()
-          ? configuredTruthTransition(
-                m_counterfactualTruthTransitionMap.value(), eventIndex)
-          : -1;
-      bool counterfactualStarted = false;
-
       auto& reverseAcceptedTotal =
           inwardFilterResult.acceptedMeasurements;
       auto& reverseRejectedTotal =
@@ -4130,114 +4097,6 @@ StatusCode RecGsfTracking::execute() {
       for (int reverseHit = (int)hits.size() - 2;
            reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
         auto& target = hits[reverseHit];
-
-        if (!counterfactualStarted && counterfactualTruthHit == reverseHit) {
-          auto identity = std::max_element(
-              reverseComps.begin(), reverseComps.end(),
-              [](const GsfComponent* left, const GsfComponent* right) {
-                const double leftWeight = left->noRadiationLineage
-                    ? left->weight : -1.0;
-                const double rightWeight = right->noRadiationLineage
-                    ? right->weight : -1.0;
-                return leftWeight < rightWeight;
-              });
-          if (identity != reverseComps.end() &&
-              (*identity)->noRadiationLineage) {
-            auto addCounterfactual = [&](int processHit, double loss) {
-              CounterfactualLossBranch branch;
-              branch.component.reset((*identity)->clone());
-              branch.component->weight = 1.0;
-              branch.processHit = processHit;
-              branch.lossFraction = loss;
-              counterfactualBranches.push_back(std::move(branch));
-            };
-            addCounterfactual(-1, 0.0);
-            for (double loss : m_counterfactualLossFractions.value()) {
-              if (loss > 0.0 && loss < 0.99) {
-                addCounterfactual(counterfactualTruthHit, loss);
-                if (counterfactualTruthHit > 0)
-                  addCounterfactual(counterfactualTruthHit - 1, loss);
-              }
-            }
-            info() << boost::format(
-                "  COUNTERFACTUAL LOSS SCAN start truthHit=%d baseId=%d "
-                "baseWeight=%.9g branches=%d variance=%.9g")
-                      % counterfactualTruthHit % (*identity)->debugId
-                      % (*identity)->weight
-                      % (int)counterfactualBranches.size()
-                      % m_counterfactualLossVariance.value() << endmsg;
-          } else {
-            warning() << "COUNTERFACTUAL LOSS SCAN skipped: no exact identity "
-                      << "branch at truthHit=" << counterfactualTruthHit
-                      << endmsg;
-          }
-          counterfactualStarted = true;
-        }
-
-        for (auto& branch : counterfactualBranches) {
-          if (!branch.valid) continue;
-          if (!branch.processApplied && branch.processHit == reverseHit) {
-            branch.valid = applyCounterfactualReverseLoss(
-                *branch.component, branch.lossFraction,
-                m_counterfactualLossVariance.value(), bz);
-            branch.processApplied = branch.valid;
-          }
-          if (!branch.valid) continue;
-          double dchi = 0.0;
-          double updateChi2 = 0.0;
-          int updateNdf = -999;
-          edm4hep::TrackState componentState =
-              trackStateFromComponent(*branch.component, bz, DH::AtOther);
-          edm4hep::TrackState updatedState;
-          MarlinTrk::MeasurementUpdate update;
-          bool accepted = false;
-          try {
-            edm4hep::TrackerHit referenceHit = hits[reverseHit + 1].lcioHit;
-            edm4hep::TrackerHit targetHit = target.lcioHit;
-            std::unique_ptr<MarlinTrk::IMarlinTrack> reverseTrack(
-                m_gsfMarlinTrkSystem->createTrack());
-            if (reverseTrack &&
-                reverseTrack->addHit(referenceHit) ==
-                    MarlinTrk::IMarlinTrack::success &&
-                reverseTrack->initialise(componentState, bz,
-                    MarlinTrk::IMarlinTrack::backward) ==
-                    MarlinTrk::IMarlinTrack::success &&
-                reverseTrack->addAndFit(targetHit, dchi, update, DBL_MAX) ==
-                    MarlinTrk::IMarlinTrack::success && update.valid &&
-                reverseTrack->getTrackState(targetHit, updatedState,
-                    updateChi2, updateNdf) ==
-                    MarlinTrk::IMarlinTrack::success &&
-                appendBaselineStateToComponent(*branch.component, updatedState,
-                    target, bz, componentState, update)) {
-              accepted = true;
-            }
-          } catch (...) {
-            accepted = false;
-          }
-          if (!accepted) {
-            branch.valid = false;
-            info() << boost::format(
-                "  COUNTERFACTUAL LOSS SCAN reject truthHit=%d processHit=%d "
-                "loss=%.6g atHit=%d")
-                      % counterfactualTruthHit % branch.processHit
-                      % branch.lossFraction % reverseHit << endmsg;
-            continue;
-          }
-          branch.cumulativeLogLikelihood +=
-              -0.5 * (dchi + update.logDetInnovation);
-          ++branch.acceptedHits;
-          if (m_componentDebugDump.value()) {
-            info() << boost::format(
-                "  COUNTERFACTUAL LOSS SCAN update truthHit=%d processHit=%d "
-                "loss=%.6g hit=%d dchi2=%.9g logDetS=%.9g cumulativeLogL=%.9g "
-                "pT=%.9g")
-                      % counterfactualTruthHit % branch.processHit
-                      % branch.lossFraction % reverseHit % dchi
-                      % update.logDetInnovation
-                      % branch.cumulativeLogLikelihood
-                      % ptFromTrackState(updatedState, bz) << endmsg;
-          }
-        }
 
         // Propagate the full mixture through the outer-to-inner interval
         // before updating its inner bounding measurement.  This mirrors the
@@ -4624,19 +4483,6 @@ StatusCode RecGsfTracking::execute() {
         if (m_verboseDump && m_verboseSplitDump) {
           dumpComponents("reverse-after-hit", reverseHit, reverseComps);
         }
-      }
-
-      for (const auto& branch : counterfactualBranches) {
-        const auto finalState = trackStateFromComponent(
-            *branch.component, bz, DH::AtOther);
-        info() << boost::format(
-            "  COUNTERFACTUAL LOSS SCAN result truthHit=%d processHit=%d "
-            "loss=%.6g valid=%d acceptedHits=%d cumulativeLogL=%.12g "
-            "finalPt=%.9g")
-                  % counterfactualTruthHit % branch.processHit
-                  % branch.lossFraction % (branch.valid ? 1 : 0)
-                  % branch.acceptedHits % branch.cumulativeLogLikelihood
-                  % ptFromTrackState(finalState, bz) << endmsg;
       }
 
       if (m_verboseDump) {
@@ -5807,7 +5653,7 @@ StatusCode RecGsfGlobalLossRefitter::execute() {
           // z is the profiled latent realization.  Its BH variance belongs in
           // the prior below, not in p(measurements|z), so only a numerical
           // variance floor is propagated here.
-          if (!applyCounterfactualReverseLoss(
+          if (!applyReverseLossHypothesis(
                   *component, 1.0 - retained, 1.0e-12, m_field))
             return result;
           processApplied = true;
