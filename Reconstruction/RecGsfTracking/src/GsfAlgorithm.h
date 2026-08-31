@@ -194,6 +194,10 @@ private:
       m_lineageNodeFBDeltaPTVariance{
           "GSFLineageNodeFBDeltaPTVariance",
           Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeFBBremProbability{
+          "GSFLineageNodeFBBremProbability",
+          Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>> m_lineageNodeFilteredKappa{
       "GSFLineageNodeFilteredKappa", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>>

@@ -1190,6 +1190,7 @@ struct LineageNodeRecord {
   double fbDeltaKappaVariance = std::numeric_limits<double>::quiet_NaN();
   double fbDeltaPt = std::numeric_limits<double>::quiet_NaN();
   double fbDeltaPtVariance = std::numeric_limits<double>::quiet_NaN();
+  double fbBremProbability = std::numeric_limits<double>::quiet_NaN();
   double filteredKappa = std::numeric_limits<double>::quiet_NaN();
   double filteredKappaVariance = std::numeric_limits<double>::quiet_NaN();
   double dominantLineageFraction =
@@ -1340,6 +1341,20 @@ public:
           node.fbDeltaPtVariance =
               forwardDerivative * forwardDerivative * forwardVariance +
               backwardDerivative * backwardDerivative * backwardVariance;
+          if (std::isfinite(node.fbDeltaPt) &&
+              std::isfinite(node.fbDeltaPtVariance)) {
+            if (node.fbDeltaPtVariance > 0.0) {
+              const double probability = 0.5 * std::erfc(
+                  node.fbDeltaPt /
+                  std::sqrt(2.0 * node.fbDeltaPtVariance));
+              node.fbBremProbability =
+                  std::clamp(probability, 0.0, 1.0);
+            } else if (node.fbDeltaPtVariance == 0.0) {
+              node.fbBremProbability = node.fbDeltaPt < 0.0
+                  ? 1.0
+                  : (node.fbDeltaPt > 0.0 ? 0.0 : 0.5);
+            }
+          }
         }
       }
     }
@@ -2672,6 +2687,8 @@ StatusCode RecGsfTracking::execute() {
   auto* lineageNodeFBDeltaPT = m_lineageNodeFBDeltaPT.createAndPut();
   auto* lineageNodeFBDeltaPTVariance =
       m_lineageNodeFBDeltaPTVariance.createAndPut();
+  auto* lineageNodeFBBremProbability =
+      m_lineageNodeFBBremProbability.createAndPut();
   auto* lineageNodeFilteredKappa =
       m_lineageNodeFilteredKappa.createAndPut();
   auto* lineageNodeFilteredKappaVariance =
@@ -2741,6 +2758,7 @@ StatusCode RecGsfTracking::execute() {
           node.fbDeltaKappaVariance);
       lineageNodeFBDeltaPT->push_back(node.fbDeltaPt);
       lineageNodeFBDeltaPTVariance->push_back(node.fbDeltaPtVariance);
+      lineageNodeFBBremProbability->push_back(node.fbBremProbability);
       lineageNodeFilteredKappa->push_back(node.filteredKappa);
       lineageNodeFilteredKappaVariance->push_back(
           node.filteredKappaVariance);

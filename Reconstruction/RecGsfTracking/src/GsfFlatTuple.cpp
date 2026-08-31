@@ -259,6 +259,8 @@ StatusCode RecGsfFlatTuple::initialize() {
                  &m_lineage_node_fb_delta_pT);
   m_tree->Branch("lineage_node_fb_delta_pT_variance",
                  &m_lineage_node_fb_delta_pT_variance);
+  m_tree->Branch("lineage_node_fb_brem_probability",
+                 &m_lineage_node_fb_brem_probability);
   m_tree->Branch("lineage_node_filtered_kappa",
                  &m_lineage_node_filtered_kappa);
   m_tree->Branch("lineage_node_filtered_kappa_variance",
@@ -540,6 +542,7 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_fb_delta_kappa_variance.clear();
   m_lineage_node_fb_delta_pT.clear();
   m_lineage_node_fb_delta_pT_variance.clear();
+  m_lineage_node_fb_brem_probability.clear();
   m_lineage_node_filtered_kappa.clear();
   m_lineage_node_filtered_kappa_variance.clear();
   m_lineage_node_filtered_pT.clear();
@@ -595,6 +598,7 @@ StatusCode RecGsfFlatTuple::execute() {
         nullptr;
     const podio::UserDataCollection<double>* nodeFBDeltaPT = nullptr;
     const podio::UserDataCollection<double>* nodeFBDeltaPTVariance = nullptr;
+    const podio::UserDataCollection<double>* nodeFBBremProbability = nullptr;
     try {
       nodeFBDeltaKappa = m_inLineageNodeFBDeltaKappa.get();
       nodeFBDeltaKappaVariance =
@@ -604,6 +608,12 @@ StatusCode RecGsfFlatTuple::execute() {
     } catch (...) {
       // Older lineage producers do not contain these passive fields. Preserve
       // the graph and expose row-aligned NaNs in the new flat branches.
+    }
+    try {
+      nodeFBBremProbability = m_inLineageNodeFBBremProbability.get();
+    } catch (...) {
+      // EDM produced before the probability diagnostic keeps its existing
+      // delta fields and receives row-aligned NaNs only for this new branch.
     }
     const auto* nodeFilteredKappa = m_inLineageNodeFilteredKappa.get();
     const auto* nodeFilteredKappaVariance =
@@ -746,6 +756,14 @@ StatusCode RecGsfFlatTuple::execute() {
             nodeCount, unavailable);
         m_lineage_node_fb_delta_pT.assign(nodeCount, unavailable);
         m_lineage_node_fb_delta_pT_variance.assign(nodeCount, unavailable);
+      }
+      if (nodeFBBremProbability &&
+          nodeFBBremProbability->size() == nodeCount) {
+        m_lineage_node_fb_brem_probability.assign(
+            nodeFBBremProbability->begin(), nodeFBBremProbability->end());
+      } else {
+        m_lineage_node_fb_brem_probability.assign(
+            nodeCount, std::numeric_limits<double>::quiet_NaN());
       }
       m_lineage_node_filtered_kappa.assign(
           nodeFilteredKappa->begin(), nodeFilteredKappa->end());

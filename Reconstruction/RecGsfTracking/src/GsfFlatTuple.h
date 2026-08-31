@@ -155,6 +155,10 @@ private:
       m_inLineageNodeFBDeltaPTVariance{
           "GSFLineageNodeFBDeltaPTVariance",
           Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeFBBremProbability{
+          "GSFLineageNodeFBBremProbability",
+          Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>> m_inLineageNodeFilteredKappa{
       "GSFLineageNodeFilteredKappa", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>>
@@ -301,6 +305,7 @@ private:
   std::vector<double> m_lineage_node_fb_delta_kappa_variance;
   std::vector<double> m_lineage_node_fb_delta_pT;
   std::vector<double> m_lineage_node_fb_delta_pT_variance;
+  std::vector<double> m_lineage_node_fb_brem_probability;
   std::vector<double> m_lineage_node_filtered_kappa;
   std::vector<double> m_lineage_node_filtered_kappa_variance;
   std::vector<double> m_lineage_node_filtered_pT;

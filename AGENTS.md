@@ -39,6 +39,11 @@ results are committed to live `B_updated[i]`.
 Direct product candidates persist their pair prior, five-dimensional overlap
 chi-square/log-determinant, log weight, normalized pre-pruning posterior,
 backward-predicted state, and explicitly named smoothed state.
+They also persist signed F/B curvature and pT differences, their approximate
+zero-cross-covariance variances, and a passive one-sided Gaussian brem
+probability.  The probability is meaningful as a directional compatibility
+score on the exact identity pair only; it is not a calibrated physical
+posterior and never steers the fit.
 They also persist the signed forward/backward differences
 `B_predicted-F_updated` in kappa and transverse momentum, with passive
 independence-approximation variances; the exact schema contract is in
