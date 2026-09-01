@@ -76,3 +76,36 @@ crossings are too small and correlated to support a physics claim, while
 inward tightening slightly increases false positives. Seed covariance is
 therefore retained as an independent diagnostic axis; it does not resolve the
 poor brem-identification power of the current F/B score.
+
+## Follow-up at `Var(kappa)=0.01`
+
+The same double-BH-off, fresh-inward, `LocalMeasurement` workflow was repeated
+with a much tighter `Var(kappa)=0.01`. Tightening both directions rejected two
+of 199 topology-clear tracks completely. Focused reruns showed that
+`ForwardKappaSeedCov=0.01` alone causes both failures: the only outward
+component is rejected at hit 6, at radii 345.9 mm and 234.7 mm. Both tracks
+complete when the forward seed stays standard and only
+`InwardKappaSeedCov=0.01` is used. The failed symmetric cases contain real
+losses of 1.13% and up to 3.47%, respectively.
+
+For the interval-local truth match with a one-interval tolerance, the fixed
+score threshold 0.95 changes calibration substantially:
+
+| Seed setting | Completed tracks | Type-I | Type-II for loss >=0.2% |
+|---|---:|---:|---:|
+| standard forward, standard inward | 199/199 | 10.598% | 63.542% |
+| standard forward, inward `0.01` | 199/199 | 15.156% | 48.958% |
+| forward `0.01`, inward `0.01` | 197/199 | 14.464% | 54.839% on surviving tracks |
+
+At the same 10.598% Type-I rate, the inward-only score threshold must move
+from 0.9500 to 0.9810. Its Type-II error is then 58.333%, versus 63.542% for
+the standard seeds, and its ROC AUC increases from 0.7344 to 0.7638. This is a
+modest improvement in the passive compatibility score, not an endpoint
+tracking-performance result. Relative to the standard seed, inward-only
+`0.01` changes reverse endpoint pT by a median 0.00078 GeV and at most
+0.05476 GeV in this BH-off control.
+
+The safe diagnostic candidate is therefore asymmetric: keep the forward seed
+standard and tighten only the fresh inward seed. It still requires independent
+held-out calibration and a BH-enabled endpoint study before any default or
+production claim. The maintained and compiled defaults remain `-1/-1`.
