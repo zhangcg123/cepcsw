@@ -19,6 +19,7 @@
 #include <cfloat>
 #include <cmath>
 #include <memory>
+#include <utility>
 
 namespace {
 
@@ -136,25 +137,44 @@ GsfTrackInitializationResult GsfTrackInitializer::initialize(
     return result;
   }
 
-  for (const auto& hit : orderedHits) {
+  std::vector<std::pair<int, edm4hep::TrackerHit>> twoDimensionalHits;
+  twoDimensionalHits.reserve(orderedHits.size());
+  for (std::size_t hitIndex = 0; hitIndex < orderedHits.size(); ++hitIndex) {
+    const auto& hit = orderedHits[hitIndex];
     if (!UTIL::BitSet32(hit.getType())[
-            UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL])
-      ++result.twoDimensionalHitCount;
+            UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL]) {
+      twoDimensionalHits.emplace_back(
+          static_cast<int>(hitIndex), hit);
+    }
   }
+  result.twoDimensionalHitCount =
+      static_cast<int>(twoDimensionalHits.size());
   if (result.twoDimensionalHitCount < 3) {
     result.error = "fewer than three two-dimensional hits";
     return result;
   }
 
-  std::vector<edm4hep::TrackerHit> mutableHits = orderedHits;
+  const std::size_t prefitBegin =
+      direction == GsfTrackInitializationDirection::Inward
+          ? twoDimensionalHits.size() - 3
+          : 0;
+  std::vector<edm4hep::TrackerHit> directionalPrefitHits;
+  directionalPrefitHits.reserve(3);
+  for (std::size_t prefitIndex = 0; prefitIndex < 3; ++prefitIndex) {
+    const auto& selected =
+        twoDimensionalHits[prefitBegin + prefitIndex];
+    result.prefitHitIndices[prefitIndex] = selected.first;
+    directionalPrefitHits.push_back(selected.second);
+  }
+
   const bool fitDirection =
       direction == GsfTrackInitializationDirection::Inward
           ? MarlinTrk::IMarlinTrack::backward
           : MarlinTrk::IMarlinTrack::forward;
   if (MarlinTrk::createPrefit(
-          mutableHits, &result.prefitState, bz, fitDirection) !=
+          directionalPrefitHits, &result.prefitState, bz, fitDirection) !=
       MarlinTrk::IMarlinTrack::success) {
-    result.error = "standard three-hit helix prefit failed";
+    result.error = "directional three-hit helix prefit failed";
     return result;
   }
   result.prefitOmegaVariance = assignStandardPrefitCovariance(

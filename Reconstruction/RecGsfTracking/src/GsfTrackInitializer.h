@@ -4,6 +4,7 @@
 #include "edm4hep/TrackState.h"
 #include "edm4hep/TrackerHit.h"
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,7 @@ struct GsfTrackInitializationResult {
   int seedHitNdf = 0;
   int seedHitMeasurementDimension = 0;
   int twoDimensionalHitCount = 0;
+  std::array<int, 3> prefitHitIndices{{-1, -1, -1}};
   std::string error;
 
   bool valid() const { return site != nullptr; }
@@ -37,11 +39,11 @@ enum class GsfTrackInitializationDirection {
   Inward,
 };
 
-/// Build a fresh GSF seed using the same initialization convention as the
-/// standard KalTest refit: a first/middle/last two-dimensional-hit helix,
-/// the full loose LCIO covariance, and an explicit update of the first
-/// measurement consumed in the requested fit direction through the baseline
-/// MarlinTrk interface.
+/// Build a fresh GSF seed from the three two-dimensional hits nearest the
+/// requested starting boundary: the three innermost hits for outward fitting
+/// or the three outermost hits for inward fitting.  The seed retains the full
+/// loose LCIO covariance and explicitly updates the first measurement consumed
+/// in the requested fit direction through the baseline MarlinTrk interface.
 class GsfTrackInitializer {
 public:
   explicit GsfTrackInitializer(MarlinTrk::IMarlinTrkSystem* trackSystem)

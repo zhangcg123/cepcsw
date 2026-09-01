@@ -3218,10 +3218,14 @@ StatusCode RecGsfTracking::execute() {
     const int charge = initialization.seedFilteredState.omega > 0.0 ? 1 : -1;
     if (m_verboseDump) {
       info() << boost::format(
-          "  INIT standard-kf-prefit twoDHits=%d firstHitDChi2=%.9g "
+          "  INIT standard-kf-prefit twoDHits=%d prefitHits=%d,%d,%d "
+          "firstHitDChi2=%.9g "
           "firstHitNdf=%d firstHitDim=%d prefitOmega=%.9g filteredOmega=%.9g "
           "prefitVarOmega=%.9g prefitVarKappa=%.9g")
             % initialization.twoDimensionalHitCount
+            % initialization.prefitHitIndices[0]
+            % initialization.prefitHitIndices[1]
+            % initialization.prefitHitIndices[2]
             % initialization.seedHitDeltaChi2
             % initialization.seedHitNdf
             % initialization.seedHitMeasurementDimension
@@ -4088,10 +4092,14 @@ StatusCode RecGsfTracking::execute() {
         if (m_verboseDump) {
           info() << boost::format(
               "  INWARD INIT standard-kf-prefit twoDHits=%d "
+              "prefitHits=%d,%d,%d "
               "outerHitDChi2=%.9g outerHitNdf=%d outerHitDim=%d "
               "prefitOmega=%.9g filteredOmega=%.9g "
               "prefitVarOmega=%.9g prefitVarKappa=%.9g")
                     % inwardInitialization.twoDimensionalHitCount
+                    % inwardInitialization.prefitHitIndices[0]
+                    % inwardInitialization.prefitHitIndices[1]
+                    % inwardInitialization.prefitHitIndices[2]
                     % inwardInitialization.seedHitDeltaChi2
                     % inwardInitialization.seedHitNdf
                     % inwardInitialization.seedHitMeasurementDimension

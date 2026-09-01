@@ -74,8 +74,9 @@ inward mixture `B_updated[0] = measurement[0] x B_predicted[0]`. A positive
 `InwardSeedCovarianceScale` copies and scales the final forward population; a
 finite value at or below zero builds one fresh standard-KF-style seed, updates
 the outermost hit, and first revisits hit `N-2`. The common initializer uses a
-first/middle/last two-dimensional-hit prefit, the loose `FullLDCTracking`
-covariance, and an explicit first-hit MarlinTrk update. `KappaSeedCov=-1`
+direction-local two-dimensional-hit prefit: the three innermost hits outward
+and the three outermost hits inward, followed by the loose `FullLDCTracking`
+covariance and an explicit boundary-hit MarlinTrk update. `KappaSeedCov=-1`
 selects `Var(omega)=1e-4`; positive values are diagnostic overrides. The
 implementation gates are in
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md` and
@@ -295,9 +296,15 @@ F/B brem score as the hit-0 trigger. In 199 topology-clear events its
 event-level maximum had ROC AUC 0.484 and was dominated by hits 220--230; at
 the exact saved intervals its AUC was 0.539 and a nominal one-sided two-sigma
 cut gave 8.37% Type-I and 89.68% Type-II error. The score remains passive and
-uncalibrated. Any hit-0 design must instead address message independence,
+uncalibrated. Direction-local three-hit prefits remove direct opposite-side
+seed contamination. On the same sample with a 0.2% truth-loss floor and a
+plus/minus-one-interval tolerance, the loose 0.95 cut improved Type-II error
+from 72.92% to 58.33% at essentially unchanged Type-I error, but every newly
+recovered interval was in the outer boundary group; hits 5--219 were
+unchanged. Any hit-0 design must still address message independence,
 cross-covariance, boundary behavior, and coherent path evidence. The exact
-gate is in `agents_record/2026-09-01-double-off-brem-score-errors.md`.
+gates are in `agents_record/2026-09-01-double-off-brem-score-errors.md` and
+`agents_record/2026-09-02-directional-three-hit-gsf-initialization.md`.
 
 The completed directional-splitting and SmoothedMarginal studies remain
 controls, not defaults. Their exact mechanical and population evidence is in
