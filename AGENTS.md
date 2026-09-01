@@ -129,9 +129,10 @@ default 100. Its reverse branch also selects the experimental
 `InwardWeightMode=SmoothedMarginal`; the compiled and active-template default
 remains `LocalMeasurement`.
 Directional BH child creation is independently configurable. The compiled and
-active reverse-template defaults are
-`ForwardBHSplitting=true, InwardBHSplitting=true`, preserving established
-behavior. The maintained reverse campaign deliberately uses
+inherited active reverse-template defaults are
+`ForwardBHSplitting=false, InwardBHSplitting=false`, so an unsteered fit
+creates no BH children in either direction. The maintained reverse campaign
+deliberately uses
 `ForwardBHSplitting=false, InwardBHSplitting=true` to isolate radiative
 hypothesis generation in the inward pass. These gates do not disable material
 path evaluation, passive interval recording, deterministic energy loss,
@@ -140,7 +141,8 @@ multiple scattering, propagation, or measurement updates.
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction
-ranking, identity-lineage protection enabled, and the five-component
+ranking, identity-lineage protection enabled,
+`ForwardBHSplitting=false`, `InwardBHSplitting=false`, and the five-component
 `CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 12 and 24 components
 and `CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
 ranking, the six-component `CEPC2GeV85StepConditioned6` model, and the
@@ -288,6 +290,15 @@ the hit-0 decision. The retired `RecGsfGlobalLossRefitter` and its maintained-
 card/flat-tuple adapters are not the implementation base; their historical
 evidence remains under `agents_record/`.
 
+A compiled-double-off identity-message gate now excludes the naive maximum
+F/B brem score as the hit-0 trigger. In 199 topology-clear events its
+event-level maximum had ROC AUC 0.484 and was dominated by hits 220--230; at
+the exact saved intervals its AUC was 0.539 and a nominal one-sided two-sigma
+cut gave 8.37% Type-I and 89.68% Type-II error. The score remains passive and
+uncalibrated. Any hit-0 design must instead address message independence,
+cross-covariance, boundary behavior, and coherent path evidence. The exact
+gate is in `agents_record/2026-09-01-double-off-brem-score-errors.md`.
+
 The completed directional-splitting and SmoothedMarginal studies remain
 controls, not defaults. Their exact mechanical and population evidence is in
 `agents_record/2026-08-31-directional-bh-splitting-controls.md` and
@@ -296,6 +307,6 @@ Freeze the production controls and existing endpoint definitions while the
 hit-0 method is designed: `DD4hepBetweenSurfaces`,
 `CEPC2GeV85StepConditioned`, `MaxComponents=10`,
 `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
-`KappaSeedCov=-1`, compiled directional gates true/true, and
+`KappaSeedCov=-1`, compiled directional gates false/false, and
 `InwardWeightMode=LocalMeasurement`. ECAL remains paused. Historical detail
 does not override this live focus.

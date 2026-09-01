@@ -80,7 +80,8 @@ gsf.BHSplitThreshold = 1.0e-4
 # Independent BH-process gates. This maintained reverse campaign deliberately
 # suppresses outward splitting so the inward refit alone generates radiative
 # hypotheses. Material-path evaluation/recording remains enabled in both
-# directions. The compiled defaults are True/True.
+# directions. The compiled defaults are False/False; the reverse branch below
+# is the explicit inward-only campaign override.
 gsf.ForwardBHSplitting = False
 gsf.InwardBHSplitting = False  # Neutral base; enabled only in reverse below.
 

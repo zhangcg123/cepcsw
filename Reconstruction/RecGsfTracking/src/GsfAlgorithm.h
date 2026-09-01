@@ -276,11 +276,11 @@ private:
       "Preserve an exact no-radiation lineage through cutoff and reduction"};
   Gaudi::Property<double> m_bhSplitThresh{this,"BHSplitThreshold",1e-4};
   Gaudi::Property<bool> m_forwardBHSplitting{
-      this, "ForwardBHSplitting", true,
+      this, "ForwardBHSplitting", false,
       "Enable Bethe-Heitler component splitting in the shared outward filter; "
       "material-path evaluation and passive recording remain active when off"};
   Gaudi::Property<bool> m_inwardBHSplitting{
-      this, "InwardBHSplitting", true,
+      this, "InwardBHSplitting", false,
       "Enable Bethe-Heitler component splitting in the independent reverse "
       "inward filter; inert unless ReverseFiltering is enabled"};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};

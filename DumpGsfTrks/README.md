@@ -224,12 +224,13 @@ ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
 `EcalComponentConstraint=False`. For the current backward-only BH mechanism
-campaign it deliberately differs from the compiled and active reverse-template
-`true/true` directional defaults: common steering sets
-`ForwardBHSplitting=False`, and the reverse branch sets
-`InwardBHSplitting=True`. Disabling the forward gate suppresses BH child
-creation only; deterministic energy loss, multiple scattering, material-path
-evaluation, and passive material recording remain active. Its top-level
+campaign it differs from the compiled and inherited active reverse-template
+directional defaults only for the inward gate: common steering matches
+`ForwardBHSplitting=False, InwardBHSplitting=False`, and the reverse branch
+explicitly overrides `InwardBHSplitting=True`. Disabling the forward gate
+suppresses BH child creation only; deterministic energy loss, multiple
+scattering, material-path evaluation, and passive material recording remain
+active. Its top-level
 `bh_model` selector is the
 default-off
 `CEPCRuntimeGenericGrid5Clear` experiment, not the production

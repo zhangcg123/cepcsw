@@ -30,10 +30,11 @@ surfaces and is an algorithmic overlap score, not a calibrated Bayesian
 posterior.
 The independent boolean properties `ForwardBHSplitting` and
 `InwardBHSplitting` gate only BH component creation in the shared outward
-filter and reverse inward filter, respectively. Both compile to `true` to
-preserve the established workflow. Disabling either gate leaves its material-
-path evaluation, passive interval recording, propagation, and measurement
-updates active. `InwardBHSplitting` is inert unless `ReverseFiltering=true`.
+filter and reverse inward filter, respectively. Both compile to `false` so an
+unsteered fit creates no BH children in either direction. Disabling either
+gate leaves its material-path evaluation, passive interval recording,
+propagation, and measurement updates active. `InwardBHSplitting` is inert
+unless `ReverseFiltering=true`.
 Reverse publishes the inner boundary state,
 `B_updated[0] = measurement[0] x B_predicted[0]`.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
@@ -80,8 +81,8 @@ distinction matters because that template enables `ElossOn` and
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
 | `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
-| `ForwardBHSplitting` | `true` | same | Enable BH component creation in the shared outward filter, including the initial hit-0 to hit-1 interval and every later outgoing accepted-hit interval above `BHSplitThreshold`. When false, the outward state still propagates, updates measurements, evaluates DD4hep paths, and contributes passive material summaries, but it remains unsplit by BH. This does not disable deterministic `ElossOn` or `MSOn`. |
-| `InwardBHSplitting` | `true` | same | Enable BH component creation in the independent reverse inward filter for every outer-to-inner interval above `BHSplitThreshold`. It is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`, which only consumes the retained forward graph. When false, the inward state still propagates, updates measurements, forms requested same-surface products, and contributes passive material summaries, but creates no new inward BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. |
+| `ForwardBHSplitting` | `false` | `false` | Enable BH component creation in the shared outward filter, including the initial hit-0 to hit-1 interval and every later outgoing accepted-hit interval above `BHSplitThreshold`. When false, the outward state still propagates, updates measurements, evaluates DD4hep paths, and contributes passive material summaries, but it remains unsplit by BH. This does not disable deterministic `ElossOn` or `MSOn`. |
+| `InwardBHSplitting` | `false` | `true` | Enable BH component creation in the independent reverse inward filter for every outer-to-inner interval above `BHSplitThreshold`. It is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`, which only consumes the retained forward graph. When false, the inward state still propagates, updates measurements, forms requested same-surface products, and contributes passive material summaries, but creates no new inward BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. The active reverse value is an explicit maintained-card campaign override, not the compiled default. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
@@ -547,9 +548,11 @@ ECAL settings agree with the production baseline:
 `DD4hepBetweenSurfaces`, and ECAL off. For the current backward-only BH
 mechanism campaign, the card deliberately sets `ForwardBHSplitting=false` in
 its common steering and enables `InwardBHSplitting=true` only in the reverse
-branch. These are campaign controls; both compiled and active reverse-template
-defaults remain true. Its top-level `bh_model` selector is the
-user-selected, default-off `CEPCRuntimeGenericGrid5Clear` experiment rather than the production
+branch. The forward value agrees with the compiled default; the inward value
+is a deliberate campaign override of the compiled `false`. Unsteered active
+reverse templates inherit the compiled `false/false` pair. Its top-level
+`bh_model` selector is the user-selected, default-off
+`CEPCRuntimeGenericGrid5Clear` experiment rather than the production
 `CEPC2GeV85StepConditioned` model. The retired runtime BH-audit CSV is no
 longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
