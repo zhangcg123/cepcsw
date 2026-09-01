@@ -96,21 +96,22 @@ identifier. A truth-no-brem interval within one position of any truth-brem
 interval belongs to that acceptance window and is therefore excluded from the
 Type-I denominator. This leaves 45,415 eligible no-brem intervals. When truth
 intervals are adjacent, one alarm can localize both; the rows below are thus
-per-truth-interval localization errors, not unique-alarm matching errors.
-Loss-category lower bounds are strict.
+per-truth-interval localization errors, not unique-alarm matching errors. The
+survey excludes losses below 0.2%, leaving 96 eligible truth intervals. The
+0.2% floor is inclusive; the larger-loss category lower bounds are strict.
 
-| Threshold | Type I, 45,415 eligible no-brem intervals | Type II, 155 brem intervals | Type II, loss >0.2% | Type II, loss >1% | Type II, loss >2% | Type II, loss >5% | Type II, loss >10% |
-|---:|---:|---:|---:|---:|---:|---:|---:|
-| 0.95 | 5,308/45,415 = 11.69% | 124/155 = 80.00% | 70/96 = 72.92% | 33/54 = 61.11% | 17/32 = 53.12% | 8/16 = 50.00% | 5/11 = 45.45% |
-| 0.977249868 (one-sided 2 sigma) | 3,794/45,415 = 8.35% | 129/155 = 83.23% | 74/96 = 77.08% | 35/54 = 64.81% | 18/32 = 56.25% | 8/16 = 50.00% | 5/11 = 45.45% |
-| 0.998650102 (one-sided 3 sigma) | 1,985/45,415 = 4.37% | 138/155 = 89.03% | 81/96 = 84.38% | 41/54 = 75.93% | 21/32 = 65.62% | 10/16 = 62.50% | 7/11 = 63.64% |
+| Threshold | Type I, 45,415 eligible no-brem intervals | Type II, loss >=0.2% | Type II, loss >1% | Type II, loss >2% | Type II, loss >5% | Type II, loss >10% |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.95 | 5,308/45,415 = 11.69% | 70/96 = 72.92% | 33/54 = 61.11% | 17/32 = 53.12% | 8/16 = 50.00% | 5/11 = 45.45% |
+| 0.977249868 (one-sided 2 sigma) | 3,794/45,415 = 8.35% | 74/96 = 77.08% | 35/54 = 64.81% | 18/32 = 56.25% | 8/16 = 50.00% | 5/11 = 45.45% |
+| 0.998650102 (one-sided 3 sigma) | 1,985/45,415 = 4.37% | 81/96 = 84.38% | 41/54 = 75.93% | 21/32 = 65.62% | 10/16 = 62.50% | 7/11 = 63.64% |
 
 The tolerance improves the exact-interval Type-II rate, most visibly for
 larger losses, while leaving the Type-I rate essentially unchanged. At the
-two-sigma threshold it nevertheless misses 83.23% of all truth intervals and
-56.25% of intervals losing more than 2%. Even 5--10% losses remain poorly
-localized. The earlier conclusion therefore does not depend on an exact
-one-surface alignment requirement.
+two-sigma threshold it nevertheless misses 77.08% of the retained intervals
+and 56.25% of intervals losing more than 2%. Even 5--10% losses remain poorly
+localized. The conclusion therefore does not depend on either sub-0.2% losses
+or an exact one-surface alignment requirement.
 
 ## Conclusion
 
