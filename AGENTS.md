@@ -40,10 +40,11 @@ Direct product candidates persist their pair prior, five-dimensional overlap
 chi-square/log-determinant, log weight, normalized pre-pruning posterior,
 backward-predicted state, and explicitly named smoothed state.
 They also persist signed F/B curvature and pT differences, their approximate
-zero-cross-covariance variances, and a passive one-sided Gaussian brem
-probability.  The probability is meaningful as a directional compatibility
-score on the exact identity pair only; it is not a calibrated physical
-posterior and never steers the fit.
+zero-cross-covariance variances, and a passive direction-signed
+five-dimensional compatibility score. Its magnitude is the chi-square CDF of
+the full F/B state difference and its direction is the signed pT difference.
+The score is meaningful on the exact identity pair only; it is not a
+calibrated physical posterior and never steers the fit.
 They also persist the signed forward/backward differences
 `B_predicted-F_updated` in kappa and transverse momentum, with passive
 independence-approximation variances; the exact schema contract is in
@@ -305,6 +306,13 @@ unchanged. Any hit-0 design must still address message independence,
 cross-covariance, boundary behavior, and coherent path evidence. The exact
 gates are in `agents_record/2026-09-01-double-off-brem-score-errors.md` and
 `agents_record/2026-09-02-directional-three-hit-gsf-initialization.md`.
+Replacing the one-dimensional magnitude with the full five-dimensional
+compatibility did not rescue the detector: at the same 0.95 threshold it
+reduced Type-I error from 11.55% to 10.60% but increased Type-II error for
+losses at or above 0.2% from 58.33% to 63.54%; at equal Type-I count it still
+missed 59/96 instead of 56/96. The new score remains passive; its definition
+and gate are in
+`agents_record/2026-09-02-forward-backward-5d-brem-score.md`.
 
 The completed directional-splitting and SmoothedMarginal studies remain
 controls, not defaults. Their exact mechanical and population evidence is in

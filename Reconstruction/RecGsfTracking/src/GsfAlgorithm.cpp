@@ -33,6 +33,7 @@
 #include "TDecompChol.h"
 #include "TMatrixDSym.h"
 #include "TVectorD.h"
+#include "Math/ProbFuncMathCore.h"
 
 #include <boost/format.hpp>
 #include <cmath>
@@ -1341,20 +1342,25 @@ public:
           node.fbDeltaPtVariance =
               forwardDerivative * forwardDerivative * forwardVariance +
               backwardDerivative * backwardDerivative * backwardVariance;
-          if (std::isfinite(node.fbDeltaPt) &&
-              std::isfinite(node.fbDeltaPtVariance)) {
-            if (node.fbDeltaPtVariance > 0.0) {
-              const double probability = 0.5 * std::erfc(
-                  node.fbDeltaPt /
-                  std::sqrt(2.0 * node.fbDeltaPtVariance));
-              node.fbBremProbability =
-                  std::clamp(probability, 0.0, 1.0);
-            } else if (node.fbDeltaPtVariance == 0.0) {
-              node.fbBremProbability = node.fbDeltaPt < 0.0
-                  ? 1.0
-                  : (node.fbDeltaPt > 0.0 ? 0.0 : 0.5);
-            }
-          }
+        }
+      }
+      if (std::isfinite(node.fbDeltaPt) &&
+          std::isfinite(overlapDChi2) && overlapDChi2 >= 0.0) {
+        // Generalize the former one-dimensional Gaussian CDF to the complete
+        // five-parameter compatibility quadratic.  F_chi2(q; 5) measures the
+        // radial inconsistency, while the signed pT difference retains the
+        // physically relevant loss direction.  For one dimension this
+        // construction is exactly Phi(-delta_pT / sigma_delta_pT).
+        const double radialProbability =
+            ROOT::Math::chisquared_cdf(overlapDChi2, 5.0);
+        if (std::isfinite(radialProbability)) {
+          const double signedProbability = node.fbDeltaPt < 0.0
+              ? 0.5 * (1.0 + radialProbability)
+              : (node.fbDeltaPt > 0.0
+                    ? 0.5 * (1.0 - radialProbability)
+                    : 0.5);
+          node.fbBremProbability =
+              std::clamp(signedProbability, 0.0, 1.0);
         }
       }
     }
