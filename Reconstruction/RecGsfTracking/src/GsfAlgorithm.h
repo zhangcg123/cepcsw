@@ -340,11 +340,22 @@ private:
       "Opt-in propagation and verbose dump of aggregate BH-mode mass by surface"};
   Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
+  Gaudi::Property<double> m_forwardKappaSeedCov{
+      this, "ForwardKappaSeedCov", -1.0,
+      "Outward direction-local prefit kappa variance; values <= 0 use the "
+      "standard KF Var(omega)=1e-4 covariance"};
+  Gaudi::Property<double> m_inwardKappaSeedCov{
+      this, "InwardKappaSeedCov", -1.0,
+      "Fresh inward direction-local prefit kappa variance; values <= 0 use "
+      "the standard KF Var(omega)=1e-4 covariance; inert for a positive "
+      "InwardSeedCovarianceScale copied-mixture seed"};
   Gaudi::Property<double> m_kappaSeedCov{
-      this, "KappaSeedCov", -1.0,
-      "Legacy diagnostic override for the outward and fresh inward prefit "
-      "kappa variance; values <= 0 use the standard KF Var(omega)=1e-4 "
-      "covariance"};
+      this, "KappaSeedCov", 0.0,
+      "Deprecated compatibility override: a nonzero value applies to both "
+      "ForwardKappaSeedCov and InwardKappaSeedCov when neither directional "
+      "property differs from its -1 default; zero disables the alias"};
+  double m_effectiveForwardKappaSeedCov = -1.0;
+  double m_effectiveInwardKappaSeedCov = -1.0;
   Gaudi::Property<std::string> m_bhModel{
       this, "BHModel", "CEPC2GeV85StepConditioned"};
   Gaudi::Property<bool> m_truthBHLossOverride{

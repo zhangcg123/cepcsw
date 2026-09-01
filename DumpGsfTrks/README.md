@@ -372,8 +372,8 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After retiring the counterfactual loss scanner, `RecGsfTracking` has 39
-compiled properties. This card explicitly steers 38 and deliberately
+After adding direction-specific seed-curvature controls, `RecGsfTracking` has
+41 compiled properties. This card explicitly steers 40 and deliberately
 inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
 the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
@@ -399,8 +399,13 @@ seed, with an explicit outermost-hit update before recursion starts at `N-2`.
 The maintained value -1 is only a mode selector, not a negative covariance
 multiplier. It creates one unit-weight inward root, so the explicitly retained
 `ReverseInitialWeightMode="ForwardPosterior"` setting is inert in this card.
-Former method-specific seed-covariance properties were removed when the
-inward filter was consolidated; stale cards must use the common property.
+The maintained card now sets `ForwardKappaSeedCov=-1` and
+`InwardKappaSeedCov=-1` independently and explicitly disables the deprecated
+common `KappaSeedCov` alias with zero. Old generated cards that set only a
+nonzero `KappaSeedCov` remain mechanically compatible and apply that value to
+both directions, but they cannot perform a direction-separated study and
+should be regenerated. The inward control affects only this fresh-seed mode;
+it is inert when a positive scale selects the copied-mixture seed.
 The reverse branch also deliberately sets
 `InwardWeightMode="SmoothedMarginal"`. It keeps each propagated mean and
 covariance equal to the hit-updated `B_updated` state, but replaces its

@@ -77,8 +77,11 @@ finite value at or below zero builds one fresh standard-KF-style seed, updates
 the outermost hit, and first revisits hit `N-2`. The common initializer uses a
 direction-local two-dimensional-hit prefit: the three innermost hits outward
 and the three outermost hits inward, followed by the loose `FullLDCTracking`
-covariance and an explicit boundary-hit MarlinTrk update. `KappaSeedCov=-1`
-selects `Var(omega)=1e-4`; positive values are diagnostic overrides. The
+covariance and an explicit boundary-hit MarlinTrk update.
+`ForwardKappaSeedCov=-1` and `InwardKappaSeedCov=-1` independently select
+`Var(omega)=1e-4`; positive values are direction-local diagnostic
+`Var(kappa)` overrides. The deprecated `KappaSeedCov` compatibility alias is
+disabled by zero in the maintained card. The
 implementation gates are in
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md` and
 `agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`.
@@ -141,7 +144,8 @@ path evaluation, passive interval recording, deterministic energy loss,
 multiple scattering, propagation, or measurement updates.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
-`KappaSeedCov=-1` (standard `Var(omega)=1e-4` forward prefit),
+`ForwardKappaSeedCov=-1` and `InwardKappaSeedCov=-1` (standard
+`Var(omega)=1e-4` direction-local prefits),
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction
 ranking, identity-lineage protection enabled,
 `ForwardBHSplitting=false`, `InwardBHSplitting=false`, and the five-component
@@ -322,6 +326,7 @@ Freeze the production controls and existing endpoint definitions while the
 hit-0 method is designed: `DD4hepBetweenSurfaces`,
 `CEPC2GeV85StepConditioned`, `MaxComponents=10`,
 `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
-`KappaSeedCov=-1`, compiled directional gates false/false, and
+`ForwardKappaSeedCov=-1`, `InwardKappaSeedCov=-1`, compiled directional gates
+false/false, and
 `InwardWeightMode=LocalMeasurement`. ECAL remains paused. Historical detail
 does not override this live focus.

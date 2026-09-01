@@ -44,8 +44,9 @@ unit-weight backward seed with the standard prefit and an explicit outermost-
 hit update. That mode is independent of the final forward mixture. The
 geometric prefit is direction-local: the outward filter uses the three
 innermost available two-dimensional hits and the fresh inward filter uses the
-three outermost. Former method-specific seed-covariance
-properties were removed rather than retained as duplicate controls. A
+three outermost. The two direction-local curvature controls described below
+belong to this common initializer; former workflow-specific duplicate seed
+properties remain removed. A
 default-off ECAL experiment can additionally write a paired component-selection result to
 `GSFTracksEcalConstrained`. Each component uses the baseline MarlinTrk
 `addHit(reference) -> initialise(componentState) -> addAndFit(currentHit)`
@@ -54,18 +55,23 @@ initializer: a temporary prefit through the first three available
 two-dimensional hits, followed by the loose covariance
 `Var(d0)=1e6`, `Var(phi)=1e2`, `Var(omega)=1e-4`, `Var(z0)=1e6`, and
 `Var(tanLambda)=1e2`, pivot transport to the first hit, and an explicit
-MarlinTrk update with that first hit. `KappaSeedCov` is retained only as a
-legacy diagnostic override of the prefit curvature variance; it does not
-restore the former `CompleteTracks`-anchored seed. The same initializer and
-curvature convention are used with the last three available two-dimensional
-hits at the outermost boundary when fresh inward initialization is selected.
+MarlinTrk update with that first hit. `ForwardKappaSeedCov` and
+`InwardKappaSeedCov` independently steer the curvature variance of the
+direction-local outward and fresh-inward prefits; they do not restore the
+former `CompleteTracks`-anchored seed. The inward control is inert when a
+positive `InwardSeedCovarianceScale` selects the copied-mixture seed.
+`KappaSeedCov` remains a deprecated compatibility alias: its nonzero value is
+accepted only while both directional controls retain `-1`, and then applies
+to both initializers. The same initializer and curvature convention are used
+with the last three available two-dimensional hits at the outermost boundary
+when fresh inward initialization is selected.
 The old alternate KF fitter
 and other initialization experiments have been removed; historical
 comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-02. `RecGsfTracking` exposes 39 Gaudi properties in
+Reference date: 2026-09-02. `RecGsfTracking` exposes 41 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -89,7 +95,9 @@ distinction matters because that template enables `ElossOn` and
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
-| `KappaSeedCov` | `-1` | same | Legacy diagnostic override for the standard-KF-style outward initializer and for the fresh inward initializer selected by `InwardSeedCovarianceScale<=0`. Any finite value `<=0` selects the exact standard-KF `Var(omega)=1e-4`; a finite positive value instead sets `Var(omega)=KappaSeedCov * alpha^2` before pivot transport, where `kappa=omega/alpha`. It changes only this curvature entry; the direction-local three-hit two-dimensional prefit, other four loose covariance entries, and explicit seed-hit update remain unchanged. Outward uses the three innermost hits; fresh inward uses the three outermost. It is irrelevant to the copied-mixture inward seed selected by a positive inward scale. |
+| `ForwardKappaSeedCov` | `-1` | same | Outward three-innermost-hit prefit curvature control. Any finite value `<=0` selects the standard-KF `Var(omega)=1e-4`; a finite positive value instead directly sets `Var(kappa)`, internally converted as `Var(omega)=ForwardKappaSeedCov * alpha^2` before pivot transport. It changes only the curvature entry; the other four loose covariance entries and explicit first-hit update are unchanged. |
+| `InwardKappaSeedCov` | `-1` | same | Fresh-inward three-outermost-hit prefit curvature control, with the same units and conversion as `ForwardKappaSeedCov`. It acts only when `InwardSeedCovarianceScale<=0`; a positive inward scale copies and scales the final forward mixture and therefore ignores this property. |
+| `KappaSeedCov` | `0` | `-1` | Deprecated compatibility alias for cards predating the directional controls. Zero disables it. A finite nonzero value is accepted only while both directional properties remain `-1`, and then applies to both initializers; combining it with either explicitly changed directional property is an initialization error. New cards must set the two directional properties and leave this alias at zero. |
 
 Material between consecutive accepted measurements is owned by the outgoing
 transition from the current measurement to the next one. The final

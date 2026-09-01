@@ -111,9 +111,13 @@ gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True
 gsf.ElossOn = True
-# Use the exact standard-KF prefit curvature variance; positive values are a
-# legacy diagnostic override in kappa units.
-gsf.KappaSeedCov = -1.0  # <=0 uses the standard forward Var(omega)=1e-4.
+# Independent direction-local curvature variances. Values <=0 select the
+# standard Var(omega)=1e-4; positive values are Var(kappa) overrides. The
+# deprecated common alias stays explicitly disabled so the two controls cannot
+# silently override one another.
+gsf.ForwardKappaSeedCov = -1.0
+gsf.InwardKappaSeedCov = -1.0
+gsf.KappaSeedCov = 0.0
 
 # Initialize the neutral backward-workflow baseline before selecting a method.
 # Each branch below repeats only the options that belong to that method.
