@@ -239,12 +239,12 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 40 `RecGsfTracking` properties, their
+The authoritative explanation of all 39 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 39 of the 40
+For this maintained workflow, `gsf.py.bk` explicitly configures 38 of the 39
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -304,8 +304,9 @@ component-constraint experiment remains off. The algorithm still supports that
 default-off experiment, but reactivating it requires a separate reconstructed-
 event input card that explicitly supplies `EcalCluster`; it is not part of this
 worker. For `method="smoother"` or `method="reverse"`, there is no
-endpoint-output selector: `GSFTracksBestBranch` always stores BestBranch and
-`GSFTracksWeightedMean` stores the moment-matched mixture, while
+endpoint-output selector: `GSFTracksBestBranch` always stores the final
+component with the largest normalized weight, and `GSFTracksWeightedMean`
+stores the moment-matched mixture, while
 `GSFTracksFullMixtureMode` stores the maximum of the complete
 five-dimensional final-mixture PDF. The latter is automatic/default-on and
 `GSFFullMixtureModeStatus` distinguishes a successful mode (`1`) from a
@@ -374,14 +375,15 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After removing the obsolete `SurfaceConsistency` final-selection path,
-`RecGsfTracking` has 40 compiled properties. This card explicitly steers 39
+After retiring configurable reverse final-branch selection,
+`RecGsfTracking` has 39 compiled properties. This card explicitly steers 38
 and deliberately inherits only `RecordTruthMaterialIntervals=true`.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
-`SurfaceConsistencyUninformativeFloor` property, or selecting
-`ReverseSelectionMode="SurfaceConsistency"` are stale experiment artifacts
+`SurfaceConsistencyUninformativeFloor` property, or assigning the removed
+`ReverseSelectionMode` property with its former `AggregateWeight`,
+`DominantLineage`, or `SurfaceConsistency` values are stale experiment artifacts
 and must be regenerated rather than edited in place. Existing tuples remain
 interpretable because the retired counterfactual scanner and selection mode
 persisted no unique EDM or flat-tuple schema.

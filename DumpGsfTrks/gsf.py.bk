@@ -134,7 +134,6 @@ gsf.MaterialIPExtrapolation = False
 # below always persist all three endpoint representations and do not select one
 # here.
 gsf.GSFOutputMode = "BestBranch"
-gsf.ReverseSelectionMode = "AggregateWeight"
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
 # Default-off research constraint.  When enabled from a separate reconstructed-
@@ -174,7 +173,6 @@ elif method == "reverse":
     gsf.ReverseFiltering = True
     gsf.InwardBHSplitting = False
     gsf.InwardWeightMode = "LocalMeasurement"
-    gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     # Inert for the maintained fresh single-component inward seed; retained
     # explicitly for positive-scale copied-mixture comparison cards.
     gsf.ReverseInitialWeightMode = "ForwardPosterior"

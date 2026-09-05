@@ -96,8 +96,6 @@ gsf.ReverseFiltering = os.getenv(
 # backward prefit seed and consumes the outermost hit before inward recursion.
 gsf.InwardSeedCovarianceScale = float(os.getenv(
     "GSF_INWARD_SEED_COVARIANCE_SCALE", "100.0"))
-gsf.ReverseSelectionMode = os.getenv(
-    "GSF_REVERSE_SELECTION_MODE", "AggregateWeight")
 gsf.ReverseInitialWeightMode = os.getenv(
     "GSF_REVERSE_INITIAL_WEIGHT_MODE", "ForwardPosterior")
 gsf.GaussianSumSmoothing = os.getenv(

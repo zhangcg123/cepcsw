@@ -2377,16 +2377,6 @@ StatusCode RecGsfTracking::initialize() {
     error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
     return StatusCode::FAILURE;
   }
-  std::string reverseSelectionMode = m_reverseSelectionMode.value();
-  std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
-                 reverseSelectionMode.begin(), ::tolower);
-  if (reverseSelectionMode != "aggregateweight" &&
-      reverseSelectionMode != "dominantlineage") {
-    error() << "ReverseSelectionMode must be AggregateWeight or "
-               "DominantLineage"
-            << endmsg;
-    return StatusCode::FAILURE;
-  }
   std::string materialPathMode = m_materialPathMode.value();
   std::transform(materialPathMode.begin(), materialPathMode.end(),
                  materialPathMode.begin(), ::tolower);
@@ -4566,20 +4556,10 @@ StatusCode RecGsfTracking::execute() {
         lineageGraph.markInwardInternalMessage(surface.components);
       GsfMixture::normalizeWeights(endpointComponents);
       if (!endpointComponents.empty()) {
-        std::string reverseSelectionMode = m_reverseSelectionMode.value();
-        std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
-                       reverseSelectionMode.begin(), ::tolower);
-        const bool selectDominantLineage =
-            reverseSelectionMode == "dominantlineage";
-        auto reverseSelectionScore = [&](const GsfComponent* component) {
-          if (selectDominantLineage)
-            return component->weight * component->dominantLineageFraction;
-          return component->weight;
-        };
         auto* reverseBest = *std::max_element(
             endpointComponents.begin(), endpointComponents.end(),
-            [&](const GsfComponent* a, const GsfComponent* b) {
-              return reverseSelectionScore(a) < reverseSelectionScore(b);
+            [](const GsfComponent* a, const GsfComponent* b) {
+              return a->weight < b->weight;
             });
         THelicalTrack reverseIp(TMatrixD(5, 1), TVector3(0, 0, 0), bz);
         TMatrixD reverseIpCov(5, 5);
@@ -4631,12 +4611,12 @@ StatusCode RecGsfTracking::execute() {
           const double reversePt = reverseIp.GetKappa() != 0.0
               ? 1.0 / std::abs(reverseIp.GetKappa()) : 0.0;
           if (m_verboseDump) {
-            info() << boost::format("  REVERSE IP output: mode=%s selection=%s bestId=%d bestWeight=%.6g dominantFraction=%.6g selectionScore=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
-                      % reverseOutputLabel % m_reverseSelectionMode.value()
+            info() << boost::format("  REVERSE IP output: mode=%s bestId=%d bestWeight=%.6g dominantFraction=%.6g pT=%.6g d0=%.6g z0=%.6g phi=%.6g tanL=%.6g")
+                      % reverseOutputLabel
                       % reverseBest->debugId
                       % reverseBest->weight
                       % reverseBest->dominantLineageFraction
-                      % reverseSelectionScore(reverseBest) % reversePt
+                      % reversePt
                       % (-reverseIp.GetDrho()) % reverseIp.GetDz()
                       % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
                       % reverseIp.GetTanLambda() << endmsg;
@@ -4813,14 +4793,13 @@ StatusCode RecGsfTracking::execute() {
                     m_ecalConstraintLikelihoodFloor.value() +
                     (1.0 - m_ecalConstraintLikelihoodFloor.value()) *
                         std::exp(-0.5 * pull * pull);
-                const double score =
-                    reverseSelectionScore(component) * likelihood;
+                const double score = component->weight * likelihood;
                 if (m_verboseDump && m_componentDebugDump) {
                   info() << boost::format(
-                      "  ECAL COMPONENT id=%d p=%.9g trackerScore=%.9g "
+                      "  ECAL COMPONENT id=%d p=%.9g trackerWeight=%.9g "
                       "logPoverE=%.9g likelihood=%.9g constrainedScore=%.9g")
                             % component->debugId % componentP
-                            % reverseSelectionScore(component) % logResidual
+                            % component->weight % logResidual
                             % likelihood % score
                          << endmsg;
                 }

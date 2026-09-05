@@ -71,7 +71,7 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-06. `RecGsfTracking` exposes 40 Gaudi properties in
+Reference date: 2026-09-06. `RecGsfTracking` exposes 39 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -262,20 +262,17 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
 | `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weights while always propagating the measurement-updated `B_updated` means and covariances. `LocalMeasurement` uses `prior(B_predicted) x likelihood(hit|B_predicted)`. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch also selects `LocalMeasurement`; `SmoothedMarginal` remains a default-off comparison. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
-| `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight` or default-off `DominantLineage`. |
-
-`AggregateWeight` selects the component with the largest normalized weight.
-`DominantLineage` multiplies that weight by the fraction supplied by its
-strongest real pre-merge lineage. It is retained only to reproduce a rejected
-diagnostic.
-`ProtectIdentityLineage` is a reduction safeguard, not another selection mode.
+`ProtectIdentityLineage` is a reduction safeguard and does not alter this
+fixed endpoint selection.
 
 Smoother and reverse have no output selector. Every successful track is
 written row-for-row to three collections: `GSFTracksBestBranch` is
-BestBranch, `GSFTracksWeightedMean` is the normalized final-mixture moment
+the final component with the largest normalized weight,
+`GSFTracksWeightedMean` is the normalized final-mixture moment
 match, and `GSFTracksFullMixtureMode` is the joint density maximum of the full
-mixture at the IP. `ReverseSelectionMode` affects only BestBranch. It does not
-alter the components entering either of the other two views.
+mixture at the IP. BestBranch selection is fixed internally and has no
+configurable scoring mode; it does not alter the components entering either
+of the other two views.
 
 For reverse, at every interior hit `0 < i < N-1`, every accepted backward
 prediction is paired with all stored forward filtered components at that hit.
@@ -391,7 +388,7 @@ one row per BH parent or child.
 
 ### Collection handles
 
-The data handles are configurable separately from the 40 properties:
+The data handles are configurable separately from the 39 properties:
 
 | Role | Default collection |
 |---|---|
@@ -545,7 +542,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 39 of the 40 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 38 of the 39 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
@@ -593,7 +590,7 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 40-property inventory above is part of the configurable interface, not a
+The 39-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

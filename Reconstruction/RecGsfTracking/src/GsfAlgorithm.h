@@ -297,9 +297,6 @@ private:
       "SmoothedMarginal propagates B_updated states with weights obtained by "
       "marginalizing each interior F_updated x B_predicted product over its "
       "forward partners"};
-  Gaudi::Property<std::string> m_reverseSelectionMode{
-      this, "ReverseSelectionMode", "AggregateWeight",
-      "AggregateWeight or DominantLineage final reverse-branch selection"};
   Gaudi::Property<std::string> m_reverseInitialWeightMode{
       this, "ReverseInitialWeightMode", "ForwardPosterior",
       "ForwardPosterior or Uniform diagnostic reverse-start weights"};
