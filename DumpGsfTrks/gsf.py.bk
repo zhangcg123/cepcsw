@@ -157,8 +157,8 @@ elif method == "reverse":
     # Independent inward multi-component refit. With the maintained nonpositive
     # inward-scale steering it starts from one fresh standard-KF-style seed;
     # positive values instead copy the full final forward posterior. Persist
-    # the selected branch in GSFTracksBestBranch and
-    # the two automatic full-mixture summaries in GSFTracksWeightedMean and
+    # the fixed maximum-weight final component in GSFTracksBestBranch and the
+    # two automatic full-mixture summaries in GSFTracksWeightedMean and
     # GSFTracksFullMixtureMode. The latter is the joint five-dimensional PDF
     # maximum; GSFFullMixtureModeStatus tags optimization success/fallback.
     # The final positive-weight component weights, IP kappas, and kappa
