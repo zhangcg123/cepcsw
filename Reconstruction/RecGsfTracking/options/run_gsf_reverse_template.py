@@ -76,9 +76,6 @@ gsf.MaxComponents = int(os.getenv("GSF_MAX_COMPONENTS", "10"))
 gsf.ReductionTargetComponents = 0  # 0 means MaxComponents
 gsf.ReductionMergeCost = os.getenv(
     "GSF_REDUCTION_MERGE_COST", "SymmetricKL")
-# Forward-only compatibility property. Reverse publication below always saves
-# BestBranch and WeightedMean in separate collections.
-gsf.GSFOutputMode = "BestBranch"
 gsf.ComponentWeightCutoff = 1.0e-4
 gsf.ProtectIdentityLineage = os.getenv(
     "GSF_PROTECT_IDENTITY_LINEAGE", "1").lower() in ("1", "true", "yes")

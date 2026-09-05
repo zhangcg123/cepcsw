@@ -130,10 +130,6 @@ gsf.InwardSeedCovarianceScale = -1.0
 # so a failed diagnostic F/B product cannot reject the live component.
 gsf.InwardWeightMode = "LocalMeasurement"
 gsf.MaterialIPExtrapolation = False
-# Forward-only compatibility setting. The smoother/reverse methods
-# below always persist all three endpoint representations and do not select one
-# here.
-gsf.GSFOutputMode = "BestBranch"
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
 # Default-off research constraint.  When enabled from a separate reconstructed-

@@ -369,10 +369,6 @@ private:
       "Passively write exact Geant4, truth-hook DD4hep, and actual runtime "
       "GSF material summaries for consecutive accepted-hit intervals; never "
       "steers propagation, BH splitting, component weights, or selection"};
-  Gaudi::Property<std::string> m_outputMode{
-      this, "GSFOutputMode", "BestBranch",
-      "Forward-only output selector; smoother/reverse always write "
-      "BestBranch, WeightedMean, and FullMixtureMode to separate collections"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",
       "Forward/reverse material assignment: CurrentSurface or "

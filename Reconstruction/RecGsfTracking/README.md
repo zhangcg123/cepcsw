@@ -71,7 +71,7 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-06. `RecGsfTracking` exposes 39 Gaudi properties in
+Reference date: 2026-09-06. `RecGsfTracking` exposes 38 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -257,7 +257,6 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother or reverse output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
 | `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weights while always propagating the measurement-updated `B_updated` means and covariances. `LocalMeasurement` uses `prior(B_predicted) x likelihood(hit|B_predicted)`. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch also selects `LocalMeasurement`; `SmoothedMarginal` remains a default-off comparison. |
@@ -265,9 +264,11 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 `ProtectIdentityLineage` is a reduction safeguard and does not alter this
 fixed endpoint selection.
 
-Smoother and reverse have no output selector. Every successful track is
-written row-for-row to three collections: `GSFTracksBestBranch` is
-the final component with the largest normalized weight,
+Ordinary forward, smoother, and reverse have no output selector: BestBranch is
+fixed to the final component with the largest normalized weight. Ordinary
+forward writes that state to `GSFTracks`. Every successful smoother or reverse
+track is additionally written row-for-row to three collections:
+`GSFTracksBestBranch` is that same fixed BestBranch,
 `GSFTracksWeightedMean` is the normalized final-mixture moment
 match, and `GSFTracksFullMixtureMode` is the joint density maximum of the full
 mixture at the IP. BestBranch selection is fixed internally and has no
@@ -388,7 +389,7 @@ one row per BH parent or child.
 
 ### Collection handles
 
-The data handles are configurable separately from the 39 properties:
+The data handles are configurable separately from the 38 properties:
 
 | Role | Default collection |
 |---|---|
@@ -542,7 +543,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 38 of the 39 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 37 of the 38 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
@@ -590,7 +591,7 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 39-property inventory above is part of the configurable interface, not a
+The 38-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

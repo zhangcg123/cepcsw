@@ -2371,12 +2371,6 @@ StatusCode RecGsfTracking::initialize() {
     error() << "BHSplitThreshold must be non-negative" << endmsg;
     return StatusCode::FAILURE;
   }
-  std::string outputMode = m_outputMode.value();
-  std::transform(outputMode.begin(), outputMode.end(), outputMode.begin(), ::tolower);
-  if (outputMode != "bestbranch" && outputMode != "weightedmean") {
-    error() << "GSFOutputMode must be BestBranch or WeightedMean" << endmsg;
-    return StatusCode::FAILURE;
-  }
   std::string materialPathMode = m_materialPathMode.value();
   std::transform(materialPathMode.begin(), materialPathMode.end(),
                  materialPathMode.begin(), ::tolower);
@@ -2597,7 +2591,6 @@ StatusCode RecGsfTracking::initialize() {
          << " protectIdentityLineage=" << m_protectIdentityLineage.value()
          << " forwardBHSplitting=" << m_forwardBHSplitting.value()
          << " inwardBHSplitting=" << m_inwardBHSplitting.value()
-         << " outputMode=" << m_outputMode.value()
          << " inwardWeightMode=" << m_inwardWeightMode.value()
          << " forwardKappaSeedCov=" << m_effectiveForwardKappaSeedCov
          << " inwardKappaSeedCov=" << m_effectiveInwardKappaSeedCov
@@ -2610,8 +2603,7 @@ StatusCode RecGsfTracking::initialize() {
   if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
     info() << "Three-view GSF publication: BestBranch -> GSFTracksBestBranch, "
               "WeightedMean -> GSFTracksWeightedMean, FullMixtureMode -> "
-              "GSFTracksFullMixtureMode; GSFOutputMode does not select "
-              "between these collections"
+              "GSFTracksFullMixtureMode"
            << endmsg;
   }
 
@@ -4914,8 +4906,8 @@ StatusCode RecGsfTracking::execute() {
       if (m_verboseDump && m_verboseSplitDump) {
         const double bestKappa = best->helixAtLastSite(bz).GetKappa();
         const double bestPt = (bestKappa != 0.0) ? 1.0 / std::abs(bestKappa) : 0.0;
-        info() << boost::format("  MIX selected bestIdx=%d id=%d bestWeight=%.6g pT=%.6g kappa=%.6e outputMode=%s")
-                  % bestIdx % best->debugId % best->weight % bestPt % bestKappa % m_outputMode.value() << endmsg;
+        info() << boost::format("  MIX selected bestIdx=%d id=%d bestWeight=%.6g pT=%.6g kappa=%.6e")
+                  % bestIdx % best->debugId % best->weight % bestPt % bestKappa << endmsg;
         if (m_componentDebugDump) {
           info() << boost::format("  SELECTED branch id=%d full-history=%s")
                     % best->debugId % best->debugHistory << endmsg;
@@ -4943,8 +4935,8 @@ StatusCode RecGsfTracking::execute() {
       // Smoother and reverse workflows publish three endpoint views:
       // BestBranch is written to GSFTracksBestBranch, while the paired
       // moment-matched state is written to GSFTracksWeightedMean and the joint
-      // density maximum to GSFTracksFullMixtureMode. The legacy selector
-      // remains effective only for the forward-only workflow.
+      // density maximum to GSFTracksFullMixtureMode. Ordinary forward GSF
+      // publishes its maximum-weight component to GSFTracks.
       THelicalTrack bestIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
       TMatrixD bestIpCov(5, 5);
       extrapolateToIP_component(best, m_materialIPExtrap, m_cradle, m_ipLayer,
@@ -5034,38 +5026,11 @@ StatusCode RecGsfTracking::execute() {
                   << endmsg;
         pairedWeightedOutputAvailable = true;
       }
-      bool usedWeightedOutput = false;
-      const std::string outputMode = m_outputMode.value();
-      if (!pairedWeightedOutputAvailable && !usedReverseOutput &&
-          outputMode == "WeightedMean") {
-        THelicalTrack mixIpHelix(TMatrixD(5,1), TVector3(0, 0, 0), bz);
-        TMatrixD mixIpCov(5, 5);
-        if (weightedMixtureAtIP(comps, m_materialIPExtrap, m_cradle, m_ipLayer,
-                                bz, mixIpHelix, mixIpCov)) {
-          ipHelix = mixIpHelix;
-          ipCov = mixIpCov;
-          usedWeightedOutput = true;
-        } else {
-          warning() << "GSFOutputMode=WeightedMean failed; falling back to BestBranch"
-                    << endmsg;
-        }
-      } else if (!pairedWeightedOutputAvailable && !usedReverseOutput &&
-                 outputMode != "BestBranch") {
-        warning() << "Unknown GSFOutputMode '" << outputMode
-                  << "'; falling back to BestBranch" << endmsg;
-      }
       if (m_verboseDump && m_verboseSplitDump) {
         auto pv = ipHelix.GetPivot();
         info() << boost::format("  DIAG ip    drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
                   % ipHelix.GetDrho() % ipHelix.GetPhi0() % ipHelix.GetKappa() % ipHelix.GetDz() % ipHelix.GetTanLambda()
                   % pv.X() % pv.Y() % pv.Z() << endmsg;
-        if (usedWeightedOutput) {
-          auto bestPv = bestIpHelix.GetPivot();
-          info() << boost::format("  DIAG best-ip drho=%.6g phi0=%.6g kappa=%.6g dz=%.6g tanl=%.6g pivot=(%.3f, %.3f, %.3f)")
-                    % bestIpHelix.GetDrho() % bestIpHelix.GetPhi0() % bestIpHelix.GetKappa()
-                    % bestIpHelix.GetDz() % bestIpHelix.GetTanLambda()
-                    % bestPv.X() % bestPv.Y() % bestPv.Z() << endmsg;
-        }
       }
 
       // Write output track
@@ -5314,8 +5279,7 @@ StatusCode RecGsfTracking::execute() {
                   % (pairedWeightedOutputAvailable
                          ? "BestBranch + WeightedMean + FullMixtureMode"
                          : (usedReverseOutput ? reverseOutputLabel :
-                            (usedWeightedOutput ? "WeightedMean" :
-                                                  "BestBranch")))
+                                                "BestBranch"))
                << endmsg;
         info() << boost::format("  material       | max-tX0 %.2e  total-tX0 %.2e")
                   % maxTX0Layer % totalTX0 << endmsg;

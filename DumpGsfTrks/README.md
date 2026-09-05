@@ -239,12 +239,12 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 39 `RecGsfTracking` properties, their
+The authoritative explanation of all 38 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 38 of the 39
+For this maintained workflow, `gsf.py.bk` explicitly configures 37 of the 38
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -303,15 +303,17 @@ tracker input does not contain calorimeter reconstruction and the local ECAL
 component-constraint experiment remains off. The algorithm still supports that
 default-off experiment, but reactivating it requires a separate reconstructed-
 event input card that explicitly supplies `EcalCluster`; it is not part of this
-worker. For `method="smoother"` or `method="reverse"`, there is no
-endpoint-output selector: `GSFTracksBestBranch` always stores the final
-component with the largest normalized weight, and `GSFTracksWeightedMean`
-stores the moment-matched mixture, while
+worker. There is no endpoint-output selector: ordinary forward always writes
+the final component with the largest normalized weight to `GSFTracks`. For
+`method="smoother"` or `method="reverse"`, `GSFTracksBestBranch` stores that
+same fixed BestBranch, `GSFTracksWeightedMean` stores the moment-matched
+mixture, and
 `GSFTracksFullMixtureMode` stores the maximum of the complete
 five-dimensional final-mixture PDF. The latter is automatic/default-on and
 `GSFFullMixtureModeStatus` distinguishes a successful mode (`1`) from a
 tagged BestBranch fallback (negative status). The removed
-`ReverseOutputMode` property must not appear in regenerated cards.
+`ReverseOutputMode` and `GSFOutputMode` properties must not appear in
+regenerated cards.
 
 The same card's `RecGsfFlatTuple` output records BestBranch in
 `bestbranch_gsf_*`, the paired moment match in `weighted_gsf_*`, plus
@@ -375,18 +377,21 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After retiring configurable reverse final-branch selection,
-`RecGsfTracking` has 39 compiled properties. This card explicitly steers 38
+After retiring the configurable endpoint-output selectors,
+`RecGsfTracking` has 38 compiled properties. This card explicitly steers 37
 and deliberately inherits only `RecordTruthMaterialIntervals=true`.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
-`SurfaceConsistencyUninformativeFloor` property, or assigning the removed
-`ReverseSelectionMode` property with its former `AggregateWeight`,
-`DominantLineage`, or `SurfaceConsistency` values are stale experiment artifacts
-and must be regenerated rather than edited in place. Existing tuples remain
-interpretable because the retired counterfactual scanner and selection mode
-persisted no unique EDM or flat-tuple schema.
+`SurfaceConsistencyUninformativeFloor` or `GSFOutputMode` property, or
+assigning the removed `ReverseSelectionMode` property with its former
+`AggregateWeight`, `DominantLineage`, or `SurfaceConsistency` values are stale
+experiment artifacts and must be regenerated rather than edited in place.
+Existing counterfactual and reverse-selection tuples remain interpretable
+because those retired controls persisted no unique EDM or flat-tuple schema.
+Historical ordinary-forward tuples using `GSFOutputMode="WeightedMean"` must
+instead be interpreted according to their original card because both endpoint
+representations used the generic `GSFTracks` collection.
 
 The separate `RecGsfGlobalLossRefitter` is also retired. Generated cards that
 import it, select `method="global-loss"`, or assign
