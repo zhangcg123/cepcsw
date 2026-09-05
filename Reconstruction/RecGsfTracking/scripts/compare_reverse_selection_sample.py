@@ -18,7 +18,7 @@ def arguments() -> argparse.Namespace:
                         choices=("no_ebrem", "light_ebrem", "hard_ebrem"))
     parser.add_argument("--input-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--candidate-label", default="SurfaceConsistency")
+    parser.add_argument("--candidate-label", default="DominantLineage")
     parser.add_argument(
         "--outcomes", type=Path,
         default=Path("TrackingPerformanceStudies/lcio_track_resolution_2p0_theta85/surveys/topology_clean_2026-07-13/topology_clean_event_outcomes.csv"))

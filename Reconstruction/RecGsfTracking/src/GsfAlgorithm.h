@@ -299,12 +299,7 @@ private:
       "forward partners"};
   Gaudi::Property<std::string> m_reverseSelectionMode{
       this, "ReverseSelectionMode", "AggregateWeight",
-      "AggregateWeight, DominantLineage, or default-off SurfaceConsistency "
-      "final reverse-branch selection"};
-  Gaudi::Property<double> m_surfaceConsistencyUninformativeFloor{
-      this, "SurfaceConsistencyUninformativeFloor", 0.05,
-      "Lower bound on the bounded surface-consistency likelihood; 0.05 "
-      "caps its final-selection Bayes factor at 20"};
+      "AggregateWeight or DominantLineage final reverse-branch selection"};
   Gaudi::Property<std::string> m_reverseInitialWeightMode{
       this, "ReverseInitialWeightMode", "ForwardPosterior",
       "ForwardPosterior or Uniform diagnostic reverse-start weights"};

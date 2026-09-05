@@ -19,10 +19,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--category", required=True,
                         choices=("no_ebrem", "light_ebrem", "hard_ebrem"))
     parser.add_argument("--selection-mode", default="DominantLineage",
-                        choices=("AggregateWeight", "DominantLineage",
-                                 "SurfaceConsistency"))
-    parser.add_argument("--surface-consistency-uninformative-floor", type=float,
-                        default=0.05)
+                        choices=("AggregateWeight", "DominantLineage"))
     parser.add_argument("--max-components", type=int, default=24)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument(
@@ -85,8 +82,6 @@ def main() -> None:
                 "1" if args.workflow == "smoother" else "0"),
             "GSF_OUTPUT_MODE": (
                 "WeightedMean" if args.workflow == "smoother" else "BestBranch"),
-            "GSF_SURFACE_CONSISTENCY_UNINFORMATIVE_FLOOR": str(
-                args.surface_consistency_uninformative_floor),
             "GSF_VERBOSE_COMPONENTS": "1" if args.verbose_components else "0",
         })
         log_path = args.output_dir / f"seed-{seed}.log"

@@ -98,8 +98,6 @@ gsf.InwardSeedCovarianceScale = float(os.getenv(
     "GSF_INWARD_SEED_COVARIANCE_SCALE", "100.0"))
 gsf.ReverseSelectionMode = os.getenv(
     "GSF_REVERSE_SELECTION_MODE", "AggregateWeight")
-gsf.SurfaceConsistencyUninformativeFloor = float(os.getenv(
-    "GSF_SURFACE_CONSISTENCY_UNINFORMATIVE_FLOOR", "0.05"))
 gsf.ReverseInitialWeightMode = os.getenv(
     "GSF_REVERSE_INITIAL_WEIGHT_MODE", "ForwardPosterior")
 gsf.GaussianSumSmoothing = os.getenv(

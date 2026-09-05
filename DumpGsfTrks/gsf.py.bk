@@ -135,7 +135,6 @@ gsf.MaterialIPExtrapolation = False
 # here.
 gsf.GSFOutputMode = "BestBranch"
 gsf.ReverseSelectionMode = "AggregateWeight"
-gsf.SurfaceConsistencyUninformativeFloor = 0.05
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
 # Default-off research constraint.  When enabled from a separate reconstructed-
@@ -176,7 +175,6 @@ elif method == "reverse":
     gsf.InwardBHSplitting = False
     gsf.InwardWeightMode = "LocalMeasurement"
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
-    gsf.SurfaceConsistencyUninformativeFloor = 0.05
     # Inert for the maintained fresh single-component inward seed; retained
     # explicitly for positive-scale copied-mixture comparison cards.
     gsf.ReverseInitialWeightMode = "ForwardPosterior"

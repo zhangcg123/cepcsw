@@ -239,12 +239,12 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 41 `RecGsfTracking` properties, their
+The authoritative explanation of all 40 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 40 of the 41
+For this maintained workflow, `gsf.py.bk` explicitly configures 39 of the 40
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -374,15 +374,17 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After adding direction-specific seed-curvature controls, `RecGsfTracking` has
-41 compiled properties. This card explicitly steers 40 and deliberately
-inherits only `RecordTruthMaterialIntervals=true`. Generated cards assigning
-the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
+After removing the obsolete `SurfaceConsistency` final-selection path,
+`RecGsfTracking` has 40 compiled properties. This card explicitly steers 39
+and deliberately inherits only `RecordTruthMaterialIntervals=true`.
+Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
-`CounterfactualLossVariance` properties are stale experiment artifacts and
-must be regenerated rather than edited in place. Existing tuples remain
-interpretable because the retired counterfactual scanner persisted no EDM or
-flat-tuple schema.
+`CounterfactualLossVariance` properties, assigning the removed
+`SurfaceConsistencyUninformativeFloor` property, or selecting
+`ReverseSelectionMode="SurfaceConsistency"` are stale experiment artifacts
+and must be regenerated rather than edited in place. Existing tuples remain
+interpretable because the retired counterfactual scanner and selection mode
+persisted no unique EDM or flat-tuple schema.
 
 The separate `RecGsfGlobalLossRefitter` is also retired. Generated cards that
 import it, select `method="global-loss"`, or assign

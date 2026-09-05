@@ -2381,16 +2381,9 @@ StatusCode RecGsfTracking::initialize() {
   std::transform(reverseSelectionMode.begin(), reverseSelectionMode.end(),
                  reverseSelectionMode.begin(), ::tolower);
   if (reverseSelectionMode != "aggregateweight" &&
-      reverseSelectionMode != "dominantlineage" &&
-      reverseSelectionMode != "surfaceconsistency") {
-    error() << "ReverseSelectionMode must be AggregateWeight, DominantLineage, "
-               "or SurfaceConsistency"
-            << endmsg;
-    return StatusCode::FAILURE;
-  }
-  if (m_surfaceConsistencyUninformativeFloor.value() <= 0.0 ||
-      m_surfaceConsistencyUninformativeFloor.value() > 1.0) {
-    error() << "SurfaceConsistencyUninformativeFloor must be in (0, 1]"
+      reverseSelectionMode != "dominantlineage") {
+    error() << "ReverseSelectionMode must be AggregateWeight or "
+               "DominantLineage"
             << endmsg;
     return StatusCode::FAILURE;
   }
@@ -2928,14 +2921,7 @@ StatusCode RecGsfTracking::execute() {
                  materialPathMode.begin(), ::tolower);
   const bool useDD4hepBetweenSurfaces =
       materialPathMode == "dd4hepbetweensurfaces";
-  std::string configuredReverseSelection = m_reverseSelectionMode.value();
-  std::transform(configuredReverseSelection.begin(),
-                 configuredReverseSelection.end(),
-                 configuredReverseSelection.begin(), ::tolower);
-  const bool selectSurfaceConsistency =
-      configuredReverseSelection == "surfaceconsistency";
-  const bool trackSurfaceLineageMass =
-      m_surfaceLineageMassDump.value() || selectSurfaceConsistency;
+  const bool trackSurfaceLineageMass = m_surfaceLineageMassDump.value();
 
   for (const auto& trk : *in) {
     ++inputTrackIndex;
@@ -4585,39 +4571,9 @@ StatusCode RecGsfTracking::execute() {
                        reverseSelectionMode.begin(), ::tolower);
         const bool selectDominantLineage =
             reverseSelectionMode == "dominantlineage";
-        auto surfaceCoincidenceProbability = [](const GsfComponent* component) {
-          std::map<int, double> forwardRadiativeMass;
-          std::map<int, double> reverseRadiativeMass;
-          for (const auto& item : component->forwardProcessModeFractions) {
-            if (item.first.second > 0)
-              forwardRadiativeMass[item.first.first] += item.second;
-          }
-          for (const auto& item : component->reverseProcessModeFractions) {
-            if (item.first.second > 0)
-              reverseRadiativeMass[item.first.first] += item.second;
-          }
-          double noCoincidence = 1.0;
-          for (const auto& item : forwardRadiativeMass) {
-            const auto reverse = reverseRadiativeMass.find(item.first);
-            if (reverse == reverseRadiativeMass.end()) continue;
-            const double forwardMass = std::clamp(item.second, 0.0, 1.0);
-            const double reverseMass = std::clamp(reverse->second, 0.0, 1.0);
-            noCoincidence *= 1.0 - forwardMass * reverseMass;
-          }
-          return std::clamp(1.0 - noCoincidence, 0.0, 1.0);
-        };
-        auto surfaceConsistencyLikelihood = [&](const GsfComponent* component) {
-          const double floor =
-              m_surfaceConsistencyUninformativeFloor.value();
-          return floor + (1.0 - floor) *
-              surfaceCoincidenceProbability(component);
-        };
         auto reverseSelectionScore = [&](const GsfComponent* component) {
           if (selectDominantLineage)
             return component->weight * component->dominantLineageFraction;
-          if (selectSurfaceConsistency)
-            return component->weight *
-                surfaceConsistencyLikelihood(component);
           return component->weight;
         };
         auto* reverseBest = *std::max_element(
@@ -4684,16 +4640,6 @@ StatusCode RecGsfTracking::execute() {
                       % (-reverseIp.GetDrho()) % reverseIp.GetDz()
                       % normalizePhi(reverseIp.GetPhi0() + M_PI / 2.0)
                       % reverseIp.GetTanLambda() << endmsg;
-            if (selectSurfaceConsistency) {
-              info() << boost::format(
-                  "  REVERSE surface-consistency: coincidence=%.9g "
-                  "likelihood=%.9g floor=%.9g maxBayesFactor=%.9g")
-                    % surfaceCoincidenceProbability(reverseBest)
-                    % surfaceConsistencyLikelihood(reverseBest)
-                    % m_surfaceConsistencyUninformativeFloor.value()
-                    % (1.0 / m_surfaceConsistencyUninformativeFloor.value())
-                    << endmsg;
-            }
             if (m_componentDebugDump) {
               info() << boost::format("  REVERSE SELECTED process-signature=%s")
                         % reverseBest->reverseProcessSignature << endmsg;
