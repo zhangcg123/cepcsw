@@ -72,7 +72,7 @@ def main() -> None:
             "GSF_EDM_OUTPUT": str(args.output_dir / f"gsf-best-{seed}.root"),
             "GSF_TUPLE_OUTPUT": str(args.output_dir / f"gsf-flat-best-{seed}.root"),
             "GSF_SELECTED_EVENT_INDICES": ",".join(map(str, entries)),
-            "GSF_BH_MODEL": "CEPC2GeV85StepConditioned",
+            "GSF_BH_MODEL": "CEPCRuntimeCategoryAligned9Clear",
             "GSF_MATERIAL_PATH_MODE": "DD4hepBetweenSurfaces",
             "GSF_REVERSE_OUTPUT_MODE": "BestBranch",
             "GSF_REVERSE_INITIAL_WEIGHT_MODE": args.reverse_initial_weight_mode,

@@ -22,128 +22,116 @@
       0.024387462621150238,
       0.05
     ],
-    "loss_strata": {
-      "identity": "no Geant4 eBrem step",
-      "loss_0_2pct": "0--2% aggregate eBrem loss",
-      "loss_10_20pct": "10--20%",
-      "loss_20_40pct": "20--40%",
-      "loss_2_4pct": "2--4%",
-      "loss_40_100pct": "40--100%",
-      "loss_4_6pct": "4--6%",
-      "loss_6_8pct": "6--8%",
-      "loss_8_10pct": "8--10%"
-    },
-    "principle": "CategoryAligned physical interval bands choose x anchors; fixed proposal geometry and runtime evaluation depend only on pathTX0",
-    "proposal_mean_loss": [
-      0.0,
-      0.01,
-      0.03,
-      0.05,
-      0.07,
-      0.09,
-      0.15,
-      0.3,
-      0.7
-    ],
-    "proposal_sigma_loss": [
-      1e-06,
-      0.005,
-      0.005,
-      0.005,
-      0.005,
-      0.005,
-      0.025,
-      0.05,
-      0.15
-    ]
+    "principle": "Category-aligned physical interval bands choose the t/X0 anchors; runtime evaluation depends only on pathTX0",
+    "component_geometry": "one effective identity plus nine globally fitted radiative Gaussians whose means and widths are shared across knots",
+    "radiative_fit_domain": "0.2% <= aggregate Geant4 eBrem loss < 100%; fitted Gaussian PDFs are untruncated"
   },
   "knots": [
     {
       "components": [
         {
           "component": 0,
-          "count": 6354884,
+          "count": 57977173,
+          "effective_count": 57977173.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.9992226204859628
+          "weight": 0.999660188622902
         },
         {
           "component": 1,
-          "count": 3958,
+          "count": 894,
+          "effective_count": 894.4088923041983,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.0006223438747085613
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 1.5421672284483685e-05
         },
         {
           "component": 2,
-          "count": 282,
+          "count": 1773,
+          "effective_count": 1772.6627786689194,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 4.434082179580957e-05
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 3.056479500456101e-05
         },
         {
           "component": 3,
-          "count": 132,
+          "count": 2486,
+          "effective_count": 2486.1694560395304,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 2.0755278287400225e-05
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 4.2867295847159956e-05
         },
         {
           "component": 4,
-          "count": 110,
+          "count": 2700,
+          "effective_count": 2700.260752574467,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 1.7296065239500188e-05
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 4.6558723607472394e-05
         },
         {
           "component": 5,
-          "count": 52,
+          "count": 2859,
+          "effective_count": 2859.1263390451795,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 8.176321749581907e-06
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 4.9297932746507174e-05
         },
         {
           "component": 6,
-          "count": 197,
+          "count": 2692,
+          "effective_count": 2692.1396670988597,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 3.097568047437761e-05
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 4.6418697362343675e-05
         },
         {
           "component": 7,
-          "count": 140,
+          "count": 2529,
+          "effective_count": 2528.527658295696,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 2.2013173941182056e-05
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 4.359764895453078e-05
         },
         {
           "component": 8,
-          "count": 73,
+          "count": 2128,
+          "effective_count": 2127.7638213835944,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 1.1478297840759215e-05
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 3.6687556032256184e-05
+        },
+        {
+          "component": 9,
+          "count": 1647,
+          "effective_count": 1646.9406345895559,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 2.839705525870531e-05
         }
       ],
       "role": "adjacent_tpc",
-      "total_count": 6359828,
+      "total_count": 57996881,
       "tx0": 4.6934641432e-05,
       "tx0_high": 0.00018454957547453654,
       "tx0_low": 0.0
@@ -152,88 +140,107 @@
       "components": [
         {
           "component": 0,
-          "count": 80475,
+          "count": 1037518,
+          "effective_count": 1037518.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.9922934648581998
+          "weight": 0.995167645670832
         },
         {
           "component": 1,
-          "count": 411,
+          "count": 223,
+          "effective_count": 222.66394445132303,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.005067817509247842
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.00021357504484298496
         },
         {
           "component": 2,
-          "count": 52,
+          "count": 472,
+          "effective_count": 472.1908333739424,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.0006411837237977805
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.00045291651803254924
         },
         {
           "component": 3,
-          "count": 28,
+          "count": 614,
+          "effective_count": 613.9080092976047,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.00034525277435265106
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.0005888489532433794
         },
         {
           "component": 4,
-          "count": 14,
+          "count": 710,
+          "effective_count": 709.8625585878146,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.00017262638717632553
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.0006808867423791285
         },
         {
           "component": 5,
-          "count": 18,
+          "count": 753,
+          "effective_count": 753.5855022231354,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.0002219482120838471
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.0007228249630937191
         },
         {
           "component": 6,
-          "count": 43,
+          "count": 738,
+          "effective_count": 737.9242889247788,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.000530209617755857
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.0007078030234584797
         },
         {
           "component": 7,
-          "count": 26,
+          "count": 618,
+          "effective_count": 617.9306879183472,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.00032059186189889027
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.0005927074305057447
         },
         {
           "component": 8,
-          "count": 33,
+          "count": 483,
+          "effective_count": 483.1510790314976,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.00040690505548705304
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.00046342937840413134
+        },
+        {
+          "component": 9,
+          "count": 427,
+          "effective_count": 426.7830961915561,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.00040936227520781246
         }
       ],
       "role": "thin_vxd",
-      "total_count": 81100,
+      "total_count": 1042556,
       "tx0": 0.000725659017917,
       "tx0_high": 0.0017289857026264557,
       "tx0_low": 0.00018454957547453654
@@ -242,88 +249,107 @@
       "components": [
         {
           "component": 0,
-          "count": 26806,
+          "count": 339485,
+          "effective_count": 339485.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.9537804661092333
+          "weight": 0.9769211953784838
         },
         {
           "component": 1,
-          "count": 922,
+          "count": 352,
+          "effective_count": 351.7001956755446,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.032805550613769795
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.001012072331838519
         },
         {
           "component": 2,
-          "count": 90,
+          "count": 683,
+          "effective_count": 683.3735669096422,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.0032022771748799147
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.0019665143434184893
         },
         {
           "component": 3,
-          "count": 48,
+          "count": 1017,
+          "effective_count": 1016.5131206935205,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.0017078811599359545
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.0029251755246500638
         },
         {
           "component": 4,
-          "count": 32,
+          "count": 1203,
+          "effective_count": 1203.2178979425655,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.001138587439957303
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.003462447728644381
         },
         {
           "component": 5,
-          "count": 28,
+          "count": 1087,
+          "effective_count": 1086.6335777845488,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.00099626400996264
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.003126958109335258
         },
         {
           "component": 6,
-          "count": 75,
+          "count": 1106,
+          "effective_count": 1106.1091398861076,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.002668564312399929
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.0031830020859731733
         },
         {
           "component": 7,
-          "count": 61,
+          "count": 973,
+          "effective_count": 973.4819706731265,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.0021704323074186087
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.0028013466588196613
         },
         {
           "component": 8,
-          "count": 43,
+          "count": 923,
+          "effective_count": 922.8519820383918,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.001529976872442626
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.0026556509461400316
+        },
+        {
+          "component": 9,
+          "count": 676,
+          "effective_count": 676.1185483965521,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.0019456368926966579
         }
       ],
       "role": "outer_vxd_service",
-      "total_count": 28105,
+      "total_count": 347505,
       "tx0": 0.00411955406889,
       "tx0_high": 0.0058241872891490925,
       "tx0_low": 0.0017289857026264557
@@ -332,88 +358,107 @@
       "components": [
         {
           "component": 0,
-          "count": 52147,
+          "count": 538224,
+          "effective_count": 538224.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.9189060600186787
+          "weight": 0.9529141193904596
         },
         {
           "component": 1,
-          "count": 3306,
+          "count": 1107,
+          "effective_count": 1107.4542345201282,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.058256533154769245
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.0019607241160798914
         },
         {
           "component": 2,
-          "count": 370,
+          "count": 2311,
+          "effective_count": 2310.772251879784,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.006519938677333521
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.0040911730162756284
         },
         {
           "component": 3,
-          "count": 216,
+          "count": 3309,
+          "effective_count": 3308.985825578728,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.0038062344710920017
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.005858488870910376
         },
         {
           "component": 4,
-          "count": 128,
+          "count": 3732,
+          "effective_count": 3731.7675444201236,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.0022555463532397046
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.006607014892240034
         },
         {
           "component": 5,
-          "count": 101,
+          "count": 3685,
+          "effective_count": 3684.768577770417,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.0017797670443532045
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.006523804223601572
         },
         {
           "component": 6,
-          "count": 269,
+          "count": 3724,
+          "effective_count": 3723.6692235642786,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.004740171632980317
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.006592676987785961
         },
         {
           "component": 7,
-          "count": 184,
+          "count": 3479,
+          "effective_count": 3478.734177885246,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.0032423478827820753
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.006159024710367828
         },
         {
           "component": 8,
-          "count": 28,
+          "count": 2839,
+          "effective_count": 2839.56815495149,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.0004934007647711854
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.005027394891020823
+        },
+        {
+          "component": 9,
+          "count": 2409,
+          "effective_count": 2409.2800094298054,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.004265578901258288
         }
       ],
       "role": "itk_and_vxd_itk",
-      "total_count": 56749,
+      "total_count": 564819,
       "tx0": 0.00823418190703,
       "tx0_high": 0.009573517551262173,
       "tx0_low": 0.0058241872891490925
@@ -422,88 +467,107 @@
       "components": [
         {
           "component": 0,
-          "count": 35282,
+          "count": 376014,
+          "effective_count": 376014.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.8939620442394912
+          "weight": 0.9345561644857026
         },
         {
           "component": 1,
-          "count": 3004,
+          "count": 1133,
+          "effective_count": 1133.3684421602154,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.07611422200826007
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.0028169069881823195
         },
         {
           "component": 2,
-          "count": 315,
+          "count": 2193,
+          "effective_count": 2193.194584004771,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.007981351508855499
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.005451029797822195
         },
         {
           "component": 3,
-          "count": 218,
+          "count": 3243,
+          "effective_count": 3242.6926292892017,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.005523601996604758
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.008059482854985651
         },
         {
           "component": 4,
-          "count": 143,
+          "count": 3737,
+          "effective_count": 3737.382964279012,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.0036232802087820203
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.009289000644419619
         },
         {
           "component": 5,
-          "count": 107,
+          "count": 3800,
+          "effective_count": 3800.0062395744017,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.002711125750627106
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.009444646359652541
         },
         {
           "component": 6,
-          "count": 250,
+          "count": 3773,
+          "effective_count": 3773.3377328672204,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.006334405959409126
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.009378363675122644
         },
         {
           "component": 7,
-          "count": 116,
+          "count": 3408,
+          "effective_count": 3407.6648586375086,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.002939164365165835
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.008469509646292383
         },
         {
           "component": 8,
-          "count": 32,
+          "count": 2920,
+          "effective_count": 2919.949799323179,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.0008108039628043682
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.007257328410501382
+        },
+        {
+          "component": 9,
+          "count": 2124,
+          "effective_count": 2123.4027498644914,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.005277567137318698
         }
       ],
       "role": "thick_bridge",
-      "total_count": 39467,
+      "total_count": 402345,
       "tx0": 0.0111307036132,
       "tx0_high": 0.013514902256556617,
       "tx0_low": 0.009573517551262173
@@ -512,88 +576,107 @@
       "components": [
         {
           "component": 0,
-          "count": 27006,
+          "count": 300089,
+          "effective_count": 300089.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.8446501735839614
+          "weight": 0.907402815743003
         },
         {
           "component": 1,
-          "count": 3386,
+          "count": 1275,
+          "effective_count": 1275.5169823803703,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.1059018546898946
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.0038568814629658743
         },
         {
           "component": 2,
-          "count": 401,
+          "count": 2647,
+          "effective_count": 2646.795151406651,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.012541832170894192
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.008003323590939098
         },
         {
           "component": 3,
-          "count": 216,
+          "count": 3699,
+          "effective_count": 3699.2186860444745,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.006755700121977919
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.011185619772020592
         },
         {
           "component": 4,
-          "count": 152,
+          "count": 4167,
+          "effective_count": 4167.054467647305,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.004754011196947424
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.012600251782963137
         },
         {
           "component": 5,
-          "count": 111,
+          "count": 4290,
+          "effective_count": 4289.860191880655,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.0034716792293497637
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.012971589152739106
         },
         {
           "component": 6,
-          "count": 308,
+          "count": 4345,
+          "effective_count": 4344.735264494333,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.009633127951709255
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.013137519244824297
         },
         {
           "component": 7,
-          "count": 230,
+          "count": 3891,
+          "effective_count": 3890.7269541472747,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.00719356957432834
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.011764698451060967
         },
         {
           "component": 8,
-          "count": 163,
+          "count": 3513,
+          "effective_count": 3513.297981543837,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.00509805148093704
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.010623436650450655
+        },
+        {
+          "component": 9,
+          "count": 2796,
+          "effective_count": 2795.7943204550984,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.008453864149033293
         }
       ],
       "role": "tpc_to_otk",
-      "total_count": 31973,
+      "total_count": 330712,
       "tx0": 0.0164097966626,
       "tx0_high": 0.018036721072632607,
       "tx0_low": 0.013514902256556617
@@ -602,88 +685,107 @@
       "components": [
         {
           "component": 0,
-          "count": 9914,
+          "count": 134773,
+          "effective_count": 134773.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.8081845602021684
+          "weight": 0.8847088015964709
         },
         {
           "component": 1,
-          "count": 1628,
+          "count": 782,
+          "effective_count": 782.4032382119102,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.13271378495149588
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.005136036381498203
         },
         {
           "component": 2,
-          "count": 197,
+          "count": 1566,
+          "effective_count": 1566.0252487800922,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.016059346213418115
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.010280073316747795
         },
         {
           "component": 3,
-          "count": 96,
+          "count": 2247,
+          "effective_count": 2247.3297689029464,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.007825874296894107
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.014752453582232343
         },
         {
           "component": 4,
-          "count": 79,
+          "count": 2382,
+          "effective_count": 2381.7765196138716,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.006440042390152442
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.015635020741084655
         },
         {
           "component": 5,
-          "count": 59,
+          "count": 2581,
+          "effective_count": 2581.2790011135417,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.004809651911632836
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.016944642114231315
         },
         {
           "component": 6,
-          "count": 141,
+          "count": 2460,
+          "effective_count": 2459.7623968392954,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.011494252873563218
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.016146954080711685
         },
         {
           "component": 7,
-          "count": 86,
+          "count": 2220,
+          "effective_count": 2220.0723070960557,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.007010679057634303
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.014573523704810786
         },
         {
           "component": 8,
-          "count": 67,
+          "count": 1842,
+          "effective_count": 1841.703485780828,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.005461808103040678
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.012089745600388798
+        },
+        {
+          "component": 9,
+          "count": 1483,
+          "effective_count": 1482.6480336614588,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.009732748881823461
         }
       ],
       "role": "skipped_or_high_interval",
-      "total_count": 12267,
+      "total_count": 152336,
       "tx0": 0.0198249444366,
       "tx0_high": 0.024387462621150238,
       "tx0_low": 0.018036721072632607
@@ -692,88 +794,107 @@
       "components": [
         {
           "component": 0,
-          "count": 748,
+          "count": 43264,
+          "effective_count": 43264.0,
           "is_identity": true,
-          "loss_class": "identity",
+          "loss_class": "effective_identity_loss_below_0p2pct",
           "mean_z": 1.0,
           "variance_z": 1e-12,
-          "weight": 0.7532729103726082
+          "weight": 0.8433199485400179
         },
         {
           "component": 1,
-          "count": 176,
+          "count": 370,
+          "effective_count": 370.35031847836433,
           "is_identity": false,
-          "loss_class": "loss_0_2pct",
-          "mean_z": 0.99,
-          "variance_z": 2.5e-05,
-          "weight": 0.1772406847935549
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9977058560075655,
+          "variance_z": 3.62299356839029e-08,
+          "weight": 0.007219023010377068
         },
         {
           "component": 2,
-          "count": 18,
+          "count": 687,
+          "effective_count": 686.6407083664703,
           "is_identity": false,
-          "loss_class": "loss_2_4pct",
-          "mean_z": 0.97,
-          "variance_z": 2.5e-05,
-          "weight": 0.01812688821752266
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9967801686210158,
+          "variance_z": 3.3207551563565643e-07,
+          "weight": 0.013384287325376599
         },
         {
           "component": 3,
-          "count": 13,
+          "count": 905,
+          "effective_count": 904.9561899288418,
           "is_identity": false,
-          "loss_class": "loss_4_6pct",
-          "mean_z": 0.95,
-          "variance_z": 2.5e-05,
-          "weight": 0.013091641490433032
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9945300614384995,
+          "variance_z": 2.0843661961804884e-06,
+          "weight": 0.01763978382770344
         },
         {
           "component": 4,
-          "count": 6,
+          "count": 1116,
+          "effective_count": 1116.2175012152074,
           "is_identity": false,
-          "loss_class": "loss_6_8pct",
-          "mean_z": 0.9299999999999999,
-          "variance_z": 2.5e-05,
-          "weight": 0.006042296072507553
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9892423568770119,
+          "variance_z": 1.1848028234055658e-05,
+          "weight": 0.021757777498249725
         },
         {
           "component": 5,
-          "count": 6,
+          "count": 1238,
+          "effective_count": 1238.059349401419,
           "is_identity": false,
-          "loss_class": "loss_8_10pct",
-          "mean_z": 0.91,
-          "variance_z": 2.5e-05,
-          "weight": 0.006042296072507553
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9775356803617331,
+          "variance_z": 6.11829740884977e-05,
+          "weight": 0.024132769665927624
         },
         {
           "component": 6,
-          "count": 14,
+          "count": 1080,
+          "effective_count": 1080.1932419668237,
           "is_identity": false,
-          "loss_class": "loss_10_20pct",
-          "mean_z": 0.85,
-          "variance_z": 0.0006250000000000001,
-          "weight": 0.014098690835850957
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.9515542498844602,
+          "variance_z": 0.00030349623993232596,
+          "weight": 0.021055577598667184
         },
         {
           "component": 7,
-          "count": 7,
+          "count": 1046,
+          "effective_count": 1045.410227374974,
           "is_identity": false,
-          "loss_class": "loss_20_40pct",
-          "mean_z": 0.7,
-          "variance_z": 0.0025000000000000005,
-          "weight": 0.007049345417925478
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.8942271255166099,
+          "variance_z": 0.0015245894895168932,
+          "weight": 0.020377572558086896
         },
         {
           "component": 8,
-          "count": 5,
+          "count": 882,
+          "effective_count": 881.917898776907,
           "is_identity": false,
-          "loss_class": "loss_40_100pct",
-          "mean_z": 0.30000000000000004,
-          "variance_z": 0.0225,
-          "weight": 0.005035246727089627
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.7641986021077766,
+          "variance_z": 0.008054676904345687,
+          "weight": 0.01719071183924422
+        },
+        {
+          "component": 9,
+          "count": 714,
+          "effective_count": 714.2545644909914,
+          "is_identity": false,
+          "loss_class": "global_radiative_gmm_0p2_to_100pct",
+          "mean_z": 0.40947260551561415,
+          "variance_z": 0.04422327951667788,
+          "weight": 0.013922548136349293
         }
       ],
       "role": "thick_interval_guard",
-      "total_count": 993,
+      "total_count": 51302,
       "tx0": 0.03,
       "tx0_high": 0.05,
       "tx0_low": 0.024387462621150238
@@ -782,7 +903,42 @@
   "model": "CEPCRuntimeCategoryAligned9Clear",
   "runtime_selector": "CEPCRuntimeCategoryAligned9Clear",
   "sole_runtime_input": "DD4hepBetweenSurfaces pathTX0",
-  "status": "integrated default-off fixed-geometry topology-clear runtime-interval control; sparse thick-knot components; not production validated",
-  "training_population": "topology-clear",
-  "variable": "z=1-clamp(aggregate_G4_ebrem_loss/runtime_interval_p_before,0,1)"
+  "status": "compiled research default; mechanically validated, not physics validated",
+  "training_population": "all topology-clear barrel+endcap exact-hook intervals; radiative shape optimized only for 0.2% <= aggregate eBrem loss < 100%; no held-out split",
+  "variable": "z=1-clamp(aggregate_G4_ebrem_loss/runtime_interval_p_before,0,1)",
+  "global_radiative_fit": {
+    "component_count": 9,
+    "fit_low": 0.002,
+    "fit_high": 1.0,
+    "gaussians_truncated": false,
+    "sigma_floor": 0.0001,
+    "shared_means_across_tx0_knots": true,
+    "shared_sigmas_across_tx0_knots": true,
+    "knot_local_weights": true,
+    "effective_identity_definition": "aggregate eBrem loss below 0.2%",
+    "means_loss": [
+      0.0022941439924345866,
+      0.0032198313789842305,
+      0.005469938561500413,
+      0.010757643122988086,
+      0.022464319638266922,
+      0.04844575011553973,
+      0.1057728744833901,
+      0.23580139789222343,
+      0.5905273944843858
+    ],
+    "sigmas_loss": [
+      0.00019034162887792807,
+      0.0005762599375591335,
+      0.0014437334228244799,
+      0.0034420964881966424,
+      0.007821954620713271,
+      0.017421143473731165,
+      0.03904599197762676,
+      0.08974785180908615,
+      0.21029331781271102
+    ]
+  },
+  "source_candidate": "TrackingPerformanceStudies/bh_category_aligned_global9_radiative_all_sim_candidate_2026-09-06/all_statistics_candidate_model.json",
+  "component_contract": "one effective identity below 0.2% plus nine globally optimized radiative Gaussians; optimization observations restricted to [0.2%,100%) but PDFs are untruncated"
 }

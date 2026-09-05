@@ -357,7 +357,7 @@ private:
   double m_effectiveForwardKappaSeedCov = -1.0;
   double m_effectiveInwardKappaSeedCov = -1.0;
   Gaudi::Property<std::string> m_bhModel{
-      this, "BHModel", "CEPC2GeV85StepConditioned"};
+      this, "BHModel", "CEPCRuntimeCategoryAligned9Clear"};
   Gaudi::Property<bool> m_truthBHLossOverride{
       this, "TruthBHLossOverride", false,
       "Default-off diagnostic replacing each executed BH response on every "

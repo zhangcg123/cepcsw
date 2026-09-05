@@ -56,94 +56,14 @@ constexpr double kActsNoChangeLimit = 0.0001;
 constexpr double kActsSingleGaussianLimit = 0.002;
 constexpr double kActsHigherLimit = 0.2;
 
-/// Same-sample execution artifact from
-/// data/CEPC2GeV85StepConditioned/cepc2gev85_step_conditioned.json.
-/// Interpolation follows that artifact exactly; this scoped model is not
-/// physics validation.
-constexpr size_t kCepcKnotCount = 8;
-constexpr size_t kCepcComponentCount = 5;
-constexpr size_t kCepc6ComponentCount = 6;
 constexpr double kCepcWeightFloor = 1e-12;
 constexpr double kCepcMeanEpsilon = 1e-9;
 constexpr double kCepcVarianceFloor = 1e-12;
 
-static constexpr std::array<double, kCepcKnotCount> cepcTX0 = {{
-    5.0000000000000002e-05, 0.00022360679774997898,
-    0.001, 0.0031622776601683794, 0.0070710678118654753,
-    0.012247448713915889, 0.017320508075688773,
-    0.024494897427831779}};
-
-static constexpr double cepcWeights[kCepcKnotCount][kCepcComponentCount] = {
-    {0.9992161956006349, 0.00053435586616364648, 0.00010720102253283032, 7.5040715772981223e-05, 6.7206794895582076e-05},
-    {0.99698032339762332, 0.0020212351451392952, 0.00046269238262224824, 0.00029222676797194627, 0.00024352230664328856},
-    {0.99255970834056695, 0.0040673594404900676, 0.0012896505543017287, 0.00099203888792440673, 0.0010912427767168474},
-    {0.95517035265989236, 0.024905359633393107, 0.0068738792588164972, 0.0060769077505479175, 0.0069735006973500697},
-    {0.91055139980431143, 0.051384022977622068, 0.01537101915853928, 0.011899125714105356, 0.010794432345421835},
-    {0.85261546772305752, 0.079049248221842075, 0.025704510668947512, 0.021968128207436752, 0.020662645178716126},
-    {0.81289838770153711, 0.1057367829021372, 0.032620922384701906, 0.021747281589801271, 0.026996625421822264},
-    {0.74696707105719251, 0.14904679376083191, 0.041594454072790304, 0.019064124783362221, 0.043327556325823233}};
-
-static constexpr double cepcMeans[kCepcKnotCount][kCepcComponentCount] = {
-    {1, 0.99884766922776635, 0.97556244551142235, 0.89135844295593858, 0.53608743511241941},
-    {1, 0.99864807156942648, 0.9787054050959042, 0.8772257449308154, 0.61697072883970228},
-    {1, 0.99832926825823465, 0.97494882917550085, 0.9020003226015364, 0.58098416102467987},
-    {1, 0.99851495232738763, 0.97443366950445343, 0.89060764876541576, 0.53856583951698356},
-    {1, 0.99822985785928486, 0.97589057895364695, 0.89614126262968785, 0.52783716531564129},
-    {1, 0.99792054624476967, 0.97467254405723969, 0.89367237092806295, 0.54757216213392146},
-    {1, 0.99779899962903329, 0.97689828365181486, 0.88946355972479463, 0.4773879349825132},
-    {1, 0.99750486973143293, 0.97990463695279117, 0.91273328673531384, 0.54602374590582048}};
-
-static constexpr double cepcVariances[kCepcKnotCount][kCepcComponentCount] = {
-    {1e-12, 4.262027532009327e-06, 0.00012485967283637489, 0.0016485194647909429, 0.048919630665790581},
-    {1e-12, 4.6506375428467805e-06, 7.2068322021001663e-05, 0.0013333195704788858, 0.018047767691370842},
-    {1e-12, 5.7493933481866932e-06, 0.00013542442016811762, 0.0013923985684636264, 0.04868662435589749},
-    {1e-12, 4.3696375864321624e-06, 0.00011800267935146991, 0.0017553532846341646, 0.048712889751143851},
-    {1e-12, 5.3654404840175474e-06, 0.00012498784475767355, 0.0016794153826326097, 0.04706965545977787},
-    {1e-12, 6.3959788880740831e-06, 0.00012434290648866142, 0.0016855349042544931, 0.041794329167051114},
-    {1e-12, 6.5596673156642638e-06, 0.00011223656930814396, 0.0016551961539066351, 0.065828372132041429},
-    {1e-12, 5.4917847350788307e-06, 4.9641302950043098e-05, 0.0010331026062999626, 0.058511627454352233}};
-
-/// Same Geant4 transition sample and t/X0 knots as the five-component model,
-/// with its g2/g3 loss range represented by three fixed truth strata:
-/// 1--5%, 5--10%, and 10--20%. The total probability of that range is
-/// unchanged at every knot.
-static constexpr double cepc6Weights[kCepcKnotCount][kCepc6ComponentCount] = {
-    {0.9992161956006349, 0.00053435586616364648, 0.00010720102253283032, 3.7520357886490611e-05, 3.7520357886490611e-05, 6.7206794895582076e-05},
-    {0.99698032339762332, 0.0020212351451392952, 0.00046269238262224824, 7.3056691992986567e-05, 0.0002191700759789597, 0.00024352230664328856},
-    {0.99255970834056706, 0.0040673594404900685, 0.0012896505543017289, 0.00064482527715086445, 0.00034721361077354239, 0.0010912427767168476},
-    {0.95517035265989236, 0.024905359633393107, 0.0068738792588164972, 0.0025901574018728831, 0.0034867503486750349, 0.0069735006973500697},
-    {0.91055139980431143, 0.051384022977622068, 0.01537101915853928, 0.0064072215383644228, 0.0054919041757409337, 0.010794432345421835},
-    {0.85261546772305763, 0.079049248221842089, 0.025704510668947515, 0.011254164040695059, 0.010713964166741696, 0.020662645178716129},
-    {0.81289838770153711, 0.1057367829021372, 0.032620922384701906, 0.01012373453318335, 0.011623547056617922, 0.026996625421822264},
-    {0.74696707105719251, 0.14904679376083191, 0.041594454072790304, 0.013864818024263433, 0.0051993067590987881, 0.043327556325823233}};
-
-static constexpr double cepc6Means[kCepcKnotCount][kCepc6ComponentCount] = {
-    {1, 0.99884766922776635, 0.97556244551142235, 0.92451213355707562, 0.85820475235480187, 0.53608743511241941},
-    {1, 0.99864807156942648, 0.9787054050959042, 0.92816179326230586, 0.86024706215365176, 0.61697072883970228},
-    {1, 0.99832926825823465, 0.97494882917550085, 0.92662383325981112, 0.85627094566474038, 0.58098416102467987},
-    {1, 0.99851495232738763, 0.97443366950445343, 0.93155296783396557, 0.8601911260287789, 0.53856583951698356},
-    {1, 0.99822985785928486, 0.97589057895364695, 0.92808573657958204, 0.85887270968814478, 0.52783716531564129},
-    {1, 0.99792054624476967, 0.97467254405723969, 0.92739087540549381, 0.85825377378790413, 0.54757216213392146},
-    {1, 0.99779899962903329, 0.97689828365181486, 0.92554798108943137, 0.85803519272978823, 0.4773879349825132},
-    {1, 0.99750486973143293, 0.97990463695279117, 0.9306686402578711, 0.86490567734182822, 0.54602374590582048}};
-
-static constexpr double cepc6Variances[kCepcKnotCount][kCepc6ComponentCount] = {
-    {1e-12, 4.262027532009327e-06, 0.00012485967283637489, 0.00022920596108721991, 0.00086949856754225952, 0.048919630665790581},
-    {1e-12, 4.6506375428467805e-06, 7.2068322021001663e-05, 5.9121084847735261e-05, 0.00060494972363256405, 0.018047767691370842},
-    {1e-12, 5.7493933481866932e-06, 0.00013542442016811762, 0.00021709794041835373, 0.00035790601940688394, 0.04868662435589749},
-    {1e-12, 4.3696375864321624e-06, 0.00011800267935146991, 0.00020042781311735425, 0.00073986169396511592, 0.048712889751143851},
-    {1e-12, 5.3654404840175474e-06, 0.00012498784475767355, 0.0001822534224584782, 0.00084663497922043973, 0.04706965545977787},
-    {1e-12, 6.3959788880740831e-06, 0.00012434290648866142, 0.00022810280888230228, 0.00076771182119095283, 0.041794329167051114},
-    {1e-12, 6.5596673156642638e-06, 0.00011223656930814396, 0.00018876637340781155, 0.00081059249911230591, 0.065828372132041429},
-    {1e-12, 5.4917847350788307e-06, 4.9641302950043098e-05, 0.00020993584933803877, 8.2928655291025777e-05, 0.058511627454352233}};
-
 // Analysis artifacts and their exact compiled representations live together
 // under data/. Runtime does not parse JSON; these tables are included so the
 // selected mixture remains deterministic and dependency-free.
-#include "../data/CEPCRuntimeGenericGrid5Clear/compiled_table.inc"
-#include "../data/CEPCRuntimeCategoryAligned5Clear/compiled_table.inc"
 #include "../data/CEPCRuntimeCategoryAligned9Clear/compiled_table.inc"
-#include "../data/CEPCRuntimeCategoryAligned15Clear/compiled_table.inc"
 
 inline double boundedLogit(double value) {
   value = std::min(1.0 - kCepcMeanEpsilon,
@@ -161,7 +81,7 @@ inline double stableInvLogit(double value) {
 }
 
 template <size_t K, size_t N>
-std::vector<BHComponent> cepcStepConditionedMixture(
+std::vector<BHComponent> cepcIntervalMixture(
     double x, const std::array<double, K>& knots,
     const double (&weights)[K][N], const double (&means)[K][N],
     const double (&variances)[K][N]) {
@@ -237,44 +157,12 @@ std::vector<BHComponent> cepcStepConditionedMixture(
   return result;
 }
 
-std::vector<BHComponent> cepc2GeV85StepConditionedMixture(double x) {
-  return cepcStepConditionedMixture(
-      x, cepcTX0, cepcWeights, cepcMeans, cepcVariances);
-}
-
-std::vector<BHComponent> cepc2GeV85StepConditioned6Mixture(double x) {
-  return cepcStepConditionedMixture(
-      x, cepcTX0, cepc6Weights, cepc6Means, cepc6Variances);
-}
-
-std::vector<BHComponent> cepcRuntimeGenericGrid5ClearMixture(double x) {
-  return cepcStepConditionedMixture(
-      x, RuntimeGenericGrid5ClearTX0, RuntimeGenericGrid5ClearWeights,
-      RuntimeGenericGrid5ClearMeans, RuntimeGenericGrid5ClearVariances);
-}
-
-std::vector<BHComponent> cepcRuntimeCategoryAligned5ClearMixture(double x) {
-  return cepcStepConditionedMixture(
-      x, RuntimeCategoryAligned5ClearTX0,
-      RuntimeCategoryAligned5ClearWeights,
-      RuntimeCategoryAligned5ClearMeans,
-      RuntimeCategoryAligned5ClearVariances);
-}
-
 std::vector<BHComponent> cepcRuntimeCategoryAligned9ClearMixture(double x) {
-  return cepcStepConditionedMixture(
+  return cepcIntervalMixture(
       x, RuntimeCategoryAligned9ClearTX0,
       RuntimeCategoryAligned9ClearWeights,
       RuntimeCategoryAligned9ClearMeans,
       RuntimeCategoryAligned9ClearVariances);
-}
-
-std::vector<BHComponent> cepcRuntimeCategoryAligned15ClearMixture(double x) {
-  return cepcStepConditionedMixture(
-      x, RuntimeCategoryAligned15ClearTX0,
-      RuntimeCategoryAligned15ClearWeights,
-      RuntimeCategoryAligned15ClearMeans,
-      RuntimeCategoryAligned15ClearVariances);
 }
 
 /// Build the 6-component Bethe-Heitler mixture for path length x (in X0).
@@ -331,25 +219,8 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
       modelName == "ACTS" || modelName == "Acts") {
     return Model::ActsAtlas;
   }
-  if (modelName == "CEPC2GeV85StepConditioned" ||
-      modelName == "cepc2GeV85StepConditioned") {
-    return Model::CEPC2GeV85StepConditioned;
-  }
-  if (modelName == "CEPC2GeV85StepConditioned6" ||
-      modelName == "cepc2GeV85StepConditioned6") {
-    return Model::CEPC2GeV85StepConditioned6;
-  }
-  if (modelName == "CEPCRuntimeGenericGrid5Clear") {
-    return Model::CEPCRuntimeGenericGrid5Clear;
-  }
-  if (modelName == "CEPCRuntimeCategoryAligned5Clear") {
-    return Model::CEPCRuntimeCategoryAligned5Clear;
-  }
   if (modelName == "CEPCRuntimeCategoryAligned9Clear") {
     return Model::CEPCRuntimeCategoryAligned9Clear;
-  }
-  if (modelName == "CEPCRuntimeCategoryAligned15Clear") {
-    return Model::CEPCRuntimeCategoryAligned15Clear;
   }
   throw std::invalid_argument("Unknown Bethe-Heitler model option: " + modelName);
 }
@@ -357,18 +228,8 @@ BetheHeitlerSplitter::Model BetheHeitlerSplitter::modelFromName(const std::strin
 const char* BetheHeitlerSplitter::modelName(Model model) {
   switch (model) {
     case Model::ActsAtlas: return "ActsAtlas";
-    case Model::CEPC2GeV85StepConditioned:
-      return "CEPC2GeV85StepConditioned";
-    case Model::CEPC2GeV85StepConditioned6:
-      return "CEPC2GeV85StepConditioned6";
-    case Model::CEPCRuntimeGenericGrid5Clear:
-      return "CEPCRuntimeGenericGrid5Clear";
-    case Model::CEPCRuntimeCategoryAligned5Clear:
-      return "CEPCRuntimeCategoryAligned5Clear";
     case Model::CEPCRuntimeCategoryAligned9Clear:
       return "CEPCRuntimeCategoryAligned9Clear";
-    case Model::CEPCRuntimeCategoryAligned15Clear:
-      return "CEPCRuntimeCategoryAligned15Clear";
   }
   return "Unknown";
 }
@@ -475,23 +336,8 @@ BetheHeitlerSplitter::mixture(double tX0) const {
     case Model::ActsAtlas:
       internal = actsAtlasMixture(tX0);
       break;
-    case Model::CEPC2GeV85StepConditioned:
-      internal = cepc2GeV85StepConditionedMixture(tX0);
-      break;
-    case Model::CEPC2GeV85StepConditioned6:
-      internal = cepc2GeV85StepConditioned6Mixture(tX0);
-      break;
-    case Model::CEPCRuntimeGenericGrid5Clear:
-      internal = cepcRuntimeGenericGrid5ClearMixture(tX0);
-      break;
-    case Model::CEPCRuntimeCategoryAligned5Clear:
-      internal = cepcRuntimeCategoryAligned5ClearMixture(tX0);
-      break;
     case Model::CEPCRuntimeCategoryAligned9Clear:
       internal = cepcRuntimeCategoryAligned9ClearMixture(tX0);
-      break;
-    case Model::CEPCRuntimeCategoryAligned15Clear:
-      internal = cepcRuntimeCategoryAligned15ClearMixture(tX0);
       break;
   }
   std::vector<BetheHeitlerMixtureComponent> result;

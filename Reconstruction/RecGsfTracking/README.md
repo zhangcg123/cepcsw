@@ -71,7 +71,7 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-02. `RecGsfTracking` exposes 41 Gaudi properties in
+Reference date: 2026-09-06. `RecGsfTracking` exposes 41 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -83,14 +83,14 @@ distinction matters because that template enables `ElossOn` and
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
-| `BHModel` | `CEPC2GeV85StepConditioned` | same | Select the BH Gaussian-mixture parameterization. Canonical values are `CEPC2GeV85StepConditioned`, `CEPC2GeV85StepConditioned6`, `CEPCRuntimeGenericGrid5Clear`, `CEPCRuntimeCategoryAligned5Clear`, `CEPCRuntimeCategoryAligned9Clear`, `CEPCRuntimeCategoryAligned15Clear`, and `ActsAtlas`. Only the first is the active default; all others are default-off research controls. |
+| `BHModel` | `CEPCRuntimeCategoryAligned9Clear` | same | Select the BH Gaussian-mixture parameterization. The supported values are the default `CEPCRuntimeCategoryAligned9Clear` and the default-off `ActsAtlas` control. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
 | `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used by the embedded-EventData truth oracle and passive material recorder. Other input tracks use the configured BH model and have no interval record. It must be nonnegative. |
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
 | `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `ForwardBHSplitting` | `false` | `false` | Enable BH component creation in the shared outward filter, including the initial hit-0 to hit-1 interval and every later outgoing accepted-hit interval above `BHSplitThreshold`. When false, the outward state still propagates, updates measurements, evaluates DD4hep paths, and contributes passive material summaries, but it remains unsplit by BH. This does not disable deterministic `ElossOn` or `MSOn`. |
-| `InwardBHSplitting` | `false` | `true` | Enable BH component creation in the independent reverse inward filter for every outer-to-inner interval above `BHSplitThreshold`. It is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`, which only consumes the retained forward graph. When false, the inward state still propagates, updates measurements, forms requested same-surface products, and contributes passive material summaries, but creates no new inward BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. The active reverse value is an explicit maintained-card campaign override, not the compiled default. |
+| `InwardBHSplitting` | `false` | `false` | Enable BH component creation in the independent reverse inward filter for every outer-to-inner interval above `BHSplitThreshold`. It is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`, which only consumes the retained forward graph. When false, the inward state still propagates, updates measurements, forms requested same-surface products, and contributes passive material summaries, but creates no new inward BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. The maintained diagnostic card also selects false; inward-only splitting remains an explicit comparison setting. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
@@ -260,7 +260,7 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 | `GSFOutputMode` | `BestBranch` | inapplicable | Forward-only publication selector: `BestBranch` or moment-matched `WeightedMean`. It does not select smoother or reverse output. The maintained card pins it to `BestBranch` for explicit compatibility. |
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
-| `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weights while always propagating the measurement-updated `B_updated` means and covariances. `LocalMeasurement` uses `prior(B_predicted) x likelihood(hit|B_predicted)`. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch selects `SmoothedMarginal`; the compiled and active reverse-template default remains `LocalMeasurement`. |
+| `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weights while always propagating the measurement-updated `B_updated` means and covariances. `LocalMeasurement` uses `prior(B_predicted) x likelihood(hit|B_predicted)`. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch also selects `LocalMeasurement`; `SmoothedMarginal` remains a default-off comparison. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 | `ReverseSelectionMode` | `AggregateWeight` | same | Final branch score: active `AggregateWeight`; rejected diagnostics `DominantLineage` and `SurfaceConsistency`. |
 | `SurfaceConsistencyUninformativeFloor` | `0.05` | same | Lower bound used only by `SurfaceConsistency`; 0.05 caps its selection Bayes factor at 20. |
@@ -550,20 +550,18 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 38 of the 39 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 40 of the 41 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
-`DD4hepBetweenSurfaces`, and ECAL off. For the current backward-only BH
-mechanism campaign, the card deliberately sets `ForwardBHSplitting=false` in
-its common steering and enables `InwardBHSplitting=true` only in the reverse
-branch. The forward value agrees with the compiled default; the inward value
-is a deliberate campaign override of the compiled `false`. Unsteered active
-reverse templates inherit the compiled `false/false` pair. Its top-level
-`bh_model` selector is the user-selected, default-off
-`CEPCRuntimeGenericGrid5Clear` experiment rather than the production
-`CEPC2GeV85StepConditioned` model. The retired runtime BH-audit CSV is no
+`DD4hepBetweenSurfaces`, and ECAL off. For the current double-off diagnostic,
+the card explicitly selects `ForwardBHSplitting=false` and
+`InwardBHSplitting=false`, matching the compiled and unsteered active reverse-
+template defaults. Its top-level `bh_model` selector explicitly uses the
+compiled and active-template default `CEPCRuntimeCategoryAligned9Clear`;
+`ActsAtlas` remains the sole default-off model control. The retired runtime
+BH-audit CSV is no
 longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
 `bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
@@ -623,68 +621,31 @@ documentation and steering audit is complete.
 
 ## Current limitation
 
-`CEPC2GeV85StepConditioned` is the constrained eight-knot, five-component
-transition model for the 2 GeV pT, 85-degree primary-electron execution sample.
-It consumes the component-local transition `t/X0` and returns hypotheses in
-`z=p_after/p_before`. Its source artifact and diagnostics are under
-`data/CEPC2GeV85StepConditioned/`. This same-sample execution model is not a
-general or independently validated CEPC Bethe-Heitler parameterization.
+`CEPCRuntimeCategoryAligned9Clear` is the default category-aligned interval
+model. Despite its retained selector name, its implementation is no longer the
+old nine-entry fixed-center proposal bank. Each t/X0 knot now contains ten
+entries: one effective identity component for intervals below 0.2% aggregate
+Geant4 eBrem loss and nine globally optimized radiative Gaussian components
+fitted over the 0.2--100% loss domain. Their means and widths come from one
+joint fit and are shared across all eight category-aligned t/X0 knots; only
+their mixture weights vary by knot. The Gaussian probability densities are
+untruncated, so their tails may extend below 0.2% loss or above 100%; those
+bounds select observations for the likelihood rather than clipping the runtime
+response. Runtime evaluation still consumes only component-local `pathTX0`,
+interpolates between knots, and returns retained-momentum hypotheses in
+`z=p_after/p_before`. Detector category and Geant4 truth are not runtime
+inputs. The authoritative artifact is under
+`data/CEPCRuntimeCategoryAligned9Clear/`.
 
-`CEPC2GeV85StepConditioned6` uses the same events, t/X0 bins, interpolation,
-and total radiative probabilities. It keeps the no-eBrem, 0--1%, and >20%
-components, while replacing the former 1--5% plus 5--20% pair with three
-truth-extracted 1--5%, 5--10%, and 10--20% components. Its artifact is under
-`data/CEPC2GeV85StepConditioned6/`. It is selectable for comparison and is not
-the default or a validated improvement.
-
-`CEPCRuntimeGenericGrid5Clear` and `CEPCRuntimeCategoryAligned5Clear` are
-parallel, default-off five-component models fitted to topology-clear training
-events from exact runtime `DD4hepBetweenSurfaces` intervals. Both take only
-the existing component-local `pathTX0` input and represent one exact no-eBrem
-component plus four aggregate Geant4 eBrem-loss classes: 0--1%, 1--5%, 5--20%,
-and greater than 20%. They use the same interpolation conventions as the
-five-component default. `CEPCRuntimeGenericGrid5Clear` retains the default
-model's generic logarithmic knot grid, isolating the effect of retraining on
-runtime intervals. `CEPCRuntimeCategoryAligned5Clear` instead places its knots
-at observed TPC, VXD, service, ITK/bridge, outer, and thick-interval t/X0
-bands; detector category is not a runtime input. Their source artifacts are
-under the correspondingly named `data/` directories. These models improve
-held-out interval-level closure but are not validated for final GSF momentum,
-clean-track safety, the separately reported secondary-activity control, or
-sparse high-thickness intervals. Above the last fitted knot they retain the
-existing constant-mixture extrapolation limitation.
-
-`CEPCRuntimeCategoryAligned9Clear` is a parallel, default-off nine-component
-proposal bank derived from the same topology-clear exact runtime intervals and
-the same category-aligned t/X0 knots as
-`CEPCRuntimeCategoryAligned5Clear`. It keeps an exact no-eBrem identity atom
-and uses fixed fractional-loss proposal centers at 1%, 3%, 5%, 7%, 9%, 15%,
-30%, and 70%; the component probabilities at each knot are fitted from the
-corresponding Geant4 interval-loss population. It exists to provide finer
-loss-magnitude coverage, not as a validated BH replacement. It remains
-experimental and default-off, and requires held-out interval closure, lineage
-survival, clean-track safety, and final-track population validation. Its source
-artifact is under `data/CEPCRuntimeCategoryAligned9Clear/`.
-
-`CEPCRuntimeCategoryAligned15Clear` is a parallel, default-off proposal bank
-fitted from the same topology-clear exact runtime intervals and using the same
-eight category-aligned t/X0 knots. It has 15 total components: one exact
-no-eBrem identity atom, five radiative proposals in 0--1% loss, six in 1--6%,
-one merged 6--10% proposal, and two proposals spanning 10--100%. The radiative
-loss strata are `[0,0.1]`, `[0.1,0.2]`, `[0.2,0.4]`, `[0.4,0.7]`,
-`[0.7,1.0]`, `[1.0,1.4]`, `[1.4,1.9]`, `[1.9,2.6]`, `[2.6,3.5]`,
-`[3.5,4.7]`, `[4.7,6.0]`, `[6,10]`, `[10,30]`, and `[30,100]` percent.
-Each proposal mean is its stratum midpoint and its sigma is one quarter of the
-stratum width, so adjacent two-sigma bounds meet while center spacing grows
-monotonically. Knot-local weights are direct topology-clear training counts;
-the total radiative probability at every knot is unchanged from the nine-
-component model. Nineteen knot/component cells have fewer than 25 training
-entries, though none is empty. This is proposal-coverage mechanics, not BH or
-GSF validation. The authoritative artifact is under
-`data/CEPCRuntimeCategoryAligned15Clear/`.
+The model was fitted from the available topology-clear electron simulation
+population and is now the steering default, but this promotion is not physics
+validation. It still requires held-out interval closure, lineage survival,
+clean-track safety, final-track population validation, and separate reporting
+of the secondary-activity control. Constant extrapolation above the last t/X0
+knot also remains a limitation.
 
 `ActsAtlas` is the ACTS default ATLAS-derived parameterization retained as a
-non-CEPC control. New steering should use one of the seven canonical values
+non-CEPC control. New steering should use one of the two supported values
 listed in the property table.
 
 ## Historical Geant4 transition dataset

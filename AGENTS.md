@@ -130,33 +130,27 @@ largely LCIO-like and forfeits much of the hard-loss recovery.
 The maintained comparison card now deliberately selects
 `InwardSeedCovarianceScale=-1` for the fresh-inward-seed campaign. This is
 campaign steering only; it does not change the compiled or active-template
-default 100. Its reverse branch also selects the experimental
-`InwardWeightMode=SmoothedMarginal`; the compiled and active-template default
-remains `LocalMeasurement`.
+default 100. Its reverse branch selects the compiled and active-template
+`InwardWeightMode=LocalMeasurement` control; `SmoothedMarginal` remains a
+default-off experiment.
 Directional BH child creation is independently configurable. The compiled and
 inherited active reverse-template defaults are
 `ForwardBHSplitting=false, InwardBHSplitting=false`, so an unsteered fit
-creates no BH children in either direction. The maintained reverse campaign
-deliberately uses
-`ForwardBHSplitting=false, InwardBHSplitting=true` to isolate radiative
-hypothesis generation in the inward pass. These gates do not disable material
-path evaluation, passive interval recording, deterministic energy loss,
-multiple scattering, propagation, or measurement updates.
+creates no BH children in either direction. The maintained double-off
+diagnostic card now uses the same false/false pair. These gates do not disable
+material-path evaluation, passive interval recording, deterministic energy
+loss, multiple scattering, propagation, or measurement updates.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `ForwardKappaSeedCov=-1` and `InwardKappaSeedCov=-1` (standard
-`Var(omega)=1e-4` direction-local prefits),
-`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction
-ranking, identity-lineage protection enabled,
-`ForwardBHSplitting=false`, `InwardBHSplitting=false`, and the five-component
-`CEPC2GeV85StepConditioned` Bethe-Heitler model. Preserve 12 and 24 components
-and `CurrentSurface` as explicit comparison settings. The weighted `Runnalls`
-ranking, the six-component `CEPC2GeV85StepConditioned6` model, and the
-runtime-interval `CEPCRuntimeGenericGrid5Clear` and
-`CEPCRuntimeCategoryAligned5Clear` five-component models and the finer
-`CEPCRuntimeCategoryAligned9Clear` and
-`CEPCRuntimeCategoryAligned15Clear` models remain default-off controls; none
-is validated or approved as a replacement.
+`Var(omega)=1e-4` direction-local prefits), `MaxComponents=10`,
+`ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction ranking,
+identity-lineage protection enabled, `ForwardBHSplitting=false`,
+`InwardBHSplitting=false`, and `CEPCRuntimeCategoryAligned9Clear`. Despite the
+retained selector name, this BH model now has one effective identity plus nine
+globally fitted radiative Gaussians. Preserve 12 and 24 components and
+`CurrentSurface` as explicit comparison settings. `ActsAtlas` is the only
+alternative BH model. Neither model is validated for production physics.
 
 Geant4 pre/post-step data is the authoritative energy-loss truth.
 SimTrackerHit momentum is only a detector-level cross-check. Existing Geant4
@@ -324,7 +318,7 @@ controls, not defaults. Their exact mechanical and population evidence is in
 `agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
 Freeze the production controls and existing endpoint definitions while the
 hit-0 method is designed: `DD4hepBetweenSurfaces`,
-`CEPC2GeV85StepConditioned`, `MaxComponents=10`,
+`CEPCRuntimeCategoryAligned9Clear`, `MaxComponents=10`,
 `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
 `ForwardKappaSeedCov=-1`, `InwardKappaSeedCov=-1`, compiled directional gates
 false/false, and

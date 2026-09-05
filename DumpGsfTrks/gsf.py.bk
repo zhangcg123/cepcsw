@@ -28,7 +28,7 @@ inputfilename = os.path.join(tuplepath, "trk_v01.root")
 method = "reverse"
 
 # One selector governs every workflow that consumes a Bethe-Heitler model.
-bh_model = "CEPCRuntimeGenericGrid5Clear"
+bh_model = "CEPCRuntimeCategoryAligned9Clear"
 
 from Configurables import k4DataSvc
 dsvc = k4DataSvc("EventDataSvc", input=inputfilename)
@@ -67,23 +67,20 @@ gearsvc = GearSvc("GearSvc")
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = True
 # Common options used by the smoother/reverse comparisons.
-# The production default is CEPC2GeV85StepConditioned. Default-off BH controls are
-# CEPC2GeV85StepConditioned6, CEPCRuntimeGenericGrid5Clear,
-# CEPCRuntimeCategoryAligned5Clear, CEPCRuntimeCategoryAligned9Clear,
-# CEPCRuntimeCategoryAligned15Clear, and ActsAtlas. The four CEPCRuntime models
-# are topology-clear interval-fit candidates and are not production validated;
-# this maintained campaign card currently selects the generic-grid control.
+# CEPCRuntimeCategoryAligned9Clear is the compiled and active-template default:
+# one effective identity plus nine globally optimized radiative Gaussians fitted
+# over 0.2--100% loss. Their untruncated shapes are shared across knots and their
+# weights are knot-local. ActsAtlas is the only supported default-off control.
+# This maintained card selects the default explicitly.
 gsf.BHModel = bh_model
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
-# Independent BH-process gates. This maintained reverse campaign deliberately
-# suppresses outward splitting so the inward refit alone generates radiative
-# hypotheses. Material-path evaluation/recording remains enabled in both
-# directions. The compiled defaults are False/False; the reverse branch below
-# is the explicit inward-only campaign override.
+# Independent BH-process gates. This double-off diagnostic creates no BH
+# children in either direction. Material-path evaluation/recording remains
+# enabled in both directions.
 gsf.ForwardBHSplitting = False
-gsf.InwardBHSplitting = False  # Neutral base; enabled only in reverse below.
+gsf.InwardBHSplitting = False
 
 # Strict Geant4 eBrem-loss oracle for diagnostic A/B tests only. Embedded
 # EventData is its fixed source; no helper-file source/input steering remains.
@@ -127,10 +124,11 @@ gsf.ReverseFiltering = False
 # standard-KF-style seed with the outermost hit already updated. The value -1
 # is a mode selector, not a negative covariance multiplier.
 gsf.InwardSeedCovarianceScale = -1.0
-# Live reverse-component weighting. LocalMeasurement is the compiled/default
-# control. The maintained reverse campaign explicitly selects the experimental
-# SmoothedMarginal mode below; propagated means/covariances remain B_updated.
-gsf.InwardWeightMode = "SmoothedMarginal" #"LocalMeasurement"
+# Live reverse-component weighting. With both split gates off and a fresh
+# single-component inward seed, LocalMeasurement and SmoothedMarginal normally
+# normalize to the same unit weight. Keep the compiled LocalMeasurement control
+# so a failed diagnostic F/B product cannot reject the live component.
+gsf.InwardWeightMode = "LocalMeasurement"
 gsf.MaterialIPExtrapolation = False
 # Forward-only compatibility setting. The smoother/reverse methods
 # below always persist all three endpoint representations and do not select one
@@ -171,15 +169,12 @@ elif method == "reverse":
     # the EDM and flat tuple. It retains evaluated nodes after measurement
     # rejection, weight cutoff, or KL merging. It also records every retained
     # interior B_smoothed[i] = F_updated[i] x B_predicted[i] product; the
-    # boundary states reuse B_updated[0] and F_updated[N-1]. SmoothedMarginal
-    # sums the unreduced pair posterior over forward partners for each
-    # backward candidate and attaches that weight to its B_updated state before
-    # cutoff/KL and the next inward propagation. It deliberately reuses
-    # overlapping forward evidence at successive surfaces and is not a
-    # calibrated Bayesian posterior.
+    # boundary states reuse B_updated[0] and F_updated[N-1]. The retained
+    # same-surface products remain passive under LocalMeasurement and never
+    # propagate or publish.
     gsf.ReverseFiltering = True
-    gsf.InwardBHSplitting = True
-    gsf.InwardWeightMode = "SmoothedMarginal"
+    gsf.InwardBHSplitting = False
+    gsf.InwardWeightMode = "LocalMeasurement"
     gsf.ReverseSelectionMode = "AggregateWeight" # equivalent bestbranch
     gsf.SurfaceConsistencyUninformativeFloor = 0.05
     # Inert for the maintained fresh single-component inward seed; retained

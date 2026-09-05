@@ -17,31 +17,17 @@ struct BetheHeitlerMixtureComponent {
 
 /// Bethe-Heitler bremsstrahlung splitter.
 ///
-/// The default model preserves the current CEPC thin-material test behavior.
-/// A simulation-derived global model can be selected in parallel.
-/// A faithful ACTS default AtlasBetheHeitlerApprox regime selection is also
-/// available as ActsAtlas; its ATLAS-derived coefficients are not CEPC
-/// validation.
-/// CEPC2GeV85StepConditioned is the explicitly scoped five-component,
-/// transition-t/X0-conditioned execution model fitted to the 2 GeV, 85-degree
-/// primary-electron sample; it is not a general or validated CEPC model.
-/// CEPC2GeV85StepConditioned6 is a parallel six-component extraction from the
-/// same sample. It replaces the original 1--5% and 5--20% components with
-/// separate 1--5%, 5--10%, and 10--20% components.
-/// CEPCRuntimeGenericGrid5Clear and CEPCRuntimeCategoryAligned5Clear are
-/// default-off five-component interval-level candidates fitted to exact
-/// DD4hepBetweenSurfaces runtime paths and matched aggregate Geant4 eBrem
-/// losses in the topology-clear control population. They differ only in their
-/// generic-logarithmic versus detector-interval-aligned t/X0 knot grids.
-/// CEPCRuntimeCategoryAligned9Clear keeps the latter knot grid and fitted
-/// per-cell loss probabilities, but replaces the four broad radiative modes
-/// with fixed proposals centered at 1, 3, 5, 7, 9, 15, 30, and 70 percent
-/// aggregate loss. It is a default-off experimental control.
-/// CEPCRuntimeCategoryAligned15Clear keeps the same t/X0 knot grid and total
-/// radiative probability, but uses one exact identity atom plus fourteen
-/// nonuniform radiative proposals: five in 0--1%, six in 1--6%, one in
-/// 6--10%, and two in 10--100%. Adjacent two-sigma proposal bounds meet. It is
-/// also a default-off experimental control.
+/// CEPCRuntimeCategoryAligned9Clear is the compiled default. Despite its
+/// retained historical selector name, it contains one effective identity
+/// component plus nine globally optimized radiative Gaussians. Their means
+/// and widths are shared across eight interval-aligned t/X0 knots; their
+/// priors are knot-local. The likelihood fit used aggregate Geant4 eBrem
+/// losses from 0.2% through 100%, while the Gaussian PDFs remain untruncated.
+/// This all-simulation candidate is not a validated production BH model.
+///
+/// ActsAtlas is the only alternative. It reproduces the ACTS default
+/// AtlasBetheHeitlerApprox regime selection; its ATLAS-derived coefficients
+/// are a control rather than CEPC validation.
 ///
 /// ActsAtlas regimes:
 ///   tX0 < 0.0001  →  no splitting (1 component, no energy loss)
@@ -52,12 +38,7 @@ struct BetheHeitlerMixtureComponent {
 struct BetheHeitlerSplitter {
   enum class Model {
     ActsAtlas,
-    CEPC2GeV85StepConditioned,
-    CEPC2GeV85StepConditioned6,
-    CEPCRuntimeGenericGrid5Clear,
-    CEPCRuntimeCategoryAligned5Clear,
-    CEPCRuntimeCategoryAligned9Clear,
-    CEPCRuntimeCategoryAligned15Clear
+    CEPCRuntimeCategoryAligned9Clear
   };
 
   BetheHeitlerSplitter();
@@ -89,7 +70,7 @@ struct BetheHeitlerSplitter {
       std::vector<BetheHeitlerMixtureComponent>* returnedMixture = nullptr) const;
 
 private:
-  Model m_model = Model::CEPC2GeV85StepConditioned;
+  Model m_model = Model::CEPCRuntimeCategoryAligned9Clear;
 };
 
 #endif

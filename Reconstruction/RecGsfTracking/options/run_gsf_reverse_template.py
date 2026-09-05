@@ -65,7 +65,7 @@ gearsvc = GearSvc("GearSvc")
 
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = electron_hypothesis
-gsf.BHModel = os.getenv("GSF_BH_MODEL", "CEPC2GeV85StepConditioned")
+gsf.BHModel = os.getenv("GSF_BH_MODEL", "CEPCRuntimeCategoryAligned9Clear")
 gsf.BHSplitThreshold = 1.0e-4
 gsf.MaterialPathMode = os.getenv(
     "GSF_MATERIAL_PATH_MODE", "DD4hepBetweenSurfaces")

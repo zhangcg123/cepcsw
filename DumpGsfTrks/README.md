@@ -125,7 +125,7 @@ Run one complete event before mass production:
 source setup.sh
 ./dump_gsftrk.sh e- 2.008 2.0 85 1 1 true \
   gsf_kappa_smoke sim_large_20260823 \
-  trk,gsf CEPC2GeV85StepConditioned
+  trk,gsf CEPCRuntimeCategoryAligned9Clear
 ```
 
 The transverse-momentum, theta, and seed arguments identify the existing
@@ -192,6 +192,9 @@ also selected, a stage reads that newly produced file; otherwise it reads the
 required existing predecessor from `input_tuplepath`. Thus `trk,gsf` reads an
 existing simulation tuple, while `gsf` reads an existing tracker tuple.
 `sim,trk,gsf`, any two-stage subset, and each individual stage are supported.
+The optional `bh_model` argument defaults to
+`CEPCRuntimeCategoryAligned9Clear`; `ActsAtlas` is the only other supported
+value.
 Select the refitter with `method` and set its method-specific properties
 directly in `gsf.py.bk` before submitting a campaign.
 
@@ -223,26 +226,25 @@ workflows and agrees with the production material-path, threshold/cutoff, and
 ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
-`EcalComponentConstraint=False`. For the current backward-only BH mechanism
-campaign it differs from the compiled and inherited active reverse-template
-directional defaults only for the inward gate: common steering matches
-`ForwardBHSplitting=False, InwardBHSplitting=False`, and the reverse branch
-explicitly overrides `InwardBHSplitting=True`. Disabling the forward gate
-suppresses BH child creation only; deterministic energy loss, multiple
-scattering, material-path evaluation, and passive material recording remain
-active. Its top-level
-`bh_model` selector is the
-default-off
-`CEPCRuntimeGenericGrid5Clear` experiment, not the production
-`CEPC2GeV85StepConditioned` model; preserve it as deliberate campaign steering
-until the user changes it.
+`EcalComponentConstraint=False`. The current double-off diagnostic matches
+the compiled and inherited active reverse-template directional defaults:
+`ForwardBHSplitting=False, InwardBHSplitting=False`. These gates suppress BH
+child creation only; deterministic energy loss, multiple scattering,
+material-path evaluation, and passive material recording remain active. Its
+top-level `bh_model` selector explicitly uses the production baseline
+`CEPCRuntimeCategoryAligned9Clear`, matching the compiled and active-template
+default. `ActsAtlas` is the sole default-off model control. The retained
+selector now denotes one effective identity plus nine globally optimized
+radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
+shared across knots and their weights are knot-local; the selector no longer
+denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 39 `RecGsfTracking` properties, their
+The authoritative explanation of all 41 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 38 of the 39
+For this maintained workflow, `gsf.py.bk` explicitly configures 40 of the 41
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -406,18 +408,15 @@ nonzero `KappaSeedCov` remain mechanically compatible and apply that value to
 both directions, but they cannot perform a direction-separated study and
 should be regenerated. The inward control affects only this fresh-seed mode;
 it is inert when a positive scale selects the copied-mixture seed.
-The reverse branch also deliberately sets
-`InwardWeightMode="SmoothedMarginal"`. It keeps each propagated mean and
-covariance equal to the hit-updated `B_updated` state, but replaces its
-interior live weight with the unreduced `F_updated x B_predicted` direct-pair
-weights marginalized over forward partners. The compiled and active reverse-
-template default remains `LocalMeasurement`. This experimental maintained-
-card choice deliberately reuses overlapping forward evidence at successive
-surfaces and is not a calibrated posterior or a validated production-default
-change.
+The reverse branch explicitly sets `InwardWeightMode="LocalMeasurement"`,
+matching the compiled and active reverse-template control. The retained
+`F_updated x B_predicted` products remain passive diagnostics and do not
+replace live reverse weights. Experimental `SmoothedMarginal` remains
+available as a default-off comparison; it reuses overlapping forward evidence
+at successive surfaces and is not a calibrated posterior.
 
-This same reverse branch is the maintained backward-only BH test:
-`ForwardBHSplitting=False`, `InwardBHSplitting=True`. The two switches control
+This same reverse branch is the maintained double-off diagnostic:
+`ForwardBHSplitting=False`, `InwardBHSplitting=False`. The two switches control
 only BH child creation in the shared outward and independent inward filters.
 The inward switch is inert for non-reverse methods; it does not control the
 retained-graph smoother. With a positive inward seed scale, turning inward
