@@ -122,10 +122,14 @@ gsf.ReverseFiltering = False
 # standard-KF-style seed with the outermost hit already updated. The value -1
 # is a mode selector, not a negative covariance multiplier.
 gsf.InwardSeedCovarianceScale = -1.0
-# Live reverse-component weighting. With both split gates off and a fresh
-# single-component inward seed, LocalMeasurement and SmoothedMarginal normally
-# normalize to the same unit weight. Keep the compiled LocalMeasurement control
-# so a failed diagnostic F/B product cannot reject the live component.
+# Live reverse measurement/weight policy. LocalMeasurement updates and
+# reweights a cohort split at surface i+1 using adjacent hit i.
+# NextMeasurement skips hit i and first updates/reweights at hit i-1;
+# NextNextMeasurement skips i and i-1 and first updates/reweights at i-2.
+# Targets below zero clamp to hit 0. Neither delayed mode creates another BH
+# split while jumping over its skipped hit(s). SmoothedMarginal is the separate
+# passive F/B-product weighting experiment. Keep the compiled/default
+# LocalMeasurement policy explicit in this maintained card.
 gsf.InwardWeightMode = "LocalMeasurement"
 gsf.MaterialIPExtrapolation = False
 gsf.ReverseInitialWeightMode = "ForwardPosterior"

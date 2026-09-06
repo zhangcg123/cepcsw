@@ -21,8 +21,15 @@ before committing the corresponding measurement results to live
 `B_smoothed[0] = B_updated[0]` and
 `B_smoothed[N-1] = F_updated[N-1]`. Product states are reduced independently
 and never propagate or publish. The compiled `InwardWeightMode` default,
-`LocalMeasurement`, also keeps their weights diagnostic-only. Experimental
-`SmoothedMarginal` instead marginalizes the normalized unreduced direct-pair
+`LocalMeasurement`, also keeps their weights diagnostic-only. The experimental
+`NextMeasurement` and `NextNextMeasurement` modes delay the first measurement
+used by a newly split inward BH cohort: they skip the adjacent hit, or the
+adjacent two hits, respectively, then update and reweight at the selected
+inner hit. A target beyond the innermost measurement is clamped to hit 0.
+The bounded diagnostic makes no additional BH split while jumping that cohort
+to its selected measurement; skipped intervening material intervals therefore
+do not create independent stochastic-loss hypotheses in these modes.
+Experimental `SmoothedMarginal` instead marginalizes the normalized unreduced direct-pair
 weights over every forward partner and attaches the result to the matching
 live `B_updated[i]` state before its cutoff, reduction, and next propagation.
 This intentionally reuses overlapping forward evidence at successive
@@ -242,14 +249,22 @@ the complete recording scope is marked invalid.
 | `MaxComponents` | `10` | `10` | Posterior-reduction trigger/capacity for the live forward/reverse mixtures and reduction target for retained interior `B_smoothed` products. A BH split is updated before reduction, so this is not an instantaneous ceiling. Keep 12 and 24 only as explicit comparisons. |
 | `ReductionTargetComponents` | `0` | `0` | Number retained after reduction; zero means use `MaxComponents`. Valid values are zero or `1..MaxComponents`. |
 | `ReductionMergeCost` | `SymmetricKL` | same | Pair-ranking cost for moment merging: active `SymmetricKL` ranks pairs by their unweighted symmetric component-to-component KL distance; default-off `Runnalls` ranks the information-loss bound of the weighted mixture approximation. Both perform the same weight-aware moment merge after choosing a pair. Runnalls was tested and rejected for promotion. |
-| `ComponentWeightCutoff` | `1e-4` | `1e-4` | Remove normalized target-measurement posterior components below this weight in the live forward and `LocalMeasurement` reverse mixtures; `SmoothedMarginal` instead cuts the selected forward-marginalized live reverse weights. It separately cuts normalized Gaussian-overlap weights in the retained interior `B_smoothed` product, while preserving at least the largest and, when enabled, an identity lineage. The live marginal is computed from all valid direct pairs before that product cutoff or KL reduction. This cutoff precedes live component-count reduction and is independent of `BHSplitThreshold`. |
+| `ComponentWeightCutoff` | `1e-4` | `1e-4` | Remove normalized target-measurement posterior components below this weight in the live forward and measurement-weighted reverse mixtures. For a delayed `NextMeasurement` or `NextNextMeasurement` cohort, neither this cutoff nor KL reduction is applied before its selected inner measurement. `SmoothedMarginal` instead cuts the selected forward-marginalized live reverse weights. The property separately cuts normalized Gaussian-overlap weights in the retained interior `B_smoothed` product, while preserving at least the largest and, when enabled, an identity lineage. The live marginal is computed from all valid direct pairs before that product cutoff or KL reduction. This cutoff is independent of `BHSplitThreshold`. |
 | `ProtectIdentityLineage` | `true` | `true` | Preserve at least one exact no-radiation lineage through cutoff and reduction when the target component count exceeds one. |
 
 Forward children from transition `i -> i+1` remain expanded through
-measurement `i+1`; reverse children from `i+1 -> i` remain expanded through
-measurement `i`. The exact innovation likelihood is applied and normalized
-before cutoff and reduction. A transition can therefore temporarily require
-roughly `MaxComponents * number-of-BH-modes` measurement updates.
+measurement `i+1`. With reverse `LocalMeasurement`, children from `i+1 -> i`
+remain expanded through measurement `i`. `NextMeasurement` instead skips
+measurement `i` and carries that cohort to measurement `i-1`;
+`NextNextMeasurement` skips measurements `i` and `i-1` and carries it to
+measurement `i-2`. Negative target indices clamp to hit 0, so all three modes
+use hit 0 when `i=0`, while both delayed modes use hit 0 when `i=1`. “Skip”
+means no Kalman measurement update and no measurement likelihood at that hit,
+not merely preserving the old weight. No new BH split is applied on an
+intervening skipped interval. At the selected target the exact
+innovation likelihood is applied and normalized before cutoff and reduction.
+A transition can therefore temporarily require roughly
+`MaxComponents * number-of-BH-modes` measurement updates.
 
 ### Forward and backward-workflow publication
 
@@ -257,10 +272,14 @@ roughly `MaxComponents * number-of-BH-modes` measurement updates.
 |---|---|---|---|
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
-| `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weights while always propagating the measurement-updated `B_updated` means and covariances. `LocalMeasurement` uses `prior(B_predicted) x likelihood(hit|B_predicted)`. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch also selects `LocalMeasurement`; `SmoothedMarginal` remains a default-off comparison. |
+| `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward measurement policy and component weights. `LocalMeasurement` propagates children split at surface `i+1` to hit `i`, updates there, and uses `prior(B_predicted) x likelihood(hit_i|B_predicted)` before cutoff and reduction. Experimental `NextMeasurement` skips hit `i` completely and first updates/reweights that cohort at hit `i-1`; `NextNextMeasurement` skips hits `i` and `i-1` and first updates/reweights at hit `i-2`. The target is `max(0,i-delay)`, so a delayed mode degrades gracefully to hit 0 near the IP. Skipped hits contribute neither a Kalman update nor a likelihood to that cohort, its cutoff/reduction is deferred until the target, and no intervening skipped interval creates another BH split. Experimental `SmoothedMarginal` uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch selects the compiled default `LocalMeasurement`; all three alternatives remain default-off experiments. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 `ProtectIdentityLineage` is a reduction safeguard and does not alter this
 fixed endpoint selection.
+
+The focused implementation and regression evidence for the two delayed
+measurement modes is recorded in
+`agents_record/2026-09-06-delayed-inward-measurement-modes.md`.
 
 Ordinary forward, smoother, and reverse have no output selector: BestBranch is
 fixed to the final component with the largest normalized weight. Ordinary

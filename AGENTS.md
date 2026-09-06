@@ -323,6 +323,11 @@ The completed directional-splitting and SmoothedMarginal studies remain
 controls, not defaults. Their exact mechanical and population evidence is in
 `agents_record/2026-08-31-directional-bh-splitting-controls.md` and
 `agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
+The default-off `NextMeasurement` and `NextNextMeasurement` controls that omit
+one or two adjacent reverse-hit updates after a BH split are also mechanically
+available but failed their focused negative-peak and hard-loss gates; their
+bounded contract and evidence are in
+`agents_record/2026-09-06-delayed-inward-measurement-modes.md`.
 Freeze the production controls and existing endpoint definitions while the
 hit-0 method is designed: `DD4hepBetweenSurfaces`,
 `CEPCRuntimeCategoryAligned9Clear`, `MaxComponents=10`,

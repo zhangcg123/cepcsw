@@ -294,6 +294,9 @@ private:
   Gaudi::Property<std::string> m_inwardWeightMode{
       this, "InwardWeightMode", "LocalMeasurement",
       "LocalMeasurement uses the B_predicted x hit likelihood posterior; "
+      "NextMeasurement skips the adjacent inward hit and first updates and "
+      "reweights at the following hit; NextNextMeasurement skips two "
+      "adjacent inward hits; both clamp their measurement target to hit 0; "
       "SmoothedMarginal propagates B_updated states with weights obtained by "
       "marginalizing each interior F_updated x B_predicted product over its "
       "forward partners"};

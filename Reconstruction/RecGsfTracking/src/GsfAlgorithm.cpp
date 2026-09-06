@@ -2427,9 +2427,11 @@ StatusCode RecGsfTracking::initialize() {
   std::transform(inwardWeightMode.begin(), inwardWeightMode.end(),
                  inwardWeightMode.begin(), ::tolower);
   if (inwardWeightMode != "localmeasurement" &&
+      inwardWeightMode != "nextmeasurement" &&
+      inwardWeightMode != "nextnextmeasurement" &&
       inwardWeightMode != "smoothedmarginal") {
-    error() << "InwardWeightMode must be LocalMeasurement or "
-               "SmoothedMarginal"
+    error() << "InwardWeightMode must be LocalMeasurement, NextMeasurement, "
+               "NextNextMeasurement, or SmoothedMarginal"
             << endmsg;
     return StatusCode::FAILURE;
   }
@@ -3970,10 +3972,13 @@ StatusCode RecGsfTracking::execute() {
     double ecalConstrainedEnergy = 0.0;
     int ecalConstrainedClusterCount = 0;
 
-    // The reverse inward GSF always propagates the locally updated B_updated
-    // states.  LocalMeasurement weights them with the target-hit likelihood;
+    // The reverse inward GSF propagates the most recently updated B_updated
+    // states. LocalMeasurement updates at the adjacent inward hit.
+    // NextMeasurement and NextNextMeasurement deliberately omit one or two
+    // adjacent hit updates after an inward BH split and first update/reweight
+    // the cohort at the selected farther-inward hit, clamped to hit 0.
     // SmoothedMarginal instead attaches the forward-marginalized interior
-    // F_updated x B_predicted pair weights.  The complete smoothed mixtures
+    // F_updated x B_predicted pair weights. The complete smoothed mixtures
     // remain independently recorded and never replace the propagated states.
     auto runGsfInwardFilter = [&]() -> GsfInwardFilterResult {
       GsfInwardFilterResult inwardFilterResult(hits.size());
@@ -4108,9 +4113,14 @@ StatusCode RecGsfTracking::execute() {
                      inwardWeightMode.begin(), ::tolower);
       const bool useSmoothedMarginalWeights =
           inwardWeightMode == "smoothedmarginal";
-      for (int reverseHit = (int)hits.size() - 2;
-           reverseHit >= 0 && !reverseComps.empty(); --reverseHit) {
-        auto& target = hits[reverseHit];
+      const int skippedMeasurementsAfterSplit =
+          inwardWeightMode == "nextmeasurement"
+              ? 1
+              : (inwardWeightMode == "nextnextmeasurement" ? 2 : 0);
+      for (int reverseOuterHit = (int)hits.size() - 1;
+           reverseOuterHit > 0 && !reverseComps.empty();) {
+        const int reverseMaterialHit = reverseOuterHit - 1;
+        auto& materialTarget = hits[reverseMaterialHit];
 
         // Propagate the full mixture through the outer-to-inner interval
         // before updating its inner bounding measurement.  This mirrors the
@@ -4119,13 +4129,14 @@ StatusCode RecGsfTracking::execute() {
         std::vector<ComponentMaterialPath> reverseMaterialPaths;
         reverseMaterialPaths.reserve(reverseComps.size());
         bool anyReverseMaterial = false;
-        const auto& reverseTargetPosition = target.lcioHit.getPosition();
+        const auto& reverseTargetPosition =
+            materialTarget.lcioHit.getPosition();
         const TVector3 reverseMaterialDestination(
             reverseTargetPosition.x, reverseTargetPosition.y,
             reverseTargetPosition.z);
         TVector3 reverseMaterialOuterEndpoint;
         const auto& reverseOuterPosition =
-            hits[static_cast<size_t>(reverseHit + 1)].lcioHit.getPosition();
+            hits[static_cast<size_t>(reverseOuterHit)].lcioHit.getPosition();
         reverseMaterialOuterEndpoint.SetXYZ(
             reverseOuterPosition.x, reverseOuterPosition.y,
             reverseOuterPosition.z);
@@ -4133,17 +4144,17 @@ StatusCode RecGsfTracking::execute() {
           reverseMaterialPaths.push_back(
               useDD4hepBetweenSurfaces
                   ? componentGeometryTransitionMaterialPath(
-                        m_materialManager, target.layer,
+                        m_materialManager, materialTarget.layer,
                         reverseMaterialDestination, *component, bz, -1,
                         &reverseMaterialOuterEndpoint)
                   : componentMaterialPathAtCrossing(
-                        target.layer, *component, bz, -1));
+                        materialTarget.layer, *component, bz, -1));
           anyReverseMaterial |= reverseMaterialPaths.back().valid &&
               reverseMaterialPaths.back().pathTX0 > m_bhSplitThresh.value();
         }
         if (truthMaterialTrackMatched) {
           auto& summary = reverseMaterialSummaries[
-              static_cast<std::size_t>(reverseHit)];
+              static_cast<std::size_t>(reverseMaterialHit)];
           for (std::size_t componentIndex = 0;
                componentIndex < reverseComps.size(); ++componentIndex) {
             summary.add(reverseMaterialPaths[componentIndex],
@@ -4160,13 +4171,14 @@ StatusCode RecGsfTracking::execute() {
                 "  MAT-REVERSE-COMP hit=%d comp=%d id=%d mode=%s "
                 "owner=outgoing-target normalTX0=%.9g absCos=%.9g "
                 "pathTX0=%.9g valid=%d")
-                      % reverseHit % componentIndex
+                      % reverseMaterialHit % componentIndex
                       % reverseComps[componentIndex]->debugId
                       % m_materialPathMode.value() % path.normalTX0
                       % path.absCosIncidence % path.pathTX0
                       % (path.valid ? 1 : 0) << endmsg;
           }
         }
+        bool didReverseSplit = false;
         if (m_inwardBHSplitting.value() && anyReverseMaterial && m_isElectron) {
           BetheHeitlerSplitter splitter(m_bhModel.value());
           std::vector<GsfComponent*> reverseChildren;
@@ -4189,7 +4201,7 @@ StatusCode RecGsfTracking::execute() {
             auto children = applyTruthBHLossOverride
                 ? splitter.splitWithRetainedFraction(
                       parent, truthRetainedFraction(
-                                  reverseHit, reverseHit + 1),
+                                  reverseMaterialHit, reverseOuterHit),
                       bz, true, &appliedMixture)
                 : splitter.split(parent, materialPath.pathTX0, bz, true,
                                  &appliedMixture);
@@ -4202,11 +4214,12 @@ StatusCode RecGsfTracking::execute() {
               if (childIndex < appliedMixture.size()) {
                 child->lineageNodeId = lineageGraph.split(
                     *child, parentLineageNodeId,
-                    LineageNodeSource::ReverseFiltering, reverseHit,
-                    target.surfaceIndex, static_cast<int>(childIndex),
+                    LineageNodeSource::ReverseFiltering, reverseMaterialHit,
+                    materialTarget.surfaceIndex,
+                    static_cast<int>(childIndex),
                     appliedMixture[childIndex], materialPath.pathTX0);
               }
-              child->lastReverseProcessHit = reverseHit;
+              child->lastReverseProcessHit = reverseMaterialHit;
               child->lastReverseProcessComponent = static_cast<int>(childIndex);
               const double childPt = child->continuationState.omega != 0.0
                   ? std::abs(alpha / child->continuationState.omega) : 0.0;
@@ -4214,20 +4227,44 @@ StatusCode RecGsfTracking::execute() {
                   ? parentPt / childPt : 1.0;
               if (!child->reverseProcessSignature.empty())
                 child->reverseProcessSignature += ";";
-              child->reverseProcessSignature += std::to_string(reverseHit) +
-                  ":g" + std::to_string(childIndex) + ":f" +
+              child->reverseProcessSignature +=
+                  std::to_string(reverseMaterialHit) + ":g" +
+                  std::to_string(childIndex) + ":f" +
                   std::to_string(child->lastReverseProcessFraction);
               if (trackSurfaceLineageMass)
                 child->reverseProcessModeFractions[
-                    {reverseHit, (int)childIndex}] = 1.0;
+                    {reverseMaterialHit, (int)childIndex}] = 1.0;
               child->debugHistory += "->reverse-material[h=" +
-                  std::to_string(reverseHit) + "]";
+                  std::to_string(reverseMaterialHit) + "]";
               reverseChildren.push_back(child);
             }
           }
           reverseComps = std::move(reverseChildren);
           ++reverseSplits;
+          didReverseSplit = true;
           GsfMixture::normalizeWeights(reverseComps);
+        }
+
+        const int reverseHit = didReverseSplit
+            ? std::max(0, reverseMaterialHit -
+                              skippedMeasurementsAfterSplit)
+            : reverseMaterialHit;
+        auto& target = hits[reverseHit];
+        const auto& reverseMeasurementPosition =
+            target.lcioHit.getPosition();
+        const TVector3 reverseMeasurementDestination(
+            reverseMeasurementPosition.x, reverseMeasurementPosition.y,
+            reverseMeasurementPosition.z);
+        if (m_verboseDump && m_verboseSplitDump &&
+            reverseHit != reverseMaterialHit) {
+          info() << boost::format(
+              "  REVERSE MEASUREMENT TARGET mode=%s outer=%d local=%d "
+              "target=%d skipped=%d%s")
+                    % m_inwardWeightMode.value() % reverseOuterHit
+                    % reverseMaterialHit % reverseHit
+                    % (reverseMaterialHit - reverseHit)
+                    % (reverseHit == 0 ? " hit0-clamped" : "")
+                 << endmsg;
         }
 
         struct ReverseMeasurementCandidate {
@@ -4259,9 +4296,8 @@ StatusCode RecGsfTracking::execute() {
           candidate.componentState =
               trackStateFromComponent(*component, bz, DH::AtOther);
           try {
-            const int referenceIndex = std::min(
-                reverseHit + 1, (int)hits.size() - 1);
-            edm4hep::TrackerHit referenceHit = hits[referenceIndex].lcioHit;
+            edm4hep::TrackerHit referenceHit =
+                hits[reverseOuterHit].lcioHit;
             edm4hep::TrackerHit targetHit = target.lcioHit;
             std::unique_ptr<MarlinTrk::IMarlinTrack> reverseTrack(
                 m_gsfMarlinTrkSystem->createTrack());
@@ -4319,7 +4355,7 @@ StatusCode RecGsfTracking::execute() {
               sharedForwardResult.filteredAt(
                   static_cast<std::size_t>(reverseHit)),
               backwardPredictedComponents, reverseHit, target.surfaceIndex,
-              reverseMaterialDestination, bz, reverseReductionTarget,
+              reverseMeasurementDestination, bz, reverseReductionTarget,
               m_componentWeightCutoff.value(),
               m_protectIdentityLineage.value(),
               m_reductionMergeCost.value(), lineageGraph);
@@ -4403,7 +4439,8 @@ StatusCode RecGsfTracking::execute() {
                         % candidate.priorWeight % candidate.dchi
                         % candidate.update.logDetInnovation
                         % (useSmoothedMarginalWeights && reverseHit > 0
-                               ? "SmoothedMarginal" : "LocalMeasurement")
+                               ? "SmoothedMarginal"
+                               : m_inwardWeightMode.value())
                         % smoothedMarginalWeight << endmsg;
               info() << boost::format("          reverse-exact-measurement: predicted=%s residual=%s H=%s R=%s S=%s")
                         % compactMatrix(candidate.update.predictedMeasurement)
@@ -4497,6 +4534,7 @@ StatusCode RecGsfTracking::execute() {
         if (m_verboseDump && m_verboseSplitDump) {
           dumpComponents("reverse-after-hit", reverseHit, reverseComps);
         }
+        reverseOuterHit = reverseHit;
       }
 
       if (m_verboseDump) {
