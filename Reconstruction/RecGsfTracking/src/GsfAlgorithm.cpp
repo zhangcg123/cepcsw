@@ -1185,6 +1185,9 @@ struct LineageNodeRecord {
   double logUnnormalizedPosterior =
       std::numeric_limits<double>::quiet_NaN();
   double normalizedPosterior = std::numeric_limits<double>::quiet_NaN();
+  double priorLocalPosterior = std::numeric_limits<double>::quiet_NaN();
+  double lookaheadLocalPosterior =
+      std::numeric_limits<double>::quiet_NaN();
   double predictedKappa = std::numeric_limits<double>::quiet_NaN();
   double predictedKappaVariance = std::numeric_limits<double>::quiet_NaN();
   double fbDeltaKappa = std::numeric_limits<double>::quiet_NaN();
@@ -1385,6 +1388,14 @@ public:
     auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
     node.normalizedPosterior = weight;
     node.weight = weight;
+  }
+
+  void setLocalChannelPosteriors(int nodeId, double priorPosterior,
+                                 double lookaheadPosterior) {
+    if (!validNode(nodeId)) return;
+    auto& node = m_nodes[static_cast<std::size_t>(nodeId)];
+    node.priorLocalPosterior = priorPosterior;
+    node.lookaheadLocalPosterior = lookaheadPosterior;
   }
 
   void setWeight(int nodeId, double weight) {
@@ -2429,11 +2440,20 @@ StatusCode RecGsfTracking::initialize() {
   std::transform(inwardWeightMode.begin(), inwardWeightMode.end(),
                  inwardWeightMode.begin(), ::tolower);
   if (inwardWeightMode != "localmeasurement" &&
-      inwardWeightMode != "nextmeasurement" &&
-      inwardWeightMode != "nextnextmeasurement" &&
       inwardWeightMode != "smoothedmarginal") {
-    error() << "InwardWeightMode must be LocalMeasurement, NextMeasurement, "
-               "NextNextMeasurement, or SmoothedMarginal"
+    error() << "InwardWeightMode must be LocalMeasurement or "
+               "SmoothedMarginal"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_inwardLookaheadDepth.value() < 0) {
+    error() << "InwardLookaheadDepth must be nonnegative" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (inwardWeightMode == "smoothedmarginal" &&
+      m_inwardLookaheadDepth.value() > 0) {
+    error() << "InwardLookaheadDepth must be zero when InwardWeightMode is "
+               "SmoothedMarginal"
             << endmsg;
     return StatusCode::FAILURE;
   }
@@ -2579,6 +2599,7 @@ StatusCode RecGsfTracking::initialize() {
          << " forwardBHSplitting=" << m_forwardBHSplitting.value()
          << " inwardBHSplitting=" << m_inwardBHSplitting.value()
          << " inwardWeightMode=" << m_inwardWeightMode.value()
+         << " inwardLookaheadDepth=" << m_inwardLookaheadDepth.value()
          << " forwardSeed=" << m_forwardSeed.value()
          << " backwardSeed=" << m_backwardSeed.value()
          << " verbose=" << m_verboseDump.value() << "/"
@@ -2665,6 +2686,10 @@ StatusCode RecGsfTracking::execute() {
       m_lineageNodeLogUnnormalizedPosterior.createAndPut();
   auto* lineageNodeNormalizedPosterior =
       m_lineageNodeNormalizedPosterior.createAndPut();
+  auto* lineageNodePriorLocalPosterior =
+      m_lineageNodePriorLocalPosterior.createAndPut();
+  auto* lineageNodeLookaheadLocalPosterior =
+      m_lineageNodeLookaheadLocalPosterior.createAndPut();
   auto* lineageNodePredictedKappa =
       m_lineageNodePredictedKappa.createAndPut();
   auto* lineageNodePredictedKappaVariance =
@@ -2739,6 +2764,9 @@ StatusCode RecGsfTracking::execute() {
       lineageNodeLogUnnormalizedPosterior->push_back(
           node.logUnnormalizedPosterior);
       lineageNodeNormalizedPosterior->push_back(node.normalizedPosterior);
+      lineageNodePriorLocalPosterior->push_back(node.priorLocalPosterior);
+      lineageNodeLookaheadLocalPosterior->push_back(
+          node.lookaheadLocalPosterior);
       lineageNodePredictedKappa->push_back(node.predictedKappa);
       lineageNodePredictedKappaVariance->push_back(
           node.predictedKappaVariance);
@@ -3975,15 +4003,14 @@ StatusCode RecGsfTracking::execute() {
     int ecalConstrainedClusterCount = 0;
 
     // The reverse inward GSF propagates the most recently updated B_updated
-    // states. LocalMeasurement updates at the adjacent inward hit.
-    // After an inward BH split, NextMeasurement and NextNextMeasurement probe
-    // one or two hits beyond that adjacent hit on temporary component copies.
-    // Only the normalized probe posterior is transferred back to the live
-    // split-surface children; their states remain at the split surface and
-    // then follow the ordinary adjacent-hit recursion. Consequently the
-    // probe hit is intentionally counted again when the live recursion later
-    // reaches it. This temporary double counting is part of the experimental
-    // contract requested for these modes.
+    // states. LocalMeasurement updates at the adjacent inward hit. A positive
+    // InwardLookaheadDepth probes each farther-inward hit i-1 through i-N on
+    // temporary component copies. Each probe posterior is normalized
+    // separately and their arithmetic mean forms a feedback channel. At the
+    // adjacent hit, that channel and the original BH-prior channel receive the
+    // same local likelihood and are combined before global normalization.
+    // Live states are updated only once. Probe hits are intentionally reused
+    // when the ordinary inward recursion reaches them.
     // SmoothedMarginal instead attaches the forward-marginalized interior
     // F_updated x B_predicted pair weights. The complete smoothed mixtures
     // remain independently recorded and never replace the propagated states.
@@ -4120,10 +4147,7 @@ StatusCode RecGsfTracking::execute() {
                      inwardWeightMode.begin(), ::tolower);
       const bool useSmoothedMarginalWeights =
           inwardWeightMode == "smoothedmarginal";
-      const int lookaheadMeasurementsAfterSplit =
-          inwardWeightMode == "nextmeasurement"
-              ? 1
-              : (inwardWeightMode == "nextnextmeasurement" ? 2 : 0);
+      const int inwardLookaheadDepth = m_inwardLookaheadDepth.value();
       for (int reverseOuterHit = (int)hits.size() - 1;
            reverseOuterHit > 0 && !reverseComps.empty();) {
         const int reverseMaterialHit = reverseOuterHit - 1;
@@ -4252,148 +4276,169 @@ StatusCode RecGsfTracking::execute() {
           GsfMixture::normalizeWeights(reverseComps);
         }
 
-        // Experimental look-ahead weighting. Probe a farther-inward
-        // measurement without mutating the live children, normalize the
-        // resulting prior*likelihood values, and copy only those weights back
-        // to the split-surface components. No cutoff or KL reduction occurs
-        // here. The ordinary adjacent measurement below is still evaluated,
-        // and the probe measurement is evaluated again when reached later.
-        if (didReverseSplit && lookaheadMeasurementsAfterSplit > 0 &&
-            !reverseComps.empty()) {
-          const int lookaheadHit = std::max(
-              0, reverseMaterialHit - lookaheadMeasurementsAfterSplit);
-          auto& lookaheadTarget = hits[lookaheadHit];
-          std::vector<GsfComponent*> lookaheadSurvivors;
-          std::vector<double> lookaheadLogWeights;
-          std::vector<int> lookaheadLineageNodeIds;
-          lookaheadSurvivors.reserve(reverseComps.size());
-          lookaheadLogWeights.reserve(reverseComps.size());
-          lookaheadLineageNodeIds.reserve(reverseComps.size());
+        struct InwardLookaheadChannels {
+          double originalPrior = 0.0;
+          double averagedFeedback = 0.0;
+        };
+        std::map<int, InwardLookaheadChannels> lookaheadChannels;
 
-          for (auto* component : reverseComps) {
-            const int parentLineageNodeId = component->lineageNodeId;
-            const double priorWeight = component->weight;
-            const edm4hep::TrackState componentState =
-                trackStateFromComponent(*component, bz, DH::AtOther);
-            double dchi = 0.0;
-            double updateChi2 = 0.0;
-            int updateNdf = -999;
-            edm4hep::TrackState updatedState;
-            MarlinTrk::MeasurementUpdate update;
-            bool evaluated = false;
-            try {
-              std::unique_ptr<MarlinTrk::IMarlinTrack> lookaheadTrack(
-                  m_gsfMarlinTrkSystem->createTrack());
-              if (lookaheadTrack &&
-                  lookaheadTrack->addHit(
-                      hits[reverseOuterHit].lcioHit) ==
-                      MarlinTrk::IMarlinTrack::success &&
-                  lookaheadTrack->initialise(
-                      componentState, bz,
-                      MarlinTrk::IMarlinTrack::backward) ==
-                      MarlinTrk::IMarlinTrack::success &&
-                  lookaheadTrack->addAndFit(
-                      lookaheadTarget.lcioHit, dchi, update, DBL_MAX) ==
-                      MarlinTrk::IMarlinTrack::success &&
-                  update.valid &&
-                  lookaheadTrack->getTrackState(
-                      lookaheadTarget.lcioHit, updatedState, updateChi2,
-                      updateNdf) == MarlinTrk::IMarlinTrack::success) {
-                evaluated = true;
-              }
-            } catch (...) {
-              evaluated = false;
-            }
+        // Experimental look-ahead weighting. Every available farther-inward
+        // hit i-1 ... i-N is probed independently from the live split state.
+        // Each probe posterior is normalized separately; their arithmetic
+        // mean forms a feedback channel. The live BH-prior weights and states
+        // are not mutated here, and a failed temporary evaluation never kills
+        // a live component. The local update below combines both channels.
+        if (didReverseSplit && inwardLookaheadDepth > 0 &&
+            reverseMaterialHit > 0 && !reverseComps.empty()) {
+          const int probeCount =
+              std::min(inwardLookaheadDepth, reverseMaterialHit);
+          std::vector<double> feedbackSums(reverseComps.size(), 0.0);
+          int validProbeCount = 0;
 
-            const double unavailable =
-                std::numeric_limits<double>::quiet_NaN();
-            const double logPosterior =
-                evaluated && priorWeight > 0.0
-                    ? std::log(priorWeight) -
-                          0.5 * (dchi + update.logDetInnovation)
-                    : unavailable;
+          for (int probeOffset = 1; probeOffset <= probeCount;
+               ++probeOffset) {
+            const int lookaheadHit = reverseMaterialHit - probeOffset;
+            auto& lookaheadTarget = hits[lookaheadHit];
+            std::vector<double> lookaheadLogWeights(
+                reverseComps.size(),
+                std::numeric_limits<double>::quiet_NaN());
+            std::vector<int> lookaheadLineageNodeIds(
+                reverseComps.size(), -1);
 
-            // Persist the evaluated temporary branch as a passive side node
-            // while keeping the live lineage anchored at the split surface.
-            // Status 3 distinguishes an accepted look-ahead measurement from
-            // an ordinary accepted measurement (status 1).
-            int lookaheadLineageNodeId = -1;
-            if (evaluated) {
-              std::unique_ptr<GsfComponent> lookaheadComponent(
-                  component->clone());
-              bool recordedState = false;
+            for (std::size_t componentIndex = 0;
+                 componentIndex < reverseComps.size(); ++componentIndex) {
+              auto* component = reverseComps[componentIndex];
+              const int parentLineageNodeId = component->lineageNodeId;
+              const double priorWeight = component->weight;
+              const edm4hep::TrackState componentState =
+                  trackStateFromComponent(*component, bz, DH::AtOther);
+              double dchi = 0.0;
+              double updateChi2 = 0.0;
+              int updateNdf = -999;
+              edm4hep::TrackState updatedState;
+              MarlinTrk::MeasurementUpdate update;
+              bool evaluated = false;
               try {
-                recordedState = appendBaselineStateToComponent(
-                    *lookaheadComponent, updatedState, lookaheadTarget, bz,
-                    componentState, update);
+                std::unique_ptr<MarlinTrk::IMarlinTrack> lookaheadTrack(
+                    m_gsfMarlinTrkSystem->createTrack());
+                if (lookaheadTrack &&
+                    lookaheadTrack->addHit(
+                        hits[reverseOuterHit].lcioHit) ==
+                        MarlinTrk::IMarlinTrack::success &&
+                    lookaheadTrack->initialise(
+                        componentState, bz,
+                        MarlinTrk::IMarlinTrack::backward) ==
+                        MarlinTrk::IMarlinTrack::success &&
+                    lookaheadTrack->addAndFit(
+                        lookaheadTarget.lcioHit, dchi, update, DBL_MAX) ==
+                        MarlinTrk::IMarlinTrack::success &&
+                    update.valid &&
+                    lookaheadTrack->getTrackState(
+                        lookaheadTarget.lcioHit, updatedState, updateChi2,
+                        updateNdf) == MarlinTrk::IMarlinTrack::success) {
+                  evaluated = true;
+                }
               } catch (...) {
-                recordedState = false;
+                evaluated = false;
               }
-              if (recordedState) {
-                lookaheadLineageNodeId = lineageGraph.measurement(
-                    *lookaheadComponent, parentLineageNodeId,
-                    LineageNodeSource::ReverseFiltering, lookaheadHit,
-                    lookaheadTarget.surfaceIndex, 3, priorWeight, dchi,
-                    update.logDetInnovation, logPosterior, &update, false);
-                lineageGraph.mark(
-                    lookaheadLineageNodeId,
-                    LineageNodeFate::InwardInternalMessage);
+
+              const double logPosterior =
+                  evaluated && priorWeight > 0.0 &&
+                          std::isfinite(dchi) &&
+                          std::isfinite(update.logDetInnovation)
+                      ? std::log(priorWeight) -
+                            0.5 * (dchi + update.logDetInnovation)
+                      : std::numeric_limits<double>::quiet_NaN();
+
+              // Status 3 is a passive look-ahead side node. It never advances
+              // the live lineage or contributes a propagated state.
+              if (evaluated && std::isfinite(logPosterior)) {
+                std::unique_ptr<GsfComponent> lookaheadComponent(
+                    component->clone());
+                bool recordedState = false;
+                try {
+                  recordedState = appendBaselineStateToComponent(
+                      *lookaheadComponent, updatedState, lookaheadTarget, bz,
+                      componentState, update);
+                } catch (...) {
+                  recordedState = false;
+                }
+                if (recordedState) {
+                  lookaheadLineageNodeIds[componentIndex] =
+                      lineageGraph.measurement(
+                          *lookaheadComponent, parentLineageNodeId,
+                          LineageNodeSource::ReverseFiltering, lookaheadHit,
+                          lookaheadTarget.surfaceIndex, 3, priorWeight, dchi,
+                          update.logDetInnovation, logPosterior, &update,
+                          false);
+                  lineageGraph.mark(
+                      lookaheadLineageNodeIds[componentIndex],
+                      LineageNodeFate::InwardInternalMessage);
+                }
+                lookaheadLogWeights[componentIndex] = logPosterior;
+                if (m_verboseDump && m_verboseSplitDump &&
+                    m_componentDebugDump) {
+                  info() << boost::format(
+                      "      REVERSE LOOKAHEAD accept depth=%d outer=%d "
+                      "local=%d probe=%d id=%d priorWeight=%.6g "
+                      "dchi2=%.6g logDetS=%.6g")
+                                % inwardLookaheadDepth % reverseOuterHit
+                                % reverseMaterialHit % lookaheadHit
+                                % component->debugId % priorWeight % dchi
+                                % update.logDetInnovation
+                         << endmsg;
+                }
               }
             }
 
-            if (evaluated && std::isfinite(logPosterior)) {
-              lookaheadSurvivors.push_back(component);
-              lookaheadLogWeights.push_back(logPosterior);
-              lookaheadLineageNodeIds.push_back(lookaheadLineageNodeId);
-              if (m_verboseDump && m_verboseSplitDump &&
-                  m_componentDebugDump) {
-                info() << boost::format(
-                    "      REVERSE LOOKAHEAD accept mode=%s outer=%d "
-                    "local=%d probe=%d id=%d priorWeight=%.6g "
-                    "dchi2=%.6g logDetS=%.6g")
-                              % m_inwardWeightMode.value() % reverseOuterHit
-                              % reverseMaterialHit % lookaheadHit
-                              % component->debugId % priorWeight % dchi
-                              % update.logDetInnovation
-                       << endmsg;
-              }
-            } else {
-              lineageGraph.mark(component->lineageNodeId,
-                                LineageNodeFate::TrackAbandoned);
-              delete component;
+            double maxLookaheadLog =
+                -std::numeric_limits<double>::infinity();
+            for (double logWeight : lookaheadLogWeights)
+              if (std::isfinite(logWeight))
+                maxLookaheadLog = std::max(maxLookaheadLog, logWeight);
+            if (!std::isfinite(maxLookaheadLog)) continue;
+
+            double normalization = 0.0;
+            for (double logWeight : lookaheadLogWeights)
+              if (std::isfinite(logWeight))
+                normalization += std::exp(logWeight - maxLookaheadLog);
+            if (!(normalization > 0.0) || !std::isfinite(normalization))
+              continue;
+
+            ++validProbeCount;
+            for (std::size_t componentIndex = 0;
+                 componentIndex < reverseComps.size(); ++componentIndex) {
+              const double posterior =
+                  std::isfinite(lookaheadLogWeights[componentIndex])
+                      ? std::exp(lookaheadLogWeights[componentIndex] -
+                                 maxLookaheadLog) /
+                            normalization
+                      : 0.0;
+              feedbackSums[componentIndex] += posterior;
+              lineageGraph.setNormalizedPosterior(
+                  lookaheadLineageNodeIds[componentIndex], posterior);
             }
           }
 
-          reverseComps.clear();
-          if (lookaheadSurvivors.empty()) break;
-          const double maxLookaheadLog = *std::max_element(
-              lookaheadLogWeights.begin(), lookaheadLogWeights.end());
           for (std::size_t componentIndex = 0;
-               componentIndex < lookaheadSurvivors.size(); ++componentIndex) {
-            lookaheadSurvivors[componentIndex]->weight = std::exp(
-                lookaheadLogWeights[componentIndex] - maxLookaheadLog);
+               componentIndex < reverseComps.size(); ++componentIndex) {
+            const double originalPrior = reverseComps[componentIndex]->weight;
+            const double averagedFeedback = validProbeCount > 0
+                ? feedbackSums[componentIndex] /
+                      static_cast<double>(validProbeCount)
+                : originalPrior;
+            lookaheadChannels.emplace(
+                reverseComps[componentIndex]->debugId,
+                InwardLookaheadChannels{originalPrior, averagedFeedback});
           }
-          reverseComps = std::move(lookaheadSurvivors);
-          GsfMixture::normalizeWeights(reverseComps);
-          for (const auto* component : reverseComps)
-            lineageGraph.setWeight(component->lineageNodeId,
-                                   component->weight);
-          for (std::size_t componentIndex = 0;
-               componentIndex < reverseComps.size(); ++componentIndex)
-            lineageGraph.setNormalizedPosterior(
-                lookaheadLineageNodeIds[componentIndex],
-                reverseComps[componentIndex]->weight);
           if (m_verboseDump && m_verboseSplitDump) {
             info() << boost::format(
-                "  REVERSE LOOKAHEAD WEIGHTS mode=%s outer=%d local=%d "
-                "probe=%d retained=%d%s")
-                          % m_inwardWeightMode.value() % reverseOuterHit
-                          % reverseMaterialHit % lookaheadHit
+                "  REVERSE LOOKAHEAD CHANNELS depth=%d outer=%d local=%d "
+                "requested=%d valid=%d components=%d")
+                          % inwardLookaheadDepth % reverseOuterHit
+                          % reverseMaterialHit % probeCount % validProbeCount
                           % static_cast<int>(reverseComps.size())
-                          % (lookaheadHit == 0 ? " hit0-clamped" : "")
                    << endmsg;
-            dumpComponents("reverse-lookahead/norm", reverseMaterialHit,
-                           reverseComps);
           }
         }
 
@@ -4408,6 +4453,9 @@ StatusCode RecGsfTracking::execute() {
           GsfComponent* component = nullptr;
           int parentLineageNodeId = -1;
           double priorWeight = 0.0;
+          double originalPriorWeight = 0.0;
+          double lookaheadFeedbackWeight = 0.0;
+          bool hasLookaheadFeedback = false;
           double dchi = 0.0;
           double updateChi2 = 0.0;
           int updateNdf = -999;
@@ -4429,7 +4477,21 @@ StatusCode RecGsfTracking::execute() {
           ReverseMeasurementCandidate candidate;
           candidate.component = component;
           candidate.parentLineageNodeId = component->lineageNodeId;
+          candidate.originalPriorWeight = component->weight;
           candidate.priorWeight = component->weight;
+          const auto lookahead = lookaheadChannels.find(component->debugId);
+          if (lookahead != lookaheadChannels.end()) {
+            candidate.originalPriorWeight = lookahead->second.originalPrior;
+            candidate.lookaheadFeedbackWeight =
+                lookahead->second.averagedFeedback;
+            candidate.hasLookaheadFeedback = true;
+            // Both channels are individually normalized. Their natural union
+            // has total mass two; the ordinary global posterior normalization
+            // below removes that common scale without a feedback fraction.
+            candidate.priorWeight =
+                candidate.originalPriorWeight +
+                candidate.lookaheadFeedbackWeight;
+          }
           candidate.componentState =
               trackStateFromComponent(*component, bz, DH::AtOther);
           try {
@@ -4512,8 +4574,14 @@ StatusCode RecGsfTracking::execute() {
 
         std::vector<GsfComponent*> acceptedReverse;
         std::vector<double> reverseLogWeights;
+        std::vector<double> priorChannelLogWeights;
+        std::vector<double> lookaheadChannelLogWeights;
+        std::vector<int> reverseMeasurementNodeIds;
         acceptedReverse.reserve(reverseCandidates.size());
         reverseLogWeights.reserve(reverseCandidates.size());
+        priorChannelLogWeights.reserve(reverseCandidates.size());
+        lookaheadChannelLogWeights.reserve(reverseCandidates.size());
+        reverseMeasurementNodeIds.reserve(reverseCandidates.size());
         for (auto& candidate : reverseCandidates) {
           auto* component = candidate.component;
           bool accepted = false;
@@ -4534,6 +4602,21 @@ StatusCode RecGsfTracking::execute() {
                     0.5 * (candidate.dchi +
                            candidate.update.logDetInnovation)
               : unavailable;
+          const double localLogLikelihood = accepted
+              ? -0.5 * (candidate.dchi +
+                        candidate.update.logDetInnovation)
+              : unavailable;
+          const double priorChannelLogPosterior =
+              accepted && candidate.originalPriorWeight > 0.0
+                  ? std::log(candidate.originalPriorWeight) +
+                        localLogLikelihood
+                  : -std::numeric_limits<double>::infinity();
+          const double lookaheadChannelLogPosterior =
+              accepted && candidate.hasLookaheadFeedback &&
+                      candidate.lookaheadFeedbackWeight > 0.0
+                  ? std::log(candidate.lookaheadFeedbackWeight) +
+                        localLogLikelihood
+                  : -std::numeric_limits<double>::infinity();
           double smoothedMarginalWeight = unavailable;
           if (accepted && useSmoothedMarginalWeights && reverseHit > 0) {
             const auto& marginalWeights =
@@ -4567,13 +4650,22 @@ StatusCode RecGsfTracking::execute() {
           if (accepted) {
             component->fitChi2 += candidate.dchi;
             reverseLogWeights.push_back(selectedReverseLogWeight);
+            priorChannelLogWeights.push_back(priorChannelLogPosterior);
+            lookaheadChannelLogWeights.push_back(
+                lookaheadChannelLogPosterior);
+            reverseMeasurementNodeIds.push_back(component->lineageNodeId);
             acceptedReverse.push_back(component);
             ++reverseAcceptedTotal;
             if (m_verboseDump && m_verboseSplitDump && m_componentDebugDump) {
-              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g priorWeight=%.6g dchi2=%.6g logDetS=%.6g weightMode=%s smoothedMarginal=%.6g")
+              info() << boost::format("      REVERSE UPDATE accept hit=%d id=%d pT=%.6g priorWeight=%.6g originalPrior=%.6g lookaheadFeedback=%.6g dchi2=%.6g logDetS=%.6g weightMode=%s smoothedMarginal=%.6g")
                         % reverseHit % component->debugId
                         % ptFromTrackState(candidate.updatedState, bz)
-                        % candidate.priorWeight % candidate.dchi
+                        % candidate.priorWeight
+                        % candidate.originalPriorWeight
+                        % (candidate.hasLookaheadFeedback
+                               ? candidate.lookaheadFeedbackWeight
+                               : unavailable)
+                        % candidate.dchi
                         % candidate.update.logDetInnovation
                         % (useSmoothedMarginalWeights && reverseHit > 0
                                ? "SmoothedMarginal"
@@ -4602,9 +4694,40 @@ StatusCode RecGsfTracking::execute() {
               std::exp(reverseLogWeights[i] - maxReverseLog);
         reverseComps = std::move(acceptedReverse);
         GsfMixture::normalizeWeights(reverseComps);
-        for (const auto* component : reverseComps)
+        auto normalizeLogWeights = [](const std::vector<double>& logWeights) {
+          std::vector<double> normalized(logWeights.size(), 0.0);
+          double maxLog = -std::numeric_limits<double>::infinity();
+          for (double logWeight : logWeights)
+            if (std::isfinite(logWeight))
+              maxLog = std::max(maxLog, logWeight);
+          if (!std::isfinite(maxLog)) return normalized;
+          double sum = 0.0;
+          for (std::size_t index = 0; index < logWeights.size(); ++index) {
+            if (!std::isfinite(logWeights[index])) continue;
+            normalized[index] = std::exp(logWeights[index] - maxLog);
+            sum += normalized[index];
+          }
+          if (!(sum > 0.0) || !std::isfinite(sum))
+            return std::vector<double>(logWeights.size(), 0.0);
+          for (auto& weight : normalized) weight /= sum;
+          return normalized;
+        };
+        const auto normalizedPriorChannel =
+            normalizeLogWeights(priorChannelLogWeights);
+        const auto normalizedLookaheadChannel =
+            normalizeLogWeights(lookaheadChannelLogWeights);
+        for (std::size_t componentIndex = 0;
+             componentIndex < reverseComps.size(); ++componentIndex) {
+          const auto* component = reverseComps[componentIndex];
           lineageGraph.setNormalizedPosterior(
               component->lineageNodeId, component->weight);
+          lineageGraph.setLocalChannelPosteriors(
+              reverseMeasurementNodeIds[componentIndex],
+              normalizedPriorChannel[componentIndex],
+              lookaheadChannels.empty()
+                  ? std::numeric_limits<double>::quiet_NaN()
+                  : normalizedLookaheadChannel[componentIndex]);
+        }
 
         // Let every reverse-process child incorporate the inward target hit
         // before cutoff or mixture reduction.  The Gaussian states below are

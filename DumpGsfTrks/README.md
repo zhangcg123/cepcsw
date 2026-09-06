@@ -435,6 +435,18 @@ replace live reverse weights. Experimental `SmoothedMarginal` remains
 available as a default-off comparison; it reuses overlapping forward evidence
 at successive surfaces and is not a calibrated posterior.
 
+The maintained card also sets `InwardLookaheadDepth=1` for the current reverse
+comparison campaign. The compiled and inherited-template default remains zero.
+For a positive depth `N`, temporary copies of each newly split reverse child
+probe the farther-inward hits `i-1` through `i-N`; separately normalized probe
+posteriors are averaged, then combined at equal status with the original BH
+prior after both channels receive the ordinary adjacent-hit likelihood. The
+live state is updated only once, and probe hits are reused by the later inward
+recursion. This is an uncalibrated evidence-reuse diagnostic, not a production
+default. The retired `NextMeasurement` and `NextNextMeasurement` strings are
+invalid; use numeric depths one and two respectively when reproducing their
+reach.
+
 This same reverse branch is the maintained double-off diagnostic:
 `ForwardBHSplitting=False`, `InwardBHSplitting=False`. The two switches control
 only BH child creation in the shared outward and independent inward filters.

@@ -245,6 +245,10 @@ StatusCode RecGsfFlatTuple::initialize() {
                  &m_lineage_node_log_unnormalized_posterior);
   m_tree->Branch("lineage_node_normalized_posterior",
                  &m_lineage_node_normalized_posterior);
+  m_tree->Branch("lineage_node_prior_local_posterior",
+                 &m_lineage_node_prior_local_posterior);
+  m_tree->Branch("lineage_node_lookahead_local_posterior",
+                 &m_lineage_node_lookahead_local_posterior);
   m_tree->Branch("lineage_node_predicted_kappa",
                  &m_lineage_node_predicted_kappa);
   m_tree->Branch("lineage_node_predicted_kappa_variance",
@@ -535,6 +539,8 @@ StatusCode RecGsfFlatTuple::execute() {
   m_lineage_node_logdet_innovation.clear();
   m_lineage_node_log_unnormalized_posterior.clear();
   m_lineage_node_normalized_posterior.clear();
+  m_lineage_node_prior_local_posterior.clear();
+  m_lineage_node_lookahead_local_posterior.clear();
   m_lineage_node_predicted_kappa.clear();
   m_lineage_node_predicted_kappa_variance.clear();
   m_lineage_node_predicted_pT.clear();
@@ -590,6 +596,18 @@ StatusCode RecGsfFlatTuple::execute() {
         m_inLineageNodeLogUnnormalizedPosterior.get();
     const auto* nodeNormalizedPosterior =
         m_inLineageNodeNormalizedPosterior.get();
+    const podio::UserDataCollection<double>* nodePriorLocalPosterior =
+        nullptr;
+    const podio::UserDataCollection<double>* nodeLookaheadLocalPosterior =
+        nullptr;
+    try {
+      nodePriorLocalPosterior = m_inLineageNodePriorLocalPosterior.get();
+      nodeLookaheadLocalPosterior =
+          m_inLineageNodeLookaheadLocalPosterior.get();
+    } catch (...) {
+      // Older lineage producers do not contain the look-ahead channel
+      // diagnostics. Preserve the graph and expose row-aligned NaNs.
+    }
     const auto* nodePredictedKappa = m_inLineageNodePredictedKappa.get();
     const auto* nodePredictedKappaVariance =
         m_inLineageNodePredictedKappaVariance.get();
@@ -726,6 +744,22 @@ StatusCode RecGsfFlatTuple::execute() {
           nodeLogUnnormalizedPosterior->end());
       m_lineage_node_normalized_posterior.assign(
           nodeNormalizedPosterior->begin(), nodeNormalizedPosterior->end());
+      const bool localChannelsConsistent =
+          nodePriorLocalPosterior && nodeLookaheadLocalPosterior &&
+          nodePriorLocalPosterior->size() == nodeCount &&
+          nodeLookaheadLocalPosterior->size() == nodeCount;
+      if (localChannelsConsistent) {
+        m_lineage_node_prior_local_posterior.assign(
+            nodePriorLocalPosterior->begin(), nodePriorLocalPosterior->end());
+        m_lineage_node_lookahead_local_posterior.assign(
+            nodeLookaheadLocalPosterior->begin(),
+            nodeLookaheadLocalPosterior->end());
+      } else {
+        m_lineage_node_prior_local_posterior.assign(
+            nodeCount, std::numeric_limits<double>::quiet_NaN());
+        m_lineage_node_lookahead_local_posterior.assign(
+            nodeCount, std::numeric_limits<double>::quiet_NaN());
+      }
       m_lineage_node_predicted_kappa.assign(
           nodePredictedKappa->begin(), nodePredictedKappa->end());
       m_lineage_node_predicted_kappa_variance.assign(

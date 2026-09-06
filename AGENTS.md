@@ -269,78 +269,54 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate design question is a hit-0 global comparison within the reverse
-GSF, replacing premature surface-local competition without reviving the
-retired standalone global-loss profiler. The proposed bounded hypothesis bank
-keeps one no-radiation identity backbone. At each eligible inward material
-interval only that backbone emits the configured non-identity BH children.
-Each emitted child represents exactly one radiative interval, is never split
-again, and is propagated through every remaining inner measurement to hit 0
-without KL merging or posterior-weight pruning against other histories.
+The immediate experiment is numeric inward look-ahead feedback inside the
+reverse GSF. The retired `NextMeasurement` and `NextNextMeasurement` string
+modes are replaced by `InwardLookaheadDepth`, compiled default zero. With
+`InwardWeightMode=LocalMeasurement`, a positive depth `N` probes every
+available farther-inward hit `i-1` through `i-N` after an actual BH split on
+`i+1 -> i`. Every probe starts independently from the split state, performs no
+intervening measurement update or explicit split, and is discarded after its
+posterior is evaluated. A failed probe cannot delete a live child.
 
-At hit 0, compare the identity and all single-loss histories using one complete
-path score: the BH log-prior for the full interval history plus the accumulated
-measurement log-likelihood from all hits. This is intended to test whether a
-low-prior light-loss child that is ambiguous at its adjacent measurement can
-be recovered by the remaining inner hits. It deliberately excludes multiple-
-loss histories in its first form, limiting the bank to approximately
-`1 + N_intervals * (N_BH_components - 1)` candidates instead of exponential
-branching.
+At local hit 0 no farther-inward probe exists, so only the ordinary terminal
+measurement update is performed. A wholly invalid probe hit is omitted from
+the average; if every requested probe is invalid, the feedback falls back to
+the original prior and normalization recovers the baseline local weighting.
 
-This method is not implemented or validated. Before editing the live reverse
-filter, review the state/weight ownership, exact interval at which the loss
-operator is applied, full-path prior normalization, endpoint publication, and
-memory contract. In particular, retaining every intermediate lineage node
-would scale roughly as `N_intervals^2 * N_BH_components`; the fit may keep the
-active state bank while persisting only the history summaries needed to audit
-the hit-0 decision. The retired `RecGsfGlobalLossRefitter` and its maintained-
-card/flat-tuple adapters are not the implementation base; their historical
-evidence remains under `agents_record/`.
+Each probe posterior is normalized separately over components and the valid
+probe vectors are averaged. The original BH-prior vector and this averaged
+feedback remain distinct until the ordinary adjacent measurement at hit `i`
+is evaluated exactly once. Both channels receive the same local likelihood;
+their unnormalized contributions are added with no feedback-fraction control,
+then globally normalized into the one live state bank before the existing
+cutoff, KL reduction, and inward recursion. Probe hits are intentionally reused
+later, so this is an uncalibrated evidence-reuse diagnostic rather than a
+Bayesian posterior. `SmoothedMarginal` is incompatible with positive depth.
 
-A compiled-double-off identity-message gate now excludes the naive maximum
-F/B brem score as the hit-0 trigger. In 199 topology-clear events its
-event-level maximum had ROC AUC 0.484 and was dominated by hits 220--230; at
-the exact saved intervals its AUC was 0.539 and a nominal one-sided two-sigma
-cut gave 8.37% Type-I and 89.68% Type-II error. The score remains passive and
-uncalibrated. Direction-local three-hit prefits remove direct opposite-side
-seed contamination. On the same sample with a 0.2% truth-loss floor and a
-plus/minus-one-interval tolerance, the loose 0.95 cut improved Type-II error
-from 72.92% to 58.33% at essentially unchanged Type-I error, but every newly
-recovered interval was in the outer boundary group; hits 5--219 were
-unchanged. Any hit-0 design must still address message independence,
-cross-covariance, boundary behavior, and coherent path evidence. The exact
-gates are in `agents_record/2026-09-01-double-off-brem-score-errors.md` and
-`agents_record/2026-09-02-directional-three-hit-gsf-initialization.md`.
-Replacing the one-dimensional magnitude with the full five-dimensional
-compatibility did not rescue the detector: at the same 0.95 threshold it
-reduced Type-I error from 11.55% to 10.60% but increased Type-II error for
-losses at or above 0.2% from 58.33% to 63.54%; at equal Type-I count it still
-missed 59/96 instead of 56/96. The new score remains passive; its definition
-and gate are in
-`agents_record/2026-09-02-forward-backward-5d-brem-score.md`.
+The flat tuple records the separate post-local channels as
+`lineage_node_prior_local_posterior` and
+`lineage_node_lookahead_local_posterior`; the existing
+`lineage_node_normalized_posterior` is the combined live value. Status-3 side
+nodes retain the separately normalized posterior for each temporary probe.
+Depth zero reproduces the stored LocalMeasurement endpoints exactly on the
+focused indices 11, 16, and 17. Depth 1 is mechanically stable but did not
+recover event 16 and degraded recovered event 17 from -0.311% to -0.732% in
+the first current-control comparison. Depth 2 has verified cumulative
+two-probe evaluation and channel normalization, but is not physics-validated.
+Exact old/new contracts and gates are in
+`agents_record/2026-09-06-delayed-inward-measurement-modes.md`; the deferred
+hit-0 single-loss-bank design is preserved in
+`agents_record/2026-09-06-hit-zero-single-loss-bank-design.md`.
 
-The completed directional-splitting and SmoothedMarginal studies remain
-controls, not defaults. Their exact mechanical and population evidence is in
-`agents_record/2026-08-31-directional-bh-splitting-controls.md` and
-`agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
-Default-off `NextMeasurement` and `NextNextMeasurement` now implement a
-bounded proxy for later evidence: after an inward BH split, temporary copies
-probe hit `i-1` or `i-2`, transfer only their normalized posterior weights
-back to the split-surface children, and are discarded; the live children then
-resume the complete adjacent-hit recursion at hit `i`. This first diagnostic
-intentionally counts the probe evidence again when the live fit reaches that
-hit. On ten selected negative-peak events, FullMixture mean absolute residual
-changed from 0.840% locally to 0.667%/0.671%, but three tracks crossed to
-positive residuals. Hard-loss event 17 remained recovered but degraded from
--0.265% to -0.932%/-0.532%; event 16 remained unrecovered. These modes are
-mechanically available, not population-validated or promoted. Their current
-and superseded hit-skipping contracts and exact evidence are in
-`agents_record/2026-09-06-delayed-inward-measurement-modes.md`.
-Freeze the production controls and existing endpoint definitions while the
-hit-0 method is designed: `DD4hepBetweenSurfaces`,
-`CEPCRuntimeCategoryAligned9Clear`, `MaxComponents=10`,
-`ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
-`ForwardSeed=1`, `BackwardSeed=1`, compiled directional gates false/false,
-and
-`InwardWeightMode=LocalMeasurement`. ECAL remains paused. Historical detail
-does not override this live focus.
+Next, run an unbiased topology-clear depth scan, at minimum depths 0, 1, and
+2. Report no-eBrem, light-eBrem, hard-eBrem, transition-location, clean-core,
+and extreme-tail behavior separately. A narrower selected core is not enough:
+the experiment advances only if it preserves no-eBrem tracks and does not
+increase catastrophic tails. Keep production controls and endpoint definitions
+frozen: `DD4hepBetweenSurfaces`, `CEPCRuntimeCategoryAligned9Clear`,
+`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
+protection, `ForwardSeed=1`, `BackwardSeed=1`, compiled directional splitting
+false/false, and compiled `InwardLookaheadDepth=0`. The maintained comparison
+card explicitly selects reverse inward splitting and depth 1 for the current
+campaign. ECAL remains paused. Historical detail does not override this live
+focus.

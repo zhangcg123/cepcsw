@@ -107,7 +107,7 @@ gsf.ComponentWeightCutoff = 1.0e-4
 gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True
-gsf.ElossOn = True
+gsf.ElossOn = False
 # Independent direction-local seed-covariance scales. A value of 1 applies
 # the five FullLDCTracking-style variances unchanged; another positive value
 # uniformly multiplies all five variances.
@@ -122,15 +122,15 @@ gsf.ReverseFiltering = False
 # standard-KF-style seed with the outermost hit already updated. The value -1
 # is a mode selector, not a negative covariance multiplier.
 gsf.InwardSeedCovarianceScale = -1.0
-# Live reverse weighting policy. LocalMeasurement uses adjacent hit i for a
-# cohort split at surface i+1. NextMeasurement and NextNextMeasurement score
-# temporary copies at hit max(0,i-1) or max(0,i-2), transfer those weights back
-# at the split surface, then resume the ordinary adjacent-hit recursion. The
-# probe makes no intermediate measurement update or BH split; its target hit is
-# intentionally used again later by the live recursion in this diagnostic.
-# SmoothedMarginal is the separate passive F/B-product weighting experiment.
-# Keep the compiled/default LocalMeasurement policy explicit in this card.
+# Live reverse weighting family: LocalMeasurement or SmoothedMarginal.
+# The independent nonnegative look-ahead depth defaults to zero. For depth N,
+# temporary children probe each unique hit i-1 through i-N, their separately
+# normalized posteriors are averaged, and the ordinary adjacent update then
+# combines equal-status feedback and original-BH-prior weight channels. Probe
+# states are discarded and their hits are intentionally reused by the live
+# recursion. A positive depth is incompatible with SmoothedMarginal.
 gsf.InwardWeightMode = "LocalMeasurement"
+gsf.InwardLookaheadDepth = 0
 gsf.MaterialIPExtrapolation = False
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
@@ -169,11 +169,23 @@ elif method == "reverse":
     # same-surface products remain passive under LocalMeasurement and never
     # propagate or publish.
     gsf.ReverseFiltering = True
-    gsf.InwardBHSplitting = False
+
+    gsf.BackwardSeed = 1.0
+    gsf.InwardBHSplitting = True
+
+    gsf.ForwardSeed = 1.0
+    gsf.ForwardBHSplitting = False
+
+    # Current comparison campaign: preserve the former NextMeasurement reach
+    # using the integer look-ahead API while keeping LocalMeasurement as the
+    # weighting family.
     gsf.InwardWeightMode = "LocalMeasurement"
+    gsf.InwardLookaheadDepth = 1
+
     # Inert for the maintained fresh single-component inward seed; retained
     # explicitly for positive-scale copied-mixture comparison cards.
-    gsf.ReverseInitialWeightMode = "ForwardPosterior"
+    gsf.InwardSeedCovarianceScale = -1  # A positive value uses the forward final mixture.
+    gsf.ReverseInitialWeightMode = "ForwardPosterior"  # Active only when the scale is positive.
 
 else:
     raise ValueError(

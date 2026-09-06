@@ -203,3 +203,64 @@ The FullMixture optimizer reports its pre-existing non-positive-definite
 fallback for event 16 in every current look-ahead run. These modes remain
 default-off diagnostics pending an unbiased population check and removal or
 explicit calibration of the deliberate probe-evidence double counting.
+
+## Replacement: numeric averaged look-ahead with a preserved prior channel
+
+Later on 2026-09-06, the two fixed string modes above were retired. The live
+API now keeps `InwardWeightMode=LocalMeasurement` and adds the nonnegative
+integer `InwardLookaheadDepth`, compiled default zero. A positive depth is
+invalid with `SmoothedMarginal`.
+
+After a real inward BH split on `i+1 -> i`, depth `N` independently probes
+every available farther-inward hit `i-1` through `i-N`. Each temporary probe
+starts from the split state, performs no intervening measurement update or
+explicit BH split, and is discarded after its likelihood is evaluated. Its
+posterior is normalized separately over the successfully evaluated children.
+The normalized probe posteriors are then averaged arithmetically. A failed
+temporary evaluation contributes zero for that component at that probe and
+never deletes the live child.
+
+A wholly invalid probe hit is omitted from the average. If every requested
+probe is invalid, the feedback vector falls back to the original prior, so the
+two equal channels reduce to the baseline local weighting after normalization.
+At local hit zero no farther-inward target exists and only the ordinary
+terminal measurement update runs.
+
+The original normalized BH-prior vector and the averaged-feedback vector stay
+as two weight channels. The ordinary adjacent hit `i` is evaluated once, so
+there is only one updated state and covariance per live child. Both channels
+receive that same local likelihood, their unnormalized contributions are
+added with no configurable feedback fraction, and the union is globally
+normalized before the existing cutoff, KL reduction, and inward recursion.
+The probed hits are intentionally used again when the live recursion reaches
+them; this remains an uncalibrated evidence-reuse experiment.
+
+Two row-aligned flat-tuple diagnostics decompose the accepted local node:
+`lineage_node_prior_local_posterior` and
+`lineage_node_lookahead_local_posterior`. The existing
+`lineage_node_normalized_posterior` is the combined live posterior. Status-3
+nodes retain each separately normalized temporary-probe posterior.
+
+The implementation was built and installed successfully. A verbose depth-1
+run on selected index 11 showed finite ten-component probe posteriors and the
+original, feedback, and combined weights at each split. A depth-2 run showed
+`requested=2, valid=2` where two farther-inward hits existed and one unique
+probe near hit 0. On every active local surface, each separately persisted
+channel and the combined posterior summed to one within floating-point
+precision.
+
+With the current maintained physics controls (including identity protection),
+same-code depth-0 reruns reproduced the stored local results exactly for
+selected indices 11, 16, and 17. The first depth-1 mechanical comparison was:
+
+| selected index | truth pT [GeV] | depth-0 FullMix pT [GeV] | depth-1 FullMix pT [GeV] | depth-0 residual [%] | depth-1 residual [%] |
+|---:|---:|---:|---:|---:|---:|
+| 11 | 40.731567 | 40.892867 | 40.892684 | +0.396 | +0.396 |
+| 16 | 37.894016 | 18.287020 | 18.287020 | -51.742 | -51.742 |
+| 17 | 18.796978 | 18.738430 | 18.659459 | -0.311 | -0.732 |
+
+This is a mechanical gate, not performance validation. Depth 1 preserved the
+event-17 hard-loss recovery but degraded its residual, and event 16 remained
+unrecovered. The next required gate is an unbiased topology-clear population
+comparison across depth 0, 1, and larger depths, with no-ebrem safety and
+extreme tails reported separately.

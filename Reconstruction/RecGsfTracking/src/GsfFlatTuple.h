@@ -137,6 +137,14 @@ private:
       m_inLineageNodeNormalizedPosterior{
           "GSFLineageNodeNormalizedPosterior",
           Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodePriorLocalPosterior{
+          "GSFLineageNodePriorLocalPosterior",
+          Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_inLineageNodeLookaheadLocalPosterior{
+          "GSFLineageNodeLookaheadLocalPosterior",
+          Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>> m_inLineageNodePredictedKappa{
       "GSFLineageNodePredictedKappa", Gaudi::DataHandle::Reader, this};
   DataHandle<podio::UserDataCollection<double>>
@@ -298,6 +306,8 @@ private:
   std::vector<double> m_lineage_node_logdet_innovation;
   std::vector<double> m_lineage_node_log_unnormalized_posterior;
   std::vector<double> m_lineage_node_normalized_posterior;
+  std::vector<double> m_lineage_node_prior_local_posterior;
+  std::vector<double> m_lineage_node_lookahead_local_posterior;
   std::vector<double> m_lineage_node_predicted_kappa;
   std::vector<double> m_lineage_node_predicted_kappa_variance;
   std::vector<double> m_lineage_node_predicted_pT;

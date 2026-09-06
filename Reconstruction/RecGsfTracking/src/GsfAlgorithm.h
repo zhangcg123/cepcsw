@@ -176,6 +176,14 @@ private:
       m_lineageNodeNormalizedPosterior{
           "GSFLineageNodeNormalizedPosterior",
           Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodePriorLocalPosterior{
+          "GSFLineageNodePriorLocalPosterior",
+          Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<double>>
+      m_lineageNodeLookaheadLocalPosterior{
+          "GSFLineageNodeLookaheadLocalPosterior",
+          Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>> m_lineageNodePredictedKappa{
       "GSFLineageNodePredictedKappa", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<double>>
@@ -294,14 +302,17 @@ private:
   Gaudi::Property<std::string> m_inwardWeightMode{
       this, "InwardWeightMode", "LocalMeasurement",
       "LocalMeasurement uses the B_predicted x hit likelihood posterior; "
-      "after a BH split, NextMeasurement probes one hit beyond the adjacent "
-      "inward hit and NextNextMeasurement probes two hits beyond it on "
-      "temporary copies, transfers only the probe posterior weights back, "
-      "then resumes ordinary adjacent-hit updates; probes clamp to hit 0 and "
-      "are intentionally counted again when reached by the live recursion; "
+      "an optional InwardLookaheadDepth adds averaged farther-inward "
+      "measurement feedback while preserving the original BH-prior channel; "
       "SmoothedMarginal propagates B_updated states with weights obtained by "
       "marginalizing each interior F_updated x B_predicted product over its "
       "forward partners"};
+  Gaudi::Property<int> m_inwardLookaheadDepth{
+      this, "InwardLookaheadDepth", 0,
+      "With LocalMeasurement, probe every available hit from i-1 through "
+      "i-N after an inward BH split, average their separately normalized "
+      "posteriors, and combine that feedback equally with the original "
+      "BH-prior channel at the ordinary local update"};
   Gaudi::Property<std::string> m_reverseInitialWeightMode{
       this, "ReverseInitialWeightMode", "ForwardPosterior",
       "ForwardPosterior or Uniform diagnostic reverse-start weights"};
