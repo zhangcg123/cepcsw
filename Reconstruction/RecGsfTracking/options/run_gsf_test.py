@@ -31,7 +31,8 @@ gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = True; gsf.MaxComponents = 24
 gsf.BHSplitThreshold = 0.01; gsf.MSOn = True; gsf.ElossOn = True
 gsf.VerboseDump = True; gsf.MaterialIPExtrapolation = False
-gsf.KappaSeedCov = 1e-7  # 1e-7=tight(trust LCIO); 1e-4=loose(more KF freedom)
+gsf.ForwardKappaSeedCov = 1e-7
+gsf.InwardKappaSeedCov = 1e-7  # 1e-7=tight; 1e-4=loose
 
 from Configurables import PodioOutput
 out = PodioOutput("outputalg"); out.filename = "gsf_test.root"; out.outputCommands = ["keep *"]

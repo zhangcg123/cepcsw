@@ -239,12 +239,12 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 38 `RecGsfTracking` properties, their
+The authoritative explanation of all 37 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 37 of the 38
+For this maintained workflow, `gsf.py.bk` explicitly configures 36 of the 37
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -377,13 +377,15 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After retiring the configurable endpoint-output selectors,
-`RecGsfTracking` has 38 compiled properties. This card explicitly steers 37
+After retiring the configurable endpoint-output selectors and the deprecated
+common curvature-seed alias,
+`RecGsfTracking` has 37 compiled properties. This card explicitly steers 36
 and deliberately inherits only `RecordTruthMaterialIntervals=true`.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
-`SurfaceConsistencyUninformativeFloor` or `GSFOutputMode` property, or
+`SurfaceConsistencyUninformativeFloor`, `GSFOutputMode`, or `KappaSeedCov`
+property, or
 assigning the removed `ReverseSelectionMode` property with its former
 `AggregateWeight`, `DominantLineage`, or `SurfaceConsistency` values are stale
 experiment artifacts and must be regenerated rather than edited in place.
@@ -410,12 +412,10 @@ seed, with an explicit outermost-hit update before recursion starts at `N-2`.
 The maintained value -1 is only a mode selector, not a negative covariance
 multiplier. It creates one unit-weight inward root, so the explicitly retained
 `ReverseInitialWeightMode="ForwardPosterior"` setting is inert in this card.
-The maintained card now sets `ForwardKappaSeedCov=-1` and
-`InwardKappaSeedCov=-1` independently and explicitly disables the deprecated
-common `KappaSeedCov` alias with zero. Old generated cards that set only a
-nonzero `KappaSeedCov` remain mechanically compatible and apply that value to
-both directions, but they cannot perform a direction-separated study and
-should be regenerated. The inward control affects only this fresh-seed mode;
+The maintained card sets `ForwardKappaSeedCov=-1` and
+`InwardKappaSeedCov=-1` independently. Any old card that assigns the removed
+common `KappaSeedCov` alias is stale and must be regenerated with explicit
+directional controls. The inward control affects only this fresh-seed mode;
 it is inert when a positive scale selects the copied-mixture seed.
 The reverse branch explicitly sets `InwardWeightMode="LocalMeasurement"`,
 matching the compiled and active reverse-template control. The retained

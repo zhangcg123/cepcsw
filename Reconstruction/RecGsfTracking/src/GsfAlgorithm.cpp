@@ -2434,29 +2434,10 @@ StatusCode RecGsfTracking::initialize() {
     return StatusCode::FAILURE;
   }
   if (!std::isfinite(m_forwardKappaSeedCov.value()) ||
-      !std::isfinite(m_inwardKappaSeedCov.value()) ||
-      !std::isfinite(m_kappaSeedCov.value())) {
-    error() << "ForwardKappaSeedCov, InwardKappaSeedCov, and the deprecated "
-               "KappaSeedCov compatibility override must be finite"
+      !std::isfinite(m_inwardKappaSeedCov.value())) {
+    error() << "ForwardKappaSeedCov and InwardKappaSeedCov must be finite"
             << endmsg;
     return StatusCode::FAILURE;
-  }
-  m_effectiveForwardKappaSeedCov = m_forwardKappaSeedCov.value();
-  m_effectiveInwardKappaSeedCov = m_inwardKappaSeedCov.value();
-  if (m_kappaSeedCov.value() != 0.0) {
-    if (m_forwardKappaSeedCov.value() != -1.0 ||
-        m_inwardKappaSeedCov.value() != -1.0) {
-      error() << "Deprecated KappaSeedCov cannot be combined with a "
-                 "non-default ForwardKappaSeedCov or InwardKappaSeedCov; "
-                 "set KappaSeedCov=0 to use the directional controls"
-              << endmsg;
-      return StatusCode::FAILURE;
-    }
-    m_effectiveForwardKappaSeedCov = m_kappaSeedCov.value();
-    m_effectiveInwardKappaSeedCov = m_kappaSeedCov.value();
-    warning() << "KappaSeedCov is deprecated; applying its value to both "
-                 "direction-local GSF initializers"
-              << endmsg;
   }
   if (m_gaussianSumSmoothing.value() && m_materialIPExtrap.value()) {
     error() << "GaussianSumSmoothing currently requires "
@@ -2592,8 +2573,8 @@ StatusCode RecGsfTracking::initialize() {
          << " forwardBHSplitting=" << m_forwardBHSplitting.value()
          << " inwardBHSplitting=" << m_inwardBHSplitting.value()
          << " inwardWeightMode=" << m_inwardWeightMode.value()
-         << " forwardKappaSeedCov=" << m_effectiveForwardKappaSeedCov
-         << " inwardKappaSeedCov=" << m_effectiveInwardKappaSeedCov
+         << " forwardKappaSeedCov=" << m_forwardKappaSeedCov.value()
+         << " inwardKappaSeedCov=" << m_inwardKappaSeedCov.value()
          << " verbose=" << m_verboseDump.value() << "/"
          << m_verboseSplitDump.value() << "/"
          << m_componentDebugDump.value()
@@ -3202,7 +3183,7 @@ StatusCode RecGsfTracking::execute() {
     auto initialization = initializer.initialize(
         orderedHits, *hits.front().layer, *hits.front().kalHit, bz,
         GsfTrackInitializationDirection::Outward,
-        m_effectiveForwardKappaSeedCov);
+        m_forwardKappaSeedCov.value());
     if (!initialization.valid()) {
       warning() << "GSF standard-KF-style initialization failed for event="
                 << eventIndex << " inputTrack=" << inputTrackIndex << ": "
@@ -4055,7 +4036,7 @@ StatusCode RecGsfTracking::execute() {
         auto inwardInitialization = initializer.initialize(
             orderedHits, *hits.back().layer, *hits.back().kalHit, bz,
             GsfTrackInitializationDirection::Inward,
-            m_effectiveInwardKappaSeedCov);
+            m_inwardKappaSeedCov.value());
         if (!inwardInitialization.valid()) {
           warning() << "GSF standard-KF-style inward initialization failed "
                     << "for event=" << eventIndex

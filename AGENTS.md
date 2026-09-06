@@ -80,9 +80,8 @@ and the three outermost hits inward, followed by the loose `FullLDCTracking`
 covariance and an explicit boundary-hit MarlinTrk update.
 `ForwardKappaSeedCov=-1` and `InwardKappaSeedCov=-1` independently select
 `Var(omega)=1e-4`; positive values are direction-local diagnostic
-`Var(kappa)` overrides. The deprecated `KappaSeedCov` compatibility alias is
-disabled by zero in the maintained card. The
-implementation gates are in
+`Var(kappa)` overrides. Both controls are steered directly; there is no common
+compatibility alias. The implementation gates are in
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md` and
 `agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`.
 

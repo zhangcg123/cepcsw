@@ -82,7 +82,10 @@ gsf.ProtectIdentityLineage = os.getenv(
 
 gsf.MSOn = True
 gsf.ElossOn = os.getenv("GSF_ELOSS_ON", "1").lower() in ("1", "true", "yes")
-gsf.KappaSeedCov = float(os.getenv("GSF_KAPPA_SEED_COV", "-1.0"))
+gsf.ForwardKappaSeedCov = float(os.getenv(
+    "GSF_FORWARD_KAPPA_SEED_COV", "-1.0"))
+gsf.InwardKappaSeedCov = float(os.getenv(
+    "GSF_INWARD_KAPPA_SEED_COV", "-1.0"))
 
 # Enables inward multi-component filtering. It publishes BestBranch,
 # WeightedMean, and FullMixtureMode to their separate row-aligned collections

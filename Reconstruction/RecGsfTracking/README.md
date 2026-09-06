@@ -60,18 +60,16 @@ MarlinTrk update with that first hit. `ForwardKappaSeedCov` and
 direction-local outward and fresh-inward prefits; they do not restore the
 former `CompleteTracks`-anchored seed. The inward control is inert when a
 positive `InwardSeedCovarianceScale` selects the copied-mixture seed.
-`KappaSeedCov` remains a deprecated compatibility alias: its nonzero value is
-accepted only while both directional controls retain `-1`, and then applies
-to both initializers. The same initializer and curvature convention are used
-with the last three available two-dimensional hits at the outermost boundary
-when fresh inward initialization is selected.
+The same initializer and curvature convention are used with the last three
+available two-dimensional hits at the outermost boundary when fresh inward
+initialization is selected.
 The old alternate KF fitter
 and other initialization experiments have been removed; historical
 comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-06. `RecGsfTracking` exposes 38 Gaudi properties in
+Reference date: 2026-09-06. `RecGsfTracking` exposes 37 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -97,7 +95,6 @@ distinction matters because that template enables `ElossOn` and
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
 | `ForwardKappaSeedCov` | `-1` | same | Outward three-innermost-hit prefit curvature control. Any finite value `<=0` selects the standard-KF `Var(omega)=1e-4`; a finite positive value instead directly sets `Var(kappa)`, internally converted as `Var(omega)=ForwardKappaSeedCov * alpha^2` before pivot transport. It changes only the curvature entry; the other four loose covariance entries and explicit first-hit update are unchanged. |
 | `InwardKappaSeedCov` | `-1` | same | Fresh-inward three-outermost-hit prefit curvature control, with the same units and conversion as `ForwardKappaSeedCov`. It acts only when `InwardSeedCovarianceScale<=0`; a positive inward scale copies and scales the final forward mixture and therefore ignores this property. |
-| `KappaSeedCov` | `0` | `-1` | Deprecated compatibility alias for cards predating the directional controls. Zero disables it. A finite nonzero value is accepted only while both directional properties remain `-1`, and then applies to both initializers; combining it with either explicitly changed directional property is an initialization error. New cards must set the two directional properties and leave this alias at zero. |
 
 Material between consecutive accepted measurements is owned by the outgoing
 transition from the current measurement to the next one. The final
@@ -389,7 +386,7 @@ one row per BH parent or child.
 
 ### Collection handles
 
-The data handles are configurable separately from the 38 properties:
+The data handles are configurable separately from the 37 properties:
 
 | Role | Default collection |
 |---|---|
@@ -543,7 +540,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 37 of the 38 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 36 of the 37 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
 ECAL settings agree with the production baseline:
@@ -591,7 +588,7 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 38-property inventory above is part of the configurable interface, not a
+The 37-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.
