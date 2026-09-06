@@ -161,4 +161,9 @@ if [ "${run_gsf}" = true ]; then
     else
         echo "Retaining external tracker input used by gsf-only stage: ${trkfile}"
     fi
+    if ! rm -- "${gsf_output}"; then
+        echo "Failed to remove intermediate GSF EDM tuple: ${gsf_output}" >&2
+        exit 1
+    fi
+    echo "Removed GSF EDM tuple after verified flat-tuple output: ${gsf_output}"
 fi
