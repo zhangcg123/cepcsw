@@ -2433,9 +2433,11 @@ StatusCode RecGsfTracking::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
-  if (!std::isfinite(m_forwardKappaSeedCov.value()) ||
-      !std::isfinite(m_inwardKappaSeedCov.value())) {
-    error() << "ForwardKappaSeedCov and InwardKappaSeedCov must be finite"
+  if (!std::isfinite(m_forwardSeed.value()) ||
+      m_forwardSeed.value() <= 0.0 ||
+      !std::isfinite(m_backwardSeed.value()) ||
+      m_backwardSeed.value() <= 0.0) {
+    error() << "ForwardSeed and BackwardSeed must be finite and positive"
             << endmsg;
     return StatusCode::FAILURE;
   }
@@ -2573,8 +2575,8 @@ StatusCode RecGsfTracking::initialize() {
          << " forwardBHSplitting=" << m_forwardBHSplitting.value()
          << " inwardBHSplitting=" << m_inwardBHSplitting.value()
          << " inwardWeightMode=" << m_inwardWeightMode.value()
-         << " forwardKappaSeedCov=" << m_forwardKappaSeedCov.value()
-         << " inwardKappaSeedCov=" << m_inwardKappaSeedCov.value()
+         << " forwardSeed=" << m_forwardSeed.value()
+         << " backwardSeed=" << m_backwardSeed.value()
          << " verbose=" << m_verboseDump.value() << "/"
          << m_verboseSplitDump.value() << "/"
          << m_componentDebugDump.value()
@@ -3183,7 +3185,7 @@ StatusCode RecGsfTracking::execute() {
     auto initialization = initializer.initialize(
         orderedHits, *hits.front().layer, *hits.front().kalHit, bz,
         GsfTrackInitializationDirection::Outward,
-        m_forwardKappaSeedCov.value());
+        m_forwardSeed.value());
     if (!initialization.valid()) {
       warning() << "GSF standard-KF-style initialization failed for event="
                 << eventIndex << " inputTrack=" << inputTrackIndex << ": "
@@ -3197,7 +3199,7 @@ StatusCode RecGsfTracking::execute() {
           "  INIT standard-kf-prefit twoDHits=%d prefitHits=%d,%d,%d "
           "firstHitDChi2=%.9g "
           "firstHitNdf=%d firstHitDim=%d prefitOmega=%.9g filteredOmega=%.9g "
-          "prefitVarOmega=%.9g prefitVarKappa=%.9g")
+          "prefitCovarianceScale=%.9g")
             % initialization.twoDimensionalHitCount
             % initialization.prefitHitIndices[0]
             % initialization.prefitHitIndices[1]
@@ -3207,8 +3209,7 @@ StatusCode RecGsfTracking::execute() {
             % initialization.seedHitMeasurementDimension
             % initialization.prefitState.omega
             % initialization.seedFilteredState.omega
-            % initialization.prefitOmegaVariance
-            % initialization.prefitKappaVariance << endmsg;
+            % initialization.prefitCovarianceScale << endmsg;
     }
 
     // ---- Step 4: forward GSF filter ----
@@ -4036,7 +4037,7 @@ StatusCode RecGsfTracking::execute() {
         auto inwardInitialization = initializer.initialize(
             orderedHits, *hits.back().layer, *hits.back().kalHit, bz,
             GsfTrackInitializationDirection::Inward,
-            m_inwardKappaSeedCov.value());
+            m_backwardSeed.value());
         if (!inwardInitialization.valid()) {
           warning() << "GSF standard-KF-style inward initialization failed "
                     << "for event=" << eventIndex
@@ -4071,7 +4072,7 @@ StatusCode RecGsfTracking::execute() {
               "prefitHits=%d,%d,%d "
               "outerHitDChi2=%.9g outerHitNdf=%d outerHitDim=%d "
               "prefitOmega=%.9g filteredOmega=%.9g "
-              "prefitVarOmega=%.9g prefitVarKappa=%.9g")
+              "prefitCovarianceScale=%.9g")
                     % inwardInitialization.twoDimensionalHitCount
                     % inwardInitialization.prefitHitIndices[0]
                     % inwardInitialization.prefitHitIndices[1]
@@ -4081,8 +4082,7 @@ StatusCode RecGsfTracking::execute() {
                     % inwardInitialization.seedHitMeasurementDimension
                     % inwardInitialization.prefitState.omega
                     % inwardInitialization.seedFilteredState.omega
-                    % inwardInitialization.prefitOmegaVariance
-                    % inwardInitialization.prefitKappaVariance << endmsg;
+                    % inwardInitialization.prefitCovarianceScale << endmsg;
         }
       }
       GsfMixture::normalizeWeights(reverseComps);

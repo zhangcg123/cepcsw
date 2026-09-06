@@ -384,8 +384,8 @@ and deliberately inherits only `RecordTruthMaterialIntervals=true`.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
-`SurfaceConsistencyUninformativeFloor`, `GSFOutputMode`, or `KappaSeedCov`
-property, or
+`SurfaceConsistencyUninformativeFloor`, `GSFOutputMode`, `KappaSeedCov`,
+`ForwardKappaSeedCov`, or `InwardKappaSeedCov` property, or
 assigning the removed `ReverseSelectionMode` property with its former
 `AggregateWeight`, `DominantLineage`, or `SurfaceConsistency` values are stale
 experiment artifacts and must be regenerated rather than edited in place.
@@ -412,11 +412,13 @@ seed, with an explicit outermost-hit update before recursion starts at `N-2`.
 The maintained value -1 is only a mode selector, not a negative covariance
 multiplier. It creates one unit-weight inward root, so the explicitly retained
 `ReverseInitialWeightMode="ForwardPosterior"` setting is inert in this card.
-The maintained card sets `ForwardKappaSeedCov=-1` and
-`InwardKappaSeedCov=-1` independently. Any old card that assigns the removed
-common `KappaSeedCov` alias is stale and must be regenerated with explicit
-directional controls. The inward control affects only this fresh-seed mode;
-it is inert when a positive scale selects the copied-mixture seed.
+The maintained card sets `ForwardSeed=1.0` and `BackwardSeed=1.0`
+independently. A value of `1` uses all five FullLDCTracking-style diagonal
+seed variances unchanged; any other finite positive value uniformly scales
+all five. Old cards assigning `KappaSeedCov`, `ForwardKappaSeedCov`, or
+`InwardKappaSeedCov` are stale and must be regenerated. `BackwardSeed`
+affects only this fresh-seed mode; it is inert when a positive
+`InwardSeedCovarianceScale` selects the copied-mixture seed.
 The reverse branch explicitly sets `InwardWeightMode="LocalMeasurement"`,
 matching the compiled and active reverse-template control. The retained
 `F_updated x B_predicted` products remain passive diagnostics and do not

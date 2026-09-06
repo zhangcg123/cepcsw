@@ -44,7 +44,7 @@ unit-weight backward seed with the standard prefit and an explicit outermost-
 hit update. That mode is independent of the final forward mixture. The
 geometric prefit is direction-local: the outward filter uses the three
 innermost available two-dimensional hits and the fresh inward filter uses the
-three outermost. The two direction-local curvature controls described below
+three outermost. The two direction-local covariance scales described below
 belong to this common initializer; former workflow-specific duplicate seed
 properties remain removed. A
 default-off ECAL experiment can additionally write a paired component-selection result to
@@ -55,12 +55,13 @@ initializer: a temporary prefit through the first three available
 two-dimensional hits, followed by the loose covariance
 `Var(d0)=1e6`, `Var(phi)=1e2`, `Var(omega)=1e-4`, `Var(z0)=1e6`, and
 `Var(tanLambda)=1e2`, pivot transport to the first hit, and an explicit
-MarlinTrk update with that first hit. `ForwardKappaSeedCov` and
-`InwardKappaSeedCov` independently steer the curvature variance of the
-direction-local outward and fresh-inward prefits; they do not restore the
-former `CompleteTracks`-anchored seed. The inward control is inert when a
-positive `InwardSeedCovarianceScale` selects the copied-mixture seed.
-The same initializer and curvature convention are used with the last three
+MarlinTrk update with that first hit. `ForwardSeed` and `BackwardSeed`
+independently scale all five FullLDCTracking-style diagonal seed variances for
+the direction-local outward and fresh-inward prefits; a value of `1` uses the
+unscaled values above. They do not restore the former `CompleteTracks`-
+anchored seed. `BackwardSeed` is inert when a positive
+`InwardSeedCovarianceScale` selects the copied-mixture seed.
+The same initializer and covariance convention are used with the last three
 available two-dimensional hits at the outermost boundary when fresh inward
 initialization is selected.
 The old alternate KF fitter
@@ -93,8 +94,8 @@ distinction matters because that template enables `ElossOn` and
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
 | `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
-| `ForwardKappaSeedCov` | `-1` | same | Outward three-innermost-hit prefit curvature control. Any finite value `<=0` selects the standard-KF `Var(omega)=1e-4`; a finite positive value instead directly sets `Var(kappa)`, internally converted as `Var(omega)=ForwardKappaSeedCov * alpha^2` before pivot transport. It changes only the curvature entry; the other four loose covariance entries and explicit first-hit update are unchanged. |
-| `InwardKappaSeedCov` | `-1` | same | Fresh-inward three-outermost-hit prefit curvature control, with the same units and conversion as `ForwardKappaSeedCov`. It acts only when `InwardSeedCovarianceScale<=0`; a positive inward scale copies and scales the final forward mixture and therefore ignores this property. |
+| `ForwardSeed` | `1.0` | same | Finite positive covariance scale for the outward three-innermost-hit prefit. `1` assigns the FullLDCTracking-style diagonal variances `Var(d0)=1e6`, `Var(phi)=1e2`, `Var(omega)=1e-4`, `Var(z0)=1e6`, and `Var(tanLambda)=1e2`; any other positive value multiplies all five variances uniformly before pivot transport and the explicit first-hit update. |
+| `BackwardSeed` | `1.0` | same | Finite positive covariance scale for the fresh-inward three-outermost-hit prefit, with the same five-variance scaling as `ForwardSeed`. It acts only when `InwardSeedCovarianceScale<=0`; a positive inward scale copies and scales the final forward mixture and therefore ignores this property. |
 
 Material between consecutive accepted measurements is owned by the outgoing
 transition from the current measurement to the next one. The final

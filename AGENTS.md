@@ -78,12 +78,16 @@ the outermost hit, and first revisits hit `N-2`. The common initializer uses a
 direction-local two-dimensional-hit prefit: the three innermost hits outward
 and the three outermost hits inward, followed by the loose `FullLDCTracking`
 covariance and an explicit boundary-hit MarlinTrk update.
-`ForwardKappaSeedCov=-1` and `InwardKappaSeedCov=-1` independently select
-`Var(omega)=1e-4`; positive values are direction-local diagnostic
-`Var(kappa)` overrides. Both controls are steered directly; there is no common
-compatibility alias. The implementation gates are in
+`ForwardSeed=1` and `BackwardSeed=1` independently select the complete
+FullLDCTracking-style loose diagonal covariance for the direction-local
+prefits. Every finite positive value uniformly scales all five seed variances;
+zero and negative values are invalid. `BackwardSeed` is inert when a positive
+`InwardSeedCovarianceScale` selects a copied/scaled forward mixture. The
+implementation gates and retired curvature-only controls are in
 `agents_record/2026-08-28-standard-kf-gsf-initializer.md` and
-`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`.
+`agents_record/2026-08-29-fresh-inward-standard-kf-initialization.md`, with
+the current scaling contract in
+`agents_record/2026-09-06-directional-seed-covariance-scales.md`.
 
 The former CMS-like compatibility alias and `CmsGsfSmoothing` property are
 retired because they had become exactly equivalent to reverse while publishing
@@ -141,8 +145,8 @@ material-path evaluation, passive interval recording, deterministic energy
 loss, multiple scattering, propagation, or measurement updates.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
-`ForwardKappaSeedCov=-1` and `InwardKappaSeedCov=-1` (standard
-`Var(omega)=1e-4` direction-local prefits), `MaxComponents=10`,
+`ForwardSeed=1` and `BackwardSeed=1` (the complete FullLDCTracking-style
+loose covariance for both direction-local prefits), `MaxComponents=10`,
 `ComponentWeightCutoff=1e-4`, `SymmetricKL` reduction ranking,
 identity-lineage protection enabled, `ForwardBHSplitting=false`,
 `InwardBHSplitting=false`, and `CEPCRuntimeCategoryAligned9Clear`. Despite the
@@ -319,7 +323,7 @@ Freeze the production controls and existing endpoint definitions while the
 hit-0 method is designed: `DD4hepBetweenSurfaces`,
 `CEPCRuntimeCategoryAligned9Clear`, `MaxComponents=10`,
 `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity protection,
-`ForwardKappaSeedCov=-1`, `InwardKappaSeedCov=-1`, compiled directional gates
-false/false, and
+`ForwardSeed=1`, `BackwardSeed=1`, compiled directional gates false/false,
+and
 `InwardWeightMode=LocalMeasurement`. ECAL remains paused. Historical detail
 does not override this live focus.

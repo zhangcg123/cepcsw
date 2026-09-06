@@ -28,20 +28,14 @@ int covarianceIndex(int row, int column) {
   return row * (row + 1) / 2 + column;
 }
 
-double assignStandardPrefitCovariance(
-    edm4hep::TrackState& state, double bz,
-    double kappaCovarianceOverride) {
-  const double alpha = bz * 2.99792458e-4;
-  const double omegaVariance = kappaCovarianceOverride > 0.0
-      ? kappaCovarianceOverride * alpha * alpha
-      : 1.0e-4;
+void assignStandardPrefitCovariance(
+    edm4hep::TrackState& state, double seedCovarianceScale) {
   for (auto& value : state.covMatrix) value = 0.0;
-  state.covMatrix[0] = 1.0e6;   // Var(d0) [mm^2]
-  state.covMatrix[2] = 1.0e2;   // Var(phi) [rad^2]
-  state.covMatrix[5] = omegaVariance;  // Var(omega) [mm^-2]
-  state.covMatrix[9] = 1.0e6;   // Var(z0) [mm^2]
-  state.covMatrix[14] = 1.0e2;  // Var(tanLambda)
-  return omegaVariance;
+  state.covMatrix[0] = seedCovarianceScale * 1.0e6;   // Var(d0) [mm^2]
+  state.covMatrix[2] = seedCovarianceScale * 1.0e2;   // Var(phi) [rad^2]
+  state.covMatrix[5] = seedCovarianceScale * 1.0e-4;  // Var(omega) [mm^-2]
+  state.covMatrix[9] = seedCovarianceScale * 1.0e6;   // Var(z0) [mm^2]
+  state.covMatrix[14] = seedCovarianceScale * 1.0e2;  // Var(tanLambda)
 }
 
 TKalTrackSite* makeSiteFromTrackState(
@@ -118,7 +112,7 @@ GsfTrackInitializationResult GsfTrackInitializer::initialize(
     const DDVTrackHit& seedKalHit,
     double bz,
     GsfTrackInitializationDirection direction,
-    double kappaCovarianceOverride) const {
+    double seedCovarianceScale) const {
   GsfTrackInitializationResult result;
   if (!m_trackSystem) {
     result.error = "baseline MarlinTrk system is unavailable";
@@ -132,8 +126,8 @@ GsfTrackInitializationResult GsfTrackInitializer::initialize(
     result.error = "invalid magnetic field";
     return result;
   }
-  if (!std::isfinite(kappaCovarianceOverride)) {
-    result.error = "non-finite kappa covariance override";
+  if (!std::isfinite(seedCovarianceScale) || seedCovarianceScale <= 0.0) {
+    result.error = "seed covariance scale must be finite and positive";
     return result;
   }
 
@@ -177,11 +171,8 @@ GsfTrackInitializationResult GsfTrackInitializer::initialize(
     result.error = "directional three-hit helix prefit failed";
     return result;
   }
-  result.prefitOmegaVariance = assignStandardPrefitCovariance(
-      result.prefitState, bz, kappaCovarianceOverride);
-  const double alpha = bz * 2.99792458e-4;
-  result.prefitKappaVariance =
-      result.prefitOmegaVariance / (alpha * alpha);
+  assignStandardPrefitCovariance(result.prefitState, seedCovarianceScale);
+  result.prefitCovarianceScale = seedCovarianceScale;
 
   std::unique_ptr<MarlinTrk::IMarlinTrack> track(
       m_trackSystem->createTrack());

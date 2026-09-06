@@ -23,8 +23,7 @@ struct GsfTrackInitializationResult {
   edm4hep::TrackState prefitState;
   edm4hep::TrackState seedFilteredState;
   double seedHitDeltaChi2 = 0.0;
-  double prefitOmegaVariance = 0.0;
-  double prefitKappaVariance = 0.0;
+  double prefitCovarianceScale = 1.0;
   int seedHitNdf = 0;
   int seedHitMeasurementDimension = 0;
   int twoDimensionalHitCount = 0;
@@ -55,7 +54,7 @@ public:
       const DDVTrackHit& seedKalHit,
       double bz,
       GsfTrackInitializationDirection direction,
-      double kappaCovarianceOverride = -1.0) const;
+      double seedCovarianceScale = 1.0) const;
 
 private:
   MarlinTrk::IMarlinTrkSystem* m_trackSystem = nullptr;

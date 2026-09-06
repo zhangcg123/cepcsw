@@ -332,14 +332,14 @@ private:
       "Opt-in propagation and verbose dump of aggregate BH-mode mass by surface"};
   Gaudi::Property<int>    m_componentDebugMaxHistory{this,"ComponentDebugMaxHistory",240};
   Gaudi::Property<std::vector<int>> m_selectedEventIndices{this,"SelectedEventIndices",{}};
-  Gaudi::Property<double> m_forwardKappaSeedCov{
-      this, "ForwardKappaSeedCov", -1.0,
-      "Outward direction-local prefit kappa variance; values <= 0 use the "
-      "standard KF Var(omega)=1e-4 covariance"};
-  Gaudi::Property<double> m_inwardKappaSeedCov{
-      this, "InwardKappaSeedCov", -1.0,
-      "Fresh inward direction-local prefit kappa variance; values <= 0 use "
-      "the standard KF Var(omega)=1e-4 covariance; inert for a positive "
+  Gaudi::Property<double> m_forwardSeed{
+      this, "ForwardSeed", 1.0,
+      "Positive scale applied uniformly to the five FullLDCTracking-style "
+      "outward prefit variances"};
+  Gaudi::Property<double> m_backwardSeed{
+      this, "BackwardSeed", 1.0,
+      "Positive scale applied uniformly to the five FullLDCTracking-style "
+      "fresh-backward prefit variances; inert for a positive "
       "InwardSeedCovarianceScale copied-mixture seed"};
   Gaudi::Property<std::string> m_bhModel{
       this, "BHModel", "CEPCRuntimeCategoryAligned9Clear"};
