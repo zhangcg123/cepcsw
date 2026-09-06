@@ -104,7 +104,7 @@ gsf.MaxComponents = 10
 gsf.ReductionTargetComponents = 0
 gsf.ReductionMergeCost = "SymmetricKL"
 gsf.ComponentWeightCutoff = 1.0e-4
-gsf.ProtectIdentityLineage = True
+gsf.ProtectIdentityLineage = False
 
 gsf.MSOn = True
 gsf.ElossOn = False
@@ -133,6 +133,18 @@ gsf.InwardWeightMode = "LocalMeasurement"
 gsf.InwardLookaheadDepth = 0
 gsf.MaterialIPExtrapolation = False
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
+
+# Default-off endpoint-only transverse beam-spot constraint for smoother and
+# reverse. When enabled, the ordinary BestBranch, WeightedMean, and
+# FullMixtureMode collections remain unchanged; three separately constrained
+# copies and a per-track success bitmask are published. Coordinates and widths
+# are in mm. These nominal CEPC comparison widths are not a validated GSF
+# production setting.
+gsf.BeamSpotConstraint = False
+gsf.BeamSpotX = 0.0
+gsf.BeamSpotY = 0.0
+gsf.BeamSpotSigmaX = 0.0145
+gsf.BeamSpotSigmaY = 3.6e-5
 
 # Default-off research constraint.  When enabled from a separate reconstructed-
 # event card that supplies EcalCluster, GSFTracksBestBranch stays tracker-only and
@@ -176,11 +188,11 @@ elif method == "reverse":
     gsf.ForwardSeed = 1.0
     gsf.ForwardBHSplitting = False
 
-    # Current comparison campaign: preserve the former NextMeasurement reach
-    # using the integer look-ahead API while keeping LocalMeasurement as the
-    # weighting family.
+    # Current comparison campaign: probe both former NextMeasurement and
+    # NextNextMeasurement targets using the integer look-ahead API while
+    # keeping LocalMeasurement as the weighting family.
     gsf.InwardWeightMode = "LocalMeasurement"
-    gsf.InwardLookaheadDepth = 1
+    gsf.InwardLookaheadDepth = 2
 
     # Inert for the maintained fresh single-component inward seed; retained
     # explicitly for positive-scale copied-mixture comparison cards.
@@ -213,6 +225,9 @@ flat = RecGsfFlatTuple("RecGsfFlatTuple")
 # their corresponding branch set
 # unavailable/zero. The always-created final_mixture_component_* vectors carry
 # all final smoother/reverse output tracks and are empty for forward.
+# A beam-spot-on run additionally fills beamspot_bestbranch_gsf_*,
+# beamspot_weighted_gsf_*, and beamspot_fullmixture_gsf_* from the three paired
+# constrained collections; the ordinary endpoint families remain unchanged.
 # The lineage_node_* and lineage_edge_* vectors automatically carry the full
 # passive smoother/reverse component DAG and are empty for the other methods.
 flat.OutputFile = os.path.join(

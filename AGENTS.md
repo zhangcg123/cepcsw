@@ -148,6 +148,16 @@ diagnostic card now uses the same false/false pair. These gates do not disable
 material-path evaluation, passive interval recording, deterministic energy
 loss, multiple scattering, propagation, or measurement updates.
 
+A default-off terminal beam-spot experiment is implemented inside
+`RecGsfTracking`, outside the MarlinTrk classes. It constrains separate copies
+of the already formed smoother/reverse BestBranch, WeightedMean, and
+FullMixtureMode IP Gaussians in transverse `drho`; it does not act as a
+fabricated detector hit or modify mixture evolution, weights, reduction,
+selection, ordinary endpoints, or hit counts. Its nominal comparison widths
+are 0.0145 mm horizontally and 3.6e-5 mm vertically. The separate EDM/flat
+outputs, status contract, focused regression, and population gate are recorded
+in `agents_record/2026-09-07-inward-lookahead-population-and-beamspot-handoff.md`.
+
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `ForwardSeed=1` and `BackwardSeed=1` (the complete FullLDCTracking-style
 loose covariance for both direction-local prefits), `MaxComponents=10`,
@@ -269,54 +279,38 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate experiment is numeric inward look-ahead feedback inside the
-reverse GSF. The retired `NextMeasurement` and `NextNextMeasurement` string
-modes are replaced by `InwardLookaheadDepth`, compiled default zero. With
-`InwardWeightMode=LocalMeasurement`, a positive depth `N` probes every
-available farther-inward hit `i-1` through `i-N` after an actual BH split on
-`i+1 -> i`. Every probe starts independently from the split state, performs no
-intervening measurement update or explicit split, and is discarded after its
-posterior is evaluated. A failed probe cannot delete a live child.
+The immediate experiment is the default-off terminal transverse beam-spot
+constraint. MarlinTrk has no vertex or arbitrary Gaussian-measurement update:
+its public measurement update consumes a detector `TrackerHit`, while point
+propagation/extrapolation does not constrain a state. Keep the implementation
+inside `RecGsfTracking`; do not fabricate a hit or measurement layer.
 
-At local hit 0 no farther-inward probe exists, so only the ordinary terminal
-measurement update is performed. A wholly invalid probe hit is omitted from
-the average; if every requested probe is invalid, the feedback falls back to
-the original prior and normalization recovers the baseline local weighting.
+For each already formed smoother/reverse IP endpoint, move its five-dimensional
+Gaussian from the origin to `(BeamSpotX, BeamSpotY, 0)`, apply the scalar
+`drho=0` update with the configured transverse beam covariance projected onto
+the endpoint normal, and move it back to the origin. The nominal comparison is
+`BeamSpotX=BeamSpotY=0`, `BeamSpotSigmaX=0.0145 mm`, and
+`BeamSpotSigmaY=3.6e-5 mm`. There is no z constraint or x-y beam correlation
+in this first version. Apply it independently to BestBranch, WeightedMean, and
+FullMixtureMode copies. Preserve the three ordinary endpoints, all component
+weights and lineages, endpoint selection, and real tracker-hit lists exactly.
 
-Each probe posterior is normalized separately over components and the valid
-probe vectors are averaged. The original BH-prior vector and this averaged
-feedback remain distinct until the ordinary adjacent measurement at hit `i`
-is evaluated exactly once. Both channels receive the same local likelihood;
-their unnormalized contributions are added with no feedback-fraction control,
-then globally normalized into the one live state bank before the existing
-cutoff, KL reduction, and inward recursion. Probe hits are intentionally reused
-later, so this is an uncalibrated evidence-reuse diagnostic rather than a
-Bayesian posterior. `SmoothedMarginal` is incompatible with positive depth.
+The focused same-code gate on selected indices 11, 16, and 17 is complete: all
+three constrained endpoints succeeded for all three tracks, and a default-off
+rerun reproduced all 46 ordinary scalar endpoint fields exactly. This is only
+mechanical validation. Next, produce a same-code topology-clear on/off
+population comparison. Report no-eBrem, light-eBrem, hard-eBrem,
+transition-location, clean-core, and catastrophic-tail behavior independently
+for BestBranch, WeightedMean, and FullMixtureMode. The beam-spot experiment
+advances only if it preserves clean tracks and improves lossy tracks without
+increasing extreme tails.
 
-The flat tuple records the separate post-local channels as
-`lineage_node_prior_local_posterior` and
-`lineage_node_lookahead_local_posterior`; the existing
-`lineage_node_normalized_posterior` is the combined live value. Status-3 side
-nodes retain the separately normalized posterior for each temporary probe.
-Depth zero reproduces the stored LocalMeasurement endpoints exactly on the
-focused indices 11, 16, and 17. Depth 1 is mechanically stable but did not
-recover event 16 and degraded recovered event 17 from -0.311% to -0.732% in
-the first current-control comparison. Depth 2 has verified cumulative
-two-probe evaluation and channel normalization, but is not physics-validated.
-Exact old/new contracts and gates are in
-`agents_record/2026-09-06-delayed-inward-measurement-modes.md`; the deferred
-hit-0 single-loss-bank design is preserved in
-`agents_record/2026-09-06-hit-zero-single-loss-bank-design.md`.
-
-Next, run an unbiased topology-clear depth scan, at minimum depths 0, 1, and
-2. Report no-eBrem, light-eBrem, hard-eBrem, transition-location, clean-core,
-and extreme-tail behavior separately. A narrower selected core is not enough:
-the experiment advances only if it preserves no-eBrem tracks and does not
-increase catastrophic tails. Keep production controls and endpoint definitions
-frozen: `DD4hepBetweenSurfaces`, `CEPCRuntimeCategoryAligned9Clear`,
+Keep compiled and active-template production controls frozen:
+`DD4hepBetweenSurfaces`, `CEPCRuntimeCategoryAligned9Clear`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
-protection, `ForwardSeed=1`, `BackwardSeed=1`, compiled directional splitting
-false/false, and compiled `InwardLookaheadDepth=0`. The maintained comparison
-card explicitly selects reverse inward splitting and depth 1 for the current
-campaign. ECAL remains paused. Historical detail does not override this live
-focus.
+protection, `ForwardSeed=1`, `BackwardSeed=1`, directional splitting
+false/false, `InwardLookaheadDepth=0`, and `BeamSpotConstraint=false`. The
+maintained comparison card still carries the previous diagnostic campaign's
+explicit depth 2 and identity protection off; enable the beam constraint only
+in a dedicated A/B card. ECAL remains paused. Historical detail does not
+override this live focus.

@@ -4,7 +4,10 @@
 The smoother and reverse workflows always write three row-aligned endpoint
 views: the selected branch to `GSFTracksBestBranch`, the moment-matched state
 to `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional
-mixture density to `GSFTracksFullMixtureMode`. A
+mixture density to `GSFTracksFullMixtureMode`. A default-off terminal
+beam-spot experiment can apply one transverse prompt-origin constraint to
+separate copies of all three already formed IP endpoints. The ordinary
+unconstrained collections remain unchanged. A
 default-on automatic component record also persists every positive-weight
 final smoother/reverse component's normalized weight, IP kappa mean, and
 kappa variance so the transverse-momentum marginal can be reconstructed from
@@ -78,7 +81,7 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-06. `RecGsfTracking` exposes 37 Gaudi properties in
+Reference date: 2026-09-07. `RecGsfTracking` exposes 43 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -283,7 +286,7 @@ each child at a time.
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
 | `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weighting family. The only accepted values are `LocalMeasurement` and experimental `SmoothedMarginal`; the retired `NextMeasurement` and `NextNextMeasurement` strings are invalid. `LocalMeasurement` updates children from `i+1 -> i` at hit `i` and uses the adjacent likelihood, optionally with `InwardLookaheadDepth` feedback. `SmoothedMarginal` instead uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. |
-| `InwardLookaheadDepth` | `0` | `0` | Nonnegative number of unique farther-inward measurements probed after an actual inward BH split while `InwardWeightMode=LocalMeasurement`. Zero is the ordinary adjacent-only workflow; one reproduces the former `NextMeasurement` target; two includes the former `NextMeasurement` and `NextNextMeasurement` targets before averaging. For local hit `i>0`, targets stop at hit 0; at local hit 0 there is no farther-inward probe and only the ordinary terminal update runs. A failed component probe contributes zero at that probe without deleting the live component. A wholly invalid probe is omitted from the average; if none is valid, the feedback vector falls back to the original prior, which reduces to baseline weighting after normalization. A positive value with `SmoothedMarginal` is invalid. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch explicitly uses depth `1` for the current comparison campaign, without changing the compiled or active-template default zero. |
+| `InwardLookaheadDepth` | `0` | `0` | Nonnegative number of unique farther-inward measurements probed after an actual inward BH split while `InwardWeightMode=LocalMeasurement`. Zero is the ordinary adjacent-only workflow; one reproduces the former `NextMeasurement` target; two includes the former `NextMeasurement` and `NextNextMeasurement` targets before averaging. For local hit `i>0`, targets stop at hit 0; at local hit 0 there is no farther-inward probe and only the ordinary terminal update runs. A failed component probe contributes zero at that probe without deleting the live component. A wholly invalid probe is omitted from the average; if none is valid, the feedback vector falls back to the original prior, which reduces to baseline weighting after normalization. A positive value with `SmoothedMarginal` is invalid. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch explicitly uses depth `2` for the current comparison campaign, without changing the compiled or active-template default zero. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 `ProtectIdentityLineage` is a reduction safeguard and does not alter this
 fixed endpoint selection.
@@ -349,6 +352,50 @@ validity, together with both the input- and output-track indices. It is passive
 output only: recording does not alter reduction, selection, endpoint
 publication, or any component state. Ordinary forward workflows do not expose
 this final multi-component endpoint and therefore produce no component rows.
+
+### Experimental terminal beam-spot constraint
+
+| Property | Compiled | Active reverse | Meaning |
+|---|---|---|---|
+| `BeamSpotConstraint` | `false` | `false` | Apply a default-off transverse prompt-origin constraint to separate copies of the three already formed smoother/reverse IP endpoints. Ordinary forward is unsupported, and the three unconstrained endpoint collections remain unchanged. |
+| `BeamSpotX` | `0.0 mm` | same | Finite nominal beam-spot x coordinate. |
+| `BeamSpotY` | `0.0 mm` | same | Finite nominal beam-spot y coordinate. |
+| `BeamSpotSigmaX` | `0.0145 mm` | same | Finite positive horizontal Gaussian beam width. This nominal CEPC comparison value is not a validated GSF production setting. |
+| `BeamSpotSigmaY` | `3.6e-5 mm` | same | Finite positive vertical Gaussian beam width. This nominal CEPC comparison value is not a validated GSF production setting. |
+
+This first implementation is endpoint-only: it neither reweights final
+components nor reruns BestBranch selection, WeightedMean moment matching, or
+FullMixtureMode optimization. Each unconstrained endpoint Gaussian is moved
+from the standard IP pivot to `(BeamSpotX, BeamSpotY, 0)`, constrained in the
+local transverse `drho` coordinate, and transported back to the origin. For
+an endpoint normal azimuth `phi0`, the independent axis-aligned beam widths
+enter the scalar measurement variance as
+
+```text
+R = cos(phi0)^2 BeamSpotSigmaX^2 + sin(phi0)^2 BeamSpotSigmaY^2.
+```
+
+There is no longitudinal beam constraint and no configured x-y correlation.
+A successful scalar update adds its beam compatibility delta-chi-square to
+the source endpoint chi-square and increments NDF by one. Consequently the
+constrained WeightedMean and FullMixtureMode fit metadata describe the
+corresponding endpoint constraint applied on top of the inherited BestBranch
+metadata; they are not newly defined component-mixture fit qualities.
+
+When enabled, the row-aligned paired outputs are
+`GSFTracksBeamSpotBestBranch`, `GSFTracksBeamSpotWeightedMean`, and
+`GSFTracksBeamSpotFullMixtureMode`. One common
+`GSFBeamSpotConstraintStatus` integer uses bit 0 for attempted, bit 1 for a
+successful BestBranch update, bit 2 for WeightedMean, and bit 3 for
+FullMixtureMode. Thus status 15 means that all three endpoint constraints
+succeeded. If an individual update fails, its paired track is an exact copy
+of that endpoint's unconstrained source and its success bit is absent. Status
+zero means disabled or not applicable. The existing
+`GSFFullMixtureModeStatus` remains the authority on whether the unconstrained
+FullMixtureMode source is a true density mode or its documented BestBranch
+fallback. In particular, `GSFTracksBeamSpotFullMixtureMode` is the constraint
+of that already published source; it is not the mode of a newly constrained
+mixture.
 
 ### Experimental ECAL component constraint
 
@@ -417,7 +464,7 @@ one row per BH parent or child.
 
 ### Collection handles
 
-The data handles are configurable separately from the 37 properties:
+The data handles are configurable separately from the 43 properties:
 
 | Role | Default collection |
 |---|---|
@@ -427,6 +474,10 @@ The data handles are configurable separately from the 37 properties:
 | paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
 | paired smoother/reverse full-mixture density-mode tracks | `GSFTracksFullMixtureMode` |
 | per-output-track full-mixture-mode status | `GSFFullMixtureModeStatus` |
+| beam-spot-constrained BestBranch copies | `GSFTracksBeamSpotBestBranch` |
+| beam-spot-constrained WeightedMean copies | `GSFTracksBeamSpotWeightedMean` |
+| beam-spot-constrained FullMixtureMode copies | `GSFTracksBeamSpotFullMixtureMode` |
+| per-output-track beam-spot constraint bitmask | `GSFBeamSpotConstraintStatus` |
 | final-mixture component track mapping | `GSFFinalMixtureComponentInputTrackIndex`, `GSFFinalMixtureComponentOutputTrackIndex` |
 | final-mixture component identity/method/status | `GSFFinalMixtureComponentIndex`, `GSFFinalMixtureComponentID`, `GSFFinalMixtureComponentSource`, `GSFFinalMixtureComponentValid` |
 | final-mixture component PDF parameters | `GSFFinalMixtureComponentWeight`, `GSFFinalMixtureComponentKappa`, `GSFFinalMixtureComponentKappaVariance` |
@@ -445,9 +496,10 @@ The data handles are configurable separately from the 37 properties:
 `RecGsfFlatTuple` keeps method-explicit tracker-result schemas. The
 `bestbranch_gsf_*` fields come only from `GSFTracksBestBranch`, while the
 generic `gsf_*` fields come from an optional `GSFTracks` collection. When
-`GSFTracksWeightedMean`, `GSFTracksFullMixtureMode`, or
-`GSFTracksEcalConstrained` is present in the ordinary GSF event store, the
-tuple also fills the corresponding parallel scalar set:
+`GSFTracksWeightedMean`, `GSFTracksFullMixtureMode`, one of the three
+beam-spot-constrained collections, or `GSFTracksEcalConstrained` is present in
+the ordinary GSF event store, the tuple also fills the corresponding parallel
+scalar set:
 
 | Branches | Meaning |
 |---|---|
@@ -459,6 +511,11 @@ tuple also fills the corresponding parallel scalar set:
 | `fullmixture_gsf_pT`, `fullmixture_gsf_p`, `fullmixture_gsf_eta`, `fullmixture_gsf_theta`, `fullmixture_gsf_phi`, `fullmixture_gsf_d0`, `fullmixture_gsf_z0`, `fullmixture_gsf_omega`, `fullmixture_gsf_tanl`, `fullmixture_gsf_chi2`, `fullmixture_gsf_ndf`, `fullmixture_gsf_nhits`, `fullmixture_gsf_type` | Paired full five-dimensional mixture-density mode from `GSFTracksFullMixtureMode`. The chi-square/NDF are inherited from BestBranch. |
 | `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward output. |
 | `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
+| `beamspot_bestbranch_gsf_pT`, `beamspot_bestbranch_gsf_p`, `beamspot_bestbranch_gsf_eta`, `beamspot_bestbranch_gsf_theta`, `beamspot_bestbranch_gsf_phi`, `beamspot_bestbranch_gsf_d0`, `beamspot_bestbranch_gsf_z0`, `beamspot_bestbranch_gsf_omega`, `beamspot_bestbranch_gsf_tanl`, `beamspot_bestbranch_gsf_chi2`, `beamspot_bestbranch_gsf_ndf`, `beamspot_bestbranch_gsf_nhits`, `beamspot_bestbranch_gsf_type` | Beam-spot-constrained copy of `GSFTracksBestBranch`, or its exact unconstrained fallback. |
+| `beamspot_weighted_gsf_pT`, `beamspot_weighted_gsf_p`, `beamspot_weighted_gsf_eta`, `beamspot_weighted_gsf_theta`, `beamspot_weighted_gsf_phi`, `beamspot_weighted_gsf_d0`, `beamspot_weighted_gsf_z0`, `beamspot_weighted_gsf_omega`, `beamspot_weighted_gsf_tanl`, `beamspot_weighted_gsf_chi2`, `beamspot_weighted_gsf_ndf`, `beamspot_weighted_gsf_nhits`, `beamspot_weighted_gsf_type` | Beam-spot-constrained copy of `GSFTracksWeightedMean`, or its exact unconstrained fallback. |
+| `beamspot_fullmixture_gsf_pT`, `beamspot_fullmixture_gsf_p`, `beamspot_fullmixture_gsf_eta`, `beamspot_fullmixture_gsf_theta`, `beamspot_fullmixture_gsf_phi`, `beamspot_fullmixture_gsf_d0`, `beamspot_fullmixture_gsf_z0`, `beamspot_fullmixture_gsf_omega`, `beamspot_fullmixture_gsf_tanl`, `beamspot_fullmixture_gsf_chi2`, `beamspot_fullmixture_gsf_ndf`, `beamspot_fullmixture_gsf_nhits`, `beamspot_fullmixture_gsf_type` | Beam-spot-constrained copy of `GSFTracksFullMixtureMode`, or its exact unconstrained fallback. |
+| `beamspot_bestbranch_gsf_available`, `beamspot_bestbranch_gsf_changed`, `beamspot_weighted_gsf_available`, `beamspot_weighted_gsf_changed`, `beamspot_fullmixture_gsf_available`, `beamspot_fullmixture_gsf_changed` | Presence and exact source-relative change tags for the three beam-spot endpoint families. They remain zero when the constraint is disabled or unavailable. |
+| `beamspot_constraint_status` | Common bitmask from `GSFBeamSpotConstraintStatus`: bit 0 attempted, and bits 1, 2, and 3 mark successful BestBranch, WeightedMean, and FullMixtureMode updates. |
 | `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
 | `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
 | `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` reverse terminal inward mixture), and IP-state validity. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
@@ -476,7 +533,7 @@ tuple also fills the corresponding parallel scalar set:
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
-| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, FullMixtureMode, and constrained fractional pT residuals relative to the first truth particle. |
+| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_beamspot_bestbranch_gsf`, `res_pT_beamspot_weighted_gsf`, `res_pT_beamspot_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, unconstrained BestBranch/WeightedMean/FullMixtureMode, the three beam-spot copies, and ECAL-constrained fractional pT residuals relative to the first truth particle. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 | `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
@@ -498,6 +555,13 @@ its status collection. Forward jobs leave it unavailable/zero with status
 zero. A negative status with
 `fullmixture_gsf_available=1` means the row-aligned track is the deliberate
 BestBranch fallback, not a successfully found density mode.
+
+The three beam-spot branch families and their common status branch always
+exist in newly produced flat tuples. They are filled only from the paired
+beam-spot collections and remain unavailable/zero when the experiment is off.
+Their `changed` flags compare each result only with its own unconstrained
+source endpoint. They have no duplicate hit-vector branches because every
+paired output preserves the corresponding source track's tracker-hit list.
 
 The `final_mixture_component_*` vectors are likewise automatic/default-on and
 presence-driven. Weights are normalized independently for each
@@ -572,12 +636,13 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 36 of the 37 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 42 of the 43 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
-ECAL settings agree with the production baseline:
+beam-spot, and ECAL settings agree with the production baseline:
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
-`DD4hepBetweenSurfaces`, and ECAL off. For the current double-off diagnostic,
+`DD4hepBetweenSurfaces`, beam-spot off, and ECAL off. For the current
+double-off diagnostic,
 the card explicitly selects `ForwardBHSplitting=false` and
 `InwardBHSplitting=false`, matching the compiled and unsteered active reverse-
 template defaults. Its top-level `bh_model` selector explicitly uses the
@@ -588,6 +653,14 @@ longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
 `bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
 `gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
+The three `beamspot_*_gsf_*` endpoint families and their common bitmask are
+also always present in the flat schema and remain unavailable/zero because
+the maintained card explicitly sets `BeamSpotConstraint=false` while retaining
+the four nominal coordinate/width values.
+The same campaign intentionally sets `ProtectIdentityLineage=false` and
+`InwardLookaheadDepth=2`, unlike their compiled and active-template values
+`true` and zero. These are comparison settings, not production-default
+changes.
 
 The maintained template exposes only `method="smoother"` and
 `method="reverse"`; it currently selects reverse.
@@ -620,7 +693,7 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 37-property inventory above is part of the configurable interface, not a
+The 43-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

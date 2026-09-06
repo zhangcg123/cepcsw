@@ -1121,6 +1121,119 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
   return finiteMatrix(inverse);
 }
 
+/// Apply one transverse beam-origin measurement to an already formed IP
+/// Gaussian.  This deliberately lives outside MarlinTrk: its public update
+/// interface accepts only detector TrackerHits, and a fabricated hit would
+/// require a non-existent detector measurement layer.  The state is moved to
+/// the nominal beam pivot, constrained in its local drho coordinate, and then
+/// moved back to the origin so all published endpoints retain the standard
+/// AtIP convention.
+static bool constrainIpGaussianToBeamSpot(
+    const THelicalTrack& inputHelix, const TMatrixD& inputCovariance,
+    double bz, double beamX, double beamY,
+    double beamSigmaX, double beamSigmaY,
+    THelicalTrack& outputHelix, TMatrixD& outputCovariance,
+    double& deltaChi2) {
+  deltaChi2 = std::numeric_limits<double>::quiet_NaN();
+  if (bz == 0.0 || inputCovariance.GetNrows() != 5 ||
+      inputCovariance.GetNcols() != 5 || !finiteMatrix(inputCovariance) ||
+      !std::isfinite(beamX) || !std::isfinite(beamY) ||
+      !(beamSigmaX > 0.0) || !(beamSigmaY > 0.0) ||
+      !std::isfinite(beamSigmaX) || !std::isfinite(beamSigmaY)) {
+    return false;
+  }
+
+  THelicalTrack beamHelix = inputHelix;
+  TMatrixD beamCovariance = inputCovariance;
+  double dphi = 0.0;
+  TMatrixD moveJacobian(5, 5);
+  moveJacobian.UnitMatrix();
+  beamHelix.MoveTo(TVector3(beamX, beamY, 0.0), dphi,
+                   &moveJacobian, &beamCovariance);
+  if (!finiteMatrix(beamCovariance)) return false;
+
+  // phi0 is the normal-direction azimuth in KalTest's helix convention, so
+  // the axis-aligned transverse beam covariance projects onto drho as below.
+  const double cosPhi = std::cos(beamHelix.GetPhi0());
+  const double sinPhi = std::sin(beamHelix.GetPhi0());
+  const double measurementVariance =
+      cosPhi * cosPhi * beamSigmaX * beamSigmaX +
+      sinPhi * sinPhi * beamSigmaY * beamSigmaY;
+  const double innovationVariance =
+      beamCovariance(0, 0) + measurementVariance;
+  const double residual = -beamHelix.GetDrho();
+  if (!(measurementVariance > 0.0) || !(innovationVariance > 0.0) ||
+      !std::isfinite(innovationVariance) || !std::isfinite(residual)) {
+    return false;
+  }
+
+  TMatrixD gain(5, 1);
+  for (int row = 0; row < 5; ++row)
+    gain(row, 0) = beamCovariance(row, 0) / innovationVariance;
+
+  TMatrixD mean;
+  helixToMean(beamHelix, mean);
+  for (int row = 0; row < 5; ++row)
+    mean(row, 0) += gain(row, 0) * residual;
+
+  // Joseph form avoids losing positive definiteness when the vertical beam
+  // width is much smaller than the fitted impact-parameter uncertainty.
+  TMatrixD identityMinusKH(5, 5);
+  identityMinusKH.UnitMatrix();
+  for (int row = 0; row < 5; ++row)
+    identityMinusKH(row, 0) -= gain(row, 0);
+  TMatrixD identityMinusKHTranspose(
+      TMatrixD::kTransposed, identityMinusKH);
+  TMatrixD gainTranspose(TMatrixD::kTransposed, gain);
+  TMatrixD constrainedCovariance =
+      identityMinusKH * beamCovariance * identityMinusKHTranspose +
+      measurementVariance * (gain * gainTranspose);
+  for (int row = 0; row < 5; ++row)
+    for (int column = 0; column < row; ++column) {
+      const double symmetricValue = 0.5 *
+          (constrainedCovariance(row, column) +
+           constrainedCovariance(column, row));
+      constrainedCovariance(row, column) = symmetricValue;
+      constrainedCovariance(column, row) = symmetricValue;
+    }
+  TMatrixD constrainedPrecision;
+  if (!finiteMatrix(mean) ||
+      !invertPositiveDefinite(constrainedCovariance,
+                              constrainedPrecision)) {
+    return false;
+  }
+
+  THelicalTrack constrainedHelix(
+      mean, TVector3(beamX, beamY, 0.0), bz);
+  TMatrixD backJacobian(5, 5);
+  backJacobian.UnitMatrix();
+  constrainedHelix.MoveTo(TVector3(0.0, 0.0, 0.0), dphi,
+                          &backJacobian, &constrainedCovariance);
+  if (!finiteMatrix(constrainedCovariance)) return false;
+  // MoveTo's finite-precision similarity transform can leave antisymmetric
+  // roundoff that is material relative to the 36 nm vertical beam width.
+  // Restore the covariance contract before the positive-definite check.
+  for (int row = 0; row < 5; ++row)
+    for (int column = 0; column < row; ++column) {
+      const double symmetricValue = 0.5 *
+          (constrainedCovariance(row, column) +
+           constrainedCovariance(column, row));
+      constrainedCovariance(row, column) = symmetricValue;
+      constrainedCovariance(column, row) = symmetricValue;
+    }
+  if (!invertPositiveDefinite(constrainedCovariance,
+                              constrainedPrecision)) {
+    return false;
+  }
+
+  deltaChi2 = residual * residual / innovationVariance;
+  if (!std::isfinite(deltaChi2)) return false;
+  outputHelix = constrainedHelix;
+  outputCovariance.ResizeTo(5, 5);
+  outputCovariance = constrainedCovariance;
+  return true;
+}
+
 enum class FinalMixtureComponentSource : std::int32_t {
   GaussianSumSmoother = 1,
   ReverseFiltering = 2,
@@ -2471,6 +2584,29 @@ StatusCode RecGsfTracking::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_beamSpotConstraint.value()) {
+    if (!m_gaussianSumSmoothing.value() && !m_reverseFiltering.value()) {
+      error() << "BeamSpotConstraint requires GaussianSumSmoothing=True or "
+                 "ReverseFiltering=True so all three paired IP endpoints "
+                 "exist"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!std::isfinite(m_beamSpotX.value()) ||
+        !std::isfinite(m_beamSpotY.value())) {
+      error() << "BeamSpotX and BeamSpotY must be finite" << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!(m_beamSpotSigmaX.value() > 0.0) ||
+        !(m_beamSpotSigmaY.value() > 0.0) ||
+        !std::isfinite(m_beamSpotSigmaX.value()) ||
+        !std::isfinite(m_beamSpotSigmaY.value())) {
+      error() << "BeamSpotSigmaX and BeamSpotSigmaY must be finite and "
+                 "positive"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+  }
   if (m_ecalComponentConstraint.value()) {
     if (!m_reverseFiltering.value()) {
       error() << "EcalComponentConstraint currently requires "
@@ -2606,6 +2742,7 @@ StatusCode RecGsfTracking::initialize() {
          << m_verboseSplitDump.value() << "/"
          << m_componentDebugDump.value()
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
+         << " beamSpotConstraint=" << m_beamSpotConstraint.value()
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
          << endmsg;
   if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
@@ -2630,11 +2767,25 @@ StatusCode RecGsfTracking::execute() {
   edm4hep::TrackCollection* weightedMeanOut = nullptr;
   edm4hep::TrackCollection* fullMixtureModeOut = nullptr;
   podio::UserDataCollection<std::int32_t>* fullMixtureModeStatusOut = nullptr;
+  edm4hep::TrackCollection* beamSpotBestBranchOut = nullptr;
+  edm4hep::TrackCollection* beamSpotWeightedMeanOut = nullptr;
+  edm4hep::TrackCollection* beamSpotFullMixtureModeOut = nullptr;
+  podio::UserDataCollection<std::int32_t>* beamSpotConstraintStatusOut =
+      nullptr;
   if (publishPairedEndpoints)
     weightedMeanOut = m_weightedMeanOutputTracks.createAndPut();
   if (publishPairedEndpoints) {
     fullMixtureModeOut = m_fullMixtureModeOutputTracks.createAndPut();
     fullMixtureModeStatusOut = m_fullMixtureModeStatus.createAndPut();
+    beamSpotConstraintStatusOut = m_beamSpotConstraintStatus.createAndPut();
+  }
+  if (publishPairedEndpoints && m_beamSpotConstraint.value()) {
+    beamSpotBestBranchOut =
+        m_beamSpotBestBranchOutputTracks.createAndPut();
+    beamSpotWeightedMeanOut =
+        m_beamSpotWeightedMeanOutputTracks.createAndPut();
+    beamSpotFullMixtureModeOut =
+        m_beamSpotFullMixtureModeOutputTracks.createAndPut();
   }
   auto* finalMixtureComponentInputTrackIndex =
       m_finalMixtureComponentInputTrackIndex.createAndPut();
@@ -5363,6 +5514,75 @@ StatusCode RecGsfTracking::execute() {
         fullMixtureModeStatusOut->push_back(
             fullMixtureModeStatusValue(fullMixtureModeStatus));
       }
+
+      // The beam spot is a terminal one-dimensional transverse constraint,
+      // not a fabricated detector hit.  Apply it only to copies of the three
+      // already formed IP endpoints.  It therefore cannot change component
+      // weights, BestBranch selection, mixture evolution, or the ordinary
+      // published outputs above.
+      std::int32_t beamSpotStatus = 0;
+      if (m_beamSpotConstraint.value()) {
+        beamSpotStatus = 1;  // enabled and attempted for this output row
+        auto publishBeamSpotEndpoint = [&](
+            edm4hep::TrackCollection* collection,
+            const THelicalTrack& sourceHelix,
+            const TMatrixD& sourceCovariance,
+            std::int32_t successBit,
+            const char* label) {
+          if (!collection) return;
+          THelicalTrack constrainedHelix = sourceHelix;
+          TMatrixD constrainedCovariance = sourceCovariance;
+          double beamDeltaChi2 = 0.0;
+          const bool constrained = constrainIpGaussianToBeamSpot(
+              sourceHelix, sourceCovariance, bz,
+              m_beamSpotX.value(), m_beamSpotY.value(),
+              m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value(),
+              constrainedHelix, constrainedCovariance, beamDeltaChi2);
+          if (constrained) beamSpotStatus |= successBit;
+
+          auto constrainedTrack = collection->create();
+          constrainedTrack.setType(2);
+          constrainedTrack.setChi2(
+              constrained ? outputChi2 + beamDeltaChi2 : outputChi2);
+          constrainedTrack.setNdf(constrained ? outputNdf + 1 : outputNdf);
+          edm4hep::TrackState constrainedState;
+          constrainedState.location = DH::AtIP;
+          fillTrackState(constrainedState,
+                         constrained ? constrainedHelix : sourceHelix,
+                         constrained ? constrainedCovariance
+                                     : sourceCovariance,
+                         bz);
+          constrainedTrack.addToTrackStates(constrainedState);
+          for (const auto& h : assocHits)
+            constrainedTrack.addToTrackerHits(h);
+
+          if (m_verboseDump) {
+            info() << boost::format(
+                "  BEAM-SPOT endpoint=%s success=%d dchi2=%.9g "
+                "sourcePt=%.9g constrainedPt=%.9g d0=%.9g")
+                      % label % (constrained ? 1 : 0)
+                      % (constrained ? beamDeltaChi2 : 0.0)
+                      % (sourceHelix.GetKappa() != 0.0
+                             ? 1.0 / std::abs(sourceHelix.GetKappa()) : 0.0)
+                      % (constrainedHelix.GetKappa() != 0.0
+                             ? 1.0 / std::abs(constrainedHelix.GetKappa())
+                             : 0.0)
+                      % (-constrainedHelix.GetDrho())
+                   << endmsg;
+          }
+        };
+        publishBeamSpotEndpoint(
+            beamSpotBestBranchOut, ipHelix, ipCov, 1 << 1,
+            "BestBranch");
+        publishBeamSpotEndpoint(
+            beamSpotWeightedMeanOut, weightedIpHelix, weightedIpCov,
+            1 << 2, "WeightedMean");
+        publishBeamSpotEndpoint(
+            beamSpotFullMixtureModeOut, fullMixtureModeIpHelix,
+            fullMixtureModeIpCov, 1 << 3, "FullMixtureMode");
+      }
+      if (beamSpotConstraintStatusOut)
+        beamSpotConstraintStatusOut->push_back(beamSpotStatus);
 
       persistFinalMixtureComponents(
           finalMixtureComponentRecords, inputTrackIndex, nFit);

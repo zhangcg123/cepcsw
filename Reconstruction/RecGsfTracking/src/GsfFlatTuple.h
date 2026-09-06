@@ -19,8 +19,8 @@ class TTree;
 
 /// Post-processor: reads CompleteTracks, the optional method-specific
 /// GSFTracks, GSFTracksBestBranch, GSFTracksWeightedMean,
-/// GSFTracksFullMixtureMode, and GSFTracksEcalConstrained collections, plus
-/// MCParticle from the event store.
+/// GSFTracksFullMixtureMode, their optional beam-spot-constrained copies, and
+/// GSFTracksEcalConstrained collections, plus MCParticle from the event store.
 /// It writes a flat ROOT TTree with relevant tracking parameters and per-hit
 /// data for downstream analysis.
 class RecGsfFlatTuple : public Algorithm {
@@ -32,6 +32,24 @@ public:
   StatusCode finalize() override;
 
 private:
+  struct EndpointFields {
+    double omega = 0.0;
+    double d0 = 0.0;
+    double z0 = 0.0;
+    double phi = 0.0;
+    double tanl = 0.0;
+    double pT = 0.0;
+    double p = 0.0;
+    double eta = 0.0;
+    double theta = 0.0;
+    double chi2 = 0.0;
+    int ndf = 0;
+    int nhits = 0;
+    int type = 0;
+    int available = 0;
+    int changed = 0;
+  };
+
   DataHandle<edm4hep::TrackCollection>      m_inCompleteTracks{
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCParticleCollection> m_inMCParticles{
@@ -264,6 +282,11 @@ private:
   int    m_fullmixture_gsf_changed = 0;
   int    m_fullmixture_gsf_status =
       fullMixtureModeStatusValue(FullMixtureModeStatus::NotApplicable);
+  // Optional terminal beam-spot copies of the three paired endpoints.
+  EndpointFields m_beamspot_bestbranch_gsf;
+  EndpointFields m_beamspot_weighted_gsf;
+  EndpointFields m_beamspot_fullmixture_gsf;
+  int m_beamspot_constraint_status = 0;
   // Positive-weight components of the final smoother/reverse mixture at IP.
   int    m_final_mixture_component_available = 0;
   int    m_final_mixture_component_n = 0;
@@ -404,6 +427,9 @@ private:
   double m_res_pT_bestbranch_gsf = 0;
   double m_res_pT_weighted_gsf = 0; // (weighted_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_fullmixture_gsf = 0;
+  double m_res_pT_beamspot_bestbranch_gsf = 0;
+  double m_res_pT_beamspot_weighted_gsf = 0;
+  double m_res_pT_beamspot_fullmixture_gsf = 0;
   double m_res_pT_ecal_gsf = 0; // (ecal_gsf_pT - mc_pT) / mc_pT
   double m_res_pT_lcio = 0;    // (lcio_pT - mc_pT) / mc_pT
 

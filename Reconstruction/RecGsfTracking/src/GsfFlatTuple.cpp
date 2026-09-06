@@ -174,6 +174,32 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("fullmixture_gsf_ndf",     &m_fullmixture_gsf_ndf);
   m_tree->Branch("fullmixture_gsf_nhits",   &m_fullmixture_gsf_nhits);
   m_tree->Branch("fullmixture_gsf_type",    &m_fullmixture_gsf_type);
+  auto branchBeamSpotEndpoint = [&](const std::string& prefix,
+                                    EndpointFields& endpoint) {
+    m_tree->Branch((prefix + "_available").c_str(), &endpoint.available);
+    m_tree->Branch((prefix + "_changed").c_str(), &endpoint.changed);
+    m_tree->Branch((prefix + "_pT").c_str(), &endpoint.pT);
+    m_tree->Branch((prefix + "_p").c_str(), &endpoint.p);
+    m_tree->Branch((prefix + "_eta").c_str(), &endpoint.eta);
+    m_tree->Branch((prefix + "_theta").c_str(), &endpoint.theta);
+    m_tree->Branch((prefix + "_phi").c_str(), &endpoint.phi);
+    m_tree->Branch((prefix + "_d0").c_str(), &endpoint.d0);
+    m_tree->Branch((prefix + "_z0").c_str(), &endpoint.z0);
+    m_tree->Branch((prefix + "_omega").c_str(), &endpoint.omega);
+    m_tree->Branch((prefix + "_tanl").c_str(), &endpoint.tanl);
+    m_tree->Branch((prefix + "_chi2").c_str(), &endpoint.chi2);
+    m_tree->Branch((prefix + "_ndf").c_str(), &endpoint.ndf);
+    m_tree->Branch((prefix + "_nhits").c_str(), &endpoint.nhits);
+    m_tree->Branch((prefix + "_type").c_str(), &endpoint.type);
+  };
+  branchBeamSpotEndpoint(
+      "beamspot_bestbranch_gsf", m_beamspot_bestbranch_gsf);
+  branchBeamSpotEndpoint(
+      "beamspot_weighted_gsf", m_beamspot_weighted_gsf);
+  branchBeamSpotEndpoint(
+      "beamspot_fullmixture_gsf", m_beamspot_fullmixture_gsf);
+  m_tree->Branch("beamspot_constraint_status",
+                 &m_beamspot_constraint_status);
   // Positive-weight components of the final smoother/reverse mixture at IP.
   // These vectors are automatic outputs, not a configurable diagnostic.
   m_tree->Branch("final_mixture_component_available",
@@ -400,6 +426,12 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("res_pT_bestbranch_gsf", &m_res_pT_bestbranch_gsf);
   m_tree->Branch("res_pT_weighted_gsf", &m_res_pT_weighted_gsf);
   m_tree->Branch("res_pT_fullmixture_gsf", &m_res_pT_fullmixture_gsf);
+  m_tree->Branch("res_pT_beamspot_bestbranch_gsf",
+                 &m_res_pT_beamspot_bestbranch_gsf);
+  m_tree->Branch("res_pT_beamspot_weighted_gsf",
+                 &m_res_pT_beamspot_weighted_gsf);
+  m_tree->Branch("res_pT_beamspot_fullmixture_gsf",
+                 &m_res_pT_beamspot_fullmixture_gsf);
   m_tree->Branch("res_pT_ecal_gsf", &m_res_pT_ecal_gsf);
   m_tree->Branch("res_pT_lcio",     &m_res_pT_lcio);
 
@@ -1062,6 +1094,27 @@ StatusCode RecGsfFlatTuple::execute() {
       fullMixtureModeStatusValue(FullMixtureModeStatus::NotApplicable);
   if (fullMixtureStatus && !fullMixtureStatus->empty())
     m_fullmixture_gsf_status = (*fullMixtureStatus)[0];
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>>
+      beamSpotBestBranchWrapper(eventSvc(),
+                                "GSFTracksBeamSpotBestBranch");
+  const auto* beamSpotBestBranchCol = beamSpotBestBranchWrapper
+      ? beamSpotBestBranchWrapper->getData() : nullptr;
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>>
+      beamSpotWeightedWrapper(eventSvc(), "GSFTracksBeamSpotWeightedMean");
+  const auto* beamSpotWeightedCol = beamSpotWeightedWrapper
+      ? beamSpotWeightedWrapper->getData() : nullptr;
+  SmartDataPtr<DataWrapper<edm4hep::TrackCollection>>
+      beamSpotFullMixtureWrapper(
+          eventSvc(), "GSFTracksBeamSpotFullMixtureMode");
+  const auto* beamSpotFullMixtureCol = beamSpotFullMixtureWrapper
+      ? beamSpotFullMixtureWrapper->getData() : nullptr;
+  SmartDataPtr<DataWrapper<podio::UserDataCollection<std::int32_t>>>
+      beamSpotStatusWrapper(eventSvc(), "GSFBeamSpotConstraintStatus");
+  const auto* beamSpotStatus = beamSpotStatusWrapper
+      ? beamSpotStatusWrapper->getData() : nullptr;
+  m_beamspot_constraint_status =
+      beamSpotStatus && !beamSpotStatus->empty()
+          ? (*beamSpotStatus)[0] : 0;
 
   // ── MC truth (first particle = primary) ──
   if (mcCol && mcCol->size() > 0) {
@@ -1369,6 +1422,71 @@ StatusCode RecGsfFlatTuple::execute() {
         m_fullmixture_gsf_chi2 != m_bestbranch_gsf_chi2 ||
         m_fullmixture_gsf_ndf != m_bestbranch_gsf_ndf)) ? 1 : 0;
 
+  auto fillBeamSpotEndpoint = [&](
+      const edm4hep::TrackCollection* collection,
+      const char* label, EndpointFields& endpoint) {
+    endpoint.available = collection && !collection->empty() ? 1 : 0;
+    endpoint.changed = 0;
+    try {
+      fillTrack(collection, endpoint.pT, endpoint.p, endpoint.eta,
+                endpoint.theta, endpoint.phi, endpoint.d0, endpoint.z0,
+                endpoint.omega, endpoint.tanl, endpoint.chi2, endpoint.ndf,
+                endpoint.nhits, endpoint.type);
+    } catch (const std::exception& error) {
+      warning() << "Event " << m_iev << ": " << label
+                << " access failed — " << error.what()
+                << " — writing unavailable beam-spot fields" << endmsg;
+      endpoint.available = 0;
+      fillTrack(nullptr, endpoint.pT, endpoint.p, endpoint.eta,
+                endpoint.theta, endpoint.phi, endpoint.d0, endpoint.z0,
+                endpoint.omega, endpoint.tanl, endpoint.chi2, endpoint.ndf,
+                endpoint.nhits, endpoint.type);
+    } catch (...) {
+      warning() << "Event " << m_iev << ": " << label
+                << " access failed (unknown exception) — writing "
+                   "unavailable beam-spot fields"
+                << endmsg;
+      endpoint.available = 0;
+      fillTrack(nullptr, endpoint.pT, endpoint.p, endpoint.eta,
+                endpoint.theta, endpoint.phi, endpoint.d0, endpoint.z0,
+                endpoint.omega, endpoint.tanl, endpoint.chi2, endpoint.ndf,
+                endpoint.nhits, endpoint.type);
+    }
+  };
+  auto endpointChanged = [](const EndpointFields& constrained,
+                            double omega, double d0, double z0, double phi,
+                            double tanl, double chi2, int ndf) {
+    return constrained.available &&
+        (constrained.omega != omega || constrained.d0 != d0 ||
+         constrained.z0 != z0 || constrained.phi != phi ||
+         constrained.tanl != tanl || constrained.chi2 != chi2 ||
+         constrained.ndf != ndf);
+  };
+  fillBeamSpotEndpoint(beamSpotBestBranchCol,
+                       "beam-spot BestBranch GSF",
+                       m_beamspot_bestbranch_gsf);
+  fillBeamSpotEndpoint(beamSpotWeightedCol,
+                       "beam-spot WeightedMean GSF",
+                       m_beamspot_weighted_gsf);
+  fillBeamSpotEndpoint(beamSpotFullMixtureCol,
+                       "beam-spot FullMixtureMode GSF",
+                       m_beamspot_fullmixture_gsf);
+  m_beamspot_bestbranch_gsf.changed = endpointChanged(
+      m_beamspot_bestbranch_gsf, m_bestbranch_gsf_omega,
+      m_bestbranch_gsf_d0, m_bestbranch_gsf_z0, m_bestbranch_gsf_phi,
+      m_bestbranch_gsf_tanl, m_bestbranch_gsf_chi2,
+      m_bestbranch_gsf_ndf) ? 1 : 0;
+  m_beamspot_weighted_gsf.changed = endpointChanged(
+      m_beamspot_weighted_gsf, m_weighted_gsf_omega,
+      m_weighted_gsf_d0, m_weighted_gsf_z0, m_weighted_gsf_phi,
+      m_weighted_gsf_tanl, m_weighted_gsf_chi2,
+      m_weighted_gsf_ndf) ? 1 : 0;
+  m_beamspot_fullmixture_gsf.changed = endpointChanged(
+      m_beamspot_fullmixture_gsf, m_fullmixture_gsf_omega,
+      m_fullmixture_gsf_d0, m_fullmixture_gsf_z0,
+      m_fullmixture_gsf_phi, m_fullmixture_gsf_tanl,
+      m_fullmixture_gsf_chi2, m_fullmixture_gsf_ndf) ? 1 : 0;
+
   m_ecal_gsf_available = ecalGsfCol && ecalGsfCol->size() > 0 ? 1 : 0;
   try {
     fillTrack(ecalGsfCol,
@@ -1451,6 +1569,15 @@ StatusCode RecGsfFlatTuple::execute() {
   m_res_pT_fullmixture_gsf =
       (m_mc_pT > 0 && m_fullmixture_gsf_available)
           ? (m_fullmixture_gsf_pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_beamspot_bestbranch_gsf =
+      (m_mc_pT > 0 && m_beamspot_bestbranch_gsf.available)
+          ? (m_beamspot_bestbranch_gsf.pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_beamspot_weighted_gsf =
+      (m_mc_pT > 0 && m_beamspot_weighted_gsf.available)
+          ? (m_beamspot_weighted_gsf.pT - m_mc_pT) / m_mc_pT : 0;
+  m_res_pT_beamspot_fullmixture_gsf =
+      (m_mc_pT > 0 && m_beamspot_fullmixture_gsf.available)
+          ? (m_beamspot_fullmixture_gsf.pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_ecal_gsf = (m_mc_pT > 0 && m_ecal_gsf_available)
       ? (m_ecal_gsf_pT - m_mc_pT) / m_mc_pT : 0;
   m_res_pT_lcio =

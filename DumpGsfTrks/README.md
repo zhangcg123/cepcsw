@@ -229,10 +229,11 @@ cards remain artifacts rather than source configuration.
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. It keeps the established smoother and reverse
 workflows and agrees with the production material-path, threshold/cutoff, and
-ECAL settings:
+beam-spot/ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
-`EcalComponentConstraint=False`. The current double-off diagnostic matches
+`BeamSpotConstraint=False`, `EcalComponentConstraint=False`. The current
+double-off diagnostic matches
 the compiled and inherited active reverse-template directional defaults:
 `ForwardBHSplitting=False, InwardBHSplitting=False`. These gates suppress BH
 child creation only; deterministic energy loss, multiple scattering,
@@ -245,12 +246,12 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 37 `RecGsfTracking` properties, their
+The authoritative explanation of all 43 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 36 of the 37
+For this maintained workflow, `gsf.py.bk` explicitly configures 42 of the 43
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -263,6 +264,17 @@ input property remains. Only generated truth-on cards differ from the false
 override base. This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
+
+The card explicitly keeps the terminal beam-spot experiment off while
+recording its nominal comparison parameters as `BeamSpotX=0.0` mm,
+`BeamSpotY=0.0` mm, `BeamSpotSigmaX=0.0145` mm, and
+`BeamSpotSigmaY=3.6e-5` mm. Enabling it leaves the ordinary three
+smoother/reverse endpoint collections unchanged and creates paired
+`GSFTracksBeamSpotBestBranch`, `GSFTracksBeamSpotWeightedMean`, and
+`GSFTracksBeamSpotFullMixtureMode` copies with a
+`GSFBeamSpotConstraintStatus` success bitmask. The corresponding
+`beamspot_*_gsf_*` flat families always exist but remain unavailable/zero in
+the maintained default-off workflow.
 
 The maintained card inherits the compiled and active reverse-template
 `RecordTruthMaterialIntervals=true` default. `GsfG4MaterialSteps` and
@@ -435,7 +447,7 @@ replace live reverse weights. Experimental `SmoothedMarginal` remains
 available as a default-off comparison; it reuses overlapping forward evidence
 at successive surfaces and is not a calibrated posterior.
 
-The maintained card also sets `InwardLookaheadDepth=1` for the current reverse
+The maintained card also sets `InwardLookaheadDepth=2` for the current reverse
 comparison campaign. The compiled and inherited-template default remains zero.
 For a positive depth `N`, temporary copies of each newly split reverse child
 probe the farther-inward hits `i-1` through `i-N`; separately normalized probe
@@ -446,6 +458,11 @@ recursion. This is an uncalibrated evidence-reuse diagnostic, not a production
 default. The retired `NextMeasurement` and `NextNextMeasurement` strings are
 invalid; use numeric depths one and two respectively when reproducing their
 reach.
+
+The same comparison card sets `ProtectIdentityLineage=False`, intentionally
+different from the compiled and active-template default `true`, so the exact
+no-radiation lineage may participate in ordinary cutoff and KL reduction.
+This campaign choice is not a production-default change.
 
 This same reverse branch is the maintained double-off diagnostic:
 `ForwardBHSplitting=False`, `InwardBHSplitting=False`. The two switches control

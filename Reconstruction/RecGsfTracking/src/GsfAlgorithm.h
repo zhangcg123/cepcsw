@@ -84,6 +84,15 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_fullMixtureModeStatus{
           "GSFFullMixtureModeStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_beamSpotBestBranchOutputTracks{
+      "GSFTracksBeamSpotBestBranch", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_beamSpotWeightedMeanOutputTracks{
+      "GSFTracksBeamSpotWeightedMean", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_beamSpotFullMixtureModeOutputTracks{
+      "GSFTracksBeamSpotFullMixtureMode", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>>
+      m_beamSpotConstraintStatus{
+          "GSFBeamSpotConstraintStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_finalMixtureComponentInputTrackIndex{
           "GSFFinalMixtureComponentInputTrackIndex",
@@ -313,6 +322,22 @@ private:
       "i-N after an inward BH split, average their separately normalized "
       "posteriors, and combine that feedback equally with the original "
       "BH-prior channel at the ordinary local update"};
+  Gaudi::Property<bool> m_beamSpotConstraint{
+      this, "BeamSpotConstraint", false,
+      "Apply a terminal transverse beam-spot Gaussian constraint to separate "
+      "copies of the smoother/reverse IP endpoints"};
+  Gaudi::Property<double> m_beamSpotX{
+      this, "BeamSpotX", 0.0,
+      "Nominal beam-spot x coordinate in mm"};
+  Gaudi::Property<double> m_beamSpotY{
+      this, "BeamSpotY", 0.0,
+      "Nominal beam-spot y coordinate in mm"};
+  Gaudi::Property<double> m_beamSpotSigmaX{
+      this, "BeamSpotSigmaX", 0.0145,
+      "Horizontal beam-spot Gaussian width in mm"};
+  Gaudi::Property<double> m_beamSpotSigmaY{
+      this, "BeamSpotSigmaY", 3.6e-5,
+      "Vertical beam-spot Gaussian width in mm"};
   Gaudi::Property<std::string> m_reverseInitialWeightMode{
       this, "ReverseInitialWeightMode", "ForwardPosterior",
       "ForwardPosterior or Uniform diagnostic reverse-start weights"};
