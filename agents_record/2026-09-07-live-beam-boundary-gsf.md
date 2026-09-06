@@ -151,6 +151,10 @@ regression only; they do not establish a resolution improvement.
 
 ## Next gate
 
+The later extension that permits positive inward look-ahead to use the beam as
+the boundary after hit 0, while retaining this live terminal sequence, is
+recorded in `2026-09-07-beam-boundary-lookahead.md`.
+
 Run separate same-code beam-off and beam-on topology-clear populations. Report
 no-eBrem, light-eBrem, hard-eBrem, transition-location, clean-core, and
 catastrophic-tail behavior independently for all three endpoint definitions.

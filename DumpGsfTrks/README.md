@@ -292,6 +292,13 @@ existing flat fields. No separate beam collection, `beamspot_*` flat family,
 or status bitmask remains; beam-off/beam-on A/B comparisons use distinct jobs
 and output tuple paths.
 
+Positive `InwardLookaheadDepth` can reach the beam in this mode. Probe targets
+descend through hit 0 and then use the beam as one additional inward boundary;
+the passive beam probe shares the live terminal update's hit-to-beam
+propagation and scalar likelihood. The ordinary hit-0 update and subsequent
+live beam-boundary processing still run. The maintained isolated beam card
+keeps depth zero so this feedback remains a separate comparison axis.
+
 The maintained card inherits the compiled and active reverse-template
 `RecordTruthMaterialIntervals=true` default. `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` are unconditional members of its base

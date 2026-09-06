@@ -305,16 +305,29 @@ smoother, `DD4hepBetweenSurfaces`, geometric IP publication, truth override and
 ECAL off, and a fresh inward seed. Directional BH gates remain independent and
 are never silently enabled.
 
+Positive inward look-ahead can now reach the beam boundary. For a split on
+`i+1 -> i`, targets descend through real hit 0 and then include the beam as one
+additional boundary when `BeamSpotConstraint=true`. The passive beam probe
+uses the same hit-to-beam propagation and scalar likelihood evaluator as the
+live terminal update, but it performs no additional split, never mutates the
+live child, and does not replace the later ordinary hit-0 and live beam
+updates. Without beam mode, look-ahead still stops at hit 0; depth zero is
+unchanged.
+
 Focused verbose tests on indices 11, 16, and 17 now exercise the forward
 beam-origin transport and both boundary BH splits. All 300 reverse boundary
 children propagated and accepted the beam update; each event retained ten
 components after cutoff/KL and published all three ordinary endpoints. A
 same-code beam-off run reproduced the prior stored
 BestBranch, WeightedMean, and FullMixtureMode values for these events. This is
-mechanical validation only. Next run a topology-clear beam-off/on population
-comparison and report no-eBrem, light-eBrem, hard-eBrem, transition location,
-clean core, and catastrophic tails for all three endpoints. The experiment
-advances only if clean tracks are preserved without increasing extreme tails.
+mechanical validation only. A focused depth-1 event-11 run additionally
+formed 100 valid beam look-ahead posteriors at the hit-0 step while retaining
+the later live beam update. Depth-0 reruns after sharing the evaluator
+reproduced the stored beam-on 11/16/17 endpoints. Next run topology-clear
+beam-off/on and beam-look-ahead depth comparisons and report no-eBrem,
+light-eBrem, hard-eBrem, transition location, clean core, and catastrophic
+tails for all three endpoints. The experiment advances only if clean tracks
+are preserved without increasing extreme tails.
 
 Keep compiled and active-template production controls frozen:
 `DD4hepBetweenSurfaces`, `CEPCRuntimeCategoryAligned9Clear`,

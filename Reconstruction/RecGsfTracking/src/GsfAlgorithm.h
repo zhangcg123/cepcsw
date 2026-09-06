@@ -309,9 +309,10 @@ private:
       "forward partners"};
   Gaudi::Property<int> m_inwardLookaheadDepth{
       this, "InwardLookaheadDepth", 0,
-      "With LocalMeasurement, probe every available hit from i-1 through "
-      "i-N after an inward BH split, average their separately normalized "
-      "posteriors, and combine that feedback equally with the original "
+      "With LocalMeasurement, probe every available inward boundary from "
+      "hit i-1 through hit 0 and then the enabled beam spot, up to depth N, "
+      "after an inward BH split; average their separately normalized "
+      "posteriors and combine that feedback equally with the original "
       "BH-prior channel at the ordinary local update"};
   Gaudi::Property<bool> m_beamSpotConstraint{
       this, "BeamSpotConstraint", false,

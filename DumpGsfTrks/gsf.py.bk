@@ -127,11 +127,13 @@ gsf.ReverseFiltering = False
 gsf.InwardSeedCovarianceScale = -1.0
 # Live reverse weighting family: LocalMeasurement or SmoothedMarginal.
 # The independent nonnegative look-ahead depth defaults to zero. For depth N,
-# temporary children probe each unique hit i-1 through i-N, their separately
-# normalized posteriors are averaged, and the ordinary adjacent update then
-# combines equal-status feedback and original-BH-prior weight channels. Probe
-# states are discarded and their hits are intentionally reused by the live
-# recursion. A positive depth is incompatible with SmoothedMarginal.
+# temporary children probe each unique inward boundary: real hits down through
+# hit 0, then the beam spot when BeamSpotConstraint is enabled. Their
+# separately normalized posteriors are averaged, and the ordinary adjacent
+# update then combines equal-status feedback and original-BH-prior weight
+# channels. Probe states are discarded and real probe hits are intentionally
+# reused by the live recursion. A positive depth is incompatible with
+# SmoothedMarginal.
 gsf.InwardWeightMode = "LocalMeasurement"
 gsf.InwardLookaheadDepth = 0
 gsf.MaterialIPExtrapolation = False

@@ -4449,10 +4449,134 @@ StatusCode RecGsfTracking::execute() {
     double ecalConstrainedEnergy = 0.0;
     int ecalConstrainedClusterCount = 0;
 
+    struct BeamMeasurementEvaluation {
+      bool accepted = false;
+      edm4hep::TrackState updatedState;
+      MarlinTrk::MeasurementUpdate update;
+      double deltaChi2 = std::numeric_limits<double>::quiet_NaN();
+      double logDetInnovation = std::numeric_limits<double>::quiet_NaN();
+      int addCode = MarlinTrk::IMarlinTrack::error;
+      int initialiseCode = MarlinTrk::IMarlinTrack::error;
+      int propagateCode = MarlinTrk::IMarlinTrack::error;
+    };
+
+    // Evaluate the same hit-to-beam propagation and scalar beam likelihood
+    // for both passive look-ahead probes and the live terminal boundary.  The
+    // caller decides whether the returned updated state is discarded or
+    // committed to the live component bank.
+    auto evaluateBeamMeasurement = [&]
+        (const edm4hep::TrackState& componentState,
+         edm4hep::TrackerHit referenceHit) {
+      BeamMeasurementEvaluation result;
+      edm4hep::TrackState predictedState;
+      double propagatedChi2 = 0.0;
+      int propagatedNdf = -999;
+      bool propagated = false;
+      try {
+        std::unique_ptr<MarlinTrk::IMarlinTrack> boundaryTrack(
+            m_gsfMarlinTrkSystem->createTrack());
+        const edm4hep::Vector3d beamTarget{
+            m_beamSpotX.value(), m_beamSpotY.value(), 0.0};
+        if (boundaryTrack) {
+          result.addCode = boundaryTrack->addHit(referenceHit);
+          if (result.addCode == MarlinTrk::IMarlinTrack::success) {
+            result.initialiseCode = boundaryTrack->initialise(
+                componentState, bz, MarlinTrk::IMarlinTrack::backward);
+          }
+          if (result.initialiseCode == MarlinTrk::IMarlinTrack::success) {
+            // initialise() creates a live dummy site but does not enter it in
+            // the LCIO-hit-to-site map. Propagate from that live last site.
+            result.propagateCode = boundaryTrack->propagate(
+                beamTarget, predictedState, propagatedChi2, propagatedNdf);
+          }
+          propagated =
+              result.propagateCode == MarlinTrk::IMarlinTrack::success;
+        }
+      } catch (...) {
+        propagated = false;
+      }
+      if (!propagated) return result;
+
+      TMatrixD predictedMean(5, 1);
+      TMatrixD predictedCovariance(5, 5);
+      trackStateToKalTest5(
+          predictedState, bz, predictedMean, predictedCovariance);
+      const auto& predictedReference = predictedState.referencePoint;
+      THelicalTrack predictedHelix(
+          predictedMean,
+          TVector3(predictedReference.x, predictedReference.y,
+                   predictedReference.z), bz);
+      const TVector3 beamPoint(
+          m_beamSpotX.value(), m_beamSpotY.value(), 0.0);
+
+      // Put the prediction at the exact beam pivot before recording the
+      // innovation. propagate(point, ...) returns a POCA state whose
+      // reference can differ from the requested point at roundoff level.
+      double beamDphi = 0.0;
+      TMatrixD beamMoveJacobian(5, 5);
+      beamMoveJacobian.UnitMatrix();
+      predictedHelix.MoveTo(
+          beamPoint, beamDphi, &beamMoveJacobian, &predictedCovariance);
+      helixToMean(predictedHelix, predictedMean);
+
+      const double cosPhi = std::cos(predictedHelix.GetPhi0());
+      const double sinPhi = std::sin(predictedHelix.GetPhi0());
+      const double measurementVariance =
+          cosPhi * cosPhi * m_beamSpotSigmaX.value() *
+              m_beamSpotSigmaX.value() +
+          sinPhi * sinPhi * m_beamSpotSigmaY.value() *
+              m_beamSpotSigmaY.value();
+      const double innovationVariance =
+          predictedCovariance(0, 0) + measurementVariance;
+      const double residual = -predictedHelix.GetDrho();
+
+      THelicalTrack constrainedHelix(
+          TMatrixD(5, 1), beamPoint, bz);
+      TMatrixD constrainedCovariance(5, 5);
+      result.accepted = updateGaussianWithBeamSpot(
+          predictedHelix, predictedCovariance, bz,
+          m_beamSpotX.value(), m_beamSpotY.value(),
+          m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value(),
+          constrainedHelix, constrainedCovariance,
+          result.deltaChi2, result.logDetInnovation);
+      if (!result.accepted) return result;
+
+      result.update.valid = true;
+      result.update.predictedState = measurementMatrix(predictedMean);
+      result.update.predictedCovariance =
+          measurementMatrix(predictedCovariance);
+      TMatrixD predictedMeasurement(1, 1);
+      predictedMeasurement(0, 0) = predictedHelix.GetDrho();
+      result.update.predictedMeasurement =
+          measurementMatrix(predictedMeasurement);
+      TMatrixD residualMatrix(1, 1);
+      residualMatrix(0, 0) = residual;
+      result.update.residual = measurementMatrix(residualMatrix);
+      TMatrixD projector(1, 5);
+      projector.Zero();
+      projector(0, 0) = 1.0;
+      result.update.projector = measurementMatrix(projector);
+      TMatrixD measurementCovariance(1, 1);
+      measurementCovariance(0, 0) = measurementVariance;
+      result.update.measurementCovariance =
+          measurementMatrix(measurementCovariance);
+      TMatrixD innovationCovariance(1, 1);
+      innovationCovariance(0, 0) = innovationVariance;
+      result.update.innovationCovariance =
+          measurementMatrix(innovationCovariance);
+      result.update.logDetInnovation = result.logDetInnovation;
+      result.updatedState = predictedState;
+      result.updatedState.location = DH::AtIP;
+      fillTrackState(result.updatedState, constrainedHelix,
+                     constrainedCovariance, bz);
+      return result;
+    };
+
     // The reverse inward GSF propagates the most recently updated B_updated
     // states. LocalMeasurement updates at the adjacent inward hit. A positive
-    // InwardLookaheadDepth probes each farther-inward hit i-1 through i-N on
-    // temporary component copies. Each probe posterior is normalized
+    // InwardLookaheadDepth probes each farther-inward boundary on temporary
+    // component copies: hits i-1 through hit 0, then the beam spot when its
+    // live constraint is enabled. Each probe posterior is normalized
     // separately and their arithmetic mean forms a feedback channel. At the
     // adjacent hit, that channel and the original BH-prior channel receive the
     // same local likelihood and are combined before global normalization.
@@ -4730,22 +4854,28 @@ StatusCode RecGsfTracking::execute() {
         std::map<int, InwardLookaheadChannels> lookaheadChannels;
 
         // Experimental look-ahead weighting. Every available farther-inward
-        // hit i-1 ... i-N is probed independently from the live split state.
+        // boundary is probed independently from the live split state: hits
+        // i-1 ... hit 0, followed by the beam spot when its live constraint is
+        // enabled. The beam probe uses the exact same propagation and scalar
+        // likelihood evaluator as the terminal live beam update.
         // Each probe posterior is normalized separately; their arithmetic
         // mean forms a feedback channel. The live BH-prior weights and states
         // are not mutated here, and a failed temporary evaluation never kills
         // a live component. The local update below combines both channels.
         if (didReverseSplit && inwardLookaheadDepth > 0 &&
-            reverseMaterialHit > 0 && !reverseComps.empty()) {
+            (reverseMaterialHit > 0 || useBeamSpotBoundary) &&
+            !reverseComps.empty()) {
+          const int availableProbeCount =
+              reverseMaterialHit + (useBeamSpotBoundary ? 1 : 0);
           const int probeCount =
-              std::min(inwardLookaheadDepth, reverseMaterialHit);
+              std::min(inwardLookaheadDepth, availableProbeCount);
           std::vector<double> feedbackSums(reverseComps.size(), 0.0);
           int validProbeCount = 0;
 
           for (int probeOffset = 1; probeOffset <= probeCount;
                ++probeOffset) {
             const int lookaheadHit = reverseMaterialHit - probeOffset;
-            auto& lookaheadTarget = hits[lookaheadHit];
+            const bool lookaheadIsBeam = lookaheadHit < 0;
             std::vector<double> lookaheadLogWeights(
                 reverseComps.size(),
                 std::numeric_limits<double>::quiet_NaN());
@@ -4760,33 +4890,45 @@ StatusCode RecGsfTracking::execute() {
               const edm4hep::TrackState componentState =
                   trackStateFromComponent(*component, bz, DH::AtOther);
               double dchi = 0.0;
-              double updateChi2 = 0.0;
-              int updateNdf = -999;
               edm4hep::TrackState updatedState;
               MarlinTrk::MeasurementUpdate update;
               bool evaluated = false;
-              try {
-                std::unique_ptr<MarlinTrk::IMarlinTrack> lookaheadTrack(
-                    m_gsfMarlinTrkSystem->createTrack());
-                if (lookaheadTrack &&
-                    lookaheadTrack->addHit(
-                        hits[reverseOuterHit].lcioHit) ==
-                        MarlinTrk::IMarlinTrack::success &&
-                    lookaheadTrack->initialise(
-                        componentState, bz,
-                        MarlinTrk::IMarlinTrack::backward) ==
-                        MarlinTrk::IMarlinTrack::success &&
-                    lookaheadTrack->addAndFit(
-                        lookaheadTarget.lcioHit, dchi, update, DBL_MAX) ==
-                        MarlinTrk::IMarlinTrack::success &&
-                    update.valid &&
-                    lookaheadTrack->getTrackState(
-                        lookaheadTarget.lcioHit, updatedState, updateChi2,
-                        updateNdf) == MarlinTrk::IMarlinTrack::success) {
-                  evaluated = true;
+              if (lookaheadIsBeam) {
+                const auto beamEvaluation = evaluateBeamMeasurement(
+                    componentState, hits[reverseOuterHit].lcioHit);
+                evaluated = beamEvaluation.accepted;
+                if (evaluated) {
+                  dchi = beamEvaluation.deltaChi2;
+                  updatedState = beamEvaluation.updatedState;
+                  update = beamEvaluation.update;
                 }
-              } catch (...) {
-                evaluated = false;
+              } else {
+                auto& lookaheadTarget = hits[lookaheadHit];
+                double updateChi2 = 0.0;
+                int updateNdf = -999;
+                try {
+                  std::unique_ptr<MarlinTrk::IMarlinTrack> lookaheadTrack(
+                      m_gsfMarlinTrkSystem->createTrack());
+                  if (lookaheadTrack &&
+                      lookaheadTrack->addHit(
+                          hits[reverseOuterHit].lcioHit) ==
+                          MarlinTrk::IMarlinTrack::success &&
+                      lookaheadTrack->initialise(
+                          componentState, bz,
+                          MarlinTrk::IMarlinTrack::backward) ==
+                          MarlinTrk::IMarlinTrack::success &&
+                      lookaheadTrack->addAndFit(
+                          lookaheadTarget.lcioHit, dchi, update, DBL_MAX) ==
+                          MarlinTrk::IMarlinTrack::success &&
+                      update.valid &&
+                      lookaheadTrack->getTrackState(
+                          lookaheadTarget.lcioHit, updatedState, updateChi2,
+                          updateNdf) == MarlinTrk::IMarlinTrack::success) {
+                    evaluated = true;
+                  }
+                } catch (...) {
+                  evaluated = false;
+                }
               }
 
               const double logPosterior =
@@ -4803,19 +4945,28 @@ StatusCode RecGsfTracking::execute() {
                 std::unique_ptr<GsfComponent> lookaheadComponent(
                     component->clone());
                 bool recordedState = false;
-                try {
-                  recordedState = appendBaselineStateToComponent(
-                      *lookaheadComponent, updatedState, lookaheadTarget, bz,
-                      componentState, update);
-                } catch (...) {
-                  recordedState = false;
+                if (lookaheadIsBeam) {
+                  lookaheadComponent->continuationState = updatedState;
+                  lookaheadComponent->continuationValid = true;
+                  lookaheadComponent->fitChi2 += dchi;
+                  recordedState = true;
+                } else {
+                  try {
+                    recordedState = appendBaselineStateToComponent(
+                        *lookaheadComponent, updatedState,
+                        hits[lookaheadHit], bz, componentState, update);
+                  } catch (...) {
+                    recordedState = false;
+                  }
                 }
                 if (recordedState) {
                   lookaheadLineageNodeIds[componentIndex] =
                       lineageGraph.measurement(
                           *lookaheadComponent, parentLineageNodeId,
                           LineageNodeSource::ReverseFiltering, lookaheadHit,
-                          lookaheadTarget.surfaceIndex, 3, priorWeight, dchi,
+                          lookaheadIsBeam
+                              ? -1 : hits[lookaheadHit].surfaceIndex,
+                          3, priorWeight, dchi,
                           update.logDetInnovation, logPosterior, &update,
                           false);
                   lineageGraph.mark(
@@ -4827,10 +4978,13 @@ StatusCode RecGsfTracking::execute() {
                     m_componentDebugDump) {
                   info() << boost::format(
                       "      REVERSE LOOKAHEAD accept depth=%d outer=%d "
-                      "local=%d probe=%d id=%d priorWeight=%.6g "
+                      "local=%d probe=%s id=%d priorWeight=%.6g "
                       "dchi2=%.6g logDetS=%.6g")
                                 % inwardLookaheadDepth % reverseOuterHit
-                                % reverseMaterialHit % lookaheadHit
+                                % reverseMaterialHit
+                                % (lookaheadIsBeam
+                                       ? std::string("beam")
+                                       : std::to_string(lookaheadHit))
                                 % component->debugId % priorWeight % dchi
                                 % update.logDetInnovation
                          << endmsg;
@@ -5269,8 +5423,6 @@ StatusCode RecGsfTracking::execute() {
     // measurement.  The resulting posterior is the live endpoint mixture;
     // this is not a post-hoc constraint on a collapsed endpoint.
     if (m_beamSpotConstraint.value() && !reverseComps.empty()) {
-      const TVector3 beamPoint(m_beamSpotX.value(), m_beamSpotY.value(), 0.0);
-
       if (m_verboseDump) {
         info() << boost::format(
             "  REVERSE BEAM material valid=%d pathTX0=%.9g layers=%d")
@@ -5342,145 +5494,43 @@ StatusCode RecGsfTracking::execute() {
       for (auto* component : reverseComps) {
         const int parentNodeId = component->lineageNodeId;
         const double priorWeight = component->weight;
-        edm4hep::TrackState predictedState;
-        double propagatedChi2 = 0.0;
-        int propagatedNdf = -999;
-        bool propagated = false;
-        int addCode = MarlinTrk::IMarlinTrack::error;
-        int initialiseCode = MarlinTrk::IMarlinTrack::error;
-        int propagateCode = MarlinTrk::IMarlinTrack::error;
-        try {
-          edm4hep::TrackerHit referenceHit = hits[0].lcioHit;
-          edm4hep::TrackState componentState =
-              trackStateFromComponent(*component, bz, DH::AtOther);
-          std::unique_ptr<MarlinTrk::IMarlinTrack> boundaryTrack(
-              m_gsfMarlinTrkSystem->createTrack());
-          const edm4hep::Vector3d beamTarget{
-              m_beamSpotX.value(), m_beamSpotY.value(), 0.0};
-          if (boundaryTrack) {
-            addCode = boundaryTrack->addHit(referenceHit);
-            if (addCode == MarlinTrk::IMarlinTrack::success) {
-              initialiseCode = boundaryTrack->initialise(
-                  componentState, bz, MarlinTrk::IMarlinTrack::backward);
-            }
-            if (initialiseCode == MarlinTrk::IMarlinTrack::success) {
-              // initialise() creates the live dummy site at hit 0 but does not
-              // enter that dummy site in the LCIO-hit-to-site map.  Propagate
-              // from the live last site; the overload taking referenceHit is
-              // valid only after that hit has produced a fitted site.
-              propagateCode = boundaryTrack->propagate(
-                  beamTarget, predictedState, propagatedChi2, propagatedNdf);
-            }
-            propagated =
-                propagateCode == MarlinTrk::IMarlinTrack::success;
-          }
-        } catch (...) {
-          propagated = false;
-        }
+        const edm4hep::TrackState componentState =
+            trackStateFromComponent(*component, bz, DH::AtOther);
+        const auto beamEvaluation = evaluateBeamMeasurement(
+            componentState, hits[0].lcioHit);
 
-        if (!propagated && m_verboseDump && m_verboseSplitDump) {
+        if (!beamEvaluation.accepted &&
+            m_verboseDump && m_verboseSplitDump) {
           info() << boost::format(
               "      REVERSE BEAM reject id=%d add=%d init=%d "
               "propagate=%d")
-                        % component->debugId % addCode % initialiseCode
-                        % propagateCode
+                        % component->debugId % beamEvaluation.addCode
+                        % beamEvaluation.initialiseCode
+                        % beamEvaluation.propagateCode
                  << endmsg;
         }
 
-        double beamDeltaChi2 = std::numeric_limits<double>::quiet_NaN();
-        double beamLogDetInnovation =
-            std::numeric_limits<double>::quiet_NaN();
-        THelicalTrack constrainedHelix(
-            TMatrixD(5, 1), beamPoint, bz);
-        TMatrixD constrainedCovariance(5, 5);
-        MarlinTrk::MeasurementUpdate beamUpdate;
-        if (propagated) {
-          TMatrixD predictedMean(5, 1);
-          TMatrixD predictedCovariance(5, 5);
-          trackStateToKalTest5(
-              predictedState, bz, predictedMean, predictedCovariance);
-          const auto& predictedReference = predictedState.referencePoint;
-          THelicalTrack predictedHelix(
-              predictedMean,
-              TVector3(predictedReference.x, predictedReference.y,
-                       predictedReference.z), bz);
-
-          // Put the prediction at the exact beam pivot before recording the
-          // innovation.  propagate(point, ...) returns a POCA state whose
-          // reference can differ from the requested point at roundoff level.
-          double beamDphi = 0.0;
-          TMatrixD beamMoveJacobian(5, 5);
-          beamMoveJacobian.UnitMatrix();
-          predictedHelix.MoveTo(
-              beamPoint, beamDphi, &beamMoveJacobian,
-              &predictedCovariance);
-          helixToMean(predictedHelix, predictedMean);
-
-          const double cosPhi = std::cos(predictedHelix.GetPhi0());
-          const double sinPhi = std::sin(predictedHelix.GetPhi0());
-          const double measurementVariance =
-              cosPhi * cosPhi * m_beamSpotSigmaX.value() *
-                  m_beamSpotSigmaX.value() +
-              sinPhi * sinPhi * m_beamSpotSigmaY.value() *
-                  m_beamSpotSigmaY.value();
-          const double innovationVariance =
-              predictedCovariance(0, 0) + measurementVariance;
-          const double residual = -predictedHelix.GetDrho();
-
-          propagated = updateGaussianWithBeamSpot(
-              predictedHelix, predictedCovariance, bz,
-              m_beamSpotX.value(), m_beamSpotY.value(),
-              m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value(),
-              constrainedHelix, constrainedCovariance,
-              beamDeltaChi2, beamLogDetInnovation);
-          if (propagated) {
-            beamUpdate.valid = true;
-            beamUpdate.predictedState = measurementMatrix(predictedMean);
-            beamUpdate.predictedCovariance =
-                measurementMatrix(predictedCovariance);
-            TMatrixD predictedMeasurement(1, 1);
-            predictedMeasurement(0, 0) = predictedHelix.GetDrho();
-            beamUpdate.predictedMeasurement =
-                measurementMatrix(predictedMeasurement);
-            TMatrixD residualMatrix(1, 1);
-            residualMatrix(0, 0) = residual;
-            beamUpdate.residual = measurementMatrix(residualMatrix);
-            TMatrixD projector(1, 5);
-            projector.Zero();
-            projector(0, 0) = 1.0;
-            beamUpdate.projector = measurementMatrix(projector);
-            TMatrixD measurementCovariance(1, 1);
-            measurementCovariance(0, 0) = measurementVariance;
-            beamUpdate.measurementCovariance =
-                measurementMatrix(measurementCovariance);
-            TMatrixD innovationCovariance(1, 1);
-            innovationCovariance(0, 0) = innovationVariance;
-            beamUpdate.innovationCovariance =
-                measurementMatrix(innovationCovariance);
-            beamUpdate.logDetInnovation = beamLogDetInnovation;
-          }
-        }
-
-        const bool acceptedBeam = propagated && priorWeight > 0.0 &&
-            std::isfinite(beamDeltaChi2) &&
-            std::isfinite(beamLogDetInnovation);
+        const bool acceptedBeam = beamEvaluation.accepted &&
+            priorWeight > 0.0 &&
+            std::isfinite(beamEvaluation.deltaChi2) &&
+            std::isfinite(beamEvaluation.logDetInnovation);
         const double logPosterior = acceptedBeam
             ? std::log(priorWeight) -
-                  0.5 * (beamDeltaChi2 + beamLogDetInnovation)
+                  0.5 * (beamEvaluation.deltaChi2 +
+                         beamEvaluation.logDetInnovation)
             : std::numeric_limits<double>::quiet_NaN();
         if (acceptedBeam) {
-          component->continuationState.location = DH::AtIP;
-          fillTrackState(component->continuationState, constrainedHelix,
-                         constrainedCovariance, bz);
+          component->continuationState = beamEvaluation.updatedState;
           component->continuationValid = true;
-          component->fitChi2 += beamDeltaChi2;
+          component->fitChi2 += beamEvaluation.deltaChi2;
         }
         component->lineageNodeId = lineageGraph.measurement(
             *component, parentNodeId,
             LineageNodeSource::ReverseFiltering, -1, -1,
-            acceptedBeam ? 4 : 0, priorWeight, beamDeltaChi2,
-            beamLogDetInnovation, logPosterior,
-            acceptedBeam ? &beamUpdate : nullptr);
+            acceptedBeam ? 4 : 0, priorWeight,
+            beamEvaluation.deltaChi2,
+            beamEvaluation.logDetInnovation, logPosterior,
+            acceptedBeam ? &beamEvaluation.update : nullptr);
         if (acceptedBeam) {
           accepted.push_back(component);
           acceptedLogWeights.push_back(logPosterior);
@@ -5488,11 +5538,10 @@ StatusCode RecGsfTracking::execute() {
             info() << boost::format(
                 "  REVERSE BEAM accept id=%d prior=%.9g dchi2=%.9g "
                 "logDetS=%.9g pT=%.9g")
-                      % component->debugId % priorWeight % beamDeltaChi2
-                      % beamLogDetInnovation
-                      % (constrainedHelix.GetKappa() != 0.0
-                             ? 1.0 / std::abs(constrainedHelix.GetKappa())
-                             : 0.0)
+                      % component->debugId % priorWeight
+                      % beamEvaluation.deltaChi2
+                      % beamEvaluation.logDetInnovation
+                      % ptFromTrackState(beamEvaluation.updatedState, bz)
                    << endmsg;
           }
         } else {
