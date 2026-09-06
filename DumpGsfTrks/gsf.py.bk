@@ -213,10 +213,22 @@ flat.HitCollectionNames = [
     "OTKEndcapTrackerHits",
 ]
 
+# Optional GSF EDM persistence. Keep this recipe beside the maintained card,
+# but leave it disabled for flat-only batch production.
+# from Configurables import PodioOutput
+# out = PodioOutput("outputalg")
+# out.filename = os.path.join(
+#     tuplepath,
+#     "gsf_{}_{}_{}.root".format(particle, outputmethod, inputseed),
+# )
+# out.outputCommands = ["keep *"]
+
 from Configurables import ApplicationMgr, MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")
 ApplicationMgr(
     TopAlg=[podioinput, gsf, flat],
+    # To persist the optional GSF EDM as well, use:
+    # TopAlg=[podioinput, gsf, flat, out],
     EvtSel="NONE",
     EvtMax=evtmax,
     ExtSvc=[dsvc, geosvc, tracksys, gearsvc, evtseeder],
