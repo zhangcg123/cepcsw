@@ -9,7 +9,7 @@ particle gun + Geant4 simulation
   -> digitization and tracking
   -> trk-<particle>-<pT>-<theta>-<seed>.root (CompleteTracks)
   -> manually configured GSF refit
-  -> GSF EDM and flat tuples
+  -> gsf_flat_<particle>_<method>_<seed>.root
 ```
 
 The simulation event itself carries the optional truth-diagnostic provenance.
@@ -135,13 +135,13 @@ argument remains unused.
 After the job, require all of the following before scaling up:
 
 1. the Gaudi job terminates successfully;
-2. the tracker output and all requested GSF EDM/flat outputs exist and have
-   the requested event count;
+2. the tracker output and requested GSF flat output exist and have the
+   requested event count;
 3. `podio-dump <input_tuplepath>/sim-<sample>.root` lists nonempty
    `GsfG4MaterialSteps` and
    `GsfSimTrackerHitG4StepLinks` for the selected primary;
-4. those two collections remain present in the `trk-` and GSF EDM outputs
-   through `keep *`;
+4. those two collections remain present in the `trk-` input and their derived
+   truth/material information is populated in the GSF flat output;
 5. every link used by the selected track has complete status, one exact
    SimTrackerHit relation, and consistent first/last/hook step relations;
 6. output filenames contain the full particle, momentum/angle, and seed
@@ -192,12 +192,12 @@ also selected, a stage reads that newly produced file; otherwise it reads the
 required existing predecessor from `input_tuplepath`. Thus `trk,gsf` reads an
 existing simulation tuple, while `gsf` reads an existing tracker tuple.
 `sim,trk,gsf`, any two-stage subset, and each individual stage are supported.
-After a successful GSF stage, the worker first verifies that both the GSF EDM
-tuple and its flat tuple are nonempty. It then removes the newly produced GSF
-EDM tuple, retaining the flat tuple as the durable result. It also removes the
-tracker tuple when the `trk` stage in that same job produced it. A `gsf`-only
-job retains its pre-existing tracker input because that file may be shared by
-other jobs or campaigns.
+The maintained GSF card passes its newly produced collections directly to
+`RecGsfFlatTuple` in the same event loop and does not schedule `PodioOutput`.
+After a successful GSF stage, the worker verifies that the flat tuple is
+nonempty. It then removes the tracker tuple when the `trk` stage in that same
+job produced it. A `gsf`-only job retains its pre-existing tracker input
+because that file may be shared by other jobs or campaigns.
 The optional `bh_model` argument defaults to
 `CEPCRuntimeCategoryAligned9Clear`; `ActsAtlas` is the only other supported
 value.
@@ -270,11 +270,13 @@ The maintained card inherits the compiled and active reverse-template
 `PodioInput` collection list, whether or not the truth BH-loss override is
 enabled. The property passively writes the exact
 Geant4 t/X0 between associated truth hooks, the DD4hep integral between those
-same positions, and forward/reverse runtime material summaries to the final
-EDM and flat tuple. The EDM outputs are `GSFTruthMaterialIntervals` and
-`GSFTruthMaterialRecordStatus`; the flat branches use the `truth_material_`
-prefix. It never replaces a runtime path or BH response and cannot change split
-gating, component weights, or track selection. Historical inputs without the
+same positions, and forward/reverse runtime material summaries to in-memory
+EDM collections consumed by the flat-tuple algorithm. Other cards may persist
+`GSFTruthMaterialIntervals` and `GSFTruthMaterialRecordStatus` with
+`PodioOutput`; the maintained batch card does not. Its durable flat branches
+use the `truth_material_` prefix. The recorder never replaces a runtime path
+or BH response and cannot change split gating, component weights, or track
+selection. Historical inputs without the
 embedded collections require an explicit
 `RecordTruthMaterialIntervals=false` control card; this affects diagnostic
 availability only.
@@ -288,9 +290,10 @@ Side material ROOT generation and the public runtime BH-audit CSV option are
 retired from the maintained workflow. Historical tuples, audit CSVs,
 standalone analysis tools, and project records remain available for
 reproducing earlier studies, but stale cards that assign removed helper-input
-properties must be regenerated. The current recording path is the ordinary GSF EDM with
-`GSFTruthMaterialIntervals`/`GSFTruthMaterialRecordStatus` and the final flat
-tuple's `truth_material_*` branches.
+properties must be regenerated. The current maintained recording path is the
+final flat tuple's `truth_material_*` branches; the corresponding EDM
+collections exist only in memory unless a separate card explicitly schedules
+`PodioOutput`.
 
 Generated `rungsf-*` cards are batch artifacts and preserve the explicit
 material mode in force when each card was created. Many predate the 2026-08-19
@@ -478,8 +481,8 @@ overwrite protection, and stage completion.
 
 Before a new campaign, address the remaining production safeguards:
 
-1. use unique, common sample identities for simulation, tracking, GSF EDM,
-   flat tuple, and logs;
+1. use unique, common sample identities for simulation, tracking, GSF flat
+   tuple, and logs;
 2. fail on missing/stale inputs, existing outputs, or tuple-integrity errors;
 3. verify exact collection and event pairing between every stage;
 4. record a manifest containing the exact commands and effective settings;

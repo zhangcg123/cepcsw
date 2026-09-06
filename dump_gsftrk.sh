@@ -141,15 +141,14 @@ if [ "${run_gsf}" = true ]; then
         exit 1
     fi
 
-    # A tracker tuple is an intermediate only when this job produced it.
-    # Confirm both durable GSF products before removing that exact job-owned
-    # input. Never delete a shared tracker tuple supplied by input_tuplepath to
-    # a gsf-only job.
+    # The maintained GSF card writes only its flat tuple. Confirm that durable
+    # result before removing a tracker tuple produced by this same job. Never
+    # delete a shared tracker tuple supplied by input_tuplepath to a gsf-only
+    # job.
     gsf_method=$(sed -n 's/^method = "\([^"]*\)"/\1/p' "${gsfcard}" | head -n 1)
-    gsf_output=${output_tupledir}/gsf_${particle}_${gsf_method}${truthsuffix}_${seed}.root
     gsf_flat_output=${output_tupledir}/gsf_flat_${particle}_${gsf_method}${truthsuffix}_${seed}.root
-    if [ -z "${gsf_method}" ] || [ ! -s "${gsf_output}" ] || [ ! -s "${gsf_flat_output}" ]; then
-        echo "GSF completed but its EDM/flat outputs are incomplete; retaining tracker input: ${trkfile}" >&2
+    if [ -z "${gsf_method}" ] || [ ! -s "${gsf_flat_output}" ]; then
+        echo "GSF completed but its flat output is incomplete; retaining tracker input: ${trkfile}" >&2
         exit 1
     fi
     if [ "${run_trk}" = true ]; then
@@ -161,9 +160,4 @@ if [ "${run_gsf}" = true ]; then
     else
         echo "Retaining external tracker input used by gsf-only stage: ${trkfile}"
     fi
-    if ! rm -- "${gsf_output}"; then
-        echo "Failed to remove intermediate GSF EDM tuple: ${gsf_output}" >&2
-        exit 1
-    fi
-    echo "Removed GSF EDM tuple after verified flat-tuple output: ${gsf_output}"
 fi

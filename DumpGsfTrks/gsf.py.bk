@@ -213,18 +213,10 @@ flat.HitCollectionNames = [
     "OTKEndcapTrackerHits",
 ]
 
-from Configurables import PodioOutput
-out = PodioOutput("outputalg")
-out.filename = os.path.join(
-    tuplepath,
-    "gsf_{}_{}_{}.root".format(particle, outputmethod, inputseed),
-)
-out.outputCommands = ["keep *"]
-
 from Configurables import ApplicationMgr, MarlinEvtSeeder
 evtseeder = MarlinEvtSeeder("EventSeeder")
 ApplicationMgr(
-    TopAlg=[podioinput, gsf, flat, out],
+    TopAlg=[podioinput, gsf, flat],
     EvtSel="NONE",
     EvtMax=evtmax,
     ExtSvc=[dsvc, geosvc, tracksys, gearsvc, evtseeder],
