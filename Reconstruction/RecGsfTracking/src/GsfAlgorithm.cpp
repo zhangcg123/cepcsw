@@ -1242,7 +1242,8 @@ public:
                   LineageNodeSource source, int hitIndex, int surfaceIndex,
                   int status, double priorWeight, double dchi2,
                   double logDetInnovation, double logPosterior,
-                  const MarlinTrk::MeasurementUpdate* update) {
+                  const MarlinTrk::MeasurementUpdate* update,
+                  bool advanceParent = true) {
     const int nodeId = appendNode(component, source,
         LineageNodeOperation::Measurement, hitIndex, surfaceIndex);
     if (nodeId < 0) return nodeId;
@@ -1266,7 +1267,8 @@ public:
           update->predictedCovariance.values[
               2 * update->predictedCovariance.cols + 2];
     }
-    addEdge(parentNodeId, nodeId, LineageEdgeOperation::Measurement);
+    addEdge(parentNodeId, nodeId, LineageEdgeOperation::Measurement,
+            advanceParent);
     if (status == 0) mark(nodeId, LineageNodeFate::MeasurementRejected);
     return nodeId;
   }
@@ -3974,9 +3976,14 @@ StatusCode RecGsfTracking::execute() {
 
     // The reverse inward GSF propagates the most recently updated B_updated
     // states. LocalMeasurement updates at the adjacent inward hit.
-    // NextMeasurement and NextNextMeasurement deliberately omit one or two
-    // adjacent hit updates after an inward BH split and first update/reweight
-    // the cohort at the selected farther-inward hit, clamped to hit 0.
+    // After an inward BH split, NextMeasurement and NextNextMeasurement probe
+    // one or two hits beyond that adjacent hit on temporary component copies.
+    // Only the normalized probe posterior is transferred back to the live
+    // split-surface children; their states remain at the split surface and
+    // then follow the ordinary adjacent-hit recursion. Consequently the
+    // probe hit is intentionally counted again when the live recursion later
+    // reaches it. This temporary double counting is part of the experimental
+    // contract requested for these modes.
     // SmoothedMarginal instead attaches the forward-marginalized interior
     // F_updated x B_predicted pair weights. The complete smoothed mixtures
     // remain independently recorded and never replace the propagated states.
@@ -4113,7 +4120,7 @@ StatusCode RecGsfTracking::execute() {
                      inwardWeightMode.begin(), ::tolower);
       const bool useSmoothedMarginalWeights =
           inwardWeightMode == "smoothedmarginal";
-      const int skippedMeasurementsAfterSplit =
+      const int lookaheadMeasurementsAfterSplit =
           inwardWeightMode == "nextmeasurement"
               ? 1
               : (inwardWeightMode == "nextnextmeasurement" ? 2 : 0);
@@ -4245,28 +4252,158 @@ StatusCode RecGsfTracking::execute() {
           GsfMixture::normalizeWeights(reverseComps);
         }
 
-        const int reverseHit = didReverseSplit
-            ? std::max(0, reverseMaterialHit -
-                              skippedMeasurementsAfterSplit)
-            : reverseMaterialHit;
+        // Experimental look-ahead weighting. Probe a farther-inward
+        // measurement without mutating the live children, normalize the
+        // resulting prior*likelihood values, and copy only those weights back
+        // to the split-surface components. No cutoff or KL reduction occurs
+        // here. The ordinary adjacent measurement below is still evaluated,
+        // and the probe measurement is evaluated again when reached later.
+        if (didReverseSplit && lookaheadMeasurementsAfterSplit > 0 &&
+            !reverseComps.empty()) {
+          const int lookaheadHit = std::max(
+              0, reverseMaterialHit - lookaheadMeasurementsAfterSplit);
+          auto& lookaheadTarget = hits[lookaheadHit];
+          std::vector<GsfComponent*> lookaheadSurvivors;
+          std::vector<double> lookaheadLogWeights;
+          std::vector<int> lookaheadLineageNodeIds;
+          lookaheadSurvivors.reserve(reverseComps.size());
+          lookaheadLogWeights.reserve(reverseComps.size());
+          lookaheadLineageNodeIds.reserve(reverseComps.size());
+
+          for (auto* component : reverseComps) {
+            const int parentLineageNodeId = component->lineageNodeId;
+            const double priorWeight = component->weight;
+            const edm4hep::TrackState componentState =
+                trackStateFromComponent(*component, bz, DH::AtOther);
+            double dchi = 0.0;
+            double updateChi2 = 0.0;
+            int updateNdf = -999;
+            edm4hep::TrackState updatedState;
+            MarlinTrk::MeasurementUpdate update;
+            bool evaluated = false;
+            try {
+              std::unique_ptr<MarlinTrk::IMarlinTrack> lookaheadTrack(
+                  m_gsfMarlinTrkSystem->createTrack());
+              if (lookaheadTrack &&
+                  lookaheadTrack->addHit(
+                      hits[reverseOuterHit].lcioHit) ==
+                      MarlinTrk::IMarlinTrack::success &&
+                  lookaheadTrack->initialise(
+                      componentState, bz,
+                      MarlinTrk::IMarlinTrack::backward) ==
+                      MarlinTrk::IMarlinTrack::success &&
+                  lookaheadTrack->addAndFit(
+                      lookaheadTarget.lcioHit, dchi, update, DBL_MAX) ==
+                      MarlinTrk::IMarlinTrack::success &&
+                  update.valid &&
+                  lookaheadTrack->getTrackState(
+                      lookaheadTarget.lcioHit, updatedState, updateChi2,
+                      updateNdf) == MarlinTrk::IMarlinTrack::success) {
+                evaluated = true;
+              }
+            } catch (...) {
+              evaluated = false;
+            }
+
+            const double unavailable =
+                std::numeric_limits<double>::quiet_NaN();
+            const double logPosterior =
+                evaluated && priorWeight > 0.0
+                    ? std::log(priorWeight) -
+                          0.5 * (dchi + update.logDetInnovation)
+                    : unavailable;
+
+            // Persist the evaluated temporary branch as a passive side node
+            // while keeping the live lineage anchored at the split surface.
+            // Status 3 distinguishes an accepted look-ahead measurement from
+            // an ordinary accepted measurement (status 1).
+            int lookaheadLineageNodeId = -1;
+            if (evaluated) {
+              std::unique_ptr<GsfComponent> lookaheadComponent(
+                  component->clone());
+              bool recordedState = false;
+              try {
+                recordedState = appendBaselineStateToComponent(
+                    *lookaheadComponent, updatedState, lookaheadTarget, bz,
+                    componentState, update);
+              } catch (...) {
+                recordedState = false;
+              }
+              if (recordedState) {
+                lookaheadLineageNodeId = lineageGraph.measurement(
+                    *lookaheadComponent, parentLineageNodeId,
+                    LineageNodeSource::ReverseFiltering, lookaheadHit,
+                    lookaheadTarget.surfaceIndex, 3, priorWeight, dchi,
+                    update.logDetInnovation, logPosterior, &update, false);
+                lineageGraph.mark(
+                    lookaheadLineageNodeId,
+                    LineageNodeFate::InwardInternalMessage);
+              }
+            }
+
+            if (evaluated && std::isfinite(logPosterior)) {
+              lookaheadSurvivors.push_back(component);
+              lookaheadLogWeights.push_back(logPosterior);
+              lookaheadLineageNodeIds.push_back(lookaheadLineageNodeId);
+              if (m_verboseDump && m_verboseSplitDump &&
+                  m_componentDebugDump) {
+                info() << boost::format(
+                    "      REVERSE LOOKAHEAD accept mode=%s outer=%d "
+                    "local=%d probe=%d id=%d priorWeight=%.6g "
+                    "dchi2=%.6g logDetS=%.6g")
+                              % m_inwardWeightMode.value() % reverseOuterHit
+                              % reverseMaterialHit % lookaheadHit
+                              % component->debugId % priorWeight % dchi
+                              % update.logDetInnovation
+                       << endmsg;
+              }
+            } else {
+              lineageGraph.mark(component->lineageNodeId,
+                                LineageNodeFate::TrackAbandoned);
+              delete component;
+            }
+          }
+
+          reverseComps.clear();
+          if (lookaheadSurvivors.empty()) break;
+          const double maxLookaheadLog = *std::max_element(
+              lookaheadLogWeights.begin(), lookaheadLogWeights.end());
+          for (std::size_t componentIndex = 0;
+               componentIndex < lookaheadSurvivors.size(); ++componentIndex) {
+            lookaheadSurvivors[componentIndex]->weight = std::exp(
+                lookaheadLogWeights[componentIndex] - maxLookaheadLog);
+          }
+          reverseComps = std::move(lookaheadSurvivors);
+          GsfMixture::normalizeWeights(reverseComps);
+          for (const auto* component : reverseComps)
+            lineageGraph.setWeight(component->lineageNodeId,
+                                   component->weight);
+          for (std::size_t componentIndex = 0;
+               componentIndex < reverseComps.size(); ++componentIndex)
+            lineageGraph.setNormalizedPosterior(
+                lookaheadLineageNodeIds[componentIndex],
+                reverseComps[componentIndex]->weight);
+          if (m_verboseDump && m_verboseSplitDump) {
+            info() << boost::format(
+                "  REVERSE LOOKAHEAD WEIGHTS mode=%s outer=%d local=%d "
+                "probe=%d retained=%d%s")
+                          % m_inwardWeightMode.value() % reverseOuterHit
+                          % reverseMaterialHit % lookaheadHit
+                          % static_cast<int>(reverseComps.size())
+                          % (lookaheadHit == 0 ? " hit0-clamped" : "")
+                   << endmsg;
+            dumpComponents("reverse-lookahead/norm", reverseMaterialHit,
+                           reverseComps);
+          }
+        }
+
+        const int reverseHit = reverseMaterialHit;
         auto& target = hits[reverseHit];
         const auto& reverseMeasurementPosition =
             target.lcioHit.getPosition();
         const TVector3 reverseMeasurementDestination(
             reverseMeasurementPosition.x, reverseMeasurementPosition.y,
             reverseMeasurementPosition.z);
-        if (m_verboseDump && m_verboseSplitDump &&
-            reverseHit != reverseMaterialHit) {
-          info() << boost::format(
-              "  REVERSE MEASUREMENT TARGET mode=%s outer=%d local=%d "
-              "target=%d skipped=%d%s")
-                    % m_inwardWeightMode.value() % reverseOuterHit
-                    % reverseMaterialHit % reverseHit
-                    % (reverseMaterialHit - reverseHit)
-                    % (reverseHit == 0 ? " hit0-clamped" : "")
-                 << endmsg;
-        }
-
         struct ReverseMeasurementCandidate {
           GsfComponent* component = nullptr;
           int parentLineageNodeId = -1;

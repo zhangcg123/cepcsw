@@ -323,10 +323,18 @@ The completed directional-splitting and SmoothedMarginal studies remain
 controls, not defaults. Their exact mechanical and population evidence is in
 `agents_record/2026-08-31-directional-bh-splitting-controls.md` and
 `agents_record/2026-08-31-smoothed-marginal-inward-weighting.md`.
-The default-off `NextMeasurement` and `NextNextMeasurement` controls that omit
-one or two adjacent reverse-hit updates after a BH split are also mechanically
-available but failed their focused negative-peak and hard-loss gates; their
-bounded contract and evidence are in
+Default-off `NextMeasurement` and `NextNextMeasurement` now implement a
+bounded proxy for later evidence: after an inward BH split, temporary copies
+probe hit `i-1` or `i-2`, transfer only their normalized posterior weights
+back to the split-surface children, and are discarded; the live children then
+resume the complete adjacent-hit recursion at hit `i`. This first diagnostic
+intentionally counts the probe evidence again when the live fit reaches that
+hit. On ten selected negative-peak events, FullMixture mean absolute residual
+changed from 0.840% locally to 0.667%/0.671%, but three tracks crossed to
+positive residuals. Hard-loss event 17 remained recovered but degraded from
+-0.265% to -0.932%/-0.532%; event 16 remained unrecovered. These modes are
+mechanically available, not population-validated or promoted. Their current
+and superseded hit-skipping contracts and exact evidence are in
 `agents_record/2026-09-06-delayed-inward-measurement-modes.md`.
 Freeze the production controls and existing endpoint definitions while the
 hit-0 method is designed: `DD4hepBetweenSurfaces`,
