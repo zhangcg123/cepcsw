@@ -663,12 +663,12 @@ rather than one entry per parent or BH child.
 
 `DumpGsfTrks/gsf.py.bk` explicitly configures 42 of the 43 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
-`RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff,
-beam-spot, and ECAL settings agree with the production baseline:
+`RecordTruthMaterialIntervals=true` default. Its reverse material,
+split/cutoff, and ECAL settings agree with the production baseline:
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
-`DD4hepBetweenSurfaces`, beam-spot off, and ECAL off. For the current
-inward-only splitting campaign, the reverse branch explicitly selects
-`ForwardBHSplitting=false` and `InwardBHSplitting=true`; the compiled and
+`DD4hepBetweenSurfaces` and ECAL off. For the current live beam-boundary
+campaign, the reverse branch explicitly selects `BeamSpotConstraint=true`,
+`ForwardBHSplitting=true`, and `InwardBHSplitting=true`; the compiled and
 unsteered active-template defaults remain false/false. Its top-level
 `bh_model` selector explicitly uses the
 compiled and active-template default `CEPCRuntimeCategoryAligned9Clear`;
@@ -678,13 +678,14 @@ longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
 `bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
 `gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
-It explicitly sets `BeamSpotConstraint=false` while retaining the four nominal
+It explicitly sets `BeamSpotConstraint=true` with the four nominal
 coordinate/width values. Beam-boundary runs fill the ordinary three reverse
 endpoint families; no `beamspot_*` flat schema or separate status exists.
-The same campaign intentionally sets `ProtectIdentityLineage=false` and
-`InwardLookaheadDepth=2`, unlike their compiled and active-template values
-`true` and zero. These are comparison settings, not production-default
-changes.
+The same campaign sets `ProtectIdentityLineage=true` and
+`InwardLookaheadDepth=0`, matching their compiled and active-template values
+so the boundary A/B does not also change those mechanisms. Its filename tag is
+`beamspot`; an unconstrained comparison requires a separate beam-off job and
+output path.
 
 The maintained template exposes only `method="smoother"` and
 `method="reverse"`; it currently selects reverse.

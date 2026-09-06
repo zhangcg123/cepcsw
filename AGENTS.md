@@ -144,7 +144,8 @@ Directional BH child creation is independently configurable. The compiled and
 inherited active reverse-template defaults are
 `ForwardBHSplitting=false, InwardBHSplitting=false`, so an unsteered fit
 creates no BH children in either direction. The maintained double-off
-diagnostic card now uses the same false/false pair. These gates do not disable
+diagnostic is historical; the maintained live beam-boundary campaign now
+explicitly enables both gates. These gates do not disable
 material-path evaluation, passive interval recording, deterministic energy
 loss, multiple scattering, propagation, or measurement updates.
 
@@ -320,7 +321,10 @@ Keep compiled and active-template production controls frozen:
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
 protection, `ForwardSeed=1`, `BackwardSeed=1`, directional splitting
 false/false, `InwardLookaheadDepth=0`, and `BeamSpotConstraint=false`. The
-maintained comparison card still carries the previous diagnostic campaign's
-explicit depth 2 and identity protection off; enable beam mode only in a
-dedicated A/B card and tuple path. ECAL remains paused. Historical detail does
-not override this live focus.
+maintained comparison card now selects the isolated beam-on side:
+`BeamSpotConstraint=true`, forward/inward splitting true/true, a fresh inward
+seed, identity protection on, and look-ahead depth zero. It writes only the
+beam-constrained ordinary triplet and tags the tuple name `beamspot`; obtain
+the unconstrained reverse triplet from a separate beam-off job and output
+path. ECAL remains paused. Historical detail does not override this live
+focus.

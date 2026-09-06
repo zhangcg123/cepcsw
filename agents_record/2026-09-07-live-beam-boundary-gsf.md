@@ -97,6 +97,29 @@ The fresh reverse seed avoids applying the forward beam observation once via
 a copied forward mixture and then a second time at the inward boundary.
 Neither directional BH gate is forced on by beam mode.
 
+## Maintained campaign steering
+
+After the focused gate passed, `DumpGsfTrks/gsf.py.bk` was advanced from the
+look-ahead campaign to an isolated live beam-boundary comparison. Its reverse
+branch explicitly selects:
+
+```text
+BeamSpotConstraint = true
+ForwardBHSplitting = true
+InwardBHSplitting = true
+InwardSeedCovarianceScale = -1
+InwardWeightMode = LocalMeasurement
+InwardLookaheadDepth = 0
+ProtectIdentityLineage = true
+TruthBHLossOverride = false
+EcalComponentConstraint = false
+```
+
+The output-method name includes `beamspot` when enabled and `beamspot-off`
+when disabled. A beam-on job saves only the constrained ordinary BestBranch,
+WeightedMean, and FullMixtureMode triplet. The unconstrained reverse triplet
+requires a separate beam-off job and output path.
+
 ## Focused mechanical gate
 
 The EL9 build and install completed for `RecGsfTracking` and

@@ -229,12 +229,12 @@ cards remain artifacts rather than source configuration.
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. It keeps the established smoother and reverse
 workflows and agrees with the production material-path, threshold/cutoff, and
-beam-spot/ECAL settings:
+ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
-`BeamSpotConstraint=False`, `EcalComponentConstraint=False`. The current
-reverse campaign explicitly selects
-`ForwardBHSplitting=False, InwardBHSplitting=True`; the compiled and inherited
+`EcalComponentConstraint=False`. The current live beam-boundary reverse
+campaign explicitly selects `BeamSpotConstraint=True` and
+`ForwardBHSplitting=True, InwardBHSplitting=True`; the compiled and inherited
 active reverse-template defaults remain false/false. These gates control BH
 child creation only; deterministic energy loss, multiple scattering,
 material-path evaluation, and passive material recording remain active. Its
@@ -262,18 +262,21 @@ uses the fixed embedded-EventData source with
 `TruthBHLossMaxEndpointDistance=5.0` mm. No source selector or helper-file
 input property remains. Only generated truth-on cards differ from the false
 override base. This remains a diagnostic campaign, not production steering.
+The current beam-on card must be submitted with the false override: the live
+beam boundary intentionally rejects `TruthBHLossOverride=true` because the
+embedded truth intervals have no beam-to-hit-0 truth hook.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 
-The card explicitly keeps the live beam-boundary experiment off while
-recording its nominal comparison parameters as `BeamSpotX=0.0` mm,
+The card explicitly enables the live beam-boundary experiment with nominal
+comparison parameters `BeamSpotX=0.0` mm,
 `BeamSpotY=0.0` mm, `BeamSpotSigmaX=0.0145` mm, and
 `BeamSpotSigmaY=3.6e-5` mm. It is reverse-only and requires
 `GaussianSumSmoothing=False`, `DD4hepBetweenSurfaces`,
 `MaterialIPExtrapolation=False`, `TruthBHLossOverride=False`,
 `EcalComponentConstraint=False`, and `InwardSeedCovarianceScale<=0`.
 
-When enabled in a separate campaign, the forward three-hit prefit is moved to
+In this campaign, the forward three-hit prefit is moved to
 the beam pivot and receives the scalar beam update. The canonical DD4hep
 beam-to-hit-0 material is optionally BH-split under
 `ForwardBHSplitting`, then transported with its complete KalTest Jacobian and
@@ -461,8 +464,8 @@ replace live reverse weights. Experimental `SmoothedMarginal` remains
 available as a default-off comparison; it reuses overlapping forward evidence
 at successive surfaces and is not a calibrated posterior.
 
-The maintained card also sets `InwardLookaheadDepth=2` for the current reverse
-comparison campaign. The compiled and inherited-template default remains zero.
+The maintained card sets `InwardLookaheadDepth=0` for the current reverse
+beam-boundary campaign, matching the compiled and inherited-template default.
 For a positive depth `N`, temporary copies of each newly split reverse child
 probe the farther-inward hits `i-1` through `i-N`; separately normalized probe
 posteriors are averaged, then combined at equal status with the original BH
@@ -473,13 +476,12 @@ default. The retired `NextMeasurement` and `NextNextMeasurement` strings are
 invalid; use numeric depths one and two respectively when reproducing their
 reach.
 
-The same comparison card sets `ProtectIdentityLineage=False`, intentionally
-different from the compiled and active-template default `true`, so the exact
-no-radiation lineage may participate in ordinary cutoff and KL reduction.
-This campaign choice is not a production-default change.
+The same comparison card sets `ProtectIdentityLineage=True`, matching the
+compiled and active-template default, so the beam-boundary comparison does not
+also change the identity-lineage safeguard.
 
-This same reverse branch is the maintained inward-only splitting diagnostic:
-`ForwardBHSplitting=False`, `InwardBHSplitting=True`. The two switches control
+This same reverse branch enables both boundary directions:
+`ForwardBHSplitting=True`, `InwardBHSplitting=True`. The two switches control
 only BH child creation in the shared outward and independent inward filters.
 The inward switch is inert for non-reverse methods; it does not control the
 retained-graph smoother. With a positive inward seed scale, turning inward
@@ -488,7 +490,8 @@ mixture. Passive above-threshold material counts can therefore remain nonzero
 when a directional gate is off and must not be interpreted as executed split
 counts. The output filename does not encode these switches, so campaigns with
 different settings need distinct output tuple paths to prevent overwrites and
-mislabeling.
+mislabeling. The maintained filename now includes `beamspot` or
+`beamspot-off`; it still does not encode the two directional split switches.
 
 The fresh-seed choice is explicit campaign steering, not a production-default
 change. Its input

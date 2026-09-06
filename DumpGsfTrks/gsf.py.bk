@@ -92,6 +92,9 @@ gsf.InwardBHSplitting = False
 # scope uses ordinary BH for the whole track and is tagged in
 # GSFTruthBHLossStatus and the flat tuple. No side material ROOT file or
 # runtime BH-audit CSV is produced by this maintained workflow.
+# Do not request the truth-on rewrite while BeamSpotConstraint=True: embedded
+# truth intervals do not include the beam-to-hit-0 boundary and initialization
+# deliberately rejects that combination.
 gsf.TruthBHLossOverride = False
 gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
@@ -104,7 +107,7 @@ gsf.MaxComponents = 10
 gsf.ReductionTargetComponents = 0
 gsf.ReductionMergeCost = "SymmetricKL"
 gsf.ComponentWeightCutoff = 1.0e-4
-gsf.ProtectIdentityLineage = False
+gsf.ProtectIdentityLineage = True
 
 gsf.MSOn = True
 gsf.ElossOn = False
@@ -191,23 +194,23 @@ elif method == "reverse":
     gsf.InwardBHSplitting = True
 
     gsf.ForwardSeed = 1.0
-    gsf.ForwardBHSplitting = False
+    gsf.ForwardBHSplitting = True
 
-    # Current comparison campaign: probe both former NextMeasurement and
-    # NextNextMeasurement targets using the integer look-ahead API while
-    # keeping LocalMeasurement as the weighting family.
+    # Keep look-ahead feedback disabled so the beam-boundary A/B comparison
+    # changes only the new live boundary treatment.
     gsf.InwardWeightMode = "LocalMeasurement"
-    gsf.InwardLookaheadDepth = 2
+    gsf.InwardLookaheadDepth = 0
 
     # Inert for the maintained fresh single-component inward seed; retained
     # explicitly for positive-scale copied-mixture comparison cards.
     gsf.InwardSeedCovarianceScale = -1  # A positive value uses the forward final mixture.
     gsf.ReverseInitialWeightMode = "ForwardPosterior"  # Active only when the scale is positive.
 
-    # Keep the live beam-boundary prototype off for the maintained campaign.
-    # Enabling it changes the ordinary three reverse endpoint collections; use
-    # a separate output tuple path for a beam-off/beam-on A/B comparison.
-    gsf.BeamSpotConstraint = False
+    # Current comparison campaign: publish the live beam-constrained reverse
+    # bank through the ordinary three endpoint collections. The unconstrained
+    # reverse triplet is not saved in this job; make a separate beam-off run
+    # and output path for the A/B side.
+    gsf.BeamSpotConstraint = True
 
 else:
     raise ValueError(
@@ -217,6 +220,8 @@ else:
 # Keep ordinary GSF truth-oracle A/B sides explicitly tagged.
 outputmethod = method + (
     "-truth-bh" if gsf.TruthBHLossOverride else "-truth-bh-off"
+) + (
+    "-beamspot" if gsf.BeamSpotConstraint else "-beamspot-off"
 )
 
 gsf.SelectedEventIndices = []
