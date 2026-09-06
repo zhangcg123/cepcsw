@@ -113,8 +113,10 @@ The active `dump_gsftrk.sh` worker accepts one `STAGES` subset of `sim`, `trk`,
 and `gsf` (default `trk,gsf`) and executes selected stages in physical order.
 Each stage consumes a predecessor produced in the same job or, when that
 predecessor is omitted, the corresponding existing tuple from the input tuple
-path. Calorimeter digitization/reconstruction and `EcalCluster` are not part of
-this worker while the ECAL prototype is paused.
+path. After verified GSF EDM and flat-tuple production, the worker removes a
+tracker tuple produced by its own `trk` stage; a `gsf`-only job retains its
+external tracker input. Calorimeter digitization/reconstruction and
+`EcalCluster` are not part of this worker while the ECAL prototype is paused.
 A passive interval recorder now persists, in the final
 GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual

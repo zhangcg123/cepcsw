@@ -192,6 +192,11 @@ also selected, a stage reads that newly produced file; otherwise it reads the
 required existing predecessor from `input_tuplepath`. Thus `trk,gsf` reads an
 existing simulation tuple, while `gsf` reads an existing tracker tuple.
 `sim,trk,gsf`, any two-stage subset, and each individual stage are supported.
+After a successful GSF stage, the worker first verifies that both the GSF EDM
+tuple and its flat tuple are nonempty. It then removes the tracker tuple only
+when the `trk` stage in that same job produced it. A `gsf`-only job retains its
+pre-existing tracker input because that file may be shared by other jobs or
+campaigns.
 The optional `bh_model` argument defaults to
 `CEPCRuntimeCategoryAligned9Clear`; `ActsAtlas` is the only other supported
 value.
