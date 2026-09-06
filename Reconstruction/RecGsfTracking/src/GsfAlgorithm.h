@@ -84,15 +84,6 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_fullMixtureModeStatus{
           "GSFFullMixtureModeStatus", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_beamSpotBestBranchOutputTracks{
-      "GSFTracksBeamSpotBestBranch", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_beamSpotWeightedMeanOutputTracks{
-      "GSFTracksBeamSpotWeightedMean", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_beamSpotFullMixtureModeOutputTracks{
-      "GSFTracksBeamSpotFullMixtureMode", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>>
-      m_beamSpotConstraintStatus{
-          "GSFBeamSpotConstraintStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>>
       m_finalMixtureComponentInputTrackIndex{
           "GSFFinalMixtureComponentInputTrackIndex",
@@ -324,8 +315,8 @@ private:
       "BH-prior channel at the ordinary local update"};
   Gaudi::Property<bool> m_beamSpotConstraint{
       this, "BeamSpotConstraint", false,
-      "Apply a terminal transverse beam-spot Gaussian constraint to separate "
-      "copies of the smoother/reverse IP endpoints"};
+      "Use the transverse beam spot as the live forward and reverse GSF "
+      "boundary measurement; currently supported only by reverse filtering"};
   Gaudi::Property<double> m_beamSpotX{
       this, "BeamSpotX", 0.0,
       "Nominal beam-spot x coordinate in mm"};

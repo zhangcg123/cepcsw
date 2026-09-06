@@ -148,15 +148,17 @@ diagnostic card now uses the same false/false pair. These gates do not disable
 material-path evaluation, passive interval recording, deterministic energy
 loss, multiple scattering, propagation, or measurement updates.
 
-A default-off terminal beam-spot experiment is implemented inside
-`RecGsfTracking`, outside the MarlinTrk classes. It constrains separate copies
-of the already formed smoother/reverse BestBranch, WeightedMean, and
-FullMixtureMode IP Gaussians in transverse `drho`; it does not act as a
-fabricated detector hit or modify mixture evolution, weights, reduction,
-selection, ordinary endpoints, or hit counts. Its nominal comparison widths
-are 0.0145 mm horizontally and 3.6e-5 mm vertically. The separate EDM/flat
-outputs, status contract, focused regression, and population gate are recorded
-in `agents_record/2026-09-07-inward-lookahead-population-and-beamspot-handoff.md`.
+A default-off reverse-only live beam-boundary experiment is implemented inside
+`RecGsfTracking`, outside the MarlinTrk classes. The forward three-hit prefit
+is moved to the beam pivot and constrained before optional beam-to-hit-0 BH
+splitting and the first real-hit update. After the ordinary reverse recursion
+updates hit 0, the same canonical boundary t/X0 may split again in the inward
+direction; each child propagates to the beam, receives the transverse `drho`
+likelihood, and enters the ordinary cutoff/KL and endpoint publication. Its
+nominal comparison widths are 0.0145 mm horizontally and 3.6e-5 mm vertically.
+The exact contract and focused mechanical gate are recorded in
+`agents_record/2026-09-07-live-beam-boundary-gsf.md`; the superseded endpoint-
+copy prototype remains documented in the earlier dated handoff record.
 
 The active defaults are `MaterialPathMode=DD4hepBetweenSurfaces`,
 `ForwardSeed=1` and `BackwardSeed=1` (the complete FullLDCTracking-style
@@ -279,31 +281,39 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The immediate experiment is the default-off terminal transverse beam-spot
-constraint. MarlinTrk has no vertex or arbitrary Gaussian-measurement update:
-its public measurement update consumes a detector `TrackerHit`, while point
-propagation/extrapolation does not constrain a state. Keep the implementation
-inside `RecGsfTracking`; do not fabricate a hit or measurement layer.
+The immediate experiment is the default-off live transverse beam boundary for
+the reverse GSF. MarlinTrk has no public arbitrary Gaussian measurement, so
+the scalar beam update remains package-local. With the experiment on, the
+direction-local forward prefit is moved to `(BeamSpotX, BeamSpotY, 0)` and
+updated there. The canonical DD4hep beam-to-hit-0 interval is evaluated once;
+`ForwardBHSplitting` optionally creates outward children before the hit-0
+measurement. Each child is then transported from the beam through that
+boundary with the package's KalTest cradle, retaining its Jacobian and process
+noise, before the standard MarlinTrk hit-0 update. Reverse independently
+finishes through hit 0, optionally applies
+`InwardBHSplitting` over the same cached interval, propagates each child to the
+beam with MarlinTrk, and applies the beam likelihood. The resulting live bank
+then undergoes the ordinary weight cutoff and KL reduction and supplies
+BestBranch, WeightedMean, and FullMixtureMode. No separate constrained endpoint
+collections or silent unconstrained fallback exist.
 
-For each already formed smoother/reverse IP endpoint, move its five-dimensional
-Gaussian from the origin to `(BeamSpotX, BeamSpotY, 0)`, apply the scalar
-`drho=0` update with the configured transverse beam covariance projected onto
-the endpoint normal, and move it back to the origin. The nominal comparison is
-`BeamSpotX=BeamSpotY=0`, `BeamSpotSigmaX=0.0145 mm`, and
-`BeamSpotSigmaY=3.6e-5 mm`. There is no z constraint or x-y beam correlation
-in this first version. Apply it independently to BestBranch, WeightedMean, and
-FullMixtureMode copies. Preserve the three ordinary endpoints, all component
-weights and lineages, endpoint selection, and real tracker-hit lists exactly.
+The nominal comparison is `BeamSpotX=BeamSpotY=0`,
+`BeamSpotSigmaX=0.0145 mm`, and `BeamSpotSigmaY=3.6e-5 mm`, with no z constraint
+or x-y correlation. Beam mode is accepted only for reverse without the KL
+smoother, `DD4hepBetweenSurfaces`, geometric IP publication, truth override and
+ECAL off, and a fresh inward seed. Directional BH gates remain independent and
+are never silently enabled.
 
-The focused same-code gate on selected indices 11, 16, and 17 is complete: all
-three constrained endpoints succeeded for all three tracks, and a default-off
-rerun reproduced all 46 ordinary scalar endpoint fields exactly. This is only
-mechanical validation. Next, produce a same-code topology-clear on/off
-population comparison. Report no-eBrem, light-eBrem, hard-eBrem,
-transition-location, clean-core, and catastrophic-tail behavior independently
-for BestBranch, WeightedMean, and FullMixtureMode. The beam-spot experiment
-advances only if it preserves clean tracks and improves lossy tracks without
-increasing extreme tails.
+Focused verbose tests on indices 11, 16, and 17 now exercise the forward
+beam-origin transport and both boundary BH splits. All 300 reverse boundary
+children propagated and accepted the beam update; each event retained ten
+components after cutoff/KL and published all three ordinary endpoints. A
+same-code beam-off run reproduced the prior stored
+BestBranch, WeightedMean, and FullMixtureMode values for these events. This is
+mechanical validation only. Next run a topology-clear beam-off/on population
+comparison and report no-eBrem, light-eBrem, hard-eBrem, transition location,
+clean core, and catastrophic tails for all three endpoints. The experiment
+advances only if clean tracks are preserved without increasing extreme tails.
 
 Keep compiled and active-template production controls frozen:
 `DD4hepBetweenSurfaces`, `CEPCRuntimeCategoryAligned9Clear`,
@@ -311,6 +321,6 @@ Keep compiled and active-template production controls frozen:
 protection, `ForwardSeed=1`, `BackwardSeed=1`, directional splitting
 false/false, `InwardLookaheadDepth=0`, and `BeamSpotConstraint=false`. The
 maintained comparison card still carries the previous diagnostic campaign's
-explicit depth 2 and identity protection off; enable the beam constraint only
-in a dedicated A/B card. ECAL remains paused. Historical detail does not
-override this live focus.
+explicit depth 2 and identity protection off; enable beam mode only in a
+dedicated A/B card and tuple path. ECAL remains paused. Historical detail does
+not override this live focus.

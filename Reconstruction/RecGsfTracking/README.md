@@ -4,10 +4,11 @@
 The smoother and reverse workflows always write three row-aligned endpoint
 views: the selected branch to `GSFTracksBestBranch`, the moment-matched state
 to `GSFTracksWeightedMean`, and the maximum of the complete five-dimensional
-mixture density to `GSFTracksFullMixtureMode`. A default-off terminal
-beam-spot experiment can apply one transverse prompt-origin constraint to
-separate copies of all three already formed IP endpoints. The ordinary
-unconstrained collections remain unchanged. A
+mixture density to `GSFTracksFullMixtureMode`. A default-off reverse-only
+beam-boundary experiment can instead make the transverse beam spot a live
+boundary measurement in both the shared forward initialization and the final
+reverse mixture. Beam-on and beam-off comparisons therefore use separate
+jobs; there are no parallel post-collapse beam endpoint collections. A
 default-on automatic component record also persists every positive-weight
 final smoother/reverse component's normalized weight, IP kappa mean, and
 kappa variance so the transverse-momentum marginal can be reconstructed from
@@ -46,8 +47,10 @@ unsteered fit creates no BH children in either direction. Disabling either
 gate leaves its material-path evaluation, passive interval recording,
 propagation, and measurement updates active. `InwardBHSplitting` is inert
 unless `ReverseFiltering=true`.
-Reverse publishes the inner boundary state,
-`B_updated[0] = measurement[0] x B_predicted[0]`.
+Without the beam-boundary experiment, reverse publishes the inner measurement
+state, `B_updated[0] = measurement[0] x B_predicted[0]`. With it enabled,
+that bank is additionally split/propagated over the hit-0-to-beam boundary,
+updated by the beam likelihood, cut, and reduced before publication.
 Both use the single `InwardSeedCovarianceScale` property. Positive values copy
 the final forward population into the common inward filter and scale every
 component covariance; values at or below zero instead construct one fresh,
@@ -65,8 +68,12 @@ update path. All forward GSF workflows use a dedicated standard-KF-style
 initializer: a temporary prefit through the first three available
 two-dimensional hits, followed by the loose covariance
 `Var(d0)=1e6`, `Var(phi)=1e2`, `Var(omega)=1e-4`, `Var(z0)=1e6`, and
-`Var(tanLambda)=1e2`, pivot transport to the first hit, and an explicit
-MarlinTrk update with that first hit. `ForwardSeed` and `BackwardSeed`
+`Var(tanLambda)=1e2`. The ordinary path transports that seed to the first hit
+and performs an explicit MarlinTrk update there. In beam-boundary mode, the
+prefit is first moved to the configured beam pivot and updated by the scalar
+beam measurement; optional BH splitting and Marlin propagation over the
+beam-to-hit-0 interval then precede the ordinary hit-0 update.
+`ForwardSeed` and `BackwardSeed`
 independently scale all five FullLDCTracking-style diagonal seed variances for
 the direction-local outward and fresh-inward prefits; a value of `1` uses the
 unscaled values above. They do not restore the former `CompleteTracks`-
@@ -99,12 +106,12 @@ distinction matters because that template enables `ElossOn` and
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
 | `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
-| `ForwardBHSplitting` | `false` | `false` | Enable BH component creation in the shared outward filter, including the initial hit-0 to hit-1 interval and every later outgoing accepted-hit interval above `BHSplitThreshold`. When false, the outward state still propagates, updates measurements, evaluates DD4hep paths, and contributes passive material summaries, but it remains unsplit by BH. This does not disable deterministic `ElossOn` or `MSOn`. |
-| `InwardBHSplitting` | `false` | `false` | Enable BH component creation in the independent reverse inward filter for every outer-to-inner interval above `BHSplitThreshold`. It is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`, which only consumes the retained forward graph. When false, the inward state still propagates, updates measurements, forms requested same-surface products, and contributes passive material summaries, but creates no new inward BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. The maintained diagnostic card also selects false; inward-only splitting remains an explicit comparison setting. |
+| `ForwardBHSplitting` | `false` | `false` | Enable BH component creation in the shared outward filter. The ordinary path begins with hit-0 to hit-1; beam-boundary mode additionally applies this same gate to the canonical DD4hep beam-to-hit-0 interval before hit 0 is updated. Every later outgoing accepted-hit interval remains governed by this property and `BHSplitThreshold`. `BeamSpotConstraint` never forces this gate on. When false, propagation, measurement updates, material evaluation, and passive recording remain active without forward BH children. This does not disable deterministic `ElossOn` or `MSOn`. |
+| `InwardBHSplitting` | `false` | `false` | Enable BH component creation in the independent reverse filter for every outer-to-inner interval above `BHSplitThreshold`. Beam-boundary mode additionally applies this same gate to the canonical hit-0-to-beam interval after hit 0 has been updated. `BeamSpotConstraint` never forces it on. The property is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`. When false, inward propagation, hit and beam updates, same-surface products, and passive material evaluation remain active without new reverse BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. The maintained reverse branch explicitly enables inward splitting; the common compiled and template default remains false. |
 | `MSOn` | `true` | `true` | Enable multiple-scattering process noise in the underlying track fit. |
 | `ElossOn` | `false` | `true` | Enable the baseline KalTest deterministic energy-loss treatment in addition to BH splitting. |
 | `MaterialPathMode` | `DD4hepBetweenSurfaces` | same | Material assignment for both outward and inward propagation. The default integrates the complete DD4hep volume interval between matched measurement endpoints in canonical inner-to-outer order; `CurrentSurface` remains an explicit comparison control. |
-| `MaterialIPExtrapolation` | `false` | `false` | Include material effects during final extrapolation to the interaction point. Kept off in the active workflow. |
+| `MaterialIPExtrapolation` | `false` | `false` | Include material effects during the legacy final extrapolation to the interaction point. Beam-boundary mode requires this false because it explicitly processes the complete hit-0-to-beam material before its terminal measurement. |
 | `ForwardSeed` | `1.0` | same | Finite positive covariance scale for the outward three-innermost-hit prefit. `1` assigns the FullLDCTracking-style diagonal variances `Var(d0)=1e6`, `Var(phi)=1e2`, `Var(omega)=1e-4`, `Var(z0)=1e6`, and `Var(tanLambda)=1e2`; any other positive value multiplies all five variances uniformly before pivot transport and the explicit first-hit update. |
 | `BackwardSeed` | `1.0` | same | Finite positive covariance scale for the fresh-inward three-outermost-hit prefit, with the same five-variance scaling as `ForwardSeed`. It acts only when `InwardSeedCovarianceScale<=0`; a positive inward scale copies and scales the final forward mixture and therefore ignores this property. |
 
@@ -125,6 +132,13 @@ boundary omits the leading volume, the query is retried from 1 micrometre
 inside the interval and the leading cap is restored from `materialAt` at its
 midpoint. A retry that still does not cover the interval is invalid rather
 than silently accepting a partial material path.
+Beam-boundary mode defines one additional canonical geometric segment from
+`(BeamSpotX, BeamSpotY, 0)` to the matched hit-0 position. The forward and
+reverse boundary calls use that same endpoint order and therefore the same
+DD4hep t/X0; their directional BH split gates remain independent. The passive
+truth-material interval recorder begins at hit 0 and does not claim a Geant4
+truth comparison for this extra boundary segment. A successful boundary split
+does retain its actual DD4hep t/X0 in the component-lineage record.
 In the `CurrentSurface` control, the owning surface's inner and outer normal
 thicknesses are divided by the absolute dot product of the component-local
 track tangent and DD4hep surface normal. Outward propagation evaluates the
@@ -181,6 +195,11 @@ scope before filtering and falls back to the ordinary BH model for that whole
 track; it never assumes zero loss. Other input tracks are outside the oracle
 scope and use the configured BH model unchanged. This all-or-nothing boundary
 prevents an undocumented truth/BH hybrid within one fitted track.
+
+`TruthBHLossOverride` and `BeamSpotConstraint` are intentionally incompatible.
+The embedded truth scope begins at hit 0 and supplies no exact production-
+vertex/beam-to-hit-0 truth interval; allowing both would silently mix the
+configured BH response at the boundary with truth responses elsewhere.
 
 The per-input-track status codes are:
 
@@ -315,9 +334,12 @@ those direct weights by backward parent and uses that marginal as the live
 weight of the corresponding measurement-updated `B_updated[i]` state;
 `LocalMeasurement` leaves the product fully diagnostic. At the boundaries no
 product node is synthesized: `B_smoothed[0]` is the terminal `B_updated[0]`,
-while `B_smoothed[N-1]` is the final `F_updated[N-1]`. Reverse derives all
-three endpoint views from `B_updated[0]`; no interior smoothed state is
-propagated or published.
+while `B_smoothed[N-1]` is the final `F_updated[N-1]`. With
+`BeamSpotConstraint=false`, reverse derives all three endpoint views from
+`B_updated[0]`. With it enabled, `B_updated[0]` instead enters the explicit
+hit-0-to-beam split, propagation, measurement, cutoff, and reduction described
+below; all three views come from that final boundary bank. No interior
+smoothed state is propagated or published.
 Historical CMS-like files retain their original collections and flat fields;
 they are not an active workflow and are not renamed in place.
 
@@ -353,48 +375,68 @@ output only: recording does not alter reduction, selection, endpoint
 publication, or any component state. Ordinary forward workflows do not expose
 this final multi-component endpoint and therefore produce no component rows.
 
-### Experimental terminal beam-spot constraint
+### Experimental live beam-boundary constraint
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
-| `BeamSpotConstraint` | `false` | `false` | Apply a default-off transverse prompt-origin constraint to separate copies of the three already formed smoother/reverse IP endpoints. Ordinary forward is unsupported, and the three unconstrained endpoint collections remain unchanged. |
+| `BeamSpotConstraint` | `false` | `false` | Enable the default-off reverse-only live beam-boundary workflow. It changes both the shared forward initialization and the final reverse mixture; it is not a post-collapse endpoint copy. |
 | `BeamSpotX` | `0.0 mm` | same | Finite nominal beam-spot x coordinate. |
 | `BeamSpotY` | `0.0 mm` | same | Finite nominal beam-spot y coordinate. |
 | `BeamSpotSigmaX` | `0.0145 mm` | same | Finite positive horizontal Gaussian beam width. This nominal CEPC comparison value is not a validated GSF production setting. |
 | `BeamSpotSigmaY` | `3.6e-5 mm` | same | Finite positive vertical Gaussian beam width. This nominal CEPC comparison value is not a validated GSF production setting. |
 
-This first implementation is endpoint-only: it neither reweights final
-components nor reruns BestBranch selection, WeightedMean moment matching, or
-FullMixtureMode optimization. Each unconstrained endpoint Gaussian is moved
-from the standard IP pivot to `(BeamSpotX, BeamSpotY, 0)`, constrained in the
-local transverse `drho` coordinate, and transported back to the origin. For
-an endpoint normal azimuth `phi0`, the independent axis-aligned beam widths
-enter the scalar measurement variance as
+The property is accepted only with `ReverseFiltering=true`,
+`GaussianSumSmoothing=false`,
+`MaterialPathMode=DD4hepBetweenSurfaces`,
+`MaterialIPExtrapolation=false`, `TruthBHLossOverride=false`,
+`EcalComponentConstraint=false`, and `InwardSeedCovarianceScale<=0`.
+The fresh inward seed prevents the reverse pass from reusing a forward
+mixture that has already incorporated the same beam measurement.
+
+The forward three-hit prefit is moved to `(BeamSpotX, BeamSpotY, 0)` and
+updated there before any real hit is fitted. The complete canonical DD4hep
+beam-to-hit-0 t/X0 is then evaluated. `ForwardBHSplitting`,
+`ElectronHypothesis`, and `BHSplitThreshold` independently decide whether it
+creates BH children; the beam option does not override them. Every resulting
+state is transported from the beam through the innermost material surface to
+hit 0 with the package's KalTest cradle. Its full Jacobian and process noise
+are composed with the standard MarlinTrk hit-0 measurement update, after which
+the usual outward hit recursion resumes. The synthetic cradle source site is
+package-local and is neither an EDM hit nor a shared tracking-code change.
+
+Reverse first completes the ordinary inward recursion through the hit-0
+measurement. It then evaluates the same canonical beam-to-hit-0 t/X0.
+`InwardBHSplitting`, `ElectronHypothesis`, and `BHSplitThreshold` govern the
+optional reverse boundary split. Every child is propagated from hit 0 to the
+beam pivot with MarlinTrk and updated by the custom scalar beam measurement.
+For component `k`, the live terminal score is
+
+```text
+log w_k' = log w_k - 0.5 * (deltaChi2_k + log S_k),
+```
+
+where `S_k` is its one-dimensional beam innovation variance. These weights
+are normalized before the ordinary component cutoff and KL reduction. The
+surviving bank, not the pre-beam `B_updated[0]`, supplies ordinary
+BestBranch, WeightedMean, FullMixtureMode, final-component, and lineage
+publication. Each published `AtIP` state is finally moved back to the origin
+as a material-free pivot transformation.
+
+For a component normal azimuth `phi0`, the independent axis-aligned beam
+widths enter the scalar measurement variance as
 
 ```text
 R = cos(phi0)^2 BeamSpotSigmaX^2 + sin(phi0)^2 BeamSpotSigmaY^2.
 ```
 
 There is no longitudinal beam constraint and no configured x-y correlation.
-A successful scalar update adds its beam compatibility delta-chi-square to
-the source endpoint chi-square and increments NDF by one. Consequently the
-constrained WeightedMean and FullMixtureMode fit metadata describe the
-corresponding endpoint constraint applied on top of the inherited BestBranch
-metadata; they are not newly defined component-mixture fit qualities.
-
-When enabled, the row-aligned paired outputs are
-`GSFTracksBeamSpotBestBranch`, `GSFTracksBeamSpotWeightedMean`, and
-`GSFTracksBeamSpotFullMixtureMode`. One common
-`GSFBeamSpotConstraintStatus` integer uses bit 0 for attempted, bit 1 for a
-successful BestBranch update, bit 2 for WeightedMean, and bit 3 for
-FullMixtureMode. Thus status 15 means that all three endpoint constraints
-succeeded. If an individual update fails, its paired track is an exact copy
-of that endpoint's unconstrained source and its success bit is absent. Status
-zero means disabled or not applicable. The existing
-`GSFFullMixtureModeStatus` remains the authority on whether the unconstrained
-FullMixtureMode source is a true density mode or its documented BestBranch
-fallback. In particular, `GSFTracksBeamSpotFullMixtureMode` is the constraint
-of that already published source; it is not the mode of a newly constrained
+A successful boundary update contributes its delta-chi-square and one degree
+of freedom to the component fit. A failed component update removes that
+component; if none survives, no reverse GSF track is published. There is no
+unconstrained fallback inside a beam-on fit and no separate beam collection,
+flat endpoint family, or status bitmask. A/B comparison therefore requires
+separate beam-off and beam-on jobs. `GSFFullMixtureModeStatus` retains its
+ordinary meaning for the density-mode search performed on the final live
 mixture.
 
 ### Experimental ECAL component constraint
@@ -474,10 +516,6 @@ The data handles are configurable separately from the 43 properties:
 | paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
 | paired smoother/reverse full-mixture density-mode tracks | `GSFTracksFullMixtureMode` |
 | per-output-track full-mixture-mode status | `GSFFullMixtureModeStatus` |
-| beam-spot-constrained BestBranch copies | `GSFTracksBeamSpotBestBranch` |
-| beam-spot-constrained WeightedMean copies | `GSFTracksBeamSpotWeightedMean` |
-| beam-spot-constrained FullMixtureMode copies | `GSFTracksBeamSpotFullMixtureMode` |
-| per-output-track beam-spot constraint bitmask | `GSFBeamSpotConstraintStatus` |
 | final-mixture component track mapping | `GSFFinalMixtureComponentInputTrackIndex`, `GSFFinalMixtureComponentOutputTrackIndex` |
 | final-mixture component identity/method/status | `GSFFinalMixtureComponentIndex`, `GSFFinalMixtureComponentID`, `GSFFinalMixtureComponentSource`, `GSFFinalMixtureComponentValid` |
 | final-mixture component PDF parameters | `GSFFinalMixtureComponentWeight`, `GSFFinalMixtureComponentKappa`, `GSFFinalMixtureComponentKappaVariance` |
@@ -496,10 +534,9 @@ The data handles are configurable separately from the 43 properties:
 `RecGsfFlatTuple` keeps method-explicit tracker-result schemas. The
 `bestbranch_gsf_*` fields come only from `GSFTracksBestBranch`, while the
 generic `gsf_*` fields come from an optional `GSFTracks` collection. When
-`GSFTracksWeightedMean`, `GSFTracksFullMixtureMode`, one of the three
-beam-spot-constrained collections, or `GSFTracksEcalConstrained` is present in
-the ordinary GSF event store, the tuple also fills the corresponding parallel
-scalar set:
+`GSFTracksWeightedMean`, `GSFTracksFullMixtureMode`, or
+`GSFTracksEcalConstrained` is present in the ordinary GSF event store, the
+tuple also fills the corresponding parallel scalar set:
 
 | Branches | Meaning |
 |---|---|
@@ -511,20 +548,15 @@ scalar set:
 | `fullmixture_gsf_pT`, `fullmixture_gsf_p`, `fullmixture_gsf_eta`, `fullmixture_gsf_theta`, `fullmixture_gsf_phi`, `fullmixture_gsf_d0`, `fullmixture_gsf_z0`, `fullmixture_gsf_omega`, `fullmixture_gsf_tanl`, `fullmixture_gsf_chi2`, `fullmixture_gsf_ndf`, `fullmixture_gsf_nhits`, `fullmixture_gsf_type` | Paired full five-dimensional mixture-density mode from `GSFTracksFullMixtureMode`. The chi-square/NDF are inherited from BestBranch. |
 | `fullmixture_gsf_available`, `fullmixture_gsf_changed` | Presence tag and exact scalar comparison against BestBranch. They are zero for forward output. |
 | `fullmixture_gsf_status` | `1` successful joint mode; `0` not applicable; `-1` incomplete component set; `-2` optimization failure; `-3` invalid local covariance; `-4` unavailable method endpoint. Negative values identify a persisted BestBranch fallback. |
-| `beamspot_bestbranch_gsf_pT`, `beamspot_bestbranch_gsf_p`, `beamspot_bestbranch_gsf_eta`, `beamspot_bestbranch_gsf_theta`, `beamspot_bestbranch_gsf_phi`, `beamspot_bestbranch_gsf_d0`, `beamspot_bestbranch_gsf_z0`, `beamspot_bestbranch_gsf_omega`, `beamspot_bestbranch_gsf_tanl`, `beamspot_bestbranch_gsf_chi2`, `beamspot_bestbranch_gsf_ndf`, `beamspot_bestbranch_gsf_nhits`, `beamspot_bestbranch_gsf_type` | Beam-spot-constrained copy of `GSFTracksBestBranch`, or its exact unconstrained fallback. |
-| `beamspot_weighted_gsf_pT`, `beamspot_weighted_gsf_p`, `beamspot_weighted_gsf_eta`, `beamspot_weighted_gsf_theta`, `beamspot_weighted_gsf_phi`, `beamspot_weighted_gsf_d0`, `beamspot_weighted_gsf_z0`, `beamspot_weighted_gsf_omega`, `beamspot_weighted_gsf_tanl`, `beamspot_weighted_gsf_chi2`, `beamspot_weighted_gsf_ndf`, `beamspot_weighted_gsf_nhits`, `beamspot_weighted_gsf_type` | Beam-spot-constrained copy of `GSFTracksWeightedMean`, or its exact unconstrained fallback. |
-| `beamspot_fullmixture_gsf_pT`, `beamspot_fullmixture_gsf_p`, `beamspot_fullmixture_gsf_eta`, `beamspot_fullmixture_gsf_theta`, `beamspot_fullmixture_gsf_phi`, `beamspot_fullmixture_gsf_d0`, `beamspot_fullmixture_gsf_z0`, `beamspot_fullmixture_gsf_omega`, `beamspot_fullmixture_gsf_tanl`, `beamspot_fullmixture_gsf_chi2`, `beamspot_fullmixture_gsf_ndf`, `beamspot_fullmixture_gsf_nhits`, `beamspot_fullmixture_gsf_type` | Beam-spot-constrained copy of `GSFTracksFullMixtureMode`, or its exact unconstrained fallback. |
-| `beamspot_bestbranch_gsf_available`, `beamspot_bestbranch_gsf_changed`, `beamspot_weighted_gsf_available`, `beamspot_weighted_gsf_changed`, `beamspot_fullmixture_gsf_available`, `beamspot_fullmixture_gsf_changed` | Presence and exact source-relative change tags for the three beam-spot endpoint families. They remain zero when the constraint is disabled or unavailable. |
-| `beamspot_constraint_status` | Common bitmask from `GSFBeamSpotConstraintStatus`: bit 0 attempted, and bits 1, 2, and 3 mark successful BestBranch, WeightedMean, and FullMixtureMode updates. |
 | `final_mixture_component_available`, `final_mixture_component_n` | One when at least one final smoother/reverse component was recorded, and the common length of every `final_mixture_component_*` vector. These branches always exist. |
 | `final_mixture_component_input_track_index`, `final_mixture_component_output_track_index` | Map every component to its source `CompleteTracks` index and row-aligned published GSF track index. This preserves all output tracks even though the legacy scalar endpoint fields describe only the first track. |
-| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` reverse terminal inward mixture), and IP-state validity. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
+| `final_mixture_component_index`, `final_mixture_component_id`, `final_mixture_component_source`, `final_mixture_component_valid` | Position in the final internal component vector, event-local diagnostic component ID, source code (`1` Gaussian-sum smoother or `2` reverse terminal inward mixture), and IP-state validity. In beam-boundary mode source 2 is the post-beam-measurement, post-cutoff/KL bank rather than pre-beam `B_updated[0]`. Codes `3` (historical CMS-like hit-1 smoothed endpoint) and `4` (historical terminal-backward fallback) remain reserved for interpreting older tuples. `valid=1` requires successful extrapolation, finite parameters, positive finite kappa variance, and a positive-definite full IP covariance. |
 | `final_mixture_component_weight`, `final_mixture_component_kappa`, `final_mixture_component_kappa_variance`, `final_mixture_component_pT` | Per-component normalized weight, IP kappa mean, covariance element `Cov(kappa,kappa)`, and derived `1/abs(kappa)` in GeV. The pT entry is NaN when `valid!=1` or kappa is unusable. |
 | `lineage_graph_available`, `lineage_node_n`, `lineage_edge_n` | Presence flag and the common lengths of the node and edge vector families. The branches always exist; smoother and reverse populate them automatically, while forward, unprocessed rows, and older EDM inputs leave them zero/empty. |
 | `lineage_node_input_track_index`, `lineage_node_output_track_index`, `lineage_node_id` | Stable graph key and track mapping. Node IDs start at zero independently for each input track, are never reused within that track, and remain in the record after the live component is deleted. The unique event-local key is `(input_track_index,node_id)`. `output_track_index=-1` preserves the evaluated graph when no GSF endpoint could be published. |
-| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` an interior two-filter smoothed product. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates only at successfully processed interior surfaces `0 < i < N-1`; `B_smoothed[0]` is represented by the terminal source-2 nodes and `B_smoothed[N-1]` by the final source-1 nodes. Each explicit smoothing candidate has one source-1 `F_updated[i]` parent and one source-2 pre-measurement parent representing `B_predicted[i]`; the exact transported backward prediction is persisted on the source-3 candidate itself. Numeric source and operation codes are unchanged. |
+| `lineage_node_source`, `lineage_node_operation`, `lineage_node_hit_index`, `lineage_node_surface_index`, `lineage_node_component_id`, `lineage_node_generation` | Workflow side, creation operation, call-site hit/surface, diagnostic component ID, and BH generation. Source is `1` forward, `2` reverse/backward, or `3` an interior two-filter smoothed product. Operation is `1` seed, `2` BH split child, `3` evaluated measurement result, `4` KL-merge output, or `5` smoothing candidate. Smoother graphs contain the forward construction used by the smoother. With positive `InwardSeedCovarianceScale`, reverse links each copied forward state to its backward seed; with a nonpositive scale, it instead contains one source-2 operation-1 root at hit `N-1` with no forward parent. Reverse records operation-5 candidates only at successfully processed interior surfaces `0 < i < N-1`; `B_smoothed[0]` is represented by the terminal source-2 nodes and `B_smoothed[N-1]` by the final source-1 nodes. Each explicit smoothing candidate has one source-1 `F_updated[i]` parent and one source-2 pre-measurement parent representing `B_predicted[i]`; the exact transported backward prediction is persisted on the source-3 candidate itself. Beam-boundary prefit, split, measurement, and terminal reduction nodes use hit and surface index `-1`; their ordinary source/operation codes are unchanged. |
 | `lineage_node_bh_component_index`, `lineage_node_bh_weight`, `lineage_node_bh_mean`, `lineage_node_bh_variance`, `lineage_node_material_tx0` | Exact configured BH mode and interval thickness for a split-created child. They are NaN or `-1` when the node was not created by a successful BH split. |
-| `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Surface-local evidence. For source-1/source-2 operation-3 nodes, status is `0` rejected, `1` accepted through the exact live measurement update, `2` accepted through the legacy recovery path, or `3` an accepted temporary look-ahead measurement whose state is diagnostic-only. `dchi2` and `logdet_innovation` are the measurement innovation terms. Each status-3 node is a passive side child of the split-surface node and its `normalized_posterior` is normalized separately within that probe hit; the live lineage remains at the split node and advances through the ordinary adjacent measurement. For a positive `InwardLookaheadDepth`, the ordinary adjacent node's `normalized_posterior` is the globally normalized sum of the original-BH-prior and averaged-feedback channels after both receive the same adjacent-hit likelihood. With depth zero it is the ordinary normalized `prior(B_predicted) x likelihood(hit|B_predicted)` score; in interior `SmoothedMarginal` steps it is the normalized forward-marginalized product weight. `log_unnormalized_posterior` preserves the raw local-measurement-family score, including the combined two-channel raw score at positive depth; under `SmoothedMarginal`, only `normalized_posterior` reflects the selected forward-marginalized live weight. For a source-3 operation-5 candidate, status remains `-1` because no detector measurement is performed, `prior_weight=w_F*w_B`, `dchi2` is the five-dimensional `F_updated`/`B_predicted` compatibility quadratic, `logdet_innovation=log(det(C_F+C_B))`, and `log_unnormalized_posterior` is the exact pair log weight used by the algorithm. Its `normalized_posterior` is the direct pair weight before the product cutoff and KL reduction. Split, seed, and KL-output nodes retain NaN for non-applicable evidence fields. |
+| `lineage_node_measurement_status`, `lineage_node_dchi2`, `lineage_node_logdet_innovation`, `lineage_node_log_unnormalized_posterior`, `lineage_node_normalized_posterior`, `lineage_node_prior_weight` | Surface-local evidence. For source-1/source-2 operation-3 nodes, status is `0` rejected, `1` accepted through the exact live detector-hit update, `2` accepted through the legacy recovery path, `3` an accepted temporary look-ahead measurement whose state is diagnostic-only, or `4` an accepted scalar beam-boundary update. Beam status-4 nodes use hit/surface `-1`, store the scalar compatibility `dchi2`, `log(S)`, and `log(prior)-0.5*(dchi2+log(S))`, and their normalized posterior is the live weight before boundary cutoff/KL. Each status-3 node is a passive side child of the split-surface node and its `normalized_posterior` is normalized separately within that probe hit; the live lineage remains at the split node and advances through the ordinary adjacent measurement. For a positive `InwardLookaheadDepth`, the ordinary adjacent node's `normalized_posterior` is the globally normalized sum of the original-BH-prior and averaged-feedback channels after both receive the same adjacent-hit likelihood. With depth zero it is the ordinary normalized `prior(B_predicted) x likelihood(hit|B_predicted)` score; in interior `SmoothedMarginal` steps it is the normalized forward-marginalized product weight. `log_unnormalized_posterior` preserves the raw local-measurement-family score, including the combined two-channel raw score at positive depth; under `SmoothedMarginal`, only `normalized_posterior` reflects the selected forward-marginalized live weight. For a source-3 operation-5 candidate, status remains `-1` because no detector measurement is performed, `prior_weight=w_F*w_B`, `dchi2` is the five-dimensional `F_updated`/`B_predicted` compatibility quadratic, `logdet_innovation=log(det(C_F+C_B))`, and `log_unnormalized_posterior` is the exact pair log weight used by the algorithm. Its `normalized_posterior` is the direct pair weight before the product cutoff and KL reduction. Split, seed, and KL-output nodes retain NaN for non-applicable evidence fields. |
 | `lineage_node_prior_local_posterior`, `lineage_node_lookahead_local_posterior` | Row-aligned decomposition of a live reverse measurement node's weight. `prior_local_posterior` is the separately normalized original-prior-times-local-likelihood channel. With active look-ahead, `lookahead_local_posterior` is the separately normalized averaged-feedback-times-local-likelihood channel; it is NaN when no look-ahead channel exists. The live `normalized_posterior` is formed from the sum of the two unnormalized channels and is the only one that enters cutoff, KL reduction, and subsequent propagation. Older EDM inputs receive row-aligned NaNs for both fields. |
 | `lineage_node_fate`, `lineage_node_no_radiation`, `lineage_node_best_branch`, `lineage_node_final_mixture`, `lineage_node_valid` | Fate is `0` active, `1` advanced to a child, `2` measurement rejected, `3` removed by weight cutoff, `4` consumed by KL merge, `5` final survivor, `6` abandoned because its endpoint or complete output track failed, or `7` a retained internal diagnostic state that does not enter the published endpoint, including direct smoothed-mixture candidates and status-3 look-ahead probe nodes. The remaining flags identify the exact identity lineage, published BestBranch, final-mixture membership, and a finite recorded state. |
 | `lineage_node_weight`, `lineage_node_predicted_kappa`, `lineage_node_predicted_kappa_variance`, `lineage_node_predicted_pT`, `lineage_node_filtered_kappa`, `lineage_node_filtered_kappa_variance`, `lineage_node_filtered_pT`, `lineage_node_smoothed_kappa`, `lineage_node_smoothed_kappa_variance`, `lineage_node_smoothed_pT`, `lineage_node_dominant_lineage_fraction`, `lineage_node_merge_cost` | Node-local statistical state. For measurement nodes, predicted quantities are the pre-update state and filtered quantities are the post-update state. For source-3 operation-5 candidates, predicted quantities are the exact `B_predicted[i]` input and the explicit `smoothed_*` quantities are the `F_updated[i] x B_predicted[i]` product. Source-3 KL outputs also populate `smoothed_*`; other sources receive NaN in those aliases. The legacy generic `filtered_*` values remain populated for source 3 for schema compatibility and equal `smoothed_*`. pT is derived as `1/abs(kappa)`. Merge cost is finite only for a KL output. `weight` is the current/final node weight, while `normalized_posterior` preserves the direct candidate's pre-pruning posterior. |
@@ -533,7 +565,7 @@ scalar set:
 | `ecal_gsf_pT`, `ecal_gsf_p`, `ecal_gsf_eta`, `ecal_gsf_theta`, `ecal_gsf_phi`, `ecal_gsf_d0`, `ecal_gsf_z0`, `ecal_gsf_omega`, `ecal_gsf_tanl`, `ecal_gsf_chi2`, `ecal_gsf_ndf`, `ecal_gsf_nhits`, `ecal_gsf_type` | Paired `GSFTracksEcalConstrained` result. |
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
-| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_beamspot_bestbranch_gsf`, `res_pT_beamspot_weighted_gsf`, `res_pT_beamspot_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, unconstrained BestBranch/WeightedMean/FullMixtureMode, the three beam-spot copies, and ECAL-constrained fractional pT residuals relative to the first truth particle. |
+| `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, FullMixtureMode, and ECAL-constrained fractional pT residuals relative to the first truth particle. In a beam-boundary run the ordinary three reverse endpoint residuals already describe the beam-updated live mixture. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 | `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
@@ -555,13 +587,6 @@ its status collection. Forward jobs leave it unavailable/zero with status
 zero. A negative status with
 `fullmixture_gsf_available=1` means the row-aligned track is the deliberate
 BestBranch fallback, not a successfully found density mode.
-
-The three beam-spot branch families and their common status branch always
-exist in newly produced flat tuples. They are filled only from the paired
-beam-spot collections and remain unavailable/zero when the experiment is off.
-Their `changed` flags compare each result only with its own unconstrained
-source endpoint. They have no duplicate hit-vector branches because every
-paired output preserves the corresponding source track's tracker-hit list.
 
 The `final_mixture_component_*` vectors are likewise automatic/default-on and
 presence-driven. Weights are normalized independently for each
@@ -638,14 +663,14 @@ rather than one entry per parent or BH child.
 
 `DumpGsfTrks/gsf.py.bk` explicitly configures 42 of the 43 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
-`RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff, and
+`RecordTruthMaterialIntervals=true` default. Its reverse material, split/cutoff,
 beam-spot, and ECAL settings agree with the production baseline:
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
 `DD4hepBetweenSurfaces`, beam-spot off, and ECAL off. For the current
-double-off diagnostic,
-the card explicitly selects `ForwardBHSplitting=false` and
-`InwardBHSplitting=false`, matching the compiled and unsteered active reverse-
-template defaults. Its top-level `bh_model` selector explicitly uses the
+inward-only splitting campaign, the reverse branch explicitly selects
+`ForwardBHSplitting=false` and `InwardBHSplitting=true`; the compiled and
+unsteered active-template defaults remain false/false. Its top-level
+`bh_model` selector explicitly uses the
 compiled and active-template default `CEPCRuntimeCategoryAligned9Clear`;
 `ActsAtlas` remains the sole default-off model control. The retired runtime
 BH-audit CSV is no
@@ -653,10 +678,9 @@ longer steered. The card's `RecGsfFlatTuple` instance writes
 the default-on `truth_material_*` vectors alongside BestBranch
 `bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
 `gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
-The three `beamspot_*_gsf_*` endpoint families and their common bitmask are
-also always present in the flat schema and remain unavailable/zero because
-the maintained card explicitly sets `BeamSpotConstraint=false` while retaining
-the four nominal coordinate/width values.
+It explicitly sets `BeamSpotConstraint=false` while retaining the four nominal
+coordinate/width values. Beam-boundary runs fill the ordinary three reverse
+endpoint families; no `beamspot_*` flat schema or separate status exists.
 The same campaign intentionally sets `ProtectIdentityLineage=false` and
 `InwardLookaheadDepth=2`, unlike their compiled and active-template values
 `true` and zero. These are comparison settings, not production-default

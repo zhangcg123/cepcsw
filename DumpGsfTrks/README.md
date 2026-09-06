@@ -233,9 +233,9 @@ beam-spot/ECAL settings:
 `DD4hepBetweenSurfaces`, `BHSplitThreshold=1e-4`,
 `MaxComponents=10`, `ComponentWeightCutoff=1e-4`, and
 `BeamSpotConstraint=False`, `EcalComponentConstraint=False`. The current
-double-off diagnostic matches
-the compiled and inherited active reverse-template directional defaults:
-`ForwardBHSplitting=False, InwardBHSplitting=False`. These gates suppress BH
+reverse campaign explicitly selects
+`ForwardBHSplitting=False, InwardBHSplitting=True`; the compiled and inherited
+active reverse-template defaults remain false/false. These gates control BH
 child creation only; deterministic energy loss, multiple scattering,
 material-path evaluation, and passive material recording remain active. Its
 top-level `bh_model` selector explicitly uses the production baseline
@@ -265,16 +265,29 @@ override base. This remains a diagnostic campaign, not production steering.
 Use the package README for the complete configuration reference and the
 reverse template for the production-baseline settings.
 
-The card explicitly keeps the terminal beam-spot experiment off while
+The card explicitly keeps the live beam-boundary experiment off while
 recording its nominal comparison parameters as `BeamSpotX=0.0` mm,
 `BeamSpotY=0.0` mm, `BeamSpotSigmaX=0.0145` mm, and
-`BeamSpotSigmaY=3.6e-5` mm. Enabling it leaves the ordinary three
-smoother/reverse endpoint collections unchanged and creates paired
-`GSFTracksBeamSpotBestBranch`, `GSFTracksBeamSpotWeightedMean`, and
-`GSFTracksBeamSpotFullMixtureMode` copies with a
-`GSFBeamSpotConstraintStatus` success bitmask. The corresponding
-`beamspot_*_gsf_*` flat families always exist but remain unavailable/zero in
-the maintained default-off workflow.
+`BeamSpotSigmaY=3.6e-5` mm. It is reverse-only and requires
+`GaussianSumSmoothing=False`, `DD4hepBetweenSurfaces`,
+`MaterialIPExtrapolation=False`, `TruthBHLossOverride=False`,
+`EcalComponentConstraint=False`, and `InwardSeedCovarianceScale<=0`.
+
+When enabled in a separate campaign, the forward three-hit prefit is moved to
+the beam pivot and receives the scalar beam update. The canonical DD4hep
+beam-to-hit-0 material is optionally BH-split under
+`ForwardBHSplitting`, then transported with its complete KalTest Jacobian and
+process noise and updated at hit 0 before the normal outward recursion.
+Reverse completes its normal recursion through hit 0,
+optionally BH-splits the same canonical boundary t/X0 under
+`InwardBHSplitting`, propagates to the beam pivot, and applies the scalar beam
+likelihood to component states, covariances, and weights before cutoff/KL.
+Neither directional gate is silently enabled by the beam option. The final
+live bank publishes through the ordinary `GSFTracksBestBranch`,
+`GSFTracksWeightedMean`, and `GSFTracksFullMixtureMode` collections and their
+existing flat fields. No separate beam collection, `beamspot_*` flat family,
+or status bitmask remains; beam-off/beam-on A/B comparisons use distinct jobs
+and output tuple paths.
 
 The maintained card inherits the compiled and active reverse-template
 `RecordTruthMaterialIntervals=true` default. `GsfG4MaterialSteps` and
@@ -360,8 +373,9 @@ The flat tuple also creates `final_mixture_component_*` vectors automatically,
 with no run-card property. For every final positive-weight smoother/reverse
 component they store the input/output track mapping, component index
 and ID, source/validity codes, normalized weight, IP kappa, kappa variance, and
-derived pT. The source code is `1` for smoother and `2` for the reverse
-terminal `B_updated[0]` endpoint. Historical code `3`
+derived pT. The source code is `1` for smoother and `2` for the reverse terminal
+mixture: ordinary `B_updated[0]` when beam-boundary mode is off, or the post-beam
+cutoff/KL bank when it is on. Historical code `3`
 means the retired CMS-like `B_smoothed[1]` endpoint, and historical code `4`
 means its terminal-backward fallback.
 They contain every published output track in the event and are empty for
@@ -464,8 +478,8 @@ different from the compiled and active-template default `true`, so the exact
 no-radiation lineage may participate in ordinary cutoff and KL reduction.
 This campaign choice is not a production-default change.
 
-This same reverse branch is the maintained double-off diagnostic:
-`ForwardBHSplitting=False`, `InwardBHSplitting=False`. The two switches control
+This same reverse branch is the maintained inward-only splitting diagnostic:
+`ForwardBHSplitting=False`, `InwardBHSplitting=True`. The two switches control
 only BH child creation in the shared outward and independent inward filters.
 The inward switch is inert for non-reverse methods; it does not control the
 retained-graph smoother. With a positive inward seed scale, turning inward

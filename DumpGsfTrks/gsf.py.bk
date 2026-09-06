@@ -76,9 +76,9 @@ gsf.BHModel = bh_model
 # Production default; use CurrentSurface only as an explicit material control.
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
-# Independent BH-process gates. This double-off diagnostic creates no BH
-# children in either direction. Material-path evaluation/recording remains
-# enabled in both directions.
+# Independent BH-process gates. The common base is double-off; a method branch
+# may explicitly override either direction. Material-path evaluation/recording
+# remains enabled in both directions.
 gsf.ForwardBHSplitting = False
 gsf.InwardBHSplitting = False
 
@@ -134,12 +134,17 @@ gsf.InwardLookaheadDepth = 0
 gsf.MaterialIPExtrapolation = False
 gsf.ReverseInitialWeightMode = "ForwardPosterior"
 
-# Default-off endpoint-only transverse beam-spot constraint for smoother and
-# reverse. When enabled, the ordinary BestBranch, WeightedMean, and
-# FullMixtureMode collections remain unchanged; three separately constrained
-# copies and a per-track success bitmask are published. Coordinates and widths
-# are in mm. These nominal CEPC comparison widths are not a validated GSF
-# production setting.
+# Default-off reverse-only live beam-boundary measurement. Coordinates and
+# widths are in mm. A beam-on reverse run first constrains its forward prefit at
+# the beam pivot, processes the optional beam->hit-0 BH split, transports the
+# resulting states from the beam through the boundary, updates hit 0, and
+# finally processes the optional hit-0->beam split and beam likelihood before
+# ordinary endpoint publication. It requires ReverseFiltering=True,
+# GaussianSumSmoothing=False, DD4hepBetweenSurfaces,
+# MaterialIPExtrapolation=False, TruthBHLossOverride=False,
+# EcalComponentConstraint=False, and a nonpositive inward covariance scale.
+# Directional splitting remains controlled by the existing forward/inward
+# gates. These nominal CEPC widths are not a validated production setting.
 gsf.BeamSpotConstraint = False
 gsf.BeamSpotX = 0.0
 gsf.BeamSpotY = 0.0
@@ -199,6 +204,11 @@ elif method == "reverse":
     gsf.InwardSeedCovarianceScale = -1  # A positive value uses the forward final mixture.
     gsf.ReverseInitialWeightMode = "ForwardPosterior"  # Active only when the scale is positive.
 
+    # Keep the live beam-boundary prototype off for the maintained campaign.
+    # Enabling it changes the ordinary three reverse endpoint collections; use
+    # a separate output tuple path for a beam-off/beam-on A/B comparison.
+    gsf.BeamSpotConstraint = False
+
 else:
     raise ValueError(
         "Unknown method={!r}; choose smoother or reverse".format(
@@ -225,9 +235,6 @@ flat = RecGsfFlatTuple("RecGsfFlatTuple")
 # their corresponding branch set
 # unavailable/zero. The always-created final_mixture_component_* vectors carry
 # all final smoother/reverse output tracks and are empty for forward.
-# A beam-spot-on run additionally fills beamspot_bestbranch_gsf_*,
-# beamspot_weighted_gsf_*, and beamspot_fullmixture_gsf_* from the three paired
-# constrained collections; the ordinary endpoint families remain unchanged.
 # The lineage_node_* and lineage_edge_* vectors automatically carry the full
 # passive smoother/reverse component DAG and are empty for the other methods.
 flat.OutputFile = os.path.join(

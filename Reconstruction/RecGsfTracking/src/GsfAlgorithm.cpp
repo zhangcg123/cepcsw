@@ -290,6 +290,18 @@ static TMatrixD updateVector5(const MarlinTrk::MeasurementUpdate::Matrix& source
   return result;
 }
 
+static MarlinTrk::MeasurementUpdate::Matrix measurementMatrix(
+    const TMatrixD& source) {
+  MarlinTrk::MeasurementUpdate::Matrix result;
+  result.rows = source.GetNrows();
+  result.cols = source.GetNcols();
+  result.values.reserve(static_cast<std::size_t>(result.rows * result.cols));
+  for (int row = 0; row < result.rows; ++row)
+    for (int column = 0; column < result.cols; ++column)
+      result.values.push_back(source(row, column));
+  return result;
+}
+
 static void trackStateToKalTest5(const edm4hep::TrackState& ts, double bz,
                                  TMatrixD& mean, TMatrixD& covariance) {
   const double alpha = bz * 2.99792458e-4;
@@ -305,6 +317,113 @@ static void trackStateToKalTest5(const edm4hep::TrackState& ts, double bz,
     for (int col = 0; col < 5; ++col)
       covariance(row, col) = scale[row] * scale[col] *
           ts.covMatrix[covIndex5(row, col)];
+}
+
+static bool finiteMatrix(const TMatrixD& matrix);
+static void fillTrackState(edm4hep::TrackState& ts,
+                           const THelicalTrack& h,
+                           const TMatrixD& cov, double bz);
+
+/// Transport a beam-pivot Gaussian to the first real measurement with the
+/// same KalTest cradle used by the package's material-aware propagation.  The
+/// beam itself is not a detector surface: move geometrically through the
+/// vacuum to the innermost cylindrical material surface, then let the cradle
+/// traverse every surface through hit 0.  Return the complete beam-to-hit
+/// Jacobian and process noise so the ordinary Marlin measurement update can
+/// retain the exact transition in the smoother/lineage diagnostics.
+static bool transportBeamStateToFirstHit(
+    const edm4hep::TrackState& beamState, const MatchedHit& firstHit,
+    const DDCylinderMeasLayer* ipLayer, TKalDetCradle* cradle, double bz,
+    edm4hep::TrackState& transportedState, TMatrixD& transportJacobian,
+    TMatrixD& processNoise) {
+  if (!ipLayer || !cradle || !firstHit.layer || !firstHit.kalHit ||
+      bz == 0.0) {
+    return false;
+  }
+
+  try {
+    TMatrixD beamMean(5, 1);
+    TMatrixD beamCovariance(5, 5);
+    trackStateToKalTest5(beamState, bz, beamMean, beamCovariance);
+    const TMatrixD originalBeamCovariance = beamCovariance;
+    const auto& beamReference = beamState.referencePoint;
+    THelicalTrack helix(
+        beamMean,
+        TVector3(beamReference.x, beamReference.y, beamReference.z), bz);
+
+    TVector3 ipCrossing;
+    double dphi = 0.0;
+    if (ipLayer->CalcXingPointWith(helix, ipCrossing, dphi, 1) <= 0)
+      return false;
+
+    TMatrixD beamToIpJacobian(5, 5);
+    beamToIpJacobian.UnitMatrix();
+    helix.MoveTo(ipCrossing, dphi, &beamToIpJacobian, &beamCovariance);
+    if (!finiteMatrix(beamCovariance)) return false;
+
+    const TKalMatrix localMeasurement = ipLayer->XvToMv(ipCrossing);
+    if (localMeasurement.GetNrows() < 2) return false;
+    Double_t values[2] = {
+        localMeasurement(0, 0), localMeasurement(1, 0)};
+    Double_t errors[2] = {1.0e16, 1.0e16};
+    edm4hep::TrackerHit sourceHandle = firstHit.lcioHit;
+    auto* sourceHit = new DDCylinderHit(
+        *ipLayer, values, errors, bz, sourceHandle);
+    TKalTrackSite sourceSite(*sourceHit, kSdim);
+    sourceSite.SetHitOwner();
+    sourceSite.SetOwner();
+    sourceSite.SetPivot(ipCrossing);
+
+    TKalMatrix sourceMean(kSdim, 1);
+    helix.PutInto(sourceMean);
+    TKalMatrix sourceCovariance(kSdim, kSdim);
+    sourceCovariance.Zero();
+    for (int row = 0; row < 5; ++row)
+      for (int column = 0; column < 5; ++column)
+        sourceCovariance(row, column) = beamCovariance(row, column);
+    if (kSdim == 6) sourceCovariance(5, 5) = 1.0e6;
+    sourceSite.Add(new TKalTrackState(
+        sourceMean, sourceCovariance, sourceSite, TVKalSite::kPredicted));
+    sourceSite.Add(new TKalTrackState(
+        sourceMean, sourceCovariance, sourceSite, TVKalSite::kFiltered));
+
+    TKalTrackSite targetSite(*firstHit.kalHit, kSdim);
+    TKalMatrix transportedMean(kSdim, 1);
+    TKalMatrix cradleJacobian(kSdim, kSdim);
+    cradleJacobian.UnitMatrix();
+    TKalMatrix cradleNoise(kSdim, kSdim);
+    cradleNoise.Zero();
+    cradle->Transport(sourceSite, targetSite, transportedMean,
+                      cradleJacobian, cradleNoise);
+
+    TMatrixD totalJacobian(5, 5);
+    TMatrixD cradleNoise5(5, 5);
+    for (int row = 0; row < 5; ++row) {
+      for (int column = 0; column < 5; ++column) {
+        totalJacobian(row, column) = cradleJacobian(row, column);
+        cradleNoise5(row, column) = cradleNoise(row, column);
+      }
+    }
+    totalJacobian *= beamToIpJacobian;
+    TMatrixD totalJacobianT(TMatrixD::kTransposed, totalJacobian);
+    TMatrixD transportedCovariance =
+        totalJacobian * originalBeamCovariance * totalJacobianT +
+        cradleNoise5;
+    if (!finiteMatrix(transportedCovariance)) return false;
+
+    THelicalTrack transportedHelix(
+        transportedMean, targetSite.GetPivot(), bz);
+    transportedState.location = DH::AtOther;
+    fillTrackState(
+        transportedState, transportedHelix, transportedCovariance, bz);
+    transportJacobian.ResizeTo(5, 5);
+    transportJacobian = totalJacobian;
+    processNoise.ResizeTo(5, 5);
+    processNoise = cradleNoise5;
+    return true;
+  } catch (...) {
+    return false;
+  }
 }
 
 static double maxRelativeMatrixDifference(const TMatrixD& actual,
@@ -543,8 +662,6 @@ static bool finishGaussian(const GaussianAccumulator& accumulator,
   covariance -= mean * meanT;
   return true;
 }
-
-static bool finiteMatrix(const TMatrixD& matrix);
 
 static bool formSmoothedGaussian(
     const GaussianMomentState& forwardUpdated,
@@ -1121,20 +1238,19 @@ static bool invertPositiveDefinite(const TMatrixD& matrix,
   return finiteMatrix(inverse);
 }
 
-/// Apply one transverse beam-origin measurement to an already formed IP
-/// Gaussian.  This deliberately lives outside MarlinTrk: its public update
-/// interface accepts only detector TrackerHits, and a fabricated hit would
-/// require a non-existent detector measurement layer.  The state is moved to
-/// the nominal beam pivot, constrained in its local drho coordinate, and then
-/// moved back to the origin so all published endpoints retain the standard
-/// AtIP convention.
-static bool constrainIpGaussianToBeamSpot(
+/// Apply one transverse beam-origin measurement to a Gaussian.  This
+/// deliberately lives outside MarlinTrk: its public update interface accepts
+/// only detector TrackerHits, and a fabricated hit would require a
+/// non-existent detector measurement layer.  The state is moved to the
+/// nominal beam pivot and constrained in its local drho coordinate.
+static bool updateGaussianWithBeamSpot(
     const THelicalTrack& inputHelix, const TMatrixD& inputCovariance,
     double bz, double beamX, double beamY,
     double beamSigmaX, double beamSigmaY,
     THelicalTrack& outputHelix, TMatrixD& outputCovariance,
-    double& deltaChi2) {
+    double& deltaChi2, double& logDetInnovation) {
   deltaChi2 = std::numeric_limits<double>::quiet_NaN();
+  logDetInnovation = std::numeric_limits<double>::quiet_NaN();
   if (bz == 0.0 || inputCovariance.GetNrows() != 5 ||
       inputCovariance.GetNcols() != 5 || !finiteMatrix(inputCovariance) ||
       !std::isfinite(beamX) || !std::isfinite(beamY) ||
@@ -1205,29 +1321,11 @@ static bool constrainIpGaussianToBeamSpot(
 
   THelicalTrack constrainedHelix(
       mean, TVector3(beamX, beamY, 0.0), bz);
-  TMatrixD backJacobian(5, 5);
-  backJacobian.UnitMatrix();
-  constrainedHelix.MoveTo(TVector3(0.0, 0.0, 0.0), dphi,
-                          &backJacobian, &constrainedCovariance);
-  if (!finiteMatrix(constrainedCovariance)) return false;
-  // MoveTo's finite-precision similarity transform can leave antisymmetric
-  // roundoff that is material relative to the 36 nm vertical beam width.
-  // Restore the covariance contract before the positive-definite check.
-  for (int row = 0; row < 5; ++row)
-    for (int column = 0; column < row; ++column) {
-      const double symmetricValue = 0.5 *
-          (constrainedCovariance(row, column) +
-           constrainedCovariance(column, row));
-      constrainedCovariance(row, column) = symmetricValue;
-      constrainedCovariance(column, row) = symmetricValue;
-    }
-  if (!invertPositiveDefinite(constrainedCovariance,
-                              constrainedPrecision)) {
-    return false;
-  }
 
   deltaChi2 = residual * residual / innovationVariance;
-  if (!std::isfinite(deltaChi2)) return false;
+  logDetInnovation = std::log(innovationVariance);
+  if (!std::isfinite(deltaChi2) || !std::isfinite(logDetInnovation))
+    return false;
   outputHelix = constrainedHelix;
   outputCovariance.ResizeTo(5, 5);
   outputCovariance = constrainedCovariance;
@@ -2585,10 +2683,42 @@ StatusCode RecGsfTracking::initialize() {
     return StatusCode::FAILURE;
   }
   if (m_beamSpotConstraint.value()) {
-    if (!m_gaussianSumSmoothing.value() && !m_reverseFiltering.value()) {
-      error() << "BeamSpotConstraint requires GaussianSumSmoothing=True or "
-                 "ReverseFiltering=True so all three paired IP endpoints "
-                 "exist"
+    if (!m_reverseFiltering.value() || m_gaussianSumSmoothing.value()) {
+      error() << "BeamSpotConstraint currently requires "
+                 "ReverseFiltering=True and GaussianSumSmoothing=False"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (materialPathMode != "dd4hepbetweensurfaces") {
+      error() << "BeamSpotConstraint requires "
+                 "MaterialPathMode=DD4hepBetweenSurfaces for the explicit "
+                 "beam-to-hit-0 boundary"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (m_materialIPExtrap.value()) {
+      error() << "BeamSpotConstraint requires MaterialIPExtrapolation=False; "
+                 "boundary material is handled before the beam update"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (m_truthBHLossOverride.value()) {
+      error() << "BeamSpotConstraint is not yet compatible with "
+                 "TruthBHLossOverride because the embedded truth intervals "
+                 "do not include beam-to-hit-0 truth hooks"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (m_ecalComponentConstraint.value()) {
+      error() << "BeamSpotConstraint and EcalComponentConstraint cannot be "
+                 "enabled together in the boundary prototype"
+              << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (m_inwardSeedCovarianceScale.value() > 0.0) {
+      error() << "BeamSpotConstraint requires InwardSeedCovarianceScale<=0 "
+                 "so the independent reverse fit does not reuse the forward "
+                 "beam measurement before applying it at the inner boundary"
               << endmsg;
       return StatusCode::FAILURE;
     }
@@ -2767,25 +2897,11 @@ StatusCode RecGsfTracking::execute() {
   edm4hep::TrackCollection* weightedMeanOut = nullptr;
   edm4hep::TrackCollection* fullMixtureModeOut = nullptr;
   podio::UserDataCollection<std::int32_t>* fullMixtureModeStatusOut = nullptr;
-  edm4hep::TrackCollection* beamSpotBestBranchOut = nullptr;
-  edm4hep::TrackCollection* beamSpotWeightedMeanOut = nullptr;
-  edm4hep::TrackCollection* beamSpotFullMixtureModeOut = nullptr;
-  podio::UserDataCollection<std::int32_t>* beamSpotConstraintStatusOut =
-      nullptr;
   if (publishPairedEndpoints)
     weightedMeanOut = m_weightedMeanOutputTracks.createAndPut();
   if (publishPairedEndpoints) {
     fullMixtureModeOut = m_fullMixtureModeOutputTracks.createAndPut();
     fullMixtureModeStatusOut = m_fullMixtureModeStatus.createAndPut();
-    beamSpotConstraintStatusOut = m_beamSpotConstraintStatus.createAndPut();
-  }
-  if (publishPairedEndpoints && m_beamSpotConstraint.value()) {
-    beamSpotBestBranchOut =
-        m_beamSpotBestBranchOutputTracks.createAndPut();
-    beamSpotWeightedMeanOut =
-        m_beamSpotWeightedMeanOutputTracks.createAndPut();
-    beamSpotFullMixtureModeOut =
-        m_beamSpotFullMixtureModeOutputTracks.createAndPut();
   }
   auto* finalMixtureComponentInputTrackIndex =
       m_finalMixtureComponentInputTrackIndex.createAndPut();
@@ -3360,7 +3476,7 @@ StatusCode RecGsfTracking::execute() {
         m_reverseFiltering.value() || m_gaussianSumSmoothing.value(),
         bz);
 
-    // ---- Step 3: standard-KF-style fresh prefit and first-hit update ----
+    // ---- Step 3: direction-local prefit and boundary initialization ----
     std::vector<edm4hep::TrackerHit> orderedHits;
     orderedHits.reserve(hits.size());
     for (const auto& hit : hits) orderedHits.push_back(hit.lcioHit);
@@ -3376,11 +3492,66 @@ StatusCode RecGsfTracking::execute() {
       for (auto& hit : hits) delete hit.kalHit;
       continue;
     }
-    const int charge = initialization.seedFilteredState.omega > 0.0 ? 1 : -1;
+    const bool useBeamSpotBoundary = m_beamSpotConstraint.value();
+    ComponentMaterialPath beamBoundaryMaterial;
+    if (useBeamSpotBoundary) {
+      const auto& hitZeroPosition = hits[0].lcioHit.getPosition();
+      beamBoundaryMaterial = geometryTransitionMaterialPath(
+          m_materialManager,
+          TVector3(m_beamSpotX.value(), m_beamSpotY.value(), 0.0),
+          TVector3(hitZeroPosition.x, hitZeroPosition.y,
+                   hitZeroPosition.z));
+    }
+    edm4hep::TrackState forwardBoundaryState =
+        initialization.seedFilteredState;
+    double forwardBoundaryDeltaChi2 = initialization.seedHitDeltaChi2;
+    double forwardBoundaryLogDetInnovation = 0.0;
+    int forwardBoundaryMeasurementDimension = 0;
+    TMatrixD forwardBoundaryPredictedMean(5, 1);
+    TMatrixD forwardBoundaryPredictedCovariance(5, 5);
+    if (useBeamSpotBoundary) {
+      TMatrixD prefitMean(5, 1);
+      TMatrixD prefitCovariance(5, 5);
+      trackStateToKalTest5(initialization.prefitState, bz,
+                           prefitMean, prefitCovariance);
+      const auto& reference = initialization.prefitState.referencePoint;
+      THelicalTrack prefitHelix(
+          prefitMean, TVector3(reference.x, reference.y, reference.z), bz);
+      const TVector3 beamPoint(
+          m_beamSpotX.value(), m_beamSpotY.value(), 0.0);
+      double beamDphi = 0.0;
+      TMatrixD beamMoveJacobian(5, 5);
+      beamMoveJacobian.UnitMatrix();
+      prefitHelix.MoveTo(beamPoint, beamDphi, &beamMoveJacobian,
+                         &prefitCovariance);
+      helixToMean(prefitHelix, forwardBoundaryPredictedMean);
+      forwardBoundaryPredictedCovariance = prefitCovariance;
+      THelicalTrack beamHelix = prefitHelix;
+      TMatrixD beamCovariance = prefitCovariance;
+      if (!updateGaussianWithBeamSpot(
+              prefitHelix, prefitCovariance, bz,
+              m_beamSpotX.value(), m_beamSpotY.value(),
+              m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value(),
+              beamHelix, beamCovariance, forwardBoundaryDeltaChi2,
+              forwardBoundaryLogDetInnovation)) {
+        warning() << "GSF beam-spot forward-boundary update failed for event="
+                  << eventIndex << " inputTrack=" << inputTrackIndex
+                  << endmsg;
+        delete initialization.site;
+        for (auto& hit : hits) delete hit.kalHit;
+        continue;
+      }
+      forwardBoundaryState.location = DH::AtIP;
+      fillTrackState(forwardBoundaryState, beamHelix, beamCovariance, bz);
+      forwardBoundaryMeasurementDimension = 1;
+    }
+    const int forwardSeedMeasurementDimension =
+        initialization.seedHitMeasurementDimension;
+    const int charge = forwardBoundaryState.omega > 0.0 ? 1 : -1;
     if (m_verboseDump) {
       info() << boost::format(
           "  INIT standard-kf-prefit twoDHits=%d prefitHits=%d,%d,%d "
-          "firstHitDChi2=%.9g "
+          "firstHitDChi2=%.9g beamBoundary=%d beamDChi2=%.9g "
           "firstHitNdf=%d firstHitDim=%d prefitOmega=%.9g filteredOmega=%.9g "
           "prefitCovarianceScale=%.9g")
             % initialization.twoDimensionalHitCount
@@ -3388,6 +3559,8 @@ StatusCode RecGsfTracking::execute() {
             % initialization.prefitHitIndices[1]
             % initialization.prefitHitIndices[2]
             % initialization.seedHitDeltaChi2
+            % (useBeamSpotBoundary ? 1 : 0)
+            % (useBeamSpotBoundary ? forwardBoundaryDeltaChi2 : 0.0)
             % initialization.seedHitNdf
             % initialization.seedHitMeasurementDimension
             % initialization.prefitState.omega
@@ -3397,8 +3570,12 @@ StatusCode RecGsfTracking::execute() {
 
     // ---- Step 4: forward GSF filter ----
     const bool fitBackwards = !MarlinTrk::IMarlinTrack::backward;
-    const size_t gsfStartHit = 1;
-    TKalTrackSite* site = initialization.site;
+    const size_t gsfStartHit = useBeamSpotBoundary ? 0 : 1;
+    TKalTrackSite* site = useBeamSpotBoundary ? nullptr : initialization.site;
+    if (useBeamSpotBoundary) {
+      delete initialization.site;
+      initialization.site = nullptr;
+    }
     int nextComponentDebugId = 0;
     auto* initComp = new GsfComponent();
     initComp->pendingProcessJacobian.UnitMatrix();
@@ -3406,13 +3583,37 @@ StatusCode RecGsfTracking::execute() {
     initComp->charge = charge;
     initComp->debugId = nextComponentDebugId++;
     initComp->debugHistory = "seed";
-    initComp->fitChi2 = initialization.seedHitDeltaChi2;
+    initComp->fitChi2 = forwardBoundaryDeltaChi2;
     initComp->kaltrack = new TKalTrack();
     initComp->kaltrack->SetOwner();
-    initComp->kaltrack->Add(site);
-    initComp->lineageNodeId = lineageGraph.seed(
-        *initComp, LineageNodeSource::ForwardFiltering, 0,
-        hits[0].surfaceIndex);
+    if (site) initComp->kaltrack->Add(site);
+    if (useBeamSpotBoundary) {
+      initComp->continuationState = initialization.prefitState;
+      initComp->continuationValid = true;
+      const int prefitNodeId = lineageGraph.seed(
+          *initComp, LineageNodeSource::ForwardFiltering, -1, -1);
+      initComp->continuationState = forwardBoundaryState;
+      MarlinTrk::MeasurementUpdate beamUpdate;
+      beamUpdate.valid = true;
+      beamUpdate.predictedState =
+          measurementMatrix(forwardBoundaryPredictedMean);
+      beamUpdate.predictedCovariance =
+          measurementMatrix(forwardBoundaryPredictedCovariance);
+      beamUpdate.logDetInnovation = forwardBoundaryLogDetInnovation;
+      const double logPosterior =
+          -0.5 * (forwardBoundaryDeltaChi2 +
+                  forwardBoundaryLogDetInnovation);
+      initComp->lineageNodeId = lineageGraph.measurement(
+          *initComp, prefitNodeId,
+          LineageNodeSource::ForwardFiltering, -1, -1, 4, 1.0,
+          forwardBoundaryDeltaChi2, forwardBoundaryLogDetInnovation,
+          logPosterior, &beamUpdate);
+      lineageGraph.setNormalizedPosterior(initComp->lineageNodeId, 1.0);
+    } else {
+      initComp->lineageNodeId = lineageGraph.seed(
+          *initComp, LineageNodeSource::ForwardFiltering, 0,
+          hits[0].surfaceIndex);
+    }
 
     std::vector<GsfComponent*> comps = {initComp};
     std::vector<GsfSmootherNode> smootherGraph;
@@ -3490,9 +3691,10 @@ StatusCode RecGsfTracking::execute() {
         const double pt = (k != 0.0) ? 1.0 / std::abs(k) : 0.0;
         const int entries = c->kaltrack ? c->kaltrack->GetEntriesFast() : 0;
         const double chi2 = componentFitChi2(*c);
-        const int ndf = c->kaltrack
+        const int ndf = c->kaltrack && entries > 0
             ? c->kaltrack->GetNDF() +
-                  initialization.seedHitMeasurementDimension
+                  forwardSeedMeasurementDimension +
+                  forwardBoundaryMeasurementDimension
             : 0;
         info() << boost::format("      top%-2d comp[%02d] id=%d parent=%d gen=%d noRad=%d procH=%d procG=%d procF=%.6g w=%.6g domFrac=%.6g domW=%.6g pT=%.6g kappa=%.6e chi2=%.3f ndf=%d sites=%d")
                   % (int)rank % (int)ci % c->debugId % c->debugParentId % c->generation
@@ -3523,13 +3725,77 @@ StatusCode RecGsfTracking::execute() {
       }
     };
 
-    sharedForwardResult.captureFiltered(0, comps);
+    // In a beam-boundary run the outward filter begins at the beam spot, not
+    // at an already updated hit 0.  Convolve the complete IP->hit-0 material
+    // interval before the first real measurement.  The ordinary default-off
+    // path below retains its historical hit-0 initialization exactly.
+    if (useBeamSpotBoundary) {
+      std::vector<ComponentMaterialPath> boundaryMaterialPaths;
+      boundaryMaterialPaths.assign(comps.size(), beamBoundaryMaterial);
+      const bool anyBoundaryMaterial = beamBoundaryMaterial.valid &&
+          beamBoundaryMaterial.pathTX0 > m_bhSplitThresh.value();
+      if (m_forwardBHSplitting.value() && anyBoundaryMaterial &&
+          m_isElectron) {
+        BetheHeitlerSplitter splitter(m_bhModel.value());
+        std::vector<GsfComponent*> boundaryChildren;
+        for (std::size_t componentIndex = 0;
+             componentIndex < comps.size(); ++componentIndex) {
+          auto* parent = comps[componentIndex];
+          const auto& materialPath = boundaryMaterialPaths[componentIndex];
+          if (!materialPath.valid ||
+              materialPath.pathTX0 <= m_bhSplitThresh.value()) {
+            boundaryChildren.push_back(parent);
+            continue;
+          }
+          const int parentId = parent->debugId;
+          const int parentNodeId = parent->lineageNodeId;
+          const int childGeneration = parent->generation + 1;
+          std::vector<BetheHeitlerMixtureComponent> appliedMixture;
+          // Embedded truth intervals currently begin at hit 0.  The new
+          // beam->hit-0 boundary therefore always uses the configured BH
+          // model, including in a truth-oracle diagnostic run.
+          auto children = splitter.split(
+              parent, materialPath.pathTX0, bz, false, &appliedMixture);
+          for (std::size_t childIndex = 0;
+               childIndex < children.size(); ++childIndex) {
+            auto* child = children[childIndex];
+            child->debugId = nextComponentDebugId++;
+            child->debugParentId = parentId;
+            child->generation = childGeneration;
+            if (childIndex < appliedMixture.size()) {
+              child->lineageNodeId = lineageGraph.split(
+                  *child, parentNodeId,
+                  LineageNodeSource::ForwardFiltering, -1, -1,
+                  static_cast<int>(childIndex), appliedMixture[childIndex],
+                  materialPath.pathTX0);
+            }
+            if (!child->forwardProcessSignature.empty())
+              child->forwardProcessSignature += ";";
+            child->forwardProcessSignature +=
+                "IP:g" + std::to_string(childIndex);
+            if (trackSurfaceLineageMass)
+              child->forwardProcessModeFractions[
+                  {-1, static_cast<int>(childIndex)}] = 1.0;
+            boundaryChildren.push_back(child);
+          }
+        }
+        comps = std::move(boundaryChildren);
+        ++nSplits;
+        maxCompsEver = std::max(maxCompsEver,
+                                static_cast<int>(comps.size()));
+        GsfMixture::normalizeWeights(comps);
+        dumpComponents("beam-to-hit0-split", -1, comps);
+      }
+    } else {
+      sharedForwardResult.captureFiltered(0, comps);
+    }
 
     // The seed already contains the filtered hit-0 state. In full-interval
     // mode, convolve it through the hit-0 -> hit-1 material before the first
     // measurement update; the legacy current-surface mode intentionally keeps
     // its historical behavior for controlled comparison.
-    if (useDD4hepBetweenSurfaces && hits.size() > 1) {
+    if (!useBeamSpotBoundary && useDD4hepBetweenSurfaces &&
+        hits.size() > 1) {
       const auto& seedPosition = hits[1].lcioHit.getPosition();
       const TVector3 seedDestination(
           seedPosition.x, seedPosition.y, seedPosition.z);
@@ -3602,7 +3868,7 @@ StatusCode RecGsfTracking::execute() {
                   % (int)ih % hi.radius % stepTX0 % (int)comps.size() << endmsg;
       }
 
-      justSplit = false;
+      justSplit = useBeamSpotBoundary && ih == 0 && comps.size() > 1;
       const int reductionTarget = (m_reductionTargetComponents.value() > 0)
           ? std::min(m_reductionTargetComponents.value(), m_maxComponents.value())
           : m_maxComponents.value();
@@ -3631,6 +3897,7 @@ StatusCode RecGsfTracking::execute() {
                   ? surfacePredictionResidual(*comp, hi, bz)
                   : std::string();
           edm4hep::TrackState componentState;
+          edm4hep::TrackState measurementInputState;
           edm4hep::TrackState updatedState;
           MarlinTrk::MeasurementUpdate measurementUpdate;
           double posteriorLogWeight = -std::numeric_limits<double>::infinity();
@@ -3638,14 +3905,43 @@ StatusCode RecGsfTracking::execute() {
           int updateNdf = -999;
           try {
             edm4hep::TrackerHit trkHit = hi.lcioHit;
-            edm4hep::TrackerHit referenceHit = hits[ih - 1].lcioHit;
+            edm4hep::TrackerHit referenceHit =
+                ih > 0 ? hits[ih - 1].lcioHit : hits[0].lcioHit;
             componentState = trackStateFromComponent(*comp, bz, DH::AtOther);
+            measurementInputState = componentState;
+            TMatrixD beamToHitJacobian(5, 5);
+            beamToHitJacobian.UnitMatrix();
+            TMatrixD beamToHitProcessNoise(5, 5);
+            beamToHitProcessNoise.Zero();
+            const bool transportFromBeam = useBeamSpotBoundary && ih == 0;
+            const bool beamTransportValid = !transportFromBeam ||
+                transportBeamStateToFirstHit(
+                    componentState, hi, m_ipLayer, m_cradle, bz,
+                    measurementInputState, beamToHitJacobian,
+                    beamToHitProcessNoise);
             std::unique_ptr<MarlinTrk::IMarlinTrack> baselineTrack(m_gsfMarlinTrkSystem->createTrack());
-            if (baselineTrack &&
+            if (beamTransportValid && baselineTrack &&
                 baselineTrack->addHit(referenceHit) == MarlinTrk::IMarlinTrack::success &&
-                baselineTrack->initialise(componentState, bz, fitBackwards) == MarlinTrk::IMarlinTrack::success &&
+                baselineTrack->initialise(measurementInputState, bz, fitBackwards) == MarlinTrk::IMarlinTrack::success &&
                 baselineTrack->addAndFit(trkHit, dchi, measurementUpdate, DBL_MAX) == MarlinTrk::IMarlinTrack::success &&
                 measurementUpdate.valid) {
+              if (transportFromBeam) {
+                const TMatrixD localTransport =
+                    updateMatrix5(measurementUpdate.transportJacobian);
+                const TMatrixD localProcessNoise =
+                    updateMatrix5(measurementUpdate.processNoiseCovariance);
+                TMatrixD localTransportT(
+                    TMatrixD::kTransposed, localTransport);
+                const TMatrixD completeTransport =
+                    localTransport * beamToHitJacobian;
+                const TMatrixD completeProcessNoise =
+                    localTransport * beamToHitProcessNoise * localTransportT +
+                    localProcessNoise;
+                measurementUpdate.transportJacobian =
+                    measurementMatrix(completeTransport);
+                measurementUpdate.processNoiseCovariance =
+                    measurementMatrix(completeProcessNoise);
+              }
               if (baselineTrack->getTrackState(trkHit, updatedState, updateChi2, updateNdf) == MarlinTrk::IMarlinTrack::success &&
                   appendBaselineStateToComponent(*comp, updatedState, hi, bz,
                                                  componentState,
@@ -4165,6 +4461,7 @@ StatusCode RecGsfTracking::execute() {
     // SmoothedMarginal instead attaches the forward-marginalized interior
     // F_updated x B_predicted pair weights. The complete smoothed mixtures
     // remain independently recorded and never replace the propagated states.
+    int nextReverseId = 0;
     auto runGsfInwardFilter = [&]() -> GsfInwardFilterResult {
       GsfInwardFilterResult inwardFilterResult(hits.size());
       if (!m_reverseFiltering.value() ||
@@ -4173,7 +4470,6 @@ StatusCode RecGsfTracking::execute() {
         return inwardFilterResult;
       }
       auto& reverseComps = inwardFilterResult.terminalBackward;
-      int nextReverseId = 0;
       const auto& reverseSeedComponents =
           sharedForwardResult.finalComponents();
       const double inwardSeedCovarianceScale =
@@ -4181,7 +4477,7 @@ StatusCode RecGsfTracking::execute() {
       inwardFilterResult.seedCovarianceScale =
           inwardSeedCovarianceScale;
       inwardFilterResult.seedMeasurementDimension =
-          initialization.seedHitMeasurementDimension;
+          forwardSeedMeasurementDimension;
       if (inwardSeedCovarianceScale > 0.0) {
         for (const auto* forwardComp : reverseSeedComponents) {
           edm4hep::TrackState finalState =
@@ -4964,6 +5260,301 @@ StatusCode RecGsfTracking::execute() {
 
     auto inwardFilterResult = runGsfInwardFilter();
     auto& reverseComps = inwardFilterResult.terminalBackward;
+    int reverseBoundaryMeasurementDimension = 0;
+
+    // A beam-constrained reverse fit has one final physical interval after
+    // the innermost tracker measurement.  Apply the configured BH split over
+    // the canonical beam<->hit-0 DD4hep material, propagate every child to
+    // the beam pivot with MarlinTrk, and only then evaluate the beam
+    // measurement.  The resulting posterior is the live endpoint mixture;
+    // this is not a post-hoc constraint on a collapsed endpoint.
+    if (m_beamSpotConstraint.value() && !reverseComps.empty()) {
+      const TVector3 beamPoint(m_beamSpotX.value(), m_beamSpotY.value(), 0.0);
+
+      if (m_verboseDump) {
+        info() << boost::format(
+            "  REVERSE BEAM material valid=%d pathTX0=%.9g layers=%d")
+                  % (beamBoundaryMaterial.valid ? 1 : 0)
+                  % beamBoundaryMaterial.pathTX0
+                  % beamBoundaryMaterial.layerCount
+               << endmsg;
+      }
+
+      if (m_inwardBHSplitting.value() && m_isElectron &&
+          beamBoundaryMaterial.valid &&
+          beamBoundaryMaterial.pathTX0 > m_bhSplitThresh.value()) {
+        BetheHeitlerSplitter splitter(m_bhModel.value());
+        std::vector<GsfComponent*> boundaryChildren;
+        for (auto* parent : reverseComps) {
+          const int parentId = parent->debugId;
+          const int parentNodeId = parent->lineageNodeId;
+          const int childGeneration = parent->generation + 1;
+          const double alpha = bz * 2.99792458e-4;
+          const double parentPt = parent->continuationState.omega != 0.0
+              ? std::abs(alpha / parent->continuationState.omega) : 0.0;
+          std::vector<BetheHeitlerMixtureComponent> appliedMixture;
+          auto children = splitter.split(
+              parent, beamBoundaryMaterial.pathTX0, bz, true,
+              &appliedMixture);
+          for (std::size_t childIndex = 0;
+               childIndex < children.size(); ++childIndex) {
+            auto* child = children[childIndex];
+            child->debugParentId = parentId;
+            child->debugId = nextReverseId++;
+            child->generation = childGeneration;
+            if (childIndex < appliedMixture.size()) {
+              child->lineageNodeId = lineageGraph.split(
+                  *child, parentNodeId,
+                  LineageNodeSource::ReverseFiltering, -1, -1,
+                  static_cast<int>(childIndex), appliedMixture[childIndex],
+                  beamBoundaryMaterial.pathTX0);
+            }
+            child->lastReverseProcessHit = -1;
+            child->lastReverseProcessComponent =
+                static_cast<int>(childIndex);
+            const double childPt = child->continuationState.omega != 0.0
+                ? std::abs(alpha / child->continuationState.omega) : 0.0;
+            child->lastReverseProcessFraction = childPt > 0.0
+                ? parentPt / childPt : 1.0;
+            if (!child->reverseProcessSignature.empty())
+              child->reverseProcessSignature += ";";
+            child->reverseProcessSignature +=
+                "IP:g" + std::to_string(childIndex) + ":f" +
+                std::to_string(child->lastReverseProcessFraction);
+            if (trackSurfaceLineageMass)
+              child->reverseProcessModeFractions[
+                  {-1, static_cast<int>(childIndex)}] = 1.0;
+            child->debugHistory += "->reverse-material[beam]";
+            boundaryChildren.push_back(child);
+          }
+        }
+        reverseComps = std::move(boundaryChildren);
+        ++inwardFilterResult.splits;
+        GsfMixture::normalizeWeights(reverseComps);
+        if (m_verboseDump && m_verboseSplitDump)
+          dumpComponents("reverse-beam-split", -1, reverseComps);
+      }
+
+      std::vector<GsfComponent*> accepted;
+      std::vector<double> acceptedLogWeights;
+      accepted.reserve(reverseComps.size());
+      acceptedLogWeights.reserve(reverseComps.size());
+      for (auto* component : reverseComps) {
+        const int parentNodeId = component->lineageNodeId;
+        const double priorWeight = component->weight;
+        edm4hep::TrackState predictedState;
+        double propagatedChi2 = 0.0;
+        int propagatedNdf = -999;
+        bool propagated = false;
+        int addCode = MarlinTrk::IMarlinTrack::error;
+        int initialiseCode = MarlinTrk::IMarlinTrack::error;
+        int propagateCode = MarlinTrk::IMarlinTrack::error;
+        try {
+          edm4hep::TrackerHit referenceHit = hits[0].lcioHit;
+          edm4hep::TrackState componentState =
+              trackStateFromComponent(*component, bz, DH::AtOther);
+          std::unique_ptr<MarlinTrk::IMarlinTrack> boundaryTrack(
+              m_gsfMarlinTrkSystem->createTrack());
+          const edm4hep::Vector3d beamTarget{
+              m_beamSpotX.value(), m_beamSpotY.value(), 0.0};
+          if (boundaryTrack) {
+            addCode = boundaryTrack->addHit(referenceHit);
+            if (addCode == MarlinTrk::IMarlinTrack::success) {
+              initialiseCode = boundaryTrack->initialise(
+                  componentState, bz, MarlinTrk::IMarlinTrack::backward);
+            }
+            if (initialiseCode == MarlinTrk::IMarlinTrack::success) {
+              // initialise() creates the live dummy site at hit 0 but does not
+              // enter that dummy site in the LCIO-hit-to-site map.  Propagate
+              // from the live last site; the overload taking referenceHit is
+              // valid only after that hit has produced a fitted site.
+              propagateCode = boundaryTrack->propagate(
+                  beamTarget, predictedState, propagatedChi2, propagatedNdf);
+            }
+            propagated =
+                propagateCode == MarlinTrk::IMarlinTrack::success;
+          }
+        } catch (...) {
+          propagated = false;
+        }
+
+        if (!propagated && m_verboseDump && m_verboseSplitDump) {
+          info() << boost::format(
+              "      REVERSE BEAM reject id=%d add=%d init=%d "
+              "propagate=%d")
+                        % component->debugId % addCode % initialiseCode
+                        % propagateCode
+                 << endmsg;
+        }
+
+        double beamDeltaChi2 = std::numeric_limits<double>::quiet_NaN();
+        double beamLogDetInnovation =
+            std::numeric_limits<double>::quiet_NaN();
+        THelicalTrack constrainedHelix(
+            TMatrixD(5, 1), beamPoint, bz);
+        TMatrixD constrainedCovariance(5, 5);
+        MarlinTrk::MeasurementUpdate beamUpdate;
+        if (propagated) {
+          TMatrixD predictedMean(5, 1);
+          TMatrixD predictedCovariance(5, 5);
+          trackStateToKalTest5(
+              predictedState, bz, predictedMean, predictedCovariance);
+          const auto& predictedReference = predictedState.referencePoint;
+          THelicalTrack predictedHelix(
+              predictedMean,
+              TVector3(predictedReference.x, predictedReference.y,
+                       predictedReference.z), bz);
+
+          // Put the prediction at the exact beam pivot before recording the
+          // innovation.  propagate(point, ...) returns a POCA state whose
+          // reference can differ from the requested point at roundoff level.
+          double beamDphi = 0.0;
+          TMatrixD beamMoveJacobian(5, 5);
+          beamMoveJacobian.UnitMatrix();
+          predictedHelix.MoveTo(
+              beamPoint, beamDphi, &beamMoveJacobian,
+              &predictedCovariance);
+          helixToMean(predictedHelix, predictedMean);
+
+          const double cosPhi = std::cos(predictedHelix.GetPhi0());
+          const double sinPhi = std::sin(predictedHelix.GetPhi0());
+          const double measurementVariance =
+              cosPhi * cosPhi * m_beamSpotSigmaX.value() *
+                  m_beamSpotSigmaX.value() +
+              sinPhi * sinPhi * m_beamSpotSigmaY.value() *
+                  m_beamSpotSigmaY.value();
+          const double innovationVariance =
+              predictedCovariance(0, 0) + measurementVariance;
+          const double residual = -predictedHelix.GetDrho();
+
+          propagated = updateGaussianWithBeamSpot(
+              predictedHelix, predictedCovariance, bz,
+              m_beamSpotX.value(), m_beamSpotY.value(),
+              m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value(),
+              constrainedHelix, constrainedCovariance,
+              beamDeltaChi2, beamLogDetInnovation);
+          if (propagated) {
+            beamUpdate.valid = true;
+            beamUpdate.predictedState = measurementMatrix(predictedMean);
+            beamUpdate.predictedCovariance =
+                measurementMatrix(predictedCovariance);
+            TMatrixD predictedMeasurement(1, 1);
+            predictedMeasurement(0, 0) = predictedHelix.GetDrho();
+            beamUpdate.predictedMeasurement =
+                measurementMatrix(predictedMeasurement);
+            TMatrixD residualMatrix(1, 1);
+            residualMatrix(0, 0) = residual;
+            beamUpdate.residual = measurementMatrix(residualMatrix);
+            TMatrixD projector(1, 5);
+            projector.Zero();
+            projector(0, 0) = 1.0;
+            beamUpdate.projector = measurementMatrix(projector);
+            TMatrixD measurementCovariance(1, 1);
+            measurementCovariance(0, 0) = measurementVariance;
+            beamUpdate.measurementCovariance =
+                measurementMatrix(measurementCovariance);
+            TMatrixD innovationCovariance(1, 1);
+            innovationCovariance(0, 0) = innovationVariance;
+            beamUpdate.innovationCovariance =
+                measurementMatrix(innovationCovariance);
+            beamUpdate.logDetInnovation = beamLogDetInnovation;
+          }
+        }
+
+        const bool acceptedBeam = propagated && priorWeight > 0.0 &&
+            std::isfinite(beamDeltaChi2) &&
+            std::isfinite(beamLogDetInnovation);
+        const double logPosterior = acceptedBeam
+            ? std::log(priorWeight) -
+                  0.5 * (beamDeltaChi2 + beamLogDetInnovation)
+            : std::numeric_limits<double>::quiet_NaN();
+        if (acceptedBeam) {
+          component->continuationState.location = DH::AtIP;
+          fillTrackState(component->continuationState, constrainedHelix,
+                         constrainedCovariance, bz);
+          component->continuationValid = true;
+          component->fitChi2 += beamDeltaChi2;
+        }
+        component->lineageNodeId = lineageGraph.measurement(
+            *component, parentNodeId,
+            LineageNodeSource::ReverseFiltering, -1, -1,
+            acceptedBeam ? 4 : 0, priorWeight, beamDeltaChi2,
+            beamLogDetInnovation, logPosterior,
+            acceptedBeam ? &beamUpdate : nullptr);
+        if (acceptedBeam) {
+          accepted.push_back(component);
+          acceptedLogWeights.push_back(logPosterior);
+          if (m_verboseDump && m_componentDebugDump) {
+            info() << boost::format(
+                "  REVERSE BEAM accept id=%d prior=%.9g dchi2=%.9g "
+                "logDetS=%.9g pT=%.9g")
+                      % component->debugId % priorWeight % beamDeltaChi2
+                      % beamLogDetInnovation
+                      % (constrainedHelix.GetKappa() != 0.0
+                             ? 1.0 / std::abs(constrainedHelix.GetKappa())
+                             : 0.0)
+                   << endmsg;
+          }
+        } else {
+          delete component;
+        }
+      }
+      reverseComps = std::move(accepted);
+
+      if (!reverseComps.empty()) {
+        const double maximumLogWeight = *std::max_element(
+            acceptedLogWeights.begin(), acceptedLogWeights.end());
+        for (std::size_t index = 0; index < reverseComps.size(); ++index)
+          reverseComps[index]->weight =
+              std::exp(acceptedLogWeights[index] - maximumLogWeight);
+        GsfMixture::normalizeWeights(reverseComps);
+        for (const auto* component : reverseComps)
+          lineageGraph.setNormalizedPosterior(
+              component->lineageNodeId, component->weight);
+
+        auto boundaryCutoffObserver = [&](const GsfComponent& component) {
+          lineageGraph.mark(component.lineageNodeId,
+                            LineageNodeFate::WeightCutoff);
+        };
+        GsfMixture::removeLowWeight(
+            reverseComps, m_componentWeightCutoff.value(),
+            m_protectIdentityLineage.value(), boundaryCutoffObserver);
+        const int reverseReductionTarget =
+            m_reductionTargetComponents.value() > 0
+                ? std::min(m_reductionTargetComponents.value(),
+                           m_maxComponents.value())
+                : m_maxComponents.value();
+        if (static_cast<int>(reverseComps.size()) >
+            reverseReductionTarget) {
+          auto boundaryReductionLogger = [&](const std::string& line) {
+            if (m_verboseDump && m_verboseSplitDump)
+              info() << line << endmsg;
+          };
+          auto boundaryReductionObserver = [&](GsfComponent& merged,
+                                                int keepSourceNodeId,
+                                                int dropSourceNodeId,
+                                                double mergeCost) {
+            merged.lineageNodeId = lineageGraph.merge(
+                merged, keepSourceNodeId, dropSourceNodeId,
+                LineageNodeSource::ReverseFiltering, -1, -1,
+                mergeCost);
+          };
+          GsfMixture::reduce(
+              reverseComps, reverseReductionTarget, bz,
+              m_protectIdentityLineage.value(), boundaryReductionLogger,
+              m_reductionMergeCost.value(), boundaryReductionObserver);
+          ++inwardFilterResult.reductions;
+        }
+        GsfMixture::normalizeWeights(reverseComps);
+        for (const auto* component : reverseComps)
+          lineageGraph.setWeight(component->lineageNodeId,
+                                 component->weight);
+        reverseBoundaryMeasurementDimension = 1;
+        if (m_verboseDump && m_verboseSplitDump)
+          dumpComponents("reverse-after-beam", -1, reverseComps);
+      }
+    }
+
     if (m_reverseFiltering.value() &&
         !sharedForwardResult.finalComponents().empty() &&
         hits.size() > 1) {
@@ -5058,7 +5649,8 @@ StatusCode RecGsfTracking::execute() {
           reverseOutputChi2 = componentFitChi2(*reverseBest);
           reverseOutputNdf = reverseBest->kaltrack
               ? reverseBest->kaltrack->GetNDF() +
-                    inwardFilterResult.seedMeasurementDimension
+                    inwardFilterResult.seedMeasurementDimension +
+                    reverseBoundaryMeasurementDimension
               : 0;
           reverseOutputWeight = reverseBest->weight;
           reverseOutputComps = (int)endpointComponents.size();
@@ -5471,7 +6063,8 @@ StatusCode RecGsfTracking::execute() {
       const int outputNdf = usedReverseOutput
           ? reverseOutputNdf
           : best->kaltrack->GetNDF() +
-                initialization.seedHitMeasurementDimension;
+                forwardSeedMeasurementDimension +
+                forwardBoundaryMeasurementDimension;
       ot.setChi2(outputChi2);
       ot.setNdf(outputNdf);
 
@@ -5514,75 +6107,6 @@ StatusCode RecGsfTracking::execute() {
         fullMixtureModeStatusOut->push_back(
             fullMixtureModeStatusValue(fullMixtureModeStatus));
       }
-
-      // The beam spot is a terminal one-dimensional transverse constraint,
-      // not a fabricated detector hit.  Apply it only to copies of the three
-      // already formed IP endpoints.  It therefore cannot change component
-      // weights, BestBranch selection, mixture evolution, or the ordinary
-      // published outputs above.
-      std::int32_t beamSpotStatus = 0;
-      if (m_beamSpotConstraint.value()) {
-        beamSpotStatus = 1;  // enabled and attempted for this output row
-        auto publishBeamSpotEndpoint = [&](
-            edm4hep::TrackCollection* collection,
-            const THelicalTrack& sourceHelix,
-            const TMatrixD& sourceCovariance,
-            std::int32_t successBit,
-            const char* label) {
-          if (!collection) return;
-          THelicalTrack constrainedHelix = sourceHelix;
-          TMatrixD constrainedCovariance = sourceCovariance;
-          double beamDeltaChi2 = 0.0;
-          const bool constrained = constrainIpGaussianToBeamSpot(
-              sourceHelix, sourceCovariance, bz,
-              m_beamSpotX.value(), m_beamSpotY.value(),
-              m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value(),
-              constrainedHelix, constrainedCovariance, beamDeltaChi2);
-          if (constrained) beamSpotStatus |= successBit;
-
-          auto constrainedTrack = collection->create();
-          constrainedTrack.setType(2);
-          constrainedTrack.setChi2(
-              constrained ? outputChi2 + beamDeltaChi2 : outputChi2);
-          constrainedTrack.setNdf(constrained ? outputNdf + 1 : outputNdf);
-          edm4hep::TrackState constrainedState;
-          constrainedState.location = DH::AtIP;
-          fillTrackState(constrainedState,
-                         constrained ? constrainedHelix : sourceHelix,
-                         constrained ? constrainedCovariance
-                                     : sourceCovariance,
-                         bz);
-          constrainedTrack.addToTrackStates(constrainedState);
-          for (const auto& h : assocHits)
-            constrainedTrack.addToTrackerHits(h);
-
-          if (m_verboseDump) {
-            info() << boost::format(
-                "  BEAM-SPOT endpoint=%s success=%d dchi2=%.9g "
-                "sourcePt=%.9g constrainedPt=%.9g d0=%.9g")
-                      % label % (constrained ? 1 : 0)
-                      % (constrained ? beamDeltaChi2 : 0.0)
-                      % (sourceHelix.GetKappa() != 0.0
-                             ? 1.0 / std::abs(sourceHelix.GetKappa()) : 0.0)
-                      % (constrainedHelix.GetKappa() != 0.0
-                             ? 1.0 / std::abs(constrainedHelix.GetKappa())
-                             : 0.0)
-                      % (-constrainedHelix.GetDrho())
-                   << endmsg;
-          }
-        };
-        publishBeamSpotEndpoint(
-            beamSpotBestBranchOut, ipHelix, ipCov, 1 << 1,
-            "BestBranch");
-        publishBeamSpotEndpoint(
-            beamSpotWeightedMeanOut, weightedIpHelix, weightedIpCov,
-            1 << 2, "WeightedMean");
-        publishBeamSpotEndpoint(
-            beamSpotFullMixtureModeOut, fullMixtureModeIpHelix,
-            fullMixtureModeIpCov, 1 << 3, "FullMixtureMode");
-      }
-      if (beamSpotConstraintStatusOut)
-        beamSpotConstraintStatusOut->push_back(beamSpotStatus);
 
       persistFinalMixtureComponents(
           finalMixtureComponentRecords, inputTrackIndex, nFit);

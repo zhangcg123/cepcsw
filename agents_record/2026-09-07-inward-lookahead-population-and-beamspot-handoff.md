@@ -2,6 +2,12 @@
 
 Date: 2026-09-07
 
+> Superseded beam design: the endpoint-copy collections, status mask, and
+> flat fields documented below were retired before population validation.
+> The current live forward/reverse boundary design is recorded in
+> `2026-09-07-live-beam-boundary-gsf.md`. The inward-look-ahead findings in
+> this record remain valid historical evidence.
+
 ## Archived inward look-ahead status
 
 The numeric `InwardLookaheadDepth` implementation remains mechanically
@@ -40,6 +46,11 @@ deliberately different from the compiled and active reverse-template defaults
 of depth zero and identity protection enabled.
 
 ## Beam-spot endpoint experiment
+
+> Superseded on 2026-09-07: the endpoint-copy implementation and evidence in
+> this section remain historical provenance only. The active default-off
+> experiment is the live forward/reverse boundary workflow documented in
+> `agents_record/2026-09-07-live-beam-boundary-gsf.md`.
 
 `IMarlinTrack` exposes measurement updates only for detector `TrackerHit`
 objects.  Its point propagation/extrapolation methods do not impose a vertex
