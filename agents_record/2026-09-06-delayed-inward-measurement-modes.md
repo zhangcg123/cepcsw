@@ -39,7 +39,8 @@ The focused tests inherited
 - forward/inward splitting `false/true`;
 - fresh inward seed (`InwardSeedCovarianceScale=-1`, `BackwardSeed=1`);
 - `MaxComponents=10`, `ComponentWeightCutoff=1e-4`;
-- `SymmetricKL` and identity protection enabled;
+- `SymmetricKL` and identity protection disabled, following the immediately
+  preceding negative-peak identity-merge experiment;
 - truth loss override disabled;
 - `MSOn=true`, `ElossOn=false`.
 
@@ -59,30 +60,30 @@ event number.
 
 | iev | truth loss [%] | LCIO | Local FullMix | Next FullMix | NextNext FullMix |
 |---:|---:|---:|---:|---:|---:|
-| 3 | 1.092 | -0.860 | -0.883 | -0.877 | -0.879 |
+| 3 | 1.092 | -0.860 | -0.883 | -0.865 | -0.879 |
 | 5 | 0.814 | -1.086 | -1.094 | -1.108 | -1.062 |
-| 8 | 0.275 | -0.263 | -0.259 | -0.272 | -0.279 |
-| 31 | 0.501 | -0.608 | -0.631 | -0.637 | -0.627 |
-| 41 | 1.728 | -1.833 | -1.826 | -1.834 | -1.819 |
-| 55 | 1.319 | -1.229 | -1.237 | -1.257 | -1.276 |
-| 62 | 1.258 | -0.866 | -0.851 | -0.834 | -0.823 |
+| 8 | 0.275 | -0.263 | -0.225 | -0.261 | -0.283 |
+| 31 | 0.501 | -0.608 | -0.629 | -0.642 | -0.627 |
+| 41 | 1.728 | -1.833 | -1.807 | -1.826 | -1.818 |
+| 55 | 1.319 | -1.229 | -1.210 | -1.247 | -1.276 |
+| 62 | 1.258 | -0.866 | -0.851 | -0.780 | -0.823 |
 | 73 | 0.462 | -0.389 | -0.405 | -0.400 | -0.408 |
-| 98 | 0.232 | -0.428 | -0.458 | -0.464 | -0.448 |
+| 98 | 0.232 | -0.428 | -0.417 | -0.452 | -0.427 |
 | 103 | 1.114 | -0.791 | -0.880 | -0.922 | +1.860 |
 
 Endpoint summaries over these deliberately selected ten events are:
 
 | endpoint | mode | mean [%] | mean absolute [%] | RMS [%] |
 |---|---|---:|---:|---:|
-| BestBranch | Local | -0.410 | 0.733 | 0.878 |
-| BestBranch | Next | -0.686 | 0.856 | 0.962 |
-| BestBranch | NextNext | -0.578 | 0.950 | 1.087 |
-| WeightedMean | Local | -0.207 | 0.482 | 0.650 |
-| WeightedMean | Next | -0.368 | 0.576 | 0.715 |
-| WeightedMean | NextNext | -0.351 | 0.679 | 0.908 |
-| FullMixtureMode | Local | -0.852 | 0.852 | 0.958 |
-| FullMixtureMode | Next | -0.861 | 0.861 | 0.967 |
-| FullMixtureMode | NextNext | -0.576 | 0.948 | 1.087 |
+| BestBranch | Local | -0.403 | 0.713 | 0.863 |
+| BestBranch | Next | -0.674 | 0.842 | 0.950 |
+| BestBranch | NextNext | -0.575 | 0.947 | 1.087 |
+| WeightedMean | Local | -0.197 | 0.474 | 0.643 |
+| WeightedMean | Next | -0.361 | 0.573 | 0.710 |
+| WeightedMean | NextNext | -0.347 | 0.675 | 0.905 |
+| FullMixtureMode | Local | -0.840 | 0.840 | 0.948 |
+| FullMixtureMode | Next | -0.850 | 0.850 | 0.957 |
+| FullMixtureMode | NextNext | -0.574 | 0.946 | 1.086 |
 
 The less-negative NextNext mean is cancellation from the `iev=103` positive
 outlier, not improved resolution.
@@ -93,9 +94,9 @@ The standard zero-based events 11, 16, and 17 were rerun with all three modes.
 
 | selected index | LCIO [%] | Local FullMix [%] | Next FullMix [%] | NextNext FullMix [%] |
 |---:|---:|---:|---:|---:|
-| 11 | +0.402 | +0.396 | +0.382 | +0.411 |
+| 11 | +0.402 | +0.414 | +0.389 | +0.419 |
 | 16 | -51.726 | -51.742 | -51.742 | -51.739 |
-| 17 | -21.228 | -0.311 | +5.612 | -2.938 |
+| 17 | -21.228 | -0.265 | +5.618 | -2.938 |
 
 All modes executed successfully, retained finite endpoint mixtures, and kept
 the LocalMeasurement regression bit-for-bit consistent on the ten selected
