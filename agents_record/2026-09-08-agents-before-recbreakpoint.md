@@ -197,9 +197,6 @@ explicit provenance. Historical detail does not override this live status.
 
 - Keep implementation changes inside `Reconstruction/RecGsfTracking` unless
   the user explicitly authorizes broader scope for a concrete reason.
-  Current explicit exception: develop `Reconstruction/RecBreakpoint` and its
-  dedicated card/build registration. Keep existing GSF and shared KF sources
-  and maintained workflow cards unchanged for this experiment.
 - Do not modify KalTest, TrackSystemSvc, MarlinTrk, DDKalTest, or other shared
   CEPCSW packages to compensate for a GSF-specific state-management problem
   unless the user explicitly authorizes a narrow shared interface change.
@@ -218,8 +215,6 @@ explicit provenance. Historical detail does not override this live status.
 - Use `dev` as the active development branch. Do not switch, create, rename,
   delete, merge, or rebase branches unless the user explicitly requests the
   specific branch operation.
-  The user-authorized breakpoint experiment is on local `test_breakpoint`,
-  branched from `dev`; this does not authorize changing remote branches.
 - Use Git frequently during development: inspect status and diffs, and create
   focused checkpoint commits after coherent, proportionately verified core
   implementation or project-knowledge changes. Track, commit, and push all
@@ -287,38 +282,62 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-The active work is the independent `RecBreakpoint` first working version on
-`test_breakpoint`. It consumes `CompleteTracks` and adds a local sixth
-coordinate `b=log(p_before/p_after)` only on run-card-selected outward hit
-intervals. Other transitions remain five-dimensional KF steps. Retained
-transition joints support RTS smoothing and loss posteriors informed by later
-hits. Native KalTest performs propagation and measurement updates through
-package-local helpers; existing GSF/KF sources and batch workflows stay frozen.
+The immediate experiment is the default-off live transverse beam boundary for
+the reverse GSF. MarlinTrk has no public arbitrary Gaussian measurement, so
+the scalar beam update remains package-local. With the experiment on, the
+direction-local forward prefit is moved to `(BeamSpotX, BeamSpotY, 0)` and
+updated there. The canonical DD4hep beam-to-hit-0 interval is evaluated once;
+`ForwardBHSplitting` optionally creates outward children before the hit-0
+measurement. Each child is then transported from the beam through that
+boundary with the package's KalTest cradle, retaining its Jacobian and process
+noise, before the standard MarlinTrk hit-0 update. Reverse independently
+finishes through hit 0, optionally applies
+`InwardBHSplitting` over the same cached interval, propagates each child to the
+beam with MarlinTrk, and applies the beam likelihood. The resulting live bank
+then undergoes the ordinary weight cutoff and KL reduction and supplies
+BestBranch, WeightedMean, and FullMixtureMode. No separate constrained endpoint
+collections or silent unconstrained fallback exist.
 
-`BreakpointIntervals=[]` is the no-breakpoint reference. Entry `i` means
-radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID. The dedicated
-card is `Reconstruction/RecBreakpoint/options/run_breakpoint.py`; build target
-`RecBreakpoint` using the existing EL9 environment. Commands, all properties,
-output schema and limitations are in the package README.
+The nominal comparison is `BeamSpotX=BeamSpotY=0`,
+`BeamSpotSigmaX=0.0145 mm`, and `BeamSpotSigmaY=3.6e-5 mm`, with no z constraint
+or x-y correlation. Beam mode is accepted only for reverse without the KL
+smoother, `DD4hepBetweenSurfaces`, geometric IP publication, truth override and
+ECAL off, and a fresh inward seed. Directional BH gates remain independent and
+are never silently enabled.
 
-Seed-12 events 11/16/17 passed same-code no-breakpoint, single-interval [5],
-and two-interval [5,7] runs with full verbose states/covariances. Empty-list
-IP pT agrees with independent native MarlinTrk within 8e-8 relative; selected
-6D/KF covariance closures are below 3e-16 for these cases. First/last interval,
-nonzero loss-prior and invalid-index tests also passed their mechanical gates.
-These are not resolution validation: arbitrary interval choices caused both
-positive and negative shifts, and large-loss recovery remains unestablished.
+Positive inward look-ahead can now reach the beam boundary. For a split on
+`i+1 -> i`, targets descend through real hit 0 and then include the beam as one
+additional boundary when `BeamSpotConstraint=true`. The passive beam probe
+uses the same hit-to-beam propagation and scalar likelihood evaluator as the
+live terminal update, but it performs no additional split, never mutates the
+live child, and does not replace the later ordinary hit-0 and live beam
+updates. Without beam mode, look-ahead still stops at hit 0; depth zero is
+unchanged.
 
-Next review interval selection and the linearization/positive-loss treatment,
-then perform same-code categorized comparisons with no-breakpoint KF and
-truth, including clean-track preservation and catastrophic tails. The present
-fit is a single linearized Gaussian, allows negative fitted b as a diagnostic,
-assumes outward noncurling barrel ordering, and does not infer loss position
-within an interval. Do not add automatic truth steering or modify shared KF
-classes to improve selected examples.
+Focused verbose tests on indices 11, 16, and 17 now exercise the forward
+beam-origin transport and both boundary BH splits. All 300 reverse boundary
+children propagated and accepted the beam update; each event retained ten
+components after cutoff/KL and published all three ordinary endpoints. A
+same-code beam-off run reproduced the prior stored
+BestBranch, WeightedMean, and FullMixtureMode values for these events. This is
+mechanical validation only. A focused depth-1 event-11 run additionally
+formed 100 valid beam look-ahead posteriors at the hit-0 step while retaining
+the later live beam update. Depth-0 reruns after sharing the evaluator
+reproduced the stored beam-on 11/16/17 endpoints. Next run topology-clear
+beam-off/on and beam-look-ahead depth comparisons and report no-eBrem,
+light-eBrem, hard-eBrem, transition location, clean core, and catastrophic
+tails for all three endpoints. The experiment advances only if clean tracks
+are preserved without increasing extreme tails.
 
-Exact tests/provenance are in
-`agents_record/2026-09-08-recbreakpoint-first-working-version.md`. The complete
-outgoing beam-boundary focus, frozen GSF controls and pending population gate
-are preserved in `agents_record/2026-09-08-agents-before-recbreakpoint.md`;
-they are paused, not invalidated or superseded by a physics claim.
+Keep compiled and active-template production controls frozen:
+`DD4hepBetweenSurfaces`, `CEPCRuntimeCategoryAligned9Clear`,
+`MaxComponents=10`, `ComponentWeightCutoff=1e-4`, `SymmetricKL`, identity
+protection, `ForwardSeed=1`, `BackwardSeed=1`, directional splitting
+false/false, `InwardLookaheadDepth=0`, and `BeamSpotConstraint=false`. The
+maintained comparison card now selects the isolated beam-on side:
+`BeamSpotConstraint=true`, forward/inward splitting true/true, a fresh inward
+seed, identity protection on, and look-ahead depth zero. It writes only the
+beam-constrained ordinary triplet and tags the tuple name `beamspot`; obtain
+the unconstrained reverse triplet from a separate beam-off job and output
+path. ECAL remains paused. Historical detail does not override this live
+focus.

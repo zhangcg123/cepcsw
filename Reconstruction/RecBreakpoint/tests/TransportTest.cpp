@@ -1,0 +1,94 @@
+#include "RecBreakpoint/AugmentedTransport.h"
+
+#include <cmath>
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+
+using namespace breakpoint;
+
+void near(double actual, double expected) {
+  if (std::abs(actual - expected) > 1.0e-12)
+    throw std::runtime_error("transport regression failed");
+}
+
+int main() {
+  Matrix5 identity{};
+  Matrix6 prior{};
+  for (int i = 0; i < 5; ++i) identity[i * 5 + i] = 1;
+  for (int i = 0; i < 6; ++i) prior[i * 6 + i] = i + 1;
+  prior[2 * 6 + 5] = prior[5 * 6 + 2] = 0.25;
+  const auto ordinary = AugmentedTransport::jacobian(identity, {});
+  const auto unchanged = AugmentedTransport::covariance(prior, ordinary, {});
+  for (int i = 0; i < 36; ++i) near(unchanged[i], prior[i]);
+
+  Vector5 derivative{};
+  derivative[2] = 2;
+  const auto coupled = AugmentedTransport::jacobian(identity, derivative);
+  const auto updated = AugmentedTransport::covariance(prior, coupled, {});
+  near(updated[2 * 6 + 2], 3 + 4 * 6 + 4 * 0.25);
+  near(updated[2 * 6 + 5], 0.25 + 2 * 6);
+  near(updated[35], 6);
+
+  // Inverse shear restores the complete prior, including cross correlations.
+  derivative[2] = -2;
+  const auto restored = AugmentedTransport::covariance(
+      updated, AugmentedTransport::jacobian(identity, derivative), {});
+  for (int i = 0; i < 36; ++i) near(restored[i], prior[i]);
+
+  Matrix5 q5{};
+  q5[0] = 0.125;
+  const auto noisy = AugmentedTransport::covariance(
+      prior, ordinary, AugmentedTransport::processNoise(q5));
+  near(noisy[0], 1.125);
+  near(noisy[35], 6);
+
+  // Physical loss-map derivatives: kappa' = exp(b) kappa.
+  const double kappa = -0.2, b = 0.07, epsilon = 1.e-6;
+  const double derivativeB = kappa * std::exp(b);
+  if (std::abs((kappa * std::exp(b + epsilon) - kappa * std::exp(b - epsilon)) /
+               (2 * epsilon) - derivativeB) > 1.e-10)
+    throw std::runtime_error("loss derivative finite-difference test failed");
+  Matrix5 lossMap = identity;
+  lossMap[12] = std::exp(b);
+  Vector5 lossColumn{};
+  lossColumn[2] = derivativeB;
+  const auto lossJacobian = AugmentedTransport::jacobian(lossMap, lossColumn);
+  Matrix5 inverseMap = identity;
+  inverseMap[12] = std::exp(-b);
+  Vector5 inverseColumn{};
+  inverseColumn[2] = -kappa;
+  const auto inverseJacobian = AugmentedTransport::jacobian(inverseMap, inverseColumn);
+  const auto physicalRestored = AugmentedTransport::covariance(
+      AugmentedTransport::covariance(prior, lossJacobian, {}), inverseJacobian, {});
+  for (int i = 0; i < 36; ++i) near(physicalRestored[i], prior[i]);
+
+  // Scalar downstream measurement of curvature: conditioning the full joint
+  // or retaining b/helix cross covariance gives the same b posterior.
+  const auto joint = AugmentedTransport::covariance(prior, coupled, {});
+  const double measurementVariance = 0.7, residual = 0.3;
+  const double predictedVariance = joint[14];
+  const double cross = joint[32]; // Cov(b,kappa)
+  const double innovationVariance = predictedVariance + measurementVariance;
+  const double directMean = cross / innovationVariance * residual;
+  const double directVariance = joint[35] - cross * cross / innovationVariance;
+  const double updatedCurvature = predictedVariance / innovationVariance * residual;
+  const double updatedVariance = predictedVariance * measurementVariance / innovationVariance;
+  const double conditionalGain = cross / predictedVariance;
+  near(conditionalGain * updatedCurvature, directMean);
+  near(joint[35] + conditionalGain * conditionalGain *
+       (updatedVariance - predictedVariance), directVariance);
+
+  bool asymmetricRejected = false;
+  Matrix6 invalid = prior;
+  invalid[1] = 0.5;
+  try { AugmentedTransport::covariance(invalid, ordinary, {}); }
+  catch (const std::invalid_argument&) { asymmetricRejected = true; }
+  if (!asymmetricRejected) throw std::runtime_error("asymmetric input not rejected");
+  bool rejected = false;
+  prior[0] = std::numeric_limits<double>::quiet_NaN();
+  try { AugmentedTransport::covariance(prior, ordinary, {}); }
+  catch (const std::invalid_argument&) { rejected = true; }
+  if (!rejected) throw std::runtime_error("nonfinite input not rejected");
+  std::cout << "RecBreakpoint transport tests passed\n";
+}
