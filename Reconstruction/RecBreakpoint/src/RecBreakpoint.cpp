@@ -28,6 +28,13 @@ RecBreakpoint::~RecBreakpoint() = default;
 
 StatusCode RecBreakpoint::initialize() {
   if (Algorithm::initialize().isFailure()) return StatusCode::FAILURE;
+  try {
+    breakpoint::parseSeedHitSelection(m_seedHitSelection.value());
+  } catch (const std::exception& exception) {
+    error() << exception.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
+  m_seedSelectionName = m_seedHitSelection.value();
   std::set<int> unique;
   for (int interval : m_intervals.value()) {
     if (interval < 0 || !unique.insert(interval).second) {
@@ -75,6 +82,8 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("breakpoint_pt", &m_fitPt);
   m_tree->Branch("filter_chi2", &m_fitChi2);
   m_tree->Branch("reference_kf_pt", &m_referencePt);
+  m_tree->Branch("seed_hit_selection", &m_seedSelectionName);
+  m_tree->Branch("seed_hit_indices", &m_seedHitIndices);
   m_tree->Branch("hit_cell_id", &m_hitCell);
   m_tree->Branch("hit_r_mm", &m_hitR);
   m_tree->Branch("hit_z_mm", &m_hitZ);
@@ -91,7 +100,8 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("smoothed_log_loss_variance", &m_lossVariance);
   m_tree->Branch("covariance_transport_closure", &m_closure);
   info() << "Outward KF + RTS; " << m_intervals.value().size()
-         << " selected breakpoint intervals; Bz=" << m_bz << endmsg;
+         << " selected breakpoint intervals; seed=" << m_seedSelectionName
+         << "; Bz=" << m_bz << endmsg;
   return StatusCode::SUCCESS;
 }
 
@@ -117,7 +127,8 @@ StatusCode RecBreakpoint::execute() {
       }
     if (count != 1) m_truthPt = nan;
   }
-  breakpoint::KalmanAdapter adapter(m_system.get(), m_bz, m_maxChi2);
+  breakpoint::KalmanAdapter adapter(m_system.get(), m_bz, m_maxChi2,
+      breakpoint::parseSeedHitSelection(m_seedHitSelection.value()));
   breakpoint::BreakpointFitter fitter(adapter);
   breakpoint::FitSettings settings{m_intervals.value(), m_meanLoss, m_sigmaLoss, m_seedScale};
   m_trackIndex = -1;
@@ -125,6 +136,7 @@ StatusCode RecBreakpoint::execute() {
     ++m_trackIndex;
     if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); continue; }
     m_fitStatus = -1;
+    m_seedHitIndices.clear();
     m_kfPt = m_fitPt = m_fitChi2 = m_referencePt = nan;
     m_hitCount = 0;
     m_hitCell.clear(); m_hitR.clear(); m_hitZ.clear(); m_localChi2.clear();
@@ -151,6 +163,11 @@ StatusCode RecBreakpoint::execute() {
         m_hitR.push_back(std::hypot(p.x, p.y));
         m_hitZ.push_back(p.z);
       }
+      const auto seedIndices = adapter.seedHitIndices(hits);
+      m_seedHitIndices.assign(seedIndices.begin(), seedIndices.end());
+      if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
+          << " seed=" << m_seedSelectionName << " ordered-hit indices="
+          << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
       const auto fit = fitter.fit(hits, settings);
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");

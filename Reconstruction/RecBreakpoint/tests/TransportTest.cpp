@@ -1,4 +1,5 @@
 #include "RecBreakpoint/AugmentedTransport.h"
+#include "RecBreakpoint/SeedHitSelection.h"
 
 #include <cmath>
 #include <iostream>
@@ -13,6 +14,21 @@ void near(double actual, double expected) {
 }
 
 int main() {
+  const auto wide = parseSeedHitSelection("FirstMiddleLast");
+  const auto legacy = parseSeedHitSelection("FirstThree");
+  // Original ordered-hit indices need not be consecutive after excluding 1D hits.
+  if (selectSeedHitIndices({0, 2, 4, 6, 8}, wide) != std::array<int,3>{0,4,8} ||
+      selectSeedHitIndices({1, 3, 7, 9}, wide) != std::array<int,3>{1,7,9} ||
+      selectSeedHitIndices({0, 4, 8}, wide) != std::array<int,3>{0,4,8} ||
+      selectSeedHitIndices({1, 3, 7, 9}, legacy) != std::array<int,3>{1,3,7})
+    throw std::runtime_error("seed-hit selection regression failed");
+  bool invalidModeRejected = false, insufficientHitsRejected = false;
+  try { parseSeedHitSelection("Middle"); }
+  catch (const std::invalid_argument&) { invalidModeRejected = true; }
+  try { selectSeedHitIndices({0, 2}, wide); }
+  catch (const std::runtime_error&) { insufficientHitsRejected = true; }
+  if (!invalidModeRejected || !insufficientHitsRejected)
+    throw std::runtime_error("invalid seed selection accepted");
   Matrix5 identity{};
   Matrix6 prior{};
   for (int i = 0; i < 5; ++i) identity[i * 5 + i] = 1;

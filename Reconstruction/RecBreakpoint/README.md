@@ -47,7 +47,9 @@ The 6x6 Jacobian includes this loss map and ordinary geometric propagation,
 including curvature/loss cross covariance. Native KalTest's sixth coordinate
 is a time offset; it is NOT reused as b.
 
-1. Make a three-hit outward prefit and loose FullLDCTracking-style covariance.
+1. Make an outward prefit from the first, middle and last usable 2D hits
+   (default), or the first three as an explicit comparison. Assign the same
+   loose FullLDCTracking-style covariance and update actual hit 0 first.
 2. At each selected edge, introduce an independent Gaussian b prior,
    linearize the loss map and propagate its covariance into the helix.
    Other edges remain ordinary five-dimensional KF transitions.
@@ -85,6 +87,7 @@ a positive-sum conditional form to avoid cancellation of loose seed errors.
 | MeanLogLoss | 0 | Common independent Gaussian b-prior mean, finite in [0,5] |
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma |
 | SeedScale | 1 | Positive scale of all five loose seed variances |
+| SeedHitSelection | FirstMiddleLast | First/middle/last usable 2D hits; FirstThree restores the original selection |
 | MaxChi2PerHit | 1e100 | Native hit-acceptance limit; rejection fails the track |
 | MSOn | true | Baseline multiple-scattering noise |
 | ElossOn | false | Baseline deterministic ionization correction |
@@ -99,6 +102,16 @@ the fit. Ambiguous multi-electron generator events have NaN truth pT. A scalar
 generator reference is not reconstructed-track truth matching, and event
 selection does not imply topology-clear selection.
 
+`SeedHitSelection` operates on the radius-ordered usable 2D hits, skipping
+one-dimensional hits. For N usable hits, FirstMiddleLast selects positions
+`0, N//2, N-1` (upper middle for even N); FirstThree selects `0,1,2`.
+Both require at least three usable hits and do not silently fall back.
+The initial covariance/SeedScale, propagation start, and hit-update order are
+unchanged. The optional native-KF reference uses the same selection.
+`BP_SEED_HIT_SELECTION=FirstThree` selects the legacy mode in the dedicated
+card. The seed uses downstream hit positions only to construct its starting
+helix, not their fitted measurement covariance. This is not a global loss fit.
+
 Fixed-name PODIO collections `BreakpointStatus` and `BreakpointOutputIndex`
 are input-row-aligned. Status: 1 success, -1 failure, 0 excluded event.
 The output index is -1 when no fit exists. Successful tracks contain IP,
@@ -112,6 +125,9 @@ smoothed curvature/variance, selected intervals, and local/all-hit loss
 posteriors with variances. `covariance_transport_closure` compares the separate
 6D prediction's helix marginal with the actual native prediction, normalized
 to covariance units; a discrepancy above 1e-3 fails the track.
+`seed_hit_selection` and `seed_hit_indices` retain the effective mode and three
+actual ordered-hit indices in each attempted track row; selection failure leaves
+the index vector empty. The indices are also printed with VerboseDump=true.
 
 Only the flat tuple is written by default. Commented PodioOutput lines in the
 card allow event-collection serialization without changing the GSF workflow.

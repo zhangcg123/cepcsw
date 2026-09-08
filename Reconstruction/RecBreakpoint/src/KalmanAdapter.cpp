@@ -103,15 +103,21 @@ std::unique_ptr<MarlinTrk::IMarlinTrack> KalmanAdapter::initialized(
   return track;
 }
 
+std::array<int, 3> KalmanAdapter::seedHitIndices(
+    const std::vector<edm4hep::TrackerHit>& hits) const {
+  std::vector<int> usable;
+  for (std::size_t i = 0; i < hits.size(); ++i) {
+    if (!UTIL::BitSet32(hits[i].getType())[UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL])
+      usable.push_back(static_cast<int>(i));
+  }
+  return selectSeedHitIndices(usable, m_seedSelection);
+}
+
 edm4hep::TrackState KalmanAdapter::prefit(const std::vector<edm4hep::TrackerHit>& hits,
                                        double scale) const {
-  std::vector<edm4hep::TrackerHit> prefitHits;
-  for (auto hit : hits) {
-    if (!UTIL::BitSet32(hit.getType())[UTIL::ILDTrkHitTypeBit::ONE_DIMENSIONAL])
-      prefitHits.push_back(hit);
-    if (prefitHits.size() == 3) break;
-  }
-  if (prefitHits.size() != 3) throw std::runtime_error("Need three two-dimensional seed hits");
+  const auto indices = seedHitIndices(hits);
+  std::vector<edm4hep::TrackerHit> prefitHits{
+      hits[indices[0]], hits[indices[1]], hits[indices[2]]};
   edm4hep::TrackState prefit{};
   requireSuccess(MarlinTrk::createPrefit(prefitHits, &prefit, m_bz, false), "Three-hit prefit");
   prefit.covMatrix.fill(0);

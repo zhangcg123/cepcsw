@@ -2,6 +2,7 @@
 #define RECBREAKPOINT_KALMANADAPTER_H
 
 #include "TrackState.h"
+#include "RecBreakpoint/SeedHitSelection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
 #include <memory>
@@ -21,8 +22,10 @@ struct MeasurementStep {
 /// All physical propagation and hit updates remain baseline KalTest calls.
 class KalmanAdapter {
 public:
-  KalmanAdapter(BreakpointTrackSystem* system, double bz, double maxChi2)
-      : m_system(system), m_bz(bz), m_maxChi2(maxChi2) {}
+  KalmanAdapter(BreakpointTrackSystem* system, double bz, double maxChi2,
+                SeedHitSelection seedSelection)
+      : m_system(system), m_bz(bz), m_maxChi2(maxChi2), m_seedSelection(seedSelection) {}
+  std::array<int, 3> seedHitIndices(const std::vector<edm4hep::TrackerHit>& hits) const;
   MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
   MeasurementStep advance(const TrackState& source, edm4hep::TrackerHit sourceHit,
                           edm4hep::TrackerHit targetHit) const;
@@ -36,6 +39,7 @@ private:
       const edm4hep::TrackState& state, edm4hep::TrackerHit hit, bool inward) const;
   BreakpointTrackSystem* m_system;
   double m_bz, m_maxChi2;
+  SeedHitSelection m_seedSelection;
 };
 } // namespace breakpoint
 #endif
