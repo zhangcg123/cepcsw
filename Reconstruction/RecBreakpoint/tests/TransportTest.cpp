@@ -99,6 +99,28 @@ int main() {
       AugmentedTransport::covariance(prior, lossJacobian, {}), inverseJacobian, {});
   for (int i = 0; i < 36; ++i) near(physicalRestored[i], prior[i]);
 
+  // An iterated affine loss map must retain the ORIGINAL prior mean. At a
+  // changed expansion point the offset is essential; merely applying exp(bref)
+  // to the old kappa would silently replace the loss hypothesis.
+  const double priorB = 0, referenceB = .12, referenceKappa = -.19;
+  const double referenceMapped = referenceKappa * std::exp(referenceB);
+  const double affinePrediction = referenceMapped
+      + std::exp(referenceB) * (kappa-referenceKappa)
+      + referenceMapped * (priorB-referenceB);
+  near(affinePrediction, std::exp(referenceB)
+      * (kappa + referenceKappa*(priorB-referenceB)));
+  // For an already-linear measurement, moving only its expansion point
+  // cannot change the posterior or repeatedly shrink the original prior.
+  const double originalMean=.3, originalVariance=.04, h=2., observation=.8, noise=.01;
+  const double posteriorVariance=1./(1./originalVariance+h*h/noise);
+  const double posteriorMean=posteriorVariance*(originalMean/originalVariance+h*observation/noise);
+  for (double reference : {-.7, .0, .6}) {
+    const double prediction=h*reference+h*(originalMean-reference);
+    const double gain=originalVariance*h/(h*h*originalVariance+noise);
+    near(originalMean+gain*(observation-prediction),posteriorMean);
+    near((1-gain*h)*originalVariance,posteriorVariance);
+  }
+
   // Scalar downstream measurement of curvature: conditioning the full joint
   // or retaining b/helix cross covariance gives the same b posterior.
   const auto joint = AugmentedTransport::covariance(prior, coupled, {});

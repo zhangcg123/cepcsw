@@ -38,6 +38,8 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_backwardMode{this, "BackwardMode", "RTS"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
+  Gaudi::Property<int> m_maxIterations{this,"MaxFitIterations",1};
+  Gaudi::Property<double> m_iterationTolerance{this,"RelinearizationTolerance",1.e-3};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
   Gaudi::Property<bool> m_ms{this, "MSOn", true};
   Gaudi::Property<bool> m_eloss{this, "ElossOn", false};
@@ -61,6 +63,10 @@ private:
   std::vector<int> m_persistentHits;
   std::vector<double> m_sixPredictedMean, m_sixPredictedCov, m_sixFilteredMean, m_sixFilteredCov;
   std::vector<double> m_sixSmoothedMean, m_sixSmoothedCov, m_sixTransport, m_sixNoise;
+  int m_iterations=0, m_iterationStatus=0;
+  double m_onePassPt=0;
+  std::string m_iterationError;
+  std::vector<double> m_iterationPt,m_iterationLoss,m_iterationLossVariance,m_iterationNorm,m_iterationChi2;
   std::vector<int> m_seedHitIndices;
   std::vector<unsigned long long> m_hitCell;
   std::vector<double> m_hitR, m_hitZ, m_localChi2, m_filteredKappa, m_smoothedKappa;

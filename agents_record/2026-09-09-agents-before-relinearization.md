@@ -286,52 +286,51 @@ Use a small `SelectedEventIndices` list for component diagnostics. Generated
 ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
+
 Active development remains the independent `RecBreakpoint` package on
-`test_breakpoint`, reading `CompleteTracks`. The default Persistent6D/RTS
-method introduces one loss coordinate b at a configured radius-ordered hit
-interval and carries its full 6D covariance through every downstream native
-KalTest update. Joint RTS crosses the birth boundary to the upstream 5D
-trajectory and IP. The loss acts only once. LocalMarginal remains the earlier
-comparison path, supporting multiple intervals and BackwardFilter; the latter
-reuses the outward posterior and is not an independent smoother.
+`test_breakpoint`, reading `CompleteTracks`. Its new compiled/dedicated-card
+default `LossStateMode=Persistent6D` introduces one loss coordinate
+`b=log(p_before/p_after)` at the configured hit interval, then carries the
+complete six-dimensional state and covariance through EVERY downstream
+propagation and native KalTest measurement update. The loss is applied only
+once. A joint RTS pass smooths the 6D sequence and crosses its birth boundary
+back to the upstream 5D states for IP publication.
 
-Optional iterated relinearization is now implemented:
-`MaxFitIterations=1` preserves the previous default, while values 2--20 require
-Persistent6D + RTS + exactly one interval. Later passes recompute transport,
-material noise and measurement Jacobians about the previous smoothed
-trajectory/b, retain affine offsets, and restart from the ORIGINAL seed and
-independent loss priors. No posterior is substituted as a new prior.
-`RelinearizationTolerance=0.001` stops on the maximum standardized smoothed
-coordinate/b change. There is no positivity constraint, damping, line search,
-within-interval location fitting, or guarantee of a global optimum.
+Persistent6D currently supports one breakpoint (or none) and
+`BackwardMode=RTS`; unsupported combinations fail explicitly.
+`LossStateMode=LocalMarginal` preserves the earlier local-joint implementation,
+multiple breakpoints and `BackwardMode=BackwardFilter`. The latter copies the
+full final forward posterior and revisits inner hits: it is an evidence-reusing
+refit, not an independent smoother. Neither path performs iterative
+relinearization or enforces a positive fitted loss.
 
-The dedicated card is `Reconstruction/RecBreakpoint/options/run_breakpoint.py`;
-`BP_MAX_ITERATIONS=10` enables the experiment. The package README is the
-complete property/schema/build reference. An empty interval list remains the
-ordinary one-pass no-breakpoint reference. Index i means hit[i] -> hit[i+1],
-not a detector layer ID. Existing full per-hit 6D vectors describe the final
-completed pass. New automatic fields retain one-pass pT and per-pass pT,
-fitted b/variance, step norm and affine chi2. Iteration status distinguishes
-one pass, convergence, limit and failure retaining the last completed pass.
+`BreakpointIntervals=[]` remains the ordinary no-breakpoint reference.
+Entry i names radius-ordered hit[i] -> hit[i+1], not a detector layer ID.
+The dedicated card is `Reconstruction/RecBreakpoint/options/run_breakpoint.py`.
+Use the EL9 environment to build target RecBreakpoint and install that package
+subdirectory; the package README contains exact commands and all properties.
+Default-on flat vectors preserve every downstream predicted/filtered/smoothed
+6D mean, full covariance, transport and process noise. The sixth coordinate
+belongs to the selected interval permanently, never native KalTest t0.
 
-Same-code eight-event A/B gates passed with exact first-pass reproduction,
-original birth-prior preservation, full covariance positive definiteness and
-6D transport/RTS checks. All converged in 3--4 passes. Seven selected cases
-reduce absolute pT residual; one worsens slightly. Seed5:84 improves from
--2.5197% to -1.1540% and seed5:92 from -2.2232% to -2.1607%, but both fitted
-losses remain negative. Seed12:17 still has a large deficit. These are focused
-mechanical/selected-event results, not population validation or proof of the
-prior/location hypothesis. Earlier local-versus-persistent equivalence and
-twenty-event wrong-sign/tail evidence remain preserved in dated records.
+Focused same-code gates passed on seed12 events11/16/17, two audited
+single-eBrem negative cases, empty-list controls, first/last intervals and a
+nonzero prior. Eleven paired event/configuration results have identical stored
+IP pT between Persistent6D and LocalMarginal; maximum fitted-b difference is
+2.6e-11. This supports the expected fixed-linearization equivalence for those
+cases, not a resolution improvement. The earlier twenty-event single-eBrem
+study still shows wrong-sign losses and new tails.
 
-Next inspect the converged b/cross-covariance histories of still-negative
-cases, then test clean-track safety and categorized populations before any
-default change. Treat linearization, prior assumptions, positivity and
-within-interval placement separately. No automatic truth steering, shared KF,
-GSF, batch workflow, or remote changes are authorized by this experiment.
-Earlier beam-boundary work and its population gate remain paused.
+Next use the live per-hit b/covariance history to diagnose how the loss estimate
+moves, then review linearization, positivity and within-interval loss placement
+as separate hypotheses. Preserve clean-track controls and categorized truth
+comparisons. No automatic truth steering, shared KF changes, GSF changes or
+batch workflow changes are authorized by this experiment.
 
-Implementation, exact settings and eight-event results:
-`agents_record/2026-09-09-recbreakpoint-iterated-relinearization.md`.
-Complete outgoing status:
-`agents_record/2026-09-09-agents-before-relinearization.md`.
+Exact implementation and gates:
+`agents_record/2026-09-09-recbreakpoint-persistent-six-dimensional-filter.md`.
+The complete outgoing focus is retained in
+`agents_record/2026-09-08-agents-before-persistent6d.md`; the single-eBrem table
+is in `agents_record/2026-09-08-recbreakpoint-single-ebrem-twenty-events.md`.
+Earlier beam-boundary work and its pending population gate remain paused,
+not invalidated.

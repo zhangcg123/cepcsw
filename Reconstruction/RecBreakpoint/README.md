@@ -79,9 +79,51 @@ update** on this path. The complete 6D posterior becomes the next step's input.
 At the end, a joint RTS pass smooths the six-dimensional sequence and crosses
 the 6D-to-5D birth boundary using its rectangular transition. It publishes the
 smoothed innermost track geometrically extrapolated to IP. The final outward
-b mean/variance already contain all downstream measurements. It is one fixed-
-linearization fit, not an iterated nonlinear refit. The unchanged LocalMarginal
-path remains an explicit equivalence/regression reference.
+b mean/variance already contain all downstream measurements. By default this
+is one filter/smoother pass. Optional repeated relinearization is described
+below. The unchanged LocalMarginal path remains an explicit regression reference.
+
+### Optional iterated relinearization
+
+Set `MaxFitIterations=10` (`BP_MAX_ITERATIONS=10` in the dedicated card) to
+allow up to ten complete filter/RTS passes. This requires Persistent6D, RTS,
+and exactly one selected interval. The default **1** preserves the original
+one-pass path. Each additional pass:
+
+1. Uses the previous smoothed trajectory and fitted b as expansion points.
+2. Re-evaluates native geometric/material transport F/Q, the loss-map
+   Jacobian, and the measurement derivative at those points.
+3. Restarts from the **original seed prior and original independent b prior**,
+   not the previous posterior. Uses affine predictions
+   `f(reference) + F(reference)*(state-reference)` and measurement models
+   `h(reference) + H(reference)*(state-reference)`. Native KalTest still
+   performs every measurement update, once per hit per pass.
+4. Runs the full joint RTS pass again. Stops when the maximum change of any
+   smoothed helix coordinate or fitted b, divided by its previous smoothed
+   standard deviation, is below `RelinearizationTolerance` (default 0.001).
+
+References and live states share the same pivots. Changing an expansion point
+does not replace the prior or apply the physical loss a second time. The
+Gaussian b-prior mean and variance remain unchanged throughout. The fit still
+allows negative b, keeps the configured loss location, and does not enforce
+positivity, use truth, or guarantee a global optimum. There is no damping or
+line search; convergence is a numerical stopping test, not physics validation.
+
+Automatic tuple fields preserve `one_pass_pt`, `fit_iterations`,
+`iteration_status`, `iteration_error`, and the per-pass vectors `iteration_pt`,
+`iteration_log_loss`, `iteration_log_loss_variance`, `iteration_step_norm`,
+`iteration_linearized_chi2`. Status is 0 for one pass, 1 for convergence, 2 for
+the iteration limit, and -1 for a failed additional pass. On failure the last
+completed fit is retained and explicitly tagged; `status=1` alone does not
+establish convergence. The first recorded step norm is 0 by convention, not
+a convergence claim. The chi-square trace is affine-filter innovation
+bookkeeping, **not** a common nonlinear objective whose decrease is required.
+Full per-hit state/covariance vectors describe the final completed pass.
+
+The implementation and eight paired event results are recorded in
+[the relinearization gate](../../agents_record/2026-09-09-recbreakpoint-iterated-relinearization.md).
+All eight converged, but several wrong-sign losses remain; do not interpret
+convergence as correct energy-loss reconstruction.
 
 ### Earlier LocalMarginal workflow
 
@@ -152,6 +194,8 @@ a positive-sum conditional form to avoid cancellation of loose seed errors.
 | MeanLogLoss | 0 | Common independent Gaussian b-prior mean, finite in [0,5] |
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma |
 | LossStateMode | Persistent6D | Persistent6D: live downstream 6D state, one interval and RTS only; LocalMarginal: earlier marginalized/local-joint path |
+| MaxFitIterations | 1 | Total passes, integer 1--20; >1 requires Persistent6D + RTS + exactly one interval |
+| RelinearizationTolerance | 0.001 | Finite positive maximum standardized smoothed-coordinate change for convergence |
 | SeedScale | 1 | Positive scale of all five loose seed variances |
 | SeedHitSelection | FirstMiddleLast | First/middle/last usable 2D hits; FirstThree restores the original selection |
 | BackwardMode | RTS | RTS smoothing or BackwardFilter seeded from the full outward posterior |
@@ -237,10 +281,11 @@ also emits full 6D states/covariances. Existing 5D track projections and scalar
 loss branches remain available. Unsupported multiple retained losses require
 more than six dimensions and are deliberately not approximated by one b.
 
-One linearization about the configured loss mean is performed. The loss is
-located at the upstream measurement surface. This version does not fit its
+By default one linearization about the configured loss mean is performed;
+optional repeated passes relinearize about the smoothed trajectory. The loss
+is located at the upstream measurement surface. This version does not fit its
 position within the interval, select intervals automatically, use BH mixtures,
-enforce positive losses, or iterate to a nonlinear optimum. Negative fitted
+enforce positive losses, or guarantee a nonlinear optimum. Negative fitted
 losses are retained, not clipped. Large-loss results need particular caution.
 There is no beam-spot update. Material/mass conventions remain native KalTest;
 this does not introduce the GSF DD4hep material-path machinery.

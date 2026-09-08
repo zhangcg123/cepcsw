@@ -12,6 +12,8 @@ struct FitSettings {
   double seedScale = 1;
   std::string backwardMode = "RTS";
   std::string lossStateMode = "Persistent6D";
+  int maxFitIterations = 1;
+  double relinearizationTolerance = 1.e-3;
 };
 
 struct IntervalResult {
@@ -36,6 +38,11 @@ struct FitResult {
   std::vector<TMatrixD> persistentTransport, persistentNoise;
   double chi2 = 0;
   int measurementDimensions = 0;
+  edm4hep::TrackState onePassIP{};
+  int iterationStatus = 0; // 0=one pass, 1=converged, 2=limit, -1=iteration failed
+  std::string iterationError;
+  std::vector<double> iterationInverseAbsOmega, iterationLoss, iterationLossVariance;
+  std::vector<double> iterationStepNorm, iterationLinearizedChi2;
 };
 
 /// Persistent6D: one loss coordinate stays live through every downstream hit.
@@ -47,7 +54,10 @@ public:
                 const FitSettings& settings) const;
 private:
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
-                          const FitSettings& settings) const;
+                          const FitSettings& settings, const FitResult* reference = nullptr,
+                          const TrackState* originalPrior = nullptr) const;
+  FitResult fitIterated(const std::vector<edm4hep::TrackerHit>& hits,
+                       const FitSettings& settings) const;
   const KalmanAdapter& m_adapter;
 };
 } // namespace breakpoint

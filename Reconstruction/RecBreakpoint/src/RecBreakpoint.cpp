@@ -37,6 +37,13 @@ StatusCode RecBreakpoint::initialize() {
   m_seedSelectionName = m_seedHitSelection.value();
   m_backwardModeName = m_backwardMode.value();
   m_lossStateModeName = m_lossStateMode.value();
+  if (m_maxIterations<1 || m_maxIterations>20 || !std::isfinite(m_iterationTolerance) ||
+      m_iterationTolerance<=0 || (m_maxIterations>1 &&
+      (m_lossStateModeName!="Persistent6D" || m_backwardModeName!="RTS" || m_intervals.value().size()!=1))) {
+    error() << "MaxFitIterations must be 1..20, tolerance positive; iterations require"
+            << " Persistent6D/RTS and exactly one breakpoint" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal") ||
       (m_lossStateModeName == "Persistent6D" &&
        (m_backwardModeName != "RTS" || m_intervals.value().size() > 1))) {
@@ -99,6 +106,15 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("seed_hit_indices", &m_seedHitIndices);
   m_tree->Branch("backward_mode", &m_backwardModeName);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
+  m_tree->Branch("one_pass_pt",&m_onePassPt);
+  m_tree->Branch("fit_iterations",&m_iterations);
+  m_tree->Branch("iteration_status",&m_iterationStatus);
+  m_tree->Branch("iteration_error",&m_iterationError);
+  m_tree->Branch("iteration_pt",&m_iterationPt);
+  m_tree->Branch("iteration_log_loss",&m_iterationLoss);
+  m_tree->Branch("iteration_log_loss_variance",&m_iterationLossVariance);
+  m_tree->Branch("iteration_step_norm",&m_iterationNorm);
+  m_tree->Branch("iteration_linearized_chi2",&m_iterationChi2);
   m_tree->Branch("persistent_hit_index", &m_persistentHits);
   m_tree->Branch("persistent_predicted_mean", &m_sixPredictedMean);
   m_tree->Branch("persistent_predicted_covariance", &m_sixPredictedCov);
@@ -164,11 +180,16 @@ StatusCode RecBreakpoint::execute() {
   breakpoint::FitSettings settings{m_intervals.value(), m_meanLoss, m_sigmaLoss, m_seedScale};
   settings.backwardMode = m_backwardModeName;
   settings.lossStateMode = m_lossStateModeName;
+  settings.maxFitIterations=m_maxIterations;
+  settings.relinearizationTolerance=m_iterationTolerance;
   m_trackIndex = -1;
   for (const auto& track : *tracks) {
     ++m_trackIndex;
     if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); continue; }
     m_fitStatus = -1;
+    m_iterations=0; m_iterationStatus=0; m_onePassPt=nan; m_iterationError.clear();
+    m_iterationPt.clear();m_iterationLoss.clear();m_iterationLossVariance.clear();
+    m_iterationNorm.clear();m_iterationChi2.clear();
     m_seedHitIndices.clear();
     m_persistentHits.clear();
     m_sixPredictedMean.clear(); m_sixPredictedCov.clear();
@@ -213,6 +234,19 @@ StatusCode RecBreakpoint::execute() {
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");
       m_fitPt = std::abs(m_bz * 2.99792458e-4 / fit.ip.omega);
+      m_onePassPt=fit.iterationInverseAbsOmega.empty() ? m_fitPt : std::abs(m_bz*2.99792458e-4/fit.onePassIP.omega);
+      m_iterationPt=fit.iterationInverseAbsOmega;
+      for(auto& value:m_iterationPt) value*=std::abs(m_bz*2.99792458e-4);
+      m_iterationLoss=fit.iterationLoss;m_iterationLossVariance=fit.iterationLossVariance;
+      m_iterationNorm=fit.iterationStepNorm;m_iterationChi2=fit.iterationLinearizedChi2;
+      m_iterations=m_iterationPt.empty()?1:m_iterationPt.size();
+      m_iterationStatus=fit.iterationStatus;m_iterationError=fit.iterationError;
+      if(m_verbose)
+        for(std::size_t j=0;j<m_iterationPt.size();++j)
+          info()<<std::setprecision(17)<<"iteration="<<j+1<<" pt="<<m_iterationPt[j]
+                <<" b="<<m_iterationLoss[j]<<" variance="<<m_iterationLossVariance[j]
+                <<" normalizedStep="<<m_iterationNorm[j]<<" affineChi2="<<m_iterationChi2[j]<<endmsg;
+      if(m_iterationStatus==-1) warning()<<"Relinearization stopped; last complete pass retained: "<<m_iterationError<<endmsg;
       m_fitChi2 = fit.chi2;
       if (m_verifyReference) {
         const auto reference = adapter.referenceKF(hits, m_seedScale,

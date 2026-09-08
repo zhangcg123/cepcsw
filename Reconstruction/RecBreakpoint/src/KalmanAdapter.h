@@ -35,6 +35,14 @@ public:
   /// Full 6D prediction and native 6D hit update. Apply exp(b) ONLY at birth.
   LossMeasurementStep advancePersistent(const LossTrackState& source,
       edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const;
+  MeasurementStep seedRelinearized(const TrackState& originalPrior,
+      edm4hep::TrackerHit hit, const TrackState& reference) const;
+  MeasurementStep advanceRelinearized(const TrackState& source,
+      edm4hep::TrackerHit from, edm4hep::TrackerHit to,
+      const TrackState& referenceSource, const TrackState& referenceTarget) const;
+  LossMeasurementStep advanceRelinearized(const LossTrackState& source,
+      edm4hep::TrackerHit from, edm4hep::TrackerHit to, bool birth,
+      const LossTrackState& referenceSource, const TrackState& referenceTarget) const;
   /// Propagate inward first, undo the selected upstream loss before its hit.
   MeasurementStep advanceBackward(const TrackState& source, edm4hep::TrackerHit sourceHit,
       edm4hep::TrackerHit targetHit, bool breakpoint, double meanLoss, double sigmaLoss) const;
