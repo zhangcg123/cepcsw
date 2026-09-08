@@ -63,6 +63,14 @@ std::pair<double, double> inferLoss(const Transition& transition,
 
 FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                const FitSettings& settings) const {
+  if (settings.lossStateMode == "Persistent6D") {
+    if (settings.backwardMode != "RTS" || settings.intervals.size() > 1)
+      throw std::invalid_argument("Persistent6D requires RTS and at most one breakpoint");
+    if (!settings.intervals.empty()) return fitPersistent(hits, settings);
+    // No loss coordinate is introduced in the empty-list 5D reference.
+  } else if (settings.lossStateMode != "LocalMarginal") {
+    throw std::invalid_argument("Unknown LossStateMode");
+  }
   if (settings.backwardMode != "RTS" && settings.backwardMode != "BackwardFilter")
     throw std::invalid_argument("BackwardMode must be RTS or BackwardFilter");
   if (hits.size() < 3) throw std::runtime_error("Insufficient hits");
@@ -226,6 +234,113 @@ FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
   std::reverse(result.breakpoints.begin(), result.breakpoints.end());
   result.ip = m_adapter.atIP(result.smoothed.front(), hits.front());
   result.endpoint = result.smoothed;
+  return result;
+}
+
+FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
+                                         const FitSettings& settings) const {
+  const int interval = settings.intervals.front();
+  if (hits.size() < 3 || interval < 0 || interval + 1 >= static_cast<int>(hits.size()))
+    throw std::invalid_argument("Persistent6D breakpoint outside track");
+  FitResult result;
+  const auto seed = m_adapter.seed(hits, settings.seedScale);
+  result.predicted.push_back(seed.predicted);
+  result.filtered.push_back(seed.filtered);
+  result.localChi2.push_back(seed.chi2);
+  result.chi2 = seed.chi2;
+  result.measurementDimensions = seed.dimension;
+
+  // State dimension changes ONCE: 5 before birth, then 6 at every later hit.
+  // Rectangular birth transport permits a genuine joint RTS pass back to 5D.
+  std::vector<TMatrixD> predictedMean{seed.predicted.mean}, predictedCov{seed.predicted.covariance};
+  std::vector<TMatrixD> filteredMean{seed.filtered.mean}, filteredCov{seed.filtered.covariance};
+  std::vector<TMatrixD> transports, noises;
+  LossTrackState live;
+  double closure = 0;
+  for (int i = 0; i + 1 < static_cast<int>(hits.size()); ++i) {
+    if (i < interval) {
+      const auto step = m_adapter.advance(result.filtered.back(), hits[i], hits[i + 1]);
+      result.predicted.push_back(step.predicted);
+      result.filtered.push_back(step.filtered);
+      result.localChi2.push_back(step.chi2);
+      result.chi2 += step.chi2;
+      result.measurementDimensions += step.dimension;
+      predictedMean.push_back(step.predicted.mean); predictedCov.push_back(step.predicted.covariance);
+      filteredMean.push_back(step.filtered.mean); filteredCov.push_back(step.filtered.covariance);
+      transports.push_back(step.transport); noises.push_back(step.noise);
+      continue;
+    }
+    const bool birth = i == interval;
+    if (birth) live = LossTrackState::introduce(result.filtered.back(),
+        settings.meanLogLoss, settings.sigmaLogLoss * settings.sigmaLogLoss);
+    const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth);
+    live = step.filtered; // Entire six-dimensional posterior is the next input.
+    result.predicted.push_back(step.predicted.track());
+    result.filtered.push_back(step.filtered.track());
+    result.localChi2.push_back(step.chi2);
+    result.chi2 += step.chi2;
+    result.measurementDimensions += step.dimension;
+    predictedMean.push_back(step.predicted.mean); predictedCov.push_back(step.predicted.covariance);
+    filteredMean.push_back(step.filtered.mean); filteredCov.push_back(step.filtered.covariance);
+    result.persistentHits.push_back(i + 1);
+    result.persistentPredicted.push_back(step.predicted);
+    result.persistentFiltered.push_back(step.filtered);
+    result.persistentTransport.push_back(step.transport);
+    result.persistentNoise.push_back(step.noise);
+    if (birth) {
+      TMatrixD transport(6, 5), lossColumn(6, 1);
+      for (int row = 0; row < 6; ++row) {
+        lossColumn(row, 0) = step.transport(row, 5);
+        for (int col = 0; col < 5; ++col) transport(row, col) = step.transport(row, col);
+      }
+      transports.push_back(transport);
+      noises.push_back(step.noise + settings.sigmaLogLoss * settings.sigmaLogLoss
+          * lossColumn * transpose(lossColumn));
+    } else {
+      transports.push_back(step.transport); noises.push_back(step.noise);
+    }
+    const TMatrixD reconstructed = transports.back() * filteredCov[i]
+        * transpose(transports.back()) + noises.back();
+    for (int row = 0; row < 6; ++row)
+      for (int col = 0; col < 6; ++col)
+        closure = std::max(closure, std::abs(reconstructed(row, col) - step.predicted.covariance(row, col))
+            / std::sqrt(step.predicted.covariance(row, row) * step.predicted.covariance(col, col)));
+    if (closure > 1.e-3) throw std::runtime_error("Persistent6D transition covariance closure failed");
+  }
+
+  auto smoothedMean = filteredMean;
+  auto smoothedCov = filteredCov;
+  for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
+    const auto& f = transports[i];
+    const TMatrixD gain = filteredCov[i] * transpose(f) * inverseCovariance(predictedCov[i + 1]);
+    smoothedMean[i] = filteredMean[i] + gain * stateDifference(smoothedMean[i + 1], predictedMean[i + 1]);
+    TMatrixD remaining(filteredCov[i].GetNrows(), filteredCov[i].GetNrows());
+    remaining.UnitMatrix();
+    remaining -= gain * f;
+    smoothedCov[i] = remaining * filteredCov[i] * transpose(remaining)
+        + gain * (noises[i] + smoothedCov[i + 1]) * transpose(gain);
+    validateCovariance(smoothedCov[i]);
+  }
+  for (std::size_t i = 0; i < hits.size(); ++i) {
+    TrackState track = result.filtered[i];
+    for (int row = 0; row < 5; ++row) {
+      track.mean(row, 0) = smoothedMean[i](row, 0);
+      for (int col = 0; col < 5; ++col) track.covariance(row, col) = smoothedCov[i](row, col);
+    }
+    result.smoothed.push_back(track);
+    if (static_cast<int>(i) > interval) {
+      LossTrackState joint;
+      joint.pivot = track.pivot;
+      joint.mean = smoothedMean[i]; joint.covariance = smoothedCov[i];
+      result.persistentSmoothed.push_back(joint);
+    }
+  }
+  const auto& local = result.persistentFiltered.front();
+  // The final outward posterior has already used ALL downstream measurements.
+  result.breakpoints.push_back({interval, settings.meanLogLoss, live.mean(5, 0),
+      live.covariance(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
+  result.endpoint = result.smoothed;
+  result.ip = m_adapter.atIP(result.endpoint.front(), hits.front());
   return result;
 }
 } // namespace breakpoint

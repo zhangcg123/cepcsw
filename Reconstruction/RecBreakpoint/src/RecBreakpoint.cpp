@@ -36,6 +36,14 @@ StatusCode RecBreakpoint::initialize() {
   }
   m_seedSelectionName = m_seedHitSelection.value();
   m_backwardModeName = m_backwardMode.value();
+  m_lossStateModeName = m_lossStateMode.value();
+  if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal") ||
+      (m_lossStateModeName == "Persistent6D" &&
+       (m_backwardModeName != "RTS" || m_intervals.value().size() > 1))) {
+    error() << "LossStateMode must be LocalMarginal or Persistent6D; Persistent6D requires"
+            << " BackwardMode=RTS and at most one breakpoint" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_backwardModeName != "RTS" && m_backwardModeName != "BackwardFilter") {
     error() << "BackwardMode must be RTS or BackwardFilter" << endmsg;
     return StatusCode::FAILURE;
@@ -90,6 +98,16 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("seed_hit_selection", &m_seedSelectionName);
   m_tree->Branch("seed_hit_indices", &m_seedHitIndices);
   m_tree->Branch("backward_mode", &m_backwardModeName);
+  m_tree->Branch("loss_state_mode", &m_lossStateModeName);
+  m_tree->Branch("persistent_hit_index", &m_persistentHits);
+  m_tree->Branch("persistent_predicted_mean", &m_sixPredictedMean);
+  m_tree->Branch("persistent_predicted_covariance", &m_sixPredictedCov);
+  m_tree->Branch("persistent_filtered_mean", &m_sixFilteredMean);
+  m_tree->Branch("persistent_filtered_covariance", &m_sixFilteredCov);
+  m_tree->Branch("persistent_smoothed_mean", &m_sixSmoothedMean);
+  m_tree->Branch("persistent_smoothed_covariance", &m_sixSmoothedCov);
+  m_tree->Branch("persistent_transport", &m_sixTransport);
+  m_tree->Branch("persistent_process_noise", &m_sixNoise);
   m_tree->Branch("hit_cell_id", &m_hitCell);
   m_tree->Branch("hit_r_mm", &m_hitR);
   m_tree->Branch("hit_z_mm", &m_hitZ);
@@ -145,12 +163,18 @@ StatusCode RecBreakpoint::execute() {
   breakpoint::BreakpointFitter fitter(adapter);
   breakpoint::FitSettings settings{m_intervals.value(), m_meanLoss, m_sigmaLoss, m_seedScale};
   settings.backwardMode = m_backwardModeName;
+  settings.lossStateMode = m_lossStateModeName;
   m_trackIndex = -1;
   for (const auto& track : *tracks) {
     ++m_trackIndex;
     if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); continue; }
     m_fitStatus = -1;
     m_seedHitIndices.clear();
+    m_persistentHits.clear();
+    m_sixPredictedMean.clear(); m_sixPredictedCov.clear();
+    m_sixFilteredMean.clear(); m_sixFilteredCov.clear();
+    m_sixSmoothedMean.clear(); m_sixSmoothedCov.clear();
+    m_sixTransport.clear(); m_sixNoise.clear();
     m_kfPt = m_fitPt = m_fitChi2 = m_referencePt = nan;
     m_hitCount = 0;
     m_hitCell.clear(); m_hitR.clear(); m_hitZ.clear(); m_localChi2.clear();
@@ -201,6 +225,37 @@ StatusCode RecBreakpoint::execute() {
                << " breakpointPt=" << m_fitPt << " referenceKFPt=" << m_referencePt << endmsg;
       }
       m_localChi2 = fit.localChi2;
+      m_persistentHits = fit.persistentHits;
+      const auto appendMatrix = [](std::vector<double>& values, const TMatrixD& matrix) {
+        for (int row = 0; row < matrix.GetNrows(); ++row)
+          for (int col = 0; col < matrix.GetNcols(); ++col) values.push_back(matrix(row, col));
+      };
+      for (std::size_t j = 0; j < fit.persistentHits.size(); ++j) {
+        appendMatrix(m_sixPredictedMean, fit.persistentPredicted[j].mean);
+        appendMatrix(m_sixPredictedCov, fit.persistentPredicted[j].covariance);
+        appendMatrix(m_sixFilteredMean, fit.persistentFiltered[j].mean);
+        appendMatrix(m_sixFilteredCov, fit.persistentFiltered[j].covariance);
+        appendMatrix(m_sixSmoothedMean, fit.persistentSmoothed[j].mean);
+        appendMatrix(m_sixSmoothedCov, fit.persistentSmoothed[j].covariance);
+        appendMatrix(m_sixTransport, fit.persistentTransport[j]);
+        appendMatrix(m_sixNoise, fit.persistentNoise[j]);
+        if (m_verbose) {
+          for (const auto& named : std::vector<std::pair<const char*, const breakpoint::LossTrackState*>>{
+              {"predicted6D", &fit.persistentPredicted[j]},
+              {"filtered6D", &fit.persistentFiltered[j]},
+              {"smoothed6D", &fit.persistentSmoothed[j]}}) {
+            std::ostringstream dump;
+            dump << std::setprecision(17) << named.first << " owner=" << m_intervals.value().front()
+                 << " hit=" << fit.persistentHits[j] << " mean=[";
+            for (int row = 0; row < 6; ++row) dump << named.second->mean(row, 0) << ' ';
+            dump << "] covariance(row-major)=[";
+            for (int row = 0; row < 6; ++row)
+              for (int col = 0; col < 6; ++col) dump << named.second->covariance(row, col) << ' ';
+            dump << ']';
+            info() << dump.str() << endmsg;
+          }
+        }
+      }
       m_backwardChi2 = fit.backwardChi2;
       for (std::size_t i = 0; i < hits.size(); ++i) {
         m_filteredKappa.push_back(fit.filtered[i].mean(2, 0));

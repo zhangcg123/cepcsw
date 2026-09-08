@@ -11,6 +11,7 @@ struct FitSettings {
   double sigmaLogLoss = 0.05;
   double seedScale = 1;
   std::string backwardMode = "RTS";
+  std::string lossStateMode = "Persistent6D";
 };
 
 struct IntervalResult {
@@ -30,19 +31,23 @@ struct FitResult {
   std::vector<double> backwardChi2;
   std::vector<double> localChi2;
   std::vector<IntervalResult> breakpoints;
+  std::vector<int> persistentHits;
+  std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;
+  std::vector<TMatrixD> persistentTransport, persistentNoise;
   double chi2 = 0;
   int measurementDimensions = 0;
 };
 
-/// Five-dimensional filter with a local six-dimensional joint at each
-/// configured breakpoint. Independent local losses are marginalized for live
-/// propagation and estimated using the retained joint in the backward smoother.
+/// Persistent6D: one loss coordinate stays live through every downstream hit.
+/// LocalMarginal retains the earlier 5D/local-joint implementation for comparisons.
 class BreakpointFitter {
 public:
   explicit BreakpointFitter(const KalmanAdapter& adapter) : m_adapter(adapter) {}
   FitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
                 const FitSettings& settings) const;
 private:
+  FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
+                          const FitSettings& settings) const;
   const KalmanAdapter& m_adapter;
 };
 } // namespace breakpoint

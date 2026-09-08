@@ -287,50 +287,38 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active development remains the independent `RecBreakpoint` package on
-`test_breakpoint`, reading `CompleteTracks`. Its new compiled/dedicated-card
-default `LossStateMode=Persistent6D` introduces one loss coordinate
-`b=log(p_before/p_after)` at the configured hit interval, then carries the
-complete six-dimensional state and covariance through EVERY downstream
-propagation and native KalTest measurement update. The loss is applied only
-once. A joint RTS pass smooths the 6D sequence and crosses its birth boundary
-back to the upstream 5D states for IP publication.
+The active work is the independent `RecBreakpoint` first working version on
+`test_breakpoint`. It consumes `CompleteTracks` and adds a local sixth
+coordinate `b=log(p_before/p_after)` only on run-card-selected outward hit
+intervals. Other transitions remain five-dimensional KF steps. Retained
+transition joints support RTS smoothing and loss posteriors informed by later
+hits. Native KalTest performs propagation and measurement updates through
+package-local helpers; existing GSF/KF sources and batch workflows stay frozen.
 
-Persistent6D currently supports one breakpoint (or none) and
-`BackwardMode=RTS`; unsupported combinations fail explicitly.
-`LossStateMode=LocalMarginal` preserves the earlier local-joint implementation,
-multiple breakpoints and `BackwardMode=BackwardFilter`. The latter copies the
-full final forward posterior and revisits inner hits: it is an evidence-reusing
-refit, not an independent smoother. Neither path performs iterative
-relinearization or enforces a positive fitted loss.
+`BreakpointIntervals=[]` is the no-breakpoint reference. Entry `i` means
+radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID. The dedicated
+card is `Reconstruction/RecBreakpoint/options/run_breakpoint.py`; build target
+`RecBreakpoint` using the existing EL9 environment. Commands, all properties,
+output schema and limitations are in the package README.
 
-`BreakpointIntervals=[]` remains the ordinary no-breakpoint reference.
-Entry i names radius-ordered hit[i] -> hit[i+1], not a detector layer ID.
-The dedicated card is `Reconstruction/RecBreakpoint/options/run_breakpoint.py`.
-Use the EL9 environment to build target RecBreakpoint and install that package
-subdirectory; the package README contains exact commands and all properties.
-Default-on flat vectors preserve every downstream predicted/filtered/smoothed
-6D mean, full covariance, transport and process noise. The sixth coordinate
-belongs to the selected interval permanently, never native KalTest t0.
+Seed-12 events 11/16/17 passed same-code no-breakpoint, single-interval [5],
+and two-interval [5,7] runs with full verbose states/covariances. Empty-list
+IP pT agrees with independent native MarlinTrk within 8e-8 relative; selected
+6D/KF covariance closures are below 3e-16 for these cases. First/last interval,
+nonzero loss-prior and invalid-index tests also passed their mechanical gates.
+These are not resolution validation: arbitrary interval choices caused both
+positive and negative shifts, and large-loss recovery remains unestablished.
 
-Focused same-code gates passed on seed12 events11/16/17, two audited
-single-eBrem negative cases, empty-list controls, first/last intervals and a
-nonzero prior. Eleven paired event/configuration results have identical stored
-IP pT between Persistent6D and LocalMarginal; maximum fitted-b difference is
-2.6e-11. This supports the expected fixed-linearization equivalence for those
-cases, not a resolution improvement. The earlier twenty-event single-eBrem
-study still shows wrong-sign losses and new tails.
+Next review interval selection and the linearization/positive-loss treatment,
+then perform same-code categorized comparisons with no-breakpoint KF and
+truth, including clean-track preservation and catastrophic tails. The present
+fit is a single linearized Gaussian, allows negative fitted b as a diagnostic,
+assumes outward noncurling barrel ordering, and does not infer loss position
+within an interval. Do not add automatic truth steering or modify shared KF
+classes to improve selected examples.
 
-Next use the live per-hit b/covariance history to diagnose how the loss estimate
-moves, then review linearization, positivity and within-interval loss placement
-as separate hypotheses. Preserve clean-track controls and categorized truth
-comparisons. No automatic truth steering, shared KF changes, GSF changes or
-batch workflow changes are authorized by this experiment.
-
-Exact implementation and gates:
-`agents_record/2026-09-09-recbreakpoint-persistent-six-dimensional-filter.md`.
-The complete outgoing focus is retained in
-`agents_record/2026-09-08-agents-before-persistent6d.md`; the single-eBrem table
-is in `agents_record/2026-09-08-recbreakpoint-single-ebrem-twenty-events.md`.
-Earlier beam-boundary work and its pending population gate remain paused,
-not invalidated.
+Exact tests/provenance are in
+`agents_record/2026-09-08-recbreakpoint-first-working-version.md`. The complete
+outgoing beam-boundary focus, frozen GSF controls and pending population gate
+are preserved in `agents_record/2026-09-08-agents-before-recbreakpoint.md`;
+they are paused, not invalidated or superseded by a physics claim.

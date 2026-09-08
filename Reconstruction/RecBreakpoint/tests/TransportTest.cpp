@@ -59,6 +59,26 @@ int main() {
   near(noisy[0], 1.125);
   near(noisy[35], 6);
 
+  // Persistent transport: b is not reapplied at subsequent surfaces. Its
+  // variance stays constant, but track/b correlations follow the geometry.
+  Matrix5 downstream = identity;
+  downstream[2] = 0.4; // local position depends on curvature
+  const auto downstreamJ = AugmentedTransport::jacobian(downstream, {});
+  const auto downstreamQ = AugmentedTransport::processNoise(q5);
+  for (int i = 0; i < 5; ++i) {
+    near(downstreamJ[i * 6 + 5], 0);
+    near(downstreamJ[5 * 6 + i], 0);
+    near(downstreamQ[i * 6 + 5], 0);
+    near(downstreamQ[5 * 6 + i], 0);
+  }
+  near(downstreamJ[35], 1);
+  near(downstreamQ[35], 0);
+  auto carried = updated;
+  for (int hit = 0; hit < 20; ++hit)
+    carried = AugmentedTransport::covariance(carried, downstreamJ, downstreamQ);
+  near(carried[35], updated[35]);
+  near(carried[5], updated[5] + 20 * 0.4 * updated[17]);
+
   // Physical loss-map derivatives: kappa' = exp(b) kappa.
   const double kappa = -0.2, b = 0.07, epsilon = 1.e-6;
   const double derivativeB = kappa * std::exp(b);

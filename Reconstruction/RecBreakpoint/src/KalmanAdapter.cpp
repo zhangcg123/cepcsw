@@ -31,6 +31,39 @@ private:
   double m_maximum;
 };
 
+/// Native KalTest Filter() operates on all SIX coordinates/covariances.
+/// Only the measurement projection is specialized: b is NOT native t0.
+class LossMeasurementSite : public TKalTrackSite {
+public:
+  explicit LossMeasurementSite(const TVTrackHit& hit) : TKalTrackSite(hit, 6) {}
+  Int_t CalcExpectedMeasVec(const TVKalState& state, TKalMatrix& expected) override {
+    const auto helix = trackOnly(state);
+    return TKalTrackSite::CalcExpectedMeasVec(helix, expected);
+  }
+  Int_t CalcMeasVecDerivative(const TVKalState& state, TKalMatrix& derivative) override {
+    const auto helix = trackOnly(state);
+    TKalMatrix h(GetDimension(), 5);
+    if (!TKalTrackSite::CalcMeasVecDerivative(helix, h)) return 0;
+    derivative.Zero();
+    for (int i = 0; i < GetDimension(); ++i)
+      for (int j = 0; j < 5; ++j) derivative(i, j) = h(i, j);
+    return 1; // H_b=0, but the full Kalman gain has a nonzero b row via P_bx.
+  }
+private:
+  TKalTrackState trackOnly(const TVKalState& state) const {
+    TKalMatrix mean(5, 1);
+    for (int i = 0; i < 5; ++i) mean(i, 0) = state(i, 0);
+    return TKalTrackState(mean, *this, TVKalSite::kPredicted, 5);
+  }
+  TVKalState& CreateState(const TKalMatrix& mean, Int_t type) override {
+    return *new TKalTrackState(mean, *this, type, 6);
+  }
+  TVKalState& CreateState(const TKalMatrix& mean, const TKalMatrix& covariance,
+                          Int_t type) override {
+    return *new TKalTrackState(mean, covariance, *this, type, 6);
+  }
+};
+
 std::unique_ptr<TKalTrackSite> makeSite(BreakpointTrackSystem& system,
                                       edm4hep::TrackerHit hit) {
   const auto* layer = system.layer(hit);
@@ -58,7 +91,8 @@ TrackState readNative(TKalTrackSite& site, TVKalSite::EStType type) {
 
 MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maximum,
     const TrackState& input, edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit,
-    bool inverseLoss = false, double meanLoss = 0, double sigmaLoss = 0) {
+    bool inverseLoss = false, double meanLoss = 0, double sigmaLoss = 0,
+    bool predictionOnly = false) {
   TKalTrack track;
   track.SetOwner();
   auto source = makeSite(system, sourceHit);
@@ -126,12 +160,15 @@ MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maxi
     prediction.SetCovMat(transformed);
     if (!target->Filter()) throw std::runtime_error("KalTest rejected inverse-breakpoint hit update");
     track.Add(target.get());
+  } else if (predictionOnly) {
+    sourcePointer->GetState(TVKalSite::kFiltered).Propagate(*target);
+    track.Add(target.get());
   } else if (!track.AddAndFilter(*target)) {
     throw std::runtime_error("KalTest rejected propagation/hit update");
   }
   auto* targetPointer = target.release(); // track now owns the accepted site
-  result.filtered = readNative(*targetPointer, TVKalSite::kFiltered);
   result.predicted = readNative(*targetPointer, TVKalSite::kPredicted);
+  result.filtered = predictionOnly ? result.predicted : readNative(*targetPointer, TVKalSite::kFiltered);
   result.transport = lossMap * sourcePointer->GetState(TVKalSite::kFiltered).GetPropMat() * pivotJacobian;
   result.noise = lossMap * sourcePointer->GetState(TVKalSite::kFiltered).GetProcNoiseMat()
       * transpose(lossMap) + lossNoise;
@@ -222,6 +259,60 @@ MeasurementStep KalmanAdapter::advanceBackward(const TrackState& source,
     bool breakpoint, double meanLoss, double sigmaLoss) const {
   return nativeStep(*m_system, m_bz, m_maxChi2, source, sourceHit, targetHit,
                     breakpoint, meanLoss, sigmaLoss);
+}
+
+LossMeasurementStep KalmanAdapter::advancePersistent(const LossTrackState& source,
+    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const {
+  LossTrackState mapped = source;
+  TMatrixD lossMap(6, 6);
+  lossMap.UnitMatrix();
+  if (applyLoss) {
+    const double scale = std::exp(source.mean(5, 0));
+    mapped.mean(2, 0) *= scale;
+    lossMap(2, 2) = scale;
+    lossMap(2, 5) = mapped.mean(2, 0);
+    mapped.covariance = lossMap * source.covariance * transpose(lossMap);
+  }
+  // Reuse native material/geometric propagation WITHOUT its 5D measurement
+  // update. The actual live hit update below is six-dimensional.
+  const auto geometry = nativeStep(*m_system, m_bz, m_maxChi2, mapped.track(),
+      sourceHit, targetHit, false, 0, 0, true);
+  LossMeasurementStep result;
+  TMatrixD geometricTransport(6, 6);
+  geometricTransport.UnitMatrix();
+  for (int i = 0; i < 5; ++i)
+    for (int j = 0; j < 5; ++j) {
+      geometricTransport(i, j) = geometry.transport(i, j);
+      result.noise(i, j) = geometry.noise(i, j);
+    }
+  result.transport = geometricTransport * lossMap;
+  result.predicted = mapped;
+  result.predicted.pivot = geometry.predicted.pivot;
+  for (int i = 0; i < 5; ++i) result.predicted.mean(i, 0) = geometry.predicted.mean(i, 0);
+  result.predicted.covariance = result.transport * source.covariance
+      * transpose(result.transport) + result.noise;
+  validateCovariance(result.predicted.covariance);
+
+  const auto* layer = m_system->layer(targetHit);
+  if (!layer) throw std::runtime_error("No persistent-6D measurement layer");
+  std::unique_ptr<ILDVTrackHit> hit(layer->ConvertLCIOTrkHit(targetHit));
+  if (!hit) throw std::runtime_error("Cannot convert persistent-6D hit");
+  LossMeasurementSite site(*hit);
+  site.SetOwner(); // site owns its states; hit is separately scoped above
+  site.SetPivot(TVector3(result.predicted.pivot.x, result.predicted.pivot.y, result.predicted.pivot.z));
+  HitAcceptance acceptance(m_maxChi2);
+  site.SetFilterCond(&acceptance);
+  site.Add(new TKalTrackState(TKalMatrix(result.predicted.mean),
+      TKalMatrix(result.predicted.covariance), site, TVKalSite::kPredicted, 6));
+  if (!site.Filter()) throw std::runtime_error("KalTest rejected persistent-6D hit update");
+  const auto& updated = site.GetState(TVKalSite::kFiltered);
+  result.filtered = result.predicted;
+  result.filtered.mean = updated;
+  result.filtered.covariance = updated.GetCovMat();
+  validateCovariance(result.filtered.covariance);
+  result.chi2 = site.GetDeltaChi2();
+  result.dimension = site.GetDimension();
+  return result;
 }
 
 edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,

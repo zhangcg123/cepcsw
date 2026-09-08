@@ -2,6 +2,7 @@
 #define RECBREAKPOINT_KALMANADAPTER_H
 
 #include "TrackState.h"
+#include "LossTrackState.h"
 #include "RecBreakpoint/SeedHitSelection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
@@ -31,6 +32,9 @@ public:
   MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
   MeasurementStep advance(const TrackState& source, edm4hep::TrackerHit sourceHit,
                           edm4hep::TrackerHit targetHit) const;
+  /// Full 6D prediction and native 6D hit update. Apply exp(b) ONLY at birth.
+  LossMeasurementStep advancePersistent(const LossTrackState& source,
+      edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const;
   /// Propagate inward first, undo the selected upstream loss before its hit.
   MeasurementStep advanceBackward(const TrackState& source, edm4hep::TrackerHit sourceHit,
       edm4hep::TrackerHit targetHit, bool breakpoint, double meanLoss, double sigmaLoss) const;
