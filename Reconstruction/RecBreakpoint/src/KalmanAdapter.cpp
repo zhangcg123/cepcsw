@@ -444,6 +444,66 @@ LossMeasurementStep KalmanAdapter::advanceRelinearized(const LossTrackState& sou
   return result;
 }
 
+MeasurementStep KalmanAdapter::advanceBackwardRelinearized(const TrackState& source,
+    edm4hep::TrackerHit from, edm4hep::TrackerHit to, bool breakpoint,
+    double priorLoss, double sigmaLoss, double referenceLoss,
+    const TrackState& referenceSource, const TrackState& referenceTarget) const {
+  if (!breakpoint)
+    return advanceRelinearized(source, from, to, referenceSource, referenceTarget);
+
+  // Match advanceBackward: geometry/material first, inverse loss at the
+  // upstream target surface, then the measurement. No extra physical loss.
+  const auto geometry = nativeStep(*m_system, m_bz, m_maxChi2,
+      referenceSource, from, to, false, 0, 0, true);
+  TMatrixD pivot(5, 5);
+  auto prediction = rebase(geometry.predicted, referenceTarget.pivot, m_bz, pivot);
+  TMatrixD inverseLoss(5, 5), derivative(5, 1);
+  inverseLoss.UnitMatrix();
+  inverseLoss(2, 2) = std::exp(-referenceLoss);
+  prediction.mean(2, 0) *= inverseLoss(2, 2);
+  derivative(2, 0) = -prediction.mean(2, 0);
+  const double variance = sigmaLoss * sigmaLoss;
+
+  MeasurementStep result;
+  result.transport = inverseLoss * pivot * geometry.transport;
+  result.noise = inverseLoss * pivot * geometry.noise
+      * transpose(pivot) * transpose(inverseLoss)
+      + variance * derivative * transpose(derivative);
+  result.lossTargetCross = variance * transpose(derivative);
+  result.predicted = prediction;
+  result.predicted.mean += result.transport * stateDifference(source.mean, referenceSource.mean)
+      + derivative * (priorLoss - referenceLoss);
+  result.predicted.covariance = result.transport * source.covariance
+      * transpose(result.transport) + result.noise;
+  validateCovariance(result.predicted.covariance);
+  // Independent joint-6D assembly audits the marginalized inverse transition.
+  Matrix6 joint{};
+  Matrix5 f{}, q{};
+  Vector5 db{};
+  const TMatrixD nativeNoise = inverseLoss * pivot * geometry.noise
+      * transpose(pivot) * transpose(inverseLoss);
+  for (int row = 0; row < 5; ++row) {
+    db[row] = derivative(row, 0);
+    for (int col = 0; col < 5; ++col) {
+      joint[6 * row + col] = source.covariance(row, col);
+      f[5 * row + col] = result.transport(row, col);
+      q[5 * row + col] = nativeNoise(row, col);
+    }
+  }
+  joint[35] = variance;
+  const auto full = AugmentedTransport::covariance(joint,
+      AugmentedTransport::jacobian(f, db), AugmentedTransport::processNoise(q));
+  for (int row = 0; row < 5; ++row)
+    for (int col = 0; col < 5; ++col)
+      result.covarianceClosure = std::max(result.covarianceClosure,
+          std::abs(full[6 * row + col] - result.predicted.covariance(row, col))
+          / std::sqrt(result.predicted.covariance(row, row) * result.predicted.covariance(col, col)));
+  result.filtered = result.predicted;
+  affineUpdate(*m_system, to, referenceTarget, result.filtered.mean,
+      result.filtered.covariance, m_maxChi2, result.chi2, result.dimension);
+  return result;
+}
+
 edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
                                                edm4hep::TrackerHit hit) const {
   auto track = initialized(toEDM(state, m_bz, 2), hit, false);

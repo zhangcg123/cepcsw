@@ -86,11 +86,12 @@ below. The unchanged LocalMarginal path remains an explicit regression reference
 ### Optional iterated relinearization
 
 Set `MaxFitIterations=10` (`BP_MAX_ITERATIONS=10` in the dedicated card) to
-allow up to ten complete filter/RTS passes. This requires Persistent6D, RTS,
-and exactly one selected interval. The default **1** preserves the original
+allow up to ten passes. Supported pairs are Persistent6D/RTS and
+LocalMarginal/BackwardFilter, both with exactly one selected interval.
+The default **1** preserves the original
 one-pass path. Each additional pass:
 
-1. Uses the previous smoothed trajectory and fitted b as expansion points.
+1. For RTS, uses the previous smoothed trajectory and fitted b as expansion points.
 2. Re-evaluates native geometric/material transport F/Q, the loss-map
    Jacobian, and the measurement derivative at those points.
 3. Restarts from the **original seed prior and original independent b prior**,
@@ -119,6 +120,30 @@ establish convergence. The first recorded step norm is 0 by convention, not
 a convergence claim. The chi-square trace is affine-filter innovation
 bookkeeping, **not** a common nonlinear objective whose decrease is required.
 Full per-hit state/covariance vectors describe the final completed pass.
+
+For `LossStateMode="LocalMarginal", BackwardMode="BackwardFilter"`, the first
+ordinary forward/backward fit is unchanged. Additional passes iterate **only
+the inward filter**. The complete original outward terminal posterior is
+frozen as the inward seed; it is neither regenerated from the inward fit nor
+replaced with an iterated posterior. Its outermost hit is not updated again.
+The original independent b prior is reintroduced at its selected inward edge
+each pass. The previous inward-filtered trajectory and final inward b provide
+expansion points. Geometry/material propagation comes first; the inverse
+loss `kappa_before=exp(-b)*kappa_after` acts at the upstream target before its
+hit update. The affine offset includes `db*(b_prior-b_reference)`.
+
+The live helix remains 5D in this LocalMarginal path; retained loss/state
+cross covariances let all later inner measurements update b. This does not
+enable Persistent6D/BackwardFilter and does not run an RTS pass, even for
+reference generation. The stopping test uses changes in inward-filtered
+states and final b, normalized by their previous variances. The trace chi2 is
+the sum of the inward hit-update chi2s, whereas the published track chi2 keeps
+the existing outward bookkeeping. Inward iteration preserves the existing
+reuse of outward hit evidence; it is not an independent Bayesian smoother.
+The forward pass is deliberately not relinearized in this experiment.
+
+See the [backward iteration gate](../../agents_record/2026-09-09-recbreakpoint-backward-filter-iteration.md)
+for the eight-event comparison and exact unchanged-RTS regression.
 
 The implementation and eight paired event results are recorded in
 [the relinearization gate](../../agents_record/2026-09-09-recbreakpoint-iterated-relinearization.md).
@@ -194,8 +219,8 @@ a positive-sum conditional form to avoid cancellation of loose seed errors.
 | MeanLogLoss | 0 | Common independent Gaussian b-prior mean, finite in [0,5] |
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma |
 | LossStateMode | Persistent6D | Persistent6D: live downstream 6D state, one interval and RTS only; LocalMarginal: earlier marginalized/local-joint path |
-| MaxFitIterations | 1 | Total passes, integer 1--20; >1 requires Persistent6D + RTS + exactly one interval |
-| RelinearizationTolerance | 0.001 | Finite positive maximum standardized smoothed-coordinate change for convergence |
+| MaxFitIterations | 1 | Total passes, integer 1--20; >1 requires one interval and Persistent6D/RTS or LocalMarginal/BackwardFilter |
+| RelinearizationTolerance | 0.001 | Finite positive maximum standardized reference-coordinate/b change; smoothed for RTS, inward-filtered for BackwardFilter |
 | SeedScale | 1 | Positive scale of all five loose seed variances |
 | SeedHitSelection | FirstMiddleLast | First/middle/last usable 2D hits; FirstThree restores the original selection |
 | BackwardMode | RTS | RTS smoothing or BackwardFilter seeded from the full outward posterior |

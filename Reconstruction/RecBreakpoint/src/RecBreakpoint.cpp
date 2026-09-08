@@ -37,11 +37,13 @@ StatusCode RecBreakpoint::initialize() {
   m_seedSelectionName = m_seedHitSelection.value();
   m_backwardModeName = m_backwardMode.value();
   m_lossStateModeName = m_lossStateMode.value();
+  const bool canIterate = (m_lossStateModeName == "Persistent6D" && m_backwardModeName == "RTS")
+      || (m_lossStateModeName == "LocalMarginal" && m_backwardModeName == "BackwardFilter");
   if (m_maxIterations<1 || m_maxIterations>20 || !std::isfinite(m_iterationTolerance) ||
       m_iterationTolerance<=0 || (m_maxIterations>1 &&
-      (m_lossStateModeName!="Persistent6D" || m_backwardModeName!="RTS" || m_intervals.value().size()!=1))) {
+      (!canIterate || m_intervals.value().size()!=1))) {
     error() << "MaxFitIterations must be 1..20, tolerance positive; iterations require"
-            << " Persistent6D/RTS and exactly one breakpoint" << endmsg;
+            << " Persistent6D/RTS or LocalMarginal/BackwardFilter, and exactly one breakpoint" << endmsg;
     return StatusCode::FAILURE;
   }
   if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal") ||

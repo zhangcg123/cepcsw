@@ -109,6 +109,11 @@ int main() {
       + referenceMapped * (priorB-referenceB);
   near(affinePrediction, std::exp(referenceB)
       * (kappa + referenceKappa*(priorB-referenceB)));
+  const double inverseReference = referenceKappa * std::exp(-referenceB);
+  const double inverseAffine = inverseReference + std::exp(-referenceB)
+      * (kappa-referenceKappa) - inverseReference*(priorB-referenceB);
+  near(inverseAffine, std::exp(-referenceB)
+      * (kappa-referenceKappa*(priorB-referenceB)));
   // For an already-linear measurement, moving only its expansion point
   // cannot change the posterior or repeatedly shrink the original prior.
   const double originalMean=.3, originalVariance=.04, h=2., observation=.8, noise=.01;

@@ -58,6 +58,9 @@ private:
                           const TrackState* originalPrior = nullptr) const;
   FitResult fitIterated(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& settings) const;
+  FitResult finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
+      const FitSettings& settings, FitResult result,
+      const FitResult* reference = nullptr) const;
   const KalmanAdapter& m_adapter;
 };
 } // namespace breakpoint
