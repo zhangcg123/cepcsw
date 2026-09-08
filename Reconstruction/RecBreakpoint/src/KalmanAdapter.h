@@ -16,6 +16,8 @@ struct MeasurementStep {
   TMatrixD noise{5, 5};
   double chi2 = 0;
   int dimension = 0;
+  TMatrixD lossTargetCross{1, 5};
+  double covarianceClosure = 0;
 };
 
 /// Owns temporary tracks only. The algorithm owns the supplied tracking system.
@@ -29,10 +31,15 @@ public:
   MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
   MeasurementStep advance(const TrackState& source, edm4hep::TrackerHit sourceHit,
                           edm4hep::TrackerHit targetHit) const;
+  /// Propagate inward first, undo the selected upstream loss before its hit.
+  MeasurementStep advanceBackward(const TrackState& source, edm4hep::TrackerHit sourceHit,
+      edm4hep::TrackerHit targetHit, bool breakpoint, double meanLoss, double sigmaLoss) const;
   edm4hep::TrackState atIP(const TrackState& state, edm4hep::TrackerHit hit) const;
+  edm4hep::TrackState propagateToIP(const TrackState& state, edm4hep::TrackerHit hit) const;
   /// Independent, unbroken MarlinTrk fit and its native smoother. Diagnostic
   /// reference for the empty-breakpoint limit, with exactly the same seed/hits.
-  edm4hep::TrackState referenceKF(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
+  edm4hep::TrackState referenceKF(const std::vector<edm4hep::TrackerHit>& hits, double scale,
+                                bool backwardFilter = false) const;
 private:
   edm4hep::TrackState prefit(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
   std::unique_ptr<MarlinTrk::IMarlinTrack> initialized(

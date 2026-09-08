@@ -63,6 +63,8 @@ std::pair<double, double> inferLoss(const Transition& transition,
 
 FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                const FitSettings& settings) const {
+  if (settings.backwardMode != "RTS" && settings.backwardMode != "BackwardFilter")
+    throw std::invalid_argument("BackwardMode must be RTS or BackwardFilter");
   if (hits.size() < 3) throw std::runtime_error("Insufficient hits");
   for (int interval : settings.intervals)
     if (interval < 0 || static_cast<std::size_t>(interval + 1) >= hits.size())
@@ -131,6 +133,69 @@ FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
     result.measurementDimensions += step.dimension;
   }
 
+  if (settings.backwardMode == "BackwardFilter") {
+    // Copy the full outward posterior without inflation. This deliberately
+    // reuses hit information; it is not an independent two-filter smoother.
+    result.backwardFiltered.resize(hits.size());
+    result.backwardPredicted.resize(hits.size());
+    result.backwardChi2.assign(hits.size(), 0);
+    result.backwardFiltered.back() = result.filtered.back();
+    result.backwardPredicted.back() = result.filtered.back(); // seed, no hit update
+
+    struct PendingLoss {
+      IntervalResult result;
+      TMatrixD stateCross{1, 5};
+    };
+    std::vector<PendingLoss> pending;
+    for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
+      const bool selected = transitions[i].breakpoint;
+      const auto step = m_adapter.advanceBackward(result.backwardFiltered[i + 1],
+          hits[i + 1], hits[i], selected, settings.meanLogLoss, settings.sigmaLogLoss);
+      if (step.covarianceClosure > 1.e-3)
+        throw std::runtime_error("Inverse-breakpoint covariance closure failed");
+      result.backwardPredicted[i] = step.predicted;
+      result.backwardFiltered[i] = step.filtered;
+      result.backwardChi2[i] = step.chi2;
+      // Retain each already-crossed loss's covariance with the live state.
+      // Subsequent inner hits can refine that scalar without an RTS pass.
+      for (auto& loss : pending)
+        loss.stateCross = loss.stateCross * transpose(step.transport);
+      if (selected) {
+        PendingLoss loss;
+        loss.result.index = i;
+        loss.result.priorLogLoss = settings.meanLogLoss;
+        loss.result.fittedLogLoss = settings.meanLogLoss;
+        loss.result.fittedVariance = settings.sigmaLogLoss * settings.sigmaLogLoss;
+        loss.result.covarianceClosure = step.covarianceClosure;
+        loss.stateCross = step.lossTargetCross;
+        pending.push_back(loss);
+      }
+      const auto inversePrediction = inverseCovariance(step.predicted.covariance);
+      for (auto& loss : pending) {
+        const TMatrixD gain = loss.stateCross * inversePrediction;
+        const TMatrixD delta = gain * stateDifference(step.filtered.mean, step.predicted.mean);
+        const TMatrixD varianceDelta = gain *
+            (step.filtered.covariance - step.predicted.covariance) * transpose(gain);
+        loss.result.fittedLogLoss += delta(0, 0);
+        loss.result.fittedVariance += varianceDelta(0, 0);
+        if (!std::isfinite(loss.result.fittedLogLoss) ||
+            !std::isfinite(loss.result.fittedVariance) || loss.result.fittedVariance < -1.e-12)
+          throw std::runtime_error("Invalid backward loss posterior");
+        loss.result.fittedVariance = std::max(0.0, loss.result.fittedVariance);
+        loss.stateCross = gain * step.filtered.covariance;
+        if (loss.result.index == i) {
+          loss.result.localLogLoss = loss.result.fittedLogLoss;
+          loss.result.localVariance = loss.result.fittedVariance;
+        }
+      }
+    }
+    for (auto it = pending.rbegin(); it != pending.rend(); ++it)
+      result.breakpoints.push_back(it->result);
+    result.endpoint = result.backwardFiltered;
+    result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
+    return result;
+  }
+
   // Rauch-Tung-Striebel backward pass using each retained transition joint.
   // Ordinary edges stay 5D; only selected edges additionally infer their loss.
   result.smoothed = result.filtered;
@@ -160,6 +225,7 @@ FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
   }
   std::reverse(result.breakpoints.begin(), result.breakpoints.end());
   result.ip = m_adapter.atIP(result.smoothed.front(), hits.front());
+  result.endpoint = result.smoothed;
   return result;
 }
 } // namespace breakpoint

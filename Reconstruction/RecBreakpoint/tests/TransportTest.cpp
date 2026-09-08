@@ -95,6 +95,24 @@ int main() {
   near(joint[35] + conditionalGain * conditionalGain *
        (updatedVariance - predictedVariance), directVariance);
 
+  // Backward loss/state cross covariance must survive subsequent hit updates.
+  // Check two sequential scalar measurements against their joint likelihood.
+  const double nextNoise = 1.3, nextObservation = -0.1;
+  const double remainingCross = conditionalGain * updatedVariance;
+  const double nextInnovation = updatedVariance + nextNoise;
+  const double secondMean = directMean + remainingCross / nextInnovation *
+      (nextObservation - updatedCurvature);
+  const double secondVariance = directVariance - remainingCross * remainingCross / nextInnovation;
+  const double combinedNoise = 1. / (1. / measurementVariance + 1. / nextNoise);
+  const double combinedObservation = combinedNoise *
+      (residual / measurementVariance + nextObservation / nextNoise);
+  near(secondMean, cross / (predictedVariance + combinedNoise) * combinedObservation);
+  near(secondVariance, joint[35] - cross * cross / (predictedVariance + combinedNoise));
+  const double inverseDerivative = -kappa * std::exp(-b);
+  if (std::abs((kappa * std::exp(-(b + epsilon)) - kappa * std::exp(-(b - epsilon))) /
+               (2 * epsilon) - inverseDerivative) > 1.e-10)
+    throw std::runtime_error("inverse loss derivative test failed");
+
   bool asymmetricRejected = false;
   Matrix6 invalid = prior;
   invalid[1] = 0.5;

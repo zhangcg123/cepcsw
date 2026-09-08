@@ -10,6 +10,7 @@ struct FitSettings {
   double meanLogLoss = 0;
   double sigmaLogLoss = 0.05;
   double seedScale = 1;
+  std::string backwardMode = "RTS";
 };
 
 struct IntervalResult {
@@ -25,6 +26,8 @@ struct IntervalResult {
 struct FitResult {
   edm4hep::TrackState ip{};
   std::vector<TrackState> predicted, filtered, smoothed;
+  std::vector<TrackState> backwardPredicted, backwardFiltered, endpoint;
+  std::vector<double> backwardChi2;
   std::vector<double> localChi2;
   std::vector<IntervalResult> breakpoints;
   double chi2 = 0;

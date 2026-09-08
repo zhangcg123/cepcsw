@@ -55,9 +55,36 @@ is a time offset; it is NOT reused as b.
    Other edges remain ordinary five-dimensional KF transitions.
 3. Update every real hit once using native KalTest. Retain transition state
    cross covariances and, at breakpoints, loss/state cross covariances.
-4. Run backward Rauch-Tung-Striebel smoothing and recover each loss posterior
+4. With `BackwardMode=RTS`, run backward Rauch-Tung-Striebel smoothing and recover each loss posterior
    using the downstream smoothed state. Publish the smoothed innermost state
    geometrically extrapolated to the IP.
+
+Alternatively, `BackwardMode=BackwardFilter` copies the last outward posterior
+and its complete covariance without scaling. It does not update the last hit
+again. It propagates inward and updates each remaining hit with native KalTest.
+On selected interval i, it first propagates from i+1 to i, then applies
+`kappa_before=exp(-b)*kappa_after` BEFORE updating hit i. This preserves the
+outward map's upstream-surface owner; it does not move the loss to i+1.
+The inverse map scales all curvature cross covariances and adds the scalar
+loss-prior variance through its derivative `-kappa_before`.
+
+Each selected reverse crossing introduces a fresh Gaussian with the configured
+MeanLogLoss/SigmaLogLoss, not the RTS or outward fitted loss posterior. The
+outward posterior already contains material/hit information, so this is a
+deliberately evidence-reusing refit, not an independent Bayesian smoother.
+Loss/state cross covariances are retained as the inward recursion continues;
+later inner hits refine previously crossed loss means/variances by Gaussian
+conditioning on the native KF's state update. They do not trigger an RTS pass
+or a second propagation of already visited hits. Final backward filtered hit 0
+is propagated to IP using native material-aware MarlinTrk propagation. RTS keeps
+its original geometric IP extrapolation unchanged. Neither mode adds a
+beam-to-first-hit breakpoint.
+
+The reference KF follows the selected mode: native outward KF plus `smooth()`
+and geometric extrapolation for RTS; a copied last-state inward KF and native
+IP propagation for BackwardFilter. The latter mirrors the default forward-fit
+publication branch of FullLDCTracking, but is still a hit-list refit, not a rerun
+of pattern recognition, merging, outlier retries or selection.
 
 Marginalizing the Gaussian loss before updating the hit, then conditioning
 it through its retained cross covariance, is equivalent to an augmented
@@ -88,6 +115,7 @@ a positive-sum conditional form to avoid cancellation of loose seed errors.
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma |
 | SeedScale | 1 | Positive scale of all five loose seed variances |
 | SeedHitSelection | FirstMiddleLast | First/middle/last usable 2D hits; FirstThree restores the original selection |
+| BackwardMode | RTS | RTS smoothing or BackwardFilter seeded from the full outward posterior |
 | MaxChi2PerHit | 1e100 | Native hit-acceptance limit; rejection fails the track |
 | MSOn | true | Baseline multiple-scattering noise |
 | ElossOn | false | Baseline deterministic ionization correction |
@@ -128,6 +156,21 @@ to covariance units; a discrepancy above 1e-3 fails the track.
 `seed_hit_selection` and `seed_hit_indices` retain the effective mode and three
 actual ordered-hit indices in each attempted track row; selection failure leaves
 the index vector empty. The indices are also printed with VerboseDump=true.
+
+`backward_mode` identifies the algorithm used. `filtered_*` and `local_chi2`
+always describe the outward pass. `smoothed_*` vectors retain their old RTS-only
+meaning and are empty in BackwardFilter runs. The latter fills
+`backward_predicted_kappa`, `backward_filtered_kappa`, their `_variance` fields
+and `backward_local_chi2`, indexed in outward hit order. At the last hit, both
+backward state vectors contain the copied seed and chi2 is zero (no update).
+VerboseDump prints complete backward predicted/filtered 5D states/covariances.
+`fitted_log_loss` and `fitted_log_loss_variance` are mode-independent final loss
+fields. `local_log_loss` describes the first hit update after introducing the
+loss: i+1 outward for RTS, i inward for BackwardFilter. The legacy
+`smoothed_log_loss*` aliases are filled only for RTS. Published track chi2/ndf
+remain outward-filter bookkeeping in both modes, not a combined goodness-of-fit.
+Unknown BackwardMode values fail initialization. Use
+`BP_BACKWARD_MODE=BackwardFilter` in the dedicated card to select the new mode.
 
 Only the flat tuple is written by default. Commented PodioOutput lines in the
 card allow event-collection serialization without changing the GSF workflow.

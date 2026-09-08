@@ -1,5 +1,6 @@
 #include "KalmanAdapter.h"
 #include "BreakpointTrackSystem.h"
+#include "RecBreakpoint/AugmentedTransport.h"
 #include "TrackSystemSvc/MarlinTrkUtils.h"
 #include "UTIL/BitSet32.h"
 #include "UTIL/ILDConf.h"
@@ -56,7 +57,8 @@ TrackState readNative(TKalTrackSite& site, TVKalSite::EStType type) {
 }
 
 MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maximum,
-    const TrackState& input, edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit) {
+    const TrackState& input, edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit,
+    bool inverseLoss = false, double meanLoss = 0, double sigmaLoss = 0) {
   TKalTrack track;
   track.SetOwner();
   auto source = makeSite(system, sourceHit);
@@ -81,13 +83,58 @@ MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maxi
   auto target = makeSite(system, targetHit);
   HitAcceptance acceptance(maximum);
   target->SetFilterCond(&acceptance);
-  if (!track.AddAndFilter(*target)) throw std::runtime_error("KalTest rejected propagation/hit update");
-  auto* targetPointer = target.release(); // track now owns the accepted site
   MeasurementStep result;
+  TMatrixD lossMap(5, 5), lossNoise(5, 5);
+  lossMap.UnitMatrix();
+  lossNoise.Zero();
+  if (inverseLoss) {
+    // Same physical owner as outward: propagation reaches hit i with the
+    // post-loss curvature, then exp(-b) restores the pre-loss state at i.
+    // Native KalTest still performs the entire measurement update.
+    // The local track constructor registers this sole live fit. Native
+    // material routines use its mass; never silently inherit another fit.
+    if (TVKalSystem::GetCurInstancePtr() != &track)
+      throw std::runtime_error("Inverse breakpoint requires its own active native track");
+    sourcePointer->GetState(TVKalSite::kFiltered).Propagate(*target);
+    auto& prediction = target->GetState(TVKalSite::kPredicted);
+    lossMap(2, 2) = std::exp(-meanLoss);
+    TKalMatrix lossMean(prediction), lossCovariance(prediction.GetCovMat());
+    lossMean(2, 0) *= lossMap(2, 2);
+    const double derivative = -lossMean(2, 0);
+    const double variance = sigmaLoss * sigmaLoss;
+    lossNoise(2, 2) = derivative * derivative * variance;
+    result.lossTargetCross(0, 2) = variance * derivative;
+    TKalMatrix transformed(lossMap * lossCovariance * transpose(lossMap) + lossNoise);
+    Matrix6 joint{};
+    Matrix5 jacobian{};
+    Vector5 d{};
+    d[2] = derivative;
+    for (int i = 0; i < 5; ++i)
+      for (int j = 0; j < 5; ++j) {
+        joint[i * 6 + j] = lossCovariance(i, j);
+        jacobian[i * 5 + j] = lossMap(i, j);
+      }
+    joint[35] = variance;
+    const auto mapped = AugmentedTransport::covariance(
+        joint, AugmentedTransport::jacobian(jacobian, d), {});
+    for (int i = 0; i < 5; ++i)
+      for (int j = 0; j < 5; ++j)
+        result.covarianceClosure = std::max(result.covarianceClosure,
+            std::abs(mapped[i * 6 + j] - transformed(i, j)) /
+            std::sqrt(transformed(i, i) * transformed(j, j)));
+    prediction.SetStateVec(lossMean);
+    prediction.SetCovMat(transformed);
+    if (!target->Filter()) throw std::runtime_error("KalTest rejected inverse-breakpoint hit update");
+    track.Add(target.get());
+  } else if (!track.AddAndFilter(*target)) {
+    throw std::runtime_error("KalTest rejected propagation/hit update");
+  }
+  auto* targetPointer = target.release(); // track now owns the accepted site
   result.filtered = readNative(*targetPointer, TVKalSite::kFiltered);
   result.predicted = readNative(*targetPointer, TVKalSite::kPredicted);
-  result.transport = sourcePointer->GetState(TVKalSite::kFiltered).GetPropMat() * pivotJacobian;
-  result.noise = sourcePointer->GetState(TVKalSite::kFiltered).GetProcNoiseMat();
+  result.transport = lossMap * sourcePointer->GetState(TVKalSite::kFiltered).GetPropMat() * pivotJacobian;
+  result.noise = lossMap * sourcePointer->GetState(TVKalSite::kFiltered).GetProcNoiseMat()
+      * transpose(lossMap) + lossNoise;
   result.chi2 = targetPointer->GetDeltaChi2();
   result.dimension = targetPointer->GetDimension();
   return result;
@@ -134,17 +181,32 @@ MeasurementStep KalmanAdapter::seed(const std::vector<edm4hep::TrackerHit>& hits
 }
 
 edm4hep::TrackState KalmanAdapter::referenceKF(
-    const std::vector<edm4hep::TrackerHit>& hits, double scale) const {
+    const std::vector<edm4hep::TrackerHit>& hits, double scale, bool backwardFilter) const {
   auto track = initialized(prefit(hits, scale), hits.front(), false);
   for (auto hit : hits) {
     double chi2 = 0;
     requireSuccess(track->addAndFit(hit, chi2, m_maxChi2), "Reference KF update");
   }
-  requireSuccess(track->smooth(), "Reference KF smooth");
   edm4hep::TrackState ip;
   auto first = hits.front();
   double chi2 = 0;
   int ndf = 0;
+  if (backwardFilter) {
+    auto last = hits.back();
+    requireSuccess(track->smooth(last), "Reference KF last-hit smooth");
+    edm4hep::TrackState seed;
+    requireSuccess(track->getTrackState(last, seed, chi2, ndf), "Reference KF last state");
+    // Match the standard finalizer: register the last hit as dummy only.
+    auto inward = initialized(seed, last, false);
+    for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
+      auto hit = hits[i];
+      requireSuccess(inward->addAndFit(hit, chi2, m_maxChi2), "Reference inward KF update");
+    }
+    requireSuccess(inward->propagate(edm4hep::Vector3d{0, 0, 0}, first, ip, chi2, ndf),
+                   "Reference inward KF IP propagation");
+    return ip;
+  }
+  requireSuccess(track->smooth(), "Reference KF smooth");
   requireSuccess(track->extrapolate(edm4hep::Vector3d{0, 0, 0}, first, ip, chi2, ndf),
                  "Reference KF IP extrapolation");
   return ip;
@@ -153,6 +215,24 @@ edm4hep::TrackState KalmanAdapter::referenceKF(
 MeasurementStep KalmanAdapter::advance(const TrackState& source,
     edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit) const {
   return nativeStep(*m_system, m_bz, m_maxChi2, source, sourceHit, targetHit);
+}
+
+MeasurementStep KalmanAdapter::advanceBackward(const TrackState& source,
+    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit,
+    bool breakpoint, double meanLoss, double sigmaLoss) const {
+  return nativeStep(*m_system, m_bz, m_maxChi2, source, sourceHit, targetHit,
+                    breakpoint, meanLoss, sigmaLoss);
+}
+
+edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
+                                               edm4hep::TrackerHit hit) const {
+  auto track = initialized(toEDM(state, m_bz, 2), hit, false);
+  edm4hep::TrackState ip;
+  double chi2 = 0;
+  int ndf = 0;
+  requireSuccess(track->propagate(edm4hep::Vector3d{0, 0, 0}, ip, chi2, ndf),
+                 "Backward KF IP propagation");
+  return ip;
 }
 
 edm4hep::TrackState KalmanAdapter::atIP(const TrackState& state,

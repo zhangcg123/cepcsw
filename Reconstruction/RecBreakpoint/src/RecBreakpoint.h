@@ -36,6 +36,7 @@ private:
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.05};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
+  Gaudi::Property<std::string> m_backwardMode{this, "BackwardMode", "RTS"};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
   Gaudi::Property<bool> m_ms{this, "MSOn", true};
   Gaudi::Property<bool> m_eloss{this, "ElossOn", false};
@@ -54,10 +55,14 @@ private:
   double m_referencePt = 0;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
+  std::string m_backwardModeName;
   std::vector<int> m_seedHitIndices;
   std::vector<unsigned long long> m_hitCell;
   std::vector<double> m_hitR, m_hitZ, m_localChi2, m_filteredKappa, m_smoothedKappa;
   std::vector<double> m_filteredVariance, m_smoothedVariance;
+  std::vector<double> m_backwardKappa, m_backwardVariance, m_backwardPredictedKappa;
+  std::vector<double> m_backwardPredictedVariance, m_backwardChi2;
+  std::vector<double> m_rtsLoss, m_rtsLossVariance;
   std::vector<double> m_priorLoss, m_localLoss, m_localVariance, m_fittedLoss, m_lossVariance, m_closure;
 };
 #endif
