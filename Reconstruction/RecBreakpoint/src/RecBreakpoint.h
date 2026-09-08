@@ -5,6 +5,9 @@
 #include "k4FWCore/DataHandle.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
@@ -30,6 +33,14 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_status{"BreakpointStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_outputIndex{"BreakpointOutputIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::MCParticleCollection> m_truth{"MCParticle", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4MaterialStepCollection> m_truthSteps{"GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_truthLinks{"GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_vxdAssociations{"VXDTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_itkbAssociations{"ITKBarrelTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_itkeAssociations{"ITKEndcapTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_tpcAssociations{"TPCTrackerHitAss", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_otkbAssociations{"OTKBarrelTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_otkeAssociations{"OTKEndcapTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
 
   Gaudi::Property<std::vector<int>> m_intervals{this, "BreakpointIntervals", {}};
   Gaudi::Property<double> m_meanLoss{this, "MeanLogLoss", 0.0};
@@ -44,6 +55,7 @@ private:
   Gaudi::Property<bool> m_ms{this, "MSOn", true};
   Gaudi::Property<bool> m_eloss{this, "ElossOn", false};
   Gaudi::Property<bool> m_truthDiagnostics{this, "TruthDiagnostics", false};
+  Gaudi::Property<double> m_truthEndpointDistance{this, "TruthMaxEndpointDistance", 5.0};
   Gaudi::Property<bool> m_verbose{this, "VerboseDump", false};
   Gaudi::Property<bool> m_verifyReference{this, "VerifyKFReference", false};
   Gaudi::Property<std::vector<int>> m_selected{this, "SelectedEventIndices", {}};
@@ -75,5 +87,11 @@ private:
   std::vector<double> m_backwardPredictedVariance, m_backwardChi2;
   std::vector<double> m_rtsLoss, m_rtsLossVariance;
   std::vector<double> m_priorLoss, m_localLoss, m_localVariance, m_fittedLoss, m_lossVariance, m_closure;
+  int m_truthOverrideStatus = 0, m_truthG4Track = -1;
+  double m_truthMaxDistance = 0;
+  std::string m_truthOverrideError;
+  std::vector<int> m_truthIntervals, m_truthFirstStep, m_truthLastStep;
+  std::vector<double> m_truthZ, m_truthB, m_truthMomentumBefore, m_truthEbremLoss, m_truthTX0;
+  std::vector<double> m_truthStartFraction, m_truthEndFraction;
 };
 #endif

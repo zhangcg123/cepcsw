@@ -1,6 +1,7 @@
 #include "RecBreakpoint.h"
 #include "BreakpointFitter.h"
 #include "BreakpointTrackSystem.h"
+#include "TruthBHLossEventData.h"
 #include "GearSvc/IGearSvc.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 #include "DetInterface/IGeomSvc.h"
@@ -46,10 +47,11 @@ StatusCode RecBreakpoint::initialize() {
             << " Persistent6D/RTS or LocalMarginal/BackwardFilter, and exactly one breakpoint" << endmsg;
     return StatusCode::FAILURE;
   }
-  if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal") ||
+  if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal"
+       && m_lossStateModeName != "TruthOverride") ||
       (m_lossStateModeName == "Persistent6D" &&
        (m_backwardModeName != "RTS" || m_intervals.value().size() > 1))) {
-    error() << "LossStateMode must be LocalMarginal or Persistent6D; Persistent6D requires"
+    error() << "LossStateMode must be LocalMarginal, Persistent6D or TruthOverride; Persistent6D requires"
             << " BackwardMode=RTS and at most one breakpoint" << endmsg;
     return StatusCode::FAILURE;
   }
@@ -64,13 +66,15 @@ StatusCode RecBreakpoint::initialize() {
       return StatusCode::FAILURE;
     }
   }
-  for (double value : {m_sigmaLoss.value(), m_seedScale.value(), m_maxChi2.value()})
+  for (double value : {m_seedScale.value(), m_maxChi2.value(), m_truthEndpointDistance.value()})
     if (!std::isfinite(value) || value <= 0) {
-      error() << "SigmaLogLoss, SeedScale, MaxChi2PerHit must be finite and positive" << endmsg;
+      error() << "SeedScale, MaxChi2PerHit, TruthMaxEndpointDistance must be finite and positive" << endmsg;
       return StatusCode::FAILURE;
     }
-  if (!std::isfinite(m_meanLoss.value()) || m_meanLoss < 0 || m_meanLoss > 5) {
-    error() << "MeanLogLoss must be finite in [0,5]" << endmsg;
+  if (m_lossStateModeName != "TruthOverride" &&
+      (!std::isfinite(m_meanLoss.value()) || m_meanLoss < 0 || m_meanLoss > 5 ||
+       !std::isfinite(m_sigmaLoss.value()) || m_sigmaLoss <= 0)) {
+    error() << "MeanLogLoss must be finite in [0,5] and SigmaLogLoss finite/positive" << endmsg;
     return StatusCode::FAILURE;
   }
   const auto geometry = service<IGeomSvc>("GeomSvc");
@@ -108,6 +112,20 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("seed_hit_indices", &m_seedHitIndices);
   m_tree->Branch("backward_mode", &m_backwardModeName);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
+  m_tree->Branch("truth_override_status", &m_truthOverrideStatus);
+  m_tree->Branch("truth_override_error", &m_truthOverrideError);
+  m_tree->Branch("truth_override_g4_track_id", &m_truthG4Track);
+  m_tree->Branch("truth_override_max_endpoint_distance", &m_truthMaxDistance);
+  m_tree->Branch("truth_override_interval", &m_truthIntervals);
+  m_tree->Branch("truth_override_retained_fraction", &m_truthZ);
+  m_tree->Branch("truth_override_log_loss", &m_truthB);
+  m_tree->Branch("truth_override_momentum_before", &m_truthMomentumBefore);
+  m_tree->Branch("truth_override_ebrem_loss", &m_truthEbremLoss);
+  m_tree->Branch("truth_override_tx0", &m_truthTX0);
+  m_tree->Branch("truth_override_first_step", &m_truthFirstStep);
+  m_tree->Branch("truth_override_last_step", &m_truthLastStep);
+  m_tree->Branch("truth_override_start_fraction", &m_truthStartFraction);
+  m_tree->Branch("truth_override_end_fraction", &m_truthEndFraction);
   m_tree->Branch("one_pass_pt",&m_onePassPt);
   m_tree->Branch("fit_iterations",&m_iterations);
   m_tree->Branch("iteration_status",&m_iterationStatus);
@@ -179,16 +197,46 @@ StatusCode RecBreakpoint::execute() {
   breakpoint::KalmanAdapter adapter(m_system.get(), m_bz, m_maxChi2,
       breakpoint::parseSeedHitSelection(m_seedHitSelection.value()));
   breakpoint::BreakpointFitter fitter(adapter);
-  breakpoint::FitSettings settings{m_intervals.value(), m_meanLoss, m_sigmaLoss, m_seedScale};
+  breakpoint::FitSettings settings;
+  settings.intervals = m_intervals.value();
+  settings.meanLogLoss = m_meanLoss;
+  settings.sigmaLogLoss = m_sigmaLoss;
+  settings.seedScale = m_seedScale;
   settings.backwardMode = m_backwardModeName;
   settings.lossStateMode = m_lossStateModeName;
   settings.maxFitIterations=m_maxIterations;
   settings.relinearizationTolerance=m_iterationTolerance;
+  const bool needTruthLoss = selected && m_lossStateModeName == "TruthOverride"
+      && !settings.intervals.empty();
+  TruthBHLossEventData truthReader; // event-local maps, released after this event
+  bool truthPrepared = false;
+  std::string truthEventError;
+  if (needTruthLoss) {
+    try {
+      std::vector<const edm4hep::MCRecoTrackerAssociationCollection*> associations;
+      auto addAvailable = [&associations](auto& handle) {
+        try { if (const auto* collection = handle.get()) associations.push_back(collection); }
+        catch (...) {} // An unused detector may be absent; actual track matches stay strict.
+      };
+      addAvailable(m_vxdAssociations); addAvailable(m_itkbAssociations);
+      addAvailable(m_itkeAssociations); addAvailable(m_tpcAssociations);
+      addAvailable(m_otkbAssociations); addAvailable(m_otkeAssociations);
+      truthPrepared = truthReader.prepare(m_truthSteps.get(), m_truthLinks.get(),
+                                         associations, truthEventError);
+    } catch (const std::exception& error) { truthEventError = error.what(); }
+    catch (...) { truthEventError = "Cannot retrieve embedded truth collections"; }
+  }
   m_trackIndex = -1;
   for (const auto& track : *tracks) {
     ++m_trackIndex;
     if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); continue; }
     m_fitStatus = -1;
+    settings.truthLogLoss.clear();
+    m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
+    m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
+    m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
+    m_truthFirstStep.clear(); m_truthLastStep.clear();
+    m_truthStartFraction.clear(); m_truthEndFraction.clear();
     m_iterations=0; m_iterationStatus=0; m_onePassPt=nan; m_iterationError.clear();
     m_iterationPt.clear();m_iterationLoss.clear();m_iterationLossVariance.clear();
     m_iterationNorm.clear();m_iterationChi2.clear();
@@ -226,6 +274,45 @@ StatusCode RecBreakpoint::execute() {
         m_hitCell.push_back(hit.getCellID());
         m_hitR.push_back(std::hypot(p.x, p.y));
         m_hitZ.push_back(p.z);
+      }
+      if (needTruthLoss) {
+        if (!truthPrepared) {
+          m_truthOverrideStatus = -1;
+          m_truthOverrideError = truthEventError;
+          throw std::runtime_error("TruthOverride event data: " + truthEventError);
+        }
+        TruthBHLossEventDataMatch match;
+        const bool matched = truthReader.matchTrack(hits, m_truthEndpointDistance, true,
+                                                    match, m_truthOverrideError);
+        m_truthG4Track = match.g4TrackID;
+        m_truthMaxDistance = match.maxEndpointDistance;
+        if (!matched) {
+          m_truthOverrideStatus = -2;
+          throw std::runtime_error("TruthOverride track association: " + m_truthOverrideError);
+        }
+        for (int interval : settings.intervals) {
+          if (interval < 0 || interval >= static_cast<int>(match.materialIntervals.size())) {
+            m_truthOverrideStatus = -3;
+            m_truthOverrideError = "Configured interval is outside the matched track";
+            throw std::runtime_error(m_truthOverrideError);
+          }
+        }
+        for (int interval : settings.intervals) {
+          const auto& truth = match.materialIntervals[interval];
+          const double b = -std::log(truth.retainedFraction);
+          settings.truthLogLoss.emplace(interval, b);
+          m_truthIntervals.push_back(interval); m_truthZ.push_back(truth.retainedFraction);
+          m_truthB.push_back(b); m_truthMomentumBefore.push_back(truth.momentumBefore);
+          m_truthEbremLoss.push_back(truth.ebremLoss); m_truthTX0.push_back(truth.truthTX0);
+          m_truthFirstStep.push_back(truth.firstStepNumber); m_truthLastStep.push_back(truth.lastStepNumber);
+          m_truthStartFraction.push_back(truth.startHookFraction); m_truthEndFraction.push_back(truth.endHookFraction);
+          if (m_verbose) info() << std::setprecision(17) << "TruthOverride event=" << m_event
+              << " track=" << m_trackIndex << " interval=" << interval << " g4Track=" << match.g4TrackID
+              << " z=" << truth.retainedFraction << " b=" << b << " addedLossVariance=0"
+              << " steps=" << truth.firstStepNumber << ':' << truth.startHookFraction
+              << "->" << truth.lastStepNumber << ':' << truth.endHookFraction << endmsg;
+        }
+        m_truthOverrideStatus = 1;
       }
       const auto seedIndices = adapter.seedHitIndices(hits);
       m_seedHitIndices.assign(seedIndices.begin(), seedIndices.end());

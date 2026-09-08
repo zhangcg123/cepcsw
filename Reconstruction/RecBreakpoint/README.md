@@ -33,6 +33,11 @@ Use `LossStateMode="LocalMarginal"` for the earlier local-joint implementation,
 multiple selected intervals, or the existing BackwardFilter comparison.
 Unsupported combinations fail initialization, never silently fall back.
 
+`LossStateMode="TruthOverride"` is a separate diagnostic: it replaces the loss
+at each explicitly configured interval with an exact, fixed Geant4 eBrem
+response. It supports RTS and BackwardFilter with `MaxFitIterations=1`.
+It does not automatically select intervals or change the compiled default.
+
 In LocalMarginal, `BreakpointIntervals=[5,7]` means two independent losses on
 `hit[5] -> hit[6]` and `hit[7] -> hit[8]`. Indices are zero-based after
 sorting hits by cylindrical radius, **not detector layer numbers**. The tuple
@@ -197,6 +202,67 @@ linear-Gaussian update. Ordinary recursion stays 5D; independent local losses
 do not permanently increase the state dimension. Covariance smoothing uses
 a positive-sum conditional form to avoid cancellation of loose seed errors.
 
+## TruthOverride diagnostic
+
+```python
+fit.LossStateMode = "TruthOverride"
+fit.BackwardMode = "RTS"  # or "BackwardFilter"
+fit.BreakpointIntervals = [5]  # explicit ordered-hit interval, not auto truth selection
+fit.MaxFitIterations = 1
+```
+
+The dedicated card loads the embedded step/link collections, six tracker
+truth-association collections and their SimTrackerHit collections only when
+this mode has a nonempty interval list. No side tuple, CSV, or GSF run is
+needed. RecBreakpoint compiles the unchanged `TruthBHLossEventData.cpp` reader
+from RecGsfTracking into its own module and links the existing GsfTruthEventData
+libraries; it does not link/run the GSF algorithm plugin or edit its source.
+
+Matching follows reconstructed TrackerHit -> MCRecoTrackerAssociation ->
+SimTrackerHit -> exact Geant4 provenance hook. All ordered hits must map
+unambiguously to one primary electron with complete, increasing hooks. The
+5 mm default `TruthMaxEndpointDistance` validates associated positions, not a
+nearest-hit search. The interval uses the existing hook-to-hook definition;
+an eBrem loss belongs to the interval whose (start,end] contains its Geant4
+post-step point. Geant4 process-subtype 3 losses are summed, and
+`z_truth = 1 - summed_eBrem_momentum_loss / momentum_at_start_hook`.
+The fixed loss is `b_truth = -log(z_truth)`. This is eBrem-only, **not** total
+momentum loss including ionization. Ordinary native MS/material handling and
+ElossOn remain unchanged; truth t/X0 is recorded but never steers transport.
+
+Each configured interval uses its own truth b and **zero additional loss
+variance**. MeanLogLoss and SigmaLogLoss are ignored in this mode. Forward
+filtering applies exp(b); BackwardFilter applies the inverse exp(-b) at the
+same upstream surface before its measurement. The live state is 5D with the
+full deterministic covariance Jacobian; a singular zero-variance sixth state
+is not introduced. Both RTS and the existing posterior-seeded backward refit
+are available. Multiple explicitly selected intervals are allowed; an empty
+list is the ordinary 5D reference and does not read truth. Losses in unselected
+intervals are not corrected. Iterations are currently rejected in this mode.
+
+Automatic fields `truth_override_status` and `truth_override_error` distinguish
+0 (not requested/empty list), 1 (valid match), -1 (invalid/unavailable event
+truth), -2 (invalid track association/hooks), and -3 (interval outside the
+matched track). Invalid truth fails the affected track (`status=-1` and no
+published track), not the entire event, and never falls back to a guessed
+loss. Status1 describes truth matching only; check the ordinary fit status too.
+The prepared lookup is event-local and each track's truth map is cleared.
+If PodioInput itself cannot load a requested collection, the job can fail
+before RecBreakpoint is reached and no per-track tag can then be written.
+
+Selected-interval vectors (aligned with `truth_override_interval`) persist
+`truth_override_retained_fraction`, `_log_loss`, `_momentum_before`,
+`_ebrem_loss`, `_tx0`, `_first_step`, `_last_step`, `_start_fraction`, and
+`_end_fraction`, all with the `truth_override` prefix. Also saved are
+`truth_override_g4_track_id` and `_max_endpoint_distance`. Existing fitted and
+local loss fields equal the fixed truth value with variance0; Persistent6D
+vectors remain empty. These diagnostics do not assert perfect reconstruction:
+the loss is still collapsed to the upstream surface, and native scattering,
+hit uncertainty, seeding and backward evidence reuse remain.
+
+See the [TruthOverride gate](../../agents_record/2026-09-09-recbreakpoint-truthoverride.md)
+for exact eight-event/two-mode results and control tests.
+
 ## Helpers
 
 - `AugmentedTransport`: ROOT-independent 6D Jacobian/covariance arithmetic.
@@ -216,9 +282,9 @@ a positive-sum conditional form to avoid cancellation of loose seed errors.
 | InputTracks | CompleteTracks | Tracks supplying reconstructed hits |
 | OutputTracks | BreakpointTracks | Successful refitted tracks |
 | BreakpointIntervals | [] | Selected outward ordered-hit intervals |
-| MeanLogLoss | 0 | Common independent Gaussian b-prior mean, finite in [0,5] |
-| SigmaLogLoss | 0.05 | Positive finite b-prior sigma |
-| LossStateMode | Persistent6D | Persistent6D: live downstream 6D state, one interval and RTS only; LocalMarginal: earlier marginalized/local-joint path |
+| MeanLogLoss | 0 | Common independent Gaussian b-prior mean, finite in [0,5]; ignored in TruthOverride |
+| SigmaLogLoss | 0.05 | Positive finite b-prior sigma; ignored in TruthOverride, which adds zero loss variance |
+| LossStateMode | Persistent6D | Persistent6D: live downstream 6D state, one interval and RTS only; LocalMarginal: local-joint path; TruthOverride: fixed per-selected-interval Geant4 eBrem loss, RTS/BackwardFilter, one pass |
 | MaxFitIterations | 1 | Total passes, integer 1--20; >1 requires one interval and Persistent6D/RTS or LocalMarginal/BackwardFilter |
 | RelinearizationTolerance | 0.001 | Finite positive maximum standardized reference-coordinate/b change; smoothed for RTS, inward-filtered for BackwardFilter |
 | SeedScale | 1 | Positive scale of all five loose seed variances |
@@ -228,13 +294,15 @@ a positive-sum conditional form to avoid cancellation of loose seed errors.
 | MSOn | true | Baseline multiple-scattering noise |
 | ElossOn | false | Baseline deterministic ionization correction |
 | TruthDiagnostics | false | Optional generator-electron pT reference only |
+| TruthMaxEndpointDistance | 5 | Finite positive mm tolerance for validating reconstructed hit vs associated exact G4 hook; active only in TruthOverride |
 | VerboseDump | false | Complete predicted/filtered/smoothed states and covariances |
 | VerifyKFReference | false | Independent native MarlinTrk rerun with same seed/hits |
 | SelectedEventIndices | [] | Zero-based input events; empty selects all |
 | OutputFile | breakpoint_flat.root | New flat ROOT output |
 
-The card enables TruthDiagnostics; truth never selects intervals or enters
-the fit. Ambiguous multi-electron generator events have NaN truth pT. A scalar
+The card enables TruthDiagnostics; this generator reference never steers the
+fit. Only the explicit TruthOverride mode uses material-loss truth. Truth
+never automatically selects intervals. Ambiguous multi-electron generator events have NaN truth pT. A scalar
 generator reference is not reconstructed-track truth matching, and event
 selection does not imply topology-clear selection.
 

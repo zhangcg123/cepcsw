@@ -99,6 +99,19 @@ int main() {
       AugmentedTransport::covariance(prior, lossJacobian, {}), inverseJacobian, {});
   for (int i = 0; i < 36; ++i) near(physicalRestored[i], prior[i]);
 
+  // A truth-fixed loss has no loss variance/cross covariance. It must still
+  // transform every helix covariance entry through the deterministic map.
+  auto fixedTruthPrior = prior;
+  for (int i = 0; i < 6; ++i) fixedTruthPrior[6*i+5] = fixedTruthPrior[30+i] = 0;
+  const auto fixedTruthMapped = AugmentedTransport::covariance(fixedTruthPrior, lossJacobian, {});
+  near(fixedTruthMapped[14], std::exp(2*b)*fixedTruthPrior[14]);
+  for (int i = 0; i < 6; ++i) {
+    near(fixedTruthMapped[6*i+5],0);
+    near(fixedTruthMapped[30+i],0);
+  }
+  const auto fixedTruthRestored = AugmentedTransport::covariance(fixedTruthMapped, inverseJacobian, {});
+  for (int i = 0; i < 36; ++i) near(fixedTruthRestored[i],fixedTruthPrior[i]);
+
   // An iterated affine loss map must retain the ORIGINAL prior mean. At a
   // changed expansion point the offset is essential; merely applying exp(bref)
   // to the old kappa would silently replace the loss hypothesis.

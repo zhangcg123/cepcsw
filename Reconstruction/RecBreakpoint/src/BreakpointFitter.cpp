@@ -25,6 +25,20 @@ Matrix5 array5(const TMatrixD& matrix) {
   return result;
 }
 
+// TruthOverride replaces the selected loss response, not the hit update or
+// material transport. A fixed truth loss has zero added loss variance.
+FitSettings intervalSettings(const FitSettings& settings, int interval) {
+  auto result = settings;
+  if (settings.lossStateMode == "TruthOverride") {
+    const auto found = settings.truthLogLoss.find(interval);
+    if (found == settings.truthLogLoss.end() || !std::isfinite(found->second) || found->second < 0)
+      throw std::runtime_error("Missing/invalid truth loss for configured interval");
+    result.meanLogLoss = found->second;
+    result.sigmaLogLoss = 0;
+  }
+  return result;
+}
+
 /// Expand only a selected source into (helix, b), b=log(p_before/p_after).
 /// The loss is applied at the upstream surface before ordinary propagation.
 TrackState applyBreakpoint(const TrackState& source, const FitSettings& settings,
@@ -80,7 +94,7 @@ FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
       throw std::invalid_argument("Persistent6D requires RTS and at most one breakpoint");
     if (!settings.intervals.empty()) return fitIterated(hits, settings);
     // No loss coordinate is introduced in the empty-list 5D reference.
-  } else if (settings.lossStateMode != "LocalMarginal") {
+  } else if (settings.lossStateMode != "LocalMarginal" && settings.lossStateMode != "TruthOverride") {
     throw std::invalid_argument("Unknown LossStateMode");
   }
   if (settings.backwardMode != "RTS" && settings.backwardMode != "BackwardFilter")
@@ -111,9 +125,10 @@ FitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
     Matrix6 jointPrior{}, jointMap{};
     TrackState propagationSource = source;
     if (transition.breakpoint) {
-      propagationSource = applyBreakpoint(source, settings, lossMap, derivative, jointPrior, jointMap);
-      transition.meanLoss = settings.meanLogLoss;
-      transition.varianceLoss = settings.sigmaLogLoss * settings.sigmaLogLoss;
+      const auto loss = intervalSettings(settings, i);
+      propagationSource = applyBreakpoint(source, loss, lossMap, derivative, jointPrior, jointMap);
+      transition.meanLoss = loss.meanLogLoss;
+      transition.varianceLoss = loss.sigmaLogLoss * loss.sigmaLogLoss;
     }
     const auto step = m_adapter.advance(propagationSource, hits[i], hits[i + 1]);
     transition.predicted = step.predicted;
@@ -207,12 +222,13 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
       const bool selected = std::find(settings.intervals.begin(), settings.intervals.end(), i)
           != settings.intervals.end();
+      const auto configuredLoss = selected ? intervalSettings(settings, i) : settings;
       const auto step = reference ? m_adapter.advanceBackwardRelinearized(
           result.backwardFiltered[i + 1], hits[i + 1], hits[i], selected,
           settings.meanLogLoss, settings.sigmaLogLoss, reference->breakpoints.front().fittedLogLoss,
           reference->backwardFiltered[i + 1], reference->backwardFiltered[i])
           : m_adapter.advanceBackward(result.backwardFiltered[i + 1],
-              hits[i + 1], hits[i], selected, settings.meanLogLoss, settings.sigmaLogLoss);
+              hits[i + 1], hits[i], selected, configuredLoss.meanLogLoss, configuredLoss.sigmaLogLoss);
       if (step.covarianceClosure > 1.e-3)
         throw std::runtime_error("Inverse-breakpoint covariance closure failed");
       result.backwardPredicted[i] = step.predicted;
@@ -225,9 +241,9 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
       if (selected) {
         PendingLoss loss;
         loss.result.index = i;
-        loss.result.priorLogLoss = settings.meanLogLoss;
-        loss.result.fittedLogLoss = settings.meanLogLoss;
-        loss.result.fittedVariance = settings.sigmaLogLoss * settings.sigmaLogLoss;
+        loss.result.priorLogLoss = configuredLoss.meanLogLoss;
+        loss.result.fittedLogLoss = configuredLoss.meanLogLoss;
+        loss.result.fittedVariance = configuredLoss.sigmaLogLoss * configuredLoss.sigmaLogLoss;
         loss.result.covarianceClosure = step.covarianceClosure;
         loss.stateCross = step.lossTargetCross;
         pending.push_back(loss);

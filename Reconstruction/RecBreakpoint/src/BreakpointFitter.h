@@ -3,6 +3,7 @@
 
 #include "KalmanAdapter.h"
 #include <vector>
+#include <map>
 
 namespace breakpoint {
 struct FitSettings {
@@ -14,6 +15,7 @@ struct FitSettings {
   std::string lossStateMode = "Persistent6D";
   int maxFitIterations = 1;
   double relinearizationTolerance = 1.e-3;
+  std::map<int, double> truthLogLoss; // exact, validated b for selected intervals only
 };
 
 struct IntervalResult {
