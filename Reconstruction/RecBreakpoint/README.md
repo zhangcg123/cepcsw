@@ -438,7 +438,7 @@ Output layout for each sample:
 ```text
 OUTPUT_TUPLEPATH/
   breakpoint_flat-e--2.0-85-SEED.root
-  trk-e--2.0-85-SEED.root             # only if trk selected; retained
+  trk-e--2.0-85-SEED.root             # intermediate; removed after verified breakpoint success
   sim-e--2.0-85-SEED.root             # only if sim selected; retained
   outlog/e--2.0-85-SEED.out, .err
   runcards/e--2.0-85-SEED/
@@ -448,8 +448,18 @@ OUTPUT_TUPLEPATH/
 ```
 
 The flat tuple contains ordinary RTS/backward and oracle/copied RTS/backward
-results. No breakpoint EDM file is written by the default card. No inputs or
-intermediate ROOT files are deleted. A selected stage consumes a predecessor
+results. No breakpoint EDM file is written by the default card. After all
+selected stages succeed and the flat tuple passes verification, a tracker
+tuple produced by this same job is deleted. All attempted ordinary rows must
+succeed and every extra pair must be valid/copied; otherwise the tracker is
+retained for diagnosis. A trk-only job keeps its output, and a breakpoint-only
+job never deletes its external tracker input. Simulation files are retained.
+The cleanup checks the exact expected path and its production-time file identity
+(device/inode/size/modification time), refuses symlinks or changed files, and
+records the outcome in completed.json under tracker_cleanup. Removed tracker
+tuples can be regenerated from the retained simulation and frozen trk card;
+they are not moved to trash. Existing completed campaigns are not cleaned
+retroactively. A selected stage consumes a predecessor
 made in the same job, otherwise an external predecessor from the input path.
 Cards are checksum-checked by the worker; never edit a frozen card in place.
 Use a new output directory for a changed physics setup. The software/library

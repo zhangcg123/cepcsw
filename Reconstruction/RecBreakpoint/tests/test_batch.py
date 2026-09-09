@@ -108,5 +108,62 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ,self.env,clear=True), self.assertRaises(ValueError):
             batch.submit_prepared('outputs')
 
+    def cleanup_fixture(self, stages='trk,breakpoint'):
+        self.prepare(STAGES=stages)
+        job=self.manifest()
+        manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
+        tracker=Path(job['files']['trk'])
+        if 'trk' in job['stages']: tracker.write_bytes(b'job-owned tracker')
+        return job,manifest,tracker,batch.file_identity(tracker)
+
+    def test_cleanup_only_owned_complete_tracker(self):
+        job,manifest,tracker,identity=self.cleanup_fixture()
+        result=batch.cleanup_tracker(job,manifest,identity,True)
+        self.assertEqual(result['status'],'removed');self.assertFalse(tracker.exists())
+        self.assertTrue(Path(job['files']['sim']).exists())
+
+    def test_cleanup_retains_failed_refits(self):
+        job,manifest,tracker,identity=self.cleanup_fixture()
+        result=batch.cleanup_tracker(job,manifest,identity,False)
+        self.assertEqual(result['status'],'retained_incomplete_refits');self.assertTrue(tracker.exists())
+
+    def test_cleanup_retains_external_input(self):
+        job,manifest,tracker,identity=self.cleanup_fixture('breakpoint')
+        result=batch.cleanup_tracker(job,manifest,None,True)
+        self.assertEqual(result['status'],'retained_external');self.assertTrue(tracker.exists())
+
+    def test_cleanup_retains_trk_only_output(self):
+        job,manifest,tracker,identity=self.cleanup_fixture('trk')
+        result=batch.cleanup_tracker(job,manifest,identity,True)
+        self.assertEqual(result['status'],'retained_no_downstream');self.assertTrue(tracker.exists())
+
+    def test_cleanup_refuses_changed_or_redirected_tracker(self):
+        job,manifest,tracker,identity=self.cleanup_fixture()
+        tracker.write_bytes(b'changed after production')
+        with self.assertRaises(RuntimeError):batch.cleanup_tracker(job,manifest,identity,True)
+        tracker.unlink()
+        shared=self.repo/'inputs/trk-e--2.0-85-12.root'
+        tracker.symlink_to(shared)
+        with self.assertRaises(RuntimeError):batch.cleanup_tracker(job,manifest,batch.file_identity(tracker),True)
+        self.assertTrue(shared.exists())
+
+    def test_worker_failure_does_not_cleanup_tracker(self):
+        self.prepare()
+        job=self.manifest()
+        manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
+        runner=self.repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
+        runner.parent.mkdir(parents=True);runner.write_text('fixture')
+        def execute(command, **kwargs):
+            if Path(command[-1]).name=='trk.py':
+                Path(job['files']['trk']).write_bytes(b'produced tracker')
+            else:
+                raise batch.subprocess.CalledProcessError(1,command)
+        with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
+             patch.object(batch,'verify',return_value=False), patch.object(batch,'cleanup_tracker') as cleanup:
+            with self.assertRaises(batch.subprocess.CalledProcessError):batch.run(manifest)
+            cleanup.assert_not_called()
+        self.assertTrue(Path(job['files']['trk']).exists())
+        self.assertFalse((manifest.parent/'completed.json').exists())
+
 
 if __name__ == '__main__': unittest.main()

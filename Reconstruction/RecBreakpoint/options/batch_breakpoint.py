@@ -189,6 +189,7 @@ def verify(path, stage):
         raise RuntimeError('Invalid ROOT output: ' + str(path))
     tree = file.Get('breakpoint' if stage == 'breakpoint' else 'events')
     if not tree or tree.GetEntries() == 0: raise RuntimeError('Empty output tree: ' + str(path))
+    cleanup_ready = False
     if stage == 'breakpoint':
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt','truth_override_result_status'):
             if not tree.GetBranch(name): raise RuntimeError('Missing flat branch: ' + name)
@@ -196,8 +197,37 @@ def verify(path, stage):
         invalid_truth = int(tree.GetEntries('truth_override_result_status<0'))
         print(f'Flat rows={tree.GetEntries()}, ordinary success={good}, invalid oracle={invalid_truth}', flush=True)
         if not good: raise RuntimeError('No successful ordinary fits; output retained for diagnosis')
+        missing_extra = int(tree.GetEntries('truth_override_result_status!=1 && truth_override_result_status!=2'))
+        cleanup_ready = good == tree.GetEntries() and missing_extra == 0
     else: print(f'{stage} events={tree.GetEntries()}', flush=True)
     file.Close()
+    return cleanup_ready
+
+
+def file_identity(path):
+    stat = path.stat()
+    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns
+
+
+def cleanup_tracker(job, manifest, produced_identity, cleanup_ready):
+    """Delete only this job's own, unchanged intermediate after verified refits."""
+    if 'trk' not in job['stages']:
+        return {'status':'retained_external'}
+    if 'breakpoint' not in job['stages']:
+        return {'status':'retained_no_downstream'}
+    if not cleanup_ready:
+        print('Retaining tracker output: some refit/oracle rows are invalid.', flush=True)
+        return {'status':'retained_incomplete_refits'}
+    output_dir = manifest.parent.parent.parent
+    expected = output_dir / f'trk-{job["sample"]}.root'
+    tracker = Path(job['files']['trk'])
+    if tracker != expected or tracker.is_symlink() or not tracker.is_file():
+        raise RuntimeError('Refusing cleanup of unexpected/nonregular tracker path: ' + str(tracker))
+    if produced_identity is None or file_identity(tracker) != produced_identity:
+        raise RuntimeError('Tracker output changed since production; refusing cleanup: ' + str(tracker))
+    tracker.unlink()
+    print('Removed verified intermediate tracker output: ' + str(tracker), flush=True)
+    return {'status':'removed', 'path':str(tracker)}
 
 
 def run(manifest):
@@ -213,12 +243,18 @@ def run(manifest):
         if Path(job['files'][stage]).exists(): raise ValueError('Output already exists: ' + job['files'][stage])
     # Exclusive marker prevents two workers using the same outputs concurrently.
     create(manifest.parent/'started.json', json.dumps({'pid':os.getpid(), 'host':os.uname().nodename})+'\n')
+    produced_tracker = None
+    cleanup_ready = False
     for stage in job['stages']:
         print('Running ' + stage + ': ' + job['cards'][stage], flush=True)
         subprocess.run([str(runner), 'gaudirun.py', job['cards'][stage]], cwd=repo, check=True)
-        verify(Path(job['files'][stage]), stage)
-    create(manifest.parent/'completed.json', json.dumps({'outputs':job['files'], 'stages':job['stages']}, indent=2)+'\n')
-    print('Completed. All inputs/intermediate tuples retained; no GSF workflow was run.', flush=True)
+        ready = verify(Path(job['files'][stage]), stage)
+        if stage == 'trk': produced_tracker = file_identity(Path(job['files']['trk']))
+        if stage == 'breakpoint': cleanup_ready = ready
+    cleanup = cleanup_tracker(job, manifest, produced_tracker, cleanup_ready)
+    create(manifest.parent/'completed.json', json.dumps({'outputs':job['files'], 'stages':job['stages'],
+                                                        'tracker_cleanup':cleanup}, indent=2)+'\n')
+    print('Completed. Simulation/external inputs retained; no GSF workflow was run.', flush=True)
 
 
 if __name__ == '__main__':
