@@ -11,7 +11,6 @@ struct FitSettings {
   double meanLogLoss = 0;
   double sigmaLogLoss = 0.05;
   double seedScale = 1;
-  std::string backwardMode = "RTS";
   std::string lossStateMode = "Persistent6D";
   int maxFitIterations = 1;
   double relinearizationTolerance = 1.e-3;
@@ -34,6 +33,13 @@ struct FitResult {
   std::vector<TrackState> backwardPredicted, backwardFiltered, endpoint;
   std::vector<double> backwardChi2;
   std::vector<double> localChi2;
+  // Complete final-pass quadratic objective, indexed by receiving hit.
+  // Process includes the loss birth prior ONCE; no second b penalty is added.
+  std::vector<double> smoothedChi2, smoothedMeasurementChi2, smoothedProcessChi2;
+  std::vector<double> smoothedNativeMeasurementChi2;
+  double smoothedSeedChi2 = 0, smoothedTotalChi2 = 0;
+  int smoothedChi2Status = 0;
+  std::string smoothedChi2Error;
   std::vector<IntervalResult> breakpoints;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;
@@ -47,19 +53,31 @@ struct FitResult {
   std::vector<double> iterationStepNorm, iterationLinearizedChi2;
 };
 
+struct PairedFitResult {
+  FitResult rts;
+  FitResult backward;
+};
+
 /// Persistent6D: one loss coordinate stays live through every downstream hit.
 /// LocalMarginal retains the earlier 5D/local-joint implementation for comparisons.
 class BreakpointFitter {
 public:
   explicit BreakpointFitter(const KalmanAdapter& adapter) : m_adapter(adapter) {}
-  FitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
+  PairedFitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
                 const FitSettings& settings) const;
 private:
+  FitResult fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
+                       const FitSettings& settings) const;
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
                           const FitSettings& settings, const FitResult* reference = nullptr,
                           const TrackState* originalPrior = nullptr) const;
   FitResult fitIterated(const std::vector<edm4hep::TrackerHit>& hits,
-                       const FitSettings& settings) const;
+                       const FitSettings& settings, FitResult initial,
+                       const FitResult& fixedForward, bool backward) const;
+  void scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits, FitResult& result,
+      const std::vector<TMatrixD>& predictedMeans, const std::vector<TMatrixD>& predictedCovs,
+      const std::vector<TMatrixD>& smoothedMeans, const std::vector<TMatrixD>& noises,
+      const std::vector<TrackState>& measurementReferences) const;
   FitResult finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
       const FitSettings& settings, FitResult result,
       const FitResult* reference = nullptr) const;

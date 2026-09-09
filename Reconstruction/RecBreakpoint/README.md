@@ -1,9 +1,8 @@
 # RecBreakpoint
 
-Experimental electron breakpoint Kalman refitter on `test_breakpoint`.
-Reads `CompleteTracks`, refits their reconstructed hits and publishes
-`BreakpointTracks`. Existing GSF/KF sources and batch cards are unchanged.
-This is a first-order fit, not a physics-validated replacement.
+Experimental electron breakpoint Kalman refitter on local `test_breakpoint`.
+Reads `CompleteTracks`. GSF/shared KF sources and maintained batch cards are
+unchanged. This is not a physics-validated replacement.
 
 ## Build and run
 
@@ -20,382 +19,264 @@ build.105.0.0.x86_64-el9-gcc11-opt/run \
   gaudirun.py Reconstruction/RecBreakpoint/options/run_breakpoint.py
 ```
 
-The dedicated card explicitly sets every package steering property.
-BP_* overrides are conveniences for tests; edit the card for other choices.
-Existing output files are refused, not overwritten. The card's tracker-only
-TDR_o1_v01 geometry must match the input.
+The dedicated card explicitly steers every package property. Existing files
+are refused, never overwritten. Its tracker-only TDR_o1_v01 geometry must
+match the input. `BackwardMode` is removed: both results are always produced.
+The card rejects the retired `BP_BACKWARD_MODE` variable instead of ignoring it.
 
-## Selected intervals, not every hit
-
-`LossStateMode="Persistent6D"` is the compiled and dedicated-card default.
-It currently accepts **one breakpoint (or none) and BackwardMode="RTS"**.
-Use `LossStateMode="LocalMarginal"` for the earlier local-joint implementation,
-multiple selected intervals, or the existing BackwardFilter comparison.
-Unsupported combinations fail initialization, never silently fall back.
-
-`LossStateMode="TruthOverride"` is a separate diagnostic: it replaces the loss
-at each explicitly configured interval with an exact, fixed Geant4 eBrem
-response. It supports RTS and BackwardFilter with `MaxFitIterations=1`.
-It does not automatically select intervals or change the compiled default.
-
-In LocalMarginal, `BreakpointIntervals=[5,7]` means two independent losses on
-`hit[5] -> hit[6]` and `hit[7] -> hit[8]`. Indices are zero-based after
-sorting hits by cylindrical radius, **not detector layer numbers**. The tuple
-saves cell IDs, radii and z. An empty list disables breakpoints. Duplicate or
-negative indices fail initialization; missing intervals fail the affected track.
-The first version is intended for outward, noncurling barrel tracks.
-
-At the selected interval the augmented state is introduced:
+## Always-paired endpoint workflow
 
 ```text
-(drho, phi0, kappa, dz, tanLambda, b)
+Shared first-pass forward filter
+  +--> RTS smoothing           --> BreakpointTracksRTS
+  +--> backward hit refilter   --> BreakpointTracksBackwardFilter
+```
+
+These are separate results, not CPU threads. Backward starts from the full
+first-pass forward endpoint posterior, without inflation, revisits hits N-2
+through 0, and uses material-aware native IP propagation. RTS never consumes
+the backward-refiltered states and retains its geometric IP extrapolation.
+Backward still reuses forward hit evidence; it is NOT an independent Bayesian
+smoother. Neither branch adds a beam-to-first-hit breakpoint.
+
+The existing `OutputTracks` property now names the RTS collection (default
+`BreakpointTracksRTS`); `OutputTracksBackwardFilter` names the other collection.
+They must differ. Each successful pair contains IP, first-hit and last-hit
+states and the original ordered hits. Fixed input-row mappings are
+`BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
+`BreakpointStatus` is 1 for a successful pair, -1 for failed fit and 0 for
+excluded input; absent outputs map to -1. Current fit failures fail the pair,
+rather than publishing one branch under the other's name.
+
+The flat tuple always records both `rts_pt` and `backward_pt`.
+`breakpoint_pt` remains an RTS alias. The removed `backward_mode` branch no
+longer misleadingly labels a row that now contains both results.
+
+## Loss state and interval ownership
+
+An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
+`BreakpointIntervals=[]` is the no-breakpoint reference. Multiple independent
+intervals are supported by LocalMarginal and TruthOverride; Persistent6D
+accepts at most one. Negative or duplicate entries fail initialization;
+out-of-range entries fail the affected track. This ordering targets outward,
+noncurling barrel tracks.
+
+```text
 b = log(p_before / p_after)
-kappa_after = exp(b) * kappa_before
 fractional loss = 1 - exp(-b)
+kappa_after = exp(b) * kappa_before
 ```
 
-The 6x6 Jacobian includes this loss map and ordinary geometric propagation,
-including curvature/loss cross covariance. Native KalTest's sixth coordinate
-is a time offset; it is NOT reused as b.
+Loss is collapsed at the upstream surface. Outward: update upstream hit,
+apply loss, propagate, update downstream hit. Backward: propagate to upstream
+surface, apply inverse loss, then update its hit. It is not a fitted emission
+position inside the interval. No BH mixture or automatic truth-based interval
+selection is performed.
 
-### Persistent6D workflow
+### Persistent6D (default)
 
-Before the chosen interval, the live filter is 5D. At its upstream hit, add
-one independent b prior to form a 6D mean and full 6x6 covariance. Apply the
-loss map once and propagate to the downstream hit. Thereafter every live
-prediction and measurement update remains **six-dimensional**:
+Before birth the filter is 5D. At the configured upstream hit it introduces
+one independent b prior. The full 6D mean/covariance then stays live at EVERY
+downstream prediction and native KalTest update, with b applied only once.
+The joint RTS recursion crosses the rectangular 6D-to-5D birth boundary.
 
 ```text
-ordinary interval: J6 = diag(F_track,1), Q6 = diag(Q_track,0)
-b_predicted = b_filtered_at_previous_hit
-P_predicted = J6 P_filtered J6^T + Q6
-measurement derivative: H6 = [H_track,0]
+ordinary transport: J6 = diag(F_track,1), Q6 = diag(Q_track,0)
+measurement: H6 = [H_track,0]
 ```
 
-The zero measurement derivative for b does not prevent its update: the full
-Kalman gain uses all track/b cross covariances. Native KalTest `Filter()`
-performs the complete 6D measurement update through a package-local site.
-The site projects only the five helix coordinates into the detector response;
-the sixth coordinate is never interpreted as native KalTest's time offset.
-Native five-dimensional material/geometric transport supplies the physical
-F and Q blocks, embedded in full 6D transport; it performs **no separate 5D hit
-update** on this path. The complete 6D posterior becomes the next step's input.
+The zero H_b does not prevent measurement updates of b through track/b cross
+covariance. The sixth coordinate is never native KalTest t0. All physical
+transport and measurement updates use native interfaces. The parallel
+backward continuation uses the established local-joint inward loss treatment
+on the common forward endpoint's 5D marginal, not a new persistent inward
+six-dimensional implementation.
 
-At the end, a joint RTS pass smooths the six-dimensional sequence and crosses
-the 6D-to-5D birth boundary using its rectangular transition. It publishes the
-smoothed innermost track geometrically extrapolated to IP. The final outward
-b mean/variance already contain all downstream measurements. By default this
-is one filter/smoother pass. Optional repeated relinearization is described
-below. The unchanged LocalMarginal path remains an explicit regression reference.
+### LocalMarginal
 
-### Optional iterated relinearization
+The live helix stays 5D. At a selected edge an independent Gaussian b is
+marginalized into the helix covariance. Retained joint cross covariances allow
+later conditioning of b, including RTS or subsequent backward measurements.
+The Gaussian birth Jacobian has derivative kappa_after outward and
+-kappa_before inward. Independent local losses allow multiple breakpoints.
+RTS covariance uses a positive-sum conditional form to avoid subtraction of
+large loose-seed covariances.
 
-Set `MaxFitIterations=10` (`BP_MAX_ITERATIONS=10` in the dedicated card) to
-allow up to ten passes. Supported pairs are Persistent6D/RTS and
-LocalMarginal/BackwardFilter, both with exactly one selected interval.
-The default **1** preserves the original
-one-pass path. Each additional pass:
-
-1. For RTS, uses the previous smoothed trajectory and fitted b as expansion points.
-2. Re-evaluates native geometric/material transport F/Q, the loss-map
-   Jacobian, and the measurement derivative at those points.
-3. Restarts from the **original seed prior and original independent b prior**,
-   not the previous posterior. Uses affine predictions
-   `f(reference) + F(reference)*(state-reference)` and measurement models
-   `h(reference) + H(reference)*(state-reference)`. Native KalTest still
-   performs every measurement update, once per hit per pass.
-4. Runs the full joint RTS pass again. Stops when the maximum change of any
-   smoothed helix coordinate or fitted b, divided by its previous smoothed
-   standard deviation, is below `RelinearizationTolerance` (default 0.001).
-
-References and live states share the same pivots. Changing an expansion point
-does not replace the prior or apply the physical loss a second time. The
-Gaussian b-prior mean and variance remain unchanged throughout. The fit still
-allows negative b, keeps the configured loss location, and does not enforce
-positivity, use truth, or guarantee a global optimum. There is no damping or
-line search; convergence is a numerical stopping test, not physics validation.
-
-Automatic tuple fields preserve `one_pass_pt`, `fit_iterations`,
-`iteration_status`, `iteration_error`, and the per-pass vectors `iteration_pt`,
-`iteration_log_loss`, `iteration_log_loss_variance`, `iteration_step_norm`,
-`iteration_linearized_chi2`. Status is 0 for one pass, 1 for convergence, 2 for
-the iteration limit, and -1 for a failed additional pass. On failure the last
-completed fit is retained and explicitly tagged; `status=1` alone does not
-establish convergence. The first recorded step norm is 0 by convention, not
-a convergence claim. The chi-square trace is affine-filter innovation
-bookkeeping, **not** a common nonlinear objective whose decrease is required.
-Full per-hit state/covariance vectors describe the final completed pass.
-
-For `LossStateMode="LocalMarginal", BackwardMode="BackwardFilter"`, the first
-ordinary forward/backward fit is unchanged. Additional passes iterate **only
-the inward filter**. The complete original outward terminal posterior is
-frozen as the inward seed; it is neither regenerated from the inward fit nor
-replaced with an iterated posterior. Its outermost hit is not updated again.
-The original independent b prior is reintroduced at its selected inward edge
-each pass. The previous inward-filtered trajectory and final inward b provide
-expansion points. Geometry/material propagation comes first; the inverse
-loss `kappa_before=exp(-b)*kappa_after` acts at the upstream target before its
-hit update. The affine offset includes `db*(b_prior-b_reference)`.
-
-The live helix remains 5D in this LocalMarginal path; retained loss/state
-cross covariances let all later inner measurements update b. This does not
-enable Persistent6D/BackwardFilter and does not run an RTS pass, even for
-reference generation. The stopping test uses changes in inward-filtered
-states and final b, normalized by their previous variances. The trace chi2 is
-the sum of the inward hit-update chi2s, whereas the published track chi2 keeps
-the existing outward bookkeeping. Inward iteration preserves the existing
-reuse of outward hit evidence; it is not an independent Bayesian smoother.
-The forward pass is deliberately not relinearized in this experiment.
-
-See the [backward iteration gate](../../agents_record/2026-09-09-recbreakpoint-backward-filter-iteration.md)
-for the eight-event comparison and exact unchanged-RTS regression.
-
-The implementation and eight paired event results are recorded in
-[the relinearization gate](../../agents_record/2026-09-09-recbreakpoint-iterated-relinearization.md).
-All eight converged, but several wrong-sign losses remain; do not interpret
-convergence as correct energy-loss reconstruction.
-
-### Earlier LocalMarginal workflow
-
-1. Make an outward prefit from the first, middle and last usable 2D hits
-   (default), or the first three as an explicit comparison. Assign the same
-   loose FullLDCTracking-style covariance and update actual hit 0 first.
-2. At each selected edge, introduce an independent Gaussian b prior,
-   linearize the loss map and propagate its covariance into the helix.
-   Other edges remain ordinary five-dimensional KF transitions.
-3. Update every real hit once using native KalTest. Retain transition state
-   cross covariances and, at breakpoints, loss/state cross covariances.
-4. With `BackwardMode=RTS`, run backward Rauch-Tung-Striebel smoothing and recover each loss posterior
-   using the downstream smoothed state. Publish the smoothed innermost state
-   geometrically extrapolated to the IP.
-
-Alternatively, `BackwardMode=BackwardFilter` copies the last outward posterior
-and its complete covariance without scaling. It does not update the last hit
-again. It propagates inward and updates each remaining hit with native KalTest.
-On selected interval i, it first propagates from i+1 to i, then applies
-`kappa_before=exp(-b)*kappa_after` BEFORE updating hit i. This preserves the
-outward map's upstream-surface owner; it does not move the loss to i+1.
-The inverse map scales all curvature cross covariances and adds the scalar
-loss-prior variance through its derivative `-kappa_before`.
-
-Each selected reverse crossing introduces a fresh Gaussian with the configured
-MeanLogLoss/SigmaLogLoss, not the RTS or outward fitted loss posterior. The
-outward posterior already contains material/hit information, so this is a
-deliberately evidence-reusing refit, not an independent Bayesian smoother.
-Loss/state cross covariances are retained as the inward recursion continues;
-later inner hits refine previously crossed loss means/variances by Gaussian
-conditioning on the native KF's state update. They do not trigger an RTS pass
-or a second propagation of already visited hits. Final backward filtered hit 0
-is propagated to IP using native material-aware MarlinTrk propagation. RTS keeps
-its original geometric IP extrapolation unchanged. Neither mode adds a
-beam-to-first-hit breakpoint.
-
-The reference KF follows the selected mode: native outward KF plus `smooth()`
-and geometric extrapolation for RTS; a copied last-state inward KF and native
-IP propagation for BackwardFilter. The latter mirrors the default forward-fit
-publication branch of FullLDCTracking, but is still a hit-list refit, not a rerun
-of pattern recognition, merging, outlier retries or selection.
-
-Marginalizing the Gaussian loss before updating the hit, then conditioning
-it through its retained cross covariance, is equivalent to an augmented
-linear-Gaussian update. Ordinary recursion stays 5D; independent local losses
-do not permanently increase the state dimension. Covariance smoothing uses
-a positive-sum conditional form to avoid cancellation of loose seed errors.
-
-## TruthOverride diagnostic
+### TruthOverride
 
 ```python
 fit.LossStateMode = "TruthOverride"
-fit.BackwardMode = "RTS"  # or "BackwardFilter"
-fit.BreakpointIntervals = [5]  # explicit ordered-hit interval, not auto truth selection
+fit.BreakpointIntervals = [5]
 fit.MaxFitIterations = 1
+# Both endpoints are always produced.
 ```
 
-The dedicated card loads the embedded step/link collections, six tracker
-truth-association collections and their SimTrackerHit collections only when
-this mode has a nonempty interval list. No side tuple, CSV, or GSF run is
-needed. RecBreakpoint compiles the unchanged `TruthBHLossEventData.cpp` reader
-from RecGsfTracking into its own module and links the existing GsfTruthEventData
-libraries; it does not link/run the GSF algorithm plugin or edit its source.
+Configured losses are fixed from embedded event truth, not guessed or fitted:
+reconstructed hit -> MCRecoTrackerAssociation -> SimTrackerHit -> exact
+Geant4 step/fraction hook. All ordered hits require unambiguous monotonic
+hooks on one primary electron. TruthMaxEndpointDistance validates associated
+positions, never chooses a nearest hit.
 
-Matching follows reconstructed TrackerHit -> MCRecoTrackerAssociation ->
-SimTrackerHit -> exact Geant4 provenance hook. All ordered hits must map
-unambiguously to one primary electron with complete, increasing hooks. The
-5 mm default `TruthMaxEndpointDistance` validates associated positions, not a
-nearest-hit search. The interval uses the existing hook-to-hook definition;
-an eBrem loss belongs to the interval whose (start,end] contains its Geant4
-post-step point. Geant4 process-subtype 3 losses are summed, and
-`z_truth = 1 - summed_eBrem_momentum_loss / momentum_at_start_hook`.
-The fixed loss is `b_truth = -log(z_truth)`. This is eBrem-only, **not** total
-momentum loss including ionization. Ordinary native MS/material handling and
-ElossOn remain unchanged; truth t/X0 is recorded but never steers transport.
+For each hook-to-hook interval (start,end], eBrem process-subtype 3 momentum
+losses are assigned by their post-step points and summed:
+`z=1-sum(delta_p_ebrem)/p_at_start_hook`, `b=-log(z)`. This excludes ionization.
+Each selected b has zero added variance; MeanLogLoss/SigmaLogLoss are ignored.
+No singular live 6D fixed-loss covariance is created. Native material, MS,
+ionization steering, seeds and upstream loss placement remain unchanged.
 
-Each configured interval uses its own truth b and **zero additional loss
-variance**. MeanLogLoss and SigmaLogLoss are ignored in this mode. Forward
-filtering applies exp(b); BackwardFilter applies the inverse exp(-b) at the
-same upstream surface before its measurement. The live state is 5D with the
-full deterministic covariance Jacobian; a singular zero-variance sixth state
-is not introduced. Both RTS and the existing posterior-seeded backward refit
-are available. Multiple explicitly selected intervals are allowed; an empty
-list is the ordinary 5D reference and does not read truth. Losses in unselected
-intervals are not corrected. Iterations are currently rejected in this mode.
+The card conditionally loads the six tracker association/SimTrackerHit sets,
+GsfG4MaterialSteps and GsfSimTrackerHitG4StepLinks. It uses no side CSV/ROOT
+helper or GSF execution. The module reuses unchanged TruthBHLossEventData.cpp
+from RecGsfTracking and the existing datamodel libraries. Invalid truth fails
+the affected pair: truth_override_status 0 means off/empty, 1 valid, -1 invalid
+event input, -2 invalid track match, -3 out-of-range interval. There is no
+ordinary-loss fallback. An input loading failure can occur before tuple output.
 
-Automatic fields `truth_override_status` and `truth_override_error` distinguish
-0 (not requested/empty list), 1 (valid match), -1 (invalid/unavailable event
-truth), -2 (invalid track association/hooks), and -3 (interval outside the
-matched track). Invalid truth fails the affected track (`status=-1` and no
-published track), not the entire event, and never falls back to a guessed
-loss. Status1 describes truth matching only; check the ordinary fit status too.
-The prepared lookup is event-local and each track's truth map is cleared.
-If PodioInput itself cannot load a requested collection, the job can fail
-before RecBreakpoint is reached and no per-track tag can then be written.
+Truth vectors retain interval, retained_fraction, log_loss, momentum_before,
+ebrem_loss, tx0, first_step/last_step and start_fraction/end_fraction under the
+truth_override_ prefix; scalar error, G4 track ID and max endpoint distance are
+also saved. Truth t/X0 is passive. An empty interval list needs no loss truth.
 
-Selected-interval vectors (aligned with `truth_override_interval`) persist
-`truth_override_retained_fraction`, `_log_loss`, `_momentum_before`,
-`_ebrem_loss`, `_tx0`, `_first_step`, `_last_step`, `_start_fraction`, and
-`_end_fraction`, all with the `truth_override` prefix. Also saved are
-`truth_override_g4_track_id` and `_max_endpoint_distance`. Existing fitted and
-local loss fields equal the fixed truth value with variance0; Persistent6D
-vectors remain empty. These diagnostics do not assert perfect reconstruction:
-the loss is still collapsed to the upstream surface, and native scattering,
-hit uncertainty, seeding and backward evidence reuse remain.
+## Iterations and seeds
 
-See the [TruthOverride gate](../../agents_record/2026-09-09-recbreakpoint-truthoverride.md)
-for exact eight-event/two-mode results and control tests.
+MaxFitIterations=1 preserves one-pass results. For >1 (up to 20), exactly one
+ordinary breakpoint is required; TruthOverride never iterates.
+Persistent6D iterates RTS and backward separately. LocalMarginal retains its
+one-pass RTS and iterates backward only. This preserves the established
+methods rather than adding unimplemented LocalMarginal RTS relinearization.
 
-## Helpers
+RTS relinearizes native F/Q and measurement derivatives around the preceding
+smoothed trajectory, retaining the original seed and b prior. Backward
+iterations relinearize only the inward path, freezing the original FIRST-pass
+forward endpoint seed; they do not use the final iterated RTS endpoint.
+They also retain the original b prior. No previous posterior becomes a new
+independent prior. Each hit is updated once per newly solved branch pass.
 
-- `AugmentedTransport`: ROOT-independent 6D Jacobian/covariance arithmetic.
-- `TrackState`: double-precision helix, covariance and pivot; EDM conversion
-  only at seed/publication and optional reference boundaries.
-- `BreakpointTrackSystem`: package-local subclass exposing existing
-  MarlinKalTest layer lookup, without shared implementation edits.
-- `KalmanAdapter`: native KalTest propagation, process noise and hit updates;
-  temporary tracks/sites own their hits and states through RAII.
-- `BreakpointFitter`: selected loss transitions, forward filtering, smoothing.
-- `RecBreakpoint`: configuration, event input/output, tuple and verbose dumps.
+Convergence is maximum standardized change in endpoint coordinates and b
+below RelinearizationTolerance. It is not proof of an optimum. There is no
+line search, damping, positivity constraint or loss-position adjustment.
+Iteration status is 0 one pass, 1 converged, 2 limit, -1 failed extra pass
+(last completed result retained). Both branches have separate histories:
+RTS retains iteration_* and fit_iterations; backward adds backward_iteration_*
+and backward_fit_iterations. backward_seed_forward_chi2 identifies its
+unchanged first-pass forward bookkeeping, which may differ from the final
+RTS forward_chi2 when RTS iterates.
 
-## Configuration
+FirstMiddleLast selects first/middle/last usable 2D hits (N//2 middle).
+FirstThree restores the older prefit. SeedScale uniformly scales native loose
+FullLDCTracking-style variances. The seed uses hit positions as a starting
+estimate; do not interpret its fitted covariance as independent data.
+VerifyKFReference evaluates BOTH native no-breakpoint references; empty-list
+pT must match within 1e-4 relatively. Stored CompleteTracks can differ because
+pattern recognition, merging, retries and steering are not rerun here.
+
+## Three default-on chi2 lists
+
+All vectors are indexed in outward hit order, length hit_count:
+
+| Flat vector | Definition |
+|---|---|
+| forward_local_chi2 | Native forward update increments; local_chi2 is its retained alias |
+| backward_local_chi2 | Native inward update increments; last hit is 0 because it is a copied seed, not another update |
+| smoothed_local_chi2 | Final RTS complete quadratic objective assigned to each hit |
+
+The smoothed score uses the SAME last-pass affine model as the KF/RTS:
+measurement penalties use original V and measurement derivatives at the
+filter's reference states. Incoming process penalties use the stored Q,
+including the independent loss birth prior once. The initial seed penalty is
+added once at hit 0. No extra b penalty is added after it was included at birth.
+It is a complete quadratic objective, not a calibrated probability or a
+normalized likelihood for comparing models with different covariances.
+
+Components are persisted as smoothed_measurement_chi2, smoothed_process_chi2
+and scalar smoothed_seed_chi2. smoothed_native_measurement_chi2 separately
+evaluates the nonlinear native measurement at the final smoothed mean, to
+expose differences from the affine objective. It is hit-only and does not
+replace the complete score.
+
+For an RTS transition, let d=x_smoothed_target-x_predicted_target and
+u=P_predicted_target^-1*d. The conditional mean of its process deviation is
+w=Q*u; its penalty is u^T Q u. This avoids inverting singular scattering Q or
+injecting fictitious noise into a deterministic/static b. It also handles the
+rectangular birth boundary. The score is evaluated at RTS means, not arbitrary
+candidate states where this conditional identity would not hold.
+
+Totals forward_chi2 (alias filter_chi2), backward_chi2 and smoothed_chi2 equal
+their corresponding vector sums. smoothed_chi2_status is 1 valid, 0 not
+evaluated, -1 evaluation failed; an error string accompanies failure.
+Diagnostics do not alter the fitted state: a score failure retains endpoints
+but marks total smoothed chi2 NaN. The RTS EDM track carries smoothed_chi2;
+the backward EDM track carries backward_chi2. Their retained NDF bookkeeping
+is total forward measurement dimensions minus five, not a calibrated
+degrees-of-freedom prescription for fitted losses and priors.
+
+Do not add the forward and backward totals: their evidence overlaps.
+For a consistent exact linear-Gaussian model, the complete RTS objective
+equals the innovation quadratic sum. Native nonlinear post-update residual
+evaluation and numerical approximations can produce differences in this
+extended KF; the separate terms make those differences auditable.
+
+## Properties
 
 | Property | Compiled default | Meaning |
 |---|---|---|
-| InputTracks | CompleteTracks | Tracks supplying reconstructed hits |
-| OutputTracks | BreakpointTracks | Successful refitted tracks |
-| BreakpointIntervals | [] | Selected outward ordered-hit intervals |
-| MeanLogLoss | 0 | Common independent Gaussian b-prior mean, finite in [0,5]; ignored in TruthOverride |
-| SigmaLogLoss | 0.05 | Positive finite b-prior sigma; ignored in TruthOverride, which adds zero loss variance |
-| LossStateMode | Persistent6D | Persistent6D: live downstream 6D state, one interval and RTS only; LocalMarginal: local-joint path; TruthOverride: fixed per-selected-interval Geant4 eBrem loss, RTS/BackwardFilter, one pass |
-| MaxFitIterations | 1 | Total passes, integer 1--20; >1 requires one interval and Persistent6D/RTS or LocalMarginal/BackwardFilter |
-| RelinearizationTolerance | 0.001 | Finite positive maximum standardized reference-coordinate/b change; smoothed for RTS, inward-filtered for BackwardFilter |
-| SeedScale | 1 | Positive scale of all five loose seed variances |
-| SeedHitSelection | FirstMiddleLast | First/middle/last usable 2D hits; FirstThree restores the original selection |
-| BackwardMode | RTS | RTS smoothing or BackwardFilter seeded from the full outward posterior |
-| MaxChi2PerHit | 1e100 | Native hit-acceptance limit; rejection fails the track |
-| MSOn | true | Baseline multiple-scattering noise |
-| ElossOn | false | Baseline deterministic ionization correction |
-| TruthDiagnostics | false | Optional generator-electron pT reference only |
-| TruthMaxEndpointDistance | 5 | Finite positive mm tolerance for validating reconstructed hit vs associated exact G4 hook; active only in TruthOverride |
-| VerboseDump | false | Complete predicted/filtered/smoothed states and covariances |
-| VerifyKFReference | false | Independent native MarlinTrk rerun with same seed/hits |
-| SelectedEventIndices | [] | Zero-based input events; empty selects all |
-| OutputFile | breakpoint_flat.root | New flat ROOT output |
+| InputTracks | CompleteTracks | Input hit-list tracks |
+| OutputTracks | BreakpointTracksRTS | RTS collection |
+| OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
+| BreakpointIntervals | [] | Selected radius-ordered hit intervals |
+| MeanLogLoss | 0 | Gaussian b-prior center, finite in [0,5]; ignored by TruthOverride |
+| SigmaLogLoss | 0.05 | Positive finite b-prior sigma; ignored by TruthOverride |
+| LossStateMode | Persistent6D | Persistent6D, LocalMarginal, TruthOverride |
+| MaxFitIterations | 1 | 1--20; ordinary single-interval iterations as described above |
+| RelinearizationTolerance | 0.001 | Positive finite standardized stopping threshold |
+| SeedScale | 1 | Positive finite scale of five loose seed variances |
+| SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |
+| MaxChi2PerHit | 1e100 | Positive finite native update acceptance limit |
+| MSOn | true | Native multiple-scattering noise |
+| ElossOn | false | Native deterministic ionization correction |
+| TruthDiagnostics | false | Generator-electron pT reference only |
+| TruthMaxEndpointDistance | 5 | Positive finite mm validation tolerance on associated hooks |
+| VerboseDump | false | Full state/covariance dumps |
+| VerifyKFReference | false | Native reference checks for both endpoints |
+| SelectedEventIndices | [] | Zero-based selected entries; empty means all |
+| OutputFile | breakpoint_flat.root | New flat output file |
 
-The card enables TruthDiagnostics; this generator reference never steers the
-fit. Only the explicit TruthOverride mode uses material-loss truth. Truth
-never automatically selects intervals. Ambiguous multi-electron generator events have NaN truth pT. A scalar
-generator reference is not reconstructed-track truth matching, and event
-selection does not imply topology-clear selection.
+TruthDiagnostics is enabled by the card. It does not steer a fit; only explicit
+TruthOverride uses material-loss truth. Ambiguous generator electrons have NaN
+truth pT. A scalar reference alone does not establish topology-clear selection.
 
-`SeedHitSelection` operates on the radius-ordered usable 2D hits, skipping
-one-dimensional hits. For N usable hits, FirstMiddleLast selects positions
-`0, N//2, N-1` (upper middle for even N); FirstThree selects `0,1,2`.
-Both require at least three usable hits and do not silently fall back.
-The initial covariance/SeedScale, propagation start, and hit-update order are
-unchanged. The optional native-KF reference uses the same selection.
-`BP_SEED_HIT_SELECTION=FirstThree` selects the legacy mode in the dedicated
-card. The seed uses downstream hit positions only to construct its starting
-helix, not their fitted measurement covariance. This is not a global loss fit.
+## Other automatic tuple information
 
-Fixed-name PODIO collections `BreakpointStatus` and `BreakpointOutputIndex`
-are input-row-aligned. Status: 1 success, -1 failure, 0 excluded event.
-The output index is -1 when no fit exists. Successful tracks contain IP,
-first-hit and last-hit states. Chi2/ndf are innovation bookkeeping, not a
-calibrated goodness-of-fit test with fitted losses and priors.
+The tuple has one row per attempted track, including failures. It retains
+ordered hit cells/radii/z, truth/KF pT, reference KF pT, filtered/smoothed kappa
+and variance, backward predicted/filtered kappa and variance, and truth
+override provenance. fitted_log_loss*, local_log_loss* and smoothed_log_loss*
+now always refer to RTS; backward_fitted_log_loss* refers to inward results.
 
-The ROOT tree `breakpoint` has one row per attempted input track, including
-failures. It saves event/track indices, status, generator/CompleteTracks/fitted
-pT, optional native-reference pT, ordered hit geometry, local chi2, filtered and
-smoothed curvature/variance, selected intervals, and local/all-hit loss
-posteriors with variances. `covariance_transport_closure` compares the separate
-6D prediction's helix marginal with the actual native prediction, normalized
-to covariance units; a discrepancy above 1e-3 fails the track.
-`seed_hit_selection` and `seed_hit_indices` retain the effective mode and three
-actual ordered-hit indices in each attempted track row; selection failure leaves
-the index vector empty. The indices are also printed with VerboseDump=true.
+Persistent6D additionally stores persistent_hit_index and row-aligned
+persistent_{predicted,filtered,smoothed}_mean (6 entries per hit), corresponding
+_covariance (36 row-major entries), persistent_transport and
+persistent_process_noise (36 entries each). These describe the final RTS
+forward pass. The saved 6D birth process noise excludes the independent b
+prior already present in its input P; the complete-score boundary construction
+includes that prior once when crossing from 5D. Empty-list, LocalMarginal and
+TruthOverride runs have empty persistent vectors. b permanently belongs to
+the configured interval, never the current hit or native t0.
 
-`backward_mode` identifies the algorithm used. `filtered_*` and `local_chi2`
-always describe the outward pass. `smoothed_*` vectors retain their old RTS-only
-meaning and are empty in BackwardFilter runs. The latter fills
-`backward_predicted_kappa`, `backward_filtered_kappa`, their `_variance` fields
-and `backward_local_chi2`, indexed in outward hit order. At the last hit, both
-backward state vectors contain the copied seed and chi2 is zero (no update).
-VerboseDump prints complete backward predicted/filtered 5D states/covariances.
-`fitted_log_loss` and `fitted_log_loss_variance` are mode-independent final loss
-fields. `local_log_loss` describes the first hit update after introducing the
-loss: i+1 outward for RTS, i inward for BackwardFilter. The legacy
-`smoothed_log_loss*` aliases are filled only for RTS. Published track chi2/ndf
-remain outward-filter bookkeeping in both modes, not a combined goodness-of-fit.
-Unknown BackwardMode values fail initialization. Use
-`BP_BACKWARD_MODE=BackwardFilter` in the dedicated card to select the new mode.
+Covariance transport closure above 1e-3 fails the affected track. Passive
+chi2-score errors are separately tagged. Flat output is default; commented
+PodioOutput lines remain in the dedicated card for optional serialization.
 
-Only the flat tuple is written by default. Commented PodioOutput lines in the
-card allow event-collection serialization without changing the GSF workflow.
+## Evidence and limits
 
-## Limits and tests
+The exact pre-change documentation is preserved in
+[the outgoing README](../../agents_record/2026-09-09-recbreakpoint-readme-before-parallel.md).
+Historical tests in the dated persistent6D, relinearization, backward-iteration
+and TruthOverride records retain their original mode-specific meanings.
+The paired-publication regression and complete-score gates are recorded in
+[the parallel implementation record](../../agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md).
 
-### Persistent-6D tuple diagnostics (automatic)
-
-`loss_state_mode` identifies the implementation. `persistent_hit_index` lists
-all downstream hits from selected interval i's hit i+1 to the final hit.
-At row ordinal j in that vector:
-
-- `persistent_{predicted,filtered,smoothed}_mean`: six entries starting at 6*j,
-  ordered drho, phi0, kappa, dz, tanLambda, b.
-- `persistent_{predicted,filtered,smoothed}_covariance`: 36 row-major entries
-  starting at 36*j, including every track/b covariance.
-- `persistent_transport`, `persistent_process_noise`: 36 row-major entries
-  each, for the incoming six-dimensional propagation. The first transport
-  includes the one-time loss mapping; later ones have identity b transport and
-  zero b process noise. The independent birth prior is in the input P, not Q.
-
-The b owner is the sole `breakpoint_interval` entry, not the current hit.
-Vectors are empty for LocalMarginal or an empty breakpoint list. VerboseDump
-also emits full 6D states/covariances. Existing 5D track projections and scalar
-loss branches remain available. Unsupported multiple retained losses require
-more than six dimensions and are deliberately not approximated by one b.
-
-By default one linearization about the configured loss mean is performed;
-optional repeated passes relinearize about the smoothed trajectory. The loss
-is located at the upstream measurement surface. This version does not fit its
-position within the interval, select intervals automatically, use BH mixtures,
-enforce positive losses, or guarantee a nonlinear optimum. Negative fitted
-losses are retained, not clipped. Large-loss results need particular caution.
-There is no beam-spot update. Material/mass conventions remain native KalTest;
-this does not introduce the GSF DD4hep material-path machinery.
-
-VerifyKFReference with an empty interval list checks IP pT against native
-MarlinTrk (relative tolerance 1e-4). This is not equality to the stored
-CompleteTracks fit, whose settings/seeding may differ.
-
-Numerical tests can also run independently:
-
-```bash
-cmake -S Reconstruction/RecBreakpoint -B /tmp/recbreakpoint-build
-cmake --build /tmp/recbreakpoint-build
-ctest --test-dir /tmp/recbreakpoint-build --output-on-failure
-```
-
-Focused evidence is in
-`agents_record/2026-09-08-recbreakpoint-first-working-version.md` at repository
-root. Execution and covariance closure are mechanical checks only; clean-track
-safety and categorized, held-out momentum validation remain open.
+No automatic interval discovery, positivity enforcement, beam spot or exact
+within-interval loss placement is implemented. Native material/mass
+conventions remain unchanged. Successful execution, convergence or smaller
+chi2 is not population validation or proof of better momentum reconstruction.

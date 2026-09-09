@@ -286,67 +286,60 @@ Use a small `SelectedEventIndices` list for component diagnostics. Generated
 ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
+Active development remains the independent `RecBreakpoint` package on local
+`test_breakpoint`, reading `CompleteTracks`. Persistent6D/RTS remains the
+compiled/card default and carries one loss coordinate through downstream
+native KalTest updates before joint RTS. LocalMarginal retains the earlier
+local-joint method and posterior-seeded BackwardFilter. Existing optional
+iterations remain: full filter/RTS relinearization for Persistent6D/RTS, or
+inward-only relinearization with a frozen original forward seed for
+LocalMarginal/BackwardFilter. MaxFitIterations defaults to1; iteration needs
+one interval, retains original loss priors and does not enforce positivity.
+The backward method still reuses forward evidence, not an independent smoother.
 
-Active development remains the independent RecBreakpoint package on local
-`test_breakpoint`, reading CompleteTracks. BackwardMode is removed. Each run
-now produces both `BreakpointTracksRTS` and
-`BreakpointTracksBackwardFilter`, with separate input-row mappings, endpoint
-pT, loss results and iteration histories in the flat tuple. These are two
-results from a shared first forward pass, not CPU threads. The backward
-continuation still copies the full first-pass forward endpoint posterior and
-refilters inward; it is not an independent Bayesian smoother. RTS does not
-consume the backward refilter.
+New opt-in `LossStateMode=TruthOverride` fixes each explicitly configured
+interval's eBrem response from reconstructed-hit associations and embedded
+Geant4 provenance. It supports RTS and BackwardFilter, multiple configured
+intervals, and MaxFitIterations=1 only. There is no automatic interval choice
+or correction outside the selected intervals. An empty list remains the
+ordinary 5D reference without truth access. The fixed b has zero added loss
+variance; MeanLogLoss/SigmaLogLoss are ignored. Native material/MS, ElossOn,
+seeds and upstream loss placement remain unchanged. It is a diagnostic oracle,
+not a production mode or exact within-interval emission-position fit.
 
-Three default-on outward-hit-indexed lists are saved:
-`forward_local_chi2`, `backward_local_chi2`, and `smoothed_local_chi2`.
-The first two are native update increments (backward's outermost entry is
-zero because its state is a copied seed). The third is the complete final
-RTS affine quadratic objective: original-V measurement penalties, incoming
-process/loss-prior penalties and the initial seed penalty once. Separate
-measurement/process/seed terms, a native nonlinear hit-only diagnostic, and
-score validity/error are persisted. Totals match the list sums. These are
-not eBrem probabilities or normalized model-comparison likelihoods; forward
-and backward totals must not be added because their evidence overlaps.
-RTS Track.chi2 carries the complete smoothed score; backward Track.chi2
-carries the inward increment sum. NDF is bookkeeping, not calibrated here.
+RecBreakpoint reuses the unchanged GSF TruthBHLossEventData reader source in
+its own module, with the existing truth datamodel libraries; it does not run
+the GSF plugin. The dedicated card automatically requests step/link,
+SimTrackerHit and association collections from the final mode/interval
+properties. No side CSV/ROOT helper is required. TruthMaxEndpointDistance=5 mm
+validates already associated hooks; it does not select matches by distance.
+Invalid truth fails the affected track with truth_override_status/error,
+never silently substituting a guessed prior. Automatic vectors record selected
+truth b/z, eBrem loss, starting momentum, t/X0 and exact step/fraction bounds.
 
-Persistent6D/RTS remains the default loss treatment, retaining b through all
-downstream native updates and joint RTS. The paired backward continuation
-retains the local-joint inverse-loss implementation. LocalMarginal supports
-multiple intervals. With MaxFitIterations>1, Persistent6D iterates RTS and
-backward separately; LocalMarginal retains one-pass RTS and iterates backward
-only. Both keep original priors, and backward freezes the original first-pass
-forward seed. Default MaxFitIterations remains1; iterations require one
-ordinary interval and do not enforce loss positivity.
+Sixteen truth-override fits (eight events x two modes) pass covariance/schema
+and truth-response checks. The five prior single-eBrem cases match independently
+audited b/hooks/cell IDs; all fixed loss variances are zero. Seed5:84 residual
+becomes +0.0570% RTS / +0.0441% backward, and seed5:92 +0.1543% / +0.1272%.
+Seed12[5] truth losses are all zero: these are mechanical interval controls,
+not complete truth corrections; 12:17 is secondary-activity control, not a
+clean optimization case. Zero-eBrem seed12:0 exactly reproduces its empty-list
+pT in both modes. Selected-event success is not population physics validation.
 
-TruthOverride remains an explicitly configured interval oracle, supported by
-both endpoints with MaxFitIterations=1. It follows reconstructed-hit
-associations into embedded G4 steps/links, not side tuples/CSV or distance
-matching. TruthMaxEndpointDistance validates associated hooks. Fixed b has
-zero added loss variance; invalid truth fails the affected pair with status
-and error. Empty intervals remain the ordinary 5D reference without truth
-access. No automatic interval discovery or within-interval emission-position
-fit is introduced. Native material/MS, ElossOn and seeds remain unchanged.
-
-Mechanical gates cover the ordinary/truth seed2:68 smoke, seed12:11/16/17,
-iterations, empty/zero-loss and multi-interval controls, plus the previous
-eight 1--5% single-eBrem examples. Paired endpoints reproduce the available
-separate-run references within the recorded tolerances. Seed12:17 remains a
-secondary-activity control, not a clean optimization count. These are
-regressions, not population physics validation. Exact tests, schema and
-limitations are in
-`agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md`.
-
-Next: use the three separately labeled scores and paired endpoints on the
-same negative fitted-loss and truth-oracle controls, checking momentum truth,
-not declaring an optimum from smaller chi2. Preserve clean-track and
-categorized population gates. No shared KF/GSF edits, maintained batch
-workflow changes, automatic truth steering or remote operations are
-authorized. Beam-boundary work remains paused.
+Current next step is to use the oracle as a paired mechanism control for the
+negative fitted-loss cases, separating prior center/width and loss-location
+hypotheses. Preserve clean-track and categorized population checks before any
+default or physics claim. The oracle is the only explicitly enabled truth-loss
+steering here; no automatic interval selection, shared KF/GSF modifications,
+batch workflow or remote changes are authorized. Beam-boundary work remains
+paused.
 
 Dedicated card: `Reconstruction/RecBreakpoint/options/run_breakpoint.py`.
-Its retired BP_BACKWARD_MODE environment control is rejected explicitly.
-The package README is the authoritative complete property/schema/build
-reference. Complete outgoing status and README were preserved in
-`agents_record/2026-09-09-agents-before-parallel-breakpoint.md` and
-`agents_record/2026-09-09-recbreakpoint-readme-before-parallel.md`.
+Package README contains the full options, schema and package-only build steps.
+Current exact implementation/results:
+`agents_record/2026-09-09-recbreakpoint-truthoverride.md`.
+Prior iterative methods/results:
+`agents_record/2026-09-09-recbreakpoint-iterated-relinearization.md` and
+`agents_record/2026-09-09-recbreakpoint-backward-filter-iteration.md`.
+Complete outgoing status:
+`agents_record/2026-09-09-agents-before-breakpoint-truthoverride.md`.

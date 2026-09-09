@@ -317,6 +317,36 @@ MeasurementStep KalmanAdapter::advance(const TrackState& source,
   return nativeStep(*m_system, m_bz, m_maxChi2, source, sourceHit, targetHit);
 }
 
+MeasurementScore KalmanAdapter::measurementScore(edm4hep::TrackerHit hit,
+    const TrackState& state, const TrackState& reference) const {
+  auto site = makeSite(*m_system, hit);
+  // All means use this native site's pivot, just as in the live filter.
+  const auto pivot = site->GetPivot();
+  const auto matches = [&](const TrackState& value) {
+    return std::abs(value.pivot.x-pivot.X()) < 1.e-8 &&
+           std::abs(value.pivot.y-pivot.Y()) < 1.e-8 &&
+           std::abs(value.pivot.z-pivot.Z()) < 1.e-8;
+  };
+  if (!matches(state) || !matches(reference))
+    throw std::runtime_error("Measurement-score pivot mismatch");
+  TKalTrackState finalState(TKalMatrix(state.mean), *site, TVKalSite::kSmoothed, 5);
+  TKalTrackState referenceState(TKalMatrix(reference.mean), *site, TVKalSite::kPredicted, 5);
+  TKalMatrix finalExpected(site->GetDimension(),1), referenceExpected(site->GetDimension(),1);
+  TKalMatrix h(site->GetDimension(),5);
+  if (!site->CalcExpectedMeasVec(finalState,finalExpected) ||
+      !site->CalcExpectedMeasVec(referenceState,referenceExpected) ||
+      !site->CalcMeasVecDerivative(referenceState,h))
+    throw std::runtime_error("Measurement-score native projection failed");
+  const TMatrixD inverse = inverseCovariance(site->GetMeasNoiseMat());
+  const auto score = [&](const TMatrixD& expected) {
+    const TMatrixD residual = site->GetMeasVec()-expected;
+    const double value = (transpose(residual)*inverse*residual)(0,0);
+    if (!std::isfinite(value) || value < 0) throw std::runtime_error("Invalid measurement score");
+    return value;
+  };
+  return {score(referenceExpected+h*stateDifference(state.mean,reference.mean)),score(finalExpected)};
+}
+
 MeasurementStep KalmanAdapter::advanceBackward(const TrackState& source,
     edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit,
     bool breakpoint, double meanLoss, double sigmaLoss) const {
@@ -512,6 +542,9 @@ edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
   int ndf = 0;
   requireSuccess(track->propagate(edm4hep::Vector3d{0, 0, 0}, ip, chi2, ndf),
                  "Backward KF IP propagation");
+  // Native propagation fills the parameters but does not label the EDM state.
+  // Our published result is explicitly the interaction-point endpoint.
+  ip.location = edm4hep::TrackState::AtIP;
   return ip;
 }
 

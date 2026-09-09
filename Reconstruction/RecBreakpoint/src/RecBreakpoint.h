@@ -29,9 +29,11 @@ public:
   StatusCode finalize() override;
 private:
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracks", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_status{"BreakpointStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_outputIndex{"BreakpointOutputIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_backwardOutputIndex{"BreakpointBackwardOutputIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::MCParticleCollection> m_truth{"MCParticle", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4MaterialStepCollection> m_truthSteps{"GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_truthLinks{"GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
@@ -47,7 +49,6 @@ private:
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.05};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
-  Gaudi::Property<std::string> m_backwardMode{this, "BackwardMode", "RTS"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<int> m_maxIterations{this,"MaxFitIterations",1};
   Gaudi::Property<double> m_iterationTolerance{this,"RelinearizationTolerance",1.e-3};
@@ -70,7 +71,6 @@ private:
   double m_referencePt = 0;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
-  std::string m_backwardModeName;
   std::string m_lossStateModeName;
   std::vector<int> m_persistentHits;
   std::vector<double> m_sixPredictedMean, m_sixPredictedCov, m_sixFilteredMean, m_sixFilteredCov;
@@ -87,6 +87,14 @@ private:
   std::vector<double> m_backwardPredictedVariance, m_backwardChi2;
   std::vector<double> m_rtsLoss, m_rtsLossVariance;
   std::vector<double> m_priorLoss, m_localLoss, m_localVariance, m_fittedLoss, m_lossVariance, m_closure;
+  double m_backwardPt=0, m_backwardTotalChi2=0, m_smoothedTotalChi2=0, m_smoothedSeedChi2=0;
+  double m_backwardSeedForwardChi2=0, m_backwardReferencePt=0;
+  int m_smoothedChi2Status=0, m_backwardIterations=0, m_backwardIterationStatus=0;
+  std::string m_smoothedChi2Error, m_backwardIterationError;
+  std::vector<double> m_smoothedChi2, m_smoothedMeasurementChi2, m_smoothedProcessChi2, m_smoothedNativeChi2;
+  std::vector<double> m_backwardLoss, m_backwardLossVariance;
+  std::vector<double> m_backwardIterationPt, m_backwardIterationLoss, m_backwardIterationVariance;
+  std::vector<double> m_backwardIterationNorm, m_backwardIterationChi2;
   int m_truthOverrideStatus = 0, m_truthG4Track = -1;
   double m_truthMaxDistance = 0;
   std::string m_truthOverrideError;

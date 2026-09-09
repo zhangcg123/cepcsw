@@ -20,6 +20,10 @@ struct MeasurementStep {
   TMatrixD lossTargetCross{1, 5};
   double covarianceClosure = 0;
 };
+struct MeasurementScore {
+  double affine = 0;
+  double native = 0;
+};
 
 /// Owns temporary tracks only. The algorithm owns the supplied tracking system.
 /// All physical propagation and hit updates remain baseline KalTest calls.
@@ -30,6 +34,10 @@ public:
       : m_system(system), m_bz(bz), m_maxChi2(maxChi2), m_seedSelection(seedSelection) {}
   std::array<int, 3> seedHitIndices(const std::vector<edm4hep::TrackerHit>& hits) const;
   MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
+  /// Passive evaluation only: no hit update. The affine score uses the SAME
+  /// measurement expansion point as the corresponding filter pass.
+  MeasurementScore measurementScore(edm4hep::TrackerHit hit, const TrackState& state,
+                                     const TrackState& reference) const;
   MeasurementStep advance(const TrackState& source, edm4hep::TrackerHit sourceHit,
                           edm4hep::TrackerHit targetHit) const;
   /// Full 6D prediction and native 6D hit update. Apply exp(b) ONLY at birth.

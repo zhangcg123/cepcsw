@@ -17,6 +17,7 @@
 #include <set>
 #include <iomanip>
 #include <sstream>
+#include <numeric>
 
 DECLARE_COMPONENT(RecBreakpoint)
 
@@ -24,6 +25,7 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
     : Algorithm(name, locator) {
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
   declareProperty("OutputTracks", m_output, "Successful refitted tracks");
+  declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
 }
 RecBreakpoint::~RecBreakpoint() = default;
 
@@ -36,27 +38,24 @@ StatusCode RecBreakpoint::initialize() {
     return StatusCode::FAILURE;
   }
   m_seedSelectionName = m_seedHitSelection.value();
-  m_backwardModeName = m_backwardMode.value();
   m_lossStateModeName = m_lossStateMode.value();
-  const bool canIterate = (m_lossStateModeName == "Persistent6D" && m_backwardModeName == "RTS")
-      || (m_lossStateModeName == "LocalMarginal" && m_backwardModeName == "BackwardFilter");
+  const bool canIterate = m_lossStateModeName == "Persistent6D" || m_lossStateModeName == "LocalMarginal";
   if (m_maxIterations<1 || m_maxIterations>20 || !std::isfinite(m_iterationTolerance) ||
       m_iterationTolerance<=0 || (m_maxIterations>1 &&
       (!canIterate || m_intervals.value().size()!=1))) {
     error() << "MaxFitIterations must be 1..20, tolerance positive; iterations require"
-            << " Persistent6D/RTS or LocalMarginal/BackwardFilter, and exactly one breakpoint" << endmsg;
+            << " Persistent6D or LocalMarginal, and exactly one breakpoint" << endmsg;
     return StatusCode::FAILURE;
   }
   if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal"
        && m_lossStateModeName != "TruthOverride") ||
-      (m_lossStateModeName == "Persistent6D" &&
-       (m_backwardModeName != "RTS" || m_intervals.value().size() > 1))) {
+      (m_lossStateModeName == "Persistent6D" && m_intervals.value().size() > 1)) {
     error() << "LossStateMode must be LocalMarginal, Persistent6D or TruthOverride; Persistent6D requires"
-            << " BackwardMode=RTS and at most one breakpoint" << endmsg;
+            << " at most one breakpoint" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_backwardModeName != "RTS" && m_backwardModeName != "BackwardFilter") {
-    error() << "BackwardMode must be RTS or BackwardFilter" << endmsg;
+  if (m_output.fullKey() == m_backwardOutput.fullKey()) {
+    error() << "The two output track collections must have different names" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -110,7 +109,31 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("reference_kf_pt", &m_referencePt);
   m_tree->Branch("seed_hit_selection", &m_seedSelectionName);
   m_tree->Branch("seed_hit_indices", &m_seedHitIndices);
-  m_tree->Branch("backward_mode", &m_backwardModeName);
+  m_tree->Branch("rts_pt", &m_fitPt);
+  m_tree->Branch("backward_pt", &m_backwardPt);
+  m_tree->Branch("forward_chi2", &m_fitChi2);
+  m_tree->Branch("backward_chi2", &m_backwardTotalChi2);
+  m_tree->Branch("smoothed_chi2", &m_smoothedTotalChi2);
+  m_tree->Branch("smoothed_chi2_status", &m_smoothedChi2Status);
+  m_tree->Branch("smoothed_chi2_error", &m_smoothedChi2Error);
+  m_tree->Branch("forward_local_chi2", &m_localChi2);
+  m_tree->Branch("smoothed_local_chi2", &m_smoothedChi2);
+  m_tree->Branch("smoothed_measurement_chi2", &m_smoothedMeasurementChi2);
+  m_tree->Branch("smoothed_process_chi2", &m_smoothedProcessChi2);
+  m_tree->Branch("smoothed_native_measurement_chi2", &m_smoothedNativeChi2);
+  m_tree->Branch("smoothed_seed_chi2", &m_smoothedSeedChi2);
+  m_tree->Branch("backward_seed_forward_chi2", &m_backwardSeedForwardChi2);
+  m_tree->Branch("backward_fitted_log_loss", &m_backwardLoss);
+  m_tree->Branch("backward_fitted_log_loss_variance", &m_backwardLossVariance);
+  m_tree->Branch("reference_backward_kf_pt", &m_backwardReferencePt);
+  m_tree->Branch("backward_fit_iterations", &m_backwardIterations);
+  m_tree->Branch("backward_iteration_status", &m_backwardIterationStatus);
+  m_tree->Branch("backward_iteration_error", &m_backwardIterationError);
+  m_tree->Branch("backward_iteration_pt", &m_backwardIterationPt);
+  m_tree->Branch("backward_iteration_log_loss", &m_backwardIterationLoss);
+  m_tree->Branch("backward_iteration_log_loss_variance", &m_backwardIterationVariance);
+  m_tree->Branch("backward_iteration_step_norm", &m_backwardIterationNorm);
+  m_tree->Branch("backward_iteration_linearized_chi2", &m_backwardIterationChi2);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
   m_tree->Branch("truth_override_status", &m_truthOverrideStatus);
   m_tree->Branch("truth_override_error", &m_truthOverrideError);
@@ -166,7 +189,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("smoothed_log_loss", &m_rtsLoss);
   m_tree->Branch("smoothed_log_loss_variance", &m_rtsLossVariance);
   m_tree->Branch("covariance_transport_closure", &m_closure);
-  info() << "Outward KF + " << m_backwardModeName << "; " << m_intervals.value().size()
+  info() << "Outward KF + parallel RTS and BackwardFilter; " << m_intervals.value().size()
          << " selected breakpoint intervals; seed=" << m_seedSelectionName
          << "; Bz=" << m_bz << endmsg;
   return StatusCode::SUCCESS;
@@ -175,8 +198,10 @@ StatusCode RecBreakpoint::initialize() {
 StatusCode RecBreakpoint::execute() {
   ++m_event;
   auto* output = m_output.createAndPut();
+  auto* backwardOutput = m_backwardOutput.createAndPut();
   auto* statuses = m_status.createAndPut();
   auto* outputIndices = m_outputIndex.createAndPut();
+  auto* backwardOutputIndices = m_backwardOutputIndex.createAndPut();
   const auto* tracks = m_input.get();
   const bool selected = m_selected.value().empty() ||
       std::find(m_selected.value().begin(), m_selected.value().end(), m_event) != m_selected.value().end();
@@ -202,7 +227,6 @@ StatusCode RecBreakpoint::execute() {
   settings.meanLogLoss = m_meanLoss;
   settings.sigmaLogLoss = m_sigmaLoss;
   settings.seedScale = m_seedScale;
-  settings.backwardMode = m_backwardModeName;
   settings.lossStateMode = m_lossStateModeName;
   settings.maxFitIterations=m_maxIterations;
   settings.relinearizationTolerance=m_iterationTolerance;
@@ -229,7 +253,7 @@ StatusCode RecBreakpoint::execute() {
   m_trackIndex = -1;
   for (const auto& track : *tracks) {
     ++m_trackIndex;
-    if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); continue; }
+    if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); backwardOutputIndices->push_back(-1); continue; }
     m_fitStatus = -1;
     settings.truthLogLoss.clear();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
@@ -247,6 +271,14 @@ StatusCode RecBreakpoint::execute() {
     m_sixSmoothedMean.clear(); m_sixSmoothedCov.clear();
     m_sixTransport.clear(); m_sixNoise.clear();
     m_kfPt = m_fitPt = m_fitChi2 = m_referencePt = nan;
+    m_backwardPt=m_backwardTotalChi2=m_smoothedTotalChi2=m_smoothedSeedChi2=nan;
+    m_backwardSeedForwardChi2=m_backwardReferencePt=nan;
+    m_smoothedChi2Status=m_backwardIterations=m_backwardIterationStatus=0;
+    m_smoothedChi2Error.clear();m_backwardIterationError.clear();
+    m_smoothedChi2.clear();m_smoothedMeasurementChi2.clear();m_smoothedProcessChi2.clear();m_smoothedNativeChi2.clear();
+    m_backwardLoss.clear();m_backwardLossVariance.clear();
+    m_backwardIterationPt.clear();m_backwardIterationLoss.clear();m_backwardIterationVariance.clear();
+    m_backwardIterationNorm.clear();m_backwardIterationChi2.clear();
     m_hitCount = 0;
     m_hitCell.clear(); m_hitR.clear(); m_hitZ.clear(); m_localChi2.clear();
     m_filteredKappa.clear(); m_smoothedKappa.clear();
@@ -319,10 +351,30 @@ StatusCode RecBreakpoint::execute() {
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
           << " seed=" << m_seedSelectionName << " ordered-hit indices="
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
-      const auto fit = fitter.fit(hits, settings);
+      const auto paired = fitter.fit(hits, settings);
+      const auto& fit=paired.rts;
+      const auto& inward=paired.backward;
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");
       m_fitPt = std::abs(m_bz * 2.99792458e-4 / fit.ip.omega);
+      if (!std::isfinite(inward.ip.omega) || inward.ip.omega==0) throw std::runtime_error("Invalid backward IP curvature");
+      m_backwardPt=std::abs(m_bz*2.99792458e-4/inward.ip.omega);
+      m_backwardTotalChi2=std::accumulate(inward.backwardChi2.begin(),inward.backwardChi2.end(),0.);
+      m_backwardSeedForwardChi2=inward.chi2;
+      m_smoothedTotalChi2=fit.smoothedTotalChi2;m_smoothedSeedChi2=fit.smoothedSeedChi2;
+      m_smoothedChi2=fit.smoothedChi2;m_smoothedMeasurementChi2=fit.smoothedMeasurementChi2;
+      m_smoothedProcessChi2=fit.smoothedProcessChi2;m_smoothedNativeChi2=fit.smoothedNativeMeasurementChi2;
+      m_smoothedChi2Status=fit.smoothedChi2Status;m_smoothedChi2Error=fit.smoothedChi2Error;
+      if(m_smoothedChi2Status!=1) warning()<<"Smoothed chi2 unavailable: "<<m_smoothedChi2Error<<endmsg;
+      for(const auto& loss:inward.breakpoints) {
+        m_backwardLoss.push_back(loss.fittedLogLoss);m_backwardLossVariance.push_back(loss.fittedVariance);
+      }
+      m_backwardIterationPt=inward.iterationInverseAbsOmega;
+      for(auto& pt:m_backwardIterationPt) pt*=std::abs(m_bz*2.99792458e-4);
+      m_backwardIterationLoss=inward.iterationLoss;m_backwardIterationVariance=inward.iterationLossVariance;
+      m_backwardIterationNorm=inward.iterationStepNorm;m_backwardIterationChi2=inward.iterationLinearizedChi2;
+      m_backwardIterations=m_backwardIterationPt.empty()?1:m_backwardIterationPt.size();
+      m_backwardIterationStatus=inward.iterationStatus;m_backwardIterationError=inward.iterationError;
       m_onePassPt=fit.iterationInverseAbsOmega.empty() ? m_fitPt : std::abs(m_bz*2.99792458e-4/fit.onePassIP.omega);
       m_iterationPt=fit.iterationInverseAbsOmega;
       for(auto& value:m_iterationPt) value*=std::abs(m_bz*2.99792458e-4);
@@ -338,11 +390,13 @@ StatusCode RecBreakpoint::execute() {
       if(m_iterationStatus==-1) warning()<<"Relinearization stopped; last complete pass retained: "<<m_iterationError<<endmsg;
       m_fitChi2 = fit.chi2;
       if (m_verifyReference) {
-        const auto reference = adapter.referenceKF(hits, m_seedScale,
-                                                  m_backwardModeName == "BackwardFilter");
+        const auto reference = adapter.referenceKF(hits, m_seedScale,false);
+        const auto backwardReference = adapter.referenceKF(hits,m_seedScale,true);
+        m_backwardReferencePt=std::abs(m_bz*2.99792458e-4/backwardReference.omega);
         m_referencePt = std::abs(m_bz * 2.99792458e-4 / reference.omega);
         if (m_intervals.value().empty() &&
-            std::abs(m_fitPt / m_referencePt - 1) > 1.e-4)
+            (std::abs(m_fitPt / m_referencePt - 1) > 1.e-4 ||
+             std::abs(m_backwardPt / m_backwardReferencePt - 1) > 1.e-4))
           throw std::runtime_error("Empty-breakpoint/native-KF pT regression failed");
         info() << "event=" << m_event << " track=" << m_trackIndex
                << " breakpointPt=" << m_fitPt << " referenceKFPt=" << m_referencePt << endmsg;
@@ -379,7 +433,7 @@ StatusCode RecBreakpoint::execute() {
           }
         }
       }
-      m_backwardChi2 = fit.backwardChi2;
+      m_backwardChi2 = inward.backwardChi2;
       for (std::size_t i = 0; i < hits.size(); ++i) {
         m_filteredKappa.push_back(fit.filtered[i].mean(2, 0));
         m_filteredVariance.push_back(fit.filtered[i].covariance(2, 2));
@@ -387,11 +441,11 @@ StatusCode RecBreakpoint::execute() {
           m_smoothedKappa.push_back(fit.smoothed[i].mean(2, 0));
           m_smoothedVariance.push_back(fit.smoothed[i].covariance(2, 2));
         }
-        if (!fit.backwardFiltered.empty()) {
-          m_backwardKappa.push_back(fit.backwardFiltered[i].mean(2, 0));
-          m_backwardVariance.push_back(fit.backwardFiltered[i].covariance(2, 2));
-          m_backwardPredictedKappa.push_back(fit.backwardPredicted[i].mean(2, 0));
-          m_backwardPredictedVariance.push_back(fit.backwardPredicted[i].covariance(2, 2));
+        if (!inward.backwardFiltered.empty()) {
+          m_backwardKappa.push_back(inward.backwardFiltered[i].mean(2, 0));
+          m_backwardVariance.push_back(inward.backwardFiltered[i].covariance(2, 2));
+          m_backwardPredictedKappa.push_back(inward.backwardPredicted[i].mean(2, 0));
+          m_backwardPredictedVariance.push_back(inward.backwardPredicted[i].covariance(2, 2));
         }
         if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
             << " hit=" << i << " r=" << m_hitR[i] << " localChi2=" << m_localChi2[i]
@@ -404,9 +458,9 @@ StatusCode RecBreakpoint::execute() {
           std::vector<std::pair<const char*, const breakpoint::TrackState*>> states{
               {"predicted", &fit.predicted[i]}, {"filtered", &fit.filtered[i]}};
           if (!fit.smoothed.empty()) states.push_back({"smoothed", &fit.smoothed[i]});
-          if (!fit.backwardFiltered.empty()) {
-            states.push_back({"backward_predicted", &fit.backwardPredicted[i]});
-            states.push_back({"backward_filtered", &fit.backwardFiltered[i]});
+          if (!inward.backwardFiltered.empty()) {
+            states.push_back({"backward_predicted", &inward.backwardPredicted[i]});
+            states.push_back({"backward_filtered", &inward.backwardFiltered[i]});
           }
           for (const auto& named : states) {
             std::ostringstream dump;
@@ -432,24 +486,31 @@ StatusCode RecBreakpoint::execute() {
             << " local=" << loss.localLogLoss << " fitted=" << loss.fittedLogLoss
             << " variance=" << loss.fittedVariance << " closure=" << loss.covarianceClosure << endmsg;
       }
-      if (m_backwardModeName == "RTS") {
-        m_rtsLoss = m_fittedLoss;
-        m_rtsLossVariance = m_lossVariance;
-      }
+      m_rtsLoss = m_fittedLoss;
+      m_rtsLossVariance = m_lossVariance;
       outputIndices->push_back(output->size());
+      backwardOutputIndices->push_back(backwardOutput->size());
       auto result = output->create();
       result.addToTrackStates(fit.ip);
       result.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), m_bz, 2));
       result.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), m_bz, 3));
-      result.setChi2(fit.chi2);
-      // This is the KF innovation degree count, not a calibrated fit test with
-      // fitted losses and priors. Persisted chi2 is explicitly filter_chi2.
+      result.setChi2(fit.smoothedTotalChi2);
+      // Dimension bookkeeping only; fitted-loss priors preclude assuming a
+      // calibrated chi2 distribution. The flat tuple labels all three scores.
       result.setNdf(fit.measurementDimensions - 5);
       for (auto hit : hits) result.addToTrackerHits(hit);
+      auto backwardTrack=backwardOutput->create();
+      backwardTrack.addToTrackStates(inward.ip);
+      backwardTrack.addToTrackStates(breakpoint::toEDM(inward.endpoint.front(),m_bz,2));
+      backwardTrack.addToTrackStates(breakpoint::toEDM(inward.endpoint.back(),m_bz,3));
+      backwardTrack.setChi2(m_backwardTotalChi2);
+      backwardTrack.setNdf(fit.measurementDimensions-5); // bookkeeping, not calibrated
+      for(auto hit:hits) backwardTrack.addToTrackerHits(hit);
       m_fitStatus = 1;
     } catch (const std::exception& exception) {
       warning() << "event=" << m_event << " track=" << m_trackIndex << ": " << exception.what() << endmsg;
       outputIndices->push_back(-1);
+      backwardOutputIndices->push_back(-1);
     }
     statuses->push_back(m_fitStatus);
     m_tree->Fill();
