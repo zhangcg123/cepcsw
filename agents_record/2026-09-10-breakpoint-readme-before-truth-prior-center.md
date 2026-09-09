@@ -66,7 +66,7 @@ longer misleadingly labels a row that now contains both results.
 
 An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
 IntervalSelectionMode selects the source of the breakpoint list independently
-of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered pair):
+of LossStateMode (how losses are fitted) and TruthOverride (extra fixed-loss pair):
 
 | IntervalSelectionMode | Behavior |
 |---|---|
@@ -80,8 +80,8 @@ uses the existing post-step assignment on each (start,end] interval, selecting
 one interval yield one breakpoint. Loss before the first hit or after the last
 hit is not covered. Interval bounds and upstream placement are unchanged.
 The ordinary fit receives only the indices: its MeanLogLoss/SigmaLogLoss prior
-is NOT replaced by truth. TruthOverride must separately be enabled to set loss
-prior centers in the additional pair. All Geant4 metadata remain diagnostic apart
+is NOT replaced by truth. TruthOverride must separately be enabled to fix loss
+values in the additional pair. All Geant4 metadata remain diagnostic apart
 from this explicit location selection and the optional loss override.
 
 Truth with no matched eBrem selects an empty list and runs the ordinary 5D
@@ -148,13 +148,11 @@ TruthOverride=True. The effective interval list is shared by both pairs:
 ```text
 select intervals for this track
   -> ordinary RTS/backward: fit losses using MeanLogLoss/SigmaLogLoss priors
-  -> extra RTS/backward: use matched Geant4 b as the prior center, SAME SigmaLogLoss
+  -> extra RTS/backward: fix each selected loss to its matched Geant4 value
 ```
 
-Both pairs use the same fitting code, LossStateMode, SigmaLogLoss and iteration
-controls. Truth changes only the prior center of each selected b; later hits
-can update b and its variance. Track covariance, native material/MS and
-measurement updates remain active. Manual
+The extra fixed-loss response adds zero loss variance; ordinary track
+covariance, native material/MS and measurement updates remain active. Manual
 selection shares its supplied list in exactly the same way. TruthOverride does
 not discover additional intervals. With an empty effective list the extra pair
 is copied (result status1), even though the switch is on. With a nonempty list,
@@ -168,7 +166,7 @@ fit.BreakpointIntervals = []  # Manual-only; Truth builds the effective list
 # Four endpoints: ordinary RTS/backward, truth-override RTS/backward.
 ```
 
-The additional prior centers come from embedded event truth:
+Configured losses are fixed from embedded event truth, not guessed or fitted:
 reconstructed hit -> MCRecoTrackerAssociation -> SimTrackerHit -> exact
 Geant4 step/fraction hook. All ordered hits require unambiguous monotonic
 hooks on one primary electron. TruthMaxEndpointDistance validates associated
@@ -177,11 +175,9 @@ positions, never chooses a nearest hit.
 For each hook-to-hook interval (start,end], eBrem process-subtype 3 momentum
 losses are assigned by their post-step points and summed:
 `z=1-sum(delta_p_ebrem)/p_at_start_hook`, `b=-log(z)`. This excludes ionization.
-Only MeanLogLoss is replaced per interval for the extra pair. SigmaLogLoss is
-identical in both pairs, and the extra fitted b need not equal truth. A Manual
-interval with no eBrem gets prior center b=0, not a permanently fixed zero loss.
-The fitter accepts generic per-interval prior centers; it has no separate
-TruthOverride loss-state mode or truth-specific update. Native material, MS,
+Each selected b has zero added variance; MeanLogLoss/SigmaLogLoss are ignored
+only for the oracle pair, and continue to steer the ordinary pair.
+No singular live 6D fixed-loss covariance is created. Native material, MS,
 ionization steering, seeds and upstream loss placement remain unchanged.
 
 The card conditionally loads the six tracker association/SimTrackerHit sets,
@@ -197,14 +193,13 @@ With `TruthOverride=False`, the additional pair copies the already computed
 ordinary pair (including covariances, hits and chi2); it does not rerun a fit.
 Truth interval selection can still read material truth. An empty effective
 interval list also copies the ordinary pair.
-With True and nonempty intervals, a separate call to the same fitter generates
-both truth-centered endpoints with the same loss-state mode, prior sigma, seed
-scales, hit selection, iteration controls and material settings. Both pairs
-obey the same mode-specific iteration rules. No truth-centered state
+With True and nonempty intervals, a separate one-pass fixed-loss fit generates
+both oracle endpoints with the same seed scales, hit selection and material
+settings. The ordinary pair may still use MaxFitIterations>1. No oracle state
 feeds back into the ordinary pair. Multi-interval ordinary comparisons require
 LocalMarginal. The old public `LossStateMode="TruthOverride"` now fails clearly:
 select an ordinary LossStateMode and set the independent `TruthOverride` bool.
-The old internal fixed-loss path has also been removed.
+The internal fitter retains its fixed-loss implementation under the old name.
 Dedicated-card environment control: `BP_TRUTH_OVERRIDE=1` (default 1).
 Set BP_TRUTH_OVERRIDE=0 to copy ordinary results into the extra pair instead.
 Already prepared cards preserve their old values/default expressions; regenerate
@@ -213,24 +208,12 @@ them in a new output directory to adopt the new default.
 `truth_override_result_status` and the input-row-aligned EDM
 `BreakpointTruthOverrideStatus` distinguish: 0 absent/not attempted, 1 copied,
 2 oracle success, -1/-2/-3 truth input/match/interval failure, -4 oracle fit failure.
-Here status2 now means a truth-centered adjustable-prior fit. Historical tuples
-without truth_override_loss_treatment retain their old fixed-b meaning; do not
-mix them with new results or describe old resolution/chi2 plots as this method.
 Index maps are `BreakpointTruthOverrideRTSIndex` and
 `BreakpointTruthOverrideBackwardIndex`; missing outputs map to -1. Check this
 result status rather than assuming that a truth-named branch used truth.
 Flat branches `truth_override_rts_pt`, `truth_override_backward_pt`,
 `truth_override_{forward,backward,smoothed}_chi2` and their `_local_chi2` vectors
 save the extra pair's results. The smoothed score also has status/error fields.
-New metadata: truth_override_loss_treatment="PriorCenter" and
-truth_override_prior_sigma_log_loss record the definition and shared prior sigma.
-truth_override_{rts,backward}_fitted_log_loss and corresponding
-_fitted_log_loss_variance vectors save the updated b posterior; they align with
-breakpoint_interval (including copied results). truth_override_log_loss remains
-the matched truth input, NOT the fitted output. The extra pair also records
-truth_override_{rts,backward}_fit_iterations. Invalid extra results have empty
-posterior vectors and iteration counts0. The treatment/sigma fields describe
-configuration; the result status still distinguishes active, copied and failed.
 `truth_override_{rts,backward}_ip_parameters` hold `(D0,phi,omega,Z0,tanLambda)`
 at the origin; `_ip_covariance` copies all 21 packed EDM covariance elements.
 The first 15 describe the fitted five-parameter helix; the trailing time
@@ -247,7 +230,7 @@ Truth selection needs it to determine whether the effective list is empty.
 ## Iterations and seeds
 
 MaxFitIterations=1 preserves one-pass results. For >1 (up to 20), exactly one
-breakpoint is required in both the ordinary and truth-centered pairs.
+ordinary breakpoint is required; TruthOverride never iterates.
 For Truth selection this count is checked per track; zero/multiple selected
 intervals with MaxFitIterations>1 fail rather than silently changing the request.
 Likewise Persistent6D with multiple selected intervals fails that track, never
@@ -349,11 +332,11 @@ extended KF; the separate terms make those differences auditable.
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
-| TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode/iterations; otherwise copy ordinary pair |
+| TruthOverride | true | Add fixed-truth-loss pair when true; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
-| SigmaLogLoss | 0.05 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
+| SigmaLogLoss | 0.05 | Ordinary positive finite b-prior sigma; oracle ignores it |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | MaxFitIterations | 1 | 1--20; ordinary single-interval iterations as described above |
 | RelinearizationTolerance | 0.001 | Positive finite standardized stopping threshold |
@@ -371,7 +354,7 @@ extended KF; the separate terms make those differences auditable.
 | OutputFile | breakpoint_flat.root | New flat output file |
 
 TruthDiagnostics is enabled by the card. It does not steer a fit. Truth interval
-selection uses truth locations; only explicit TruthOverride sets truth loss prior centers.
+selection uses truth locations; only explicit TruthOverride fixes loss values.
 Ambiguous generator electrons have NaN
 truth pT. A scalar reference alone does not establish topology-clear selection.
 
@@ -541,3 +524,4 @@ No reconstruction-based interval discovery, positivity enforcement, beam spot or
 within-interval loss placement is implemented. Native material/mass
 conventions remain unchanged. Successful execution, convergence or smaller
 chi2 is not population validation or proof of better momentum reconstruction.
+

@@ -124,5 +124,11 @@ private:
   std::vector<double> m_truthForwardLocal, m_truthBackwardLocal, m_truthSmoothedLocal;
   std::vector<double> m_truthRTSParameters, m_truthRTSCovariance;
   std::vector<double> m_truthBackwardParameters, m_truthBackwardCovariance;
+  // Distinguish truth-centered adjustable priors from historical fixed-b tuples.
+  std::string m_truthLossTreatment = "PriorCenter";
+  double m_truthPriorSigma = 0;
+  std::vector<double> m_truthRTSLoss, m_truthRTSLossVariance;
+  std::vector<double> m_truthBackwardLoss, m_truthBackwardLossVariance;
+  int m_truthRTSIterations = 0, m_truthBackwardIterations = 0;
 };
 #endif

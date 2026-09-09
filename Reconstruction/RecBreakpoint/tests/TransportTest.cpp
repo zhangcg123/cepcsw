@@ -99,7 +99,8 @@ int main() {
       AugmentedTransport::covariance(prior, lossJacobian, {}), inverseJacobian, {});
   for (int i = 0; i < 36; ++i) near(physicalRestored[i], prior[i]);
 
-  // A truth-fixed loss has no loss variance/cross covariance. It must still
+  // A deterministic zero-variance helper limit (NOT the truth-prior workflow).
+  // It must still
   // transform every helix covariance entry through the deterministic map.
   auto fixedTruthPrior = prior;
   for (int i = 0; i < 6; ++i) fixedTruthPrior[6*i+5] = fixedTruthPrior[30+i] = 0;
@@ -111,6 +112,22 @@ int main() {
   }
   const auto fixedTruthRestored = AugmentedTransport::covariance(fixedTruthMapped, inverseJacobian, {});
   for (int i = 0; i < 36; ++i) near(fixedTruthRestored[i],fixedTruthPrior[i]);
+
+  // A truth-supplied prior center uses the SAME positive loss variance as an
+  // ordinary prior. The covariance map must retain its b-to-curvature term.
+  // Only the expansion center changes the Jacobian; no sigma cancellation.
+  for (double center : {0., .03, .4}) {
+    Matrix6 sharedSigmaPrior{};
+    for (int i=0;i<5;++i) sharedSigmaPrior[6*i+i]=0.01;
+    sharedSigmaPrior[35]=.05*.05;
+    Matrix5 map=identity; map[12]=std::exp(center);
+    Vector5 column{}; column[2]=kappa*std::exp(center);
+    const auto mapped=AugmentedTransport::covariance(sharedSigmaPrior,
+        AugmentedTransport::jacobian(map,column),{});
+    near(mapped[14],std::exp(2*center)*sharedSigmaPrior[14]+column[2]*column[2]*sharedSigmaPrior[35]);
+    near(mapped[17],column[2]*sharedSigmaPrior[35]);
+    near(mapped[35],sharedSigmaPrior[35]);
+  }
 
   // An iterated affine loss map must retain the ORIGINAL prior mean. At a
   // changed expansion point the offset is essential; merely applying exp(bref)

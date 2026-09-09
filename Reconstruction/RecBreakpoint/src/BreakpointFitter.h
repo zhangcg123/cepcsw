@@ -15,7 +15,9 @@ struct FitSettings {
   std::string lossStateMode = "LocalMarginal";
   int maxFitIterations = 1;
   double relinearizationTolerance = 1.e-3;
-  std::map<int, double> truthLogLoss; // exact, validated b for selected intervals only
+  // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
+  // the fitter does not distinguish truth-supplied from manually set centers.
+  std::map<int, double> intervalMeanLogLoss;
 };
 
 struct IntervalResult {

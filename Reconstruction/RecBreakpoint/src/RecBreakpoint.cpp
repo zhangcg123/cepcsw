@@ -168,6 +168,14 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("interval_selection_truth_max_endpoint_distance", &m_intervalTruthDistance);
   m_tree->Branch("truth_override_status", &m_truthOverrideStatus);
   m_tree->Branch("truth_override_result_status", &m_truthResultCode);
+  m_tree->Branch("truth_override_loss_treatment", &m_truthLossTreatment);
+  m_tree->Branch("truth_override_prior_sigma_log_loss", &m_truthPriorSigma);
+  m_tree->Branch("truth_override_rts_fitted_log_loss", &m_truthRTSLoss);
+  m_tree->Branch("truth_override_rts_fitted_log_loss_variance", &m_truthRTSLossVariance);
+  m_tree->Branch("truth_override_backward_fitted_log_loss", &m_truthBackwardLoss);
+  m_tree->Branch("truth_override_backward_fitted_log_loss_variance", &m_truthBackwardLossVariance);
+  m_tree->Branch("truth_override_rts_fit_iterations", &m_truthRTSIterations);
+  m_tree->Branch("truth_override_backward_fit_iterations", &m_truthBackwardIterations);
   m_tree->Branch("truth_override_rts_pt", &m_truthRTSPt);
   m_tree->Branch("truth_override_backward_pt", &m_truthBackwardPt);
   m_tree->Branch("truth_override_forward_chi2", &m_truthForwardChi2);
@@ -317,13 +325,17 @@ StatusCode RecBreakpoint::execute() {
     m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
     m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
     m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
+    m_truthPriorSigma = settings.sigmaLogLoss;
+    m_truthRTSLoss.clear(); m_truthRTSLossVariance.clear();
+    m_truthBackwardLoss.clear(); m_truthBackwardLossVariance.clear();
+    m_truthRTSIterations = m_truthBackwardIterations = 0;
     m_fitStatus = -1;
     settings.intervals = m_intervals.value(); // never reuse the previous track's truth-selected list
     bool needTruthLoss = false;
     m_intervalSelectionStatus = 0; m_intervalSelectionError.clear();
     m_selectedIntervals.clear(); m_intervalTruthLoss.clear(); m_intervalTruthZ.clear();
     m_intervalTruthTrack = -1; m_intervalTruthDistance = nan;
-    settings.truthLogLoss.clear();
+    settings.intervalMeanLogLoss.clear();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
     m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
@@ -376,7 +388,7 @@ StatusCode RecBreakpoint::execute() {
         m_hitZ.push_back(p.z);
       }
       // One association-driven truth match can serve interval selection and the
-      // optional fixed-loss oracle. Ordinary fitting receives ONLY the indices,
+      // optional truth-centered fit. Ordinary fitting receives ONLY the indices,
       // never the truth loss center/variance, from Truth interval selection.
       TruthBHLossEventDataMatch match;
       bool matchedTruth = false;
@@ -584,12 +596,12 @@ StatusCode RecBreakpoint::execute() {
       for(auto hit:hits) backwardTrack.addToTrackerHits(hit);
       m_fitStatus = 1;
 
-      // The ordinary pair is complete before applying fixed truth losses. Failure of the
+      // The ordinary pair is complete before assigning truth prior centers. Failure of the
       // diagnostic oracle must not discard or silently replace ordinary tracks.
       try {
         auto oracleSettings = settings;
-        oracleSettings.lossStateMode = "TruthOverride";
-        oracleSettings.maxFitIterations = 1; // exact fixed losses need no prior iteration
+        // Only the per-interval b prior centers differ. Keep the same sigma_b,
+        // loss-state implementation, iteration controls, seeds and native updates.
         if (needTruthLoss) {
           if (!truthPrepared) {
             m_truthOverrideStatus = -1;
@@ -614,7 +626,7 @@ StatusCode RecBreakpoint::execute() {
           for (int interval : oracleSettings.intervals) {
             const auto& truth = match.materialIntervals[interval];
             const double b = -std::log(truth.retainedFraction);
-            oracleSettings.truthLogLoss.emplace(interval, b);
+            oracleSettings.intervalMeanLogLoss.emplace(interval, b);
             m_truthIntervals.push_back(interval); m_truthZ.push_back(truth.retainedFraction);
             m_truthB.push_back(b); m_truthMomentumBefore.push_back(truth.momentumBefore);
             m_truthEbremLoss.push_back(truth.ebremLoss); m_truthTX0.push_back(truth.truthTX0);
@@ -622,7 +634,8 @@ StatusCode RecBreakpoint::execute() {
             m_truthStartFraction.push_back(truth.startHookFraction); m_truthEndFraction.push_back(truth.endHookFraction);
             if (m_verbose) info() << std::setprecision(17) << "TruthOverride event=" << m_event
                 << " track=" << m_trackIndex << " interval=" << interval << " g4Track=" << match.g4TrackID
-                << " z=" << truth.retainedFraction << " b=" << b << " addedLossVariance=0"
+                << " z=" << truth.retainedFraction << " prior_b=" << b
+                << " prior_sigma_b=" << oracleSettings.sigmaLogLoss
                 << " steps=" << truth.firstStepNumber << ':' << truth.startHookFraction
                 << "->" << truth.lastStepNumber << ':' << truth.endHookFraction << endmsg;
           }
@@ -662,6 +675,16 @@ StatusCode RecBreakpoint::execute() {
         m_truthForwardLocal = truthRTS.localChi2;
         m_truthBackwardLocal = truthBackward.backwardChi2;
         m_truthSmoothedLocal = truthRTS.smoothedChi2;
+        for (const auto& loss : truthRTS.breakpoints) {
+          m_truthRTSLoss.push_back(loss.fittedLogLoss);
+          m_truthRTSLossVariance.push_back(loss.fittedVariance);
+        }
+        for (const auto& loss : truthBackward.breakpoints) {
+          m_truthBackwardLoss.push_back(loss.fittedLogLoss);
+          m_truthBackwardLossVariance.push_back(loss.fittedVariance);
+        }
+        m_truthRTSIterations = truthRTS.iterationInverseAbsOmega.empty() ? 1 : truthRTS.iterationInverseAbsOmega.size();
+        m_truthBackwardIterations = truthBackward.iterationInverseAbsOmega.empty() ? 1 : truthBackward.iterationInverseAbsOmega.size();
         auto saveIP = [](const edm4hep::TrackState& ip, std::vector<double>& parameters,
                          std::vector<double>& covariance) {
           parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
@@ -697,6 +720,9 @@ StatusCode RecBreakpoint::execute() {
         m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
         m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
         m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
+        m_truthRTSLoss.clear(); m_truthRTSLossVariance.clear();
+        m_truthBackwardLoss.clear(); m_truthBackwardLossVariance.clear();
+        m_truthRTSIterations = m_truthBackwardIterations = 0;
         m_truthOverrideError = exception.what();
         warning() << "Ordinary pair retained; additional truth pair failed: " << exception.what() << endmsg;
       }

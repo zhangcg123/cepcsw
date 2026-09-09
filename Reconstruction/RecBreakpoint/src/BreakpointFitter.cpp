@@ -26,16 +26,13 @@ Matrix5 array5(const TMatrixD& matrix) {
   return result;
 }
 
-// TruthOverride replaces the selected loss response, not the hit update or
-// material transport. A fixed truth loss has zero added loss variance.
+// Resolve a per-interval prior center through the same code for every fit.
+// The uncertainty and fit method are never changed by the center's origin.
 FitSettings intervalSettings(const FitSettings& settings, int interval) {
   auto result = settings;
-  if (settings.lossStateMode == "TruthOverride") {
-    const auto found = settings.truthLogLoss.find(interval);
-    if (found == settings.truthLogLoss.end() || !std::isfinite(found->second) || found->second < 0)
-      throw std::runtime_error("Missing/invalid truth loss for configured interval");
+  const auto found = settings.intervalMeanLogLoss.find(interval);
+  if (found != settings.intervalMeanLogLoss.end()) {
     result.meanLogLoss = found->second;
-    result.sigmaLogLoss = 0;
   }
   return result;
 }
@@ -85,20 +82,24 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       !std::isfinite(settings.relinearizationTolerance) || settings.relinearizationTolerance <= 0)
     throw std::invalid_argument("Invalid breakpoint iteration limit/tolerance");
   if (settings.maxFitIterations > 1) {
-    if (settings.intervals.size() != 1 || settings.lossStateMode == "TruthOverride")
-      throw std::invalid_argument("Iterations require one ordinary breakpoint");
+    if (settings.intervals.size() != 1)
+      throw std::invalid_argument("Iterations require one breakpoint");
   }
   if (settings.lossStateMode == "Persistent6D") {
     if (settings.intervals.size() > 1)
       throw std::invalid_argument("Persistent6D requires at most one breakpoint");
     // No loss coordinate is introduced in the empty-list 5D reference.
-  } else if (settings.lossStateMode != "LocalMarginal" && settings.lossStateMode != "TruthOverride") {
+  } else if (settings.lossStateMode != "LocalMarginal") {
     throw std::invalid_argument("Unknown LossStateMode");
   }
   if (hits.size() < 3) throw std::runtime_error("Insufficient hits");
   for (int interval : settings.intervals)
     if (interval < 0 || static_cast<std::size_t>(interval + 1) >= hits.size())
       throw std::runtime_error("Configured breakpoint interval outside this track");
+  for (const auto& center : settings.intervalMeanLogLoss)
+    if (!std::isfinite(center.second) || center.second < 0 ||
+        std::find(settings.intervals.begin(), settings.intervals.end(), center.first) == settings.intervals.end())
+      throw std::invalid_argument("Invalid per-interval loss prior center");
 
   // Share the first forward population. Neither continuation feeds the other.
   const auto first = settings.lossStateMode == "Persistent6D" && !settings.intervals.empty()
@@ -254,7 +255,7 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
       const auto configuredLoss = selected ? intervalSettings(settings, i) : settings;
       const auto step = reference ? m_adapter.advanceBackwardRelinearized(
           result.backwardFiltered[i + 1], hits[i + 1], hits[i], selected,
-          settings.meanLogLoss, settings.sigmaLogLoss, reference->breakpoints.front().fittedLogLoss,
+          configuredLoss.meanLogLoss, configuredLoss.sigmaLogLoss, reference->breakpoints.front().fittedLogLoss,
           reference->backwardFiltered[i + 1], reference->backwardFiltered[i])
           : m_adapter.advanceBackward(result.backwardFiltered[i + 1],
               hits[i + 1], hits[i], selected, configuredLoss.meanLogLoss, configuredLoss.sigmaLogLoss);
@@ -306,6 +307,7 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
 FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
     const FitSettings& settings, const FitResult* reference, const TrackState* originalPrior) const {
   const int interval = settings.intervals.front();
+  const auto loss = intervalSettings(settings, interval);
   if (hits.size() < 3 || interval < 0 || interval + 1 >= static_cast<int>(hits.size()))
     throw std::invalid_argument("Persistent6D breakpoint outside track");
   FitResult result;
@@ -341,10 +343,10 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     }
     const bool birth = i == interval;
     if (birth) live = LossTrackState::introduce(result.filtered.back(),
-        settings.meanLogLoss, settings.sigmaLogLoss * settings.sigmaLogLoss);
+        loss.meanLogLoss, loss.sigmaLogLoss * loss.sigmaLogLoss);
     LossTrackState expansion;
     if (reference) expansion = birth ? LossTrackState::introduce(reference->smoothed[i],
-        reference->breakpoints.front().fittedLogLoss,settings.sigmaLogLoss*settings.sigmaLogLoss)
+        reference->breakpoints.front().fittedLogLoss,loss.sigmaLogLoss*loss.sigmaLogLoss)
         : reference->persistentSmoothed[i-interval-1];
     const auto step = reference ? m_adapter.advanceRelinearized(live,hits[i],hits[i+1],birth,
         expansion,reference->smoothed[i+1]) : m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth);
@@ -368,7 +370,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
         for (int col = 0; col < 5; ++col) transport(row, col) = step.transport(row, col);
       }
       transports.push_back(transport);
-      noises.push_back(step.noise + settings.sigmaLogLoss * settings.sigmaLogLoss
+      noises.push_back(step.noise + loss.sigmaLogLoss * loss.sigmaLogLoss
           * lossColumn * transpose(lossColumn));
     } else {
       transports.push_back(step.transport); noises.push_back(step.noise);
@@ -411,7 +413,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   }
   const auto& local = result.persistentFiltered.front();
   // The final outward posterior has already used ALL downstream measurements.
-  result.breakpoints.push_back({interval, settings.meanLogLoss, live.mean(5, 0),
+  result.breakpoints.push_back({interval, loss.meanLogLoss, live.mean(5, 0),
       live.covariance(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
   result.endpoint = result.smoothed;
   result.ip = m_adapter.atIP(result.endpoint.front(), hits.front());

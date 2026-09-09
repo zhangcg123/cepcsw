@@ -287,114 +287,124 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active development is the independent RecBreakpoint package on local
-`test_breakpoint`, reading CompleteTracks. Keep shared KF/GSF sources,
-maintained GSF cards and unrelated user-owned workflow edits unchanged.
-No remote operations or reconstruction-based interval finder are authorized.
-Beam-boundary work remains paused.
+Active development remains the independent RecBreakpoint package on local
+`test_breakpoint`, reading CompleteTracks. BackwardMode is removed. Each run
+now produces ordinary `BreakpointTracksRTS` and
+`BreakpointTracksBackwardFilter`, with separate input-row mappings, endpoint
+pT, loss results and iteration histories in the flat tuple. These are two
+results from a shared first forward pass, not CPU threads. The backward
+continuation copies the first-pass forward endpoint mean and scales its full
+5x5 track covariance by positive finite `BackwardSeedScale` (default1), then
+refilters inward; it is not an independent Bayesian smoother. The dedicated
+card exposes this scale; its effective value is saved in `backward_seed_scale`.
+RTS starts from the final forward updated state/covariance with no such scale, reuses
+the buffered forward transitions, and does not consume the backward refilter.
 
-Each run produces ordinary `BreakpointTracksRTS` and
-`BreakpointTracksBackwardFilter`, plus separate truth-assisted/copied
-`BreakpointTracksTruthOverrideRTS` and
-`BreakpointTracksTruthOverrideBackwardFilter`. These are paired results, not
-CPU threads. BackwardMode is removed. The backward continuation copies its
-pair's first-forward endpoint mean and scales the full 5x5 track covariance
-by positive finite BackwardSeedScale (default1), then refilters inward.
-Each iteration scales a fresh copy once, never cumulatively. Backward still
-reuses forward evidence and is not an independent Bayesian smoother.
-RTS starts from its own final forward posterior, uses buffered transitions,
-does not consume the backward refilter and ignores BackwardSeedScale.
-Forward SeedScale defaults1; FirstMiddleLast remains the direction's prefit
-selection. BackwardSeedScale does not scale the loss-prior sigma.
+Three default-on outward-hit-indexed lists are saved:
+`forward_local_chi2`, `backward_local_chi2`, and `smoothed_local_chi2`.
+The first two are native update increments (backward's outermost entry is
+zero because its state is a copied seed). The third is the complete final
+RTS affine quadratic objective: original-V measurement penalties, incoming
+process/loss-prior penalties and the initial seed penalty once. Separate
+measurement/process/seed terms, a native nonlinear hit-only diagnostic, and
+score validity/error are persisted. Totals match the list sums. These are
+not eBrem probabilities or normalized model-comparison likelihoods; forward
+and backward totals must not be added because their evidence overlaps.
+RTS Track.chi2 carries the complete smoothed score; backward Track.chi2
+carries the inward increment sum. NDF is bookkeeping, not calibrated here.
 
-LocalMarginal is the compiled/card default and supports multiple independent
-breakpoint intervals. Persistent6D retains b through downstream native updates
-and joint RTS, for at most one interval. Both publish RTS and a local-joint
-backward continuation. MaxFitIterations defaults1; >1 requires exactly one
-interval. Persistent6D iterates RTS and backward separately; LocalMarginal
-keeps one-pass RTS and iterates backward only. Iterations retain the original
-loss priors and each pair's original forward seed. No positivity bound is
-imposed on the fitted loss.
+LocalMarginal/RTS is now the compiled/card default loss treatment, supporting
+multiple independently selected intervals. Persistent6D remains available,
+retaining b through downstream native updates and joint RTS for one interval.
+The paired backward continuation
+retains the local-joint inverse-loss implementation. LocalMarginal supports
+multiple intervals. With MaxFitIterations>1, Persistent6D iterates RTS and
+backward separately; LocalMarginal retains one-pass RTS and iterates backward
+only. Both keep original priors, and backward freezes the original first-pass
+forward seed. BackwardSeedScale is applied once to a copy of that original
+covariance on each inward pass, never compounded across iterations. It does
+not scale the independent loss prior or affect forward/RTS. Default
+MaxFitIterations remains1; iterations require one
+ordinary interval and do not enforce loss positivity.
 
-The user changed TruthOverride semantics on 2026-09-10. The default-on bool
-now sets each selected b PRIOR CENTER to the matched truth value, with the
-SAME positive SigmaLogLoss as the ordinary fit. It no longer fixes b or sets
-its variance to zero. Only the prior centers differ: loss-state mode,
-iterations, seeds, native material/MS, ElossOn and the fitter code are shared.
-The extra b can move away from truth as hits update its posterior. Truth is
-converted using z=1-sum(delta_p_eBrem)/p_start and b=-log(z), via unchanged
-reconstructed-hit associations and embedded Geant4 hooks. The generic fitter
-accepts per-interval prior centers, not a separate TruthOverride mode.
-The public LossStateMode likewise accepts only LocalMarginal/Persistent6D.
+An independent default-on `TruthOverride` bool adds a second RTS/backward
+pair in `BreakpointTracksTruthOverrideRTS` and
+`BreakpointTracksTruthOverrideBackwardFilter`. Off, or with empty intervals,
+these are copies of the completed ordinary results; Truth interval selection
+may still read truth even when fixed-loss override is off.
+On, each selected interval receives fixed b from reconstructed-hit associations
+and embedded G4 provenance, with zero added loss variance, in a separate
+one-pass oracle pair. Ordinary iterations/settings remain unchanged.
+The public LossStateMode now selects Persistent6D or LocalMarginal only;
+old LossStateMode=TruthOverride fails with migration guidance. The dedicated
+card uses BP_TRUTH_OVERRIDE=1, default1, and derives truth-input needs from
+both this control and IntervalSelectionMode.
+The default-on change and exact branch-by-branch regression are recorded in
+`agents_record/2026-09-09-recbreakpoint-truth-default-on.md`.
+Oracle-only truth failure in Manual mode preserves ordinary results but leaves extra outputs absent/NaN
+with tagged errors. Result status distinguishes absent0, copied1, oracle2
+and negative failure; separate input-row index maps are always saved.
+The flat tuple adds oracle/copied endpoint pT, full packed IP covariances and
+parameters, and three chi2 lists/totals. Truth values remain passive except for
+Truth location selection and the explicitly enabled fixed-loss oracle. No reconstruction-based interval discovery,
+within-interval emission fit, native material, shared KF/GSF or seed changes.
 
-IntervalSelectionMode remains independent: Truth (compiled/card default)
-selects every matched accepted-hit interval with positive G4 eBrem loss and
-passes only indices to the ordinary fit. Multiple emissions in an interval
-give one breakpoint; no new loss cutoff is applied. Only intervals between
-accepted hits are covered, with the same post-step assignment and upstream
-loss placement. Manual uses exactly BreakpointIntervals; an empty Manual list
-is the 5D reference. A nonempty list is rejected outside Manual. Auto is
-reserved and fails initialization. A selected Manual interval without eBrem
-has truth prior center b=0, but its fitted b can move. Unselected losses are
-not corrected automatically. Persistent6D/iteration interval-count limits are
-checked per track, never resolved by silently discarding intervals.
+IntervalSelectionMode is now independent of loss-state treatment and fixed-loss
+override. Compiled/card Truth selects every matched runtime hit interval with
+positive G4 eBrem loss per track; it passes only indices, not truth loss centers,
+to the ordinary fit. No-loss tracks receive an empty effective list/5D refit.
+Manual retains explicit BreakpointIntervals (empty means baseline); a nonempty
+list is rejected outside Manual. Auto is reserved for the developing
+reconstruction-based finder and fails initialization explicitly.
+Truth selection follows reconstructed-hit associations into exact embedded G4
+hooks, includes all positive interval losses without a new cutoff, and covers
+only intervals between accepted hits. Invalid truth fails the affected track;
+it is not treated as an empty list. Effective indices, selection status/error,
+selected loss/z and match metadata are saved even with TruthOverride off.
+Persistent6D still allows one interval; iterations still require exactly one,
+checked per track for Truth selection. Neither silently discards extra losses.
+The new batch helper captures BP_INTERVAL_SELECTION_MODE. Regenerate old
+prepared cards in a new output directory; default Truth/LocalMarginal replaces
+the previous manual-empty/Persistent6D steering. Current batch shell edits
+belong to the user and must be preserved. Exact contract and tests:
+`agents_record/2026-09-09-recbreakpoint-truth-interval-selection.md`.
+Seven same-code Truth-versus-Manual event comparisons reproduce the ordinary
+and oracle outputs exactly, including two multiple-interval tracks. An
+additional missing-association case fails with a selection tag rather than
+becoming a no-loss track. These are regression gates only.
 
-TruthOverride=False or an empty effective list copies ordinary outputs into
-the extra collections without a rerun. Truth selection may still read truth
-with the override off. Invalid Truth selection fails the affected ordinary
-track, not an empty-list substitute. Oracle-only truth failure in Manual mode
-preserves ordinary results; extra outputs remain absent/NaN with tagged errors.
-No side CSV/ROOT reader or GSF execution is used. TruthMaxEndpointDistance
-validates associated hooks, not nearest-distance matching. Existing input-row
-maps and result statuses remain: absent0, copied1, active truth-assisted2,
-negative input/match/interval/fit failure. Ordinary failure leaves the extra
-pair unattempted. Truth t/X0 and other G4 metadata remain passive apart from
-explicit location selection and truth-prior-center steering.
+Mechanical gates cover the ordinary/truth seed2:68 smoke, seed12:11/16/17,
+iterations, empty/zero-loss and multi-interval controls, plus the previous
+eight 1--5% single-eBrem examples. Paired endpoints reproduce the available
+separate-run references within the recorded tolerances. Seed12:17 remains a
+secondary-activity control, not a clean optimization count. These are
+regressions, not population physics validation. Exact tests, schema and
+limitations are in
+`agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md`.
+The backward seed scale, unchanged RTS boundary and 25-case scale/regression
+gate are recorded in
+`agents_record/2026-09-09-recbreakpoint-backward-seed-scale.md`.
 
-The flat tuple retains four endpoint pT values and the complete extra IP
-parameters/covariances. New truth_override_loss_treatment="PriorCenter" and
-truth_override_prior_sigma_log_loss distinguish the revised semantics.
-truth_override_log_loss remains the truth INPUT; new
-truth_override_{rts,backward}_fitted_log_loss and corresponding variance
-vectors hold fitted posteriors aligned with breakpoint_interval, including
-copied fits. Extra fit-iteration counts are saved. Historical tuples without
-the treatment field used fixed b with sigma_b=0; existing population plots and
-chi2 comparisons describe that OLD method and must not be relabeled.
+Next: use the separately labeled scores and four endpoints on the
+same negative fitted-loss and truth-oracle controls, checking momentum truth,
+not declaring an optimum from smaller chi2. Preserve clean-track and
+categorized population gates. No shared KF/GSF edits, maintained batch
+workflow changes, automatic truth steering or remote operations are
+authorized. Beam-boundary work remains paused.
 
-Three per-hit lists and totals remain automatic for both pairs: forward and
-backward native measurement-update chi2 increments, and the complete final
-RTS affine quadratic objective (original-V measurement, process/loss-prior,
-and initial-seed penalty once). The backward outermost increment is zero
-because it is a copied seed. Ordinary smoothed measurement/process/seed and
-native nonlinear hit-only diagnostics remain separately available; oracle
-per-hit totals are saved but its decomposition is not. Score status/error is
-separate from fit validity. RTS Track.chi2 uses the complete smoothed score;
-backward uses its inward increment sum. Do not add forward/backward/smoothed
-totals to each other or treat them as calibrated eBrem probabilities. NDF
-remains bookkeeping. Identical prior widths still do not guarantee identical
-linearizations or a calibrated model-comparison likelihood.
+Dedicated card: `Reconstruction/RecBreakpoint/options/run_breakpoint.py`.
+Its retired BP_BACKWARD_MODE environment control is rejected explicitly.
+The package README is the authoritative complete property/schema/build
+reference. Complete outgoing status and README were preserved in
+`agents_record/2026-09-09-agents-before-parallel-breakpoint.md` and
+`agents_record/2026-09-09-recbreakpoint-readme-before-parallel.md`.
 
-Current gate passed: package build/install, standalone covariance tests,
-19 batch tests, and 20 local jobs / 28 selected-event configurations.
-Ordinary results exactly reproduce previous tuples and same-code off runs.
-Seven truth-centered/manual-identical-prior comparisons match exactly in
-endpoint pT, IP covariances, fitted losses, per-hit chi2 and iteration counts.
-Coverage includes seed2:68, seed12:11/16/17 (17 remains secondary activity
-control), empty/zero-loss and multiple intervals, both modes, iterations,
-different positive sigmas and backward scale100. Next: rerun the categorized
-population comparison with shared sigma_b, distinguishing the revised method
-from historical fixed-b outputs. Mechanical agreement is not physics validation.
+The parallel truth-pair contract, regression results and control migration are
+recorded in `agents_record/2026-09-09-recbreakpoint-parallel-truth-pair.md`.
+Its 18-case gate checks exact ordinary on/off preservation, exact disabled
+copies, prior oracle reproduction, covariance/schema consistency, and ordinary
+result preservation on deliberately invalid truth. This is mechanical evidence,
+not additional physics validation.
+The complete outgoing status is preserved in
+`agents_record/2026-09-09-agents-before-parallel-truth-pair.md`.
 
-Dedicated card: Reconstruction/RecBreakpoint/options/run_breakpoint.py;
-BP_TRUTH_OVERRIDE defaults1. Regenerate cards in a new output directory and
-do not mix newly built truth-prior results with old fixed-loss tuples.
-Batch workers do not snapshot libraries; avoid rebuilding with active jobs.
-The package README is the authoritative option/schema/build reference.
-Implementation and gate results are recorded in
-`agents_record/2026-09-10-recbreakpoint-truth-prior-center.md`.
-The complete outgoing status and README are preserved in
-`agents_record/2026-09-10-agents-before-truth-prior-center.md` and
-`agents_record/2026-09-10-breakpoint-readme-before-truth-prior-center.md`.
-Prior seed, iteration, interval-selection, parallel-endpoint and fixed-loss
-gates remain in their dated 2026-09-09 records; those numerical oracle results
-are historical, not predictions of the revised method.
