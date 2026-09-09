@@ -20,3 +20,12 @@ invalid-oracle rows accepted for file cleanup; corrupt/recovered/empty or
 missing-branch outputs still rejected; and failed subprocesses retaining
 intermediate outputs. Real existing flat tuples for seeds 1,2,3,4,5,6,7,10 in
 breakpoint_barrel also passed the updated ROOT verification.
+
+Applied the user-authorized cleanup to those eight completed jobs: removed only
+their job-owned trk ROOT files, totaling 2,326,038,634 bytes (2.17 GiB). Checked
+manifest/completion agreement, exact paths, unchanged file identities, retained
+simulation inputs and cards. Updated each completed.json cleanup status while
+preserving the previous retained status in a separate field. Flat tuples,
+simulation files and cards remain; tracker files can be regenerated, not
+restored from trash. A redundant uproot branch-read check stalled and was
+interrupted before deletion; the successful native ROOT check above was used.
