@@ -426,7 +426,7 @@ After inspecting the generated cards, submit those exact prepared jobs:
 Omit DRY_RUN=1 on the first command to prepare and submit immediately. Do not
 rerun preparation over the same sample/output directory; use `submit` after
 a dry run. DRY_RUN=1 also works with `submit` to print commands only.
-The scripts use the existing IHEP `hep_sub -g higgs -mem ... -argu JOB.json`
+The scripts use the existing IHEP `hep_sub -g cms -mem ... -argu JOB.json`
 convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 
 | Control | Default | Meaning |

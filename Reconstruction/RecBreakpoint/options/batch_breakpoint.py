@@ -154,7 +154,7 @@ def submit_jobs(jobs, dry):
         output = carddir.parent.parent
         worker = repo/'dump_breakpoint.sh'
         memory = job['memory_mb']
-        command = ['hep_sub', str(worker), '-g', 'higgs', '-mem', str(memory),
+        command = ['hep_sub', str(worker), '-g', 'cms', '-mem', str(memory),
                    '-o', str(output/'outlog'/f'{job["sample"]}.out'),
                    '-e', str(output/'outlog'/f'{job["sample"]}.err'), '-argu', str(carddir/'job.json')]
         print(shlex.join(command), flush=True)

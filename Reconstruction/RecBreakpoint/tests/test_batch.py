@@ -127,6 +127,7 @@ class BatchTest(unittest.TestCase):
             self.prepare(DRY_RUN='0')
         args=run.call_args.args[0]
         self.assertEqual(args[:2],['hep_sub',str(self.repo/'dump_breakpoint.sh')])
+        self.assertEqual(args[args.index('-g')+1],'cms')
         self.assertEqual(args[args.index('-mem')+1],'5000')
         self.assertEqual(args[-2],'-argu')
         self.assertTrue(Path(args[-1]).is_file())
