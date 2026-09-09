@@ -419,8 +419,11 @@ PodioOutput lines remain in the dedicated card for optional serialization.
 
 Use the new root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
 The existing `subtrkjobs.sh`, `dump_gsftrk.sh` and all GSF cards are unchanged.
-Fit physics remains in `options/run_breakpoint.py`; optional supported BP_*
-environment overrides are frozen at preparation along with the complete card.
+The shared loss-prior sigma is controlled by BP_SIGMA_LOG_LOSS in
+subbreakpointjobs.sh (default0.05); other fit physics remains in
+options/run_breakpoint.py. Supported BP_* environment values are frozen at
+preparation along with the complete card. The card consumes the submitted
+sigma, retaining its 0.05 fallback only for direct standalone runs.
 The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
@@ -456,6 +459,7 @@ convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 | PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Comma-separated filename labels |
 | MEMORY_MB | 5000 | Scheduler memory request |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
+| BP_SIGMA_LOG_LOSS | 0.05 | Finite positive prior sigma of b=-log(z), shared by ordinary and truth-assisted fits |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
 For existing tracker inputs, set STAGES=breakpoint and point INPUT_TUPLEPATH
@@ -468,6 +472,11 @@ All BP_* values supported by the dedicated card except its job I/O/event-count
 fields are captured; BP_BACKWARD_MODE remains retired and is not supported.
 Unset BP_SELECTED normally means all events; explicit selection is available
 for isolated batch smoke tests. Job I/O and NEVT come from workflow controls.
+
+Edit the BP_SIGMA_LOG_LOSS default in subbreakpointjobs.sh, or override it for
+one preparation with BP_SIGMA_LOG_LOSS=0.01 ./subbreakpointjobs.sh. Changing this
+value does not change already prepared cards: use a new output directory and
+prepare new cards. The submit-existing command retains their frozen values.
 
 During preparation, missing or zero-byte external predecessor inputs cause that
 sample to be skipped, with its sample label and path printed. Other valid seeds

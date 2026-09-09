@@ -24,7 +24,8 @@ class BatchTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.repo = Path(self.temp.name)
         for rel in ['DumpGsfTrks/sim.py.bk', 'DumpGsfTrks/trk.py.bk',
-                    'Reconstruction/RecBreakpoint/options/run_breakpoint.py', 'dump_breakpoint.sh']:
+                    'Reconstruction/RecBreakpoint/options/run_breakpoint.py', 'dump_breakpoint.sh',
+                    'subbreakpointjobs.sh', 'Reconstruction/RecBreakpoint/options/batch_breakpoint.py']:
             dest = self.repo/rel; dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO/rel, dest)
         (self.repo/'inputs').mkdir()
@@ -67,6 +68,19 @@ class BatchTest(unittest.TestCase):
         for stage, card in job['cards'].items():
             self.assertEqual(batch.hashlib.sha256(Path(card).read_bytes()).hexdigest(),job['checksums'][stage])
         with self.assertRaises(ValueError): self.prepare()
+
+    def test_submission_shell_freezes_shared_loss_sigma(self):
+        for output, override, expected in [('sigma_default', None, '0.05'), ('sigma_override', '0.01', '0.01')]:
+            env = dict(self.env, OUTPUT_TUPLEPATH=output)
+            if override is not None: env['BP_SIGMA_LOG_LOSS'] = override
+            result = batch.subprocess.run(['bash', str(self.repo/'subbreakpointjobs.sh')],
+                                          env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            job = self.manifest(output)
+            self.assertEqual(job['controls']['BP_SIGMA_LOG_LOSS'], expected)
+            card = Path(job['cards']['breakpoint']).read_text()
+            self.assertIn(repr('BP_SIGMA_LOG_LOSS')+': '+repr(expected), card)
+            self.assertIn('fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.05"))', card)
 
     def test_invalid_campaigns_leave_no_output(self):
         for override in [dict(STAGES=''),dict(STAGES='trk,trk'),dict(STAGES='gsf'),dict(SEED_LAST='11'),
