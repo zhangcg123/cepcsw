@@ -331,6 +331,99 @@ Covariance transport closure above 1e-3 fails the affected track. Passive
 chi2-score errors are separately tagged. Flat output is default; commented
 PodioOutput lines remain in the dedicated card for optional serialization.
 
+## Independent batch workflow
+
+Use the new root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
+The existing `subtrkjobs.sh`, `dump_gsftrk.sh` and all GSF cards are unchanged.
+Fit physics remains in `options/run_breakpoint.py`; optional supported BP_*
+environment overrides are frozen at preparation along with the complete card.
+There is no automatic per-event breakpoint discovery. The configured interval
+list applies to every track; empty means the no-breakpoint reference, even
+when TruthOverride is true.
+
+Prepare a campaign from existing simulation files, without submitting:
+
+```bash
+DRY_RUN=1 NEVT=200 SEED_FIRST=1 SEED_LAST=50 \
+INPUT_TUPLEPATH=sim_large_barrel_20260823 \
+OUTPUT_TUPLEPATH=breakpoint_campaign STAGES=trk,breakpoint \
+./subbreakpointjobs.sh
+```
+
+After inspecting the generated cards, submit those exact prepared jobs:
+
+```bash
+./subbreakpointjobs.sh submit breakpoint_campaign
+```
+
+Omit DRY_RUN=1 on the first command to prepare and submit immediately. Do not
+rerun preparation over the same sample/output directory; use `submit` after
+a dry run. DRY_RUN=1 also works with `submit` to print commands only.
+The scripts use the existing IHEP `hep_sub -g higgs -mem ... -argu JOB.json`
+convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
+
+| Control | Default | Meaning |
+|---|---|---|
+| STAGES | trk,breakpoint | Any nonduplicated subset of sim,trk,breakpoint; physical order always used |
+| INPUT_TUPLEPATH | sim_large_barrel_20260823 | Existing predecessor tuples, relative to repository or absolute |
+| OUTPUT_TUPLEPATH | breakpoint_barrel | New results/cards/logs; must differ from input |
+| NEVT | 200 | Maximum events per job |
+| SEED_FIRST / SEED_LAST | 1 / 50 | Inclusive seed/file indices; generated sim/trk cards use that RNG seed |
+| PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Comma-separated filename labels |
+| MEMORY_MB | 5000 | Scheduler memory request |
+| DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
+| CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
+
+For existing tracker inputs, set STAGES=breakpoint and point INPUT_TUPLEPATH
+at their directory. Input names are `sim-e--2.0-85-SEED.root` or
+`trk-e--2.0-85-SEED.root` with the selected labels. Examples of optional fit
+overrides: `BP_INTERVALS=5 BP_TRUTH_OVERRIDE=1 BP_BACKWARD_SEED_SCALE=100`.
+Interval5 here is only an example, NOT a recommended automatic truth interval.
+All BP_* values supported by the dedicated card except its job I/O/event-count
+fields are captured; BP_BACKWARD_MODE remains retired and is not supported.
+Unset BP_SELECTED normally means all events; explicit selection is available
+for isolated batch smoke tests. Job I/O and NEVT come from workflow controls.
+
+Output layout for each sample:
+
+```text
+OUTPUT_TUPLEPATH/
+  breakpoint_flat-e--2.0-85-SEED.root
+  trk-e--2.0-85-SEED.root             # only if trk selected; retained
+  sim-e--2.0-85-SEED.root             # only if sim selected; retained
+  outlog/e--2.0-85-SEED.out, .err
+  runcards/e--2.0-85-SEED/
+    job.json, trk.py, breakpoint.py  # only selected stages have cards
+    submitted.json                  # successful scheduler submission
+    started.json, completed.json    # worker lifecycle
+```
+
+The flat tuple contains ordinary RTS/backward and oracle/copied RTS/backward
+results. No breakpoint EDM file is written by the default card. No inputs or
+intermediate ROOT files are deleted. A selected stage consumes a predecessor
+made in the same job, otherwise an external predecessor from the input path.
+Cards are checksum-checked by the worker; never edit a frozen card in place.
+Use a new output directory for a changed physics setup. The software/library
+is NOT snapshotted: keep the branch/build stable while jobs are queued/running.
+
+The worker verifies readable nonempty ROOT trees, required flat branches, and
+at least one successful ordinary fit. Invalid oracle rows are reported and
+retained; inspect truth_override_result_status before analysis. This output
+check is not physics validation. Failed jobs retain outputs/started marker for
+diagnosis and cannot blindly overwrite/restart; use a new output directory.
+Duplicate submissions are rejected once submitted.json exists.
+
+Simulation and tracker cards are read-only templates from DumpGsfTrks. Only
+generated copies receive filenames, seed/event count and simulation particle.
+The hard-coded simulation energy/theta ranges are NOT changed by filename
+labels; inspect sim.py.bk before selecting sim. The current breakpoint fitter
+still assumes outward radius-ordered noncurling barrel tracks. Tracker truth
+collections are preserved by the existing trk template's keep-all output.
+
+Syntax/planning tests and local worker smoke results are recorded in
+`agents_record/2026-09-09-recbreakpoint-independent-batch.md` (repository root).
+No real Condor submission was performed for this change.
+
 ## Evidence and limits
 
 The exact pre-change documentation is preserved in
