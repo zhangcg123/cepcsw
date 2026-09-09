@@ -70,9 +70,43 @@ class BatchTest(unittest.TestCase):
     def test_invalid_campaigns_leave_no_output(self):
         for override in [dict(STAGES=''),dict(STAGES='trk,trk'),dict(STAGES='gsf'),dict(SEED_LAST='11'),
                          dict(NEVT='0'),dict(MEMORY_MB='bad'),dict(PARTICLES='../escape'),
-                         dict(INPUT_TUPLEPATH='outputs'),dict(BP_TRUTH_OVERRIDE='maybe'),dict(SEED_LAST='13')]:
+                         dict(INPUT_TUPLEPATH='outputs'),dict(BP_TRUTH_OVERRIDE='maybe')]:
             with self.subTest(override=override),self.assertRaises(ValueError): self.prepare(**override)
             self.assertFalse((self.repo/'outputs').exists())
+
+    def test_missing_and_empty_inputs_skip_but_later_seed_submits(self):
+        # Seed11 missing, seed12 valid, seed13 empty, seed14 valid.
+        (self.repo/'inputs/sim-e--2.0-85-13.root').write_bytes(b'')
+        (self.repo/'inputs/sim-e--2.0-85-14.root').write_bytes(b'planning fixture')
+        env = dict(self.env, SEED_FIRST='11', SEED_LAST='14', DRY_RUN='0')
+        output = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), contextlib.redirect_stdout(output), \
+             patch.object(batch.shutil, 'which', return_value='/mock/hep_sub'), \
+             patch.object(batch.subprocess, 'run') as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = 'Submitted mock job\n'; run.return_value.stderr = ''
+            batch.prepare()
+        self.assertEqual(run.call_count, 2)
+        for seed in (12, 14):
+            self.assertTrue((self.repo/f'outputs/runcards/e--2.0-85-{seed}/job.json').is_file())
+        for seed in (11, 13):
+            self.assertFalse((self.repo/f'outputs/runcards/e--2.0-85-{seed}').exists())
+            self.assertIn(f'Skipping e--2.0-85-{seed}', output.getvalue())
+        self.assertIn('Skipped 2 samples', output.getvalue())
+
+    def test_all_missing_inputs_leave_no_output(self):
+        with self.assertRaisesRegex(ValueError, 'No eligible jobs: skipped 2'):
+            self.prepare(SEED_FIRST='13', SEED_LAST='14')
+        self.assertFalse((self.repo/'outputs').exists())
+
+    def test_breakpoint_only_skips_missing_tracker(self):
+        self.prepare(STAGES='breakpoint', SEED_LAST='13')
+        self.assertEqual(self.manifest()['stages'], ['breakpoint'])
+        self.assertFalse((self.repo/'outputs/runcards/e--2.0-85-13').exists())
+
+    def test_generated_sim_needs_no_external_sim(self):
+        self.prepare(STAGES='sim,trk,breakpoint', SEED_FIRST='13', SEED_LAST='13')
+        self.assertTrue((self.repo/'outputs/runcards/e--2.0-85-13/job.json').is_file())
 
     def test_template_drift_fails_before_submission(self):
         path=self.repo/'DumpGsfTrks/trk.py.bk'

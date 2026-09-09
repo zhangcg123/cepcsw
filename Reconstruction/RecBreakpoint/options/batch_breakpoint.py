@@ -76,6 +76,7 @@ def prepare():
              'breakpoint': repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'}
     for stage in stages: templates[stage] = paths[stage].read_text()
     jobs = []
+    skipped = 0
     for particle in os.environ['PARTICLES'].split(','):
         for theta in os.environ['THETAS'].split(','):
             for pt in os.environ['TRANSVERSE_MOMENTA'].split(','):
@@ -87,11 +88,17 @@ def prepare():
                     carddir = output/'runcards'/sample
                     files = {s: str((output if s in stages else source)/f'{s}-{sample}.root') for s in ('sim','trk')}
                     files['breakpoint'] = str(output/f'breakpoint_flat-{sample}.root')
+                    missing_inputs = []
                     for stage, predecessor in [('trk','sim'), ('breakpoint','trk')]:
                         if stage in stages and predecessor not in stages:
                             path = Path(files[predecessor])
                             if not path.is_file() or path.stat().st_size == 0:
-                                raise ValueError('Missing external input: ' + str(path))
+                                missing_inputs.append(str(path))
+                    if missing_inputs:
+                        skipped += 1
+                        print(f'Skipping {sample}: missing or empty external input: '
+                              + ', '.join(missing_inputs), flush=True)
+                        continue
                     for path in [carddir, output/'outlog'/f'{sample}.out', output/'outlog'/f'{sample}.err'] + [Path(files[s]) for s in stages]:
                         if path.exists(): raise ValueError('Refusing to overwrite ' + str(path))
                     job = dict(repo=str(repo), sample=sample, seed=seed, nevt=nevt,
@@ -123,6 +130,8 @@ def prepare():
                         job['cards'][stage] = str(carddir/f'{stage}.py')
                         job['checksums'][stage] = hashlib.sha256(text.encode()).hexdigest()
                     jobs.append((carddir, job, cards))
+    if not jobs:
+        raise ValueError(f'No eligible jobs: skipped {skipped} samples with missing or empty external inputs')
     if len({str(d) for d, _, _ in jobs}) != len(jobs): raise ValueError('Duplicate sample labels')
     # Validate the entire campaign before creating files or submitting any job.
     (output/'outlog').mkdir(parents=True, exist_ok=True)
@@ -131,6 +140,7 @@ def prepare():
         for stage, text in cards.items(): create(Path(job['cards'][stage]), text)
         create(carddir/'job.json', json.dumps(job, indent=2)+'\n')
     print(f'Prepared {len(jobs)} jobs: {",".join(stages)}; output={output}', flush=True)
+    print(f'Skipped {skipped} samples with missing or empty external inputs.', flush=True)
     print('Fit steering is frozen from run_breakpoint.py and explicit BP_* overrides.', flush=True)
     print('Interval selection follows the frozen card (Truth by default; Auto not implemented).', flush=True)
     print('Simulation momentum/theta ranges remain those in sim.py.bk.', flush=True)

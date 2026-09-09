@@ -452,6 +452,15 @@ fields are captured; BP_BACKWARD_MODE remains retired and is not supported.
 Unset BP_SELECTED normally means all events; explicit selection is available
 for isolated batch smoke tests. Job I/O and NEVT come from workflow controls.
 
+During preparation, missing or zero-byte external predecessor inputs cause that
+sample to be skipped, with its sample label and path printed. Other valid seeds
+are still prepared/submitted; the final summary reports the skipped count.
+This covers missing sim inputs for trk and missing tracker inputs for a
+breakpoint-only stage. A predecessor generated in the same job needs no
+existing input. If all samples are skipped, preparation exits with an error
+without creating cards or submitting anything. Other validation errors (such
+as existing outputs or template drift) still abort preparation before submission.
+
 Output layout for each sample:
 
 ```text
