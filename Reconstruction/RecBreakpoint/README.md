@@ -142,10 +142,26 @@ large loose-seed covariances.
 
 ### TruthOverride
 
+The default diagnostic chain is Truth interval selection + LocalMarginal +
+TruthOverride=True. The effective interval list is shared by both pairs:
+
+```text
+select intervals for this track
+  -> ordinary RTS/backward: fit losses using MeanLogLoss/SigmaLogLoss priors
+  -> extra RTS/backward: fix each selected loss to its matched Geant4 value
+```
+
+The extra fixed-loss response adds zero loss variance; ordinary track
+covariance, native material/MS and measurement updates remain active. Manual
+selection shares its supplied list in exactly the same way. TruthOverride does
+not discover additional intervals. With an empty effective list the extra pair
+is copied (result status1), even though the switch is on. With a nonempty list,
+successful oracle results have status2. Auto remains an initialization error.
+
 ```python
 fit.IntervalSelectionMode = "Truth"  # select locations for this track
 fit.LossStateMode = "LocalMarginal"   # ordinary pair fits the loss
-fit.TruthOverride = True           # additional oracle pair; compiled/card default False
+fit.TruthOverride = True           # additional oracle pair; compiled/card default True
 fit.BreakpointIntervals = []  # Manual-only; Truth builds the effective list
 # Four endpoints: ordinary RTS/backward, truth-override RTS/backward.
 ```
@@ -184,7 +200,10 @@ feeds back into the ordinary pair. Multi-interval ordinary comparisons require
 LocalMarginal. The old public `LossStateMode="TruthOverride"` now fails clearly:
 select an ordinary LossStateMode and set the independent `TruthOverride` bool.
 The internal fitter retains its fixed-loss implementation under the old name.
-Dedicated-card environment control: `BP_TRUTH_OVERRIDE=1` (default 0).
+Dedicated-card environment control: `BP_TRUTH_OVERRIDE=1` (default 1).
+Set BP_TRUTH_OVERRIDE=0 to copy ordinary results into the extra pair instead.
+Already prepared cards preserve their old values/default expressions; regenerate
+them in a new output directory to adopt the new default.
 
 `truth_override_result_status` and the input-row-aligned EDM
 `BreakpointTruthOverrideStatus` distinguish: 0 absent/not attempted, 1 copied,
@@ -313,7 +332,7 @@ extended KF; the separate terms make those differences auditable.
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
-| TruthOverride | false | Add fixed-truth-loss pair when true; otherwise copy ordinary pair |
+| TruthOverride | true | Add fixed-truth-loss pair when true; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |

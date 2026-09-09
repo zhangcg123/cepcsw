@@ -57,7 +57,7 @@ private:
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 1.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
-  Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", false};
+  Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", true};
   Gaudi::Property<int> m_maxIterations{this,"MaxFitIterations",1};
   Gaudi::Property<double> m_iterationTolerance{this,"RelinearizationTolerance",1.e-3};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};

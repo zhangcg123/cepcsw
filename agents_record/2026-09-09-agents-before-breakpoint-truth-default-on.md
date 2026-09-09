@@ -327,7 +327,7 @@ not scale the independent loss prior or affect forward/RTS. Default
 MaxFitIterations remains1; iterations require one
 ordinary interval and do not enforce loss positivity.
 
-An independent default-on `TruthOverride` bool adds a second RTS/backward
+An independent default-off `TruthOverride` bool adds a second RTS/backward
 pair in `BreakpointTracksTruthOverrideRTS` and
 `BreakpointTracksTruthOverrideBackwardFilter`. Off, or with empty intervals,
 these are copies of the completed ordinary results; Truth interval selection
@@ -337,10 +337,8 @@ and embedded G4 provenance, with zero added loss variance, in a separate
 one-pass oracle pair. Ordinary iterations/settings remain unchanged.
 The public LossStateMode now selects Persistent6D or LocalMarginal only;
 old LossStateMode=TruthOverride fails with migration guidance. The dedicated
-card uses BP_TRUTH_OVERRIDE=1, default1, and derives truth-input needs from
+card uses BP_TRUTH_OVERRIDE=1, default0, and derives truth-input needs from
 both this control and IntervalSelectionMode.
-The default-on change and exact branch-by-branch regression are recorded in
-`agents_record/2026-09-09-recbreakpoint-truth-default-on.md`.
 Oracle-only truth failure in Manual mode preserves ordinary results but leaves extra outputs absent/NaN
 with tagged errors. Result status distinguishes absent0, copied1, oracle2
 and negative failure; separate input-row index maps are always saved.
