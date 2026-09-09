@@ -31,6 +31,11 @@ private:
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_truthRTSOutput{"BreakpointTracksTruthOverrideRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_truthBackwardOutput{"BreakpointTracksTruthOverrideBackwardFilter", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_truthResultStatus{"BreakpointTruthOverrideStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_truthRTSIndex{"BreakpointTruthOverrideRTSIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_truthBackwardIndex{"BreakpointTruthOverrideBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_status{"BreakpointStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_outputIndex{"BreakpointOutputIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_backwardOutputIndex{"BreakpointBackwardOutputIndex", Gaudi::DataHandle::Writer, this};
@@ -51,6 +56,7 @@ private:
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 1.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
+  Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", false};
   Gaudi::Property<int> m_maxIterations{this,"MaxFitIterations",1};
   Gaudi::Property<double> m_iterationTolerance{this,"RelinearizationTolerance",1.e-3};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
@@ -103,5 +109,14 @@ private:
   std::vector<int> m_truthIntervals, m_truthFirstStep, m_truthLastStep;
   std::vector<double> m_truthZ, m_truthB, m_truthMomentumBefore, m_truthEbremLoss, m_truthTX0;
   std::vector<double> m_truthStartFraction, m_truthEndFraction;
+  // Parallel oracle endpoints. Status: 0 absent, 1 copied, 2 oracle, negative invalid.
+  int m_truthResultCode = 0;
+  double m_truthRTSPt = 0, m_truthBackwardPt = 0;
+  double m_truthForwardChi2 = 0, m_truthBackwardChi2 = 0, m_truthSmoothedChi2 = 0;
+  int m_truthSmoothedStatus = 0;
+  std::string m_truthSmoothedError;
+  std::vector<double> m_truthForwardLocal, m_truthBackwardLocal, m_truthSmoothedLocal;
+  std::vector<double> m_truthRTSParameters, m_truthRTSCovariance;
+  std::vector<double> m_truthBackwardParameters, m_truthBackwardCovariance;
 };
 #endif

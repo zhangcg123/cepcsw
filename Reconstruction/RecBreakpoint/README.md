@@ -48,7 +48,10 @@ smoother. Neither branch adds a beam-to-first-hit breakpoint.
 
 The existing `OutputTracks` property now names the RTS collection (default
 `BreakpointTracksRTS`); `OutputTracksBackwardFilter` names the other collection.
-They must differ. Each successful pair contains IP, first-hit and last-hit
+Two additional collections are always available:
+`BreakpointTracksTruthOverrideRTS` and `BreakpointTracksTruthOverrideBackwardFilter`,
+named by `OutputTracksTruthOverrideRTS` and `OutputTracksTruthOverrideBackwardFilter`.
+All four names must differ. Each successful pair contains IP, first-hit and last-hit
 states and the original ordered hits. Fixed input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
 `BreakpointStatus` is 1 for a successful pair, -1 for failed fit and 0 for
@@ -63,7 +66,7 @@ longer misleadingly labels a row that now contains both results.
 
 An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
 `BreakpointIntervals=[]` is the no-breakpoint reference. Multiple independent
-intervals are supported by LocalMarginal and TruthOverride; Persistent6D
+intervals are supported by LocalMarginal and the additional truth pair; Persistent6D
 accepts at most one. Negative or duplicate entries fail initialization;
 out-of-range entries fail the affected track. This ordering targets outward,
 noncurling barrel tracks.
@@ -112,10 +115,10 @@ large loose-seed covariances.
 ### TruthOverride
 
 ```python
-fit.LossStateMode = "TruthOverride"
+fit.LossStateMode = "Persistent6D"  # ordinary pair; LocalMarginal is also supported
+fit.TruthOverride = True           # additional oracle pair; compiled/card default False
 fit.BreakpointIntervals = [5]
-fit.MaxFitIterations = 1
-# Both endpoints are always produced.
+# Four endpoints: ordinary RTS/backward, truth-override RTS/backward.
 ```
 
 Configured losses are fixed from embedded event truth, not guessed or fitted:
@@ -127,7 +130,8 @@ positions, never chooses a nearest hit.
 For each hook-to-hook interval (start,end], eBrem process-subtype 3 momentum
 losses are assigned by their post-step points and summed:
 `z=1-sum(delta_p_ebrem)/p_at_start_hook`, `b=-log(z)`. This excludes ionization.
-Each selected b has zero added variance; MeanLogLoss/SigmaLogLoss are ignored.
+Each selected b has zero added variance; MeanLogLoss/SigmaLogLoss are ignored
+only for the oracle pair, and continue to steer the ordinary pair.
 No singular live 6D fixed-loss covariance is created. Native material, MS,
 ionization steering, seeds and upstream loss placement remain unchanged.
 
@@ -135,9 +139,38 @@ The card conditionally loads the six tracker association/SimTrackerHit sets,
 GsfG4MaterialSteps and GsfSimTrackerHitG4StepLinks. It uses no side CSV/ROOT
 helper or GSF execution. The module reuses unchanged TruthBHLossEventData.cpp
 from RecGsfTracking and the existing datamodel libraries. Invalid truth fails
-the affected pair: truth_override_status 0 means off/empty, 1 valid, -1 invalid
+only the additional oracle pair; the ordinary outputs remain available.
+truth_override_status 0 means off/empty, 1 valid input, -1 invalid
 event input, -2 invalid track match, -3 out-of-range interval. There is no
-ordinary-loss fallback. An input loading failure can occur before tuple output.
+ordinary-loss fallback on truth failure. An input loading failure can occur before tuple output.
+
+With `TruthOverride=False`, the additional pair copies the already computed
+ordinary pair (including covariances, hits and chi2); it does not rerun a fit or
+access material truth. An empty interval list also copies the ordinary pair.
+With True and nonempty intervals, a separate one-pass fixed-loss fit generates
+both oracle endpoints with the same seed scales, hit selection and material
+settings. The ordinary pair may still use MaxFitIterations>1. No oracle state
+feeds back into the ordinary pair. Multi-interval ordinary comparisons require
+LocalMarginal. The old public `LossStateMode="TruthOverride"` now fails clearly:
+select an ordinary LossStateMode and set the independent `TruthOverride` bool.
+The internal fitter retains its fixed-loss implementation under the old name.
+Dedicated-card environment control: `BP_TRUTH_OVERRIDE=1` (default 0).
+
+`truth_override_result_status` and the input-row-aligned EDM
+`BreakpointTruthOverrideStatus` distinguish: 0 absent/not attempted, 1 copied,
+2 oracle success, -1/-2/-3 truth input/match/interval failure, -4 oracle fit failure.
+Index maps are `BreakpointTruthOverrideRTSIndex` and
+`BreakpointTruthOverrideBackwardIndex`; missing outputs map to -1. Check this
+result status rather than assuming that a truth-named branch used truth.
+Flat branches `truth_override_rts_pt`, `truth_override_backward_pt`,
+`truth_override_{forward,backward,smoothed}_chi2` and their `_local_chi2` vectors
+save the extra pair's results. The smoothed score also has status/error fields.
+`truth_override_{rts,backward}_ip_parameters` hold `(D0,phi,omega,Z0,tanLambda)`
+at the origin; `_ip_covariance` copies all 21 packed EDM covariance elements.
+The first 15 describe the fitted five-parameter helix; the trailing time
+row/column is carried from EDM and is not a fitted loss coordinate.
+Failed extra results have NaN scalar results and empty vectors, not copies.
+An ordinary-pair failure currently leaves the extra pair unattempted (status 0).
 
 Truth vectors retain interval, retained_fraction, log_loss, momentum_before,
 ebrem_loss, tx0, first_step/last_step and start_fraction/end_fraction under the
@@ -242,10 +275,13 @@ extended KF; the separate terms make those differences auditable.
 | InputTracks | CompleteTracks | Input hit-list tracks |
 | OutputTracks | BreakpointTracksRTS | RTS collection |
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
+| OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
+| OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
+| TruthOverride | false | Add fixed-truth-loss pair when true; otherwise copy ordinary pair |
 | BreakpointIntervals | [] | Selected radius-ordered hit intervals |
-| MeanLogLoss | 0 | Gaussian b-prior center, finite in [0,5]; ignored by TruthOverride |
-| SigmaLogLoss | 0.05 | Positive finite b-prior sigma; ignored by TruthOverride |
-| LossStateMode | Persistent6D | Persistent6D, LocalMarginal, TruthOverride |
+| MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
+| SigmaLogLoss | 0.05 | Ordinary positive finite b-prior sigma; oracle ignores it |
+| LossStateMode | Persistent6D | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | MaxFitIterations | 1 | 1--20; ordinary single-interval iterations as described above |
 | RelinearizationTolerance | 0.001 | Positive finite standardized stopping threshold |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
@@ -286,8 +322,9 @@ _covariance (36 row-major entries), persistent_transport and
 persistent_process_noise (36 entries each). These describe the final RTS
 forward pass. The saved 6D birth process noise excludes the independent b
 prior already present in its input P; the complete-score boundary construction
-includes that prior once when crossing from 5D. Empty-list, LocalMarginal and
-TruthOverride runs have empty persistent vectors. b permanently belongs to
+includes that prior once when crossing from 5D. Empty-list and LocalMarginal
+ordinary fits have empty persistent vectors. Enabling the extra truth pair
+does not change these ordinary diagnostics. b permanently belongs to
 the configured interval, never the current hit or native t0.
 
 Covariance transport closure above 1e-3 fails the affected track. Passive

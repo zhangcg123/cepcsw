@@ -26,6 +26,8 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
   declareProperty("OutputTracks", m_output, "Successful refitted tracks");
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
+  declareProperty("OutputTracksTruthOverrideRTS", m_truthRTSOutput, "Oracle RTS, or ordinary RTS copy when disabled");
+  declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
 }
 RecBreakpoint::~RecBreakpoint() = default;
 
@@ -47,15 +49,19 @@ StatusCode RecBreakpoint::initialize() {
             << " Persistent6D or LocalMarginal, and exactly one breakpoint" << endmsg;
     return StatusCode::FAILURE;
   }
-  if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal"
-       && m_lossStateModeName != "TruthOverride") ||
+  if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal") ||
       (m_lossStateModeName == "Persistent6D" && m_intervals.value().size() > 1)) {
-    error() << "LossStateMode must be LocalMarginal, Persistent6D or TruthOverride; Persistent6D requires"
-            << " at most one breakpoint" << endmsg;
+    error() << "LossStateMode must be LocalMarginal or Persistent6D (at most one breakpoint)."
+            << " Use TruthOverride=true for the additional oracle pair, not LossStateMode=TruthOverride." << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_output.fullKey() == m_backwardOutput.fullKey()) {
-    error() << "The two output track collections must have different names" << endmsg;
+  if (m_output.fullKey() == m_backwardOutput.fullKey() ||
+      m_output.fullKey() == m_truthRTSOutput.fullKey() ||
+      m_output.fullKey() == m_truthBackwardOutput.fullKey() ||
+      m_backwardOutput.fullKey() == m_truthRTSOutput.fullKey() ||
+      m_backwardOutput.fullKey() == m_truthBackwardOutput.fullKey() ||
+      m_truthRTSOutput.fullKey() == m_truthBackwardOutput.fullKey()) {
+    error() << "The four output track collections must have different names" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -72,9 +78,8 @@ StatusCode RecBreakpoint::initialize() {
               << " must be finite and positive" << endmsg;
       return StatusCode::FAILURE;
     }
-  if (m_lossStateModeName != "TruthOverride" &&
-      (!std::isfinite(m_meanLoss.value()) || m_meanLoss < 0 || m_meanLoss > 5 ||
-       !std::isfinite(m_sigmaLoss.value()) || m_sigmaLoss <= 0)) {
+  if (!std::isfinite(m_meanLoss.value()) || m_meanLoss < 0 || m_meanLoss > 5 ||
+      !std::isfinite(m_sigmaLoss.value()) || m_sigmaLoss <= 0) {
     error() << "MeanLogLoss must be finite in [0,5] and SigmaLogLoss finite/positive" << endmsg;
     return StatusCode::FAILURE;
   }
@@ -140,6 +145,21 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("backward_iteration_linearized_chi2", &m_backwardIterationChi2);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
   m_tree->Branch("truth_override_status", &m_truthOverrideStatus);
+  m_tree->Branch("truth_override_result_status", &m_truthResultCode);
+  m_tree->Branch("truth_override_rts_pt", &m_truthRTSPt);
+  m_tree->Branch("truth_override_backward_pt", &m_truthBackwardPt);
+  m_tree->Branch("truth_override_forward_chi2", &m_truthForwardChi2);
+  m_tree->Branch("truth_override_backward_chi2", &m_truthBackwardChi2);
+  m_tree->Branch("truth_override_smoothed_chi2", &m_truthSmoothedChi2);
+  m_tree->Branch("truth_override_smoothed_chi2_status", &m_truthSmoothedStatus);
+  m_tree->Branch("truth_override_smoothed_chi2_error", &m_truthSmoothedError);
+  m_tree->Branch("truth_override_forward_local_chi2", &m_truthForwardLocal);
+  m_tree->Branch("truth_override_backward_local_chi2", &m_truthBackwardLocal);
+  m_tree->Branch("truth_override_smoothed_local_chi2", &m_truthSmoothedLocal);
+  m_tree->Branch("truth_override_rts_ip_parameters", &m_truthRTSParameters);
+  m_tree->Branch("truth_override_rts_ip_covariance", &m_truthRTSCovariance);
+  m_tree->Branch("truth_override_backward_ip_parameters", &m_truthBackwardParameters);
+  m_tree->Branch("truth_override_backward_ip_covariance", &m_truthBackwardCovariance);
   m_tree->Branch("truth_override_error", &m_truthOverrideError);
   m_tree->Branch("truth_override_g4_track_id", &m_truthG4Track);
   m_tree->Branch("truth_override_max_endpoint_distance", &m_truthMaxDistance);
@@ -203,6 +223,11 @@ StatusCode RecBreakpoint::execute() {
   ++m_event;
   auto* output = m_output.createAndPut();
   auto* backwardOutput = m_backwardOutput.createAndPut();
+  auto* truthRTSOutput = m_truthRTSOutput.createAndPut();
+  auto* truthBackwardOutput = m_truthBackwardOutput.createAndPut();
+  auto* truthResultStatuses = m_truthResultStatus.createAndPut();
+  auto* truthRTSIndices = m_truthRTSIndex.createAndPut();
+  auto* truthBackwardIndices = m_truthBackwardIndex.createAndPut();
   auto* statuses = m_status.createAndPut();
   auto* outputIndices = m_outputIndex.createAndPut();
   auto* backwardOutputIndices = m_backwardOutputIndex.createAndPut();
@@ -235,7 +260,7 @@ StatusCode RecBreakpoint::execute() {
   settings.lossStateMode = m_lossStateModeName;
   settings.maxFitIterations=m_maxIterations;
   settings.relinearizationTolerance=m_iterationTolerance;
-  const bool needTruthLoss = selected && m_lossStateModeName == "TruthOverride"
+  const bool needTruthLoss = selected && m_enableTruthOverride
       && !settings.intervals.empty();
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
@@ -258,7 +283,18 @@ StatusCode RecBreakpoint::execute() {
   m_trackIndex = -1;
   for (const auto& track : *tracks) {
     ++m_trackIndex;
-    if (!selected) { statuses->push_back(0); outputIndices->push_back(-1); backwardOutputIndices->push_back(-1); continue; }
+    if (!selected) {
+      statuses->push_back(0); outputIndices->push_back(-1); backwardOutputIndices->push_back(-1);
+      truthResultStatuses->push_back(0); truthRTSIndices->push_back(-1); truthBackwardIndices->push_back(-1);
+      continue;
+    }
+    int truthRTSIndex = -1, truthBackwardIndex = -1;
+    m_truthResultCode = 0;
+    m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
+    m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
+    m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
+    m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
+    m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
     m_fitStatus = -1;
     settings.truthLogLoss.clear();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
@@ -311,45 +347,6 @@ StatusCode RecBreakpoint::execute() {
         m_hitCell.push_back(hit.getCellID());
         m_hitR.push_back(std::hypot(p.x, p.y));
         m_hitZ.push_back(p.z);
-      }
-      if (needTruthLoss) {
-        if (!truthPrepared) {
-          m_truthOverrideStatus = -1;
-          m_truthOverrideError = truthEventError;
-          throw std::runtime_error("TruthOverride event data: " + truthEventError);
-        }
-        TruthBHLossEventDataMatch match;
-        const bool matched = truthReader.matchTrack(hits, m_truthEndpointDistance, true,
-                                                    match, m_truthOverrideError);
-        m_truthG4Track = match.g4TrackID;
-        m_truthMaxDistance = match.maxEndpointDistance;
-        if (!matched) {
-          m_truthOverrideStatus = -2;
-          throw std::runtime_error("TruthOverride track association: " + m_truthOverrideError);
-        }
-        for (int interval : settings.intervals) {
-          if (interval < 0 || interval >= static_cast<int>(match.materialIntervals.size())) {
-            m_truthOverrideStatus = -3;
-            m_truthOverrideError = "Configured interval is outside the matched track";
-            throw std::runtime_error(m_truthOverrideError);
-          }
-        }
-        for (int interval : settings.intervals) {
-          const auto& truth = match.materialIntervals[interval];
-          const double b = -std::log(truth.retainedFraction);
-          settings.truthLogLoss.emplace(interval, b);
-          m_truthIntervals.push_back(interval); m_truthZ.push_back(truth.retainedFraction);
-          m_truthB.push_back(b); m_truthMomentumBefore.push_back(truth.momentumBefore);
-          m_truthEbremLoss.push_back(truth.ebremLoss); m_truthTX0.push_back(truth.truthTX0);
-          m_truthFirstStep.push_back(truth.firstStepNumber); m_truthLastStep.push_back(truth.lastStepNumber);
-          m_truthStartFraction.push_back(truth.startHookFraction); m_truthEndFraction.push_back(truth.endHookFraction);
-          if (m_verbose) info() << std::setprecision(17) << "TruthOverride event=" << m_event
-              << " track=" << m_trackIndex << " interval=" << interval << " g4Track=" << match.g4TrackID
-              << " z=" << truth.retainedFraction << " b=" << b << " addedLossVariance=0"
-              << " steps=" << truth.firstStepNumber << ':' << truth.startHookFraction
-              << "->" << truth.lastStepNumber << ':' << truth.endHookFraction << endmsg;
-        }
-        m_truthOverrideStatus = 1;
       }
       const auto seedIndices = adapter.seedHitIndices(hits);
       m_seedHitIndices.assign(seedIndices.begin(), seedIndices.end());
@@ -513,12 +510,133 @@ StatusCode RecBreakpoint::execute() {
       backwardTrack.setNdf(fit.measurementDimensions-5); // bookkeeping, not calibrated
       for(auto hit:hits) backwardTrack.addToTrackerHits(hit);
       m_fitStatus = 1;
+
+      // The ordinary pair is complete before truth is consulted. Failure of the
+      // diagnostic oracle must not discard or silently replace ordinary tracks.
+      try {
+        auto oracleSettings = settings;
+        oracleSettings.lossStateMode = "TruthOverride";
+        oracleSettings.maxFitIterations = 1; // exact fixed losses need no prior iteration
+        if (needTruthLoss) {
+          if (!truthPrepared) {
+            m_truthOverrideStatus = -1;
+            m_truthOverrideError = truthEventError;
+            throw std::runtime_error("TruthOverride event data: " + truthEventError);
+          }
+          TruthBHLossEventDataMatch match;
+          const bool matched = truthReader.matchTrack(hits, m_truthEndpointDistance, true,
+                                                      match, m_truthOverrideError);
+          m_truthG4Track = match.g4TrackID;
+          m_truthMaxDistance = match.maxEndpointDistance;
+          if (!matched) {
+            m_truthOverrideStatus = -2;
+            throw std::runtime_error("TruthOverride track association: " + m_truthOverrideError);
+          }
+          for (int interval : oracleSettings.intervals) {
+            if (interval < 0 || interval >= static_cast<int>(match.materialIntervals.size())) {
+              m_truthOverrideStatus = -3;
+              m_truthOverrideError = "Configured interval is outside the matched track";
+              throw std::runtime_error(m_truthOverrideError);
+            }
+          }
+          for (int interval : oracleSettings.intervals) {
+            const auto& truth = match.materialIntervals[interval];
+            const double b = -std::log(truth.retainedFraction);
+            oracleSettings.truthLogLoss.emplace(interval, b);
+            m_truthIntervals.push_back(interval); m_truthZ.push_back(truth.retainedFraction);
+            m_truthB.push_back(b); m_truthMomentumBefore.push_back(truth.momentumBefore);
+            m_truthEbremLoss.push_back(truth.ebremLoss); m_truthTX0.push_back(truth.truthTX0);
+            m_truthFirstStep.push_back(truth.firstStepNumber); m_truthLastStep.push_back(truth.lastStepNumber);
+            m_truthStartFraction.push_back(truth.startHookFraction); m_truthEndFraction.push_back(truth.endHookFraction);
+            if (m_verbose) info() << std::setprecision(17) << "TruthOverride event=" << m_event
+                << " track=" << m_trackIndex << " interval=" << interval << " g4Track=" << match.g4TrackID
+                << " z=" << truth.retainedFraction << " b=" << b << " addedLossVariance=0"
+                << " steps=" << truth.firstStepNumber << ':' << truth.startHookFraction
+                << "->" << truth.lastStepNumber << ':' << truth.endHookFraction << endmsg;
+          }
+          m_truthOverrideStatus = 1;
+        }
+
+        std::unique_ptr<breakpoint::PairedFitResult> oracle;
+        if (needTruthLoss)
+          oracle = std::make_unique<breakpoint::PairedFitResult>(fitter.fit(hits, oracleSettings));
+        const auto& extraPair = oracle ? *oracle : paired;
+        const auto& truthRTS = extraPair.rts;
+        const auto& truthBackward = extraPair.backward;
+        for (const auto* candidate : {&truthRTS, &truthBackward})
+          if (!std::isfinite(candidate->ip.omega) || candidate->ip.omega == 0)
+            throw std::runtime_error("Invalid truth-override endpoint curvature");
+
+        // Use exactly the same endpoint representation and chi2 conventions.
+        // With the switch off these are copies of the already calculated pair,
+        // not a rerun with slightly different floating-point results.
+        auto publish = [&](edm4hep::TrackCollection& collection,
+                           const breakpoint::FitResult& source, double chi2) {
+          auto destination = collection.create();
+          destination.addToTrackStates(source.ip);
+          destination.addToTrackStates(breakpoint::toEDM(source.endpoint.front(), m_bz, 2));
+          destination.addToTrackStates(breakpoint::toEDM(source.endpoint.back(), m_bz, 3));
+          destination.setChi2(chi2);
+          destination.setNdf(source.measurementDimensions - 5);
+          for (auto hit : hits) destination.addToTrackerHits(hit);
+        };
+        m_truthRTSPt = std::abs(m_bz * 2.99792458e-4 / truthRTS.ip.omega);
+        m_truthBackwardPt = std::abs(m_bz * 2.99792458e-4 / truthBackward.ip.omega);
+        m_truthForwardChi2 = truthRTS.chi2;
+        m_truthBackwardChi2 = std::accumulate(truthBackward.backwardChi2.begin(), truthBackward.backwardChi2.end(), 0.);
+        m_truthSmoothedChi2 = truthRTS.smoothedTotalChi2;
+        m_truthSmoothedStatus = truthRTS.smoothedChi2Status;
+        m_truthSmoothedError = truthRTS.smoothedChi2Error;
+        m_truthForwardLocal = truthRTS.localChi2;
+        m_truthBackwardLocal = truthBackward.backwardChi2;
+        m_truthSmoothedLocal = truthRTS.smoothedChi2;
+        auto saveIP = [](const edm4hep::TrackState& ip, std::vector<double>& parameters,
+                         std::vector<double>& covariance) {
+          parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
+          covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
+        };
+        saveIP(truthRTS.ip, m_truthRTSParameters, m_truthRTSCovariance);
+        saveIP(truthBackward.ip, m_truthBackwardParameters, m_truthBackwardCovariance);
+        truthRTSIndex = truthRTSOutput->size();
+        truthBackwardIndex = truthBackwardOutput->size();
+        publish(*truthRTSOutput, truthRTS, m_truthSmoothedChi2);
+        publish(*truthBackwardOutput, truthBackward, m_truthBackwardChi2);
+        m_truthResultCode = needTruthLoss ? 2 : 1;
+        if (m_verbose) {
+          for (std::size_t i = 0; i < hits.size(); ++i) {
+            for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
+                {"truth_rts", &truthRTS.endpoint[i]}, {"truth_backward", &truthBackward.endpoint[i]}}) {
+              std::ostringstream dump;
+              dump << std::setprecision(17) << named.first << " hit=" << i << " mean=[";
+              for (int row = 0; row < 5; ++row) dump << named.second->mean(row, 0) << ' ';
+              dump << "] covariance(row-major)=[";
+              for (int row = 0; row < 5; ++row)
+                for (int col = 0; col < 5; ++col) dump << named.second->covariance(row, col) << ' ';
+              dump << ']';
+              info() << dump.str() << endmsg;
+            }
+          }
+        }
+      } catch (const std::exception& exception) {
+        m_truthResultCode = m_truthOverrideStatus < 0 ? m_truthOverrideStatus : -4;
+        truthRTSIndex = truthBackwardIndex = -1;
+        m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
+        m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
+        m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
+        m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
+        m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
+        m_truthOverrideError = exception.what();
+        warning() << "Ordinary pair retained; additional truth pair failed: " << exception.what() << endmsg;
+      }
     } catch (const std::exception& exception) {
       warning() << "event=" << m_event << " track=" << m_trackIndex << ": " << exception.what() << endmsg;
       outputIndices->push_back(-1);
       backwardOutputIndices->push_back(-1);
     }
     statuses->push_back(m_fitStatus);
+    truthResultStatuses->push_back(m_truthResultCode);
+    truthRTSIndices->push_back(truthRTSIndex);
+    truthBackwardIndices->push_back(truthBackwardIndex);
     m_tree->Fill();
   }
   return StatusCode::SUCCESS;

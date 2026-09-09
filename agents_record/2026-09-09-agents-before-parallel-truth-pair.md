@@ -289,7 +289,7 @@ ROOT files and logs are outputs, not status records.
 
 Active development remains the independent RecBreakpoint package on local
 `test_breakpoint`, reading CompleteTracks. BackwardMode is removed. Each run
-now produces ordinary `BreakpointTracksRTS` and
+now produces both `BreakpointTracksRTS` and
 `BreakpointTracksBackwardFilter`, with separate input-row mappings, endpoint
 pT, loss results and iteration histories in the flat tuple. These are two
 results from a shared first forward pass, not CPU threads. The backward
@@ -325,23 +325,14 @@ not scale the independent loss prior or affect forward/RTS. Default
 MaxFitIterations remains1; iterations require one
 ordinary interval and do not enforce loss positivity.
 
-An independent default-off `TruthOverride` bool adds a second RTS/backward
-pair in `BreakpointTracksTruthOverrideRTS` and
-`BreakpointTracksTruthOverrideBackwardFilter`. Off, or with empty intervals,
-these are copies of the completed ordinary results without loss-truth access.
-On, each selected interval receives fixed b from reconstructed-hit associations
-and embedded G4 provenance, with zero added loss variance, in a separate
-one-pass oracle pair. Ordinary iterations/settings remain unchanged.
-The public LossStateMode now selects Persistent6D or LocalMarginal only;
-old LossStateMode=TruthOverride fails with migration guidance. The dedicated
-card uses BP_TRUTH_OVERRIDE=1, default0, and derives truth-input needs from it.
-Invalid truth preserves ordinary results but leaves extra outputs absent/NaN
-with tagged errors. Result status distinguishes absent0, copied1, oracle2
-and negative failure; separate input-row index maps are always saved.
-The flat tuple adds oracle/copied endpoint pT, full packed IP covariances and
-parameters, and three chi2 lists/totals. The original truth provenance remains
-passive except for the explicitly enabled oracle. No interval discovery,
-within-interval emission fit, native material, shared KF/GSF or seed changes.
+TruthOverride remains an explicitly configured interval oracle, supported by
+both endpoints with MaxFitIterations=1. It follows reconstructed-hit
+associations into embedded G4 steps/links, not side tuples/CSV or distance
+matching. TruthMaxEndpointDistance validates associated hooks. Fixed b has
+zero added loss variance; invalid truth fails the affected pair with status
+and error. Empty intervals remain the ordinary 5D reference without truth
+access. No automatic interval discovery or within-interval emission-position
+fit is introduced. Native material/MS, ElossOn and seeds remain unchanged.
 
 Mechanical gates cover the ordinary/truth seed2:68 smoke, seed12:11/16/17,
 iterations, empty/zero-loss and multi-interval controls, plus the previous
@@ -355,7 +346,7 @@ The backward seed scale, unchanged RTS boundary and 25-case scale/regression
 gate are recorded in
 `agents_record/2026-09-09-recbreakpoint-backward-seed-scale.md`.
 
-Next: use the separately labeled scores and four endpoints on the
+Next: use the three separately labeled scores and paired endpoints on the
 same negative fitted-loss and truth-oracle controls, checking momentum truth,
 not declaring an optimum from smaller chi2. Preserve clean-track and
 categorized population gates. No shared KF/GSF edits, maintained batch
@@ -368,12 +359,3 @@ The package README is the authoritative complete property/schema/build
 reference. Complete outgoing status and README were preserved in
 `agents_record/2026-09-09-agents-before-parallel-breakpoint.md` and
 `agents_record/2026-09-09-recbreakpoint-readme-before-parallel.md`.
-
-The parallel truth-pair contract, regression results and control migration are
-recorded in `agents_record/2026-09-09-recbreakpoint-parallel-truth-pair.md`.
-Its 18-case gate checks exact ordinary on/off preservation, exact disabled
-copies, prior oracle reproduction, covariance/schema consistency, and ordinary
-result preservation on deliberately invalid truth. This is mechanical evidence,
-not additional physics validation.
-The complete outgoing status is preserved in
-`agents_record/2026-09-09-agents-before-parallel-truth-pair.md`.
