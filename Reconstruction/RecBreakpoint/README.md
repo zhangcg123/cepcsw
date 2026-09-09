@@ -4,6 +4,12 @@ Experimental electron breakpoint Kalman refitter on local `test_breakpoint`.
 Reads `CompleteTracks`. GSF/shared KF sources and maintained batch cards are
 unchanged. This is not a physics-validated replacement.
 
+For the complete code-checked mathematical workflow, read
+[why Persistent6D and LocalMarginal can give the same result](docs/fixed-linearized-loss-walkthrough.md).
+It defines every state/reference/deviation, derives the loss Jacobians A and
+g, and follows uncertainty, measurement updates and RTS loss recovery in one
+self-contained explanation.
+
 ## Build and run
 
 From the CEPCSW repository root:
