@@ -293,12 +293,9 @@ now produces both `BreakpointTracksRTS` and
 `BreakpointTracksBackwardFilter`, with separate input-row mappings, endpoint
 pT, loss results and iteration histories in the flat tuple. These are two
 results from a shared first forward pass, not CPU threads. The backward
-continuation copies the first-pass forward endpoint mean and scales its full
-5x5 track covariance by positive finite `BackwardSeedScale` (default1), then
-refilters inward; it is not an independent Bayesian smoother. The dedicated
-card exposes this scale; its effective value is saved in `backward_seed_scale`.
-RTS starts from the final forward updated state/covariance with no such scale, reuses
-the buffered forward transitions, and does not consume the backward refilter.
+continuation still copies the full first-pass forward endpoint posterior and
+refilters inward; it is not an independent Bayesian smoother. RTS does not
+consume the backward refilter.
 
 Three default-on outward-hit-indexed lists are saved:
 `forward_local_chi2`, `backward_local_chi2`, and `smoothed_local_chi2`.
@@ -319,10 +316,7 @@ retains the local-joint inverse-loss implementation. LocalMarginal supports
 multiple intervals. With MaxFitIterations>1, Persistent6D iterates RTS and
 backward separately; LocalMarginal retains one-pass RTS and iterates backward
 only. Both keep original priors, and backward freezes the original first-pass
-forward seed. BackwardSeedScale is applied once to a copy of that original
-covariance on each inward pass, never compounded across iterations. It does
-not scale the independent loss prior or affect forward/RTS. Default
-MaxFitIterations remains1; iterations require one
+forward seed. Default MaxFitIterations remains1; iterations require one
 ordinary interval and do not enforce loss positivity.
 
 TruthOverride remains an explicitly configured interval oracle, supported by
@@ -342,9 +336,6 @@ secondary-activity control, not a clean optimization count. These are
 regressions, not population physics validation. Exact tests, schema and
 limitations are in
 `agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md`.
-The backward seed scale, unchanged RTS boundary and 25-case scale/regression
-gate are recorded in
-`agents_record/2026-09-09-recbreakpoint-backward-seed-scale.md`.
 
 Next: use the three separately labeled scores and paired endpoints on the
 same negative fitted-loss and truth-oracle controls, checking momentum truth,

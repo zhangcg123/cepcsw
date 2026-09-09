@@ -453,6 +453,42 @@ and iterates backward only. Therefore enabling iterations does not constitute
 an equivalent RTS comparison. Tiny floating-point differences can also occur;
 matching saved pT does not imply bit-identical full covariance or chi2.
 
+## 11. Related seed controls: backward refilter versus RTS
+
+The backward hit refilter is a separate output branch, not the RTS pass above.
+Let N-1 name the final hit, x_F_upd its state after the FIRST forward pass,
+and P_F_upd its full 5x5 track covariance. Let s be BackwardSeedScale, a
+positive finite configurable number (default1). Its seed is:
+
+```text
+x_backward_seed = x_F_upd[N-1]
+P_backward_seed = s * P_F_upd[N-1]
+```
+
+All covariance entries, including cross-covariances, are scaled. Standard
+deviations scale by sqrt(s); correlation coefficients and the seed mean do
+not change. The outermost hit is not updated again, and the first backward
+update is at N-2. This does not create an independent backward seed or scale
+the loss prior B. During inward relinearization the same original forward
+covariance is scaled once per pass, not multiplied cumulatively across passes.
+
+RTS instead has the boundary condition:
+
+```text
+x_RTS[N-1] = x_forward_upd[N-1]
+P_RTS[N-1] = P_forward_upd[N-1]
+```
+
+It uses the stored forward states and transitions and does not run a fresh
+backward measurement filter. BackwardSeedScale is absent from this boundary
+and the entire RTS recursion. Only an explicitly enabled outer
+relinearization loop repeats the full forward/RTS fit using the original
+prior and updated linearization references.
+
+This seed-control section was checked against the subsequent
+BackwardSeedScale implementation; the fixed-linearized equations above
+remain unchanged.
+
 ## Source verification map
 
 These references support the full explanation above; reading them is not

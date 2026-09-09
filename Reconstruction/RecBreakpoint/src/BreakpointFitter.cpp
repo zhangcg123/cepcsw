@@ -79,6 +79,8 @@ std::pair<double, double> inferLoss(const Transition& transition,
 
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                      const FitSettings& settings) const {
+  if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
+    throw std::invalid_argument("BackwardSeedScale must be finite and positive");
   if (settings.maxFitIterations < 1 || settings.maxFitIterations > 20 ||
       !std::isfinite(settings.relinearizationTolerance) || settings.relinearizationTolerance <= 0)
     throw std::invalid_argument("Invalid breakpoint iteration limit/tolerance");
@@ -226,13 +228,20 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     result.smoothedChi2Status=0;
     result.persistentHits.clear();result.persistentPredicted.clear();result.persistentFiltered.clear();
     result.persistentSmoothed.clear();result.persistentTransport.clear();result.persistentNoise.clear();
-    // Copy the full outward posterior without inflation. This deliberately
-    // reuses hit information; it is not an independent two-filter smoother.
+    // Scale a COPY of the original first-pass forward endpoint covariance.
+    // Preserve its mean and every correlation. Each inward iteration starts
+    // from this same forward source, so the scale is applied once, not compounded.
+    // This still reuses hit information; it is not an independent smoother.
     result.backwardFiltered.resize(hits.size());
     result.backwardPredicted.resize(hits.size());
     result.backwardChi2.assign(hits.size(), 0);
-    result.backwardFiltered.back() = result.filtered.back();
-    result.backwardPredicted.back() = result.filtered.back(); // seed, no hit update
+    auto backwardSeed = result.filtered.back();
+    if (settings.backwardSeedScale != 1.0) {
+      backwardSeed.covariance *= settings.backwardSeedScale;
+      validateCovariance(backwardSeed.covariance);
+    }
+    result.backwardFiltered.back() = backwardSeed;
+    result.backwardPredicted.back() = backwardSeed; // seed, no hit update
 
     struct PendingLoss {
       IntervalResult result;

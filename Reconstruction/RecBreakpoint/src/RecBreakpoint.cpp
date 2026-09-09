@@ -65,9 +65,11 @@ StatusCode RecBreakpoint::initialize() {
       return StatusCode::FAILURE;
     }
   }
-  for (double value : {m_seedScale.value(), m_maxChi2.value(), m_truthEndpointDistance.value()})
+  for (double value : {m_seedScale.value(), m_backwardSeedScale.value(),
+                       m_maxChi2.value(), m_truthEndpointDistance.value()})
     if (!std::isfinite(value) || value <= 0) {
-      error() << "SeedScale, MaxChi2PerHit, TruthMaxEndpointDistance must be finite and positive" << endmsg;
+      error() << "SeedScale, BackwardSeedScale, MaxChi2PerHit, TruthMaxEndpointDistance"
+              << " must be finite and positive" << endmsg;
       return StatusCode::FAILURE;
     }
   if (m_lossStateModeName != "TruthOverride" &&
@@ -98,6 +100,8 @@ StatusCode RecBreakpoint::initialize() {
   if (!m_file || m_file->IsZombie()) return StatusCode::FAILURE;
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
+  m_recordBackwardSeedScale = m_backwardSeedScale.value();
+  m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_tree->Branch("event_index", &m_event);
   m_tree->Branch("input_track_index", &m_trackIndex);
   m_tree->Branch("status", &m_fitStatus);
@@ -227,6 +231,7 @@ StatusCode RecBreakpoint::execute() {
   settings.meanLogLoss = m_meanLoss;
   settings.sigmaLogLoss = m_sigmaLoss;
   settings.seedScale = m_seedScale;
+  settings.backwardSeedScale = m_backwardSeedScale;
   settings.lossStateMode = m_lossStateModeName;
   settings.maxFitIterations=m_maxIterations;
   settings.relinearizationTolerance=m_iterationTolerance;
@@ -396,7 +401,8 @@ StatusCode RecBreakpoint::execute() {
         m_referencePt = std::abs(m_bz * 2.99792458e-4 / reference.omega);
         if (m_intervals.value().empty() &&
             (std::abs(m_fitPt / m_referencePt - 1) > 1.e-4 ||
-             std::abs(m_backwardPt / m_backwardReferencePt - 1) > 1.e-4))
+             (m_backwardSeedScale == 1.0 &&
+              std::abs(m_backwardPt / m_backwardReferencePt - 1) > 1.e-4)))
           throw std::runtime_error("Empty-breakpoint/native-KF pT regression failed");
         info() << "event=" << m_event << " track=" << m_trackIndex
                << " breakpointPt=" << m_fitPt << " referenceKFPt=" << m_referencePt << endmsg;

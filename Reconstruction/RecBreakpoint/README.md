@@ -39,8 +39,9 @@ Shared first-pass forward filter
 ```
 
 These are separate results, not CPU threads. Backward starts from the full
-first-pass forward endpoint posterior, without inflation, revisits hits N-2
-through 0, and uses material-aware native IP propagation. RTS never consumes
+first-pass forward endpoint mean and its full covariance multiplied by
+BackwardSeedScale (default1), revisits hits N-2 through 0, and uses
+material-aware native IP propagation. RTS never consumes
 the backward-refiltered states and retains its geometric IP extrapolation.
 Backward still reuses forward hit evidence; it is NOT an independent Bayesian
 smoother. Neither branch adds a beam-to-first-hit breakpoint.
@@ -151,12 +152,21 @@ Persistent6D iterates RTS and backward separately. LocalMarginal retains its
 one-pass RTS and iterates backward only. This preserves the established
 methods rather than adding unimplemented LocalMarginal RTS relinearization.
 
-RTS relinearizes native F/Q and measurement derivatives around the preceding
-smoothed trajectory, retaining the original seed and b prior. Backward
+Ordinary RTS starts at the final forward updated state and covariance, then
+uses buffered forward predictions, covariances and transitions to smooth
+inward. It does not initialize an independent filter or update the hit
+measurements a second time. BackwardSeedScale never enters RTS. Only explicitly
+enabled Persistent6D relinearization repeats the forward-fit/RTS cycle.
+
+When iterating, the forward/RTS cycle relinearizes native F/Q and measurement
+derivatives around the preceding smoothed trajectory, retaining the original
+seed and b prior. Backward
 iterations relinearize only the inward path, freezing the original FIRST-pass
 forward endpoint seed; they do not use the final iterated RTS endpoint.
-They also retain the original b prior. No previous posterior becomes a new
-independent prior. Each hit is updated once per newly solved branch pass.
+The same BackwardSeedScale multiplies that frozen covariance once on each
+inward pass, never repeatedly across iterations. They also retain the original
+b prior. No previous posterior becomes a new independent prior. Each hit is
+updated once per newly solved branch pass.
 
 Convergence is maximum standardized change in endpoint coordinates and b
 below RelinearizationTolerance. It is not proof of an optimum. There is no
@@ -173,8 +183,11 @@ FirstThree restores the older prefit. SeedScale uniformly scales native loose
 FullLDCTracking-style variances. The seed uses hit positions as a starting
 estimate; do not interpret its fitted covariance as independent data.
 VerifyKFReference evaluates BOTH native no-breakpoint references; empty-list
-pT must match within 1e-4 relatively. Stored CompleteTracks can differ because
-pattern recognition, merging, retries and steering are not rerun here.
+pT must match within 1e-4 relatively for RTS and for backward when
+BackwardSeedScale=1. The native backward reference remains unscaled: at other
+scales its pT is saved as a comparison, without imposing an equality gate.
+Stored CompleteTracks can differ because pattern recognition, merging,
+retries and steering are not rerun here.
 
 ## Three default-on chi2 lists
 
@@ -236,6 +249,7 @@ extended KF; the separate terms make those differences auditable.
 | MaxFitIterations | 1 | 1--20; ordinary single-interval iterations as described above |
 | RelinearizationTolerance | 0.001 | Positive finite standardized stopping threshold |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
+| BackwardSeedScale | 1 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
 | SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |
 | MaxChi2PerHit | 1e100 | Positive finite native update acceptance limit |
 | MSOn | true | Native multiple-scattering noise |
@@ -250,6 +264,13 @@ extended KF; the separate terms make those differences auditable.
 TruthDiagnostics is enabled by the card. It does not steer a fit; only explicit
 TruthOverride uses material-loss truth. Ambiguous generator electrons have NaN
 truth pT. A scalar reference alone does not establish topology-clear selection.
+
+The dedicated card exposes `fit.BackwardSeedScale` and optional environment
+variable `BP_BACKWARD_SEED_SCALE` (default1). All 25 covariance entries are
+scaled, preserving correlation coefficients; standard deviations scale by
+sqrt(BackwardSeedScale). The effective value is saved in every flat row as
+`backward_seed_scale`. This control does not create a fresh backward seed,
+scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 ## Other automatic tuple information
 
