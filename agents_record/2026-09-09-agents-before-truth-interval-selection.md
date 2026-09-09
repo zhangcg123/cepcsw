@@ -313,10 +313,8 @@ and backward totals must not be added because their evidence overlaps.
 RTS Track.chi2 carries the complete smoothed score; backward Track.chi2
 carries the inward increment sum. NDF is bookkeeping, not calibrated here.
 
-LocalMarginal/RTS is now the compiled/card default loss treatment, supporting
-multiple independently selected intervals. Persistent6D remains available,
-retaining b through downstream native updates and joint RTS for one interval.
-The paired backward continuation
+Persistent6D/RTS remains the default loss treatment, retaining b through all
+downstream native updates and joint RTS. The paired backward continuation
 retains the local-joint inverse-loss implementation. LocalMarginal supports
 multiple intervals. With MaxFitIterations>1, Persistent6D iterates RTS and
 backward separately; LocalMarginal retains one-pass RTS and iterates backward
@@ -330,46 +328,20 @@ ordinary interval and do not enforce loss positivity.
 An independent default-off `TruthOverride` bool adds a second RTS/backward
 pair in `BreakpointTracksTruthOverrideRTS` and
 `BreakpointTracksTruthOverrideBackwardFilter`. Off, or with empty intervals,
-these are copies of the completed ordinary results; Truth interval selection
-may still read truth even when fixed-loss override is off.
+these are copies of the completed ordinary results without loss-truth access.
 On, each selected interval receives fixed b from reconstructed-hit associations
 and embedded G4 provenance, with zero added loss variance, in a separate
 one-pass oracle pair. Ordinary iterations/settings remain unchanged.
 The public LossStateMode now selects Persistent6D or LocalMarginal only;
 old LossStateMode=TruthOverride fails with migration guidance. The dedicated
-card uses BP_TRUTH_OVERRIDE=1, default0, and derives truth-input needs from
-both this control and IntervalSelectionMode.
-Oracle-only truth failure in Manual mode preserves ordinary results but leaves extra outputs absent/NaN
+card uses BP_TRUTH_OVERRIDE=1, default0, and derives truth-input needs from it.
+Invalid truth preserves ordinary results but leaves extra outputs absent/NaN
 with tagged errors. Result status distinguishes absent0, copied1, oracle2
 and negative failure; separate input-row index maps are always saved.
 The flat tuple adds oracle/copied endpoint pT, full packed IP covariances and
-parameters, and three chi2 lists/totals. Truth values remain passive except for
-Truth location selection and the explicitly enabled fixed-loss oracle. No reconstruction-based interval discovery,
+parameters, and three chi2 lists/totals. The original truth provenance remains
+passive except for the explicitly enabled oracle. No interval discovery,
 within-interval emission fit, native material, shared KF/GSF or seed changes.
-
-IntervalSelectionMode is now independent of loss-state treatment and fixed-loss
-override. Compiled/card Truth selects every matched runtime hit interval with
-positive G4 eBrem loss per track; it passes only indices, not truth loss centers,
-to the ordinary fit. No-loss tracks receive an empty effective list/5D refit.
-Manual retains explicit BreakpointIntervals (empty means baseline); a nonempty
-list is rejected outside Manual. Auto is reserved for the developing
-reconstruction-based finder and fails initialization explicitly.
-Truth selection follows reconstructed-hit associations into exact embedded G4
-hooks, includes all positive interval losses without a new cutoff, and covers
-only intervals between accepted hits. Invalid truth fails the affected track;
-it is not treated as an empty list. Effective indices, selection status/error,
-selected loss/z and match metadata are saved even with TruthOverride off.
-Persistent6D still allows one interval; iterations still require exactly one,
-checked per track for Truth selection. Neither silently discards extra losses.
-The new batch helper captures BP_INTERVAL_SELECTION_MODE. Regenerate old
-prepared cards in a new output directory; default Truth/LocalMarginal replaces
-the previous manual-empty/Persistent6D steering. Current batch shell edits
-belong to the user and must be preserved. Exact contract and tests:
-`agents_record/2026-09-09-recbreakpoint-truth-interval-selection.md`.
-Seven same-code Truth-versus-Manual event comparisons reproduce the ordinary
-and oracle outputs exactly, including two multiple-interval tracks. An
-additional missing-association case fails with a selection tag rather than
-becoming a no-loss track. These are regression gates only.
 
 Mechanical gates cover the ordinary/truth seed2:68 smoke, seed12:11/16/17,
 iterations, empty/zero-loss and multi-interval controls, plus the previous

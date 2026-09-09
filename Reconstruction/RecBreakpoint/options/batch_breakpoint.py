@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 ORDER = ('sim', 'trk', 'breakpoint')
-BP_CONTROLS = ('BP_INTERVALS', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
+BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_SEED_HIT_SELECTION', 'BP_MAX_ITERATIONS', 'BP_ITERATION_TOLERANCE',
                'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_SELECTED')
@@ -132,7 +132,8 @@ def prepare():
         create(carddir/'job.json', json.dumps(job, indent=2)+'\n')
     print(f'Prepared {len(jobs)} jobs: {",".join(stages)}; output={output}', flush=True)
     print('Fit steering is frozen from run_breakpoint.py and explicit BP_* overrides.', flush=True)
-    print('No automatic interval choice; simulation momentum/theta ranges remain those in sim.py.bk.', flush=True)
+    print('Interval selection follows the frozen card (Truth by default; Auto not implemented).', flush=True)
+    print('Simulation momentum/theta ranges remain those in sim.py.bk.', flush=True)
     submit_jobs([(carddir, job) for carddir, job, _ in jobs], dry)
 
 

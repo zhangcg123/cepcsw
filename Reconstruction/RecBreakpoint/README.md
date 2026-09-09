@@ -20,7 +20,7 @@ cmake --build build.105.0.0.x86_64-el9-gcc11-opt --target RecBreakpoint -j4
 cmake -P build.105.0.0.x86_64-el9-gcc11-opt/Reconstruction/RecBreakpoint/cmake_install.cmake
 BP_INPUT=/absolute/path/to/tracker.root \
 BP_OUTPUT=/absolute/path/to/new_breakpoint_flat.root \
-BP_INTERVALS=5 BP_EVENTS=18 BP_SELECTED=11,16,17 BP_VERBOSE=1 \
+BP_INTERVAL_SELECTION_MODE=Truth BP_EVENTS=18 BP_SELECTED=11,16,17 BP_VERBOSE=1 \
 build.105.0.0.x86_64-el9-gcc11-opt/run \
   gaudirun.py Reconstruction/RecBreakpoint/options/run_breakpoint.py
 ```
@@ -65,7 +65,36 @@ longer misleadingly labels a row that now contains both results.
 ## Loss state and interval ownership
 
 An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
-`BreakpointIntervals=[]` is the no-breakpoint reference. Multiple independent
+IntervalSelectionMode selects the source of the breakpoint list independently
+of LossStateMode (how losses are fitted) and TruthOverride (extra fixed-loss pair):
+
+| IntervalSelectionMode | Behavior |
+|---|---|
+| Truth (compiled/card default) | Select every matched runtime hit interval with positive Geant4 eBrem loss, independently for each track |
+| Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
+| Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
+
+Truth follows reconstructed-hit associations and exact embedded G4 hooks. It
+uses the existing post-step assignment on each (start,end] interval, selecting
+`ebremLoss>0` without an additional loss threshold. Several emissions within
+one interval yield one breakpoint. Loss before the first hit or after the last
+hit is not covered. Interval bounds and upstream placement are unchanged.
+The ordinary fit receives only the indices: its MeanLogLoss/SigmaLogLoss prior
+is NOT replaced by truth. TruthOverride must separately be enabled to fix loss
+values in the additional pair. All Geant4 metadata remain diagnostic apart
+from this explicit location selection and the optional loss override.
+
+Truth with no matched eBrem selects an empty list and runs the ordinary 5D
+reference, with copied extra outputs. Invalid truth fails the affected track
+with interval-selection status/error; it never means a guessed empty list.
+A nonempty BreakpointIntervals list is rejected outside Manual mode, so it
+cannot silently be ignored. Dedicated-card control: BP_INTERVAL_SELECTION_MODE.
+The card loads truth collections for Truth selection even if TruthOverride=False.
+Previously prepared cards predate this control/default change: regenerate them
+in a new output directory. Explicit fixed-list comparisons must now set Manual;
+do not patch a checksum-protected prepared card in place.
+
+Multiple independent
 intervals are supported by LocalMarginal and the additional truth pair; Persistent6D
 accepts at most one. Negative or duplicate entries fail initialization;
 out-of-range entries fail the affected track. This ordering targets outward,
@@ -80,10 +109,9 @@ kappa_after = exp(b) * kappa_before
 Loss is collapsed at the upstream surface. Outward: update upstream hit,
 apply loss, propagate, update downstream hit. Backward: propagate to upstream
 surface, apply inverse loss, then update its hit. It is not a fitted emission
-position inside the interval. No BH mixture or automatic truth-based interval
-selection is performed.
+position inside the interval. No BH mixture is used.
 
-### Persistent6D (default)
+### Persistent6D
 
 Before birth the filter is 5D. At the configured upstream hit it introduces
 one independent b prior. The full 6D mean/covariance then stays live at EVERY
@@ -102,7 +130,7 @@ backward continuation uses the established local-joint inward loss treatment
 on the common forward endpoint's 5D marginal, not a new persistent inward
 six-dimensional implementation.
 
-### LocalMarginal
+### LocalMarginal (compiled/card default)
 
 The live helix stays 5D. At a selected edge an independent Gaussian b is
 marginalized into the helix covariance. Retained joint cross covariances allow
@@ -115,9 +143,10 @@ large loose-seed covariances.
 ### TruthOverride
 
 ```python
-fit.LossStateMode = "Persistent6D"  # ordinary pair; LocalMarginal is also supported
+fit.IntervalSelectionMode = "Truth"  # select locations for this track
+fit.LossStateMode = "LocalMarginal"   # ordinary pair fits the loss
 fit.TruthOverride = True           # additional oracle pair; compiled/card default False
-fit.BreakpointIntervals = [5]
+fit.BreakpointIntervals = []  # Manual-only; Truth builds the effective list
 # Four endpoints: ordinary RTS/backward, truth-override RTS/backward.
 ```
 
@@ -145,8 +174,9 @@ event input, -2 invalid track match, -3 out-of-range interval. There is no
 ordinary-loss fallback on truth failure. An input loading failure can occur before tuple output.
 
 With `TruthOverride=False`, the additional pair copies the already computed
-ordinary pair (including covariances, hits and chi2); it does not rerun a fit or
-access material truth. An empty interval list also copies the ordinary pair.
+ordinary pair (including covariances, hits and chi2); it does not rerun a fit.
+Truth interval selection can still read material truth. An empty effective
+interval list also copies the ordinary pair.
 With True and nonempty intervals, a separate one-pass fixed-loss fit generates
 both oracle endpoints with the same seed scales, hit selection and material
 settings. The ordinary pair may still use MaxFitIterations>1. No oracle state
@@ -175,12 +205,18 @@ An ordinary-pair failure currently leaves the extra pair unattempted (status 0).
 Truth vectors retain interval, retained_fraction, log_loss, momentum_before,
 ebrem_loss, tx0, first_step/last_step and start_fraction/end_fraction under the
 truth_override_ prefix; scalar error, G4 track ID and max endpoint distance are
-also saved. Truth t/X0 is passive. An empty interval list needs no loss truth.
+also saved. Truth t/X0 is passive. Manual with an empty list needs no loss truth;
+Truth selection needs it to determine whether the effective list is empty.
 
 ## Iterations and seeds
 
 MaxFitIterations=1 preserves one-pass results. For >1 (up to 20), exactly one
 ordinary breakpoint is required; TruthOverride never iterates.
+For Truth selection this count is checked per track; zero/multiple selected
+intervals with MaxFitIterations>1 fail rather than silently changing the request.
+Likewise Persistent6D with multiple selected intervals fails that track, never
+selects just the largest loss. Use default LocalMarginal/MaxFitIterations=1 for
+unrestricted truth-selected interval counts.
 Persistent6D iterates RTS and backward separately. LocalMarginal retains its
 one-pass RTS and iterates backward only. This preserves the established
 methods rather than adding unimplemented LocalMarginal RTS relinearization.
@@ -278,10 +314,11 @@ extended KF; the separate terms make those differences auditable.
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
 | TruthOverride | false | Add fixed-truth-loss pair when true; otherwise copy ordinary pair |
-| BreakpointIntervals | [] | Selected radius-ordered hit intervals |
+| IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
+| BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
 | SigmaLogLoss | 0.05 | Ordinary positive finite b-prior sigma; oracle ignores it |
-| LossStateMode | Persistent6D | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | MaxFitIterations | 1 | 1--20; ordinary single-interval iterations as described above |
 | RelinearizationTolerance | 0.001 | Positive finite standardized stopping threshold |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
@@ -297,8 +334,9 @@ extended KF; the separate terms make those differences auditable.
 | SelectedEventIndices | [] | Zero-based selected entries; empty means all |
 | OutputFile | breakpoint_flat.root | New flat output file |
 
-TruthDiagnostics is enabled by the card. It does not steer a fit; only explicit
-TruthOverride uses material-loss truth. Ambiguous generator electrons have NaN
+TruthDiagnostics is enabled by the card. It does not steer a fit. Truth interval
+selection uses truth locations; only explicit TruthOverride fixes loss values.
+Ambiguous generator electrons have NaN
 truth pT. A scalar reference alone does not establish topology-clear selection.
 
 The dedicated card exposes `fit.BackwardSeedScale` and optional environment
@@ -315,6 +353,16 @@ ordered hit cells/radii/z, truth/KF pT, reference KF pT, filtered/smoothed kappa
 and variance, backward predicted/filtered kappa and variance, and truth
 override provenance. fitted_log_loss*, local_log_loss* and smoothed_log_loss*
 now always refer to RTS; backward_fitted_log_loss* refers to inward results.
+
+Interval selection saves interval_selection_mode, interval_selection_status
+(0 not attempted, 1 Manual, 2 valid Truth, -1 invalid event truth, -2 invalid
+track association), interval_selection_error and selected_breakpoint_interval.
+The effective indices are retained even if the subsequent fit fails. Truth
+selection additionally saves interval_selection_truth_ebrem_loss (GeV),
+_retained_fraction, _g4_track_id and _max_endpoint_distance (mm). The loss/z
+vectors align with the selected intervals and are empty in Manual mode. A valid
+empty truth list has status2, not an error. Selection truth failure prevents
+ordinary fitting; a later oracle-only failure still preserves ordinary tracks.
 
 Persistent6D additionally stores persistent_hit_index and row-aligned
 persistent_{predicted,filtered,smoothed}_mean (6 entries per hit), corresponding
@@ -337,9 +385,9 @@ Use the new root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
 The existing `subtrkjobs.sh`, `dump_gsftrk.sh` and all GSF cards are unchanged.
 Fit physics remains in `options/run_breakpoint.py`; optional supported BP_*
 environment overrides are frozen at preparation along with the complete card.
-There is no automatic per-event breakpoint discovery. The configured interval
-list applies to every track; empty means the no-breakpoint reference, even
-when TruthOverride is true.
+The default Truth selection chooses per-track locations from embedded Geant4
+provenance. Auto reconstruction-based selection is not implemented. Manual
+uses one configured list for every track; an empty Manual list is the baseline.
 
 Prepare a campaign from existing simulation files, without submitting:
 
@@ -377,7 +425,8 @@ convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 For existing tracker inputs, set STAGES=breakpoint and point INPUT_TUPLEPATH
 at their directory. Input names are `sim-e--2.0-85-SEED.root` or
 `trk-e--2.0-85-SEED.root` with the selected labels. Examples of optional fit
-overrides: `BP_INTERVALS=5 BP_TRUTH_OVERRIDE=1 BP_BACKWARD_SEED_SCALE=100`.
+overrides: `BP_INTERVAL_SELECTION_MODE=Truth BP_TRUTH_OVERRIDE=1`, or
+`BP_INTERVAL_SELECTION_MODE=Manual BP_INTERVALS=5 BP_BACKWARD_SEED_SCALE=100`.
 Interval5 here is only an example, NOT a recommended automatic truth interval.
 All BP_* values supported by the dedicated card except its job I/O/event-count
 fields are captured; BP_BACKWARD_MODE remains retired and is not supported.
@@ -433,7 +482,7 @@ and TruthOverride records retain their original mode-specific meanings.
 The paired-publication regression and complete-score gates are recorded in
 [the parallel implementation record](../../agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md).
 
-No automatic interval discovery, positivity enforcement, beam spot or exact
+No reconstruction-based interval discovery, positivity enforcement, beam spot or exact
 within-interval loss placement is implemented. Native material/mass
 conventions remain unchanged. Successful execution, convergence or smaller
 chi2 is not population validation or proof of better momentum reconstruction.

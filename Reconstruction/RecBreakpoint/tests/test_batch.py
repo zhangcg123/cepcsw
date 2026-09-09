@@ -57,10 +57,11 @@ class BatchTest(unittest.TestCase):
     def test_controls_frozen_and_originals_unchanged(self):
         source = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
         before = source.read_bytes()
-        self.prepare(BP_TRUTH_OVERRIDE='true', BP_INTERVALS='5', BP_BACKWARD_SEED_SCALE='100')
+        self.prepare(BP_TRUTH_OVERRIDE='true', BP_INTERVAL_SELECTION_MODE='Manual', BP_INTERVALS='5', BP_BACKWARD_SEED_SCALE='100')
         job = self.manifest()
         self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'1')
         self.assertEqual(job['controls']['BP_INTERVALS'],'5')
+        self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'Manual')
         self.assertEqual(source.read_bytes(),before)
         for stage, card in job['cards'].items():
             self.assertEqual(batch.hashlib.sha256(Path(card).read_bytes()).hexdigest(),job['checksums'][stage])

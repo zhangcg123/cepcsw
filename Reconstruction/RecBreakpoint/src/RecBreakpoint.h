@@ -50,12 +50,13 @@ private:
   DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_otkeAssociations{"OTKEndcapTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
 
   Gaudi::Property<std::vector<int>> m_intervals{this, "BreakpointIntervals", {}};
+  Gaudi::Property<std::string> m_intervalSelection{this, "IntervalSelectionMode", "Truth"};
   Gaudi::Property<double> m_meanLoss{this, "MeanLogLoss", 0.0};
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.05};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 1.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
-  Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
+  Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", false};
   Gaudi::Property<int> m_maxIterations{this,"MaxFitIterations",1};
   Gaudi::Property<double> m_iterationTolerance{this,"RelinearizationTolerance",1.e-3};
@@ -80,6 +81,11 @@ private:
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;
+  std::string m_intervalSelectionName, m_intervalSelectionError;
+  int m_intervalSelectionStatus = 0, m_intervalTruthTrack = -1;
+  double m_intervalTruthDistance = 0;
+  std::vector<int> m_selectedIntervals;
+  std::vector<double> m_intervalTruthLoss, m_intervalTruthZ;
   std::vector<int> m_persistentHits;
   std::vector<double> m_sixPredictedMean, m_sixPredictedCov, m_sixFilteredMean, m_sixFilteredCov;
   std::vector<double> m_sixSmoothedMean, m_sixSmoothedCov, m_sixTransport, m_sixNoise;

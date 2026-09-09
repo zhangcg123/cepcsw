@@ -12,7 +12,7 @@ struct FitSettings {
   double sigmaLogLoss = 0.05;
   double seedScale = 1;
   double backwardSeedScale = 1; // scales the full first-forward endpoint covariance
-  std::string lossStateMode = "Persistent6D";
+  std::string lossStateMode = "LocalMarginal";
   int maxFitIterations = 1;
   double relinearizationTolerance = 1.e-3;
   std::map<int, double> truthLogLoss; // exact, validated b for selected intervals only

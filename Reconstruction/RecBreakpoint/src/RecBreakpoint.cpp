@@ -41,10 +41,24 @@ StatusCode RecBreakpoint::initialize() {
   }
   m_seedSelectionName = m_seedHitSelection.value();
   m_lossStateModeName = m_lossStateMode.value();
+  m_intervalSelectionName = m_intervalSelection.value();
+  if (m_intervalSelectionName == "Auto") {
+    error() << "IntervalSelectionMode=Auto is reserved: the reconstruction-based interval finder is not implemented."
+            << " Use Truth for this diagnostic or Manual for a fixed list." << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_intervalSelectionName != "Truth" && m_intervalSelectionName != "Manual") {
+    error() << "IntervalSelectionMode must be Truth, Manual, or reserved Auto" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_intervalSelectionName != "Manual" && !m_intervals.value().empty()) {
+    error() << "BreakpointIntervals is a Manual-only list; clear it for Truth selection" << endmsg;
+    return StatusCode::FAILURE;
+  }
   const bool canIterate = m_lossStateModeName == "Persistent6D" || m_lossStateModeName == "LocalMarginal";
   if (m_maxIterations<1 || m_maxIterations>20 || !std::isfinite(m_iterationTolerance) ||
       m_iterationTolerance<=0 || (m_maxIterations>1 &&
-      (!canIterate || m_intervals.value().size()!=1))) {
+      (!canIterate || (m_intervalSelectionName == "Manual" && m_intervals.value().size()!=1)))) {
     error() << "MaxFitIterations must be 1..20, tolerance positive; iterations require"
             << " Persistent6D or LocalMarginal, and exactly one breakpoint" << endmsg;
     return StatusCode::FAILURE;
@@ -144,6 +158,14 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("backward_iteration_step_norm", &m_backwardIterationNorm);
   m_tree->Branch("backward_iteration_linearized_chi2", &m_backwardIterationChi2);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
+  m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
+  m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
+  m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
+  m_tree->Branch("selected_breakpoint_interval", &m_selectedIntervals);
+  m_tree->Branch("interval_selection_truth_ebrem_loss", &m_intervalTruthLoss);
+  m_tree->Branch("interval_selection_truth_retained_fraction", &m_intervalTruthZ);
+  m_tree->Branch("interval_selection_truth_g4_track_id", &m_intervalTruthTrack);
+  m_tree->Branch("interval_selection_truth_max_endpoint_distance", &m_intervalTruthDistance);
   m_tree->Branch("truth_override_status", &m_truthOverrideStatus);
   m_tree->Branch("truth_override_result_status", &m_truthResultCode);
   m_tree->Branch("truth_override_rts_pt", &m_truthRTSPt);
@@ -213,8 +235,8 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("smoothed_log_loss", &m_rtsLoss);
   m_tree->Branch("smoothed_log_loss_variance", &m_rtsLossVariance);
   m_tree->Branch("covariance_transport_closure", &m_closure);
-  info() << "Outward KF + parallel RTS and BackwardFilter; " << m_intervals.value().size()
-         << " selected breakpoint intervals; seed=" << m_seedSelectionName
+  info() << "Outward KF + parallel RTS and BackwardFilter; interval selection=" << m_intervalSelectionName
+         << "; seed=" << m_seedSelectionName
          << "; Bz=" << m_bz << endmsg;
   return StatusCode::SUCCESS;
 }
@@ -260,12 +282,12 @@ StatusCode RecBreakpoint::execute() {
   settings.lossStateMode = m_lossStateModeName;
   settings.maxFitIterations=m_maxIterations;
   settings.relinearizationTolerance=m_iterationTolerance;
-  const bool needTruthLoss = selected && m_enableTruthOverride
-      && !settings.intervals.empty();
+  const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
+      (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
   std::string truthEventError;
-  if (needTruthLoss) {
+  if (needTruthData) {
     try {
       std::vector<const edm4hep::MCRecoTrackerAssociationCollection*> associations;
       auto addAvailable = [&associations](auto& handle) {
@@ -296,6 +318,11 @@ StatusCode RecBreakpoint::execute() {
     m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
     m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
     m_fitStatus = -1;
+    settings.intervals = m_intervals.value(); // never reuse the previous track's truth-selected list
+    bool needTruthLoss = false;
+    m_intervalSelectionStatus = 0; m_intervalSelectionError.clear();
+    m_selectedIntervals.clear(); m_intervalTruthLoss.clear(); m_intervalTruthZ.clear();
+    m_intervalTruthTrack = -1; m_intervalTruthDistance = nan;
     settings.truthLogLoss.clear();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
@@ -348,6 +375,52 @@ StatusCode RecBreakpoint::execute() {
         m_hitR.push_back(std::hypot(p.x, p.y));
         m_hitZ.push_back(p.z);
       }
+      // One association-driven truth match can serve interval selection and the
+      // optional fixed-loss oracle. Ordinary fitting receives ONLY the indices,
+      // never the truth loss center/variance, from Truth interval selection.
+      TruthBHLossEventDataMatch match;
+      bool matchedTruth = false;
+      std::string matchError;
+      auto matchTruth = [&]() {
+        if (!matchedTruth)
+          matchedTruth = truthReader.matchTrack(hits, m_truthEndpointDistance, true, match, matchError);
+        return matchedTruth;
+      };
+      if (m_intervalSelectionName == "Truth") {
+        if (!truthPrepared) {
+          m_intervalSelectionStatus = -1;
+          m_intervalSelectionError = truthEventError;
+          throw std::runtime_error("Truth interval input: " + truthEventError);
+        }
+        if (!matchTruth()) {
+          m_intervalSelectionStatus = -2;
+          m_intervalSelectionError = matchError;
+          throw std::runtime_error("Truth interval association: " + matchError);
+        }
+        m_intervalTruthTrack = match.g4TrackID;
+        m_intervalTruthDistance = match.maxEndpointDistance;
+        for (std::size_t i = 0; i < match.materialIntervals.size(); ++i) {
+          const auto& interval = match.materialIntervals[i];
+          if (interval.ebremLoss > 0.0) {
+            settings.intervals.push_back(static_cast<int>(i));
+            m_intervalTruthLoss.push_back(interval.ebremLoss);
+            m_intervalTruthZ.push_back(interval.retainedFraction);
+          }
+        }
+        m_intervalSelectionStatus = 2;
+      } else {
+        m_intervalSelectionStatus = 1;
+      }
+      m_selectedIntervals = settings.intervals;
+      needTruthLoss = m_enableTruthOverride && !settings.intervals.empty();
+      if (m_verbose) {
+        std::ostringstream selection;
+        selection << "event=" << m_event << " track=" << m_trackIndex
+                  << " intervalSelection=" << m_intervalSelectionName << " intervals=[";
+        for (int i : settings.intervals) selection << i << ' ';
+        selection << "] ordinary prior b=" << settings.meanLogLoss << " sigma=" << settings.sigmaLogLoss;
+        info() << selection.str() << endmsg;
+      }
       const auto seedIndices = adapter.seedHitIndices(hits);
       m_seedHitIndices.assign(seedIndices.begin(), seedIndices.end());
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
@@ -396,7 +469,7 @@ StatusCode RecBreakpoint::execute() {
         const auto backwardReference = adapter.referenceKF(hits,m_seedScale,true);
         m_backwardReferencePt=std::abs(m_bz*2.99792458e-4/backwardReference.omega);
         m_referencePt = std::abs(m_bz * 2.99792458e-4 / reference.omega);
-        if (m_intervals.value().empty() &&
+        if (settings.intervals.empty() &&
             (std::abs(m_fitPt / m_referencePt - 1) > 1.e-4 ||
              (m_backwardSeedScale == 1.0 &&
               std::abs(m_backwardPt / m_backwardReferencePt - 1) > 1.e-4)))
@@ -425,7 +498,7 @@ StatusCode RecBreakpoint::execute() {
               {"filtered6D", &fit.persistentFiltered[j]},
               {"smoothed6D", &fit.persistentSmoothed[j]}}) {
             std::ostringstream dump;
-            dump << std::setprecision(17) << named.first << " owner=" << m_intervals.value().front()
+            dump << std::setprecision(17) << named.first << " owner=" << settings.intervals.front()
                  << " hit=" << fit.persistentHits[j] << " mean=[";
             for (int row = 0; row < 6; ++row) dump << named.second->mean(row, 0) << ' ';
             dump << "] covariance(row-major)=[";
@@ -511,7 +584,7 @@ StatusCode RecBreakpoint::execute() {
       for(auto hit:hits) backwardTrack.addToTrackerHits(hit);
       m_fitStatus = 1;
 
-      // The ordinary pair is complete before truth is consulted. Failure of the
+      // The ordinary pair is complete before applying fixed truth losses. Failure of the
       // diagnostic oracle must not discard or silently replace ordinary tracks.
       try {
         auto oracleSettings = settings;
@@ -523,9 +596,8 @@ StatusCode RecBreakpoint::execute() {
             m_truthOverrideError = truthEventError;
             throw std::runtime_error("TruthOverride event data: " + truthEventError);
           }
-          TruthBHLossEventDataMatch match;
-          const bool matched = truthReader.matchTrack(hits, m_truthEndpointDistance, true,
-                                                      match, m_truthOverrideError);
+          const bool matched = matchTruth();
+          m_truthOverrideError = matchError;
           m_truthG4Track = match.g4TrackID;
           m_truthMaxDistance = match.maxEndpointDistance;
           if (!matched) {
