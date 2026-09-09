@@ -13,8 +13,6 @@ struct FitSettings {
   double seedScale = 1;
   double backwardSeedScale = 1; // scales the full first-forward endpoint covariance
   std::string lossStateMode = "LocalMarginal";
-  int maxFitIterations = 1;
-  double relinearizationTolerance = 1.e-3;
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
@@ -49,11 +47,6 @@ struct FitResult {
   std::vector<TMatrixD> persistentTransport, persistentNoise;
   double chi2 = 0;
   int measurementDimensions = 0;
-  edm4hep::TrackState onePassIP{};
-  int iterationStatus = 0; // 0=one pass, 1=converged, 2=limit, -1=iteration failed
-  std::string iterationError;
-  std::vector<double> iterationInverseAbsOmega, iterationLoss, iterationLossVariance;
-  std::vector<double> iterationStepNorm, iterationLinearizedChi2;
 };
 
 struct PairedFitResult {
@@ -72,18 +65,13 @@ private:
   FitResult fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& settings) const;
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
-                          const FitSettings& settings, const FitResult* reference = nullptr,
-                          const TrackState* originalPrior = nullptr) const;
-  FitResult fitIterated(const std::vector<edm4hep::TrackerHit>& hits,
-                       const FitSettings& settings, FitResult initial,
-                       const FitResult& fixedForward, bool backward) const;
+                          const FitSettings& settings) const;
   void scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits, FitResult& result,
       const std::vector<TMatrixD>& predictedMeans, const std::vector<TMatrixD>& predictedCovs,
       const std::vector<TMatrixD>& smoothedMeans, const std::vector<TMatrixD>& noises,
       const std::vector<TrackState>& measurementReferences) const;
   FitResult finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
-      const FitSettings& settings, FitResult result,
-      const FitResult* reference = nullptr) const;
+      const FitSettings& settings, FitResult result) const;
   const KalmanAdapter& m_adapter;
 };
 } // namespace breakpoint

@@ -78,13 +78,6 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
                                      const FitSettings& settings) const {
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
-  if (settings.maxFitIterations < 1 || settings.maxFitIterations > 20 ||
-      !std::isfinite(settings.relinearizationTolerance) || settings.relinearizationTolerance <= 0)
-    throw std::invalid_argument("Invalid breakpoint iteration limit/tolerance");
-  if (settings.maxFitIterations > 1) {
-    if (settings.intervals.size() != 1)
-      throw std::invalid_argument("Iterations require one breakpoint");
-  }
   if (settings.lossStateMode == "Persistent6D") {
     if (settings.intervals.size() > 1)
       throw std::invalid_argument("Persistent6D requires at most one breakpoint");
@@ -105,13 +98,7 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
   const auto first = settings.lossStateMode == "Persistent6D" && !settings.intervals.empty()
       ? fitPersistent(hits,settings) : fitLocalRTS(hits,settings);
   auto inward = finishBackward(hits,settings,first);
-  auto rts = first;
-  if (settings.maxFitIterations > 1) {
-    if (settings.lossStateMode == "Persistent6D")
-      rts = fitIterated(hits,settings,first,first,false);
-    inward = fitIterated(hits,settings,std::move(inward),first,true);
-  }
-  return {std::move(rts),std::move(inward)};
+  return {first,std::move(inward)};
 }
 
 FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
@@ -221,7 +208,7 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
 }
 
 FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
-    const FitSettings& settings, FitResult result, const FitResult* reference) const {
+    const FitSettings& settings, FitResult result) const {
     result.breakpoints.clear();
     result.smoothed.clear();
     result.smoothedChi2.clear(); result.smoothedMeasurementChi2.clear();
@@ -230,8 +217,7 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     result.persistentHits.clear();result.persistentPredicted.clear();result.persistentFiltered.clear();
     result.persistentSmoothed.clear();result.persistentTransport.clear();result.persistentNoise.clear();
     // Scale a COPY of the original first-pass forward endpoint covariance.
-    // Preserve its mean and every correlation. Each inward iteration starts
-    // from this same forward source, so the scale is applied once, not compounded.
+    // Preserve its mean and every correlation; apply the scale once.
     // This still reuses hit information; it is not an independent smoother.
     result.backwardFiltered.resize(hits.size());
     result.backwardPredicted.resize(hits.size());
@@ -253,11 +239,7 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
       const bool selected = std::find(settings.intervals.begin(), settings.intervals.end(), i)
           != settings.intervals.end();
       const auto configuredLoss = selected ? intervalSettings(settings, i) : settings;
-      const auto step = reference ? m_adapter.advanceBackwardRelinearized(
-          result.backwardFiltered[i + 1], hits[i + 1], hits[i], selected,
-          configuredLoss.meanLogLoss, configuredLoss.sigmaLogLoss, reference->breakpoints.front().fittedLogLoss,
-          reference->backwardFiltered[i + 1], reference->backwardFiltered[i])
-          : m_adapter.advanceBackward(result.backwardFiltered[i + 1],
+      const auto step = m_adapter.advanceBackward(result.backwardFiltered[i + 1],
               hits[i + 1], hits[i], selected, configuredLoss.meanLogLoss, configuredLoss.sigmaLogLoss);
       if (step.covarianceClosure > 1.e-3)
         throw std::runtime_error("Inverse-breakpoint covariance closure failed");
@@ -305,14 +287,13 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
 }
 
 FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
-    const FitSettings& settings, const FitResult* reference, const TrackState* originalPrior) const {
+    const FitSettings& settings) const {
   const int interval = settings.intervals.front();
   const auto loss = intervalSettings(settings, interval);
   if (hits.size() < 3 || interval < 0 || interval + 1 >= static_cast<int>(hits.size()))
     throw std::invalid_argument("Persistent6D breakpoint outside track");
   FitResult result;
-  const auto seed = reference ? m_adapter.seedRelinearized(*originalPrior,hits.front(),reference->smoothed.front())
-                             : m_adapter.seed(hits, settings.seedScale);
+  const auto seed = m_adapter.seed(hits, settings.seedScale);
   result.predicted.push_back(seed.predicted);
   result.filtered.push_back(seed.filtered);
   result.localChi2.push_back(seed.chi2);
@@ -328,9 +309,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   double closure = 0;
   for (int i = 0; i + 1 < static_cast<int>(hits.size()); ++i) {
     if (i < interval) {
-      const auto step = reference ? m_adapter.advanceRelinearized(result.filtered.back(),hits[i],hits[i+1],
-          reference->smoothed[i],reference->smoothed[i+1])
-          : m_adapter.advance(result.filtered.back(), hits[i], hits[i + 1]);
+      const auto step = m_adapter.advance(result.filtered.back(), hits[i], hits[i + 1]);
       result.predicted.push_back(step.predicted);
       result.filtered.push_back(step.filtered);
       result.localChi2.push_back(step.chi2);
@@ -344,12 +323,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     const bool birth = i == interval;
     if (birth) live = LossTrackState::introduce(result.filtered.back(),
         loss.meanLogLoss, loss.sigmaLogLoss * loss.sigmaLogLoss);
-    LossTrackState expansion;
-    if (reference) expansion = birth ? LossTrackState::introduce(reference->smoothed[i],
-        reference->breakpoints.front().fittedLogLoss,loss.sigmaLogLoss*loss.sigmaLogLoss)
-        : reference->persistentSmoothed[i-interval-1];
-    const auto step = reference ? m_adapter.advanceRelinearized(live,hits[i],hits[i+1],birth,
-        expansion,reference->smoothed[i+1]) : m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth);
+    const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth);
     live = step.filtered; // Entire six-dimensional posterior is the next input.
     result.predicted.push_back(step.predicted.track());
     result.filtered.push_back(step.filtered.track());
@@ -418,7 +392,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   result.endpoint = result.smoothed;
   result.ip = m_adapter.atIP(result.endpoint.front(), hits.front());
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
-                reference ? reference->smoothed : result.predicted);
+                result.predicted);
   return result;
 }
 
@@ -468,56 +442,4 @@ void BreakpointFitter::scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hit
   }
 }
 
-FitResult BreakpointFitter::fitIterated(const std::vector<edm4hep::TrackerHit>& hits,
-    const FitSettings& settings, FitResult current, const FitResult& fixedForward,
-    bool backward) const {
-  // The backward experiment iterates only the inward fit. Its complete
-  // original forward posterior is frozen, not regenerated from inward output.
-  const TrackState originalPrior=current.predicted.front();
-  const auto onePass=current.ip;
-  // History is stored separately: replacing the live fit cannot accumulate
-  // old posterior covariances, loss priors or measurement contributions.
-  std::vector<double> pts,losses,variances,norms,chi2;
-  auto record=[&](const FitResult& fit,double step) {
-    // The algorithm converts inverse curvature to GeV using its field value.
-    pts.push_back(1.0/std::abs(fit.ip.omega)); // converted to GeV by the algorithm
-    losses.push_back(fit.breakpoints.front().fittedLogLoss);
-    variances.push_back(fit.breakpoints.front().fittedVariance);
-    norms.push_back(step);
-    chi2.push_back(backward ? std::accumulate(fit.backwardChi2.begin(), fit.backwardChi2.end(), 0.)
-                           : fit.chi2);
-  };
-  record(current,0);
-  int status=settings.maxFitIterations>1 ? 2 : 0;
-  std::string error;
-  for(int iteration=1;iteration<settings.maxFitIterations;++iteration) {
-    try {
-      auto next = backward ? finishBackward(hits, settings, fixedForward, &current)
-          : fitPersistent(hits,settings,&current,&originalPrior);
-      double change=0;
-      for(std::size_t i=0;i<hits.size();++i) {
-        const auto delta=stateDifference(next.endpoint[i].mean,current.endpoint[i].mean);
-        for(int j=0;j<5;++j) change=std::max(change,std::abs(delta(j,0))
-            /std::sqrt(current.endpoint[i].covariance(j,j)));
-      }
-      change=std::max(change,std::abs(next.breakpoints.front().fittedLogLoss-
-          current.breakpoints.front().fittedLogLoss)/std::sqrt(current.breakpoints.front().fittedVariance));
-      if (!std::isfinite(change)) throw std::runtime_error("Nonfinite iteration convergence metric");
-      record(next,change);
-      current=std::move(next);
-      if(change<settings.relinearizationTolerance) { status=1; break; }
-    } catch(const std::exception& failure) {
-      status=-1; error=failure.what(); break; // retain last completed fit, explicitly tagged
-    }
-  }
-  current.onePassIP=onePass;
-  current.iterationStatus=status;
-  current.iterationError=error;
-  current.iterationInverseAbsOmega=std::move(pts);
-  current.iterationLoss=std::move(losses);
-  current.iterationLossVariance=std::move(variances);
-  current.iterationStepNorm=std::move(norms);
-  current.iterationLinearizedChi2=std::move(chi2);
-  return current;
-}
 } // namespace breakpoint

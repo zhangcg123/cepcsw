@@ -16,7 +16,7 @@ import sys
 ORDER = ('sim', 'trk', 'breakpoint')
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
-               'BP_SEED_HIT_SELECTION', 'BP_MAX_ITERATIONS', 'BP_ITERATION_TOLERANCE',
+               'BP_SEED_HIT_SELECTION',
                'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_SELECTED')
 
 
@@ -67,6 +67,10 @@ def prepare():
         raise ValueError('Worker missing/not executable: ' + str(worker))
     if not dry and not shutil.which('hep_sub'): raise ValueError('hep_sub is unavailable; use DRY_RUN=1 to prepare locally')
 
+    # Refuse stale iteration requests instead of silently preparing a different fit.
+    for retired in ('BP_MAX_ITERATIONS', 'BP_ITERATION_TOLERANCE'):
+        if retired in os.environ:
+            raise ValueError(retired + ' was removed; RecBreakpoint is one-pass only')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF'):

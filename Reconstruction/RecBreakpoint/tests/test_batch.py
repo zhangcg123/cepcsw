@@ -70,6 +70,13 @@ class BatchTest(unittest.TestCase):
         with self.assertRaises(ValueError): self.prepare()
 
     def test_submission_shell_freezes_shared_loss_sigma(self):
+        # This fixture checks plumbing, independent of the user's active campaign default.
+        script = self.repo/'subbreakpointjobs.sh'
+        text = script.read_text()
+        import re
+        text, count = re.subn(r'(BP_SIGMA_LOG_LOSS:-)[^}]+', lambda match: match[1]+'0.05', text)
+        self.assertEqual(count, 1)
+        script.write_text(text)
         for output, override, expected in [('sigma_default', None, '0.05'), ('sigma_override', '0.01', '0.01')]:
             env = dict(self.env, OUTPUT_TUPLEPATH=output)
             if override is not None: env['BP_SIGMA_LOG_LOSS'] = override
@@ -81,6 +88,13 @@ class BatchTest(unittest.TestCase):
             card = Path(job['cards']['breakpoint']).read_text()
             self.assertIn(repr('BP_SIGMA_LOG_LOSS')+': '+repr(expected), card)
             self.assertIn('fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.05"))', card)
+
+    def test_retired_iteration_controls_are_rejected(self):
+        for name in ('BP_MAX_ITERATIONS', 'BP_ITERATION_TOLERANCE'):
+            self.assertNotIn(name, batch.BP_CONTROLS)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'removed'):
+                self.prepare(**{name:'1'})
+            self.assertFalse((self.repo/'outputs').exists())
 
     def test_invalid_campaigns_leave_no_output(self):
         for override in [dict(STAGES=''),dict(STAGES='trk,trk'),dict(STAGES='gsf'),dict(SEED_LAST='11'),

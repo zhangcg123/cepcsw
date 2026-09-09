@@ -58,8 +58,6 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", true};
-  Gaudi::Property<int> m_maxIterations{this,"MaxFitIterations",1};
-  Gaudi::Property<double> m_iterationTolerance{this,"RelinearizationTolerance",1.e-3};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
   Gaudi::Property<bool> m_ms{this, "MSOn", true};
   Gaudi::Property<bool> m_eloss{this, "ElossOn", false};
@@ -89,10 +87,6 @@ private:
   std::vector<int> m_persistentHits;
   std::vector<double> m_sixPredictedMean, m_sixPredictedCov, m_sixFilteredMean, m_sixFilteredCov;
   std::vector<double> m_sixSmoothedMean, m_sixSmoothedCov, m_sixTransport, m_sixNoise;
-  int m_iterations=0, m_iterationStatus=0;
-  double m_onePassPt=0;
-  std::string m_iterationError;
-  std::vector<double> m_iterationPt,m_iterationLoss,m_iterationLossVariance,m_iterationNorm,m_iterationChi2;
   std::vector<int> m_seedHitIndices;
   std::vector<unsigned long long> m_hitCell;
   std::vector<double> m_hitR, m_hitZ, m_localChi2, m_filteredKappa, m_smoothedKappa;
@@ -103,12 +97,10 @@ private:
   std::vector<double> m_priorLoss, m_localLoss, m_localVariance, m_fittedLoss, m_lossVariance, m_closure;
   double m_backwardPt=0, m_backwardTotalChi2=0, m_smoothedTotalChi2=0, m_smoothedSeedChi2=0;
   double m_backwardSeedForwardChi2=0, m_backwardReferencePt=0;
-  int m_smoothedChi2Status=0, m_backwardIterations=0, m_backwardIterationStatus=0;
-  std::string m_smoothedChi2Error, m_backwardIterationError;
+  int m_smoothedChi2Status=0;
+  std::string m_smoothedChi2Error;
   std::vector<double> m_smoothedChi2, m_smoothedMeasurementChi2, m_smoothedProcessChi2, m_smoothedNativeChi2;
   std::vector<double> m_backwardLoss, m_backwardLossVariance;
-  std::vector<double> m_backwardIterationPt, m_backwardIterationLoss, m_backwardIterationVariance;
-  std::vector<double> m_backwardIterationNorm, m_backwardIterationChi2;
   int m_truthOverrideStatus = 0, m_truthG4Track = -1;
   double m_truthMaxDistance = 0;
   std::string m_truthOverrideError;
@@ -129,6 +121,5 @@ private:
   double m_truthPriorSigma = 0;
   std::vector<double> m_truthRTSLoss, m_truthRTSLossVariance;
   std::vector<double> m_truthBackwardLoss, m_truthBackwardLossVariance;
-  int m_truthRTSIterations = 0, m_truthBackwardIterations = 0;
 };
 #endif

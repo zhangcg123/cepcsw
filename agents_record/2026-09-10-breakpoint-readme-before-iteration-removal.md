@@ -151,7 +151,7 @@ select intervals for this track
   -> extra RTS/backward: use matched Geant4 b as the prior center, SAME SigmaLogLoss
 ```
 
-Both pairs use the same fitting code, LossStateMode and SigmaLogLoss
+Both pairs use the same fitting code, LossStateMode, SigmaLogLoss and iteration
 controls. Truth changes only the prior center of each selected b; later hits
 can update b and its variance. Track covariance, native material/MS and
 measurement updates remain active. Manual
@@ -199,8 +199,8 @@ Truth interval selection can still read material truth. An empty effective
 interval list also copies the ordinary pair.
 With True and nonempty intervals, a separate call to the same fitter generates
 both truth-centered endpoints with the same loss-state mode, prior sigma, seed
-scales, hit selection and material settings. Both pairs are one-pass fits.
-No truth-centered state
+scales, hit selection, iteration controls and material settings. Both pairs
+obey the same mode-specific iteration rules. No truth-centered state
 feeds back into the ordinary pair. Multi-interval ordinary comparisons require
 LocalMarginal. The old public `LossStateMode="TruthOverride"` now fails clearly:
 select an ordinary LossStateMode and set the independent `TruthOverride` bool.
@@ -227,8 +227,9 @@ truth_override_prior_sigma_log_loss record the definition and shared prior sigma
 truth_override_{rts,backward}_fitted_log_loss and corresponding
 _fitted_log_loss_variance vectors save the updated b posterior; they align with
 breakpoint_interval (including copied results). truth_override_log_loss remains
-the matched truth input, NOT the fitted output. Invalid extra results have empty
-posterior vectors. The treatment/sigma fields describe
+the matched truth input, NOT the fitted output. The extra pair also records
+truth_override_{rts,backward}_fit_iterations. Invalid extra results have empty
+posterior vectors and iteration counts0. The treatment/sigma fields describe
 configuration; the result status still distinguishes active, copied and failed.
 `truth_override_{rts,backward}_ip_parameters` hold `(D0,phi,omega,Z0,tanLambda)`
 at the origin; `_ip_covariance` copies all 21 packed EDM covariance elements.
@@ -243,31 +244,44 @@ truth_override_ prefix; scalar error, G4 track ID and max endpoint distance are
 also saved. Truth t/X0 is passive. Manual with an empty list needs no loss truth;
 Truth selection needs it to determine whether the effective list is empty.
 
-## One-pass fits and seeds
+## Iterations and seeds
 
-Both loss-state modes run one forward filter, one RTS smoother and one
-backward refilter per pair. There is no repeated relinearization loop.
-LocalMarginal supports multiple intervals; Persistent6D supports at most one.
-Empty intervals use the ordinary 5D reference. No new fitted-loss positivity
-constraint is imposed.
+MaxFitIterations=1 preserves one-pass results. For >1 (up to 20), exactly one
+breakpoint is required in both the ordinary and truth-centered pairs.
+For Truth selection this count is checked per track; zero/multiple selected
+intervals with MaxFitIterations>1 fail rather than silently changing the request.
+Likewise Persistent6D with multiple selected intervals fails that track, never
+selects just the largest loss. Use default LocalMarginal/MaxFitIterations=1 for
+unrestricted truth-selected interval counts.
+Persistent6D iterates RTS and backward separately. LocalMarginal retains its
+one-pass RTS and iterates backward only. This preserves the established
+methods rather than adding unimplemented LocalMarginal RTS relinearization.
 
-RTS starts at the final forward updated state/covariance and uses buffered
-forward transitions. It neither restarts a filter nor consumes the backward
-refilter. BackwardSeedScale does not affect RTS. The backward refilter copies
-the forward endpoint and scales its full covariance once; it still reuses
-forward evidence and is not an independent Bayesian smoother.
-backward_seed_forward_chi2 records that pair's forward bookkeeping.
+Ordinary RTS starts at the final forward updated state and covariance, then
+uses buffered forward predictions, covariances and transitions to smooth
+inward. It does not initialize an independent filter or update the hit
+measurements a second time. BackwardSeedScale never enters RTS. Only explicitly
+enabled Persistent6D relinearization repeats the forward-fit/RTS cycle.
 
-MaxFitIterations and RelinearizationTolerance have been removed.
-BP_MAX_ITERATIONS and BP_ITERATION_TOLERANCE are rejected by the maintained
-card and batch preparation, not silently ignored. Old prepared cards assigning
-the removed Gaudi properties must be regenerated; existing tuples are unchanged.
-Iteration-only flat fields are removed: one_pass_pt, fit_iterations,
-iteration_*, backward_fit_iterations, backward_iteration_* and
-truth_override_{rts,backward}_fit_iterations. Four endpoints, fitted loss means
-and variances, per-hit states, and all three per-hit chi2 lists/totals remain.
-The original iteration contract is preserved in
-agents_record/2026-09-10-breakpoint-readme-before-iteration-removal.md.
+When iterating, the forward/RTS cycle relinearizes native F/Q and measurement
+derivatives around the preceding smoothed trajectory, retaining the original
+seed and b prior. Backward
+iterations relinearize only the inward path, freezing the original FIRST-pass
+forward endpoint seed; they do not use the final iterated RTS endpoint.
+The same BackwardSeedScale multiplies that frozen covariance once on each
+inward pass, never repeatedly across iterations. They also retain the original
+b prior. No previous posterior becomes a new independent prior. Each hit is
+updated once per newly solved branch pass.
+
+Convergence is maximum standardized change in endpoint coordinates and b
+below RelinearizationTolerance. It is not proof of an optimum. There is no
+line search, damping, positivity constraint or loss-position adjustment.
+Iteration status is 0 one pass, 1 converged, 2 limit, -1 failed extra pass
+(last completed result retained). Both branches have separate histories:
+RTS retains iteration_* and fit_iterations; backward adds backward_iteration_*
+and backward_fit_iterations. backward_seed_forward_chi2 identifies its
+unchanged first-pass forward bookkeeping, which may differ from the final
+RTS forward_chi2 when RTS iterates.
 
 FirstMiddleLast selects first/middle/last usable 2D hits (N//2 middle).
 FirstThree restores the older prefit. SeedScale uniformly scales native loose
@@ -335,12 +349,14 @@ extended KF; the separate terms make those differences auditable.
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
-| TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
+| TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode/iterations; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| MaxFitIterations | 1 | 1--20; ordinary single-interval iterations as described above |
+| RelinearizationTolerance | 0.001 | Positive finite standardized stopping threshold |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
 | BackwardSeedScale | 1 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
 | SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |

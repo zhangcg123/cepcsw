@@ -447,8 +447,10 @@ arbitrary nonlinear refits, discarded correlations, different priors, or
 future transport that depends explicitly on the historical b beyond its
 already-applied effect on the track.
 
-Both implementations now run one pass; repeated relinearization has been
-removed. Tiny floating-point differences can still occur;
+The current implementation's iteration capabilities differ: Persistent6D
+can iterate RTS and backward separately; LocalMarginal retains one-pass RTS
+and iterates backward only. Therefore enabling iterations does not constitute
+an equivalent RTS comparison. Tiny floating-point differences can also occur;
 matching saved pT does not imply bit-identical full covariance or chi2.
 
 ## 11. Related seed controls: backward refilter versus RTS
@@ -467,7 +469,8 @@ All covariance entries, including cross-covariances, are scaled. Standard
 deviations scale by sqrt(s); correlation coefficients and the seed mean do
 not change. The outermost hit is not updated again, and the first backward
 update is at N-2. This does not create an independent backward seed or scale
-the loss prior B. The copied forward covariance is scaled once.
+the loss prior B. During inward relinearization the same original forward
+covariance is scaled once per pass, not multiplied cumulatively across passes.
 
 RTS instead has the boundary condition:
 
@@ -478,7 +481,9 @@ P_RTS[N-1] = P_forward_upd[N-1]
 
 It uses the stored forward states and transitions and does not run a fresh
 backward measurement filter. BackwardSeedScale is absent from this boundary
-and the entire RTS recursion. There is no outer relinearization loop.
+and the entire RTS recursion. Only an explicitly enabled outer
+relinearization loop repeats the full forward/RTS fit using the original
+prior and updated linearization references.
 
 This seed-control section was checked against the subsequent
 BackwardSeedScale implementation; the fixed-linearized equations above

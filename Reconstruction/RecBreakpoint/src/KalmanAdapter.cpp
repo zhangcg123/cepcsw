@@ -35,31 +35,13 @@ private:
 /// Only the measurement projection is specialized: b is NOT native t0.
 class LossMeasurementSite : public TKalTrackSite {
 public:
-  explicit LossMeasurementSite(const TVTrackHit& hit, int dimension = 6)
-      : TKalTrackSite(hit, dimension), m_dimension(dimension),
-        m_reference(dimension, 1), m_expected(hit.GetDimension(), 1),
-        m_derivative(hit.GetDimension(), dimension) {}
-  void setReference(const TrackState& reference) {
-    for (int i = 0; i < 5; ++i) m_reference(i, 0) = reference.mean(i, 0);
-    const TKalTrackState helix(TKalMatrix(reference.mean), *this, TVKalSite::kPredicted, 5);
-    TKalMatrix h(GetDimension(), 5);
-    if (!TKalTrackSite::CalcExpectedMeasVec(helix, m_expected) ||
-        !TKalTrackSite::CalcMeasVecDerivative(helix, h))
-      throw std::runtime_error("Cannot linearize measurement at reference trajectory");
-    for (int i = 0; i < GetDimension(); ++i)
-      for (int j = 0; j < 5; ++j) m_derivative(i, j) = h(i, j);
-    m_affine = true;
-  }
+  explicit LossMeasurementSite(const TVTrackHit& hit)
+      : TKalTrackSite(hit, 6) {}
   Int_t CalcExpectedMeasVec(const TVKalState& state, TKalMatrix& expected) override {
-    if (m_affine) {
-      expected = m_expected + m_derivative * stateDifference(state, m_reference);
-      return 1;
-    }
     const auto helix = trackOnly(state);
     return TKalTrackSite::CalcExpectedMeasVec(helix, expected);
   }
   Int_t CalcMeasVecDerivative(const TVKalState& state, TKalMatrix& derivative) override {
-    if (m_affine) { derivative = m_derivative; return 1; }
     const auto helix = trackOnly(state);
     TKalMatrix h(GetDimension(), 5);
     if (!TKalTrackSite::CalcMeasVecDerivative(helix, h)) return 0;
@@ -69,20 +51,17 @@ public:
     return 1; // H_b=0, but the full Kalman gain has a nonzero b row via P_bx.
   }
 private:
-  int m_dimension;
-  bool m_affine = false;
-  TKalMatrix m_reference, m_expected, m_derivative;
   TKalTrackState trackOnly(const TVKalState& state) const {
     TKalMatrix mean(5, 1);
     for (int i = 0; i < 5; ++i) mean(i, 0) = state(i, 0);
     return TKalTrackState(mean, *this, TVKalSite::kPredicted, 5);
   }
   TVKalState& CreateState(const TKalMatrix& mean, Int_t type) override {
-    return *new TKalTrackState(mean, *this, type, m_dimension);
+    return *new TKalTrackState(mean, *this, type, 6);
   }
   TVKalState& CreateState(const TKalMatrix& mean, const TKalMatrix& covariance,
                           Int_t type) override {
-    return *new TKalTrackState(mean, covariance, *this, type, m_dimension);
+    return *new TKalTrackState(mean, covariance, *this, type, 6);
   }
 };
 
@@ -199,46 +178,6 @@ MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maxi
   return result;
 }
 
-// Change coordinates only: no extra material or measurement. Reference and live
-// states must use the same pivot for the affine displacement to be meaningful.
-TrackState rebase(const TrackState& input, const edm4hep::Vector3d& pivot,
-                  double bz, TMatrixD& jacobian) {
-  TrackState result = input;
-  THelicalTrack helix(input.mean(0,0), input.mean(1,0), input.mean(2,0),
-      input.mean(3,0), input.mean(4,0), input.pivot.x,input.pivot.y,input.pivot.z,bz);
-  jacobian.UnitMatrix();
-  double angle = 0;
-  helix.MoveTo(TVector3(pivot.x,pivot.y,pivot.z),angle,&jacobian,&result.covariance);
-  result.pivot = pivot;
-  result.mean(0,0)=helix.GetDrho(); result.mean(1,0)=helix.GetPhi0();
-  result.mean(2,0)=helix.GetKappa(); result.mean(3,0)=helix.GetDz();
-  result.mean(4,0)=helix.GetTanLambda();
-  return result;
-}
-
-// The only measurement-update algebra is native KalTest Filter(). This helper
-// supplies a fixed affine measurement model h(ref)+H(ref)*(x-ref).
-void affineUpdate(BreakpointTrackSystem& system, edm4hep::TrackerHit hit,
-    const TrackState& reference, TMatrixD& mean, TMatrixD& covariance,
-    double maximum, double& chi2, int& dimension) {
-  const auto* layer=system.layer(hit);
-  if (!layer) throw std::runtime_error("No relinearized measurement layer");
-  std::unique_ptr<ILDVTrackHit> native(layer->ConvertLCIOTrkHit(hit));
-  if (!native) throw std::runtime_error("Cannot convert relinearized hit");
-  LossMeasurementSite site(*native,mean.GetNrows());
-  site.SetOwner();
-  site.SetPivot(TVector3(reference.pivot.x,reference.pivot.y,reference.pivot.z));
-  site.setReference(reference);
-  HitAcceptance acceptance(maximum);
-  site.SetFilterCond(&acceptance);
-  site.Add(new TKalTrackState(TKalMatrix(mean),TKalMatrix(covariance),site,
-                             TVKalSite::kPredicted,mean.GetNrows()));
-  if (!site.Filter()) throw std::runtime_error("KalTest rejected relinearized hit");
-  mean=site.GetState(TVKalSite::kFiltered);
-  covariance=site.GetState(TVKalSite::kFiltered).GetCovMat();
-  validateCovariance(covariance);
-  chi2=site.GetDeltaChi2(); dimension=site.GetDimension();
-}
 } // namespace
 
 std::unique_ptr<MarlinTrk::IMarlinTrack> KalmanAdapter::initialized(
@@ -405,132 +344,6 @@ LossMeasurementStep KalmanAdapter::advancePersistent(const LossTrackState& sourc
   validateCovariance(result.filtered.covariance);
   result.chi2 = site.GetDeltaChi2();
   result.dimension = site.GetDimension();
-  return result;
-}
-
-MeasurementStep KalmanAdapter::seedRelinearized(const TrackState& originalPrior,
-    edm4hep::TrackerHit hit, const TrackState& reference) const {
-  MeasurementStep result;
-  TMatrixD pivot(5,5);
-  result.predicted=rebase(originalPrior,reference.pivot,m_bz,pivot);
-  result.filtered=result.predicted;
-  affineUpdate(*m_system,hit,reference,result.filtered.mean,result.filtered.covariance,
-               m_maxChi2,result.chi2,result.dimension);
-  return result;
-}
-
-MeasurementStep KalmanAdapter::advanceRelinearized(const TrackState& source,
-    edm4hep::TrackerHit from, edm4hep::TrackerHit to,
-    const TrackState& referenceSource, const TrackState& referenceTarget) const {
-  const auto geometry=nativeStep(*m_system,m_bz,m_maxChi2,referenceSource,from,to,false,0,0,true);
-  TMatrixD pivot(5,5);
-  const auto referencePrediction=rebase(geometry.predicted,referenceTarget.pivot,m_bz,pivot);
-  MeasurementStep result;
-  result.transport=pivot*geometry.transport;
-  result.noise=pivot*geometry.noise*transpose(pivot);
-  result.predicted=referencePrediction;
-  result.predicted.mean += result.transport*stateDifference(source.mean,referenceSource.mean);
-  result.predicted.covariance=result.transport*source.covariance*transpose(result.transport)+result.noise;
-  validateCovariance(result.predicted.covariance);
-  result.filtered=result.predicted;
-  affineUpdate(*m_system,to,referenceTarget,result.filtered.mean,result.filtered.covariance,
-               m_maxChi2,result.chi2,result.dimension);
-  return result;
-}
-
-LossMeasurementStep KalmanAdapter::advanceRelinearized(const LossTrackState& source,
-    edm4hep::TrackerHit from, edm4hep::TrackerHit to, bool birth,
-    const LossTrackState& referenceSource, const TrackState& referenceTarget) const {
-  auto mapped=referenceSource;
-  TMatrixD loss(6,6);
-  loss.UnitMatrix();
-  if (birth) {
-    loss(2,2)=std::exp(referenceSource.mean(5,0));
-    mapped.mean(2,0)*=loss(2,2);
-    loss(2,5)=mapped.mean(2,0);
-    mapped.covariance=loss*referenceSource.covariance*transpose(loss);
-  }
-  const auto geometry=nativeStep(*m_system,m_bz,m_maxChi2,mapped.track(),from,to,false,0,0,true);
-  TMatrixD pivot(5,5);
-  const auto target=rebase(geometry.predicted,referenceTarget.pivot,m_bz,pivot);
-  const TMatrixD f=pivot*geometry.transport;
-  const TMatrixD q=pivot*geometry.noise*transpose(pivot);
-  TMatrixD transport(6,6);
-  transport.UnitMatrix();
-  LossMeasurementStep result;
-  for(int i=0;i<5;++i)
-    for(int j=0;j<5;++j) { transport(i,j)=f(i,j); result.noise(i,j)=q(i,j); }
-  result.transport=transport*loss;
-  result.predicted=referenceSource;
-  result.predicted.pivot=target.pivot;
-  for(int i=0;i<5;++i) result.predicted.mean(i,0)=target.mean(i,0);
-  // Essential affine offset. A new expansion point is NOT a new prior mean.
-  result.predicted.mean += result.transport*stateDifference(source.mean,referenceSource.mean);
-  result.predicted.covariance=result.transport*source.covariance*transpose(result.transport)+result.noise;
-  validateCovariance(result.predicted.covariance);
-  result.filtered=result.predicted;
-  affineUpdate(*m_system,to,referenceTarget,result.filtered.mean,result.filtered.covariance,
-               m_maxChi2,result.chi2,result.dimension);
-  return result;
-}
-
-MeasurementStep KalmanAdapter::advanceBackwardRelinearized(const TrackState& source,
-    edm4hep::TrackerHit from, edm4hep::TrackerHit to, bool breakpoint,
-    double priorLoss, double sigmaLoss, double referenceLoss,
-    const TrackState& referenceSource, const TrackState& referenceTarget) const {
-  if (!breakpoint)
-    return advanceRelinearized(source, from, to, referenceSource, referenceTarget);
-
-  // Match advanceBackward: geometry/material first, inverse loss at the
-  // upstream target surface, then the measurement. No extra physical loss.
-  const auto geometry = nativeStep(*m_system, m_bz, m_maxChi2,
-      referenceSource, from, to, false, 0, 0, true);
-  TMatrixD pivot(5, 5);
-  auto prediction = rebase(geometry.predicted, referenceTarget.pivot, m_bz, pivot);
-  TMatrixD inverseLoss(5, 5), derivative(5, 1);
-  inverseLoss.UnitMatrix();
-  inverseLoss(2, 2) = std::exp(-referenceLoss);
-  prediction.mean(2, 0) *= inverseLoss(2, 2);
-  derivative(2, 0) = -prediction.mean(2, 0);
-  const double variance = sigmaLoss * sigmaLoss;
-
-  MeasurementStep result;
-  result.transport = inverseLoss * pivot * geometry.transport;
-  result.noise = inverseLoss * pivot * geometry.noise
-      * transpose(pivot) * transpose(inverseLoss)
-      + variance * derivative * transpose(derivative);
-  result.lossTargetCross = variance * transpose(derivative);
-  result.predicted = prediction;
-  result.predicted.mean += result.transport * stateDifference(source.mean, referenceSource.mean)
-      + derivative * (priorLoss - referenceLoss);
-  result.predicted.covariance = result.transport * source.covariance
-      * transpose(result.transport) + result.noise;
-  validateCovariance(result.predicted.covariance);
-  // Independent joint-6D assembly audits the marginalized inverse transition.
-  Matrix6 joint{};
-  Matrix5 f{}, q{};
-  Vector5 db{};
-  const TMatrixD nativeNoise = inverseLoss * pivot * geometry.noise
-      * transpose(pivot) * transpose(inverseLoss);
-  for (int row = 0; row < 5; ++row) {
-    db[row] = derivative(row, 0);
-    for (int col = 0; col < 5; ++col) {
-      joint[6 * row + col] = source.covariance(row, col);
-      f[5 * row + col] = result.transport(row, col);
-      q[5 * row + col] = nativeNoise(row, col);
-    }
-  }
-  joint[35] = variance;
-  const auto full = AugmentedTransport::covariance(joint,
-      AugmentedTransport::jacobian(f, db), AugmentedTransport::processNoise(q));
-  for (int row = 0; row < 5; ++row)
-    for (int col = 0; col < 5; ++col)
-      result.covarianceClosure = std::max(result.covarianceClosure,
-          std::abs(full[6 * row + col] - result.predicted.covariance(row, col))
-          / std::sqrt(result.predicted.covariance(row, row) * result.predicted.covariance(col, col)));
-  result.filtered = result.predicted;
-  affineUpdate(*m_system, to, referenceTarget, result.filtered.mean,
-      result.filtered.covariance, m_maxChi2, result.chi2, result.dimension);
   return result;
 }
 
