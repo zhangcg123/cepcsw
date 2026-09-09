@@ -108,3 +108,62 @@ Base: `TrackingPerformanceStudies/breakpoint_free_loss_minuit_20260910/`.
 
 No ROOT files or other generated study artifacts are staged or committed.
 Only this durable diagnostic record is checkpointed locally.
+
+## Follow-up: are failures concentrated at the front?
+
+Read the same100 flat rows' hit_cell_id, hit_r_mm and selected interval index.
+Detector IDs and layer bitfields were checked against the active TDR_o1_v01
+XML and included readouts: system=bits0..4, layer starts at bit7 (9 bits for
+silicon,13 for TPC). Grouping is by the UPSTREAM reconstructed interval
+anchor, not the exact Geant4 emission material or first/second half-layer.
+This distinction matters for the VXD->ITK and TPC->OTK intervals.
+
+| Upstream anchor region | N | Worsened vs ordinary RTS | Absolute residual >20% | Absolute residual >100% |
+|---|---:|---:|---:|---:|
+| VXD, including VXD->ITK |17|13|11|7|
+| ITK, including ITK->TPC |38|15|2|0|
+| TPC, including TPC->OTK |45|10|1|0|
+
+All8 upper-bound winners and all7 >100% residuals are VXD-owned. The17 VXD
+intervals comprise7 internal VXD intervals (6 worsen,5 >100%) and10
+VXD->ITK intervals (7 worsen,2 >100%). The present VXD interval indices are
+0,2,4,5; do not use these indices as universal layer identifiers. Smaller
+degradations also occur outside VXD. Of14 tracks exceeding20% absolute
+residual,11 are VXD-owned. These are same-sample associations, not a proof
+of the cause of every bad fit.
+
+### Direct score evidence for the loss/momentum degeneracy
+
+Seed4:event11 has interval VXD L0->L1, radii11.08254->16.58198mm, one upstream
+hit and232 downstream hits. Truth interval loss0.009618%, generator
+pT11.919195175170898GeV. Saved blind scan:
+
+| b | Loss % | Complete RTS chi2 | IP pT GeV | IP pT * exp(-b) GeV |
+|---|---:|---:|---:|---:|
+|0|0|458.743298|11.929422|11.929422|
+|0.15|13.9292|458.740271|13.860011|11.929422|
+|0.5|39.3469|458.730737|19.668319|11.929439|
+|1|63.2121|458.701276|32.427878|11.929550|
+
+The saved IP quantity times exp(-b) is a proxy demonstrating near-exact
+momentum/loss compensation, not a newly measured downstream state. The
+physical fixed-loss map is p_before=p_after*exp(b); with almost no upstream
+curvature leverage, an increase in b can be compensated by an increase in
+pre-loss/IP momentum while leaving the downstream trajectory nearly intact.
+The one-pass source confirms the mean kappa map exp(b), native filtering of
+all downstream hits and RTS, and a loose FirstMiddleLast prefit covariance.
+There is no Gaussian b prior in this experiment. The tiny residual score
+trend selects b=1, not an informative determination of63% physical loss.
+
+Seed3:17 (VXD L2->L3,3 upstream hits) and6:74 (VXD L5->ITK L0,6 upstream
+hits) also have IP pT*exp(-b) approximately constant across b=0,.15,.5,1.
+Thus downstream hit count alone does not resolve the BEFORE-loss curvature.
+The association and compensation are observed; how much the small score
+trend comes from fluctuations, covariance normalization, nonlinear projection
+or material modelling remains unseparated. Do not assign all failures to
+information limitation: earlier1:47 and current6:38 show strong wrong-score
+preferences that need their own diagnosis.
+
+Reproduction: `analyze_locations.py`; outputs `hundred/location_rows.csv`,
+`location_summary.json`, `location_analysis.log`. No additional reconstruction
+jobs or source changes were needed for this audit.
