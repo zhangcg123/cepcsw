@@ -206,9 +206,9 @@ def verify(path, stage):
         good = int(tree.GetEntries('status==1'))
         invalid_truth = int(tree.GetEntries('truth_override_result_status<0'))
         print(f'Flat rows={tree.GetEntries()}, ordinary success={good}, invalid oracle={invalid_truth}', flush=True)
-        if not good: raise RuntimeError('No successful ordinary fits; output retained for diagnosis')
-        missing_extra = int(tree.GetEntries('truth_override_result_status!=1 && truth_override_result_status!=2'))
-        cleanup_ready = good == tree.GetEntries() and missing_extra == 0
+        # Job completion/output integrity, not per-track fit success, permits
+        # cleanup. Failed ordinary/oracle rows remain tagged in the flat tuple.
+        cleanup_ready = True
     else: print(f'{stage} events={tree.GetEntries()}', flush=True)
     file.Close()
     return cleanup_ready
@@ -220,14 +220,14 @@ def file_identity(path):
 
 
 def cleanup_tracker(job, manifest, produced_identity, cleanup_ready):
-    """Delete only this job's own, unchanged intermediate after verified refits."""
+    """Delete only this job's own, unchanged intermediate after verified output."""
     if 'trk' not in job['stages']:
         return {'status':'retained_external'}
     if 'breakpoint' not in job['stages']:
         return {'status':'retained_no_downstream'}
     if not cleanup_ready:
-        print('Retaining tracker output: some refit/oracle rows are invalid.', flush=True)
-        return {'status':'retained_incomplete_refits'}
+        print('Retaining tracker output: breakpoint output has not passed verification.', flush=True)
+        return {'status':'retained_unverified_output'}
     output_dir = manifest.parent.parent.parent
     expected = output_dir / f'trk-{job["sample"]}.root'
     tracker = Path(job['files']['trk'])

@@ -8,8 +8,9 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 REPO = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('batch', REPO/'Reconstruction/RecBreakpoint/options/batch_breakpoint.py')
@@ -157,10 +158,39 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(result['status'],'removed');self.assertFalse(tracker.exists())
         self.assertTrue(Path(job['files']['sim']).exists())
 
-    def test_cleanup_retains_failed_refits(self):
+    def test_cleanup_retains_unverified_output(self):
         job,manifest,tracker,identity=self.cleanup_fixture()
         result=batch.cleanup_tracker(job,manifest,identity,False)
-        self.assertEqual(result['status'],'retained_incomplete_refits');self.assertTrue(tracker.exists())
+        self.assertEqual(result['status'],'retained_unverified_output');self.assertTrue(tracker.exists())
+
+    def test_bad_fit_rows_do_not_block_cleanup(self):
+        for good in (0, 1, 2):
+            with self.subTest(ordinary_success=good):
+                tree = MagicMock()
+                tree.GetEntries.side_effect = lambda cut=None: {
+                    None: 2, 'status==1': good, 'truth_override_result_status<0': 1}[cut]
+                file = MagicMock()
+                file.IsZombie.return_value = False
+                file.TestBit.return_value = False
+                file.Get.return_value = tree
+                root = types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path: file, kRecovered=1))
+                with patch.dict('sys.modules', ROOT=root), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertTrue(batch.verify(Path('fixture.root'), 'breakpoint'))
+                file.Close.assert_called_once()
+
+    def test_invalid_flat_output_still_blocks_cleanup(self):
+        for defect in ('zombie', 'recovered', 'empty', 'missing_branch'):
+            with self.subTest(defect=defect):
+                tree = MagicMock()
+                tree.GetEntries.return_value = 0 if defect == 'empty' else 2
+                tree.GetBranch.return_value = None if defect == 'missing_branch' else object()
+                file = MagicMock()
+                file.IsZombie.return_value = defect == 'zombie'
+                file.TestBit.return_value = defect == 'recovered'
+                file.Get.return_value = tree
+                root = types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path: file, kRecovered=1))
+                with patch.dict('sys.modules', ROOT=root), self.assertRaises(RuntimeError):
+                    batch.verify(Path('fixture.root'), 'breakpoint')
 
     def test_cleanup_retains_external_input(self):
         job,manifest,tracker,identity=self.cleanup_fixture('breakpoint')

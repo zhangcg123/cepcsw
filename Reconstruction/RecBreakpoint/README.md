@@ -478,9 +478,9 @@ OUTPUT_TUPLEPATH/
 The flat tuple contains ordinary RTS/backward and oracle/copied RTS/backward
 results. No breakpoint EDM file is written by the default card. After all
 selected stages succeed and the flat tuple passes verification, a tracker
-tuple produced by this same job is deleted. All attempted ordinary rows must
-succeed and every extra pair must be valid/copied; otherwise the tracker is
-retained for diagnosis. A trk-only job keeps its output, and a breakpoint-only
+tuple produced by this same job is deleted regardless of individual ordinary
+or truth-override fit failures, including when every fit fails. Failure tags
+remain in the flat tuple. A trk-only job keeps its output, and a breakpoint-only
 job never deletes its external tracker input. Simulation files are retained.
 The cleanup checks the exact expected path and its production-time file identity
 (device/inode/size/modification time), refuses symlinks or changed files, and
@@ -493,9 +493,9 @@ Cards are checksum-checked by the worker; never edit a frozen card in place.
 Use a new output directory for a changed physics setup. The software/library
 is NOT snapshotted: keep the branch/build stable while jobs are queued/running.
 
-The worker verifies readable nonempty ROOT trees, required flat branches, and
-at least one successful ordinary fit. Invalid oracle rows are reported and
-retained; inspect truth_override_result_status before analysis. This output
+The worker verifies readable nonempty ROOT trees and required flat branches;
+it reports fit-success counts but does not require successful fits for cleanup.
+Invalid oracle rows remain tagged; inspect truth_override_result_status before analysis. This output
 check is not physics validation. Failed jobs retain outputs/started marker for
 diagnosis and cannot blindly overwrite/restart; use a new output directory.
 Duplicate submissions are rejected once submitted.json exists.
