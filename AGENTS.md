@@ -218,8 +218,9 @@ explicit provenance. Historical detail does not override this live status.
 - Use `dev` as the active development branch. Do not switch, create, rename,
   delete, merge, or rebase branches unless the user explicitly requests the
   specific branch operation.
-  The user-authorized breakpoint experiment is on local `test_breakpoint`,
-  branched from `dev`; this does not authorize changing remote branches.
+  The user-authorized breakpoint experiment is on `breakpoint` (renamed from
+  `test_breakpoint`), branched from `dev`. The user authorized publishing this
+  branch to origin; other remote branch changes require a separate request.
 - Use Git frequently during development: inspect status and diffs, and create
   focused checkpoint commits after coherent, proportionately verified core
   implementation or project-knowledge changes. Track, commit, and push all
@@ -236,6 +237,10 @@ explicit provenance. Historical detail does not override this live status.
   files, logs, plots, tables, notebooks, batch cards, and experiment outputs
   uncommitted unless the user explicitly authorizes a specific exception. Do
   not change branches unless the user explicitly requests it.
+  Explicit breakpoint publication exception: also track its dedicated
+  run_breakpoint.py, subbreakpointjobs.sh, dump_breakpoint.sh, batch helper,
+  package build files/registration and the required DumpGsfTrks/trk.py.bk.
+  Never stage or commit generated ROOT files for this publication.
 - Keep `AGENTS.md` limited to global status, active laws, essential commands,
   and the current focus. Before replacing or removing unique detail, preserve
   it in a dated `agents_record/` entry; replace rather than append focus.
@@ -288,9 +293,10 @@ ROOT files and logs are outputs, not status records.
 ## 2. Current focus
 
 Active work is the independent RecBreakpoint package on local
-`test_breakpoint`, reading CompleteTracks. Shared KF/GSF sources, maintained
+`breakpoint`, reading CompleteTracks. Shared KF/GSF sources, maintained
 GSF cards and unrelated user-owned workflow edits remain out of scope.
-No remote operations or reconstruction-based interval finder are authorized.
+Beyond the requested origin/breakpoint publication, further remote operations
+and a reconstruction-based interval finder require explicit authorization.
 Beam-boundary work remains paused.
 
 The user requested removal of repeated relinearization on 2026-09-10.

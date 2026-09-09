@@ -9,7 +9,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
 cd -- "${script_dir}" || exit 1
 # Source the existing environment before nounset: external setup uses unset vars.
 source setup.sh || exit 1
-set -eu
+#set -eu
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
 export BLIS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 exec python3 Reconstruction/RecBreakpoint/options/batch_breakpoint.py run "${manifest}"

@@ -1,6 +1,7 @@
 # RecBreakpoint
 
-Experimental electron breakpoint Kalman refitter on local `test_breakpoint`.
+Experimental electron breakpoint Kalman refitter on branch `breakpoint`
+(renamed from `test_breakpoint`).
 Reads `CompleteTracks`. GSF/shared KF sources and maintained batch cards are
 unchanged. This is not a physics-validated replacement.
 
