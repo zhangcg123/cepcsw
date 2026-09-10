@@ -3,6 +3,7 @@
 
 #include "TrackState.h"
 #include "LossTrackState.h"
+#include "GaussianTrackModel.h"
 #include "RecBreakpoint/SeedHitSelection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
@@ -38,6 +39,9 @@ public:
   /// measurement expansion point as the corresponding filter pass.
   MeasurementScore measurementScore(edm4hep::TrackerHit hit, const TrackState& state,
                                      const TrackState& reference) const;
+  /// Passive native H/V/residual capture; does not perform a measurement update.
+  GaussianHitModel gaussianHitModel(edm4hep::TrackerHit hit,
+                                   const TrackState& reference) const;
   MeasurementStep advance(const TrackState& source, edm4hep::TrackerHit sourceHit,
                           edm4hep::TrackerHit targetHit) const;
   /// Full 6D prediction and native 6D hit update. Apply exp(b) ONLY at birth.

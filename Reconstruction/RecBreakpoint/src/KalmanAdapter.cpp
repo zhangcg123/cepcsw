@@ -256,6 +256,22 @@ MeasurementStep KalmanAdapter::advance(const TrackState& source,
   return nativeStep(*m_system, m_bz, m_maxChi2, source, sourceHit, targetHit);
 }
 
+GaussianHitModel KalmanAdapter::gaussianHitModel(edm4hep::TrackerHit hit,
+    const TrackState& reference) const {
+  auto site = makeSite(*m_system, hit);
+  const auto pivot = site->GetPivot();
+  if (std::abs(reference.pivot.x - pivot.X()) > 1.e-8 ||
+      std::abs(reference.pivot.y - pivot.Y()) > 1.e-8 ||
+      std::abs(reference.pivot.z - pivot.Z()) > 1.e-8)
+    throw std::runtime_error("Gaussian hit model pivot mismatch");
+  TKalTrackState predicted(TKalMatrix(reference.mean), *site, TVKalSite::kPredicted, 5);
+  TKalMatrix expected(site->GetDimension(), 1), derivative(site->GetDimension(), 5);
+  if (!site->CalcExpectedMeasVec(predicted, expected) ||
+      !site->CalcMeasVecDerivative(predicted, derivative))
+    throw std::runtime_error("Gaussian hit model native projection failed");
+  return {derivative, site->GetMeasNoiseMat(), site->GetMeasVec() - expected};
+}
+
 MeasurementScore KalmanAdapter::measurementScore(edm4hep::TrackerHit hit,
     const TrackState& state, const TrackState& reference) const {
   auto site = makeSite(*m_system, hit);

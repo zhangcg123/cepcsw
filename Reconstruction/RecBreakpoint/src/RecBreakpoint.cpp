@@ -89,6 +89,11 @@ StatusCode RecBreakpoint::initialize() {
     error() << "MeanLogLoss must be finite in [0,5] and SigmaLogLoss finite/positive" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (!std::isfinite(m_freeLossMax.value()) || m_freeLossMax <= 0 || m_freeLossMax > 5 ||
+      m_freeLossMaxCalls < 1 || !std::isfinite(m_freeLossTolerance.value()) || m_freeLossTolerance <= 0) {
+    error() << "FreeLossMaxLogLoss must be in (0,5]; FreeLossMaxCallsPerStart and FreeLossTolerance must be positive" << endmsg;
+    return StatusCode::FAILURE;
+  }
   const auto geometry = service<IGeomSvc>("GeomSvc");
   const auto gear = service<IGearSvc>("GearSvc");
   if (!geometry || !gear || !gear->getGearMgr()) return StatusCode::FAILURE;
@@ -111,6 +116,7 @@ StatusCode RecBreakpoint::initialize() {
   if (!m_file || m_file->IsZombie()) return StatusCode::FAILURE;
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
+  m_freeLossTuple.book(*m_tree);
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_tree->Branch("event_index", &m_event);
@@ -261,6 +267,9 @@ StatusCode RecBreakpoint::execute() {
   settings.seedScale = m_seedScale;
   settings.backwardSeedScale = m_backwardSeedScale;
   settings.lossStateMode = m_lossStateModeName;
+  const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
+      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),
+      m_freeLossCheck.value()};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
       (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
@@ -290,6 +299,8 @@ StatusCode RecBreakpoint::execute() {
       continue;
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
+    m_freeLossTuple.reset(m_freeLossFit, freeLossControls);
+    m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
     m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
     m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
@@ -403,7 +414,18 @@ StatusCode RecBreakpoint::execute() {
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
           << " seed=" << m_seedSelectionName << " ordered-hit indices="
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
-      const auto paired = fitter.fit(hits, settings);
+      auto paired = fitter.fit(hits, settings);
+      if (m_freeLossFit) {
+        auto freeFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, freeLossControls);
+        m_freeLossTuple.assign(freeFit.diagnostics);
+        if (freeFit.fitted) paired = std::move(*freeFit.fitted);
+        if (!freeFit.diagnostics.error.empty())
+          warning() << "FreeLossFit: " << freeFit.diagnostics.error << "; ordinary pair retained" << endmsg;
+        if (m_verbose) info() << std::setprecision(17) << "FreeLossFit event=" << m_event
+            << " track=" << m_trackIndex << " status=" << int(freeFit.diagnostics.status)
+            << " b=" << freeFit.diagnostics.b << " nll2=" << freeFit.diagnostics.likelihood.nll2
+            << " minuit_status=" << freeFit.diagnostics.minuitStatus << endmsg;
+      }
       const auto& fit=paired.rts;
       const auto& inward=paired.backward;
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
@@ -546,6 +568,13 @@ StatusCode RecBreakpoint::execute() {
       // diagnostic oracle must not discard or silently replace ordinary tracks.
       try {
         auto oracleSettings = settings;
+        // The optional free fit changes only the primary pair. Preserve the
+        // established truth-prior diagnostic, including its configured sigma.
+        // When that diagnostic is off, explicitly label copies of a free fit.
+        if (!needTruthLoss && m_freeLossTuple.applied()) {
+          m_truthLossTreatment = "CopiedFreeLikelihood";
+          m_truthPriorSigma = 0;
+        }
         // Only the per-interval b prior centers differ. Keep the same sigma_b,
         // loss-state implementation, seeds and native one-pass updates.
         if (needTruthLoss) {

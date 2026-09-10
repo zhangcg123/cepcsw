@@ -13,13 +13,18 @@ target_include_directories(RecBreakpointHelpers PUBLIC
 set_target_properties(RecBreakpointHelpers PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  add_library(RecBreakpointLikelihood STATIC src/TrackLikelihood.cpp)
+  target_compile_features(RecBreakpointLikelihood PUBLIC cxx_std_17)
+  target_include_directories(RecBreakpointLikelihood PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_link_libraries(RecBreakpointLikelihood PUBLIC Eigen3::Eigen ROOT::Matrix)
+  set_target_properties(RecBreakpointLikelihood PROPERTIES POSITION_INDEPENDENT_CODE ON)
   gaudi_add_module(RecBreakpoint
     SOURCES src/RecBreakpoint.cpp src/TrackState.cpp src/KalmanAdapter.cpp
-            src/BreakpointFitter.cpp
+            src/BreakpointFitter.cpp src/FreeLossFitter.cpp src/FreeLossTuple.cpp
             # Reuse the exact maintained relation-driven reader, without
             # linking the GSF algorithm plugin or changing its implementation.
             ../RecGsfTracking/src/TruthBHLossEventData.cpp
-    LINK RecBreakpointHelpers TrackSystemSvcLib Gaudi::GaudiKernel
+    LINK RecBreakpointHelpers RecBreakpointLikelihood ROOT::Minuit2 TrackSystemSvcLib Gaudi::GaudiKernel
          k4FWCore::k4FWCore EDM4HEP::edm4hep EDM4HEP::edm4hepDict
          GsfTruthEventData GsfTruthEventDataDict
          ${ROOT_LIBRARIES} ${LCIO_LIBRARIES})
@@ -40,4 +45,9 @@ if(BUILD_TESTING)
   add_executable(RecBreakpointTransportTest tests/TransportTest.cpp)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
+  if(TARGET RecBreakpointLikelihood)
+    add_executable(RecBreakpointLikelihoodTest tests/LikelihoodTest.cpp)
+    target_link_libraries(RecBreakpointLikelihoodTest PRIVATE RecBreakpointLikelihood)
+    add_test(NAME RecBreakpointLikelihood COMMAND RecBreakpointLikelihoodTest)
+  endif()
 endif()

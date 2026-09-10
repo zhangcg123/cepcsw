@@ -78,6 +78,9 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
                                      const FitSettings& settings) const {
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
+  if (settings.captureGaussianModel &&
+      (settings.lossStateMode != "LocalMarginal" || settings.sigmaLogLoss != 0))
+    throw std::invalid_argument("Gaussian likelihood capture requires fixed-loss LocalMarginal");
   if (settings.lossStateMode == "Persistent6D") {
     if (settings.intervals.size() > 1)
       throw std::invalid_argument("Persistent6D requires at most one breakpoint");
@@ -204,12 +207,27 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     if (i) noises.push_back(transitions[i-1].noise);
   }
   scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
+  if (settings.captureGaussianModel) {
+    auto model = std::make_shared<GaussianTrackModel>();
+    model->seedCovariance.ResizeTo(result.predicted.front().covariance);
+    model->seedCovariance = result.predicted.front().covariance;
+    for (std::size_t i = 0; i < hits.size(); ++i) {
+      model->hits.push_back(m_adapter.gaussianHitModel(hits[i], result.predicted[i]));
+      if (i) {
+        const auto& edge = transitions[i - 1];
+        model->transitions.push_back({edge.transport, edge.noise,
+            stateDifference(result.predicted[i - 1].mean, result.filtered[i - 1].mean)});
+      }
+    }
+    result.gaussianModel = std::move(model);
+  }
   return result;
 }
 
 FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
     const FitSettings& settings, FitResult result) const {
     result.breakpoints.clear();
+    result.gaussianModel.reset(); // the marginal likelihood uses the forward model
     result.smoothed.clear();
     result.smoothedChi2.clear(); result.smoothedMeasurementChi2.clear();
     result.smoothedProcessChi2.clear(); result.smoothedNativeMeasurementChi2.clear();

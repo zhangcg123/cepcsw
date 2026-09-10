@@ -329,6 +329,13 @@ extended KF; the separate terms make those differences auditable.
 
 ## Properties
 
+Optional normalized-likelihood free-loss fitting is now implemented in this
+package, not in an external prototype. Set `FreeLossFit=True` to replace the
+primary pair with the native conditional fit at the optimized loss. The
+compatibility default is false. This is an implementation promotion, not a
+claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
+for the model, code organization, output contract and limitations.
+
 | Property | Compiled default | Meaning |
 |---|---|---|
 | InputTracks | CompleteTracks | Input hit-list tracks |
@@ -342,6 +349,11 @@ extended KF; the separate terms make those differences auditable.
 | MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| FreeLossFit | false | Optional normalized-likelihood optimization for one selected LocalMarginal interval; tagged ordinary fallback otherwise |
+| FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
+| FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
+| FreeLossTolerance | 0.001 | Positive finite MIGRAD tolerance |
+| FreeLossCheckLikelihoods | false | Check reverse-order QR and joint-smoothed SVD against the same forward-order likelihood; no alternative objective |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
 | BackwardSeedScale | 100 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
 | SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |
@@ -368,6 +380,14 @@ sqrt(BackwardSeedScale). The effective value is saved in every flat row as
 scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 ## Other automatic tuple information
+
+All runs also save the `free_loss_*` fields described in
+[the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract). They are
+explicitly inactive/NaN/empty when unused. Existing tuple fields and the four
+track collection names are retained. With free fitting applied, primary
+track covariances are conditional on optimized b; the outer optimizer's b
+uncertainty is not propagated into them. `Track.chi2` retains its existing
+quadratic meaning; `free_loss_nll2` separately records the fitting objective.
 
 The tuple has one row per attempted track, including failures. It retains
 ordered hit cells/radii/z, truth/KF pT, reference KF pT, filtered/smoothed kappa

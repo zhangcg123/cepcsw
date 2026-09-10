@@ -292,97 +292,159 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is the independent RecBreakpoint package on local `breakpoint`,
-reading CompleteTracks. Shared KF/GSF sources, maintained GSF cards and
-unrelated user-owned workflow edits remain out of scope. Beyond the requested
-origin/breakpoint publication, further remote operations and a reconstruction-
-based interval finder require explicit authorization. Beam-boundary work is paused.
+Active work is the independent RecBreakpoint package on local
+`breakpoint`, reading CompleteTracks. Shared KF/GSF sources, maintained
+GSF cards and unrelated user-owned workflow edits remain out of scope.
+Beyond the requested origin/breakpoint publication, further remote operations
+and a reconstruction-based interval finder require explicit authorization.
+Beam-boundary work remains paused.
 
-The user authorized promotion of the normalized free-loss prototype into the
-maintained package on 2026-09-10. It is now an OPTIONAL standard package path:
-`FreeLossFit=False` preserves the existing Gaussian-prior method; true runs a
-bounded Minuit2 fit of b=log(p_before/p_after) and publishes the resulting
-conditional RTS/backward pair. The default remains off pending a different
-user choice; promotion into maintained code is not physics validation.
-There is no alternate filter implementation or temporary-source runtime loader.
-FreeLossFitter calls the existing BreakpointFitter; TrackLikelihood computes
-the normalized Gaussian marginal likelihood from native F/Q/H/V. FreeLossTuple
-handles serialization separately. See
-`Reconstruction/RecBreakpoint/docs/free-loss-fit.md` for the complete contract.
+The user requested removal of repeated relinearization on 2026-09-10.
+Both LocalMarginal (compiled/card default) and Persistent6D now run only one
+forward filter, one RTS pass and one backward refilter per pair.
+MaxFitIterations, RelinearizationTolerance, their fitter settings and the
+iteration-specific propagation/update helpers are removed. The maintained
+card and dedicated batch helper reject stale BP_MAX_ITERATIONS and
+BP_ITERATION_TOLERANCE requests. Old prepared cards assigning retired Gaudi
+properties must be regenerated; no existing tuples/cards are rewritten.
+A subsequently user-authorized free-loss prototype is now tested outside the
+maintained package under TrackingPerformanceStudies. It calls the existing
+compiled BreakpointFitter helpers; there is no alternate filter/smoother.
+Each trial fixes b with sigma_b=0 and Minuit2 varies b in [0,1]. It uses
+truth-selected intervals, never truth loss amounts to initialize the search.
+The maintained package, positive Gaussian loss priors and batch cards have
+not changed; free fitting is not integrated into the maintained run card.
+The initial 100-event RTS-objective test found severe early-interval tails,
+not an overall improvement. The evidence and location audit are recorded in
+`agents_record/2026-09-10-breakpoint-free-loss-hundred-events.md`.
 
-Free fitting currently supports one selected LocalMarginal interval.
-Empty intervals use the 5D reference. Multiple intervals or Persistent6D
-retain the ordinary pair with unsupported status; failed searches retain it
-with failure status. The ordinary pair must first succeed. The optimizer
-accepts no truth-loss amount: Truth selection supplies indices only.
-Default b bounds are [0,1], with a blind scan and three MIGRAD starts.
-Each conditional trial fixes b with sigma_b=0 and uses the same native fitter.
-This is distinct from the removed repeated relinearization controls, which
-remain retired. FreeLossCheckLikelihoods optionally checks reverse-order QR
-and joint-smoothed SVD against the same forward-order Gaussian objective.
-These are equivalent formulations, not three independent physics objectives.
+Four row-mapped outputs remain: BreakpointTracksRTS,
+BreakpointTracksBackwardFilter, BreakpointTracksTruthOverrideRTS and
+BreakpointTracksTruthOverrideBackwardFilter. These are paired results, not
+CPU threads. RTS uses its own forward posterior and buffered transitions,
+not the backward refilter. The backward refilter copies its pair's forward
+endpoint mean and scales the full 5x5 covariance once by positive finite
+BackwardSeedScale (default100; changed from 1 on 2026-09-10 at user request).
+The completed three-objective 100-event study explicitly used 1 and is not
+relabeled or rerun by this default change. It reuses forward evidence, so is not an
+independent Bayesian smoother. Forward SeedScale defaults1 and
+FirstMiddleLast remains the prefit hit selection. BackwardSeedScale affects
+neither RTS nor the loss-prior sigma.
 
-Four row-mapped outputs remain: primary RTS/backward and extra truth-assisted
-RTS/backward. TruthOverride is still default-on: its matched G4 loss supplies
-a PRIOR CENTER with the configured positive SigmaLogLoss, using the established
-one-pass fitter. Free fitting changes only the primary pair; it does not
-redefine truth override or make its uncertainty identical to the free fit.
-With override off and an applied free fit, extra outputs are exact primary
-copies tagged CopiedFreeLikelihood and prior sigma0. Otherwise the existing
-PriorCenter/copy/failure contracts remain. No side truth CSV/ROOT reader is used.
+LocalMarginal supports multiple selected intervals. Persistent6D keeps b
+through every downstream native hit update and joint RTS, for at most one
+interval. Empty intervals use the 5D reference. Both publish the paired
+local-joint backward continuation. No fitted-loss positivity constraint is
+imposed. The ordinary prior remains MeanLogLoss=0 and positive
+SigmaLogLoss=0.05 by compiled default; campaign overrides are separate.
 
-IntervalSelectionMode=Truth remains default and uses associated G4 hooks at
-accepted-hit intervals. Manual uses the exact supplied interval list; empty
-means no breakpoints. Auto remains reserved and fails initialization.
-Invalid truth selection is never converted to no loss. Truth t/X0 is passive.
-LocalMarginal supports multiple ordinary intervals; Persistent6D at most one.
-The original positive Gaussian prior remains MeanLogLoss0/SigmaLogLoss0.05.
-The dedicated submission campaign sigma is separate and must be preserved.
+TruthOverride remains default-on and uses matched truth as each selected b
+PRIOR CENTER, with the SAME positive SigmaLogLoss and one-pass fitting code
+as the ordinary fit. It does not fix b or zero its uncertainty.
+Only the per-interval prior centers differ. Hits can move the fitted loss
+away from truth. z=1-sum(delta_p_eBrem)/p_start and b=-log(z) are derived
+through reconstructed-hit associations and exact embedded G4 hooks.
+LossStateMode only accepts LocalMarginal/Persistent6D, not TruthOverride.
+Historical tuples without truth_override_loss_treatment="PriorCenter"
+used fixed loss with zero added variance and must not be relabeled.
 
-Forward SeedScale1 and FirstMiddleLast remain defaults. BackwardSeedScale100
-scales the copied forward endpoint covariance for the native backward refilter;
-RTS does not use this refilter and its likelihood does not use that copied
-backward seed. The reverse-order likelihood check also does not use it.
-The native backward fit is not an independent Bayesian smoother.
+IntervalSelectionMode=Truth (compiled/card default) selects every matched
+accepted-hit interval with positive G4 eBrem loss and supplies only indices
+to the ordinary fit. Multiple emissions can give one breakpoint. There is
+no added loss cutoff, and only intervals between accepted hits are covered.
+Post-step assignment and upstream loss placement are unchanged.
+Manual uses BreakpointIntervals; an empty list means a 5D reference.
+Nonempty manual lists are rejected outside Manual. Auto remains reserved
+and fails initialization. Persistent6D rejects multiple intervals per track
+rather than discarding losses. A selected Manual interval with no eBrem has
+truth prior center0 but its fitted loss can move; unselected losses are not
+automatically corrected.
 
-The flat tuple always records the optional free-fit steering, selected b,
-local Minuit error/status/EDM, boundaries, objective decomposition, trial
-records and explicit applied/fallback statuses. Published track covariances
-are CONDITIONAL on optimized b: optimizer uncertainty is not injected.
-A finite scan winner or non-converged candidate may be published and tagged;
-Applied does not certify a physical optimum. Existing forward/backward
-innovation chi2 and complete smoothed quadratic retain their definitions;
-Track.chi2 is not replaced by -2logL. Never add the three chi2s/likelihoods.
-NDF remains bookkeeping. The empirical hit-derived prefit seed and local affine
-model are explicit likelihood limitations.
+TruthOverride=False or empty effective intervals copy ordinary results into
+the extra pair. Truth interval selection can still require truth with override
+off. Invalid Truth selection fails the affected ordinary track; it is never
+interpreted as no loss. Oracle-only failure in Manual preserves ordinary
+results with absent/NaN extra outputs and tagged errors. Ordinary failure
+leaves the extra pair unattempted. Status remains absent0, copied1,
+active truth-assisted2, negative failure, with separate collection row maps.
+No side CSV/ROOT reader or GSF execution is involved. TruthMaxEndpointDistance
+validates associated hooks rather than finding nearest hits.
 
-Focused integration gates reproduce all 3,724 prototype state/covariance records
-exactly across 2:68, 12:11, secondary-control12:17 and 4:11. Disabled and
-fallback cases preserve all104 legacy tuple fields and checked full dumps.
-In this exact input sample12:16 has NO selected interval, not multiple
-intervals; an explicit Manual=[4,5] control tests multi-interval fallback.
-Batch unit tests, singular-noise likelihood tests, covariance transport tests,
-private configurable generation and CMake dependency checks pass.
-Evidence is in `agents_record/2026-09-10-breakpoint-free-loss-integration.md`.
-Neither these mechanical gates nor earlier selected-event improvements establish
-population performance. The old100-event quadratic-only study must not be
-relabeled as a normalized-likelihood population study.
+The flat tuple retains endpoint pT, extra IP parameters/packed covariances,
+truth interval metadata, fitted loss means/variances, complete persistent
+states and all three per-hit chi2 lists/totals. Removed iteration-only fields:
+one_pass_pt, fit_iterations, iteration_*, backward_fit_iterations,
+backward_iteration_* and truth_override_{rts,backward}_fit_iterations.
+truth_override_log_loss is the truth INPUT, while
+truth_override_{rts,backward}_fitted_log_loss and variance vectors are fitted
+posteriors aligned with breakpoint_interval. Treatment and shared prior sigma
+remain explicit. Truth t/X0 remains passive.
 
-Deployment is pending confirmation that no breakpoint batch jobs are using
-shared libraries. Maintained sources were privately compiled/tested without
-overwriting the shared build-tree or installed plugin. The updated card needs
-the new plugin; do NOT submit it against the old installation.
-The site queue client currently fails to import htcondor, so it cannot establish
-that the queue is idle. Batch workers do not snapshot libraries: do not rebuild
-or install over shared libraries while jobs are using them.
-Once idle is confirmed, build/install RecBreakpoint, audit installed properties
-and repeat a focused installed-card run before batch use.
+Forward/backward chi2 are native hit-update increment sums. Complete smoothed
+chi2 includes original-V measurement, process/loss-prior and initial-seed
+penalties once. Backward's outermost increment is zero. Ordinary decomposition
+and nonlinear hit-only diagnostics remain; extra pairs retain complete
+per-hit sums without decomposition. Score validity is separate from fit
+validity. RTS Track.chi2 uses the complete smoothed score; backward uses its
+inward sum. Never add the three scores or treat them as calibrated eBrem
+probabilities. NDF remains bookkeeping; smaller chi2 does not guarantee better
+truth pT, particularly when comparing different prior centers.
 
-Dedicated card: Reconstruction/RecBreakpoint/options/run_breakpoint.py.
-Free fit can be selected with BP_FREE_LOSS_FIT=1 via the existing dedicated
-sub/dump workflow after deployment. The package README is authoritative.
-Next: safe deployment, then categorized population checks and study of
-conditional-covariance limitations; no shared-KF/GSF changes or automatic
-interval finder are included in this promotion.
-The full outgoing status is preserved in
-`agents_record/2026-09-10-agents-before-free-loss-integration.md`.
+The current sigma_b=0.001 campaign has 8,098 clean valid paired tracks; 3,135
+have exactly one truth-selected breakpoint. Single-breakpoint chi2-split plots
+are in TrackingPerformanceStudies/breakpoint_barrel_sigma0001_singlebreakpoint_chi2split_20260910.
+RTS complete-score categories have 1912 truth-prior-smaller, 1215
+ordinary-smaller and 8 numerical ties; backward has 1837/1283/15.
+Truth-prior width68 is better in both categories, but that is diagnostic,
+not production validation or proof that a prior-free minimizer will improve
+the momentum. Source fitting changes require explicit user direction.
+
+Dedicated card: Reconstruction/RecBreakpoint/options/run_breakpoint.py;
+BP_TRUTH_OVERRIDE defaults1. Shared SigmaLogLoss can be frozen from
+BP_SIGMA_LOG_LOSS in the dedicated submission script. Preserve the user's
+campaign choice. Batch workers do not snapshot libraries; do not rebuild
+while jobs are using them. The package README is the authoritative option,
+schema and build reference.
+
+Removal details and focused before/after gates belong in
+`agents_record/2026-09-10-recbreakpoint-iteration-removal.md`.
+The complete outgoing status, README and explanatory walkthrough are saved
+in dated `2026-09-10-*-before-iteration-removal.md` snapshots under
+agents_record (AGENTS snapshot:
+`2026-09-10-agents-before-breakpoint-iteration-removal.md`).
+The prior truth-prior-center implementation and its 20-job/28-configuration
+gate remain historical in
+`agents_record/2026-09-10-recbreakpoint-truth-prior-center.md`.
+Removal gate passed: nine direct before/after configurations (13 track rows),
+all 104 retained flat fields and 21,819 full state/covariance dump lines match
+exactly; 19 iteration-only fields are absent. Coverage includes both modes,
+truth on/off, empty/zero-loss/multiple intervals, sigma0.001/0.05,
+BackwardSeedScale100 and seed12:11/16/17 (17 remains a secondary control).
+Package build/install, installed configurable audit, 21 batch tests and the
+standalone covariance test passed. These are mechanical regression checks.
+Current focus: the user-authorized isolated normalized free-loss likelihood
+prototype, TrackingPerformanceStudies/breakpoint_free_loss_likelihood_20260910.
+It captures native F/Q/H/V and evaluates ONE frozen affine marginal likelihood
+through forward-order QR, reverse-order QR and a joint-smoothed SVD calculation.
+These are equivalent formulations, not three independent objectives. The
+reverse-order score does not reuse a data-conditioned backward seed. The
+published native backward endpoint uses BackwardSeedScale100; native RTS and
+ordinary/oracle outputs remain unchanged. No maintained fitter/card/library
+was modified by this likelihood experiment.
+Analytic singular-noise tests pass. All816 valid trial evaluations agree
+within1.32e-6; independent three-formulation minima on12:11 give identical
+published endpoints. All13 ordinary rows/104 fields and verbose state dumps
+match maintained scale100 references. Five clean events and secondary12:17
+were profiled; multi-interval12:16 remains only an ordinary regression control.
+Normalization removes the +172% overshoot of4:11, but20% errors persist in
+other examples. No population or physics validation is claimed.
+The empirical prefit seed and trial-dependent affine approximation remain
+explicit caveats. Minuit boundaries/status and conditional-covariance limits
+must be preserved; do not add the three likelihoods together.
+Next: review population performance and seed/model sensitivity before any
+integration request. Contract, formulas, numerical evidence and resumption:
+`agents_record/2026-09-10-breakpoint-normalized-free-loss-likelihood.md`.
+The preceding100-event/300-fit quadratic-only study remains in
+`agents_record/2026-09-10-breakpoint-three-free-loss-objectives.md`.
+The complete outgoing AGENTS is preserved in
+`agents_record/2026-09-10-agents-before-normalized-likelihood.md`.

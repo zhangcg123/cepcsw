@@ -69,6 +69,18 @@ if "BP_BACKWARD_MODE" in os.environ:
 # One breakpoint at most. The backward continuation retains its local-joint
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
 fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
+# Optional outer b fit: normalized full-track likelihood, not chi2 alone.
+# True replaces the primary RTS/backward pair on one selected LocalMarginal
+# interval; its track covariances are conditional on fitted b. Empty lists use
+# the 5D reference. Unsupported/multi-interval or failed searches retain the
+# ordinary pair with explicit free_loss_status/error tags in the flat tuple.
+fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "0") == "1"
+fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))
+fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
+fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
+# Numerical audit only: reverse-order and joint-smoothed forms of the SAME
+# likelihood must agree. They are not alternative physics objectives.
+fit.FreeLossCheckLikelihoods = os.environ.get("BP_FREE_LOSS_CHECK", "0") == "1"
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
 # to matched G4 values at the SAME selected intervals. SigmaLogLoss is the SAME
 # as in the ordinary fit; hits can still update b and its posterior variance.
@@ -76,7 +88,9 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # It neither changes the interval selection nor corrects unselected intervals.
 # Example: Manual=[5], actual eBrem only in interval 7 -> prior center at 5 is
 # b=0 (z=1), but the fitted b may move. Interval 7 is not added automatically.
-# Ordinary RTS/backward still fit losses using MeanLogLoss/SigmaLogLoss priors.
+# With FreeLossFit=False, primary RTS/backward use MeanLogLoss/SigmaLogLoss.
+# With FreeLossFit=True, the extra truth pair STILL uses the configured positive
+# sigma and truth prior center; it is not a second minimization or a fixed oracle.
 # False, or an empty effective interval list: save ordinary RTS/backward copies
 # in the truth-override outputs. Truth selection can still read truth when False.
 # LossStateMode controls the ordinary fit; neither control overrides the other.

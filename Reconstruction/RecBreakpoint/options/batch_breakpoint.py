@@ -16,6 +16,8 @@ import sys
 ORDER = ('sim', 'trk', 'breakpoint')
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
+               'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
+               'BP_FREE_LOSS_TOLERANCE', 'BP_FREE_LOSS_CHECK',
                'BP_SEED_HIT_SELECTION',
                'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_SELECTED')
 
@@ -73,7 +75,7 @@ def prepare():
             raise ValueError(retired + ' was removed; RecBreakpoint is one-pass only')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
-    for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF'):
+    for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_CHECK'):
         if key in controls: controls[key] = str(int(boolean(controls[key])))
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',

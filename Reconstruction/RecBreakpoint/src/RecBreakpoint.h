@@ -10,6 +10,7 @@
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
+#include "FreeLossTuple.h"
 
 #include <cstdint>
 #include <memory>
@@ -57,6 +58,11 @@ private:
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 100.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
+  Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
+  Gaudi::Property<double> m_freeLossMax{this, "FreeLossMaxLogLoss", 1.0};
+  Gaudi::Property<int> m_freeLossMaxCalls{this, "FreeLossMaxCallsPerStart", 180};
+  Gaudi::Property<double> m_freeLossTolerance{this, "FreeLossTolerance", .001};
+  Gaudi::Property<bool> m_freeLossCheck{this, "FreeLossCheckLikelihoods", false};
   Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", true};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
   Gaudi::Property<bool> m_ms{this, "MSOn", true};
@@ -76,6 +82,7 @@ private:
   double m_truthPt = 0, m_kfPt = 0, m_fitPt = 0, m_fitChi2 = 0;
   double m_referencePt = 0;
   double m_recordBackwardSeedScale = 100;
+  breakpoint::FreeLossTuple m_freeLossTuple;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;

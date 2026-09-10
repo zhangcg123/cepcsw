@@ -82,6 +82,35 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(batch.hashlib.sha256(Path(card).read_bytes()).hexdigest(),job['checksums'][stage])
         with self.assertRaises(ValueError): self.prepare()
 
+    def test_free_loss_controls_and_default(self):
+        self.prepare(OUTPUT_TUPLEPATH='free_default')
+        default = self.manifest('free_default')
+        card = Path(default['cards']['breakpoint']).read_text()
+        assignments = '\n'.join(line for line in card.splitlines() if line.startswith('fit.FreeLoss'))
+        fit = types.SimpleNamespace()
+        with patch.dict(os.environ, {}, clear=True):
+            exec(assignments, {'fit':fit, 'os':os})
+        self.assertFalse(fit.FreeLossFit)
+        self.assertFalse(fit.FreeLossCheckLikelihoods)
+        self.assertEqual(fit.FreeLossMaxLogLoss, 1)
+        self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
+        self.assertEqual(fit.FreeLossTolerance, .001)
+        self.prepare(OUTPUT_TUPLEPATH='free_enabled', BP_FREE_LOSS_FIT='true',
+                     BP_FREE_LOSS_CHECK='yes', BP_FREE_LOSS_MAX_LOG_LOSS='.5',
+                     BP_FREE_LOSS_MAX_CALLS='100', BP_FREE_LOSS_TOLERANCE='.002')
+        job = self.manifest('free_enabled')
+        self.assertEqual(job['controls']['BP_FREE_LOSS_FIT'], '1')
+        self.assertEqual(job['controls']['BP_FREE_LOSS_CHECK'], '1')
+        with patch.dict(os.environ, job['controls'], clear=True):
+            exec(assignments, {'fit':fit, 'os':os})
+        self.assertTrue(fit.FreeLossFit)
+        self.assertTrue(fit.FreeLossCheckLikelihoods)
+        self.assertEqual(fit.FreeLossMaxLogLoss, .5)
+        self.assertEqual(fit.FreeLossMaxCallsPerStart, 100)
+        self.assertEqual(fit.FreeLossTolerance, .002)
+        with self.assertRaises(ValueError):
+            self.prepare(OUTPUT_TUPLEPATH='free_invalid', BP_FREE_LOSS_FIT='maybe')
+
     def test_submission_shell_freezes_shared_loss_sigma(self):
         # This fixture checks plumbing, independent of the user's active campaign default.
         script = self.repo/'subbreakpointjobs.sh'
