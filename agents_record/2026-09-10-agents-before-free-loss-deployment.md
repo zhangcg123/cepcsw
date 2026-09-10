@@ -368,23 +368,20 @@ Neither these mechanical gates nor earlier selected-event improvements establish
 population performance. The old100-event quadratic-only study must not be
 relabeled as a normalized-likelihood population study.
 
-Deployment completed after the user confirmed no batch jobs were running.
-The configured Release build and package-only install provide the new plugin,
-generated Configurables and plugin databases. Both compiled numerical tests
-pass. Four installed-card runs (eight rows) reproduce the checked private-build
-full state/covariance dumps exactly; free-off tuple fields and free-on selected
-b, likelihood and endpoint pT agree exactly. The tested controls include
-BackwardSeedScale100 and FreeLossFit both false/true. Build and installed plugin
-hashes agree. Evidence and the filesystem clock-skew warning are recorded in
-`agents_record/2026-09-10-breakpoint-free-loss-deployment.md`.
-Batch workers do not snapshot libraries: do not rebuild or install over shared
-libraries while jobs are using them. The site queue client still fails to import
-htcondor; user confirmation, not that client, established the safe deployment window.
+Deployment is pending confirmation that no breakpoint batch jobs are using
+shared libraries. Maintained sources were privately compiled/tested without
+overwriting the shared build-tree or installed plugin. The updated card needs
+the new plugin; do NOT submit it against the old installation.
+The site queue client currently fails to import htcondor, so it cannot establish
+that the queue is idle. Batch workers do not snapshot libraries: do not rebuild
+or install over shared libraries while jobs are using them.
+Once idle is confirmed, build/install RecBreakpoint, audit installed properties
+and repeat a focused installed-card run before batch use.
 
 Dedicated card: Reconstruction/RecBreakpoint/options/run_breakpoint.py.
-Free fit can now be selected with BP_FREE_LOSS_FIT=1 via the existing dedicated
-sub/dump workflow. The package README is authoritative.
-Next: categorized population checks and study of
+Free fit can be selected with BP_FREE_LOSS_FIT=1 via the existing dedicated
+sub/dump workflow after deployment. The package README is authoritative.
+Next: safe deployment, then categorized population checks and study of
 conditional-covariance limitations; no shared-KF/GSF changes or automatic
 interval finder are included in this promotion.
 The full outgoing status is preserved in
