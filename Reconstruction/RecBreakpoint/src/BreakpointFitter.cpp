@@ -197,7 +197,7 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     }
   }
   std::reverse(result.breakpoints.begin(), result.breakpoints.end());
-  result.ip = m_adapter.atIP(result.smoothed.front(), hits.front());
+  result.ip = m_adapter.propagateToIP(result.smoothed.front(), hits.front());
   result.endpoint = result.smoothed;
   std::vector<TMatrixD> predicted, covariances, smoothed, noises;
   for (std::size_t i=0;i<hits.size();++i) {
@@ -408,7 +408,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   result.breakpoints.push_back({interval, loss.meanLogLoss, live.mean(5, 0),
       live.covariance(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
   result.endpoint = result.smoothed;
-  result.ip = m_adapter.atIP(result.endpoint.front(), hits.front());
+  result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
                 result.predicted);
   return result;

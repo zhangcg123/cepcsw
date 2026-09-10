@@ -370,24 +370,11 @@ edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
   double chi2 = 0;
   int ndf = 0;
   requireSuccess(track->propagate(edm4hep::Vector3d{0, 0, 0}, ip, chi2, ndf),
-                 "Backward KF IP propagation");
+                 "Native KF IP propagation");
   // Native propagation fills the parameters but does not label the EDM state.
   // Our published result is explicitly the interaction-point endpoint.
   ip.location = edm4hep::TrackState::AtIP;
   return ip;
 }
 
-edm4hep::TrackState KalmanAdapter::atIP(const TrackState& state,
-                                      edm4hep::TrackerHit hit) const {
-  (void)hit;
-  THelicalTrack helix(state.mean(0, 0), state.mean(1, 0), state.mean(2, 0),
-      state.mean(3, 0), state.mean(4, 0), state.pivot.x, state.pivot.y, state.pivot.z, m_bz);
-  TrackState moved = state;
-  double angle = 0;
-  helix.MoveTo(TVector3(0, 0, 0), angle, nullptr, &moved.covariance);
-  moved.mean(0, 0) = helix.GetDrho(); moved.mean(1, 0) = helix.GetPhi0();
-  moved.mean(2, 0) = helix.GetKappa(); moved.mean(3, 0) = helix.GetDz();
-  moved.mean(4, 0) = helix.GetTanLambda(); moved.pivot = {0, 0, 0};
-  return toEDM(moved, m_bz, 1);
-}
 } // namespace breakpoint

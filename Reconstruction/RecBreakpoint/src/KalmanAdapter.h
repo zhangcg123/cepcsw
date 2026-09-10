@@ -50,7 +50,7 @@ public:
   /// Propagate inward first, undo the selected upstream loss before its hit.
   MeasurementStep advanceBackward(const TrackState& source, edm4hep::TrackerHit sourceHit,
       edm4hep::TrackerHit targetHit, bool breakpoint, double meanLoss, double sigmaLoss) const;
-  edm4hep::TrackState atIP(const TrackState& state, edm4hep::TrackerHit hit) const;
+  // One native, material-aware IP operation for every endpoint family.
   edm4hep::TrackState propagateToIP(const TrackState& state, edm4hep::TrackerHit hit) const;
   /// Independent, unbroken MarlinTrk fit and its native smoother. Diagnostic
   /// reference for the empty-breakpoint limit, with exactly the same seed/hits.

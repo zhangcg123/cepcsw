@@ -42,8 +42,13 @@ Shared first-pass forward filter
 These are separate results, not CPU threads. Backward starts from the full
 first-pass forward endpoint mean and its full covariance multiplied by
 BackwardSeedScale (default100), revisits hits N-2 through 0, and uses
-material-aware native IP propagation. RTS never consumes
-the backward-refiltered states and retains its geometric IP extrapolation.
+material-aware native IP propagation. RTS never consumes the backward-refiltered
+states. Both endpoints now use the SAME KalmanAdapter::propagateToIP operation:
+initialize from the innermost endpoint and call native MarlinTrk propagation
+to (0,0,0), honoring the existing MSOn/ElossOn settings. This applies to ordinary,
+free-loss and truth-prior results in both LocalMarginal and Persistent6D modes.
+The former purely geometric RTS-only atIP helper has been removed. No beam-spot
+measurement or extra breakpoint is introduced by this common IP operation.
 Backward still reuses forward hit evidence; it is NOT an independent Bayesian
 smoother. Neither branch adds a beam-to-first-hit breakpoint.
 

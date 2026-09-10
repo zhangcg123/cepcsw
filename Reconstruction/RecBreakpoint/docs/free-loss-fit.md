@@ -111,6 +111,46 @@ nor a successful Minuit call establishes correct physical loss recovery.
 
 ## Six collections: ordinary, free-loss and truth-assisted pairs
 
+### Shared loss, different inward calculations
+
+There is ONE Minuit search and one selected b for both free-loss endpoints.
+For each trial the existing fitter runs with that b fixed (sigma_b=0).
+Minuit chooses the minimum normalized full-track likelihood; no truth loss
+amount sets the chosen b. The final fitter call uses that same selected value
+for both RTS and backward continuation.
+
+RTS uses transitions buffered DURING THIS trial's forward filter, not from a
+previous event or an old fit. Each transition retains predicted state/covariance,
+full transport F (including the selected loss Jacobian), process noise Q and
+adjacent-state cross covariance C=P_filtered*F^T. With G=C*inverse(P_predicted),
+its inward mean update is:
+
+```text
+x_smoothed[i] = x_filtered[i]
+              + G[i] * (x_smoothed[i+1] - x_predicted[i+1])
+```
+
+Here x is the native5D state (drho,phi0,kappa,dz,tanl); phi differences are wrapped.
+The stored cross covariance is what makes downstream measurements inform the
+upstream state. This is the RTS procedure for the current linearized model,
+not a fresh backward hit refit. The implementation also transports the full
+smoothed covariance in conditional/Joseph form.
+
+For positive b, the forward loss map multiplies curvature by exp(b). RTS uses
+the resulting forward transitions; it does not apply a second loss. The native
+backward refilter instead propagates inward, applies exp(-b) at the selected
+upstream surface and updates its hit. Same physical loss, opposite direction.
+Its seed is the final forward endpoint with covariance scaled by
+BackwardSeedScale; this scale does not change the RTS calculation or objective.
+
+All ordinary/free/truth RTS and backward endpoints now share native MarlinTrk
+propagation from their innermost state to the IP, honoring MSOn/ElossOn. The
+removed RTS-only geometric extrapolation is not an alternative live path.
+This synchronizes the final transport, not the distinct endpoint estimates;
+it adds neither a beam-spot measurement nor an extra loss breakpoint.
+
+### Output contract
+
 The existing names remain:
 
 - BreakpointTracksRTS / BreakpointTracksBackwardFilter: ALWAYS the ordinary pair.

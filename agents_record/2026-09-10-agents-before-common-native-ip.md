@@ -354,11 +354,6 @@ scales the copied forward endpoint covariance for the native backward refilter;
 RTS does not use this refilter and its likelihood does not use that copied
 backward seed. The reverse-order likelihood check also does not use it.
 The native backward fit is not an independent Bayesian smoother.
-RTS and backward now share KalmanAdapter::propagateToIP: initialize from each
-innermost endpoint and use native MarlinTrk propagation to (0,0,0), honoring
-MSOn/ElossOn. This covers ordinary/free/truth pairs in both loss-state modes.
-The geometric RTS-only atIP helper is removed. No beam-spot measurement or new
-breakpoint is added, and the hit-level recursion and likelihood are unchanged.
 
 The flat tuple always records the optional free-fit steering, selected b,
 local Minuit error/status/EDM, boundaries, objective decomposition, trial
@@ -387,21 +382,19 @@ Neither these mechanical gates nor earlier selected-event improvements establish
 population performance. The old100-event quadratic-only study must not be
 relabeled as a normalized-likelihood population study.
 
-The common native IP change is built and package-only installed following the
-user's confirmation that no batch jobs were running. Ten local reruns produced
-14 rows:13 successes and one expected invalid track. All36,936 verbose hit-level
-state/covariance records match the preceding separate-pair code exactly.
-Across all164 tuple fields, only free/truth RTS IP parameter/covariance vectors
-changed. All pT values, fitted b values, likelihood/trial diagnostics, hit-level
-chi2s and backward results are exactly unchanged. Extra ordinary-copy EDM tracks
-still agree exactly. Both compiled numerical tests and23 batch tests pass.
-Build and installed hashes agree. This is an endpoint-consistency regression,
-not proof of improved pT resolution. See
-`agents_record/2026-09-10-breakpoint-common-native-ip.md` and its outgoing snapshot
-`agents_record/2026-09-10-agents-before-common-native-ip.md`.
-The preceding separate-pair gate (including452-event row maps and output-name
-collision rejection) remains in
-`agents_record/2026-09-10-breakpoint-free-loss-parallel-pair.md`.
+The separate-pair change is built and package-only installed following the user's
+confirmation that no batch jobs were running. Ten local regression jobs produced
+14 rows:13 successes and one intentionally invalid track. All104 original fields
+and ordinary full dumps agree exactly with the pre-change ordinary reference;
+the new free-pair values and full-state arrays agree with the prior optimized
+or copied references. Nine ordinary-copy rows have exact EDM track payloads,
+including IP/first/last states, covariances, chi2, NDF and hit references.
+Input-row status/index maps were checked over452 EDM events, including excluded
+and invalid tracks. Two compiled numerical tests and23 batch tests pass; colliding
+output names are rejected. Build and installed hashes agree. These are mechanical
+regression checks, not new physics validation. Evidence and the preserved outgoing
+status are in `agents_record/2026-09-10-breakpoint-free-loss-parallel-pair.md`
+and `agents_record/2026-09-10-agents-before-free-loss-parallel-pair.md`.
 Batch workers do not snapshot libraries: do not rebuild or install over shared
 libraries while jobs are using them. The site queue client still fails to import
 htcondor; user confirmation, not that client, established the safe deployment window.
