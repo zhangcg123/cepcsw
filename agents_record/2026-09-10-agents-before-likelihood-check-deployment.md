@@ -373,16 +373,10 @@ agents_record/2026-09-10-breakpoint-likelihood-check-removal.md.
 Source/card removal is complete. Private-library regression passed eight jobs/
 11 rows: all160 retained tuple fields and27,876 verbose state/covariance lines
 match the preceding code exactly; only five audit fields disappeared. All24
-batch tests and the independent likelihood unit test pass. The user subsequently
-confirmed no batch jobs. The shared package is now rebuilt and installed with
-the removal: three installed-library jobs/five rows match the private build in
-all160 tuple fields and12,796 verbose state/covariance records. Both compiled
-numerical tests pass; built/installed library hashes agree. Installed configurable
-audit confirms the property is absent and sigma0.001/backward scale100 remain.
-Exact deployment evidence and the prior pending-install snapshot are in
-agents_record/2026-09-10-breakpoint-likelihood-check-deployment.md and
-agents_record/2026-09-10-agents-before-likelihood-check-deployment.md.
-Existing prepared cards assigning the removed property must be regenerated;
-no prior cards/tuples were rewritten. Next: evaluate
+batch tests and the independent likelihood unit test pass. Shared build/install
+await confirmation that no breakpoint jobs are queued/running. The site queue
+client cannot establish this because its htcondor import fails. Do not assume
+the current installed plugin already includes this removal.
+Next: deploy/test in a safe window, then evaluate
 categorized population performance with the explicit new selection/fallback
 semantics. No automatic interval finder or broad physics claim is authorized.
