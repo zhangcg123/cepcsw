@@ -422,29 +422,19 @@ truth on/off, empty/zero-loss/multiple intervals, sigma0.001/0.05,
 BackwardSeedScale100 and seed12:11/16/17 (17 remains a secondary control).
 Package build/install, installed configurable audit, 21 batch tests and the
 standalone covariance test passed. These are mechanical regression checks.
-Current focus: the user-authorized isolated normalized free-loss likelihood
-prototype, TrackingPerformanceStudies/breakpoint_free_loss_likelihood_20260910.
-It captures native F/Q/H/V and evaluates ONE frozen affine marginal likelihood
-through forward-order QR, reverse-order QR and a joint-smoothed SVD calculation.
-These are equivalent formulations, not three independent objectives. The
-reverse-order score does not reuse a data-conditioned backward seed. The
-published native backward endpoint uses BackwardSeedScale100; native RTS and
-ordinary/oracle outputs remain unchanged. No maintained fitter/card/library
-was modified by this likelihood experiment.
-Analytic singular-noise tests pass. All816 valid trial evaluations agree
-within1.32e-6; independent three-formulation minima on12:11 give identical
-published endpoints. All13 ordinary rows/104 fields and verbose state dumps
-match maintained scale100 references. Five clean events and secondary12:17
-were profiled; multi-interval12:16 remains only an ordinary regression control.
-Normalization removes the +172% overshoot of4:11, but20% errors persist in
-other examples. No population or physics validation is claimed.
-The empirical prefit seed and trial-dependent affine approximation remain
-explicit caveats. Minuit boundaries/status and conditional-covariance limits
-must be preserved; do not add the three likelihoods together.
-Next: review population performance and seed/model sensitivity before any
-integration request. Contract, formulas, numerical evidence and resumption:
-`agents_record/2026-09-10-breakpoint-normalized-free-loss-likelihood.md`.
-The preceding100-event/300-fit quadratic-only study remains in
+The three-objective diagnostic is complete: independent minimizations of
+forward update chi2, backward update chi2 and complete smoothed chi2 on the
+same100 events, with both endpoints for each loss. All300 ordinary rows and
+the previous100 smoothed-objective trial/minimum/state results reproduce
+exactly. The backward objective narrows width68 but still creates4 >100%
+errors, versus6 for forward and7 for smoothed; all are VXD-starting intervals.
+The study is TrackingPerformanceStudies/breakpoint_free_loss_three_objectives_20260910;
+the contract and evidence are in
 `agents_record/2026-09-10-breakpoint-three-free-loss-objectives.md`.
-The complete outgoing AGENTS is preserved in
-`agents_record/2026-09-10-agents-before-normalized-likelihood.md`.
+Next: review objective sensitivity versus early-interval loss/momentum
+degeneracy before selecting any further fitting change. Preserve boundary
+and convergence tags; do not add overlapping scores or equate minima with
+validated physical losses.
+No integration into maintained fitting code is authorized by this diagnostic.
+The complete outgoing AGENTS text is preserved in
+`agents_record/2026-09-10-agents-before-three-objective-freefit.md`.
