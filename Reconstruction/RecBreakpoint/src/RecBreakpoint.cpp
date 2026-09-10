@@ -19,6 +19,22 @@
 #include <sstream>
 #include <numeric>
 
+namespace {
+// Every endpoint family uses identical EDM representation and hit references.
+int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& fit,
+                 const std::vector<edm4hep::TrackerHit>& hits, double bz, double chi2) {
+  const int index = output.size();
+  auto track = output.create();
+  track.addToTrackStates(fit.ip);
+  track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
+  track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
+  track.setChi2(chi2);
+  track.setNdf(fit.measurementDimensions - 5); // bookkeeping, not calibrated
+  for (auto hit : hits) track.addToTrackerHits(hit);
+  return index;
+}
+}
+
 DECLARE_COMPONENT(RecBreakpoint)
 
 RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
@@ -26,6 +42,8 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
   declareProperty("OutputTracks", m_output, "Successful refitted tracks");
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
+  declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS, or exact ordinary RTS copy");
+  declareProperty("OutputTracksFreeLossBackwardFilter", m_freeBackwardOutput, "Free-loss backward filter, or exact ordinary copy");
   declareProperty("OutputTracksTruthOverrideRTS", m_truthRTSOutput, "Oracle RTS, or ordinary RTS copy when disabled");
   declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
 }
@@ -61,13 +79,11 @@ StatusCode RecBreakpoint::initialize() {
             << " Use TruthOverride=true for the additional oracle pair, not LossStateMode=TruthOverride." << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_output.fullKey() == m_backwardOutput.fullKey() ||
-      m_output.fullKey() == m_truthRTSOutput.fullKey() ||
-      m_output.fullKey() == m_truthBackwardOutput.fullKey() ||
-      m_backwardOutput.fullKey() == m_truthRTSOutput.fullKey() ||
-      m_backwardOutput.fullKey() == m_truthBackwardOutput.fullKey() ||
-      m_truthRTSOutput.fullKey() == m_truthBackwardOutput.fullKey()) {
-    error() << "The four output track collections must have different names" << endmsg;
+  const std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
+      m_truthRTSOutput.fullKey(), m_truthBackwardOutput.fullKey(),
+      m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey()};
+  if (outputNames.size() != 6 || outputNames.count(m_input.fullKey())) {
+    error() << "The six output track collections must differ from each other and the input" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -117,6 +133,7 @@ StatusCode RecBreakpoint::initialize() {
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
   m_freeLossTuple.book(*m_tree);
+  m_freeLossTracks.book(*m_tree, "free_loss_");
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_tree->Branch("event_index", &m_event);
@@ -232,6 +249,11 @@ StatusCode RecBreakpoint::execute() {
   ++m_event;
   auto* output = m_output.createAndPut();
   auto* backwardOutput = m_backwardOutput.createAndPut();
+  auto* freeRTSOutput = m_freeRTSOutput.createAndPut();
+  auto* freeBackwardOutput = m_freeBackwardOutput.createAndPut();
+  auto* freeResultStatuses = m_freeResultStatus.createAndPut();
+  auto* freeRTSIndices = m_freeRTSIndex.createAndPut();
+  auto* freeBackwardIndices = m_freeBackwardIndex.createAndPut();
   auto* truthRTSOutput = m_truthRTSOutput.createAndPut();
   auto* truthBackwardOutput = m_truthBackwardOutput.createAndPut();
   auto* truthResultStatuses = m_truthResultStatus.createAndPut();
@@ -296,10 +318,12 @@ StatusCode RecBreakpoint::execute() {
     if (!selected) {
       statuses->push_back(0); outputIndices->push_back(-1); backwardOutputIndices->push_back(-1);
       truthResultStatuses->push_back(0); truthRTSIndices->push_back(-1); truthBackwardIndices->push_back(-1);
+      freeResultStatuses->push_back(0); freeRTSIndices->push_back(-1); freeBackwardIndices->push_back(-1);
       continue;
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls);
+    m_freeLossTracks.reset();
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
     m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
@@ -414,11 +438,12 @@ StatusCode RecBreakpoint::execute() {
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
           << " seed=" << m_seedSelectionName << " ordered-hit indices="
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
-      auto paired = fitter.fit(hits, settings);
+      const auto paired = fitter.fit(hits, settings);
+      std::optional<breakpoint::PairedFitResult> freePair;
       if (m_freeLossFit) {
         auto freeFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, freeLossControls);
         m_freeLossTuple.assign(freeFit.diagnostics);
-        if (freeFit.fitted) paired = std::move(*freeFit.fitted);
+        freePair = std::move(freeFit.fitted);
         if (!freeFit.diagnostics.error.empty())
           warning() << "FreeLossFit: " << freeFit.diagnostics.error << "; ordinary pair retained" << endmsg;
         if (m_verbose) info() << std::setprecision(17) << "FreeLossFit event=" << m_event
@@ -544,37 +569,47 @@ StatusCode RecBreakpoint::execute() {
       }
       m_rtsLoss = m_fittedLoss;
       m_rtsLossVariance = m_lossVariance;
-      outputIndices->push_back(output->size());
-      backwardOutputIndices->push_back(backwardOutput->size());
-      auto result = output->create();
-      result.addToTrackStates(fit.ip);
-      result.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), m_bz, 2));
-      result.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), m_bz, 3));
-      result.setChi2(fit.smoothedTotalChi2);
-      // Dimension bookkeeping only; fitted-loss priors preclude assuming a
-      // calibrated chi2 distribution. The flat tuple labels all three scores.
-      result.setNdf(fit.measurementDimensions - 5);
-      for (auto hit : hits) result.addToTrackerHits(hit);
-      auto backwardTrack=backwardOutput->create();
-      backwardTrack.addToTrackStates(inward.ip);
-      backwardTrack.addToTrackStates(breakpoint::toEDM(inward.endpoint.front(),m_bz,2));
-      backwardTrack.addToTrackStates(breakpoint::toEDM(inward.endpoint.back(),m_bz,3));
-      backwardTrack.setChi2(m_backwardTotalChi2);
-      backwardTrack.setNdf(fit.measurementDimensions-5); // bookkeeping, not calibrated
-      for(auto hit:hits) backwardTrack.addToTrackerHits(hit);
+      outputIndices->push_back(publishTrack(*output, fit, hits, m_bz, fit.smoothedTotalChi2));
+      backwardOutputIndices->push_back(publishTrack(*backwardOutput, inward, hits, m_bz, m_backwardTotalChi2));
       m_fitStatus = 1;
+
+      // Never replace ordinary results. Disabled/unsupported/failed searches
+      // publish the same ordinary pair here, without an additional fit.
+      const auto& freeResult = freePair ? *freePair : paired;
+      const double freeBackwardChi2 = std::accumulate(freeResult.backward.backwardChi2.begin(),
+                                                     freeResult.backward.backwardChi2.end(), 0.);
+      const int freeRTSIndex = publishTrack(*freeRTSOutput, freeResult.rts, hits, m_bz,
+                                            freeResult.rts.smoothedTotalChi2);
+      const int freeBackwardIndex = publishTrack(*freeBackwardOutput, freeResult.backward, hits,
+                                                 m_bz, freeBackwardChi2);
+      m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
+      if (m_verbose) {
+        for (std::size_t i = 0; i < hits.size(); ++i) {
+          for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
+              {"free_predicted", &freeResult.rts.predicted[i]},
+              {"free_filtered", &freeResult.rts.filtered[i]},
+              {"free_smoothed", &freeResult.rts.endpoint[i]},
+              {"free_backward_predicted", &freeResult.backward.backwardPredicted[i]},
+              {"free_backward_filtered", &freeResult.backward.endpoint[i]}}) {
+            std::ostringstream dump;
+            dump << std::setprecision(17) << named.first << " hit=" << i << " mean=[";
+            for (int row = 0; row < 5; ++row) dump << named.second->mean(row, 0) << ' ';
+            dump << "] covariance(row-major)=[";
+            for (int row = 0; row < 5; ++row)
+              for (int column = 0; column < 5; ++column)
+                dump << named.second->covariance(row, column) << ' ';
+            dump << ']';
+            info() << dump.str() << endmsg;
+          }
+        }
+      }
 
       // The ordinary pair is complete before assigning truth prior centers. Failure of the
       // diagnostic oracle must not discard or silently replace ordinary tracks.
       try {
         auto oracleSettings = settings;
-        // The optional free fit changes only the primary pair. Preserve the
-        // established truth-prior diagnostic, including its configured sigma.
-        // When that diagnostic is off, explicitly label copies of a free fit.
-        if (!needTruthLoss && m_freeLossTuple.applied()) {
-          m_truthLossTreatment = "CopiedFreeLikelihood";
-          m_truthPriorSigma = 0;
-        }
+        // Truth-prior results remain independent of the optional free pair.
+        // When disabled, they copy the ordinary pair, never the optimized one.
         // Only the per-interval b prior centers differ. Keep the same sigma_b,
         // loss-state implementation, seeds and native one-pass updates.
         if (needTruthLoss) {
@@ -630,16 +665,6 @@ StatusCode RecBreakpoint::execute() {
         // Use exactly the same endpoint representation and chi2 conventions.
         // With the switch off these are copies of the already calculated pair,
         // not a rerun with slightly different floating-point results.
-        auto publish = [&](edm4hep::TrackCollection& collection,
-                           const breakpoint::FitResult& source, double chi2) {
-          auto destination = collection.create();
-          destination.addToTrackStates(source.ip);
-          destination.addToTrackStates(breakpoint::toEDM(source.endpoint.front(), m_bz, 2));
-          destination.addToTrackStates(breakpoint::toEDM(source.endpoint.back(), m_bz, 3));
-          destination.setChi2(chi2);
-          destination.setNdf(source.measurementDimensions - 5);
-          for (auto hit : hits) destination.addToTrackerHits(hit);
-        };
         m_truthRTSPt = std::abs(m_bz * 2.99792458e-4 / truthRTS.ip.omega);
         m_truthBackwardPt = std::abs(m_bz * 2.99792458e-4 / truthBackward.ip.omega);
         m_truthForwardChi2 = truthRTS.chi2;
@@ -665,10 +690,8 @@ StatusCode RecBreakpoint::execute() {
         };
         saveIP(truthRTS.ip, m_truthRTSParameters, m_truthRTSCovariance);
         saveIP(truthBackward.ip, m_truthBackwardParameters, m_truthBackwardCovariance);
-        truthRTSIndex = truthRTSOutput->size();
-        truthBackwardIndex = truthBackwardOutput->size();
-        publish(*truthRTSOutput, truthRTS, m_truthSmoothedChi2);
-        publish(*truthBackwardOutput, truthBackward, m_truthBackwardChi2);
+        truthRTSIndex = publishTrack(*truthRTSOutput, truthRTS, hits, m_bz, m_truthSmoothedChi2);
+        truthBackwardIndex = publishTrack(*truthBackwardOutput, truthBackward, hits, m_bz, m_truthBackwardChi2);
         m_truthResultCode = needTruthLoss ? 2 : 1;
         if (m_verbose) {
           for (std::size_t i = 0; i < hits.size(); ++i) {
@@ -707,6 +730,9 @@ StatusCode RecBreakpoint::execute() {
     truthResultStatuses->push_back(m_truthResultCode);
     truthRTSIndices->push_back(truthRTSIndex);
     truthBackwardIndices->push_back(truthBackwardIndex);
+    freeResultStatuses->push_back(m_freeLossTracks.status());
+    freeRTSIndices->push_back(m_freeLossTracks.rtsIndex());
+    freeBackwardIndices->push_back(m_freeLossTracks.backwardIndex());
     m_tree->Fill();
   }
   return StatusCode::SUCCESS;

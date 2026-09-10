@@ -301,15 +301,13 @@ based interval finder require explicit authorization. Beam-boundary work is paus
 The user authorized promotion of the normalized free-loss prototype into the
 maintained package on 2026-09-10. It is now an OPTIONAL standard package path:
 `FreeLossFit=False` preserves the existing Gaussian-prior method; true runs a
-bounded Minuit2 fit of b=log(p_before/p_after) and publishes an ADDITIONAL
-conditional RTS/backward pair. Ordinary results are never replaced.
-The default remains off pending a different
+bounded Minuit2 fit of b=log(p_before/p_after) and publishes the resulting
+conditional RTS/backward pair. The default remains off pending a different
 user choice; promotion into maintained code is not physics validation.
 There is no alternate filter implementation or temporary-source runtime loader.
 FreeLossFitter calls the existing BreakpointFitter; TrackLikelihood computes
 the normalized Gaussian marginal likelihood from native F/Q/H/V. FreeLossTuple
-handles optimizer serialization separately; FitPairTuple serializes the added
-result pair without another fit. All three pairs use one EDM publication helper. See
+handles serialization separately. See
 `Reconstruction/RecBreakpoint/docs/free-loss-fit.md` for the complete contract.
 
 Free fitting currently supports one selected LocalMarginal interval.
@@ -324,22 +322,14 @@ remain retired. FreeLossCheckLikelihoods optionally checks reverse-order QR
 and joint-smoothed SVD against the same forward-order Gaussian objective.
 These are equivalent formulations, not three independent physics objectives.
 
-Six row-mapped outputs are always available: ordinary RTS/backward, additional
-FreeLoss RTS/backward, and additional truth-assisted RTS/backward. The ordinary
-pair and all104 original tuple fields retain their ordinary/truth meanings
-regardless of FreeLossFit. With free fitting off, empty intervals, unsupported
-settings or search failure, the FreeLoss collections and result branches copy
-the ordinary pair exactly, without a rerun. FreeLoss result status is0 absent,
-1 ordinary copy,2 optimized; input-row EDM maps retain -1 for absent outputs.
-The optimizer's request/outcome status remains separate. The new flat
-free_loss_result_status branch identifies this separate-pair schema.
-
-TruthOverride is still default-on: matched G4 loss supplies a PRIOR CENTER
-with the configured positive SigmaLogLoss and the established one-pass fitter.
-When off, the truth pair ALWAYS copies the ordinary pair, never the FreeLoss
-pair. PriorCenter/copy/failure contracts remain. Historical replacement-mode
-tuples and CopiedFreeLikelihood tags must not be relabeled. No side truth
-CSV/ROOT reader is used.
+Four row-mapped outputs remain: primary RTS/backward and extra truth-assisted
+RTS/backward. TruthOverride is still default-on: its matched G4 loss supplies
+a PRIOR CENTER with the configured positive SigmaLogLoss, using the established
+one-pass fitter. Free fitting changes only the primary pair; it does not
+redefine truth override or make its uncertainty identical to the free fit.
+With override off and an applied free fit, extra outputs are exact primary
+copies tagged CopiedFreeLikelihood and prior sigma0. Otherwise the existing
+PriorCenter/copy/failure contracts remain. No side truth CSV/ROOT reader is used.
 
 IntervalSelectionMode=Truth remains default and uses associated G4 hooks at
 accepted-hit intervals. Manual uses the exact supplied interval list; empty
@@ -357,12 +347,8 @@ The native backward fit is not an independent Bayesian smoother.
 
 The flat tuple always records the optional free-fit steering, selected b,
 local Minuit error/status/EDM, boundaries, objective decomposition, trial
-records and explicit applied/fallback statuses. Additional FreeLoss result
-branches persist pT, IP parameters/covariances, fitted losses/variances, all
-three chi2 totals/lists and all five native per-hit state/covariance sequences.
-They copy ordinary values when optimization is off, not NaNs or empty vectors.
-Only absent ordinary results yield absent extra pairs. Optimized FreeLoss track
-covariances are CONDITIONAL on optimized b: optimizer uncertainty is not injected.
+records and explicit applied/fallback statuses. Published track covariances
+are CONDITIONAL on optimized b: optimizer uncertainty is not injected.
 A finite scan winner or non-converged candidate may be published and tagged;
 Applied does not certify a physical optimum. Existing forward/backward
 innovation chi2 and complete smoothed quadratic retain their definitions;
@@ -382,19 +368,15 @@ Neither these mechanical gates nor earlier selected-event improvements establish
 population performance. The old100-event quadratic-only study must not be
 relabeled as a normalized-likelihood population study.
 
-The separate-pair change is built and package-only installed following the user's
-confirmation that no batch jobs were running. Ten local regression jobs produced
-14 rows:13 successes and one intentionally invalid track. All104 original fields
-and ordinary full dumps agree exactly with the pre-change ordinary reference;
-the new free-pair values and full-state arrays agree with the prior optimized
-or copied references. Nine ordinary-copy rows have exact EDM track payloads,
-including IP/first/last states, covariances, chi2, NDF and hit references.
-Input-row status/index maps were checked over452 EDM events, including excluded
-and invalid tracks. Two compiled numerical tests and23 batch tests pass; colliding
-output names are rejected. Build and installed hashes agree. These are mechanical
-regression checks, not new physics validation. Evidence and the preserved outgoing
-status are in `agents_record/2026-09-10-breakpoint-free-loss-parallel-pair.md`
-and `agents_record/2026-09-10-agents-before-free-loss-parallel-pair.md`.
+Deployment completed after the user confirmed no batch jobs were running.
+The configured Release build and package-only install provide the new plugin,
+generated Configurables and plugin databases. Both compiled numerical tests
+pass. Four installed-card runs (eight rows) reproduce the checked private-build
+full state/covariance dumps exactly; free-off tuple fields and free-on selected
+b, likelihood and endpoint pT agree exactly. The tested controls include
+BackwardSeedScale100 and FreeLossFit both false/true. Build and installed plugin
+hashes agree. Evidence and the filesystem clock-skew warning are recorded in
+`agents_record/2026-09-10-breakpoint-free-loss-deployment.md`.
 Batch workers do not snapshot libraries: do not rebuild or install over shared
 libraries while jobs are using them. The site queue client still fails to import
 htcondor; user confirmation, not that client, established the safe deployment window.

@@ -37,6 +37,8 @@ fit = RecBreakpoint("RecBreakpoint")
 fit.InputTracks = "CompleteTracks"
 fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
+fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"
+fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter"
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.BreakpointIntervals = breakpoint_intervals
@@ -70,10 +72,13 @@ if "BP_BACKWARD_MODE" in os.environ:
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
 fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # Optional outer b fit: normalized full-track likelihood, not chi2 alone.
-# True replaces the primary RTS/backward pair on one selected LocalMarginal
-# interval; its track covariances are conditional on fitted b. Empty lists use
-# the 5D reference. Unsupported/multi-interval or failed searches retain the
-# ordinary pair with explicit free_loss_status/error tags in the flat tuple.
+# Ordinary RTS/backward are ALWAYS retained. True adds optimized results in
+# the FreeLoss RTS/backward collections on one selected LocalMarginal interval;
+# their covariances are conditional on fitted b. False copies ordinary results
+# into these extra collections/flat branches, without another fit.
+# Empty lists, unsupported modes/multiple intervals and failed searches also
+# copy ordinary results, with explicit free_loss_status/error diagnostics.
+# free_loss_result_status: 0 absent, 1 ordinary copy, 2 optimized pair.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "0") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
@@ -88,9 +93,9 @@ fit.FreeLossCheckLikelihoods = os.environ.get("BP_FREE_LOSS_CHECK", "0") == "1"
 # It neither changes the interval selection nor corrects unselected intervals.
 # Example: Manual=[5], actual eBrem only in interval 7 -> prior center at 5 is
 # b=0 (z=1), but the fitted b may move. Interval 7 is not added automatically.
-# With FreeLossFit=False, primary RTS/backward use MeanLogLoss/SigmaLogLoss.
-# With FreeLossFit=True, the extra truth pair STILL uses the configured positive
-# sigma and truth prior center; it is not a second minimization or a fixed oracle.
+# Primary RTS/backward always use MeanLogLoss/SigmaLogLoss. FreeLossFit changes
+# only the additional FreeLoss pair. The truth pair STILL uses the configured
+# positive sigma and truth prior center, not Minuit or a fixed-loss oracle.
 # False, or an empty effective interval list: save ordinary RTS/backward copies
 # in the truth-override outputs. Truth selection can still read truth when False.
 # LossStateMode controls the ordinary fit; neither control overrides the other.

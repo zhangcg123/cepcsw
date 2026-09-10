@@ -11,6 +11,7 @@
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "FreeLossTuple.h"
+#include "FitPairTuple.h"
 
 #include <cstdint>
 #include <memory>
@@ -32,6 +33,11 @@ private:
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_freeRTSOutput{"BreakpointTracksFreeLossRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_freeBackwardOutput{"BreakpointTracksFreeLossBackwardFilter", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_freeResultStatus{"BreakpointFreeLossStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_freeRTSIndex{"BreakpointFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_freeBackwardIndex{"BreakpointFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthRTSOutput{"BreakpointTracksTruthOverrideRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthBackwardOutput{"BreakpointTracksTruthOverrideBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_truthResultStatus{"BreakpointTruthOverrideStatus", Gaudi::DataHandle::Writer, this};
@@ -83,6 +89,7 @@ private:
   double m_referencePt = 0;
   double m_recordBackwardSeedScale = 100;
   breakpoint::FreeLossTuple m_freeLossTuple;
+  breakpoint::FitPairTuple m_freeLossTracks;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;

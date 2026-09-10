@@ -117,6 +117,9 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     settings.meanLogLoss = best.b;
     settings.captureGaussianModel = false;
     result.fitted.emplace(m_fitter.fit(hits, settings));
+    for (const auto* endpoint : {&result.fitted->rts.ip, &result.fitted->backward.ip})
+      if (!std::isfinite(endpoint->omega) || endpoint->omega == 0)
+        throw std::runtime_error("Invalid free-loss endpoint curvature");
     diagnostic.status = FreeLossStatus::Applied;
   } catch (const std::exception& error) {
     diagnostic.status = FreeLossStatus::Failed;

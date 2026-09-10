@@ -52,7 +52,11 @@ The existing `OutputTracks` property now names the RTS collection (default
 Two additional collections are always available:
 `BreakpointTracksTruthOverrideRTS` and `BreakpointTracksTruthOverrideBackwardFilter`,
 named by `OutputTracksTruthOverrideRTS` and `OutputTracksTruthOverrideBackwardFilter`.
-All four names must differ. Each successful pair contains IP, first-hit and last-hit
+The free-loss pair is also always available: `BreakpointTracksFreeLossRTS` and
+`BreakpointTracksFreeLossBackwardFilter`, controlled by `OutputTracksFreeLossRTS`
+and `OutputTracksFreeLossBackwardFilter`. It contains independently optimized
+results when applied, exact ordinary copies otherwise. All six names must differ
+from each other and the input. Each successful pair contains IP, first-hit and last-hit
 states and the original ordered hits. Fixed input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
 `BreakpointStatus` is 1 for a successful pair, -1 for failed fit and 0 for
@@ -166,7 +170,8 @@ fit.IntervalSelectionMode = "Truth"  # select locations for this track
 fit.LossStateMode = "LocalMarginal"   # ordinary pair fits the loss
 fit.TruthOverride = True           # additional oracle pair; compiled/card default True
 fit.BreakpointIntervals = []  # Manual-only; Truth builds the effective list
-# Four endpoints: ordinary RTS/backward, truth-override RTS/backward.
+# Six endpoints: ordinary, truth-override and free-loss RTS/backward pairs.
+# With FreeLossFit=False the free-loss pair copies the ordinary pair.
 ```
 
 The additional prior centers come from embedded event truth:
@@ -265,7 +270,7 @@ card and batch preparation, not silently ignored. Old prepared cards assigning
 the removed Gaudi properties must be regenerated; existing tuples are unchanged.
 Iteration-only flat fields are removed: one_pass_pt, fit_iterations,
 iteration_*, backward_fit_iterations, backward_iteration_* and
-truth_override_{rts,backward}_fit_iterations. Four endpoints, fitted loss means
+truth_override_{rts,backward}_fit_iterations. The original four endpoints, fitted loss means
 and variances, per-hit states, and all three per-hit chi2 lists/totals remain.
 The original iteration contract is preserved in
 agents_record/2026-09-10-breakpoint-readme-before-iteration-removal.md.
@@ -330,8 +335,9 @@ extended KF; the separate terms make those differences auditable.
 ## Properties
 
 Optional normalized-likelihood free-loss fitting is now implemented in this
-package, not in an external prototype. Set `FreeLossFit=True` to replace the
-primary pair with the native conditional fit at the optimized loss. The
+package, not in an external prototype. Set `FreeLossFit=True` to add a separate
+FreeLoss pair with the native conditional fit at the optimized loss. The ordinary
+RTS/backward pair and its tuple fields are never replaced. The
 compatibility default is false. This is an implementation promotion, not a
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
@@ -341,6 +347,8 @@ for the model, code organization, output contract and limitations.
 | InputTracks | CompleteTracks | Input hit-list tracks |
 | OutputTracks | BreakpointTracksRTS | RTS collection |
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
+| OutputTracksFreeLossRTS | BreakpointTracksFreeLossRTS | Optimized RTS, or exact ordinary RTS copy |
+| OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optimized backward filter, or exact ordinary backward copy |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
@@ -383,8 +391,10 @@ scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 All runs also save the `free_loss_*` fields described in
 [the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract). They are
-explicitly inactive/NaN/empty when unused. Existing tuple fields and the four
-track collection names are retained. With free fitting applied, primary
+optimizer diagnostics are inactive/NaN/empty when unused; the additional endpoint
+fields instead copy the ordinary results exactly. Existing tuple fields and the
+four earlier collections retain ordinary/truth-prior meanings regardless of
+FreeLossFit. With free fitting applied, only the FreeLoss pair's
 track covariances are conditional on optimized b; the outer optimizer's b
 uncertainty is not propagated into them. `Track.chi2` retains its existing
 quadratic meaning; `free_loss_nll2` separately records the fitting objective.

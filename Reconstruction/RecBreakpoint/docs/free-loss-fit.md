@@ -2,14 +2,15 @@
 
 `FreeLossFit=True` enables the promoted normalized-likelihood prototype inside
 RecBreakpoint. `False` retains the established Gaussian-prior fitting exactly.
-The default is false so existing campaigns do not silently change method.
+The default is false. Ordinary results are ALWAYS retained; the optional method
+occupies a separate pair of collections and flat branches.
 
 This mode currently supports ONE selected LocalMarginal interval. It does
 not discover intervals and does not change Truth/Manual selection. An empty
 interval list remains the 5D reference. Multiple intervals or Persistent6D
-retain the ordinary pair and report an explicit unsupported status. They are
+copy the ordinary pair into the extra FreeLoss outputs and report unsupported status. They are
 never silently reduced to one interval. A failed search also retains the
-ordinary pair and reports its error. This limitation matches the tested
+ordinary results in the extra outputs and reports its error. This limitation matches the tested
 scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ## Controls and workflow
@@ -43,7 +44,7 @@ For one selected interval:
    sigma_b=0. No b Gaussian prior or truth amount enters this optimization.
 3. Evaluate the normalized marginal likelihood of the captured affine model.
 4. Repeat the chosen trial without its scalar cache, then make the native
-   conditional fit at that b the primary RTS/backward output pair.
+   conditional fit at that b the ADDITIONAL FreeLoss RTS/backward output pair.
 
 The bounds are [0,FreeLossMaxLogLoss], default[0,1]. The tested14-point scan
 is scaled with the upper bound. Three MIGRAD starts are the best scan point,
@@ -108,26 +109,26 @@ likelihood. F/H/Q also change with the trial trajectory, so the model is a
 local affine approximation to nonlinear tracking. Neither a low objective
 nor a successful Minuit call establishes correct physical loss recovery.
 
-## Publication and truth-assisted pair
+## Six collections: ordinary, free-loss and truth-assisted pairs
 
 The existing names remain:
 
-- BreakpointTracksRTS / BreakpointTracksBackwardFilter: free fit when applied;
-  otherwise the ordinary pair.
+- BreakpointTracksRTS / BreakpointTracksBackwardFilter: ALWAYS the ordinary pair.
+- BreakpointTracksFreeLossRTS / BreakpointTracksFreeLossBackwardFilter:
+  optimized results when applied; otherwise exact ordinary copies without a rerun.
 - BreakpointTracksTruthOverrideRTS / BreakpointTracksTruthOverrideBackwardFilter:
   the established truth-centered positive-SigmaLogLoss comparison when enabled.
 
 TruthOverride has NOT been redefined as a fixed-loss oracle. Its prior center
 and the configured positive sigma still go through the existing fitter. With
-free fitting enabled, the primary pair has no b Gaussian prior, while the
-extra truth pair retains its prior: these are not identical-uncertainty fits.
-When TruthOverride is off and free fitting was applied, the extra pair is
-copied exactly and tagged `truth_override_loss_treatment=CopiedFreeLikelihood`
-with `truth_override_prior_sigma_log_loss=0`. Otherwise the old PriorCenter
-contract is unchanged. Truth interval selection may still need embedded
+free fitting enabled, the FreeLoss pair has no b Gaussian prior, while the
+ordinary/truth pairs retain their priors: these are not identical-uncertainty fits.
+When TruthOverride is off, the truth pair ALWAYS copies the ordinary pair,
+even when free fitting is on. The PriorCenter contract is unchanged.
+Truth interval selection may still need embedded
 truth when the override is off; the optimizer interface accepts no truth loss.
 
-Primary native track covariances are CONDITIONAL on the fitted b. The local
+Optimized FreeLoss track covariances are CONDITIONAL on the fitted b. The local
 Minuit error is recorded but is not added to those covariances. Zero fitted
 loss variance in the native tuple therefore does not mean the optimized loss
 has zero uncertainty. Track.chi2 and existing per-hit lists retain their
@@ -136,9 +137,9 @@ existing dimension bookkeeping, not a calibrated significance for free fitting.
 
 ## Flat tuple contract
 
-These fields are always present; unused scalars are NaN, trials empty and
+Optimizer fields are always present; unused scores are NaN, trials empty and
 flags false. `free_loss_enabled` records the request, `free_loss_applied` the
-actual selected primary method. Disabled runs retain all old values exactly.
+actual optimized-extra-pair method. Disabled runs retain all old values exactly.
 
 | Field(s), prefix free_loss_ | Meaning |
 |---|---|
@@ -149,7 +150,7 @@ actual selected primary method. Disabled runs retain all old values exactly.
 | nll2, quadratic, logdet | Normalized objective, its quadratic and total covariance-logdet contribution; m*log(2*pi) is also included in nll2 |
 | reverse_order_nll2, joint_smoothed_nll2 | Optional equivalence checks, NaN when disabled |
 | lower_bound, upper_bound | Selected b within1e-6 of a bound |
-| covariance_conditional | True when the primary covariance conditions on optimized b |
+| covariance_conditional | True when the extra FreeLoss covariance conditions on optimized b |
 | error | Unsupported/failed-search explanation |
 | trial_b, trial_nll2, trial_valid, trial_phase, trial_error | Row-aligned evaluated trials; phases0 scan,1 Minuit,2 uncached repeat,3 local scan |
 | trial_reverse_order_nll2, trial_joint_smoothed_nll2 | Optional per-trial likelihood checks |
@@ -159,16 +160,50 @@ part of the maintained workflow. Trial arrays replace the prototype CSV
 logging; failed trials retain explanatory strings. Cached trajectories are
 not retained across trials or tracks.
 
+### Always-present result branches and EDM row maps
+
+The additional endpoint branches are NOT empty when the optimizer is disabled.
+They copy the ordinary pair exactly, including covariances, fitted losses and
+per-hit chi2 lists. Unsupported/failed searches and empty intervals also copy it.
+If the ordinary fit fails or a track is excluded, no successful pair is invented:
+EDM indices are -1, result status0, endpoint pT is NaN and vectors are empty.
+Flat rows continue to exist only for attempted tracks.
+
+`BreakpointFreeLossStatus`, `BreakpointFreeLossRTSIndex` and
+`BreakpointFreeLossBackwardIndex` are input-track-row-aligned EDM collections.
+The same values appear as `free_loss_result_status`, `free_loss_rts_index` and
+`free_loss_backward_index`. Result status0 means absent,1 ordinary copy,2
+optimized pair. This is separate from `free_loss_status`, which describes the
+optimizer request/outcome (off0, empty1, applied2, unsupported-1, failed-2).
+
+Always-present branches, all prefixed `free_loss_`:
+
+- `{rts,backward}_pt`, `_ip_parameters`, `_ip_covariance`, `_fitted_log_loss`,
+  `_fitted_log_loss_variance`: IP parameters are EDM `(D0,phi,omega,Z0,tanLambda)`;
+  covariance has the15 packed EDM entries. Loss vectors use `breakpoint_interval`.
+- `forward_chi2`, `backward_chi2`, `smoothed_chi2`, their corresponding
+  `*_local_chi2` lists, and `smoothed_chi2_status/error`: same definitions as ordinary.
+- `{forward_predicted,forward_filtered,smoothed,backward_predicted,backward_filtered}_parameters`
+  and `_covariance`: all accepted-hit 5D states, flattened hit-major;
+  parameters are native `(drho,phi0,kappa,dz,tanl)`, covariance row-major25 entries/hit.
+  They share the ordinary ordered-hit metadata; these are not packed IP covariances.
+
+Historical tuples produced before this separate-pair change used the ordinary
+primary names for the optimized result and, with TruthOverride off, used
+CopiedFreeLikelihood for the extra truth copies. Do not relabel those tuples.
+The presence of `free_loss_result_status` identifies the new separate-pair schema.
+
 ## Code organization
 
 | Component | Responsibility |
 |---|---|
-| RecBreakpoint | Gaudi steering, fallback choice and existing endpoint publication |
+| RecBreakpoint | Gaudi steering, fallback choice and common publication for all three pairs |
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
 | TrackLikelihood | Read-only Gaussian marginal likelihood and optional consistency checks |
 | FreeLossFitter | Blind bounded scalar search; calls the existing fitter for each trial |
 | FreeLossTuple | Serialization only; no fitting or likelihood logic |
+| FitPairTuple | Additional result-pair serialization; exact copies use the existing fit object |
 
 Free fitting remains a research option. The focused prototype eliminated one
 extreme overshoot but retained20% errors in other examples. Wider categorized

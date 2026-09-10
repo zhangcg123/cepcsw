@@ -20,7 +20,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set_target_properties(RecBreakpointLikelihood PROPERTIES POSITION_INDEPENDENT_CODE ON)
   gaudi_add_module(RecBreakpoint
     SOURCES src/RecBreakpoint.cpp src/TrackState.cpp src/KalmanAdapter.cpp
-            src/BreakpointFitter.cpp src/FreeLossFitter.cpp src/FreeLossTuple.cpp
+            src/BreakpointFitter.cpp src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
             # Reuse the exact maintained relation-driven reader, without
             # linking the GSF algorithm plugin or changing its implementation.
             ../RecGsfTracking/src/TruthBHLossEventData.cpp
