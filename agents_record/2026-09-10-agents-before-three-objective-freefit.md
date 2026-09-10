@@ -307,16 +307,8 @@ iteration-specific propagation/update helpers are removed. The maintained
 card and dedicated batch helper reject stale BP_MAX_ITERATIONS and
 BP_ITERATION_TOLERANCE requests. Old prepared cards assigning retired Gaudi
 properties must be regenerated; no existing tuples/cards are rewritten.
-A subsequently user-authorized free-loss prototype is now tested outside the
-maintained package under TrackingPerformanceStudies. It calls the existing
-compiled BreakpointFitter helpers; there is no alternate filter/smoother.
-Each trial fixes b with sigma_b=0 and Minuit2 varies b in [0,1]. It uses
-truth-selected intervals, never truth loss amounts to initialize the search.
-The maintained package, positive Gaussian loss priors and batch cards have
-not changed; free fitting is not integrated into the maintained run card.
-The initial 100-event RTS-objective test found severe early-interval tails,
-not an overall improvement. The evidence and location audit are recorded in
-`agents_record/2026-09-10-breakpoint-free-loss-hundred-events.md`.
+A free-loss/profile-chi2 fitter was discussed but is NOT implemented or
+authorized by this removal request. The loss priors have not changed.
 
 Four row-mapped outputs remain: BreakpointTracksRTS,
 BreakpointTracksBackwardFilter, BreakpointTracksTruthOverrideRTS and
@@ -420,19 +412,5 @@ truth on/off, empty/zero-loss/multiple intervals, sigma0.001/0.05,
 BackwardSeedScale100 and seed12:11/16/17 (17 remains a secondary control).
 Package build/install, installed configurable audit, 21 batch tests and the
 standalone covariance test passed. These are mechanical regression checks.
-The three-objective diagnostic is complete: independent minimizations of
-forward update chi2, backward update chi2 and complete smoothed chi2 on the
-same100 events, with both endpoints for each loss. All300 ordinary rows and
-the previous100 smoothed-objective trial/minimum/state results reproduce
-exactly. The backward objective narrows width68 but still creates4 >100%
-errors, versus6 for forward and7 for smoothed; all are VXD-starting intervals.
-The study is TrackingPerformanceStudies/breakpoint_free_loss_three_objectives_20260910;
-the contract and evidence are in
-`agents_record/2026-09-10-breakpoint-three-free-loss-objectives.md`.
-Next: review objective sensitivity versus early-interval loss/momentum
-degeneracy before selecting any further fitting change. Preserve boundary
-and convergence tags; do not add overlapping scores or equate minima with
-validated physical losses.
-No integration into maintained fitting code is authorized by this diagnostic.
-The complete outgoing AGENTS text is preserved in
-`agents_record/2026-09-10-agents-before-three-objective-freefit.md`.
+Next: await direction on a distinct free-b fitting design; do not silently
+replace the Gaussian prior or claim a physics optimum from this removal.
