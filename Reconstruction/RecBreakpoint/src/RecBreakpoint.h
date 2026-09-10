@@ -59,7 +59,7 @@ private:
   Gaudi::Property<std::vector<int>> m_intervals{this, "BreakpointIntervals", {}};
   Gaudi::Property<std::string> m_intervalSelection{this, "IntervalSelectionMode", "Truth"};
   Gaudi::Property<double> m_meanLoss{this, "MeanLogLoss", 0.0};
-  Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.05};
+  Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.001};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 100.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};

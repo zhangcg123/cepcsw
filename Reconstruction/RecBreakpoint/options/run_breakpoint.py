@@ -43,7 +43,9 @@ fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
-# Truth (default): select every matched hit interval with positive G4 eBrem loss;
+# Truth (default): select ONLY the matched hit interval with the largest summed
+# absolute G4 eBrem momentum loss (ties: innermost). All three pairs share it.
+# Other loss intervals are not fitted. No positive loss means no breakpoint;
 # keep BreakpointIntervals empty here, since the list is built for each track.
 # Manual: use only BreakpointIntervals above, even if actual eBrem occurs elsewhere.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
@@ -54,7 +56,7 @@ fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth"
 fit.MeanLogLoss = float(os.environ.get("BP_MEAN_LOG_LOSS", "0.0"))
 # Batch value is set in subbreakpointjobs.sh and frozen into the generated card.
 # The fallback below is for direct standalone use, without the submission script.
-fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.05"))
+fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.001"))
 fit.SeedScale = 1.0
 # Scale the full copied first-forward endpoint covariance for BackwardFilter
 # only. The mean and RTS are unchanged. Positive finite values; 1 preserves it.
@@ -76,9 +78,12 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # the FreeLoss RTS/backward collections on one selected LocalMarginal interval;
 # their covariances are conditional on fitted b. False copies ordinary results
 # into these extra collections/flat branches, without another fit.
-# Empty lists, unsupported modes/multiple intervals and failed searches also
-# copy ordinary results, with explicit free_loss_status/error diagnostics.
-# free_loss_result_status: 0 absent, 1 ordinary copy, 2 optimized pair.
+# Empty lists copy ordinary results. Unsupported modes/manual multiple intervals
+# or failed optimization copy the INPUT CompleteTracks KF into both free outputs.
+# Success requires a converged, valid Minuit minimum (not just a finite scan).
+# free_loss_result_status: 0 absent, 1 ordinary copy, 2 optimized pair, 3 KF fallback.
+# KF fallback has IP parameters/covariance and free_loss_kf_chi2; unavailable
+# per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))

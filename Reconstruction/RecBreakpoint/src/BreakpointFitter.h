@@ -9,7 +9,7 @@ namespace breakpoint {
 struct FitSettings {
   std::vector<int> intervals; // i selects the outward transition hit[i] -> hit[i+1]
   double meanLogLoss = 0;
-  double sigmaLogLoss = 0.05;
+  double sigmaLogLoss = 0.001;
   double seedScale = 1;
   double backwardSeedScale = 100; // scales the full first-forward endpoint covariance
   std::string lossStateMode = "LocalMarginal";

@@ -30,7 +30,7 @@ struct FreeLossTrial {
 struct FreeLossDiagnostics {
   FreeLossStatus status = FreeLossStatus::NotAttempted;
   int interval = -1;
-  int minuitStatus = -99; // sentinel: scan winner, not a converged interior minimum
+  int minuitStatus = -99; // sentinel: no accepted converged minimum
   double b = std::numeric_limits<double>::quiet_NaN();
   double bError = std::numeric_limits<double>::quiet_NaN(); // local Minuit estimate only
   double edm = std::numeric_limits<double>::quiet_NaN();

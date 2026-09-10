@@ -9,10 +9,12 @@ occupies a separate pair of collections and flat branches.
 
 This mode currently supports ONE selected LocalMarginal interval. It does
 not discover intervals and does not change Truth/Manual selection. An empty
-interval list remains the 5D reference. Multiple intervals or Persistent6D
-copy the ordinary pair into the extra FreeLoss outputs and report unsupported status. They are
-never silently reduced to one interval. A failed search also retains the
-ordinary results in the extra outputs and reports its error. This limitation matches the tested
+interval list remains the 5D reference. Truth selection now chooses only the
+interval with the largest summed absolute G4 eBrem momentum loss, shared by all
+three pairs (equal losses choose the innermost interval). Other losses are not fitted.
+Manual multiple intervals or Persistent6D report unsupported status. Unsupported
+or failed searches copy the INPUT CompleteTracks KF into both FreeLoss outputs.
+The ordinary and truth-prior pairs are unchanged by this fallback. This limitation matches the tested
 scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ## Controls and workflow
@@ -36,7 +38,7 @@ BP_FREE_LOSS_FIT=1 ./subbreakpointjobs.sh
 
 That uses the existing input/output/stage controls and does not change the
 GSF worker/cards. The script's selected loss sigma is still relevant to
-ordinary fallback and the truth-prior comparison pair, not to free-b trials.
+the ordinary and truth-prior comparison pairs, not to free-b trials or KF copies.
 
 For one selected interval:
 
@@ -56,8 +58,10 @@ scan uses b_best + j*.001 for j=-10..10 within bounds; it does not silently
 replace the selected minimum. Failed native trials are tagged and receive
 a large invalid-objective penalty, not a fabricated valid likelihood.
 
-The result may be at a boundary or retain a finite non-converged/scan
-candidate, as in the prototype. Always inspect the separately saved Minuit
+The result may be at a boundary but must come from a valid converged MIGRAD
+minimum (Minimize true, status0, finite EDM). A finite scan or non-converged
+candidate alone is no longer accepted. If all starts fail this gate, use the
+input KF fallback. Always inspect the separately saved Minuit
 status, boundary flags and trial records; `status=Applied` means an endpoint
 was produced, not that its loss is accurately measured.
 
@@ -186,9 +190,9 @@ actual optimized-extra-pair method. Disabled runs retain all old values exactly.
 | Field(s), prefix free_loss_ | Meaning |
 |---|---|
 | enabled, max_log_loss, max_calls_per_start, tolerance, check_likelihoods | Effective steering |
-| status | 0 not attempted; 1 no interval/5D; 2 applied; -1 unsupported ordinary fallback; -2 failed-search ordinary fallback |
+| status | 0 not attempted; 1 no interval/5D; 2 applied; -1 unsupported KF fallback; -2 failed-search KF fallback |
 | interval | Selected scalar breakpoint index, or -1 |
-| b, b_error, minuit_status, edm | Selected loss and local optimization diagnostics; -99 status identifies a retained scan winner |
+| b, b_error, minuit_status, edm | Selected loss and local optimization diagnostics; successful minima have status0; -99 means no accepted minimum |
 | nll2, quadratic, logdet | Normalized objective, its quadratic and total covariance-logdet contribution; m*log(2*pi) is also included in nll2 |
 | reverse_order_nll2, joint_smoothed_nll2 | Optional equivalence checks, NaN when disabled |
 | lower_bound, upper_bound | Selected b within1e-6 of a bound |
@@ -206,7 +210,12 @@ not retained across trials or tracks.
 
 The additional endpoint branches are NOT empty when the optimizer is disabled.
 They copy the ordinary pair exactly, including covariances, fitted losses and
-per-hit chi2 lists. Unsupported/failed searches and empty intervals also copy it.
+per-hit chi2 lists. Empty intervals also copy it. Unsupported/failed searches
+instead copy the original input KF track, including every stored track state,
+covariance, chi2, NDF and relation. The flat free-loss endpoint parameters and
+covariances then describe the KF IP. `free_loss_kf_chi2` stores its published
+score; breakpoint loss/per-hit vectors remain empty and all three unavailable
+refit scores remain NaN, rather than borrowing another fit's diagnostics.
 If the ordinary fit fails or a track is excluded, no successful pair is invented:
 EDM indices are -1, result status0, endpoint pT is NaN and vectors are empty.
 Flat rows continue to exist only for attempted tracks.
@@ -215,7 +224,7 @@ Flat rows continue to exist only for attempted tracks.
 `BreakpointFreeLossBackwardIndex` are input-track-row-aligned EDM collections.
 The same values appear as `free_loss_result_status`, `free_loss_rts_index` and
 `free_loss_backward_index`. Result status0 means absent,1 ordinary copy,2
-optimized pair. This is separate from `free_loss_status`, which describes the
+optimized pair,3 input KF fallback. This is separate from `free_loss_status`, which describes the
 optimizer request/outcome (off0, empty1, applied2, unsupported-1, failed-2).
 
 Always-present branches, all prefixed `free_loss_`:

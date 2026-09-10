@@ -80,14 +80,14 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 
 | IntervalSelectionMode | Behavior |
 |---|---|
-| Truth (compiled/card default) | Select every matched runtime hit interval with positive Geant4 eBrem loss, independently for each track |
+| Truth (compiled/card default) | Select only the matched runtime interval with the largest summed absolute Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
 Truth follows reconstructed-hit associations and exact embedded G4 hooks. It
 uses the existing post-step assignment on each (start,end] interval, selecting
-`ebremLoss>0` without an additional loss threshold. Several emissions within
-one interval yield one breakpoint. Loss before the first hit or after the last
+the maximum positive `ebremLoss` without an additional loss threshold. Several emissions within
+one interval are summed. Other intervals' losses are not fitted. Loss before the first hit or after the last
 hit is not covered. Interval bounds and upstream placement are unchanged.
 The ordinary fit receives only the indices: its MeanLogLoss/SigmaLogLoss prior
 is NOT replaced by truth. TruthOverride must separately be enabled to set loss
@@ -362,9 +362,9 @@ for the model, code organization, output contract and limitations.
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
-| SigmaLogLoss | 0.05 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
+| SigmaLogLoss | 0.001 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
-| FreeLossFit | false | Optional normalized-likelihood optimization for one selected LocalMarginal interval; tagged ordinary fallback otherwise |
+| FreeLossFit | false | Card default true; normalized-likelihood optimization for one selected LocalMarginal interval; input KF fallback on failure/unsupported mode |
 | FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
 | FreeLossTolerance | 0.001 | Positive finite MIGRAD tolerance |
@@ -397,9 +397,12 @@ scale the independent breakpoint loss prior, or change the forward fit/RTS.
 ## Other automatic tuple information
 
 All runs also save the `free_loss_*` fields described in
-[the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract). They are
+[the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract). The
 optimizer diagnostics are inactive/NaN/empty when unused; the additional endpoint
-fields instead copy the ordinary results exactly. Existing tuple fields and the
+fields then copy the ordinary results exactly. Failed/unsupported optimization
+instead copies the original input KF (free_loss_result_status=3). Its stored
+score is free_loss_kf_chi2; unavailable breakpoint per-hit vectors are empty and
+refit totals NaN. Existing tuple fields and the
 four earlier collections retain ordinary/truth-prior meanings regardless of
 FreeLossFit. With free fitting applied, only the FreeLoss pair's
 track covariances are conditional on optimized b; the outer optimizer's b
@@ -442,10 +445,12 @@ PodioOutput lines remain in the dedicated card for optional serialization.
 Use the new root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
 The existing `subtrkjobs.sh`, `dump_gsftrk.sh` and all GSF cards are unchanged.
 The shared loss-prior sigma is controlled by BP_SIGMA_LOG_LOSS in
-subbreakpointjobs.sh (default0.05); other fit physics remains in
+subbreakpointjobs.sh (default0.001); other fit physics remains in
 options/run_breakpoint.py. Supported BP_* environment values are frozen at
 preparation along with the complete card. The card consumes the submitted
-sigma, retaining its 0.05 fallback only for direct standalone runs.
+sigma, with the same 0.001 fallback for direct standalone runs and in C++.
+Every algorithm-specific Gaudi property and configurable track collection is
+explicitly assigned in the maintained card; a source/card audit test checks coverage.
 The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.

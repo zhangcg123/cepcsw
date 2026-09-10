@@ -42,8 +42,8 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
   declareProperty("OutputTracks", m_output, "Successful refitted tracks");
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
-  declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS, or exact ordinary RTS copy");
-  declareProperty("OutputTracksFreeLossBackwardFilter", m_freeBackwardOutput, "Free-loss backward filter, or exact ordinary copy");
+  declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS; ordinary copy when off, input KF copy on failure");
+  declareProperty("OutputTracksFreeLossBackwardFilter", m_freeBackwardOutput, "Free-loss backward; ordinary copy when off, input KF copy on failure");
   declareProperty("OutputTracksTruthOverrideRTS", m_truthRTSOutput, "Oracle RTS, or ordinary RTS copy when disabled");
   declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
 }
@@ -411,13 +411,23 @@ StatusCode RecBreakpoint::execute() {
         }
         m_intervalTruthTrack = match.g4TrackID;
         m_intervalTruthDistance = match.maxEndpointDistance;
+        // One common breakpoint for all endpoint families: choose the largest
+        // summed absolute eBrem momentum loss between accepted hit hooks.
+        // Equal losses keep the first (innermost) interval. Other losses are
+        // deliberately not fitted; the optimizer still receives only an index.
+        int largest = -1;
+        double largestLoss = 0.;
         for (std::size_t i = 0; i < match.materialIntervals.size(); ++i) {
-          const auto& interval = match.materialIntervals[i];
-          if (interval.ebremLoss > 0.0) {
-            settings.intervals.push_back(static_cast<int>(i));
-            m_intervalTruthLoss.push_back(interval.ebremLoss);
-            m_intervalTruthZ.push_back(interval.retainedFraction);
+          if (match.materialIntervals[i].ebremLoss > largestLoss) {
+            largest = static_cast<int>(i);
+            largestLoss = match.materialIntervals[i].ebremLoss;
           }
+        }
+        if (largest >= 0) {
+          const auto& interval = match.materialIntervals[largest];
+          settings.intervals.push_back(largest);
+          m_intervalTruthLoss.push_back(interval.ebremLoss);
+          m_intervalTruthZ.push_back(interval.retainedFraction);
         }
         m_intervalSelectionStatus = 2;
       } else {
@@ -440,12 +450,15 @@ StatusCode RecBreakpoint::execute() {
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
       const auto paired = fitter.fit(hits, settings);
       std::optional<breakpoint::PairedFitResult> freePair;
+      bool freeKFFallback = false;
       if (m_freeLossFit) {
         auto freeFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, freeLossControls);
         m_freeLossTuple.assign(freeFit.diagnostics);
         freePair = std::move(freeFit.fitted);
+        freeKFFallback = freeFit.diagnostics.status == breakpoint::FreeLossStatus::Failed ||
+                         freeFit.diagnostics.status == breakpoint::FreeLossStatus::Unsupported;
         if (!freeFit.diagnostics.error.empty())
-          warning() << "FreeLossFit: " << freeFit.diagnostics.error << "; ordinary pair retained" << endmsg;
+          warning() << "FreeLossFit: " << freeFit.diagnostics.error << "; free outputs use input KF" << endmsg;
         if (m_verbose) info() << std::setprecision(17) << "FreeLossFit event=" << m_event
             << " track=" << m_trackIndex << " status=" << int(freeFit.diagnostics.status)
             << " b=" << freeFit.diagnostics.b << " nll2=" << freeFit.diagnostics.likelihood.nll2
@@ -573,17 +586,33 @@ StatusCode RecBreakpoint::execute() {
       backwardOutputIndices->push_back(publishTrack(*backwardOutput, inward, hits, m_bz, m_backwardTotalChi2));
       m_fitStatus = 1;
 
-      // Never replace ordinary results. Disabled/unsupported/failed searches
-      // publish the same ordinary pair here, without an additional fit.
+      // Never replace ordinary results. A failed/unsupported optimization
+      // copies CompleteTracks itself, not a breakpoint or fresh KF refit.
       const auto& freeResult = freePair ? *freePair : paired;
-      const double freeBackwardChi2 = std::accumulate(freeResult.backward.backwardChi2.begin(),
-                                                     freeResult.backward.backwardChi2.end(), 0.);
-      const int freeRTSIndex = publishTrack(*freeRTSOutput, freeResult.rts, hits, m_bz,
-                                            freeResult.rts.smoothedTotalChi2);
-      const int freeBackwardIndex = publishTrack(*freeBackwardOutput, freeResult.backward, hits,
-                                                 m_bz, freeBackwardChi2);
-      m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
-      if (m_verbose) {
+      if (freeKFFallback) {
+        try {
+          const int rtsIndex = freeRTSOutput->size();
+          const int backwardIndex = freeBackwardOutput->size();
+          m_freeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
+          freeRTSOutput->push_back(track.clone());
+          freeBackwardOutput->push_back(track.clone());
+          if (m_verbose) info() << "FreeLoss KF fallback event=" << m_event
+              << " track=" << m_trackIndex << " inputPt=" << m_kfPt << endmsg;
+        } catch (const std::exception& error) {
+          m_freeLossTracks.reset();
+          warning() << "Ordinary pair retained; input KF fallback unavailable: "
+                    << error.what() << endmsg;
+        }
+      } else {
+        const double freeBackwardChi2 = std::accumulate(freeResult.backward.backwardChi2.begin(),
+                                                       freeResult.backward.backwardChi2.end(), 0.);
+        const int freeRTSIndex = publishTrack(*freeRTSOutput, freeResult.rts, hits, m_bz,
+                                              freeResult.rts.smoothedTotalChi2);
+        const int freeBackwardIndex = publishTrack(*freeBackwardOutput, freeResult.backward, hits,
+                                                   m_bz, freeBackwardChi2);
+        m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
+      }
+      if (m_verbose && !freeKFFallback) {
         for (std::size_t i = 0; i < hits.size(); ++i) {
           for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
               {"free_predicted", &freeResult.rts.predicted[i]},

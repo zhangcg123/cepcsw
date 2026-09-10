@@ -292,77 +292,126 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is the independent RecBreakpoint package on local breakpoint.
-Shared KF/GSF sources and their maintained cards remain out of scope. Batch
-workers load shared libraries: do not rebuild/install while jobs use them.
-No remote changes are part of the current request.
+Active work is the independent RecBreakpoint package on local `breakpoint`,
+reading CompleteTracks. Shared KF/GSF sources, maintained GSF cards and
+unrelated user-owned workflow edits remain out of scope. Beyond the requested
+origin/breakpoint publication, further remote operations and a reconstruction-
+based interval finder require explicit authorization. Beam-boundary work is paused.
 
-The maintained standalone/batch card defaults FreeLossFit=true. The compiled
-compatibility default remains false. SigmaLogLoss=0.001 now agrees across the
-C++ property, FitSettings, maintained card and submission script; explicit
-campaign overrides remain available. Every algorithm-specific configurable
-property and track collection is assigned explicitly in run_breakpoint.py.
-The dedicated sub/dump/batch helper remain separate from the GSF workflow.
-Already prepared cards are frozen and are not rewritten by these changes.
+The user authorized promotion of the normalized free-loss prototype into the
+maintained package on 2026-09-10. It is now an OPTIONAL standard package path:
+`FreeLossFit=False` preserves the existing Gaussian-prior method; true runs a
+bounded Minuit2 fit of b=log(p_before/p_after) and publishes an ADDITIONAL
+conditional RTS/backward pair. Ordinary results are never replaced.
+The default remains off pending a different
+user choice; promotion into maintained code is not physics validation.
+There is no alternate filter implementation or temporary-source runtime loader.
+FreeLossFitter calls the existing BreakpointFitter; TrackLikelihood computes
+the normalized Gaussian marginal likelihood from native F/Q/H/V. FreeLossTuple
+handles optimizer serialization separately; FitPairTuple serializes the added
+result pair without another fit. All three pairs use one EDM publication helper. See
+`Reconstruction/RecBreakpoint/docs/free-loss-fit.md` for the complete contract.
 
-Truth interval selection now chooses ONLY the accepted-hit interval with the
-largest summed absolute G4 eBrem momentum loss. Ties select the innermost
-interval. Several emissions in one interval are summed; other intervals are
-not fitted. All ordinary/free/truth pairs share this selected interval.
-No positive loss means an empty 5D reference; invalid truth still fails the
-affected track rather than masquerading as no loss. The optimizer receives
-only the selected index, not a truth loss amount. Manual lists remain explicit;
-Auto is reserved. Loss ownership and association-driven exact hooks are unchanged.
+Free fitting currently supports one selected LocalMarginal interval.
+Empty intervals use the 5D reference. Multiple intervals or Persistent6D
+retain the ordinary pair with unsupported status; failed searches retain it
+with failure status. The ordinary pair must first succeed. The optimizer
+accepts no truth-loss amount: Truth selection supplies indices only.
+Default b bounds are [0,1], with a blind scan and three MIGRAD starts.
+Each conditional trial fixes b with sigma_b=0 and uses the same native fitter.
+This is distinct from the removed repeated relinearization controls, which
+remain retired. FreeLossCheckLikelihoods optionally checks reverse-order QR
+and joint-smoothed SVD against the same forward-order Gaussian objective.
+These are equivalent formulations, not three independent physics objectives.
 
-Six output collections remain: ordinary RTS/backward, FreeLoss RTS/backward,
-and truth-prior RTS/backward. Ordinary results are never replaced. Free fitting
-uses the same BreakpointFitter at fixed b and sigma_b=0, with Minuit optimizing
-the normalized full-track Gaussian likelihood. Only one LocalMarginal interval
-is supported by this scalar optimizer. No repeated relinearization is restored.
-A valid converged MIGRAD minimum is now required; a finite scan point or a
-non-converged candidate alone no longer counts as successful optimization.
+Six row-mapped outputs are always available: ordinary RTS/backward, additional
+FreeLoss RTS/backward, and additional truth-assisted RTS/backward. The ordinary
+pair and all104 original tuple fields retain their ordinary/truth meanings
+regardless of FreeLossFit. With free fitting off, empty intervals, unsupported
+settings or search failure, the FreeLoss collections and result branches copy
+the ordinary pair exactly, without a rerun. FreeLoss result status is0 absent,
+1 ordinary copy,2 optimized; input-row EDM maps retain -1 for absent outputs.
+The optimizer's request/outcome status remains separate. The new flat
+free_loss_result_status branch identifies this separate-pair schema.
 
-FreeLoss off or no selected interval copies ordinary results (result status1).
-Successful optimization produces the conditional free pair (status2).
-Failed/unsupported optimization copies the original CompleteTracks KF track
-into BOTH FreeLoss collections (status3), including its states/covariances,
-chi2/NDF and relations. Flat IP values describe the same KF copy.
-free_loss_kf_chi2 explicitly records that score; unavailable free per-hit
-states/losses/chi2 lists are empty and refit totals NaN, never borrowed from an
-ordinary fit. Optimizer outcome remains separate in free_loss_status/error.
-If the input KF has no valid IP, no free fallback is fabricated (status0).
-Ordinary fit failure still leaves extra pairs unattempted.
+TruthOverride is still default-on: matched G4 loss supplies a PRIOR CENTER
+with the configured positive SigmaLogLoss and the established one-pass fitter.
+When off, the truth pair ALWAYS copies the ordinary pair, never the FreeLoss
+pair. PriorCenter/copy/failure contracts remain. Historical replacement-mode
+tuples and CopiedFreeLikelihood tags must not be relabeled. No side truth
+CSV/ROOT reader is used.
 
-TruthOverride remains default-on: truth b is the extra pair's PRIOR CENTER,
-with the same positive SigmaLogLoss as ordinary, not a fixed-loss oracle.
-Truth off copies ordinary, never free results. LocalMarginal can still fit
-explicit Manual multiple intervals; Persistent6D at most one. FreeLoss in
-unsupported configurations uses the tagged input-KF fallback.
+IntervalSelectionMode=Truth remains default and uses associated G4 hooks at
+accepted-hit intervals. Manual uses the exact supplied interval list; empty
+means no breakpoints. Auto remains reserved and fails initialization.
+Invalid truth selection is never converted to no loss. Truth t/X0 is passive.
+LocalMarginal supports multiple ordinary intervals; Persistent6D at most one.
+The original positive Gaussian prior remains MeanLogLoss0/SigmaLogLoss0.05.
+The dedicated submission campaign sigma is separate and must be preserved.
 
-Forward SeedScale1, FirstMiddleLast and BackwardSeedScale100 remain defaults.
-Backward copies/scales the forward endpoint and is not an independent Bayesian
-smoother. RTS uses its forward buffered transitions. Both use the common native
-MarlinTrk IP propagation, not a beam constraint. Existing MSOn=true and
-ElossOn=false steering remains. Optimized covariance is conditional on b;
-Minuit uncertainty is recorded but not injected into the track covariance.
+Forward SeedScale1 and FirstMiddleLast remain defaults. BackwardSeedScale100
+scales the copied forward endpoint covariance for the native backward refilter;
+RTS does not use this refilter and its likelihood does not use that copied
+backward seed. The reverse-order likelihood check also does not use it.
+The native backward fit is not an independent Bayesian smoother.
+RTS and backward now share KalmanAdapter::propagateToIP: initialize from each
+innermost endpoint and use native MarlinTrk propagation to (0,0,0), honoring
+MSOn/ElossOn. This covers ordinary/free/truth pairs in both loss-state modes.
+The geometric RTS-only atIP helper is removed. No beam-spot measurement or new
+breakpoint is added, and the hit-level recursion and likelihood are unchanged.
 
-The three per-hit/total quadratic scores retain their existing meanings.
-The free objective includes the full residual quadratic, log determinant and
-normalization; optional reverse-order/joint checks are equivalent evaluations,
-not competing objectives. Never add the three chi2s or infer physics validation
-from convergence or lower objective alone.
+The flat tuple always records the optional free-fit steering, selected b,
+local Minuit error/status/EDM, boundaries, objective decomposition, trial
+records and explicit applied/fallback statuses. Additional FreeLoss result
+branches persist pT, IP parameters/covariances, fitted losses/variances, all
+three chi2 totals/lists and all five native per-hit state/covariance sequences.
+They copy ordinary values when optimization is off, not NaNs or empty vectors.
+Only absent ordinary results yield absent extra pairs. Optimized FreeLoss track
+covariances are CONDITIONAL on optimized b: optimizer uncertainty is not injected.
+A finite scan winner or non-converged candidate may be published and tagged;
+Applied does not certify a physical optimum. Existing forward/backward
+innovation chi2 and complete smoothed quadratic retain their definitions;
+Track.chi2 is not replaced by -2logL. Never add the three chi2s/likelihoods.
+NDF remains bookkeeping. The empirical hit-derived prefit seed and local affine
+model are explicit likelihood limitations.
 
-The outgoing status and all previous gates are preserved losslessly in
-agents_record/2026-09-10-agents-before-largest-loss-kf-fallback.md.
-The current implementation/gate record is
-agents_record/2026-09-10-breakpoint-largest-loss-kf-fallback.md.
-Authoritative option/schema reference: Reconstruction/RecBreakpoint/README.md
-and docs/free-loss-fit.md. Focused gates passed: eight local jobs/11 rows,
-24 batch tests including all30 algorithm property assignments, two compiled
-numerical tests, 901 unchanged ordinary/truth scalar/vector comparisons,
-13,685 exact ordinary/truth verbose state records and six exact EDM copies.
-The two multiple-truth cases select the independently checked largest interval;
-forced Minuit failure selects KF fallback. Event12:17 is a secondary control.
-Next: evaluate
-categorized population performance with the explicit new selection/fallback
-semantics. No automatic interval finder or broad physics claim is authorized.
+Focused integration gates reproduce all 3,724 prototype state/covariance records
+exactly across 2:68, 12:11, secondary-control12:17 and 4:11. Disabled and
+fallback cases preserve all104 legacy tuple fields and checked full dumps.
+In this exact input sample12:16 has NO selected interval, not multiple
+intervals; an explicit Manual=[4,5] control tests multi-interval fallback.
+Batch unit tests, singular-noise likelihood tests, covariance transport tests,
+private configurable generation and CMake dependency checks pass.
+Evidence is in `agents_record/2026-09-10-breakpoint-free-loss-integration.md`.
+Neither these mechanical gates nor earlier selected-event improvements establish
+population performance. The old100-event quadratic-only study must not be
+relabeled as a normalized-likelihood population study.
+
+The common native IP change is built and package-only installed following the
+user's confirmation that no batch jobs were running. Ten local reruns produced
+14 rows:13 successes and one expected invalid track. All36,936 verbose hit-level
+state/covariance records match the preceding separate-pair code exactly.
+Across all164 tuple fields, only free/truth RTS IP parameter/covariance vectors
+changed. All pT values, fitted b values, likelihood/trial diagnostics, hit-level
+chi2s and backward results are exactly unchanged. Extra ordinary-copy EDM tracks
+still agree exactly. Both compiled numerical tests and23 batch tests pass.
+Build and installed hashes agree. This is an endpoint-consistency regression,
+not proof of improved pT resolution. See
+`agents_record/2026-09-10-breakpoint-common-native-ip.md` and its outgoing snapshot
+`agents_record/2026-09-10-agents-before-common-native-ip.md`.
+The preceding separate-pair gate (including452-event row maps and output-name
+collision rejection) remains in
+`agents_record/2026-09-10-breakpoint-free-loss-parallel-pair.md`.
+Batch workers do not snapshot libraries: do not rebuild or install over shared
+libraries while jobs are using them. The site queue client still fails to import
+htcondor; user confirmation, not that client, established the safe deployment window.
+
+Dedicated card: Reconstruction/RecBreakpoint/options/run_breakpoint.py.
+Free fit can now be selected with BP_FREE_LOSS_FIT=1 via the existing dedicated
+sub/dump workflow. The package README is authoritative.
+Next: categorized population checks and study of
+conditional-covariance limitations; no shared-KF/GSF changes or automatic
+interval finder are included in this promotion.
+The full outgoing status is preserved in
+`agents_record/2026-09-10-agents-before-free-loss-integration.md`.
+

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 #include <numeric>
+#include <stdexcept>
 
 namespace breakpoint {
 void FitPairTuple::Endpoint::book(TTree& tree, const std::string& prefix) {
@@ -43,6 +44,7 @@ void FitPairTuple::book(TTree& tree, const std::string& prefix) {
   tree.Branch((prefix + "result_status").c_str(), &m_status);
   tree.Branch((prefix + "rts_index").c_str(), &m_rtsIndex);
   tree.Branch((prefix + "backward_index").c_str(), &m_backwardIndex);
+  tree.Branch((prefix + "kf_chi2").c_str(), &m_kfChi2);
   m_rts.book(tree, prefix + "rts_");
   m_backward.book(tree, prefix + "backward_");
   tree.Branch((prefix + "breakpoint_interval").c_str(), &m_intervals);
@@ -66,6 +68,26 @@ void FitPairTuple::reset() {
   *this = FitPairTuple{};
   const double nan = std::numeric_limits<double>::quiet_NaN();
   m_rts.pt = m_backward.pt = m_forwardChi2 = m_backwardChi2 = m_smoothedChi2 = nan;
+  m_kfChi2 = nan;
+}
+
+void FitPairTuple::assignKF(const edm4hep::Track& track, double bz,
+                            int rtsIndex, int backwardIndex) {
+  reset();
+  for (const auto& ip : track.getTrackStates()) {
+    if (ip.location != 1 || !std::isfinite(ip.omega) || ip.omega == 0) continue;
+    m_rts.pt = std::abs(bz * 2.99792458e-4 / ip.omega);
+    m_rts.parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
+    m_rts.covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
+    m_backward = m_rts;
+    m_kfChi2 = track.getChi2();
+    m_status = 3; m_rtsIndex = rtsIndex; m_backwardIndex = backwardIndex;
+    // CompleteTracks does not supply these per-hit smoother diagnostics.
+    // Leave them empty/NaN, never borrow a failed breakpoint fit's values.
+    m_smoothedError = "Input KF fallback: breakpoint per-hit scores unavailable";
+    return;
+  }
+  throw std::runtime_error("Input KF fallback has no valid IP state");
 }
 
 void FitPairTuple::assign(const PairedFitResult& pair, double bz, int status,

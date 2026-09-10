@@ -19,6 +19,21 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_card_explicitly_steers_every_algorithm_property(self):
+        import ast
+        import re
+        package = REPO/'Reconstruction/RecBreakpoint'
+        header = (package/'src/RecBreakpoint.h').read_text()
+        source = (package/'src/RecBreakpoint.cpp').read_text()
+        properties = set(re.findall(r'Gaudi::Property<[^;]+?\{this, "([^"]+)"', header))
+        properties.update(re.findall(r'declareProperty\("([^"]+)"', source))
+        card = ast.parse((package/'options/run_breakpoint.py').read_text())
+        explicit = {target.attr for node in ast.walk(card) if isinstance(node, ast.Assign)
+                    for target in node.targets if isinstance(target, ast.Attribute)
+                    and isinstance(target.value, ast.Name) and target.value.id == 'fit'}
+        self.assertGreater(len(properties), 25)
+        self.assertEqual(properties - explicit, set())
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='breakpoint_batch_test_')
         self.addCleanup(self.temp.cleanup)
@@ -135,7 +150,7 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(job['controls']['BP_SIGMA_LOG_LOSS'], expected)
             card = Path(job['cards']['breakpoint']).read_text()
             self.assertIn(repr('BP_SIGMA_LOG_LOSS')+': '+repr(expected), card)
-            self.assertIn('fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.05"))', card)
+            self.assertIn('fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.001"))', card)
 
     def test_retired_iteration_controls_are_rejected(self):
         for name in ('BP_MAX_ITERATIONS', 'BP_ITERATION_TOLERANCE'):

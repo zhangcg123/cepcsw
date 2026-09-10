@@ -21,7 +21,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
   }
   if (ordinary.intervals.size() != 1 || ordinary.lossStateMode != "LocalMarginal") {
     diagnostic.status = FreeLossStatus::Unsupported;
-    diagnostic.error = "FreeLossFit supports one selected LocalMarginal interval; ordinary pair retained";
+    diagnostic.error = "FreeLossFit supports one selected LocalMarginal interval";
     return result;
   }
   diagnostic.interval = ordinary.intervals.front();
@@ -74,6 +74,9 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     }
     if (!best.valid) throw std::runtime_error("No valid free-loss trial");
     const double scanBest = best.b;
+    // The coarse scan seeds Minuit; it is not a successful optimization.
+    best.valid = false;
+    best.likelihood.nll2 = 1.e20;
     for (double start : {scanBest, std::min(.005, controls.maxLogLoss), std::min(.05, controls.maxLogLoss)}) {
       std::unique_ptr<ROOT::Math::Minimizer> minimizer(ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad"));
       if (!minimizer) throw std::runtime_error("Minuit2 is unavailable");
@@ -86,9 +89,10 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       minimizer->SetErrorDef(1.);
       minimizer->SetPrintLevel(0);
       minimizer->SetLimitedVariable(0, "b", start, std::min(.002, .02 * controls.maxLogLoss), 0., controls.maxLogLoss);
-      minimizer->Minimize();
+      const bool converged = minimizer->Minimize();
       const auto trial = evaluate(minimizer->X()[0]);
-      if (trial.valid && trial.likelihood.nll2 <= best.likelihood.nll2) {
+      if (converged && minimizer->Status() == 0 && std::isfinite(minimizer->Edm()) &&
+          trial.valid && trial.likelihood.nll2 <= best.likelihood.nll2) {
         best = trial;
         diagnostic.minuitStatus = minimizer->Status();
         diagnostic.edm = minimizer->Edm();
@@ -96,6 +100,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
                                                : std::numeric_limits<double>::quiet_NaN();
       }
     }
+    if (!best.valid) throw std::runtime_error("No converged valid Minuit minimum");
     phase = FreeLossTrialPhase::Repeat;
     const auto repeated = evaluate(best.b, true);
     if (!repeated.valid || std::abs(repeated.likelihood.nll2 - best.likelihood.nll2) > 1.e-7)
