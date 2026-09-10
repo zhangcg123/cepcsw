@@ -54,7 +54,7 @@ private:
   Gaudi::Property<double> m_meanLoss{this, "MeanLogLoss", 0.0};
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.05};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
-  Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 1.0};
+  Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 100.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", true};
@@ -75,7 +75,7 @@ private:
   int m_event = -1, m_trackIndex = -1, m_fitStatus = 0, m_hitCount = 0;
   double m_truthPt = 0, m_kfPt = 0, m_fitPt = 0, m_fitChi2 = 0;
   double m_referencePt = 0;
-  double m_recordBackwardSeedScale = 1;
+  double m_recordBackwardSeedScale = 100;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;

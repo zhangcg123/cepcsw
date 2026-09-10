@@ -56,7 +56,8 @@ fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.05"))
 fit.SeedScale = 1.0
 # Scale the full copied first-forward endpoint covariance for BackwardFilter
 # only. The mean and RTS are unchanged. Positive finite values; 1 preserves it.
-fit.BackwardSeedScale = float(os.environ.get("BP_BACKWARD_SEED_SCALE", "1.0"))
+# Default 100 inflates all covariance entries by 100 (standard deviations by 10).
+fit.BackwardSeedScale = float(os.environ.get("BP_BACKWARD_SEED_SCALE", "100.0"))
 # Three usable 2D hits in radius order; N//2 is the middle (upper for even N).
 # FirstThree restores the original short-lever-arm prefit for comparisons.
 fit.SeedHitSelection = os.environ.get("BP_SEED_HIT_SELECTION", "FirstMiddleLast")

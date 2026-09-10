@@ -56,6 +56,19 @@ class BatchTest(unittest.TestCase):
                     self.assertIn(repr(job['files']['trk']),text)
                     self.assertNotIn('RecGsfTracking(',text)
 
+    def test_backward_seed_default_and_explicit_override(self):
+        for output, override, expected in [('seed_default', {}, 100.0),
+                                           ('seed_explicit', {'BP_BACKWARD_SEED_SCALE':'1'}, 1.0)]:
+            self.prepare(OUTPUT_TUPLEPATH=output, **override)
+            job = self.manifest(output)
+            card = Path(job['cards']['breakpoint']).read_text()
+            assignment = next(line for line in card.splitlines()
+                              if line.startswith('fit.BackwardSeedScale ='))
+            fit = types.SimpleNamespace()
+            with patch.dict(os.environ, job['controls'], clear=True):
+                exec(assignment, {'fit':fit, 'os':os})
+            self.assertEqual(fit.BackwardSeedScale, expected)
+
     def test_controls_frozen_and_originals_unchanged(self):
         source = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
         before = source.read_bytes()

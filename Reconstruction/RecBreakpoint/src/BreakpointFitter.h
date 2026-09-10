@@ -11,7 +11,7 @@ struct FitSettings {
   double meanLogLoss = 0;
   double sigmaLogLoss = 0.05;
   double seedScale = 1;
-  double backwardSeedScale = 1; // scales the full first-forward endpoint covariance
+  double backwardSeedScale = 100; // scales the full first-forward endpoint covariance
   std::string lossStateMode = "LocalMarginal";
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.

@@ -324,7 +324,9 @@ BreakpointTracksTruthOverrideBackwardFilter. These are paired results, not
 CPU threads. RTS uses its own forward posterior and buffered transitions,
 not the backward refilter. The backward refilter copies its pair's forward
 endpoint mean and scales the full 5x5 covariance once by positive finite
-BackwardSeedScale (default1). It reuses forward evidence, so is not an
+BackwardSeedScale (default100; changed from 1 on 2026-09-10 at user request).
+The completed three-objective 100-event study explicitly used 1 and is not
+relabeled or rerun by this default change. It reuses forward evidence, so is not an
 independent Bayesian smoother. Forward SeedScale defaults1 and
 FirstMiddleLast remains the prefit hit selection. BackwardSeedScale affects
 neither RTS nor the loss-prior sigma.

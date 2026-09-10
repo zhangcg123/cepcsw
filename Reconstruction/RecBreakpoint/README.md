@@ -41,7 +41,7 @@ Shared first-pass forward filter
 
 These are separate results, not CPU threads. Backward starts from the full
 first-pass forward endpoint mean and its full covariance multiplied by
-BackwardSeedScale (default1), revisits hits N-2 through 0, and uses
+BackwardSeedScale (default100), revisits hits N-2 through 0, and uses
 material-aware native IP propagation. RTS never consumes
 the backward-refiltered states and retains its geometric IP extrapolation.
 Backward still reuses forward hit evidence; it is NOT an independent Bayesian
@@ -343,7 +343,7 @@ extended KF; the separate terms make those differences auditable.
 | SigmaLogLoss | 0.05 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
-| BackwardSeedScale | 1 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
+| BackwardSeedScale | 100 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
 | SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |
 | MaxChi2PerHit | 1e100 | Positive finite native update acceptance limit |
 | MSOn | true | Native multiple-scattering noise |
@@ -361,7 +361,7 @@ Ambiguous generator electrons have NaN
 truth pT. A scalar reference alone does not establish topology-clear selection.
 
 The dedicated card exposes `fit.BackwardSeedScale` and optional environment
-variable `BP_BACKWARD_SEED_SCALE` (default1). All 25 covariance entries are
+variable `BP_BACKWARD_SEED_SCALE` (default100). All 25 covariance entries are
 scaled, preserving correlation coefficients; standard deviations scale by
 sqrt(BackwardSeedScale). The effective value is saved in every flat row as
 `backward_seed_scale`. This control does not create a fresh backward seed,
