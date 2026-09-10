@@ -90,7 +90,7 @@ class BatchTest(unittest.TestCase):
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, {}, clear=True):
             exec(assignments, {'fit':fit, 'os':os})
-        self.assertFalse(fit.FreeLossFit)
+        self.assertTrue(fit.FreeLossFit)
         self.assertFalse(fit.FreeLossCheckLikelihoods)
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
@@ -108,6 +108,12 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(fit.FreeLossMaxLogLoss, .5)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 100)
         self.assertEqual(fit.FreeLossTolerance, .002)
+        self.prepare(OUTPUT_TUPLEPATH='free_disabled', BP_FREE_LOSS_FIT='false')
+        disabled = self.manifest('free_disabled')
+        self.assertEqual(disabled['controls']['BP_FREE_LOSS_FIT'], '0')
+        with patch.dict(os.environ, disabled['controls'], clear=True):
+            exec(assignments, {'fit':fit, 'os':os})
+        self.assertFalse(fit.FreeLossFit)
         with self.assertRaises(ValueError):
             self.prepare(OUTPUT_TUPLEPATH='free_invalid', BP_FREE_LOSS_FIT='maybe')
 

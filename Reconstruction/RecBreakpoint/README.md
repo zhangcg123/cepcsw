@@ -343,7 +343,9 @@ Optional normalized-likelihood free-loss fitting is now implemented in this
 package, not in an external prototype. Set `FreeLossFit=True` to add a separate
 FreeLoss pair with the native conditional fit at the optimized loss. The ordinary
 RTS/backward pair and its tuple fields are never replaced. The
-compatibility default is false. This is an implementation promotion, not a
+compiled compatibility default is false; the maintained standalone/batch card
+defaults to true. Set `BP_FREE_LOSS_FIT=0` to disable it for newly prepared jobs.
+Previously prepared cards are not changed. This is an implementation promotion, not a
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
 

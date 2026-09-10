@@ -2,7 +2,9 @@
 
 `FreeLossFit=True` enables the promoted normalized-likelihood prototype inside
 RecBreakpoint. `False` retains the established Gaussian-prior fitting exactly.
-The default is false. Ordinary results are ALWAYS retained; the optional method
+The compiled default is false, while the maintained standalone/batch card defaults
+to true. `BP_FREE_LOSS_FIT=0` explicitly disables it; previously prepared cards
+retain their frozen settings. Ordinary results are ALWAYS retained; the optional method
 occupies a separate pair of collections and flat branches.
 
 This mode currently supports ONE selected LocalMarginal interval. It does

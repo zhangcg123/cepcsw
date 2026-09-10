@@ -79,7 +79,8 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # Empty lists, unsupported modes/multiple intervals and failed searches also
 # copy ordinary results, with explicit free_loss_status/error diagnostics.
 # free_loss_result_status: 0 absent, 1 ordinary copy, 2 optimized pair.
-fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "0") == "1"
+# Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
+fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
