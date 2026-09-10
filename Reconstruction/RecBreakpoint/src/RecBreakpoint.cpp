@@ -290,8 +290,7 @@ StatusCode RecBreakpoint::execute() {
   settings.backwardSeedScale = m_backwardSeedScale;
   settings.lossStateMode = m_lossStateModeName;
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
-      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),
-      m_freeLossCheck.value()};
+      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value()};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
       (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event

@@ -89,9 +89,6 @@ fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
-# Numerical audit only: reverse-order and joint-smoothed forms of the SAME
-# likelihood must agree. They are not alternative physics objectives.
-fit.FreeLossCheckLikelihoods = os.environ.get("BP_FREE_LOSS_CHECK", "0") == "1"
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
 # to matched G4 values at the SAME selected intervals. SigmaLogLoss is the SAME
 # as in the ordinary fit; hits can still update b and its posterior variance.

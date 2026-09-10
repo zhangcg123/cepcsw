@@ -52,7 +52,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
             forward.breakpoints.front().fittedLogLoss != b ||
             forward.breakpoints.front().fittedVariance != 0 || !forward.gaussianModel)
           throw std::runtime_error("Conditional free-loss fit invariant failed");
-        trial.likelihood = evaluateTrackLikelihood(*forward.gaussianModel, controls.checkEquivalentLikelihoods);
+        trial.likelihood = evaluateTrackLikelihood(*forward.gaussianModel);
         trial.valid = std::isfinite(trial.likelihood.nll2) && std::isfinite(forward.ip.omega) && forward.ip.omega != 0;
         if (!trial.valid) throw std::runtime_error("Nonfinite free-loss candidate");
       } catch (const std::exception& error) {

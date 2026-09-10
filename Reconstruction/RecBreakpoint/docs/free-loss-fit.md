@@ -24,12 +24,11 @@ fit.FreeLossFit = True
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
-fit.FreeLossCheckLikelihoods = False
 fit.BackwardSeedScale = 100.0
 ```
 
 The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_MAX_LOG_LOSS,
-BP_FREE_LOSS_MAX_CALLS, BP_FREE_LOSS_TOLERANCE and BP_FREE_LOSS_CHECK. The
+BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
 dedicated batch helper freezes these controls and the card. Example:
 
 ```bash
@@ -97,10 +96,8 @@ The determinant term matters when changing b changes the uncertainty.
 Continuous-density -2logL may be negative; it is not a chi-square statistic.
 
 Forward-order QR of [I,A]^T computes the objective without forming an
-ill-conditioned C. Optional reverse-order QR and joint-state SVD evaluate the
-SAME likelihood independently and must agree within1e-4. There is deliberately
-no Forward/Backward/Smoothed objective selector. In particular, the reverse
-calculation does NOT use the current backward refilter's copied forward seed.
+ill-conditioned C. There is one objective calculation and no runtime
+cross-formulation audit or Forward/Backward/Smoothed objective selector.
 BackwardSeedScale changes that refilter's endpoint, not the likelihood.
 
 Singular Q is represented by its supported square-root directions; no inverse
@@ -189,17 +186,15 @@ actual optimized-extra-pair method. Disabled runs retain all old values exactly.
 
 | Field(s), prefix free_loss_ | Meaning |
 |---|---|
-| enabled, max_log_loss, max_calls_per_start, tolerance, check_likelihoods | Effective steering |
+| enabled, max_log_loss, max_calls_per_start, tolerance | Effective steering |
 | status | 0 not attempted; 1 no interval/5D; 2 applied; -1 unsupported KF fallback; -2 failed-search KF fallback |
 | interval | Selected scalar breakpoint index, or -1 |
 | b, b_error, minuit_status, edm | Selected loss and local optimization diagnostics; successful minima have status0; -99 means no accepted minimum |
 | nll2, quadratic, logdet | Normalized objective, its quadratic and total covariance-logdet contribution; m*log(2*pi) is also included in nll2 |
-| reverse_order_nll2, joint_smoothed_nll2 | Optional equivalence checks, NaN when disabled |
 | lower_bound, upper_bound | Selected b within1e-6 of a bound |
 | covariance_conditional | True when the extra FreeLoss covariance conditions on optimized b |
 | error | Unsupported/failed-search explanation |
 | trial_b, trial_nll2, trial_valid, trial_phase, trial_error | Row-aligned evaluated trials; phases0 scan,1 Minuit,2 uncached repeat,3 local scan |
-| trial_reverse_order_nll2, trial_joint_smoothed_nll2 | Optional per-trial likelihood checks |
 
 No side CSV writer, temporary source loader or extra ROOT helper input is
 part of the maintained workflow. Trial arrays replace the prototype CSV
@@ -251,7 +246,7 @@ The presence of `free_loss_result_status` identifies the new separate-pair schem
 | RecBreakpoint | Gaudi steering, fallback choice and common publication for all three pairs |
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
-| TrackLikelihood | Read-only Gaussian marginal likelihood and optional consistency checks |
+| TrackLikelihood | Read-only normalized Gaussian marginal likelihood |
 | FreeLossFitter | Blind bounded scalar search; calls the existing fitter for each trial |
 | FreeLossTuple | Serialization only; no fitting or likelihood logic |
 | FitPairTuple | Additional result-pair serialization; exact copies use the existing fit object |

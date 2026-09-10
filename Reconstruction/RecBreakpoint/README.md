@@ -368,7 +368,6 @@ for the model, code organization, output contract and limitations.
 | FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
 | FreeLossTolerance | 0.001 | Positive finite MIGRAD tolerance |
-| FreeLossCheckLikelihoods | false | Check reverse-order QR and joint-smoothed SVD against the same forward-order likelihood; no alternative objective |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
 | BackwardSeedScale | 100 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
 | SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |
@@ -451,6 +450,8 @@ preparation along with the complete card. The card consumes the submitted
 sigma, with the same 0.001 fallback for direct standalone runs and in C++.
 Every algorithm-specific Gaudi property and configurable track collection is
 explicitly assigned in the maintained card; a source/card audit test checks coverage.
+Prepared cards containing the retired likelihood-audit property must be
+regenerated before use with the updated plugin; do not edit checksummed cards.
 The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.

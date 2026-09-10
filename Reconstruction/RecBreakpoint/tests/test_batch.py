@@ -106,20 +106,17 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertFalse(fit.FreeLossCheckLikelihoods)
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
         self.assertEqual(fit.FreeLossTolerance, .001)
         self.prepare(OUTPUT_TUPLEPATH='free_enabled', BP_FREE_LOSS_FIT='true',
-                     BP_FREE_LOSS_CHECK='yes', BP_FREE_LOSS_MAX_LOG_LOSS='.5',
+                     BP_FREE_LOSS_MAX_LOG_LOSS='.5',
                      BP_FREE_LOSS_MAX_CALLS='100', BP_FREE_LOSS_TOLERANCE='.002')
         job = self.manifest('free_enabled')
         self.assertEqual(job['controls']['BP_FREE_LOSS_FIT'], '1')
-        self.assertEqual(job['controls']['BP_FREE_LOSS_CHECK'], '1')
         with patch.dict(os.environ, job['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertTrue(fit.FreeLossCheckLikelihoods)
         self.assertEqual(fit.FreeLossMaxLogLoss, .5)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 100)
         self.assertEqual(fit.FreeLossTolerance, .002)

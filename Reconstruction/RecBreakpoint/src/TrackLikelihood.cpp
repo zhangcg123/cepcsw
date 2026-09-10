@@ -113,26 +113,9 @@ GaussianScore orderedScore(const Matrix& response, const Vector& residual) {
   return {innovation.squaredNorm(), 2 * upper.diagonal().array().abs().log().sum()};
 }
 
-/// Independent check: solve the joint posterior in whitened seed/process
-/// coordinates and include its integration normalization. No independent-hit
-/// approximation is made for smoothed residuals, and no track is updated here.
-GaussianScore jointSmoothedScore(const WhitenedModel& model) {
-  Eigen::BDCSVD<Matrix> decomposition(model.response, Eigen::ComputeThinU | Eigen::ComputeThinV);
-  if (decomposition.info() != Eigen::Success)
-    throw std::runtime_error("Joint Gaussian likelihood SVD failed");
-  const Vector singular = decomposition.singularValues();
-  const Vector projection = decomposition.matrixU().transpose() * model.residual;
-  const Vector coefficients = (singular.array() / (1 + singular.array().square()) * projection.array()).matrix();
-  const Vector posterior = decomposition.matrixV() * coefficients;
-  const Vector residual = model.residual - decomposition.matrixU()
-      * (singular.array() * coefficients.array()).matrix();
-  return {residual.squaredNorm() + posterior.squaredNorm(),
-          (1 + singular.array().square()).log().sum()};
-}
 } // namespace
 
-TrackLikelihoodResult evaluateTrackLikelihood(const GaussianTrackModel& model,
-                                             bool checkEquivalentForms) {
+TrackLikelihoodResult evaluateTrackLikelihood(const GaussianTrackModel& model) {
   const auto whitened = whitenModel(model);
   const auto score = orderedScore(whitened.response, whitened.residual);
   TrackLikelihoodResult result;
@@ -143,19 +126,6 @@ TrackLikelihoodResult evaluateTrackLikelihood(const GaussianTrackModel& model,
   result.logDeterminant = score.logDeterminant + whitened.measurementLogDeterminant;
   result.nll2 = result.quadratic + result.logDeterminant + normalization;
   if (!std::isfinite(result.nll2)) throw std::runtime_error("Nonfinite Gaussian likelihood");
-  if (checkEquivalentForms) {
-    const auto reverse = orderedScore(whitened.response.colwise().reverse().eval(),
-                                      whitened.residual.reverse().eval());
-    const auto joint = jointSmoothedScore(whitened);
-    result.reverseOrderNll2 = reverse.quadratic + reverse.logDeterminant
-        + whitened.measurementLogDeterminant + normalization;
-    result.jointSmoothedNll2 = joint.quadratic + joint.logDeterminant
-        + whitened.measurementLogDeterminant + normalization;
-    if (!std::isfinite(result.reverseOrderNll2) || !std::isfinite(result.jointSmoothedNll2) ||
-        std::abs(result.nll2 - result.reverseOrderNll2) > 1.e-4 ||
-        std::abs(result.nll2 - result.jointSmoothedNll2) > 1.e-4)
-      throw std::runtime_error("Equivalent Gaussian likelihood formulations disagree");
-  }
   return result;
 }
 } // namespace breakpoint

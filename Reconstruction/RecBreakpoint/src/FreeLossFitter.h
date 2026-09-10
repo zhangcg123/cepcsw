@@ -12,7 +12,6 @@ struct FreeLossSettings {
   double maxLogLoss = 1; // b in [0,maxLogLoss]; default maximum loss is 63.2121%
   unsigned maxCallsPerStart = 180;
   double tolerance = .001;
-  bool checkEquivalentLikelihoods = false;
 };
 
 enum class FreeLossStatus { NotAttempted = 0, NoInterval = 1, Applied = 2,

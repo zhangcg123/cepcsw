@@ -41,16 +41,12 @@ int main() {
     const Eigen::MatrixXd lower = decomposition.matrixL();
     const double expected = residual.dot(decomposition.solve(residual))
         + 2 * lower.diagonal().array().log().sum() + 6 * std::log(2 * std::acos(-1.));
-    const auto checked = breakpoint::evaluateTrackLikelihood(model, true);
-    const auto normal = breakpoint::evaluateTrackLikelihood(model, false);
-    for (double value : {checked.nll2, checked.reverseOrderNll2, checked.jointSmoothedNll2, normal.nll2})
-      if (std::abs(value - expected) > 1.e-10) throw std::runtime_error("Gaussian reference mismatch");
-    if (!std::isnan(normal.reverseOrderNll2) || !std::isnan(normal.jointSmoothedNll2))
-      throw std::runtime_error("Disabled likelihood checks must remain explicitly absent");
-    std::cout << "Q=" << noise << ": independent dense reference and likelihood checks passed\n";
+    const auto result = breakpoint::evaluateTrackLikelihood(model);
+    if (std::abs(result.nll2 - expected) > 1.e-10) throw std::runtime_error("Gaussian reference mismatch");
+    std::cout << "Q=" << noise << ": independent dense reference passed\n";
   }
   try {
-    breakpoint::evaluateTrackLikelihood({}, true);
+    breakpoint::evaluateTrackLikelihood({});
     throw std::logic_error("Empty Gaussian model was accepted");
   } catch (const std::runtime_error&) {}
 }

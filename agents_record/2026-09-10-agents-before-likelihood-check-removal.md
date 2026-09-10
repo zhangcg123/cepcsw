@@ -348,9 +348,8 @@ Minuit uncertainty is recorded but not injected into the track covariance.
 
 The three per-hit/total quadratic scores retain their existing meanings.
 The free objective includes the full residual quadratic, log determinant and
-normalization. Runtime reverse-order/joint likelihood cross-checks and their
-controller have been removed at the user's request. The ordinary objective
-and Minuit convergence/KF fallback remain unchanged. Never add the three chi2s or infer physics validation
+normalization; optional reverse-order/joint checks are equivalent evaluations,
+not competing objectives. Never add the three chi2s or infer physics validation
 from convergence or lower objective alone.
 
 The outgoing status and all previous gates are preserved losslessly in
@@ -358,25 +357,12 @@ agents_record/2026-09-10-agents-before-largest-loss-kf-fallback.md.
 The current implementation/gate record is
 agents_record/2026-09-10-breakpoint-largest-loss-kf-fallback.md.
 Authoritative option/schema reference: Reconstruction/RecBreakpoint/README.md
-and docs/free-loss-fit.md. The preceding largest-loss gates passed: eight local jobs/11 rows,
+and docs/free-loss-fit.md. Focused gates passed: eight local jobs/11 rows,
 24 batch tests including all30 algorithm property assignments, two compiled
 numerical tests, 901 unchanged ordinary/truth scalar/vector comparisons,
 13,685 exact ordinary/truth verbose state records and six exact EDM copies.
 The two multiple-truth cases select the independently checked largest interval;
 forced Minuit failure selects KF fallback. Event12:17 is a secondary control.
-The removal also deletes five audit-only flat fields and the dedicated batch
-environment control. The standard card now explicitly sets all29 remaining
-algorithm properties. Independent dense-reference numerical unit tests remain;
-they are not part of event processing. Historical audit descriptions are kept
-in agents_record/2026-09-10-agents-before-likelihood-check-removal.md and
-agents_record/2026-09-10-breakpoint-likelihood-check-removal.md.
-Source/card removal is complete. Private-library regression passed eight jobs/
-11 rows: all160 retained tuple fields and27,876 verbose state/covariance lines
-match the preceding code exactly; only five audit fields disappeared. All24
-batch tests and the independent likelihood unit test pass. Shared build/install
-await confirmation that no breakpoint jobs are queued/running. The site queue
-client cannot establish this because its htcondor import fails. Do not assume
-the current installed plugin already includes this removal.
-Next: deploy/test in a safe window, then evaluate
+Next: evaluate
 categorized population performance with the explicit new selection/fallback
 semantics. No automatic interval finder or broad physics claim is authorized.
