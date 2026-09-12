@@ -37,3 +37,17 @@ do not introduce symbols merely to restate these definitions.
   does not establish equal minimizing losses for different objectives.
 - This glossary prescribes no answer to the disputed equality. Inspect code
   and establish assumptions before claiming a mathematical or numerical match.
+
+## Arrange a tracking-chi2 comparison
+
+When a common complete-trajectory expression is justified, display measurement,
+propagation and seed contributions in the same order on both sides, each with
+its residual and inverse covariance. Keep any determinant/normalization terms
+explicitly separate on both sides if comparing full Minuit objectives.
+
+If an equality involves minimizing over all trajectory states at fixed trial
+loss, show that minimization on the relevant side. Distinguish it from evaluating
+the same expression on stored forward-updated states or RTS-smoothed states,
+and from Minuit varying the trial loss. Do not omit these operations just to make
+two expressions look identical. This is a presentation requirement; the common
+expression and any claimed equality still need mathematical/code verification.

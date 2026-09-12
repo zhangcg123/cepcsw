@@ -30,6 +30,26 @@ For CEPCSW tracking/objective discussions, read
 [references/tracking-terms.md](references/tracking-terms.md) before explaining
 those concepts. It is a vocabulary contract, not proof of an algorithm property.
 
+## Compare expressions in the same arrangement
+
+- Before explaining an equality or difference, display both complete quantities
+  with the same notation, term order and level of expansion. Do not compare one
+  per-hit contribution with a whole-track sum, or give an explicit formula for
+  one side and only verbal labels for the other.
+- Show covariance weighting and included terms on both sides. If one expression
+  hides terms in a combined covariance, expand it or derive a common form;
+  saying "already included" is not a substitute for showing the connection.
+- Display operations such as minimization, integration and evaluation explicitly.
+  Name the variables optimized or integrated out, the variables held fixed, and
+  the states at which an expression is evaluated. Never silently substitute
+  "evaluate at these states" for "minimize over possible states".
+- A common form must preserve meaning: show any required transformation and its
+  assumptions. If that cannot be established, state the unresolved difference
+  instead of forcing matching formulas or claiming equality.
+- Keep the comparison in one self-contained answer so the user need not assemble
+  definitions and omitted terms from several preceding replies. Explain the
+  connection after displaying the common arrangement, not after repeated objections.
+
 ## Stable claims and assumptions
 
 - Before claiming equality, identify both exact quantities, included terms,
