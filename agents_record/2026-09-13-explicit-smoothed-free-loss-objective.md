@@ -104,16 +104,26 @@ All pT values below are in GeV and come from these direct runs:
 The private library and normal CMake RecBreakpoint target build successfully.
 The normal build reports the known filesystem-clock-skew and ROOT C++-standard
 warnings; numerical tests and direct library runs provide the actual gates.
-Shared installation is pending confirmation that no breakpoint batch jobs are
-running. The read-only hep_q check cannot import htcondor in this environment;
-that failure does NOT establish an empty queue. A nonblocking question has
-been sent to the user. No jobs were submitted.
+Shared installation was initially deferred: the read-only hep_q check could
+not import htcondor in this environment, which did NOT establish an empty
+queue. The user subsequently confirmed "there is not any batch jobs" on
+2026-09-13. Only the package-local cmake_install.cmake was then run; it installs
+libRecBreakpoint, its generated Python configurable and component/confdb files.
+No other package or workflow card was changed and no batch jobs were submitted.
 
-Installed library remains the preceding implementation, SHA256:
+Before installation, the preceding installed library had SHA256:
 c765a01ef13fadd2b26999e6dc015e7818a2950e2ab4d26ab5a0eccd717de95e.
-The built target is separate from that installed file.
-Built library SHA256:
+After installation, built and installed libraries match byte-for-byte, SHA256:
 7ed0302ff8f490f6e59c452ac3e12fda21615556bb9f4c230977b3463f574540.
+
+Both installed regression jobs completed with exit code zero: 2:68 and
+12:11,16,17. Outputs are in the study's installed/ directory, with install.log
+and installed_analysis.log alongside the earlier private/build evidence.
+All 160 fields in all four rows and all 11,172 verbose mean/covariance records
+agree exactly with the new private and direct-CMake-library runs. The complete
+analysis script passes, including the pre-change rerun, ordinary/truth
+preservation, matching-b objective, and direct RTS-chi2 checks. The pT tables
+above also describe the installed rerun; 12:17 remains a secondary control.
 
 This change implements the requested explicit evaluation, not a demonstrated
 physics improvement. The fixed-affine Gaussian identity predicts near agreement
@@ -128,3 +138,7 @@ laws and compile instructions remain unchanged in live AGENTS.md. Only its
 Current focus is replaced; the outgoing removal evidence and prior decision
 remain in that snapshot and their existing dated records. No history directory
 was moved, renamed or pruned.
+Before updating the deployment status, another complete snapshot was saved in
+2026-09-13-agents-before-smoothed-objective-install.md. Global status, active
+laws and compile instructions are again preserved unchanged; no unique history
+was deleted.

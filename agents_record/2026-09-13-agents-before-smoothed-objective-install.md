@@ -321,21 +321,16 @@ explicit in the maintained card.
 
 The private and normal CMake package builds are complete. Direct CMake-library
 runs reproduce all 160 fields and 11,172 verbose records of the new private
-runs exactly. After the user confirmed no batch jobs were running, RecBreakpoint
-alone was installed. Built/installed libraries match byte-for-byte; all 160
-fields and 11,172 verbose records of the installed four-row rerun also match
-the new private runs exactly. The explicit RTS-based normalized objective is
-now deployed. No source or card settings changed during installation. The
-remaining physics question is why the existing objective admits bad loss
-minima; this equivalent evaluation has not resolved it or justified a new
-performance claim. Await the user's next diagnostic direction rather than
-reintroducing reference iterations.
+runs exactly. Shared installation
+is pending confirmation of no running breakpoint batch jobs: hep_q fails to
+import htcondor here and cannot establish queue status. The installed library
+still uses the preceding marginal-quadratic evaluation. Next: after the user
+confirms, install only RecBreakpoint and repeat the four-row installed/private
+regression. Do not silently treat source/build changes as deployed.
 Exact code contract, results and evidence:
 agents_record/2026-09-13-explicit-smoothed-free-loss-objective.md.
 The entire outgoing focus is preserved in
 agents_record/2026-09-13-agents-before-smoothed-objective-implementation.md.
-The pre-installation status is preserved in
-agents_record/2026-09-13-agents-before-smoothed-objective-install.md.
 
 The six-output, largest-truth-interval, conditional free-Minuit, truth-prior and
 KF-fallback contracts remain operative. Maintained FreeLossFit=true (compiled
