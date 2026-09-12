@@ -298,48 +298,57 @@ ROOT files and logs are outputs, not status records.
 ## 2. Current focus
 
 Active work is RecBreakpoint on local breakpoint. On 2026-09-13 the user
-requested a no-prior breakpoint KF/RTS test to examine weak inner-track
-constraints for early bremsstrahlung. LossPriorMode=Unconstrained is now an
-opt-in one-pass native conditional KF + scalar diffuse-regression + RTS
-implementation. It starts with exactly zero b prior precision and retains
-the inferred b variance and all five state/b correlations. It is NOT a
-fixed-b fit or a huge-variance approximation. One LocalMarginal interval is
-supported. Gaussian remains the compiled/card default; Fixed is an explicit
-diagnostic control. The separate Gaussian truth-prior and conditional Minuit
-pairs retain their meanings. No reference iterations or shared KF/GSF edits
-were introduced; no remote operations are authorized.
+authorized the explicit RTS-smoothed free-loss objective. It is implemented:
+J(b) = complete smoothed chi2(b) + log det S_all(b) + M log(2*pi).
+FreeLossFitter reads the existing RTS pass's measurement + process + seed chi2
+directly. The same captured-model joint measurement covariance supplies the
+normalization; S_all is NOT the smoothed-state covariance. The separate marginal
+quadratic helper remains for numerical regression, not Minuit steering.
+No reference-trajectory iteration, new filter, property or tuple field was added.
+Shared KF/GSF sources and user-owned workflow edits remain untouched. No remote
+operations are authorized.
 
-Three numerical tests and 25 batch/card tests pass (30 explicit properties).
-Gaussian reruns reproduce all 160 old tuple fields and 11,172 verbose state/
-covariance records for 2:68 and 12:11,16,17 exactly. Eleven same-input
-comparison rows cover nine selected-loss examples, no-interval control 12:16,
-and secondary-activity control 12:17 (reported separately). The no-prior
-method is mechanically operational but NOT a performance solution: several
-early-loss results have very large tails and uncertainty.
+The private same-input before/after gate passes on 2:68 and 12:11,16,17; 12:17
+is a secondary-topology control and 12:16 is a no-interval copy. Both free
+endpoint pT values are unchanged in all four rows. All 104 non-free fields per
+row and 6,517 ordinary/truth verbose states agree exactly; the no-interval row
+agrees in all 160 fields. Applied new rows save the exact RTS chi2 used by
+Minuit. Matching valid scan points agree in normalized objective within
+6.9e-6; fitted b and some detailed free states change at numerical precision.
+This is not bit-identical free-state evolution or a physics-performance gain.
+Both numerical tests and all 24 batch tests pass; all 29 properties remain
+explicit in the maintained card.
 
-The three soft h4->h5 examples have |Corr(inner kappa,b)|>0.99998 and sigma_b
-0.267--0.647 within the captured model. However, a small native b-change test
-also exposes loss-response discrepancies: 3:36 has an opposite-sign
-inner-curvature response, and 5:62 differs by roughly a factor of two.
-The discrepancies persist with b steps of 1e-4 and 1e-5.
-The native rerun changes expansions/covariance as well as means; this does
-not yet localize a bad Jacobian. Do NOT attribute all failure to sparse inner
-hits or claim the no-prior solver establishes an irreducible detector limit.
-Next: discuss and trace this response difference surface by surface before
-changing the model, priors or shared code.
-
-The new code is built and tested from the build tree, NOT installed.
-Installed RecBreakpoint remains the preceding validated normalized-RTS-objective
-version. An asynchronous active-batch query is awaiting the user; no deployment
-was assumed. The updated card's LossPriorMode requires the build-tree library/
-configuration or a later package-only install, not the old installed schema.
-Existing prepared cards and outputs remain untouched. The new mode remains
-experimental, not a new production default.
-
-Authoritative new contract: Reconstruction/RecBreakpoint/docs/unconstrained-loss.md.
-Exact tables, caveats, hashes and evidence:
-agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
-Outgoing status: agents_record/2026-09-13-agents-before-unconstrained-loss.md.
-The normalized free-loss objective remains complete RTS chi2 + log det S_all
-+ M log(2*pi), with its preceding deployment evidence retained in
+The private and normal CMake package builds are complete. Direct CMake-library
+runs reproduce all 160 fields and 11,172 verbose records of the new private
+runs exactly. After the user confirmed no batch jobs were running, RecBreakpoint
+alone was installed. Built/installed libraries match byte-for-byte; all 160
+fields and 11,172 verbose records of the installed four-row rerun also match
+the new private runs exactly. The explicit RTS-based normalized objective is
+now deployed. No source or card settings changed during installation. The
+remaining physics question is why the existing objective admits bad loss
+minima; this equivalent evaluation has not resolved it or justified a new
+performance claim. Await the user's next diagnostic direction rather than
+reintroducing reference iterations.
+Exact code contract, results and evidence:
 agents_record/2026-09-13-explicit-smoothed-free-loss-objective.md.
+The entire outgoing focus is preserved in
+agents_record/2026-09-13-agents-before-smoothed-objective-implementation.md.
+The pre-installation status is preserved in
+agents_record/2026-09-13-agents-before-smoothed-objective-install.md.
+
+The six-output, largest-truth-interval, conditional free-Minuit, truth-prior and
+KF-fallback contracts remain operative. Maintained FreeLossFit=true (compiled
+false), SigmaLogLoss=0.001, Forward SeedScale=1, BackwardSeedScale=100,
+MSOn=true and ElossOn=false are unchanged. Free fitting optimizes fixed b with
+sigma_b=0; truth override remains an extra Gaussian-prior-center fit with the
+ordinary sigma, not a fixed-loss oracle. Failed free optimization copies KF;
+no-interval/free-off cases copy ordinary. See Reconstruction/RecBreakpoint/README.md
+and docs/free-loss-fit.md for the authoritative controls/schema.
+
+Reference-trajectory iterations remain removed. Existing frozen cards with the
+three retired properties need regeneration; they and previous ROOT outputs have
+not been rewritten. The earlier removal and retirement evidence remains under
+agents_record/2026-09-12-breakpoint-reference-removal.md and the outgoing
+snapshot. Extreme large-loss minima remain unresolved. No automatic interval
+finder, new reference loop, or production-physics claim is authorized.

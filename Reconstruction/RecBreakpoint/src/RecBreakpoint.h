@@ -64,6 +64,7 @@ private:
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 100.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
+  Gaudi::Property<std::string> m_lossPriorMode{this, "LossPriorMode", "Gaussian"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
   Gaudi::Property<double> m_freeLossMax{this, "FreeLossMaxLogLoss", 1.0};
   Gaudi::Property<int> m_freeLossMaxCalls{this, "FreeLossMaxCallsPerStart", 180};
@@ -92,6 +93,10 @@ private:
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;
+  std::string m_lossPriorModeName;
+  std::vector<double> m_stateLossCovariance, m_backwardStateLossCovariance;
+  std::vector<int> m_predictionValid, m_filteredValid, m_backwardPredictionValid, m_backwardFilteredValid;
+  double m_lossInformation=0, m_backwardLossInformation=0, m_lossReference=0, m_lossChi2Closure=0;
   std::string m_intervalSelectionName, m_intervalSelectionError;
   int m_intervalSelectionStatus = 0, m_intervalTruthTrack = -1;
   double m_intervalTruthDistance = 0;

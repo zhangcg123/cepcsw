@@ -74,6 +74,16 @@ longer misleadingly labels a row that now contains both results.
 
 ## Loss state and interval ownership
 
+An opt-in **unconstrained loss prior** is now available through
+`LossPriorMode="Unconstrained"`: one LocalMarginal interval, zero b prior
+precision, data-derived b variance and state/b correlations retained. This
+uses the native conditional KF plus affine diffuse regression and RTS, not
+Minuit or a huge prior variance. The compiled/card default remains Gaussian.
+`LossPriorMode="Fixed"` supplies a separate exact fixed-b diagnostic control.
+The prior descriptions below apply to Gaussian mode; the separate truth-prior
+pair stays Gaussian and FreeLossFit stays independent in every mode.
+See [the no-prior equations, validity flags and limitations](docs/unconstrained-loss.md).
+
 An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
 IntervalSelectionMode selects the source of the breakpoint list independently
 of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered pair):
@@ -367,9 +377,10 @@ controls are introduced. See [the exact objective](docs/smoothed-objective.md).
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
-| MeanLogLoss | 0 | Ordinary Gaussian b-prior center, finite in [0,5]; oracle ignores it |
-| SigmaLogLoss | 0.001 | Positive finite b-prior sigma shared by ordinary and truth-centered fits |
+| MeanLogLoss | 0 | Finite in [0,5]: Gaussian prior center, Unconstrained expansion reference, or Fixed exact value; truth-prior pair ignores it |
+| SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma; unused by Unconstrained/Fixed ordinary outputs, retained by the separate truth-prior pair |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| LossPriorMode | Gaussian | Gaussian prior, Unconstrained (zero b precision, one LocalMarginal interval), or Fixed (exact MeanLogLoss, LocalMarginal); separate truth-prior and Minuit pairs unchanged |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization for one selected LocalMarginal interval; input KF fallback on failure/unsupported mode |
 | FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |

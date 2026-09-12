@@ -13,6 +13,7 @@ struct FitSettings {
   double seedScale = 1;
   double backwardSeedScale = 100; // scales the full first-forward endpoint covariance
   std::string lossStateMode = "LocalMarginal";
+  std::string lossPriorMode = "Gaussian"; // Unconstrained: zero b prior precision
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
@@ -50,6 +51,12 @@ struct FitResult {
   double chi2 = 0;
   int measurementDimensions = 0;
   std::shared_ptr<const GaussianTrackModel> gaussianModel;
+  // Unconstrained mode: flat arrays are hit-major, five Cov(state,b) entries
+  // per hit. Predictions with a still-diffuse loss have NaN covariance and
+  // predictionValid=0; no finite uncertainty is invented for those states.
+  std::vector<double> stateLossCovariance;
+  std::vector<int> predictionValid, filteredValid;
+  double lossInformation = 0, lossReference = 0, lossChi2Closure = 0;
 };
 
 struct PairedFitResult {

@@ -73,6 +73,18 @@ if "BP_BACKWARD_MODE" in os.environ:
 # One breakpoint at most. The backward continuation retains its local-joint
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
 fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
+# Gaussian preserves the existing MeanLogLoss/SigmaLogLoss prior. Unconstrained
+# fits b jointly with the track with exactly ZERO b prior precision, retaining
+# its data-derived variance and track/b correlations. One LocalMarginal interval
+# only. MeanLogLoss becomes an expansion reference, NOT a prior; SigmaLogLoss
+# is unused for ordinary results. Negative fitted b is allowed (no positivity
+# constraint). Native geometry/noise are captured once, no reference iterations.
+# TruthOverride remains a SEPARATE Gaussian truth-prior pair; optional Minuit
+# FreeLossFit also remains separate. Neither defines the unconstrained result.
+# Fixed is an explicit diagnostic control: hold MeanLogLoss exactly, sigma_b=0,
+# using LocalMarginal only. This is NOT the unconstrained mode. Assigning truth
+# to MeanLogLoss in this control permits a genuinely fixed-loss comparison.
+fit.LossPriorMode = os.environ.get("BP_LOSS_PRIOR_MODE", "Gaussian")
 # Optional outer b fit: normalized full-track likelihood, not chi2 alone.
 # Ordinary RTS/backward are ALWAYS retained. True adds optimized results in
 # the FreeLoss RTS/backward collections on one selected LocalMarginal interval;

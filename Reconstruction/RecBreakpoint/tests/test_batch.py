@@ -19,6 +19,13 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_unconstrained_control_frozen(self):
+        self.prepare(BP_LOSS_PRIOR_MODE='Unconstrained', BP_FREE_LOSS_FIT='0')
+        job=self.manifest()
+        self.assertEqual(job['controls']['BP_LOSS_PRIOR_MODE'],'Unconstrained')
+        card=Path(job['cards']['breakpoint']).read_text()
+        self.assertIn("'BP_LOSS_PRIOR_MODE': 'Unconstrained'",card)
+
     def test_card_explicitly_steers_every_algorithm_property(self):
         import ast
         import re
