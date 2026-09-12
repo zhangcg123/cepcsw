@@ -71,6 +71,20 @@ Replacing J by smoothedTotalChi2 alone would drop the determinant term. It
 would be a change of objective, not just a different way to evaluate J.
 No such change is made by removing reference-trajectory iterations.
 
+On 2026-09-13 the user explicitly required retaining BOTH normalization terms
+in the proposed switch to direct complete RTS-smoothed chi2 evaluation:
+
+```text
+Proposed J(b) = smoothedTotalChi2(b) + log det S_all(b) + M log(2*pi).
+```
+
+S_all is the same joint measurement covariance denoted S above, NOT the
+RTS-smoothed state covariance. M is the same total measurement dimension.
+This decision does not authorize dropping the determinant or substituting a
+determinant of the smoothed state covariance. The current code still calculates
+its chi2 through the captured Gaussian model; direct use of smoothedTotalChi2
+by Minuit has not been implemented. No reference-trajectory iteration is restored.
+
 The equalities above require the same fixed affine model. In the actual
 native tracking code the nonlinear measurement evaluations/reference choices
 can differ from the captured affine ones. Do not claim that every published

@@ -314,15 +314,9 @@ contains log det S and measurement normalization. It is not a claim that native
 nonlinear forward diagnostics equal the captured-model scores bit-for-bit.
 The algebra and supported singular-process-noise treatment are documented in
 Reconstruction/RecBreakpoint/docs/smoothed-objective.md. An independent numerical
-test compares all three quadratic constructions. On 2026-09-13 the user confirmed
-that the proposed explicit RTS-smoothed objective MUST retain log det S_all and
-M log(2*pi). The target is complete smoothed chi2 + those two terms, not complete
-smoothed chi2 alone. S_all remains the same joint measurement covariance, not
-the RTS-smoothed state covariance. Only this design decision is recorded; no
-objective implementation has changed. Next: the explicit RTS-based evaluation
-and same-model regression when implementation is resumed. No new reference loop,
-automatic interval finder or physics-performance claim is authorized. Decision:
-agents_record/2026-09-13-smoothed-objective-normalization-decision.md.
+test compares all three quadratic constructions. Next: clarify the user's
+desired objective before any further fitting changes. No new reference loop,
+automatic interval finder or physics-performance claim is authorized.
 
 The removal passed 24 batch tests (all 29 properties explicitly assigned), both
 compiled numerical tests and four private-library event rows: 2:68 and
