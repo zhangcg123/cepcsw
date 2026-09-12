@@ -1,3 +1,7 @@
+# Historical contract — feature removed at user request
+
+This preserves the removed feature documentation verbatim below.
+
 # Fixed-loss reference-trajectory iterations
 
 This optional experiment implements the user's 2026-09-12 request. It is not

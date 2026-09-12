@@ -89,12 +89,6 @@ fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
-# Fixed-b reference-trajectory iterations: zero preserves the previous method.
-# Try 20 for the self-consistency diagnostic; ordinary/truth pairs stay unchanged.
-# Inner passes hold b and the ORIGINAL seed prior fixed, rebuilding F/H/Q.
-fit.FreeLossReferenceIterations = int(os.environ.get("BP_FREE_LOSS_REFERENCE_ITERATIONS", "0"))
-fit.FreeLossReferenceTolerance = float(os.environ.get("BP_FREE_LOSS_REFERENCE_TOLERANCE", "0.001"))
-fit.FreeLossReferenceObjectiveTolerance = float(os.environ.get("BP_FREE_LOSS_REFERENCE_OBJECTIVE_TOLERANCE", "0.0001"))
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
 # to matched G4 values at the SAME selected intervals. SigmaLogLoss is the SAME
 # as in the ordinary fit; hits can still update b and its posterior variance.

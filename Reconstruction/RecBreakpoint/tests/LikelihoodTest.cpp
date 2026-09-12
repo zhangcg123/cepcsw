@@ -43,6 +43,44 @@ int main() {
         + 2 * lower.diagonal().array().log().sum() + 6 * std::log(2 * std::acos(-1.));
     const auto result = breakpoint::evaluateTrackLikelihood(model);
     if (std::abs(result.nll2 - expected) > 1.e-10) throw std::runtime_error("Gaussian reference mismatch");
+    // Independent full-trajectory least squares. The seven unit-prior latent
+    // coordinates are five seed components and two scalar process kicks.
+    // This represents singular Q without an inverse or artificial noise.
+    Eigen::MatrixXd response = Eigen::MatrixXd::Zero(6, 7);
+    Eigen::MatrixXd measurementCov = Eigen::MatrixXd::Zero(6, 6);
+    for (int i = 0; i < 3; ++i) {
+      response(2*i, 0) = 1; response(2*i+1, 2) = 1;
+      for (int j = 0; j < i; ++j) response(2*i, 5+j) = std::sqrt(noise);
+      measurementCov(2*i, 2*i) = .2;
+      measurementCov(2*i+1, 2*i+1) = .3;
+      measurementCov(2*i, 2*i+1) = measurementCov(2*i+1, 2*i) = .02;
+    }
+    const Eigen::MatrixXd precision = measurementCov.inverse();
+    const Eigen::MatrixXd normal = Eigen::MatrixXd::Identity(7, 7)
+        + response.transpose()*precision*response;
+    const Eigen::VectorXd fitted = normal.ldlt().solve(response.transpose()*precision*residual);
+    const Eigen::VectorXd measurementResidual = residual-response*fitted;
+    const double smoothedPenalty = measurementResidual.dot(precision*measurementResidual)
+        + fitted.squaredNorm(); // measurement + seed + process penalties
+
+    // Separate forward Kalman factorization of exactly the same linear model.
+    Eigen::Vector2d mean = Eigen::Vector2d::Zero();
+    Eigen::Matrix2d stateCov = Eigen::Matrix2d::Identity();
+    const Eigen::Matrix2d measurementNoise = measurementCov.topLeftCorner<2,2>();
+    double forwardPenalty = 0;
+    for (int i = 0; i < 3; ++i) {
+      if (i) stateCov(0,0) += noise;
+      const Eigen::Vector2d innovation = residual.segment<2>(2*i)-mean;
+      const Eigen::Matrix2d innovationCov = stateCov+measurementNoise;
+      forwardPenalty += innovation.dot(innovationCov.ldlt().solve(innovation));
+      const Eigen::Matrix2d gain = stateCov*innovationCov.inverse();
+      mean += gain*innovation;
+      stateCov = (Eigen::Matrix2d::Identity()-gain)*stateCov;
+    }
+    if (std::abs(smoothedPenalty-result.quadratic) > 1.e-10 ||
+        std::abs(forwardPenalty-result.quadratic) > 1.e-10)
+      throw std::runtime_error("Forward / full smoothed / marginal quadratic mismatch");
+    std::cout << "Q=" << noise << ": forward, full smoothed and marginal quadratics agree\n";
     std::cout << "Q=" << noise << ": independent dense reference passed\n";
   }
   try {

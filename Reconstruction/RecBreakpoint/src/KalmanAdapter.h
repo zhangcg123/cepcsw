@@ -44,13 +44,6 @@ public:
                                    const TrackState& reference) const;
   MeasurementStep advance(const TrackState& source, edm4hep::TrackerHit sourceHit,
                           edm4hep::TrackerHit targetHit) const;
-  /// Affine model about a fixed reference; the measurement update is still
-  /// TKalTrackSite::Filter(), with a reference-fixed native H and measurement.
-  MeasurementStep updateAtReference(const TrackState& prediction,
-      edm4hep::TrackerHit hit, const TrackState& reference) const;
-  MeasurementStep advanceAtReference(const TrackState& source,
-      const TrackState& referenceSource, edm4hep::TrackerHit sourceHit,
-      edm4hep::TrackerHit targetHit, const TrackState& referenceTarget) const;
   /// Full 6D prediction and native 6D hit update. Apply exp(b) ONLY at birth.
   LossMeasurementStep advancePersistent(const LossTrackState& source,
       edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const;

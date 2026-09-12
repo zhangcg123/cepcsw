@@ -292,53 +292,47 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is RecBreakpoint on local breakpoint. The user clarified that the
-requested objective discussion did NOT call for reference-trajectory iterations,
-and explicitly requested their removal on 2026-09-12. The iteration code, three
-properties, dedicated card/batch environment steering and eleven iteration-only
-tuple fields have been removed. Runtime sources and maintained cards are restored
-to the preceding one-pass implementation. The normalized marginal free-loss
-objective is UNCHANGED; replacing it by a smoothed quadratic alone has not been
-implemented or authorized by this removal. No remote operations are authorized.
-Shared KF/GSF sources and user-owned workflow edits remain untouched.
+Active work is RecBreakpoint on local breakpoint. The user authorized fixed-b
+reference-trajectory iterations on 2026-09-12 after the batch objective audit.
+Only RecBreakpoint and its dedicated card/helpers/docs are in scope. Existing
+GSF/shared KF sources and user-owned GSF workflow edits stay untouched. No
+remote operations are authorized. Private gates passed; after the user confirmed
+no batch jobs, the package was built and installed. Future shared replacement
+still requires establishing that no running jobs use the library.
 
-For a fixed affine Gaussian track model, the complete RTS measurement + process
-+ seed quadratic equals the model's forward innovation quadratic and marginal
-quadratic. This is not equality to the FULL normalized likelihood, which also
-contains log det S and measurement normalization. It is not a claim that native
-nonlinear forward diagnostics equal the captured-model scores bit-for-bit.
-The algebra and supported singular-process-noise treatment are documented in
-Reconstruction/RecBreakpoint/docs/smoothed-objective.md. An independent numerical
-test compares all three quadratic constructions. Next: clarify the user's
-desired objective before any further fitting changes. No new reference loop,
-automatic interval finder or physics-performance claim is authorized.
+Implemented: optional FreeLossReferenceIterations (0 preserves
+the deployed one-pass method), FreeLossReferenceTolerance=0.001 and
+FreeLossReferenceObjectiveTolerance=0.0001. Each trial keeps b, the original
+seed prior, measurements and measurement noise fixed. Rebuild native transport,
+measurement Jacobians and process noise around the preceding RTS trajectory,
+then use the existing KF/RTS recursion and native KalTest measurement update.
+Inner nonconvergence invalidates a trial. Ordinary and truth-prior fits stay
+one-pass. The final backward refilter starts from the converged forward endpoint
+with its existing covariance scale; it is not part of the likelihood or inner
+RTS reference update. Mechanical gates passed:24 batch tests, two numerical
+executables, affine reference-origin invariance,10 paired rows including12:11/16/17,
+exact legacy OFF and ordinary/truth regressions, convergence/KF-fallback checks,
+and installed/private equality in all171 fields. The three extreme overshoots
+remain; no performance improvement is established. Keep the new path opt-in.
+Full gate/table: agents_record/2026-09-12-breakpoint-reference-trajectory.md.
+Next: user review of these results before further objective/model changes.
 
-The removal passed 24 batch tests (all 29 properties explicitly assigned), both
-compiled numerical tests and four private-library event rows: 2:68 and
-12:11,16,17, with 12:17 kept as a secondary-topology control. All 160 retained
-tuple fields and 11,172 verbose mean/covariance records agree exactly with the
-preceding iteration-OFF runs. Shared build/install and the same four-row
-installed regression passed with the same exact fields and verbose records.
-Built/installed library hashes agree and the installed schema has no iteration
-controls; sigma 0.001 and backward scale 100 remain unchanged.
-Existing frozen cards with the three removed properties need regeneration;
-existing cards and ROOT outputs have not been rewritten.
+The prior batch has 8097 common topology-clear tracks: 3028 no-eBrem, 2683
+positive cumulative G4 loss below 1%, 2386 at least 1%. Category truth covers
+the full embedded tracker record, not only selected accepted-hit intervals.
+4676 free optimizations succeeded, 3414 no-interval ordinary copies, 7 input-KF
+fallbacks. Truth prior has lower complete smoothed chi2 in 453/4676 optimized
+events. All 62 free RTS overshoots above +100% prefer the free smoothed score.
+Saved nearby-truth loss trials also have worse actual likelihood than the wrong
+large-loss solution in checked examples 14:1, 38:106 and 19:146. The single-pass
+forward and smoothed trajectory can differ enormously near those early losses.
+This motivates, but does not validate, rebuilding the reference model. The
+Minuit acceptance policy also can miss a better saved trial; only five events
+have missed improvement above 0.0001 and one above 1, not the main tail cause.
 
-The six-output, largest-truth-interval, conditional free-Minuit, truth-prior and
-KF-fallback contracts remain operative. Maintained FreeLossFit=true (compiled
-false), SigmaLogLoss=0.001, Forward SeedScale=1, BackwardSeedScale=100,
-MSOn=true and ElossOn=false are unchanged. Free fitting optimizes fixed b with
-sigma_b=0; truth override remains an extra Gaussian-prior-center fit with the
-ordinary sigma, not a fixed-loss oracle. Failed free optimization copies KF;
-no-interval/free-off cases copy ordinary. See Reconstruction/RecBreakpoint/README.md
-and docs/free-loss-fit.md for the authoritative controls/schema.
-
-The outgoing status is preserved in
-agents_record/2026-09-12-agents-before-reference-removal.md. The retired experiment
-and all its result tables remain in
-agents_record/2026-09-12-breakpoint-reference-trajectory.md; its removed mathematical
-contract is archived in agents_record/2026-09-12-retired-reference-trajectory-contract.md.
-Those tests did not resolve the extreme large-loss minima. The prior batch audit
-and all earlier contracts remain in the archived status, not superseded by a new
-performance claim. Current removal evidence:
-agents_record/2026-09-12-breakpoint-reference-removal.md.
+The complete previous six-output, largest-interval, truth-prior, free-Minuit,
+KF-fallback, installed-library and batch contracts remain in the outgoing
+snapshot agents_record/2026-09-12-agents-before-reference-trajectory.md.
+They remain operative except for the explicitly optional new experiment.
+Authoritative options/schema: Reconstruction/RecBreakpoint/README.md and
+docs/free-loss-fit.md. Preserve existing frozen cards and produced tuples.

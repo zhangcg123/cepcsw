@@ -1,6 +1,5 @@
 #include "BreakpointFitter.h"
 #include "RecBreakpoint/AugmentedTransport.h"
-#include "TrackLikelihood.h"
 
 #include <algorithm>
 #include <cmath>
@@ -106,17 +105,9 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
 }
 
 FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
-    const FitSettings& settings, const std::vector<TrackState>* reference) const {
+                                      const FitSettings& settings) const {
   FitResult result;
-  auto seed = m_adapter.seed(hits, settings.seedScale);
-  if (reference) {
-    if (reference->size() != hits.size() || settings.sigmaLogLoss != 0)
-      throw std::runtime_error("Reference fitting requires fixed loss and all hit references");
-    // Discard the native seed's updated result. Start again from its ORIGINAL
-    // predicted prior; no previous iteration posterior is used as a prior.
-    seed = m_adapter.updateAtReference(seed.predicted, hits.front(), reference->front());
-    result.reference = *reference;
-  }
+  const auto seed = m_adapter.seed(hits, settings.seedScale);
   result.predicted.push_back(seed.predicted);
   result.filtered.push_back(seed.filtered);
   result.localChi2.push_back(seed.chi2);
@@ -141,19 +132,7 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
       transition.meanLoss = loss.meanLogLoss;
       transition.varianceLoss = loss.sigmaLogLoss * loss.sigmaLogLoss;
     }
-    MeasurementStep step;
-    if (reference) {
-      auto referenceSource = (*reference)[i];
-      if (transition.breakpoint) {
-        TMatrixD map(5, 5), d(5, 1); Matrix6 joint{}, jacobian{};
-        referenceSource = applyBreakpoint(referenceSource, intervalSettings(settings, i),
-                                          map, d, joint, jacobian);
-      }
-      step = m_adapter.advanceAtReference(propagationSource, referenceSource,
-          hits[i], hits[i+1], (*reference)[i+1]);
-    } else {
-      step = m_adapter.advance(propagationSource, hits[i], hits[i + 1]);
-    }
+    const auto step = m_adapter.advance(propagationSource, hits[i], hits[i + 1]);
     transition.predicted = step.predicted;
     const TMatrixD fullHelixTransport = step.transport * lossMap;
     transition.transport = fullHelixTransport;
@@ -227,22 +206,13 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     smoothed.push_back(result.smoothed[i].mean);
     if (i) noises.push_back(transitions[i-1].noise);
   }
-  scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,
-                reference ? *reference : result.predicted);
+  scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
   if (settings.captureGaussianModel) {
     auto model = std::make_shared<GaussianTrackModel>();
     model->seedCovariance.ResizeTo(result.predicted.front().covariance);
     model->seedCovariance = result.predicted.front().covariance;
     for (std::size_t i = 0; i < hits.size(); ++i) {
-      auto measurement = m_adapter.gaussianHitModel(hits[i],
-          reference ? (*reference)[i] : result.predicted[i]);
-      if (reference) {
-        // GaussianTrackModel uses predicted-state origins, whereas H/h were
-        // evaluated at a. Retain the affine intercept when changing origins.
-        measurement.residual -= measurement.derivative *
-            stateDifference(result.predicted[i].mean, (*reference)[i].mean);
-      }
-      model->hits.push_back(measurement);
+      model->hits.push_back(m_adapter.gaussianHitModel(hits[i], result.predicted[i]));
       if (i) {
         const auto& edge = transitions[i - 1];
         model->transitions.push_back({edge.transport, edge.noise,
@@ -252,55 +222,6 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     result.gaussianModel = std::move(model);
   }
   return result;
-}
-
-PairedFitResult BreakpointFitter::fitWithReference(
-    const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& settings,
-    const ReferenceFitSettings& controls) const {
-  if (!controls.maxIterations) return fit(hits, settings);
-  if (settings.lossStateMode != "LocalMarginal" || settings.intervals.size() != 1 ||
-      settings.sigmaLogLoss != 0 || !settings.intervalMeanLogLoss.empty())
-    throw std::runtime_error("Reference iterations require one fixed-b LocalMarginal interval");
-  if (!std::isfinite(controls.stateTolerance) || controls.stateTolerance <= 0 ||
-      !std::isfinite(controls.objectiveTolerance) || controls.objectiveTolerance <= 0)
-    throw std::runtime_error("Invalid reference convergence tolerances");
-  auto capture = settings;
-  capture.captureGaussianModel = true;
-  // The ordinary entry point validates settings and generates the initial
-  // trajectory. Its backward result is not used to update the reference.
-  auto current = fit(hits, capture).rts;
-  double previousObjective = evaluateTrackLikelihood(*current.gaussianModel).nll2;
-  for (unsigned iteration = 1; iteration <= controls.maxIterations; ++iteration) {
-    auto next = fitLocalRTS(hits, capture, &current.smoothed);
-    const double objective = evaluateTrackLikelihood(*next.gaussianModel).nll2;
-    double change = 0;
-    for (std::size_t i = 0; i < hits.size(); ++i) {
-      const auto delta = stateDifference(next.smoothed[i].mean, current.smoothed[i].mean);
-      const auto& covariance = next.smoothed[i].covariance;
-      for (int row = 0; row < 5; ++row) {
-        change = std::max(change, std::abs(delta(row, 0)) / std::sqrt(covariance(row, row)));
-        for (int col = 0; col < 5; ++col)
-          change = std::max(change,
-              std::abs(covariance(row, col)-current.smoothed[i].covariance(row, col)) /
-              std::sqrt(covariance(row, row)*covariance(col, col)));
-      }
-    }
-    next.referenceIterations = iteration;
-    next.referenceStateChange = change;
-    next.referenceObjectiveChange = std::abs(objective-previousObjective);
-    if (change <= controls.stateTolerance &&
-        next.referenceObjectiveChange <= controls.objectiveTolerance) {
-      auto backward = finishBackward(hits, settings, next);
-      if (!settings.captureGaussianModel) next.gaussianModel.reset();
-      return {std::move(next), std::move(backward)};
-    }
-    previousObjective = objective;
-    current = std::move(next);
-  }
-  throw std::runtime_error("Fixed-b reference trajectory did not converge after " +
-      std::to_string(controls.maxIterations) + " passes; state change=" +
-      std::to_string(current.referenceStateChange) + ", objective change=" +
-      std::to_string(current.referenceObjectiveChange));
 }
 
 FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit>& hits,

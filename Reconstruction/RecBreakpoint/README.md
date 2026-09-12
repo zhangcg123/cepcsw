@@ -256,10 +256,8 @@ Truth selection needs it to determine whether the effective list is empty.
 
 ## One-pass fits and seeds
 
-The ordinary and truth-prior pairs run one forward filter, one RTS smoother
-and one backward refilter per pair. They have no repeated relinearization loop.
-The optional free-loss pair can instead enable fixed-b reference-trajectory
-iterations; see [its mathematical contract](docs/reference-trajectory.md).
+Both loss-state modes run one forward filter, one RTS smoother and one
+backward refilter per pair. There is no repeated relinearization loop.
 LocalMarginal supports multiple intervals; Persistent6D supports at most one.
 Empty intervals use the ordinary 5D reference. No new fitted-loss positivity
 constraint is imposed.
@@ -370,9 +368,6 @@ for the model, code organization, output contract and limitations.
 | FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
 | FreeLossTolerance | 0.001 | Positive finite MIGRAD tolerance |
-| FreeLossReferenceIterations | 0 | Nonnegative maximum inner reference passes per fixed-b trial; 0 preserves the previous one-pass free fit |
-| FreeLossReferenceTolerance | 0.001 | Positive finite maximum state shift in posterior-sigma units and covariance shift normalized by posterior standard deviations |
-| FreeLossReferenceObjectiveTolerance | 0.0001 | Positive finite maximum absolute change in full -2logL between inner passes |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
 | BackwardSeedScale | 100 | Positive finite scale of the full copied first-forward endpoint covariance; mean and RTS unchanged |
 | SeedHitSelection | FirstMiddleLast | FirstMiddleLast or FirstThree |

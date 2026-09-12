@@ -61,10 +61,6 @@ void FitPairTuple::book(TTree& tree, const std::string& prefix) {
   m_smoothed.book(tree, prefix + "smoothed_");
   m_backwardPredicted.book(tree, prefix + "backward_predicted_");
   m_backwardFiltered.book(tree, prefix + "backward_filtered_");
-  m_reference.book(tree, prefix + "reference_");
-  tree.Branch((prefix + "reference_passes").c_str(), &m_referencePasses);
-  tree.Branch((prefix + "reference_state_change").c_str(), &m_referenceStateChange);
-  tree.Branch((prefix + "reference_objective_change").c_str(), &m_referenceObjectiveChange);
 }
 
 void FitPairTuple::reset() {
@@ -114,9 +110,5 @@ void FitPairTuple::assign(const PairedFitResult& pair, double bz, int status,
   m_smoothed.assign(pair.rts.smoothed);
   m_backwardPredicted.assign(pair.backward.backwardPredicted);
   m_backwardFiltered.assign(pair.backward.backwardFiltered);
-  m_reference.assign(pair.rts.reference);
-  m_referencePasses = pair.rts.referenceIterations;
-  m_referenceStateChange = pair.rts.referenceStateChange;
-  m_referenceObjectiveChange = pair.rts.referenceObjectiveChange;
 }
 } // namespace breakpoint

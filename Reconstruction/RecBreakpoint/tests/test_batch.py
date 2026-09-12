@@ -109,15 +109,9 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
         self.assertEqual(fit.FreeLossTolerance, .001)
-        self.assertEqual(fit.FreeLossReferenceIterations, 0)
-        self.assertEqual(fit.FreeLossReferenceTolerance, .001)
-        self.assertEqual(fit.FreeLossReferenceObjectiveTolerance, .0001)
         self.prepare(OUTPUT_TUPLEPATH='free_enabled', BP_FREE_LOSS_FIT='true',
                      BP_FREE_LOSS_MAX_LOG_LOSS='.5',
-                     BP_FREE_LOSS_MAX_CALLS='100', BP_FREE_LOSS_TOLERANCE='.002',
-                     BP_FREE_LOSS_REFERENCE_ITERATIONS='20',
-                     BP_FREE_LOSS_REFERENCE_TOLERANCE='.002',
-                     BP_FREE_LOSS_REFERENCE_OBJECTIVE_TOLERANCE='.0002')
+                     BP_FREE_LOSS_MAX_CALLS='100', BP_FREE_LOSS_TOLERANCE='.002')
         job = self.manifest('free_enabled')
         self.assertEqual(job['controls']['BP_FREE_LOSS_FIT'], '1')
         with patch.dict(os.environ, job['controls'], clear=True):
@@ -126,9 +120,6 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(fit.FreeLossMaxLogLoss, .5)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 100)
         self.assertEqual(fit.FreeLossTolerance, .002)
-        self.assertEqual(fit.FreeLossReferenceIterations, 20)
-        self.assertEqual(fit.FreeLossReferenceTolerance, .002)
-        self.assertEqual(fit.FreeLossReferenceObjectiveTolerance, .0002)
         self.prepare(OUTPUT_TUPLEPATH='free_disabled', BP_FREE_LOSS_FIT='false')
         disabled = self.manifest('free_disabled')
         self.assertEqual(disabled['controls']['BP_FREE_LOSS_FIT'], '0')

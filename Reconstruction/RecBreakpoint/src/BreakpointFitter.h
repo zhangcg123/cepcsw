@@ -30,12 +30,6 @@ struct IntervalResult {
   double covarianceClosure = 0;
 };
 
-struct ReferenceFitSettings {
-  unsigned maxIterations = 0; // zero preserves the existing one-pass fit
-  double stateTolerance = 1.e-3; // max state shift / posterior sigma, and relative covariance shift
-  double objectiveTolerance = 1.e-4; // absolute change of -2 log L
-};
-
 struct FitResult {
   edm4hep::TrackState ip{};
   std::vector<TrackState> predicted, filtered, smoothed;
@@ -56,9 +50,6 @@ struct FitResult {
   double chi2 = 0;
   int measurementDimensions = 0;
   std::shared_ptr<const GaussianTrackModel> gaussianModel;
-  std::vector<TrackState> reference; // final reference used to build F/H/Q, not an extra prior
-  unsigned referenceIterations = 0;
-  double referenceStateChange = 0, referenceObjectiveChange = 0;
 };
 
 struct PairedFitResult {
@@ -73,14 +64,9 @@ public:
   explicit BreakpointFitter(const KalmanAdapter& adapter) : m_adapter(adapter) {}
   PairedFitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
                 const FitSettings& settings) const;
-  /// Fixed-b reference iterations only. The original seed remains unchanged;
-  /// ordinary/truth-prior fitting never enters this method.
-  PairedFitResult fitWithReference(const std::vector<edm4hep::TrackerHit>& hits,
-      const FitSettings& settings, const ReferenceFitSettings& controls) const;
 private:
   FitResult fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
-                       const FitSettings& settings,
-                       const std::vector<TrackState>* reference = nullptr) const;
+                       const FitSettings& settings) const;
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
                           const FitSettings& settings) const;
   void scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits, FitResult& result,
