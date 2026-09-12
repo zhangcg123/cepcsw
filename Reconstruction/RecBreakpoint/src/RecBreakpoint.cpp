@@ -110,6 +110,12 @@ StatusCode RecBreakpoint::initialize() {
     error() << "FreeLossMaxLogLoss must be in (0,5]; FreeLossMaxCallsPerStart and FreeLossTolerance must be positive" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_referenceIterations < 0 || !std::isfinite(m_referenceTolerance.value()) ||
+      m_referenceTolerance <= 0 || !std::isfinite(m_referenceObjectiveTolerance.value()) ||
+      m_referenceObjectiveTolerance <= 0) {
+    error() << "FreeLossReferenceIterations must be nonnegative; reference tolerances finite/positive" << endmsg;
+    return StatusCode::FAILURE;
+  }
   const auto geometry = service<IGeomSvc>("GeomSvc");
   const auto gear = service<IGearSvc>("GearSvc");
   if (!geometry || !gear || !gear->getGearMgr()) return StatusCode::FAILURE;
@@ -290,7 +296,9 @@ StatusCode RecBreakpoint::execute() {
   settings.backwardSeedScale = m_backwardSeedScale;
   settings.lossStateMode = m_lossStateModeName;
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
-      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value()};
+      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),
+      {static_cast<unsigned>(m_referenceIterations.value()), m_referenceTolerance.value(),
+       m_referenceObjectiveTolerance.value()}};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
       (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event

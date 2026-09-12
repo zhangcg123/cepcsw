@@ -68,6 +68,9 @@ private:
   Gaudi::Property<double> m_freeLossMax{this, "FreeLossMaxLogLoss", 1.0};
   Gaudi::Property<int> m_freeLossMaxCalls{this, "FreeLossMaxCallsPerStart", 180};
   Gaudi::Property<double> m_freeLossTolerance{this, "FreeLossTolerance", .001};
+  Gaudi::Property<int> m_referenceIterations{this, "FreeLossReferenceIterations", 0};
+  Gaudi::Property<double> m_referenceTolerance{this, "FreeLossReferenceTolerance", .001};
+  Gaudi::Property<double> m_referenceObjectiveTolerance{this, "FreeLossReferenceObjectiveTolerance", .0001};
   Gaudi::Property<bool> m_enableTruthOverride{this, "TruthOverride", true};
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
   Gaudi::Property<bool> m_ms{this, "MSOn", true};

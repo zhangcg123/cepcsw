@@ -40,6 +40,9 @@ private:
   std::vector<double> m_forwardLocal, m_backwardLocal, m_smoothedLocal;
   States m_forwardPredicted, m_forwardFiltered, m_smoothed;
   States m_backwardPredicted, m_backwardFiltered;
+  States m_reference;
+  int m_referencePasses = 0;
+  double m_referenceStateChange = 0, m_referenceObjectiveChange = 0;
 };
 } // namespace breakpoint
 #endif

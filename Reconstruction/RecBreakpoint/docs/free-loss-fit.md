@@ -7,6 +7,11 @@ to true. `BP_FREE_LOSS_FIT=0` explicitly disables it; previously prepared cards
 retain their frozen settings. Ordinary results are ALWAYS retained; the optional method
 occupies a separate pair of collections and flat branches.
 
+`FreeLossReferenceIterations>0` enables the optional fixed-b reference-trajectory
+experiment described in [reference-trajectory.md](reference-trajectory.md).
+The one-pass likelihood construction below remains the default when it is zero.
+The ordinary/truth-prior workflow and original Minuit controls are unchanged.
+
 This mode currently supports ONE selected LocalMarginal interval. It does
 not discover intervals and does not change Truth/Manual selection. An empty
 interval list remains the 5D reference. Truth selection now chooses only the

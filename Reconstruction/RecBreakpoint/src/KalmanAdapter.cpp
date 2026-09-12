@@ -31,6 +31,32 @@ private:
   double m_maximum;
 };
 
+/// The reference changes the measurement model, not the native Kalman update.
+/// h(x) = h(a) + H(a) * (x-a), with the same hit V and wrapped azimuth.
+class ReferenceMeasurementSite : public TKalTrackSite {
+public:
+  ReferenceMeasurementSite(const TVTrackHit& hit, const TrackState& reference)
+      : TKalTrackSite(hit, 5), m_reference(reference.mean),
+        m_expected(GetDimension(), 1), m_derivative(GetDimension(), 5) {
+    SetPivot(TVector3(reference.pivot.x, reference.pivot.y, reference.pivot.z));
+    TKalTrackState state(TKalMatrix(reference.mean), *this, TVKalSite::kPredicted, 5);
+    if (!TKalTrackSite::CalcExpectedMeasVec(state, m_expected) ||
+        !TKalTrackSite::CalcMeasVecDerivative(state, m_derivative))
+      throw std::runtime_error("Cannot construct reference measurement model");
+  }
+  Int_t CalcExpectedMeasVec(const TVKalState& state, TKalMatrix& expected) override {
+    expected = m_expected + m_derivative * stateDifference(state, m_reference);
+    return 1;
+  }
+  Int_t CalcMeasVecDerivative(const TVKalState&, TKalMatrix& derivative) override {
+    derivative = m_derivative;
+    return 1;
+  }
+private:
+  TMatrixD m_reference;
+  TKalMatrix m_expected, m_derivative;
+};
+
 /// Native KalTest Filter() operates on all SIX coordinates/covariances.
 /// Only the measurement projection is specialized: b is NOT native t0.
 class LossMeasurementSite : public TKalTrackSite {
@@ -254,6 +280,47 @@ edm4hep::TrackState KalmanAdapter::referenceKF(
 MeasurementStep KalmanAdapter::advance(const TrackState& source,
     edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit) const {
   return nativeStep(*m_system, m_bz, m_maxChi2, source, sourceHit, targetHit);
+}
+
+MeasurementStep KalmanAdapter::updateAtReference(const TrackState& prediction,
+    edm4hep::TrackerHit hit, const TrackState& reference) const {
+  const auto* layer = m_system->layer(hit);
+  if (!layer) throw std::runtime_error("No reference measurement layer");
+  std::unique_ptr<ILDVTrackHit> nativeHit(layer->ConvertLCIOTrkHit(hit));
+  if (!nativeHit) throw std::runtime_error("Cannot convert reference hit");
+  if (std::abs(prediction.pivot.x-reference.pivot.x) > 1.e-8 ||
+      std::abs(prediction.pivot.y-reference.pivot.y) > 1.e-8 ||
+      std::abs(prediction.pivot.z-reference.pivot.z) > 1.e-8)
+    throw std::runtime_error("Reference measurement pivot mismatch");
+  ReferenceMeasurementSite site(*nativeHit, reference);
+  site.SetHitOwner(); nativeHit.release(); site.SetOwner();
+  HitAcceptance acceptance(m_maxChi2);
+  site.SetFilterCond(&acceptance);
+  site.Add(new TKalTrackState(TKalMatrix(prediction.mean),
+      TKalMatrix(prediction.covariance), site, TVKalSite::kPredicted, 5));
+  if (!site.Filter()) throw std::runtime_error("Native reference hit update failed");
+  MeasurementStep result;
+  result.predicted = prediction;
+  result.filtered = readNative(site, TVKalSite::kFiltered);
+  result.chi2 = site.GetDeltaChi2(); result.dimension = site.GetDimension();
+  return result;
+}
+
+MeasurementStep KalmanAdapter::advanceAtReference(const TrackState& source,
+    const TrackState& referenceSource, edm4hep::TrackerHit sourceHit,
+    edm4hep::TrackerHit targetHit, const TrackState& referenceTarget) const {
+  // Only the reference is propagated nonlinearly. F and Q belong to that
+  // propagation; the estimated state/covariance follow its affine model.
+  const auto nominal = nativeStep(*m_system, m_bz, m_maxChi2, referenceSource,
+      sourceHit, targetHit, false, 0, 0, true);
+  auto predicted = nominal.predicted;
+  predicted.mean += nominal.transport * stateDifference(source.mean, referenceSource.mean);
+  predicted.covariance = nominal.transport * source.covariance * transpose(nominal.transport)
+      + nominal.noise;
+  validateCovariance(predicted.covariance);
+  auto result = updateAtReference(predicted, targetHit, referenceTarget);
+  result.transport = nominal.transport; result.noise = nominal.noise;
+  return result;
 }
 
 GaussianHitModel KalmanAdapter::gaussianHitModel(edm4hep::TrackerHit hit,

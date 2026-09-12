@@ -7,6 +7,9 @@ void FreeLossTuple::book(TTree& tree) {
   tree.Branch("free_loss_max_log_loss", &m_maxLogLoss);
   tree.Branch("free_loss_max_calls_per_start", &m_maxCalls);
   tree.Branch("free_loss_tolerance", &m_tolerance);
+  tree.Branch("free_loss_reference_iterations", &m_referenceIterations);
+  tree.Branch("free_loss_reference_tolerance", &m_referenceTolerance);
+  tree.Branch("free_loss_reference_objective_tolerance", &m_referenceObjectiveTolerance);
   tree.Branch("free_loss_applied", &m_applied);
   tree.Branch("free_loss_status", &m_status);
   tree.Branch("free_loss_interval", &m_interval);
@@ -26,12 +29,18 @@ void FreeLossTuple::book(TTree& tree) {
   tree.Branch("free_loss_trial_valid", &m_trialValid);
   tree.Branch("free_loss_trial_phase", &m_trialPhase);
   tree.Branch("free_loss_trial_error", &m_trialError);
+  tree.Branch("free_loss_trial_reference_iterations", &m_trialReferenceIterations);
+  tree.Branch("free_loss_trial_reference_state_change", &m_trialReferenceStateChange);
+  tree.Branch("free_loss_trial_reference_objective_change", &m_trialReferenceObjectiveChange);
 }
 
 void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls) {
   m_enabled = enabled;
   m_maxLogLoss = controls.maxLogLoss;
   m_maxCalls = controls.maxCallsPerStart;
+  m_referenceIterations = controls.reference.maxIterations;
+  m_referenceTolerance = controls.reference.stateTolerance;
+  m_referenceObjectiveTolerance = controls.reference.objectiveTolerance;
   m_tolerance = controls.tolerance;
   m_applied = m_lower = m_upper = m_covarianceConditional = false;
   m_status = 0; m_interval = -1; m_minuitStatus = -99;
@@ -40,6 +49,8 @@ void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls) {
   m_error.clear();
   m_trialB.clear(); m_trialNll2.clear();
   m_trialValid.clear(); m_trialPhase.clear(); m_trialError.clear();
+  m_trialReferenceIterations.clear(); m_trialReferenceStateChange.clear();
+  m_trialReferenceObjectiveChange.clear();
 }
 
 void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
@@ -60,6 +71,9 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
     m_trialB.push_back(trial.b); m_trialNll2.push_back(trial.likelihood.nll2);
     m_trialValid.push_back(trial.valid); m_trialPhase.push_back(int(trial.phase));
     m_trialError.push_back(trial.error);
+    m_trialReferenceIterations.push_back(trial.referenceIterations);
+    m_trialReferenceStateChange.push_back(trial.referenceStateChange);
+    m_trialReferenceObjectiveChange.push_back(trial.referenceObjectiveChange);
   }
 }
 } // namespace breakpoint

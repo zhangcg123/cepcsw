@@ -49,4 +49,38 @@ int main() {
     breakpoint::evaluateTrackLikelihood({});
     throw std::logic_error("Empty Gaussian model was accepted");
   } catch (const std::runtime_error&) {}
+
+  // Reference-origin invariance: nontrivial F, singular Q, and nonzero affine
+  // offsets. Moving the expansion coordinates must not change the likelihood.
+  breakpoint::GaussianTrackModel original;
+  original.seedCovariance.ResizeTo(5,5); original.seedCovariance.UnitMatrix();
+  for (int i=0;i<4;++i) {
+    TMatrixD h(2,5), v(2,2), residual(2,1);
+    h.Zero(); v.UnitMatrix(); h(0,0)=1;h(0,2)=.3;h(1,3)=1;h(1,4)=.2;
+    residual(0,0)=.2*i;residual(1,0)=.4-.1*i;
+    original.hits.push_back({h,v,residual});
+    if (i) {
+      TMatrixD f(5,5),q(5,5),shift(5,1);
+      f.UnitMatrix();f(0,2)=.12;f(2,2)=1.3;f(3,4)=.2;
+      q.Zero();q(1,1)=.01;q(4,4)=.02;shift.Zero();shift(2,0)=.13*i;
+      original.transitions.push_back({f,q,shift});
+    }
+  }
+  auto moved=original;
+  TMatrixD previousShift(5,1);previousShift.Zero();
+  for(int i=0;i<4;++i) {
+    TMatrixD shift(5,1);shift.Zero();
+    if(i) {shift(0,0)=.03*i;shift(2,0)=-.07*i;shift(4,0)=.02*i;}
+    moved.hits[i].residual-=moved.hits[i].derivative*shift;
+    if(i) {
+      TMatrixD inverse(moved.transitions[i-1].transport);inverse.Invert();
+      moved.transitions[i-1].sourceShift+=previousShift-inverse*shift;
+    }
+    previousShift=shift;
+  }
+  const auto a=breakpoint::evaluateTrackLikelihood(original);
+  const auto b=breakpoint::evaluateTrackLikelihood(moved);
+  if(std::abs(a.nll2-b.nll2)>1.e-10)
+    throw std::runtime_error("Affine reference-origin invariance failed");
+  std::cout << "Nonidentity transport/affine reference-origin invariance passed\n";
 }

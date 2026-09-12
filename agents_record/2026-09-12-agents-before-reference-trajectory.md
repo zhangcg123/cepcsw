@@ -292,47 +292,97 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is RecBreakpoint on local breakpoint. The user authorized fixed-b
-reference-trajectory iterations on 2026-09-12 after the batch objective audit.
-Only RecBreakpoint and its dedicated card/helpers/docs are in scope. Existing
-GSF/shared KF sources and user-owned GSF workflow edits stay untouched. No
-remote operations are authorized. Private gates passed; after the user confirmed
-no batch jobs, the package was built and installed. Future shared replacement
-still requires establishing that no running jobs use the library.
+Active work is the independent RecBreakpoint package on local breakpoint.
+Shared KF/GSF sources and their maintained cards remain out of scope. Batch
+workers load shared libraries: do not rebuild/install while jobs use them.
+No remote changes are part of the current request.
 
-Implemented: optional FreeLossReferenceIterations (0 preserves
-the deployed one-pass method), FreeLossReferenceTolerance=0.001 and
-FreeLossReferenceObjectiveTolerance=0.0001. Each trial keeps b, the original
-seed prior, measurements and measurement noise fixed. Rebuild native transport,
-measurement Jacobians and process noise around the preceding RTS trajectory,
-then use the existing KF/RTS recursion and native KalTest measurement update.
-Inner nonconvergence invalidates a trial. Ordinary and truth-prior fits stay
-one-pass. The final backward refilter starts from the converged forward endpoint
-with its existing covariance scale; it is not part of the likelihood or inner
-RTS reference update. Mechanical gates passed:24 batch tests, two numerical
-executables, affine reference-origin invariance,10 paired rows including12:11/16/17,
-exact legacy OFF and ordinary/truth regressions, convergence/KF-fallback checks,
-and installed/private equality in all171 fields. The three extreme overshoots
-remain; no performance improvement is established. Keep the new path opt-in.
-Full gate/table: agents_record/2026-09-12-breakpoint-reference-trajectory.md.
-Next: user review of these results before further objective/model changes.
+The maintained standalone/batch card defaults FreeLossFit=true. The compiled
+compatibility default remains false. SigmaLogLoss=0.001 now agrees across the
+C++ property, FitSettings, maintained card and submission script; explicit
+campaign overrides remain available. Every algorithm-specific configurable
+property and track collection is assigned explicitly in run_breakpoint.py.
+The dedicated sub/dump/batch helper remain separate from the GSF workflow.
+Already prepared cards are frozen and are not rewritten by these changes.
 
-The prior batch has 8097 common topology-clear tracks: 3028 no-eBrem, 2683
-positive cumulative G4 loss below 1%, 2386 at least 1%. Category truth covers
-the full embedded tracker record, not only selected accepted-hit intervals.
-4676 free optimizations succeeded, 3414 no-interval ordinary copies, 7 input-KF
-fallbacks. Truth prior has lower complete smoothed chi2 in 453/4676 optimized
-events. All 62 free RTS overshoots above +100% prefer the free smoothed score.
-Saved nearby-truth loss trials also have worse actual likelihood than the wrong
-large-loss solution in checked examples 14:1, 38:106 and 19:146. The single-pass
-forward and smoothed trajectory can differ enormously near those early losses.
-This motivates, but does not validate, rebuilding the reference model. The
-Minuit acceptance policy also can miss a better saved trial; only five events
-have missed improvement above 0.0001 and one above 1, not the main tail cause.
+Truth interval selection now chooses ONLY the accepted-hit interval with the
+largest summed absolute G4 eBrem momentum loss. Ties select the innermost
+interval. Several emissions in one interval are summed; other intervals are
+not fitted. All ordinary/free/truth pairs share this selected interval.
+No positive loss means an empty 5D reference; invalid truth still fails the
+affected track rather than masquerading as no loss. The optimizer receives
+only the selected index, not a truth loss amount. Manual lists remain explicit;
+Auto is reserved. Loss ownership and association-driven exact hooks are unchanged.
 
-The complete previous six-output, largest-interval, truth-prior, free-Minuit,
-KF-fallback, installed-library and batch contracts remain in the outgoing
-snapshot agents_record/2026-09-12-agents-before-reference-trajectory.md.
-They remain operative except for the explicitly optional new experiment.
-Authoritative options/schema: Reconstruction/RecBreakpoint/README.md and
-docs/free-loss-fit.md. Preserve existing frozen cards and produced tuples.
+Six output collections remain: ordinary RTS/backward, FreeLoss RTS/backward,
+and truth-prior RTS/backward. Ordinary results are never replaced. Free fitting
+uses the same BreakpointFitter at fixed b and sigma_b=0, with Minuit optimizing
+the normalized full-track Gaussian likelihood. Only one LocalMarginal interval
+is supported by this scalar optimizer. No repeated relinearization is restored.
+A valid converged MIGRAD minimum is now required; a finite scan point or a
+non-converged candidate alone no longer counts as successful optimization.
+
+FreeLoss off or no selected interval copies ordinary results (result status1).
+Successful optimization produces the conditional free pair (status2).
+Failed/unsupported optimization copies the original CompleteTracks KF track
+into BOTH FreeLoss collections (status3), including its states/covariances,
+chi2/NDF and relations. Flat IP values describe the same KF copy.
+free_loss_kf_chi2 explicitly records that score; unavailable free per-hit
+states/losses/chi2 lists are empty and refit totals NaN, never borrowed from an
+ordinary fit. Optimizer outcome remains separate in free_loss_status/error.
+If the input KF has no valid IP, no free fallback is fabricated (status0).
+Ordinary fit failure still leaves extra pairs unattempted.
+
+TruthOverride remains default-on: truth b is the extra pair's PRIOR CENTER,
+with the same positive SigmaLogLoss as ordinary, not a fixed-loss oracle.
+Truth off copies ordinary, never free results. LocalMarginal can still fit
+explicit Manual multiple intervals; Persistent6D at most one. FreeLoss in
+unsupported configurations uses the tagged input-KF fallback.
+
+Forward SeedScale1, FirstMiddleLast and BackwardSeedScale100 remain defaults.
+Backward copies/scales the forward endpoint and is not an independent Bayesian
+smoother. RTS uses its forward buffered transitions. Both use the common native
+MarlinTrk IP propagation, not a beam constraint. Existing MSOn=true and
+ElossOn=false steering remains. Optimized covariance is conditional on b;
+Minuit uncertainty is recorded but not injected into the track covariance.
+
+The three per-hit/total quadratic scores retain their existing meanings.
+The free objective includes the full residual quadratic, log determinant and
+normalization. Runtime reverse-order/joint likelihood cross-checks and their
+controller have been removed at the user's request. The ordinary objective
+and Minuit convergence/KF fallback remain unchanged. Never add the three chi2s or infer physics validation
+from convergence or lower objective alone.
+
+The outgoing status and all previous gates are preserved losslessly in
+agents_record/2026-09-10-agents-before-largest-loss-kf-fallback.md.
+The current implementation/gate record is
+agents_record/2026-09-10-breakpoint-largest-loss-kf-fallback.md.
+Authoritative option/schema reference: Reconstruction/RecBreakpoint/README.md
+and docs/free-loss-fit.md. The preceding largest-loss gates passed: eight local jobs/11 rows,
+24 batch tests including all30 algorithm property assignments, two compiled
+numerical tests, 901 unchanged ordinary/truth scalar/vector comparisons,
+13,685 exact ordinary/truth verbose state records and six exact EDM copies.
+The two multiple-truth cases select the independently checked largest interval;
+forced Minuit failure selects KF fallback. Event12:17 is a secondary control.
+The removal also deletes five audit-only flat fields and the dedicated batch
+environment control. The standard card now explicitly sets all29 remaining
+algorithm properties. Independent dense-reference numerical unit tests remain;
+they are not part of event processing. Historical audit descriptions are kept
+in agents_record/2026-09-10-agents-before-likelihood-check-removal.md and
+agents_record/2026-09-10-breakpoint-likelihood-check-removal.md.
+Source/card removal is complete. Private-library regression passed eight jobs/
+11 rows: all160 retained tuple fields and27,876 verbose state/covariance lines
+match the preceding code exactly; only five audit fields disappeared. All24
+batch tests and the independent likelihood unit test pass. The user subsequently
+confirmed no batch jobs. The shared package is now rebuilt and installed with
+the removal: three installed-library jobs/five rows match the private build in
+all160 tuple fields and12,796 verbose state/covariance records. Both compiled
+numerical tests pass; built/installed library hashes agree. Installed configurable
+audit confirms the property is absent and sigma0.001/backward scale100 remain.
+Exact deployment evidence and the prior pending-install snapshot are in
+agents_record/2026-09-10-breakpoint-likelihood-check-deployment.md and
+agents_record/2026-09-10-agents-before-likelihood-check-deployment.md.
+Existing prepared cards assigning the removed property must be regenerated;
+no prior cards/tuples were rewritten. Next: evaluate
+categorized population performance with the explicit new selection/fallback
+semantics. No automatic interval finder or broad physics claim is authorized.

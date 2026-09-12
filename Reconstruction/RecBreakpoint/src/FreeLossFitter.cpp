@@ -46,8 +46,11 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       trial.likelihood.nll2 = 1.e20;
       try {
         settings.meanLogLoss = b;
-        const auto pair = m_fitter.fit(hits, settings);
+        const auto pair = m_fitter.fitWithReference(hits, settings, controls.reference);
         const auto& forward = pair.rts;
+        trial.referenceIterations = forward.referenceIterations;
+        trial.referenceStateChange = forward.referenceStateChange;
+        trial.referenceObjectiveChange = forward.referenceObjectiveChange;
         if (forward.smoothedChi2Status != 1 || forward.breakpoints.size() != 1 ||
             forward.breakpoints.front().fittedLogLoss != b ||
             forward.breakpoints.front().fittedVariance != 0 || !forward.gaussianModel)
@@ -121,7 +124,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     // optimizer curvature are NOT injected into its track covariance.
     settings.meanLogLoss = best.b;
     settings.captureGaussianModel = false;
-    result.fitted.emplace(m_fitter.fit(hits, settings));
+    result.fitted.emplace(m_fitter.fitWithReference(hits, settings, controls.reference));
     for (const auto* endpoint : {&result.fitted->rts.ip, &result.fitted->backward.ip})
       if (!std::isfinite(endpoint->omega) || endpoint->omega == 0)
         throw std::runtime_error("Invalid free-loss endpoint curvature");
