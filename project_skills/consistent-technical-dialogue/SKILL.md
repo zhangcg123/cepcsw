@@ -1,84 +1,60 @@
 ---
 name: consistent-technical-dialogue
-description: Maintain stable terminology, symbols, assumptions and code-backed claims during multi-turn technical discussions, especially tracking states, chi2 definitions, likelihood objectives and algorithm comparisons. Use for derivations, apparent contradictions, or recovering a question lost through repeated explanations. Not needed for routine execution or cosmetic plot changes without conceptual discussion.
+description: Explain complex ideas consistently across multi-turn discussions. Use for conceptual comparisons, detailed reasoning, apparent contradictions, or confusion caused by shifting terms and assumptions. Keep explanations aligned with the user's question without prescribing a domain-specific conclusion.
 ---
 
 # Consistent technical dialogue
 
-Help the user follow one line of reasoning without silently changing the words,
-mathematical objects or assumptions. Continuity matters more than stylistic
-variation. This skill governs explanations; it does not authorize code changes.
+Make the reasoning easy to follow without changing the meaning as the discussion
+progresses. Apply these principles to the topic at hand, not as a rigid answer
+template. Explaining a proposal does not authorize implementing it.
 
-## One name per concept
+## Preserve the question
 
-- Recover the original goal and exact current question. Answer that question
-  before proposing a different experiment.
-- Reuse the user's established terms when their meaning is clear. Keep a small
-  terminology ledger: canonical name, definition, symbol if used, and scope
-  (before/after update, one hit/all hits). Show only entries needed now; do not
-  restart a glossary every turn.
-- Do not substitute synonyms for variety. Map a source-code alias once to the
-  canonical name, then keep that name. If an earlier label conflated concepts,
-  explicitly separate them once; consistency must not preserve an error.
-- Keep a state, its residual vector, the covariance-weighted scalar calculated
-  from that residual, and the full optimization objective distinct.
-- Keep symbols, subscripts and units stable. Do not reuse a symbol for local
-  and full-track covariances without distinction. Define every new symbol
-  immediately. Use terminal-readable formulas for this user.
+Identify the user's goal and the precise point under discussion. Answer that
+point first. Do not replace it with a nearby question that is easier to explain.
+When detail obscures the goal, briefly restore what is requested, what is known,
+and what remains unresolved.
 
-For CEPCSW tracking/objective discussions, read
-[references/tracking-terms.md](references/tracking-terms.md) before explaining
-those concepts. It is a vocabulary contract, not proof of an algorithm property.
+## Keep language and meaning stable
 
-## Compare expressions in the same arrangement
+Use one established name for each concept. Do not introduce synonyms merely for
+variety. When an alias is necessary, explain the mapping once and then use the
+established name. Keep definitions, symbols, units and scope consistent; define
+new terms before relying on them. Distinct concepts need distinct names even
+when they are closely related.
 
-- Before explaining an equality or difference, display both complete quantities
-  with the same notation, term order and level of expansion. Do not compare one
-  per-hit contribution with a whole-track sum, or give an explicit formula for
-  one side and only verbal labels for the other.
-- Show covariance weighting and included terms on both sides. If one expression
-  hides terms in a combined covariance, expand it or derive a common form;
-  saying "already included" is not a substitute for showing the connection.
-- Display operations such as minimization, integration and evaluation explicitly.
-  Name the variables optimized or integrated out, the variables held fixed, and
-  the states at which an expression is evaluated. Never silently substitute
-  "evaluate at these states" for "minimize over possible states".
-- A common form must preserve meaning: show any required transformation and its
-  assumptions. If that cannot be established, state the unresolved difference
-  instead of forcing matching formulas or claiming equality.
-- Keep the comparison in one self-contained answer so the user need not assemble
-  definitions and omitted terms from several preceding replies. Explain the
-  connection after displaying the common arrangement, not after repeated objections.
+## Make comparisons directly comparable
 
-## Stable claims and assumptions
+Present alternatives at the same level of detail, with corresponding parts in
+the same order and notation where useful. Do not expand one side while hiding
+the other in shorthand. Make relevant inputs, conditions and operations visible.
+If a shared representation requires a transformation, show the connection and
+its assumptions. Do not force matching forms when the meanings differ.
 
-- Before claiming equality, identify both exact quantities, included terms,
-  whether parameters are fixed or optimized, and required model assumptions.
-  Retain those qualifiers later; do not broaden "one term agrees" to "same result".
-- Separate mathematical statements, observed numerical agreement, current
-  implementation behavior and untested expectations. A small numerical check
-  proves neither an unrestricted theorem nor a physics improvement.
-- Inspect relevant current code for implementation claims. Trace where each
-  state, residual and covariance is constructed and used. A function name or
-  old explanation is not enough. Cite the relevant file when useful.
-- Correct a claim by stating the previous claim, corrected claim, and specific
-  reason/evidence. Do not disguise a correction as a vocabulary change or only
-  say that the preceding answer was unclear.
-- A simplified example must not silently change the disputed issue. State its
-  assumptions and limits first. One measurement cannot by itself establish a
-  multi-layer forward-versus-smoothed claim.
+## Make the reasoning explicit
 
-## Recover without restarting
+Say exactly what is being compared and in what sense it agrees or differs.
+Expose the step that connects the premise to the conclusion rather than saying
+it is obvious or already included. Separate a description of a procedure from
+claims about its outcome. Keep conclusions within the assumptions and evidence
+that support them; similar outcomes do not establish identical mechanisms.
 
-- When wording is challenged, resolve it using the existing names rather than
-  another equivalent term or an unnecessary new derivation.
-- If the same objection recurs, stop repeating the explanation. Identify the
-  precise mismatch, check the source or a minimal calculation, and state what
-  is established and unresolved. Do not blame the user's understanding or
-  assert agreement without evidence.
-- If the user loses the goal, summarize the original goal, requested change,
-  actual implementation status, and one unresolved question. Do not restart
-  the entire history or infer new implementation authority.
-- Before sending, check for renamed concepts, undefined symbols, changed
-  assumptions, conflated states/scores and claims stronger than the evidence.
-  Fix these directly instead of appending more qualifications.
+## Ground claims and correct them openly
+
+Distinguish definitions, assumptions, deductions, observations and unresolved
+questions. Check relevant primary evidence for factual claims, including current
+source code when discussing implementation. If a claim changes, state what was
+wrong, the corrected claim and why it changed. Do not hide a correction behind
+new terminology, or retain an error merely to appear consistent.
+
+## Resolve confusion without adding more
+
+When an objection recurs, identify the exact mismatch instead of repeating the
+same explanation with different words. Use the smallest derivation, example or
+check that addresses it. Label any simplification and preserve the feature being
+disputed. Keep the necessary definitions and comparison together so the user
+does not have to reconstruct the answer from earlier replies.
+
+Before sending, check for renamed concepts, omitted logical steps, changed
+assumptions and unasked detours. Fix those directly rather than adding more text.

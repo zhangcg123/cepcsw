@@ -195,12 +195,11 @@ explicit provenance. Historical detail does not override this live status.
 
 ### Project laws and work scope
 
-- For multi-turn algorithm explanations, derivations and disputed technical
-  claims, use the skill at project_skills/consistent-technical-dialogue/SKILL.md.
-  Keep one canonical name per concept, define symbols before use, and explicitly
-  label corrections and changed assumptions. Do not rename the same quantity
-  across replies or conflate a state, residual, chi2 contribution and full
-  objective. Read its linked terminology reference for tracking discussions.
+- For in-depth explanations, comparisons and disputed technical claims, use
+  project_skills/consistent-technical-dialogue/SKILL.md. Keep terminology and
+  assumptions stable, present comparisons at matching levels of detail, make
+  reasoning explicit, and identify corrections openly. Preserve the user's
+  original question instead of introducing unasked detours.
 - Keep implementation changes inside `Reconstruction/RecGsfTracking` unless
   the user explicitly authorizes broader scope for a concrete reason.
   Current explicit exception: develop `Reconstruction/RecBreakpoint` and its
