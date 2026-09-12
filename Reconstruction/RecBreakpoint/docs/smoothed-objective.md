@@ -59,14 +59,16 @@ add new observations to the likelihood.
 
 ## Which objective is currently minimized
 
-The current Minuit objective remains the NORMALIZED marginal likelihood:
+The current Minuit objective evaluates the NORMALIZED marginal likelihood
+using the complete RTS-smoothed chi2 directly:
 
 ```text
 J(b) = C(X_s,b) + log det S(b) + M log(2*pi).
 ```
 
 S is the joint covariance of all UNWHITENED measurements and M their total
-dimension. The code computes it through a stable whitened QR factorization.
+dimension. QR of the captured model supplies its log determinant. The existing
+RTS pass supplies C(X_s,b) through `FitResult::smoothedTotalChi2`.
 Replacing J by smoothedTotalChi2 alone would drop the determinant term. It
 would be a change of objective, not just a different way to evaluate J.
 No such change is made by removing reference-trajectory iterations.
@@ -75,15 +77,18 @@ On 2026-09-13 the user explicitly required retaining BOTH normalization terms
 in the proposed switch to direct complete RTS-smoothed chi2 evaluation:
 
 ```text
-Proposed J(b) = smoothedTotalChi2(b) + log det S_all(b) + M log(2*pi).
+J(b) = smoothedTotalChi2(b) + log det S_all(b) + M log(2*pi).
 ```
 
 S_all is the same joint measurement covariance denoted S above, NOT the
 RTS-smoothed state covariance. M is the same total measurement dimension.
-This decision does not authorize dropping the determinant or substituting a
-determinant of the smoothed state covariance. The current code still calculates
-its chi2 through the captured Gaussian model; direct use of smoothedTotalChi2
-by Minuit has not been implemented. No reference-trajectory iteration is restored.
+The production `FreeLossFitter` passes this trial's complete RTS-smoothed chi2
+and captured model to `evaluateSmoothedTrackLikelihood`. That helper uses
+the supplied chi2 without replacing it by a marginal quadratic, and adds
+exactly these two normalization terms. Invalid smoothed scores invalidate
+the trial; there is no silent fallback to another objective. The independent
+`evaluateTrackLikelihood` is retained for numerical regression only. No
+reference-trajectory iteration, new filter, or new run-card control is added.
 
 The equalities above require the same fixed affine model. In the actual
 native tracking code the nonlinear measurement evaluations/reference choices
@@ -95,6 +100,8 @@ does not enter the marginal objective, and the backward refilter is not a
 second independent contribution to add to it.
 
 LikelihoodTest independently compares a forward Kalman sum, dense
-full-trajectory least squares, and the production marginal quadratic with
-zero and singular process noise. These checks establish the algebra, not
+full-trajectory least squares, and the marginal quadratic with zero and
+singular process noise. It also checks the direct smoothed objective against
+the normalized dense likelihood, verifies that the supplied chi2 is used,
+and rejects invalid smoothed scores. These checks establish the algebra, not
 physics performance or the correctness of every nonlinear approximation.

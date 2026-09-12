@@ -45,7 +45,9 @@ For one selected interval:
 2. Scan and optimize `b = log(p_before/p_after)`, with fractional loss
    `1-exp(-b)`. For each b, invoke the SAME BreakpointFitter with b fixed and
    sigma_b=0. No b Gaussian prior or truth amount enters this optimization.
-3. Evaluate the normalized marginal likelihood of the captured affine model.
+3. Read the complete RTS-smoothed chi2 (measurement + process + seed) from
+   THIS trial. Add the joint measurement covariance log determinant and
+   measurement normalization from THIS trial's captured affine model.
 4. Repeat the chosen trial without its scalar cache, then make the native
    conditional fit at that b the ADDITIONAL FreeLoss RTS/backward output pair.
 
@@ -88,8 +90,14 @@ independent seed/process variables u give the full measurement model:
 d = A*u + epsilon,  u~N(0,I), epsilon~N(0,I)
 C = I + A*A^T
 
+S_all = joint covariance of all unwhitened measurements
+logdet(S_all) = logdet(C) + sum logdet(V_i)
+
 objective = -2 log L
-          = d^T*C^-1*d + logdet(C) + sum logdet(V_i) + m*log(2*pi)
+          = complete smoothed chi2 + logdet(S_all) + m*log(2*pi)
+
+complete smoothed chi2 = measurement chi2 + process chi2 + seed chi2
+                      = d^T*C^-1*d  (for the same fixed affine Gaussian model)
 ```
 
 m counts every measured coordinate at every accepted hit. This integrates
@@ -98,9 +106,17 @@ quadratic or a product of independent smoothed-hit residual densities.
 The determinant term matters when changing b changes the uncertainty.
 Continuous-density -2logL may be negative; it is not a chi-square statistic.
 
-Forward-order QR of [I,A]^T computes the objective without forming an
-ill-conditioned C. There is one objective calculation and no runtime
-cross-formulation audit or Forward/Backward/Smoothed objective selector.
+The production objective reads `FitResult::smoothedTotalChi2` directly from
+the existing RTS pass. `evaluateSmoothedTrackLikelihood` adds the normalization;
+QR of [I,A]^T supplies the joint covariance determinant without forming an
+ill-conditioned C. It does NOT compute or substitute the marginal quadratic.
+`S_all` is not the RTS-smoothed state covariance. Original V, Q and seed
+covariance enter the complete smoothed chi2; no independent smoothed-hit
+likelihoods are multiplied together.
+
+The separate `evaluateTrackLikelihood` marginal quadratic remains a numerical
+regression reference, not the Minuit objective path. There is no runtime
+cross-formulation audit, new iteration, or Forward/Backward/Smoothed selector.
 BackwardSeedScale changes that refilter's endpoint, not the likelihood.
 
 Singular Q is represented by its supported square-root directions; no inverse
@@ -193,7 +209,7 @@ actual optimized-extra-pair method. Disabled runs retain all old values exactly.
 | status | 0 not attempted; 1 no interval/5D; 2 applied; -1 unsupported KF fallback; -2 failed-search KF fallback |
 | interval | Selected scalar breakpoint index, or -1 |
 | b, b_error, minuit_status, edm | Selected loss and local optimization diagnostics; successful minima have status0; -99 means no accepted minimum |
-| nll2, quadratic, logdet | Normalized objective, its quadratic and total covariance-logdet contribution; m*log(2*pi) is also included in nll2 |
+| nll2, quadratic, logdet | Normalized objective, the complete RTS-smoothed chi2 used by Minuit, and logdet(S_all); m*log(2*pi) is also included in nll2 |
 | lower_bound, upper_bound | Selected b within1e-6 of a bound |
 | covariance_conditional | True when the extra FreeLoss covariance conditions on optimized b |
 | error | Unsupported/failed-search explanation |
@@ -249,7 +265,7 @@ The presence of `free_loss_result_status` identifies the new separate-pair schem
 | RecBreakpoint | Gaudi steering, fallback choice and common publication for all three pairs |
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
-| TrackLikelihood | Read-only normalized Gaussian marginal likelihood |
+| TrackLikelihood | Add joint-measurement normalization to the supplied complete RTS-smoothed chi2; retain independent marginal evaluation for regression |
 | FreeLossFitter | Blind bounded scalar search; calls the existing fitter for each trial |
 | FreeLossTuple | Serialization only; no fitting or likelihood logic |
 | FitPairTuple | Additional result-pair serialization; exact copies use the existing fit object |

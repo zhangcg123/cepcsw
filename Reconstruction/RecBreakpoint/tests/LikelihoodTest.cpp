@@ -2,6 +2,7 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 int main() {
@@ -80,6 +81,27 @@ int main() {
     if (std::abs(smoothedPenalty-result.quadratic) > 1.e-10 ||
         std::abs(forwardPenalty-result.quadratic) > 1.e-10)
       throw std::runtime_error("Forward / full smoothed / marginal quadratic mismatch");
+    const auto smoothed = breakpoint::evaluateSmoothedTrackLikelihood(model, smoothedPenalty);
+    if (smoothed.quadratic != smoothedPenalty || smoothed.logDeterminant != result.logDeterminant ||
+        smoothed.measurementDimensions != 6 || smoothed.latentDimensions != result.latentDimensions ||
+        std::abs(smoothed.nll2-expected) > 1.e-10)
+      throw std::runtime_error("Direct complete smoothed likelihood / normalization mismatch");
+    // Deliberately supply a different chi2 to prove the helper uses its RTS
+    // argument, not a silently recomputed marginal quadratic.
+    const auto supplied = breakpoint::evaluateSmoothedTrackLikelihood(model, smoothedPenalty+2.);
+    if (supplied.quadratic != smoothedPenalty+2. || std::abs(supplied.nll2-smoothed.nll2-2.) > 1.e-10)
+      throw std::runtime_error("Supplied complete smoothed chi2 was not used");
+    const auto zero = breakpoint::evaluateSmoothedTrackLikelihood(model, 0.);
+    if (zero.quadratic != 0. || std::abs(zero.nll2-result.logDeterminant-6*std::log(2*std::acos(-1.))) > 1.e-10)
+      throw std::runtime_error("Zero smoothed chi2 dropped or changed normalization");
+    for (double invalid : {-1., std::numeric_limits<double>::infinity(),
+                           std::numeric_limits<double>::quiet_NaN()}) {
+      bool rejected = false;
+      try { breakpoint::evaluateSmoothedTrackLikelihood(model, invalid); }
+      catch (const std::runtime_error&) { rejected = true; }
+      if (!rejected) throw std::runtime_error("Invalid smoothed chi2 was accepted");
+    }
+    std::cout << "Q=" << noise << ": direct RTS objective and unchanged normalization passed\n";
     std::cout << "Q=" << noise << ": forward, full smoothed and marginal quadratics agree\n";
     std::cout << "Q=" << noise << ": independent dense reference passed\n";
   }

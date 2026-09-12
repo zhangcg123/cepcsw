@@ -349,6 +349,12 @@ Previously prepared cards are not changed. This is an implementation promotion, 
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
 
+For each fixed-loss trial, Minuit now uses the existing RTS pass directly:
+`complete smoothed chi2 + log det S_all + M log(2*pi)`. The first term includes
+measurement, process and seed chi2; `S_all` is the joint measurement covariance,
+not the smoothed state covariance. No reference-trajectory iterations or new
+controls are introduced. See [the exact objective](docs/smoothed-objective.md).
+
 | Property | Compiled default | Meaning |
 |---|---|---|
 | InputTracks | CompleteTracks | Input hit-list tracks |

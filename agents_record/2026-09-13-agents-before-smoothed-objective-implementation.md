@@ -297,40 +297,43 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is RecBreakpoint on local breakpoint. On 2026-09-13 the user
-authorized the explicit RTS-smoothed free-loss objective. It is implemented:
-J(b) = complete smoothed chi2(b) + log det S_all(b) + M log(2*pi).
-FreeLossFitter reads the existing RTS pass's measurement + process + seed chi2
-directly. The same captured-model joint measurement covariance supplies the
-normalization; S_all is NOT the smoothed-state covariance. The separate marginal
-quadratic helper remains for numerical regression, not Minuit steering.
-No reference-trajectory iteration, new filter, property or tuple field was added.
-Shared KF/GSF sources and user-owned workflow edits remain untouched. No remote
-operations are authorized.
+Active work is RecBreakpoint on local breakpoint. The user clarified that the
+requested objective discussion did NOT call for reference-trajectory iterations,
+and explicitly requested their removal on 2026-09-12. The iteration code, three
+properties, dedicated card/batch environment steering and eleven iteration-only
+tuple fields have been removed. Runtime sources and maintained cards are restored
+to the preceding one-pass implementation. The normalized marginal free-loss
+objective is UNCHANGED; replacing it by a smoothed quadratic alone has not been
+implemented or authorized by this removal. No remote operations are authorized.
+Shared KF/GSF sources and user-owned workflow edits remain untouched.
 
-The private same-input before/after gate passes on 2:68 and 12:11,16,17; 12:17
-is a secondary-topology control and 12:16 is a no-interval copy. Both free
-endpoint pT values are unchanged in all four rows. All 104 non-free fields per
-row and 6,517 ordinary/truth verbose states agree exactly; the no-interval row
-agrees in all 160 fields. Applied new rows save the exact RTS chi2 used by
-Minuit. Matching valid scan points agree in normalized objective within
-6.9e-6; fitted b and some detailed free states change at numerical precision.
-This is not bit-identical free-state evolution or a physics-performance gain.
-Both numerical tests and all 24 batch tests pass; all 29 properties remain
-explicit in the maintained card.
+For a fixed affine Gaussian track model, the complete RTS measurement + process
++ seed quadratic equals the model's forward innovation quadratic and marginal
+quadratic. This is not equality to the FULL normalized likelihood, which also
+contains log det S and measurement normalization. It is not a claim that native
+nonlinear forward diagnostics equal the captured-model scores bit-for-bit.
+The algebra and supported singular-process-noise treatment are documented in
+Reconstruction/RecBreakpoint/docs/smoothed-objective.md. An independent numerical
+test compares all three quadratic constructions. On 2026-09-13 the user confirmed
+that the proposed explicit RTS-smoothed objective MUST retain log det S_all and
+M log(2*pi). The target is complete smoothed chi2 + those two terms, not complete
+smoothed chi2 alone. S_all remains the same joint measurement covariance, not
+the RTS-smoothed state covariance. Only this design decision is recorded; no
+objective implementation has changed. Next: the explicit RTS-based evaluation
+and same-model regression when implementation is resumed. No new reference loop,
+automatic interval finder or physics-performance claim is authorized. Decision:
+agents_record/2026-09-13-smoothed-objective-normalization-decision.md.
 
-The private and normal CMake package builds are complete. Direct CMake-library
-runs reproduce all 160 fields and 11,172 verbose records of the new private
-runs exactly. Shared installation
-is pending confirmation of no running breakpoint batch jobs: hep_q fails to
-import htcondor here and cannot establish queue status. The installed library
-still uses the preceding marginal-quadratic evaluation. Next: after the user
-confirms, install only RecBreakpoint and repeat the four-row installed/private
-regression. Do not silently treat source/build changes as deployed.
-Exact code contract, results and evidence:
-agents_record/2026-09-13-explicit-smoothed-free-loss-objective.md.
-The entire outgoing focus is preserved in
-agents_record/2026-09-13-agents-before-smoothed-objective-implementation.md.
+The removal passed 24 batch tests (all 29 properties explicitly assigned), both
+compiled numerical tests and four private-library event rows: 2:68 and
+12:11,16,17, with 12:17 kept as a secondary-topology control. All 160 retained
+tuple fields and 11,172 verbose mean/covariance records agree exactly with the
+preceding iteration-OFF runs. Shared build/install and the same four-row
+installed regression passed with the same exact fields and verbose records.
+Built/installed library hashes agree and the installed schema has no iteration
+controls; sigma 0.001 and backward scale 100 remain unchanged.
+Existing frozen cards with the three removed properties need regeneration;
+existing cards and ROOT outputs have not been rewritten.
 
 The six-output, largest-truth-interval, conditional free-Minuit, truth-prior and
 KF-fallback contracts remain operative. Maintained FreeLossFit=true (compiled
@@ -341,9 +344,12 @@ ordinary sigma, not a fixed-loss oracle. Failed free optimization copies KF;
 no-interval/free-off cases copy ordinary. See Reconstruction/RecBreakpoint/README.md
 and docs/free-loss-fit.md for the authoritative controls/schema.
 
-Reference-trajectory iterations remain removed. Existing frozen cards with the
-three retired properties need regeneration; they and previous ROOT outputs have
-not been rewritten. The earlier removal and retirement evidence remains under
-agents_record/2026-09-12-breakpoint-reference-removal.md and the outgoing
-snapshot. Extreme large-loss minima remain unresolved. No automatic interval
-finder, new reference loop, or production-physics claim is authorized.
+The outgoing status is preserved in
+agents_record/2026-09-12-agents-before-reference-removal.md. The retired experiment
+and all its result tables remain in
+agents_record/2026-09-12-breakpoint-reference-trajectory.md; its removed mathematical
+contract is archived in agents_record/2026-09-12-retired-reference-trajectory-contract.md.
+Those tests did not resolve the extreme large-loss minima. The prior batch audit
+and all earlier contracts remain in the archived status, not superseded by a new
+performance claim. Current removal evidence:
+agents_record/2026-09-12-breakpoint-reference-removal.md.

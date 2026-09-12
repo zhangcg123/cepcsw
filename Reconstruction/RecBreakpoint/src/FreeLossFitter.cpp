@@ -47,13 +47,17 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       try {
         settings.meanLogLoss = b;
         const auto pair = m_fitter.fit(hits, settings);
-        const auto& forward = pair.rts;
-        if (forward.smoothedChi2Status != 1 || forward.breakpoints.size() != 1 ||
-            forward.breakpoints.front().fittedLogLoss != b ||
-            forward.breakpoints.front().fittedVariance != 0 || !forward.gaussianModel)
+        const auto& rts = pair.rts;
+        if (rts.smoothedChi2Status != 1 || rts.breakpoints.size() != 1 ||
+            rts.breakpoints.front().fittedLogLoss != b ||
+            rts.breakpoints.front().fittedVariance != 0 || !rts.gaussianModel)
           throw std::runtime_error("Conditional free-loss fit invariant failed");
-        trial.likelihood = evaluateTrackLikelihood(*forward.gaussianModel);
-        trial.valid = std::isfinite(trial.likelihood.nll2) && std::isfinite(forward.ip.omega) && forward.ip.omega != 0;
+        // Score this trial's existing RTS trajectory: measurement + process
+        // + seed chi2, then the SAME joint-measurement normalization. No new
+        // filter pass, reference iteration, or backward chi2 is added.
+        trial.likelihood = evaluateSmoothedTrackLikelihood(
+            *rts.gaussianModel, rts.smoothedTotalChi2);
+        trial.valid = std::isfinite(trial.likelihood.nll2) && std::isfinite(rts.ip.omega) && rts.ip.omega != 0;
         if (!trial.valid) throw std::runtime_error("Nonfinite free-loss candidate");
       } catch (const std::exception& error) {
         trial.error = error.what();

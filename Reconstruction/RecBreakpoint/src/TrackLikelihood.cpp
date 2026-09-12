@@ -97,35 +97,50 @@ WhitenedModel whitenModel(const GaussianTrackModel& model) {
   return result;
 }
 
-struct GaussianScore { double quadratic, logDeterminant; };
-
 /// QR([I,A]^T) gives C=R^T R for C=I+A A^T, avoiding an ill-conditioned
-/// normal matrix. The triangular solve is the conditional hit factorization.
-GaussianScore orderedScore(const Matrix& response, const Vector& residual) {
+/// normal matrix. This is the whitened joint MEASUREMENT covariance, not an RTS state
+/// covariance. Both objective evaluations use this same factor.
+Matrix factorJointCovariance(const Matrix& response) {
   const int dimensions = response.rows();
   Matrix generator(dimensions, dimensions + response.cols());
   generator.leftCols(dimensions).setIdentity();
   generator.rightCols(response.cols()) = response;
   Eigen::HouseholderQR<Matrix> decomposition(generator.transpose());
-  const Matrix upper = decomposition.matrixQR().topLeftCorner(dimensions, dimensions)
+  return decomposition.matrixQR().topLeftCorner(dimensions, dimensions)
       .triangularView<Eigen::Upper>();
-  const Vector innovation = upper.transpose().triangularView<Eigen::Lower>().solve(residual);
-  return {innovation.squaredNorm(), 2 * upper.diagonal().array().abs().log().sum()};
+}
+
+/// Keep the normalization identical for the direct RTS evaluation and the
+/// independent marginal reference. Only the source of the chi2 term differs.
+TrackLikelihoodResult normalizedLikelihood(const WhitenedModel& whitened,
+    const Matrix& upper, double quadratic) {
+  TrackLikelihoodResult result;
+  result.measurementDimensions = whitened.residual.size();
+  result.latentDimensions = whitened.response.cols();
+  const double normalization = result.measurementDimensions * std::log(2 * std::acos(-1.));
+  result.quadratic = quadratic;
+  result.logDeterminant = 2 * upper.diagonal().array().abs().log().sum()
+      + whitened.measurementLogDeterminant;
+  result.nll2 = result.quadratic + result.logDeterminant + normalization;
+  if (!std::isfinite(result.nll2)) throw std::runtime_error("Nonfinite Gaussian likelihood");
+  return result;
 }
 
 } // namespace
 
 TrackLikelihoodResult evaluateTrackLikelihood(const GaussianTrackModel& model) {
   const auto whitened = whitenModel(model);
-  const auto score = orderedScore(whitened.response, whitened.residual);
-  TrackLikelihoodResult result;
-  result.measurementDimensions = whitened.residual.size();
-  result.latentDimensions = whitened.response.cols();
-  const double normalization = result.measurementDimensions * std::log(2 * std::acos(-1.));
-  result.quadratic = score.quadratic;
-  result.logDeterminant = score.logDeterminant + whitened.measurementLogDeterminant;
-  result.nll2 = result.quadratic + result.logDeterminant + normalization;
-  if (!std::isfinite(result.nll2)) throw std::runtime_error("Nonfinite Gaussian likelihood");
-  return result;
+  const Matrix upper = factorJointCovariance(whitened.response);
+  const Vector innovation = upper.transpose().triangularView<Eigen::Lower>().solve(whitened.residual);
+  return normalizedLikelihood(whitened, upper, innovation.squaredNorm());
+}
+
+TrackLikelihoodResult evaluateSmoothedTrackLikelihood(
+    const GaussianTrackModel& model, double completeSmoothedChi2) {
+  if (!std::isfinite(completeSmoothedChi2) || completeSmoothedChi2 < 0)
+    throw std::runtime_error("Invalid complete RTS-smoothed chi2 for free-loss objective");
+  const auto whitened = whitenModel(model);
+  const Matrix upper = factorJointCovariance(whitened.response);
+  return normalizedLikelihood(whitened, upper, completeSmoothedChi2);
 }
 } // namespace breakpoint
