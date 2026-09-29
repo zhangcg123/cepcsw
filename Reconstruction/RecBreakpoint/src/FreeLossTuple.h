@@ -9,12 +9,14 @@ namespace breakpoint {
 class FreeLossTuple {
 public:
   void book(TTree& tree);
-  void reset(bool enabled, const FreeLossSettings& controls);
+  void reset(bool enabled, const FreeLossSettings& controls, double sigmaLogLoss);
   void assign(const FreeLossDiagnostics& diagnostic);
   bool applied() const { return m_status == int(FreeLossStatus::Applied); }
 private:
   bool m_enabled = false, m_applied = false, m_lower = false, m_upper = false;
   bool m_covarianceConditional = false;
+  std::string m_lossTreatment = "PriorCenter";
+  double m_priorSigmaLogLoss = 0;
   double m_maxLogLoss = 1, m_tolerance = .001;
   int m_maxCalls = 180;
   int m_status = 0, m_interval = -1, m_minuitStatus = -99;

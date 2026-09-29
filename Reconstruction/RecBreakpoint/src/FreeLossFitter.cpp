@@ -25,33 +25,38 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     return result;
   }
   diagnostic.interval = ordinary.intervals.front();
+  diagnostic.priorSigmaLogLoss = ordinary.sigmaLogLoss;
   try {
     if (!std::isfinite(controls.maxLogLoss) || controls.maxLogLoss <= 0 || controls.maxLogLoss > 5 ||
         !controls.maxCallsPerStart || !std::isfinite(controls.tolerance) || controls.tolerance <= 0)
       throw std::invalid_argument("Invalid free-loss optimization settings");
+    if (!std::isfinite(ordinary.sigmaLogLoss) || ordinary.sigmaLogLoss <= 0)
+      throw std::invalid_argument("FreeLossFit requires a finite positive SigmaLogLoss");
 
-    // Ignore Gaussian prior centers/widths in the conditional trial, including
-    // any per-interval centers. There is no truth amount or fitted-b prior here.
+    // Minuit varies the loss PRIOR CENTER, not a fixed loss. Every trial and
+    // the final refit retain the SAME sigma as the ordinary/truth-prior fits.
+    // Clear per-interval centers so no external/truth amount overrides Minuit.
     auto settings = ordinary;
-    settings.sigmaLogLoss = 0;
     settings.intervalMeanLogLoss.clear();
     settings.captureGaussianModel = true;
     std::map<double, FreeLossTrial> cache; // scalar records only, never cached trajectories
     FreeLossTrialPhase phase = FreeLossTrialPhase::Scan;
-    auto evaluate = [&](double b, bool force = false) {
-      if (!force && cache.count(b)) return cache.at(b);
+    auto evaluate = [&](double priorMean, bool force = false) {
+      if (!force && cache.count(priorMean)) return cache.at(priorMean);
       FreeLossTrial trial;
-      trial.b = b;
+      trial.b = priorMean;
       trial.phase = phase;
       trial.likelihood.nll2 = 1.e20;
       try {
-        settings.meanLogLoss = b;
+        settings.meanLogLoss = priorMean;
         const auto pair = m_fitter.fit(hits, settings);
         const auto& rts = pair.rts;
         if (rts.smoothedChi2Status != 1 || rts.breakpoints.size() != 1 ||
-            rts.breakpoints.front().fittedLogLoss != b ||
-            rts.breakpoints.front().fittedVariance != 0 || !rts.gaussianModel)
-          throw std::runtime_error("Conditional free-loss fit invariant failed");
+            rts.breakpoints.front().priorLogLoss != priorMean ||
+            !std::isfinite(rts.breakpoints.front().fittedLogLoss) ||
+            !std::isfinite(rts.breakpoints.front().fittedVariance) ||
+            rts.breakpoints.front().fittedVariance < 0 || !rts.gaussianModel)
+          throw std::runtime_error("Gaussian-prior free-loss fit invariant failed");
         // Score this trial's existing RTS trajectory: measurement + process
         // + seed chi2, then the SAME joint-measurement normalization. No new
         // filter pass, reference iteration, or backward chi2 is added.
@@ -63,7 +68,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
         trial.error = error.what();
         trial.likelihood.nll2 = 1.e20;
       }
-      cache[b] = trial;
+      cache[priorMean] = trial;
       diagnostic.trials.push_back(trial);
       return trial;
     };
@@ -92,7 +97,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       minimizer->SetPrecision(1.e-8);
       minimizer->SetErrorDef(1.);
       minimizer->SetPrintLevel(0);
-      minimizer->SetLimitedVariable(0, "b", start, std::min(.002, .02 * controls.maxLogLoss), 0., controls.maxLogLoss);
+      minimizer->SetLimitedVariable(0, "mean_log_loss", start, std::min(.002, .02 * controls.maxLogLoss), 0., controls.maxLogLoss);
       const bool converged = minimizer->Minimize();
       const auto trial = evaluate(minimizer->X()[0]);
       if (converged && minimizer->Status() == 0 && std::isfinite(minimizer->Edm()) &&
@@ -121,8 +126,9 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     diagnostic.lowerBound = best.b <= 1.e-6;
     diagnostic.upperBound = best.b >= controls.maxLogLoss - 1.e-6;
 
-    // Publish the native conditional fit at the selected b. The model and
-    // optimizer curvature are NOT injected into its track covariance.
+    // Refit with the optimized center AND configured sigma. The shared fitter
+    // supplies posterior loss variance and track/loss correlations. The Minuit
+    // error on the center is a different quantity and is not added again.
     settings.meanLogLoss = best.b;
     settings.captureGaussianModel = false;
     result.fitted.emplace(m_fitter.fit(hits, settings));

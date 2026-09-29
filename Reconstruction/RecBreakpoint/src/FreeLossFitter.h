@@ -9,7 +9,7 @@
 namespace breakpoint {
 
 struct FreeLossSettings {
-  double maxLogLoss = 1; // b in [0,maxLogLoss]; default maximum loss is 63.2121%
+  double maxLogLoss = 1; // prior center in [0,maxLogLoss], not a posterior bound
   unsigned maxCallsPerStart = 180;
   double tolerance = .001;
 };
@@ -19,7 +19,7 @@ enum class FreeLossStatus { NotAttempted = 0, NoInterval = 1, Applied = 2,
 enum class FreeLossTrialPhase { Scan = 0, Minimize = 1, Repeat = 2, LocalScan = 3 };
 
 struct FreeLossTrial {
-  double b = 0;
+  double b = 0; // trial prior center; retained name for tuple compatibility
   TrackLikelihoodResult likelihood;
   bool valid = false;
   FreeLossTrialPhase phase = FreeLossTrialPhase::Scan;
@@ -30,8 +30,9 @@ struct FreeLossDiagnostics {
   FreeLossStatus status = FreeLossStatus::NotAttempted;
   int interval = -1;
   int minuitStatus = -99; // sentinel: no accepted converged minimum
-  double b = std::numeric_limits<double>::quiet_NaN();
-  double bError = std::numeric_limits<double>::quiet_NaN(); // local Minuit estimate only
+  double b = std::numeric_limits<double>::quiet_NaN(); // optimized prior center
+  double bError = std::numeric_limits<double>::quiet_NaN(); // Minuit center error, NOT sigma_b
+  double priorSigmaLogLoss = std::numeric_limits<double>::quiet_NaN();
   double edm = std::numeric_limits<double>::quiet_NaN();
   TrackLikelihoodResult likelihood;
   bool lowerBound = false, upperBound = false;
@@ -44,8 +45,9 @@ struct FreeLossFitResult {
   FreeLossDiagnostics diagnostics;
 };
 
-/// Outer scalar optimization only. Every conditional trajectory is produced
+/// Outer scalar prior-center optimization only. Every trajectory is produced
 /// by BreakpointFitter; no Kalman filter/smoother is reimplemented here.
+/// Every trial/final fit retains ordinary.sigmaLogLoss; posterior b can move.
 /// No truth-loss input is accepted by this interface.
 class FreeLossFitter {
 public:

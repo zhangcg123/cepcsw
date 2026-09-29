@@ -18,7 +18,8 @@ struct TrackLikelihoodResult {
 TrackLikelihoodResult evaluateTrackLikelihood(const GaussianTrackModel& model);
 
 /// Use the existing RTS pass's complete measurement + process + seed chi2
-/// directly. The supplied model must belong to that same fixed-loss trial.
+/// directly. The supplied model must belong to that same loss-prior trial,
+/// including the configured loss variance in its birth process covariance.
 /// Add log det S_all and M log(2*pi), NOT a smoothed-state determinant.
 TrackLikelihoodResult evaluateSmoothedTrackLikelihood(
     const GaussianTrackModel& model, double completeSmoothedChi2);

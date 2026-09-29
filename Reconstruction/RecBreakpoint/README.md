@@ -80,8 +80,9 @@ and `Fixed` modes, their `LossPriorMode` selector, and their dedicated tuple
 diagnostics were removed on 2026-09-29. The card and batch planner explicitly
 reject the retired `BP_LOSS_PRIOR_MODE` variable rather than silently changing
 a requested fit. Old Gaudi cards assigning `LossPriorMode` must be regenerated.
-The separate `FreeLossFit` optimizer still uses fixed-b conditional trials
-internally; neither that optimizer nor the Gaussian truth-prior pair was removed.
+The separate `FreeLossFit` optimizer and Gaussian truth-prior pair remain.
+Since 2026-09-30, free-loss trials optimize the Gaussian prior center while
+retaining the SAME `SigmaLogLoss` as ordinary and truth-prior fits.
 The retired mathematical contract is preserved in
 [the historical record](../../agents_record/2026-09-29-retired-unconstrained-loss-contract.md).
 
@@ -352,7 +353,7 @@ extended KF; the separate terms make those differences auditable.
 
 Optional normalized-likelihood free-loss fitting is now implemented in this
 package, not in an external prototype. Set `FreeLossFit=True` to add a separate
-FreeLoss pair with the native conditional fit at the optimized loss. The ordinary
+FreeLoss pair with the shared Gaussian fitter at the optimized prior center. The ordinary
 RTS/backward pair and its tuple fields are never replaced. The
 compiled compatibility default is false; the maintained standalone/batch card
 defaults to true. Set `BP_FREE_LOSS_FIT=0` to disable it for newly prepared jobs.
@@ -360,7 +361,7 @@ Previously prepared cards are not changed. This is an implementation promotion, 
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
 
-For each fixed-loss trial, Minuit now uses the existing RTS pass directly:
+For each prior-center trial, Minuit uses the existing RTS pass directly:
 `complete smoothed chi2 + log det S_all + M log(2*pi)`. The first term includes
 measurement, process and seed chi2; `S_all` is the joint measurement covariance,
 not the smoothed state covariance. No reference-trajectory iterations or new
@@ -379,10 +380,10 @@ controls are introduced. See [the exact objective](docs/smoothed-objective.md).
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
-| SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary and truth-prior fits; free-loss trials hold b fixed internally |
+| SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
-| FreeLossFit | false | Card default true; normalized-likelihood optimization for one selected LocalMarginal interval; input KF fallback on failure/unsupported mode |
-| FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
+| FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
+| FreeLossMaxLogLoss | 1 | Upper bound on the optimized prior center, finite in (0,5]; lower bound zero. Does not truncate the Gaussian or bound the fitted posterior loss |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
 | FreeLossTolerance | 0.001 | Positive finite MIGRAD tolerance |
 | SeedScale | 1 | Positive finite scale of five loose seed variances |
@@ -420,9 +421,15 @@ instead copies the original input KF (free_loss_result_status=3). Its stored
 score is free_loss_kf_chi2; unavailable breakpoint per-hit vectors are empty and
 refit totals NaN. Existing tuple fields and the
 four earlier collections retain ordinary/truth-prior meanings regardless of
-FreeLossFit. With free fitting applied, only the FreeLoss pair's
-track covariances are conditional on optimized b; the outer optimizer's b
-uncertainty is not propagated into them. `Track.chi2` retains its existing
+FreeLossFit. FreeLoss track covariances now include posterior loss uncertainty
+and track/loss correlations from the same Gaussian fitter. They still condition
+on the optimized prior center; Minuit's error on that center is NOT SigmaLogLoss
+and is not added to the covariance. `free_loss_treatment="PriorCenter"` and
+`free_loss_prior_sigma_log_loss` distinguish these outputs from historical fixed-b
+tuples. `free_loss_prior_mean_log_loss` names the optimized center explicitly;
+`free_loss_b` remains its compatibility alias, not the posterior loss.
+The legacy `free_loss_covariance_conditional` fixed-b flag is false.
+`Track.chi2` retains its existing
 quadratic meaning; `free_loss_nll2` separately records the fitting objective.
 
 The tuple has one row per attempted track, including failures. It retains
@@ -504,7 +511,7 @@ convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 | PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Comma-separated filename labels |
 | MEMORY_MB | 5000 | Scheduler memory request |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
-| BP_SIGMA_LOG_LOSS | 0.05 | Finite positive prior sigma of b=-log(z), shared by ordinary and truth-assisted fits |
+| BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
 For existing tracker inputs, set STAGES=breakpoint and point INPUT_TUPLEPATH

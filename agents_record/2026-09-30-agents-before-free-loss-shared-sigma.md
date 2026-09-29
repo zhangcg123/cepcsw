@@ -1,3 +1,7 @@
+# Historical status before sharing SigmaLogLoss with free-loss fitting
+
+Captured on 2026-09-30; not current steering.
+
 # CEPCSW GSF Development
 
 ## 1. Introduction and global status
@@ -297,44 +301,36 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is RecBreakpoint on local breakpoint. The user now requires the
-free-loss pair to use the SAME SigmaLogLoss as ordinary and truth-centred
-fits. Every Minuit trial and final refit retains that positive Gaussian width.
-Minuit optimizes the loss PRIOR CENTER mu; the shared KF/RTS/backward fitter
-then updates b and its variance from measurements. SigmaLogLoss is the prior
-sigma, not the fitted posterior sigma or Minuit's error on mu. The latter is
-not added to track covariance. No new configurable property or separate
-filter was introduced. Free fitting still supports one LocalMarginal interval.
-Its objective remains complete RTS chi2 + log det S_all + M log(2*pi), now
-including the loss-prior uncertainty in the captured birth process covariance.
+Active work is RecBreakpoint on local breakpoint. On 2026-09-29, after reviewing
+the supported workflows, the user explicitly requested removing the primary
+LocalMarginal Unconstrained and Fixed workflows as the first simplification.
+Those implementations, the now-redundant LossPriorMode property, and their
+dedicated tuple fields/tests are removed. Gaussian LocalMarginal and
+Persistent6D remain; the separate Minuit free-loss pair and Gaussian
+truth-centred pair are unchanged. Fixed-b conditional trials INSIDE Minuit
+are retained and are not a selectable primary Fixed workflow.
 
-Both numerical tests and 28 card/batch tests pass (29 explicit properties).
-Ten direct before/after rows reproduce all ordinary/truth fields and 18,310
-verbose state/covariance records exactly. Four native Gaussian refits at the
-optimized centers reproduce the free pair exactly, including 4,650 verbose
-records. Widths 0.001 and 0.05, off/empty copies and unsupported-mode KF
-fallback were checked. 12:17 is a separate secondary-activity control.
-This is a mechanical gate, not a physics-performance claim. The user confirmed
-no active jobs and explicitly authorized installation after validation;
-only RecBreakpoint was installed. No remote operation was performed.
-Contract, schema migration, numerical examples and deployment evidence:
-agents_record/2026-09-30-free-loss-shared-sigma.md.
+The removal passes both numerical tests and 27 batch/card tests (29 explicit
+properties). Direct before/after comparisons for 2:68 and 12:11,16,17, including
+Persistent6D and manual multiple intervals, reproduce all 160 retained tuple
+fields in eight rows and 23,712 verbose state/covariance records exactly.
+12:17 remains a separate secondary-activity control, not a clean-track claim.
+The rebuilt Gaussian-only library is byte-identical to the existing installed
+library; generated/installed property schemas agree except for a timestamp.
+No installation was needed or performed. Full verification and provenance are in
+agents_record/2026-09-29-breakpoint-prior-mode-removal.md.
+Do not extend this removal into further algorithm changes without direction.
+Do not install over the shared runtime or operate on the remote implicitly.
+Existing inputs, prepared cards and outputs, user edits, GSF and shared KF
+sources are preserved. New cards reject BP_LOSS_PRIOR_MODE explicitly; old
+cards assigning the deleted property must be regenerated for the new build.
 
-The primary Unconstrained/Fixed workflows and LossPriorMode remain removed;
-Gaussian LocalMarginal and Persistent6D remain. No reference iterations,
-shared KF/GSF changes, or modification of existing outputs/prepared cards.
-Historical tuples without free_loss_treatment="PriorCenter" retain the old
-fixed-b free-fit meaning. Current tuples distinguish the optimized prior center,
-configured sigma and fitted loss/variance. Existing cards inherit the installed
-algorithm change while retaining their frozen SigmaLogLoss; regenerate cards
-that still assign the retired LossPriorMode property.
-
-Next: discuss the shared-width behavior before further algorithm changes or
-population claims. Do not change priors, objectives, package scope or remote
-state without direction. Historical no-prior response discrepancies remain
-unresolved in agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
-The outgoing focus and full retired fixed-b contract are archived under
-agents_record/2026-09-30-agents-before-free-loss-shared-sigma.md and
-agents_record/2026-09-30-retired-fixed-free-loss-contract.md. Maintained formulas
-and workflow are in Reconstruction/RecBreakpoint/docs/free-loss-fit.md and
-docs/smoothed-objective.md under that package.
+Historical no-prior tests and their unresolved native/captured response
+discrepancy remain in agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
+The removal is not a resolution of that discrepancy or a physics-validation
+claim. The complete outgoing status and retired mathematical contract are
+preserved in agents_record/2026-09-29-agents-before-breakpoint-simplification.md
+and agents_record/2026-09-29-retired-unconstrained-loss-contract.md.
+The maintained Gaussian workflows and normalized free-loss objective are
+documented in Reconstruction/RecBreakpoint/README.md and docs/smoothed-objective.md
+under that package. No reference iterations or shared KF/GSF edits were added.

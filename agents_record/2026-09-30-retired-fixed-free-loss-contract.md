@@ -1,3 +1,10 @@
+# Historical fixed-loss optimizer contract
+
+The following documents are archived before the shared-SigmaLogLoss change.
+They describe the retired fixed-b trials, not current free-loss steering.
+
+## Original file: Reconstruction/RecBreakpoint/docs/free-loss-fit.md
+
 # Optional free-loss fitting
 
 `FreeLossFit=True` enables the promoted normalized-likelihood prototype inside
@@ -21,7 +28,6 @@ scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ```python
 fit.FreeLossFit = True
-fit.SigmaLogLoss = 0.001  # SAME prior width for all three fit pairs
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
@@ -37,32 +43,26 @@ BP_FREE_LOSS_FIT=1 ./subbreakpointjobs.sh
 ```
 
 That uses the existing input/output/stage controls and does not change the
-GSF worker/cards. The script's selected loss sigma is used by ordinary,
-free-loss and truth-prior fits, including every optimizer trial and final refit.
-It does not modify an input KF copy used as a failure fallback.
+GSF worker/cards. The script's selected loss sigma is still relevant to
+the ordinary and truth-prior comparison pairs, not to free-b trials or KF copies.
 
 For one selected interval:
 
-1. Fit the ordinary pair once and preserve it independently of optimization.
-2. Scan and optimize the Gaussian loss PRIOR CENTER, called mu below.
-   The loss parameter is `b = log(p_before/p_after)`, with fractional loss
-   `1-exp(-b)`. Every trial invokes the SAME BreakpointFitter with
-   `b ~ N(mu, SigmaLogLoss^2)`. The configured sigma is positive and unchanged.
-   Measurements can change the fitted b and its variance. No truth amount
-   sets the trial center, and no extra penalty holds mu near MeanLogLoss.
+1. Fit the ordinary pair once, preserving a fallback if optimization fails.
+2. Scan and optimize `b = log(p_before/p_after)`, with fractional loss
+   `1-exp(-b)`. For each b, invoke the SAME BreakpointFitter with b fixed and
+   sigma_b=0. No b Gaussian prior or truth amount enters this optimization.
 3. Read the complete RTS-smoothed chi2 (measurement + process + seed) from
    THIS trial. Add the joint measurement covariance log determinant and
    measurement normalization from THIS trial's captured affine model.
-4. Repeat the chosen trial without its scalar cache, then rerun the same
-   Gaussian fit with the selected mu AND configured sigma to produce the
-   ADDITIONAL FreeLoss RTS/backward output pair.
+4. Repeat the chosen trial without its scalar cache, then make the native
+   conditional fit at that b the ADDITIONAL FreeLoss RTS/backward output pair.
 
-The bounds on mu are [0,FreeLossMaxLogLoss], default[0,1]. They do not bound
-the posterior b or truncate the Gaussian. The tested14-point scan
+The bounds are [0,FreeLossMaxLogLoss], default[0,1]. The tested14-point scan
 is scaled with the upper bound. Three MIGRAD starts are the best scan point,
 min(.005,upper), and min(.05,upper). The normal initial step is .002, capped
 at2% of the upper bound. Minuit ErrorDef=1, precision1e-8. A local diagnostic
-scan uses mu_best + j*.001 for j=-10..10 within bounds; it does not silently
+scan uses b_best + j*.001 for j=-10..10 within bounds; it does not silently
 replace the selected minimum. Failed native trials are tagged and receive
 a large invalid-objective penalty, not a fabricated valid likelihood.
 
@@ -79,14 +79,10 @@ For the exact relation to complete smoothed residuals, see
 [forward likelihood and smoothed quadratic](smoothed-objective.md).
 
 The native state is `(drho, phi0, kappa, dz, tanl)` at each hit's native pivot.
-For one prior-center trial, xp and xf denote the native forward predicted and
+For one fixed-b trial, xp and xf denote the native forward predicted and
 updated states. H and V are the native measurement derivative and covariance;
-F includes geometric propagation and the loss Jacobian at mu. At the selected
-birth edge, Q is native process noise plus `SigmaLogLoss^2 * g * g^T`, where
-g is the target-state derivative with respect to b. Other edges retain native Q.
-This includes the Gaussian loss prior ONCE, after marginalizing its local loss
-coordinate; no separate b penalty or independent log(sigma) term is added.
-The frozen model is:
+F includes geometric propagation and the selected fixed-loss Jacobian; Q is
+the native process noise. The frozen model is:
 
 ```text
 x_0 ~ N(xp_0, Pseed)
@@ -114,7 +110,7 @@ complete smoothed chi2 = measurement chi2 + process chi2 + seed chi2
 m counts every measured coordinate at every accepted hit. This integrates
 over the Gaussian trajectory variables. It is not just the minimized
 quadratic or a product of independent smoothed-hit residual densities.
-The determinant term matters when changing mu changes the uncertainty.
+The determinant term matters when changing b changes the uncertainty.
 Continuous-density -2logL may be negative; it is not a chi-square statistic.
 
 The production objective reads `FitResult::smoothedTotalChi2` directly from
@@ -144,14 +140,13 @@ nor a successful Minuit call establishes correct physical loss recovery.
 
 ## Six collections: ordinary, free-loss and truth-assisted pairs
 
-### Shared loss prior, different inward calculations
+### Shared loss, different inward calculations
 
-There is ONE Minuit search and one selected mu for both free-loss endpoints.
-For each trial the existing fitter uses the SAME positive SigmaLogLoss.
+There is ONE Minuit search and one selected b for both free-loss endpoints.
+For each trial the existing fitter runs with that b fixed (sigma_b=0).
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
-amount sets the chosen mu. The final fitter call uses that same selected center
-and width for both RTS and backward continuation. Their fitted b values and
-posterior variances can differ because their inward calculations differ.
+amount sets the chosen b. The final fitter call uses that same selected value
+for both RTS and backward continuation.
 
 RTS uses transitions buffered DURING THIS trial's forward filter, not from a
 previous event or an old fit. Each transition retains predicted state/covariance,
@@ -170,12 +165,10 @@ upstream state. This is the RTS procedure for the current linearized model,
 not a fresh backward hit refit. The implementation also transports the full
 smoothed covariance in conditional/Joseph form.
 
-For positive mu, the forward loss map is linearized at exp(mu), with the
-configured loss variance transported by the same shared fitter. RTS uses
+For positive b, the forward loss map multiplies curvature by exp(b). RTS uses
 the resulting forward transitions; it does not apply a second loss. The native
-backward refilter instead propagates inward, applies the inverse map at the
-selected upstream surface with that same prior width, and updates its hit.
-Same loss-prior settings, opposite direction.
+backward refilter instead propagates inward, applies exp(-b) at the selected
+upstream surface and updates its hit. Same physical loss, opposite direction.
 Its seed is the final forward endpoint with covariance scaled by
 BackwardSeedScale; this scale does not change the RTS calculation or objective.
 
@@ -191,28 +184,23 @@ The existing names remain:
 
 - BreakpointTracksRTS / BreakpointTracksBackwardFilter: ALWAYS the ordinary pair.
 - BreakpointTracksFreeLossRTS / BreakpointTracksFreeLossBackwardFilter:
-  optimized-prior results when applied; ordinary copies when off/empty;
-  input KF copies on failed or unsupported optimization.
+  optimized results when applied; otherwise exact ordinary copies without a rerun.
 - BreakpointTracksTruthOverrideRTS / BreakpointTracksTruthOverrideBackwardFilter:
   the established truth-centered positive-SigmaLogLoss comparison when enabled.
 
 TruthOverride has NOT been redefined as a fixed-loss oracle. Its prior center
 and the configured positive sigma still go through the existing fitter. With
-free fitting enabled, all three pairs use the SAME configured Gaussian width.
-Their prior centers differ: configured MeanLogLoss, optimized mu, or truth b.
-Equal prior widths do not imply equal posterior covariances or loss estimates.
+free fitting enabled, the FreeLoss pair has no b Gaussian prior, while the
+ordinary/truth pairs retain their priors: these are not identical-uncertainty fits.
 When TruthOverride is off, the truth pair ALWAYS copies the ordinary pair,
 even when free fitting is on. The PriorCenter contract is unchanged.
 Truth interval selection may still need embedded
 truth when the override is off; the optimizer interface accepts no truth loss.
 
-Optimized FreeLoss track covariances include the fitted loss uncertainty and
-track/loss correlations from the shared Gaussian fitter. They are NOT fixed-b
-conditional covariances. They do still condition on the chosen prior center:
-the local Minuit error on mu is recorded but not added as a second uncertainty.
-SigmaLogLoss is the prior width; saved fitted_log_loss_variance is the posterior
-variance; b_error is the Minuit error on the prior center. These are distinct.
-Track.chi2 and existing per-hit lists retain their
+Optimized FreeLoss track covariances are CONDITIONAL on the fitted b. The local
+Minuit error is recorded but is not added to those covariances. Zero fitted
+loss variance in the native tuple therefore does not mean the optimized loss
+has zero uncertainty. Track.chi2 and existing per-hit lists retain their
 quadratic definitions; they are not replaced with -2logL. NDF remains the
 existing dimension bookkeeping, not a calibrated significance for free fitting.
 
@@ -224,17 +212,15 @@ actual optimized-extra-pair method. Disabled runs retain all old values exactly.
 
 | Field(s), prefix free_loss_ | Meaning |
 |---|---|
-| enabled, max_log_loss, max_calls_per_start, tolerance | Effective steering; max_log_loss bounds the prior center |
-| treatment, prior_sigma_log_loss | PriorCenter and the configured SigmaLogLoss; present even when free fitting is off |
-| prior_mean_log_loss | Optimized Gaussian prior center mu; NaN if no optimization was applied |
+| enabled, max_log_loss, max_calls_per_start, tolerance | Effective steering |
 | status | 0 not attempted; 1 no interval/5D; 2 applied; -1 unsupported KF fallback; -2 failed-search KF fallback |
 | interval | Selected scalar breakpoint index, or -1 |
-| b, b_error, minuit_status, edm | b is a compatibility alias for prior_mean_log_loss; b_error is the Minuit center error, NOT SigmaLogLoss or posterior sigma_b; successful minima have status0; -99 means no accepted minimum |
+| b, b_error, minuit_status, edm | Selected loss and local optimization diagnostics; successful minima have status0; -99 means no accepted minimum |
 | nll2, quadratic, logdet | Normalized objective, the complete RTS-smoothed chi2 used by Minuit, and logdet(S_all); m*log(2*pi) is also included in nll2 |
-| lower_bound, upper_bound | Selected prior center within1e-6 of a bound |
-| covariance_conditional | Legacy exact-fixed-b flag; false for the new Gaussian-prior fit. Center-estimation uncertainty is still not integrated |
+| lower_bound, upper_bound | Selected b within1e-6 of a bound |
+| covariance_conditional | True when the extra FreeLoss covariance conditions on optimized b |
 | error | Unsupported/failed-search explanation |
-| trial_b, trial_nll2, trial_valid, trial_phase, trial_error | Row-aligned prior-center trials; phases0 scan,1 Minuit,2 uncached repeat,3 local scan |
+| trial_b, trial_nll2, trial_valid, trial_phase, trial_error | Row-aligned evaluated trials; phases0 scan,1 Minuit,2 uncached repeat,3 local scan |
 
 No side CSV writer, temporary source loader or extra ROOT helper input is
 part of the maintained workflow. Trial arrays replace the prototype CSV
@@ -277,10 +263,7 @@ Always-present branches, all prefixed `free_loss_`:
 Historical tuples produced before this separate-pair change used the ordinary
 primary names for the optimized result and, with TruthOverride off, used
 CopiedFreeLikelihood for the extra truth copies. Do not relabel those tuples.
-The presence of `free_loss_result_status` identifies the separate-pair schema.
-Within that schema, `free_loss_treatment="PriorCenter"` identifies the shared
-positive-sigma method introduced on 2026-09-30. Older tuples lacking this field
-retain their fixed-b interpretation; do not relabel them.
+The presence of `free_loss_result_status` identifies the new separate-pair schema.
 
 ## Code organization
 
@@ -290,11 +273,120 @@ retain their fixed-b interpretation; do not relabel them.
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
 | TrackLikelihood | Add joint-measurement normalization to the supplied complete RTS-smoothed chi2; retain independent marginal evaluation for regression |
-| FreeLossFitter | Blind bounded prior-center search; calls the existing Gaussian fitter with shared sigma for each trial |
+| FreeLossFitter | Blind bounded scalar search; calls the existing fitter for each trial |
 | FreeLossTuple | Serialization only; no fitting or likelihood logic |
 | FitPairTuple | Additional result-pair serialization; exact copies use the existing fit object |
 
-Free fitting remains a research option. Historical fixed-b results do not
-validate the new positive-sigma workflow. Wider categorized validation and
-assessment of prior-center estimation uncertainty remain necessary before
+Free fitting remains a research option. The focused prototype eliminated one
+extreme overshoot but retained20% errors in other examples. Wider categorized
+validation and a treatment of outer-loss uncertainty remain necessary before
 physics use.
+## Original file: Reconstruction/RecBreakpoint/docs/smoothed-objective.md
+
+# Forward likelihood and complete smoothed quadratic
+
+This explanation concerns one fixed trial loss b and the SAME fixed affine
+Gaussian model. It does not introduce a different objective or iterations.
+The native state is (drho, phi0, kappa, dz, tanl), with kappa=q/pT.
+
+## Complete trajectory score
+
+Let x_i be the track state at layer i, y_i its measured coordinates, mu_0
+the initial seed mean, P_0 the seed covariance, f_i the captured affine
+transport including fixed loss b, and h_i the captured affine measurement
+map. V_i is measurement noise and Q_i is propagation noise. The score for
+an entire candidate trajectory X=(x_0,...,x_(N-1)) is:
+
+```text
+C(X,b) = (x_0-mu_0)^T P_0^-1 (x_0-mu_0)
+       + sum_i (y_i-h_i(x_i))^T V_i^-1 (y_i-h_i(x_i))
+       + sum_(i=1..N-1) (x_i-f_i(x_(i-1),b))^T Q_i^+
+                        (x_i-f_i(x_(i-1),b)).
+```
+
+T means transpose and + denotes the inverse on supported noise directions.
+With singular Q, null-space transition residuals must be exactly zero;
+a pseudoinverse alone must not silently permit unsupported process changes.
+The implementation avoids this issue by constructing process residuals on
+the supported noise subspace. The seed term is included once. The fixed-b
+free trial has no Gaussian loss prior and no stochastic loss variance.
+
+For this fixed Gaussian model, the RTS conditional mean X_s minimizes C.
+The sum at X_s is the complete smoothed quadratic. V and Q are original
+noise covariances, NOT the smoothed posterior covariance of x_i.
+
+## Why the forward and smoothed quadratic values agree
+
+Represent independent seed fluctuations and supported process kicks by a
+unit-Gaussian vector u. Whiten each hit by its measurement noise, giving:
+
+```text
+d = A*u + epsilon,    covariance(u)=I, covariance(epsilon)=I
+C(u,b) = ||d-A*u||^2 + ||u||^2
+u_hat = (I+A^T*A)^-1 A^T*d
+C(u_hat,b) = d^T (I+A*A^T)^-1 d.
+```
+
+d is the stacked whitened residual relative to the model mean; A maps the
+seed/process fluctuations into whitened hit coordinates. I is the identity
+matrix and ||v||^2=v^T*v. u_hat describes the smoothed best-fit trajectory
+and fitted process kicks. Substitution and the Woodbury identity give the
+last equality: the marginal-likelihood quadratic is exactly the optimized
+complete smoothed quadratic.
+
+The forward Kalman recursion is another factorization of this SAME Gaussian
+model. Its sum of innovation quadratics is the same scalar. The individual
+per-hit terms differ: forward terms use upstream conditional predictions,
+whereas smoothed terms distribute the score over final hit, process and seed
+residuals. No downstream hit information disappears from the total forward
+factorization. Smoothing recovers the conditional trajectory; it does not
+add new observations to the likelihood.
+
+## Which objective is currently minimized
+
+The current Minuit objective evaluates the NORMALIZED marginal likelihood
+using the complete RTS-smoothed chi2 directly:
+
+```text
+J(b) = C(X_s,b) + log det S(b) + M log(2*pi).
+```
+
+S is the joint covariance of all UNWHITENED measurements and M their total
+dimension. QR of the captured model supplies its log determinant. The existing
+RTS pass supplies C(X_s,b) through `FitResult::smoothedTotalChi2`.
+Replacing J by smoothedTotalChi2 alone would drop the determinant term. It
+would be a change of objective, not just a different way to evaluate J.
+No such change is made by removing reference-trajectory iterations.
+
+On 2026-09-13 the user explicitly required retaining BOTH normalization terms
+in the proposed switch to direct complete RTS-smoothed chi2 evaluation:
+
+```text
+J(b) = smoothedTotalChi2(b) + log det S_all(b) + M log(2*pi).
+```
+
+S_all is the same joint measurement covariance denoted S above, NOT the
+RTS-smoothed state covariance. M is the same total measurement dimension.
+The production `FreeLossFitter` passes this trial's complete RTS-smoothed chi2
+and captured model to `evaluateSmoothedTrackLikelihood`. That helper uses
+the supplied chi2 without replacing it by a marginal quadratic, and adds
+exactly these two normalization terms. Invalid smoothed scores invalidate
+the trial; there is no silent fallback to another objective. The independent
+`evaluateTrackLikelihood` is retained for numerical regression only. No
+reference-trajectory iteration, new filter, or new run-card control is added.
+
+The equalities above require the same fixed affine model. In the actual
+native tracking code the nonlinear measurement evaluations/reference choices
+can differ from the captured affine ones. Do not claim that every published
+native forward chi2 equals the captured marginal quadratic bit-for-bit.
+scoreSmoothed uses the affine measurement score for its complete total and
+also records a distinct native measurement-only score. BackwardSeedScale=100
+does not enter the marginal objective, and the backward refilter is not a
+second independent contribution to add to it.
+
+LikelihoodTest independently compares a forward Kalman sum, dense
+full-trajectory least squares, and the marginal quadratic with zero and
+singular process noise. It also checks the direct smoothed objective against
+the normalized dense likelihood, verifies that the supplied chi2 is used,
+and rejects invalid smoothed scores. These checks establish the algebra, not
+physics performance or the correctness of every nonlinear approximation.

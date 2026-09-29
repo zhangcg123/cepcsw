@@ -5,7 +5,59 @@
 #include <limits>
 #include <stdexcept>
 
+namespace {
+void checkFiniteLossPrior() {
+  // Independent one-breakpoint model: one seed curvature plus one Gaussian
+  // loss kick. The kick affects BOTH downstream hits, once at birth. Direct
+  // dense covariance and latent least squares independently check the capture
+  // used for each shared-SigmaLogLoss Minuit prior-center trial.
+  for (double sigma : {0., .001, .01, .05}) {
+    for (double center : {0., .03, .1}) {
+      breakpoint::GaussianTrackModel model;
+      model.seedCovariance.ResizeTo(5,5);
+      model.seedCovariance.UnitMatrix();
+      model.seedCovariance(2,2)=.04;
+      Eigen::Matrix3d measurement=Eigen::Matrix3d::Zero();
+      measurement.diagonal()<<.01,.02,.03;
+      Eigen::Vector3d residual;
+      residual<<.03,.10-2*center,.09-2*center;
+      Eigen::Matrix<double,3,2> response;
+      response<<.2,0., .2,2*sigma, .2,2*sigma;
+      for(int i=0;i<3;++i) {
+        TMatrixD h(1,5),v(1,1),r(1,1);
+        h.Zero();h(0,2)=1;v(0,0)=measurement(i,i);r(0,0)=residual(i);
+        model.hits.push_back({h,v,r});
+        if(i) {
+          TMatrixD f(5,5),q(5,5),shift(5,1);
+          f.UnitMatrix();q.Zero();shift.Zero();
+          if(i==1) q(2,2)=4*sigma*sigma;
+          model.transitions.push_back({f,q,shift});
+        }
+      }
+      const Eigen::Matrix3d joint=measurement+response*response.transpose();
+      const Eigen::LLT<Eigen::Matrix3d> jointFactor(joint);
+      const Eigen::Matrix3d lower=jointFactor.matrixL();
+      const double expectedChi2=residual.dot(jointFactor.solve(residual));
+      const double expectedLogdet=2*lower.diagonal().array().log().sum();
+      const Eigen::Matrix3d precision=measurement.inverse();
+      const Eigen::Matrix2d normal=Eigen::Matrix2d::Identity()+response.transpose()*precision*response;
+      const Eigen::Vector2d fitted=normal.ldlt().solve(response.transpose()*precision*residual);
+      const Eigen::Vector3d hitResidual=residual-response*fitted;
+      const double completeChi2=hitResidual.dot(precision*hitResidual)+fitted.squaredNorm();
+      const auto scored=breakpoint::evaluateSmoothedTrackLikelihood(model,completeChi2);
+      const auto marginal=breakpoint::evaluateTrackLikelihood(model);
+      if(std::abs(completeChi2-expectedChi2)>1.e-10 ||
+         std::abs(scored.logDeterminant-expectedLogdet)>1.e-10 ||
+         std::abs(scored.nll2-marginal.nll2)>1.e-10)
+        throw std::runtime_error("Shared Gaussian loss variance/normalization mismatch");
+    }
+    std::cout<<"Shared loss sigma="<<sigma<<": dense and complete-smoothed objectives agree\n";
+  }
+}
+} // namespace
+
 int main() {
+  checkFiniteLossPrior();
   // Independent dense Gaussian reference. Includes unobserved state
   // coordinates, correlated measurement errors and singular/no process noise.
   for (double noise : {0., .1}) {

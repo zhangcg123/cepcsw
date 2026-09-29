@@ -78,9 +78,8 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
                                      const FitSettings& settings) const {
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
-  if (settings.captureGaussianModel &&
-      (settings.lossStateMode != "LocalMarginal" || settings.sigmaLogLoss != 0))
-    throw std::invalid_argument("Gaussian likelihood capture requires fixed-loss LocalMarginal");
+  if (settings.captureGaussianModel && settings.lossStateMode != "LocalMarginal")
+    throw std::invalid_argument("Gaussian likelihood capture requires LocalMarginal");
   if (settings.lossStateMode == "Persistent6D") {
     if (settings.intervals.size() > 1)
       throw std::invalid_argument("Persistent6D requires at most one breakpoint");

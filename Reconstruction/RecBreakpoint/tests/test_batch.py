@@ -158,6 +158,22 @@ class BatchTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.prepare(OUTPUT_TUPLEPATH='free_invalid', BP_FREE_LOSS_FIT='maybe')
 
+    def test_free_loss_shares_sigma_without_a_second_width_control(self):
+        self.assertIn('BP_SIGMA_LOG_LOSS', batch.BP_CONTROLS)
+        self.assertFalse(any('SIGMA' in name and name != 'BP_SIGMA_LOG_LOSS'
+                             for name in batch.BP_CONTROLS))
+        for sigma in ('0.001', '0.05'):
+            output='shared_sigma_'+sigma
+            self.prepare(OUTPUT_TUPLEPATH=output, BP_FREE_LOSS_FIT='true', BP_SIGMA_LOG_LOSS=sigma)
+            job=self.manifest(output)
+            assignments='\n'.join(line for line in Path(job['cards']['breakpoint']).read_text().splitlines()
+                                  if line.startswith(('fit.SigmaLogLoss =', 'fit.FreeLossFit =')))
+            fit=types.SimpleNamespace()
+            with patch.dict(os.environ,job['controls'],clear=True):
+                exec(assignments,{'fit':fit,'os':os})
+            self.assertTrue(fit.FreeLossFit)
+            self.assertEqual(fit.SigmaLogLoss,float(sigma))
+
     def test_submission_shell_freezes_shared_loss_sigma(self):
         # This fixture checks plumbing, independent of the user's active campaign default.
         script = self.repo/'subbreakpointjobs.sh'

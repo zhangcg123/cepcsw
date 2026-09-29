@@ -321,7 +321,7 @@ StatusCode RecBreakpoint::execute() {
       continue;
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
-    m_freeLossTuple.reset(m_freeLossFit, freeLossControls);
+    m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
     m_freeLossTracks.reset();
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
@@ -460,7 +460,8 @@ StatusCode RecBreakpoint::execute() {
           warning() << "FreeLossFit: " << freeFit.diagnostics.error << "; free outputs use input KF" << endmsg;
         if (m_verbose) info() << std::setprecision(17) << "FreeLossFit event=" << m_event
             << " track=" << m_trackIndex << " status=" << int(freeFit.diagnostics.status)
-            << " b=" << freeFit.diagnostics.b << " nll2=" << freeFit.diagnostics.likelihood.nll2
+            << " prior_mean=" << freeFit.diagnostics.b << " prior_sigma=" << settings.sigmaLogLoss
+            << " nll2=" << freeFit.diagnostics.likelihood.nll2
             << " minuit_status=" << freeFit.diagnostics.minuitStatus << endmsg;
       }
       const auto& fit=paired.rts;

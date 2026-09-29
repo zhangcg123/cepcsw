@@ -61,6 +61,8 @@ fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth"
 fit.MeanLogLoss = float(os.environ.get("BP_MEAN_LOG_LOSS", "0.0"))
 # Batch value is set in subbreakpointjobs.sh and frozen into the generated card.
 # The fallback below is for direct standalone use, without the submission script.
+# This SAME prior sigma is used by ordinary, free-loss and truth-centred fits.
+# Minuit varies the free-loss prior center; each trial/final refit retains sigma.
 fit.SigmaLogLoss = float(os.environ.get("BP_SIGMA_LOG_LOSS", "0.001"))
 fit.SeedScale = 1.0
 # Scale the full copied first-forward endpoint covariance for BackwardFilter
@@ -79,12 +81,14 @@ if "BP_BACKWARD_MODE" in os.environ:
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
 fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # Both representations use the MeanLogLoss/SigmaLogLoss Gaussian prior.
-# The optional Minuit pair below uses fixed-b trials internally; it remains
-# separate from the ordinary fit and the Gaussian truth-prior pair.
-# Optional outer b fit: normalized full-track likelihood, not chi2 alone.
+# The optional Minuit pair below optimizes the prior center with the SAME sigma;
+# it remains separate from the ordinary fit and the truth-centred pair.
+# Optional outer prior-center fit: normalized full-track likelihood, not chi2 alone.
 # Ordinary RTS/backward are ALWAYS retained. True adds optimized results in
 # the FreeLoss RTS/backward collections on one selected LocalMarginal interval;
-# their covariances are conditional on fitted b. False copies ordinary results
+# their covariances include the loss posterior variance and correlations.
+# Minuit's error on the chosen prior center is NOT another SigmaLogLoss.
+# False copies ordinary results
 # into these extra collections/flat branches, without another fit.
 # Empty lists copy ordinary results. Unsupported modes/manual multiple intervals
 # or failed optimization copy the INPUT CompleteTracks KF into both free outputs.
@@ -94,7 +98,7 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
-fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))
+fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
@@ -107,6 +111,7 @@ fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
 # Primary RTS/backward always use MeanLogLoss/SigmaLogLoss. FreeLossFit changes
 # only the additional FreeLoss pair. The truth pair STILL uses the configured
 # positive sigma and truth prior center, not Minuit or a fixed-loss oracle.
+# FreeLossFit uses that same sigma but an optimized prior center instead.
 # False, or an empty effective interval list: save ordinary RTS/backward copies
 # in the truth-override outputs. Truth selection can still read truth when False.
 # LossStateMode controls the ordinary fit; neither control overrides the other.

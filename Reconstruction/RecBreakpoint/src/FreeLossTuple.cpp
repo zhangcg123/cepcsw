@@ -1,5 +1,6 @@
 #include "FreeLossTuple.h"
 #include "TTree.h"
+#include <cmath>
 
 namespace breakpoint {
 void FreeLossTuple::book(TTree& tree) {
@@ -11,6 +12,9 @@ void FreeLossTuple::book(TTree& tree) {
   tree.Branch("free_loss_status", &m_status);
   tree.Branch("free_loss_interval", &m_interval);
   tree.Branch("free_loss_b", &m_b);
+  tree.Branch("free_loss_treatment", &m_lossTreatment);
+  tree.Branch("free_loss_prior_mean_log_loss", &m_b);
+  tree.Branch("free_loss_prior_sigma_log_loss", &m_priorSigmaLogLoss);
   tree.Branch("free_loss_b_error", &m_errorB);
   tree.Branch("free_loss_minuit_status", &m_minuitStatus);
   tree.Branch("free_loss_edm", &m_edm);
@@ -28,8 +32,9 @@ void FreeLossTuple::book(TTree& tree) {
   tree.Branch("free_loss_trial_error", &m_trialError);
 }
 
-void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls) {
+void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls, double sigmaLogLoss) {
   m_enabled = enabled;
+  m_priorSigmaLogLoss = sigmaLogLoss;
   m_maxLogLoss = controls.maxLogLoss;
   m_maxCalls = controls.maxCallsPerStart;
   m_tolerance = controls.tolerance;
@@ -46,7 +51,11 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
   m_status = int(diagnostic.status);
   m_interval = diagnostic.interval;
   m_applied = applied();
-  m_covarianceConditional = m_applied;
+  // Legacy flag meant conditional on an EXACT fixed b. The new output includes
+  // posterior loss variance, but still conditions on the optimized prior center.
+  m_covarianceConditional = false;
+  if (std::isfinite(diagnostic.priorSigmaLogLoss))
+    m_priorSigmaLogLoss = diagnostic.priorSigmaLogLoss;
   m_minuitStatus = diagnostic.minuitStatus;
   m_b = diagnostic.b; m_errorB = diagnostic.bError; m_edm = diagnostic.edm;
   m_lower = diagnostic.lowerBound; m_upper = diagnostic.upperBound;
