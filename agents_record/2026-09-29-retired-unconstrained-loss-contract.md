@@ -1,3 +1,9 @@
+# Retired contract: no-prior and fixed primary breakpoint workflows
+
+Archived verbatim from RecBreakpoint/docs/unconstrained-loss.md on 2026-09-29.
+The modes and their selector have been removed at the user request.
+This is historical documentation, not a supported run configuration.
+
 # Unconstrained breakpoint loss
 
 `LossPriorMode="Unconstrained"` is an opt-in, one-pass joint fit of the track

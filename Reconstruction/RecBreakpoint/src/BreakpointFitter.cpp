@@ -1,6 +1,5 @@
 #include "BreakpointFitter.h"
 #include "RecBreakpoint/AugmentedTransport.h"
-#include "UnconstrainedLoss.h"
 
 #include <algorithm>
 #include <cmath>
@@ -16,7 +15,6 @@ struct Transition {
   TMatrixD transport{5, 5};
   TMatrixD noise{5, 5};
   TMatrixD lossTargetCross{1, 5};
-  TMatrixD lossResponse{5, 1}; // derivative at FIXED b; independent of its prior
   bool breakpoint = false;
   double meanLoss = 0, varianceLoss = 0, closure = 0;
 };
@@ -74,51 +72,12 @@ std::pair<double, double> inferLoss(const Transition& transition,
     throw std::runtime_error("Invalid conditional breakpoint variance");
   return {transition.meanLoss + correction(0, 0), std::max(0.0, variance)};
 }
-
-// Integrate the fitted scalar uncertainty, including track/b correlation.
-// The supplied state is conditional on the reference b. This is an affine
-// parameter transformation, NOT a second Kalman measurement update.
-bool marginalizeLoss(TrackState& state, const TMatrixD& response,
-                     const UnconstrainedLoss& loss) {
-  if (!loss.identified()) {
-    bool affected=false;
-    for(int i=0;i<5;++i) affected=affected || response(i,0)!=0;
-    if (!affected) return true;
-    // A diffuse direction has no finite covariance before enough hits arrive.
-    for(int i=0;i<5;++i) for(int j=0;j<5;++j)
-      state.covariance(i,j)=std::numeric_limits<double>::quiet_NaN();
-    return false;
-  }
-  state.mean+=response*loss.shift();
-  state.covariance+=loss.variance()*response*transpose(response);
-  try { validateCovariance(state.covariance); }
-  catch(const std::exception&) {
-    // A barely observed prefix can have enormous variance and numerically
-    // unresolved finite directions. Mark it unavailable; never add a prior
-    // or covariance jitter. Final endpoints must separately require success.
-    for(int i=0;i<5;++i) for(int j=0;j<5;++j)
-      state.covariance(i,j)=std::numeric_limits<double>::quiet_NaN();
-    return false;
-  }
-  return true;
-}
 } // namespace
 
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                      const FitSettings& settings) const {
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
-  if (settings.lossPriorMode!="Gaussian" && settings.lossPriorMode!="Unconstrained" && settings.lossPriorMode!="Fixed")
-    throw std::invalid_argument("LossPriorMode must be Gaussian, Unconstrained or Fixed");
-  if (settings.lossPriorMode=="Fixed") {
-    if(settings.lossStateMode!="LocalMarginal")
-      throw std::invalid_argument("Fixed loss requires LocalMarginal (no singular live 6D covariance)");
-    auto conditional=settings;conditional.lossPriorMode="Gaussian";conditional.sigmaLogLoss=0;
-    return fit(hits,conditional);
-  }
-  if (settings.lossPriorMode=="Unconstrained" &&
-      (settings.lossStateMode!="LocalMarginal" || settings.intervals.size()>1 || settings.captureGaussianModel))
-    throw std::invalid_argument("Unconstrained loss requires LocalMarginal and at most one interval; no outer trial capture");
   if (settings.captureGaussianModel &&
       (settings.lossStateMode != "LocalMarginal" || settings.sigmaLogLoss != 0))
     throw std::invalid_argument("Gaussian likelihood capture requires fixed-loss LocalMarginal");
@@ -147,7 +106,6 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
 
 FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
                                       const FitSettings& settings) const {
-  const bool unconstrained=settings.lossPriorMode=="Unconstrained" && !settings.intervals.empty();
   FitResult result;
   const auto seed = m_adapter.seed(hits, settings.seedScale);
   result.predicted.push_back(seed.predicted);
@@ -169,10 +127,7 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     Matrix6 jointPrior{}, jointMap{};
     TrackState propagationSource = source;
     if (transition.breakpoint) {
-      auto loss = intervalSettings(settings, i);
-      // Conditional reference only. The final unconstrained b variance is
-      // inferred from data below, never interpreted as fixed zero uncertainty.
-      if (unconstrained) loss.sigmaLogLoss=0;
+      const auto loss = intervalSettings(settings, i);
       propagationSource = applyBreakpoint(source, loss, lossMap, derivative, jointPrior, jointMap);
       transition.meanLoss = loss.meanLogLoss;
       transition.varianceLoss = loss.sigmaLogLoss * loss.sigmaLogLoss;
@@ -186,7 +141,6 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
 
     if (transition.breakpoint) {
       const TMatrixD propagatedDerivative = step.transport * derivative;
-      transition.lossResponse=propagatedDerivative;
       transition.noise += transition.varianceLoss * propagatedDerivative * transpose(propagatedDerivative);
       Vector5 column{};
       for (int j = 0; j < 5; ++j) {
@@ -216,41 +170,15 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     result.measurementDimensions += step.dimension;
   }
 
-  // Exact diffuse scalar regression for this captured affine model. Native
-  // KalTest already performed all 5D hit updates above. Derivatives follow
-  // those same updates; zero initial information removes the b prior exactly.
-  std::vector<TMatrixD> predictedResponse(hits.size(),TMatrixD(5,1));
-  std::vector<TMatrixD> filteredResponse(hits.size(),TMatrixD(5,1));
-  std::vector<UnconstrainedLoss> prefixes;
-  UnconstrainedLoss lossInformation;
-  std::vector<double> diffuseChi2;
-  if (unconstrained) {
-    for(std::size_t i=0;i<hits.size();++i) {
-      if(i) predictedResponse[i]=transitions[i-1].transport*filteredResponse[i-1]
-                                      +transitions[i-1].lossResponse;
-      diffuseChi2.push_back(lossInformation.add(
-          m_adapter.gaussianHitModel(hits[i],result.predicted[i]),
-          result.predicted[i].covariance,predictedResponse[i]));
-      filteredResponse[i]=result.filtered[i].covariance
-          *inverseCovariance(result.predicted[i].covariance)*predictedResponse[i];
-      prefixes.push_back(lossInformation);
-    }
-    // Fail explicitly rather than report an arbitrary b with zero uncertainty.
-    (void)lossInformation.variance();
-  }
-
   // Rauch-Tung-Striebel backward pass using each retained transition joint.
   // Ordinary edges stay 5D; only selected edges additionally infer their loss.
   result.smoothed = result.filtered;
-  auto smoothedResponse=filteredResponse;
   for (int i = static_cast<int>(transitions.size()) - 1; i >= 0; --i) {
     const auto& edge = transitions[i];
     const auto& downstream = result.smoothed[i + 1];
     const TMatrixD gain = edge.sourceTargetCross * inverseCovariance(edge.predicted.covariance);
     auto& smoothed = result.smoothed[i];
     smoothed.mean = result.filtered[i].mean + gain * stateDifference(downstream.mean, edge.predicted.mean);
-    if(unconstrained) smoothedResponse[i]=filteredResponse[i]
-        +gain*(smoothedResponse[i+1]-predictedResponse[i+1]);
     // Conditional-covariance (Joseph) form avoids cancellation of loose seed errors.
     TMatrixD remaining(5, 5);
     remaining.UnitMatrix();
@@ -269,44 +197,16 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
     }
   }
   std::reverse(result.breakpoints.begin(), result.breakpoints.end());
-  const auto measurementReferences=result.predicted;
+  result.ip = m_adapter.propagateToIP(result.smoothed.front(), hits.front());
+  result.endpoint = result.smoothed;
   std::vector<TMatrixD> predicted, covariances, smoothed, noises;
   for (std::size_t i=0;i<hits.size();++i) {
     predicted.push_back(result.predicted[i].mean);
     covariances.push_back(result.predicted[i].covariance);
-    if(unconstrained) {
-      // Complete chi2 is evaluated at the fitted b, using the conditional
-      // covariance/noise of that SAME model. The b prior contributes nothing.
-      predicted.back()+=predictedResponse[i]*lossInformation.shift();
-      if(!marginalizeLoss(result.smoothed[i],smoothedResponse[i],lossInformation))
-        throw std::runtime_error("Unconstrained RTS covariance unavailable at hit "+std::to_string(i));
-      for(int row=0;row<5;++row) result.stateLossCovariance.push_back(
-          smoothedResponse[i](row,0)*lossInformation.variance());
-      const UnconstrainedLoss before=i ? prefixes[i-1] : UnconstrainedLoss{};
-      result.predictionValid.push_back(marginalizeLoss(result.predicted[i],predictedResponse[i],before));
-      result.filteredValid.push_back(marginalizeLoss(result.filtered[i],filteredResponse[i],prefixes[i]));
-    }
     smoothed.push_back(result.smoothed[i].mean);
     if (i) noises.push_back(transitions[i-1].noise);
   }
-  scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,measurementReferences);
-  if(unconstrained) {
-    // The measurement expansion remains at the original native prediction,
-    // not the shifted diffuse prediction (which can be improper at birth).
-    const int index=settings.intervals.front();
-    const auto& local=prefixes[index+1];
-    const double reference=intervalSettings(settings,index).meanLogLoss;
-    const double nan=std::numeric_limits<double>::quiet_NaN();
-    result.breakpoints={{index,nan,reference+lossInformation.shift(),lossInformation.variance(),
-        local.identified()?reference+local.shift():nan,local.identified()?local.variance():nan,0}};
-    result.lossInformation=lossInformation.information();
-    result.lossReference=reference;
-    result.localChi2=diffuseChi2;
-    result.chi2=lossInformation.quadratic();
-    result.lossChi2Closure=result.smoothedTotalChi2-result.chi2;
-  }
-  result.ip = m_adapter.propagateToIP(result.smoothed.front(), hits.front());
-  result.endpoint = result.smoothed;
+  scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
   if (settings.captureGaussianModel) {
     auto model = std::make_shared<GaussianTrackModel>();
     model->seedCovariance.ResizeTo(result.predicted.front().covariance);
@@ -326,9 +226,6 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
 
 FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
     const FitSettings& settings, FitResult result) const {
-    const bool unconstrained=settings.lossPriorMode=="Unconstrained" && !settings.intervals.empty();
-    result.stateLossCovariance.clear();result.predictionValid.clear();result.filteredValid.clear();
-    result.lossInformation=0;result.lossChi2Closure=0;
     result.breakpoints.clear();
     result.gaussianModel.reset(); // the marginal likelihood uses the forward model
     result.smoothed.clear();
@@ -350,10 +247,6 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     }
     result.backwardFiltered.back() = backwardSeed;
     result.backwardPredicted.back() = backwardSeed; // seed, no hit update
-    std::vector<TMatrixD> predictedResponse(hits.size(),TMatrixD(5,1));
-    std::vector<TMatrixD> filteredResponse(hits.size(),TMatrixD(5,1));
-    std::vector<UnconstrainedLoss> prefixes(hits.size());
-    UnconstrainedLoss lossInformation;
 
     struct PendingLoss {
       IntervalResult result;
@@ -363,8 +256,7 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
       const bool selected = std::find(settings.intervals.begin(), settings.intervals.end(), i)
           != settings.intervals.end();
-      auto configuredLoss = selected ? intervalSettings(settings, i) : settings;
-      if(unconstrained) configuredLoss.sigmaLogLoss=0;
+      const auto configuredLoss = selected ? intervalSettings(settings, i) : settings;
       const auto step = m_adapter.advanceBackward(result.backwardFiltered[i + 1],
               hits[i + 1], hits[i], selected, configuredLoss.meanLogLoss, configuredLoss.sigmaLogLoss);
       if (step.covarianceClosure > 1.e-3)
@@ -372,16 +264,6 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
       result.backwardPredicted[i] = step.predicted;
       result.backwardFiltered[i] = step.filtered;
       result.backwardChi2[i] = step.chi2;
-      if(unconstrained) {
-        predictedResponse[i]=step.transport*filteredResponse[i+1];
-        // Inward loss is undone AFTER propagation, before this local hit.
-        if(selected) predictedResponse[i](2,0)-=step.predicted.mean(2,0);
-        result.backwardChi2[i]=lossInformation.add(m_adapter.gaussianHitModel(hits[i],step.predicted),
-            step.predicted.covariance,predictedResponse[i]);
-        filteredResponse[i]=step.filtered.covariance*inverseCovariance(step.predicted.covariance)
-            *predictedResponse[i];
-        prefixes[i]=lossInformation;
-      }
       // Retain each already-crossed loss's covariance with the live state.
       // Subsequent inner hits can refine that scalar without an RTS pass.
       for (auto& loss : pending)
@@ -417,23 +299,6 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     }
     for (auto it = pending.rbegin(); it != pending.rend(); ++it)
       result.breakpoints.push_back(it->result);
-    if(unconstrained) {
-      (void)lossInformation.variance();
-      const int index=settings.intervals.front();
-      const double reference=intervalSettings(settings,index).meanLogLoss;
-      const double nan=std::numeric_limits<double>::quiet_NaN();
-      const auto& local=prefixes[index];
-      result.breakpoints={{index,nan,reference+lossInformation.shift(),lossInformation.variance(),
-          local.identified()?reference+local.shift():nan,local.identified()?local.variance():nan,0}};
-      result.lossInformation=lossInformation.information();result.lossReference=reference;
-      for(std::size_t i=0;i<hits.size();++i) {
-        const auto before=i+1<hits.size()?prefixes[i+1]:UnconstrainedLoss{};
-        result.predictionValid.push_back(marginalizeLoss(result.backwardPredicted[i],predictedResponse[i],before));
-        result.filteredValid.push_back(marginalizeLoss(result.backwardFiltered[i],filteredResponse[i],prefixes[i]));
-        for(int row=0;row<5;++row) result.stateLossCovariance.push_back(prefixes[i].identified()
-            ? filteredResponse[i](row,0)*prefixes[i].variance() : nan);
-      }
-    }
     result.endpoint = result.backwardFiltered;
     result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
     return result;

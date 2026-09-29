@@ -74,15 +74,16 @@ longer misleadingly labels a row that now contains both results.
 
 ## Loss state and interval ownership
 
-An opt-in **unconstrained loss prior** is now available through
-`LossPriorMode="Unconstrained"`: one LocalMarginal interval, zero b prior
-precision, data-derived b variance and state/b correlations retained. This
-uses the native conditional KF plus affine diffuse regression and RTS, not
-Minuit or a huge prior variance. The compiled/card default remains Gaussian.
-`LossPriorMode="Fixed"` supplies a separate exact fixed-b diagnostic control.
-The prior descriptions below apply to Gaussian mode; the separate truth-prior
-pair stays Gaussian and FreeLossFit stays independent in every mode.
-See [the no-prior equations, validity flags and limitations](docs/unconstrained-loss.md).
+Both `LocalMarginal` and `Persistent6D` use the Gaussian loss prior configured
+by `MeanLogLoss` and `SigmaLogLoss`. The experimental primary `Unconstrained`
+and `Fixed` modes, their `LossPriorMode` selector, and their dedicated tuple
+diagnostics were removed on 2026-09-29. The card and batch planner explicitly
+reject the retired `BP_LOSS_PRIOR_MODE` variable rather than silently changing
+a requested fit. Old Gaudi cards assigning `LossPriorMode` must be regenerated.
+The separate `FreeLossFit` optimizer still uses fixed-b conditional trials
+internally; neither that optimizer nor the Gaussian truth-prior pair was removed.
+The retired mathematical contract is preserved in
+[the historical record](../../agents_record/2026-09-29-retired-unconstrained-loss-contract.md).
 
 An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
 IntervalSelectionMode selects the source of the breakpoint list independently
@@ -377,10 +378,9 @@ controls are introduced. See [the exact objective](docs/smoothed-objective.md).
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
-| MeanLogLoss | 0 | Finite in [0,5]: Gaussian prior center, Unconstrained expansion reference, or Fixed exact value; truth-prior pair ignores it |
-| SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma; unused by Unconstrained/Fixed ordinary outputs, retained by the separate truth-prior pair |
+| MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
+| SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary and truth-prior fits; free-loss trials hold b fixed internally |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
-| LossPriorMode | Gaussian | Gaussian prior, Unconstrained (zero b precision, one LocalMarginal interval), or Fixed (exact MeanLogLoss, LocalMarginal); separate truth-prior and Minuit pairs unchanged |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization for one selected LocalMarginal interval; input KF fallback on failure/unsupported mode |
 | FreeLossMaxLogLoss | 1 | Upper b bound, finite in (0,5]; lower bound is zero; default maximum fractional loss63.2121% |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |

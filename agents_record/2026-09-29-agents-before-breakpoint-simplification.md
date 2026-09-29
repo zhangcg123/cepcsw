@@ -1,3 +1,7 @@
+# Historical snapshot before removal of the experimental loss-prior modes
+
+Captured before changing the active focus on 2026-09-29. Not live steering.
+
 # CEPCSW GSF Development
 
 ## 1. Introduction and global status
@@ -297,36 +301,49 @@ ROOT files and logs are outputs, not status records.
 
 ## 2. Current focus
 
-Active work is RecBreakpoint on local breakpoint. On 2026-09-29, after reviewing
-the supported workflows, the user explicitly requested removing the primary
-LocalMarginal Unconstrained and Fixed workflows as the first simplification.
-Those implementations, the now-redundant LossPriorMode property, and their
-dedicated tuple fields/tests are removed. Gaussian LocalMarginal and
-Persistent6D remain; the separate Minuit free-loss pair and Gaussian
-truth-centred pair are unchanged. Fixed-b conditional trials INSIDE Minuit
-are retained and are not a selectable primary Fixed workflow.
+Active work is RecBreakpoint on local breakpoint. On 2026-09-13 the user
+requested a no-prior breakpoint KF/RTS test to examine weak inner-track
+constraints for early bremsstrahlung. LossPriorMode=Unconstrained is now an
+opt-in one-pass native conditional KF + scalar diffuse-regression + RTS
+implementation. It starts with exactly zero b prior precision and retains
+the inferred b variance and all five state/b correlations. It is NOT a
+fixed-b fit or a huge-variance approximation. One LocalMarginal interval is
+supported. Gaussian remains the compiled/card default; Fixed is an explicit
+diagnostic control. The separate Gaussian truth-prior and conditional Minuit
+pairs retain their meanings. No reference iterations or shared KF/GSF edits
+were introduced; no remote operations are authorized.
 
-The removal passes both numerical tests and 27 batch/card tests (29 explicit
-properties). Direct before/after comparisons for 2:68 and 12:11,16,17, including
-Persistent6D and manual multiple intervals, reproduce all 160 retained tuple
-fields in eight rows and 23,712 verbose state/covariance records exactly.
-12:17 remains a separate secondary-activity control, not a clean-track claim.
-The rebuilt Gaussian-only library is byte-identical to the existing installed
-library; generated/installed property schemas agree except for a timestamp.
-No installation was needed or performed. Full verification and provenance are in
-agents_record/2026-09-29-breakpoint-prior-mode-removal.md.
-Do not extend this removal into further algorithm changes without direction.
-Do not install over the shared runtime or operate on the remote implicitly.
-Existing inputs, prepared cards and outputs, user edits, GSF and shared KF
-sources are preserved. New cards reject BP_LOSS_PRIOR_MODE explicitly; old
-cards assigning the deleted property must be regenerated for the new build.
+Three numerical tests and 25 batch/card tests pass (30 explicit properties).
+Gaussian reruns reproduce all 160 old tuple fields and 11,172 verbose state/
+covariance records for 2:68 and 12:11,16,17 exactly. Eleven same-input
+comparison rows cover nine selected-loss examples, no-interval control 12:16,
+and secondary-activity control 12:17 (reported separately). The no-prior
+method is mechanically operational but NOT a performance solution: several
+early-loss results have very large tails and uncertainty.
 
-Historical no-prior tests and their unresolved native/captured response
-discrepancy remain in agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
-The removal is not a resolution of that discrepancy or a physics-validation
-claim. The complete outgoing status and retired mathematical contract are
-preserved in agents_record/2026-09-29-agents-before-breakpoint-simplification.md
-and agents_record/2026-09-29-retired-unconstrained-loss-contract.md.
-The maintained Gaussian workflows and normalized free-loss objective are
-documented in Reconstruction/RecBreakpoint/README.md and docs/smoothed-objective.md
-under that package. No reference iterations or shared KF/GSF edits were added.
+The three soft h4->h5 examples have |Corr(inner kappa,b)|>0.99998 and sigma_b
+0.267--0.647 within the captured model. However, a small native b-change test
+also exposes loss-response discrepancies: 3:36 has an opposite-sign
+inner-curvature response, and 5:62 differs by roughly a factor of two.
+The discrepancies persist with b steps of 1e-4 and 1e-5.
+The native rerun changes expansions/covariance as well as means; this does
+not yet localize a bad Jacobian. Do NOT attribute all failure to sparse inner
+hits or claim the no-prior solver establishes an irreducible detector limit.
+Next: discuss and trace this response difference surface by surface before
+changing the model, priors or shared code.
+
+The new code is built and tested from the build tree, NOT installed.
+Installed RecBreakpoint remains the preceding validated normalized-RTS-objective
+version. An asynchronous active-batch query is awaiting the user; no deployment
+was assumed. The updated card's LossPriorMode requires the build-tree library/
+configuration or a later package-only install, not the old installed schema.
+Existing prepared cards and outputs remain untouched. The new mode remains
+experimental, not a new production default.
+
+Authoritative new contract: Reconstruction/RecBreakpoint/docs/unconstrained-loss.md.
+Exact tables, caveats, hashes and evidence:
+agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
+Outgoing status: agents_record/2026-09-13-agents-before-unconstrained-loss.md.
+The normalized free-loss objective remains complete RTS chi2 + log det S_all
++ M log(2*pi), with its preceding deployment evidence retained in
+agents_record/2026-09-13-explicit-smoothed-free-loss-objective.md.

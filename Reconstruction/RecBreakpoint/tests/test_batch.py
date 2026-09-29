@@ -19,12 +19,34 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
-    def test_unconstrained_control_frozen(self):
-        self.prepare(BP_LOSS_PRIOR_MODE='Unconstrained', BP_FREE_LOSS_FIT='0')
-        job=self.manifest()
-        self.assertEqual(job['controls']['BP_LOSS_PRIOR_MODE'],'Unconstrained')
-        card=Path(job['cards']['breakpoint']).read_text()
-        self.assertIn("'BP_LOSS_PRIOR_MODE': 'Unconstrained'",card)
+    def test_retired_loss_prior_control_rejected_before_preparing_jobs(self):
+        self.assertNotIn('BP_LOSS_PRIOR_MODE', batch.BP_CONTROLS)
+        for value in ('Unconstrained', 'Fixed', 'Gaussian'):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'LossPriorMode was removed'):
+                self.prepare(BP_LOSS_PRIOR_MODE=value)
+            self.assertFalse((self.repo/'outputs').exists())
+
+    def test_standalone_card_rejects_retired_loss_prior_before_gaudi(self):
+        import runpy
+        card = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
+        for value in ('Unconstrained', 'Fixed', 'Gaussian'):
+            with self.subTest(value=value), patch.dict(os.environ, {'BP_LOSS_PRIOR_MODE': value}, clear=True):
+                with self.assertRaisesRegex(ValueError, 'LossPriorMode was removed'):
+                    runpy.run_path(str(card))
+
+    def test_gaussian_prior_and_state_representations_remain(self):
+        self.prepare()
+        card = Path(self.manifest()['cards']['breakpoint']).read_text()
+        assignments = '\n'.join(line for line in card.splitlines()
+                                if line.startswith(('fit.MeanLogLoss =', 'fit.SigmaLogLoss =', 'fit.LossStateMode =')))
+        for mode in ('LocalMarginal', 'Persistent6D'):
+            fit = types.SimpleNamespace()
+            with self.subTest(mode=mode), patch.dict(os.environ, {'BP_LOSS_STATE_MODE': mode}, clear=True):
+                exec(assignments, {'fit':fit, 'os':os})
+            self.assertEqual(fit.LossStateMode, mode)
+            self.assertEqual(fit.MeanLogLoss, 0)
+            self.assertEqual(fit.SigmaLogLoss, .001)
+        self.assertNotIn('fit.LossPriorMode', card)
 
     def test_card_explicitly_steers_every_algorithm_property(self):
         import ast

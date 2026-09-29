@@ -29,9 +29,7 @@ int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& 
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
   track.setChi2(chi2);
-  // One extra free parameter only in the identified no-prior fit. This is
-  // bookkeeping, not a calibration of either seed-reusing chi2 distribution.
-  track.setNdf(fit.measurementDimensions - 5 - (fit.lossInformation>0 ? 1 : 0));
+  track.setNdf(fit.measurementDimensions - 5); // bookkeeping, not calibrated
   for (auto hit : hits) track.addToTrackerHits(hit);
   return index;
 }
@@ -61,14 +59,6 @@ StatusCode RecBreakpoint::initialize() {
   }
   m_seedSelectionName = m_seedHitSelection.value();
   m_lossStateModeName = m_lossStateMode.value();
-  m_lossPriorModeName = m_lossPriorMode.value();
-  if ((m_lossPriorModeName!="Gaussian" && m_lossPriorModeName!="Unconstrained" && m_lossPriorModeName!="Fixed") ||
-      (m_lossPriorModeName=="Unconstrained" &&
-       (m_lossStateModeName!="LocalMarginal" || m_intervals.value().size()>1)) ||
-      (m_lossPriorModeName=="Fixed" && m_lossStateModeName!="LocalMarginal")) {
-    error()<<"LossPriorMode must be Gaussian, Unconstrained or Fixed; Unconstrained/Fixed require LocalMarginal, Unconstrained at most one interval"<<endmsg;
-    return StatusCode::FAILURE;
-  }
   m_intervalSelectionName = m_intervalSelection.value();
   if (m_intervalSelectionName == "Auto") {
     error() << "IntervalSelectionMode=Auto is reserved: the reconstruction-based interval finder is not implemented."
@@ -175,17 +165,6 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("backward_fitted_log_loss_variance", &m_backwardLossVariance);
   m_tree->Branch("reference_backward_kf_pt", &m_backwardReferencePt);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
-  m_tree->Branch("loss_prior_mode", &m_lossPriorModeName);
-  m_tree->Branch("unconstrained_state_loss_covariance", &m_stateLossCovariance);
-  m_tree->Branch("unconstrained_backward_state_loss_covariance", &m_backwardStateLossCovariance);
-  m_tree->Branch("unconstrained_prediction_valid", &m_predictionValid);
-  m_tree->Branch("unconstrained_filtered_valid", &m_filteredValid);
-  m_tree->Branch("unconstrained_backward_prediction_valid", &m_backwardPredictionValid);
-  m_tree->Branch("unconstrained_backward_filtered_valid", &m_backwardFilteredValid);
-  m_tree->Branch("unconstrained_loss_information", &m_lossInformation);
-  m_tree->Branch("unconstrained_backward_loss_information", &m_backwardLossInformation);
-  m_tree->Branch("unconstrained_loss_reference", &m_lossReference);
-  m_tree->Branch("unconstrained_chi2_closure", &m_lossChi2Closure);
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
@@ -310,7 +289,6 @@ StatusCode RecBreakpoint::execute() {
   settings.seedScale = m_seedScale;
   settings.backwardSeedScale = m_backwardSeedScale;
   settings.lossStateMode = m_lossStateModeName;
-  settings.lossPriorMode = m_lossPriorModeName;
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
       static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value()};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
@@ -345,9 +323,6 @@ StatusCode RecBreakpoint::execute() {
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls);
     m_freeLossTracks.reset();
-    m_stateLossCovariance.clear();m_backwardStateLossCovariance.clear();
-    m_predictionValid.clear();m_filteredValid.clear();m_backwardPredictionValid.clear();m_backwardFilteredValid.clear();
-    m_lossInformation=m_backwardLossInformation=m_lossReference=m_lossChi2Closure=nan;
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
     m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
@@ -464,9 +439,7 @@ StatusCode RecBreakpoint::execute() {
         selection << "event=" << m_event << " track=" << m_trackIndex
                   << " intervalSelection=" << m_intervalSelectionName << " intervals=[";
         for (int i : settings.intervals) selection << i << ' ';
-        selection << "] lossPriorMode=" << settings.lossPriorMode
-                  << " reference b=" << settings.meanLogLoss;
-        if(settings.lossPriorMode=="Gaussian") selection << " prior sigma=" << settings.sigmaLogLoss;
+        selection << "] ordinary prior b=" << settings.meanLogLoss << " sigma=" << settings.sigmaLogLoss;
         info() << selection.str() << endmsg;
       }
       const auto seedIndices = adapter.seedHitIndices(hits);
@@ -492,11 +465,6 @@ StatusCode RecBreakpoint::execute() {
       }
       const auto& fit=paired.rts;
       const auto& inward=paired.backward;
-      m_stateLossCovariance=fit.stateLossCovariance;m_backwardStateLossCovariance=inward.stateLossCovariance;
-      m_predictionValid=fit.predictionValid;m_filteredValid=fit.filteredValid;
-      m_backwardPredictionValid=inward.predictionValid;m_backwardFilteredValid=inward.filteredValid;
-      m_lossInformation=fit.lossInformation;m_backwardLossInformation=inward.lossInformation;
-      m_lossReference=fit.lossReference;m_lossChi2Closure=fit.lossChi2Closure;
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");
       m_fitPt = std::abs(m_bz * 2.99792458e-4 / fit.ip.omega);
@@ -668,9 +636,6 @@ StatusCode RecBreakpoint::execute() {
       // diagnostic oracle must not discard or silently replace ordinary tracks.
       try {
         auto oracleSettings = settings;
-        // The separately named truth-prior pair keeps its established meaning.
-        // With a flat prior, a truth "prior center" would not be a constraint.
-        oracleSettings.lossPriorMode = "Gaussian";
         // Truth-prior results remain independent of the optional free pair.
         // When disabled, they copy the ordinary pair, never the optimized one.
         // Only the per-interval b prior centers differ. Keep the same sigma_b,

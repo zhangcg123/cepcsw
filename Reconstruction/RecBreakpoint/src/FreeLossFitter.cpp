@@ -33,7 +33,6 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     // Ignore Gaussian prior centers/widths in the conditional trial, including
     // any per-interval centers. There is no truth amount or fitted-b prior here.
     auto settings = ordinary;
-    settings.lossPriorMode = "Gaussian"; // conditional fixed-b trial, not diffuse regression
     settings.sigmaLogLoss = 0;
     settings.intervalMeanLogLoss.clear();
     settings.captureGaussianModel = true;
