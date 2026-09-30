@@ -400,3 +400,61 @@ Durable generated tables: TrackingPerformanceStudies/
 breakpoint_shared_sigma_population_20260930/score_decomposition/
 score_components.csv,paired_gains.csv,per_hit_components.csv,per_hit_gains.csv,
 reproduction_gate.csv,summary.json. No generated artifacts are committed.
+
+### Additional twelve paired score-decomposition examples
+
+2026-10-01, user requested more events. Reused the same installed library,
+card and Gaussian-centre replay procedure above; no Minuit rerun, source,
+maintained card, build, installation or remote changes. SigmaLogLoss=.001.
+Twenty-four isolated fits exited successfully. Raw evidence and selection:
+/tmp/recbreakpoint-score-more-20261001.w0gDTw/.
+
+Selection was fixed before reruns, excluding the preceding seven: first
+seed/event in each qualifying light/hard x VXD/ITK/ITK-to-TPC failure cell
+(free chi2 lower, free outside +/-1%, truth inside); four within-window
+controls across tracker locations; two opposite, truth-lower-score controls.
+All belong to the strict single-emission sample. This is selected diagnostic
+evidence, not a population failure-rate estimate or held-out validation.
+
+All24 RTS IP pT, IP parameter vectors, complete chi2 and local chi2 arrays
+reproduce saved results exactly. All12 available free smoothed state and
+covariance arrays reproduce exactly. Across437,328 numerical comparisons,
+some other fields are not bit-identical, but all pass the original allclose
+gate (rtol1e-10, atol1e-9). Do not generalize exactness to every field.
+
+Gain = truth-centred chi2 minus free-centred chi2; positive favors free.
+pT residuals are100*(pT_reco/pT_truth-1), in percent. Seed gain is omitted
+below because its largest absolute value is4.983e-6; it remains in totals.
+
+| Seed:event | Role / interval | Measurement gain | Process gain | Complete gain | Free pT residual % | Truth pT residual % |
+|---|---|---:|---:|---:|---:|---:|
+| 21:67 | light bad / VXD L4 -> L5 | 1.615675 | 0.062383 | 1.678057 | +30.062293 | -0.200370 |
+| 21:60 | light bad / ITK L1 -> L2 | 0.724666 | 3.042238 | 3.766904 | +2.428449 | +0.066929 |
+| 32:3 | light bad / ITK L2 -> TPC L0 | 1.696595 | 1.659163 | 3.355758 | +1.410393 | +0.111644 |
+| 21:96 | hard bad / VXD L4 -> L5 | 2.451045 | -0.347766 | 2.103274 | +40.724165 | +0.077128 |
+| 21:83 | hard bad / ITK L1 -> L2 | 4.298582 | 9.872895 | 14.171478 | +4.948464 | +0.726743 |
+| 23:21 | hard bad / ITK L1 -> TPC L0 | 3.611921 | 9.869567 | 13.481488 | +3.763482 | +0.571853 |
+| 21:39 | light control / TPC L166 -> L167 | -0.288860 | 0.837148 | 0.548288 | +0.139470 | +0.074952 |
+| 21:44 | hard control / TPC L105 -> L106 | 0.435485 | -0.046132 | 0.389353 | -0.239160 | -0.082478 |
+| 21:25 | light control / TPC L222 -> OTK L0 | 0.100448 | 0.028583 | 0.129031 | -0.068321 | -0.066873 |
+| 23:50 | hard control / ITK L0 -> L1 | 0.237254 | 0.364385 | 0.601639 | -0.973003 | +0.122105 |
+| 21:6 | truth-lower light / VXD L5 -> ITK L0 | -0.000138 | 0.000022 | -0.000116 | +0.212543 | +0.218500 |
+| 21:72 | truth-lower hard / VXD L1 -> L3 | -0.132589 | 0.001308 | -0.131278 | -26.561480 | +0.003708 |
+
+All six new bad examples improve native (non-affine) hit-projection chi2 too:
+gains1.594644,.722784,1.657941,2.449476,4.312180,3.680552 in table order.
+Together with the previous four, all ten selected bad examples show genuinely
+better measurement-noise-weighted hit agreement despite worse IP momentum.
+Three new failures are process-gain dominated; the VXD cases are measurement
+dominated. This is not explained solely by seed penalties or affine hit
+projection. Control21:39, however, worsens measurement chi2 and improves the
+complete score through process terms; never infer measurement improvement
+from complete-score improvement alone. Truth-lower controls are not by
+themselves optimizer failures: Minuit minimizes normalized likelihood,
+including its log determinant, rather than chi2 alone. Transport/noise-model
+closure and the physical cause remain unresolved; no model fix is claimed.
+
+Durable generated evidence: TrackingPerformanceStudies/
+breakpoint_shared_sigma_population_20260930/score_decomposition_more/
+paired_gains.csv,score_components.csv,per_hit_components.csv,per_hit_gains.csv,
+reproduction_gate.csv,summary.json. Generated artifacts remain uncommitted.
