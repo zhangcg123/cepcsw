@@ -1,3 +1,7 @@
+# Historical status before the paired free-loss population study
+
+Captured before changing the current focus; not current steering.
+
 # CEPCSW GSF Development
 
 ## 1. Introduction and global status
@@ -329,16 +333,10 @@ configured sigma and fitted loss/variance. Existing cards inherit the installed
 algorithm change while retaining their frozen SigmaLogLoss; regenerate cards
 that still assign the retired LossPriorMode property.
 
-Current task: run a fixed 2,000-event, seeds21--40 population with the installed
-shared-width defaults to judge free-loss performance against baseline KF and
-the zero-centred breakpoint pair. Include optimizer KF fallbacks, report
-primary failures and secondary activity separately, check loss categories,
-tails, paired seed-bootstrap uncertainty and the two fixed seed blocks.
-No tuning or source/card/runtime change is authorized by this diagnostic.
-Plan, progress and results: agents_record/2026-09-30-free-loss-population.md;
-outgoing status: agents_record/2026-09-30-agents-before-free-loss-population.md.
-Historical no-prior response discrepancies remain unresolved in
-agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
+Next: discuss the shared-width behavior before further algorithm changes or
+population claims. Do not change priors, objectives, package scope or remote
+state without direction. Historical no-prior response discrepancies remain
+unresolved in agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
 The outgoing focus and full retired fixed-b contract are archived under
 agents_record/2026-09-30-agents-before-free-loss-shared-sigma.md and
 agents_record/2026-09-30-retired-fixed-free-loss-contract.md. Maintained formulas
