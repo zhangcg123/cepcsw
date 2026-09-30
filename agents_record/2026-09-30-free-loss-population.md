@@ -275,3 +275,58 @@ location_table.csv,resolution_summary.csv,summary.json}. These preserve all
 endpoint metrics and exact layer-pair labels as well as the region table.
 Native ROOT readout was used after the uproot array read stalled; neither
 reader attempt reran or modified tracking. No source/card/runtime change.
+
+### Which single-emission events prefer free-loss in complete RTS chi2?
+
+2026-10-01 read-only comparison, same 536 strict single-emission tracks.
+Gain = truth_override_smoothed_chi2 - free_loss_smoothed_chi2. Use 1e-6
+tolerance for ties, not a significance threshold. There are 497 free-lower,
+38 truth-lower and one numerical tie; strictly positive gain also counts 497.
+All ordinary/free/truth complete scores were checked finite with status1;
+free_loss_quadratic agrees with free_loss_smoothed_chi2. Per-hit complete
+contributions reproduce both totals. Baseline KF chi2 was read separately
+from CompleteTracks and is not mislabeled as complete RTS chi2.
+
+| Loss category | Free-lower / total | Median chi2 gain among free-lower | Free pT worse than truth among free-lower | Free outside +/-1% | Truth outside +/-1% |
+|---|---:|---:|---:|---:|---:|
+| Light | 322/348 | 0.09983 | 242/322 | 52/322 | 0/322 |
+| Hard | 175/188 | 0.40903 | 128/175 | 65/175 | 7/175 |
+| All | 497/536 | 0.19324 | 370/497 | 117/497 | 7/497 |
+
+Of the 497 lower-chi2 tracks, 373 gain less than one chi2 unit, 124 gain more
+than one, 33 more than five and 24 more than ten. There is no universal
+overestimated-loss class: 242 overestimate the fitted loss, 255 underestimate;
+190 use a zero prior centre. However all 52 light-loss failures outside +/-1%
+overestimate loss and have positive pT residuals. Across both loss categories,
+98/117 outside-window free tracks overshoot pT, 19 undershoot.
+
+Location among free-lower: VXD28 (15 outside +/-1%), VXD-to-ITK56 (35),
+ITK123 (53), ITK-to-TPC68 (13), TPC105 (0), TPC-to-OTK117 (1).
+Corresponding median numbers of hits up to the upstream breakpoint anchor:
+4.5,6,8,9,130,232. Thus 116/117 outside-window free tracks have a dominant
+interval before or entering TPC. This association is consistent with weak
+inner-track/loss separation but does not independently prove the cause.
+
+Representative actual paired values (loss in percent, residual in percent):
+
+| Seed:event | Interval region | Truth loss | Free posterior loss | Chi2 gain | Free pT residual | Truth-centred pT residual |
+|---|---|---:|---:|---:|---:|---:|
+| 24:10 | ITK-to-TPC | 0.02582 | 6.75854 | 234.75346 | +6.90937 | +0.50259 |
+| 26:60 | VXD-to-ITK | 0.05511 | 39.02955 | 16.78635 | +63.71931 | -0.07776 |
+| 22:5 | VXD-to-ITK | 14.75915 | 63.21219 | 18.40059 | +132.22121 | +0.40219 |
+| 36:16 | VXD-to-ITK | 10.44886 | 63.21232 | 67.76841 | +143.77376 | +0.30573 |
+
+The last two hit the optimized-prior upper bound b=1. Example24:10 has
+206.422 of the 234.753 gain on contributions through the upstream anchor,
+and28.331 from the target outward. Those local contributions include process
+and seed terms; they are NOT pure measurement-only chi2. Do not infer that
+all reductions are numerical noise or merely tiny statistical improvements.
+Minuit minimizes normalized likelihood, not chi2 alone. Independent real-event
+objective closure and decomposition of pathological minima remain unperformed.
+
+Outputs: by_location/single_ebrem/chi2_preference/{paired_rows.csv,
+category_summary.csv,summary.json}; script analyze_chi2_preference.py.
+The preceding four-column performance table with medians is preserved in
+by_location/single_ebrem/location_performance_with_chi2.csv, with paired
+scores in event_rows_with_chi2.csv and checks in chi2_summary.json.
+No source, card, fitting settings or remote state changed.
