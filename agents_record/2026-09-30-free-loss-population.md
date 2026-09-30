@@ -330,3 +330,73 @@ The preceding four-column performance table with medians is preserved in
 by_location/single_ebrem/location_performance_with_chi2.csv, with paired
 scores in event_rows_with_chi2.csv and checks in chi2_summary.json.
 No source, card, fitting settings or remote state changed.
+
+### Complete-score decomposition: seven same-code paired examples
+
+2026-10-01 user authorized separating measurement/process/seed contributions.
+The free/truth flat outputs contain local complete scores but not separated
+terms. Recovered these through the unchanged shared fitter by placing each
+saved optimized prior centre or truth centre in MeanLogLoss, keeping
+SigmaLogLoss=.001 and all other physics settings unchanged, disabling only
+the extra optimization/truth passes. This exposes the ordinary slot's detailed
+score arrays for the identical Gaussian-centre fit. No source/card/install
+change, temporary implementation, build-tree override or remote operation.
+
+Four known failures:24:10,26:60,22:5,36:16. Three explicitly selected
+within-window controls:21:5 (hard/internal TPC),21:27 (light/internal TPC),
+23:13 (hard/internal ITK). These are diagnostic examples, not an unbiased
+population measurement. Fourteen isolated local jobs all exited successfully.
+Driver, options steering, hashes, verbose full state/covariance dumps and raw
+tuples: /tmp/recbreakpoint-score-decomposition-20261001.83KFP8/.
+Installed library/card SHA256 remain the same as the population run.
+
+Reproduction: compared 255,446 numerical entries. All14 RTS pT values AND IP
+parameter vectors reproduce exactly. Twelve complete/local RTS chi2 records
+are exact; largest total difference2.1007e-9, largest local difference7.36e-9.
+The original strict all-field gate did NOT pass:22:5 free has these tiny local
+differences, and several backward records differ (largest backward chi2
+difference3.3832e-5, largest backward IP parameter difference3.8417e-8).
+Do not claim blanket bit-identical reproduction or hide these discrepancies.
+The quantities used for this decomposition pass exact endpoint and absolute
+1e-7 RTS-score gates, with strict-gate details retained in the evidence.
+All measurement+process+seed sums reproduce their saved local/total scores.
+
+Gain below means truth-centred minus free-centred; positive favors free.
+
+| Seed:event | Measurement gain | Process gain | Seed gain | Complete gain |
+|---|---:|---:|---:|---:|
+| 24:10 bad | 21.225979 | 213.527481 | -2.744e-7 | 234.753460 |
+| 26:60 bad | 14.521710 | 2.264654 | -1.819e-5 | 16.786346 |
+| 22:5 bad | 17.261096 | 1.139498 | -2.285e-6 | 18.400591 |
+| 36:16 bad | 31.195296 | 36.573140 | -2.995e-5 | 67.768406 |
+| 21:5 control | 0.034804 | -0.025365 | -9.262e-12 | 0.009439 |
+| 21:27 control | 2.311247 | 0.067232 | 2.472e-11 | 2.378479 |
+| 23:13 control | -0.010839 | 0.095529 | 2.231e-9 | 0.084690 |
+
+All four bad examples genuinely improve the measurement-noise-weighted hit
+score as well as the complete score. This persists using direct native hit
+projection rather than affine measurement approximation: respective native
+measurement gains are21.131271,15.504575,17.540755,36.629408. Thus the sign is
+not an artifact of using the affine hit score. It is not universal: control
+23:13 slightly worsens its measurement contribution while improving process.
+Seed penalties are numerically negligible here, not the driver of the effect.
+
+24:10 is process dominated (91.0% of its gain). Its process contribution
+drops239.5433 ->26.01585, while measurement536.5572 ->515.3312. Incoming
+edges to ITK L1 and L2 account for process gains118.1457 and56.5187; both
+precede the selected ITK L2 -> TPC L0 loss interval. The large gain is not
+simply a penalty at the breakpoint itself. Other useful local evidence:
+26:60 obtains9.8661 measurement gain at VXD L0;36:16 gains both in silicon
+hit agreement and in incoming process terms around VXD L5/ITK L0/ITK L2.
+
+This establishes the requested distinction for the selected examples: wrong
+IP momentum can accompany genuinely better hit agreement, sometimes with a
+large additional process-score benefit. It does not independently validate
+the transport/noise model or identify a coding bug. Next narrow check is the
+actual smoothed process residuals versus propagated Q on the dominant ITK
+edges of24:10, with an independent same-linearized-model score closure.
+
+Durable generated tables: TrackingPerformanceStudies/
+breakpoint_shared_sigma_population_20260930/score_decomposition/
+score_components.csv,paired_gains.csv,per_hit_components.csv,per_hit_gains.csv,
+reproduction_gate.csv,summary.json. No generated artifacts are committed.
