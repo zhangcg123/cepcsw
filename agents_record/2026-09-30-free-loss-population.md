@@ -183,3 +183,55 @@ solutions, validate the objective, or resolve no-prior augmented-KF proposals.
 Next useful diagnostic is same-event inspection of light-loss degradation and
 the eight extreme minima, including fitted loss and objective profile. No new
 prior, objective, default or algorithm change is authorized by this study.
+
+## Location split, 2026-10-01
+
+User requested light/hard categories by eBrem layer. Reused the exact 946
+paired loss tracks, without rerunning or changing the fitter. Light remains
+0<total matched loss<1%; hard remains >=1%. Location is the selected interval
+with the largest summed absolute G4 eBrem loss, matching current Truth
+interval selection. It is NOT the exact physical emission layer or a
+first-half/second-half classification, and multiple losses still receive one
+dominant-interval label. Labels identify both ordered runtime hit anchors.
+
+Decoded hit_cell_id: system is low five bits, layer begins at bit7 with nine
+bits for silicon and thirteen for TPC. Checked against geometry readout
+encodings and existing location analysis; row identity, selected interval and
+truth-override interval/loss agree for all 946 rows. Detector layer labels are
+zero-based encoded layers, not a global hit index. Same-layer and skipped-layer
+intervals are retained explicitly. Internal TPC rows are pooled for plotting
+only; exact TPC row-to-row metrics are retained in the tables.
+
+| Dominant interval region | Light N | Hard N | Light KF within1 (%) | Light free RTS within1 (%) | Hard KF within1 (%) | Hard free RTS within1 (%) |
+|---|---:|---:|---:|---:|---:|---:|
+| Within VXD | 51 | 46 | 96.1 | 82.4 | 0.0 | 4.3 |
+| VXD to ITK | 77 | 55 | 97.4 | 67.5 | 0.0 | 1.8 |
+| Within ITK | 122 | 103 | 95.1 | 63.9 | 2.9 | 39.8 |
+| ITK to TPC | 78 | 60 | 93.6 | 84.6 | 6.7 | 66.7 |
+| Within TPC | 105 | 62 | 100.0 | 100.0 | 38.7 | 83.9 |
+| TPC to OTK | 100 | 87 | 99.0 | 99.0 | 90.8 | 90.8 |
+
+All eight >100% free RTS outliers are VXD-internal (three, including the one
+light-loss event) or VXD-to-ITK (five). Hard-loss improvement is concentrated
+in ITK/internal, ITK-to-TPC and internal-TPC intervals; earlier losses remain
+poorly recovered. These are empirical location associations, not a causal
+diagnosis or an equal-loss/equal-momentum comparison across detector regions.
+
+Outputs below the original study directory:
+- analyze_locations.py: reproducible read-only analysis, not committed.
+- by_location/event_locations.csv: all 946 paired event IDs, exact anchors,
+  radii/z, selected loss and all existing endpoint residuals.
+- by_location/location_counts.csv and location_resolution.csv: region,
+  plotting-interval and exact-interval counts and full-range metrics.
+- by_location/location_paired_changes.csv: improvements, worsening and tails.
+- by_location/{light,hard}_{rts,backward}_regions_{core,tails}.{png,pdf}:
+  six-region comparison panels. Core is +/-1%, tails +/-100% with log y.
+- by_location/intervals/: individual plots for all 24 plotting interval
+  categories, showing light/hard and core/tails, separately for RTS/backward.
+  N<20 is marked low-statistics. Each canvas contains only KF, ordinary and
+  free-loss; truth-centred statistics are also available in the CSV.
+- by_location/summary.json: definitions and provenance hashes.
+
+Histogram normalization uses the full category population, not the displayed
+window; overflow counts are shown. No residual selection or fit is applied.
+No source, card, installed runtime or remote operation changed.
