@@ -38,6 +38,9 @@ private:
   std::string m_smoothedError;
   std::vector<int> m_intervals;
   std::vector<double> m_forwardLocal, m_backwardLocal, m_smoothedLocal;
+  // Complete RTS score terms; native measurement is a separate cross-check.
+  std::vector<double> m_smoothedMeasurement, m_smoothedProcess, m_smoothedNative;
+  double m_smoothedSeed = 0;
   States m_forwardPredicted, m_forwardFiltered, m_smoothed;
   States m_backwardPredicted, m_backwardFiltered;
 };

@@ -127,6 +127,8 @@ private:
   int m_truthSmoothedStatus = 0;
   std::string m_truthSmoothedError;
   std::vector<double> m_truthForwardLocal, m_truthBackwardLocal, m_truthSmoothedLocal;
+  std::vector<double> m_truthSmoothedMeasurement, m_truthSmoothedProcess, m_truthSmoothedNative;
+  double m_truthSmoothedSeed = 0;
   std::vector<double> m_truthRTSParameters, m_truthRTSCovariance;
   std::vector<double> m_truthBackwardParameters, m_truthBackwardCovariance;
   // Distinguish truth-centered adjustable priors from historical fixed-b tuples.

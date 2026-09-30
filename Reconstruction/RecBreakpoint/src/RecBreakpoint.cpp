@@ -191,6 +191,10 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("truth_override_forward_local_chi2", &m_truthForwardLocal);
   m_tree->Branch("truth_override_backward_local_chi2", &m_truthBackwardLocal);
   m_tree->Branch("truth_override_smoothed_local_chi2", &m_truthSmoothedLocal);
+  m_tree->Branch("truth_override_smoothed_measurement_chi2", &m_truthSmoothedMeasurement);
+  m_tree->Branch("truth_override_smoothed_process_chi2", &m_truthSmoothedProcess);
+  m_tree->Branch("truth_override_smoothed_native_measurement_chi2", &m_truthSmoothedNative);
+  m_tree->Branch("truth_override_smoothed_seed_chi2", &m_truthSmoothedSeed);
   m_tree->Branch("truth_override_rts_ip_parameters", &m_truthRTSParameters);
   m_tree->Branch("truth_override_rts_ip_covariance", &m_truthRTSCovariance);
   m_tree->Branch("truth_override_backward_ip_parameters", &m_truthBackwardParameters);
@@ -328,6 +332,8 @@ StatusCode RecBreakpoint::execute() {
     m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
     m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
     m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
+    m_truthSmoothedMeasurement.clear(); m_truthSmoothedProcess.clear(); m_truthSmoothedNative.clear();
+    m_truthSmoothedSeed = nan;
     m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
     m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
     m_truthPriorSigma = settings.sigmaLogLoss;
@@ -704,6 +710,10 @@ StatusCode RecBreakpoint::execute() {
         m_truthForwardLocal = truthRTS.localChi2;
         m_truthBackwardLocal = truthBackward.backwardChi2;
         m_truthSmoothedLocal = truthRTS.smoothedChi2;
+        m_truthSmoothedMeasurement = truthRTS.smoothedMeasurementChi2;
+        m_truthSmoothedProcess = truthRTS.smoothedProcessChi2;
+        m_truthSmoothedNative = truthRTS.smoothedNativeMeasurementChi2;
+        m_truthSmoothedSeed = truthRTS.smoothedSeedChi2;
         for (const auto& loss : truthRTS.breakpoints) {
           m_truthRTSLoss.push_back(loss.fittedLogLoss);
           m_truthRTSLossVariance.push_back(loss.fittedVariance);
@@ -743,6 +753,8 @@ StatusCode RecBreakpoint::execute() {
         m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
         m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
         m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
+        m_truthSmoothedMeasurement.clear(); m_truthSmoothedProcess.clear(); m_truthSmoothedNative.clear();
+        m_truthSmoothedSeed = nan;
         m_truthRTSParameters.clear(); m_truthRTSCovariance.clear();
         m_truthBackwardParameters.clear(); m_truthBackwardCovariance.clear();
         m_truthRTSLoss.clear(); m_truthRTSLossVariance.clear();

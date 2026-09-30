@@ -327,6 +327,30 @@ evaluates the nonlinear native measurement at the final smoothed mean, to
 expose differences from the affine objective. It is hit-only and does not
 replace the complete score.
 
+This complete-score breakdown is always written for ordinary, free-loss and
+truth-override RTS results, with no prefix, `free_loss_` and
+`truth_override_`, respectively. No card switch is needed. Each prefix has
+`smoothed_measurement_chi2`, `smoothed_process_chi2` and
+`smoothed_native_measurement_chi2` vectors in outward hit order, plus scalar
+`smoothed_seed_chi2`. For a valid score:
+
+```text
+smoothed_local_chi2[i] = smoothed_measurement_chi2[i]
+                      + smoothed_process_chi2[i]
+                      + (i == 0 ? smoothed_seed_chi2 : 0)
+smoothed_chi2 = sum(smoothed_local_chi2)
+```
+
+The native measurement vector is not added to that sum. Disabled extra fits
+copy the ordinary breakdown along with their ordinary endpoints. Absent/failed
+extra fits and an input-KF fallback have empty breakdown vectors and a NaN seed
+term; the existing status/error fields distinguish these cases. A failed score
+evaluation can retain partial diagnostics: only use the complete decomposition
+when `smoothed_chi2_status == 1`. These are RTS contributions, not a new
+decomposition of the backward innovation score or of stored CompleteTracks.
+Older tuples lack the two extra-prefix breakdowns and require refitting to
+obtain them.
+
 For an RTS transition, let d=x_smoothed_target-x_predicted_target and
 u=P_predicted_target^-1*d. The conditional mean of its process deviation is
 w=Q*u; its penalty is u^T Q u. This avoids inverting singular scattering Q or

@@ -269,6 +269,14 @@ Always-present branches, all prefixed `free_loss_`:
   covariance has the15 packed EDM entries. Loss vectors use `breakpoint_interval`.
 - `forward_chi2`, `backward_chi2`, `smoothed_chi2`, their corresponding
   `*_local_chi2` lists, and `smoothed_chi2_status/error`: same definitions as ordinary.
+- `smoothed_measurement_chi2`, `smoothed_process_chi2` and
+  `smoothed_native_measurement_chi2` per-hit vectors, plus scalar
+  `smoothed_seed_chi2`: always saved under both `free_loss_` and
+  `truth_override_`, just as for ordinary RTS. Measurement + process + the
+  seed term once at hit 0 reproduces the complete RTS score. Native measurement
+  is a separate check, not an additional contribution. Off/copy results copy
+  these terms; input-KF fallback has empty vectors and NaN seed, not a fabricated
+  RTS decomposition. Gate score use on the corresponding smoothed status.
 - `{forward_predicted,forward_filtered,smoothed,backward_predicted,backward_filtered}_parameters`
   and `_covariance`: all accepted-hit 5D states, flattened hit-major;
   parameters are native `(drho,phi0,kappa,dz,tanl)`, covariance row-major25 entries/hit.

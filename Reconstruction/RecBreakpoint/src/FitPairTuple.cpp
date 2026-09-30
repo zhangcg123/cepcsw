@@ -56,6 +56,10 @@ void FitPairTuple::book(TTree& tree, const std::string& prefix) {
   tree.Branch((prefix + "forward_local_chi2").c_str(), &m_forwardLocal);
   tree.Branch((prefix + "backward_local_chi2").c_str(), &m_backwardLocal);
   tree.Branch((prefix + "smoothed_local_chi2").c_str(), &m_smoothedLocal);
+  tree.Branch((prefix + "smoothed_measurement_chi2").c_str(), &m_smoothedMeasurement);
+  tree.Branch((prefix + "smoothed_process_chi2").c_str(), &m_smoothedProcess);
+  tree.Branch((prefix + "smoothed_native_measurement_chi2").c_str(), &m_smoothedNative);
+  tree.Branch((prefix + "smoothed_seed_chi2").c_str(), &m_smoothedSeed);
   m_forwardPredicted.book(tree, prefix + "forward_predicted_");
   m_forwardFiltered.book(tree, prefix + "forward_filtered_");
   m_smoothed.book(tree, prefix + "smoothed_");
@@ -69,6 +73,7 @@ void FitPairTuple::reset() {
   const double nan = std::numeric_limits<double>::quiet_NaN();
   m_rts.pt = m_backward.pt = m_forwardChi2 = m_backwardChi2 = m_smoothedChi2 = nan;
   m_kfChi2 = nan;
+  m_smoothedSeed = nan;
 }
 
 void FitPairTuple::assignKF(const edm4hep::Track& track, double bz,
@@ -105,6 +110,10 @@ void FitPairTuple::assign(const PairedFitResult& pair, double bz, int status,
   m_forwardLocal = pair.rts.localChi2;
   m_backwardLocal = pair.backward.backwardChi2;
   m_smoothedLocal = pair.rts.smoothedChi2;
+  m_smoothedMeasurement = pair.rts.smoothedMeasurementChi2;
+  m_smoothedProcess = pair.rts.smoothedProcessChi2;
+  m_smoothedNative = pair.rts.smoothedNativeMeasurementChi2;
+  m_smoothedSeed = pair.rts.smoothedSeedChi2;
   m_forwardPredicted.assign(pair.rts.predicted);
   m_forwardFiltered.assign(pair.rts.filtered);
   m_smoothed.assign(pair.rts.smoothed);
