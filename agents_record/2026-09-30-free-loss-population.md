@@ -235,3 +235,43 @@ Outputs below the original study directory:
 Histogram normalization uses the full category population, not the displayed
 window; overflow counts are shown. No residual selection or fit is applied.
 No source, card, installed runtime or remote operation changed.
+
+### Strict single-eBrem restriction, 2026-10-01
+
+User requested the same table for real single-emission events. Counted actual
+Geant4 processSubtype=3 steps for the matched primary electron, in the full
+embedded tracker record of the same input trk files. Require exactly one
+occurrence with positive momentumLoss; no extra analysis loss threshold.
+This is stricter than one nonzero-loss interval. The scope is the recorded
+tracker region, not the calorimeter/entire detector. Light/hard and location
+definitions remain unchanged from the preceding table.
+
+Of 946 paired loss tracks, 536 are strict single-eBrem: 348 light and 188 hard.
+The remaining 410 have multiple steps: 270 have two, 108 three, 26 four,
+four five, one six and one 29. No nonpositive-loss eBrem process occurrences
+were found. All 946 generator pT values agree with input truth. For all 536
+single-emission tracks, the unique step belongs to the selected breakpoint's
+exact (start,end] truth hooks and its momentumLoss reproduces that interval's
+truth loss. No optimizer fallback remains in this subset.
+
+| Interval region | Light N | Hard N | Light KF within1 (%) | Light free RTS within1 (%) | Hard KF within1 (%) | Hard free RTS within1 (%) |
+|---|---:|---:|---:|---:|---:|---:|
+| Within VXD | 32 | 19 | 100.0 | 81.25 | 0.0 | 0.0 |
+| VXD to ITK | 50 | 22 | 98.0 | 66.0 | 0.0 | 0.0 |
+| Within ITK | 74 | 49 | 100.0 | 64.865 | 2.041 | 44.898 |
+| ITK to TPC | 46 | 22 | 100.0 | 91.304 | 9.091 | 59.091 |
+| Within TPC | 77 | 28 | 100.0 | 100.0 | 53.571 | 100.0 |
+| TPC to OTK | 69 | 48 | 100.0 | 100.0 | 97.917 | 97.917 |
+
+Overall light within1: KF347/348, free RTS295/348; hard: KF65/188,
+free RTS110/188. Two >100% free RTS overshoots remain, 22:5 and 36:16,
+both VXD L5 -> ITK L0. Thus ignored additional eBrem emissions do not alone
+explain the early-loss failures or the light-loss degradation. This is not a
+causal isolation of other differences, and per-region statistics remain small.
+
+Reproducible analysis: analyze_single_ebrem.py in the study directory.
+Outputs: by_location/single_ebrem/{step_count_audit.csv,event_rows.csv,
+location_table.csv,resolution_summary.csv,summary.json}. These preserve all
+endpoint metrics and exact layer-pair labels as well as the region table.
+Native ROOT readout was used after the uproot array read stalled; neither
+reader attempt reran or modified tracking. No source/card/runtime change.
