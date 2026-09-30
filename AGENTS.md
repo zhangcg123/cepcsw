@@ -329,13 +329,19 @@ configured sigma and fitted loss/variance. Existing cards inherit the installed
 algorithm change while retaining their frozen SigmaLogLoss; regenerate cards
 that still assign the retired LossPriorMode property.
 
-Current task: run a fixed 2,000-event, seeds21--40 population with the installed
-shared-width defaults to judge free-loss performance against baseline KF and
-the zero-centred breakpoint pair. Include optimizer KF fallbacks, report
-primary failures and secondary activity separately, check loss categories,
-tails, paired seed-bootstrap uncertainty and the two fixed seed blocks.
-No tuning or source/card/runtime change is authorized by this diagnostic.
-Plan, progress and results: agents_record/2026-09-30-free-loss-population.md;
+Completed fixed 2,000-event seeds21--40 study: 1,677 clean paired tracks,
+34 interval-association failures among 1,711 single-track candidates, and
+237 secondary-activity events reported separately. One optimizer KF fallback
+is included. Free-loss narrows inclusive width68 (RTS .341% vs KF .861%) but
+worsens RMS (12.563% vs 6.759%) and creates eight >100% positive outliers.
+It improves >=1% loss central recovery but significantly damages (0,1%) loss
+tracks (within +/-1% falls from 97.0% to 82.9%). Both fixed seed blocks agree;
+seed-cluster bootstrap supports these category and RMS differences. It is not
+an overall safe replacement. Current Gaussian shared-width free-loss is not
+the proposed no-prior augmented KF. No source/card/runtime or remote changed.
+Next: discuss these findings; inspect extreme/light-loss failures before any
+new objective/prior/default changes. No such changes are authorized yet.
+Full counts, numerical results and provenance: agents_record/2026-09-30-free-loss-population.md;
 outgoing status: agents_record/2026-09-30-agents-before-free-loss-population.md.
 Historical no-prior response discrepancies remain unresolved in
 agents_record/2026-09-13-unconstrained-breakpoint-loss.md.
