@@ -42,19 +42,46 @@ datatypes:
       - float postGlobalTime // post-step global time [ns]
 
   gsftruth::G4BremsPhoton:
-    Description: "Geant4 bremsstrahlung photon emitted on one selected electron/positron step"
+    Description: "Geant4 bremsstrahlung photon emitted by one selected primary electron/positron inside the tracker"
     Author: "CEPCSW GSF development"
     Members:
       - std::int32_t parentTrackID // Geant4 electron/positron track identifier
       - std::int32_t parentStepNumber // electron/positron track-local step number
       - std::int32_t secondaryIndexInStep // zero-based index among all secondaries of this step
       - std::int32_t creatorProcessSubtype // Geant4 creator-process subtype (3 = eBrem)
+      - std::int32_t trackID // assigned photon Geant4 track ID, or -1 if not tracked
       - edm4hep::Vector3d position // photon creation position [mm]
       - edm4hep::Vector3f momentum // photon creation momentum [GeV]
       - float energy // photon creation total energy [GeV]
       - float globalTime // photon creation global time [ns]
     OneToOneRelations:
       - gsftruth::G4MaterialStep parentStep // exact stored electron/positron step that emitted this photon
+
+  gsftruth::G4BremsPhotonStep:
+    Description: "One step of a recorded bremsstrahlung photon before or at its first ECAL entry"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t trackID // assigned photon Geant4 track ID
+      - std::int32_t stepNumber // photon track-local step number
+      - std::int32_t processSubtype // process defining the post-step point
+      - std::int32_t preStepStatus // Geant4 pre-step status
+      - std::int32_t postStepStatus // Geant4 post-step status
+      - std::int32_t trackStatus // Geant4 track status after the step
+      - std::int32_t preVolumeCopyNo // pre-step physical-volume copy number
+      - std::int32_t postVolumeCopyNo // post-step physical-volume copy number
+      - std::int16_t postInEcal // post point is in the first ECAL volume reached by this photon
+      - edm4hep::Vector3d prePosition // pre-step position [mm]
+      - edm4hep::Vector3d postPosition // post-step position [mm]
+      - edm4hep::Vector3f preMomentum // pre-step momentum [GeV]
+      - edm4hep::Vector3f postMomentum // post-step momentum [GeV]
+      - float preEnergy // pre-step total energy [GeV]
+      - float postEnergy // post-step total energy [GeV]
+      - float preGlobalTime // pre-step global time [ns]
+      - float postGlobalTime // post-step global time [ns]
+      - float stepLength // Geant4 step length [mm]
+      - float energyDeposit // energy deposited on this step [GeV]
+    OneToOneRelations:
+      - gsftruth::G4BremsPhoton photon // exact recorded photon whose track made this step
 
   gsftruth::SimTrackerHitG4StepLink:
     Description: "Exact Geant4 step provenance of one EDM4hep SimTrackerHit"

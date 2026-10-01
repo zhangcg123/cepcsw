@@ -4,7 +4,7 @@ This PODIO extension stores the Geant4 information needed by default-off GSF
 mechanism diagnostics inside the ordinary EDM event. It is not a production
 tracking input and does not make the normal GSF truth-dependent.
 
-The simulation writes three provenance collections:
+The simulation writes four provenance collections:
 
 - `GsfG4MaterialSteps` (`gsftruth::G4MaterialStep`): selected Geant4 pre/post
   steps, including positions, momenta, process subtype, local material
@@ -12,17 +12,33 @@ The simulation writes three provenance collections:
 - `GsfSimTrackerHitG4StepLinks`
   (`gsftruth::SimTrackerHitG4StepLink`): the exact persisted `SimTrackerHit`,
   its first and last contributing Geant4 steps, and its measurement hook.
-- `GsfG4BremsPhotons` (`gsftruth::G4BremsPhoton`): every photon returned by
-  `GetSecondaryInCurrentStep()` for a selected electron/positron parent whose
-  photon creator process has bremsstrahlung subtype 3. The parent's defining
-  process is not a filter: it identifies the step limiter, not necessarily
-  every process contributing secondaries. The existing PDG, primary-only and
-  tracker-envelope selection applies to the parent step. Each photon has a direct
-  `parentStep` relation and redundant parent-track/step numbers, its index in
-  that step's full secondary list, creation position, momentum, energy, and
-  time. These are photon-creation values, not calorimeter or final-state
-  values. Geant4 has not necessarily assigned the secondary a usable track ID
-  at this point, so the step relation plus secondary index is the identity.
+- `GsfG4BremsPhotons` (`gsftruth::G4BremsPhoton`): explicit photons returned by
+  `GetSecondaryInCurrentStep()` for a selected **primary electron/positron**
+  parent, with photon creator-process subtype `fBremsstrahlung` and a creation
+  position inside the configured tracker bounds. The parent's step-limiting
+  process is not used as a photon filter. Each photon retains its exact
+  `parentStep`, secondary-list index, creation kinematics and time, and its
+  Geant4 track ID once tracking starts (`-1` if it does not start).
+- `GsfG4BremsPhotonSteps` (`gsftruth::G4BremsPhotonStep`): every Geant4 step of
+  each recorded photon, including the boundary step that first enters an ECAL
+  volume but no subsequent ECAL step. Each step links directly to its photon
+  and stores the pre/post position, momentum, total energy and time, process
+  subtype, statuses, volume copy numbers, path length and energy deposit.
+  `postInEcal=1` marks the first ECAL-entry step. If a photon stops before
+  ECAL, its final stored step records that termination; if it never reaches
+  ECAL, all its tracked steps are retained. ECAL entry is identified from the
+  Geant4 touchable volume ancestry, not a cylindrical radius approximation.
+  Tracking beyond first ECAL entry and daughter-particle trajectories are not
+  recorded in this collection.
+
+The Geant4 photon ID is not reliable at secondary creation, so the recorder
+temporarily associates the secondary `G4Track` pointer with its birth record
+and fills the ID at `PreUserTrackingAction`. The pointer is never persisted.
+This all-step collection costs more space than birth-only truth: a same-seed
+20-event 2 GeV barrel test stored 44 photons and 11,532 pre-ECAL photon steps,
+adding about 647 kB (11.9%) to the compressed ROOT file compared with the
+birth-only version. This is a sample-specific size measurement, not a general
+per-event estimate.
 
 The event-level relation chain is:
 

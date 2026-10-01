@@ -8,6 +8,7 @@
 #include "G4Material.hh"
 #include "G4ParticleDefinition.hh"
 #include "G4Track.hh"
+#include "G4VTouchable.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4EventManager.hh"
 #include "G4TrackingManager.hh"
@@ -37,6 +38,22 @@ namespace {
 bool isSensitiveVolume(const G4VPhysicalVolume* volume) {
     return volume && volume->GetLogicalVolume() &&
            volume->GetLogicalVolume()->GetSensitiveDetector();
+}
+
+// Inspect the touchable ancestry: the step may land in a crystal or support
+// child whose own name does not identify the ECAL detector envelope.
+bool isEcalPoint(const G4StepPoint* point) {
+    const auto* touchable = point ? point->GetTouchable() : nullptr;
+    if (!touchable) return false;
+    for (int depth = 0; depth <= touchable->GetHistoryDepth(); ++depth) {
+        const auto* volume = touchable->GetVolume(depth);
+        if (!volume) continue;
+        const auto& name = volume->GetName();
+        if (name.find("Ecal") != G4String::npos ||
+            name.find("ECAL") != G4String::npos ||
+            name.find("ecal") != G4String::npos) return true;
+    }
+    return false;
 }
 }
 
@@ -146,6 +163,10 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
     m_track2primary.clear();
     m_gsfTruthSteps.clear();
     m_gsfBremsPhotons.clear();
+    m_pendingGsfBremsPhotons.clear();
+    m_gsfBremsPhotonByTrackID.clear();
+    m_gsfBremsPhotonReachedEcal.clear();
+    m_gsfBremsPhotonSteps.clear();
  
 }
 
@@ -160,6 +181,7 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
     if (m_writeGsfTruthEventData.value()) {
         auto* gsfTruthSteps = m_gsfTruthStepCol.createAndPut();
         auto* gsfBremsPhotons = m_gsfBremsPhotonCol.createAndPut();
+        auto* gsfBremsPhotonSteps = m_gsfBremsPhotonStepCol.createAndPut();
         gsfTruthLinks = m_gsfTruthLinkCol.createAndPut();
         for (const auto& record : m_gsfTruthSteps) {
             auto stored = gsfTruthSteps->create();
@@ -197,7 +219,9 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
                 static_cast<gsftruth::G4MaterialStep>(stored));
             gsfTruthTrackIDs.insert(record.trackID);
         }
-        for (const auto& record : m_gsfBremsPhotons) {
+        std::map<std::size_t, gsftruth::G4BremsPhoton> gsfPhotonByIndex;
+        for (std::size_t index = 0; index < m_gsfBremsPhotons.size(); ++index) {
+            const auto& record = m_gsfBremsPhotons[index];
             const auto parent = gsfTruthStepByKey.find(
                 std::make_pair(record.parentTrackID, record.parentStepNumber));
             if (parent == gsfTruthStepByKey.end()) {
@@ -211,11 +235,42 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
             photon.setParentStepNumber(record.parentStepNumber);
             photon.setSecondaryIndexInStep(record.secondaryIndexInStep);
             photon.setCreatorProcessSubtype(record.creatorProcessSubtype);
+            photon.setTrackID(record.trackID);
             photon.setPosition(record.position);
             photon.setMomentum(record.momentum);
             photon.setEnergy(record.energy);
             photon.setGlobalTime(record.globalTime);
             photon.setParentStep(parent->second);
+            gsfPhotonByIndex.emplace(index, static_cast<gsftruth::G4BremsPhoton>(photon));
+        }
+        for (const auto& record : m_gsfBremsPhotonSteps) {
+            const auto photon = gsfPhotonByIndex.find(record.photonIndex);
+            if (photon == gsfPhotonByIndex.end()) {
+                warning() << "Missing photon for Geant4 step: track "
+                          << record.trackID << ", step " << record.stepNumber << endmsg;
+                continue;
+            }
+            auto stored = gsfBremsPhotonSteps->create();
+            stored.setTrackID(record.trackID);
+            stored.setStepNumber(record.stepNumber);
+            stored.setProcessSubtype(record.processSubtype);
+            stored.setPreStepStatus(record.preStepStatus);
+            stored.setPostStepStatus(record.postStepStatus);
+            stored.setTrackStatus(record.trackStatus);
+            stored.setPreVolumeCopyNo(record.preVolumeCopyNo);
+            stored.setPostVolumeCopyNo(record.postVolumeCopyNo);
+            stored.setPostInEcal(record.postInEcal);
+            stored.setPrePosition(record.prePosition);
+            stored.setPostPosition(record.postPosition);
+            stored.setPreMomentum(record.preMomentum);
+            stored.setPostMomentum(record.postMomentum);
+            stored.setPreEnergy(record.preEnergy);
+            stored.setPostEnergy(record.postEnergy);
+            stored.setPreGlobalTime(record.preGlobalTime);
+            stored.setPostGlobalTime(record.postGlobalTime);
+            stored.setStepLength(record.stepLength);
+            stored.setEnergyDeposit(record.energyDeposit);
+            stored.setPhoton(photon->second);
         }
     }
 
@@ -546,6 +601,22 @@ Edm4hepWriterAnaElemTool::PreUserTrackingAction(const G4Track* track) {
     int curparid = track->GetParentID();
     int pritrkid = curparid;
 
+    if (m_writeGsfTruthEventData.value()) {
+        const auto pending = m_pendingGsfBremsPhotons.find(track);
+        if (pending != m_pendingGsfBremsPhotons.end()) {
+            auto& photon = m_gsfBremsPhotons[pending->second];
+            if (track->GetDefinition()->GetPDGEncoding() == 22 &&
+                curparid == photon.parentTrackID) {
+                photon.trackID = curtrkid;
+                m_gsfBremsPhotonByTrackID.emplace(curtrkid, pending->second);
+            } else {
+                warning() << "Brems photon secondary pointer reused by an unrelated track"
+                          << endmsg;
+            }
+            m_pendingGsfBremsPhotons.erase(pending);
+        }
+    }
+
     // if it is ancestor mode, then we need to check whether current track is associated
     // with MCParticle or not.
     // If it is associated, then we will record this info.
@@ -779,6 +850,7 @@ void
 Edm4hepWriterAnaElemTool::UserSteppingAction(const G4Step* aStep) {
     if (m_writeGsfTruthEventData.value()) {
         recordGsfTruthStep(aStep);
+        recordGsfBremsPhotonStep(aStep);
     }
     auto aTrack = aStep->GetTrack();
     // try to get user track info
@@ -905,7 +977,7 @@ void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
     // process that contributed secondaries. Select the photon's creator below.
     // fBremsstrahlung is also used for other charged particles, so explicitly
     // restrict this electron/positron collection to the selected e-/e+ parents.
-    if (std::abs(record.pdg) != 11) return;
+    if (std::abs(record.pdg) != 11 || track->GetParentID() != 0) return;
     const auto* secondaries = step->GetSecondaryInCurrentStep();
     if (!secondaries) return;
     for (std::size_t index = 0; index < secondaries->size(); ++index) {
@@ -917,6 +989,9 @@ void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
         const auto* creator = secondary->GetCreatorProcess();
         if (!creator || creator->GetProcessSubType() != fBremsstrahlung) continue;
         const auto& position = secondary->GetPosition();
+        // The material-step selection can include a boundary step; require
+        // the photon itself to be born inside the configured tracker bounds.
+        if (R <= 0.0 || Z <= 0.0 || !insideGsfTruthTracker(position)) continue;
         const auto& momentum = secondary->GetMomentum();
         GsfBremsPhotonRecord photon;
         photon.parentTrackID = record.trackID;
@@ -933,8 +1008,66 @@ void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
             momentum.z() / CLHEP::GeV);
         photon.energy = secondary->GetTotalEnergy() / CLHEP::GeV;
         photon.globalTime = secondary->GetGlobalTime() / CLHEP::ns;
+        const auto photonIndex = m_gsfBremsPhotons.size();
         m_gsfBremsPhotons.push_back(photon);
+        m_pendingGsfBremsPhotons.emplace(secondary, photonIndex);
     }
+}
+
+void Edm4hepWriterAnaElemTool::recordGsfBremsPhotonStep(const G4Step* step) {
+    if (!step || !step->GetTrack()) return;
+    const auto* track = step->GetTrack();
+    const int trackID = track->GetTrackID();
+    const auto photon = m_gsfBremsPhotonByTrackID.find(trackID);
+    if (photon == m_gsfBremsPhotonByTrackID.end() ||
+        m_gsfBremsPhotonReachedEcal.count(trackID) != 0) return;
+
+    const auto* pre = step->GetPreStepPoint();
+    const auto* post = step->GetPostStepPoint();
+    if (!pre || !post) return;
+    if (isEcalPoint(pre)) {
+        m_gsfBremsPhotonReachedEcal.insert(trackID);
+        return;
+    }
+
+    GsfBremsPhotonStepRecord record;
+    record.photonIndex = photon->second;
+    record.trackID = trackID;
+    record.stepNumber = track->GetCurrentStepNumber();
+    const auto* process = post->GetProcessDefinedStep();
+    record.processSubtype = process ? process->GetProcessSubType() : 0;
+    record.preStepStatus = static_cast<int>(pre->GetStepStatus());
+    record.postStepStatus = static_cast<int>(post->GetStepStatus());
+    record.trackStatus = static_cast<int>(track->GetTrackStatus());
+    const auto* preVolume = pre->GetPhysicalVolume();
+    const auto* postVolume = post->GetPhysicalVolume();
+    record.preVolumeCopyNo = preVolume ? preVolume->GetCopyNo() : 0;
+    record.postVolumeCopyNo = postVolume ? postVolume->GetCopyNo() : 0;
+    record.postInEcal = isEcalPoint(post) ? 1 : 0;
+    const auto& prePosition = pre->GetPosition();
+    const auto& postPosition = post->GetPosition();
+    record.prePosition = edm4hep::Vector3d(
+        prePosition.x() / CLHEP::mm, prePosition.y() / CLHEP::mm,
+        prePosition.z() / CLHEP::mm);
+    record.postPosition = edm4hep::Vector3d(
+        postPosition.x() / CLHEP::mm, postPosition.y() / CLHEP::mm,
+        postPosition.z() / CLHEP::mm);
+    const auto& preMomentum = pre->GetMomentum();
+    const auto& postMomentum = post->GetMomentum();
+    record.preMomentum = edm4hep::Vector3f(
+        preMomentum.x() / CLHEP::GeV, preMomentum.y() / CLHEP::GeV,
+        preMomentum.z() / CLHEP::GeV);
+    record.postMomentum = edm4hep::Vector3f(
+        postMomentum.x() / CLHEP::GeV, postMomentum.y() / CLHEP::GeV,
+        postMomentum.z() / CLHEP::GeV);
+    record.preEnergy = pre->GetTotalEnergy() / CLHEP::GeV;
+    record.postEnergy = post->GetTotalEnergy() / CLHEP::GeV;
+    record.preGlobalTime = pre->GetGlobalTime() / CLHEP::ns;
+    record.postGlobalTime = post->GetGlobalTime() / CLHEP::ns;
+    record.stepLength = step->GetStepLength() / CLHEP::mm;
+    record.energyDeposit = step->GetTotalEnergyDeposit() / CLHEP::GeV;
+    m_gsfBremsPhotonSteps.push_back(record);
+    if (record.postInEcal) m_gsfBremsPhotonReachedEcal.insert(trackID);
 }
 
 StatusCode
