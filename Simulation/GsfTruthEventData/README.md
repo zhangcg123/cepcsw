@@ -91,6 +91,17 @@ collection is empty when no selected eBrem step emits a photon.
 Only explicit Geant4 secondary photons are available: energy loss below the
 Geant4 photon-production cut is not converted into synthetic photon records.
 
+The ordinary secondary `MCParticle` writer has a separate `SecTrackEk`
+property, in MeV. Its compiled default is now `10`; the local maintained
+`DumpGsfTrks/sim.py.bk` also sets it explicitly to `10.0` for batch steering.
+This does not change which Geant4 secondaries are produced or which photons
+enter `GsfG4BremsPhotons`. The ordinary writer still applies its configured
+spatial bounds, except for its pre-existing process exceptions. A same-seed
+20-event smoke increased ordinary
+`MCParticle` entries from 32 at 100 MeV to 59 at 10 MeV, while preserving all
+44 dedicated bremsstrahlung-photon records and 11,532 photon steps. A zero-cut
+control stored 766 ordinary entries, mostly very-low-energy electrons.
+
 `RecGsfTracking` can additionally write
 `GSFTruthMaterialIntervals` (`gsftruth::MaterialInterval`) into its final EDM
 output when `RecordTruthMaterialIntervals=true`. Each object corresponds to
