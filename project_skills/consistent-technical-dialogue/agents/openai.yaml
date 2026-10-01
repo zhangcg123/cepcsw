@@ -1,6 +1,0 @@
-interface:
-  display_name: "Consistent Technical Dialogue"
-  short_description: "Keep technical terms and claims stable across turns"
-  default_prompt: "Use $consistent-technical-dialogue to explain this topic with stable terminology, comparable representations and explicit reasoning."
-policy:
-  allow_implicit_invocation: true
