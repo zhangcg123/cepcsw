@@ -1,10 +1,15 @@
 """Serve a plot directory with a self-updating PNG gallery at /.
 
 Uses only the Python standard library. Bound to localhost by design; forward
-the port through SSH or VS Code when viewing from another machine.
+the port through SSH or VS Code when viewing from another machine. Optional
+gallery.json holds human-authored title, intro and ordered sections; the server
+never infers plot meanings or physics categories. Unassigned new images remain
+visible in a separate section.
 """
 
 import argparse
+import fnmatch
+import json
 from functools import partial
 from html import escape
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -12,49 +17,95 @@ from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 
+def sections_for(root, images):
+    """Apply optional human-authored categories; never infer physics from names."""
+    manifest_path = root / "gallery.json"
+    if not manifest_path.is_file():
+        return "Plot gallery", "", [("All plots", "", images)]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != 1 or not isinstance(manifest.get("sections"), list):
+        raise ValueError("gallery.json requires schema_version=1 and a sections list")
+    title = str(manifest.get("title", "Plot gallery"))
+    intro = str(manifest.get("intro", ""))
+    remaining = {path.relative_to(root).as_posix(): path for path in images}
+    groups = []
+    for section in manifest["sections"]:
+        if not isinstance(section, dict) or not isinstance(section.get("patterns"), list):
+            raise ValueError("each gallery section requires a patterns list")
+        heading = str(section.get("title", "Untitled section"))
+        description = str(section.get("description", ""))
+        chosen = []
+        # Pattern order is the display order; each matched filename sorts within
+        # its pattern. First section wins if patterns overlap.
+        for pattern in section["patterns"]:
+            for relative in sorted(list(remaining)):
+                if fnmatch.fnmatchcase(relative, str(pattern)):
+                    chosen.append(remaining.pop(relative))
+        if chosen:
+            groups.append((heading, description, chosen))
+    if remaining:
+        groups.append(("New / uncategorized", "Plots not yet assigned in gallery.json.",
+                       [remaining[name] for name in sorted(remaining)]))
+    return title, intro, groups
+
+
+def card(root, path):
+    relative = path.relative_to(root).as_posix()
+    url = "/" + quote(relative, safe="/")
+    label = escape(relative)
+    return (
+        f'<a class="card" href="{url}" target="_blank" rel="noopener" '
+        f'data-name="{escape(relative.lower(), quote=True)}">'
+        f'<img src="{url}" alt="{label}" loading="lazy">'
+        f'<span>{label}</span></a>'
+    )
+
+
 def gallery(root):
     images = sorted(
         (path for path in root.rglob("*") if path.is_file() and path.suffix.lower() == ".png"),
         key=lambda path: str(path.relative_to(root)).lower(),
     )
-    cards = []
-    for path in images:
-        relative = path.relative_to(root).as_posix()
-        url = "/" + quote(relative, safe="/")
-        label = escape(relative)
-        cards.append(
-            f'<a class="card" href="{url}" target="_blank" rel="noopener" '
-            f'data-name="{escape(relative.lower(), quote=True)}">'
-            f'<img src="{url}" alt="{label}" loading="lazy">'
-            f'<span>{label}</span></a>'
+    title, intro, sections = sections_for(root, images)
+    links = ['<a href="/README.md">README.md</a>'] if (root / "README.md").is_file() else []
+    section_html = []
+    navigation = []
+    for index, (heading, description, paths) in enumerate(sections):
+        anchor = f"section-{index + 1}"
+        navigation.append(f'<a href="#{anchor}">{escape(heading)} ({len(paths)})</a>')
+        section_html.append(
+            f'<section class="group" id="{anchor}"><h2>{escape(heading)}</h2>'
+            f'<p>{escape(description)}</p><div class="grid">'
+            + "".join(card(root, path) for path in paths) + "</div></section>"
         )
-    links = []
-    for name in ("README.md", "resolution_summary.csv", "category_counts.csv", "location_resolution.csv"):
-        if (root / name).is_file():
-            links.append(f'<a href="/{quote(name)}">{escape(name)}</a>')
     return (
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<title>Plot gallery</title><style>'
+        f'<title>{escape(title)}</title><style>'
         'body{font:16px system-ui,sans-serif;margin:0;background:#f5f7fa;color:#17212b}'
-        'header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:1rem 1.5rem;z-index:1}'
-        'h1{font-size:1.4rem;margin:0 0 .5rem}p{margin:.35rem 0;color:#4b5563}'
+        'header{background:#fff;border-bottom:1px solid #ddd;padding:1rem 1.5rem}'
+        'h1{font-size:1.4rem;margin:0 0 .5rem}h2{margin:.25rem 0 .5rem}'
+        'p{margin:.35rem 0;color:#4b5563}'
         'input{font:inherit;padding:.55rem;width:min(38rem,95%);border:1px solid #9ca3af;border-radius:6px}'
         'nav{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.5rem}'
-        'main{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1rem;padding:1rem}'
+        'main{padding:1rem}.group{margin:0 0 2.5rem}.group h2{border-bottom:2px solid #d4dce4;padding-bottom:.3rem}'
+        '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1rem;margin-top:1rem}'
         '.card{background:white;border:1px solid #ddd;border-radius:8px;overflow:hidden;'
         'text-decoration:none;color:inherit;box-shadow:0 1px 3px #0001}'
         '.card:hover{outline:2px solid #377dca}'
         'img{width:100%;height:245px;object-fit:contain;background:#fff;display:block}'
         'span{display:block;padding:.7rem;overflow-wrap:anywhere;font-size:.88rem}'
-        '</style></head><body><header><h1>Plot gallery</h1>'
-        f'<p>{len(images)} PNG plots in {escape(str(root))}. Click a preview for the full image.</p>'
+        '</style></head><body><header>'
+        f'<h1>{escape(title)}</h1><p>{escape(intro)}</p>'
+        f'<p>{len(images)} PNG plots. Click a preview for the full image.</p>'
         '<input id="filter" aria-label="Filter plot names" placeholder="Filter plot names…">'
-        f'<nav>{" ".join(links)}</nav></header><main id="gallery">'
-        + "".join(cards)
+        f'<nav>{" ".join(navigation + links)}</nav></header><main id="gallery">'
+        + "".join(section_html)
         + '</main><script>document.getElementById("filter").addEventListener("input",e=>{'
-          'const q=e.target.value.toLowerCase();document.querySelectorAll(".card").forEach(c=>'
-          'c.hidden=!c.dataset.name.includes(q))})</script></body></html>'
+          'const q=e.target.value.toLowerCase();document.querySelectorAll(".group").forEach(g=>{'
+          'let visible=0;g.querySelectorAll(".card").forEach(c=>{'
+          'c.hidden=!c.dataset.name.includes(q);if(!c.hidden)visible++});g.hidden=!visible})'
+          '})</script></body></html>'
     ).encode("utf-8")
 
 

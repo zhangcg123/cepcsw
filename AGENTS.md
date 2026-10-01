@@ -301,7 +301,14 @@ Its home page shows all PNG previews together; `plotweb_status` and
 `plotweb_stop` manage it. Stop the current server before launching a different
 plot directory. The maintained gallery implementation is
 `TrackingPerformanceStudies/plot_gallery_server.py`. Do not start a plain
-directory-listing HTTP server for future plot requests.
+directory-listing HTTP server for future plot requests. For each new plot
+directory, assign a dedicated sub-agent to inspect the plots and their analysis
+notes, then author that directory's `gallery.json` with `schema_version: 1`,
+`title`, `intro`, and ordered `sections` (`title`, `description`, `patterns`).
+The sub-agent must verify that every PNG appears in exactly one meaningful
+category. Keep category semantics out of the generic server; it displays
+uncategorized new plots separately until the manifest is updated. Treat each
+per-analysis manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
