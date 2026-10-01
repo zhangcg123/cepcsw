@@ -43,3 +43,27 @@ environment after `source setup.sh`; use PODIO Frame reading.
 
 No run-card, GSF or breakpoint changes were included. No runtime installation
 has been performed; existing simulation files do not acquire the new collection.
+
+## Same-seed preservation check
+
+The old installed `DetSimAna`/`GsfTruthEventData` runtime and the new uninstalled
+build were run with the same maintained `DumpGsfTrks/sim.py.bk` settings: seed
+12345, primary e-, 2 GeV, theta 85 degrees, 20 events. The paired ROOT files
+are `/tmp/gsf_photon_old_installed.root` and
+`/tmp/gsf_photon_review_smoke.root`. This comparison uses the active local card,
+including its pre-existing user edits; it does not compare different cards.
+
+The old event tree had 29 collections and 452 branches. The new event tree had
+the same 29 collections plus `GsfG4BremsPhotons`, represented by 16 new branches.
+No old branch was removed. For every old branch, type, event count, basket
+count, basket event boundaries, uncompressed length, and stored payload agreed
+exactly across the 20 paired events: 825 old baskets compared, zero mismatches.
+This covers `GsfG4MaterialSteps`, `GsfSimTrackerHitG4StepLinks`, MCParticles,
+tracker hits, calorimeter hits/contributions, and all other original event
+collections. The new tuple recorded 44 photon entries in this sample.
+
+Thus, no pre-existing **event collection content** changed in these paired
+events. File metadata necessarily gains the photon collection, and this check
+does not claim an all-seed/all-geometry guarantee. The direct PODIO check of
+every generic getter crashed inside the ROOT binding, so the final broad check
+compared each ROOT branch's stored baskets and event boundaries instead.
