@@ -299,8 +299,10 @@ For browser plots, use the user's dedicated localhost port 8000 and the
 gallery server by default: `source ~/.bashrc; plotweb_start /absolute/plot/dir`.
 Its home page shows all PNG previews together; `plotweb_status` and
 `plotweb_stop` manage it. Stop the current server before launching a different
-plot directory. The maintained gallery implementation is
-`TrackingPerformanceStudies/plot_gallery_server.py`. Do not start a plain
+plot directory. The maintained personal implementation is the `plot-gallery`
+skill at `~/.agents/skills/plot-gallery/`; its launcher and server are independent
+of CEPCSW. The former `TrackingPerformanceStudies/plot_gallery_server.py` remains
+available as a historical project copy. Do not start a plain
 directory-listing HTTP server for future plot requests. Delegate the complete
 plot-server request to one dedicated sub-agent: inspect the requested directory
 and analysis notes; author/update its `gallery.json` with `schema_version: 1`,
