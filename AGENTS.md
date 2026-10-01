@@ -295,6 +295,14 @@ build.105.0.0.x86_64-el9-gcc11-opt/run \
 Use a small `SelectedEventIndices` list for component diagnostics. Generated
 ROOT files and logs are outputs, not status records.
 
+For browser plots, use the user's dedicated localhost port 8000 and the
+gallery server by default: `source ~/.bashrc; plotweb_start /absolute/plot/dir`.
+Its home page shows all PNG previews together; `plotweb_status` and
+`plotweb_stop` manage it. Stop the current server before launching a different
+plot directory. The maintained gallery implementation is
+`TrackingPerformanceStudies/plot_gallery_server.py`. Do not start a plain
+directory-listing HTTP server for future plot requests.
+
 ## 2. Current focus
 
 Active work remains RecBreakpoint on local `breakpoint`. Its shared-width
