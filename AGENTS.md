@@ -314,13 +314,14 @@ and dated records remain; do not refer to their raw ROOT tuples as available.
 The exact cleanup inventory is in
 `agents_record/2026-10-01-sim-only-tuple-cleanup.md`.
 
-The source now serializes measurement, process and seed contributions by
-default for ordinary, free-loss and truth-centred RTS results. Direct tests
-showed unchanged endpoints and score closure; this verified module has not
-yet been installed. Before a new batch, verify job activity, install the
-RecBreakpoint module, and regenerate tracker inputs from the retained
-simulation sample. Then investigate light-loss failures and extreme tails
-with the saved per-hit score breakdown before proposing model changes.
+The source and installed RecBreakpoint module now serialize measurement,
+process and seed contributions by default for ordinary, free-loss and
+truth-centred RTS results. Direct tests showed unchanged endpoints and score
+closure; the package-only deployment is recorded in
+`agents_record/2026-10-01-score-breakdown-deployment.md`. Before a new batch,
+regenerate tracker inputs from the retained simulation sample. Then investigate
+light-loss failures and extreme tails with the saved per-hit score breakdown
+before proposing model changes.
 No new objective, prior or default physics change has been authorized.
 
 Detailed current evidence and retained outputs:
