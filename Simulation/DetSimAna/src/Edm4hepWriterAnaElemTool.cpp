@@ -13,6 +13,7 @@
 #include "G4TrackingManager.hh"
 #include "G4SteppingManager.hh"
 #include "G4GammaGeneralProcess.hh"
+#include "G4EmProcessSubType.hh"
 
 #include "DD4hep/Detector.h"
 #include "DD4hep/Plugins.h"
@@ -144,6 +145,7 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
     // reset
     m_track2primary.clear();
     m_gsfTruthSteps.clear();
+    m_gsfBremsPhotons.clear();
  
 }
 
@@ -157,6 +159,7 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
     std::set<int> gsfTruthTrackIDs;
     if (m_writeGsfTruthEventData.value()) {
         auto* gsfTruthSteps = m_gsfTruthStepCol.createAndPut();
+        auto* gsfBremsPhotons = m_gsfBremsPhotonCol.createAndPut();
         gsfTruthLinks = m_gsfTruthLinkCol.createAndPut();
         for (const auto& record : m_gsfTruthSteps) {
             auto stored = gsfTruthSteps->create();
@@ -193,6 +196,26 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
                 std::make_pair(record.trackID, record.stepNumber),
                 static_cast<gsftruth::G4MaterialStep>(stored));
             gsfTruthTrackIDs.insert(record.trackID);
+        }
+        for (const auto& record : m_gsfBremsPhotons) {
+            const auto parent = gsfTruthStepByKey.find(
+                std::make_pair(record.parentTrackID, record.parentStepNumber));
+            if (parent == gsfTruthStepByKey.end()) {
+                warning() << "Missing stored parent eBrem step for photon: track "
+                          << record.parentTrackID << ", step "
+                          << record.parentStepNumber << endmsg;
+                continue;
+            }
+            auto photon = gsfBremsPhotons->create();
+            photon.setParentTrackID(record.parentTrackID);
+            photon.setParentStepNumber(record.parentStepNumber);
+            photon.setSecondaryIndexInStep(record.secondaryIndexInStep);
+            photon.setCreatorProcessSubtype(record.creatorProcessSubtype);
+            photon.setPosition(record.position);
+            photon.setMomentum(record.momentum);
+            photon.setEnergy(record.energy);
+            photon.setGlobalTime(record.globalTime);
+            photon.setParentStep(parent->second);
         }
     }
 
@@ -874,6 +897,44 @@ void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
     record.preGlobalTime = pre->GetGlobalTime() / CLHEP::ns;
     record.postGlobalTime = post->GetGlobalTime() / CLHEP::ns;
     m_gsfTruthSteps.push_back(record);
+
+    // A photon can be below the generic MCParticle secondary threshold. Read
+    // Geant4's secondaries for this exact step, before their tracks are stacked
+    // or transported; their future track IDs are not yet a reliable key.
+    // The step-defining process only identifies the step limiter, not every
+    // process that contributed secondaries. Select the photon's creator below.
+    // fBremsstrahlung is also used for other charged particles, so explicitly
+    // restrict this electron/positron collection to the selected e-/e+ parents.
+    if (std::abs(record.pdg) != 11) return;
+    const auto* secondaries = step->GetSecondaryInCurrentStep();
+    if (!secondaries) return;
+    for (std::size_t index = 0; index < secondaries->size(); ++index) {
+        const auto* secondary = (*secondaries)[index];
+        if (!secondary || !secondary->GetDefinition() ||
+            secondary->GetDefinition()->GetPDGEncoding() != 22) {
+            continue;
+        }
+        const auto* creator = secondary->GetCreatorProcess();
+        if (!creator || creator->GetProcessSubType() != fBremsstrahlung) continue;
+        const auto& position = secondary->GetPosition();
+        const auto& momentum = secondary->GetMomentum();
+        GsfBremsPhotonRecord photon;
+        photon.parentTrackID = record.trackID;
+        photon.parentStepNumber = record.stepNumber;
+        photon.secondaryIndexInStep = static_cast<int>(index);
+        photon.creatorProcessSubtype = creator->GetProcessSubType();
+        photon.position = edm4hep::Vector3d(
+            position.x() / CLHEP::mm,
+            position.y() / CLHEP::mm,
+            position.z() / CLHEP::mm);
+        photon.momentum = edm4hep::Vector3f(
+            momentum.x() / CLHEP::GeV,
+            momentum.y() / CLHEP::GeV,
+            momentum.z() / CLHEP::GeV);
+        photon.energy = secondary->GetTotalEnergy() / CLHEP::GeV;
+        photon.globalTime = secondary->GetGlobalTime() / CLHEP::ns;
+        m_gsfBremsPhotons.push_back(photon);
+    }
 }
 
 StatusCode
@@ -912,4 +973,3 @@ Edm4hepWriterAnaElemTool::finalize() {
 
     return sc;
 }
-

@@ -41,6 +41,21 @@ datatypes:
       - float preGlobalTime // pre-step global time [ns]
       - float postGlobalTime // post-step global time [ns]
 
+  gsftruth::G4BremsPhoton:
+    Description: "Geant4 bremsstrahlung photon emitted on one selected electron/positron step"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t parentTrackID // Geant4 electron/positron track identifier
+      - std::int32_t parentStepNumber // electron/positron track-local step number
+      - std::int32_t secondaryIndexInStep // zero-based index among all secondaries of this step
+      - std::int32_t creatorProcessSubtype // Geant4 creator-process subtype (3 = eBrem)
+      - edm4hep::Vector3d position // photon creation position [mm]
+      - edm4hep::Vector3f momentum // photon creation momentum [GeV]
+      - float energy // photon creation total energy [GeV]
+      - float globalTime // photon creation global time [ns]
+    OneToOneRelations:
+      - gsftruth::G4MaterialStep parentStep // exact stored electron/positron step that emitted this photon
+
   gsftruth::SimTrackerHitG4StepLink:
     Description: "Exact Geant4 step provenance of one EDM4hep SimTrackerHit"
     Author: "CEPCSW GSF development"

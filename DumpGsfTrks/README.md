@@ -31,11 +31,14 @@ Simulation/DetSimAna/src/Edm4hepWriterAnaElemTool.{h,cpp}
 ```
 
 With `Edm4hepWriterAnaElemTool.WriteGsfTruthEventData=True`, simulation writes
-two PODIO collections into the ordinary event:
+three PODIO collections into the ordinary event:
 
 - `GsfG4MaterialSteps`: selected Geant4 pre/post material steps;
 - `GsfSimTrackerHitG4StepLinks`: one relation from a persisted
   `SimTrackerHit` to its exact contributing step range and measurement hook.
+- `GsfG4BremsPhotons`: bremsstrahlung photons from selected electron/positron
+  steps, with creation kinematics and a direct relation to each parent `GsfG4MaterialSteps`
+  object. This is creation truth, not a reconstructed or calorimeter photon.
 
 The transient detector hit records the first/last contributing Geant4 step
 and the hook convention when the hit is made. Combined silicon hits expose a
@@ -87,9 +90,13 @@ edm4hep_writer.GsfTruthTrackerOnly = True
 
 Important interpretations:
 
-- `GsfTruthPrimaryOnly=True` records only primary tracks with a configured PDG.
-  It excludes secondary electrons and photons, but the primary's momentum
-  change across an eBrem step is retained.
+- `GsfTruthPrimaryOnly=True` selects only primary tracks with a
+  configured PDG for the step collection. It excludes secondary tracks from
+  that collection, but photons emitted on selected primary-electron/positron
+  steps are retained separately in `GsfG4BremsPhotons`, including photons
+  below the generic `MCParticle` secondary threshold. Selection uses the photon
+  creator's bremsstrahlung subtype, not the parent's step-defining process;
+  photons suppressed by Geant4's production cut are not materialized.
 - `GsfTruthTrackerOnly=True` uses the writer's tracker envelope. It is not a
   sensitive-volume test; support and gap material inside that envelope remains
   available between tracker hits.

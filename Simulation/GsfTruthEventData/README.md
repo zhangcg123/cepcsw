@@ -4,7 +4,7 @@ This PODIO extension stores the Geant4 information needed by default-off GSF
 mechanism diagnostics inside the ordinary EDM event. It is not a production
 tracking input and does not make the normal GSF truth-dependent.
 
-The simulation writes two provenance collections:
+The simulation writes three provenance collections:
 
 - `GsfG4MaterialSteps` (`gsftruth::G4MaterialStep`): selected Geant4 pre/post
   steps, including positions, momenta, process subtype, local material
@@ -12,6 +12,17 @@ The simulation writes two provenance collections:
 - `GsfSimTrackerHitG4StepLinks`
   (`gsftruth::SimTrackerHitG4StepLink`): the exact persisted `SimTrackerHit`,
   its first and last contributing Geant4 steps, and its measurement hook.
+- `GsfG4BremsPhotons` (`gsftruth::G4BremsPhoton`): every photon returned by
+  `GetSecondaryInCurrentStep()` for a selected electron/positron parent whose
+  photon creator process has bremsstrahlung subtype 3. The parent's defining
+  process is not a filter: it identifies the step limiter, not necessarily
+  every process contributing secondaries. The existing PDG, primary-only and
+  tracker-envelope selection applies to the parent step. Each photon has a direct
+  `parentStep` relation and redundant parent-track/step numbers, its index in
+  that step's full secondary list, creation position, momentum, energy, and
+  time. These are photon-creation values, not calorimeter or final-state
+  values. Geant4 has not necessarily assigned the secondary a usable track ID
+  at this point, so the step relation plus secondary index is the identity.
 
 The event-level relation chain is:
 
@@ -55,9 +66,14 @@ edm4hep_writer.GsfTruthPrimaryOnly = True
 edm4hep_writer.GsfTruthTrackerOnly = True
 ```
 
-Both collections are written into the same `sim*.root` event and survive the
+All three collections are written into the same `sim*.root` event and survive the
 normal `keep *` chain. ROOT dictionary PCM/rootmap files are installed beside
 the generated libraries so generic PODIO readers can deserialize them.
+Photons below the generic `MCParticle` secondary threshold are included; do
+not assume each photon has a corresponding stored `MCParticle`. The photon
+collection is empty when no selected eBrem step emits a photon.
+Only explicit Geant4 secondary photons are available: energy loss below the
+Geant4 photon-production cut is not converted into synthetic photon records.
 
 `RecGsfTracking` can additionally write
 `GSFTruthMaterialIntervals` (`gsftruth::MaterialInterval`) into its final EDM

@@ -19,6 +19,7 @@
 #include "edm4hep/SimCalorimeterHitCollection.h"
 #include "edm4hep/CaloHitContributionCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/G4BremsPhotonCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 
 class Edm4hepWriterAnaElemTool: public extends<AlgTool, IAnaElemTool> {
@@ -67,6 +68,8 @@ private:
 
     DataHandle<gsftruth::G4MaterialStepCollection> m_gsfTruthStepCol{
         "GsfG4MaterialSteps", Gaudi::DataHandle::Writer, this};
+    DataHandle<gsftruth::G4BremsPhotonCollection> m_gsfBremsPhotonCol{
+        "GsfG4BremsPhotons", Gaudi::DataHandle::Writer, this};
     DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_gsfTruthLinkCol{
         "GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Writer, this};
 
@@ -158,6 +161,18 @@ private:
     };
 
     std::vector<GsfTruthStepRecord> m_gsfTruthSteps;
+
+    struct GsfBremsPhotonRecord {
+        int parentTrackID = -1;
+        int parentStepNumber = -1;
+        int secondaryIndexInStep = -1;
+        int creatorProcessSubtype = 0;
+        edm4hep::Vector3d position{};
+        edm4hep::Vector3f momentum{};
+        float energy = 0.0f;
+        float globalTime = 0.0f;
+    };
+    std::vector<GsfBremsPhotonRecord> m_gsfBremsPhotons;
 
     bool acceptGsfTruthPdg(int pdg) const;
     bool insideGsfTruthTracker(const G4ThreeVector& position) const;
