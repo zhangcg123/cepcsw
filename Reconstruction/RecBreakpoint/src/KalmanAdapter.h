@@ -56,6 +56,10 @@ public:
       edm4hep::TrackerHit targetHit, bool breakpoint, double meanLoss, double sigmaLoss) const;
   // One native, material-aware IP operation for every endpoint family.
   edm4hep::TrackState propagateToIP(const TrackState& state, edm4hep::TrackerHit hit) const;
+  // The same native ECAL-face extrapolation used by CompleteTracks. It starts
+  // from this endpoint's own outermost fitted state, not the input KF state.
+  edm4hep::TrackState propagateToCalorimeter(const TrackState& state,
+                                             edm4hep::TrackerHit lastHit) const;
   /// Independent, unbroken MarlinTrk fit and its native smoother. Diagnostic
   /// reference for the empty-breakpoint limit, with exactly the same seed/hits.
   edm4hep::TrackState referenceKF(const std::vector<edm4hep::TrackerHit>& hits, double scale,

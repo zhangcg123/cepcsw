@@ -21,14 +21,34 @@
 #include <optional>
 
 namespace {
+enum CaloFamily {
+  InputKF, OrdinaryRTS, OrdinaryBackward, FreeRTS, FreeBackward,
+  BeamFreeRTS, BeamFreeBackward, TruthRTS, TruthBackward, DiffuseRTS
+};
+constexpr const char* caloPrefixes[] = {
+  "kf_", "rts_", "backward_", "free_loss_rts_", "free_loss_backward_",
+  "beam_guided_free_loss_rts_", "beam_guided_free_loss_backward_",
+  "truth_override_rts_", "truth_override_backward_", "diffuse_augmented_rts_"
+};
 // Every endpoint family uses identical EDM representation and hit references.
 int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& fit,
-                 const std::vector<edm4hep::TrackerHit>& hits, double bz, double chi2) {
+                 const std::vector<edm4hep::TrackerHit>& hits, double bz, double chi2,
+                 const breakpoint::KalmanAdapter& adapter,
+                 breakpoint::CaloStateTuple& caloTuple) {
   const int index = output.size();
   auto track = output.create();
   track.addToTrackStates(fit.ip);
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
+  // A calorimeter extrapolation is diagnostic/publication only. Its failure
+  // must never discard or alter the fitted IP and hit states.
+  try {
+    const auto calo = adapter.propagateToCalorimeter(fit.endpoint.back(), hits.back());
+    caloTuple.assign(calo, bz, 1);
+    track.addToTrackStates(calo);
+  } catch (const std::exception& error) {
+    caloTuple.fail(error.what());
+  }
   track.setChi2(chi2);
   track.setNdf(fit.measurementDimensions - 5 - fit.freeLossParameterCount); // bookkeeping, not calibrated
   for (auto hit : hits) track.addToTrackerHits(hit);
@@ -147,6 +167,8 @@ StatusCode RecBreakpoint::initialize() {
   if (!m_file || m_file->IsZombie()) return StatusCode::FAILURE;
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
+  for (std::size_t i = 0; i < m_caloStates.size(); ++i)
+    m_caloStates[i].book(*m_tree, caloPrefixes[i]);
   m_freeLossTuple.book(*m_tree);
   m_beamFreeLossTuple.book(*m_tree, "beam_guided_free_loss_");
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
@@ -393,6 +415,8 @@ StatusCode RecBreakpoint::execute() {
     m_truthLikelihood.reset();
     m_freeLossTracks.reset();
     m_beamFreeLossTracks.reset();
+    for (auto& calo : m_caloStates) calo.reset();
+    m_caloStates[InputKF].assignFromTrack(track, m_bz, 2);
     m_diffuseStatus = 0; m_diffuseIndex = -1; m_diffuseError.clear();
     m_diffusePt = m_diffuseB = m_diffuseBVariance = nan;
     m_diffuseIPParameters.clear(); m_diffuseIPCovariance.clear();
@@ -694,15 +718,19 @@ StatusCode RecBreakpoint::execute() {
       }
       m_rtsLoss = m_fittedLoss;
       m_rtsLossVariance = m_lossVariance;
-      outputIndices->push_back(publishTrack(*output, fit, hits, m_bz, fit.smoothedTotalChi2));
-      backwardOutputIndices->push_back(publishTrack(*backwardOutput, inward, hits, m_bz, m_backwardTotalChi2));
+      outputIndices->push_back(publishTrack(*output, fit, hits, m_bz, fit.smoothedTotalChi2,
+                                            adapter, m_caloStates[OrdinaryRTS]));
+      backwardOutputIndices->push_back(publishTrack(*backwardOutput, inward, hits, m_bz,
+                                                    m_backwardTotalChi2, adapter,
+                                                    m_caloStates[OrdinaryBackward]));
       m_fitStatus = 1;
 
       // Independent flat-prior experiment. A failed or underidentified fit
       // never changes the ordinary pair and is explicitly an input-KF copy.
       if (!m_diffuseAugmentedRTS || settings.intervals.empty()) {
         m_diffuseStatus = settings.intervals.empty() ? 1 : 0;
-        m_diffuseIndex = publishTrack(*diffuseRTSOutput, fit, hits, m_bz, fit.smoothedTotalChi2);
+        m_diffuseIndex = publishTrack(*diffuseRTSOutput, fit, hits, m_bz,
+                                      fit.smoothedTotalChi2, adapter, m_caloStates[DiffuseRTS]);
         m_diffusePt = m_fitPt;
         m_diffuseIPParameters = {fit.ip.D0, fit.ip.phi, fit.ip.omega, fit.ip.Z0, fit.ip.tanLambda};
         m_diffuseIPCovariance.assign(fit.ip.covMatrix.begin(), fit.ip.covMatrix.end());
@@ -712,7 +740,8 @@ StatusCode RecBreakpoint::execute() {
             diffuse.breakpoints.empty() || !std::isfinite(diffuse.breakpoints.front().fittedVariance))
           throw std::runtime_error("Invalid diffuse endpoint or loss posterior");
         m_diffuseStatus = 2;
-        m_diffuseIndex = publishTrack(*diffuseRTSOutput, diffuse, hits, m_bz, diffuse.chi2);
+        m_diffuseIndex = publishTrack(*diffuseRTSOutput, diffuse, hits, m_bz,
+                                      diffuse.chi2, adapter, m_caloStates[DiffuseRTS]);
         m_diffusePt = std::abs(m_bz * 2.99792458e-4 / diffuse.ip.omega);
         m_diffuseB = diffuse.breakpoints.front().fittedLogLoss;
         m_diffuseBVariance = diffuse.breakpoints.front().fittedVariance;
@@ -761,6 +790,7 @@ StatusCode RecBreakpoint::execute() {
         m_diffuseError = error.what();
         m_diffuseIndex = diffuseRTSOutput->size();
         diffuseRTSOutput->push_back(track.clone());
+        m_caloStates[DiffuseRTS].assignFromTrack(track, m_bz, 2);
         m_diffusePt = m_kfPt;
         warning() << "DiffuseAugmentedRTS input-KF fallback: " << m_diffuseError << endmsg;
       }
@@ -776,6 +806,8 @@ StatusCode RecBreakpoint::execute() {
           m_freeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
           freeRTSOutput->push_back(track.clone());
           freeBackwardOutput->push_back(track.clone());
+          m_caloStates[FreeRTS].assignFromTrack(track, m_bz, 2);
+          m_caloStates[FreeBackward].assignFromTrack(track, m_bz, 2);
           if (m_verbose) info() << "FreeLoss KF fallback event=" << m_event
               << " track=" << m_trackIndex << " inputPt=" << m_kfPt << endmsg;
         } catch (const std::exception& error) {
@@ -798,9 +830,11 @@ StatusCode RecBreakpoint::execute() {
         const double freeBackwardChi2 = std::accumulate(freeResult.backward.backwardChi2.begin(),
                                                        freeResult.backward.backwardChi2.end(), 0.);
         const int freeRTSIndex = publishTrack(*freeRTSOutput, freeResult.rts, hits, m_bz,
-                                              freeResult.rts.smoothedTotalChi2);
+                                              freeResult.rts.smoothedTotalChi2, adapter,
+                                              m_caloStates[FreeRTS]);
         const int freeBackwardIndex = publishTrack(*freeBackwardOutput, freeResult.backward, hits,
-                                                   m_bz, freeBackwardChi2);
+                                                   m_bz, freeBackwardChi2, adapter,
+                                                   m_caloStates[FreeBackward]);
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
       }
       if (m_verbose && !freeKFFallback) {
@@ -838,6 +872,8 @@ StatusCode RecBreakpoint::execute() {
           m_beamFreeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
           beamFreeRTSOutput->push_back(track.clone());
           beamFreeBackwardOutput->push_back(track.clone());
+          m_caloStates[BeamFreeRTS].assignFromTrack(track, m_bz, 2);
+          m_caloStates[BeamFreeBackward].assignFromTrack(track, m_bz, 2);
         } catch (const std::exception& error) {
           m_beamFreeLossTracks.reset();
           warning() << "Beam-guided input KF fallback unavailable: " << error.what() << endmsg;
@@ -858,9 +894,11 @@ StatusCode RecBreakpoint::execute() {
         const double backwardChi2 = std::accumulate(beamResult.backward.backwardChi2.begin(),
                                                     beamResult.backward.backwardChi2.end(), 0.);
         const int rtsIndex = publishTrack(*beamFreeRTSOutput, beamResult.rts, hits, m_bz,
-                                          beamResult.rts.smoothedTotalChi2);
+                                          beamResult.rts.smoothedTotalChi2, adapter,
+                                          m_caloStates[BeamFreeRTS]);
         const int backwardIndex = publishTrack(*beamFreeBackwardOutput, beamResult.backward,
-                                               hits, m_bz, backwardChi2);
+                                               hits, m_bz, backwardChi2, adapter,
+                                               m_caloStates[BeamFreeBackward]);
         m_beamFreeLossTracks.assign(beamResult, m_bz, beamFreePair ? 2 : 1,
                                    rtsIndex, backwardIndex);
       }
@@ -977,8 +1015,11 @@ StatusCode RecBreakpoint::execute() {
         };
         saveIP(truthRTS.ip, m_truthRTSParameters, m_truthRTSCovariance);
         saveIP(truthBackward.ip, m_truthBackwardParameters, m_truthBackwardCovariance);
-        truthRTSIndex = publishTrack(*truthRTSOutput, truthRTS, hits, m_bz, m_truthSmoothedChi2);
-        truthBackwardIndex = publishTrack(*truthBackwardOutput, truthBackward, hits, m_bz, m_truthBackwardChi2);
+        truthRTSIndex = publishTrack(*truthRTSOutput, truthRTS, hits, m_bz,
+                                     m_truthSmoothedChi2, adapter, m_caloStates[TruthRTS]);
+        truthBackwardIndex = publishTrack(*truthBackwardOutput, truthBackward, hits, m_bz,
+                                          m_truthBackwardChi2, adapter,
+                                          m_caloStates[TruthBackward]);
         m_truthResultCode = needTruthLoss ? 2 : 1;
         if (m_verbose) {
           for (std::size_t i = 0; i < hits.size(); ++i) {

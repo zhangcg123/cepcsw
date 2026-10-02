@@ -13,7 +13,9 @@
 #include "FreeLossTuple.h"
 #include "FitPairTuple.h"
 #include "LikelihoodTuple.h"
+#include "CaloStateTuple.h"
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -105,6 +107,8 @@ private:
   breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
+  // KF input plus the nine parallel published breakpoint endpoint families.
+  std::array<breakpoint::CaloStateTuple, 10> m_caloStates;
   int m_diffuseStatus = 0, m_diffuseIndex = -1;
   std::string m_diffuseError;
   double m_diffusePt = 0, m_diffuseB = 0, m_diffuseBVariance = 0;

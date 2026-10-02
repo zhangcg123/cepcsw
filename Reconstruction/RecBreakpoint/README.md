@@ -69,8 +69,14 @@ base free-loss result. A ninth, independent
 `BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
 `DiffuseAugmentedRTS` (compiled default off; maintained-card default on).
 All nine names must differ
-from each other and the input. Each successful pair contains IP, first-hit and last-hit
-states and the original ordered hits. Fixed input-row mappings are
+from each other and the input. Each successful result contains IP, first-hit,
+last-hit, and, when native extrapolation succeeds, ECAL-face (`AtCalorimeter`)
+states and the original ordered hits. The ECAL-face state starts from that
+result's own outermost fitted endpoint; it is not copied from `CompleteTracks`
+and the last hit is not updated a second time. The same native barrel/endcap
+layer propagation and nearest-face choice used by the baseline are applied.
+Failure of this extra extrapolation leaves the IP/hit fit intact. Fixed
+input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
 `BreakpointStatus` is 1 for a successful pair, -1 for failed fit and 0 for
 excluded input; absent outputs map to -1. Current fit failures fail the pair,
@@ -79,6 +85,21 @@ rather than publishing one branch under the other's name.
 The flat tuple always records both `rts_pt` and `backward_pt`.
 `breakpoint_pt` remains an RTS alias. The removed `backward_mode` branch no
 longer misleadingly labels a row that now contains both results.
+
+The calorimeter state is saved in the flat tuple for the input KF and all nine
+endpoint families, using prefixes `kf_`, `rts_`, `backward_`,
+`free_loss_rts_`, `free_loss_backward_`, `beam_guided_free_loss_rts_`,
+`beam_guided_free_loss_backward_`, `truth_override_rts_`,
+`truth_override_backward_`, and `diffuse_augmented_rts_`. Each prefix has
+`calo_status`, `calo_error`, `calo_pt`, `calo_p`, `calo_parameters`,
+`calo_covariance`, and `calo_reference_point_mm`. Parameters are the EDM
+`(D0, phi, omega, Z0, tanLambda)` at the ECAL face; covariance is the packed
+21-entry EDM covariance. Status 1 means native extrapolation succeeded, 2
+means an input-KF state was copied (including a fit fallback), 0 means no
+output, and -1 means the state was unavailable or extrapolation failed.
+Unavailable numerical fields are NaN/empty. The default card writes only
+the flat tuple; add the optional `PodioOutput` from the card to serialize the
+nine EDM track collections themselves.
 
 ## Loss state and interval ownership
 

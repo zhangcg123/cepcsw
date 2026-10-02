@@ -3,6 +3,7 @@
 #include "RecBreakpoint/AugmentedTransport.h"
 #include "TrackSystemSvc/MarlinTrkUtils.h"
 #include "UTIL/BitSet32.h"
+#include "UTIL/BitField64.h"
 #include "UTIL/ILDConf.h"
 #include "kaldet/ILDVMeasLayer.h"
 #include "kaldet/ILDVTrackHit.h"
@@ -12,6 +13,7 @@
 #include "kaltest/TKalFilterCond.h"
 #include "kaltest/THelicalTrack.h"
 
+#include <cmath>
 #include <stdexcept>
 
 namespace breakpoint {
@@ -380,6 +382,46 @@ edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
   // Our published result is explicitly the interaction-point endpoint.
   ip.location = edm4hep::TrackState::AtIP;
   return ip;
+}
+
+edm4hep::TrackState KalmanAdapter::propagateToCalorimeter(
+    const TrackState& state, edm4hep::TrackerHit lastHit) const {
+  // A fresh native track has the fitted endpoint as its initial (dummy-hit)
+  // site. The CompleteTracks convenience helper takes a real hit previously
+  // used by the same native fit, which this standalone endpoint does not have.
+  // Use its underlying no-hit native propagation instead; no last-hit update
+  // is repeated and no shared MarlinTrk code needs to change.
+  auto track = initialized(toEDM(state, m_bz, edm4hep::TrackState::AtLastHit),
+                           lastHit, false);
+  UTIL::BitField64 encoder(lcio::ILDCellID0::encoder_string);
+  encoder.reset();
+  encoder[lcio::LCTrackerCellID::subdet()] = lcio::ILDDetID::ECAL;
+  encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::barrel;
+  encoder[lcio::LCTrackerCellID::layer()] = 0;
+  edm4hep::TrackState barrel, endcap;
+  double chi2 = 0;
+  int ndf = 0, detectorElement = 0;
+  const int barrelStatus = track->propagateToLayer(encoder.lowWord(), barrel, chi2,
+      ndf, detectorElement, MarlinTrk::IMarlinTrack::modeForward);
+  encoder[lcio::LCTrackerCellID::subdet()] = lcio::ILDDetID::ECAL_ENDCAP;
+  encoder[lcio::LCTrackerCellID::side()] = state.mean(4, 0) >= 0 ?
+      lcio::ILDDetID::fwd : lcio::ILDDetID::bwd;
+  const int endcapStatus = track->propagateToLayer(encoder.lowWord(), endcap, chi2,
+      ndf, detectorElement, MarlinTrk::IMarlinTrack::modeForward);
+  const int success = MarlinTrk::IMarlinTrack::success;
+  if (barrelStatus != success && endcapStatus != success)
+    throw std::runtime_error("Native ECAL-face propagation failed: barrel status " +
+        std::to_string(barrelStatus) + ", endcap status " + std::to_string(endcapStatus));
+  auto distanceToHit = [&lastHit](const edm4hep::TrackState& candidate) {
+    const auto hit = lastHit.getPosition();
+    const auto point = candidate.referencePoint;
+    return std::hypot(std::hypot(hit.x - point.x, hit.y - point.y), hit.z - point.z);
+  };
+  edm4hep::TrackState calo = barrelStatus != success ? endcap :
+      endcapStatus != success ? barrel :
+      distanceToHit(barrel) < distanceToHit(endcap) ? barrel : endcap;
+  calo.location = edm4hep::TrackState::AtCalorimeter;
+  return calo;
 }
 
 } // namespace breakpoint
