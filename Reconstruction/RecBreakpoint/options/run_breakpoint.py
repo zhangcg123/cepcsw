@@ -44,6 +44,8 @@ fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
 fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"
 fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter"
+fit.OutputTracksBeamGuidedFreeLossRTS = "BreakpointTracksBeamGuidedFreeLossRTS"
+fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFreeLossBackwardFilter"
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.BreakpointIntervals = breakpoint_intervals
@@ -101,6 +103,16 @@ fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
+# A second free-loss optimizer adds one transverse beam-origin likelihood to
+# the OBJECTIVE at every trial. No beam hit or update enters either KF/RTS fit.
+# The ordinary FreeLoss pair above remains unchanged; when this switch is off,
+# the beam-guided pair is an exact copy of that base pair. Both use the same
+# detector hits, selected breakpoint and SigmaLogLoss.
+fit.FreeLossBeamSpotObjective = os.environ.get("BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE", "1") == "1"
+fit.BeamSpotX = float(os.environ.get("BP_BEAM_SPOT_X", "0.0"))  # mm
+fit.BeamSpotY = float(os.environ.get("BP_BEAM_SPOT_Y", "0.0"))  # mm
+fit.BeamSpotSigmaX = float(os.environ.get("BP_BEAM_SPOT_SIGMA_X", "0.0145"))  # mm
+fit.BeamSpotSigmaY = float(os.environ.get("BP_BEAM_SPOT_SIGMA_Y", "3.6e-5"))  # mm
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
 # to matched G4 values at the SAME selected intervals. SigmaLogLoss is the SAME
 # as in the ordinary fit; hits can still update b and its posterior variance.

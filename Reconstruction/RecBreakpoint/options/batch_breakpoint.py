@@ -18,6 +18,8 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
                'BP_FREE_LOSS_TOLERANCE',
+               'BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE', 'BP_BEAM_SPOT_X', 'BP_BEAM_SPOT_Y',
+               'BP_BEAM_SPOT_SIGMA_X', 'BP_BEAM_SPOT_SIGMA_Y',
                'BP_SEED_HIT_SELECTION',
                'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_SELECTED')
 
@@ -77,7 +79,8 @@ def prepare():
         raise ValueError('BP_LOSS_PRIOR_MODE/LossPriorMode was removed; ordinary breakpoint fits use a Gaussian loss prior')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
-    for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT'):
+    for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
+                'BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE'):
         if key in controls: controls[key] = str(int(boolean(controls[key])))
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
@@ -209,7 +212,10 @@ def verify(path, stage):
     if not tree or tree.GetEntries() == 0: raise RuntimeError('Empty output tree: ' + str(path))
     cleanup_ready = False
     if stage == 'breakpoint':
-        for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt','truth_override_result_status'):
+        for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
+                     'truth_override_result_status', 'beam_guided_free_loss_rts_pt',
+                     'beam_guided_free_loss_backward_pt', 'beam_guided_free_loss_result_status',
+                     'beam_guided_free_loss_objective_nll2'):
             if not tree.GetBranch(name): raise RuntimeError('Missing flat branch: ' + name)
         good = int(tree.GetEntries('status==1'))
         invalid_truth = int(tree.GetEntries('truth_override_result_status<0'))

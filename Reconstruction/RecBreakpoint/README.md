@@ -60,7 +60,12 @@ named by `OutputTracksTruthOverrideRTS` and `OutputTracksTruthOverrideBackwardFi
 The free-loss pair is also always available: `BreakpointTracksFreeLossRTS` and
 `BreakpointTracksFreeLossBackwardFilter`, controlled by `OutputTracksFreeLossRTS`
 and `OutputTracksFreeLossBackwardFilter`. It contains independently optimized
-results when applied, exact ordinary copies otherwise. All six names must differ
+results when applied, exact ordinary copies otherwise. A second free-loss pair,
+`BreakpointTracksBeamGuidedFreeLossRTS` and
+`BreakpointTracksBeamGuidedFreeLossBackwardFilter`, optimizes an additional
+beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
+`FreeLossBeamSpotObjective` controls this pair; when disabled it copies the
+base free-loss result. All eight names must differ
 from each other and the input. Each successful pair contains IP, first-hit and last-hit
 states and the original ordered hits. Fixed input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
@@ -385,11 +390,20 @@ Previously prepared cards are not changed. This is an implementation promotion, 
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
 
-For each prior-center trial, Minuit uses the existing RTS pass directly:
+For each prior-center trial, the base Minuit optimization uses the existing RTS pass directly:
 `complete smoothed chi2 + log det S_all + M log(2*pi)`. The first term includes
 measurement, process and seed chi2; `S_all` is the joint measurement covariance,
-not the smoothed state covariance. No reference-trajectory iterations or new
-controls are introduced. See [the exact objective](docs/smoothed-objective.md).
+not the smoothed state covariance. No reference-trajectory iteration is
+introduced. See [the exact objective](docs/smoothed-objective.md).
+The parallel beam-guided optimization adds one predictive term,
+`drho_beam^2/(P_drho_beam + sigma_beam^2) + log(P_drho_beam + sigma_beam^2)
++ log(2*pi)`, evaluated from each trial's hit-only RTS IP state at the beam
+mean. `sigma_beam^2 = cos(phi0)^2*sigma_x^2 + sin(phi0)^2*sigma_y^2`.
+The beam is never passed to the Kalman measurement update; it selects a
+different fitted loss-prior center. Thus its published track parameters and
+covariance are detector-hit refits conditional on that selected center, not
+beam-constrained states. This experimental objective is default-on in the
+maintained card, but not physics-validated.
 
 | Property | Compiled default | Meaning |
 |---|---|---|
@@ -398,6 +412,8 @@ controls are introduced. See [the exact objective](docs/smoothed-objective.md).
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
 | OutputTracksFreeLossRTS | BreakpointTracksFreeLossRTS | Optimized RTS, or exact ordinary RTS copy |
 | OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optimized backward filter, or exact ordinary backward copy |
+| OutputTracksBeamGuidedFreeLossRTS | BreakpointTracksBeamGuidedFreeLossRTS | Beam-objective free-loss RTS; base free-loss copy when disabled, input KF fallback on optimizer failure |
+| OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Matching beam-objective backward endpoint |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
@@ -407,6 +423,9 @@ controls are introduced. See [the exact objective](docs/smoothed-objective.md).
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
+| FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
+| BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
+| BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |
 | FreeLossMaxLogLoss | 1 | Upper bound on the optimized prior center, finite in (0,5]; lower bound zero. Does not truncate the Gaussian or bound the fitted posterior loss |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
 | FreeLossTolerance | 0.001 | Positive finite MIGRAD tolerance |
@@ -439,7 +458,15 @@ scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 All runs also save the `free_loss_*` fields described in
 [the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract). The
-optimizer diagnostics are inactive/NaN/empty when unused; the additional endpoint
+`beam_guided_free_loss_*` fields use the same endpoint and optimizer schema
+for the independent beam-guided result. Its `nll2` and
+`beam_guided_free_loss_likelihood_nll2` are detector-hit likelihoods;
+`beam_guided_free_loss_objective_nll2` is their sum with
+`beam_guided_free_loss_beam_nll2`. Trial-level hit, beam, and total scores are
+saved separately. When the option is off, its endpoints copy the base free-loss
+pair; when its optimization fails, only this second pair falls back to the
+input KF. The base `free_loss_*` result never changes because of this switch.
+The base optimizer diagnostics are inactive/NaN/empty when unused; its additional endpoint
 fields then copy the ordinary results exactly. Failed/unsupported optimization
 instead copies the original input KF (free_loss_result_status=3). Its stored
 score is free_loss_kf_chi2; unavailable breakpoint per-hit vectors are empty and
@@ -457,8 +484,9 @@ The legacy `free_loss_covariance_conditional` fixed-b flag is false.
 quadratic meaning; `free_loss_nll2` separately records the fitting objective.
 
 The flat tuple also records the same normalized full-track likelihood for
-each RTS family as `ordinary_likelihood_*`, `free_loss_likelihood_*`, and
-`truth_override_likelihood_*`. Each prefix has `status` (1 valid, 0 absent,
+each RTS family as `ordinary_likelihood_*`, `free_loss_likelihood_*`,
+`beam_guided_free_loss_likelihood_*`, and `truth_override_likelihood_*`.
+Each prefix has `status` (1 valid, 0 absent,
 -1 unavailable or evaluation failed), `nll2`, `quadratic`, `logdet`,
 `measurement_dimensions`, `latent_dimensions`, and `error`. All use
 `nll2 = quadratic + logdet + measurement_dimensions * log(2*pi)`, with the

@@ -39,6 +39,11 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeResultStatus{"BreakpointFreeLossStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeRTSIndex{"BreakpointFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeBackwardIndex{"BreakpointFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_beamFreeRTSOutput{"BreakpointTracksBeamGuidedFreeLossRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_beamFreeBackwardOutput{"BreakpointTracksBeamGuidedFreeLossBackwardFilter", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeResultStatus{"BreakpointBeamGuidedFreeLossStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeRTSIndex{"BreakpointBeamGuidedFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeBackwardIndex{"BreakpointBeamGuidedFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthRTSOutput{"BreakpointTracksTruthOverrideRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthBackwardOutput{"BreakpointTracksTruthOverrideBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_truthResultStatus{"BreakpointTruthOverrideStatus", Gaudi::DataHandle::Writer, this};
@@ -66,6 +71,11 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
+  Gaudi::Property<bool> m_freeLossBeamSpotObjective{this, "FreeLossBeamSpotObjective", true};
+  Gaudi::Property<double> m_beamSpotX{this, "BeamSpotX", 0.0};
+  Gaudi::Property<double> m_beamSpotY{this, "BeamSpotY", 0.0};
+  Gaudi::Property<double> m_beamSpotSigmaX{this, "BeamSpotSigmaX", 0.0145};
+  Gaudi::Property<double> m_beamSpotSigmaY{this, "BeamSpotSigmaY", 3.6e-5};
   Gaudi::Property<double> m_freeLossMax{this, "FreeLossMaxLogLoss", 1.0};
   Gaudi::Property<int> m_freeLossMaxCalls{this, "FreeLossMaxCallsPerStart", 180};
   Gaudi::Property<double> m_freeLossTolerance{this, "FreeLossTolerance", .001};
@@ -88,9 +98,9 @@ private:
   double m_truthPt = 0, m_kfPt = 0, m_fitPt = 0, m_fitChi2 = 0;
   double m_referencePt = 0;
   double m_recordBackwardSeedScale = 100;
-  breakpoint::FreeLossTuple m_freeLossTuple;
-  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_truthLikelihood;
-  breakpoint::FitPairTuple m_freeLossTracks;
+  breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
+  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
+  breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;

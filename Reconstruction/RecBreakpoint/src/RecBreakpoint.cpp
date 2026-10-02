@@ -45,6 +45,10 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
   declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS; ordinary copy when off, input KF copy on failure");
   declareProperty("OutputTracksFreeLossBackwardFilter", m_freeBackwardOutput, "Free-loss backward; ordinary copy when off, input KF copy on failure");
+  declareProperty("OutputTracksBeamGuidedFreeLossRTS", m_beamFreeRTSOutput,
+                  "Separate beam-objective free-loss RTS; free-loss copy when disabled, input KF on failure");
+  declareProperty("OutputTracksBeamGuidedFreeLossBackwardFilter", m_beamFreeBackwardOutput,
+                  "Separate beam-objective free-loss backward endpoint");
   declareProperty("OutputTracksTruthOverrideRTS", m_truthRTSOutput, "Oracle RTS, or ordinary RTS copy when disabled");
   declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
 }
@@ -82,9 +86,10 @@ StatusCode RecBreakpoint::initialize() {
   }
   const std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
       m_truthRTSOutput.fullKey(), m_truthBackwardOutput.fullKey(),
-      m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey()};
-  if (outputNames.size() != 6 || outputNames.count(m_input.fullKey())) {
-    error() << "The six output track collections must differ from each other and the input" << endmsg;
+      m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey(),
+      m_beamFreeRTSOutput.fullKey(), m_beamFreeBackwardOutput.fullKey()};
+  if (outputNames.size() != 8 || outputNames.count(m_input.fullKey())) {
+    error() << "The eight output track collections must differ from each other and the input" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -111,6 +116,12 @@ StatusCode RecBreakpoint::initialize() {
     error() << "FreeLossMaxLogLoss must be in (0,5]; FreeLossMaxCallsPerStart and FreeLossTolerance must be positive" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (!std::isfinite(m_beamSpotX.value()) || !std::isfinite(m_beamSpotY.value()) ||
+      !std::isfinite(m_beamSpotSigmaX.value()) || m_beamSpotSigmaX <= 0 ||
+      !std::isfinite(m_beamSpotSigmaY.value()) || m_beamSpotSigmaY <= 0) {
+    error() << "BeamSpotX/Y must be finite and BeamSpotSigmaX/Y finite/positive" << endmsg;
+    return StatusCode::FAILURE;
+  }
   const auto geometry = service<IGeomSvc>("GeomSvc");
   const auto gear = service<IGearSvc>("GearSvc");
   if (!geometry || !gear || !gear->getGearMgr()) return StatusCode::FAILURE;
@@ -134,10 +145,13 @@ StatusCode RecBreakpoint::initialize() {
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
   m_freeLossTuple.book(*m_tree);
+  m_beamFreeLossTuple.book(*m_tree, "beam_guided_free_loss_");
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
+  m_beamFreeLikelihood.book(*m_tree, "beam_guided_free_loss_likelihood_");
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
+  m_beamFreeLossTracks.book(*m_tree, "beam_guided_free_loss_");
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_tree->Branch("event_index", &m_event);
@@ -262,6 +276,11 @@ StatusCode RecBreakpoint::execute() {
   auto* freeResultStatuses = m_freeResultStatus.createAndPut();
   auto* freeRTSIndices = m_freeRTSIndex.createAndPut();
   auto* freeBackwardIndices = m_freeBackwardIndex.createAndPut();
+  auto* beamFreeRTSOutput = m_beamFreeRTSOutput.createAndPut();
+  auto* beamFreeBackwardOutput = m_beamFreeBackwardOutput.createAndPut();
+  auto* beamFreeResultStatuses = m_beamFreeResultStatus.createAndPut();
+  auto* beamFreeRTSIndices = m_beamFreeRTSIndex.createAndPut();
+  auto* beamFreeBackwardIndices = m_beamFreeBackwardIndex.createAndPut();
   auto* truthRTSOutput = m_truthRTSOutput.createAndPut();
   auto* truthBackwardOutput = m_truthBackwardOutput.createAndPut();
   auto* truthResultStatuses = m_truthResultStatus.createAndPut();
@@ -299,7 +318,11 @@ StatusCode RecBreakpoint::execute() {
   settings.lossStateMode = m_lossStateModeName;
   settings.captureGaussianModel = true; // passive score for ordinary and truth RTS
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
-      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value()};
+      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(), std::nullopt};
+  auto beamFreeLossControls = freeLossControls;
+  beamFreeLossControls.beamSpot = breakpoint::BeamSpotSettings{
+      m_beamSpotX.value(), m_beamSpotY.value(),
+      m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value()};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
       (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
@@ -327,14 +350,20 @@ StatusCode RecBreakpoint::execute() {
       statuses->push_back(0); outputIndices->push_back(-1); backwardOutputIndices->push_back(-1);
       truthResultStatuses->push_back(0); truthRTSIndices->push_back(-1); truthBackwardIndices->push_back(-1);
       freeResultStatuses->push_back(0); freeRTSIndices->push_back(-1); freeBackwardIndices->push_back(-1);
+      beamFreeResultStatuses->push_back(0); beamFreeRTSIndices->push_back(-1);
+      beamFreeBackwardIndices->push_back(-1);
       continue;
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
+    m_beamFreeLossTuple.reset(m_freeLossFit && m_freeLossBeamSpotObjective,
+                              beamFreeLossControls, settings.sigmaLogLoss);
     m_ordinaryLikelihood.reset();
     m_freeLikelihood.reset();
+    m_beamFreeLikelihood.reset();
     m_truthLikelihood.reset();
     m_freeLossTracks.reset();
+    m_beamFreeLossTracks.reset();
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
     m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
@@ -464,9 +493,13 @@ StatusCode RecBreakpoint::execute() {
       const auto paired = fitter.fit(hits, settings);
       std::optional<breakpoint::PairedFitResult> freePair;
       std::optional<breakpoint::TrackLikelihoodResult> optimizedLikelihood;
+      std::optional<breakpoint::PairedFitResult> beamFreePair;
+      std::optional<breakpoint::TrackLikelihoodResult> optimizedBeamLikelihood;
       bool freeKFFallback = false;
+      bool beamFreeKFFallback = false;
       if (m_freeLossFit) {
-        auto freeFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, freeLossControls);
+        const breakpoint::FreeLossFitter optimizer(fitter, m_bz);
+        auto freeFit = optimizer.fit(hits, settings, freeLossControls);
         m_freeLossTuple.assign(freeFit.diagnostics);
         if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
           optimizedLikelihood = freeFit.diagnostics.likelihood;
@@ -480,6 +513,28 @@ StatusCode RecBreakpoint::execute() {
             << " prior_mean=" << freeFit.diagnostics.b << " prior_sigma=" << settings.sigmaLogLoss
             << " nll2=" << freeFit.diagnostics.likelihood.nll2
             << " minuit_status=" << freeFit.diagnostics.minuitStatus << endmsg;
+        if (m_freeLossBeamSpotObjective) {
+          auto beamFit = optimizer.fit(hits, settings, beamFreeLossControls);
+          m_beamFreeLossTuple.assign(beamFit.diagnostics);
+          if (beamFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
+            optimizedBeamLikelihood = beamFit.diagnostics.likelihood;
+          beamFreePair = std::move(beamFit.fitted);
+          beamFreeKFFallback = beamFit.diagnostics.status == breakpoint::FreeLossStatus::Failed ||
+                               beamFit.diagnostics.status == breakpoint::FreeLossStatus::Unsupported;
+          if (!beamFit.diagnostics.error.empty())
+            warning() << "Beam-guided FreeLossFit: " << beamFit.diagnostics.error
+                      << "; beam-guided outputs use input KF" << endmsg;
+          if (m_verbose) info() << std::setprecision(17)
+              << "BeamGuidedFreeLossFit event=" << m_event << " track=" << m_trackIndex
+              << " status=" << int(beamFit.diagnostics.status)
+              << " prior_mean=" << beamFit.diagnostics.b
+              << " hit_nll2=" << beamFit.diagnostics.likelihood.nll2
+              << " beam_nll2=" << beamFit.diagnostics.beam.nll2
+              << " objective_nll2=" << beamFit.diagnostics.objectiveNll2
+              << " beam_residual_mm=" << beamFit.diagnostics.beam.residual
+              << " beam_variance_mm2=" << beamFit.diagnostics.beam.innovationVariance
+              << " minuit_status=" << beamFit.diagnostics.minuitStatus << endmsg;
+        }
       }
       const auto& fit=paired.rts;
       const auto& inward=paired.backward;
@@ -663,6 +718,67 @@ StatusCode RecBreakpoint::execute() {
         }
       }
 
+      // The beam is an extra scalar objective term ONLY. The accepted center
+      // is refitted with the same detector hits; no beam Kalman update enters
+      // either endpoint or its covariance. When disabled, copy the base free
+      // result rather than silently choosing a third fit.
+      const auto& beamResult = beamFreePair ? *beamFreePair : freeResult;
+      const bool beamFallback = m_freeLossBeamSpotObjective ? beamFreeKFFallback : freeKFFallback;
+      if (beamFallback) {
+        m_beamFreeLikelihood.invalidate("Beam-guided output is input KF fallback; no breakpoint likelihood");
+        try {
+          const int rtsIndex = beamFreeRTSOutput->size();
+          const int backwardIndex = beamFreeBackwardOutput->size();
+          m_beamFreeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
+          beamFreeRTSOutput->push_back(track.clone());
+          beamFreeBackwardOutput->push_back(track.clone());
+        } catch (const std::exception& error) {
+          m_beamFreeLossTracks.reset();
+          warning() << "Beam-guided input KF fallback unavailable: " << error.what() << endmsg;
+        }
+      } else {
+        if (beamFreePair) {
+          if (!optimizedBeamLikelihood)
+            m_beamFreeLikelihood.invalidate("Accepted beam-guided fit has no hit likelihood");
+          else {
+            try { m_beamFreeLikelihood.assign(*optimizedBeamLikelihood); }
+            catch (const std::exception& error) { m_beamFreeLikelihood.invalidate(error.what()); }
+          }
+        } else if (m_freeLossBeamSpotObjective) {
+          m_beamFreeLikelihood = m_ordinaryLikelihood; // no selected interval
+        } else {
+          m_beamFreeLikelihood = m_freeLikelihood; // exact base free-loss copy
+        }
+        const double backwardChi2 = std::accumulate(beamResult.backward.backwardChi2.begin(),
+                                                    beamResult.backward.backwardChi2.end(), 0.);
+        const int rtsIndex = publishTrack(*beamFreeRTSOutput, beamResult.rts, hits, m_bz,
+                                          beamResult.rts.smoothedTotalChi2);
+        const int backwardIndex = publishTrack(*beamFreeBackwardOutput, beamResult.backward,
+                                               hits, m_bz, backwardChi2);
+        m_beamFreeLossTracks.assign(beamResult, m_bz, beamFreePair ? 2 : 1,
+                                   rtsIndex, backwardIndex);
+      }
+      if (m_verbose && !beamFallback) {
+        for (std::size_t i = 0; i < hits.size(); ++i) {
+          for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
+              {"beam_guided_predicted", &beamResult.rts.predicted[i]},
+              {"beam_guided_filtered", &beamResult.rts.filtered[i]},
+              {"beam_guided_smoothed", &beamResult.rts.endpoint[i]},
+              {"beam_guided_backward_predicted", &beamResult.backward.backwardPredicted[i]},
+              {"beam_guided_backward_filtered", &beamResult.backward.endpoint[i]}}) {
+            std::ostringstream dump;
+            dump << std::setprecision(17) << named.first << " hit=" << i << " mean=[";
+            for (int row = 0; row < 5; ++row) dump << named.second->mean(row, 0) << ' ';
+            dump << "] covariance(row-major)=[";
+            for (int row = 0; row < 5; ++row)
+              for (int column = 0; column < 5; ++column)
+                dump << named.second->covariance(row, column) << ' ';
+            dump << ']';
+            info() << dump.str() << endmsg;
+          }
+        }
+      }
+
       // The ordinary pair is complete before assigning truth prior centers. Failure of the
       // diagnostic oracle must not discard or silently replace ordinary tracks.
       try {
@@ -794,6 +910,7 @@ StatusCode RecBreakpoint::execute() {
       if (m_fitStatus != 1) {
         m_ordinaryLikelihood.reset();
         m_freeLikelihood.reset();
+        m_beamFreeLikelihood.reset();
         m_truthLikelihood.reset();
       }
       outputIndices->push_back(-1);
@@ -806,6 +923,9 @@ StatusCode RecBreakpoint::execute() {
     freeResultStatuses->push_back(m_freeLossTracks.status());
     freeRTSIndices->push_back(m_freeLossTracks.rtsIndex());
     freeBackwardIndices->push_back(m_freeLossTracks.backwardIndex());
+    beamFreeResultStatuses->push_back(m_beamFreeLossTracks.status());
+    beamFreeRTSIndices->push_back(m_beamFreeLossTracks.rtsIndex());
+    beamFreeBackwardIndices->push_back(m_beamFreeLossTracks.backwardIndex());
     m_tree->Fill();
   }
   return StatusCode::SUCCESS;

@@ -312,37 +312,28 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work remains RecBreakpoint on local `breakpoint`. Its shared-width
-Gaussian LocalMarginal and Persistent6D workflows, the separate free-loss
-prior-centre fit, and the truth-centred diagnostic are mechanically available.
-The free-loss fit is not a safe overall replacement: the completed 2,000-event
-study found central hard-loss recovery but light-loss degradation and large
-positive tails. In the later 50-event diagnostic, free-loss had lower complete
-RTS chi2 than truth-centred fits in 47 events, yet worse absolute IP pT in 32
-of those. This is selected mechanism evidence, not production validation.
+Active work remains RecBreakpoint on local `breakpoint`. The ordinary,
+truth-centred and base free-loss pairs remain available. A new, default-on
+`FreeLossBeamSpotObjective` experiment runs a second free-loss optimization:
+it adds a beam-origin likelihood to the scalar loss-prior-centre objective,
+but never feeds the beam into the KF/RTS measurement updates. It publishes
+separate RTS/backward tracks and flat diagnostics. The base free-loss outputs
+must remain unchanged; disabling the new control copies them exactly.
 
-The only retained tuple inputs are `sim_large_barrel_20260823/` (251,000
-events) and `sim_large_endcap_20260823/` (100,000 events). All other generated
-tuple ROOT files, including tracker, GSF, breakpoint and temporary outputs,
-were removed at the user's request. Historical analysis tables, plots, logs
-and dated records remain; do not refer to their raw ROOT tuples as available.
-The exact cleanup inventory is in
-`agents_record/2026-10-01-sim-only-tuple-cleanup.md`.
+The source and installed module passed build/unit/batch-card gates and a
+same-input three-track on/off smoke test at entries 11, 16 and 17. The old
+non-beam tuple fields agreed and the new objective closed as hit-plus-beam
+likelihood. This establishes mechanics only, not improved physics performance.
+The focused gate is recorded in
+`agents_record/2026-10-02-beam-guided-free-loss-objective.md`.
+The earlier 2,000-event free-loss population showed light-loss degradation and
+large positive tails. Next, analyze the new beam-guided result on categorized
+barrel events, including clean-track safety and tails, before considering it
+as a production default. Do not alter the common KF or GSF workflow for this
+experiment.
 
-The source and installed RecBreakpoint module now serialize measurement,
-process and seed contributions by default for ordinary, free-loss and
-truth-centred RTS results. Direct tests showed unchanged endpoints and score
-closure; the package-only deployment is recorded in
-`agents_record/2026-10-01-score-breakdown-deployment.md`. Before a new batch,
-regenerate tracker inputs from the retained simulation sample. Then investigate
-light-loss failures and extreme tails with the saved per-hit score breakdown
-before proposing model changes.
-No new objective, prior or default physics change has been authorized.
-
-Detailed current evidence and retained outputs:
-`agents_record/2026-09-30-free-loss-shared-sigma.md`,
-`agents_record/2026-09-30-free-loss-population.md`,
-`agents_record/2026-10-01-breakpoint-default-score-breakdown.md`, and
-`agents_record/2026-10-01-breakpoint-score-more50.md`. The complete outgoing
-focus is preserved verbatim in
-`agents_record/2026-10-01-before-sim-only-tuple-cleanup.md`.
+Current ROOT campaigns present in this workspace are
+`sim_large_barrel_20261001/` and `breakpoint_barrel/` (100 files each); the
+earlier retained `sim_large_*_20260823/` inputs referenced in the outgoing
+focus are no longer present. The outgoing text and its evidence links are
+preserved in `agents_record/2026-10-02-before-beam-objective.md`.

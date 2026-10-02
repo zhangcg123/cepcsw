@@ -1,35 +1,49 @@
 #include "FreeLossTuple.h"
 #include "TTree.h"
 #include <cmath>
+#include <limits>
 
 namespace breakpoint {
-void FreeLossTuple::book(TTree& tree) {
-  tree.Branch("free_loss_enabled", &m_enabled);
-  tree.Branch("free_loss_max_log_loss", &m_maxLogLoss);
-  tree.Branch("free_loss_max_calls_per_start", &m_maxCalls);
-  tree.Branch("free_loss_tolerance", &m_tolerance);
-  tree.Branch("free_loss_applied", &m_applied);
-  tree.Branch("free_loss_status", &m_status);
-  tree.Branch("free_loss_interval", &m_interval);
-  tree.Branch("free_loss_b", &m_b);
-  tree.Branch("free_loss_treatment", &m_lossTreatment);
-  tree.Branch("free_loss_prior_mean_log_loss", &m_b);
-  tree.Branch("free_loss_prior_sigma_log_loss", &m_priorSigmaLogLoss);
-  tree.Branch("free_loss_b_error", &m_errorB);
-  tree.Branch("free_loss_minuit_status", &m_minuitStatus);
-  tree.Branch("free_loss_edm", &m_edm);
-  tree.Branch("free_loss_nll2", &m_nll2);
-  tree.Branch("free_loss_quadratic", &m_quadratic);
-  tree.Branch("free_loss_logdet", &m_logdet);
-  tree.Branch("free_loss_lower_bound", &m_lower);
-  tree.Branch("free_loss_upper_bound", &m_upper);
-  tree.Branch("free_loss_covariance_conditional", &m_covarianceConditional);
-  tree.Branch("free_loss_error", &m_error);
-  tree.Branch("free_loss_trial_b", &m_trialB);
-  tree.Branch("free_loss_trial_nll2", &m_trialNll2);
-  tree.Branch("free_loss_trial_valid", &m_trialValid);
-  tree.Branch("free_loss_trial_phase", &m_trialPhase);
-  tree.Branch("free_loss_trial_error", &m_trialError);
+void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
+  auto branch = [&](const char* suffix, auto* address) {
+    tree.Branch((prefix + suffix).c_str(), address);
+  };
+  branch("enabled", &m_enabled);
+  branch("max_log_loss", &m_maxLogLoss);
+  branch("max_calls_per_start", &m_maxCalls);
+  branch("tolerance", &m_tolerance);
+  branch("applied", &m_applied);
+  branch("status", &m_status);
+  branch("interval", &m_interval);
+  branch("b", &m_b);
+  branch("treatment", &m_lossTreatment);
+  branch("prior_mean_log_loss", &m_b);
+  branch("prior_sigma_log_loss", &m_priorSigmaLogLoss);
+  branch("b_error", &m_errorB);
+  branch("minuit_status", &m_minuitStatus);
+  branch("edm", &m_edm);
+  branch("nll2", &m_nll2); // hit-only normalized likelihood
+  branch("quadratic", &m_quadratic);
+  branch("logdet", &m_logdet);
+  branch("objective_nll2", &m_objectiveNll2);
+  branch("beam_nll2", &m_beamNll2);
+  branch("beam_quadratic", &m_beamQuadratic);
+  branch("beam_logdet", &m_beamLogdet);
+  branch("beam_residual_mm", &m_beamResidual);
+  branch("beam_innovation_variance_mm2", &m_beamVariance);
+  branch("beam_track_variance_mm2", &m_beamTrackVariance);
+  branch("beam_spot_variance_mm2", &m_beamSpotVariance);
+  branch("lower_bound", &m_lower);
+  branch("upper_bound", &m_upper);
+  branch("covariance_conditional", &m_covarianceConditional);
+  branch("error", &m_error);
+  branch("trial_b", &m_trialB);
+  branch("trial_nll2", &m_trialNll2); // hit-only, retained name
+  branch("trial_objective_nll2", &m_trialObjectiveNll2);
+  branch("trial_beam_nll2", &m_trialBeamNll2);
+  branch("trial_valid", &m_trialValid);
+  branch("trial_phase", &m_trialPhase);
+  branch("trial_error", &m_trialError);
 }
 
 void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls, double sigmaLogLoss) {
@@ -42,8 +56,10 @@ void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls, double
   m_status = 0; m_interval = -1; m_minuitStatus = -99;
   const double nan = std::numeric_limits<double>::quiet_NaN();
   m_b = m_errorB = m_edm = m_nll2 = m_quadratic = m_logdet = nan;
+  m_objectiveNll2 = m_beamNll2 = m_beamQuadratic = m_beamLogdet = nan;
+  m_beamResidual = m_beamVariance = m_beamTrackVariance = m_beamSpotVariance = nan;
   m_error.clear();
-  m_trialB.clear(); m_trialNll2.clear();
+  m_trialB.clear(); m_trialNll2.clear(); m_trialObjectiveNll2.clear(); m_trialBeamNll2.clear();
   m_trialValid.clear(); m_trialPhase.clear(); m_trialError.clear();
 }
 
@@ -64,9 +80,20 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
     m_nll2 = diagnostic.likelihood.nll2;
     m_quadratic = diagnostic.likelihood.quadratic;
     m_logdet = diagnostic.likelihood.logDeterminant;
+    m_objectiveNll2 = diagnostic.objectiveNll2;
+    m_beamNll2 = diagnostic.beam.nll2;
+    m_beamQuadratic = diagnostic.beam.quadratic;
+    m_beamLogdet = diagnostic.beam.logDeterminant;
+    m_beamResidual = diagnostic.beam.residual;
+    m_beamVariance = diagnostic.beam.innovationVariance;
+    m_beamTrackVariance = diagnostic.beam.trackVariance;
+    m_beamSpotVariance = diagnostic.beam.beamVariance;
   }
   for (const auto& trial : diagnostic.trials) {
     m_trialB.push_back(trial.b); m_trialNll2.push_back(trial.likelihood.nll2);
+    m_trialObjectiveNll2.push_back(trial.objectiveNll2);
+    m_trialBeamNll2.push_back(trial.valid ? trial.beam.nll2
+                                            : std::numeric_limits<double>::quiet_NaN());
     m_trialValid.push_back(trial.valid); m_trialPhase.push_back(int(trial.phase));
     m_trialError.push_back(trial.error);
   }

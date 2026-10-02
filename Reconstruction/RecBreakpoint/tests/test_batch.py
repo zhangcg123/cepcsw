@@ -75,6 +75,7 @@ class BatchTest(unittest.TestCase):
         (self.repo/'inputs').mkdir()
         for stage in ['sim','trk']:
             (self.repo/'inputs'/f'{stage}-e--2.0-85-12.root').write_bytes(b'planning fixture')
+        (self.repo/'inputs/sim-barrel-12.root').write_bytes(b'planning fixture')
         self.env = dict(CEPCSW_BREAKPOINT_DIR=str(self.repo), INPUT_TUPLEPATH='inputs', OUTPUT_TUPLEPATH='outputs',
                         STAGES='trk,breakpoint', NEVT='2', SEED_FIRST='12', SEED_LAST='12', MEMORY_MB='5000',
                         DRY_RUN='1', PARTICLES='e-', THETAS='85', TRANSVERSE_MOMENTA='2.0')
@@ -160,7 +161,7 @@ class BatchTest(unittest.TestCase):
 
     def test_free_loss_shares_sigma_without_a_second_width_control(self):
         self.assertIn('BP_SIGMA_LOG_LOSS', batch.BP_CONTROLS)
-        self.assertFalse(any('SIGMA' in name and name != 'BP_SIGMA_LOG_LOSS'
+        self.assertFalse(any('SIGMA_LOG_LOSS' in name and name != 'BP_SIGMA_LOG_LOSS'
                              for name in batch.BP_CONTROLS))
         for sigma in ('0.001', '0.05'):
             output='shared_sigma_'+sigma
@@ -173,6 +174,28 @@ class BatchTest(unittest.TestCase):
                 exec(assignments,{'fit':fit,'os':os})
             self.assertTrue(fit.FreeLossFit)
             self.assertEqual(fit.SigmaLogLoss,float(sigma))
+
+    def test_beam_guided_free_loss_is_parallel_and_default_on(self):
+        self.prepare(OUTPUT_TUPLEPATH='beam_default')
+        job = self.manifest('beam_default')
+        card = Path(job['cards']['breakpoint']).read_text()
+        selected = ('fit.FreeLossBeamSpotObjective =', 'fit.BeamSpotX =', 'fit.BeamSpotY =',
+                    'fit.BeamSpotSigmaX =', 'fit.BeamSpotSigmaY =')
+        assignments = '\n'.join(line for line in card.splitlines() if line.startswith(selected))
+        fit = types.SimpleNamespace()
+        with patch.dict(os.environ, job['controls'], clear=True):
+            exec(assignments, {'fit': fit, 'os': os})
+        self.assertTrue(fit.FreeLossBeamSpotObjective)
+        self.assertEqual((fit.BeamSpotX, fit.BeamSpotY), (0, 0))
+        self.assertEqual((fit.BeamSpotSigmaX, fit.BeamSpotSigmaY), (.0145, 3.6e-5))
+        self.assertIn('OutputTracksBeamGuidedFreeLossRTS', card)
+        self.assertIn('OutputTracksBeamGuidedFreeLossBackwardFilter', card)
+        self.prepare(OUTPUT_TUPLEPATH='beam_off', BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE='false')
+        off = self.manifest('beam_off')
+        self.assertEqual(off['controls']['BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE'], '0')
+        with patch.dict(os.environ, off['controls'], clear=True):
+            exec(assignments, {'fit': fit, 'os': os})
+        self.assertFalse(fit.FreeLossBeamSpotObjective)
 
     def test_submission_shell_freezes_shared_loss_sigma(self):
         # This fixture checks plumbing, independent of the user's active campaign default.
@@ -188,7 +211,7 @@ class BatchTest(unittest.TestCase):
             result = batch.subprocess.run(['bash', str(self.repo/'subbreakpointjobs.sh')],
                                           env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-            job = self.manifest(output)
+            job = json.loads((self.repo/output/'runcards/barrel-12/job.json').read_text())
             self.assertEqual(job['controls']['BP_SIGMA_LOG_LOSS'], expected)
             card = Path(job['cards']['breakpoint']).read_text()
             self.assertIn(repr('BP_SIGMA_LOG_LOSS')+': '+repr(expected), card)

@@ -10,8 +10,9 @@ import math
 import numpy as np
 import ROOT
 
-PREFIXES = ('', 'free_loss_', 'truth_override_')
+PREFIXES = ('', 'free_loss_', 'beam_guided_free_loss_', 'truth_override_')
 LIKELIHOOD_PREFIXES = ('ordinary_likelihood_', 'free_loss_likelihood_',
+                       'beam_guided_free_loss_likelihood_',
                        'truth_override_likelihood_')
 TERMS = ('smoothed_measurement_chi2', 'smoothed_process_chi2',
          'smoothed_native_measurement_chi2', 'smoothed_seed_chi2')
@@ -64,6 +65,7 @@ def check_rows(rows):
                                     rel_tol=1e-11, abs_tol=1e-8)
                 score_prefix = {'ordinary_likelihood_': '',
                                 'free_loss_likelihood_': 'free_loss_',
+                                'beam_guided_free_loss_likelihood_': 'beam_guided_free_loss_',
                                 'truth_override_likelihood_': 'truth_override_'}[prefix]
                 assert math.isclose(quadratic, row[score_prefix + 'smoothed_chi2'],
                                     rel_tol=1e-9, abs_tol=1e-7)
@@ -82,6 +84,14 @@ def check_rows(rows):
             for term in ('nll2', 'quadratic', 'logdet'):
                 assert math.isclose(row['free_loss_likelihood_' + term],
                                     row['free_loss_' + term], rel_tol=1e-12, abs_tol=1e-8)
+        if row['beam_guided_free_loss_result_status'] == 2:
+            assert row['beam_guided_free_loss_likelihood_status'] == 1
+            for term in ('nll2', 'quadratic', 'logdet'):
+                assert math.isclose(row['beam_guided_free_loss_likelihood_' + term],
+                                    row['beam_guided_free_loss_' + term], rel_tol=1e-12, abs_tol=1e-8)
+            assert math.isclose(row['beam_guided_free_loss_objective_nll2'],
+                                row['beam_guided_free_loss_nll2'] + row['beam_guided_free_loss_beam_nll2'],
+                                rel_tol=1e-12, abs_tol=1e-8)
         if row['truth_override_result_status'] == 1:
             for term in ('status', 'nll2', 'quadratic', 'logdet',
                          'measurement_dimensions', 'latent_dimensions', 'error'):
@@ -96,8 +106,9 @@ def check_rows(rows):
             native = np.asarray(row[prefix + TERMS[2]])
             seed = row[prefix + TERMS[3]]
             if prefix and row[prefix + 'result_status'] == 1:
+                source_prefix = 'free_loss_' if prefix == 'beam_guided_free_loss_' else ''
                 for term in TERMS:
-                    assert compare(row[term], row[prefix + term], prefix + term), prefix + term
+                    assert compare(row[source_prefix + term], row[prefix + term], prefix + term), prefix + term
                 counts['copies'] += 1
             if status == 1:
                 n = row['hit_count']

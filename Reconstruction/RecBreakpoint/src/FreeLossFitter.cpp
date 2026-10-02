@@ -47,6 +47,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       trial.b = priorMean;
       trial.phase = phase;
       trial.likelihood.nll2 = 1.e20;
+      trial.objectiveNll2 = 1.e20;
       try {
         settings.meanLogLoss = priorMean;
         const auto pair = m_fitter.fit(hits, settings);
@@ -62,11 +63,16 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
         // filter pass, reference iteration, or backward chi2 is added.
         trial.likelihood = evaluateSmoothedTrackLikelihood(
             *rts.gaussianModel, rts.smoothedTotalChi2);
-        trial.valid = std::isfinite(trial.likelihood.nll2) && std::isfinite(rts.ip.omega) && rts.ip.omega != 0;
+        if (controls.beamSpot)
+          trial.beam = evaluateBeamSpotLikelihood(rts.ip, m_bz, *controls.beamSpot);
+        trial.objectiveNll2 = trial.likelihood.nll2 + trial.beam.nll2;
+        trial.valid = std::isfinite(trial.objectiveNll2) &&
+                      std::isfinite(rts.ip.omega) && rts.ip.omega != 0;
         if (!trial.valid) throw std::runtime_error("Nonfinite free-loss candidate");
       } catch (const std::exception& error) {
         trial.error = error.what();
         trial.likelihood.nll2 = 1.e20;
+        trial.objectiveNll2 = 1.e20;
       }
       cache[priorMean] = trial;
       diagnostic.trials.push_back(trial);
@@ -76,20 +82,20 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     // Preserve the tested blind scan and multistart MIGRAD strategy. The grid
     // is scaled only when the user changes the upper b bound from one.
     FreeLossTrial best;
-    best.likelihood.nll2 = 1.e20;
+    best.objectiveNll2 = 1.e20;
     for (double fraction : {0., .0005, .001, .002, .005, .01, .02, .04, .08, .15, .3, .5, .75, 1.}) {
       const auto trial = evaluate(fraction * controls.maxLogLoss);
-      if (trial.valid && trial.likelihood.nll2 < best.likelihood.nll2) best = trial;
+      if (trial.valid && trial.objectiveNll2 < best.objectiveNll2) best = trial;
     }
     if (!best.valid) throw std::runtime_error("No valid free-loss trial");
     const double scanBest = best.b;
     // The coarse scan seeds Minuit; it is not a successful optimization.
     best.valid = false;
-    best.likelihood.nll2 = 1.e20;
+    best.objectiveNll2 = 1.e20;
     for (double start : {scanBest, std::min(.005, controls.maxLogLoss), std::min(.05, controls.maxLogLoss)}) {
       std::unique_ptr<ROOT::Math::Minimizer> minimizer(ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad"));
       if (!minimizer) throw std::runtime_error("Minuit2 is unavailable");
-      ROOT::Math::Functor objective([&](const double* b) { return evaluate(b[0]).likelihood.nll2; }, 1);
+      ROOT::Math::Functor objective([&](const double* b) { return evaluate(b[0]).objectiveNll2; }, 1);
       phase = FreeLossTrialPhase::Minimize;
       minimizer->SetFunction(objective);
       minimizer->SetMaxFunctionCalls(controls.maxCallsPerStart);
@@ -101,7 +107,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       const bool converged = minimizer->Minimize();
       const auto trial = evaluate(minimizer->X()[0]);
       if (converged && minimizer->Status() == 0 && std::isfinite(minimizer->Edm()) &&
-          trial.valid && trial.likelihood.nll2 <= best.likelihood.nll2) {
+          trial.valid && trial.objectiveNll2 <= best.objectiveNll2) {
         best = trial;
         diagnostic.minuitStatus = minimizer->Status();
         diagnostic.edm = minimizer->Edm();
@@ -112,7 +118,9 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     if (!best.valid) throw std::runtime_error("No converged valid Minuit minimum");
     phase = FreeLossTrialPhase::Repeat;
     const auto repeated = evaluate(best.b, true);
-    if (!repeated.valid || std::abs(repeated.likelihood.nll2 - best.likelihood.nll2) > 1.e-7)
+    if (!repeated.valid ||
+        std::abs(repeated.objectiveNll2 - best.objectiveNll2) > 1.e-7 ||
+        std::abs(repeated.likelihood.nll2 - best.likelihood.nll2) > 1.e-7)
       throw std::runtime_error("Free-loss minimum is not reproducible");
 
     // Diagnostic scan only: it must not silently replace the Minuit result.
@@ -123,6 +131,8 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     }
     diagnostic.b = best.b;
     diagnostic.likelihood = best.likelihood;
+    diagnostic.beam = best.beam;
+    diagnostic.objectiveNll2 = best.objectiveNll2;
     diagnostic.lowerBound = best.b <= 1.e-6;
     diagnostic.upperBound = best.b >= controls.maxLogLoss - 1.e-6;
 

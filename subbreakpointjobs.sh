@@ -15,6 +15,9 @@ export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.
 # Must be finite and positive. Frozen into generated cards at preparation.
 export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
+# Freeze the default-on parallel beam-guided free-loss objective in each job.
+# The base free-loss outputs remain independent and unchanged.
+export BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE=${BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE:-1}
 # These identify existing sample filenames; they do NOT change the hard-coded
 # momentum/theta ranges in the simulation card.
 export PARTICLES=${PARTICLES:-e-}

@@ -11,7 +11,7 @@ This mode currently supports ONE selected LocalMarginal interval. It does
 not discover intervals and does not change Truth/Manual selection. An empty
 interval list remains the 5D reference. Truth selection now chooses only the
 interval with the largest summed absolute G4 eBrem momentum loss, shared by all
-three pairs (equal losses choose the innermost interval). Other losses are not fitted.
+four pairs (equal losses choose the innermost interval). Other losses are not fitted.
 Manual multiple intervals or Persistent6D report unsupported status. Unsupported
 or failed searches copy the INPUT CompleteTracks KF into both FreeLoss outputs.
 The ordinary and truth-prior pairs are unchanged by this fallback. This limitation matches the tested
@@ -21,15 +21,25 @@ scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ```python
 fit.FreeLossFit = True
-fit.SigmaLogLoss = 0.001  # SAME prior width for all three fit pairs
+fit.SigmaLogLoss = 0.001  # SAME prior width for all four fit pairs
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
+fit.FreeLossBeamSpotObjective = True  # independent, default-on second optimizer
+fit.BeamSpotX = fit.BeamSpotY = 0.0  # mm
+fit.BeamSpotSigmaX = 0.0145  # mm
+fit.BeamSpotSigmaY = 3.6e-5  # mm
 fit.BackwardSeedScale = 100.0
 ```
 
 The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_MAX_LOG_LOSS,
 BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
+parallel objective is controlled by BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE
+(default 1); BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y can override its
+mean and widths. It runs only when FreeLossFit is enabled, and setting it to
+0 leaves an exact copy of the base free-loss endpoint pair in its dedicated
+outputs. The ordinary and base free-loss pairs never receive a beam update.
+The
 dedicated batch helper freezes these controls and the card. Example:
 
 ```bash
@@ -74,6 +84,22 @@ status, boundary flags and trial records; `status=Applied` means an endpoint
 was produced, not that its loss is accurately measured.
 
 ## One model, not three objective choices
+
+The base free-loss objective below remains unchanged. In parallel, a second
+Minuit search adds the predictive likelihood of a transverse beam-origin
+measurement, evaluated from each trial's hit-only RTS IP state:
+
+```text
+S_beam(mu) = P_drho(mu) + cos(phi0(mu))^2*sigma_x^2 + sin(phi0(mu))^2*sigma_y^2
+beam_nll2(mu) = drho(mu)^2/S_beam(mu) + log(S_beam(mu)) + log(2*pi)
+beam_guided_objective(mu) = hit_nll2(mu) + beam_nll2(mu)
+```
+
+The IP state is geometrically repivoted to the configured beam mean for this
+score. The beam is never inserted into a Kalman update, hit list, RTS smoother,
+or published covariance. Only the selected loss-prior center can change. This
+term is a one-dimensional projected transverse likelihood, not a complete
+two-dimensional beam-spot constraint or validated event-origin model.
 
 For the exact relation to complete smoothed residuals, see
 [forward likelihood and smoothed quadratic](smoothed-objective.md).
@@ -142,11 +168,12 @@ likelihood. F/H/Q also change with the trial trajectory, so the model is a
 local affine approximation to nonlinear tracking. Neither a low objective
 nor a successful Minuit call establishes correct physical loss recovery.
 
-## Six collections: ordinary, free-loss and truth-assisted pairs
+## Eight collections: ordinary, two free-loss and truth-assisted pairs
 
 ### Shared loss prior, different inward calculations
 
-There is ONE Minuit search and one selected mu for both free-loss endpoints.
+Each free-loss pair has one Minuit search and one selected mu shared by its
+RTS and backward endpoints; the beam-guided pair has an independent search.
 For each trial the existing fitter uses the SAME positive SigmaLogLoss.
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
 amount sets the chosen mu. The final fitter call uses that same selected center
@@ -193,12 +220,16 @@ The existing names remain:
 - BreakpointTracksFreeLossRTS / BreakpointTracksFreeLossBackwardFilter:
   optimized-prior results when applied; ordinary copies when off/empty;
   input KF copies on failed or unsupported optimization.
+- BreakpointTracksBeamGuidedFreeLossRTS /
+  BreakpointTracksBeamGuidedFreeLossBackwardFilter: separately optimized
+  prior-center results when enabled; base free-loss copies when disabled;
+  input KF copies if the beam-guided search fails.
 - BreakpointTracksTruthOverrideRTS / BreakpointTracksTruthOverrideBackwardFilter:
   the established truth-centered positive-SigmaLogLoss comparison when enabled.
 
 TruthOverride has NOT been redefined as a fixed-loss oracle. Its prior center
 and the configured positive sigma still go through the existing fitter. With
-free fitting enabled, all three pairs use the SAME configured Gaussian width.
+free fitting enabled, all four pairs use the SAME configured Gaussian width.
 Their prior centers differ: configured MeanLogLoss, optimized mu, or truth b.
 Equal prior widths do not imply equal posterior covariances or loss estimates.
 When TruthOverride is off, the truth pair ALWAYS copies the ordinary pair,
@@ -305,7 +336,7 @@ retain their fixed-b interpretation; do not relabel them.
 
 | Component | Responsibility |
 |---|---|
-| RecBreakpoint | Gaudi steering, fallback choice and common publication for all three pairs |
+| RecBreakpoint | Gaudi steering, fallback choice and common publication for all four pairs |
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
 | TrackLikelihood | Add joint-measurement normalization to the supplied complete RTS-smoothed chi2; retain independent marginal evaluation for regression |
