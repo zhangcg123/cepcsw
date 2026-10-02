@@ -314,8 +314,9 @@ manifest as an uncommitted analysis artifact.
 
 Active work remains RecBreakpoint on local `breakpoint`. A new independent
 `DiffuseAugmentedRTS` experiment uses an exact flat-prior, persistent 6D
-loss coordinate at one selected interval. Its compiled and maintained-card
-default is off; it publishes a separate endpoint/status and never replaces
+loss coordinate at one selected interval. Its compiled default is off, while
+the maintained-card default is on. It publishes a separate endpoint/status
+and never replaces
 ordinary RTS, backward, free-loss, beam-guided or truth-centred results.
 The package builds, numerical tests pass, and a 25-event barrel smoke has
 12/12 selected-interval fits without fallback. A same-code on/off check found

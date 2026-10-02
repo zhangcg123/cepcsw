@@ -83,7 +83,9 @@ if "BP_BACKWARD_MODE" in os.environ:
 # One breakpoint at most. The backward continuation retains its local-joint
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
 fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
-# Independent exact-diffuse augmented 6D KF/RTS experiment (default off).
+# Independent exact-diffuse augmented 6D KF/RTS experiment (card default on;
+# compiled property default remains off). Set BP_DIFFUSE_AUGMENTED_RTS=0 to
+# copy ordinary RTS into its parallel output instead.
 # At the one selected interval, b=log(p_before/p_after) starts with no finite
 # Gaussian prior. Downstream hits identify b; SigmaLogLoss is NOT used here.
 # 0: disabled ordinary-RTS copy; 1: no-interval ordinary copy;
@@ -91,8 +93,9 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # Negative fitted b is retained as a diagnostic, not silently clipped to 0.
 # Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
-fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "0") == "1"
-# Both representations use the MeanLogLoss/SigmaLogLoss Gaussian prior.
+fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
+# Both ordinary LossStateMode representations use the MeanLogLoss/SigmaLogLoss
+# Gaussian prior; the separate diffuse output above does not.
 # The optional Minuit pair below optimizes the prior center with the SAME sigma;
 # it remains separate from the ordinary fit and the truth-centred pair.
 # Optional outer prior-center fit: normalized full-track likelihood, not chi2 alone.

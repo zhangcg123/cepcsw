@@ -67,7 +67,8 @@ beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
 `FreeLossBeamSpotObjective` controls this pair; when disabled it copies the
 base free-loss result. A ninth, independent
 `BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
-`DiffuseAugmentedRTS` (compiled/card default off). All nine names must differ
+`DiffuseAugmentedRTS` (compiled default off; maintained-card default on).
+All nine names must differ
 from each other and the input. Each successful pair contains IP, first-hit and last-hit
 states and the original ordered hits. Fixed input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
@@ -458,7 +459,7 @@ maintained card, but not physics-validated.
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
-| DiffuseAugmentedRTS | false | Independent one-interval, flat-prior 6D KF/RTS fit; card default false; ignores SigmaLogLoss for this extra fit |
+| DiffuseAugmentedRTS | false | Independent one-interval, flat-prior 6D KF/RTS fit; maintained-card default true (`BP_DIFFUSE_AUGMENTED_RTS=0` disables it); ignores SigmaLogLoss for this extra fit |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
