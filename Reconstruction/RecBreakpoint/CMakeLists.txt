@@ -20,7 +20,8 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set_target_properties(RecBreakpointLikelihood PROPERTIES POSITION_INDEPENDENT_CODE ON)
   gaudi_add_module(RecBreakpoint
     SOURCES src/RecBreakpoint.cpp src/TrackState.cpp src/KalmanAdapter.cpp
-            src/BreakpointFitter.cpp src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
+            src/BreakpointFitter.cpp src/DiffuseLossState.cpp
+            src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
             src/LikelihoodTuple.cpp src/BeamSpotLikelihood.cpp
             # Reuse the exact maintained relation-driven reader, without
             # linking the GSF algorithm plugin or changing its implementation.
@@ -50,5 +51,13 @@ if(BUILD_TESTING)
     add_executable(RecBreakpointLikelihoodTest tests/LikelihoodTest.cpp)
     target_link_libraries(RecBreakpointLikelihoodTest PRIVATE RecBreakpointLikelihood)
     add_test(NAME RecBreakpointLikelihood COMMAND RecBreakpointLikelihoodTest)
+    add_executable(RecBreakpointDiffuseTest tests/DiffuseTest.cpp
+      src/DiffuseLossState.cpp src/TrackState.cpp)
+    target_compile_features(RecBreakpointDiffuseTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointDiffuseTest PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
+    target_link_libraries(RecBreakpointDiffuseTest PRIVATE ROOT::Matrix EDM4HEP::edm4hep)
+    add_test(NAME RecBreakpointDiffuse COMMAND RecBreakpointDiffuseTest)
   endif()
 endif()

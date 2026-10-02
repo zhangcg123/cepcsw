@@ -45,6 +45,9 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeRTSIndex{"BreakpointBeamGuidedFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeBackwardIndex{"BreakpointBeamGuidedFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthRTSOutput{"BreakpointTracksTruthOverrideRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_diffuseRTSOutput{"BreakpointTracksDiffuseAugmentedRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_diffuseStatusOutput{"BreakpointDiffuseAugmentedStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_diffuseIndexOutput{"BreakpointDiffuseAugmentedIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthBackwardOutput{"BreakpointTracksTruthOverrideBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_truthResultStatus{"BreakpointTruthOverrideStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_truthRTSIndex{"BreakpointTruthOverrideRTSIndex", Gaudi::DataHandle::Writer, this};
@@ -71,6 +74,7 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
+  Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", false};
   Gaudi::Property<bool> m_freeLossBeamSpotObjective{this, "FreeLossBeamSpotObjective", true};
   Gaudi::Property<double> m_beamSpotX{this, "BeamSpotX", 0.0};
   Gaudi::Property<double> m_beamSpotY{this, "BeamSpotY", 0.0};
@@ -101,6 +105,17 @@ private:
   breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
+  int m_diffuseStatus = 0, m_diffuseIndex = -1;
+  std::string m_diffuseError;
+  double m_diffusePt = 0, m_diffuseB = 0, m_diffuseBVariance = 0;
+  std::vector<double> m_diffuseIPParameters, m_diffuseIPCovariance;
+  std::vector<double> m_diffuseLocalChi2, m_diffuseFilteredB, m_diffuseSmoothedB;
+  std::vector<int> m_diffuseHitIndex;
+  std::vector<int> m_diffusePredictedUnresolved, m_diffuseFilteredUnresolved;
+  std::vector<double> m_diffusePredictedMean, m_diffusePredictedCovariance;
+  std::vector<double> m_diffuseFilteredMean, m_diffuseFilteredCovariance;
+  std::vector<double> m_diffuseSmoothedMean, m_diffuseSmoothedCovariance;
+  std::vector<double> m_diffuseTransport, m_diffuseNoise;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;
   std::string m_lossStateModeName;

@@ -48,6 +48,7 @@ fit.OutputTracksBeamGuidedFreeLossRTS = "BreakpointTracksBeamGuidedFreeLossRTS"
 fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFreeLossBackwardFilter"
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
+fit.OutputTracksDiffuseAugmentedRTS = "BreakpointTracksDiffuseAugmentedRTS"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
 # Truth (default): select ONLY the matched hit interval with the largest summed
@@ -82,6 +83,15 @@ if "BP_BACKWARD_MODE" in os.environ:
 # One breakpoint at most. The backward continuation retains its local-joint
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
 fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
+# Independent exact-diffuse augmented 6D KF/RTS experiment (default off).
+# At the one selected interval, b=log(p_before/p_after) starts with no finite
+# Gaussian prior. Downstream hits identify b; SigmaLogLoss is NOT used here.
+# 0: disabled ordinary-RTS copy; 1: no-interval ordinary copy;
+# 2: diffuse fitted; -1: underidentified/failed input-KF copy.
+# Negative fitted b is retained as a diagnostic, not silently clipped to 0.
+# Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
+# NOT an absolute likelihood comparable with Gaussian-prior fits.
+fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "0") == "1"
 # Both representations use the MeanLogLoss/SigmaLogLoss Gaussian prior.
 # The optional Minuit pair below optimizes the prior center with the SAME sigma;
 # it remains separate from the ordinary fit and the truth-centred pair.

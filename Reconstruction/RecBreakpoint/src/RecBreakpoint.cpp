@@ -30,7 +30,7 @@ int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& 
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
   track.setChi2(chi2);
-  track.setNdf(fit.measurementDimensions - 5); // bookkeeping, not calibrated
+  track.setNdf(fit.measurementDimensions - 5 - fit.freeLossParameterCount); // bookkeeping, not calibrated
   for (auto hit : hits) track.addToTrackerHits(hit);
   return index;
 }
@@ -50,6 +50,8 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("OutputTracksBeamGuidedFreeLossBackwardFilter", m_beamFreeBackwardOutput,
                   "Separate beam-objective free-loss backward endpoint");
   declareProperty("OutputTracksTruthOverrideRTS", m_truthRTSOutput, "Oracle RTS, or ordinary RTS copy when disabled");
+  declareProperty("OutputTracksDiffuseAugmentedRTS", m_diffuseRTSOutput,
+                  "Exact-diffuse augmented RTS; ordinary copy when disabled or no interval");
   declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
 }
 RecBreakpoint::~RecBreakpoint() = default;
@@ -87,9 +89,10 @@ StatusCode RecBreakpoint::initialize() {
   const std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
       m_truthRTSOutput.fullKey(), m_truthBackwardOutput.fullKey(),
       m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey(),
-      m_beamFreeRTSOutput.fullKey(), m_beamFreeBackwardOutput.fullKey()};
-  if (outputNames.size() != 8 || outputNames.count(m_input.fullKey())) {
-    error() << "The eight output track collections must differ from each other and the input" << endmsg;
+      m_beamFreeRTSOutput.fullKey(), m_beamFreeBackwardOutput.fullKey(),
+      m_diffuseRTSOutput.fullKey()};
+  if (outputNames.size() != 9 || outputNames.count(m_input.fullKey())) {
+    error() << "The nine output track collections must differ from each other and the input" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -152,6 +155,28 @@ StatusCode RecBreakpoint::initialize() {
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
   m_beamFreeLossTracks.book(*m_tree, "beam_guided_free_loss_");
+  m_tree->Branch("diffuse_augmented_status", &m_diffuseStatus);
+  m_tree->Branch("diffuse_augmented_index", &m_diffuseIndex);
+  m_tree->Branch("diffuse_augmented_error", &m_diffuseError);
+  m_tree->Branch("diffuse_augmented_pt", &m_diffusePt);
+  m_tree->Branch("diffuse_augmented_fitted_log_loss", &m_diffuseB);
+  m_tree->Branch("diffuse_augmented_fitted_log_loss_variance", &m_diffuseBVariance);
+  m_tree->Branch("diffuse_augmented_ip_parameters", &m_diffuseIPParameters);
+  m_tree->Branch("diffuse_augmented_ip_covariance", &m_diffuseIPCovariance);
+  m_tree->Branch("diffuse_augmented_local_chi2", &m_diffuseLocalChi2);
+  m_tree->Branch("diffuse_augmented_filtered_log_loss", &m_diffuseFilteredB);
+  m_tree->Branch("diffuse_augmented_smoothed_log_loss", &m_diffuseSmoothedB);
+  m_tree->Branch("diffuse_augmented_hit_index", &m_diffuseHitIndex);
+  m_tree->Branch("diffuse_augmented_predicted_unresolved", &m_diffusePredictedUnresolved);
+  m_tree->Branch("diffuse_augmented_filtered_unresolved", &m_diffuseFilteredUnresolved);
+  m_tree->Branch("diffuse_augmented_predicted_mean", &m_diffusePredictedMean);
+  m_tree->Branch("diffuse_augmented_predicted_covariance", &m_diffusePredictedCovariance);
+  m_tree->Branch("diffuse_augmented_filtered_mean", &m_diffuseFilteredMean);
+  m_tree->Branch("diffuse_augmented_filtered_covariance", &m_diffuseFilteredCovariance);
+  m_tree->Branch("diffuse_augmented_smoothed_mean", &m_diffuseSmoothedMean);
+  m_tree->Branch("diffuse_augmented_smoothed_covariance", &m_diffuseSmoothedCovariance);
+  m_tree->Branch("diffuse_augmented_transport", &m_diffuseTransport);
+  m_tree->Branch("diffuse_augmented_process_noise", &m_diffuseNoise);
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_tree->Branch("event_index", &m_event);
@@ -282,6 +307,9 @@ StatusCode RecBreakpoint::execute() {
   auto* beamFreeRTSIndices = m_beamFreeRTSIndex.createAndPut();
   auto* beamFreeBackwardIndices = m_beamFreeBackwardIndex.createAndPut();
   auto* truthRTSOutput = m_truthRTSOutput.createAndPut();
+  auto* diffuseRTSOutput = m_diffuseRTSOutput.createAndPut();
+  auto* diffuseStatuses = m_diffuseStatusOutput.createAndPut();
+  auto* diffuseIndices = m_diffuseIndexOutput.createAndPut();
   auto* truthBackwardOutput = m_truthBackwardOutput.createAndPut();
   auto* truthResultStatuses = m_truthResultStatus.createAndPut();
   auto* truthRTSIndices = m_truthRTSIndex.createAndPut();
@@ -352,6 +380,7 @@ StatusCode RecBreakpoint::execute() {
       freeResultStatuses->push_back(0); freeRTSIndices->push_back(-1); freeBackwardIndices->push_back(-1);
       beamFreeResultStatuses->push_back(0); beamFreeRTSIndices->push_back(-1);
       beamFreeBackwardIndices->push_back(-1);
+      diffuseStatuses->push_back(0); diffuseIndices->push_back(-1);
       continue;
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
@@ -364,6 +393,16 @@ StatusCode RecBreakpoint::execute() {
     m_truthLikelihood.reset();
     m_freeLossTracks.reset();
     m_beamFreeLossTracks.reset();
+    m_diffuseStatus = 0; m_diffuseIndex = -1; m_diffuseError.clear();
+    m_diffusePt = m_diffuseB = m_diffuseBVariance = nan;
+    m_diffuseIPParameters.clear(); m_diffuseIPCovariance.clear();
+    m_diffuseLocalChi2.clear(); m_diffuseFilteredB.clear(); m_diffuseSmoothedB.clear();
+    m_diffuseHitIndex.clear();
+    m_diffusePredictedUnresolved.clear(); m_diffuseFilteredUnresolved.clear();
+    m_diffusePredictedMean.clear(); m_diffusePredictedCovariance.clear();
+    m_diffuseFilteredMean.clear(); m_diffuseFilteredCovariance.clear();
+    m_diffuseSmoothedMean.clear(); m_diffuseSmoothedCovariance.clear();
+    m_diffuseTransport.clear(); m_diffuseNoise.clear();
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
     m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
@@ -659,6 +698,73 @@ StatusCode RecBreakpoint::execute() {
       backwardOutputIndices->push_back(publishTrack(*backwardOutput, inward, hits, m_bz, m_backwardTotalChi2));
       m_fitStatus = 1;
 
+      // Independent flat-prior experiment. A failed or underidentified fit
+      // never changes the ordinary pair and is explicitly an input-KF copy.
+      if (!m_diffuseAugmentedRTS || settings.intervals.empty()) {
+        m_diffuseStatus = settings.intervals.empty() ? 1 : 0;
+        m_diffuseIndex = publishTrack(*diffuseRTSOutput, fit, hits, m_bz, fit.smoothedTotalChi2);
+        m_diffusePt = m_fitPt;
+        m_diffuseIPParameters = {fit.ip.D0, fit.ip.phi, fit.ip.omega, fit.ip.Z0, fit.ip.tanLambda};
+        m_diffuseIPCovariance.assign(fit.ip.covMatrix.begin(), fit.ip.covMatrix.end());
+      } else try {
+        const auto diffuse = fitter.fitDiffuseRTS(hits, settings);
+        if (!std::isfinite(diffuse.ip.omega) || diffuse.ip.omega == 0 ||
+            diffuse.breakpoints.empty() || !std::isfinite(diffuse.breakpoints.front().fittedVariance))
+          throw std::runtime_error("Invalid diffuse endpoint or loss posterior");
+        m_diffuseStatus = 2;
+        m_diffuseIndex = publishTrack(*diffuseRTSOutput, diffuse, hits, m_bz, diffuse.chi2);
+        m_diffusePt = std::abs(m_bz * 2.99792458e-4 / diffuse.ip.omega);
+        m_diffuseB = diffuse.breakpoints.front().fittedLogLoss;
+        m_diffuseBVariance = diffuse.breakpoints.front().fittedVariance;
+        m_diffuseIPParameters = {diffuse.ip.D0, diffuse.ip.phi, diffuse.ip.omega,
+                                 diffuse.ip.Z0, diffuse.ip.tanLambda};
+        m_diffuseIPCovariance.assign(diffuse.ip.covMatrix.begin(), diffuse.ip.covMatrix.end());
+        m_diffuseLocalChi2 = diffuse.localChi2;
+        m_diffuseHitIndex = diffuse.persistentHits;
+        m_diffusePredictedUnresolved = diffuse.persistentPredictedDiffuse;
+        m_diffuseFilteredUnresolved = diffuse.persistentFilteredDiffuse;
+        for (std::size_t j = 0; j < diffuse.persistentHits.size(); ++j) {
+          const auto& predicted = diffuse.persistentPredicted[j];
+          const auto& filtered = diffuse.persistentFiltered[j];
+          const auto& smoothed = diffuse.persistentSmoothed[j];
+          m_diffuseFilteredB.push_back(filtered.mean(5, 0));
+          m_diffuseSmoothedB.push_back(smoothed.mean(5, 0));
+          appendMatrix(m_diffusePredictedMean, predicted.mean);
+          appendMatrix(m_diffusePredictedCovariance, predicted.covariance);
+          appendMatrix(m_diffuseFilteredMean, filtered.mean);
+          appendMatrix(m_diffuseFilteredCovariance, filtered.covariance);
+          appendMatrix(m_diffuseSmoothedMean, smoothed.mean);
+          appendMatrix(m_diffuseSmoothedCovariance, smoothed.covariance);
+          appendMatrix(m_diffuseTransport, diffuse.persistentTransport[j]);
+          appendMatrix(m_diffuseNoise, diffuse.persistentNoise[j]);
+          if (m_verbose) {
+            std::ostringstream dump;
+            dump << std::setprecision(17) << "diffuse6D hit=" << diffuse.persistentHits[j]
+                 << " filtered=[";
+            for (int row = 0; row < 6; ++row) dump << filtered.mean(row, 0) << ' ';
+            dump << "] smoothed=[";
+            for (int row = 0; row < 6; ++row) dump << smoothed.mean(row, 0) << ' ';
+            dump << "] filteredCov=[";
+            for (int row = 0; row < 6; ++row)
+              for (int col = 0; col < 6; ++col) dump << filtered.covariance(row, col) << ' ';
+            dump << "] smoothedCov=[";
+            for (int row = 0; row < 6; ++row)
+              for (int col = 0; col < 6; ++col) dump << smoothed.covariance(row, col) << ' ';
+            info() << dump.str() << endmsg;
+          }
+        }
+        if (m_verbose) info() << "diffuse event=" << m_event << " track=" << m_trackIndex
+          << " interval=" << settings.intervals.front() << " b=" << m_diffuseB
+          << " variance=" << m_diffuseBVariance << " pt=" << m_diffusePt << endmsg;
+      } catch (const std::exception& error) {
+        m_diffuseStatus = -1;
+        m_diffuseError = error.what();
+        m_diffuseIndex = diffuseRTSOutput->size();
+        diffuseRTSOutput->push_back(track.clone());
+        m_diffusePt = m_kfPt;
+        warning() << "DiffuseAugmentedRTS input-KF fallback: " << m_diffuseError << endmsg;
+      }
+
       // Never replace ordinary results. A failed/unsupported optimization
       // copies CompleteTracks itself, not a breakpoint or fresh KF refit.
       const auto& freeResult = freePair ? *freePair : paired;
@@ -926,6 +1032,8 @@ StatusCode RecBreakpoint::execute() {
     beamFreeResultStatuses->push_back(m_beamFreeLossTracks.status());
     beamFreeRTSIndices->push_back(m_beamFreeLossTracks.rtsIndex());
     beamFreeBackwardIndices->push_back(m_beamFreeLossTracks.backwardIndex());
+    diffuseStatuses->push_back(m_diffuseStatus);
+    diffuseIndices->push_back(m_diffuseIndex);
     m_tree->Fill();
   }
   return StatusCode::SUCCESS;

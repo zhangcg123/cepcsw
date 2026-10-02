@@ -46,9 +46,11 @@ struct FitResult {
   std::vector<IntervalResult> breakpoints;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;
+  std::vector<int> persistentPredictedDiffuse, persistentFilteredDiffuse;
   std::vector<TMatrixD> persistentTransport, persistentNoise;
   double chi2 = 0;
   int measurementDimensions = 0;
+  int freeLossParameterCount = 0; // one unpenalized b in exact-diffuse fit
   std::shared_ptr<const GaussianTrackModel> gaussianModel;
   std::string gaussianModelError;
 };
@@ -65,6 +67,10 @@ public:
   explicit BreakpointFitter(const KalmanAdapter& adapter) : m_adapter(adapter) {}
   PairedFitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
                 const FitSettings& settings) const;
+  /// One selected interval, exact rank-one diffuse loss initialization.
+  /// No Gaussian SigmaLogLoss prior is introduced or scored.
+  FitResult fitDiffuseRTS(const std::vector<edm4hep::TrackerHit>& hits,
+                         const FitSettings& settings) const;
 private:
   FitResult fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& settings) const;

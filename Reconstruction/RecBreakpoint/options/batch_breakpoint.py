@@ -15,6 +15,7 @@ import sys
 
 ORDER = ('sim', 'trk', 'breakpoint')
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
+               'BP_DIFFUSE_AUGMENTED_RTS',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
                'BP_FREE_LOSS_TOLERANCE',
@@ -80,6 +81,7 @@ def prepare():
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
+                'BP_DIFFUSE_AUGMENTED_RTS',
                 'BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE'):
         if key in controls: controls[key] = str(int(boolean(controls[key])))
     templates = {}

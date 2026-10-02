@@ -65,7 +65,9 @@ results when applied, exact ordinary copies otherwise. A second free-loss pair,
 `BreakpointTracksBeamGuidedFreeLossBackwardFilter`, optimizes an additional
 beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
 `FreeLossBeamSpotObjective` controls this pair; when disabled it copies the
-base free-loss result. All eight names must differ
+base free-loss result. A ninth, independent
+`BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
+`DiffuseAugmentedRTS` (compiled/card default off). All nine names must differ
 from each other and the input. Each successful pair contains IP, first-hit and last-hit
 states and the original ordered hits. Fixed input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
@@ -90,6 +92,39 @@ Since 2026-09-30, free-loss trials optimize the Gaussian prior center while
 retaining the SAME `SigmaLogLoss` as ordinary and truth-prior fits.
 The retired mathematical contract is preserved in
 [the historical record](../../agents_record/2026-09-29-retired-unconstrained-loss-contract.md).
+
+### Exact-diffuse augmented RTS experiment
+
+`DiffuseAugmentedRTS=True` adds a separate result; it never replaces ordinary
+RTS, backward filtering, free-loss, or truth-centred outputs. It supports one
+selected interval. Truth interval selection supplies the interval index only,
+not the loss magnitude. At birth the persistent six-dimensional state adds
+`b=log(p_before/p_after)` with an exact rank-one diffuse covariance
+`P = P_finite + κ u uᵀ`, `κ → ∞`, rather than any finite Gaussian prior.
+`P_finite(b,b)=1` is solely a decomposition reference; it does not constrain
+the fitted b. Native material-aware propagation and the 6D loss Jacobian are
+shared with Persistent6D. Until a downstream hit identifies b, a special
+exact-diffuse scalar measurement update is used; subsequent hits use the
+ordinary native KalTest 6D update. A rectangular 5D→6D transition and the
+limiting diffuse RTS gain bring downstream information back to inner hits.
+
+`diffuse_augmented_status` is 0 for a disabled ordinary copy, 1 for a
+no-interval ordinary copy, 2 for a fitted diffuse result, and -1 for an
+underidentified/failed input-KF copy. Its collection index is row-mapped in
+`BreakpointDiffuseAugmentedIndex`; the fit status is also in
+`BreakpointDiffuseAugmentedStatus`. The flat tuple stores the IP momentum,
+parameters/covariance, fitted b and variance, and per-hit filtered/smoothed
+b values. Row-aligned six-dimensional predicted/filtered/smoothed means,
+finite covariance blocks, transport/noise, and hit indices are also recorded.
+`diffuse_augmented_predicted_unresolved` and
+`diffuse_augmented_filtered_unresolved` mark states whose full covariance is
+still infinite; their stored finite block is only `P_finite`, not a physical
+total covariance. A negative fitted b is retained as a diagnostic rather
+than clipped. The finite innovation chi-square excludes the
+diffuse-consuming scalar measurement and is **not** an absolute likelihood
+comparable to the Gaussian-prior ordinary/free/truth fits. No diffuse backward
+endpoint or calibrated model selection is claimed. This method remains an
+unvalidated experiment.
 
 An interval i is radius-ordered `hit[i] -> hit[i+1]`, not a detector layer ID.
 IntervalSelectionMode selects the source of the breakpoint list independently
@@ -416,12 +451,14 @@ maintained card, but not physics-validated.
 | OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Matching beam-objective backward endpoint |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
+| OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| DiffuseAugmentedRTS | false | Independent one-interval, flat-prior 6D KF/RTS fit; card default false; ignores SigmaLogLoss for this extra fit |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |

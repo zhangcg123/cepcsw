@@ -311,6 +311,31 @@ MeasurementStep KalmanAdapter::advanceBackward(const TrackState& source,
 
 LossMeasurementStep KalmanAdapter::advancePersistent(const LossTrackState& source,
     edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const {
+  auto result = predictPersistent(source, sourceHit, targetHit, applyLoss);
+  const auto* layer = m_system->layer(targetHit);
+  if (!layer) throw std::runtime_error("No persistent-6D measurement layer");
+  std::unique_ptr<ILDVTrackHit> hit(layer->ConvertLCIOTrkHit(targetHit));
+  if (!hit) throw std::runtime_error("Cannot convert persistent-6D hit");
+  LossMeasurementSite site(*hit);
+  site.SetOwner(); // site owns its states; hit is separately scoped above
+  site.SetPivot(TVector3(result.predicted.pivot.x, result.predicted.pivot.y, result.predicted.pivot.z));
+  HitAcceptance acceptance(m_maxChi2);
+  site.SetFilterCond(&acceptance);
+  site.Add(new TKalTrackState(TKalMatrix(result.predicted.mean),
+      TKalMatrix(result.predicted.covariance), site, TVKalSite::kPredicted, 6));
+  if (!site.Filter()) throw std::runtime_error("KalTest rejected persistent-6D hit update");
+  const auto& updated = site.GetState(TVKalSite::kFiltered);
+  result.filtered = result.predicted;
+  result.filtered.mean = updated;
+  result.filtered.covariance = updated.GetCovMat();
+  validateCovariance(result.filtered.covariance);
+  result.chi2 = site.GetDeltaChi2();
+  result.dimension = site.GetDimension();
+  return result;
+}
+
+LossMeasurementStep KalmanAdapter::predictPersistent(const LossTrackState& source,
+    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const {
   LossTrackState mapped = source;
   TMatrixD lossMap(6, 6);
   lossMap.UnitMatrix();
@@ -340,26 +365,6 @@ LossMeasurementStep KalmanAdapter::advancePersistent(const LossTrackState& sourc
   result.predicted.covariance = result.transport * source.covariance
       * transpose(result.transport) + result.noise;
   validateCovariance(result.predicted.covariance);
-
-  const auto* layer = m_system->layer(targetHit);
-  if (!layer) throw std::runtime_error("No persistent-6D measurement layer");
-  std::unique_ptr<ILDVTrackHit> hit(layer->ConvertLCIOTrkHit(targetHit));
-  if (!hit) throw std::runtime_error("Cannot convert persistent-6D hit");
-  LossMeasurementSite site(*hit);
-  site.SetOwner(); // site owns its states; hit is separately scoped above
-  site.SetPivot(TVector3(result.predicted.pivot.x, result.predicted.pivot.y, result.predicted.pivot.z));
-  HitAcceptance acceptance(m_maxChi2);
-  site.SetFilterCond(&acceptance);
-  site.Add(new TKalTrackState(TKalMatrix(result.predicted.mean),
-      TKalMatrix(result.predicted.covariance), site, TVKalSite::kPredicted, 6));
-  if (!site.Filter()) throw std::runtime_error("KalTest rejected persistent-6D hit update");
-  const auto& updated = site.GetState(TVKalSite::kFiltered);
-  result.filtered = result.predicted;
-  result.filtered.mean = updated;
-  result.filtered.covariance = updated.GetCovMat();
-  validateCovariance(result.filtered.covariance);
-  result.chi2 = site.GetDeltaChi2();
-  result.dimension = site.GetDimension();
   return result;
 }
 

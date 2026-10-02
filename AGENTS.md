@@ -312,28 +312,24 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work remains RecBreakpoint on local `breakpoint`. The ordinary,
-truth-centred and base free-loss pairs remain available. A new, default-on
-`FreeLossBeamSpotObjective` experiment runs a second free-loss optimization:
-it adds a beam-origin likelihood to the scalar loss-prior-centre objective,
-but never feeds the beam into the KF/RTS measurement updates. It publishes
-separate RTS/backward tracks and flat diagnostics. The base free-loss outputs
-must remain unchanged; disabling the new control copies them exactly.
+Active work remains RecBreakpoint on local `breakpoint`. A new independent
+`DiffuseAugmentedRTS` experiment uses an exact flat-prior, persistent 6D
+loss coordinate at one selected interval. Its compiled and maintained-card
+default is off; it publishes a separate endpoint/status and never replaces
+ordinary RTS, backward, free-loss, beam-guided or truth-centred results.
+The package builds, numerical tests pass, and a 25-event barrel smoke has
+12/12 selected-interval fits without fallback. A same-code on/off check found
+ordinary RTS/backward endpoints bit-identical. Some hard-loss examples recover
+IP momentum, but tiny-loss examples can worsen badly. This is mechanical and
+selected-event evidence only, not physics validation. The exact method,
+status meanings, gate and preserved outgoing focus are in
+`agents_record/2026-10-03-exact-diffuse-breakpoint.md`.
 
-The source and installed module passed build/unit/batch-card gates and a
-same-input three-track on/off smoke test at entries 11, 16 and 17. The old
-non-beam tuple fields agreed and the new objective closed as hit-plus-beam
-likelihood. This establishes mechanics only, not improved physics performance.
-The focused gate is recorded in
-`agents_record/2026-10-02-beam-guided-free-loss-objective.md`.
-The earlier 2,000-event free-loss population showed light-loss degradation and
-large positive tails. Next, analyze the new beam-guided result on categorized
-barrel events, including clean-track safety and tails, before considering it
-as a production default. Do not alter the common KF or GSF workflow for this
-experiment.
-
-Current ROOT campaigns present in this workspace are
-`sim_large_barrel_20261001/` and `breakpoint_barrel/` (100 files each); the
-earlier retained `sim_large_*_20260823/` inputs referenced in the outgoing
-focus are no longer present. The outgoing text and its evidence links are
-preserved in `agents_record/2026-10-02-before-beam-objective.md`.
+Next: test categorized pT resolution, clean-track safety, failure and tail
+rates, and fitted-loss calibration on independent barrel/endcap samples;
+diagnose early-breakpoint tiny-loss failures before proposing a physical
+loss-boundary or model-choice gate. Do not alter common KF/GSF workflows or
+make this the production default from selected improvements. Current source
+ROOT campaigns include `sim_large_barrel_20261001/` and `breakpoint_barrel/`;
+regenerate tracker inputs for new studies rather than relying on temporary
+smoke-test files.

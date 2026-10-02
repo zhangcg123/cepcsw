@@ -1,4 +1,5 @@
 #include "BreakpointFitter.h"
+#include "DiffuseLossState.h"
 #include "RecBreakpoint/AugmentedTransport.h"
 
 #include <algorithm>
@@ -438,6 +439,197 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
       result.gaussianModelError = error.what();
     }
   }
+  return result;
+}
+
+FitResult
+BreakpointFitter::fitDiffuseRTS(const std::vector<edm4hep::TrackerHit> &hits,
+                                const FitSettings &settings) const {
+  if (settings.intervals.size() != 1 || hits.size() < 3)
+    throw std::invalid_argument(
+        "DiffuseAugmentedRTS requires exactly one selected interval");
+  const int interval = settings.intervals.front();
+  if (interval < 0 || interval + 1 >= static_cast<int>(hits.size()))
+    throw std::invalid_argument("DiffuseAugmentedRTS interval outside track");
+  FitResult result;
+  result.freeLossParameterCount = 1;
+  const auto seed = m_adapter.seed(hits, settings.seedScale);
+  result.predicted.push_back(seed.predicted);
+  result.filtered.push_back(seed.filtered);
+  result.localChi2.push_back(seed.chi2);
+  result.chi2 = seed.chi2;
+  result.measurementDimensions = seed.dimension;
+  std::vector<TMatrixD> predictedMean{seed.predicted.mean},
+      predictedCov{seed.predicted.covariance};
+  std::vector<TMatrixD> filteredMean{seed.filtered.mean},
+      filteredCov{seed.filtered.covariance};
+  std::vector<TMatrixD> predictedDiffuse, filteredDiffuse, transports, noises;
+  TMatrixD zero5(5, 1);
+  zero5.Zero();
+  predictedDiffuse.push_back(zero5);
+  filteredDiffuse.push_back(zero5);
+  LossTrackState live;
+  TMatrixD liveDirection(6, 1);
+  liveDirection.Zero();
+  double firstHitB = 0, firstHitVariance = 0;
+
+  for (int i = 0; i + 1 < static_cast<int>(hits.size()); ++i) {
+    const char *stage = "prefix";
+    try {
+      if (i < interval) {
+        const auto step =
+            m_adapter.advance(result.filtered.back(), hits[i], hits[i + 1]);
+        result.predicted.push_back(step.predicted);
+        result.filtered.push_back(step.filtered);
+        result.localChi2.push_back(step.chi2);
+        result.chi2 += step.chi2;
+        result.measurementDimensions += step.dimension;
+        predictedMean.push_back(step.predicted.mean);
+        predictedCov.push_back(step.predicted.covariance);
+        filteredMean.push_back(step.filtered.mean);
+        filteredCov.push_back(step.filtered.covariance);
+        predictedDiffuse.push_back(zero5);
+        filteredDiffuse.push_back(zero5);
+        transports.push_back(step.transport);
+        noises.push_back(step.noise);
+        continue;
+      }
+      const bool birth = i == interval;
+      if (birth) {
+        // The finite variance 1 is ONLY a decomposition reference for P*.
+        // e_b carries the genuinely unbounded direction and is never replaced
+        // with a huge finite SigmaLogLoss.
+        live = LossTrackState::introduce(result.filtered.back(), 0., 1.);
+        liveDirection.Zero();
+        liveDirection(5, 0) = 1.;
+      }
+      LossMeasurementStep step;
+      TMatrixD targetDirection(6, 1);
+      targetDirection.Zero();
+      if (birth || liveDirection(5, 0) != 0.) {
+        // Native propagation owns geometry and process noise. Before the first
+        // informative hit, only the scalar Kalman measurement update is
+        // diffuse.
+        stage = "diffuse prediction";
+        step = m_adapter.predictPersistent(live, hits[i], hits[i + 1], birth);
+        targetDirection = step.transport * liveDirection;
+        auto model =
+            m_adapter.gaussianHitModel(hits[i + 1], step.predicted.track());
+        TMatrixD derivative(model.derivative.GetNrows(), 6);
+        derivative.Zero();
+        for (int row = 0; row < derivative.GetNrows(); ++row)
+          for (int col = 0; col < 5; ++col)
+            derivative(row, col) = model.derivative(row, col);
+        DiffuseLossState diffuse;
+        diffuse.mean = step.predicted.mean;
+        diffuse.finiteCovariance = step.predicted.covariance;
+        diffuse.diffuseDirection = targetDirection;
+        stage = "diffuse measurement";
+        const auto score =
+            updateDiffuseHit(diffuse, derivative, model.noise, model.residual);
+        step.filtered = step.predicted;
+        step.filtered.mean = diffuse.mean;
+        step.filtered.covariance = diffuse.finiteCovariance;
+        liveDirection = diffuse.diffuseDirection;
+        step.chi2 = score.finiteChi2;
+        step.dimension = derivative.GetNrows();
+      } else {
+        stage = "finite 6D measurement";
+        step = m_adapter.advancePersistent(live, hits[i], hits[i + 1], false);
+        liveDirection.Zero();
+      }
+      live = step.filtered;
+      result.predicted.push_back(step.predicted.track());
+      result.filtered.push_back(step.filtered.track());
+      result.localChi2.push_back(step.chi2);
+      result.chi2 += step.chi2;
+      result.measurementDimensions += step.dimension;
+      predictedMean.push_back(step.predicted.mean);
+      predictedCov.push_back(step.predicted.covariance);
+      filteredMean.push_back(step.filtered.mean);
+      filteredCov.push_back(step.filtered.covariance);
+      predictedDiffuse.push_back(targetDirection);
+      filteredDiffuse.push_back(liveDirection);
+      result.persistentHits.push_back(i + 1);
+      result.persistentPredicted.push_back(step.predicted);
+      result.persistentFiltered.push_back(step.filtered);
+      result.persistentPredictedDiffuse.push_back(targetDirection(5, 0) != 0.);
+      result.persistentFilteredDiffuse.push_back(liveDirection(5, 0) != 0.);
+      result.persistentTransport.push_back(step.transport);
+      result.persistentNoise.push_back(step.noise);
+      if (birth) {
+        TMatrixD rectangular(6, 5);
+        for (int row = 0; row < 6; ++row)
+          for (int col = 0; col < 5; ++col)
+            rectangular(row, col) = step.transport(row, col);
+        transports.push_back(rectangular);
+        firstHitB = step.filtered.mean(5, 0);
+        firstHitVariance = step.filtered.covariance(5, 5);
+      } else
+        transports.push_back(step.transport);
+      // P* at birth includes the arbitrary unit reference variance of b;
+      // retain it here so the Joseph RTS form closes the finite covariance.
+      noises.push_back(
+          birth ? TMatrixD(step.noise +
+                           targetDirection * transpose(targetDirection))
+                : step.noise);
+    } catch (const std::exception &error) {
+      throw std::runtime_error("Diffuse interval " + std::to_string(interval) +
+                               " transition " + std::to_string(i) + " " +
+                               stage + ": " + error.what());
+    }
+  }
+  if ((liveDirection * transpose(liveDirection))(5, 5) > 0.)
+    throw std::runtime_error(
+        "Diffuse loss is unidentifiable from downstream hits");
+
+  auto smoothedMean = filteredMean;
+  auto smoothedCov = filteredCov;
+  for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
+    try {
+      const auto &map = transports[i];
+      const TMatrixD gain =
+          diffuseRtsGain(filteredCov[i], filteredDiffuse[i], map,
+                         predictedCov[i + 1], predictedDiffuse[i + 1]);
+      smoothedMean[i] =
+          filteredMean[i] +
+          gain * stateDifference(smoothedMean[i + 1], predictedMean[i + 1]);
+      smoothedCov[i] = diffuseRtsCovariance(filteredCov[i], gain, map,
+                                            noises[i], smoothedCov[i + 1]);
+    } catch (const std::exception &error) {
+      throw std::runtime_error("Diffuse RTS hit " + std::to_string(i) + ": " +
+                               error.what());
+    }
+  }
+  for (std::size_t i = 0; i < hits.size(); ++i) {
+    TrackState track = result.filtered[i];
+    for (int row = 0; row < 5; ++row) {
+      track.mean(row, 0) = smoothedMean[i](row, 0);
+      for (int col = 0; col < 5; ++col)
+        track.covariance(row, col) = smoothedCov[i](row, col);
+    }
+    result.smoothed.push_back(track);
+    if (static_cast<int>(i) > interval) {
+      LossTrackState joint;
+      joint.pivot = track.pivot;
+      joint.mean = smoothedMean[i];
+      joint.covariance = smoothedCov[i];
+      result.persistentSmoothed.push_back(joint);
+    }
+  }
+  const int first = interval + 1;
+  result.breakpoints.push_back({interval, 0., smoothedMean[first](5, 0),
+                                smoothedCov[first](5, 5), firstHitB,
+                                firstHitVariance, 0.});
+  result.endpoint = result.smoothed;
+  result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
+  // A flat-prior rank-one filter has no normalized absolute NLL on b.
+  // Its finite innovation chi2 omits the diffuse-consuming scalar; do not
+  // compare that number with the Gaussian-prior ordinary chi2/NLL.
+  result.smoothedChi2Status = 0;
+  result.smoothedChi2Error =
+      "Absolute score undefined for flat diffuse b prior";
+  result.smoothedTotalChi2 = std::numeric_limits<double>::quiet_NaN();
   return result;
 }
 
