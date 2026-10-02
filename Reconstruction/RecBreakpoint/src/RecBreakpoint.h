@@ -12,6 +12,7 @@
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "FreeLossTuple.h"
 #include "FitPairTuple.h"
+#include "LikelihoodTuple.h"
 
 #include <cstdint>
 #include <memory>
@@ -88,6 +89,7 @@ private:
   double m_referencePt = 0;
   double m_recordBackwardSeedScale = 100;
   breakpoint::FreeLossTuple m_freeLossTuple;
+  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks;
   std::vector<int> m_breakpointIndex;
   std::string m_seedSelectionName;

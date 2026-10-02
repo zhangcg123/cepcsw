@@ -262,6 +262,17 @@ The same values appear as `free_loss_result_status`, `free_loss_rts_index` and
 optimized pair,3 input KF fallback. This is separate from `free_loss_status`, which describes the
 optimizer request/outcome (off0, empty1, applied2, unsupported-1, failed-2).
 
+The parallel `ordinary_likelihood_*`, `free_loss_likelihood_*`, and
+`truth_override_likelihood_*` branches contain the same normalized
+`-2 log L = complete RTS chi2 + log det S_all + M log(2*pi)` for each RTS
+result. They save `status`, `nll2`, `quadratic`, `logdet`,
+`measurement_dimensions`, `latent_dimensions`, and `error`. Status 1 is
+valid, 0 absent, -1 unavailable/failed. An optimized free-loss result uses
+the accepted Minuit objective; an off/no-interval result copies ordinary;
+an input-KF fallback has no breakpoint likelihood. The truth-assisted result
+copies ordinary only when its own fit is disabled. These diagnostics do not
+change track publication or the existing `Track.chi2` convention.
+
 Always-present branches, all prefixed `free_loss_`:
 
 - `{rts,backward}_pt`, `_ip_parameters`, `_ip_covariance`, `_fitted_log_loss`,

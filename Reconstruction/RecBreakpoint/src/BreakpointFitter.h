@@ -16,7 +16,7 @@ struct FitSettings {
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
-  // Internal request from FreeLossFitter only; ordinary/oracle passes leave off.
+  // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
 };
 
@@ -50,6 +50,7 @@ struct FitResult {
   double chi2 = 0;
   int measurementDimensions = 0;
   std::shared_ptr<const GaussianTrackModel> gaussianModel;
+  std::string gaussianModelError;
 };
 
 struct PairedFitResult {

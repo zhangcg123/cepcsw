@@ -456,6 +456,20 @@ The legacy `free_loss_covariance_conditional` fixed-b flag is false.
 `Track.chi2` retains its existing
 quadratic meaning; `free_loss_nll2` separately records the fitting objective.
 
+The flat tuple also records the same normalized full-track likelihood for
+each RTS family as `ordinary_likelihood_*`, `free_loss_likelihood_*`, and
+`truth_override_likelihood_*`. Each prefix has `status` (1 valid, 0 absent,
+-1 unavailable or evaluation failed), `nll2`, `quadratic`, `logdet`,
+`measurement_dimensions`, `latent_dimensions`, and `error`. All use
+`nll2 = quadratic + logdet + measurement_dimensions * log(2*pi)`, with the
+complete RTS measurement + process + seed score as `quadratic`. Free-loss
+optimized rows copy the accepted optimizer objective (also retained under
+`free_loss_nll2`); disabled/empty-interval free and truth rows copy the
+ordinary likelihood. A free-loss input-KF fallback has no breakpoint
+likelihood. Likelihood failures are passive and do not discard valid tracks.
+Both LocalMarginal and Persistent6D RTS fits capture the required Gaussian
+model. Older tuples lack these new fields and must be regenerated.
+
 The tuple has one row per attempted track, including failures. It retains
 ordered hit cells/radii/z, truth/KF pT, reference KF pT, filtered/smoothed kappa
 and variance, backward predicted/filtered kappa and variance, and truth

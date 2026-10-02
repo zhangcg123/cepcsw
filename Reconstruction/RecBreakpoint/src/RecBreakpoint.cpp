@@ -18,6 +18,7 @@
 #include <iomanip>
 #include <sstream>
 #include <numeric>
+#include <optional>
 
 namespace {
 // Every endpoint family uses identical EDM representation and hit references.
@@ -133,6 +134,9 @@ StatusCode RecBreakpoint::initialize() {
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
   m_freeLossTuple.book(*m_tree);
+  m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
+  m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
+  m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
@@ -293,6 +297,7 @@ StatusCode RecBreakpoint::execute() {
   settings.seedScale = m_seedScale;
   settings.backwardSeedScale = m_backwardSeedScale;
   settings.lossStateMode = m_lossStateModeName;
+  settings.captureGaussianModel = true; // passive score for ordinary and truth RTS
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
       static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value()};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
@@ -326,6 +331,9 @@ StatusCode RecBreakpoint::execute() {
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
+    m_ordinaryLikelihood.reset();
+    m_freeLikelihood.reset();
+    m_truthLikelihood.reset();
     m_freeLossTracks.reset();
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
@@ -455,10 +463,13 @@ StatusCode RecBreakpoint::execute() {
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
       const auto paired = fitter.fit(hits, settings);
       std::optional<breakpoint::PairedFitResult> freePair;
+      std::optional<breakpoint::TrackLikelihoodResult> optimizedLikelihood;
       bool freeKFFallback = false;
       if (m_freeLossFit) {
         auto freeFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, freeLossControls);
         m_freeLossTuple.assign(freeFit.diagnostics);
+        if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
+          optimizedLikelihood = freeFit.diagnostics.likelihood;
         freePair = std::move(freeFit.fitted);
         freeKFFallback = freeFit.diagnostics.status == breakpoint::FreeLossStatus::Failed ||
                          freeFit.diagnostics.status == breakpoint::FreeLossStatus::Unsupported;
@@ -472,6 +483,7 @@ StatusCode RecBreakpoint::execute() {
       }
       const auto& fit=paired.rts;
       const auto& inward=paired.backward;
+      m_ordinaryLikelihood.assign(fit);
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");
       m_fitPt = std::abs(m_bz * 2.99792458e-4 / fit.ip.omega);
@@ -596,6 +608,7 @@ StatusCode RecBreakpoint::execute() {
       // copies CompleteTracks itself, not a breakpoint or fresh KF refit.
       const auto& freeResult = freePair ? *freePair : paired;
       if (freeKFFallback) {
+        m_freeLikelihood.invalidate("Free-loss output is input KF fallback; no breakpoint likelihood");
         try {
           const int rtsIndex = freeRTSOutput->size();
           const int backwardIndex = freeBackwardOutput->size();
@@ -610,6 +623,17 @@ StatusCode RecBreakpoint::execute() {
                     << error.what() << endmsg;
         }
       } else {
+        if (freePair) {
+          // The accepted Minuit trial already used this exact normalized
+          // objective. Do not silently replace it with a different score.
+          if (!optimizedLikelihood) m_freeLikelihood.invalidate("Accepted free fit has no likelihood");
+          else {
+            try { m_freeLikelihood.assign(*optimizedLikelihood); }
+            catch (const std::exception& error) { m_freeLikelihood.invalidate(error.what()); }
+          }
+        } else {
+          m_freeLikelihood = m_ordinaryLikelihood; // free fit off or no interval
+        }
         const double freeBackwardChi2 = std::accumulate(freeResult.backward.backwardChi2.begin(),
                                                        freeResult.backward.backwardChi2.end(), 0.);
         const int freeRTSIndex = publishTrack(*freeRTSOutput, freeResult.rts, hits, m_bz,
@@ -693,6 +717,8 @@ StatusCode RecBreakpoint::execute() {
         const auto& extraPair = oracle ? *oracle : paired;
         const auto& truthRTS = extraPair.rts;
         const auto& truthBackward = extraPair.backward;
+        if (oracle) m_truthLikelihood.assign(truthRTS);
+        else m_truthLikelihood = m_ordinaryLikelihood;
         for (const auto* candidate : {&truthRTS, &truthBackward})
           if (!std::isfinite(candidate->ip.omega) || candidate->ip.omega == 0)
             throw std::runtime_error("Invalid truth-override endpoint curvature");
@@ -748,6 +774,7 @@ StatusCode RecBreakpoint::execute() {
           }
         }
       } catch (const std::exception& exception) {
+        m_truthLikelihood.invalidate(exception.what());
         m_truthResultCode = m_truthOverrideStatus < 0 ? m_truthOverrideStatus : -4;
         truthRTSIndex = truthBackwardIndex = -1;
         m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
@@ -764,6 +791,11 @@ StatusCode RecBreakpoint::execute() {
       }
     } catch (const std::exception& exception) {
       warning() << "event=" << m_event << " track=" << m_trackIndex << ": " << exception.what() << endmsg;
+      if (m_fitStatus != 1) {
+        m_ordinaryLikelihood.reset();
+        m_freeLikelihood.reset();
+        m_truthLikelihood.reset();
+      }
       outputIndices->push_back(-1);
       backwardOutputIndices->push_back(-1);
     }

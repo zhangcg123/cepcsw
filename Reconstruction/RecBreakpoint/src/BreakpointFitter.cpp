@@ -78,8 +78,6 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
                                      const FitSettings& settings) const {
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
-  if (settings.captureGaussianModel && settings.lossStateMode != "LocalMarginal")
-    throw std::invalid_argument("Gaussian likelihood capture requires LocalMarginal");
   if (settings.lossStateMode == "Persistent6D") {
     if (settings.intervals.size() > 1)
       throw std::invalid_argument("Persistent6D requires at most one breakpoint");
@@ -207,18 +205,22 @@ FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& 
   }
   scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
   if (settings.captureGaussianModel) {
-    auto model = std::make_shared<GaussianTrackModel>();
-    model->seedCovariance.ResizeTo(result.predicted.front().covariance);
-    model->seedCovariance = result.predicted.front().covariance;
-    for (std::size_t i = 0; i < hits.size(); ++i) {
-      model->hits.push_back(m_adapter.gaussianHitModel(hits[i], result.predicted[i]));
-      if (i) {
-        const auto& edge = transitions[i - 1];
-        model->transitions.push_back({edge.transport, edge.noise,
-            stateDifference(result.predicted[i - 1].mean, result.filtered[i - 1].mean)});
+    try {
+      auto model = std::make_shared<GaussianTrackModel>();
+      model->seedCovariance.ResizeTo(result.predicted.front().covariance);
+      model->seedCovariance = result.predicted.front().covariance;
+      for (std::size_t i = 0; i < hits.size(); ++i) {
+        model->hits.push_back(m_adapter.gaussianHitModel(hits[i], result.predicted[i]));
+        if (i) {
+          const auto& edge = transitions[i - 1];
+          model->transitions.push_back({edge.transport, edge.noise,
+              stateDifference(result.predicted[i - 1].mean, result.filtered[i - 1].mean)});
+        }
       }
+      result.gaussianModel = std::move(model);
+    } catch (const std::exception& error) {
+      result.gaussianModelError = error.what();
     }
-    result.gaussianModel = std::move(model);
   }
   return result;
 }
@@ -410,6 +412,32 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
                 result.predicted);
+  if (settings.captureGaussianModel) {
+    try {
+      auto model = std::make_shared<GaussianTrackModel>();
+      model->seedCovariance.ResizeTo(predictedCov.front());
+      model->seedCovariance = predictedCov.front();
+      for (std::size_t i = 0; i < hits.size(); ++i) {
+        auto hitModel = m_adapter.gaussianHitModel(hits[i], result.predicted[i]);
+        const int dimensions = predictedMean[i].GetNrows();
+        if (dimensions == 6) {
+          TMatrixD derivative(hitModel.derivative.GetNrows(), dimensions);
+          derivative.Zero();
+          for (int row = 0; row < derivative.GetNrows(); ++row)
+            for (int column = 0; column < 5; ++column)
+              derivative(row, column) = hitModel.derivative(row, column);
+          hitModel.derivative.ResizeTo(derivative);
+          hitModel.derivative = derivative; // hit observes helix, not latent b directly
+        }
+        model->hits.push_back(std::move(hitModel));
+        if (i) model->transitions.push_back({transports[i - 1], noises[i - 1],
+            stateDifference(predictedMean[i - 1], filteredMean[i - 1])});
+      }
+      result.gaussianModel = std::move(model);
+    } catch (const std::exception& error) {
+      result.gaussianModelError = error.what();
+    }
+  }
   return result;
 }
 

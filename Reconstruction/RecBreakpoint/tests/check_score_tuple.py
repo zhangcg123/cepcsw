@@ -11,6 +11,8 @@ import numpy as np
 import ROOT
 
 PREFIXES = ('', 'free_loss_', 'truth_override_')
+LIKELIHOOD_PREFIXES = ('ordinary_likelihood_', 'free_loss_likelihood_',
+                       'truth_override_likelihood_')
 TERMS = ('smoothed_measurement_chi2', 'smoothed_process_chi2',
          'smoothed_native_measurement_chi2', 'smoothed_seed_chi2')
 
@@ -50,6 +52,41 @@ def compare(a, b, name):
 def check_rows(rows):
     counts = dict(valid_scores=0, copies=0, unavailable=0)
     for row in rows:
+        for prefix in LIKELIHOOD_PREFIXES:
+            status = row[prefix + 'status']
+            if status == 1:
+                nll2 = row[prefix + 'nll2']
+                quadratic = row[prefix + 'quadratic']
+                logdet = row[prefix + 'logdet']
+                dimensions = row[prefix + 'measurement_dimensions']
+                assert dimensions > 0
+                assert math.isclose(nll2, quadratic + logdet + dimensions * math.log(2 * math.pi),
+                                    rel_tol=1e-11, abs_tol=1e-8)
+                score_prefix = {'ordinary_likelihood_': '',
+                                'free_loss_likelihood_': 'free_loss_',
+                                'truth_override_likelihood_': 'truth_override_'}[prefix]
+                assert math.isclose(quadratic, row[score_prefix + 'smoothed_chi2'],
+                                    rel_tol=1e-9, abs_tol=1e-7)
+            else:
+                assert status in (0, -1)
+                assert math.isnan(row[prefix + 'nll2'])
+                if status == -1:
+                    assert row[prefix + 'error']
+        if row['free_loss_result_status'] == 1:
+            for term in ('status', 'nll2', 'quadratic', 'logdet',
+                         'measurement_dimensions', 'latent_dimensions', 'error'):
+                assert compare(row['ordinary_likelihood_' + term],
+                               row['free_loss_likelihood_' + term], term)
+        if row['free_loss_result_status'] == 2:
+            assert row['free_loss_likelihood_status'] == 1
+            for term in ('nll2', 'quadratic', 'logdet'):
+                assert math.isclose(row['free_loss_likelihood_' + term],
+                                    row['free_loss_' + term], rel_tol=1e-12, abs_tol=1e-8)
+        if row['truth_override_result_status'] == 1:
+            for term in ('status', 'nll2', 'quadratic', 'logdet',
+                         'measurement_dimensions', 'latent_dimensions', 'error'):
+                assert compare(row['ordinary_likelihood_' + term],
+                               row['truth_override_likelihood_' + term], term)
         for prefix in PREFIXES:
             for term in TERMS:
                 assert prefix + term in row, prefix + term

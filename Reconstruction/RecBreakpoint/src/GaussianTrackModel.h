@@ -8,7 +8,7 @@ namespace breakpoint {
 
 /// Native hit projection frozen at the forward prediction, not at the truth.
 struct GaussianHitModel {
-  TMatrixD derivative; // H: measured coordinates versus five track coordinates
+  TMatrixD derivative; // H: measured coordinates versus live 5D or 6D state
   TMatrixD noise;      // V: native measurement covariance
   TMatrixD residual;   // measured hit - h(native predicted state)
 };
