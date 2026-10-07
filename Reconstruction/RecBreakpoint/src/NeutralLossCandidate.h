@@ -10,9 +10,11 @@
 namespace breakpoint {
 
 struct NeutralLossCandidate {
+  bool hasReference = false; // Valid input-track AtCalorimeter reference point
   double energy = 0;       // GeV, sum of selected hit-supported ECAL clusters
   double sigmaEnergy = 0;  // GeV, independent-cluster uncertainty approximation
   std::vector<int> clusterIndices;
+  std::vector<double> clusterEnergies, clusterEnergyErrors;
 };
 
 /// Reconstructed-only association; no photon or Geant4 truth enters the fit.

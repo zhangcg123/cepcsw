@@ -18,6 +18,7 @@
 #include "LikelihoodTuple.h"
 #include "CaloStateTuple.h"
 #include "RecoAssociationTuple.h"
+#include "NeutralLossCandidate.h"
 
 #include <array>
 #include <cstdint>
@@ -132,6 +133,10 @@ private:
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
   // KF input plus the ten parallel published breakpoint endpoint families.
   std::array<breakpoint::CaloStateTuple, 11> m_caloStates;
+  // Collected independently for each input track, even when the ECAL fit is off.
+  breakpoint::NeutralLossCandidate m_collectedNeutral;
+  int m_collectedNeutralStatus = 0, m_collectedNeutralCount = 0;
+  std::string m_collectedNeutralError;
   // Status: 0 disabled, 1 no usable neutral/interval (ordinary RTS copy),
   // 2 absolute-loss RTS, -1 failed (ordinary RTS copy), -2 ordinary fit failed.
   int m_absoluteStatus = 0, m_absoluteIndex = -1;

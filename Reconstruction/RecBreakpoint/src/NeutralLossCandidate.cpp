@@ -42,6 +42,7 @@ NeutralLossCandidate collectNeutralLoss(const edm4hep::Track& track,
     break;
   }
   if (!hasReference) return result;
+  result.hasReference = true;
 
   std::set<edm4hep::Cluster> ecal;
   for (const auto& cluster : ecalClusters) ecal.insert(cluster);
@@ -63,8 +64,10 @@ NeutralLossCandidate collectNeutralLoss(const edm4hep::Track& track,
           std::abs(dphi) > phiWindow) continue;
       selected.insert(cluster);
       result.clusterIndices.push_back(cluster.id().index);
+      result.clusterEnergies.push_back(energy);
       result.energy += energy;
       const double sigma = stochasticError * std::sqrt(energy) + constantError * energy;
+      result.clusterEnergyErrors.push_back(sigma);
       variance += sigma * sigma;
     }
   }

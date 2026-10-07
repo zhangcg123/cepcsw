@@ -2,7 +2,6 @@
 #include "BreakpointFitter.h"
 #include "BreakpointTrackSystem.h"
 #include "TruthBHLossEventData.h"
-#include "NeutralLossCandidate.h"
 #include "GearSvc/IGearSvc.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 #include "DetInterface/IGeomSvc.h"
@@ -256,6 +255,14 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("diffuse_augmented_smoothed_covariance", &m_diffuseSmoothedCovariance);
   m_tree->Branch("diffuse_augmented_transport", &m_diffuseTransport);
   m_tree->Branch("diffuse_augmented_process_noise", &m_diffuseNoise);
+  m_tree->Branch("collected_neutral_ecal_status", &m_collectedNeutralStatus);
+  m_tree->Branch("collected_neutral_ecal_error", &m_collectedNeutralError);
+  m_tree->Branch("collected_neutral_ecal_cluster_count", &m_collectedNeutralCount);
+  m_tree->Branch("collected_neutral_ecal_cluster_indices", &m_collectedNeutral.clusterIndices);
+  m_tree->Branch("collected_neutral_ecal_cluster_energy", &m_collectedNeutral.clusterEnergies);
+  m_tree->Branch("collected_neutral_ecal_cluster_energy_error", &m_collectedNeutral.clusterEnergyErrors);
+  m_tree->Branch("collected_neutral_ecal_energy", &m_collectedNeutral.energy);
+  m_tree->Branch("collected_neutral_ecal_energy_error", &m_collectedNeutral.sigmaEnergy);
   m_tree->Branch("absolute_neutral_status", &m_absoluteStatus);
   m_tree->Branch("absolute_neutral_index", &m_absoluteIndex);
   m_tree->Branch("absolute_neutral_error", &m_absoluteError);
@@ -492,6 +499,25 @@ StatusCode RecBreakpoint::execute() {
       continue;
     }
     m_trackRecoTuple.assign(track, *trackTruthAssociations, *pidPfos, *ecalClusters);
+    // Collect once for this track row, independently of interval selection or
+    // fit success. The ECAL refit below consumes this exact same candidate.
+    m_collectedNeutral = {};
+    m_collectedNeutralStatus = m_collectedNeutralCount = 0;
+    m_collectedNeutralError.clear();
+    try {
+      m_collectedNeutral = breakpoint::collectNeutralLoss(
+          track, *pidPfos, *ecalClusters,
+          m_neutralThetaWindow.value() * 1.e-3,
+          m_neutralPhiWindow.value() * 1.e-3,
+          m_neutralStochasticError.value(), m_neutralConstantError.value());
+      m_collectedNeutralCount = static_cast<int>(m_collectedNeutral.clusterIndices.size());
+      m_collectedNeutralStatus = !m_collectedNeutral.hasReference ? 0 :
+          (m_collectedNeutralCount == 0 ? 1 : 2);
+    } catch (const std::exception& error) {
+      m_collectedNeutralStatus = -1;
+      m_collectedNeutralError = error.what();
+      m_collectedNeutral.energy = m_collectedNeutral.sigmaEnergy = nan;
+    }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
     m_beamFreeLossTuple.reset(m_freeLossFit && m_freeLossBeamSpotObjective,
@@ -950,11 +976,9 @@ StatusCode RecBreakpoint::execute() {
         copyOrdinaryToAbsolute();
       } else {
         try {
-          const auto neutral = breakpoint::collectNeutralLoss(
-              track, *pidPfos, *ecalClusters,
-              m_neutralThetaWindow.value() * 1.e-3,
-              m_neutralPhiWindow.value() * 1.e-3,
-              m_neutralStochasticError.value(), m_neutralConstantError.value());
+          if (m_collectedNeutralStatus < 0)
+            throw std::runtime_error(m_collectedNeutralError);
+          const auto& neutral = m_collectedNeutral;
           m_absoluteClusterIndices = neutral.clusterIndices;
           if (neutral.clusterIndices.empty()) {
             m_absoluteStatus = 1;

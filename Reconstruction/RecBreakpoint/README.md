@@ -132,6 +132,32 @@ The old ECAL-to-log-loss-prior recipe is retired; its numerical results and
 historical diagnostic artifacts remain evidence in dated records. The ordinary,
 free-loss and truth-prior fits still use their own MeanLogLoss/SigmaLogLoss
 machinery; it is not part of the ECAL refit controller.
+
+The main `breakpoint` tree also always saves the neutral-cluster selection
+**for its own input track**, even with `EcalLossReferenceMode=Off`, no selected
+breakpoint, or a failed tracking fit. The collector is called once per track
+before fitting; an enabled ECAL refit reuses that same result.
+
+| Track-row branch | Meaning |
+|---|---|
+| collected_neutral_ecal_status | 0: no input AtCalorimeter reference; 1: valid reference, no qualifying cluster; 2: clusters selected; -1: collection error |
+| collected_neutral_ecal_error | Error text for status -1 |
+| collected_neutral_ecal_cluster_count | Number of selected unique hit-supported neutral ECAL clusters |
+| collected_neutral_ecal_cluster_indices | EcalCluster indices, linking to the event-level neutral_pfos tree |
+| collected_neutral_ecal_cluster_energy | Aligned per-cluster energies in GeV |
+| collected_neutral_ecal_cluster_energy_error | Aligned per-cluster errors in GeV using the configured resolution |
+| collected_neutral_ecal_energy | Sum of selected cluster energies in GeV |
+| collected_neutral_ecal_energy_error | Quadrature sum of selected cluster errors in GeV |
+
+No selection gives empty vectors, count zero and zero energy/error; status
+distinguishes a missing track reference from an empty window. A collection
+error gives empty vectors/count zero and NaN summed energy/error. Each track
+uses its input KF ECAL reference point with the configured theta/phi windows.
+Only neutral PFO clusters belonging to EcalCluster with actual calorimeter
+hits, finite positive energy and valid position qualify; a cluster is counted
+once within a track. Different tracks may independently select the same cluster
+when their windows overlap: this is not exclusive event-wide ownership.
+The per-event `neutral_pfos` tree remains separate and is unchanged.
 All ten names must differ
 from each other and the input. Each successful result contains IP, first-hit,
 last-hit, and, when native extrapolation succeeds, ECAL-face (`AtCalorimeter`)
