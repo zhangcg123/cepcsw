@@ -37,6 +37,11 @@ public:
   StatusCode execute() override;
   StatusCode finalize() override;
 private:
+  bool ecalRefitEnabled() const { return m_ecalLossReferenceMode != "Off"; }
+  bool ecalUsesDiffuseReference() const {
+    return m_ecalLossReferenceMode == "PreReference" ||
+           m_ecalLossReferenceMode == "PostReference";
+  }
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
@@ -88,9 +93,7 @@ private:
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
   Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", false};
-  Gaudi::Property<bool> m_absoluteNeutralRTS{this, "AbsoluteNeutralLossRTS", false};
-  Gaudi::Property<bool> m_absoluteDiffuseReference{this, "AbsoluteNeutralDiffuseReference", false};
-  Gaudi::Property<std::string> m_absoluteReferenceSource{this, "AbsoluteNeutralReferenceSource", "UpstreamSmoothed"};
+  Gaudi::Property<std::string> m_ecalLossReferenceMode{this, "EcalLossReferenceMode", "Off"};
   Gaudi::Property<double> m_neutralThetaWindow{this, "NeutralLossThetaWindowMrad", 10.0};
   Gaudi::Property<double> m_neutralPhiWindow{this, "NeutralLossPhiWindowMrad", 200.0};
   Gaudi::Property<double> m_neutralStochasticError{this, "NeutralLossStochasticError", 0.011};

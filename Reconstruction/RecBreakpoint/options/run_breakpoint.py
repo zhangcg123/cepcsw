@@ -8,6 +8,11 @@ import os
 # Reject retired steering before loading Gaudi or opening any input/output.
 if "BP_LOSS_PRIOR_MODE" in os.environ:
     raise ValueError("BP_LOSS_PRIOR_MODE/LossPriorMode was removed; ordinary breakpoint fits use a Gaussian loss prior")
+for _retired in ("BP_ABSOLUTE_NEUTRAL_RTS", "BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE",
+                 "BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE"):
+    if _retired in os.environ:
+        raise ValueError(_retired + " was removed; use BP_ECAL_LOSS_REFERENCE_MODE="
+                         "Off/NoReference/PreReference/PostReference")
 
 from Gaudi.Configuration import INFO
 from Configurables import (
@@ -70,10 +75,6 @@ fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth"
 fit.MeanLogLoss = float(os.environ.get("BP_MEAN_LOG_LOSS", "0.0"))
 # SigmaLogLoss is the standard deviation OF b, not log(sigma) and not the
 # energy error itself. The prior variance used by the fitter is SigmaLogLoss**2.
-# Example of external ECAL steering: if neutral energy E approximates
-# p_before-p_after and has relative error f, choose MeanLogLoss=log(1+E/p_after)
-# and SigmaLogLoss=f*E/(p_after+E). This treats reference p_after as fixed
-# during the conversion; the card does not calculate or apply this automatically.
 # Batch value is set in subbreakpointjobs.sh and frozen into the generated card.
 # The fallback below is for direct standalone use, without the submission script.
 # This SAME prior sigma is used by ordinary, free-loss and truth-centred fits.
@@ -106,26 +107,22 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
 fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
-# Parallel, default-off absolute-loss RTS. A hit-supported neutral ECAL
-# cluster inside the window about the input track's ECAL state supplies the
-# sixth coordinate L=p_before-p_after in GeV, with its Gaussian prior error.
-# The same ECAL energy is NOT used as a second hit/update. This requires one
-# selected breakpoint interval; without one or a qualifying cluster, its
-# output is an ordinary RTS copy. The existing log-loss outputs are unchanged.
-fit.AbsoluteNeutralLossRTS = os.environ.get("BP_ABSOLUTE_NEUTRAL_RTS", "0") == "1"
-# Diagnostic only: evaluate the absolute-loss birth map/Jacobian at the
-# diffuse upstream smoothed MEAN. Requires DiffuseAugmentedRTS; its covariance
-# is NOT reused. Original track seed and ECAL L prior/error remain unchanged.
-# This is one loss-map relinearization, not a whole-trajectory iteration.
-fit.AbsoluteNeutralDiffuseReference = os.environ.get("BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE", "0") == "1"
-# Effective only when the diffuse reference above is enabled. UpstreamSmoothed
-# reproduces the first study. PostLossPlusECAL builds a pre-break reference
-# momentum from diffuse post-break p + the selected neutral ECAL energy;
-# the post-break curvature supplies its sign. Both use the same independent
-# ECAL loss prior/error and restart the same live KF/RTS fit from its seed.
-fit.AbsoluteNeutralReferenceSource = os.environ.get(
-    "BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE", "UpstreamSmoothed"
-)
+# One ECAL absolute-loss KF/RTS fitter, selected by this single controller:
+# Off (default): copy ordinary RTS into the ECAL output.
+# NoReference: evaluate the loss map/Jacobian at the live forward state at hit i.
+# PreReference: use the diffuse smoothed state at i as the loss-map reference.
+# PostReference: start with that same state; replace its curvature using
+# p_diffuse(i+1)+E_neutral, with the charge sign from i+1. Keep pivot/direction i.
+# PreReference/PostReference require DiffuseAugmentedRTS=True. Only their mean
+# reference is used; the live seed/covariance are retained. No diffuse error
+# is inserted as a prior. This changes one loss map, not the whole trajectory.
+# All three active modes collect the same hit-supported neutral ECAL clusters
+# around the input track's ECAL direction and initialize the sixth coordinate
+# L=p_before-p_after with E_neutral and its error in GeV. Each runs the same
+# 6D fitter; ECAL energy is not applied as a second measurement update.
+# One selected interval is required. Missing interval/cluster or failed fit
+# produces an ordinary RTS copy, with explicit status/error in the flat tuple.
+fit.EcalLossReferenceMode = os.environ.get("BP_ECAL_LOSS_REFERENCE_MODE", "Off")
 fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "10"))
 fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"))
 # Per-cluster sigma_E [GeV] = a*sqrt(E [GeV]) + c*E [GeV]; independent cluster

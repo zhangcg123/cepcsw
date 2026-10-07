@@ -312,14 +312,16 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the default-off absolute-neutral-loss
-RTS and the reference used to linearize its loss map. The default-off
-`AbsoluteNeutralDiffuseReference` now selects `UpstreamSmoothed` (previous
-test/default) or `PostLossPlusECAL`, where the upstream reference momentum
-is the diffuse post-break momentum plus selected neutral ECAL energy. This
-changes only the loss-map reference; the original seed, live covariance and
-independent ECAL loss prior/error remain. It is built/tested via `build.../run`
-but not installed into the shared InstallArea.
+Active work on local `breakpoint` is one default-off ECAL absolute-loss
+KF/RTS refit. `EcalLossReferenceMode` replaces the three overlapping controls
+with Off, NoReference (live forward reference), PreReference (diffuse state at
+hit i), and PostReference (same state with curvature from diffuse momentum at
+i+1 plus neutral ECAL energy). All active modes share the same fit and ECAL
+energy/error prior. The last two require DiffuseAugmentedRTS; diffuse covariance
+is not imported. The maintained card/batch variable is BP_ECAL_LOSS_REFERENCE_MODE.
+The old ECAL-to-log-prior diagnostic is retired; ordinary/free-loss/truth-prior
+fits retain their own log-loss machinery. The update is tested through the
+build-tree runtime; the shared InstallArea is not updated.
 
 In a same-code twelve-event local A/B at 4% ECAL error, the new reference
 reduces median absolute pT residual from 6.57% to 0.98% and removes the
@@ -333,7 +335,8 @@ Next: diagnose the distant forward mean versus consistent ECAL reference in
 1:25 and design a full trajectory relinearization that keeps the original
 hit/seed objective. Do not import the diffuse covariance as another prior
 or suppress the failure with a truth-based cut. Require clean/light-loss
-safety, tail control and held-out population checks before promotion. Full
-numbers, definitions, tests and the preserved outgoing focus are in
-`agents_record/2026-10-08-breakpoint-postloss-plus-ecal-reference.md`; the
-initial prototype and earlier reference studies remain in dated records.
+safety, tail control and held-out population checks before promotion.
+Controller migration, regression evidence, and the outgoing focus are in
+`agents_record/2026-10-08-breakpoint-ecal-controller.md`; the twelve-event
+physics comparison remains in
+`agents_record/2026-10-08-breakpoint-postloss-plus-ecal-reference.md`.

@@ -165,13 +165,14 @@ StatusCode RecBreakpoint::initialize() {
     error() << "MeanLogLoss must be finite in [0,5] and SigmaLogLoss finite/positive" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_absoluteNeutralRTS && m_absoluteDiffuseReference && !m_diffuseAugmentedRTS) {
-    error() << "AbsoluteNeutralDiffuseReference requires DiffuseAugmentedRTS" << endmsg;
+  if (m_ecalLossReferenceMode != "Off" && m_ecalLossReferenceMode != "NoReference" &&
+      m_ecalLossReferenceMode != "PreReference" && m_ecalLossReferenceMode != "PostReference") {
+    error() << "EcalLossReferenceMode must be Off, NoReference, PreReference or PostReference"
+            << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_absoluteReferenceSource != "UpstreamSmoothed" &&
-      m_absoluteReferenceSource != "PostLossPlusECAL") {
-    error() << "AbsoluteNeutralReferenceSource must be UpstreamSmoothed or PostLossPlusECAL"
+  if (ecalUsesDiffuseReference() && !m_diffuseAugmentedRTS) {
+    error() << "EcalLossReferenceMode PreReference/PostReference requires DiffuseAugmentedRTS"
             << endmsg;
     return StatusCode::FAILURE;
   }
@@ -518,10 +519,9 @@ StatusCode RecBreakpoint::execute() {
     m_absolutePt = m_absolutePtError = nan;
     m_absolutePriorEnergy = m_absolutePriorSigma = nan;
     m_absoluteFittedEnergy = m_absoluteFittedVariance = nan;
-    m_absoluteReferenceRequested = m_absoluteDiffuseReference.value();
+    m_absoluteReferenceRequested = ecalUsesDiffuseReference();
     m_absoluteReferenceUsed = false;
-    m_absoluteReferenceSourceName = m_absoluteDiffuseReference.value()
-        ? m_absoluteReferenceSource.value() : "Forward";
+    m_absoluteReferenceSourceName = m_ecalLossReferenceMode.value();
     m_absoluteForwardP = m_absoluteReferenceP = m_absoluteReferencePostP = nan;
     m_absoluteReferenceParameters.clear();
     m_absoluteClusterIndices.clear();
@@ -851,7 +851,7 @@ StatusCode RecBreakpoint::execute() {
         if (!std::isfinite(diffuse.ip.omega) || diffuse.ip.omega == 0 ||
             diffuse.breakpoints.empty() || !std::isfinite(diffuse.breakpoints.front().fittedVariance))
           throw std::runtime_error("Invalid diffuse endpoint or loss posterior");
-        if (m_absoluteNeutralRTS && m_absoluteDiffuseReference) {
+        if (ecalUsesDiffuseReference()) {
           absoluteLossReference = diffuse.smoothed.at(settings.intervals.front());
           if (diffuse.persistentHits.empty() || diffuse.persistentSmoothed.empty() ||
               diffuse.persistentHits.front() != settings.intervals.front() + 1)
@@ -945,8 +945,8 @@ StatusCode RecBreakpoint::execute() {
                                   fit.ip.Z0, fit.ip.tanLambda};
         m_absoluteIPCovariance.assign(fit.ip.covMatrix.begin(), fit.ip.covMatrix.end());
       };
-      if (!m_absoluteNeutralRTS || settings.intervals.size() != 1) {
-        m_absoluteStatus = m_absoluteNeutralRTS ? 1 : 0;
+      if (!ecalRefitEnabled() || settings.intervals.size() != 1) {
+        m_absoluteStatus = ecalRefitEnabled() ? 1 : 0;
         copyOrdinaryToAbsolute();
       } else {
         try {
@@ -962,10 +962,10 @@ StatusCode RecBreakpoint::execute() {
           } else {
             m_absolutePriorEnergy = neutral.energy;
             m_absolutePriorSigma = neutral.sigmaEnergy;
-            if (m_absoluteDiffuseReference && !absoluteLossReference)
+            if (ecalUsesDiffuseReference() && !absoluteLossReference)
               throw std::runtime_error("Diffuse loss-map reference unavailable: " + m_diffuseError);
             if (absoluteLossReference) {
-              if (m_absoluteReferenceSource == "PostLossPlusECAL") {
+              if (m_ecalLossReferenceMode == "PostReference") {
                 const double before = m_absoluteReferencePostP + neutral.energy;
                 const double tanLambda = absoluteLossReference->mean(4, 0);
                 if (!std::isfinite(before) || before <= neutral.energy ||
@@ -1045,7 +1045,7 @@ StatusCode RecBreakpoint::execute() {
           m_absoluteStatus = -1;
           m_absoluteError = error.what();
           copyOrdinaryToAbsolute();
-          warning() << "AbsoluteNeutralLossRTS ordinary-RTS fallback: "
+          warning() << "ECAL absolute-loss RTS ordinary-RTS fallback: "
                     << m_absoluteError << endmsg;
         }
       }

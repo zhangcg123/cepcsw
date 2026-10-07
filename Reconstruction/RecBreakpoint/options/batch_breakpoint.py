@@ -46,7 +46,7 @@ TRACKER_PASSTHROUGH = (
 )
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_DIFFUSE_AUGMENTED_RTS',
-               'BP_ABSOLUTE_NEUTRAL_RTS', 'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
+               'BP_ECAL_LOSS_REFERENCE_MODE', 'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
                'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
@@ -126,6 +126,11 @@ def prepare():
             raise ValueError(retired + ' was removed; RecBreakpoint is one-pass only')
     if 'BP_LOSS_PRIOR_MODE' in os.environ:
         raise ValueError('BP_LOSS_PRIOR_MODE/LossPriorMode was removed; ordinary breakpoint fits use a Gaussian loss prior')
+    for retired in ('BP_ABSOLUTE_NEUTRAL_RTS', 'BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE',
+                    'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE'):
+        if retired in os.environ:
+            raise ValueError(retired + ' was removed; use BP_ECAL_LOSS_REFERENCE_MODE='
+                             'Off/NoReference/PreReference/PostReference')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',

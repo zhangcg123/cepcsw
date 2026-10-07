@@ -19,6 +19,40 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_ecal_reference_mode_is_frozen_for_each_variant(self):
+        for mode in (None, 'Off', 'NoReference', 'PreReference', 'PostReference'):
+            output = 'ecal_' + (mode or 'default')
+            expected = mode or 'Off'
+            overrides = {} if mode is None else {'BP_ECAL_LOSS_REFERENCE_MODE': mode}
+            self.prepare(OUTPUT_TUPLEPATH=output, **overrides)
+            job = self.manifest(output)
+            template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+            frozen = Path(job['cards']['breakpoint']).read_text()
+            self.assertTrue(frozen.endswith(template))
+            prefix = frozen[:-len(template)]
+            assignment = next(line for line in template.splitlines()
+                              if line.startswith('fit.EcalLossReferenceMode ='))
+            fit = types.SimpleNamespace()
+            # Worker ambient steering must not change the submitted mode.
+            with patch.dict(os.environ, {'BP_ECAL_LOSS_REFERENCE_MODE': 'wrong-ambient-mode'}, clear=True):
+                exec(prefix + '\n' + assignment, {'fit': fit, 'os': os})
+            self.assertEqual(fit.EcalLossReferenceMode, expected)
+            if mode is not None:
+                self.assertEqual(job['controls']['BP_ECAL_LOSS_REFERENCE_MODE'], mode)
+
+    def test_retired_ecal_controls_are_rejected_before_outputs(self):
+        import runpy
+        card = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
+        for name in ('BP_ABSOLUTE_NEUTRAL_RTS', 'BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE',
+                     'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE'):
+            self.assertNotIn(name, batch.BP_CONTROLS)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'use BP_ECAL_LOSS_REFERENCE_MODE'):
+                self.prepare(**{name: '1'})
+            self.assertFalse((self.repo/'outputs').exists())
+            with patch.dict(os.environ, {name: '1'}, clear=True):
+                with self.assertRaisesRegex(ValueError, 'use BP_ECAL_LOSS_REFERENCE_MODE'):
+                    runpy.run_path(str(card))
+
     def test_retired_loss_prior_control_rejected_before_preparing_jobs(self):
         self.assertNotIn('BP_LOSS_PRIOR_MODE', batch.BP_CONTROLS)
         for value in ('Unconstrained', 'Fixed', 'Gaussian'):

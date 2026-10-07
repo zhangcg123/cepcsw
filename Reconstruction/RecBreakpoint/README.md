@@ -68,8 +68,8 @@ beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
 base free-loss result. A ninth, independent
 `BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
 `DiffuseAugmentedRTS` (compiled default off; maintained-card default on).
-The tenth, `BreakpointTracksAbsoluteNeutralRTS`, is a default-off parallel
-experiment controlled by `AbsoluteNeutralLossRTS`. It requires exactly one
+The tenth, `BreakpointTracksAbsoluteNeutralRTS`, is one default-off ECAL
+absolute-loss KF/RTS experiment controlled by `EcalLossReferenceMode`. It requires exactly one
 selected breakpoint interval and a reconstructed hit-supported neutral ECAL
 cluster near the input track's ECAL direction. Its sixth state coordinate is
 the absolute loss `L = p_before - p_after` in GeV. Selected cluster energy and
@@ -85,10 +85,24 @@ cluster indices, prior energy/error, smoothed loss/variance, IP covariance,
 and 6D smoothed states. This is a single-pass extended-KF prototype;
 nonlinear loss mapping can be biased when the pre-break forward state is far
 from the true momentum, so a successful status is not physics validation.
-The default-off `AbsoluteNeutralDiffuseReference` tests this sensitivity by
-evaluating **only the breakpoint loss mapping and its Jacobian** at the selected
-diffuse-derived upstream reference mean (requires `DiffuseAugmentedRTS`). The original
-forward track mean is transported with the affine offset
+The one controller has four values, with no separate enable/reference switches:
+
+| EcalLossReferenceMode | Loss-map reference for the same absolute-energy fitter |
+|---|---|
+| Off (compiled and card default) | No ECAL refit; publish an ordinary RTS copy |
+| NoReference | Evaluate at the live forward state at hit i; no diffuse reference is supplied |
+| PreReference | Use the diffuse smoothed state at hit i |
+| PostReference | Start from that same state at i; replace curvature using p_diffuse(i+1) + E_neutral and the charge sign at i+1 |
+
+Set `fit.EcalLossReferenceMode` in the maintained card, or export
+`BP_ECAL_LOSS_REFERENCE_MODE` for standalone/batch use. The batch helper freezes
+this choice into the generated card. PreReference and PostReference require
+`DiffuseAugmentedRTS=true`; NoReference can run without the diffuse fit.
+All three active choices share cluster selection, ECAL energy/error initialization,
+the six-dimensional forward filter, RTS smoothing, output and fallback code.
+Only the reference used for **the breakpoint loss mapping and its Jacobian** differs.
+For either diffuse-reference choice, the original forward track mean is transported with
+the affine offset
 `f(reference) + J(reference)*(live-reference)`; it is not replaced by diffuse.
 The original seed, live covariance, and ECAL `L` prior/error remain unchanged.
 The diffuse covariance is explicitly discarded. Geometry and measurement
@@ -100,19 +114,24 @@ reference parameters (`drho,phi0,kappa,dz,tanLambda`, kappa=1/pT), and
 `absolute_neutral_forward_p_before`/`absolute_neutral_reference_p_before` in
 GeV. The used flag is true only for a successful published referenced fit;
 on failure the attempted reference can still be recorded.
-`AbsoluteNeutralReferenceSource` selects `UpstreamSmoothed` (the first
-reference test and default) or `PostLossPlusECAL` while the diffuse-reference
-switch is enabled. The latter reads the diffuse smoothed state just after the
-selected interval and sets the upstream reference momentum magnitude to
-`p_after_diffuse + E_neutral`. It keeps the upstream pivot/direction, uses the
-post-break curvature sign, and changes only the curvature mean at the loss-map
-expansion point. The independent ECAL `L` prior/error, original live seed,
-covariance, native propagation and hit updates remain the same. The tuple
-records `absolute_neutral_reference_source` and
-`absolute_neutral_reference_p_after` to make the choice auditable. An
+PostReference reads the diffuse smoothed state at hit i+1; it does not propagate
+that reference backward to i. The loss map itself is still applied at the
+upstream pivot i, before native propagation to i+1. Its resulting before-loss
+reference momentum is `p_diffuse(i+1) + E_neutral`; ECAL energy supplies the same
+independent `L` prior/error as in the other two modes. It is not an additional
+ECAL measurement. The tuple records the selected controller value in
+`absolute_neutral_reference_source`, and the diffuse downstream reference in
+`absolute_neutral_reference_p_after`, to make the choice auditable. An
 unavailable or invalid post-break reference produces status -1 and an
 ordinary-copy fallback. This option is a controlled one-pass test, not a
 full-trajectory relinearization or a physics-validated correction.
+The former three properties `AbsoluteNeutralLossRTS`,
+`AbsoluteNeutralDiffuseReference`, and `AbsoluteNeutralReferenceSource` are
+removed. Their BP_ABSOLUTE_NEUTRAL_* environment controls now fail explicitly.
+The old ECAL-to-log-loss-prior recipe is retired; its numerical results and
+historical diagnostic artifacts remain evidence in dated records. The ordinary,
+free-loss and truth-prior fits still use their own MeanLogLoss/SigmaLogLoss
+machinery; it is not part of the ECAL refit controller.
 All ten names must differ
 from each other and the input. Each successful result contains IP, first-hit,
 last-hit, and, when native extrapolation succeeds, ECAL-face (`AtCalorimeter`)
@@ -548,9 +567,7 @@ maintained card, but not physics-validated.
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | DiffuseAugmentedRTS | false | Independent one-interval, flat-prior 6D KF/RTS fit; maintained-card default true (`BP_DIFFUSE_AUGMENTED_RTS=0` disables it); ignores SigmaLogLoss for this extra fit |
-| AbsoluteNeutralLossRTS | false | Independent one-interval RTS using hit-supported neutral ECAL energy directly as an absolute sixth-coordinate prior; maintained-card default also false (`BP_ABSOLUTE_NEUTRAL_RTS=1` enables) |
-| AbsoluteNeutralDiffuseReference | false | Absolute-loss birth-map/Jacobian expansion at diffuse upstream smoothed mean only; requires DiffuseAugmentedRTS when AbsoluteNeutralLossRTS is on; no diffuse covariance/prior reuse; `BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE=1` enables |
-| AbsoluteNeutralReferenceSource | UpstreamSmoothed | When AbsoluteNeutralDiffuseReference is true, choose UpstreamSmoothed or PostLossPlusECAL for the loss-map reference only; `BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE` steers the maintained card |
+| EcalLossReferenceMode | Off | One absolute-loss KF/RTS: Off, NoReference (live forward reference), PreReference (diffuse state i), PostReference (curvature from diffuse momentum i+1 plus ECAL); last two require DiffuseAugmentedRTS; card and batch environment BP_ECAL_LOSS_REFERENCE_MODE |
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
