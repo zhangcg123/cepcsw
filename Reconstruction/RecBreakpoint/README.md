@@ -67,8 +67,8 @@ beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
 `FreeLossBeamSpotObjective` controls this pair; when disabled it copies the
 base free-loss result. A ninth, independent
 `BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
-`DiffuseAugmentedRTS` (compiled default off; maintained-card default on).
-The tenth, `BreakpointTracksAbsoluteNeutralRTS`, is one default-off ECAL
+`DiffuseAugmentedRTS` (compiled and maintained-card default on).
+The tenth, `BreakpointTracksAbsoluteNeutralRTS`, is one default-on ECAL
 absolute-loss KF/RTS experiment controlled by `EcalLossReferenceMode`. It requires exactly one
 selected breakpoint interval and a reconstructed hit-supported neutral ECAL
 cluster near the input track's ECAL direction. Its sixth state coordinate is
@@ -89,10 +89,10 @@ The one controller has four values, with no separate enable/reference switches:
 
 | EcalLossReferenceMode | Loss-map reference for the same absolute-energy fitter |
 |---|---|
-| Off (compiled and card default) | No ECAL refit; publish an ordinary RTS copy |
+| Off | No ECAL refit; publish an ordinary RTS copy |
 | NoReference | Evaluate at the live forward state at hit i; no diffuse reference is supplied |
 | PreReference | Use the diffuse smoothed state at hit i |
-| PostReference | Start from that same state at i; replace curvature using p_diffuse(i+1) + E_neutral and the charge sign at i+1 |
+| PostReference (compiled and card default) | Start from that same state at i; replace curvature using p_diffuse(i+1) + E_neutral and the charge sign at i+1 |
 
 Set `fit.EcalLossReferenceMode` in the maintained card, or export
 `BP_ECAL_LOSS_REFERENCE_MODE` for standalone/batch use. The batch helper freezes
@@ -306,7 +306,7 @@ apply loss, propagate, update downstream hit. Backward: propagate to upstream
 surface, apply inverse loss, then update its hit. It is not a fitted emission
 position inside the interval. No BH mixture is used.
 
-### Persistent6D
+### Persistent6D (compiled/card default)
 
 Before birth the filter is 5D. At the configured upstream hit it introduces
 one independent b prior. The full 6D mean/covariance then stays live at EVERY
@@ -325,7 +325,7 @@ backward continuation uses the established local-joint inward loss treatment
 on the common forward endpoint's 5D marginal, not a new persistent inward
 six-dimensional implementation.
 
-### LocalMarginal (compiled/card default)
+### LocalMarginal
 
 The live helix stays 5D. At a selected edge an independent Gaussian b is
 marginalized into the helix covariance. Retained joint cross covariances allow
@@ -337,7 +337,7 @@ large loose-seed covariances.
 
 ### TruthOverride
 
-The default diagnostic chain is Truth interval selection + LocalMarginal +
+The default diagnostic chain is Truth interval selection + Persistent6D +
 TruthOverride=True. The effective interval list is shared by both pairs:
 
 ```text
@@ -357,7 +357,7 @@ successful oracle results have status2. Auto remains an initialization error.
 
 ```python
 fit.IntervalSelectionMode = "Truth"  # select locations for this track
-fit.LossStateMode = "LocalMarginal"   # ordinary pair fits the loss
+fit.LossStateMode = "Persistent6D"   # ordinary pair fits the loss
 fit.TruthOverride = True           # additional oracle pair; compiled/card default True
 fit.BreakpointIntervals = []  # Manual-only; Truth builds the effective list
 # Six endpoints: ordinary, truth-override and free-loss RTS/backward pairs.
@@ -591,12 +591,12 @@ maintained card, but not physics-validated.
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
-| LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
-| DiffuseAugmentedRTS | false | Independent one-interval, flat-prior 6D KF/RTS fit; maintained-card default true (`BP_DIFFUSE_AUGMENTED_RTS=0` disables it); ignores SigmaLogLoss for this extra fit |
-| EcalLossReferenceMode | Off | One absolute-loss KF/RTS: Off, NoReference (live forward reference), PreReference (diffuse state i), PostReference (curvature from diffuse momentum i+1 plus ECAL); last two require DiffuseAugmentedRTS; card and batch environment BP_ECAL_LOSS_REFERENCE_MODE |
+| LossStateMode | Persistent6D | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| DiffuseAugmentedRTS | true | Independent one-interval, flat-prior 6D KF/RTS fit; ignores SigmaLogLoss. Disabling also requires ECAL Off or NoReference |
+| EcalLossReferenceMode | PostReference | One absolute-loss KF/RTS: Off, NoReference (live forward reference), PreReference (diffuse state i), PostReference (curvature from diffuse momentum i+1 plus ECAL); last two require DiffuseAugmentedRTS; card and batch environment BP_ECAL_LOSS_REFERENCE_MODE |
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
-| FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
+| FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one interval in the selected Persistent6D or LocalMarginal representation; input KF fallback on failure/unsupported mode |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |

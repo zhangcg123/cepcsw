@@ -19,9 +19,13 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     diagnostic.status = FreeLossStatus::NoInterval;
     return result;
   }
-  if (ordinary.intervals.size() != 1 || ordinary.lossStateMode != "LocalMarginal") {
+  // Both representations provide the same captured Gaussian model and RTS
+  // score interface. Keep the selected representation for every trial and
+  // final refit; do not silently switch a Persistent6D request to 5D.
+  if (ordinary.intervals.size() != 1 ||
+      (ordinary.lossStateMode != "LocalMarginal" && ordinary.lossStateMode != "Persistent6D")) {
     diagnostic.status = FreeLossStatus::Unsupported;
-    diagnostic.error = "FreeLossFit supports one selected LocalMarginal interval";
+    diagnostic.error = "FreeLossFit supports one selected LocalMarginal or Persistent6D interval";
     return result;
   }
   diagnostic.interval = ordinary.intervals.front();

@@ -95,10 +95,10 @@ if "BP_BACKWARD_MODE" in os.environ:
 # Persistent6D retains b and the full 6x6 covariance at every downstream hit.
 # One breakpoint at most. The backward continuation retains its local-joint
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
-fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
-# Independent exact-diffuse augmented 6D KF/RTS experiment (card default on;
-# compiled property default remains off). Set BP_DIFFUSE_AUGMENTED_RTS=0 to
-# copy ordinary RTS into its parallel output instead.
+fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "Persistent6D")
+# Independent exact-diffuse augmented 6D KF/RTS experiment (compiled/card on).
+# Required by the default ECAL PostReference. To disable, also choose ECAL
+# Off or NoReference; the diffuse output then copies ordinary RTS.
 # At the one selected interval, b=log(p_before/p_after) starts with no finite
 # Gaussian prior. Downstream hits identify b; SigmaLogLoss is NOT used here.
 # 0: disabled ordinary-RTS copy; 1: no-interval ordinary copy;
@@ -108,10 +108,10 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
 fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
 # One ECAL absolute-loss KF/RTS fitter, selected by this single controller:
-# Off (default): copy ordinary RTS into the ECAL output.
+# Off: copy ordinary RTS into the ECAL output.
 # NoReference: evaluate the loss map/Jacobian at the live forward state at hit i.
 # PreReference: use the diffuse smoothed state at i as the loss-map reference.
-# PostReference: start with that same state; replace its curvature using
+# PostReference (default): start with that same state; replace its curvature using
 # p_diffuse(i+1)+E_neutral, with the charge sign from i+1. Keep pivot/direction i.
 # PreReference/PostReference require DiffuseAugmentedRTS=True. Only their mean
 # reference is used; the live seed/covariance are retained. No diffuse error
@@ -122,7 +122,7 @@ fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
 # 6D fitter; ECAL energy is not applied as a second measurement update.
 # One selected interval is required. Missing interval/cluster or failed fit
 # produces an ordinary RTS copy, with explicit status/error in the flat tuple.
-fit.EcalLossReferenceMode = os.environ.get("BP_ECAL_LOSS_REFERENCE_MODE", "Off")
+fit.EcalLossReferenceMode = os.environ.get("BP_ECAL_LOSS_REFERENCE_MODE", "PostReference")
 fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "10"))
 fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"))
 # Per-cluster sigma_E [GeV] = a*sqrt(E [GeV]) + c*E [GeV]; independent cluster
@@ -135,7 +135,8 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # it remains separate from the ordinary fit and the truth-centred pair.
 # Optional outer prior-center fit: normalized full-track likelihood, not chi2 alone.
 # Ordinary RTS/backward are ALWAYS retained. True adds optimized results in
-# the FreeLoss RTS/backward collections on one selected LocalMarginal interval;
+# the FreeLoss RTS/backward collections on one selected interval, using the
+# selected LossStateMode (Persistent6D or LocalMarginal) for every trial/refit;
 # their covariances include the loss posterior variance and correlations.
 # Minuit's error on the chosen prior center is NOT another SigmaLogLoss.
 # False copies ordinary results

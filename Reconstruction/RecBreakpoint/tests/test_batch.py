@@ -19,10 +19,30 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_compiled_and_frozen_card_tracking_defaults_agree(self):
+        import re
+        self.prepare()
+        card = Path(self.manifest()['cards']['breakpoint']).read_text()
+        template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        assignments = '\n'.join(line for line in template.splitlines() if line.startswith(
+            ('fit.LossStateMode =', 'fit.EcalLossReferenceMode =', 'fit.DiffuseAugmentedRTS =')))
+        fit = types.SimpleNamespace()
+        with patch.dict(os.environ, {'BP_LOSS_STATE_MODE': 'LocalMarginal',
+                                     'BP_ECAL_LOSS_REFERENCE_MODE': 'Off',
+                                     'BP_DIFFUSE_AUGMENTED_RTS': '0'}, clear=True):
+            exec(card[:-len(template)] + '\n' + assignments, {'fit': fit, 'os': os})
+        expected = {'LossStateMode': 'Persistent6D',
+                    'EcalLossReferenceMode': 'PostReference', 'DiffuseAugmentedRTS': True}
+        header = (REPO/'Reconstruction/RecBreakpoint/src/RecBreakpoint.h').read_text()
+        for name, value in expected.items():
+            self.assertEqual(getattr(fit, name), value)
+            literal = 'true' if value is True else '"' + value + '"'
+            self.assertRegex(header, r'"' + name + r'",\s*' + re.escape(literal) + r'\}')
+
     def test_ecal_reference_mode_is_frozen_for_each_variant(self):
         for mode in (None, 'Off', 'NoReference', 'PreReference', 'PostReference'):
             output = 'ecal_' + (mode or 'default')
-            expected = mode or 'Off'
+            expected = mode or 'PostReference'
             overrides = {} if mode is None else {'BP_ECAL_LOSS_REFERENCE_MODE': mode}
             self.prepare(OUTPUT_TUPLEPATH=output, **overrides)
             job = self.manifest(output)
@@ -73,11 +93,12 @@ class BatchTest(unittest.TestCase):
         card = Path(self.manifest()['cards']['breakpoint']).read_text()
         assignments = '\n'.join(line for line in card.splitlines()
                                 if line.startswith(('fit.MeanLogLoss =', 'fit.SigmaLogLoss =', 'fit.LossStateMode =')))
-        for mode in ('LocalMarginal', 'Persistent6D'):
+        for mode in (None, 'LocalMarginal', 'Persistent6D'):
             fit = types.SimpleNamespace()
-            with self.subTest(mode=mode), patch.dict(os.environ, {'BP_LOSS_STATE_MODE': mode}, clear=True):
+            overrides = {} if mode is None else {'BP_LOSS_STATE_MODE': mode}
+            with self.subTest(mode=mode), patch.dict(os.environ, overrides, clear=True):
                 exec(assignments, {'fit':fit, 'os':os})
-            self.assertEqual(fit.LossStateMode, mode)
+            self.assertEqual(fit.LossStateMode, mode or 'Persistent6D')
             self.assertEqual(fit.MeanLogLoss, 0)
             self.assertEqual(fit.SigmaLogLoss, .001)
         self.assertNotIn('fit.LossPriorMode', card)

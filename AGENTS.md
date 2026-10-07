@@ -312,13 +312,18 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is one default-off ECAL absolute-loss
+Active work on local `breakpoint` is one default-on ECAL absolute-loss
 KF/RTS refit. `EcalLossReferenceMode` replaces the three overlapping controls
 with Off, NoReference (live forward reference), PreReference (diffuse state at
 hit i), and PostReference (same state with curvature from diffuse momentum at
 i+1 plus neutral ECAL energy). All active modes share the same fit and ECAL
 energy/error prior. The last two require DiffuseAugmentedRTS; diffuse covariance
 is not imported. The maintained card/batch variable is BP_ECAL_LOSS_REFERENCE_MODE.
+Compiled/card defaults are Persistent6D and ECAL PostReference, with diffuse
+enabled to provide that reference. Free-loss supports both Persistent6D and
+LocalMarginal through the same fitter and unchanged SigmaLogLoss/objective.
+The default migration is recorded in
+`agents_record/2026-10-08-breakpoint-persistent-post-defaults.md`.
 The old ECAL-to-log-prior diagnostic is retired; ordinary/free-loss/truth-prior
 fits retain their own log-loss machinery. The update is tested through the
 build-tree runtime; the shared InstallArea is not updated.

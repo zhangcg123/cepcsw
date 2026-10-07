@@ -91,10 +91,10 @@ private:
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 100.0};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
-  Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
+  Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
-  Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", false};
-  Gaudi::Property<std::string> m_ecalLossReferenceMode{this, "EcalLossReferenceMode", "Off"};
+  Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", true};
+  Gaudi::Property<std::string> m_ecalLossReferenceMode{this, "EcalLossReferenceMode", "PostReference"};
   Gaudi::Property<double> m_neutralThetaWindow{this, "NeutralLossThetaWindowMrad", 10.0};
   Gaudi::Property<double> m_neutralPhiWindow{this, "NeutralLossPhiWindowMrad", 200.0};
   Gaudi::Property<double> m_neutralStochasticError{this, "NeutralLossStochasticError", 0.011};

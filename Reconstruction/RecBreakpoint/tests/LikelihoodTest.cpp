@@ -46,9 +46,37 @@ void checkFiniteLossPrior() {
       const double completeChi2=hitResidual.dot(precision*hitResidual)+fitted.squaredNorm();
       const auto scored=breakpoint::evaluateSmoothedTrackLikelihood(model,completeChi2);
       const auto marginal=breakpoint::evaluateTrackLikelihood(model);
+      // The same loss retained as a sixth coordinate: rectangular 6x5 birth,
+      // correlated track/loss noise at birth, then a static loss coordinate.
+      // Its normalization must match both the 5D marginal and dense reference.
+      breakpoint::GaussianTrackModel persistent;
+      persistent.seedCovariance.ResizeTo(model.seedCovariance);
+      persistent.seedCovariance=model.seedCovariance;
+      for(int i=0;i<3;++i) {
+        const int dimensions=i ? 6 : 5;
+        TMatrixD h(1,dimensions),v(1,1),r(1,1);
+        h.Zero();h(0,2)=1;v(0,0)=measurement(i,i);r(0,0)=residual(i);
+        persistent.hits.push_back({h,v,r});
+        if(i) {
+          const int previousDimensions=i==1 ? 5 : 6;
+          TMatrixD f(6,previousDimensions),q(6,6),shift(previousDimensions,1);
+          f.Zero();q.Zero();shift.Zero();
+          for(int j=0;j<previousDimensions;++j) f(j,j)=1;
+          if(i==1) {
+            q(2,2)=4*sigma*sigma;
+            q(2,5)=q(5,2)=2*sigma*sigma;
+            q(5,5)=sigma*sigma;
+          }
+          persistent.transitions.push_back({f,q,shift});
+        }
+      }
+      const auto persistentScore=breakpoint::evaluateSmoothedTrackLikelihood(persistent,completeChi2);
+      const auto persistentMarginal=breakpoint::evaluateTrackLikelihood(persistent);
       if(std::abs(completeChi2-expectedChi2)>1.e-10 ||
          std::abs(scored.logDeterminant-expectedLogdet)>1.e-10 ||
-         std::abs(scored.nll2-marginal.nll2)>1.e-10)
+         std::abs(scored.nll2-marginal.nll2)>1.e-10 ||
+         std::abs(persistentScore.nll2-scored.nll2)>1.e-10 ||
+         std::abs(persistentMarginal.nll2-marginal.nll2)>1.e-10)
         throw std::runtime_error("Shared Gaussian loss variance/normalization mismatch");
     }
     std::cout<<"Shared loss sigma="<<sigma<<": dense and complete-smoothed objectives agree\n";
