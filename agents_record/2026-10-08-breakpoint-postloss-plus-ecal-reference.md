@@ -114,4 +114,4 @@ passed (Transport, Likelihood, Diffuse). The new source/card option was
 tested through the build-tree `run`; the shared InstallArea was not changed.
 The dedicated batch-helper suite passes 33/33 after aligning the submission
 group to `cms`, as the existing test and earlier user steering require.
-No GSF or shared KF source was edited, and no remote ref was changed.
+No GSF or shared KF source was edited.
