@@ -4,6 +4,7 @@
 #include "TMatrixDSym.h"
 
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace breakpoint {
@@ -49,6 +50,17 @@ edm4hep::TrackState toEDM(const TrackState& state, double bz, int location) {
     for (int j = 0; j <= i; ++j)
       result.covMatrix[packed(i, j)] = scales[i] * scales[j] * state.covariance(i, j);
   return result;
+}
+
+double transverseMomentumError(const edm4hep::TrackState& state, double bz) {
+  // EDM packed covariance index (omega,omega) = 2*(2+1)/2 + 2 = 5.
+  const double omega = state.omega;
+  const double variance = state.covMatrix[5];
+  if (!std::isfinite(bz) || !std::isfinite(omega) || omega == 0 ||
+      !std::isfinite(variance) || variance < 0)
+    return std::numeric_limits<double>::quiet_NaN();
+  const double pt = std::abs(bz * curvaturePerTesla / omega);
+  return pt * std::sqrt(variance) / std::abs(omega);
 }
 
 TMatrixD transpose(const TMatrixD& matrix) {

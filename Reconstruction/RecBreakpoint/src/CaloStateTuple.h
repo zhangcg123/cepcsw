@@ -27,7 +27,7 @@ public:
 private:
   int m_status = 0;
   std::string m_error;
-  double m_pt = 0, m_p = 0;
+  double m_pt = 0, m_ptError = 0, m_p = 0;
   // EDM helix order: D0, phi, omega, Z0, tanLambda; covariance is the
   // original packed 21-element EDM matrix. Reference point is in mm.
   std::vector<double> m_parameters, m_covariance, m_referencePoint;

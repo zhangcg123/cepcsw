@@ -77,6 +77,8 @@ std::pair<double, double> inferLoss(const Transition& transition,
 
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                      const FitSettings& settings) const {
+  if (settings.absoluteLossPrior)
+    throw std::invalid_argument("Ordinary paired fitter cannot consume an absolute-loss prior");
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
   if (settings.lossStateMode == "Persistent6D") {
@@ -100,6 +102,18 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       ? fitPersistent(hits,settings) : fitLocalRTS(hits,settings);
   auto inward = finishBackward(hits,settings,first);
   return {first,std::move(inward)};
+}
+
+FitResult BreakpointFitter::fitAbsoluteLossRTS(const std::vector<edm4hep::TrackerHit>& hits,
+    const FitSettings& settings, double energy, double sigmaEnergy,
+    const TrackState* lossReference) const {
+  if (settings.intervals.size() != 1 ||
+      !std::isfinite(energy) || energy <= 0 ||
+      !std::isfinite(sigmaEnergy) || sigmaEnergy <= 0)
+    throw std::invalid_argument("Absolute-loss RTS requires one interval and positive energy/error");
+  auto absolute = settings;
+  absolute.absoluteLossPrior = std::make_pair(energy, sigmaEnergy);
+  return fitPersistent(hits, absolute, lossReference);
 }
 
 FitResult BreakpointFitter::fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
@@ -307,9 +321,12 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
 }
 
 FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
-    const FitSettings& settings) const {
+    const FitSettings& settings, const TrackState* lossReference) const {
   const int interval = settings.intervals.front();
   const auto loss = intervalSettings(settings, interval);
+  const bool absolute = settings.absoluteLossPrior.has_value();
+  const double priorMean = absolute ? settings.absoluteLossPrior->first : loss.meanLogLoss;
+  const double priorSigma = absolute ? settings.absoluteLossPrior->second : loss.sigmaLogLoss;
   if (hits.size() < 3 || interval < 0 || interval + 1 >= static_cast<int>(hits.size()))
     throw std::invalid_argument("Persistent6D breakpoint outside track");
   FitResult result;
@@ -342,8 +359,10 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     }
     const bool birth = i == interval;
     if (birth) live = LossTrackState::introduce(result.filtered.back(),
-        loss.meanLogLoss, loss.sigmaLogLoss * loss.sigmaLogLoss);
-    const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth);
+        priorMean, priorSigma * priorSigma);
+    const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth,
+        absolute ? LossCoordinate::AbsoluteMomentum : LossCoordinate::LogRatio,
+        birth ? lossReference : nullptr);
     live = step.filtered; // Entire six-dimensional posterior is the next input.
     result.predicted.push_back(step.predicted.track());
     result.filtered.push_back(step.filtered.track());
@@ -364,7 +383,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
         for (int col = 0; col < 5; ++col) transport(row, col) = step.transport(row, col);
       }
       transports.push_back(transport);
-      noises.push_back(step.noise + loss.sigmaLogLoss * loss.sigmaLogLoss
+      noises.push_back(step.noise + priorSigma * priorSigma
           * lossColumn * transpose(lossColumn));
     } else {
       transports.push_back(step.transport); noises.push_back(step.noise);
@@ -407,8 +426,14 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   }
   const auto& local = result.persistentFiltered.front();
   // The final outward posterior has already used ALL downstream measurements.
-  result.breakpoints.push_back({interval, loss.meanLogLoss, live.mean(5, 0),
-      live.covariance(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
+  if (absolute) {
+    const auto& smoothedLoss = result.persistentSmoothed.front();
+    result.absoluteLoss = AbsoluteLossResult{interval, priorMean, priorSigma,
+        smoothedLoss.mean(5, 0), smoothedLoss.covariance(5, 5),
+        live.mean(5, 0), live.covariance(5, 5)};
+  } else
+    result.breakpoints.push_back({interval, loss.meanLogLoss, live.mean(5, 0),
+        live.covariance(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
   result.endpoint = result.smoothed;
   result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,

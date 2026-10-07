@@ -20,7 +20,7 @@ public:
   int backwardIndex() const { return m_backwardIndex; }
 private:
   struct Endpoint {
-    double pt = 0;
+    double pt = 0, ptError = 0;
     std::vector<double> parameters, covariance, loss, lossVariance;
     void book(TTree& tree, const std::string& prefix);
     void assign(const FitResult& fit, double bz);

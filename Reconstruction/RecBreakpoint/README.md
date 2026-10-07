@@ -68,7 +68,52 @@ beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
 base free-loss result. A ninth, independent
 `BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
 `DiffuseAugmentedRTS` (compiled default off; maintained-card default on).
-All nine names must differ
+The tenth, `BreakpointTracksAbsoluteNeutralRTS`, is a default-off parallel
+experiment controlled by `AbsoluteNeutralLossRTS`. It requires exactly one
+selected breakpoint interval and a reconstructed hit-supported neutral ECAL
+cluster near the input track's ECAL direction. Its sixth state coordinate is
+the absolute loss `L = p_before - p_after` in GeV. Selected cluster energy and
+its estimated error initialize `L` once; no separate ECAL measurement update
+is made. It uses the existing 6D Kalman/RTS path with an absolute-loss birth
+map, leaving all log-loss outputs intact. When disabled or no cluster/interval
+qualifies, its collection holds an ordinary RTS copy; on fit failure it also
+copies ordinary RTS and records the error. No truth enters cluster selection.
+`absolute_neutral_status` is 0 for disabled, 1 for an ordinary copy, 2 for a
+fitted absolute-loss result, -1 for fit failure with ordinary copy, and -2
+when the ordinary fit failed. The flat row also stores the selected ECAL
+cluster indices, prior energy/error, smoothed loss/variance, IP covariance,
+and 6D smoothed states. This is a single-pass extended-KF prototype;
+nonlinear loss mapping can be biased when the pre-break forward state is far
+from the true momentum, so a successful status is not physics validation.
+The default-off `AbsoluteNeutralDiffuseReference` tests this sensitivity by
+evaluating **only the breakpoint loss mapping and its Jacobian** at the selected
+diffuse-derived upstream reference mean (requires `DiffuseAugmentedRTS`). The original
+forward track mean is transported with the affine offset
+`f(reference) + J(reference)*(live-reference)`; it is not replaced by diffuse.
+The original seed, live covariance, and ECAL `L` prior/error remain unchanged.
+The diffuse covariance is explicitly discarded. Geometry and measurement
+linearizations still follow the new live forward pass: this is a single
+loss-map reference test, not a whole-trajectory iteration. Unavailable or
+unphysical references trigger the existing status -1 ordinary-copy fallback.
+The flat row records reference requested/used flags, the five upstream
+reference parameters (`drho,phi0,kappa,dz,tanLambda`, kappa=1/pT), and
+`absolute_neutral_forward_p_before`/`absolute_neutral_reference_p_before` in
+GeV. The used flag is true only for a successful published referenced fit;
+on failure the attempted reference can still be recorded.
+`AbsoluteNeutralReferenceSource` selects `UpstreamSmoothed` (the first
+reference test and default) or `PostLossPlusECAL` while the diffuse-reference
+switch is enabled. The latter reads the diffuse smoothed state just after the
+selected interval and sets the upstream reference momentum magnitude to
+`p_after_diffuse + E_neutral`. It keeps the upstream pivot/direction, uses the
+post-break curvature sign, and changes only the curvature mean at the loss-map
+expansion point. The independent ECAL `L` prior/error, original live seed,
+covariance, native propagation and hit updates remain the same. The tuple
+records `absolute_neutral_reference_source` and
+`absolute_neutral_reference_p_after` to make the choice auditable. An
+unavailable or invalid post-break reference produces status -1 and an
+ordinary-copy fallback. This option is a controlled one-pass test, not a
+full-trajectory relinearization or a physics-validated correction.
+All ten names must differ
 from each other and the input. Each successful result contains IP, first-hit,
 last-hit, and, when native extrapolation succeeds, ECAL-face (`AtCalorimeter`)
 states and the original ordered hits. The ECAL-face state starts from that
@@ -83,7 +128,17 @@ excluded input; absent outputs map to -1. Current fit failures fail the pair,
 rather than publishing one branch under the other's name.
 
 The flat tuple always records both `rts_pt` and `backward_pt`.
-`breakpoint_pt` remains an RTS alias. The removed `backward_mode` branch no
+`breakpoint_pt` remains an RTS alias. Every IP momentum endpoint has a
+matching `*_pt_error` one-sigma field in GeV: `kf`, `breakpoint`/`rts`,
+`backward`, `free_loss_rts`, `free_loss_backward`,
+`beam_guided_free_loss_rts`, `beam_guided_free_loss_backward`,
+`truth_override_rts`, `truth_override_backward`, and `diffuse_augmented`.
+The optional `reference_kf` and `reference_backward_kf` checks have the same
+field. These are fit-covariance errors, not empirical resolution estimates.
+For an EDM endpoint with curvature `omega` and packed covariance element
+`covMatrix[5]=Var(omega)`, the stored value is
+`sigma(pT) = pT*sqrt(Var(omega))/abs(omega)`. Missing or invalid endpoint
+covariance yields NaN. The removed `backward_mode` branch no
 longer misleadingly labels a row that now contains both results.
 
 The calorimeter state is saved in the flat tuple for the input KF and all nine
@@ -91,13 +146,15 @@ endpoint families, using prefixes `kf_`, `rts_`, `backward_`,
 `free_loss_rts_`, `free_loss_backward_`, `beam_guided_free_loss_rts_`,
 `beam_guided_free_loss_backward_`, `truth_override_rts_`,
 `truth_override_backward_`, and `diffuse_augmented_rts_`. Each prefix has
-`calo_status`, `calo_error`, `calo_pt`, `calo_p`, `calo_parameters`,
+`calo_status`, `calo_error`, `calo_pt`, `calo_pt_error`, `calo_p`, `calo_parameters`,
 `calo_covariance`, and `calo_reference_point_mm`. Parameters are the EDM
 `(D0, phi, omega, Z0, tanLambda)` at the ECAL face; covariance is the packed
 21-entry EDM covariance. Status 1 means native extrapolation succeeded, 2
 means an input-KF state was copied (including a fit fallback), 0 means no
 output, and -1 means the state was unavailable or extrapolation failed.
-Unavailable numerical fields are NaN/empty. The default card writes only
+`calo_pt_error` uses that family's propagated calorimeter-state covariance
+and the same curvature formula. It does not include any extra uncertainty
+from the calorimeter shower. Unavailable numerical fields are NaN/empty. The default card writes only
 the flat tuple; add the optional `PodioOutput` from the card to serialize the
 nine EDM track collections themselves.
 
@@ -138,6 +195,15 @@ underidentified/failed input-KF copy. Its collection index is row-mapped in
 parameters/covariance, fitted b and variance, and per-hit filtered/smoothed
 b values. Row-aligned six-dimensional predicted/filtered/smoothed means,
 finite covariance blocks, transport/noise, and hit indices are also recorded.
+For a successful diffuse fit, `diffuse_augmented_eloss` is the signed
+momentum-loss estimate in GeV at the first hit after the selected interval:
+`p_after * (exp(b)-1)`, with
+`p_after = sqrt(1+tanLambda^2)/abs(kappa)` from that hit's smoothed 6D state.
+`diffuse_augmented_eloss_error` is its one-sigma linear propagated error,
+using the full joint covariance of `(kappa, tanLambda, b)`, including their
+off-diagonal correlations. This is a tracker momentum-loss proxy, not an
+independently reconstructed photon energy. The two fields are NaN for
+disabled/copied or failed diffuse fits.
 `diffuse_augmented_predicted_unresolved` and
 `diffuse_augmented_filtered_unresolved` mark states whose full covariance is
 still infinite; their stored finite block is only `P_finite`, not a physical
@@ -474,6 +540,7 @@ maintained card, but not physics-validated.
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
+| OutputTracksAbsoluteNeutralRTS | BreakpointTracksAbsoluteNeutralRTS | Absolute neutral-energy-loss RTS, or ordinary RTS copy |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
@@ -481,6 +548,11 @@ maintained card, but not physics-validated.
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | LocalMarginal | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
 | DiffuseAugmentedRTS | false | Independent one-interval, flat-prior 6D KF/RTS fit; maintained-card default true (`BP_DIFFUSE_AUGMENTED_RTS=0` disables it); ignores SigmaLogLoss for this extra fit |
+| AbsoluteNeutralLossRTS | false | Independent one-interval RTS using hit-supported neutral ECAL energy directly as an absolute sixth-coordinate prior; maintained-card default also false (`BP_ABSOLUTE_NEUTRAL_RTS=1` enables) |
+| AbsoluteNeutralDiffuseReference | false | Absolute-loss birth-map/Jacobian expansion at diffuse upstream smoothed mean only; requires DiffuseAugmentedRTS when AbsoluteNeutralLossRTS is on; no diffuse covariance/prior reuse; `BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE=1` enables |
+| AbsoluteNeutralReferenceSource | UpstreamSmoothed | When AbsoluteNeutralDiffuseReference is true, choose UpstreamSmoothed or PostLossPlusECAL for the loss-map reference only; `BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE` steers the maintained card |
+| NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
+| NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one LocalMarginal interval; input KF fallback on failure/unsupported mode |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
@@ -494,17 +566,70 @@ maintained card, but not physics-validated.
 | MaxChi2PerHit | 1e100 | Positive finite native update acceptance limit |
 | MSOn | true | Native multiple-scattering noise |
 | ElossOn | false | Native deterministic ionization correction |
-| TruthDiagnostics | false | Generator-electron pT reference only |
 | TruthMaxEndpointDistance | 5 | Positive finite mm validation tolerance on associated hooks |
 | VerboseDump | false | Full state/covariance dumps |
 | VerifyKFReference | false | Native reference checks for both endpoints |
 | SelectedEventIndices | [] | Zero-based selected entries; empty means all |
 | OutputFile | breakpoint_flat.root | New flat output file |
 
-TruthDiagnostics is enabled by the card. It does not steer a fit. Truth interval
-selection uses truth locations; only explicit TruthOverride sets truth loss prior centers.
-Ambiguous generator electrons have NaN
-truth pT. A scalar reference alone does not establish topology-clear selection.
+`truth_pt` now means the pT of the MC particle matched to **this row's**
+`CompleteTracks` track by `CompleteTracksParticleAssociation`; it no longer
+repeats the event's generator-electron pT on unrelated track rows. The
+association producer's weight is a count of reconstructed track hits attributed
+to an MC particle. The flat row saves `truth_track_hit_count`,
+`truth_best_mc_hit_count`, `truth_linked_hit_count`, and
+`truth_match_purity = truth_best_mc_hit_count / truth_track_hit_count`.
+`truth_match_status` is 0 for no positive association, 1 for a unique largest
+weight, and 2 for a tie. Missing/tied rows have NaN `truth_pt` rather than an
+arbitrarily assigned particle. A unique match additionally records
+`truth_mc_index`, PDG, generator/simulator status, energy, momentum x/y/z,
+charge, vertex/endpoint x/y/z, and parent MC indices. This is a flat snapshot
+of the associated MC particle, not a copied PODIO object.
+The ratio `truth_linked_hit_count / truth_track_hit_count` distinguishes
+unlinked hits from a competing MC particle's linked hits. These are passive
+diagnostics; truth interval selection and TruthOverride retain their separate
+association-driven contracts. For primary-electron pT resolution, require a
+valid unique match to the generator-status primary and retain the existing
+topology/track-completeness selection; a short fragment can have purity 1.
+
+Each track row also records all `CyberPFOPID` charged PFOs whose track link is
+that exact `CompleteTracks` object: `charged_pfo_count`, PFO index/PDG/energy,
+and flattened PID hypothesis PDG/likelihood arrays keyed by PFO index. Its
+ECAL-only clusters have `charged_ecal_cluster_count` (the exact count, not a
+capped flag), PFO/cluster indices, energy, and x/y/z position arrays. The
+PFO count and cluster count are distinct; zero and multiple matches remain
+visible without silently selecting one. HCAL clusters are not mixed into these
+ECAL arrays.
+
+The same flat ROOT file contains a companion `neutral_pfos` TTree with **one
+row per processed event**, including an empty row when no neutral PFO exists.
+Its `event_index` joins to the per-track `breakpoint` TTree; neutral PFO
+index/PDG/energy and ECAL-cluster PFO/cluster indices, energies, and x/y/z
+positions are stored once for the event, not repeated for every charged track.
+These fields describe CyberPFO reconstruction ownership, not a neutral-cluster
+truth match. The same event row also stores one entry per recorded primary-
+electron eBrem photon in parallel `ebrem_photon_*` arrays. The photon index,
+Geant4 track ID, parent track ID, and parent step number identify its origin;
+`birth_{x,y,z}` (mm) and `birth_{energy,px,py,pz}` (GeV) give its emission
+location and four-momentum. `ecal_entry_{x,y,z}` (mm) and
+`ecal_entry_{energy,px,py,pz}` (GeV) are the post-point values of the first
+recorded photon step entering an ECAL volume, not an extrapolation to a
+cluster. `ecal_entry_status=1` means that step exists; status 0 means no
+recorded ECAL entry, with step number -1 and entry coordinates/four-momentum
+set to NaN. These truth-photon arrays are event-level and do not assert a
+match to any neutral PFO or cluster. Older flat files retain the former
+event-level meaning of `truth_pt` and have no `neutral_pfos` tree; do not
+silently combine their `truth_pt` values with the new track-matched schema.
+
+For every photon, `ebrem_photon_last_step_*` saves its highest-numbered
+recorded Geant4 step, whether or not it entered ECAL: step number, process
+subtype, pre/post step and track status, volume copy numbers, `post_in_ecal`,
+pre/post positions (mm), energies and momentum components (GeV), times (ns),
+step length (mm), and energy deposit (GeV). `last_step_status=1` means a step
+was found. With no recorded step it is 0, integer step fields are -1, and
+floating-point step fields are NaN; the photon's birth record remains intact.
+The final-step process and track status help identify absorption, conversion,
+or escape, but they are raw Geant4 codes and not a reconstructed PFO match.
 
 The dedicated card exposes `fit.BackwardSeedScale` and optional environment
 variable `BP_BACKWARD_SEED_SCALE` (default100). All 25 covariance entries are
@@ -590,8 +715,8 @@ PodioOutput lines remain in the dedicated card for optional serialization.
 
 ## Independent batch workflow
 
-Use the new root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
-The existing `subtrkjobs.sh`, `dump_gsftrk.sh` and all GSF cards are unchanged.
+Use the root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
+This workflow is independent of GSF and does not run its fitter.
 The shared loss-prior sigma is controlled by BP_SIGMA_LOG_LOSS in
 subbreakpointjobs.sh (default0.001); other fit physics remains in
 options/run_breakpoint.py. Supported BP_* environment values are frozen at
@@ -608,16 +733,16 @@ uses one configured list for every track; an empty Manual list is the baseline.
 Prepare a campaign from existing simulation files, without submitting:
 
 ```bash
-DRY_RUN=1 NEVT=200 SEED_FIRST=1 SEED_LAST=50 \
-INPUT_TUPLEPATH=sim_large_barrel_20260823 \
-OUTPUT_TUPLEPATH=breakpoint_campaign STAGES=trk,breakpoint \
+DRY_RUN=1 NEVT=200 SEED_FIRST=1 SEED_LAST=2 \
+SAMPLE_REGION=barrel INPUT_TUPLEPATH=sim_large_barrel_20261001 \
+OUTPUT_TUPLEPATH=breakpoint_barrel STAGES=trk,calodigi,rec,breakpoint \
 ./subbreakpointjobs.sh
 ```
 
 After inspecting the generated cards, submit those exact prepared jobs:
 
 ```bash
-./subbreakpointjobs.sh submit breakpoint_campaign
+./subbreakpointjobs.sh submit breakpoint_barrel
 ```
 
 Omit DRY_RUN=1 on the first command to prepare and submit immediately. Do not
@@ -628,20 +753,59 @@ convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 
 | Control | Default | Meaning |
 |---|---|---|
-| STAGES | trk,breakpoint | Any nonduplicated subset of sim,trk,breakpoint; physical order always used |
-| INPUT_TUPLEPATH | sim_large_barrel_20260823 | Existing predecessor tuples, relative to repository or absolute |
-| OUTPUT_TUPLEPATH | breakpoint_barrel | New results/cards/logs; must differ from input |
+| STAGES | breakpoint | Any nonduplicated subset of sim,trk,calodigi,rec,breakpoint; physical order always used |
+| INPUT_TUPLEPATH | sim_large_barrel_20261001 | Existing predecessor tuples, relative to repository or absolute |
+| OUTPUT_TUPLEPATH | breakpoint_barrel | Results/cards/logs; existing files or run-card directories block preparation rather than being overwritten |
 | NEVT | 200 | Maximum events per job |
-| SEED_FIRST / SEED_LAST | 1 / 50 | Inclusive seed/file indices; generated sim/trk cards use that RNG seed |
-| PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Comma-separated filename labels |
+| SEED_FIRST / SEED_LAST | 1 / 100 | Inclusive seed/file indices; generated sim/trk cards use that RNG seed |
+| SAMPLE_REGION | barrel | `barrel` or `endcap`: use region-and-seed filenames; empty restores legacy naming |
+| PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Particle remains active; theta and pT are filename labels only when SAMPLE_REGION is empty |
 | MEMORY_MB | 5000 | Scheduler memory request |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
-For existing tracker inputs, set STAGES=breakpoint and point INPUT_TUPLEPATH
-at their directory. Input names are `sim-e--2.0-85-SEED.root` or
-`trk-e--2.0-85-SEED.root` with the selected labels. Examples of optional fit
+For the current barrel sample, the input is `sim-barrel-SEED.root`; generated
+outputs are `trk-barrel-SEED.root`, `calodigi-barrel-SEED.root`,
+`rec-barrel-SEED.root`, and `breakpoint_flat-barrel-SEED.root`.
+The breakpoint fitter reads **rec**, not trk. The retained rec event contains
+`EcalCluster`, `CyberPFO`, digitized ECAL/HCAL hits, `CompleteTracks`, and
+the Geant4 tracker-step and bremsstrahlung-photon path provenance. The tracker
+steps are used by truth interval selection. ECAL
+PFO PID, charged-track ECAL clusters, and event-level neutral ECAL clusters are
+now copied into the flat tuple as passive diagnostics; they do not steer the
+fit. The full REC event remains available for later external eBrem studies.
+`submit` selects only prepared cards matching the current `SAMPLE_REGION`, so
+old `e--2.0-85-*` manifests in the same directory are not resubmitted.
+For existing reconstructed inputs, set STAGES=breakpoint and point
+INPUT_TUPLEPATH at their `rec-barrel-SEED.root` directory. An external
+`trk-barrel-SEED.root` can feed `STAGES=calodigi,rec,breakpoint` only if it
+retains the simulated calorimeter hit collections. To read older
+momentum/theta-named files, set `SAMPLE_REGION=''` and use the legacy labels;
+the predecessor file still needs the corresponding stage-name prefix.
+To regenerate the current barrel flat tuples with newly added passive photon
+fields, keep the existing REC files and use a **new** output directory:
+
+```bash
+STAGES=breakpoint INPUT_TUPLEPATH=sim_large_barrel_20261001 \
+OUTPUT_TUPLEPATH=breakpoint_barrel_photonlast_20261003 \
+SAMPLE_REGION=barrel NEVT=200 SEED_FIRST=1 SEED_LAST=100 \
+./subbreakpointjobs.sh
+```
+
+The helper skips missing REC seeds; it neither reruns simulation/reconstruction
+nor overwrites the old `breakpoint_barrel/` flats. The new tuples, generated
+cards, and logs go under the specified output directory. Use `DRY_RUN=1`
+first if you want to inspect cards before submission; then submit those frozen
+cards with:
+
+```bash
+./subbreakpointjobs.sh submit breakpoint_barrel_photonlast_20261003
+```
+
+When STAGES includes sim, SAMPLE_REGION also sets its gun
+theta range (endcap 10--40 degrees, barrel 40--85 degrees); gun energy remains
+configured in `DumpGsfTrks/sim.py.bk`. Examples of optional fit
 overrides: `BP_INTERVAL_SELECTION_MODE=Truth BP_TRUTH_OVERRIDE=1`, or
 `BP_INTERVAL_SELECTION_MODE=Manual BP_INTERVALS=5 BP_BACKWARD_SEED_SCALE=100`.
 Interval5 here is only an example, NOT a recommended automatic truth interval.
@@ -658,8 +822,8 @@ prepare new cards. The submit-existing command retains their frozen values.
 During preparation, missing or zero-byte external predecessor inputs cause that
 sample to be skipped, with its sample label and path printed. Other valid seeds
 are still prepared/submitted; the final summary reports the skipped count.
-This covers missing sim inputs for trk and missing tracker inputs for a
-breakpoint-only stage. A predecessor generated in the same job needs no
+This covers every omitted predecessor: sim for trk, trk for calodigi,
+calodigi for rec, and rec for breakpoint. A predecessor generated in the same job needs no
 existing input. If all samples are skipped, preparation exits with an error
 without creating cards or submitting anything. Other validation errors (such
 as existing outputs or template drift) still abort preparation before submission.
@@ -668,51 +832,66 @@ Output layout for each sample:
 
 ```text
 OUTPUT_TUPLEPATH/
-  breakpoint_flat-e--2.0-85-SEED.root
-  trk-e--2.0-85-SEED.root             # intermediate; removed after verified breakpoint success
-  sim-e--2.0-85-SEED.root             # only if sim selected; retained
-  outlog/e--2.0-85-SEED.out, .err
-  runcards/e--2.0-85-SEED/
-    job.json, trk.py, breakpoint.py  # only selected stages have cards
+  breakpoint_flat-barrel-SEED.root
+  rec-barrel-SEED.root                # retained ECAL reconstruction and tracker provenance
+  calodigi-barrel-SEED.root           # removed after verified rec, if made in this job
+  trk-barrel-SEED.root                # removed after verified calodigi, if made in this job
+  sim-barrel-SEED.root                # only if sim selected; retained
+  outlog/barrel-SEED.out, .err
+  runcards/barrel-SEED/
+    job.json, trk.py, calodigi.py, rec.py, breakpoint.py  # selected stages only
     submitted.json                  # successful scheduler submission
     started.json, completed.json    # worker lifecycle
 ```
 
 The flat tuple contains ordinary RTS/backward and oracle/copied RTS/backward
-results. No breakpoint EDM file is written by the default card. After all
-selected stages succeed and the flat tuple passes verification, a tracker
-tuple produced by this same job is deleted regardless of individual ordinary
-or truth-override fit failures, including when every fit fails. Failure tags
-remain in the flat tuple. A trk-only job keeps its output, and a breakpoint-only
-job never deletes its external tracker input. Simulation files are retained.
-The cleanup checks the exact expected path and its production-time file identity
-(device/inode/size/modification time), refuses symlinks or changed files, and
-records the outcome in completed.json under tracker_cleanup. Removed tracker
-tuples can be regenerated from the retained simulation and frozen trk card;
-they are not moved to trash. Existing completed campaigns are not cleaned
-retroactively. A selected stage consumes a predecessor
+results. No breakpoint EDM file is written by the default card. Once
+`calodigi` passes ROOT/tree/collection verification, the worker removes its
+own `trk` tuple. Once `rec` passes verification, it removes its own
+`calodigi` tuple. It never removes an external input, the simulation tuple,
+or the `rec` tuple; a stage without its immediate consumer keeps its output.
+Breakpoint fit failures do not affect this cleanup because the durable `rec`
+tuple has already passed verification, and failure tags remain in the flat
+tuple. The cleanup checks the exact expected path and its production-time file
+identity (device/inode/size/modification time), refuses symlinks or changed
+files, and records both outcomes in completed.json under
+`intermediate_cleanup`. Removed intermediates can be regenerated from the
+retained simulation and frozen cards; they are not moved to trash. Existing
+completed campaigns are not cleaned retroactively. A selected stage consumes a predecessor
 made in the same job, otherwise an external predecessor from the input path.
 Cards are checksum-checked by the worker; never edit a frozen card in place.
 Use a new output directory for a changed physics setup. The software/library
 is NOT snapshotted: keep the branch/build stable while jobs are queued/running.
 
-The worker verifies readable nonempty ROOT trees and required flat branches;
-it reports fit-success counts but does not require successful fits for cleanup.
+The worker verifies readable nonempty ROOT trees and required downstream
+collections before deleting an intermediate. It also verifies flat branches
+and reports fit-success counts, but fit success is not a cleanup criterion.
 Invalid oracle rows remain tagged; inspect truth_override_result_status before analysis. This output
 check is not physics validation. Failed jobs retain outputs/started marker for
 diagnosis and cannot blindly overwrite/restart; use a new output directory.
 Duplicate submissions are rejected once submitted.json exists.
 
-Simulation and tracker cards are read-only templates from DumpGsfTrks. Only
-generated copies receive filenames, seed/event count and simulation particle.
+Simulation, tracker, calorimeter-digitization, and calorimeter-reconstruction
+cards are read-only templates from DumpGsfTrks. Only generated copies receive
+filenames, seed/event count and simulation particle. The generated tracker
+card also reads simulated calorimeter hits so they survive into calodigi;
+generated calodigi/rec cards carry the reconstructed tracker collections and
+Geant4 material/primary-bremsstrahlung-photon provenance through to rec.
+Shared GSF templates remain unchanged.
 The hard-coded simulation energy/theta ranges are NOT changed by filename
 labels; inspect sim.py.bk before selecting sim. The current breakpoint fitter
-still assumes outward radius-ordered noncurling barrel tracks. Tracker truth
-collections are preserved by the existing trk template's keep-all output.
+still assumes outward radius-ordered noncurling barrel tracks. The one-event
+local smoke of the new four-stage chain verified a nonempty `EcalCluster` and
+`CyberPFO`, retained CompleteTracks and G4 provenance, a successful breakpoint
+flat output, and identical KF/RTS/free-loss/diffuse pT for the paired old/new
+entry. A second one-event smoke with primary eBrem verified nonempty photon
+and photon-step collections in rec (three photons and 1,606 path steps) and
+again reproduced the old breakpoint pT. This is an I/O regression gate, not
+ECAL-eBrem physics validation.
 
-Syntax/planning tests and local worker smoke results are recorded in
+Earlier syntax/planning tests and local worker smoke results are recorded in
 `agents_record/2026-09-09-recbreakpoint-independent-batch.md` (repository root).
-No real Condor submission was performed for this change.
+No Condor submission was performed for the ECAL-flow change.
 
 ## Evidence and limits
 

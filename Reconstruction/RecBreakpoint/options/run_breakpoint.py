@@ -15,7 +15,9 @@ from Configurables import (
     TrackSystemSvc, k4DataSvc,
 )
 
-input_file = os.environ.get("BP_INPUT", "trk_v01.root")
+# The calorimeter-reconstructed event retains CompleteTracks, tracker truth
+# provenance, and ECAL/PFO collections for later external eBrem studies.
+input_file = os.environ.get("BP_INPUT", "rec.root")
 output_file = os.environ.get("BP_OUTPUT", "breakpoint_flat.root")
 event_count = int(os.environ.get("BP_EVENTS", "10"))
 selected_events = [int(v) for v in os.environ.get("BP_SELECTED", "").split(",") if v]
@@ -33,7 +35,8 @@ geometry.compact = os.path.join(
 gear = GearSvc("GearSvc")
 track_system = TrackSystemSvc("TrackSystemSvc")
 reader = PodioInput("PodioReader", collections=[
-    "CompleteTracks", "MCParticle",
+    "CompleteTracks", "CompleteTracksParticleAssociation", "MCParticle",
+    "CyberPFOPID", "EcalCluster", "GsfG4BremsPhotons", "GsfG4BremsPhotonSteps",
     "VXDTrackerHits", "ITKBarrelTrackerHits", "ITKEndcapTrackerHits",
     "TPCTrackerHits", "OTKBarrelTrackerHits", "OTKEndcapTrackerHits",
 ])
@@ -49,6 +52,7 @@ fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFr
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.OutputTracksDiffuseAugmentedRTS = "BreakpointTracksDiffuseAugmentedRTS"
+fit.OutputTracksAbsoluteNeutralRTS = "BreakpointTracksAbsoluteNeutralRTS"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
 # Truth (default): select ONLY the matched hit interval with the largest summed
@@ -60,8 +64,16 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")
 # b = log(p_before/p_after). Fractional loss is 1-exp(-b).
+# MeanLogLoss is the center of the Gaussian prior on b at each selected edge.
+# The default 0 represents the no-loss hypothesis; hits may update b.
 # This first implementation uses one linearized Gaussian at each selected edge.
 fit.MeanLogLoss = float(os.environ.get("BP_MEAN_LOG_LOSS", "0.0"))
+# SigmaLogLoss is the standard deviation OF b, not log(sigma) and not the
+# energy error itself. The prior variance used by the fitter is SigmaLogLoss**2.
+# Example of external ECAL steering: if neutral energy E approximates
+# p_before-p_after and has relative error f, choose MeanLogLoss=log(1+E/p_after)
+# and SigmaLogLoss=f*E/(p_after+E). This treats reference p_after as fixed
+# during the conversion; the card does not calculate or apply this automatically.
 # Batch value is set in subbreakpointjobs.sh and frozen into the generated card.
 # The fallback below is for direct standalone use, without the submission script.
 # This SAME prior sigma is used by ordinary, free-loss and truth-centred fits.
@@ -94,6 +106,32 @@ fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "LocalMarginal")
 # Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
 fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
+# Parallel, default-off absolute-loss RTS. A hit-supported neutral ECAL
+# cluster inside the window about the input track's ECAL state supplies the
+# sixth coordinate L=p_before-p_after in GeV, with its Gaussian prior error.
+# The same ECAL energy is NOT used as a second hit/update. This requires one
+# selected breakpoint interval; without one or a qualifying cluster, its
+# output is an ordinary RTS copy. The existing log-loss outputs are unchanged.
+fit.AbsoluteNeutralLossRTS = os.environ.get("BP_ABSOLUTE_NEUTRAL_RTS", "0") == "1"
+# Diagnostic only: evaluate the absolute-loss birth map/Jacobian at the
+# diffuse upstream smoothed MEAN. Requires DiffuseAugmentedRTS; its covariance
+# is NOT reused. Original track seed and ECAL L prior/error remain unchanged.
+# This is one loss-map relinearization, not a whole-trajectory iteration.
+fit.AbsoluteNeutralDiffuseReference = os.environ.get("BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE", "0") == "1"
+# Effective only when the diffuse reference above is enabled. UpstreamSmoothed
+# reproduces the first study. PostLossPlusECAL builds a pre-break reference
+# momentum from diffuse post-break p + the selected neutral ECAL energy;
+# the post-break curvature supplies its sign. Both use the same independent
+# ECAL loss prior/error and restart the same live KF/RTS fit from its seed.
+fit.AbsoluteNeutralReferenceSource = os.environ.get(
+    "BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE", "UpstreamSmoothed"
+)
+fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "10"))
+fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"))
+# Per-cluster sigma_E [GeV] = a*sqrt(E [GeV]) + c*E [GeV]; independent cluster
+# variances are added. These are provisional resolution assumptions.
+fit.NeutralLossStochasticError = float(os.environ.get("BP_NEUTRAL_STOCHASTIC", "0.011"))
+fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.004"))
 # Both ordinary LossStateMode representations use the MeanLogLoss/SigmaLogLoss
 # Gaussian prior; the separate diffuse output above does not.
 # The optional Minuit pair below optimizes the prior center with the SAME sigma;
@@ -148,7 +186,6 @@ for retired in ("BP_MAX_ITERATIONS", "BP_ITERATION_TOLERANCE"):
 fit.MaxChi2PerHit = 1.e100
 fit.MSOn = True
 fit.ElossOn = False
-fit.TruthDiagnostics = True  # optional scalar reference; never used in fitting
 fit.TruthMaxEndpointDistance = 5.0  # mm, validation of associated hooks, not spatial matching
 fit.VerboseDump = os.environ.get("BP_VERBOSE", "0") == "1"
 fit.VerifyKFReference = os.environ.get("BP_VERIFY_KF", "0") == "1"

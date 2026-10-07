@@ -17,6 +17,8 @@ struct TrackState {
 
 TrackState fromEDM(const edm4hep::TrackState& state, double bz);
 edm4hep::TrackState toEDM(const TrackState& state, double bz, int location = 0);
+/// One-sigma pT uncertainty [GeV] from the EDM omega variance; NaN if invalid.
+double transverseMomentumError(const edm4hep::TrackState& state, double bz);
 TMatrixD transpose(const TMatrixD& matrix);
 TMatrixD inverseCovariance(const TMatrixD& matrix);
 TMatrixD stateDifference(const TMatrixD& left, const TMatrixD& right);

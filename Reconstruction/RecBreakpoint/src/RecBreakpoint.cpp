@@ -2,6 +2,7 @@
 #include "BreakpointFitter.h"
 #include "BreakpointTrackSystem.h"
 #include "TruthBHLossEventData.h"
+#include "NeutralLossCandidate.h"
 #include "GearSvc/IGearSvc.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 #include "DetInterface/IGeomSvc.h"
@@ -19,17 +20,45 @@
 #include <sstream>
 #include <numeric>
 #include <optional>
+#include <utility>
 
 namespace {
 enum CaloFamily {
   InputKF, OrdinaryRTS, OrdinaryBackward, FreeRTS, FreeBackward,
-  BeamFreeRTS, BeamFreeBackward, TruthRTS, TruthBackward, DiffuseRTS
+  BeamFreeRTS, BeamFreeBackward, TruthRTS, TruthBackward, DiffuseRTS, AbsoluteRTS
 };
 constexpr const char* caloPrefixes[] = {
   "kf_", "rts_", "backward_", "free_loss_rts_", "free_loss_backward_",
   "beam_guided_free_loss_rts_", "beam_guided_free_loss_backward_",
-  "truth_override_rts_", "truth_override_backward_", "diffuse_augmented_rts_"
+  "truth_override_rts_", "truth_override_backward_", "diffuse_augmented_rts_",
+  "absolute_neutral_rts_"
 };
+// At the first hit after the breakpoint, the joint RTS state still carries
+// both the post-loss momentum and b=log(p_before/p_after). Keep their
+// covariance: treating b and momentum as independent misstates the error.
+std::pair<double, double> diffuseMomentumLoss(const breakpoint::LossTrackState& state) {
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  const double kappa = state.mean(2, 0);
+  const double tanLambda = state.mean(4, 0);
+  const double b = state.mean(5, 0);
+  if (!std::isfinite(kappa) || kappa == 0 || !std::isfinite(tanLambda) || !std::isfinite(b))
+    return {nan, nan};
+  const double after = std::hypot(1.0, tanLambda) / std::abs(kappa);
+  const double fraction = std::expm1(b);
+  const double loss = after * fraction;
+  const double gradient[] = {
+      -loss / kappa,
+      loss * tanLambda / (1.0 + tanLambda * tanLambda),
+      after * std::exp(b)};
+  constexpr int coordinate[] = {2, 4, 5};
+  double variance = 0;
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 3; ++j)
+      variance += gradient[i] * state.covariance(coordinate[i], coordinate[j]) * gradient[j];
+  if (!std::isfinite(loss) || !std::isfinite(variance) || variance < -1.e-12)
+    return {loss, nan};
+  return {loss, std::sqrt(std::max(0.0, variance))};
+}
 // Every endpoint family uses identical EDM representation and hit references.
 int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& fit,
                  const std::vector<edm4hep::TrackerHit>& hits, double bz, double chi2,
@@ -72,6 +101,8 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("OutputTracksTruthOverrideRTS", m_truthRTSOutput, "Oracle RTS, or ordinary RTS copy when disabled");
   declareProperty("OutputTracksDiffuseAugmentedRTS", m_diffuseRTSOutput,
                   "Exact-diffuse augmented RTS; ordinary copy when disabled or no interval");
+  declareProperty("OutputTracksAbsoluteNeutralRTS", m_absoluteRTSOutput,
+                  "Hit-supported neutral ECAL absolute-loss RTS; ordinary copy when off/unavailable");
   declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
 }
 RecBreakpoint::~RecBreakpoint() = default;
@@ -110,9 +141,9 @@ StatusCode RecBreakpoint::initialize() {
       m_truthRTSOutput.fullKey(), m_truthBackwardOutput.fullKey(),
       m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey(),
       m_beamFreeRTSOutput.fullKey(), m_beamFreeBackwardOutput.fullKey(),
-      m_diffuseRTSOutput.fullKey()};
-  if (outputNames.size() != 9 || outputNames.count(m_input.fullKey())) {
-    error() << "The nine output track collections must differ from each other and the input" << endmsg;
+      m_diffuseRTSOutput.fullKey(), m_absoluteRTSOutput.fullKey()};
+  if (outputNames.size() != 10 || outputNames.count(m_input.fullKey())) {
+    error() << "The ten output track collections must differ from each other and the input" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -132,6 +163,26 @@ StatusCode RecBreakpoint::initialize() {
   if (!std::isfinite(m_meanLoss.value()) || m_meanLoss < 0 || m_meanLoss > 5 ||
       !std::isfinite(m_sigmaLoss.value()) || m_sigmaLoss <= 0) {
     error() << "MeanLogLoss must be finite in [0,5] and SigmaLogLoss finite/positive" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_absoluteNeutralRTS && m_absoluteDiffuseReference && !m_diffuseAugmentedRTS) {
+    error() << "AbsoluteNeutralDiffuseReference requires DiffuseAugmentedRTS" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_absoluteReferenceSource != "UpstreamSmoothed" &&
+      m_absoluteReferenceSource != "PostLossPlusECAL") {
+    error() << "AbsoluteNeutralReferenceSource must be UpstreamSmoothed or PostLossPlusECAL"
+            << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (!std::isfinite(m_neutralThetaWindow.value()) || m_neutralThetaWindow <= 0 ||
+      m_neutralThetaWindow >= 3141 ||
+      !std::isfinite(m_neutralPhiWindow.value()) || m_neutralPhiWindow <= 0 ||
+      m_neutralPhiWindow >= 3141 ||
+      !std::isfinite(m_neutralStochasticError.value()) || m_neutralStochasticError < 0 ||
+      !std::isfinite(m_neutralConstantError.value()) || m_neutralConstantError < 0 ||
+      m_neutralStochasticError.value() + m_neutralConstantError.value() <= 0) {
+    error() << "Invalid neutral-loss windows or energy-error coefficients" << endmsg;
     return StatusCode::FAILURE;
   }
   if (!std::isfinite(m_freeLossMax.value()) || m_freeLossMax <= 0 || m_freeLossMax > 5 ||
@@ -167,6 +218,8 @@ StatusCode RecBreakpoint::initialize() {
   if (!m_file || m_file->IsZombie()) return StatusCode::FAILURE;
   m_file->cd();
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
+  m_neutralTree = new TTree("neutral_pfos", "Neutral CyberPFOPID and ECAL clusters, once per selected event");
+  m_neutralPfoTuple.book(*m_neutralTree);
   for (std::size_t i = 0; i < m_caloStates.size(); ++i)
     m_caloStates[i].book(*m_tree, caloPrefixes[i]);
   m_freeLossTuple.book(*m_tree);
@@ -181,8 +234,11 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("diffuse_augmented_index", &m_diffuseIndex);
   m_tree->Branch("diffuse_augmented_error", &m_diffuseError);
   m_tree->Branch("diffuse_augmented_pt", &m_diffusePt);
+  m_tree->Branch("diffuse_augmented_pt_error", &m_diffusePtError);
   m_tree->Branch("diffuse_augmented_fitted_log_loss", &m_diffuseB);
   m_tree->Branch("diffuse_augmented_fitted_log_loss_variance", &m_diffuseBVariance);
+  m_tree->Branch("diffuse_augmented_eloss", &m_diffuseEloss);
+  m_tree->Branch("diffuse_augmented_eloss_error", &m_diffuseElossError);
   m_tree->Branch("diffuse_augmented_ip_parameters", &m_diffuseIPParameters);
   m_tree->Branch("diffuse_augmented_ip_covariance", &m_diffuseIPCovariance);
   m_tree->Branch("diffuse_augmented_local_chi2", &m_diffuseLocalChi2);
@@ -199,21 +255,48 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("diffuse_augmented_smoothed_covariance", &m_diffuseSmoothedCovariance);
   m_tree->Branch("diffuse_augmented_transport", &m_diffuseTransport);
   m_tree->Branch("diffuse_augmented_process_noise", &m_diffuseNoise);
+  m_tree->Branch("absolute_neutral_status", &m_absoluteStatus);
+  m_tree->Branch("absolute_neutral_index", &m_absoluteIndex);
+  m_tree->Branch("absolute_neutral_error", &m_absoluteError);
+  m_tree->Branch("absolute_neutral_pt", &m_absolutePt);
+  m_tree->Branch("absolute_neutral_pt_error", &m_absolutePtError);
+  m_tree->Branch("absolute_neutral_prior_energy", &m_absolutePriorEnergy);
+  m_tree->Branch("absolute_neutral_prior_sigma", &m_absolutePriorSigma);
+  m_tree->Branch("absolute_neutral_fitted_energy", &m_absoluteFittedEnergy);
+  m_tree->Branch("absolute_neutral_fitted_variance", &m_absoluteFittedVariance);
+  m_tree->Branch("absolute_neutral_diffuse_reference_requested", &m_absoluteReferenceRequested);
+  m_tree->Branch("absolute_neutral_diffuse_reference_used", &m_absoluteReferenceUsed);
+  m_tree->Branch("absolute_neutral_reference_source", &m_absoluteReferenceSourceName);
+  m_tree->Branch("absolute_neutral_forward_p_before", &m_absoluteForwardP);
+  m_tree->Branch("absolute_neutral_reference_p_before", &m_absoluteReferenceP);
+  m_tree->Branch("absolute_neutral_reference_p_after", &m_absoluteReferencePostP);
+  m_tree->Branch("absolute_neutral_reference_parameters", &m_absoluteReferenceParameters);
+  m_tree->Branch("absolute_neutral_cluster_indices", &m_absoluteClusterIndices);
+  m_tree->Branch("absolute_neutral_ip_parameters", &m_absoluteIPParameters);
+  m_tree->Branch("absolute_neutral_ip_covariance", &m_absoluteIPCovariance);
+  m_tree->Branch("absolute_neutral_persistent_hit_index", &m_absolutePersistentHits);
+  m_tree->Branch("absolute_neutral_smoothed_mean", &m_absoluteSmoothedMean);
+  m_tree->Branch("absolute_neutral_smoothed_covariance", &m_absoluteSmoothedCovariance);
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_tree->Branch("event_index", &m_event);
   m_tree->Branch("input_track_index", &m_trackIndex);
   m_tree->Branch("status", &m_fitStatus);
   m_tree->Branch("hit_count", &m_hitCount);
-  m_tree->Branch("truth_pt", &m_truthPt);
+  m_trackRecoTuple.book(*m_tree);
   m_tree->Branch("kf_pt", &m_kfPt);
+  m_tree->Branch("kf_pt_error", &m_kfPtError);
   m_tree->Branch("breakpoint_pt", &m_fitPt);
+  m_tree->Branch("breakpoint_pt_error", &m_fitPtError);
   m_tree->Branch("filter_chi2", &m_fitChi2);
   m_tree->Branch("reference_kf_pt", &m_referencePt);
+  m_tree->Branch("reference_kf_pt_error", &m_referencePtError);
   m_tree->Branch("seed_hit_selection", &m_seedSelectionName);
   m_tree->Branch("seed_hit_indices", &m_seedHitIndices);
   m_tree->Branch("rts_pt", &m_fitPt);
+  m_tree->Branch("rts_pt_error", &m_fitPtError);
   m_tree->Branch("backward_pt", &m_backwardPt);
+  m_tree->Branch("backward_pt_error", &m_backwardPtError);
   m_tree->Branch("forward_chi2", &m_fitChi2);
   m_tree->Branch("backward_chi2", &m_backwardTotalChi2);
   m_tree->Branch("smoothed_chi2", &m_smoothedTotalChi2);
@@ -229,6 +312,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("backward_fitted_log_loss", &m_backwardLoss);
   m_tree->Branch("backward_fitted_log_loss_variance", &m_backwardLossVariance);
   m_tree->Branch("reference_backward_kf_pt", &m_backwardReferencePt);
+  m_tree->Branch("reference_backward_kf_pt_error", &m_backwardReferencePtError);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
@@ -247,7 +331,9 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("truth_override_backward_fitted_log_loss", &m_truthBackwardLoss);
   m_tree->Branch("truth_override_backward_fitted_log_loss_variance", &m_truthBackwardLossVariance);
   m_tree->Branch("truth_override_rts_pt", &m_truthRTSPt);
+  m_tree->Branch("truth_override_rts_pt_error", &m_truthRTSPtError);
   m_tree->Branch("truth_override_backward_pt", &m_truthBackwardPt);
+  m_tree->Branch("truth_override_backward_pt_error", &m_truthBackwardPtError);
   m_tree->Branch("truth_override_forward_chi2", &m_truthForwardChi2);
   m_tree->Branch("truth_override_backward_chi2", &m_truthBackwardChi2);
   m_tree->Branch("truth_override_smoothed_chi2", &m_truthSmoothedChi2);
@@ -332,6 +418,9 @@ StatusCode RecBreakpoint::execute() {
   auto* diffuseRTSOutput = m_diffuseRTSOutput.createAndPut();
   auto* diffuseStatuses = m_diffuseStatusOutput.createAndPut();
   auto* diffuseIndices = m_diffuseIndexOutput.createAndPut();
+  auto* absoluteRTSOutput = m_absoluteRTSOutput.createAndPut();
+  auto* absoluteStatuses = m_absoluteStatusOutput.createAndPut();
+  auto* absoluteIndices = m_absoluteIndexOutput.createAndPut();
   auto* truthBackwardOutput = m_truthBackwardOutput.createAndPut();
   auto* truthResultStatuses = m_truthResultStatus.createAndPut();
   auto* truthRTSIndices = m_truthRTSIndex.createAndPut();
@@ -343,18 +432,13 @@ StatusCode RecBreakpoint::execute() {
   const bool selected = m_selected.value().empty() ||
       std::find(m_selected.value().begin(), m_selected.value().end(), m_event) != m_selected.value().end();
   const double nan = std::numeric_limits<double>::quiet_NaN();
-  m_truthPt = nan;
-  if (selected && m_truthDiagnostics) {
-    // Optional reference only, never used by the fitter. Ambiguous multi-electron
-    // events have no scalar truth reference; this is not track truth matching.
-    int count = 0;
-    for (const auto& particle : *m_truth.get())
-      if (particle.getGeneratorStatus() == 1 && std::abs(particle.getPDG()) == 11) {
-        const auto p = particle.getMomentum();
-        m_truthPt = std::hypot(p.x, p.y);
-        ++count;
-      }
-    if (count != 1) m_truthPt = nan;
+  const auto* trackTruthAssociations = selected ? m_trackTruthAssociations.get() : nullptr;
+  const auto* pidPfos = selected ? m_pidPfos.get() : nullptr;
+  const auto* ecalClusters = selected ? m_ecalClusters.get() : nullptr;
+  if (selected) {
+    m_neutralPfoTuple.assign(m_event, *pidPfos, *ecalClusters,
+                             *m_bremsPhotons.get(), *m_bremsPhotonSteps.get());
+    m_neutralTree->Fill();
   }
   breakpoint::KalmanAdapter adapter(m_system.get(), m_bz, m_maxChi2,
       breakpoint::parseSeedHitSelection(m_seedHitSelection.value()));
@@ -403,8 +487,10 @@ StatusCode RecBreakpoint::execute() {
       beamFreeResultStatuses->push_back(0); beamFreeRTSIndices->push_back(-1);
       beamFreeBackwardIndices->push_back(-1);
       diffuseStatuses->push_back(0); diffuseIndices->push_back(-1);
+      absoluteStatuses->push_back(0); absoluteIndices->push_back(-1);
       continue;
     }
+    m_trackRecoTuple.assign(track, *trackTruthAssociations, *pidPfos, *ecalClusters);
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
     m_beamFreeLossTuple.reset(m_freeLossFit && m_freeLossBeamSpotObjective,
@@ -418,7 +504,8 @@ StatusCode RecBreakpoint::execute() {
     for (auto& calo : m_caloStates) calo.reset();
     m_caloStates[InputKF].assignFromTrack(track, m_bz, 2);
     m_diffuseStatus = 0; m_diffuseIndex = -1; m_diffuseError.clear();
-    m_diffusePt = m_diffuseB = m_diffuseBVariance = nan;
+    m_diffusePt = m_diffusePtError = m_diffuseB = m_diffuseBVariance = nan;
+    m_diffuseEloss = m_diffuseElossError = nan;
     m_diffuseIPParameters.clear(); m_diffuseIPCovariance.clear();
     m_diffuseLocalChi2.clear(); m_diffuseFilteredB.clear(); m_diffuseSmoothedB.clear();
     m_diffuseHitIndex.clear();
@@ -427,9 +514,24 @@ StatusCode RecBreakpoint::execute() {
     m_diffuseFilteredMean.clear(); m_diffuseFilteredCovariance.clear();
     m_diffuseSmoothedMean.clear(); m_diffuseSmoothedCovariance.clear();
     m_diffuseTransport.clear(); m_diffuseNoise.clear();
+    m_absoluteStatus = 0; m_absoluteIndex = -1; m_absoluteError.clear();
+    m_absolutePt = m_absolutePtError = nan;
+    m_absolutePriorEnergy = m_absolutePriorSigma = nan;
+    m_absoluteFittedEnergy = m_absoluteFittedVariance = nan;
+    m_absoluteReferenceRequested = m_absoluteDiffuseReference.value();
+    m_absoluteReferenceUsed = false;
+    m_absoluteReferenceSourceName = m_absoluteDiffuseReference.value()
+        ? m_absoluteReferenceSource.value() : "Forward";
+    m_absoluteForwardP = m_absoluteReferenceP = m_absoluteReferencePostP = nan;
+    m_absoluteReferenceParameters.clear();
+    m_absoluteClusterIndices.clear();
+    m_absoluteIPParameters.clear(); m_absoluteIPCovariance.clear();
+    m_absolutePersistentHits.clear();
+    m_absoluteSmoothedMean.clear(); m_absoluteSmoothedCovariance.clear();
     m_truthLossTreatment = "PriorCenter";
     m_truthResultCode = 0;
-    m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
+    m_truthRTSPt = m_truthRTSPtError = m_truthBackwardPt = m_truthBackwardPtError = nan;
+    m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
     m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
     m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
     m_truthSmoothedMeasurement.clear(); m_truthSmoothedProcess.clear(); m_truthSmoothedNative.clear();
@@ -457,9 +559,10 @@ StatusCode RecBreakpoint::execute() {
     m_sixFilteredMean.clear(); m_sixFilteredCov.clear();
     m_sixSmoothedMean.clear(); m_sixSmoothedCov.clear();
     m_sixTransport.clear(); m_sixNoise.clear();
-    m_kfPt = m_fitPt = m_fitChi2 = m_referencePt = nan;
-    m_backwardPt=m_backwardTotalChi2=m_smoothedTotalChi2=m_smoothedSeedChi2=nan;
-    m_backwardSeedForwardChi2=m_backwardReferencePt=nan;
+    m_kfPt = m_kfPtError = m_fitPt = m_fitPtError = m_fitChi2 = nan;
+    m_referencePt = m_referencePtError = nan;
+    m_backwardPt = m_backwardPtError = m_backwardTotalChi2 = m_smoothedTotalChi2 = m_smoothedSeedChi2 = nan;
+    m_backwardSeedForwardChi2 = m_backwardReferencePt = m_backwardReferencePtError = nan;
     m_smoothedChi2Status=0;
     m_smoothedChi2Error.clear();
     m_smoothedChi2.clear();m_smoothedMeasurementChi2.clear();m_smoothedProcessChi2.clear();m_smoothedNativeChi2.clear();
@@ -474,8 +577,10 @@ StatusCode RecBreakpoint::execute() {
     m_breakpointIndex.clear(); m_priorLoss.clear(); m_localLoss.clear();
     m_localVariance.clear(); m_fittedLoss.clear(); m_lossVariance.clear(); m_closure.clear();
     for (const auto& state : track.getTrackStates())
-      if (state.location == 1 && state.omega != 0)
+      if (state.location == 1 && state.omega != 0) {
         m_kfPt = std::abs(m_bz * 2.99792458e-4 / state.omega);
+        m_kfPtError = breakpoint::transverseMomentumError(state, m_bz);
+      }
     try {
       std::vector<edm4hep::TrackerHit> hits;
       for (auto hit : track.getTrackerHits()) hits.push_back(hit);
@@ -605,8 +710,10 @@ StatusCode RecBreakpoint::execute() {
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");
       m_fitPt = std::abs(m_bz * 2.99792458e-4 / fit.ip.omega);
+      m_fitPtError = breakpoint::transverseMomentumError(fit.ip, m_bz);
       if (!std::isfinite(inward.ip.omega) || inward.ip.omega==0) throw std::runtime_error("Invalid backward IP curvature");
       m_backwardPt=std::abs(m_bz*2.99792458e-4/inward.ip.omega);
+      m_backwardPtError = breakpoint::transverseMomentumError(inward.ip, m_bz);
       m_backwardTotalChi2=std::accumulate(inward.backwardChi2.begin(),inward.backwardChi2.end(),0.);
       m_backwardSeedForwardChi2=inward.chi2;
       m_smoothedTotalChi2=fit.smoothedTotalChi2;m_smoothedSeedChi2=fit.smoothedSeedChi2;
@@ -622,7 +729,9 @@ StatusCode RecBreakpoint::execute() {
         const auto reference = adapter.referenceKF(hits, m_seedScale,false);
         const auto backwardReference = adapter.referenceKF(hits,m_seedScale,true);
         m_backwardReferencePt=std::abs(m_bz*2.99792458e-4/backwardReference.omega);
+        m_backwardReferencePtError = breakpoint::transverseMomentumError(backwardReference, m_bz);
         m_referencePt = std::abs(m_bz * 2.99792458e-4 / reference.omega);
+        m_referencePtError = breakpoint::transverseMomentumError(reference, m_bz);
         if (settings.intervals.empty() &&
             (std::abs(m_fitPt / m_referencePt - 1) > 1.e-4 ||
              (m_backwardSeedScale == 1.0 &&
@@ -727,11 +836,14 @@ StatusCode RecBreakpoint::execute() {
 
       // Independent flat-prior experiment. A failed or underidentified fit
       // never changes the ordinary pair and is explicitly an input-KF copy.
+      std::optional<breakpoint::TrackState> absoluteLossReference;
+      double absolutePostKappa = nan;
       if (!m_diffuseAugmentedRTS || settings.intervals.empty()) {
         m_diffuseStatus = settings.intervals.empty() ? 1 : 0;
         m_diffuseIndex = publishTrack(*diffuseRTSOutput, fit, hits, m_bz,
                                       fit.smoothedTotalChi2, adapter, m_caloStates[DiffuseRTS]);
         m_diffusePt = m_fitPt;
+        m_diffusePtError = m_fitPtError;
         m_diffuseIPParameters = {fit.ip.D0, fit.ip.phi, fit.ip.omega, fit.ip.Z0, fit.ip.tanLambda};
         m_diffuseIPCovariance.assign(fit.ip.covMatrix.begin(), fit.ip.covMatrix.end());
       } else try {
@@ -739,12 +851,36 @@ StatusCode RecBreakpoint::execute() {
         if (!std::isfinite(diffuse.ip.omega) || diffuse.ip.omega == 0 ||
             diffuse.breakpoints.empty() || !std::isfinite(diffuse.breakpoints.front().fittedVariance))
           throw std::runtime_error("Invalid diffuse endpoint or loss posterior");
+        if (m_absoluteNeutralRTS && m_absoluteDiffuseReference) {
+          absoluteLossReference = diffuse.smoothed.at(settings.intervals.front());
+          if (diffuse.persistentHits.empty() || diffuse.persistentSmoothed.empty() ||
+              diffuse.persistentHits.front() != settings.intervals.front() + 1)
+            throw std::runtime_error("Diffuse post-break reference is not the selected interval");
+          const auto& post = diffuse.persistentSmoothed.front();
+          absolutePostKappa = post.mean(2, 0);
+          if (!std::isfinite(absolutePostKappa) || absolutePostKappa == 0 ||
+              !std::isfinite(post.mean(4, 0)))
+            throw std::runtime_error("Invalid diffuse post-break momentum reference");
+          m_absoluteReferencePostP = std::hypot(1.0, post.mean(4, 0)) /
+              std::abs(absolutePostKappa);
+          if (!std::isfinite(m_absoluteReferencePostP) || m_absoluteReferencePostP <= 0)
+            throw std::runtime_error("Invalid diffuse post-break momentum magnitude");
+          // Only the mean/pivot defines the expansion point. Its fitted
+          // covariance is not inherited by the independent absolute fit.
+          absoluteLossReference->covariance.Zero();
+        }
         m_diffuseStatus = 2;
         m_diffuseIndex = publishTrack(*diffuseRTSOutput, diffuse, hits, m_bz,
                                       diffuse.chi2, adapter, m_caloStates[DiffuseRTS]);
         m_diffusePt = std::abs(m_bz * 2.99792458e-4 / diffuse.ip.omega);
+        m_diffusePtError = breakpoint::transverseMomentumError(diffuse.ip, m_bz);
         m_diffuseB = diffuse.breakpoints.front().fittedLogLoss;
         m_diffuseBVariance = diffuse.breakpoints.front().fittedVariance;
+        if (!diffuse.persistentSmoothed.empty()) {
+          const auto loss = diffuseMomentumLoss(diffuse.persistentSmoothed.front());
+          m_diffuseEloss = loss.first;
+          m_diffuseElossError = loss.second;
+        }
         m_diffuseIPParameters = {diffuse.ip.D0, diffuse.ip.phi, diffuse.ip.omega,
                                  diffuse.ip.Z0, diffuse.ip.tanLambda};
         m_diffuseIPCovariance.assign(diffuse.ip.covMatrix.begin(), diffuse.ip.covMatrix.end());
@@ -792,7 +928,126 @@ StatusCode RecBreakpoint::execute() {
         diffuseRTSOutput->push_back(track.clone());
         m_caloStates[DiffuseRTS].assignFromTrack(track, m_bz, 2);
         m_diffusePt = m_kfPt;
+        m_diffusePtError = m_kfPtError;
         warning() << "DiffuseAugmentedRTS input-KF fallback: " << m_diffuseError << endmsg;
+      }
+
+      // Independent absolute-loss experiment. The selected neutral ECAL energy
+      // initializes L=p_before-p_after in the sixth state coordinate; it is
+      // not applied again as a measurement. The ordinary RTS is never changed.
+      auto copyOrdinaryToAbsolute = [&]() {
+        m_absoluteIndex = publishTrack(*absoluteRTSOutput, fit, hits, m_bz,
+                                        fit.smoothedTotalChi2, adapter,
+                                        m_caloStates[AbsoluteRTS]);
+        m_absolutePt = m_fitPt;
+        m_absolutePtError = m_fitPtError;
+        m_absoluteIPParameters = {fit.ip.D0, fit.ip.phi, fit.ip.omega,
+                                  fit.ip.Z0, fit.ip.tanLambda};
+        m_absoluteIPCovariance.assign(fit.ip.covMatrix.begin(), fit.ip.covMatrix.end());
+      };
+      if (!m_absoluteNeutralRTS || settings.intervals.size() != 1) {
+        m_absoluteStatus = m_absoluteNeutralRTS ? 1 : 0;
+        copyOrdinaryToAbsolute();
+      } else {
+        try {
+          const auto neutral = breakpoint::collectNeutralLoss(
+              track, *pidPfos, *ecalClusters,
+              m_neutralThetaWindow.value() * 1.e-3,
+              m_neutralPhiWindow.value() * 1.e-3,
+              m_neutralStochasticError.value(), m_neutralConstantError.value());
+          m_absoluteClusterIndices = neutral.clusterIndices;
+          if (neutral.clusterIndices.empty()) {
+            m_absoluteStatus = 1;
+            copyOrdinaryToAbsolute();
+          } else {
+            m_absolutePriorEnergy = neutral.energy;
+            m_absolutePriorSigma = neutral.sigmaEnergy;
+            if (m_absoluteDiffuseReference && !absoluteLossReference)
+              throw std::runtime_error("Diffuse loss-map reference unavailable: " + m_diffuseError);
+            if (absoluteLossReference) {
+              if (m_absoluteReferenceSource == "PostLossPlusECAL") {
+                const double before = m_absoluteReferencePostP + neutral.energy;
+                const double tanLambda = absoluteLossReference->mean(4, 0);
+                if (!std::isfinite(before) || before <= neutral.energy ||
+                    !std::isfinite(tanLambda))
+                  throw std::runtime_error("Invalid post-loss plus ECAL reference momentum");
+                // Use the post-break charge sign and the upstream direction at
+                // the upstream pivot. Only the expansion point is replaced.
+                absoluteLossReference->mean(2, 0) = std::copysign(
+                    std::hypot(1.0, tanLambda) / before, absolutePostKappa);
+              }
+              appendMatrix(m_absoluteReferenceParameters, absoluteLossReference->mean);
+              m_absoluteReferenceP = std::hypot(1.0, absoluteLossReference->mean(4, 0))
+                  / std::abs(absoluteLossReference->mean(2, 0));
+            }
+            const auto absolute = fitter.fitAbsoluteLossRTS(
+                hits, settings, neutral.energy, neutral.sigmaEnergy,
+                absoluteLossReference ? &*absoluteLossReference : nullptr);
+            if (!absolute.absoluteLoss || !std::isfinite(absolute.ip.omega) ||
+                absolute.ip.omega == 0 ||
+                !std::isfinite(absolute.absoluteLoss->fittedVariance))
+              throw std::runtime_error("Invalid absolute-loss RTS endpoint or posterior");
+            m_absoluteIndex = publishTrack(*absoluteRTSOutput, absolute, hits, m_bz,
+                                            absolute.smoothedTotalChi2, adapter,
+                                            m_caloStates[AbsoluteRTS]);
+            m_absoluteStatus = 2;
+            m_absoluteReferenceUsed = absoluteLossReference.has_value();
+            const auto& upstream = absolute.filtered.at(settings.intervals.front());
+            m_absoluteForwardP = std::hypot(1.0, upstream.mean(4, 0)) / std::abs(upstream.mean(2, 0));
+            if (!absoluteLossReference) m_absoluteReferenceP = m_absoluteForwardP;
+            m_absolutePt = std::abs(m_bz * 2.99792458e-4 / absolute.ip.omega);
+            m_absolutePtError = breakpoint::transverseMomentumError(absolute.ip, m_bz);
+            m_absoluteFittedEnergy = absolute.absoluteLoss->fittedEnergy;
+            m_absoluteFittedVariance = absolute.absoluteLoss->fittedVariance;
+            m_absoluteIPParameters = {absolute.ip.D0, absolute.ip.phi,
+                                      absolute.ip.omega, absolute.ip.Z0,
+                                      absolute.ip.tanLambda};
+            m_absoluteIPCovariance.assign(absolute.ip.covMatrix.begin(),
+                                           absolute.ip.covMatrix.end());
+            m_absolutePersistentHits = absolute.persistentHits;
+            for (const auto& state : absolute.persistentSmoothed) {
+              appendMatrix(m_absoluteSmoothedMean, state.mean);
+              appendMatrix(m_absoluteSmoothedCovariance, state.covariance);
+            }
+            if (m_verbose) {
+              for (std::size_t j = 0; j < absolute.persistentHits.size(); ++j) {
+                std::ostringstream dump;
+                dump << std::setprecision(17) << "absolute6D hit=" << absolute.persistentHits[j];
+                const auto print = [&](const char* name, const TMatrixD& matrix) {
+                  dump << ' ' << name << "=[";
+                  for (int r = 0; r < matrix.GetNrows(); ++r)
+                    for (int c = 0; c < matrix.GetNcols(); ++c) dump << matrix(r, c) << ' ';
+                  dump << ']';
+                };
+                print("predicted", absolute.persistentPredicted[j].mean);
+                print("filtered", absolute.persistentFiltered[j].mean);
+                print("smoothed", absolute.persistentSmoothed[j].mean);
+                print("predictedCov", absolute.persistentPredicted[j].covariance);
+                print("filteredCov", absolute.persistentFiltered[j].covariance);
+                print("smoothedCov", absolute.persistentSmoothed[j].covariance);
+                print("transport", absolute.persistentTransport[j]);
+                print("noise", absolute.persistentNoise[j]);
+                info() << dump.str() << endmsg;
+              }
+            }
+            if (m_verbose) info() << "absoluteNeutral event=" << m_event
+                << " track=" << m_trackIndex << " interval=" << settings.intervals.front()
+                << " prior=" << neutral.energy << " +/- " << neutral.sigmaEnergy
+                << " fitted=" << m_absoluteFittedEnergy << " +/- "
+                << std::sqrt(m_absoluteFittedVariance) << " pt=" << m_absolutePt
+                << " diffuseReference=" << m_absoluteReferenceUsed
+                << " referenceSource=" << m_absoluteReferenceSourceName
+                << " forwardP=" << m_absoluteForwardP
+                << " referenceBeforeP=" << m_absoluteReferenceP
+                << " diffuseAfterP=" << m_absoluteReferencePostP << endmsg;
+          }
+        } catch (const std::exception& error) {
+          m_absoluteStatus = -1;
+          m_absoluteError = error.what();
+          copyOrdinaryToAbsolute();
+          warning() << "AbsoluteNeutralLossRTS ordinary-RTS fallback: "
+                    << m_absoluteError << endmsg;
+        }
       }
 
       // Never replace ordinary results. A failed/unsupported optimization
@@ -987,7 +1242,9 @@ StatusCode RecBreakpoint::execute() {
         // With the switch off these are copies of the already calculated pair,
         // not a rerun with slightly different floating-point results.
         m_truthRTSPt = std::abs(m_bz * 2.99792458e-4 / truthRTS.ip.omega);
+        m_truthRTSPtError = breakpoint::transverseMomentumError(truthRTS.ip, m_bz);
         m_truthBackwardPt = std::abs(m_bz * 2.99792458e-4 / truthBackward.ip.omega);
+        m_truthBackwardPtError = breakpoint::transverseMomentumError(truthBackward.ip, m_bz);
         m_truthForwardChi2 = truthRTS.chi2;
         m_truthBackwardChi2 = std::accumulate(truthBackward.backwardChi2.begin(), truthBackward.backwardChi2.end(), 0.);
         m_truthSmoothedChi2 = truthRTS.smoothedTotalChi2;
@@ -1040,7 +1297,8 @@ StatusCode RecBreakpoint::execute() {
         m_truthLikelihood.invalidate(exception.what());
         m_truthResultCode = m_truthOverrideStatus < 0 ? m_truthOverrideStatus : -4;
         truthRTSIndex = truthBackwardIndex = -1;
-        m_truthRTSPt = m_truthBackwardPt = m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
+        m_truthRTSPt = m_truthRTSPtError = m_truthBackwardPt = m_truthBackwardPtError = nan;
+        m_truthForwardChi2 = m_truthBackwardChi2 = m_truthSmoothedChi2 = nan;
         m_truthSmoothedStatus = 0; m_truthSmoothedError.clear();
         m_truthForwardLocal.clear(); m_truthBackwardLocal.clear(); m_truthSmoothedLocal.clear();
         m_truthSmoothedMeasurement.clear(); m_truthSmoothedProcess.clear(); m_truthSmoothedNative.clear();
@@ -1054,6 +1312,7 @@ StatusCode RecBreakpoint::execute() {
       }
     } catch (const std::exception& exception) {
       warning() << "event=" << m_event << " track=" << m_trackIndex << ": " << exception.what() << endmsg;
+      if (m_fitStatus != 1) m_absoluteStatus = -2;
       if (m_fitStatus != 1) {
         m_ordinaryLikelihood.reset();
         m_freeLikelihood.reset();
@@ -1075,6 +1334,8 @@ StatusCode RecBreakpoint::execute() {
     beamFreeBackwardIndices->push_back(m_beamFreeLossTracks.backwardIndex());
     diffuseStatuses->push_back(m_diffuseStatus);
     diffuseIndices->push_back(m_diffuseIndex);
+    absoluteStatuses->push_back(m_absoluteStatus);
+    absoluteIndices->push_back(m_absoluteIndex);
     m_tree->Fill();
   }
   return StatusCode::SUCCESS;
@@ -1084,6 +1345,7 @@ StatusCode RecBreakpoint::finalize() {
   if (m_file && !m_file->IsZombie()) {
     m_file->cd();
     m_tree->Write();
+    m_neutralTree->Write();
     m_file->Close();
   }
   return Algorithm::finalize();

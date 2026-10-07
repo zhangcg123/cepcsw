@@ -13,9 +13,41 @@ import shutil
 import subprocess
 import sys
 
-ORDER = ('sim', 'trk', 'breakpoint')
+ORDER = ('sim', 'trk', 'calodigi', 'rec', 'breakpoint')
+SIM_CALO_COLLECTIONS = (
+    'EcalBarrelCollection', 'EcalBarrelContributionCollection',
+    'EcalEndcapsCollection', 'EcalEndcapsContributionCollection',
+    'HcalBarrelCollection', 'HcalBarrelContributionCollection',
+    'HcalEndcapsCollection', 'HcalEndcapsContributionCollection',
+)
+SIM_BREMS_COLLECTIONS = ('GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps')
+BREAKPOINT_INPUT_COLLECTIONS = (
+    'MCParticle', 'CompleteTracks', 'CompleteTracksParticleAssociation',
+    'GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps',
+    'VXDTrackerHits', 'ITKBarrelTrackerHits', 'ITKEndcapTrackerHits',
+    'TPCTrackerHits', 'OTKBarrelTrackerHits', 'OTKEndcapTrackerHits',
+    'VXDTrackerHitAssociation', 'ITKBarrelTrackerHitAssociation',
+    'ITKEndcapTrackerHitAssociation', 'TPCTrackerHitAss',
+    'OTKBarrelTrackerHitAssociation', 'OTKEndcapTrackerHitAssociation',
+    'GsfG4MaterialSteps', 'GsfSimTrackerHitG4StepLinks',
+)
+TRACKER_PASSTHROUGH = (
+    'VXDCollection', 'ITKBarrelCollection', 'ITKEndcapCollection',
+    'TPCCollection', 'OTKBarrelCollection', 'OTKEndcapCollection',
+    'GsfG4MaterialSteps', 'GsfSimTrackerHitG4StepLinks',
+    'GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps',
+    'VXDTrackerHits', 'ITKBarrelTrackerHits', 'ITKEndcapTrackerHits',
+    'TPCTrackerHits', 'OTKBarrelTrackerHits', 'OTKEndcapTrackerHits',
+    'VXDTrackerHitAssociation', 'ITKBarrelTrackerHitAssociation',
+    'ITKEndcapTrackerHitAssociation', 'TPCTrackerHitAss',
+    'OTKBarrelTrackerHitAssociation', 'OTKEndcapTrackerHitAssociation',
+    'CompleteTracks', 'CompleteTracksParticleAssociation',
+    'RecTofCollection', 'DndxTracks',
+)
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_DIFFUSE_AUGMENTED_RTS',
+               'BP_ABSOLUTE_NEUTRAL_RTS', 'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
+               'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
                'BP_FREE_LOSS_TOLERANCE',
@@ -50,6 +82,16 @@ def replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
+def pass_through(text, reader, collections):
+    """Extend only this worker's frozen card; shared GSF templates stay intact."""
+    addition = (f'for _collection in {collections!r}:\n'
+                f'    if _collection not in {reader}.collections:\n'
+                f'        {reader}.collections.append(_collection)\n\n')
+    anchor = ('# ApplicationMgr\n' if reader == 'podioinput'
+              else 'from Configurables import ApplicationMgr\n')
+    return replace_once(text, anchor, addition + anchor)
+
+
 def create(path, text):
     with path.open('x') as stream: stream.write(text)
 
@@ -61,12 +103,18 @@ def prepare():
     if source == output: raise ValueError('Input and output directories must differ')
     requested = os.environ['STAGES'].split(',')
     if len(set(requested)) != len(requested) or any(s not in ORDER for s in requested):
-        raise ValueError('STAGES must be a nonempty, nonduplicated subset of sim,trk,breakpoint')
+        raise ValueError('STAGES must be a nonempty, nonduplicated subset of sim,trk,calodigi,rec,breakpoint')
     stages = [s for s in ORDER if s in requested]
     nevt, first, last = integer('NEVT', 1), integer('SEED_FIRST', 0), integer('SEED_LAST', 0)
     memory = integer('MEMORY_MB', 1)
     if first > last: raise ValueError('SEED_FIRST exceeds SEED_LAST')
     dry = boolean(os.environ['DRY_RUN'])
+    sample_region = os.environ.get('SAMPLE_REGION', '').strip()
+    if sample_region and sample_region not in ('barrel', 'endcap'):
+        raise ValueError('SAMPLE_REGION must be barrel, endcap, or empty for legacy names')
+    if sample_region and any(len(os.environ[key].split(',')) != 1
+                             for key in ('PARTICLES', 'THETAS', 'TRANSVERSE_MOMENTA')):
+        raise ValueError('Region-and-seed filenames require one particle and one legacy scan label per campaign')
     worker = repo / 'dump_breakpoint.sh'
     if not worker.is_file() or not os.access(worker, os.X_OK):
         raise ValueError('Worker missing/not executable: ' + str(worker))
@@ -86,6 +134,8 @@ def prepare():
         if key in controls: controls[key] = str(int(boolean(controls[key])))
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
+             'calodigi': repo/'DumpGsfTrks/calodigi.py.bk',
+             'rec': repo/'DumpGsfTrks/rec.py.bk',
              'breakpoint': repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'}
     for stage in stages: templates[stage] = paths[stage].read_text()
     jobs = []
@@ -97,12 +147,14 @@ def prepare():
                     if not re.fullmatch(r'[A-Za-z0-9.+-]+', value):
                         raise ValueError('Unsafe/empty sample label: ' + repr(value))
                 for seed in range(first, last + 1):
-                    sample = f'{particle}-{pt}-{theta}-{seed}'
+                    sample = f'{sample_region}-{seed}' if sample_region else f'{particle}-{pt}-{theta}-{seed}'
                     carddir = output/'runcards'/sample
-                    files = {s: str((output if s in stages else source)/f'{s}-{sample}.root') for s in ('sim','trk')}
+                    files = {s: str((output if s in stages else source)/f'{s}-{sample}.root')
+                             for s in ('sim', 'trk', 'calodigi', 'rec')}
                     files['breakpoint'] = str(output/f'breakpoint_flat-{sample}.root')
                     missing_inputs = []
-                    for stage, predecessor in [('trk','sim'), ('breakpoint','trk')]:
+                    for stage, predecessor in [('trk','sim'), ('calodigi','trk'),
+                                               ('rec','calodigi'), ('breakpoint','rec')]:
                         if stage in stages and predecessor not in stages:
                             path = Path(files[predecessor])
                             if not path.is_file() or path.stat().st_size == 0:
@@ -114,24 +166,49 @@ def prepare():
                         continue
                     for path in [carddir, output/'outlog'/f'{sample}.out', output/'outlog'/f'{sample}.err'] + [Path(files[s]) for s in stages]:
                         if path.exists(): raise ValueError('Refusing to overwrite ' + str(path))
-                    job = dict(repo=str(repo), sample=sample, seed=seed, nevt=nevt,
+                    job = dict(repo=str(repo), sample=sample, sample_region=sample_region,
+                               seed=seed, nevt=nevt,
                                stages=stages, files=files, cards={}, checksums={}, controls=controls, memory_mb=memory)
                     cards = {}
                     for stage in stages:
                         text = templates[stage]
-                        if stage in ('sim','trk'):
+                        if stage in ('sim', 'trk', 'calodigi', 'rec'):
                             text = replace_once(text, 'tuplepath = ""', 'tuplepath = ' + repr(str(output)))
                             text = replace_once(text, 'inputseed = 12340', f'inputseed = {seed}')
                             text = replace_once(text, 'evtmax = 12340', f'evtmax = {nevt}')
                             if stage == 'sim':
                                 text = replace_once(text, "particlename = 'mu-'", 'particlename = ' + repr(particle))
+                                if sample_region:
+                                    text = replace_once(text, 'region = "barrel"', 'region = ' + repr(sample_region))
                                 text = replace_once(text, '"sim_v01.root"', repr(files['sim']))
-                            else:
+                            elif stage == 'trk':
                                 text = replace_once(text, '"sim_v01.root"', repr(files['sim']))
                                 text = replace_once(text, '"rec_v01.root"', repr(files['trk']))
                                 text = replace_once(text, '"Digi_MUON.root"', repr(f'Digi_MUON-{sample}.root'))
+                                # The tracker output is the calodigi input.
+                                # Preserve simulated calorimeter hits and
+                                # primary eBrem-photon provenance through it.
+                                if 'calodigi' in stages:
+                                    text = pass_through(text, 'podioinput',
+                                                        SIM_CALO_COLLECTIONS + SIM_BREMS_COLLECTIONS)
+                            elif stage == 'calodigi':
+                                text = replace_once(text, 'digitizationseed = 12340', f'digitizationseed = {seed}')
+                                text = replace_once(text, '"trk.root"', repr(files['trk']))
+                                text = replace_once(text, '"calodigi.root"', repr(files['calodigi']))
+                                text = replace_once(text, '"Digi_ECAL.root"', repr(f'Digi_ECAL-{sample}.root'))
+                                text = replace_once(text, '"Digi_HCAL.root"', repr(f'Digi_HCAL-{sample}.root'))
+                                # Keep tracker inputs and G4 provenance for rec and breakpoint.
+                                text = pass_through(text, 'podioinput', TRACKER_PASSTHROUGH)
+                            else:  # rec
+                                text = replace_once(text, '"calodigi.root"', repr(files['calodigi']))
+                                text = replace_once(text, '"rec.root"', repr(files['rec']))
+                                text = replace_once(text, '"RecAnaTuple_TDR_o1_v01.root"',
+                                                    repr(f'RecAnaTuple-{sample}.root'))
+                                text = replace_once(text, '"Jets_TDR_o1_v01.root"',
+                                                    repr(f'Jets-{sample}.root'))
+                                text = pass_through(text, 'inp', TRACKER_PASSTHROUGH)
                         else:
-                            env = dict(controls, BP_INPUT=files['trk'], BP_OUTPUT=files['breakpoint'], BP_EVENTS=str(nevt))
+                            env = dict(controls, BP_INPUT=files['rec'], BP_OUTPUT=files['breakpoint'], BP_EVENTS=str(nevt))
                             # Clear worker ambient BP_* so batch nodes cannot silently
                             # change physics or resurrect old selected-event controls.
                             text = ('import os\n'
@@ -156,7 +233,8 @@ def prepare():
     print(f'Skipped {skipped} samples with missing or empty external inputs.', flush=True)
     print('Fit steering is frozen from run_breakpoint.py and explicit BP_* overrides.', flush=True)
     print('Interval selection follows the frozen card (Truth by default; Auto not implemented).', flush=True)
-    print('Simulation momentum/theta ranges remain those in sim.py.bk.', flush=True)
+    print('Sample naming: ' + (sample_region + '-<seed>' if sample_region else 'legacy particle-pT-theta-seed'), flush=True)
+    print('If simulation runs here, its gun energy stays in sim.py.bk and its theta range follows SAMPLE_REGION.', flush=True)
     submit_jobs([(carddir, job) for carddir, job, _ in jobs], dry)
 
 
@@ -186,10 +264,16 @@ def submit_prepared(value):
     repo = Path(os.environ['CEPCSW_BREAKPOINT_DIR']).resolve()
     output = directory(repo, value)
     dry = boolean(os.environ['DRY_RUN'])
+    sample_region = os.environ.get('SAMPLE_REGION', '').strip()
+    if sample_region and sample_region not in ('barrel', 'endcap'):
+        raise ValueError('SAMPLE_REGION must be barrel, endcap, or empty for legacy names')
     if not dry and not shutil.which('hep_sub'): raise ValueError('hep_sub is unavailable')
     jobs = []
     for manifest in sorted((output/'runcards').glob('*/job.json')):
         job = json.loads(manifest.read_text())
+        # Historical momentum/theta cards may share this output directory.
+        # Select only the campaign naming mode requested by this invocation.
+        if job.get('sample_region', '') != sample_region: continue
         if Path(job['repo']) != repo: raise ValueError('Manifest belongs to another worktree')
         if (manifest.parent/'submitted.json').exists(): raise ValueError('Job already submitted: ' + str(manifest))
         if (manifest.parent/'started.json').exists(): raise ValueError('Job already started: ' + str(manifest))
@@ -201,7 +285,7 @@ def submit_prepared(value):
             if (output/'outlog'/f'{job["sample"]}.{suffix}').exists():
                 raise ValueError('Existing scheduler log: inspect job state before resubmission')
         jobs.append((manifest.parent,job))
-    if not jobs: raise ValueError('No prepared job manifests under ' + str(output))
+    if not jobs: raise ValueError(f'No prepared {sample_region or "legacy"} job manifests under {output}')
     submit_jobs(jobs,dry)
 
 
@@ -212,19 +296,39 @@ def verify(path, stage):
         raise RuntimeError('Invalid ROOT output: ' + str(path))
     tree = file.Get('breakpoint' if stage == 'breakpoint' else 'events')
     if not tree or tree.GetEntries() == 0: raise RuntimeError('Empty output tree: ' + str(path))
-    cleanup_ready = False
-    if stage == 'breakpoint':
+    cleanup_ready = True
+    if stage == 'calodigi':
+        for name in BREAKPOINT_INPUT_COLLECTIONS + (
+                'ECALBarrel', 'ECALEndcaps', 'HCALBarrel', 'HCALEndcaps',
+                'GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps'):
+            if not tree.GetBranch(name): raise RuntimeError('Missing calodigi collection: ' + name)
+        print(f'calodigi events={tree.GetEntries()}', flush=True)
+    elif stage == 'rec':
+        for name in BREAKPOINT_INPUT_COLLECTIONS + (
+                'EcalCluster', 'CyberPFO', 'CyberPFOPID',
+                'GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps'):
+            if not tree.GetBranch(name): raise RuntimeError('Missing rec collection: ' + name)
+        print(f'rec events={tree.GetEntries()}', flush=True)
+    elif stage == 'breakpoint':
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
                      'truth_override_result_status', 'beam_guided_free_loss_rts_pt',
                      'beam_guided_free_loss_backward_pt', 'beam_guided_free_loss_result_status',
                      'beam_guided_free_loss_objective_nll2'):
             if not tree.GetBranch(name): raise RuntimeError('Missing flat branch: ' + name)
+        for name in ('truth_pt', 'truth_match_status', 'truth_match_purity',
+                     'charged_pfo_count', 'charged_ecal_cluster_count'):
+            if not tree.GetBranch(name): raise RuntimeError('Missing matched flat branch: ' + name)
+        neutral = file.Get('neutral_pfos')
+        if not neutral or not all(neutral.GetBranch(name) for name in (
+                'neutral_ecal_cluster_energy', 'ebrem_photon_ecal_entry_status',
+                'ebrem_photon_last_step_status', 'ebrem_photon_last_step_process_subtype',
+                'ebrem_photon_last_step_track_status', 'ebrem_photon_last_step_post_energy')):
+            raise RuntimeError('Missing neutral-PFO event tree: ' + str(path))
         good = int(tree.GetEntries('status==1'))
         invalid_truth = int(tree.GetEntries('truth_override_result_status<0'))
         print(f'Flat rows={tree.GetEntries()}, ordinary success={good}, invalid oracle={invalid_truth}', flush=True)
         # Job completion/output integrity, not per-track fit success, permits
         # cleanup. Failed ordinary/oracle rows remain tagged in the flat tuple.
-        cleanup_ready = True
     else: print(f'{stage} events={tree.GetEntries()}', flush=True)
     file.Close()
     return cleanup_ready
@@ -235,25 +339,26 @@ def file_identity(path):
     return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns
 
 
-def cleanup_tracker(job, manifest, produced_identity, cleanup_ready):
-    """Delete only this job's own, unchanged intermediate after verified output."""
-    if 'trk' not in job['stages']:
+def cleanup_intermediate(job, manifest, stage, produced_identity, cleanup_ready):
+    """Delete only this job's unchanged intermediate after its consumer verifies."""
+    consumer = {'trk': 'calodigi', 'calodigi': 'rec'}[stage]
+    if stage not in job['stages']:
         return {'status':'retained_external'}
-    if 'breakpoint' not in job['stages']:
+    if consumer not in job['stages']:
         return {'status':'retained_no_downstream'}
     if not cleanup_ready:
-        print('Retaining tracker output: breakpoint output has not passed verification.', flush=True)
+        print(f'Retaining {stage} output: {consumer} output has not passed verification.', flush=True)
         return {'status':'retained_unverified_output'}
     output_dir = manifest.parent.parent.parent
-    expected = output_dir / f'trk-{job["sample"]}.root'
-    tracker = Path(job['files']['trk'])
-    if tracker != expected or tracker.is_symlink() or not tracker.is_file():
-        raise RuntimeError('Refusing cleanup of unexpected/nonregular tracker path: ' + str(tracker))
-    if produced_identity is None or file_identity(tracker) != produced_identity:
-        raise RuntimeError('Tracker output changed since production; refusing cleanup: ' + str(tracker))
-    tracker.unlink()
-    print('Removed verified intermediate tracker output: ' + str(tracker), flush=True)
-    return {'status':'removed', 'path':str(tracker)}
+    expected = output_dir / f'{stage}-{job["sample"]}.root'
+    intermediate = Path(job['files'][stage])
+    if intermediate != expected or intermediate.is_symlink() or not intermediate.is_file():
+        raise RuntimeError('Refusing cleanup of unexpected/nonregular intermediate: ' + str(intermediate))
+    if produced_identity is None or file_identity(intermediate) != produced_identity:
+        raise RuntimeError('Intermediate changed since production; refusing cleanup: ' + str(intermediate))
+    intermediate.unlink()
+    print('Removed verified intermediate ' + stage + ' output: ' + str(intermediate), flush=True)
+    return {'status':'removed', 'path':str(intermediate)}
 
 
 def run(manifest):
@@ -269,18 +374,23 @@ def run(manifest):
         if Path(job['files'][stage]).exists(): raise ValueError('Output already exists: ' + job['files'][stage])
     # Exclusive marker prevents two workers using the same outputs concurrently.
     create(manifest.parent/'started.json', json.dumps({'pid':os.getpid(), 'host':os.uname().nodename})+'\n')
-    produced_tracker = None
-    cleanup_ready = False
+    produced = {}
+    cleanup = {stage: {'status': 'retained_external' if stage not in job['stages']
+                       else 'retained_no_downstream'} for stage in ('trk', 'calodigi')}
     for stage in job['stages']:
         print('Running ' + stage + ': ' + job['cards'][stage], flush=True)
         subprocess.run([str(runner), 'gaudirun.py', job['cards'][stage]], cwd=repo, check=True)
         ready = verify(Path(job['files'][stage]), stage)
-        if stage == 'trk': produced_tracker = file_identity(Path(job['files']['trk']))
-        if stage == 'breakpoint': cleanup_ready = ready
-    cleanup = cleanup_tracker(job, manifest, produced_tracker, cleanup_ready)
+        if stage in ('trk', 'calodigi'):
+            produced[stage] = file_identity(Path(job['files'][stage]))
+        if stage == 'calodigi':
+            cleanup['trk'] = cleanup_intermediate(job, manifest, 'trk', produced.get('trk'), ready)
+        elif stage == 'rec':
+            cleanup['calodigi'] = cleanup_intermediate(job, manifest, 'calodigi',
+                                                        produced.get('calodigi'), ready)
     create(manifest.parent/'completed.json', json.dumps({'outputs':job['files'], 'stages':job['stages'],
-                                                        'tracker_cleanup':cleanup}, indent=2)+'\n')
-    print('Completed. Simulation/external inputs retained; no GSF workflow was run.', flush=True)
+                                                        'intermediate_cleanup':cleanup}, indent=2)+'\n')
+    print('Completed. Simulation, rec, and external inputs retained; no GSF workflow was run.', flush=True)
 
 
 if __name__ == '__main__':

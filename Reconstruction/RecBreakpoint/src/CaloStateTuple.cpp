@@ -1,4 +1,5 @@
 #include "CaloStateTuple.h"
+#include "TrackState.h"
 
 #include "TTree.h"
 
@@ -12,6 +13,7 @@ void CaloStateTuple::book(TTree& tree, const std::string& prefix) {
   tree.Branch((prefix + "calo_status").c_str(), &m_status);
   tree.Branch((prefix + "calo_error").c_str(), &m_error);
   tree.Branch((prefix + "calo_pt").c_str(), &m_pt);
+  tree.Branch((prefix + "calo_pt_error").c_str(), &m_ptError);
   tree.Branch((prefix + "calo_p").c_str(), &m_p);
   tree.Branch((prefix + "calo_parameters").c_str(), &m_parameters);
   tree.Branch((prefix + "calo_covariance").c_str(), &m_covariance);
@@ -21,7 +23,7 @@ void CaloStateTuple::book(TTree& tree, const std::string& prefix) {
 void CaloStateTuple::reset() {
   m_status = 0;
   m_error.clear();
-  m_pt = m_p = std::numeric_limits<double>::quiet_NaN();
+  m_pt = m_ptError = m_p = std::numeric_limits<double>::quiet_NaN();
   m_parameters.clear();
   m_covariance.clear();
   m_referencePoint.clear();
@@ -38,6 +40,7 @@ void CaloStateTuple::assign(const edm4hep::TrackState& state, double bz, int sta
   m_covariance.assign(state.covMatrix.begin(), state.covMatrix.end());
   m_referencePoint = {state.referencePoint.x, state.referencePoint.y, state.referencePoint.z};
   m_pt = std::abs(bz * 2.99792458e-4 / state.omega);
+  m_ptError = transverseMomentumError(state, bz);
   m_p = m_pt * std::hypot(1.0, static_cast<double>(state.tanLambda));
 }
 

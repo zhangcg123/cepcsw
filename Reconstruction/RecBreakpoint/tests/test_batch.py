@@ -68,14 +68,15 @@ class BatchTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.repo = Path(self.temp.name)
         for rel in ['DumpGsfTrks/sim.py.bk', 'DumpGsfTrks/trk.py.bk',
+                    'DumpGsfTrks/calodigi.py.bk', 'DumpGsfTrks/rec.py.bk',
                     'Reconstruction/RecBreakpoint/options/run_breakpoint.py', 'dump_breakpoint.sh',
                     'subbreakpointjobs.sh', 'Reconstruction/RecBreakpoint/options/batch_breakpoint.py']:
             dest = self.repo/rel; dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO/rel, dest)
         (self.repo/'inputs').mkdir()
-        for stage in ['sim','trk']:
+        for stage in ['sim','trk','calodigi','rec']:
             (self.repo/'inputs'/f'{stage}-e--2.0-85-12.root').write_bytes(b'planning fixture')
-        (self.repo/'inputs/sim-barrel-12.root').write_bytes(b'planning fixture')
+            (self.repo/'inputs'/f'{stage}-barrel-12.root').write_bytes(b'planning fixture')
         self.env = dict(CEPCSW_BREAKPOINT_DIR=str(self.repo), INPUT_TUPLEPATH='inputs', OUTPUT_TUPLEPATH='outputs',
                         STAGES='trk,breakpoint', NEVT='2', SEED_FIRST='12', SEED_LAST='12', MEMORY_MB='5000',
                         DRY_RUN='1', PARTICLES='e-', THETAS='85', TRANSVERSE_MOMENTA='2.0')
@@ -94,11 +95,11 @@ class BatchTest(unittest.TestCase):
                 self.prepare(STAGES=','.join(reversed(selected)), OUTPUT_TUPLEPATH=out)
                 job = self.manifest(out)
                 self.assertEqual(job['stages'],list(selected))
-                for stage in ('sim','trk'):
+                for stage in ('sim','trk','calodigi','rec'):
                     self.assertEqual(Path(job['files'][stage]).parent,self.repo/(out if stage in selected else 'inputs'))
                 if 'breakpoint' in selected:
                     text=Path(job['cards']['breakpoint']).read_text()
-                    self.assertIn(repr(job['files']['trk']),text)
+                    self.assertIn(repr(job['files']['rec']),text)
                     self.assertNotIn('RecGsfTracking(',text)
 
     def test_backward_seed_default_and_explicit_override(self):
@@ -235,7 +236,8 @@ class BatchTest(unittest.TestCase):
         # Seed11 missing, seed12 valid, seed13 empty, seed14 valid.
         (self.repo/'inputs/sim-e--2.0-85-13.root').write_bytes(b'')
         (self.repo/'inputs/sim-e--2.0-85-14.root').write_bytes(b'planning fixture')
-        env = dict(self.env, SEED_FIRST='11', SEED_LAST='14', DRY_RUN='0')
+        env = dict(self.env, STAGES='trk,calodigi,rec,breakpoint',
+                   SEED_FIRST='11', SEED_LAST='14', DRY_RUN='0')
         output = io.StringIO()
         with patch.dict(os.environ, env, clear=True), contextlib.redirect_stdout(output), \
              patch.object(batch.shutil, 'which', return_value='/mock/hep_sub'), \
@@ -253,7 +255,7 @@ class BatchTest(unittest.TestCase):
 
     def test_all_missing_inputs_leave_no_output(self):
         with self.assertRaisesRegex(ValueError, 'No eligible jobs: skipped 2'):
-            self.prepare(SEED_FIRST='13', SEED_LAST='14')
+            self.prepare(STAGES='trk,calodigi,rec,breakpoint', SEED_FIRST='13', SEED_LAST='14')
         self.assertFalse((self.repo/'outputs').exists())
 
     def test_breakpoint_only_skips_missing_tracker(self):
@@ -262,7 +264,7 @@ class BatchTest(unittest.TestCase):
         self.assertFalse((self.repo/'outputs/runcards/e--2.0-85-13').exists())
 
     def test_generated_sim_needs_no_external_sim(self):
-        self.prepare(STAGES='sim,trk,breakpoint', SEED_FIRST='13', SEED_LAST='13')
+        self.prepare(STAGES='sim,trk,calodigi,rec,breakpoint', SEED_FIRST='13', SEED_LAST='13')
         self.assertTrue((self.repo/'outputs/runcards/e--2.0-85-13/job.json').is_file())
 
     def test_template_drift_fails_before_submission(self):
@@ -300,24 +302,37 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ,self.env,clear=True), self.assertRaises(ValueError):
             batch.submit_prepared('outputs')
 
-    def cleanup_fixture(self, stages='trk,breakpoint'):
+    def cleanup_fixture(self, stages='trk,calodigi,rec'):
         self.prepare(STAGES=stages)
         job=self.manifest()
         manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
-        tracker=Path(job['files']['trk'])
-        if 'trk' in job['stages']: tracker.write_bytes(b'job-owned tracker')
-        return job,manifest,tracker,batch.file_identity(tracker)
+        paths={stage:Path(job['files'][stage]) for stage in ('trk','calodigi')}
+        identities={}
+        for stage in ('trk','calodigi'):
+            if stage in job['stages']:
+                paths[stage].write_bytes(b'job-owned '+stage.encode())
+                identities[stage]=batch.file_identity(paths[stage])
+        return job,manifest,paths,identities
 
     def test_cleanup_only_owned_complete_tracker(self):
-        job,manifest,tracker,identity=self.cleanup_fixture()
-        result=batch.cleanup_tracker(job,manifest,identity,True)
-        self.assertEqual(result['status'],'removed');self.assertFalse(tracker.exists())
+        job,manifest,paths,identities=self.cleanup_fixture()
+        result=batch.cleanup_intermediate(job,manifest,'trk',identities['trk'],True)
+        self.assertEqual(result['status'],'removed');self.assertFalse(paths['trk'].exists())
+        self.assertTrue(paths['calodigi'].exists())
         self.assertTrue(Path(job['files']['sim']).exists())
 
+    def test_cleanup_only_owned_complete_calodigi(self):
+        job,manifest,paths,identities=self.cleanup_fixture()
+        result=batch.cleanup_intermediate(job,manifest,'calodigi',identities['calodigi'],True)
+        self.assertEqual(result['status'],'removed');self.assertFalse(paths['calodigi'].exists())
+        self.assertTrue(paths['trk'].exists())
+
     def test_cleanup_retains_unverified_output(self):
-        job,manifest,tracker,identity=self.cleanup_fixture()
-        result=batch.cleanup_tracker(job,manifest,identity,False)
-        self.assertEqual(result['status'],'retained_unverified_output');self.assertTrue(tracker.exists())
+        job,manifest,paths,identities=self.cleanup_fixture()
+        for stage in ('trk','calodigi'):
+            result=batch.cleanup_intermediate(job,manifest,stage,identities[stage],False)
+            self.assertEqual(result['status'],'retained_unverified_output')
+            self.assertTrue(paths[stage].exists())
 
     def test_bad_fit_rows_do_not_block_cleanup(self):
         for good in (0, 1, 2):
@@ -348,25 +363,85 @@ class BatchTest(unittest.TestCase):
                 with patch.dict('sys.modules', ROOT=root), self.assertRaises(RuntimeError):
                     batch.verify(Path('fixture.root'), 'breakpoint')
 
+    def test_missing_durable_rec_input_blocks_calodigi_cleanup(self):
+        tree = MagicMock()
+        tree.GetEntries.return_value = 2
+        tree.GetBranch.side_effect = lambda name: None if name == 'TPCTrackerHitAss' else object()
+        file = MagicMock()
+        file.IsZombie.return_value = False
+        file.TestBit.return_value = False
+        file.Get.return_value = tree
+        root = types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path: file, kRecovered=1))
+        with patch.dict('sys.modules', ROOT=root), self.assertRaisesRegex(RuntimeError, 'TPCTrackerHitAss'):
+            batch.verify(Path('fixture.root'), 'rec')
+
     def test_cleanup_retains_external_input(self):
-        job,manifest,tracker,identity=self.cleanup_fixture('breakpoint')
-        result=batch.cleanup_tracker(job,manifest,None,True)
-        self.assertEqual(result['status'],'retained_external');self.assertTrue(tracker.exists())
+        job,manifest,paths,identities=self.cleanup_fixture('rec,breakpoint')
+        result=batch.cleanup_intermediate(job,manifest,'calodigi',None,True)
+        self.assertEqual(result['status'],'retained_external');self.assertTrue(paths['calodigi'].exists())
 
     def test_cleanup_retains_trk_only_output(self):
-        job,manifest,tracker,identity=self.cleanup_fixture('trk')
-        result=batch.cleanup_tracker(job,manifest,identity,True)
-        self.assertEqual(result['status'],'retained_no_downstream');self.assertTrue(tracker.exists())
+        job,manifest,paths,identities=self.cleanup_fixture('trk')
+        result=batch.cleanup_intermediate(job,manifest,'trk',identities['trk'],True)
+        self.assertEqual(result['status'],'retained_no_downstream');self.assertTrue(paths['trk'].exists())
 
     def test_cleanup_refuses_changed_or_redirected_tracker(self):
-        job,manifest,tracker,identity=self.cleanup_fixture()
-        tracker.write_bytes(b'changed after production')
-        with self.assertRaises(RuntimeError):batch.cleanup_tracker(job,manifest,identity,True)
-        tracker.unlink()
-        shared=self.repo/'inputs/trk-e--2.0-85-12.root'
-        tracker.symlink_to(shared)
-        with self.assertRaises(RuntimeError):batch.cleanup_tracker(job,manifest,batch.file_identity(tracker),True)
-        self.assertTrue(shared.exists())
+        job,manifest,paths,identities=self.cleanup_fixture()
+        for stage in ('trk','calodigi'):
+            intermediate=paths[stage]
+            intermediate.write_bytes(b'changed after production')
+            with self.assertRaises(RuntimeError):
+                batch.cleanup_intermediate(job,manifest,stage,identities[stage],True)
+            intermediate.unlink()
+            shared=self.repo/f'inputs/{stage}-e--2.0-85-12.root'
+            intermediate.symlink_to(shared)
+            with self.assertRaises(RuntimeError):
+                batch.cleanup_intermediate(job,manifest,stage,batch.file_identity(intermediate),True)
+            self.assertTrue(shared.exists())
+
+    def test_worker_cleans_each_intermediate_after_its_consumer(self):
+        self.prepare(STAGES='trk,calodigi,rec,breakpoint')
+        job=self.manifest()
+        manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
+        runner=self.repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
+        runner.parent.mkdir(parents=True);runner.write_text('fixture')
+        observed=[]
+        def execute(command, **kwargs):
+            stage=Path(command[-1]).stem
+            observed.append((stage, Path(job['files']['trk']).exists(),
+                             Path(job['files']['calodigi']).exists()))
+            Path(job['files'][stage]).write_bytes(b'produced '+stage.encode())
+        with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
+             patch.object(batch,'verify',return_value=True):
+            batch.run(manifest)
+        self.assertEqual(observed, [('trk',False,False), ('calodigi',True,False),
+                                    ('rec',False,True), ('breakpoint',False,False)])
+        self.assertFalse(Path(job['files']['trk']).exists())
+        self.assertFalse(Path(job['files']['calodigi']).exists())
+        self.assertTrue(Path(job['files']['sim']).exists())
+        self.assertTrue(Path(job['files']['rec']).exists())
+        self.assertTrue(Path(job['files']['breakpoint']).exists())
+        completed=json.loads((manifest.parent/'completed.json').read_text())
+        self.assertEqual(completed['intermediate_cleanup']['trk']['status'],'removed')
+        self.assertEqual(completed['intermediate_cleanup']['calodigi']['status'],'removed')
+
+    def test_rec_failure_retains_calodigi_and_sim(self):
+        self.prepare(STAGES='trk,calodigi,rec,breakpoint')
+        job=self.manifest()
+        manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
+        runner=self.repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
+        runner.parent.mkdir(parents=True);runner.write_text('fixture')
+        def execute(command, **kwargs):
+            stage=Path(command[-1]).stem
+            if stage == 'rec': raise batch.subprocess.CalledProcessError(1,command)
+            Path(job['files'][stage]).write_bytes(b'produced '+stage.encode())
+        with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
+             patch.object(batch,'verify',return_value=True):
+            with self.assertRaises(batch.subprocess.CalledProcessError): batch.run(manifest)
+        self.assertFalse(Path(job['files']['trk']).exists())
+        self.assertTrue(Path(job['files']['calodigi']).exists())
+        self.assertTrue(Path(job['files']['sim']).exists())
+        self.assertFalse((manifest.parent/'completed.json').exists())
 
     def test_worker_failure_does_not_cleanup_tracker(self):
         self.prepare()
@@ -380,7 +455,7 @@ class BatchTest(unittest.TestCase):
             else:
                 raise batch.subprocess.CalledProcessError(1,command)
         with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
-             patch.object(batch,'verify',return_value=False), patch.object(batch,'cleanup_tracker') as cleanup:
+             patch.object(batch,'verify',return_value=False), patch.object(batch,'cleanup_intermediate') as cleanup:
             with self.assertRaises(batch.subprocess.CalledProcessError):batch.run(manifest)
             cleanup.assert_not_called()
         self.assertTrue(Path(job['files']['trk']).exists())

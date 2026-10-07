@@ -4,6 +4,7 @@
 #include "KalmanAdapter.h"
 #include <vector>
 #include <map>
+#include <optional>
 
 namespace breakpoint {
 struct FitSettings {
@@ -16,6 +17,8 @@ struct FitSettings {
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
+  // Set only by fitAbsoluteLossRTS. The ordinary log-loss fit never reads it.
+  std::optional<std::pair<double, double>> absoluteLossPrior; // mean, sigma [GeV]
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
 };
@@ -28,6 +31,13 @@ struct IntervalResult {
   double localLogLoss = 0;
   double localVariance = 0;
   double covarianceClosure = 0;
+};
+
+struct AbsoluteLossResult {
+  int interval = -1;
+  double priorEnergy = 0, priorSigma = 0;
+  double localEnergy = 0, localVariance = 0;
+  double fittedEnergy = 0, fittedVariance = 0;
 };
 
 struct FitResult {
@@ -44,6 +54,7 @@ struct FitResult {
   int smoothedChi2Status = 0;
   std::string smoothedChi2Error;
   std::vector<IntervalResult> breakpoints;
+  std::optional<AbsoluteLossResult> absoluteLoss;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;
   std::vector<int> persistentPredictedDiffuse, persistentFilteredDiffuse;
@@ -71,11 +82,18 @@ public:
   /// No Gaussian SigmaLogLoss prior is introduced or scored.
   FitResult fitDiffuseRTS(const std::vector<edm4hep::TrackerHit>& hits,
                          const FitSettings& settings) const;
+  /// Separate one-breakpoint RTS with absolute loss L [GeV] as coordinate 5.
+  /// The external energy initializes L; it is not applied as another hit.
+  /// Optional upstream track mean is ONLY a loss-map expansion point.
+  FitResult fitAbsoluteLossRTS(const std::vector<edm4hep::TrackerHit>& hits,
+      const FitSettings& settings, double energy, double sigmaEnergy,
+      const TrackState* lossReference = nullptr) const;
 private:
   FitResult fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& settings) const;
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
-                          const FitSettings& settings) const;
+                          const FitSettings& settings,
+                          const TrackState* lossReference = nullptr) const;
   void scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits, FitResult& result,
       const std::vector<TMatrixD>& predictedMeans, const std::vector<TMatrixD>& predictedCovs,
       const std::vector<TMatrixD>& smoothedMeans, const std::vector<TMatrixD>& noises,

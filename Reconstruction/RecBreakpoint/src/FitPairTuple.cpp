@@ -1,4 +1,5 @@
 #include "FitPairTuple.h"
+#include "TrackState.h"
 #include "TTree.h"
 #include <cmath>
 #include <limits>
@@ -8,6 +9,7 @@
 namespace breakpoint {
 void FitPairTuple::Endpoint::book(TTree& tree, const std::string& prefix) {
   tree.Branch((prefix + "pt").c_str(), &pt);
+  tree.Branch((prefix + "pt_error").c_str(), &ptError);
   tree.Branch((prefix + "ip_parameters").c_str(), &parameters);
   tree.Branch((prefix + "ip_covariance").c_str(), &covariance);
   tree.Branch((prefix + "fitted_log_loss").c_str(), &loss);
@@ -17,6 +19,7 @@ void FitPairTuple::Endpoint::book(TTree& tree, const std::string& prefix) {
 void FitPairTuple::Endpoint::assign(const FitResult& fit, double bz) {
   const auto& ip = fit.ip;
   pt = std::abs(bz * 2.99792458e-4 / ip.omega);
+  ptError = transverseMomentumError(ip, bz);
   parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
   covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
   for (const auto& item : fit.breakpoints) {
@@ -72,6 +75,7 @@ void FitPairTuple::reset() {
   *this = FitPairTuple{};
   const double nan = std::numeric_limits<double>::quiet_NaN();
   m_rts.pt = m_backward.pt = m_forwardChi2 = m_backwardChi2 = m_smoothedChi2 = nan;
+  m_rts.ptError = m_backward.ptError = nan;
   m_kfChi2 = nan;
   m_smoothedSeed = nan;
 }
@@ -82,6 +86,7 @@ void FitPairTuple::assignKF(const edm4hep::Track& track, double bz,
   for (const auto& ip : track.getTrackStates()) {
     if (ip.location != 1 || !std::isfinite(ip.omega) || ip.omega == 0) continue;
     m_rts.pt = std::abs(bz * 2.99792458e-4 / ip.omega);
+    m_rts.ptError = transverseMomentumError(ip, bz);
     m_rts.parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
     m_rts.covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
     m_backward = m_rts;

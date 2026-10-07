@@ -4,8 +4,11 @@
 #include "TrackState.h"
 
 namespace breakpoint {
+enum class LossCoordinate { LogRatio, AbsoluteMomentum };
+
 /// Live six-dimensional state. Coordinate 5 always names the SAME breakpoint,
-/// not the material at the current pivot. Ordinary transport never reapplies b.
+/// not the material at the current pivot. The configured loss is applied only
+/// when this state first crosses its owning interval.
 struct LossTrackState {
   TMatrixD mean{6, 1};
   TMatrixD covariance{6, 6};
@@ -20,14 +23,14 @@ struct LossTrackState {
     }
     return result;
   }
-  static LossTrackState introduce(const TrackState& track, double b, double variance) {
+  static LossTrackState introduce(const TrackState& track, double lossValue, double variance) {
     LossTrackState result;
     result.pivot = track.pivot;
     for (int i = 0; i < 5; ++i) {
       result.mean(i, 0) = track.mean(i, 0);
       for (int j = 0; j < 5; ++j) result.covariance(i, j) = track.covariance(i, j);
     }
-    result.mean(5, 0) = b;
+    result.mean(5, 0) = lossValue;
     result.covariance(5, 5) = variance;
     return result;
   }

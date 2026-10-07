@@ -6,6 +6,9 @@
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
+#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
+#include "edm4hep/ReconstructedParticleCollection.h"
+#include "edm4hep/ClusterCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
@@ -14,6 +17,7 @@
 #include "FitPairTuple.h"
 #include "LikelihoodTuple.h"
 #include "CaloStateTuple.h"
+#include "RecoAssociationTuple.h"
 
 #include <array>
 #include <cstdint>
@@ -48,6 +52,9 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeBackwardIndex{"BreakpointBeamGuidedFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthRTSOutput{"BreakpointTracksTruthOverrideRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_diffuseRTSOutput{"BreakpointTracksDiffuseAugmentedRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_absoluteRTSOutput{"BreakpointTracksAbsoluteNeutralRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_absoluteStatusOutput{"BreakpointAbsoluteNeutralStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_absoluteIndexOutput{"BreakpointAbsoluteNeutralIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_diffuseStatusOutput{"BreakpointDiffuseAugmentedStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_diffuseIndexOutput{"BreakpointDiffuseAugmentedIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthBackwardOutput{"BreakpointTracksTruthOverrideBackwardFilter", Gaudi::DataHandle::Writer, this};
@@ -57,7 +64,11 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_status{"BreakpointStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_outputIndex{"BreakpointOutputIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_backwardOutputIndex{"BreakpointBackwardOutputIndex", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::MCParticleCollection> m_truth{"MCParticle", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_trackTruthAssociations{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::ReconstructedParticleCollection> m_pidPfos{"CyberPFOPID", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::ClusterCollection> m_ecalClusters{"EcalCluster", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4BremsPhotonCollection> m_bremsPhotons{"GsfG4BremsPhotons", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4BremsPhotonStepCollection> m_bremsPhotonSteps{"GsfG4BremsPhotonSteps", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4MaterialStepCollection> m_truthSteps{"GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_truthLinks{"GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_vxdAssociations{"VXDTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
@@ -77,6 +88,13 @@ private:
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "LocalMarginal"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
   Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", false};
+  Gaudi::Property<bool> m_absoluteNeutralRTS{this, "AbsoluteNeutralLossRTS", false};
+  Gaudi::Property<bool> m_absoluteDiffuseReference{this, "AbsoluteNeutralDiffuseReference", false};
+  Gaudi::Property<std::string> m_absoluteReferenceSource{this, "AbsoluteNeutralReferenceSource", "UpstreamSmoothed"};
+  Gaudi::Property<double> m_neutralThetaWindow{this, "NeutralLossThetaWindowMrad", 10.0};
+  Gaudi::Property<double> m_neutralPhiWindow{this, "NeutralLossPhiWindowMrad", 200.0};
+  Gaudi::Property<double> m_neutralStochasticError{this, "NeutralLossStochasticError", 0.011};
+  Gaudi::Property<double> m_neutralConstantError{this, "NeutralLossConstantError", 0.004};
   Gaudi::Property<bool> m_freeLossBeamSpotObjective{this, "FreeLossBeamSpotObjective", true};
   Gaudi::Property<double> m_beamSpotX{this, "BeamSpotX", 0.0};
   Gaudi::Property<double> m_beamSpotY{this, "BeamSpotY", 0.0};
@@ -89,7 +107,6 @@ private:
   Gaudi::Property<double> m_maxChi2{this, "MaxChi2PerHit", 1.e100};
   Gaudi::Property<bool> m_ms{this, "MSOn", true};
   Gaudi::Property<bool> m_eloss{this, "ElossOn", false};
-  Gaudi::Property<bool> m_truthDiagnostics{this, "TruthDiagnostics", false};
   Gaudi::Property<double> m_truthEndpointDistance{this, "TruthMaxEndpointDistance", 5.0};
   Gaudi::Property<bool> m_verbose{this, "VerboseDump", false};
   Gaudi::Property<bool> m_verifyReference{this, "VerifyKFReference", false};
@@ -100,18 +117,37 @@ private:
   double m_bz = 0;
   std::unique_ptr<TFile> m_file;
   TTree* m_tree = nullptr; // file owned
+  TTree* m_neutralTree = nullptr; // file owned; one entry per processed event
   int m_event = -1, m_trackIndex = -1, m_fitStatus = 0, m_hitCount = 0;
-  double m_truthPt = 0, m_kfPt = 0, m_fitPt = 0, m_fitChi2 = 0;
-  double m_referencePt = 0;
+  double m_kfPt = 0, m_kfPtError = 0, m_fitPt = 0, m_fitPtError = 0, m_fitChi2 = 0;
+  breakpoint::TrackRecoTuple m_trackRecoTuple;
+  breakpoint::NeutralPfoTuple m_neutralPfoTuple;
+  double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
-  // KF input plus the nine parallel published breakpoint endpoint families.
-  std::array<breakpoint::CaloStateTuple, 10> m_caloStates;
+  // KF input plus the ten parallel published breakpoint endpoint families.
+  std::array<breakpoint::CaloStateTuple, 11> m_caloStates;
+  // Status: 0 disabled, 1 no usable neutral/interval (ordinary RTS copy),
+  // 2 absolute-loss RTS, -1 failed (ordinary RTS copy), -2 ordinary fit failed.
+  int m_absoluteStatus = 0, m_absoluteIndex = -1;
+  std::string m_absoluteError;
+  double m_absolutePt = 0, m_absolutePtError = 0;
+  double m_absolutePriorEnergy = 0, m_absolutePriorSigma = 0;
+  double m_absoluteFittedEnergy = 0, m_absoluteFittedVariance = 0;
+  bool m_absoluteReferenceRequested = false, m_absoluteReferenceUsed = false;
+  std::string m_absoluteReferenceSourceName;
+  double m_absoluteForwardP = 0, m_absoluteReferenceP = 0, m_absoluteReferencePostP = 0;
+  std::vector<double> m_absoluteReferenceParameters;
+  std::vector<int> m_absoluteClusterIndices;
+  std::vector<double> m_absoluteIPParameters, m_absoluteIPCovariance;
+  std::vector<int> m_absolutePersistentHits;
+  std::vector<double> m_absoluteSmoothedMean, m_absoluteSmoothedCovariance;
   int m_diffuseStatus = 0, m_diffuseIndex = -1;
   std::string m_diffuseError;
-  double m_diffusePt = 0, m_diffuseB = 0, m_diffuseBVariance = 0;
+  double m_diffusePt = 0, m_diffusePtError = 0, m_diffuseB = 0, m_diffuseBVariance = 0;
+  double m_diffuseEloss = 0, m_diffuseElossError = 0;
   std::vector<double> m_diffuseIPParameters, m_diffuseIPCovariance;
   std::vector<double> m_diffuseLocalChi2, m_diffuseFilteredB, m_diffuseSmoothedB;
   std::vector<int> m_diffuseHitIndex;
@@ -139,8 +175,8 @@ private:
   std::vector<double> m_backwardPredictedVariance, m_backwardChi2;
   std::vector<double> m_rtsLoss, m_rtsLossVariance;
   std::vector<double> m_priorLoss, m_localLoss, m_localVariance, m_fittedLoss, m_lossVariance, m_closure;
-  double m_backwardPt=0, m_backwardTotalChi2=0, m_smoothedTotalChi2=0, m_smoothedSeedChi2=0;
-  double m_backwardSeedForwardChi2=0, m_backwardReferencePt=0;
+  double m_backwardPt=0, m_backwardPtError=0, m_backwardTotalChi2=0, m_smoothedTotalChi2=0, m_smoothedSeedChi2=0;
+  double m_backwardSeedForwardChi2=0, m_backwardReferencePt=0, m_backwardReferencePtError=0;
   int m_smoothedChi2Status=0;
   std::string m_smoothedChi2Error;
   std::vector<double> m_smoothedChi2, m_smoothedMeasurementChi2, m_smoothedProcessChi2, m_smoothedNativeChi2;
@@ -153,7 +189,7 @@ private:
   std::vector<double> m_truthStartFraction, m_truthEndFraction;
   // Parallel oracle endpoints. Status: 0 absent, 1 copied, 2 oracle, negative invalid.
   int m_truthResultCode = 0;
-  double m_truthRTSPt = 0, m_truthBackwardPt = 0;
+  double m_truthRTSPt = 0, m_truthRTSPtError = 0, m_truthBackwardPt = 0, m_truthBackwardPtError = 0;
   double m_truthForwardChi2 = 0, m_truthBackwardChi2 = 0, m_truthSmoothedChi2 = 0;
   int m_truthSmoothedStatus = 0;
   std::string m_truthSmoothedError;
