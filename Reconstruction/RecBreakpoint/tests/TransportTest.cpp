@@ -1,4 +1,5 @@
 #include "RecBreakpoint/AugmentedTransport.h"
+#include "RecBreakpoint/AbsoluteLossMapping.h"
 #include "RecBreakpoint/SeedHitSelection.h"
 
 #include <cmath>
@@ -14,6 +15,43 @@ void near(double actual, double expected) {
 }
 
 int main() {
+  // Exercise the SAME absolute-loss map used by KalmanAdapter: both signs of
+  // charge/slope, small and large losses, and every nontrivial derivative.
+  for (double curvature : {-0.1, 0.1})
+    for (double slope : {-0.7, 0., 0.7})
+      for (double energy : {0., 0.2, 5.}) {
+        const Vector6 source{.01, .2, curvature, .03, slope, energy};
+        const auto mapped = absoluteLossMapping(source);
+        for (int column : {2, 4, 5}) {
+          if (energy == 0 && column == 5) continue; // nonnegative L domain
+          auto plus = source, minus = source;
+          const double step = 1.e-6 * (column == 2 ? .1 : 1.);
+          plus[column] += step; minus[column] -= step;
+          const double numerical = (absoluteLossMapping(plus).mean[2]
+              - absoluteLossMapping(minus).mean[2]) / (2 * step);
+          if (std::abs(numerical - mapped.jacobian[12 + column]) > 1.e-8)
+            throw std::runtime_error("absolute-loss Jacobian finite-difference test failed");
+        }
+        Vector5 reference{};
+        for (int j = 0; j < 5; ++j) reference[j] = source[j];
+        const auto same = absoluteLossMapping(source, &reference);
+        for (int j = 0; j < 6; ++j) near(same.mean[j], mapped.mean[j]);
+        reference[2] *= .8; reference[4] += .05;
+        const auto affine = absoluteLossMapping(source, &reference);
+        Vector6 expansion = source;
+        for (int j = 0; j < 5; ++j) expansion[j] = reference[j];
+        const auto atReference = absoluteLossMapping(expansion);
+        near(affine.mean[2], atReference.mean[2]
+            + atReference.jacobian[14] * (source[2] - expansion[2])
+            + atReference.jacobian[16] * (source[4] - expansion[4]));
+        for (int j : {0, 1, 3, 4, 5}) near(affine.mean[j], source[j]);
+        if (energy == 0) near(affine.mean[2], source[2]);
+      }
+  bool invalidLoss = false;
+  try { absoluteLossMapping(Vector6{0, 0, .1, 0, 0, 10}); }
+  catch (const std::runtime_error&) { invalidLoss = true; }
+  if (!invalidLoss) throw std::runtime_error("unphysical absolute-loss map accepted");
+
   const auto wide = parseSeedHitSelection("FirstMiddleLast");
   const auto legacy = parseSeedHitSelection("FirstThree");
   // Original ordered-hit indices need not be consecutive after excluding 1D hits.
