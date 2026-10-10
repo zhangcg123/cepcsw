@@ -336,21 +336,25 @@ not a validated 99%-efficient or correct interval finder. Full denominators,
 truth caveats and the superseded focus are preserved in
 `agents_record/2026-10-11-interval-identification-batch-audit.md`.
 
-The current identification study uses BDTs on the saved baseline-KF and
+The current identification study uses BDTs on saved baseline-KF and
 reconstructed-geometry features only; the user explicitly excluded breakpoint
-refits. On seed-held-out barrel tracks with >=1% truth loss, the combined BDT
-ranks 39% of true intervals first and 78% in the top five, but at ~99% track
-sensitivity it falsely flags ~97.5% of tracks without a >=1% loss. Five-/ten-
-hit averages did not materially change this. It is a diagnostic, not a viable
-99%-efficient and correct interval finder. The complete methods, denominators,
-limitations and analysis artifact path are in
-`agents_record/2026-10-11-baseline-kf-bdt-interval-study.md`.
+refits. Ordered forward/backward/smoothed neighborhood features reach 40.1%
+top1, 58.4% top2 and 80.0% top5 exact interval recall for >=1% losses on the
+same seed-separated development test. Richer central-hit features already
+reach 41.2% top1 and 59.4% top2. A track-grouped BDT ranking trial did not
+improve selection. High-sensitivity loss detection still falsely flags ~98%
+of negatives. The initial analysis extractor unnecessarily masked whole state
+sequences when a single hit was missing; the new diagnostics preserve valid
+hits. Do not interpret the first weak BDT as a fundamental information limit.
+The complete evidence and outgoing focus are in
+`agents_record/2026-10-11-ordered-neighborhood-bdt.md`; the first comparison
+remains in `agents_record/2026-10-11-baseline-kf-bdt-interval-study.md`.
 
-Next: compare a separate track-level no-loss decision with a track-grouped
-interval-ranking BDT and explicit one/two/rare-three multiplicity outputs.
-Construct signed, sustained change-point features from the already recorded
-baseline forward/backward sequences, keep all internal TPC intervals eligible,
-and gate on held-out exact location, clean-track false positives and seed/angle
-transfer. Do not use breakpoint refits, ECAL information or truth in model
-inputs for this task. The tuple schema and local run instructions remain in
+Next: diagnose candidate confusions and train with hard negatives from nearby
+intervals and competing material peaks; develop a separate no-loss and
+one/two/rare-three multiplicity decision. Keep every internal TPC interval
+eligible. The reused test split is development evidence; final validation
+requires independent data, clean-track safety and geometry transfer checks.
+Do not use breakpoint refits, ECAL information or truth in model inputs for
+this task. The tuple schema and local run instructions remain in
 `Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
