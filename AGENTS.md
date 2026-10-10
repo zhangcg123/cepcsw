@@ -312,33 +312,37 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is a separate baseline-KF dataset producer
-for reconstruction-only identification of one or two eBrem intervals.
-`RecBreakpointIdentification`, under RecBreakpoint, reads existing REC and
-writes a dedicated flat tuple. Its separate card is
-`Reconstruction/RecBreakpoint/options/run_interval_identification.py`.
-It records raw hits/geometry, baseline forward, native-smoothed and independently
-seeded backward diagnostics, plus separate full interval truth labels. No
-breakpoint insertion, recovery fit, ECAL constraint or truth steering is used.
-The standard first/middle/last-hit seed is truth-independent but not strictly
-disjoint-hit evidence. Preserve this distinction in downstream classifiers.
+Active work on local `breakpoint` is reconstruction-only identification of
+primary-electron eBrem intervals. The separate `RecBreakpointIdentification`
+producer reads REC, records baseline forward, native-smoothed and backward
+KF features, hit geometry and reconstructed DD4hep hit-to-hit chord t/X0,
+then adds Geant4 truth labels for evaluation. The standard direction-local
+prefits still use both track ends, so their outputs are not strictly
+independent evidence. The tuple uses barrel radius ordering; explicit surface
+axes and a validated endcap ordering are still absent. It does not run the
+breakpoint recovery fitter, use ECAL, or steer reconstruction with truth.
+The installed runtime, shared KF sources and recovery algorithms are unchanged.
 
-Build-tree tests on 18 events (20 tracks, including two multi-track controls)
-passed schema/label checks and exact truth-on/off feature isolation. A separate
-production-style inward continuation reproduced stored CompleteTracks pT to
-floating-point precision. The production cards, shared KF sources and installed
-runtime are unchanged. This is a mechanical dataset gate, not physics validation.
-The first version uses barrel radius ordering; reconstructed DD4hep t/X0 and
-explicit surface axes remain unrecorded. Never substitute truth material into
-classifier inputs. Native six-dimensional timing predictions are retained,
-separately from the five-helix state marginals; timing is not breakpoint loss.
+The completed barrel dataset has 72 files, 14,398 events with tracks and
+15,395 track rows. A strict single-track, >=100-hit, uniquely truth-matched
+cohort has 13,182 tracks. For >=1% truth losses, 4,539 intervals occur on
+3,958 tracks; 44 of those tracks contain at least three such intervals.
+The five thickest reconstructed-material intervals cover 74.7% of these
+losses and the top twenty cover 86.3% exactly, missing many internal TPC
+intervals. Local KF chi2 and simple forward/backward curvature differences
+rank true intervals poorly. KF hit rejection is informative when present but
+covers only 18.7% of the >=1% loss tracks. This is a diagnostic population,
+not a validated 99%-efficient or correct interval finder. Full denominators,
+truth caveats and the superseded focus are preserved in
+`agents_record/2026-10-11-interval-identification-batch-audit.md`.
 
-Next: review schema and develop interval-identification features using baseline
-diagnostics only. Truth is for labels/evaluation; neutral clusters are excluded
-for now. Do not run production batches, install over the shared runtime, or
-change recovery algorithms as part of this dataset work without direction.
-Schema/run instructions are in
+Next: define a minimum relevant loss and exact versus neighbouring-interval
+targets; compare zero, one, two and rare three-or-more loss hypotheses using
+whole-hit-sequence evidence. Develop genuinely disjoint inner/outer segment
+fits and profile a loss at candidate intervals, scanning internal TPC rather
+than relying on material peaks. Validate candidate recall, final correctness,
+clean-track safety and held-out seed/geometry transfer separately. Keep
+neutral clusters and the existing recovery methods out of this study until
+the interval-finding mechanism is established. The tuple schema and local run
+instructions remain in
 `Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
-Evidence and the complete outgoing ECAL-refit focus are preserved in
-`agents_record/2026-10-10-interval-identification.md`; the existing ECAL refitter
-and its Persistent6D/PostReference defaults are unchanged.
