@@ -312,36 +312,33 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is one default-on ECAL absolute-loss
-KF/RTS refit. `EcalLossReferenceMode` replaces the three overlapping controls
-with Off, NoReference (live forward reference), PreReference (diffuse state at
-hit i), and PostReference (same state with curvature from diffuse momentum at
-i+1 plus neutral ECAL energy). All active modes share the same fit and ECAL
-energy/error prior. The last two require DiffuseAugmentedRTS; diffuse covariance
-is not imported. The maintained card/batch variable is BP_ECAL_LOSS_REFERENCE_MODE.
-Compiled/card defaults are Persistent6D and ECAL PostReference, with diffuse
-enabled to provide that reference. Free-loss supports both Persistent6D and
-LocalMarginal through the same fitter and unchanged SigmaLogLoss/objective.
-The default migration is recorded in
-`agents_record/2026-10-08-breakpoint-persistent-post-defaults.md`.
-The old ECAL-to-log-prior diagnostic is retired; ordinary/free-loss/truth-prior
-fits retain their own log-loss machinery. The update is tested through the
-build-tree runtime; the shared InstallArea is not updated.
+Active work on local `breakpoint` is a separate baseline-KF dataset producer
+for reconstruction-only identification of one or two eBrem intervals.
+`RecBreakpointIdentification`, under RecBreakpoint, reads existing REC and
+writes a dedicated flat tuple. Its separate card is
+`Reconstruction/RecBreakpoint/options/run_interval_identification.py`.
+It records raw hits/geometry, baseline forward, native-smoothed and independently
+seeded backward diagnostics, plus separate full interval truth labels. No
+breakpoint insertion, recovery fit, ECAL constraint or truth steering is used.
+The standard first/middle/last-hit seed is truth-independent but not strictly
+disjoint-hit evidence. Preserve this distinction in downstream classifiers.
 
-In a same-code twelve-event local A/B at 4% ECAL error, the new reference
-reduces median absolute pT residual from 6.57% to 0.98% and removes the
-event 2:10 155.8 GeV tail. Eleven fits succeed and closely approach the old
-log-loss ECAL-prior results. Event 1:25 instead fails the one-pass affine
-map and falls back to ordinary RTS, yielding a 42.35% residual. The result
-is promising but unsafe and not physics-validated. All non-absolute outputs
-and four clean/control copies are unchanged.
+Build-tree tests on 18 events (20 tracks, including two multi-track controls)
+passed schema/label checks and exact truth-on/off feature isolation. A separate
+production-style inward continuation reproduced stored CompleteTracks pT to
+floating-point precision. The production cards, shared KF sources and installed
+runtime are unchanged. This is a mechanical dataset gate, not physics validation.
+The first version uses barrel radius ordering; reconstructed DD4hep t/X0 and
+explicit surface axes remain unrecorded. Never substitute truth material into
+classifier inputs. Native six-dimensional timing predictions are retained,
+separately from the five-helix state marginals; timing is not breakpoint loss.
 
-Next: diagnose the distant forward mean versus consistent ECAL reference in
-1:25 and design a full trajectory relinearization that keeps the original
-hit/seed objective. Do not import the diffuse covariance as another prior
-or suppress the failure with a truth-based cut. Require clean/light-loss
-safety, tail control and held-out population checks before promotion.
-Controller migration, regression evidence, and the outgoing focus are in
-`agents_record/2026-10-08-breakpoint-ecal-controller.md`; the twelve-event
-physics comparison remains in
-`agents_record/2026-10-08-breakpoint-postloss-plus-ecal-reference.md`.
+Next: review schema and develop interval-identification features using baseline
+diagnostics only. Truth is for labels/evaluation; neutral clusters are excluded
+for now. Do not run production batches, install over the shared runtime, or
+change recovery algorithms as part of this dataset work without direction.
+Schema/run instructions are in
+`Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
+Evidence and the complete outgoing ECAL-refit focus are preserved in
+`agents_record/2026-10-10-interval-identification.md`; the existing ECAL refitter
+and its Persistent6D/PostReference defaults are unchanged.

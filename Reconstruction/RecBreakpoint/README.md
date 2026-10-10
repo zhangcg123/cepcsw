@@ -5,6 +5,11 @@ Experimental electron breakpoint Kalman refitter on branch `breakpoint`
 Reads `CompleteTracks`. GSF/shared KF sources and maintained batch cards are
 unchanged. This is not a physics-validated replacement.
 
+For the separate baseline-KF dataset producer (no breakpoint or ECAL fit), see
+[interval-identification tuple](docs/interval-identification-tuple.md) and
+`options/run_interval_identification.py`. It preserves raw hits, forward,
+native-smoothed and independent-backward diagnostics, and separate truth labels.
+
 For the complete code-checked mathematical workflow, read
 [why Persistent6D and LocalMarginal can give the same result](docs/fixed-linearized-loss-walkthrough.md).
 It defines every state/reference/deviation, derives the loss Jacobians A and

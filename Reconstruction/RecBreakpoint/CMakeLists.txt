@@ -20,6 +20,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set_target_properties(RecBreakpointLikelihood PROPERTIES POSITION_INDEPENDENT_CODE ON)
   gaudi_add_module(RecBreakpoint
     SOURCES src/RecBreakpoint.cpp src/TrackState.cpp src/KalmanAdapter.cpp
+            src/RecBreakpointIdentification.cpp src/BaselineKFDiagnostics.cpp
             src/BreakpointFitter.cpp src/DiffuseLossState.cpp
             src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
