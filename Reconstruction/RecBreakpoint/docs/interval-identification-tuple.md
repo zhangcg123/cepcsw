@@ -115,6 +115,24 @@ no diagonal jitter or absolute-value repair is silently applied.
 
 ## Validation requirements
 
+Schema 2 additionally records default-on reconstructed geometry material:
+`interval_chord_tx0` and `interval_chord_reverse_tx0` integrate DD4hep material
+along the straight segment between adjacent reconstructed hit positions, in
+each direction. These are dimensionless t/X0, independent of all truth hooks.
+They are NOT the exact curved KF material path and do not change its Q or mean
+energy loss. Keep `truth_interval_tx0` as a separate supervision/check field.
+The endpoints retain the usual sensitive-midpoint to sensitive-midpoint
+convention (half layer + gap + half layer when applicable).
+
+Both scans store `interval_chord_material_[reverse_]status`,
+`interval_chord_material_[reverse_]segments` and
+`interval_chord_material_[reverse_]covered_mm`. Status 1 means complete;
+2 means complete after a 1-micrometre-or-smaller starting-boundary repair;
+-1 means invalid/incomplete and t/X0 is NaN, never a false zero. Coverage is
+checked within max(0.001 mm, 1e-6 * chord length). The repair accounts for its
+removed cap using the cap-midpoint material. Opposite-direction values are
+retained independently, not averaged to hide a navigation discrepancy.
+
 Run a verbose focused event, then entries 11,16,17. Check matrix sizes, covariance
 validity, accepted-hit indexing, truth loss/count ownership and before/after
 boundaries. Repeat with BPID_TRUTH=0 and require every non-truth branch identical:

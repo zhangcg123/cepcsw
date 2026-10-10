@@ -23,6 +23,20 @@ def check(data):
         n = row["hit_count"]
         assert len(row["hit_position"]) == n
         assert len(row["interval_upstream_hit"]) == max(0, n - 1)
+        if "interval_chord_tx0" in row:
+            for reverse in (False, True):
+                suffix = "reverse_" if reverse else ""
+                tx0 = row["interval_chord_" + suffix + "tx0"]
+                status = row["interval_chord_material_" + suffix + "status"]
+                covered = row["interval_chord_material_" + suffix + "covered_mm"]
+                assert len(tx0) == len(status) == len(covered) == n - 1
+                for value, flag, path, length in zip(tx0, status, covered, row["interval_chord_length_mm"]):
+                    assert flag in (-1, 1, 2)
+                    if flag > 0:
+                        assert np.isfinite(value) and value >= 0
+                        assert abs(path - length) <= max(1e-3, 1e-6 * length)
+                    else:
+                        assert np.isnan(value)
         for direction in ("forward_", "backward_"):
             assert len(row[direction + "update_status"]) == n
             assert any(x == 1 for x in row[direction + "diagnostic_valid"]), direction

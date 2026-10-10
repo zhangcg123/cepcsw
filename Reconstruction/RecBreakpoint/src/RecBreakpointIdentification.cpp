@@ -1,6 +1,7 @@
 // Diagnostic dataset producer only. This algorithm never invokes a breakpoint
 // fitter and never changes CompleteTracks or any reconstruction collection.
 #include "BaselineKFDiagnostics.h"
+#include "IdentificationMaterial.h"
 #include "BreakpointTrackSystem.h"
 #include "DD4hep/DD4hepUnits.h"
 #include "DD4hep/Detector.h"
@@ -145,6 +146,7 @@ private:
   Gaudi::Property<std::vector<int>> selected{this, "SelectedEventIndices", {}};
   Gaudi::Property<bool> verbose{this, "VerboseDiagnostics", false};
   std::unique_ptr<breakpoint::BreakpointTrackSystem> system;
+  std::unique_ptr<dd4hep::rec::MaterialManager> material;
   std::unique_ptr<TFile> file;
   TTree *tree = nullptr;
   double bz = 0, baselinePt = missing, baselineChi2 = missing,
@@ -189,6 +191,8 @@ StatusCode RecBreakpointIdentification::initialize() {
   system->setOption(MarlinTrk::IMarlinTrkSystem::CFG::usedEdx, eloss);
   system->setOption(MarlinTrk::IMarlinTrkSystem::CFG::useSmoothing, false);
   system->init();
+  material = std::make_unique<dd4hep::rec::MaterialManager>(
+      geom->lcdd()->world().volume());
   const std::filesystem::path path(output.value());
   if (path.has_parent_path())
     std::filesystem::create_directories(path.parent_path());
@@ -223,6 +227,10 @@ StatusCode RecBreakpointIdentification::initialize() {
                         "hit_side",
                         "interval_upstream_hit",
                         "interval_downstream_hit",
+                        "interval_chord_material_status",
+                        "interval_chord_material_reverse_status",
+                        "interval_chord_material_segments",
+                        "interval_chord_material_reverse_segments",
                         "truth_interval_status",
                         "truth_interval_first_step",
                         "truth_interval_last_step",
@@ -239,7 +247,9 @@ StatusCode RecBreakpointIdentification::initialize() {
                         "truth_ebrem_assignment_status"})
     tree->Branch(n, &iv[n]);
   for (const auto *n :
-       {"interval_chord_length_mm", "truth_interval_tx0",
+       {"interval_chord_length_mm", "interval_chord_tx0",
+        "interval_chord_reverse_tx0", "interval_chord_material_covered_mm",
+        "interval_chord_material_reverse_covered_mm", "truth_interval_tx0",
         "truth_interval_ebrem_momentum_loss", "truth_interval_momentum_before",
         "truth_interval_retained_fraction", "truth_interval_start_fraction",
         "truth_interval_end_fraction", "truth_hit_hook_fraction",
@@ -256,7 +266,7 @@ StatusCode RecBreakpointIdentification::initialize() {
   bookDirection(*tree, forward, "forward_");
   bookDirection(*tree, backward, "backward_");
   std::ostringstream metadata;
-  metadata << "schema=1; source=" << source.value()
+  metadata << "schema=2; source=" << source.value()
            << "; geometry=" << geometryTag.value()
            << "; units=mm,GeV,rad; state=(drho,phi0,kappa=q/pT,dz,tanLambda); "
               "matrices=row-major; "
@@ -269,7 +279,8 @@ StatusCode RecBreakpointIdentification::initialize() {
            << "no breakpoint, no ECAL, no truth steering; rejected matrix "
               "slots empty; "
            << "interval_chord_length is NOT curved path length; runtime "
-              "material represented by per-transition Q, not DD4hep t/X0; "
+              "material represented by per-transition Q; interval_chord_tx0 "
+              "is a separate DD4hep reconstructed-hit chord scan, not KF path; "
            << "smoothed residual covariance=V-H*P_s*H^T for same affine "
               "forward model; "
            << "truth interval loss is momentum loss, not photon energy; truth "
@@ -362,6 +373,17 @@ StatusCode RecBreakpointIdentification::execute() {
         dv["interval_chord_length_mm"].push_back(
             std::sqrt((p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y) +
                       (p.z - q.z) * (p.z - q.z)));
+        const TVector3 from(q.x, q.y, q.z), to(p.x, p.y, p.z);
+        const auto outward = breakpoint::identificationMaterial(*material, from, to);
+        const auto inward = breakpoint::identificationMaterial(*material, to, from);
+        dv["interval_chord_tx0"].push_back(outward.tx0);
+        dv["interval_chord_reverse_tx0"].push_back(inward.tx0);
+        dv["interval_chord_material_covered_mm"].push_back(outward.coveredMM);
+        dv["interval_chord_material_reverse_covered_mm"].push_back(inward.coveredMM);
+        iv["interval_chord_material_status"].push_back(outward.status);
+        iv["interval_chord_material_reverse_status"].push_back(inward.status);
+        iv["interval_chord_material_segments"].push_back(outward.segments);
+        iv["interval_chord_material_reverse_segments"].push_back(inward.segments);
       }
     }
     // Reconstructed features are finalized BEFORE the first truth lookup.
