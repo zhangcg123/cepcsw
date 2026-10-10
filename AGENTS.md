@@ -336,13 +336,21 @@ not a validated 99%-efficient or correct interval finder. Full denominators,
 truth caveats and the superseded focus are preserved in
 `agents_record/2026-10-11-interval-identification-batch-audit.md`.
 
-Next: define a minimum relevant loss and exact versus neighbouring-interval
-targets; compare zero, one, two and rare three-or-more loss hypotheses using
-whole-hit-sequence evidence. Develop genuinely disjoint inner/outer segment
-fits and profile a loss at candidate intervals, scanning internal TPC rather
-than relying on material peaks. Validate candidate recall, final correctness,
-clean-track safety and held-out seed/geometry transfer separately. Keep
-neutral clusters and the existing recovery methods out of this study until
-the interval-finding mechanism is established. The tuple schema and local run
-instructions remain in
+The current identification study uses BDTs on the saved baseline-KF and
+reconstructed-geometry features only; the user explicitly excluded breakpoint
+refits. On seed-held-out barrel tracks with >=1% truth loss, the combined BDT
+ranks 39% of true intervals first and 78% in the top five, but at ~99% track
+sensitivity it falsely flags ~97.5% of tracks without a >=1% loss. Five-/ten-
+hit averages did not materially change this. It is a diagnostic, not a viable
+99%-efficient and correct interval finder. The complete methods, denominators,
+limitations and analysis artifact path are in
+`agents_record/2026-10-11-baseline-kf-bdt-interval-study.md`.
+
+Next: compare a separate track-level no-loss decision with a track-grouped
+interval-ranking BDT and explicit one/two/rare-three multiplicity outputs.
+Construct signed, sustained change-point features from the already recorded
+baseline forward/backward sequences, keep all internal TPC intervals eligible,
+and gate on held-out exact location, clean-track false positives and seed/angle
+transfer. Do not use breakpoint refits, ECAL information or truth in model
+inputs for this task. The tuple schema and local run instructions remain in
 `Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
