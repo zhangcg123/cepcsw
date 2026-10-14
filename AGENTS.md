@@ -312,49 +312,33 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is reconstruction-only identification of
-primary-electron eBrem intervals. The separate `RecBreakpointIdentification`
-producer reads REC, records baseline forward, native-smoothed and backward
-KF features, hit geometry and reconstructed DD4hep hit-to-hit chord t/X0,
-then adds Geant4 truth labels for evaluation. The standard direction-local
-prefits still use both track ends, so their outputs are not strictly
-independent evidence. The tuple uses barrel radius ordering; explicit surface
-axes and a validated endcap ordering are still absent. It does not run the
-breakpoint recovery fitter, use ECAL, or steer reconstruction with truth.
-The installed runtime, shared KF sources and recovery algorithms are unchanged.
+Active work on local `breakpoint` is a reconstruction-only, track-first
+eBrem classifier followed by interval location. A track is truth-positive
+when at least one tracker interval loses more than 1% of its primary truth
+momentum. `RecBreakpointIdentification` supplies baseline forward,
+native-smoothed and backward KF diagnostics, reconstructed DD4hep chord
+material and hit geometry. Truth supplies labels and evaluation only.
+No breakpoint recovery fit or ECAL input enters these models. The producer
+still uses barrel radius ordering; explicit surface axes and validated
+endcap ordering are absent. Shared KF sources, production cards and the
+installed runtime remain unchanged.
 
-The completed barrel dataset has 72 files, 14,398 events with tracks and
-15,395 track rows. A strict single-track, >=100-hit, uniquely truth-matched
-cohort has 13,182 tracks. For >=1% truth losses, 4,539 intervals occur on
-3,958 tracks; 44 of those tracks contain at least three such intervals.
-The five thickest reconstructed-material intervals cover 74.7% of these
-losses and the top twenty cover 86.3% exactly, missing many internal TPC
-intervals. Local KF chi2 and simple forward/backward curvature differences
-rank true intervals poorly. KF hit rejection is informative when present but
-covers only 18.7% of the >=1% loss tracks. This is a diagnostic population,
-not a validated 99%-efficient or correct interval finder. Full denominators,
-truth caveats and the superseded focus are preserved in
-`agents_record/2026-10-11-interval-identification-batch-audit.md`.
+The direct track-level BDT uses complete tracks, then gates an existing
+interval BDT trained with negative intervals from both loss and no-loss
+tracks. On the reused seed-separated development test of 2,554 tracks
+(758 positive), its validation-set 5%-FPR threshold finds 400/758 positive
+tracks at 81.5% purity and flags 57/1,371 strict clean controls. At a
+high-efficiency threshold it finds 737/758 but reaches only 30.3% purity.
+With the 5%-FPR track gate, exact interval top-1 recall is 176/871.
+Thus this is an operational analysis procedure, not an efficient and pure
+production identifier. Full definitions, denominators and reproduction
+commands are in `agents_record/2026-10-15-track-first-ebrem-classification.md`;
+the earlier candidate studies remain in dated 2026-10-11 records.
 
-The current identification study uses BDTs on saved baseline-KF and
-reconstructed-geometry features only; the user explicitly excluded breakpoint
-refits. Ordered forward/backward/smoothed neighborhood features reach 40.1%
-top1, 58.4% top2 and 80.0% top5 exact interval recall for >=1% losses on the
-same seed-separated development test. Richer central-hit features already
-reach 41.2% top1 and 59.4% top2. A track-grouped BDT ranking trial did not
-improve selection. High-sensitivity loss detection still falsely flags ~98%
-of negatives. The initial analysis extractor unnecessarily masked whole state
-sequences when a single hit was missing; the new diagnostics preserve valid
-hits. Do not interpret the first weak BDT as a fundamental information limit.
-The complete evidence and outgoing focus are in
-`agents_record/2026-10-11-ordered-neighborhood-bdt.md`; the first comparison
-remains in `agents_record/2026-10-11-baseline-kf-bdt-interval-study.md`.
-
-Next: diagnose candidate confusions and train with hard negatives from nearby
-intervals and competing material peaks; develop a separate no-loss and
-one/two/rare-three multiplicity decision. Keep every internal TPC interval
-eligible. The reused test split is development evidence; final validation
-requires independent data, clean-track safety and geometry transfer checks.
-Do not use breakpoint refits, ECAL information or truth in model inputs for
-this task. The tuple schema and local run instructions remain in
+Next: diagnose missed positive tracks and strict-clean false positives,
+especially losses of 1--2%, then improve the whole-track decision before
+hard-negative interval training and multiplicity inference. Keep every
+internal TPC interval eligible. The development test has already been used
+for feature selection; final claims need independent data, clean-track
+safety and geometry-transfer checks. The tuple schema remains in
 `Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
