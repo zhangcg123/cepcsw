@@ -317,29 +317,30 @@ hierarchical model for track-level eBrem detection and interval location.
 A track is truth-positive when at least one tracker interval loses more
 than 1% of its primary truth momentum. `RecBreakpointIdentification`
 supplies baseline forward, native-smoothed and backward KF diagnostics,
-reconstructed DD4hep chord material and hit geometry. The model scores the
-ordered interval sequence and pools those same scores into one track
-decision; truth supplies labels and evaluation only. No breakpoint recovery
-fit or ECAL input enters this study. The producer still uses barrel radius
-ordering; explicit surface axes and validated endcap ordering are absent.
-Shared KF sources, production cards and the installed runtime are unchanged.
+reconstructed DD4hep chord material and hit geometry. The current
+analysis model uses only local hit/interval inputs: a bidirectional recurrent
+encoder compares all hits before and after each candidate interval, then
+pools those same interval scores into one track decision. Truth supplies
+labels and evaluation only; no breakpoint recovery fit or ECAL input enters
+the model. The producer still uses barrel radius ordering; explicit
+surface axes and validated endcap ordering are absent. Shared KF sources,
+production cards and the installed runtime are unchanged.
 
 On the reused seed-separated development test of 2,554 tracks (758
-positive), the hierarchical model's validation-set 5%-FPR threshold finds
-406/758 positive tracks at 80.6% purity and 189/871 qualifying intervals
-at exact top-1 end-to-end. At a high-efficiency threshold it finds 749/758
-tracks but only 30.0% purity. Unrestricted interval ranking finds 359/871
-exact top-1, 495/871 top-2 and 667/871 top-5. These are small/mixed changes
-relative to the earlier two-model BDT and remain far from a validated
-production identifier. The model, complete denominators, and reproduction
-commands are in `agents_record/2026-10-15-hierarchical-sequence-ebrem-model.md`;
-the outgoing two-model results remain in
-`agents_record/2026-10-15-track-first-ebrem-classification.md`.
+positive), the full-context model's validation-set 5%-FPR threshold finds
+414/758 positive tracks at 81.7% purity and 201/871 qualifying intervals
+at exact top-1 end-to-end. Unrestricted interval ranking finds 372/871
+exact top-1. This modestly improves the prior 99-feature CNN, but at a
+high-efficiency threshold falsely flags 1,696/1,796 negative tracks.
+It is not a validated production identifier. Complete results, caveats and
+reproduction commands are in
+`agents_record/2026-10-15-full-context-ebrem-sequence-model.md`; the outgoing
+CNN and two-model BDT studies remain in their dated records.
 
 Next: diagnose misses by detector region, loss size and candidate rank,
-and strict-clean false positives; examine the track pooling and explicit
-interval-negative supervision; then develop a one/two/rare-three multiplicity
-decision. Keep every internal TPC interval eligible. The development test
-has already been used for feature selection; final claims require
-independent data, clean-track safety and geometry-transfer checks. The tuple
-schema remains in `Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
+and strict-clean false positives; test explicit interval-negative training
+and a one/two/rare-three multiplicity decision. Keep every internal TPC
+interval eligible. The development test has already been used for feature
+selection; final claims require independent data, clean-track safety and
+geometry-transfer checks. The tuple schema remains in
+`Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
