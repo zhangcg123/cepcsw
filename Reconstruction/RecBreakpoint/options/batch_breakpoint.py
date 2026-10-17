@@ -370,8 +370,9 @@ def run(manifest):
     job = json.loads(manifest.read_text())
     repo = Path(job['repo'])
     if Path.cwd().resolve() != repo: raise ValueError('Manifest belongs to a different worktree')
-    runner = repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
-    if not runner.is_file(): raise ValueError('Configured EL9 build runner is missing')
+    # dump_breakpoint.sh sources the project's installed runtime via setup.sh.
+    runner = shutil.which('gaudirun.py')
+    if not runner: raise ValueError('gaudirun.py is unavailable; source project setup.sh first')
     for stage in job['stages']:
         card = Path(job['cards'][stage])
         if hashlib.sha256(card.read_bytes()).hexdigest() != job['checksums'][stage]:
@@ -384,7 +385,7 @@ def run(manifest):
                        else 'retained_no_downstream'} for stage in ('trk', 'calodigi')}
     for stage in job['stages']:
         print('Running ' + stage + ': ' + job['cards'][stage], flush=True)
-        subprocess.run([str(runner), 'gaudirun.py', job['cards'][stage]], cwd=repo, check=True)
+        subprocess.run([runner, job['cards'][stage]], cwd=repo, check=True)
         ready = verify(Path(job['files'][stage]), stage)
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))

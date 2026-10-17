@@ -484,17 +484,18 @@ class BatchTest(unittest.TestCase):
         self.prepare(STAGES='trk,calodigi,rec,breakpoint')
         job=self.manifest()
         manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
-        runner=self.repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
-        runner.parent.mkdir(parents=True);runner.write_text('fixture')
         observed=[]
         def execute(command, **kwargs):
             stage=Path(command[-1]).stem
+            self.assertEqual(command, ['/project/environment/gaudirun.py', job['cards'][stage]])
             observed.append((stage, Path(job['files']['trk']).exists(),
                              Path(job['files']['calodigi']).exists()))
             Path(job['files'][stage]).write_bytes(b'produced '+stage.encode())
         with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
-             patch.object(batch,'verify',return_value=True):
+             patch.object(batch,'verify',return_value=True), \
+             patch.object(batch.shutil,'which',return_value='/project/environment/gaudirun.py') as which:
             batch.run(manifest)
+        which.assert_called_once_with('gaudirun.py')
         self.assertEqual(observed, [('trk',False,False), ('calodigi',True,False),
                                     ('rec',False,True), ('breakpoint',False,False)])
         self.assertFalse(Path(job['files']['trk']).exists())
@@ -510,14 +511,13 @@ class BatchTest(unittest.TestCase):
         self.prepare(STAGES='trk,calodigi,rec,breakpoint')
         job=self.manifest()
         manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
-        runner=self.repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
-        runner.parent.mkdir(parents=True);runner.write_text('fixture')
         def execute(command, **kwargs):
             stage=Path(command[-1]).stem
             if stage == 'rec': raise batch.subprocess.CalledProcessError(1,command)
             Path(job['files'][stage]).write_bytes(b'produced '+stage.encode())
         with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
-             patch.object(batch,'verify',return_value=True):
+             patch.object(batch,'verify',return_value=True), \
+             patch.object(batch.shutil,'which',return_value='/project/environment/gaudirun.py'):
             with self.assertRaises(batch.subprocess.CalledProcessError): batch.run(manifest)
         self.assertFalse(Path(job['files']['trk']).exists())
         self.assertTrue(Path(job['files']['calodigi']).exists())
@@ -528,19 +528,29 @@ class BatchTest(unittest.TestCase):
         self.prepare()
         job=self.manifest()
         manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
-        runner=self.repo/'build.105.0.0.x86_64-el9-gcc11-opt/run'
-        runner.parent.mkdir(parents=True);runner.write_text('fixture')
         def execute(command, **kwargs):
             if Path(command[-1]).name=='trk.py':
                 Path(job['files']['trk']).write_bytes(b'produced tracker')
             else:
                 raise batch.subprocess.CalledProcessError(1,command)
         with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.subprocess,'run',side_effect=execute), \
-             patch.object(batch,'verify',return_value=False), patch.object(batch,'cleanup_intermediate') as cleanup:
+             patch.object(batch,'verify',return_value=False), patch.object(batch,'cleanup_intermediate') as cleanup, \
+             patch.object(batch.shutil,'which',return_value='/project/environment/gaudirun.py'):
             with self.assertRaises(batch.subprocess.CalledProcessError):batch.run(manifest)
             cleanup.assert_not_called()
         self.assertTrue(Path(job['files']['trk']).exists())
         self.assertFalse((manifest.parent/'completed.json').exists())
+
+    def test_worker_missing_project_launcher_does_not_start(self):
+        self.prepare()
+        manifest=self.repo/'outputs/runcards/e--2.0-85-12/job.json'
+        with patch.object(Path,'cwd',return_value=self.repo), \
+             patch.object(batch.shutil,'which',return_value=None), \
+             patch.object(batch.subprocess,'run') as execute:
+            with self.assertRaisesRegex(ValueError, 'source project setup.sh'):
+                batch.run(manifest)
+            execute.assert_not_called()
+        self.assertFalse((manifest.parent/'started.json').exists())
 
 
 if __name__ == '__main__': unittest.main()

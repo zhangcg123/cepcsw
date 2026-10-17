@@ -834,6 +834,12 @@ rerun preparation over the same sample/output directory; use `submit` after
 a dry run. DRY_RUN=1 also works with `submit` to print commands only.
 The scripts use the existing IHEP `hep_sub -g cms -mem ... -argu JOB.json`
 convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
+The worker sources the project's `setup.sh` and launches `gaudirun.py` directly
+for every stage, using the standard `InstallArea` runtime like a manual
+`source setup.sh; ./run.sh CARD.py` run. It no longer selects a build-directory
+launcher. Install verified builds before submission; rebuilding alone does not
+update this runtime. Cards are frozen at preparation, but libraries are not.
+Do not rebuild/install shared runtime libraries while campaign jobs are active.
 
 | Control | Default | Meaning |
 |---|---|---|
