@@ -312,36 +312,33 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is layer-owned truth breakpoint placement
-for RecBreakpoint. The user explicitly defers GSF and the identification
-tupliser/training. Both halves of a sensitive traversal and uniquely associated
-passive support/cooling should share one physical owner. Shared structures,
-unassigned material and owners without usable accepted hits remain labelled
-in the flat tuple but cannot select a breakpoint. No eligible breakpoint is
-not the same as no physical eBrem.
+Active work on local `breakpoint` is migration of eBrem identification to the
+same layer-owned truth used by RecBreakpoint. Both consumers call
+TruthBHLossEventData::matchBreakpoints; identification retains ALL eligible
+owner groups, while the recovery fitter still chooses its largest group.
+Index i denotes loss at hit[i], not a direction-dependent gap. Physical
+hook-to-hook material diagnostics remain separate. GSF remains unmigrated.
 
-The user authorized extending TruthBHLossEventData for this purpose. Its
-breakpoint-specific mapping is implemented under RecBreakpoint; legacy
-matchTrack callers are not migrated. One common selected index i means loss
-at hit[i], before outward propagation to hit[i+1]; inward propagation reaches
-hit[i] before inverse loss. Ordinary/diffuse/free-loss receive location only;
-truth override also uses the same owner-group loss. Physical hook-to-hook
-t/X0 remains a separate unchanged diagnostic. Shared KF and fitter algebra
-are unchanged. The installed runtime has not been updated for this change.
+Identification schema3 saves shared ownership records and truth_label_valid.
+The conservative training gate excludes any row with an ineligible emission;
+unknown ownership is not a no-eBrem label. Local full-context model readers
+require schema3 and use separate layer_owned_v1 caches/models. The >1%-of-
+primary-momentum track target is ANY qualifying owner group. Baseline KF
+features, fitting algorithms and installed runtime are unchanged. The batch
+helper uses the rebuilt plugin, so future jobs produce schema3 without install.
 
-Validation: six focused CTests and 36 batch-helper tests pass. A 50-event local
-run passes persisted ownership/selection checks: 49 unique recorded emissions,
-33 with a unique sensitive/passive owner, 16 shared/unassigned across 14 events.
-Three of 56 track rows lack usable truth-hit provenance and are flagged; all
-50 events have at least one successfully associated row. A fixed-location
-source-matched regression has 472 exactly equal common branches. Details and
-the explicit 11/16/17 comparison are in
-`agents_record/2026-10-18-breakpoint-layer-owned-truth.md`.
+Validation: 20 local events (22 rows), including entries11/16/17. Ownership
+matches RecBreakpoint in all 22 rows; all non-truth branches are exactly equal
+to the pre-change producer and truth-disabled rerun. Extraction retains 12
+valid-label tracks and excludes 10 incomplete-ownership rows. Six CTests and
+36 batch-helper tests pass. No ML retraining or new efficiency claim.
+Details: `agents_record/2026-10-18-identification-layer-owned-truth.md`.
 
-Next: review deployment and larger categorized physics comparisons. Passive
-geometry rules are audited for TDR_o1_v01 barrel
-assemblies only; unknown/endcap passive layouts fail closed. This is a truth
-placement change, not a reconstruction-based eBrem finder or performance claim.
-The contract is `Reconstruction/RecBreakpoint/docs/truth-layer-ownership.md`.
-Outgoing identification results, caveats and next steps are preserved in the
-complete pre-edit snapshot `agents_record/2026-10-18-AGENTS-before-layer-ownership.md`.
+Next: regenerate identification tuples into a new output directory, rebuild
+training caches, count coverage by detector/loss, then retrain/evaluate with
+seed-separated data. Do not mix old hook-labelled tuples/caches with schema3.
+Reviewed passive ownership remains barrel-only; unknown/endcap structures
+fail closed. Source contracts are in RecBreakpoint/docs/interval-identification-tuple.md
+and truth-layer-ownership.md. Prior breakpoint evidence and full outgoing
+focus are preserved in `agents_record/2026-10-18-breakpoint-layer-owned-truth.md`
+and `agents_record/2026-10-18-AGENTS-before-identification-ownership.md`.

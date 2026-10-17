@@ -12,6 +12,8 @@
 #include "TNamed.h"
 #include "TTree.h"
 #include "TruthBHLossEventData.h"
+#include "TruthBreakpointTuple.h"
+#include "TGeoNavigator.h"
 #include "UTIL/BitField64.h"
 #include "UTIL/ILDConf.h"
 #include "edm4hep/EventHeaderCollection.h"
@@ -147,6 +149,9 @@ private:
   Gaudi::Property<bool> verbose{this, "VerboseDiagnostics", false};
   std::unique_ptr<breakpoint::BreakpointTrackSystem> system;
   std::unique_ptr<dd4hep::rec::MaterialManager> material;
+  std::unique_ptr<TGeoNavigator> truthNavigator;
+  breakpoint::TruthBreakpointTuple ownership;
+  int truthLabelSchema = 3, truthLabelValid = 0;
   std::unique_ptr<TFile> file;
   TTree *tree = nullptr;
   double bz = 0, baselinePt = missing, baselineChi2 = missing,
@@ -217,8 +222,11 @@ StatusCode RecBreakpointIdentification::initialize() {
   B("truth_match_purity", truthPurity);
   B("truth_linked_hit_fraction", truthLinkedFraction);
   B("truth_association_weight", truthWeight);
+  B("truth_label_schema", truthLabelSchema);
+  B("truth_label_valid", truthLabelValid);
   B("hit_cell_id", cells);
 #undef B
+  ownership.book(*tree);
   for (const auto *n : {"hit_collection_id",
                         "hit_object_index",
                         "hit_original_order",
@@ -242,9 +250,7 @@ StatusCode RecBreakpointIdentification::initialize() {
                         "truth_hit_g4_track",
                         "truth_hit_hook_step",
                         "truth_hit_hook_status",
-                        "truth_ebrem_step",
-                        "truth_ebrem_interval",
-                        "truth_ebrem_assignment_status"})
+                        "truth_ebrem_interval"})
     tree->Branch(n, &iv[n]);
   for (const auto *n :
        {"interval_chord_length_mm", "interval_chord_tx0",
@@ -254,7 +260,7 @@ StatusCode RecBreakpointIdentification::initialize() {
         "truth_interval_retained_fraction", "truth_interval_start_fraction",
         "truth_interval_end_fraction", "truth_hit_hook_fraction",
         "truth_hit_association_weight", "truth_ebrem_pre_energy",
-        "truth_ebrem_post_energy", "truth_ebrem_momentum_loss"})
+        "truth_ebrem_post_energy"})
     tree->Branch(n, &dv[n]);
   for (const auto *n :
        {"hit_position", "hit_position_covariance", "baseline_ip_parameters",
@@ -266,7 +272,7 @@ StatusCode RecBreakpointIdentification::initialize() {
   bookDirection(*tree, forward, "forward_");
   bookDirection(*tree, backward, "backward_");
   std::ostringstream metadata;
-  metadata << "schema=2; source=" << source.value()
+  metadata << "schema=3; source=" << source.value()
            << "; geometry=" << geometryTag.value()
            << "; units=mm,GeV,rad; state=(drho,phi0,kappa=q/pT,dz,tanLambda); "
               "matrices=row-major; "
@@ -284,7 +290,9 @@ StatusCode RecBreakpointIdentification::initialize() {
            << "smoothed residual covariance=V-H*P_s*H^T for same affine "
               "forward model; "
            << "truth interval loss is momentum loss, not photon energy; truth "
-              "assignment uses exact provenance hooks; "
+              "assignment=layer-owned-v1 via TruthBHLossEventData::matchBreakpoints; "
+              "interval i labels loss at hit[i]; hook t/X0 remains physical; "
+              "truth_label_valid=0 excludes incomplete/ambiguous ownership from training; "
            << "Bz=" << bz << "; MS=" << ms.value() << "; dEdx=" << eloss.value()
            << "; cut=" << cut.value() << "; seed variances=";
   for (double v : seedVariances.value())
@@ -392,6 +400,8 @@ StatusCode RecBreakpointIdentification::execute() {
     backward = breakpoint::baselineDiagnostics(
         *system, hits, bz, seedVariances.value(), cut, true, false);
     truthStatus = 0;
+    truthLabelValid = 0;
+    ownership.reset();
     truthError.clear();
     truthTrack = truthMC = -1;
     truthPurity = truthLinkedFraction = truthWeight = missing;
@@ -400,6 +410,8 @@ StatusCode RecBreakpointIdentification::execute() {
         recordTruth(hits, track);
       } catch (const std::exception &e) {
         truthStatus = -1;
+        ownership.status = -1;
+        truthLabelValid = 0;
         truthError = e.what();
       }
     if (verbose) {
@@ -499,16 +511,26 @@ void RecBreakpointIdentification::recordTruth(
     mv["truth_particle_vertex"].push_back(xyz(best.getVertex()));
   }
   TruthBHLossEventData reader;
-  TruthBHLossEventDataMatch match;
+  TruthBreakpointMatch ownedMatch;
+  const auto& match = ownedMatch.hooks;
   const auto *material = steps.get();
+  if (!truthNavigator) {
+    truthNavigator = std::make_unique<TGeoNavigator>(&dd4hep::Detector::getInstance().manager());
+    truthNavigator->BuildCache();
+    truthNavigator->GetCache()->BuildInfoBranch();
+  }
   if (!reader.prepare(material, links.get(), associations, truthError) ||
-      !reader.matchTrack(hits, endpointTolerance, true, match, truthError)) {
+      !reader.matchBreakpoints(hits, endpointTolerance, *truthNavigator, ownedMatch, truthError)) {
     truthStatus = -1;
+    ownership.status = -1;
     iv["truth_interval_status"].assign(hits.empty() ? 0 : hits.size() - 1, -1);
     return;
   }
   truthTrack = match.g4TrackID;
   truthStatus = ties > 1 ? 2 : 1;
+  ownership.assign(ownedMatch);
+  // Conservative training gate: an excluded emission must not become a negative label.
+  truthLabelValid = truthStatus == 1 && ownership.ineligible == 0;
   for (const auto &interval : match.materialIntervals) {
     iv["truth_interval_status"].push_back(1);
     iv["truth_interval_first_step"].push_back(interval.firstStepNumber);
@@ -516,60 +538,33 @@ void RecBreakpointIdentification::recordTruth(
     dv["truth_interval_start_fraction"].push_back(interval.startHookFraction);
     dv["truth_interval_end_fraction"].push_back(interval.endHookFraction);
     dv["truth_interval_tx0"].push_back(interval.truthTX0);
-    dv["truth_interval_ebrem_momentum_loss"].push_back(interval.ebremLoss);
-    dv["truth_interval_momentum_before"].push_back(interval.momentumBefore);
-    dv["truth_interval_retained_fraction"].push_back(interval.retainedFraction);
+    dv["truth_interval_ebrem_momentum_loss"].push_back(0.);
+    dv["truth_interval_momentum_before"].push_back(missing);
+    dv["truth_interval_retained_fraction"].push_back(1.);
     iv["truth_interval_ebrem_count"].push_back(0);
     iv["truth_interval_boundary_ambiguity"].push_back(0);
   }
-  for (const auto &s : *material)
-    if (s.getTrackID() == truthTrack && s.getProcessSubtype() == 3) {
-      const int step = s.getStepNumber();
-      int owner = -3, assignment = 0;
-      // Emission occurs at the G4 post-step point. Boundary-step emissions are
-      // flagged separately; full hooks remain available for downstream policy.
-      for (std::size_t i = 0; i < match.materialIntervals.size(); ++i) {
-        const auto &v = match.materialIntervals[i];
-        if (step >= v.firstStepNumber && step <= v.lastStepNumber) {
-          if (step == v.firstStepNumber || step == v.lastStepNumber)
-            iv["truth_interval_boundary_ambiguity"][i] = 1;
-          if ((step > v.firstStepNumber || v.startHookFraction < 1. - 1.e-6) &&
-              (step < v.lastStepNumber || v.endHookFraction >= 1. - 1.e-6)) {
-            owner = i;
-            assignment =
-                (step == v.firstStepNumber || step == v.lastStepNumber) ? 2 : 1;
-            ++iv["truth_interval_ebrem_count"][i];
-            break;
-          }
-        }
-      }
-      if (owner == -3 && !match.materialIntervals.empty()) {
-        const auto &a = match.materialIntervals.front();
-        const auto &b = match.materialIntervals.back();
-        if (step < a.firstStepNumber ||
-            (step == a.firstStepNumber && a.startHookFraction >= 1. - 1.e-6)) {
-          owner = -1;
-          assignment = 3;
-        }
-        if (step > b.lastStepNumber ||
-            (step == b.lastStepNumber && b.endHookFraction < 1. - 1.e-6)) {
-          owner = -2;
-          assignment = 4;
-        }
-      }
-      iv["truth_ebrem_step"].push_back(step);
-      iv["truth_ebrem_interval"].push_back(owner);
-      iv["truth_ebrem_assignment_status"].push_back(assignment);
-      mv["truth_ebrem_pre_position"].push_back(xyz(s.getPrePosition()));
-      mv["truth_ebrem_post_position"].push_back(xyz(s.getPostPosition()));
-      mv["truth_ebrem_pre_momentum"].push_back(xyz(s.getPreMomentum()));
-      mv["truth_ebrem_post_momentum"].push_back(xyz(s.getPostMomentum()));
-      dv["truth_ebrem_pre_energy"].push_back(s.getPreKineticEnergy() +
-                                             0.00051099895);
-      dv["truth_ebrem_post_energy"].push_back(s.getPostKineticEnergy() +
-                                              0.00051099895);
-      dv["truth_ebrem_momentum_loss"].push_back(s.getMomentumLoss());
-    }
+  for (const auto& loss : ownedMatch.breakpoints) {
+    const int i = loss.hitIndex;
+    dv["truth_interval_ebrem_momentum_loss"][i] = loss.ebremLoss;
+    dv["truth_interval_momentum_before"][i] = loss.momentumBefore;
+    dv["truth_interval_retained_fraction"][i] = loss.retainedFraction;
+    iv["truth_interval_ebrem_count"][i] = loss.emissionCount;
+  }
+  std::map<int, gsftruth::G4MaterialStep> primarySteps;
+  for (const auto& s : *material)
+    if (s.getTrackID() == truthTrack) primarySteps.emplace(s.getStepNumber(), s);
+  for (const auto& emission : ownedMatch.emissions) {
+    const auto& s = primarySteps.at(emission.stepNumber);
+    iv["truth_ebrem_interval"].push_back(
+        emission.status == TruthBreakpointStatus::Eligible ? emission.hitIndex : -1);
+    mv["truth_ebrem_pre_position"].push_back(xyz(s.getPrePosition()));
+    mv["truth_ebrem_post_position"].push_back(xyz(s.getPostPosition()));
+    mv["truth_ebrem_pre_momentum"].push_back(xyz(s.getPreMomentum()));
+    mv["truth_ebrem_post_momentum"].push_back(xyz(s.getPostMomentum()));
+    dv["truth_ebrem_pre_energy"].push_back(s.getPreKineticEnergy() + 0.00051099895);
+    dv["truth_ebrem_post_energy"].push_back(s.getPostKineticEnergy() + 0.00051099895);
+  }
 }
 
 StatusCode RecBreakpointIdentification::finalize() {

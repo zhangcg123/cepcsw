@@ -62,18 +62,45 @@ barrel campaign. It is not validated for curling tracks or general endcap order.
   are not yet recorded; do not substitute truth t/X0 as a classifier input.
 * `truth_hit_*`: association multiplicity, unique simulated-hit ID, weight and
   exact Geant4 hook identity/fraction/status. Ambiguous matches are not guessed.
-* `truth_interval_*`: ALL N-1 intervals on a successful provenance match,
-  endpoint steps/fractions, G4 t/X0, eBrem momentum loss, incoming momentum,
-  retained fraction, emission counts and boundary flags. A failed match gives
-  negative truth_status and unknown labels, never negative-class zero losses.
+* `truth_interval_*`: ALL N-1 candidate breakpoints on a successful match.
+  Loss/count/z at index i now describe the layer-owned loss AT hit[i], using
+  the SAME `TruthBHLossEventData::matchBreakpoints` as RecBreakpoint. All eligible
+  groups are retained, not only its largest-loss selection. Pre-momentum is
+  the earliest emission's pre-step momentum (NaN for an empty group).
+  Endpoint steps/fractions and t/X0 still describe the physical hook-to-hook
+  material interval; they do NOT define loss membership. The deprecated
+  boundary_ambiguity vector is zero; use the explicit ownership statuses.
+  A failed match gives negative truth_status and unknown labels, never
+  negative-class zero losses.
 * `truth_ebrem_*`: primary-electron G4 eBrem steps, pre/post xyz, momenta,
   total energies (kinetic + electron mass), momentum loss and interval assignment.
-  Interval -1 is before first hook, -2 after last, -3 unresolved. Assignment
-  status 1 strict interior, 2 endpoint-step, 3 before, 4 after, 0 unresolved.
+  `truth_ebrem_interval` is the eligible owner hit index, or -1 if excluded.
+  The old `truth_ebrem_assignment_status` is retired. Shared per-emission
+  ownership/status/key/material-path branches are documented in
+  [truth-layer-ownership.md](truth-layer-ownership.md). Missing/ambiguous accepted
+  hits, outermost hits and unassigned/shared material remain explicitly saved.
   Truth source intentionally supports primary electron/positron only.
 * `truth_match_purity`: fraction of all track hits linked to the chosen MC.
   `truth_linked_hit_fraction` separately reports coverage. Tied maximum track
   association weights do not publish an arbitrary particle's momentum.
+
+Schema 3 adds `truth_label_schema=3` and `truth_label_valid`. The latter is 1
+only for a successful, untied association with every recorded emission eligible;
+it is 0 when truth is off, invalid, or has any excluded emission. This conservative
+gate prevents unresolved losses from becoming negative training examples.
+No-loss rows can be valid. Label the track positive when ANY eligible owner-group
+loss / primary momentum > 0.01, with one candidate per outgoing hit index.
+The owner is a physical layer/hit, not a direction-dependent gap. Truth remains
+labels only; reconstructed KF features and t/X0 inputs are unchanged.
+
+Old schema-2 tuples and cached labels cannot be reused for this campaign.
+The local training scripts in TrackingPerformanceStudies/interval_bdt_20261011
+require schema 3 and write separate `layer_owned_v1/` caches/models. Set
+BPID_INPUT_DIR to the regenerated tuple directory, then run neighborhood_bdt.py
+extract, hierarchical_sequence_model.py extract, and full_context_sequence_model.py
+train. The first extraction reuses only the historical seed split, not its labels.
+Rows with truth_label_valid=0 are counted separately and excluded. No training
+or performance comparison is implied by the producer migration.
 
 Native state order is `(drho,phi0,kappa=q/pT,dz,tanLambda)`, NOT EDM helix order.
 Matrices are row-major; per-hit matrix vectors have N outer entries. Measurement

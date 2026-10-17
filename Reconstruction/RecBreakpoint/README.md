@@ -400,8 +400,9 @@ ionization steering, seeds and upstream loss placement remain unchanged.
 The card conditionally loads the six tracker association/SimTrackerHit sets,
 GsfG4MaterialSteps and GsfSimTrackerHitG4StepLinks. It uses no side CSV/ROOT
 helper or GSF execution. The module reuses TruthBHLossEventData's event reader
-and adds its breakpoint ownership method inside RecBreakpoint. Legacy GSF and
-identification callers still use matchTrack; their workflow is not migrated.
+and adds its breakpoint ownership method inside RecBreakpoint. The identification
+tupliser uses that same method for all candidate labels. Legacy GSF callers
+still use matchTrack; that workflow is not migrated.
 Invalid truth fails
 only the additional oracle pair; the ordinary outputs remain available.
 truth_override_status 0 means off/empty, 1 valid input, -1 invalid

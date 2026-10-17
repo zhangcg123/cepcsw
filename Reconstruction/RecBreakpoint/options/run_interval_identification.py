@@ -31,6 +31,9 @@ diagnostic.TupleFile = output_file
 diagnostic.SourceFile = input_file
 diagnostic.GeometryTag = geometry.compact
 diagnostic.RecordTruth = record_truth
+# Schema 3 uses the SAME layer-owned mapping as RecBreakpoint, retaining all
+# eligible owners for labels. truth_label_valid=0 rows are excluded from ML;
+# shared/unassigned losses are saved, never silently labelled no-eBrem.
 diagnostic.TruthSteps = "GsfG4MaterialSteps"
 diagnostic.TruthLinks = "GsfSimTrackerHitG4StepLinks"
 diagnostic.TrackTruthAssociations = "CompleteTracksParticleAssociation"
