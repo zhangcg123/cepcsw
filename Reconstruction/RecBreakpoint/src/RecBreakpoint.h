@@ -19,6 +19,7 @@
 #include "CaloStateTuple.h"
 #include "RecoAssociationTuple.h"
 #include "NeutralLossCandidate.h"
+#include "TruthBreakpointTuple.h"
 
 #include <array>
 #include <cstdint>
@@ -27,6 +28,7 @@
 
 class TFile;
 class TTree;
+class TGeoNavigator;
 namespace breakpoint { class BreakpointTrackSystem; }
 
 /// Opt-in electron refitter; all new fitting helpers belong to this package.
@@ -118,6 +120,8 @@ private:
   Gaudi::Property<std::string> m_tupleName{this, "OutputFile", "breakpoint_flat.root"};
 
   std::unique_ptr<breakpoint::BreakpointTrackSystem> m_system;
+  std::unique_ptr<TGeoNavigator> m_truthNavigator;
+  breakpoint::TruthBreakpointTuple m_truthOwnership;
   double m_bz = 0;
   std::unique_ptr<TFile> m_file;
   TTree* m_tree = nullptr; // file owned

@@ -312,35 +312,36 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is a reconstruction-only, single
-hierarchical model for track-level eBrem detection and interval location.
-A track is truth-positive when at least one tracker interval loses more
-than 1% of its primary truth momentum. `RecBreakpointIdentification`
-supplies baseline forward, native-smoothed and backward KF diagnostics,
-reconstructed DD4hep chord material and hit geometry. The current
-analysis model uses only local hit/interval inputs: a bidirectional recurrent
-encoder compares all hits before and after each candidate interval, then
-pools those same interval scores into one track decision. Truth supplies
-labels and evaluation only; no breakpoint recovery fit or ECAL input enters
-the model. The producer still uses barrel radius ordering; explicit
-surface axes and validated endcap ordering are absent. Shared KF sources,
-production cards and the installed runtime are unchanged.
+Active work on local `breakpoint` is layer-owned truth breakpoint placement
+for RecBreakpoint. The user explicitly defers GSF and the identification
+tupliser/training. Both halves of a sensitive traversal and uniquely associated
+passive support/cooling should share one physical owner. Shared structures,
+unassigned material and owners without usable accepted hits remain labelled
+in the flat tuple but cannot select a breakpoint. No eligible breakpoint is
+not the same as no physical eBrem.
 
-On the reused seed-separated development test of 2,554 tracks (758
-positive), the full-context model's validation-set 5%-FPR threshold finds
-414/758 positive tracks at 81.7% purity and 201/871 qualifying intervals
-at exact top-1 end-to-end. Unrestricted interval ranking finds 372/871
-exact top-1. This modestly improves the prior 99-feature CNN, but at a
-high-efficiency threshold falsely flags 1,696/1,796 negative tracks.
-It is not a validated production identifier. Complete results, caveats and
-reproduction commands are in
-`agents_record/2026-10-15-full-context-ebrem-sequence-model.md`; the outgoing
-CNN and two-model BDT studies remain in their dated records.
+The user authorized extending TruthBHLossEventData for this purpose. Its
+breakpoint-specific mapping is implemented under RecBreakpoint; legacy
+matchTrack callers are not migrated. One common selected index i means loss
+at hit[i], before outward propagation to hit[i+1]; inward propagation reaches
+hit[i] before inverse loss. Ordinary/diffuse/free-loss receive location only;
+truth override also uses the same owner-group loss. Physical hook-to-hook
+t/X0 remains a separate unchanged diagnostic. Shared KF and fitter algebra
+are unchanged. The installed runtime has not been updated for this change.
 
-Next: diagnose misses by detector region, loss size and candidate rank,
-and strict-clean false positives; test explicit interval-negative training
-and a one/two/rare-three multiplicity decision. Keep every internal TPC
-interval eligible. The development test has already been used for feature
-selection; final claims require independent data, clean-track safety and
-geometry-transfer checks. The tuple schema remains in
-`Reconstruction/RecBreakpoint/docs/interval-identification-tuple.md`.
+Validation: six focused CTests and 36 batch-helper tests pass. A 50-event local
+run passes persisted ownership/selection checks: 49 unique recorded emissions,
+33 with a unique sensitive/passive owner, 16 shared/unassigned across 14 events.
+Three of 56 track rows lack usable truth-hit provenance and are flagged; all
+50 events have at least one successfully associated row. A fixed-location
+source-matched regression has 472 exactly equal common branches. Details and
+the explicit 11/16/17 comparison are in
+`agents_record/2026-10-18-breakpoint-layer-owned-truth.md`.
+
+Next: review deployment and larger categorized physics comparisons. Passive
+geometry rules are audited for TDR_o1_v01 barrel
+assemblies only; unknown/endcap passive layouts fail closed. This is a truth
+placement change, not a reconstruction-based eBrem finder or performance claim.
+The contract is `Reconstruction/RecBreakpoint/docs/truth-layer-ownership.md`.
+Outgoing identification results, caveats and next steps are preserved in the
+complete pre-edit snapshot `agents_record/2026-10-18-AGENTS-before-layer-ownership.md`.

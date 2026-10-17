@@ -27,7 +27,8 @@ output_file = os.environ.get("BP_OUTPUT", "breakpoint_flat.root")
 event_count = int(os.environ.get("BP_EVENTS", "10"))
 selected_events = [int(v) for v in os.environ.get("BP_SELECTED", "").split(",") if v]
 
-# Zero-based ordered-hit intervals: 5 means hit[5] -> hit[6].
+# Zero-based ordered-hit intervals: 5 means a loss AT hit[5], before outward
+# propagation to hit[6]; inward propagation reaches hit[5] before inverse loss.
 # Used only with IntervalSelectionMode=Manual. Empty then means the 5D reference.
 # For example [5, 7] introduces two independent local loss parameters.
 breakpoint_intervals = [int(v) for v in os.environ.get("BP_INTERVALS", "").split(",") if v]
@@ -60,9 +61,13 @@ fit.OutputTracksDiffuseAugmentedRTS = "BreakpointTracksDiffuseAugmentedRTS"
 fit.OutputTracksAbsoluteNeutralRTS = "BreakpointTracksAbsoluteNeutralRTS"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
-# Truth (default): select ONLY the matched hit interval with the largest summed
-# absolute G4 eBrem momentum loss (ties: innermost). All three pairs share it.
-# Other loss intervals are not fitted. No positive loss means no breakpoint;
+# Truth (default): select ONLY the eligible layer-owned breakpoint with the
+# largest summed G4 eBrem momentum loss (ties: innermost). Every fit shares it.
+# Both halves of one sensor and uniquely owned support map to the same hit.
+# Shared/unassigned material, missing/ambiguous hits and the last hit cannot
+# select a breakpoint; their emissions/statuses remain saved in the flat tuple.
+# No eligible loss means no breakpoint, NOT necessarily no physical eBrem.
+# Other loss locations are not fitted;
 # keep BreakpointIntervals empty here, since the list is built for each track.
 # Manual: use only BreakpointIntervals above, even if actual eBrem occurs elsewhere.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
@@ -163,7 +168,7 @@ fit.BeamSpotY = float(os.environ.get("BP_BEAM_SPOT_Y", "0.0"))  # mm
 fit.BeamSpotSigmaX = float(os.environ.get("BP_BEAM_SPOT_SIGMA_X", "0.0145"))  # mm
 fit.BeamSpotSigmaY = float(os.environ.get("BP_BEAM_SPOT_SIGMA_Y", "3.6e-5"))  # mm
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
-# to matched G4 values at the SAME selected intervals. SigmaLogLoss is the SAME
+# to layer-owned G4 values at the SAME selected breakpoints. SigmaLogLoss is the SAME
 # as in the ordinary fit; hits can still update b and its posterior variance.
 # Both pairs use the same LossStateMode and one-pass fitting code.
 # It neither changes the interval selection nor corrects unselected intervals.

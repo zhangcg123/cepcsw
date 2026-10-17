@@ -73,6 +73,7 @@ bool TruthBHLossEventData::prepare(
     record.postMomentum = step.getPostMomentum();
     record.momentumLoss = step.getMomentumLoss();
     record.stepTX0 = step.getStepTX0();
+    record.radiationLength = step.getMaterialRadiationLength();
     if (!m_steps.emplace(key, record).second) {
       std::ostringstream message;
       message << "duplicate embedded G4 step track=" << key.first
@@ -97,6 +98,7 @@ bool TruthBHLossEventData::prepare(
     record.hookFraction = link.getHookFraction();
     record.provenanceType = link.getProvenanceType();
     record.status = link.getStatus();
+    record.cellID = link.getSimHit().getCellID();
 
     // Legitimate collections can contain unresolved low-pT accumulation hits.
     // Preserve them in the lookup and reject only if the selected reconstructed

@@ -2,6 +2,8 @@
 #include "BreakpointFitter.h"
 #include "BreakpointTrackSystem.h"
 #include "TruthBHLossEventData.h"
+#include "DD4hep/Detector.h"
+#include "TGeoNavigator.h"
 #include "GearSvc/IGearSvc.h"
 #include "TrackSystemSvc/ITrackSystemSvc.h"
 #include "DetInterface/IGeomSvc.h"
@@ -323,6 +325,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("reference_backward_kf_pt_error", &m_backwardReferencePtError);
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
+  m_truthOwnership.book(*m_tree);
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
   m_tree->Branch("selected_breakpoint_interval", &m_selectedIntervals);
@@ -574,6 +577,7 @@ StatusCode RecBreakpoint::execute() {
     m_selectedIntervals.clear(); m_intervalTruthLoss.clear(); m_intervalTruthZ.clear();
     m_intervalTruthTrack = -1; m_intervalTruthDistance = nan;
     settings.intervalMeanLogLoss.clear();
+    m_truthOwnership.reset();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
     m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
@@ -626,12 +630,22 @@ StatusCode RecBreakpoint::execute() {
       // One association-driven truth match can serve interval selection and the
       // optional truth-centered fit. Ordinary fitting receives ONLY the indices,
       // never the truth loss center/variance, from Truth interval selection.
-      TruthBHLossEventDataMatch match;
+      TruthBreakpointMatch ownedMatch;
+      auto& match = ownedMatch.hooks;
       bool matchedTruth = false;
       std::string matchError;
       auto matchTruth = [&]() {
-        if (!matchedTruth)
-          matchedTruth = truthReader.matchTrack(hits, m_truthEndpointDistance, true, match, matchError);
+        if (!matchedTruth) {
+          if (!m_truthNavigator) {
+            m_truthNavigator = std::make_unique<TGeoNavigator>(&dd4hep::Detector::getInstance().manager());
+            m_truthNavigator->BuildCache();
+            m_truthNavigator->GetCache()->BuildInfoBranch();
+          }
+          matchedTruth = truthReader.matchBreakpoints(hits, m_truthEndpointDistance,
+              *m_truthNavigator, ownedMatch, matchError);
+          if (matchedTruth) m_truthOwnership.assign(ownedMatch);
+          else m_truthOwnership.status = -1;
+        }
         return matchedTruth;
       };
       if (m_intervalSelectionName == "Truth") {
@@ -647,25 +661,17 @@ StatusCode RecBreakpoint::execute() {
         }
         m_intervalTruthTrack = match.g4TrackID;
         m_intervalTruthDistance = match.maxEndpointDistance;
-        // One common breakpoint for all endpoint families: choose the largest
-        // summed absolute eBrem momentum loss between accepted hit hooks.
-        // Equal losses keep the first (innermost) interval. Other losses are
-        // deliberately not fitted; the optimizer still receives only an index.
-        int largest = -1;
-        double largestLoss = 0.;
-        for (std::size_t i = 0; i < match.materialIntervals.size(); ++i) {
-          if (match.materialIntervals[i].ebremLoss > largestLoss) {
-            largest = static_cast<int>(i);
-            largestLoss = match.materialIntervals[i].ebremLoss;
-          }
+        // One shared physical breakpoint: largest eligible layer-owned loss;
+        // ties keep the innermost hit. Unowned emissions remain in the tuple.
+        const TruthBreakpointLoss* largest = nullptr;
+        for (const auto& loss : ownedMatch.breakpoints)
+          if (loss.ebremLoss > 0 && (!largest || loss.ebremLoss > largest->ebremLoss)) largest = &loss;
+        if (largest) {
+          settings.intervals.push_back(largest->hitIndex);
+          m_intervalTruthLoss.push_back(largest->ebremLoss);
+          m_intervalTruthZ.push_back(largest->retainedFraction);
         }
-        if (largest >= 0) {
-          const auto& interval = match.materialIntervals[largest];
-          settings.intervals.push_back(largest);
-          m_intervalTruthLoss.push_back(interval.ebremLoss);
-          m_intervalTruthZ.push_back(interval.retainedFraction);
-        }
-        m_intervalSelectionStatus = 2;
+        m_intervalSelectionStatus = largest ? 2 : ownedMatch.emissions.empty() ? 3 : 4;
       } else {
         m_intervalSelectionStatus = 1;
       }
@@ -1232,17 +1238,23 @@ StatusCode RecBreakpoint::execute() {
             }
           }
           for (int interval : oracleSettings.intervals) {
-            const auto& truth = match.materialIntervals[interval];
-            const double b = -std::log(truth.retainedFraction);
+            const auto& truth = match.materialIntervals[interval]; // physical hook metadata only
+            const auto found = std::find_if(ownedMatch.breakpoints.begin(), ownedMatch.breakpoints.end(),
+                [interval](const auto& loss) { return loss.hitIndex == interval; });
+            const double retained = found == ownedMatch.breakpoints.end() ? 1. : found->retainedFraction;
+            const double loss = found == ownedMatch.breakpoints.end() ? 0. : found->ebremLoss;
+            const double before = found == ownedMatch.breakpoints.end() ?
+                std::numeric_limits<double>::quiet_NaN() : found->momentumBefore;
+            const double b = -std::log(retained);
             oracleSettings.intervalMeanLogLoss.emplace(interval, b);
-            m_truthIntervals.push_back(interval); m_truthZ.push_back(truth.retainedFraction);
-            m_truthB.push_back(b); m_truthMomentumBefore.push_back(truth.momentumBefore);
-            m_truthEbremLoss.push_back(truth.ebremLoss); m_truthTX0.push_back(truth.truthTX0);
+            m_truthIntervals.push_back(interval); m_truthZ.push_back(retained);
+            m_truthB.push_back(b); m_truthMomentumBefore.push_back(before);
+            m_truthEbremLoss.push_back(loss); m_truthTX0.push_back(truth.truthTX0);
             m_truthFirstStep.push_back(truth.firstStepNumber); m_truthLastStep.push_back(truth.lastStepNumber);
             m_truthStartFraction.push_back(truth.startHookFraction); m_truthEndFraction.push_back(truth.endHookFraction);
             if (m_verbose) info() << std::setprecision(17) << "TruthOverride event=" << m_event
                 << " track=" << m_trackIndex << " interval=" << interval << " g4Track=" << match.g4TrackID
-                << " z=" << truth.retainedFraction << " prior_b=" << b
+                << " z=" << retained << " prior_b=" << b
                 << " prior_sigma_b=" << oracleSettings.sigmaLogLoss
                 << " steps=" << truth.firstStepNumber << ':' << truth.startHookFraction
                 << "->" << truth.lastStepNumber << ':' << truth.endHookFraction << endmsg;

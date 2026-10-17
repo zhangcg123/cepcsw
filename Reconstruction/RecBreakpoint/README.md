@@ -270,22 +270,30 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 
 | IntervalSelectionMode | Behavior |
 |---|---|
-| Truth (compiled/card default) | Select only the matched runtime interval with the largest summed absolute Geant4 eBrem momentum loss; ties choose innermost |
+| Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
-Truth follows reconstructed-hit associations and exact embedded G4 hooks. It
-uses the existing post-step assignment on each (start,end] interval, selecting
-the maximum positive `ebremLoss` without an additional loss threshold. Several emissions within
-one interval are summed. Other intervals' losses are not fitted. Loss before the first hit or after the last
-hit is not covered. Interval bounds and upstream placement are unchanged.
+Truth follows reconstructed-hit associations and exact embedded G4 provenance.
+`TruthBHLossEventData::matchBreakpoints` resolves each emission's owner and its
+accepted hit. Both halves of a sensitive traversal belong to that same hit;
+audited barrel support/cooling follows its physical sensor assembly, never
+nearest radius. Shared structures and unresolved/missing/ambiguous hits are
+recorded but cannot select a breakpoint. Unknown passive layouts fail closed.
+The selected index i means a loss at hit[i], before outward propagation to
+hit[i+1]; inward propagation reaches hit[i] before applying inverse loss and
+updating measurement i. The outermost hit has no supported outward interval.
+Several eligible emissions at the same hit are summed. Select the maximum
+positive sum without an additional loss threshold; other losses are not fitted.
+Physical hook-to-hook material integrals are unchanged and remain separate.
 The ordinary fit receives only the indices: its MeanLogLoss/SigmaLogLoss prior
 is NOT replaced by truth. TruthOverride must separately be enabled to set loss
 prior centers in the additional pair. All Geant4 metadata remain diagnostic apart
 from this explicit location selection and the optional loss override.
 
-Truth with no matched eBrem selects an empty list and runs the ordinary 5D
-reference, with copied extra outputs. Invalid truth fails the affected track
+Truth with no eligible eBrem selects an empty list and runs the ordinary 5D
+reference, with copied extra outputs. This is separately labelled from no
+recorded eBrem. Invalid truth fails the affected track
 with interval-selection status/error; it never means a guessed empty list.
 A nonempty BreakpointIntervals list is rejected outside Manual mode, so it
 cannot silently be ignored. Dedicated-card control: BP_INTERVAL_SELECTION_MODE.
@@ -375,9 +383,13 @@ Geant4 step/fraction hook. All ordered hits require unambiguous monotonic
 hooks on one primary electron. TruthMaxEndpointDistance validates associated
 positions, never chooses a nearest hit.
 
-For each hook-to-hook interval (start,end], eBrem process-subtype 3 momentum
-losses are assigned by their post-step points and summed:
-`z=1-sum(delta_p_ebrem)/p_at_start_hook`, `b=-log(z)`. This excludes ionization.
+For each eligible layer-owned breakpoint, sum the recorded momentum losses
+of its process-subtype 3 steps. Use the pre-step momentum of the earliest such
+emission: `z=1-sum(delta_p_ebrem)/p_before_first_emission`, `b=-log(z)`.
+Other process types are excluded, but the recorded pre/post momentum change
+of an eBrem step can include continuous loss in that same step. Invalid sums
+are marked ineligible, not clipped. No hook-interpolated momentum is reused
+as the denominator after changing ownership.
 Only MeanLogLoss is replaced per interval for the extra pair. SigmaLogLoss is
 identical in both pairs, and the extra fitted b need not equal truth. A Manual
 interval with no eBrem gets prior center b=0, not a permanently fixed zero loss.
@@ -387,8 +399,10 @@ ionization steering, seeds and upstream loss placement remain unchanged.
 
 The card conditionally loads the six tracker association/SimTrackerHit sets,
 GsfG4MaterialSteps and GsfSimTrackerHitG4StepLinks. It uses no side CSV/ROOT
-helper or GSF execution. The module reuses unchanged TruthBHLossEventData.cpp
-from RecGsfTracking and the existing datamodel libraries. Invalid truth fails
+helper or GSF execution. The module reuses TruthBHLossEventData's event reader
+and adds its breakpoint ownership method inside RecBreakpoint. Legacy GSF and
+identification callers still use matchTrack; their workflow is not migrated.
+Invalid truth fails
 only the additional oracle pair; the ordinary outputs remain available.
 truth_override_status 0 means off/empty, 1 valid input, -1 invalid
 event input, -2 invalid track match, -3 out-of-range interval. There is no
@@ -737,14 +751,19 @@ override provenance. fitted_log_loss*, local_log_loss* and smoothed_log_loss*
 now always refer to RTS; backward_fitted_log_loss* refers to inward results.
 
 Interval selection saves interval_selection_mode, interval_selection_status
-(0 not attempted, 1 Manual, 2 valid Truth, -1 invalid event truth, -2 invalid
+(0 not attempted, 1 Manual, 2 Truth with selected loss, 3 Truth with no recorded
+emission, 4 Truth with emissions but no positive eligible loss, -1 invalid event truth, -2 invalid
 track association), interval_selection_error and selected_breakpoint_interval.
 The effective indices are retained even if the subsequent fit fails. Truth
 selection additionally saves interval_selection_truth_ebrem_loss (GeV),
 _retained_fraction, _g4_track_id and _max_endpoint_distance (mm). The loss/z
 vectors align with the selected intervals and are empty in Manual mode. A valid
-empty truth list has status2, not an error. Selection truth failure prevents
+empty truth list has status3 or4, not an error. Selection truth failure prevents
 ordinary fitting; a later oracle-only failure still preserves ordinary tracks.
+
+Default-on per-emission ownership branches are documented in
+[truth-layer-ownership.md](docs/truth-layer-ownership.md). Counts distinguish
+no unique material owner from a known owner with no usable reconstructed hit.
 
 Persistent6D additionally stores persistent_hit_index and row-aligned
 persistent_{predicted,filtered,smoothed}_mean (6 entries per hit), corresponding

@@ -25,6 +25,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
             src/NeutralLossCandidate.cpp
+            src/TruthLayerOwnership.cpp src/TruthBreakpointOwnership.cpp src/TruthBreakpointTuple.cpp
             src/LikelihoodTuple.cpp src/BeamSpotLikelihood.cpp
             # Reuse the exact maintained relation-driven reader, without
             # linking the GSF algorithm plugin or changing its implementation.
@@ -51,6 +52,21 @@ if(BUILD_TESTING)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
   if(TARGET RecBreakpointLikelihood)
+    add_executable(RecBreakpointTruthOwnershipTest tests/TruthOwnershipTest.cpp src/TruthLayerOwnership.cpp)
+    target_compile_features(RecBreakpointTruthOwnershipTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointTruthOwnershipTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${CMAKE_CURRENT_SOURCE_DIR}/../RecGsfTracking/src)
+    target_link_libraries(RecBreakpointTruthOwnershipTest PRIVATE GsfTruthEventData EDM4HEP::edm4hep)
+    add_test(NAME RecBreakpointTruthOwnership COMMAND RecBreakpointTruthOwnershipTest)
+    add_executable(RecBreakpointTruthMatchTest tests/TruthBreakpointMatchTest.cpp
+      src/TruthLayerOwnership.cpp src/TruthBreakpointOwnership.cpp
+      ../RecGsfTracking/src/TruthBHLossEventData.cpp)
+    target_compile_features(RecBreakpointTruthMatchTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointTruthMatchTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${CMAKE_CURRENT_SOURCE_DIR}/../RecGsfTracking/src ${LCIO_INCLUDE_DIRS})
+    target_link_libraries(RecBreakpointTruthMatchTest PRIVATE GsfTruthEventData EDM4HEP::edm4hep
+      ${ROOT_LIBRARIES} ${LCIO_LIBRARIES})
+    add_test(NAME RecBreakpointTruthMatch COMMAND RecBreakpointTruthMatchTest)
     add_executable(RecBreakpointNeutralLossCandidateTest tests/NeutralLossCandidateTest.cpp
       src/NeutralLossCandidate.cpp)
     target_compile_features(RecBreakpointNeutralLossCandidateTest PRIVATE cxx_std_17)
