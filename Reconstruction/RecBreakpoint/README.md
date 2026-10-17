@@ -33,15 +33,16 @@ build.105.0.0.x86_64-el9-gcc11-opt/run \
 
 The dedicated card explicitly steers every package property. Existing files
 are refused, never overwritten. Its tracker-only TDR_o1_v01 geometry must
-match the input. `BackwardMode` is removed: both results are always produced.
+match the input. `BackwardMode` is removed: each of the four backward filters
+has its own run switch, default off.
 The card rejects the retired `BP_BACKWARD_MODE` variable instead of ignoring it.
 
-## Always-paired endpoint workflow
+## RTS and optional backward endpoints
 
 ```text
 Shared first-pass forward filter
   +--> RTS smoothing           --> BreakpointTracksRTS
-  +--> backward hit refilter   --> BreakpointTracksBackwardFilter
+  +--> optional backward hit refilter --> BreakpointTracksBackwardFilter
 ```
 
 These are separate results, not CPU threads. Backward starts from the full
@@ -59,13 +60,14 @@ smoother. Neither branch adds a beam-to-first-hit breakpoint.
 
 The existing `OutputTracks` property now names the RTS collection (default
 `BreakpointTracksRTS`); `OutputTracksBackwardFilter` names the other collection.
-Two additional collections are always available:
+Two additional collections are declared:
 `BreakpointTracksTruthOverrideRTS` and `BreakpointTracksTruthOverrideBackwardFilter`,
 named by `OutputTracksTruthOverrideRTS` and `OutputTracksTruthOverrideBackwardFilter`.
-The free-loss pair is also always available: `BreakpointTracksFreeLossRTS` and
+The free-loss collections are also declared: `BreakpointTracksFreeLossRTS` and
 `BreakpointTracksFreeLossBackwardFilter`, controlled by `OutputTracksFreeLossRTS`
 and `OutputTracksFreeLossBackwardFilter`. It contains independently optimized
-results when applied, exact ordinary copies otherwise. A second free-loss pair,
+results when applied, ordinary copies otherwise where the corresponding
+backward fit is enabled. A second free-loss pair,
 `BreakpointTracksBeamGuidedFreeLossRTS` and
 `BreakpointTracksBeamGuidedFreeLossBackwardFilter`, optimizes an additional
 beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
@@ -173,11 +175,14 @@ layer propagation and nearest-face choice used by the baseline are applied.
 Failure of this extra extrapolation leaves the IP/hit fit intact. Fixed
 input-row mappings are
 `BreakpointOutputIndex` (RTS) and `BreakpointBackwardOutputIndex`.
-`BreakpointStatus` is 1 for a successful pair, -1 for failed fit and 0 for
+`BreakpointStatus` is 1 for a successful ordinary RTS fit, -1 for failed fit and 0 for
 excluded input; absent outputs map to -1. Current fit failures fail the pair,
 rather than publishing one branch under the other's name.
 
-The flat tuple always records both `rts_pt` and `backward_pt`.
+The flat tuple retains both branch names. With a backward switch off, that
+filter is not run: its collection is empty, its index is -1, and its flat
+endpoint/chi2 fields are NaN with per-hit vectors empty. Four
+`*_backward_filter_enabled` flat fields record the effective switches.
 `breakpoint_pt` remains an RTS alias. Every IP momentum endpoint has a
 matching `*_pt_error` one-sigma field in GeV: `kf`, `breakpoint`/`rts`,
 `backward`, `free_loss_rts`, `free_loss_backward`,
@@ -373,8 +378,8 @@ fit.IntervalSelectionMode = "Truth"  # select locations for this track
 fit.LossStateMode = "Persistent6D"   # ordinary pair fits the loss
 fit.TruthOverride = True           # additional oracle pair; compiled/card default True
 fit.BreakpointIntervals = []  # Manual-only; Truth builds the effective list
-# Six endpoints: ordinary, truth-override and free-loss RTS/backward pairs.
-# With FreeLossFit=False the free-loss pair copies the ordinary pair.
+# Three RTS endpoints; their backward partners require separate run switches.
+# With FreeLossFit=False its RTS output copies ordinary RTS.
 ```
 
 The additional prior centers come from embedded event truth:
@@ -570,8 +575,8 @@ extended KF; the separate terms make those differences auditable.
 
 Optional normalized-likelihood free-loss fitting is now implemented in this
 package, not in an external prototype. Set `FreeLossFit=True` to add a separate
-FreeLoss pair with the shared Gaussian fitter at the optimized prior center. The ordinary
-RTS/backward pair and its tuple fields are never replaced. The
+FreeLoss RTS result with the shared Gaussian fitter at the optimized prior center. The ordinary
+RTS result and its tuple fields are never replaced. The
 compiled compatibility default is false; the maintained standalone/batch card
 defaults to true. Set `BP_FREE_LOSS_FIT=0` to disable it for newly prepared jobs.
 Previously prepared cards are not changed. This is an implementation promotion, not a
@@ -597,13 +602,17 @@ maintained card, but not physics-validated.
 |---|---|---|
 | InputTracks | CompleteTracks | Input hit-list tracks |
 | OutputTracks | BreakpointTracksRTS | RTS collection |
-| OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Parallel inward-filter collection |
+| OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Optional inward-filter collection; empty when disabled |
 | OutputTracksFreeLossRTS | BreakpointTracksFreeLossRTS | Optimized RTS, or exact ordinary RTS copy |
-| OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optimized backward filter, or exact ordinary backward copy |
+| OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optional optimized backward filter; empty when disabled |
 | OutputTracksBeamGuidedFreeLossRTS | BreakpointTracksBeamGuidedFreeLossRTS | Beam-objective free-loss RTS; base free-loss copy when disabled, input KF fallback on optimizer failure |
-| OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Matching beam-objective backward endpoint |
+| OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Optional beam-objective backward endpoint; empty when disabled |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
-| OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Oracle backward or ordinary backward copy |
+| OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Optional oracle backward; empty when disabled |
+| OrdinaryBackwardFilter | false | Run the ordinary inward refilter; otherwise leave its output absent |
+| FreeLossBackwardFilter | false | Run the accepted free-loss backward refit; optimization trials never run backward |
+| BeamGuidedFreeLossBackwardFilter | false | Run the accepted beam-guided backward refit |
+| TruthOverrideBackwardFilter | false | Run the truth-prior backward refit when TruthOverride applies |
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | OutputTracksAbsoluteNeutralRTS | BreakpointTracksAbsoluteNeutralRTS | Absolute neutral-energy-loss RTS, or ordinary RTS copy |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |

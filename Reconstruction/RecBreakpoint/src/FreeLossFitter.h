@@ -59,7 +59,8 @@ class FreeLossFitter {
 public:
   FreeLossFitter(const BreakpointFitter& fitter, double bz) : m_fitter(fitter), m_bz(bz) {}
   FreeLossFitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
-                       const FitSettings& ordinary, const FreeLossSettings& controls) const;
+                       const FitSettings& ordinary, const FreeLossSettings& controls,
+                       bool runBackward = true) const;
 private:
   const BreakpointFitter& m_fitter;
   double m_bz;

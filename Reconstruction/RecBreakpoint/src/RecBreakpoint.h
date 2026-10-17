@@ -92,6 +92,10 @@ private:
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.001};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
   Gaudi::Property<double> m_backwardSeedScale{this, "BackwardSeedScale", 100.0};
+  Gaudi::Property<bool> m_ordinaryBackwardFilter{this, "OrdinaryBackwardFilter", false};
+  Gaudi::Property<bool> m_freeLossBackwardFilter{this, "FreeLossBackwardFilter", false};
+  Gaudi::Property<bool> m_beamFreeLossBackwardFilter{this, "BeamGuidedFreeLossBackwardFilter", false};
+  Gaudi::Property<bool> m_truthBackwardFilter{this, "TruthOverrideBackwardFilter", false};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
@@ -132,6 +136,7 @@ private:
   breakpoint::NeutralPfoTuple m_neutralPfoTuple;
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
+  std::array<int, 4> m_backwardRunFlags{};
   breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;

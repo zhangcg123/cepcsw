@@ -289,6 +289,12 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("absolute_neutral_smoothed_covariance", &m_absoluteSmoothedCovariance);
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
+  m_backwardRunFlags = {int(m_ordinaryBackwardFilter.value()), int(m_freeLossBackwardFilter.value()),
+                        int(m_beamFreeLossBackwardFilter.value()), int(m_truthBackwardFilter.value())};
+  m_tree->Branch("ordinary_backward_filter_enabled", &m_backwardRunFlags[0]);
+  m_tree->Branch("free_loss_backward_filter_enabled", &m_backwardRunFlags[1]);
+  m_tree->Branch("beam_guided_free_loss_backward_filter_enabled", &m_backwardRunFlags[2]);
+  m_tree->Branch("truth_override_backward_filter_enabled", &m_backwardRunFlags[3]);
   m_tree->Branch("event_index", &m_event);
   m_tree->Branch("input_track_index", &m_trackIndex);
   m_tree->Branch("status", &m_fitStatus);
@@ -405,7 +411,10 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("smoothed_log_loss", &m_rtsLoss);
   m_tree->Branch("smoothed_log_loss_variance", &m_rtsLossVariance);
   m_tree->Branch("covariance_transport_closure", &m_closure);
-  info() << "Outward KF + parallel RTS and BackwardFilter; interval selection=" << m_intervalSelectionName
+  info() << "Outward KF + RTS; backward filters (ordinary/free/beam/truth)="
+         << m_backwardRunFlags[0] << '/' << m_backwardRunFlags[1] << '/'
+         << m_backwardRunFlags[2] << '/' << m_backwardRunFlags[3]
+         << "; interval selection=" << m_intervalSelectionName
          << "; seed=" << m_seedSelectionName
          << "; Bz=" << m_bz << endmsg;
   return StatusCode::SUCCESS;
@@ -690,7 +699,7 @@ StatusCode RecBreakpoint::execute() {
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
           << " seed=" << m_seedSelectionName << " ordered-hit indices="
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
-      const auto paired = fitter.fit(hits, settings);
+      const auto paired = fitter.fit(hits, settings, m_ordinaryBackwardFilter);
       std::optional<breakpoint::PairedFitResult> freePair;
       std::optional<breakpoint::TrackLikelihoodResult> optimizedLikelihood;
       std::optional<breakpoint::PairedFitResult> beamFreePair;
@@ -699,7 +708,8 @@ StatusCode RecBreakpoint::execute() {
       bool beamFreeKFFallback = false;
       if (m_freeLossFit) {
         const breakpoint::FreeLossFitter optimizer(fitter, m_bz);
-        auto freeFit = optimizer.fit(hits, settings, freeLossControls);
+        auto freeFit = optimizer.fit(hits, settings, freeLossControls,
+                                     m_freeLossBackwardFilter);
         m_freeLossTuple.assign(freeFit.diagnostics);
         if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
           optimizedLikelihood = freeFit.diagnostics.likelihood;
@@ -714,7 +724,8 @@ StatusCode RecBreakpoint::execute() {
             << " nll2=" << freeFit.diagnostics.likelihood.nll2
             << " minuit_status=" << freeFit.diagnostics.minuitStatus << endmsg;
         if (m_freeLossBeamSpotObjective) {
-          auto beamFit = optimizer.fit(hits, settings, beamFreeLossControls);
+          auto beamFit = optimizer.fit(hits, settings, beamFreeLossControls,
+                                       m_beamFreeLossBackwardFilter);
           m_beamFreeLossTuple.assign(beamFit.diagnostics);
           if (beamFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
             optimizedBeamLikelihood = beamFit.diagnostics.likelihood;
@@ -737,36 +748,41 @@ StatusCode RecBreakpoint::execute() {
         }
       }
       const auto& fit=paired.rts;
-      const auto& inward=paired.backward;
+      const auto* inward=paired.backward ? &*paired.backward : nullptr;
       m_ordinaryLikelihood.assign(fit);
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
         throw std::runtime_error("Invalid IP curvature");
       m_fitPt = std::abs(m_bz * 2.99792458e-4 / fit.ip.omega);
       m_fitPtError = breakpoint::transverseMomentumError(fit.ip, m_bz);
-      if (!std::isfinite(inward.ip.omega) || inward.ip.omega==0) throw std::runtime_error("Invalid backward IP curvature");
-      m_backwardPt=std::abs(m_bz*2.99792458e-4/inward.ip.omega);
-      m_backwardPtError = breakpoint::transverseMomentumError(inward.ip, m_bz);
-      m_backwardTotalChi2=std::accumulate(inward.backwardChi2.begin(),inward.backwardChi2.end(),0.);
-      m_backwardSeedForwardChi2=inward.chi2;
+      if (inward) {
+        if (!std::isfinite(inward->ip.omega) || inward->ip.omega==0)
+          throw std::runtime_error("Invalid backward IP curvature");
+        m_backwardPt=std::abs(m_bz*2.99792458e-4/inward->ip.omega);
+        m_backwardPtError = breakpoint::transverseMomentumError(inward->ip, m_bz);
+        m_backwardTotalChi2=std::accumulate(inward->backwardChi2.begin(),inward->backwardChi2.end(),0.);
+        m_backwardSeedForwardChi2=inward->chi2;
+      }
       m_smoothedTotalChi2=fit.smoothedTotalChi2;m_smoothedSeedChi2=fit.smoothedSeedChi2;
       m_smoothedChi2=fit.smoothedChi2;m_smoothedMeasurementChi2=fit.smoothedMeasurementChi2;
       m_smoothedProcessChi2=fit.smoothedProcessChi2;m_smoothedNativeChi2=fit.smoothedNativeMeasurementChi2;
       m_smoothedChi2Status=fit.smoothedChi2Status;m_smoothedChi2Error=fit.smoothedChi2Error;
       if(m_smoothedChi2Status!=1) warning()<<"Smoothed chi2 unavailable: "<<m_smoothedChi2Error<<endmsg;
-      for(const auto& loss:inward.breakpoints) {
+      if (inward) for(const auto& loss:inward->breakpoints) {
         m_backwardLoss.push_back(loss.fittedLogLoss);m_backwardLossVariance.push_back(loss.fittedVariance);
       }
       m_fitChi2 = fit.chi2;
       if (m_verifyReference) {
         const auto reference = adapter.referenceKF(hits, m_seedScale,false);
-        const auto backwardReference = adapter.referenceKF(hits,m_seedScale,true);
-        m_backwardReferencePt=std::abs(m_bz*2.99792458e-4/backwardReference.omega);
-        m_backwardReferencePtError = breakpoint::transverseMomentumError(backwardReference, m_bz);
+        if (inward) {
+          const auto backwardReference = adapter.referenceKF(hits,m_seedScale,true);
+          m_backwardReferencePt=std::abs(m_bz*2.99792458e-4/backwardReference.omega);
+          m_backwardReferencePtError = breakpoint::transverseMomentumError(backwardReference, m_bz);
+        }
         m_referencePt = std::abs(m_bz * 2.99792458e-4 / reference.omega);
         m_referencePtError = breakpoint::transverseMomentumError(reference, m_bz);
         if (settings.intervals.empty() &&
             (std::abs(m_fitPt / m_referencePt - 1) > 1.e-4 ||
-             (m_backwardSeedScale == 1.0 &&
+             (inward && m_backwardSeedScale == 1.0 &&
               std::abs(m_backwardPt / m_backwardReferencePt - 1) > 1.e-4)))
           throw std::runtime_error("Empty-breakpoint/native-KF pT regression failed");
         info() << "event=" << m_event << " track=" << m_trackIndex
@@ -804,7 +820,7 @@ StatusCode RecBreakpoint::execute() {
           }
         }
       }
-      m_backwardChi2 = inward.backwardChi2;
+      if (inward) m_backwardChi2 = inward->backwardChi2;
       for (std::size_t i = 0; i < hits.size(); ++i) {
         m_filteredKappa.push_back(fit.filtered[i].mean(2, 0));
         m_filteredVariance.push_back(fit.filtered[i].covariance(2, 2));
@@ -812,11 +828,11 @@ StatusCode RecBreakpoint::execute() {
           m_smoothedKappa.push_back(fit.smoothed[i].mean(2, 0));
           m_smoothedVariance.push_back(fit.smoothed[i].covariance(2, 2));
         }
-        if (!inward.backwardFiltered.empty()) {
-          m_backwardKappa.push_back(inward.backwardFiltered[i].mean(2, 0));
-          m_backwardVariance.push_back(inward.backwardFiltered[i].covariance(2, 2));
-          m_backwardPredictedKappa.push_back(inward.backwardPredicted[i].mean(2, 0));
-          m_backwardPredictedVariance.push_back(inward.backwardPredicted[i].covariance(2, 2));
+        if (inward && !inward->backwardFiltered.empty()) {
+          m_backwardKappa.push_back(inward->backwardFiltered[i].mean(2, 0));
+          m_backwardVariance.push_back(inward->backwardFiltered[i].covariance(2, 2));
+          m_backwardPredictedKappa.push_back(inward->backwardPredicted[i].mean(2, 0));
+          m_backwardPredictedVariance.push_back(inward->backwardPredicted[i].covariance(2, 2));
         }
         if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
             << " hit=" << i << " r=" << m_hitR[i] << " localChi2=" << m_localChi2[i]
@@ -829,9 +845,9 @@ StatusCode RecBreakpoint::execute() {
           std::vector<std::pair<const char*, const breakpoint::TrackState*>> states{
               {"predicted", &fit.predicted[i]}, {"filtered", &fit.filtered[i]}};
           if (!fit.smoothed.empty()) states.push_back({"smoothed", &fit.smoothed[i]});
-          if (!inward.backwardFiltered.empty()) {
-            states.push_back({"backward_predicted", &inward.backwardPredicted[i]});
-            states.push_back({"backward_filtered", &inward.backwardFiltered[i]});
+          if (inward && !inward->backwardFiltered.empty()) {
+            states.push_back({"backward_predicted", &inward->backwardPredicted[i]});
+            states.push_back({"backward_filtered", &inward->backwardFiltered[i]});
           }
           for (const auto& named : states) {
             std::ostringstream dump;
@@ -861,9 +877,9 @@ StatusCode RecBreakpoint::execute() {
       m_rtsLossVariance = m_lossVariance;
       outputIndices->push_back(publishTrack(*output, fit, hits, m_bz, fit.smoothedTotalChi2,
                                             adapter, m_caloStates[OrdinaryRTS]));
-      backwardOutputIndices->push_back(publishTrack(*backwardOutput, inward, hits, m_bz,
+      backwardOutputIndices->push_back(inward ? publishTrack(*backwardOutput, *inward, hits, m_bz,
                                                     m_backwardTotalChi2, adapter,
-                                                    m_caloStates[OrdinaryBackward]));
+                                                    m_caloStates[OrdinaryBackward]) : -1);
       m_fitStatus = 1;
 
       // Independent flat-prior experiment. A failed or underidentified fit
@@ -1087,12 +1103,12 @@ StatusCode RecBreakpoint::execute() {
         m_freeLikelihood.invalidate("Free-loss output is input KF fallback; no breakpoint likelihood");
         try {
           const int rtsIndex = freeRTSOutput->size();
-          const int backwardIndex = freeBackwardOutput->size();
+          const int backwardIndex = m_freeLossBackwardFilter ? freeBackwardOutput->size() : -1;
           m_freeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
           freeRTSOutput->push_back(track.clone());
-          freeBackwardOutput->push_back(track.clone());
+          if (backwardIndex >= 0) freeBackwardOutput->push_back(track.clone());
           m_caloStates[FreeRTS].assignFromTrack(track, m_bz, 2);
-          m_caloStates[FreeBackward].assignFromTrack(track, m_bz, 2);
+          if (backwardIndex >= 0) m_caloStates[FreeBackward].assignFromTrack(track, m_bz, 2);
           if (m_verbose) info() << "FreeLoss KF fallback event=" << m_event
               << " track=" << m_trackIndex << " inputPt=" << m_kfPt << endmsg;
         } catch (const std::exception& error) {
@@ -1112,24 +1128,30 @@ StatusCode RecBreakpoint::execute() {
         } else {
           m_freeLikelihood = m_ordinaryLikelihood; // free fit off or no interval
         }
-        const double freeBackwardChi2 = std::accumulate(freeResult.backward.backwardChi2.begin(),
-                                                       freeResult.backward.backwardChi2.end(), 0.);
         const int freeRTSIndex = publishTrack(*freeRTSOutput, freeResult.rts, hits, m_bz,
                                               freeResult.rts.smoothedTotalChi2, adapter,
                                               m_caloStates[FreeRTS]);
-        const int freeBackwardIndex = publishTrack(*freeBackwardOutput, freeResult.backward, hits,
-                                                   m_bz, freeBackwardChi2, adapter,
-                                                   m_caloStates[FreeBackward]);
+        int freeBackwardIndex = -1;
+        if (m_freeLossBackwardFilter && freeResult.backward) {
+          const double freeBackwardChi2 = std::accumulate(freeResult.backward->backwardChi2.begin(),
+                                                         freeResult.backward->backwardChi2.end(), 0.);
+          freeBackwardIndex = publishTrack(*freeBackwardOutput, *freeResult.backward, hits,
+                                           m_bz, freeBackwardChi2, adapter,
+                                           m_caloStates[FreeBackward]);
+        }
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
       }
       if (m_verbose && !freeKFFallback) {
         for (std::size_t i = 0; i < hits.size(); ++i) {
-          for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
+          std::vector<std::pair<const char*, const breakpoint::TrackState*>> states{
               {"free_predicted", &freeResult.rts.predicted[i]},
               {"free_filtered", &freeResult.rts.filtered[i]},
-              {"free_smoothed", &freeResult.rts.endpoint[i]},
-              {"free_backward_predicted", &freeResult.backward.backwardPredicted[i]},
-              {"free_backward_filtered", &freeResult.backward.endpoint[i]}}) {
+              {"free_smoothed", &freeResult.rts.endpoint[i]}};
+          if (m_freeLossBackwardFilter && freeResult.backward) {
+            states.push_back({"free_backward_predicted", &freeResult.backward->backwardPredicted[i]});
+            states.push_back({"free_backward_filtered", &freeResult.backward->endpoint[i]});
+          }
+          for (const auto& named : states) {
             std::ostringstream dump;
             dump << std::setprecision(17) << named.first << " hit=" << i << " mean=[";
             for (int row = 0; row < 5; ++row) dump << named.second->mean(row, 0) << ' ';
@@ -1153,12 +1175,12 @@ StatusCode RecBreakpoint::execute() {
         m_beamFreeLikelihood.invalidate("Beam-guided output is input KF fallback; no breakpoint likelihood");
         try {
           const int rtsIndex = beamFreeRTSOutput->size();
-          const int backwardIndex = beamFreeBackwardOutput->size();
+          const int backwardIndex = m_beamFreeLossBackwardFilter ? beamFreeBackwardOutput->size() : -1;
           m_beamFreeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
           beamFreeRTSOutput->push_back(track.clone());
-          beamFreeBackwardOutput->push_back(track.clone());
+          if (backwardIndex >= 0) beamFreeBackwardOutput->push_back(track.clone());
           m_caloStates[BeamFreeRTS].assignFromTrack(track, m_bz, 2);
-          m_caloStates[BeamFreeBackward].assignFromTrack(track, m_bz, 2);
+          if (backwardIndex >= 0) m_caloStates[BeamFreeBackward].assignFromTrack(track, m_bz, 2);
         } catch (const std::exception& error) {
           m_beamFreeLossTracks.reset();
           warning() << "Beam-guided input KF fallback unavailable: " << error.what() << endmsg;
@@ -1176,25 +1198,31 @@ StatusCode RecBreakpoint::execute() {
         } else {
           m_beamFreeLikelihood = m_freeLikelihood; // exact base free-loss copy
         }
-        const double backwardChi2 = std::accumulate(beamResult.backward.backwardChi2.begin(),
-                                                    beamResult.backward.backwardChi2.end(), 0.);
         const int rtsIndex = publishTrack(*beamFreeRTSOutput, beamResult.rts, hits, m_bz,
                                           beamResult.rts.smoothedTotalChi2, adapter,
                                           m_caloStates[BeamFreeRTS]);
-        const int backwardIndex = publishTrack(*beamFreeBackwardOutput, beamResult.backward,
-                                               hits, m_bz, backwardChi2, adapter,
-                                               m_caloStates[BeamFreeBackward]);
+        int backwardIndex = -1;
+        if (m_beamFreeLossBackwardFilter && beamResult.backward) {
+          const double backwardChi2 = std::accumulate(beamResult.backward->backwardChi2.begin(),
+                                                      beamResult.backward->backwardChi2.end(), 0.);
+          backwardIndex = publishTrack(*beamFreeBackwardOutput, *beamResult.backward,
+                                       hits, m_bz, backwardChi2, adapter,
+                                       m_caloStates[BeamFreeBackward]);
+        }
         m_beamFreeLossTracks.assign(beamResult, m_bz, beamFreePair ? 2 : 1,
                                    rtsIndex, backwardIndex);
       }
       if (m_verbose && !beamFallback) {
         for (std::size_t i = 0; i < hits.size(); ++i) {
-          for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
+          std::vector<std::pair<const char*, const breakpoint::TrackState*>> states{
               {"beam_guided_predicted", &beamResult.rts.predicted[i]},
               {"beam_guided_filtered", &beamResult.rts.filtered[i]},
-              {"beam_guided_smoothed", &beamResult.rts.endpoint[i]},
-              {"beam_guided_backward_predicted", &beamResult.backward.backwardPredicted[i]},
-              {"beam_guided_backward_filtered", &beamResult.backward.endpoint[i]}}) {
+              {"beam_guided_smoothed", &beamResult.rts.endpoint[i]}};
+          if (m_beamFreeLossBackwardFilter && beamResult.backward) {
+            states.push_back({"beam_guided_backward_predicted", &beamResult.backward->backwardPredicted[i]});
+            states.push_back({"beam_guided_backward_filtered", &beamResult.backward->endpoint[i]});
+          }
+          for (const auto& named : states) {
             std::ostringstream dump;
             dump << std::setprecision(17) << named.first << " hit=" << i << " mean=[";
             for (int row = 0; row < 5; ++row) dump << named.second->mean(row, 0) << ' ';
@@ -1264,30 +1292,36 @@ StatusCode RecBreakpoint::execute() {
 
         std::unique_ptr<breakpoint::PairedFitResult> oracle;
         if (needTruthLoss)
-          oracle = std::make_unique<breakpoint::PairedFitResult>(fitter.fit(hits, oracleSettings));
+          oracle = std::make_unique<breakpoint::PairedFitResult>(
+              fitter.fit(hits, oracleSettings, m_truthBackwardFilter));
         const auto& extraPair = oracle ? *oracle : paired;
         const auto& truthRTS = extraPair.rts;
-        const auto& truthBackward = extraPair.backward;
+        const auto* truthBackward = m_truthBackwardFilter && extraPair.backward ?
+            &*extraPair.backward : nullptr;
         if (oracle) m_truthLikelihood.assign(truthRTS);
         else m_truthLikelihood = m_ordinaryLikelihood;
-        for (const auto* candidate : {&truthRTS, &truthBackward})
-          if (!std::isfinite(candidate->ip.omega) || candidate->ip.omega == 0)
-            throw std::runtime_error("Invalid truth-override endpoint curvature");
+        if (!std::isfinite(truthRTS.ip.omega) || truthRTS.ip.omega == 0 ||
+            (truthBackward && (!std::isfinite(truthBackward->ip.omega) ||
+                               truthBackward->ip.omega == 0)))
+          throw std::runtime_error("Invalid truth-override endpoint curvature");
 
         // Use exactly the same endpoint representation and chi2 conventions.
-        // With the switch off these are copies of the already calculated pair,
-        // not a rerun with slightly different floating-point results.
+        // With TruthOverride off, RTS copies the ordinary result; backward
+        // copies only when its own run switch and ordinary backward are on.
         m_truthRTSPt = std::abs(m_bz * 2.99792458e-4 / truthRTS.ip.omega);
         m_truthRTSPtError = breakpoint::transverseMomentumError(truthRTS.ip, m_bz);
-        m_truthBackwardPt = std::abs(m_bz * 2.99792458e-4 / truthBackward.ip.omega);
-        m_truthBackwardPtError = breakpoint::transverseMomentumError(truthBackward.ip, m_bz);
+        if (truthBackward) {
+          m_truthBackwardPt = std::abs(m_bz * 2.99792458e-4 / truthBackward->ip.omega);
+          m_truthBackwardPtError = breakpoint::transverseMomentumError(truthBackward->ip, m_bz);
+          m_truthBackwardChi2 = std::accumulate(truthBackward->backwardChi2.begin(),
+                                                truthBackward->backwardChi2.end(), 0.);
+          m_truthBackwardLocal = truthBackward->backwardChi2;
+        }
         m_truthForwardChi2 = truthRTS.chi2;
-        m_truthBackwardChi2 = std::accumulate(truthBackward.backwardChi2.begin(), truthBackward.backwardChi2.end(), 0.);
         m_truthSmoothedChi2 = truthRTS.smoothedTotalChi2;
         m_truthSmoothedStatus = truthRTS.smoothedChi2Status;
         m_truthSmoothedError = truthRTS.smoothedChi2Error;
         m_truthForwardLocal = truthRTS.localChi2;
-        m_truthBackwardLocal = truthBackward.backwardChi2;
         m_truthSmoothedLocal = truthRTS.smoothedChi2;
         m_truthSmoothedMeasurement = truthRTS.smoothedMeasurementChi2;
         m_truthSmoothedProcess = truthRTS.smoothedProcessChi2;
@@ -1297,7 +1331,7 @@ StatusCode RecBreakpoint::execute() {
           m_truthRTSLoss.push_back(loss.fittedLogLoss);
           m_truthRTSLossVariance.push_back(loss.fittedVariance);
         }
-        for (const auto& loss : truthBackward.breakpoints) {
+        if (truthBackward) for (const auto& loss : truthBackward->breakpoints) {
           m_truthBackwardLoss.push_back(loss.fittedLogLoss);
           m_truthBackwardLossVariance.push_back(loss.fittedVariance);
         }
@@ -1307,17 +1341,19 @@ StatusCode RecBreakpoint::execute() {
           covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
         };
         saveIP(truthRTS.ip, m_truthRTSParameters, m_truthRTSCovariance);
-        saveIP(truthBackward.ip, m_truthBackwardParameters, m_truthBackwardCovariance);
+        if (truthBackward) saveIP(truthBackward->ip, m_truthBackwardParameters, m_truthBackwardCovariance);
         truthRTSIndex = publishTrack(*truthRTSOutput, truthRTS, hits, m_bz,
                                      m_truthSmoothedChi2, adapter, m_caloStates[TruthRTS]);
-        truthBackwardIndex = publishTrack(*truthBackwardOutput, truthBackward, hits, m_bz,
-                                          m_truthBackwardChi2, adapter,
+        if (truthBackward) truthBackwardIndex = publishTrack(*truthBackwardOutput, *truthBackward,
+                                          hits, m_bz, m_truthBackwardChi2, adapter,
                                           m_caloStates[TruthBackward]);
         m_truthResultCode = needTruthLoss ? 2 : 1;
         if (m_verbose) {
           for (std::size_t i = 0; i < hits.size(); ++i) {
-            for (const auto& named : std::vector<std::pair<const char*, const breakpoint::TrackState*>>{
-                {"truth_rts", &truthRTS.endpoint[i]}, {"truth_backward", &truthBackward.endpoint[i]}}) {
+            std::vector<std::pair<const char*, const breakpoint::TrackState*>> states{
+                {"truth_rts", &truthRTS.endpoint[i]}};
+            if (truthBackward) states.push_back({"truth_backward", &truthBackward->endpoint[i]});
+            for (const auto& named : states) {
               std::ostringstream dump;
               dump << std::setprecision(17) << named.first << " hit=" << i << " mean=[";
               for (int row = 0; row < 5; ++row) dump << named.second->mean(row, 0) << ' ';

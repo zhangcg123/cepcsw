@@ -170,6 +170,33 @@ class BatchTest(unittest.TestCase):
                 exec(assignment, {'fit':fit, 'os':os})
             self.assertEqual(fit.BackwardSeedScale, expected)
 
+    def test_backward_fit_switches_default_off_and_freeze_independently(self):
+        names = {
+            'OrdinaryBackwardFilter': 'BP_ORDINARY_BACKWARD_FILTER',
+            'FreeLossBackwardFilter': 'BP_FREE_LOSS_BACKWARD_FILTER',
+            'BeamGuidedFreeLossBackwardFilter': 'BP_BEAM_FREE_LOSS_BACKWARD_FILTER',
+            'TruthOverrideBackwardFilter': 'BP_TRUTH_BACKWARD_FILTER',
+        }
+        self.prepare(OUTPUT_TUPLEPATH='backward_default')
+        template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        assignments = '\n'.join(line for line in template.splitlines()
+                                if any(line.startswith('fit.' + name + ' =') for name in names))
+        for name in names:
+            fit = types.SimpleNamespace()
+            with patch.dict(os.environ, {}, clear=True):
+                exec(assignments, {'fit': fit, 'os': os})
+            self.assertFalse(getattr(fit, name))
+            output = 'backward_' + name
+            self.prepare(OUTPUT_TUPLEPATH=output, **{names[name]: 'true'})
+            job = self.manifest(output)
+            self.assertEqual(job['controls'][names[name]], '1')
+            frozen = Path(job['cards']['breakpoint']).read_text()
+            prefix = frozen[:-len(template)]
+            fit = types.SimpleNamespace()
+            with patch.dict(os.environ, {names[name]: '0'}, clear=True):
+                exec(prefix + '\n' + assignments, {'fit': fit, 'os': os})
+            self.assertTrue(getattr(fit, name))
+
     def test_controls_frozen_and_originals_unchanged(self):
         source = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
         before = source.read_bytes()

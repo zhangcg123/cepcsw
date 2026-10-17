@@ -68,7 +68,7 @@ struct FitResult {
 
 struct PairedFitResult {
   FitResult rts;
-  FitResult backward;
+  std::optional<FitResult> backward;
 };
 
 /// Persistent6D: one loss coordinate stays live through every downstream hit.
@@ -77,7 +77,7 @@ class BreakpointFitter {
 public:
   explicit BreakpointFitter(const KalmanAdapter& adapter) : m_adapter(adapter) {}
   PairedFitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
-                const FitSettings& settings) const;
+                const FitSettings& settings, bool runBackward = true) const;
   /// One selected interval, exact rank-one diffuse loss initialization.
   /// No Gaussian SigmaLogLoss prior is introduced or scored.
   FitResult fitDiffuseRTS(const std::vector<edm4hep::TrackerHit>& hits,

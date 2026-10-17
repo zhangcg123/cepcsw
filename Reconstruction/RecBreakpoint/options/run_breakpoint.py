@@ -90,13 +90,20 @@ fit.SeedScale = 1.0
 # only. The mean and RTS are unchanged. Positive finite values; 1 preserves it.
 # Default 100 inflates all covariance entries by 100 (standard deviations by 10).
 fit.BackwardSeedScale = float(os.environ.get("BP_BACKWARD_SEED_SCALE", "100.0"))
+# These switches skip the corresponding inward KF computation, not just output
+# serialization. Disabled backward collections are empty and tuple indices are -1.
+# Their flat endpoint values are NaN; RTS results remain available.
+fit.OrdinaryBackwardFilter = os.environ.get("BP_ORDINARY_BACKWARD_FILTER", "0") == "1"
+fit.FreeLossBackwardFilter = os.environ.get("BP_FREE_LOSS_BACKWARD_FILTER", "0") == "1"
+fit.BeamGuidedFreeLossBackwardFilter = os.environ.get("BP_BEAM_FREE_LOSS_BACKWARD_FILTER", "0") == "1"
+fit.TruthOverrideBackwardFilter = os.environ.get("BP_TRUTH_BACKWARD_FILTER", "0") == "1"
 # Three usable 2D hits in radius order; N//2 is the middle (upper for even N).
 # FirstThree restores the original short-lever-arm prefit for comparisons.
 fit.SeedHitSelection = os.environ.get("BP_SEED_HIT_SELECTION", "FirstMiddleLast")
-# Both RTS and BackwardFilter are always produced from the common forward fit.
+# RTS is always produced; the four backward continuations are independently optional.
 # Reject the retired environment control rather than silently ignoring it.
 if "BP_BACKWARD_MODE" in os.environ:
-    raise ValueError("BP_BACKWARD_MODE/BackwardMode was removed: both endpoints are always saved")
+    raise ValueError("BP_BACKWARD_MODE/BackwardMode was removed; use the four backward-filter switches")
 # Persistent6D retains b and the full 6x6 covariance at every downstream hit.
 # One breakpoint at most. The backward continuation retains its local-joint
 # loss treatment. LocalMarginal also supports multiple selected breakpoints.
@@ -139,13 +146,13 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # The optional Minuit pair below optimizes the prior center with the SAME sigma;
 # it remains separate from the ordinary fit and the truth-centred pair.
 # Optional outer prior-center fit: normalized full-track likelihood, not chi2 alone.
-# Ordinary RTS/backward are ALWAYS retained. True adds optimized results in
+# Ordinary RTS is always retained. True adds optimized results in
 # the FreeLoss RTS/backward collections on one selected interval, using the
 # selected LossStateMode (Persistent6D or LocalMarginal) for every trial/refit;
 # their covariances include the loss posterior variance and correlations.
 # Minuit's error on the chosen prior center is NOT another SigmaLogLoss.
-# False copies ordinary results
-# into these extra collections/flat branches, without another fit.
+# False copies ordinary RTS and, only if enabled, its backward result into
+# the corresponding extra outputs, without another fit.
 # Empty lists copy ordinary results. Unsupported modes/manual multiple intervals
 # or failed optimization copy the INPUT CompleteTracks KF into both free outputs.
 # Success requires a converged, valid Minuit minimum (not just a finite scan).
@@ -174,15 +181,15 @@ fit.BeamSpotSigmaY = float(os.environ.get("BP_BEAM_SPOT_SIGMA_Y", "3.6e-5"))  # 
 # It neither changes the interval selection nor corrects unselected intervals.
 # Example: Manual=[5], actual eBrem only in interval 7 -> prior center at 5 is
 # b=0 (z=1), but the fitted b may move. Interval 7 is not added automatically.
-# Primary RTS/backward always use MeanLogLoss/SigmaLogLoss. FreeLossFit changes
+# Primary RTS and enabled backward use MeanLogLoss/SigmaLogLoss. FreeLossFit changes
 # only the additional FreeLoss pair. The truth pair STILL uses the configured
 # positive sigma and truth prior center, not Minuit or a fixed-loss oracle.
 # FreeLossFit uses that same sigma but an optimized prior center instead.
-# False, or an empty effective interval list: save ordinary RTS/backward copies
-# in the truth-override outputs. Truth selection can still read truth when False.
+# False, or an empty effective interval list: save an ordinary RTS copy and
+# only the separately enabled backward copy. Truth selection still reads truth.
 # LossStateMode controls the ordinary fit; neither control overrides the other.
 fit.TruthOverride = os.environ.get("BP_TRUTH_OVERRIDE", "1") == "1"
-# Repeated relinearization was retired; both endpoints use one pass.
+# Repeated relinearization was retired; enabled endpoints use one pass.
 for retired in ("BP_MAX_ITERATIONS", "BP_ITERATION_TOLERANCE"):
     if retired in os.environ:
         raise ValueError(retired + " was removed; RecBreakpoint is one-pass only")

@@ -76,7 +76,7 @@ std::pair<double, double> inferLoss(const Transition& transition,
 } // namespace
 
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
-                                     const FitSettings& settings) const {
+                                     const FitSettings& settings, bool runBackward) const {
   if (settings.absoluteLossPrior)
     throw std::invalid_argument("Ordinary paired fitter cannot consume an absolute-loss prior");
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
@@ -100,8 +100,9 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
   // Share the first forward population. Neither continuation feeds the other.
   const auto first = settings.lossStateMode == "Persistent6D" && !settings.intervals.empty()
       ? fitPersistent(hits,settings) : fitLocalRTS(hits,settings);
+  if (!runBackward) return {std::move(first), std::nullopt};
   auto inward = finishBackward(hits,settings,first);
-  return {first,std::move(inward)};
+  return {std::move(first), std::move(inward)};
 }
 
 FitResult BreakpointFitter::fitAbsoluteLossRTS(const std::vector<edm4hep::TrackerHit>& hits,

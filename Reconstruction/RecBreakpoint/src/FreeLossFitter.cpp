@@ -12,7 +12,7 @@
 namespace breakpoint {
 
 FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
-    const FitSettings& ordinary, const FreeLossSettings& controls) const {
+    const FitSettings& ordinary, const FreeLossSettings& controls, bool runBackward) const {
   FreeLossFitResult result;
   auto& diagnostic = result.diagnostics;
   if (ordinary.intervals.empty()) {
@@ -54,7 +54,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       trial.objectiveNll2 = 1.e20;
       try {
         settings.meanLogLoss = priorMean;
-        const auto pair = m_fitter.fit(hits, settings);
+        const auto pair = m_fitter.fit(hits, settings, false);
         const auto& rts = pair.rts;
         if (rts.smoothedChi2Status != 1 || rts.breakpoints.size() != 1 ||
             rts.breakpoints.front().priorLogLoss != priorMean ||
@@ -145,10 +145,11 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     // error on the center is a different quantity and is not added again.
     settings.meanLogLoss = best.b;
     settings.captureGaussianModel = false;
-    result.fitted.emplace(m_fitter.fit(hits, settings));
-    for (const auto* endpoint : {&result.fitted->rts.ip, &result.fitted->backward.ip})
-      if (!std::isfinite(endpoint->omega) || endpoint->omega == 0)
-        throw std::runtime_error("Invalid free-loss endpoint curvature");
+    result.fitted.emplace(m_fitter.fit(hits, settings, runBackward));
+    if (!std::isfinite(result.fitted->rts.ip.omega) || result.fitted->rts.ip.omega == 0 ||
+        (result.fitted->backward &&
+         (!std::isfinite(result.fitted->backward->ip.omega) || result.fitted->backward->ip.omega == 0)))
+      throw std::runtime_error("Invalid free-loss endpoint curvature");
     diagnostic.status = FreeLossStatus::Applied;
   } catch (const std::exception& error) {
     diagnostic.status = FreeLossStatus::Failed;

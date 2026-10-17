@@ -89,7 +89,7 @@ void FitPairTuple::assignKF(const edm4hep::Track& track, double bz,
     m_rts.ptError = transverseMomentumError(ip, bz);
     m_rts.parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
     m_rts.covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
-    m_backward = m_rts;
+    if (backwardIndex >= 0) m_backward = m_rts;
     m_kfChi2 = track.getChi2();
     m_status = 3; m_rtsIndex = rtsIndex; m_backwardIndex = backwardIndex;
     // CompleteTracks does not supply these per-hit smoother diagnostics.
@@ -104,16 +104,17 @@ void FitPairTuple::assign(const PairedFitResult& pair, double bz, int status,
                           int rtsIndex, int backwardIndex) {
   reset();
   m_rts.assign(pair.rts, bz);
-  m_backward.assign(pair.backward, bz);
+  if (pair.backward && backwardIndex >= 0) m_backward.assign(*pair.backward, bz);
   m_status = status; m_rtsIndex = rtsIndex; m_backwardIndex = backwardIndex;
   m_forwardChi2 = pair.rts.chi2;
-  m_backwardChi2 = std::accumulate(pair.backward.backwardChi2.begin(), pair.backward.backwardChi2.end(), 0.);
+  if (pair.backward && backwardIndex >= 0)
+    m_backwardChi2 = std::accumulate(pair.backward->backwardChi2.begin(), pair.backward->backwardChi2.end(), 0.);
   m_smoothedChi2 = pair.rts.smoothedTotalChi2;
   m_smoothedStatus = pair.rts.smoothedChi2Status;
   m_smoothedError = pair.rts.smoothedChi2Error;
   for (const auto& loss : pair.rts.breakpoints) m_intervals.push_back(loss.index);
   m_forwardLocal = pair.rts.localChi2;
-  m_backwardLocal = pair.backward.backwardChi2;
+  if (pair.backward && backwardIndex >= 0) m_backwardLocal = pair.backward->backwardChi2;
   m_smoothedLocal = pair.rts.smoothedChi2;
   m_smoothedMeasurement = pair.rts.smoothedMeasurementChi2;
   m_smoothedProcess = pair.rts.smoothedProcessChi2;
@@ -122,7 +123,9 @@ void FitPairTuple::assign(const PairedFitResult& pair, double bz, int status,
   m_forwardPredicted.assign(pair.rts.predicted);
   m_forwardFiltered.assign(pair.rts.filtered);
   m_smoothed.assign(pair.rts.smoothed);
-  m_backwardPredicted.assign(pair.backward.backwardPredicted);
-  m_backwardFiltered.assign(pair.backward.backwardFiltered);
+  if (pair.backward && backwardIndex >= 0) {
+    m_backwardPredicted.assign(pair.backward->backwardPredicted);
+    m_backwardFiltered.assign(pair.backward->backwardFiltered);
+  }
 }
 } // namespace breakpoint
