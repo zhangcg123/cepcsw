@@ -798,7 +798,23 @@ The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
 
-Prepare a campaign from existing simulation files, without submitting:
+The submission helper defaults to the complete chain:
+`sim -> trk -> calodigi -> rec -> breakpoint`. It freezes the shared
+`DumpGsfTrks/sim.py.bk` together with the downstream cards at preparation.
+No existing input tuple is needed for this chain. All outputs go into
+OUTPUT_TUPLEPATH; SIM and REC are retained alongside the breakpoint flat tuple.
+INPUT_TUPLEPATH is unused for this complete chain, but must still differ from
+OUTPUT_TUPLEPATH. Existing outputs/cards are never overwritten.
+
+Prepare a new full-chain campaign without submitting:
+
+```bash
+DRY_RUN=1 OUTPUT_TUPLEPATH=breakpoint_barrel_full_20261018 \
+./subbreakpointjobs.sh
+```
+
+For partial chains, explicitly set STAGES. For example, prepare from existing
+simulation files without submitting:
 
 ```bash
 DRY_RUN=1 NEVT=200 SEED_FIRST=1 SEED_LAST=2 \
@@ -821,7 +837,7 @@ convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 
 | Control | Default | Meaning |
 |---|---|---|
-| STAGES | breakpoint | Any nonduplicated subset of sim,trk,calodigi,rec,breakpoint; physical order always used |
+| STAGES | sim,trk,calodigi,rec,breakpoint | Any nonduplicated subset of these stages; physical order always used |
 | INPUT_TUPLEPATH | sim_large_barrel_20261001 | Existing predecessor tuples, relative to repository or absolute |
 | OUTPUT_TUPLEPATH | breakpoint_barrel | Results/cards/logs; existing files or run-card directories block preparation rather than being overwritten |
 | NEVT | 200 | Maximum events per job |
@@ -833,8 +849,8 @@ convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
-For the current barrel sample, the input is `sim-barrel-SEED.root`; generated
-outputs are `trk-barrel-SEED.root`, `calodigi-barrel-SEED.root`,
+For the default full barrel chain, simulation produces `sim-barrel-SEED.root`;
+downstream outputs are `trk-barrel-SEED.root`, `calodigi-barrel-SEED.root`,
 `rec-barrel-SEED.root`, and `breakpoint_flat-barrel-SEED.root`.
 The breakpoint fitter reads **rec**, not trk. The retained rec event contains
 `EcalCluster`, `CyberPFO`, digitized ECAL/HCAL hits, `CompleteTracks`, and

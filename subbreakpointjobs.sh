@@ -9,9 +9,10 @@ export SEED_FIRST=${SEED_FIRST:-1}
 export SEED_LAST=${SEED_LAST:-100}
 export INPUT_TUPLEPATH=${INPUT_TUPLEPATH:-sim_large_barrel_20261001}
 export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-breakpoint_barrel}
-# Preserve the reconstructed ECAL/PFO event tuple for later external eBrem
-# studies. Existing simulation is reused unless sim is explicitly selected.
-export STAGES=${STAGES:-breakpoint}
+# Full chain by default; use STAGES=trk,calodigi,rec,breakpoint for existing
+# SIM inputs, or STAGES=breakpoint for existing REC inputs.
+# Retain SIM/REC/flat outputs; remove owned TRK/calodigi only after validation.
+export STAGES=${STAGES:-sim,trk,calodigi,rec,breakpoint}
 export MEMORY_MB=${MEMORY_MB:-5000}
 export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.

@@ -322,6 +322,32 @@ class BatchTest(unittest.TestCase):
         self.prepare(STAGES='sim,trk,calodigi,rec,breakpoint', SEED_FIRST='13', SEED_LAST='13')
         self.assertTrue((self.repo/'outputs/runcards/e--2.0-85-13/job.json').is_file())
 
+    def test_submission_wrapper_full_chain_default_and_rec_override(self):
+        for stages in (None, 'breakpoint'):
+            with self.subTest(stages=stages):
+                output = 'wrapper_full' if stages is None else 'wrapper_rec'
+                env = dict(self.env, PATH=os.environ.get('PATH', '/usr/bin:/bin'),
+                           SAMPLE_REGION='barrel', OUTPUT_TUPLEPATH=output)
+                if stages is None:
+                    del env['STAGES']
+                    env['INPUT_TUPLEPATH'] = 'absent_inputs'
+                else:
+                    env['STAGES'] = stages
+                result = batch.subprocess.run(
+                    ['bash', str(self.repo/'subbreakpointjobs.sh')], env=env,
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                carddir = self.repo/output/'runcards/barrel-12'
+                job = json.loads((carddir/'job.json').read_text())
+                self.assertEqual(job['stages'], list(batch.ORDER) if stages is None else ['breakpoint'])
+                self.assertFalse((carddir/'submitted.json').exists())
+                for stage, predecessor in zip(batch.ORDER[1:], batch.ORDER[:-1]):
+                    if stage not in job['stages']: continue
+                    card = Path(job['cards'][stage]).read_text()
+                    self.assertIn(repr(job['files'][predecessor]), card)
+                    expected = self.repo/(output if predecessor in job['stages'] else 'inputs')
+                    self.assertEqual(Path(job['files'][predecessor]).parent, expected)
+
     def test_template_drift_fails_before_submission(self):
         path=self.repo/'DumpGsfTrks/trk.py.bk'
         path.write_text(path.read_text().replace('evtmax = 12340','evtmax = 2'))
