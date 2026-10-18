@@ -23,6 +23,7 @@ scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ```python
 fit.FreeLossFit = True
+fit.FreeLossEcal = False  # optional ECAL term in the existing free-loss search
 fit.SigmaLogLoss = 0.001  # SAME prior width for all four fit pairs
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
@@ -34,7 +35,7 @@ fit.BeamSpotSigmaY = 3.6e-5  # mm
 fit.BackwardSeedScale = 100.0
 ```
 
-The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_MAX_LOG_LOSS,
+The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_ECAL (default 0), BP_FREE_LOSS_MAX_LOG_LOSS,
 BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
 parallel objective is controlled by BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE
 (default 1); BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y can override its
@@ -52,6 +53,21 @@ That uses the existing input/output/stage controls and does not change the
 GSF worker/cards. The script's selected loss sigma is used by ordinary,
 free-loss and truth-prior fits, including every optimizer trial and final refit.
 It does not modify an input KF copy used as a failure fallback.
+
+`FreeLossEcal=True` requires `FreeLossFit=True` and `Persistent6D`. When exactly
+one breakpoint and an accepted hit-supported neutral ECAL cluster are present,
+it adds an energy term to the *existing* free-loss scalar objective. At each
+trial's first smoothed post-break state, `E_pred = p_post (exp(b)-1)` and the
+energy variance is the collected neutral-energy variance plus the propagated
+6D state covariance. The term is the Gaussian squared pull plus log variance
+and normalization. The ordinary, diffuse, truth-prior, and separate beam-guided
+fits are unchanged. With no accepted cluster, the base free-loss path is
+unchanged; a failed enabled fit still uses the existing input-KF fallback.
+This is an objective-only ECAL constraint, not an ECAL Kalman measurement or a
+fully joint trajectory/cluster fit. It is experimental: misassociated neutral
+clusters can substantially worsen momentum. Keep the option off for baseline
+production and use distinct output paths for on/off comparisons. When enabled,
+the saved base free-loss NLL includes the ECAL term on applicable tracks.
 
 For one selected interval:
 

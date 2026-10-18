@@ -14,6 +14,7 @@ struct FreeLossSettings {
   unsigned maxCallsPerStart = 180;
   double tolerance = .001;
   std::optional<BeamSpotSettings> beamSpot; // objective only; never a KF hit
+  std::optional<std::pair<double, double>> ecalLoss; // external neutral energy and error [GeV]
 };
 
 enum class FreeLossStatus { NotAttempted = 0, NoInterval = 1, Applied = 2,

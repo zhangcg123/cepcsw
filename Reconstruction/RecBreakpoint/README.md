@@ -626,6 +626,7 @@ maintained card, but not physics-validated.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one interval in the selected Persistent6D or LocalMarginal representation; input KF fallback on failure/unsupported mode |
+| FreeLossEcal | false | Card default false (`BP_FREE_LOSS_ECAL=1` enables); add accepted hit-supported neutral energy to the existing Persistent6D free-loss profile objective for one interval; no-cluster tracks retain tracker-only behavior; experimental, not physics-validated |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |
@@ -862,6 +863,7 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 | MEMORY_MB | 5000 | Scheduler memory request |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
+| BP_FREE_LOSS_ECAL | 0 | Freeze the optional neutral-ECAL term in the existing Persistent6D free-loss objective; use separate output directories for A/B |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
 For the default full barrel chain, simulation produces `sim-barrel-SEED.root`;

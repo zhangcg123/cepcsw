@@ -42,7 +42,24 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     // Clear per-interval centers so no external/truth amount overrides Minuit.
     auto settings = ordinary;
     settings.intervalMeanLogLoss.clear();
+    // ECAL changes the scalar objective, not the tracker-hit KF/RTS updates.
     settings.captureGaussianModel = true;
+    std::optional<double> ecalStart;
+    if (controls.ecalLoss) {
+      auto referenceSettings = settings;
+      referenceSettings.captureGaussianModel = false;
+      referenceSettings.meanLogLoss = 0.;
+      const auto reference = m_fitter.fit(hits, referenceSettings, false);
+      if (reference.rts.persistentSmoothed.empty())
+        throw std::runtime_error("Missing post-break track reference for ECAL search seed");
+      const auto& post = reference.rts.persistentSmoothed.front();
+      const double kappa = post.mean(2, 0);
+      if (!std::isfinite(kappa) || kappa == 0)
+        throw std::runtime_error("Invalid post-break curvature for ECAL search seed");
+      const double postMomentum = std::hypot(1., post.mean(4, 0)) / std::abs(kappa);
+      ecalStart = std::clamp(std::log1p(controls.ecalLoss->first / postMomentum),
+                             0., controls.maxLogLoss);
+    }
     std::map<double, FreeLossTrial> cache; // scalar records only, never cached trajectories
     FreeLossTrialPhase phase = FreeLossTrialPhase::Scan;
     auto evaluate = [&](double priorMean, bool force = false) {
@@ -67,6 +84,37 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
         // filter pass, reference iteration, or backward chi2 is added.
         trial.likelihood = evaluateSmoothedTrackLikelihood(
             *rts.gaussianModel, rts.smoothedTotalChi2);
+        if (controls.ecalLoss) {
+          if (rts.persistentSmoothed.empty())
+            throw std::runtime_error("Missing post-break state for ECAL likelihood");
+          const auto& post = rts.persistentSmoothed.front();
+          const double kappa = post.mean(2, 0);
+          if (!std::isfinite(kappa) || kappa == 0)
+            throw std::runtime_error("Invalid post-break curvature for ECAL likelihood");
+          const double postMomentum = std::hypot(1., post.mean(4, 0)) / std::abs(kappa);
+          const double expectedEnergy = postMomentum * std::expm1(post.mean(5, 0));
+          const double tangent = post.mean(4, 0);
+          const double b = post.mean(5, 0);
+          TMatrixD energyDerivative(1, 6);
+          energyDerivative.Zero();
+          energyDerivative(0, 2) = -expectedEnergy / kappa;
+          energyDerivative(0, 4) = expectedEnergy * tangent / (1. + tangent * tangent);
+          energyDerivative(0, 5) = postMomentum * std::exp(b);
+          const TMatrixD propagated = energyDerivative * post.covariance *
+              TMatrixD(TMatrixD::kTransposed, energyDerivative);
+          const double energyVariance = controls.ecalLoss->second * controls.ecalLoss->second +
+              propagated(0, 0);
+          if (!std::isfinite(energyVariance) || energyVariance <= 0.)
+            throw std::runtime_error("Invalid ECAL predictive variance");
+          const double pull = (controls.ecalLoss->first - expectedEnergy) /
+              std::sqrt(energyVariance);
+          const double ecalNll2 = pull * pull +
+              std::log(2. * std::acos(-1.) * energyVariance);
+          trial.likelihood.nll2 += ecalNll2;
+          trial.likelihood.quadratic += pull * pull;
+          trial.likelihood.logDeterminant += std::log(energyVariance);
+          ++trial.likelihood.measurementDimensions;
+        }
         if (controls.beamSpot)
           trial.beam = evaluateBeamSpotLikelihood(rts.ip, m_bz, *controls.beamSpot);
         trial.objectiveNll2 = trial.likelihood.nll2 + trial.beam.nll2;
@@ -91,12 +139,17 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       const auto trial = evaluate(fraction * controls.maxLogLoss);
       if (trial.valid && trial.objectiveNll2 < best.objectiveNll2) best = trial;
     }
+    if (ecalStart) for (double offset : {-.02, -.005, 0., .005, .02}) {
+      const auto trial = evaluate(std::clamp(*ecalStart + offset, 0., controls.maxLogLoss));
+      if (trial.valid && trial.objectiveNll2 < best.objectiveNll2) best = trial;
+    }
     if (!best.valid) throw std::runtime_error("No valid free-loss trial");
     const double scanBest = best.b;
     // The coarse scan seeds Minuit; it is not a successful optimization.
     best.valid = false;
     best.objectiveNll2 = 1.e20;
-    for (double start : {scanBest, std::min(.005, controls.maxLogLoss), std::min(.05, controls.maxLogLoss)}) {
+    for (double start : {scanBest, ecalStart.value_or(std::min(.005, controls.maxLogLoss)),
+                         std::min(.05, controls.maxLogLoss)}) {
       std::unique_ptr<ROOT::Math::Minimizer> minimizer(ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad"));
       if (!minimizer) throw std::runtime_error("Minuit2 is unavailable");
       ROOT::Math::Functor objective([&](const double* b) { return evaluate(b[0]).objectiveNll2; }, 1);

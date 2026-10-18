@@ -177,6 +177,10 @@ StatusCode RecBreakpoint::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_freeLossEcal && (!m_freeLossFit || m_lossStateModeName != "Persistent6D")) {
+    error() << "FreeLossEcal requires FreeLossFit and Persistent6D" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (!std::isfinite(m_neutralThetaWindow.value()) || m_neutralThetaWindow <= 0 ||
       m_neutralThetaWindow >= 3141 ||
       !std::isfinite(m_neutralPhiWindow.value()) || m_neutralPhiWindow <= 0 ||
@@ -472,7 +476,8 @@ StatusCode RecBreakpoint::execute() {
   settings.lossStateMode = m_lossStateModeName;
   settings.captureGaussianModel = true; // passive score for ordinary and truth RTS
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
-      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(), std::nullopt};
+      static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),
+      std::nullopt, std::nullopt};
   auto beamFreeLossControls = freeLossControls;
   beamFreeLossControls.beamSpot = breakpoint::BeamSpotSettings{
       m_beamSpotX.value(), m_beamSpotY.value(),
@@ -708,7 +713,11 @@ StatusCode RecBreakpoint::execute() {
       bool beamFreeKFFallback = false;
       if (m_freeLossFit) {
         const breakpoint::FreeLossFitter optimizer(fitter, m_bz);
-        auto freeFit = optimizer.fit(hits, settings, freeLossControls,
+        auto trackFreeControls = freeLossControls;
+        if (m_freeLossEcal && m_collectedNeutralStatus == 2 && settings.intervals.size() == 1)
+          trackFreeControls.ecalLoss = std::make_pair(
+              m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+        auto freeFit = optimizer.fit(hits, settings, trackFreeControls,
                                      m_freeLossBackwardFilter);
         m_freeLossTuple.assign(freeFit.diagnostics);
         if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)

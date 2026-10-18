@@ -312,33 +312,16 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is migration of eBrem identification to the
-same layer-owned truth used by RecBreakpoint. Both consumers call
-TruthBHLossEventData::matchBreakpoints; identification retains ALL eligible
-owner groups, while the recovery fitter still chooses its largest group.
-Index i denotes loss at hit[i], not a direction-dependent gap. Physical
-hook-to-hook material diagnostics remain separate. GSF remains unmigrated.
+Active work on local `breakpoint` is the optional ECAL-guided free-loss fit.
+`FreeLossEcal` is installed and default-off. It adds accepted hit-supported
+neutral energy to the existing Persistent6D scalar free-loss objective for one
+selected breakpoint; it does not add an ECAL Kalman hit. The on/off no-neutral
+fallback and one focused ECAL recovery reproduce the isolated prototype.
+Selected neutral misassociations can cause severe momentum overshoots, so no
+physics-validation claim or default-on change is justified. Mechanics and
+tests are in `agents_record/2026-10-19-free-loss-ecal-promotion.md`.
 
-Identification schema3 saves shared ownership records and truth_label_valid.
-The conservative training gate excludes any row with an ineligible emission;
-unknown ownership is not a no-eBrem label. Local full-context model readers
-require schema3 and use separate layer_owned_v1 caches/models. The >1%-of-
-primary-momentum track target is ANY qualifying owner group. Baseline KF
-features, fitting algorithms and installed runtime are unchanged. The batch
-helper uses the rebuilt plugin, so future jobs produce schema3 without install.
-
-Validation: 20 local events (22 rows), including entries11/16/17. Ownership
-matches RecBreakpoint in all 22 rows; all non-truth branches are exactly equal
-to the pre-change producer and truth-disabled rerun. Extraction retains 12
-valid-label tracks and excludes 10 incomplete-ownership rows. Six CTests and
-36 batch-helper tests pass. No ML retraining or new efficiency claim.
-Details: `agents_record/2026-10-18-identification-layer-owned-truth.md`.
-
-Next: regenerate identification tuples into a new output directory, rebuild
-training caches, count coverage by detector/loss, then retrain/evaluate with
-seed-separated data. Do not mix old hook-labelled tuples/caches with schema3.
-Reviewed passive ownership remains barrel-only; unknown/endcap structures
-fail closed. Source contracts are in RecBreakpoint/docs/interval-identification-tuple.md
-and truth-layer-ownership.md. Prior breakpoint evidence and full outgoing
-focus are preserved in `agents_record/2026-10-18-breakpoint-layer-owned-truth.md`
-and `agents_record/2026-10-18-AGENTS-before-identification-ownership.md`.
+Next: evaluate association quality and held-out categorized performance before
+considering broader use. The prior layer-owned identification focus, including
+its pending tuple regeneration and seed-separated training, is preserved in
+that record and `agents_record/2026-10-18-identification-layer-owned-truth.md`.
