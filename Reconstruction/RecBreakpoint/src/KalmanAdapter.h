@@ -33,6 +33,7 @@ public:
   KalmanAdapter(BreakpointTrackSystem* system, double bz, double maxChi2,
                 SeedHitSelection seedSelection)
       : m_system(system), m_bz(bz), m_maxChi2(maxChi2), m_seedSelection(seedSelection) {}
+  double bz() const { return m_bz; }
   std::array<int, 3> seedHitIndices(const std::vector<edm4hep::TrackerHit>& hits) const;
   MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
   /// Passive evaluation only: no hit update. The affine score uses the SAME

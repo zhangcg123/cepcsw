@@ -15,6 +15,7 @@ struct FreeLossSettings {
   double tolerance = .001;
   std::optional<BeamSpotSettings> beamSpot; // objective only; never a KF hit
   std::optional<std::pair<double, double>> ecalLoss; // external neutral energy and error [GeV]
+  std::optional<std::pair<double, double>> chargedEcalEnergy; // terminal 6D KF observation [GeV]
 };
 
 enum class FreeLossStatus { NotAttempted = 0, NoInterval = 1, Applied = 2,
@@ -25,6 +26,10 @@ struct FreeLossTrial {
   double b = 0; // trial prior center; retained name for tuple compatibility
   TrackLikelihoodResult likelihood;
   BeamSpotLikelihood beam;
+  double chargedEcalPredictedEnergy = std::numeric_limits<double>::quiet_NaN();
+  double chargedEcalResidual = std::numeric_limits<double>::quiet_NaN();
+  double chargedEcalInnovationVariance = std::numeric_limits<double>::quiet_NaN();
+  double chargedEcalChi2 = std::numeric_limits<double>::quiet_NaN();
   double objectiveNll2 = std::numeric_limits<double>::quiet_NaN();
   bool valid = false;
   FreeLossTrialPhase phase = FreeLossTrialPhase::Scan;
@@ -41,6 +46,10 @@ struct FreeLossDiagnostics {
   double edm = std::numeric_limits<double>::quiet_NaN();
   TrackLikelihoodResult likelihood;
   BeamSpotLikelihood beam;
+  double chargedEcalPredictedEnergy = std::numeric_limits<double>::quiet_NaN();
+  double chargedEcalResidual = std::numeric_limits<double>::quiet_NaN();
+  double chargedEcalInnovationVariance = std::numeric_limits<double>::quiet_NaN();
+  double chargedEcalChi2 = std::numeric_limits<double>::quiet_NaN();
   double objectiveNll2 = std::numeric_limits<double>::quiet_NaN();
   bool lowerBound = false, upperBound = false;
   std::string error;

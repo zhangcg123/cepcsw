@@ -163,6 +163,12 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
+# Experimental terminal scalar KF update: one linked charged ECAL shower
+# constrains energy (not position) before free-loss RTS smoothing. Default OFF.
+# CyberPFA may have used the input track momentum when constructing this shower.
+fit.FreeLossChargedEcalMeasurement = os.environ.get("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "0") == "1"
+fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))
+fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", "0.004"))
 # Parallel free-loss pair using neutral-ECAL energy (one interval). The
 # tracker-only pair remains available; BP_FREE_LOSS_ECAL=0 disables this fit.
 # No accepted hit-supported neutral cluster gives an exact free-loss copy.

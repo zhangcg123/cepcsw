@@ -187,6 +187,19 @@ StatusCode RecBreakpoint::initialize() {
     error() << "FreeLossEcal requires FreeLossFit and Persistent6D" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_freeLossChargedEcalMeasurement &&
+      (!m_freeLossFit || m_lossStateModeName != "Persistent6D")) {
+    error() << "FreeLossChargedEcalMeasurement requires FreeLossFit and Persistent6D" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (!std::isfinite(m_chargedEcalStochasticError.value()) ||
+      m_chargedEcalStochasticError < 0 ||
+      !std::isfinite(m_chargedEcalConstantError.value()) ||
+      m_chargedEcalConstantError < 0 ||
+      m_chargedEcalStochasticError.value() + m_chargedEcalConstantError.value() <= 0) {
+    error() << "Invalid charged ECAL energy-error coefficients" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (!std::isfinite(m_neutralThetaWindow.value()) || m_neutralThetaWindow <= 0 ||
       m_neutralThetaWindow >= 3141 ||
       !std::isfinite(m_neutralPhiWindow.value()) || m_neutralPhiWindow <= 0 ||
@@ -278,6 +291,10 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("collected_neutral_ecal_cluster_energy_error", &m_collectedNeutral.clusterEnergyErrors);
   m_tree->Branch("collected_neutral_ecal_energy", &m_collectedNeutral.energy);
   m_tree->Branch("collected_neutral_ecal_energy_error", &m_collectedNeutral.sigmaEnergy);
+  m_tree->Branch("free_loss_charged_ecal_measurement_status", &m_chargedEcalMeasurementStatus);
+  m_tree->Branch("free_loss_charged_ecal_cluster_count", &m_chargedEcalMeasurementClusterCount);
+  m_tree->Branch("free_loss_charged_ecal_energy", &m_chargedEcalMeasurementEnergy);
+  m_tree->Branch("free_loss_charged_ecal_energy_error", &m_chargedEcalMeasurementError);
   m_tree->Branch("absolute_neutral_status", &m_absoluteStatus);
   m_tree->Branch("absolute_neutral_index", &m_absoluteIndex);
   m_tree->Branch("absolute_neutral_error", &m_absoluteError);
@@ -533,6 +550,42 @@ StatusCode RecBreakpoint::execute() {
       continue;
     }
     m_trackRecoTuple.assign(track, *trackTruthAssociations, *pidPfos, *ecalClusters);
+    m_chargedEcalMeasurementStatus = 0;
+    m_chargedEcalMeasurementClusterCount = 0;
+    m_chargedEcalMeasurementEnergy = m_chargedEcalMeasurementError = nan;
+    if (m_freeLossChargedEcalMeasurement) {
+      int linkedPfos = 0;
+      std::set<edm4hep::Cluster> ecal;
+      for (const auto& cluster : *ecalClusters) ecal.insert(cluster);
+      std::set<edm4hep::Cluster> selectedClusters;
+      double energy = 0, variance = 0;
+      for (const auto& pfo : *pidPfos) {
+        if (pfo.getCharge() == 0) continue;
+        bool ownsTrack = false;
+        for (const auto& linked : pfo.getTracks())
+          if (linked == track) { ownsTrack = true; break; }
+        if (!ownsTrack) continue;
+        ++linkedPfos;
+        for (const auto& cluster : pfo.getClusters()) {
+          if (!ecal.count(cluster) || cluster.hits_size() == 0 ||
+              selectedClusters.count(cluster)) continue;
+          const double value = cluster.getEnergy();
+          if (!std::isfinite(value) || value <= 0) continue;
+          selectedClusters.insert(cluster);
+          energy += value;
+          const double sigma = m_chargedEcalStochasticError * std::sqrt(value) +
+              m_chargedEcalConstantError * value;
+          variance += sigma * sigma;
+        }
+      }
+      m_chargedEcalMeasurementStatus = linkedPfos > 1 ? 3 :
+          linkedPfos == 1 && energy > 0 ? 2 : 1;
+      if (m_chargedEcalMeasurementStatus == 2) {
+        m_chargedEcalMeasurementClusterCount = selectedClusters.size();
+        m_chargedEcalMeasurementEnergy = energy;
+        m_chargedEcalMeasurementError = std::sqrt(variance);
+      }
+    }
     // Collect once for this track row, independently of interval selection or
     // fit success. The ECAL refit below consumes this exact same candidate.
     m_collectedNeutral = {};
@@ -738,7 +791,11 @@ StatusCode RecBreakpoint::execute() {
       bool beamFreeKFFallback = false;
       if (m_freeLossFit) {
         const breakpoint::FreeLossFitter optimizer(fitter, m_bz);
-        auto freeFit = optimizer.fit(hits, settings, freeLossControls,
+        auto chargedControls = freeLossControls;
+        if (m_chargedEcalMeasurementStatus == 2)
+          chargedControls.chargedEcalEnergy = std::make_pair(
+              m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
+        auto freeFit = optimizer.fit(hits, settings, chargedControls,
                                      m_freeLossBackwardFilter);
         m_freeLossTuple.assign(freeFit.diagnostics);
         if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)

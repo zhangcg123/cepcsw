@@ -104,6 +104,9 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
+  Gaudi::Property<bool> m_freeLossChargedEcalMeasurement{this, "FreeLossChargedEcalMeasurement", false};
+  Gaudi::Property<double> m_chargedEcalStochasticError{this, "ChargedEcalStochasticError", 0.011};
+  Gaudi::Property<double> m_chargedEcalConstantError{this, "ChargedEcalConstantError", 0.004};
   Gaudi::Property<bool> m_freeLossEcal{this, "FreeLossEcal", false};
   Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", true};
   Gaudi::Property<std::string> m_ecalLossReferenceMode{this, "EcalLossReferenceMode", "PostReference"};
@@ -152,6 +155,8 @@ private:
   breakpoint::NeutralLossCandidate m_collectedNeutral;
   int m_collectedNeutralStatus = 0, m_collectedNeutralCount = 0;
   std::string m_collectedNeutralError;
+  int m_chargedEcalMeasurementStatus = 0, m_chargedEcalMeasurementClusterCount = 0;
+  double m_chargedEcalMeasurementEnergy = 0, m_chargedEcalMeasurementError = 0;
   // Status: 0 disabled, 1 no usable neutral/interval (ordinary RTS copy),
   // 2 absolute-loss RTS, -1 failed (ordinary RTS copy), -2 ordinary fit failed.
   int m_absoluteStatus = 0, m_absoluteIndex = -1;

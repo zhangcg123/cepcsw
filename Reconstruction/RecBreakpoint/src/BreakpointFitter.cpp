@@ -398,6 +398,75 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     if (closure > 1.e-3) throw std::runtime_error("Persistent6D transition covariance closure failed");
   }
 
+  if (settings.chargedEcalEnergy) {
+    const auto [measuredEnergy, sigmaEnergy] = *settings.chargedEcalEnergy;
+    if (!std::isfinite(measuredEnergy) || measuredEnergy <= 0 ||
+        !std::isfinite(sigmaEnergy) || sigmaEnergy <= 0)
+      throw std::invalid_argument("Invalid charged ECAL energy measurement");
+    auto caloEnergy = [&](const LossTrackState& state) {
+      const auto calo = m_adapter.propagateToCalorimeter(state.track(), hits.back());
+      const auto helix = fromEDM(calo, m_adapter.bz());
+      return std::make_pair(calo, std::hypot(1., helix.mean(4, 0)) / std::abs(helix.mean(2, 0)));
+    };
+    const auto [calo, predictedEnergy] = caloEnergy(live);
+    if (!std::isfinite(predictedEnergy) || predictedEnergy <= 0)
+      throw std::runtime_error("Invalid predicted charged ECAL energy");
+    TMatrixD derivative(1, 6);
+    derivative.Zero();
+    // Energy-only observation: no ECAL position residual or direct geometry derivative.
+    for (int column : {2, 4}) {
+      auto shifted = live;
+      if (!std::isfinite(live.covariance(column, column)) ||
+          live.covariance(column, column) <= 0)
+        throw std::runtime_error("Invalid charged ECAL input covariance");
+      const double step = std::max(1.e-7, 1.e-4 * std::sqrt(live.covariance(column, column)));
+      shifted.mean(column, 0) += step;
+      derivative(0, column) = (caloEnergy(shifted).second - predictedEnergy) / step;
+      if (!std::isfinite(derivative(0, column)))
+        throw std::runtime_error("Invalid charged ECAL energy derivative");
+    }
+    const double stateVariance = (derivative * live.covariance * transpose(derivative))(0, 0);
+    const auto caloState = fromEDM(calo, m_adapter.bz());
+    TMatrixD caloDerivative(1, 5);
+    caloDerivative.Zero();
+    caloDerivative(0, 2) = -predictedEnergy / caloState.mean(2, 0);
+    caloDerivative(0, 4) = predictedEnergy * caloState.mean(4, 0) /
+        (1. + caloState.mean(4, 0) * caloState.mean(4, 0));
+    const double nativeVariance = (caloDerivative * caloState.covariance *
+        transpose(caloDerivative))(0, 0);
+    if (!std::isfinite(stateVariance) || stateVariance < 0 ||
+        !std::isfinite(nativeVariance) || nativeVariance < 0)
+      throw std::runtime_error("Invalid charged ECAL propagated covariance");
+    // shortcut: native propagation exposes no cross covariance; subtract its
+    // transported input variance and keep the nonnegative material remainder.
+    const double extraVariance = std::max(0., nativeVariance - stateVariance);
+    const double observationVariance = sigmaEnergy * sigmaEnergy + extraVariance;
+    const double innovationVariance = stateVariance + observationVariance;
+    if (!std::isfinite(innovationVariance) || innovationVariance <= 0)
+      throw std::runtime_error("Invalid charged ECAL innovation variance");
+    const double residual = measuredEnergy - predictedEnergy;
+    const TMatrixD gain = live.covariance * transpose(derivative) * (1. / innovationVariance);
+    live.mean += gain * residual;
+    TMatrixD remaining(6, 6);
+    remaining.UnitMatrix();
+    remaining -= gain * derivative;
+    live.covariance = remaining * live.covariance * transpose(remaining) +
+        observationVariance * gain * transpose(gain);
+    validateCovariance(live.covariance);
+    filteredMean.back() = live.mean;
+    filteredCov.back() = live.covariance;
+    result.persistentFiltered.back() = live;
+    result.filtered.back() = live.track();
+    result.chargedEcalPredictedEnergy = predictedEnergy;
+    result.chargedEcalResidual = residual;
+    result.chargedEcalInnovationVariance = innovationVariance;
+    result.chargedEcalChi2 = residual * residual / innovationVariance;
+    result.chargedEcalPostfitChi2 = residual * residual * observationVariance /
+        (innovationVariance * innovationVariance);
+    result.chi2 += result.chargedEcalChi2;
+    ++result.measurementDimensions;
+  }
+
   auto smoothedMean = filteredMean;
   auto smoothedCov = filteredCov;
   for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
@@ -439,6 +508,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
                 result.predicted);
+  result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
   if (settings.captureGaussianModel) {
     try {
       auto model = std::make_shared<GaussianTrackModel>();

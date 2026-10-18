@@ -19,6 +19,7 @@ struct FitSettings {
   std::map<int, double> intervalMeanLogLoss;
   // Set only by fitAbsoluteLossRTS. The ordinary log-loss fit never reads it.
   std::optional<std::pair<double, double>> absoluteLossPrior; // mean, sigma [GeV]
+  std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; free-loss RTS only
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
 };
@@ -55,6 +56,9 @@ struct FitResult {
   std::string smoothedChi2Error;
   std::vector<IntervalResult> breakpoints;
   std::optional<AbsoluteLossResult> absoluteLoss;
+  double chargedEcalPredictedEnergy = 0, chargedEcalResidual = 0;
+  double chargedEcalInnovationVariance = 0, chargedEcalChi2 = 0;
+  double chargedEcalPostfitChi2 = 0;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;
   std::vector<int> persistentPredictedDiffuse, persistentFilteredDiffuse;

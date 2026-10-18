@@ -312,20 +312,20 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the optional ECAL-guided free-loss fit.
-`FreeLossEcal` is installed and default-on in the maintained breakpoint card
-(compiled default off). It adds accepted hit-supported
-neutral energy in a parallel Persistent6D scalar free-loss search for one
-selected breakpoint; it does not add an ECAL Kalman hit. Tracker-only
-`free_loss_*` endpoints remain in the same tuple, while `free_loss_ecal_*`
-holds the ECAL-guided pair or a tracker-only copy when ineligible. The on/off
-no-neutral fallback and one focused ECAL recovery reproduce the isolated prototype.
-Selected neutral misassociations can cause severe momentum overshoots, so the
-default-on study steering is not a physics-validation claim. All backward
-filters remain default-off. Mechanics and
-tests are in `agents_record/2026-10-19-free-loss-ecal-promotion.md`.
+Active work on local `breakpoint` is the charged-ECAL energy measurement in
+the ordinary free-loss Persistent6D fit. `FreeLossChargedEcalMeasurement` is
+installed and default-off. It updates the outer tracker 6D state with one
+energy-only scalar KF observation, then RTS-smooths inward; no ECAL cluster
+position is fitted. OFF exactly reproduced 593 existing flat-tuple branches
+for the focused same-input regression. ON converged on three linked-cluster
+tracks; a no-cluster track reproduced the tracker-only fit. These are
+mechanical gates, not physics validation. The provisional charged-cluster
+resolution and possible CyberPFA track-energy reuse are the immediate risks.
+The neutral-ECAL free-loss branch remains a separate default-on study option;
+all backward filters remain default-off.
 
-Next: evaluate association quality and held-out categorized performance before
-considering broader use. The prior layer-owned identification focus, including
-its pending tuple regeneration and seed-separated training, is preserved in
-that record and `agents_record/2026-10-18-identification-layer-owned-truth.md`.
+Next: audit charged-cluster independence/calibration, then compare held-out
+clean/light/hard-loss performance and association failures. Do not add ECAL
+position constraints or promote this charged measurement to default-on from
+the focused smoke tests. Exact behavior, outgoing focus and tests are in
+`agents_record/2026-10-19-charged-ecal-free-loss-kf.md`.

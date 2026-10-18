@@ -24,6 +24,8 @@ private:
   double m_b = 0, m_errorB = 0, m_edm = 0, m_nll2 = 0, m_quadratic = 0, m_logdet = 0;
   double m_objectiveNll2 = 0, m_beamNll2 = 0, m_beamQuadratic = 0, m_beamLogdet = 0;
   double m_beamResidual = 0, m_beamVariance = 0, m_beamTrackVariance = 0, m_beamSpotVariance = 0;
+  double m_chargedEcalPredicted = 0, m_chargedEcalResidual = 0;
+  double m_chargedEcalVariance = 0, m_chargedEcalChi2 = 0;
   std::string m_error;
   std::vector<double> m_trialB, m_trialNll2, m_trialObjectiveNll2, m_trialBeamNll2;
   std::vector<int> m_trialValid, m_trialPhase;

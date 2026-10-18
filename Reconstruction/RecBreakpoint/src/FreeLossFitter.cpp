@@ -28,6 +28,11 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     diagnostic.error = "FreeLossFit supports one selected LocalMarginal or Persistent6D interval";
     return result;
   }
+  if (controls.chargedEcalEnergy && ordinary.lossStateMode != "Persistent6D") {
+    diagnostic.status = FreeLossStatus::Unsupported;
+    diagnostic.error = "Charged ECAL KF measurement requires Persistent6D";
+    return result;
+  }
   diagnostic.interval = ordinary.intervals.front();
   diagnostic.priorSigmaLogLoss = ordinary.sigmaLogLoss;
   try {
@@ -42,7 +47,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     // Clear per-interval centers so no external/truth amount overrides Minuit.
     auto settings = ordinary;
     settings.intervalMeanLogLoss.clear();
-    // ECAL changes the scalar objective, not the tracker-hit KF/RTS updates.
+    settings.chargedEcalEnergy = controls.chargedEcalEnergy;
     settings.captureGaussianModel = true;
     std::optional<double> ecalStart;
     if (controls.ecalLoss) {
@@ -82,8 +87,20 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
         // Score this trial's existing RTS trajectory: measurement + process
         // + seed chi2, then the SAME joint-measurement normalization. No new
         // filter pass, reference iteration, or backward chi2 is added.
-        trial.likelihood = evaluateSmoothedTrackLikelihood(
-            *rts.gaussianModel, rts.smoothedTotalChi2);
+        trial.likelihood = controls.chargedEcalEnergy
+            ? evaluateTrackLikelihood(*rts.gaussianModel)
+            : evaluateSmoothedTrackLikelihood(*rts.gaussianModel, rts.smoothedTotalChi2);
+        if (controls.chargedEcalEnergy) {
+          trial.chargedEcalPredictedEnergy = rts.chargedEcalPredictedEnergy;
+          trial.chargedEcalResidual = rts.chargedEcalResidual;
+          trial.chargedEcalInnovationVariance = rts.chargedEcalInnovationVariance;
+          trial.chargedEcalChi2 = rts.chargedEcalChi2;
+          trial.likelihood.nll2 += rts.chargedEcalChi2 +
+              std::log(2. * std::acos(-1.) * rts.chargedEcalInnovationVariance);
+          trial.likelihood.quadratic += rts.chargedEcalChi2;
+          trial.likelihood.logDeterminant += std::log(rts.chargedEcalInnovationVariance);
+          ++trial.likelihood.measurementDimensions;
+        }
         if (controls.ecalLoss) {
           if (rts.persistentSmoothed.empty())
             throw std::runtime_error("Missing post-break state for ECAL likelihood");
@@ -189,6 +206,10 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     diagnostic.b = best.b;
     diagnostic.likelihood = best.likelihood;
     diagnostic.beam = best.beam;
+    diagnostic.chargedEcalPredictedEnergy = best.chargedEcalPredictedEnergy;
+    diagnostic.chargedEcalResidual = best.chargedEcalResidual;
+    diagnostic.chargedEcalInnovationVariance = best.chargedEcalInnovationVariance;
+    diagnostic.chargedEcalChi2 = best.chargedEcalChi2;
     diagnostic.objectiveNll2 = best.objectiveNll2;
     diagnostic.lowerBound = best.b <= 1.e-6;
     diagnostic.upperBound = best.b >= controls.maxLogLoss - 1.e-6;

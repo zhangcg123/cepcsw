@@ -33,6 +33,10 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("beam_innovation_variance_mm2", &m_beamVariance);
   branch("beam_track_variance_mm2", &m_beamTrackVariance);
   branch("beam_spot_variance_mm2", &m_beamSpotVariance);
+  branch("charged_ecal_predicted_energy", &m_chargedEcalPredicted);
+  branch("charged_ecal_residual", &m_chargedEcalResidual);
+  branch("charged_ecal_innovation_variance", &m_chargedEcalVariance);
+  branch("charged_ecal_chi2", &m_chargedEcalChi2);
   branch("lower_bound", &m_lower);
   branch("upper_bound", &m_upper);
   branch("covariance_conditional", &m_covarianceConditional);
@@ -58,6 +62,7 @@ void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls, double
   m_b = m_errorB = m_edm = m_nll2 = m_quadratic = m_logdet = nan;
   m_objectiveNll2 = m_beamNll2 = m_beamQuadratic = m_beamLogdet = nan;
   m_beamResidual = m_beamVariance = m_beamTrackVariance = m_beamSpotVariance = nan;
+  m_chargedEcalPredicted = m_chargedEcalResidual = m_chargedEcalVariance = m_chargedEcalChi2 = nan;
   m_error.clear();
   m_trialB.clear(); m_trialNll2.clear(); m_trialObjectiveNll2.clear(); m_trialBeamNll2.clear();
   m_trialValid.clear(); m_trialPhase.clear(); m_trialError.clear();
@@ -88,6 +93,10 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
     m_beamVariance = diagnostic.beam.innovationVariance;
     m_beamTrackVariance = diagnostic.beam.trackVariance;
     m_beamSpotVariance = diagnostic.beam.beamVariance;
+    m_chargedEcalPredicted = diagnostic.chargedEcalPredictedEnergy;
+    m_chargedEcalResidual = diagnostic.chargedEcalResidual;
+    m_chargedEcalVariance = diagnostic.chargedEcalInnovationVariance;
+    m_chargedEcalChi2 = diagnostic.chargedEcalChi2;
   }
   for (const auto& trial : diagnostic.trials) {
     m_trialB.push_back(trial.b); m_trialNll2.push_back(trial.likelihood.nll2);
