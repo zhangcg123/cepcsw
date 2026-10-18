@@ -312,20 +312,23 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the charged-ECAL energy measurement in
-the ordinary free-loss Persistent6D fit. `FreeLossChargedEcalMeasurement` is
-installed and default-off. It updates the outer tracker 6D state with one
-energy-only scalar KF observation, then RTS-smooths inward; no ECAL cluster
-position is fitted. OFF exactly reproduced 593 existing flat-tuple branches
-for the focused same-input regression. ON converged on three linked-cluster
-tracks; a no-cluster track reproduced the tracker-only fit. These are
-mechanical gates, not physics validation. The provisional charged-cluster
-resolution and possible CyberPFA track-energy reuse are the immediate risks.
-The neutral-ECAL free-loss branch remains a separate default-on study option;
-all backward filters remain default-off.
+Active work on local `breakpoint` is the optional charged-ECAL measurement in
+the free-loss Persistent6D fit. Its new terminal ECAL-face state receives an
+energy-only Kalman update; RTS traverses that ECAL-to-last-tracker edge before
+continuing inward. `FreeLossChargedEcalMeasurement` remains default-off, fits
+no ECAL cluster position, and leaves the neutral-ECAL branch separate. All
+backward filters remain default-off. The OFF path reproduced all 609 focused
+pre-existing flat-tuple branches, six package CTests passed, and the fixed
+100-event barrel hard-loss/no-collected-neutral ON cohort produced 100 rows
+with 98 converged fits. Its median absolute IP pT error remained worse than
+the earlier tracker-only output; this is a mechanical gate, not physics
+validation. Native propagation does not expose the terminal transition cross
+covariance, so the ECAL transport is numerically differentiated. Charged
+cluster independence/calibration and unresolved-photon contamination remain
+the leading physics risks.
 
-Next: audit charged-cluster independence/calibration, then compare held-out
-clean/light/hard-loss performance and association failures. Do not add ECAL
-position constraints or promote this charged measurement to default-on from
-the focused smoke tests. Exact behavior, outgoing focus and tests are in
-`agents_record/2026-10-19-charged-ecal-free-loss-kf.md`.
+Next: verify this terminal covariance model and charged-cluster truth content,
+then perform same-final-code, held-out clean/light/hard-loss A/B comparisons,
+including endcap events, before considering default-on steering. Do not add
+ECAL position constraints in this phase. Exact behavior, outgoing focus and
+tests are in `agents_record/2026-10-19-explicit-charged-ecal-face-rts.md`.

@@ -155,6 +155,7 @@ FitResult BreakpointFitter::finishBackward(const std::vector<edm4hep::TrackerHit
     result.smoothedChi2Status=0;
     result.persistentHits.clear();result.persistentPredicted.clear();result.persistentFiltered.clear();
     result.persistentSmoothed.clear();result.persistentTransport.clear();result.persistentNoise.clear();
+    result.chargedEcalFiltered.reset();
     // Scale a COPY of the original first-pass forward endpoint covariance.
     // Preserve its mean and every correlation; apply the scale once.
     // This still reuses hit information; it is not an independent smoother.
@@ -302,77 +303,114 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     if (closure > 1.e-3) throw std::runtime_error("Persistent6D transition covariance closure failed");
   }
 
+  std::optional<LossTrackState> terminalSmoothed;
   if (settings.chargedEcalEnergy) {
     const auto [measuredEnergy, sigmaEnergy] = *settings.chargedEcalEnergy;
     if (!std::isfinite(measuredEnergy) || measuredEnergy <= 0 ||
         !std::isfinite(sigmaEnergy) || sigmaEnergy <= 0)
       throw std::invalid_argument("Invalid charged ECAL energy measurement");
-    auto caloEnergy = [&](const LossTrackState& state) {
-      const auto calo = m_adapter.propagateToCalorimeter(state.track(), hits.back());
-      const auto helix = fromEDM(calo, m_adapter.bz());
-      return std::make_pair(calo, std::hypot(1., helix.mean(4, 0)) / std::abs(helix.mean(2, 0)));
+    auto propagate = [&](const LossTrackState& state) {
+      return fromEDM(m_adapter.propagateToCalorimeter(state.track(), hits.back()),
+                     m_adapter.bz());
     };
-    const auto [calo, predictedEnergy] = caloEnergy(live);
+    const TrackState native = propagate(live);
+    const double predictedEnergy = std::hypot(1., native.mean(4, 0)) /
+        std::abs(native.mean(2, 0));
     if (!std::isfinite(predictedEnergy) || predictedEnergy <= 0)
       throw std::runtime_error("Invalid predicted charged ECAL energy");
-    TMatrixD derivative(1, 6);
-    derivative.Zero();
-    // Energy-only observation: no ECAL position residual or direct geometry derivative.
-    for (int column : {2, 4}) {
-      auto shifted = live;
+    TMatrixD transport(6, 6);
+    transport.Zero();
+    transport(5, 5) = 1.; // The loss coordinate is unchanged after its owning interval.
+    for (int column = 0; column < 5; ++column) {
       if (!std::isfinite(live.covariance(column, column)) ||
           live.covariance(column, column) <= 0)
         throw std::runtime_error("Invalid charged ECAL input covariance");
       const double step = std::max(1.e-7, 1.e-4 * std::sqrt(live.covariance(column, column)));
+      auto shifted = live;
       shifted.mean(column, 0) += step;
-      derivative(0, column) = (caloEnergy(shifted).second - predictedEnergy) / step;
-      if (!std::isfinite(derivative(0, column)))
-        throw std::runtime_error("Invalid charged ECAL energy derivative");
+      const TrackState shiftedCalo = propagate(shifted);
+      const TMatrixD difference = stateDifference(shiftedCalo.mean, native.mean);
+      for (int row = 0; row < 5; ++row) {
+        transport(row, column) = difference(row, 0) / step;
+        if (!std::isfinite(transport(row, column)))
+          throw std::runtime_error("Invalid tracker-to-ECAL transport derivative");
+      }
     }
-    const double stateVariance = (derivative * live.covariance * transpose(derivative))(0, 0);
-    const auto caloState = fromEDM(calo, m_adapter.bz());
-    TMatrixD caloDerivative(1, 5);
-    caloDerivative.Zero();
-    caloDerivative(0, 2) = -predictedEnergy / caloState.mean(2, 0);
-    caloDerivative(0, 4) = predictedEnergy * caloState.mean(4, 0) /
-        (1. + caloState.mean(4, 0) * caloState.mean(4, 0));
-    const double nativeVariance = (caloDerivative * caloState.covariance *
-        transpose(caloDerivative))(0, 0);
-    if (!std::isfinite(stateVariance) || stateVariance < 0 ||
-        !std::isfinite(nativeVariance) || nativeVariance < 0)
-      throw std::runtime_error("Invalid charged ECAL propagated covariance");
-    // shortcut: native propagation exposes no cross covariance; subtract its
-    // transported input variance and keep the nonnegative material remainder.
-    const double extraVariance = std::max(0., nativeVariance - stateVariance);
-    const double observationVariance = sigmaEnergy * sigmaEnergy + extraVariance;
-    const double innovationVariance = stateVariance + observationVariance;
+    LossTrackState ecalPredicted;
+    ecalPredicted.pivot = native.pivot;
+    ecalPredicted.mean(5, 0) = live.mean(5, 0);
+    const TMatrixD propagatedCross = transport * live.covariance;
+    for (int row = 0; row < 5; ++row) {
+      ecalPredicted.mean(row, 0) = native.mean(row, 0);
+      for (int column = 0; column < 5; ++column)
+        ecalPredicted.covariance(row, column) = native.covariance(row, column);
+      ecalPredicted.covariance(row, 5) = ecalPredicted.covariance(5, row) =
+          propagatedCross(row, 5);
+    }
+    ecalPredicted.covariance(5, 5) = live.covariance(5, 5);
+    validateCovariance(ecalPredicted.covariance);
+    TMatrixD energyDerivative(1, 6);
+    energyDerivative.Zero();
+    energyDerivative(0, 2) = -predictedEnergy / native.mean(2, 0);
+    energyDerivative(0, 4) = predictedEnergy * native.mean(4, 0) /
+        (1. + native.mean(4, 0) * native.mean(4, 0));
+    const double observationVariance = sigmaEnergy * sigmaEnergy;
+    const double innovationVariance =
+        (energyDerivative * ecalPredicted.covariance * transpose(energyDerivative))(0, 0)
+        + observationVariance;
     if (!std::isfinite(innovationVariance) || innovationVariance <= 0)
       throw std::runtime_error("Invalid charged ECAL innovation variance");
     const double residual = measuredEnergy - predictedEnergy;
-    const TMatrixD gain = live.covariance * transpose(derivative) * (1. / innovationVariance);
-    live.mean += gain * residual;
+    const TMatrixD gain = ecalPredicted.covariance * transpose(energyDerivative) *
+        (1. / innovationVariance);
+    LossTrackState ecalFiltered = ecalPredicted;
+    ecalFiltered.mean += gain * residual;
     TMatrixD remaining(6, 6);
     remaining.UnitMatrix();
-    remaining -= gain * derivative;
-    live.covariance = remaining * live.covariance * transpose(remaining) +
+    remaining -= gain * energyDerivative;
+    ecalFiltered.covariance = remaining * ecalPredicted.covariance * transpose(remaining) +
         observationVariance * gain * transpose(gain);
-    validateCovariance(live.covariance);
-    filteredMean.back() = live.mean;
-    filteredCov.back() = live.covariance;
-    result.persistentFiltered.back() = live;
-    result.filtered.back() = live.track();
+    validateCovariance(ecalFiltered.covariance);
+    result.chargedEcalFiltered = ecalFiltered;
+    const TMatrixD smoothingGain = live.covariance * transpose(transport) *
+        inverseCovariance(ecalPredicted.covariance);
+    // shortcut: native propagation lacks transition cross covariance; use its
+    // covariance and numerical transport until that interface is available.
+    const TMatrixD noise = ecalPredicted.covariance -
+        transport * live.covariance * transpose(transport);
+    TMatrixD complement(6, 6);
+    complement.UnitMatrix();
+    complement -= smoothingGain * transport;
+    terminalSmoothed.emplace();
+    terminalSmoothed->pivot = live.pivot;
+    terminalSmoothed->mean = live.mean + smoothingGain *
+        stateDifference(ecalFiltered.mean, ecalPredicted.mean);
+    terminalSmoothed->covariance = complement * live.covariance * transpose(complement) +
+        smoothingGain * (noise + ecalFiltered.covariance) * transpose(smoothingGain);
+    validateCovariance(terminalSmoothed->covariance);
     result.chargedEcalPredictedEnergy = predictedEnergy;
     result.chargedEcalResidual = residual;
     result.chargedEcalInnovationVariance = innovationVariance;
     result.chargedEcalChi2 = residual * residual / innovationVariance;
+    const TMatrixD innovationShift = stateDifference(ecalFiltered.mean, ecalPredicted.mean);
+    const TMatrixD processScoreDirection =
+        inverseCovariance(ecalPredicted.covariance) * innovationShift;
+    const double processChi2 = (transpose(processScoreDirection) * noise *
+        processScoreDirection)(0, 0);
+    if (!std::isfinite(processChi2) || processChi2 < -1.e-8)
+      throw std::runtime_error("Invalid tracker-to-ECAL process penalty");
     result.chargedEcalPostfitChi2 = residual * residual * observationVariance /
-        (innovationVariance * innovationVariance);
+        (innovationVariance * innovationVariance) + std::max(0., processChi2);
     result.chi2 += result.chargedEcalChi2;
     ++result.measurementDimensions;
   }
 
   auto smoothedMean = filteredMean;
   auto smoothedCov = filteredCov;
+  if (terminalSmoothed) {
+    smoothedMean.back() = terminalSmoothed->mean;
+    smoothedCov.back() = terminalSmoothed->covariance;
+  }
   for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
     const auto& f = transports[i];
     const TMatrixD gain = filteredCov[i] * transpose(f) * inverseCovariance(predictedCov[i + 1]);
@@ -406,8 +444,8 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
         smoothedLoss.mean(5, 0), smoothedLoss.covariance(5, 5),
         live.mean(5, 0), live.covariance(5, 5)};
   } else
-    result.breakpoints.push_back({interval, loss.meanLogLoss, live.mean(5, 0),
-        live.covariance(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
+    result.breakpoints.push_back({interval, loss.meanLogLoss, smoothedMean.back()(5, 0),
+        smoothedCov.back()(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
   result.endpoint = result.smoothed;
   result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,

@@ -580,18 +580,24 @@ introduced. See [the exact objective](docs/smoothed-objective.md).
 `FreeLossChargedEcalMeasurement` (compiled/card default **false**;
 `BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT=1`) is an experimental alternative for
 the tracker-only free-loss pair. With exactly one charged CyberPFOPID linked to
-the input track, it sums its hit-supported `EcalCluster` energies. At the outer
-tracker state, native propagation predicts energy at the ECAL face; a scalar
-Kalman update of the live 6D state uses that energy and the cluster sum, then
-the ordinary RTS pass carries the constraint inward. No cluster position enters
-the measurement. Each free-loss trial scores the tracker likelihood plus the
+the input track, it sums its hit-supported `EcalCluster` energies. Native
+propagation takes the outer tracker state to the ECAL face; the propagated
+five-parameter covariance and a numerical five-parameter transport Jacobian
+form an explicit six-dimensional ECAL predicted state, retaining the loss
+coordinate and its correlations. The scalar energy measurement updates that
+ECAL-face state. RTS first traverses this ECAL-to-last-tracker edge, then the
+ordinary tracker edges inward. For a successful ON fit, the updated ECAL-face
+state is also the published `free_loss_rts_calo_*` state. No cluster position enters the
+measurement. Each free-loss trial scores the tracker likelihood plus the
 conditional ECAL-energy likelihood; the existing neutral-ECAL and beam-guided
 pairs remain separate. The provisional per-cluster error is
 `a*sqrt(E/GeV) GeV + c*E`, with independent variances summed (`a=0.011`,
-`c=0.004` by default). The energy derivative is numerical in curvature and
-tan(lambda); native ECAL covariance supplies an approximate nonnegative
-propagation-noise remainder. This is a first-version approximation, not a
-calibrated calorimeter measurement. CyberPFA may have used the input track
+`c=0.004` by default). The energy derivative at ECAL is analytic in curvature
+and tan(lambda); the last-tracker-to-ECAL transport is numerical in all five
+track parameters. Because native propagation does not expose its transition
+cross covariance, the process covariance is inferred from the propagated
+covariance and this Jacobian. This is not yet a calibrated calorimeter
+measurement. CyberPFA may have used the input track
 momentum to construct the charged shower, so the observation may not be
 independent of the tracker fit. The flat tuple records
 `free_loss_charged_ecal_measurement_status` (0 off, 1 no usable cluster,
@@ -638,7 +644,7 @@ maintained card, but not physics-validated.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
-| FreeLossChargedEcalMeasurement | false | Card default false; terminal energy-only KF update in the tracker-only free-loss Persistent6D fit when one linked charged PFO has hit-supported ECAL energy; does not use cluster position |
+| FreeLossChargedEcalMeasurement | false | Card default false; explicit ECAL-face energy-only KF update and terminal RTS edge in the tracker-only free-loss Persistent6D fit when one linked charged PFO has hit-supported ECAL energy; does not use cluster position |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | FreeLossEcal | false | Card default true when FreeLossFit is on (`BP_FREE_LOSS_ECAL=0` disables); run a parallel Persistent6D free-loss profile search with accepted hit-supported neutral energy for one interval; base free-loss outputs never change; experimental, not physics-validated |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |

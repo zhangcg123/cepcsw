@@ -71,10 +71,13 @@ int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& 
   track.addToTrackStates(fit.ip);
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
   track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
-  // A calorimeter extrapolation is diagnostic/publication only. Its failure
-  // must never discard or alter the fitted IP and hit states.
+  // Publish the fitted ECAL node when present; other endpoints use passive
+  // extrapolation, whose failure must not alter the fitted IP and hit states.
   try {
-    const auto calo = adapter.propagateToCalorimeter(fit.endpoint.back(), hits.back());
+    const auto calo = fit.chargedEcalFiltered
+        ? breakpoint::toEDM(fit.chargedEcalFiltered->track(), bz,
+                            edm4hep::TrackState::AtCalorimeter)
+        : adapter.propagateToCalorimeter(fit.endpoint.back(), hits.back());
     caloTuple.assign(calo, bz, 1);
     track.addToTrackStates(calo);
   } catch (const std::exception& error) {

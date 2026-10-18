@@ -1,5 +1,9 @@
 # Charged-ECAL energy measurement in free-loss RTS (2026-10-19)
 
+Historical first version. Its last-tracker-state update was replaced by the
+explicit ECAL-face state and terminal RTS edge recorded in
+`2026-10-19-explicit-charged-ecal-face-rts.md`.
+
 ## Outgoing focus, preserved verbatim
 
 Active work on local `breakpoint` is the optional ECAL-guided free-loss fit.
