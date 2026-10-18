@@ -7,14 +7,13 @@ to true. `BP_FREE_LOSS_FIT=0` explicitly disables it; previously prepared cards
 retain their frozen settings. Ordinary results are ALWAYS retained; the optional method
 occupies a separate pair of collections and flat branches.
 
-This mode supports ONE selected interval with either Persistent6D (default)
-or LocalMarginal. Every trial and final refit uses the selected representation
-through the same BreakpointFitter; neither mode has a separate optimizer. It does
+This mode supports ONE selected interval with Persistent6D.
+Every trial and final refit uses the same BreakpointFitter. It does
 not discover intervals and does not change Truth/Manual selection. An empty
 interval list remains the 5D reference. Truth selection now chooses only the
 interval with the largest summed absolute G4 eBrem momentum loss, shared by all
 four pairs (equal losses choose the innermost interval). Other losses are not fitted.
-Manual multiple intervals or unknown state representations report unsupported status. Unsupported
+Manual multiple intervals report unsupported status. Unsupported
 or failed searches copy the INPUT CompleteTracks KF into both FreeLoss outputs.
 The ordinary and truth-prior pairs are unchanged by this fallback. This limitation matches the tested
 scalar prototype; a simultaneous multiple-loss optimizer is not implemented.

@@ -10,11 +10,9 @@ For the separate baseline-KF dataset producer (no breakpoint or ECAL fit), see
 `options/run_interval_identification.py`. It preserves raw hits, forward,
 native-smoothed and independent-backward diagnostics, and separate truth labels.
 
-For the complete code-checked mathematical workflow, read
-[why Persistent6D and LocalMarginal can give the same result](docs/fixed-linearized-loss-walkthrough.md).
-It defines every state/reference/deviation, derives the loss Jacobians A and
-g, and follows uncertainty, measurement updates and RTS loss recovery in one
-self-contained explanation.
+The retired LocalMarginal comparison is preserved in the
+[historical walkthrough](../../agents_record/2026-10-19-retired-local-marginal-walkthrough.md).
+Only Persistent6D remains executable for a selected breakpoint.
 
 ## Build and run
 
@@ -52,7 +50,7 @@ material-aware native IP propagation. RTS never consumes the backward-refiltered
 states. Both endpoints now use the SAME KalmanAdapter::propagateToIP operation:
 initialize from the innermost endpoint and call native MarlinTrk propagation
 to (0,0,0), honoring the existing MSOn/ElossOn settings. This applies to ordinary,
-free-loss and truth-prior results in both LocalMarginal and Persistent6D modes.
+free-loss and truth-prior results in Persistent6D mode.
 The former purely geometric RTS-only atIP helper has been removed. No beam-spot
 measurement or extra breakpoint is introduced by this common IP operation.
 Backward still reuses forward hit evidence; it is NOT an independent Bayesian
@@ -218,7 +216,7 @@ nine EDM track collections themselves.
 
 ## Loss state and interval ownership
 
-Both `LocalMarginal` and `Persistent6D` use the Gaussian loss prior configured
+`Persistent6D` uses the Gaussian loss prior configured
 by `MeanLogLoss` and `SigmaLogLoss`. The experimental primary `Unconstrained`
 and `Fixed` modes, their `LossPriorMode` selector, and their dedicated tuple
 diagnostics were removed on 2026-09-29. The card and batch planner explicitly
@@ -310,9 +308,8 @@ Previously prepared cards predate this control/default change: regenerate them
 in a new output directory. Explicit fixed-list comparisons must now set Manual;
 do not patch a checksum-protected prepared card in place.
 
-Multiple independent
-intervals are supported by LocalMarginal and the additional truth pair; Persistent6D
-accepts at most one. Negative or duplicate entries fail initialization;
+At most one interval is supported by the ordinary and truth-prior fits.
+Negative or duplicate entries fail initialization;
 out-of-range entries fail the affected track. This ordering targets outward,
 noncurling barrel tracks.
 
@@ -346,16 +343,6 @@ backward continuation uses the established local-joint inward loss treatment
 on the common forward endpoint's 5D marginal, not a new persistent inward
 six-dimensional implementation.
 
-### LocalMarginal
-
-The live helix stays 5D. At a selected edge an independent Gaussian b is
-marginalized into the helix covariance. Retained joint cross covariances allow
-later conditioning of b, including RTS or subsequent backward measurements.
-The Gaussian birth Jacobian has derivative kappa_after outward and
--kappa_before inward. Independent local losses allow multiple breakpoints.
-RTS covariance uses a positive-sum conditional form to avoid subtraction of
-large loose-seed covariances.
-
 ### TruthOverride
 
 The default diagnostic chain is Truth interval selection + Persistent6D +
@@ -367,7 +354,7 @@ select intervals for this track
   -> extra RTS/backward: use matched Geant4 b as the prior center, SAME SigmaLogLoss
 ```
 
-Both pairs use the same fitting code, LossStateMode and SigmaLogLoss
+Both pairs use the same fitting code and SigmaLogLoss
 controls. Truth changes only the prior center of each selected b; later hits
 can update b and its variance. Track covariance, native material/MS and
 measurement updates remain active. Manual
@@ -425,9 +412,8 @@ With True and nonempty intervals, a separate call to the same fitter generates
 both truth-centered endpoints with the same loss-state mode, prior sigma, seed
 scales, hit selection and material settings. Both pairs are one-pass fits.
 No truth-centered state
-feeds back into the ordinary pair. Multi-interval ordinary comparisons require
-LocalMarginal. The old public `LossStateMode="TruthOverride"` now fails clearly:
-select an ordinary LossStateMode and set the independent `TruthOverride` bool.
+feeds back into the ordinary pair. The old public `LossStateMode="TruthOverride"` fails clearly:
+keep `LossStateMode="Persistent6D"` and set the independent `TruthOverride` bool.
 The old internal fixed-loss path has also been removed.
 Dedicated-card environment control: `BP_TRUTH_OVERRIDE=1` (default 1).
 Set BP_TRUTH_OVERRIDE=0 to copy ordinary results into the extra pair instead.
@@ -469,9 +455,9 @@ Truth selection needs it to determine whether the effective list is empty.
 
 ## One-pass fits and seeds
 
-Both loss-state modes run one forward filter, one RTS smoother and one
-backward refilter per pair. There is no repeated relinearization loop.
-LocalMarginal supports multiple intervals; Persistent6D supports at most one.
+Each pair runs one forward filter, one RTS smoother and one
+optional backward refilter. There is no repeated relinearization loop.
+Persistent6D supports at most one interval.
 Empty intervals use the ordinary 5D reference. No new fitted-loss positivity
 constraint is imposed.
 
@@ -646,12 +632,12 @@ maintained card, but not physics-validated.
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
-| LossStateMode | Persistent6D | Ordinary pair: Persistent6D or LocalMarginal; TruthOverride is a separate bool |
+| LossStateMode | Persistent6D | Compatibility property for prepared cards; only Persistent6D is accepted. TruthOverride is a separate bool |
 | DiffuseAugmentedRTS | true | Independent one-interval, flat-prior 6D KF/RTS fit; ignores SigmaLogLoss. Disabling also requires ECAL Off or NoReference |
 | EcalLossReferenceMode | PostReference | One absolute-loss KF/RTS: Off, NoReference (live forward reference), PreReference (diffuse state i), PostReference (curvature from diffuse momentum i+1 plus ECAL); last two require DiffuseAugmentedRTS; card and batch environment BP_ECAL_LOSS_REFERENCE_MODE |
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
-| FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one interval in the selected Persistent6D or LocalMarginal representation; input KF fallback on failure/unsupported mode |
+| FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
 | FreeLossChargedEcalMeasurement | false | Card default false; terminal energy-only KF update in the tracker-only free-loss Persistent6D fit when one linked charged PFO has hit-supported ECAL energy; does not use cluster position |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | FreeLossEcal | false | Card default true when FreeLossFit is on (`BP_FREE_LOSS_ECAL=0` disables); run a parallel Persistent6D free-loss profile search with accepted hit-supported neutral energy for one interval; base free-loss outputs never change; experimental, not physics-validated |
@@ -788,7 +774,7 @@ optimized rows copy the accepted optimizer objective (also retained under
 free loss. Disabled/empty-interval free and truth rows copy the
 ordinary likelihood. A free-loss input-KF fallback has no breakpoint
 likelihood. Likelihood failures are passive and do not discard valid tracks.
-Both LocalMarginal and Persistent6D RTS fits capture the required Gaussian
+Persistent6D RTS fits capture the required Gaussian
 model. Older tuples lack these new fields and must be regenerated.
 
 The tuple has one row per attempted track, including failures. It retains
@@ -818,8 +804,8 @@ _covariance (36 row-major entries), persistent_transport and
 persistent_process_noise (36 entries each). These describe the final RTS
 forward pass. The saved 6D birth process noise excludes the independent b
 prior already present in its input P; the complete-score boundary construction
-includes that prior once when crossing from 5D. Empty-list and LocalMarginal
-ordinary fits have empty persistent vectors. Enabling the extra truth pair
+includes that prior once when crossing from 5D. Empty-list 5D reference
+fits have empty persistent vectors. Enabling the extra truth pair
 does not change these ordinary diagnostics. b permanently belongs to
 the configured interval, never the current hit or native t0.
 

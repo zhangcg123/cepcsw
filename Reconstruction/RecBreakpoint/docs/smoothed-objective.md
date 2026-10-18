@@ -29,7 +29,7 @@ The implementation avoids this issue by constructing process residuals on
 the supported noise subspace. The seed term is included once. At the loss
 birth, Q_i includes sigma^2*g_i*g_i^T, where g_i is the target-state derivative
 with respect to b. This marginalizes the local Gaussian loss coordinate and
-includes its prior ONCE, exactly as in ordinary LocalMarginal fitting.
+includes its prior ONCE in the collapsed five-dimensional score.
 No extra independent b penalty or log(sigma) normalization is added.
 Here mu_0 is the track seed mean; mu without a subscript is the loss prior center.
 

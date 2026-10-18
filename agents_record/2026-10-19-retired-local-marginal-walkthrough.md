@@ -1,4 +1,7 @@
-# Why Persistent6D and LocalMarginal can give the same result
+# Historical: why Persistent6D and LocalMarginal can give the same result
+
+LocalMarginal was retired on 2026-10-19. This document preserves its original
+mathematical comparison; its source-code references describe the former fitter.
 
 This is a self-contained, terminal-readable explanation of the implementation,
 including the state conventions, every deviation/reference, and the derivation
@@ -491,16 +494,16 @@ required to understand the notation:
 
 | Part | Implementation |
 |---|---|
-| Coordinates, units, separate pivot | [TrackState.h](../src/TrackState.h), [TrackState.cpp](../src/TrackState.cpp): fromEDM, toEDM, stateDifference |
-| Native coordinate order | [KalTest TVTrack.h](../../../Utilities/KalTest/src/geomlib/TVTrack.h): PutInto/SetTo |
-| Independent loss birth | [LossTrackState.h](../src/LossTrackState.h): introduce |
-| Loss map and A/g derivatives | [BreakpointFitter.cpp](../src/BreakpointFitter.cpp): applyBreakpoint; [KalmanAdapter.cpp](../src/KalmanAdapter.cpp): advancePersistent |
-| Joint covariance transformation | [AugmentedTransport.cpp](../src/AugmentedTransport.cpp): jacobian, covariance |
-| Saved loss/track and source/target correlations | [BreakpointFitter.cpp](../src/BreakpointFitter.cpp): fitLocalRTS |
-| Native measurement gain/update | [KalTest TVKalSite.cxx](../../../Utilities/KalTest/src/kallib/TVKalSite.cxx): Filter |
-| Zero direct measurement derivative for b | [KalmanAdapter.cpp](../src/KalmanAdapter.cpp): LossMeasurementSite |
-| Loss applied only at birth, persistent recursion | [BreakpointFitter.cpp](../src/BreakpointFitter.cpp): fitPersistent; [KalmanAdapter.cpp](../src/KalmanAdapter.cpp): advancePersistent |
-| Smoothed loss recovery | [BreakpointFitter.cpp](../src/BreakpointFitter.cpp): inferLoss and its allHits call |
+| Coordinates, units, separate pivot | [TrackState.h](../Reconstruction/RecBreakpoint/src/TrackState.h), [TrackState.cpp](../Reconstruction/RecBreakpoint/src/TrackState.cpp): fromEDM, toEDM, stateDifference |
+| Native coordinate order | [KalTest TVTrack.h](../Utilities/KalTest/src/geomlib/TVTrack.h): PutInto/SetTo |
+| Independent loss birth | [LossTrackState.h](../Reconstruction/RecBreakpoint/src/LossTrackState.h): introduce |
+| Loss map and A/g derivatives | Retired `BreakpointFitter.cpp::applyBreakpoint`; [KalmanAdapter.cpp](../Reconstruction/RecBreakpoint/src/KalmanAdapter.cpp): advancePersistent |
+| Joint covariance transformation | [AugmentedTransport.cpp](../Reconstruction/RecBreakpoint/src/AugmentedTransport.cpp): jacobian, covariance |
+| Saved loss/track and source/target correlations | Retired `BreakpointFitter.cpp::fitLocalRTS` |
+| Native measurement gain/update | [KalTest TVKalSite.cxx](../Utilities/KalTest/src/kallib/TVKalSite.cxx): Filter |
+| Zero direct measurement derivative for b | [KalmanAdapter.cpp](../Reconstruction/RecBreakpoint/src/KalmanAdapter.cpp): LossMeasurementSite |
+| Loss applied only at birth, persistent recursion | [BreakpointFitter.cpp](../Reconstruction/RecBreakpoint/src/BreakpointFitter.cpp): fitPersistent; [KalmanAdapter.cpp](../Reconstruction/RecBreakpoint/src/KalmanAdapter.cpp): advancePersistent |
+| Smoothed loss recovery | Retired `BreakpointFitter.cpp::inferLoss` and its allHits call |
 
 The paired-run numerical checks and endpoint/chi2 distinctions are documented
-in the [parallel implementation record](../../../agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md).
+in the [parallel implementation record](2026-09-09-recbreakpoint-parallel-endpoints-chi2.md).

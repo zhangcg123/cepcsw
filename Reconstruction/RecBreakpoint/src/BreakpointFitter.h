@@ -13,7 +13,6 @@ struct FitSettings {
   double sigmaLogLoss = 0.001;
   double seedScale = 1;
   double backwardSeedScale = 100; // scales the full first-forward endpoint covariance
-  std::string lossStateMode = "Persistent6D";
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
@@ -76,7 +75,6 @@ struct PairedFitResult {
 };
 
 /// Persistent6D: one loss coordinate stays live through every downstream hit.
-/// LocalMarginal retains the earlier 5D/local-joint implementation for comparisons.
 class BreakpointFitter {
 public:
   explicit BreakpointFitter(const KalmanAdapter& adapter) : m_adapter(adapter) {}
@@ -93,7 +91,7 @@ public:
       const FitSettings& settings, double energy, double sigmaEnergy,
       const TrackState* lossReference = nullptr) const;
 private:
-  FitResult fitLocalRTS(const std::vector<edm4hep::TrackerHit>& hits,
+  FitResult fitNoBreakpointRTS(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& settings) const;
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,
                           const FitSettings& settings,

@@ -137,10 +137,9 @@ StatusCode RecBreakpoint::initialize() {
     error() << "BreakpointIntervals is a Manual-only list; clear it for Truth selection" << endmsg;
     return StatusCode::FAILURE;
   }
-  if ((m_lossStateModeName != "Persistent6D" && m_lossStateModeName != "LocalMarginal") ||
-      (m_lossStateModeName == "Persistent6D" && m_intervals.value().size() > 1)) {
-    error() << "LossStateMode must be LocalMarginal or Persistent6D (at most one breakpoint)."
-            << " Use TruthOverride=true for the additional oracle pair, not LossStateMode=TruthOverride." << endmsg;
+  if (m_lossStateModeName != "Persistent6D" || m_intervals.value().size() > 1) {
+    error() << "LossStateMode only accepts Persistent6D (at most one breakpoint)."
+            << " TruthOverride is a separate switch." << endmsg;
     return StatusCode::FAILURE;
   }
   const std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
@@ -183,13 +182,12 @@ StatusCode RecBreakpoint::initialize() {
             << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_freeLossEcal && (!m_freeLossFit || m_lossStateModeName != "Persistent6D")) {
-    error() << "FreeLossEcal requires FreeLossFit and Persistent6D" << endmsg;
+  if (m_freeLossEcal && !m_freeLossFit) {
+    error() << "FreeLossEcal requires FreeLossFit" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_freeLossChargedEcalMeasurement &&
-      (!m_freeLossFit || m_lossStateModeName != "Persistent6D")) {
-    error() << "FreeLossChargedEcalMeasurement requires FreeLossFit and Persistent6D" << endmsg;
+  if (m_freeLossChargedEcalMeasurement && !m_freeLossFit) {
+    error() << "FreeLossChargedEcalMeasurement requires FreeLossFit" << endmsg;
     return StatusCode::FAILURE;
   }
   if (!std::isfinite(m_chargedEcalStochasticError.value()) ||
@@ -505,7 +503,6 @@ StatusCode RecBreakpoint::execute() {
   settings.sigmaLogLoss = m_sigmaLoss;
   settings.seedScale = m_seedScale;
   settings.backwardSeedScale = m_backwardSeedScale;
-  settings.lossStateMode = m_lossStateModeName;
   settings.captureGaussianModel = true; // passive score for ordinary and truth RTS
   const breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
       static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),

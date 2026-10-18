@@ -130,6 +130,8 @@ def prepare():
             raise ValueError(retired + ' was removed; RecBreakpoint is one-pass only')
     if 'BP_LOSS_PRIOR_MODE' in os.environ:
         raise ValueError('BP_LOSS_PRIOR_MODE/LossPriorMode was removed; ordinary breakpoint fits use a Gaussian loss prior')
+    if os.environ.get('BP_LOSS_STATE_MODE', 'Persistent6D') != 'Persistent6D':
+        raise ValueError('BP_LOSS_STATE_MODE only accepts Persistent6D; LocalMarginal was removed')
     for retired in ('BP_ABSOLUTE_NEUTRAL_RTS', 'BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE',
                     'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE'):
         if retired in os.environ:

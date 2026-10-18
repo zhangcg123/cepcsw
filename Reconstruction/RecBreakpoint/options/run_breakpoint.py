@@ -8,6 +8,8 @@ import os
 # Reject retired steering before loading Gaudi or opening any input/output.
 if "BP_LOSS_PRIOR_MODE" in os.environ:
     raise ValueError("BP_LOSS_PRIOR_MODE/LossPriorMode was removed; ordinary breakpoint fits use a Gaussian loss prior")
+if os.environ.get("BP_LOSS_STATE_MODE", "Persistent6D") != "Persistent6D":
+    raise ValueError("BP_LOSS_STATE_MODE only accepts Persistent6D; LocalMarginal was removed")
 for _retired in ("BP_ABSOLUTE_NEUTRAL_RTS", "BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE",
                  "BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE"):
     if _retired in os.environ:
@@ -30,7 +32,7 @@ selected_events = [int(v) for v in os.environ.get("BP_SELECTED", "").split(",") 
 # Zero-based ordered-hit intervals: 5 means a loss AT hit[5], before outward
 # propagation to hit[6]; inward propagation reaches hit[5] before inverse loss.
 # Used only with IntervalSelectionMode=Manual. Empty then means the 5D reference.
-# For example [5, 7] introduces two independent local loss parameters.
+# At most one interval is supported by the persistent loss fit.
 breakpoint_intervals = [int(v) for v in os.environ.get("BP_INTERVALS", "").split(",") if v]
 
 dsvc = k4DataSvc("EventDataSvc", input=input_file)
@@ -106,10 +108,9 @@ fit.SeedHitSelection = os.environ.get("BP_SEED_HIT_SELECTION", "FirstMiddleLast"
 # Reject the retired environment control rather than silently ignoring it.
 if "BP_BACKWARD_MODE" in os.environ:
     raise ValueError("BP_BACKWARD_MODE/BackwardMode was removed; use the four backward-filter switches")
-# Persistent6D retains b and the full 6x6 covariance at every downstream hit.
-# One breakpoint at most. The backward continuation retains its local-joint
-# loss treatment. LocalMarginal also supports multiple selected breakpoints.
-fit.LossStateMode = os.environ.get("BP_LOSS_STATE_MODE", "Persistent6D")
+# Compatibility property for previously generated cards; only Persistent6D
+# remains supported. The backward continuation retains its local-joint fit.
+fit.LossStateMode = "Persistent6D"
 # Independent exact-diffuse augmented 6D KF/RTS experiment (compiled/card on).
 # Required by the default ECAL PostReference. To disable, also choose ECAL
 # Off or NoReference; the diffuse output then copies ordinary RTS.
@@ -143,19 +144,19 @@ fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"
 # variances are added. These are provisional resolution assumptions.
 fit.NeutralLossStochasticError = float(os.environ.get("BP_NEUTRAL_STOCHASTIC", "0.011"))
 fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.004"))
-# Both ordinary LossStateMode representations use the MeanLogLoss/SigmaLogLoss
-# Gaussian prior; the separate diffuse output above does not.
+# The ordinary fit uses the MeanLogLoss/SigmaLogLoss Gaussian prior;
+# the separate diffuse output above does not.
 # The optional Minuit pair below optimizes the prior center with the SAME sigma;
 # it remains separate from the ordinary fit and the truth-centred pair.
 # Optional outer prior-center fit: normalized full-track likelihood, not chi2 alone.
 # Ordinary RTS is always retained. True adds optimized results in
-# the FreeLoss RTS/backward collections on one selected interval, using the
-# selected LossStateMode (Persistent6D or LocalMarginal) for every trial/refit;
+# the FreeLoss RTS/backward collections on one selected interval, using
+# Persistent6D for every trial/refit;
 # their covariances include the loss posterior variance and correlations.
 # Minuit's error on the chosen prior center is NOT another SigmaLogLoss.
 # False copies ordinary RTS and, only if enabled, its backward result into
 # the corresponding extra outputs, without another fit.
-# Empty lists copy ordinary results. Unsupported modes/manual multiple intervals
+# Empty lists copy ordinary results. Manual multiple intervals
 # or failed optimization copy the INPUT CompleteTracks KF into both free outputs.
 # Success requires a converged, valid Minuit minimum (not just a finite scan).
 # free_loss_result_status: 0 absent, 1 ordinary copy, 2 optimized pair, 3 KF fallback.
@@ -189,7 +190,7 @@ fit.BeamSpotSigmaY = float(os.environ.get("BP_BEAM_SPOT_SIGMA_Y", "3.6e-5"))  # 
 # HOW MUCH, for the extra pair only: True (default) sets the b PRIOR CENTERS
 # to layer-owned G4 values at the SAME selected breakpoints. SigmaLogLoss is the SAME
 # as in the ordinary fit; hits can still update b and its posterior variance.
-# Both pairs use the same LossStateMode and one-pass fitting code.
+# Both pairs use the same one-pass fitting code.
 # It neither changes the interval selection nor corrects unselected intervals.
 # Example: Manual=[5], actual eBrem only in interval 7 -> prior center at 5 is
 # b=0 (z=1), but the fitted b may move. Interval 7 is not added automatically.
@@ -199,7 +200,7 @@ fit.BeamSpotSigmaY = float(os.environ.get("BP_BEAM_SPOT_SIGMA_Y", "3.6e-5"))  # 
 # FreeLossFit uses that same sigma but an optimized prior center instead.
 # False, or an empty effective interval list: save an ordinary RTS copy and
 # only the separately enabled backward copy. Truth selection still reads truth.
-# LossStateMode controls the ordinary fit; neither control overrides the other.
+# The truth-prior pair changes only the loss-prior center.
 fit.TruthOverride = os.environ.get("BP_TRUTH_OVERRIDE", "1") == "1"
 # Repeated relinearization was retired; enabled endpoints use one pass.
 for retired in ("BP_MAX_ITERATIONS", "BP_ITERATION_TOLERANCE"):

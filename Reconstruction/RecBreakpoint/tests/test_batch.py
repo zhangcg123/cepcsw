@@ -27,7 +27,7 @@ class BatchTest(unittest.TestCase):
         assignments = '\n'.join(line for line in template.splitlines() if line.startswith(
             ('fit.LossStateMode =', 'fit.EcalLossReferenceMode =', 'fit.DiffuseAugmentedRTS =')))
         fit = types.SimpleNamespace()
-        with patch.dict(os.environ, {'BP_LOSS_STATE_MODE': 'LocalMarginal',
+        with patch.dict(os.environ, {'BP_LOSS_STATE_MODE': 'Persistent6D',
                                      'BP_ECAL_LOSS_REFERENCE_MODE': 'Off',
                                      'BP_DIFFUSE_AUGMENTED_RTS': '0'}, clear=True):
             exec(card[:-len(template)] + '\n' + assignments, {'fit': fit, 'os': os})
@@ -88,12 +88,12 @@ class BatchTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'LossPriorMode was removed'):
                     runpy.run_path(str(card))
 
-    def test_gaussian_prior_and_state_representations_remain(self):
+    def test_gaussian_prior_and_persistent_state_remain(self):
         self.prepare()
         card = Path(self.manifest()['cards']['breakpoint']).read_text()
         assignments = '\n'.join(line for line in card.splitlines()
                                 if line.startswith(('fit.MeanLogLoss =', 'fit.SigmaLogLoss =', 'fit.LossStateMode =')))
-        for mode in (None, 'LocalMarginal', 'Persistent6D'):
+        for mode in (None, 'Persistent6D'):
             fit = types.SimpleNamespace()
             overrides = {} if mode is None else {'BP_LOSS_STATE_MODE': mode}
             with self.subTest(mode=mode), patch.dict(os.environ, overrides, clear=True):
@@ -102,6 +102,16 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(fit.MeanLogLoss, 0)
             self.assertEqual(fit.SigmaLogLoss, .001)
         self.assertNotIn('fit.LossPriorMode', card)
+
+    def test_local_marginal_is_rejected_before_outputs(self):
+        import runpy
+        with self.assertRaisesRegex(ValueError, 'LocalMarginal was removed'):
+            self.prepare(BP_LOSS_STATE_MODE='LocalMarginal')
+        self.assertFalse((self.repo/'outputs').exists())
+        card = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
+        with patch.dict(os.environ, {'BP_LOSS_STATE_MODE': 'LocalMarginal'}, clear=True):
+            with self.assertRaisesRegex(ValueError, 'LocalMarginal was removed'):
+                runpy.run_path(str(card))
 
     def test_card_explicitly_steers_every_algorithm_property(self):
         import ast
