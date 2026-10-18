@@ -214,6 +214,8 @@ class BatchTest(unittest.TestCase):
         self.prepare(OUTPUT_TUPLEPATH='free_default')
         default = self.manifest('free_default')
         card = Path(default['cards']['breakpoint']).read_text()
+        self.assertIn('fit.OutputTracksFreeLossEcalRTS = "BreakpointTracksFreeLossEcalRTS"', card)
+        self.assertIn('fit.OutputTracksFreeLossEcalBackwardFilter = "BreakpointTracksFreeLossEcalBackwardFilter"', card)
         assignments = '\n'.join(line for line in card.splitlines() if line.startswith('fit.FreeLoss'))
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, {}, clear=True):

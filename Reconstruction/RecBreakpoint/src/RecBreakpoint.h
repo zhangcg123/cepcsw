@@ -53,6 +53,11 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeResultStatus{"BreakpointFreeLossStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeRTSIndex{"BreakpointFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeBackwardIndex{"BreakpointFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_ecalFreeRTSOutput{"BreakpointTracksFreeLossEcalRTS", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> m_ecalFreeBackwardOutput{"BreakpointTracksFreeLossEcalBackwardFilter", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_ecalFreeResultStatus{"BreakpointFreeLossEcalStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_ecalFreeRTSIndex{"BreakpointFreeLossEcalRTSIndex", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_ecalFreeBackwardIndex{"BreakpointFreeLossEcalBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_beamFreeRTSOutput{"BreakpointTracksBeamGuidedFreeLossRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_beamFreeBackwardOutput{"BreakpointTracksBeamGuidedFreeLossBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeResultStatus{"BreakpointBeamGuidedFreeLossStatus", Gaudi::DataHandle::Writer, this};
@@ -138,11 +143,11 @@ private:
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   std::array<int, 4> m_backwardRunFlags{};
-  breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
-  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
-  breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
-  // KF input plus the ten parallel published breakpoint endpoint families.
-  std::array<breakpoint::CaloStateTuple, 11> m_caloStates;
+  breakpoint::FreeLossTuple m_freeLossTuple, m_ecalFreeLossTuple, m_beamFreeLossTuple;
+  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_ecalFreeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
+  breakpoint::FitPairTuple m_freeLossTracks, m_ecalFreeLossTracks, m_beamFreeLossTracks;
+  // KF input plus twelve parallel published breakpoint endpoint families.
+  std::array<breakpoint::CaloStateTuple, 13> m_caloStates;
   // Collected independently for each input track, even when the ECAL fit is off.
   breakpoint::NeutralLossCandidate m_collectedNeutral;
   int m_collectedNeutralStatus = 0, m_collectedNeutralCount = 0;

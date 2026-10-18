@@ -26,13 +26,14 @@
 namespace {
 enum CaloFamily {
   InputKF, OrdinaryRTS, OrdinaryBackward, FreeRTS, FreeBackward,
-  BeamFreeRTS, BeamFreeBackward, TruthRTS, TruthBackward, DiffuseRTS, AbsoluteRTS
+  BeamFreeRTS, BeamFreeBackward, TruthRTS, TruthBackward, DiffuseRTS, AbsoluteRTS,
+  EcalFreeRTS, EcalFreeBackward
 };
 constexpr const char* caloPrefixes[] = {
   "kf_", "rts_", "backward_", "free_loss_rts_", "free_loss_backward_",
   "beam_guided_free_loss_rts_", "beam_guided_free_loss_backward_",
   "truth_override_rts_", "truth_override_backward_", "diffuse_augmented_rts_",
-  "absolute_neutral_rts_"
+  "absolute_neutral_rts_", "free_loss_ecal_rts_", "free_loss_ecal_backward_"
 };
 // At the first hit after the breakpoint, the joint RTS state still carries
 // both the post-loss momentum and b=log(p_before/p_after). Keep their
@@ -95,6 +96,10 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
   declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS; ordinary copy when off, input KF copy on failure");
   declareProperty("OutputTracksFreeLossBackwardFilter", m_freeBackwardOutput, "Free-loss backward; ordinary copy when off, input KF copy on failure");
+  declareProperty("OutputTracksFreeLossEcalRTS", m_ecalFreeRTSOutput,
+                  "Parallel ECAL-guided free-loss RTS; base free-loss copy when unavailable");
+  declareProperty("OutputTracksFreeLossEcalBackwardFilter", m_ecalFreeBackwardOutput,
+                  "Parallel ECAL-guided free-loss backward endpoint");
   declareProperty("OutputTracksBeamGuidedFreeLossRTS", m_beamFreeRTSOutput,
                   "Separate beam-objective free-loss RTS; free-loss copy when disabled, input KF on failure");
   declareProperty("OutputTracksBeamGuidedFreeLossBackwardFilter", m_beamFreeBackwardOutput,
@@ -141,10 +146,11 @@ StatusCode RecBreakpoint::initialize() {
   const std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
       m_truthRTSOutput.fullKey(), m_truthBackwardOutput.fullKey(),
       m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey(),
+      m_ecalFreeRTSOutput.fullKey(), m_ecalFreeBackwardOutput.fullKey(),
       m_beamFreeRTSOutput.fullKey(), m_beamFreeBackwardOutput.fullKey(),
       m_diffuseRTSOutput.fullKey(), m_absoluteRTSOutput.fullKey()};
-  if (outputNames.size() != 10 || outputNames.count(m_input.fullKey())) {
-    error() << "The ten output track collections must differ from each other and the input" << endmsg;
+  if (outputNames.size() != 12 || outputNames.count(m_input.fullKey())) {
+    error() << "The twelve output track collections must differ from each other and the input" << endmsg;
     return StatusCode::FAILURE;
   }
   std::set<int> unique;
@@ -229,12 +235,15 @@ StatusCode RecBreakpoint::initialize() {
   for (std::size_t i = 0; i < m_caloStates.size(); ++i)
     m_caloStates[i].book(*m_tree, caloPrefixes[i]);
   m_freeLossTuple.book(*m_tree);
+  m_ecalFreeLossTuple.book(*m_tree, "free_loss_ecal_");
   m_beamFreeLossTuple.book(*m_tree, "beam_guided_free_loss_");
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
+  m_ecalFreeLikelihood.book(*m_tree, "free_loss_ecal_likelihood_");
   m_beamFreeLikelihood.book(*m_tree, "beam_guided_free_loss_likelihood_");
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
+  m_ecalFreeLossTracks.book(*m_tree, "free_loss_ecal_");
   m_beamFreeLossTracks.book(*m_tree, "beam_guided_free_loss_");
   m_tree->Branch("diffuse_augmented_status", &m_diffuseStatus);
   m_tree->Branch("diffuse_augmented_index", &m_diffuseIndex);
@@ -297,6 +306,7 @@ StatusCode RecBreakpoint::initialize() {
                         int(m_beamFreeLossBackwardFilter.value()), int(m_truthBackwardFilter.value())};
   m_tree->Branch("ordinary_backward_filter_enabled", &m_backwardRunFlags[0]);
   m_tree->Branch("free_loss_backward_filter_enabled", &m_backwardRunFlags[1]);
+  m_tree->Branch("free_loss_ecal_backward_filter_enabled", &m_backwardRunFlags[1]);
   m_tree->Branch("beam_guided_free_loss_backward_filter_enabled", &m_backwardRunFlags[2]);
   m_tree->Branch("truth_override_backward_filter_enabled", &m_backwardRunFlags[3]);
   m_tree->Branch("event_index", &m_event);
@@ -433,6 +443,11 @@ StatusCode RecBreakpoint::execute() {
   auto* freeResultStatuses = m_freeResultStatus.createAndPut();
   auto* freeRTSIndices = m_freeRTSIndex.createAndPut();
   auto* freeBackwardIndices = m_freeBackwardIndex.createAndPut();
+  auto* ecalFreeRTSOutput = m_ecalFreeRTSOutput.createAndPut();
+  auto* ecalFreeBackwardOutput = m_ecalFreeBackwardOutput.createAndPut();
+  auto* ecalFreeResultStatuses = m_ecalFreeResultStatus.createAndPut();
+  auto* ecalFreeRTSIndices = m_ecalFreeRTSIndex.createAndPut();
+  auto* ecalFreeBackwardIndices = m_ecalFreeBackwardIndex.createAndPut();
   auto* beamFreeRTSOutput = m_beamFreeRTSOutput.createAndPut();
   auto* beamFreeBackwardOutput = m_beamFreeBackwardOutput.createAndPut();
   auto* beamFreeResultStatuses = m_beamFreeResultStatus.createAndPut();
@@ -509,6 +524,8 @@ StatusCode RecBreakpoint::execute() {
       statuses->push_back(0); outputIndices->push_back(-1); backwardOutputIndices->push_back(-1);
       truthResultStatuses->push_back(0); truthRTSIndices->push_back(-1); truthBackwardIndices->push_back(-1);
       freeResultStatuses->push_back(0); freeRTSIndices->push_back(-1); freeBackwardIndices->push_back(-1);
+      ecalFreeResultStatuses->push_back(0); ecalFreeRTSIndices->push_back(-1);
+      ecalFreeBackwardIndices->push_back(-1);
       beamFreeResultStatuses->push_back(0); beamFreeRTSIndices->push_back(-1);
       beamFreeBackwardIndices->push_back(-1);
       diffuseStatuses->push_back(0); diffuseIndices->push_back(-1);
@@ -537,13 +554,17 @@ StatusCode RecBreakpoint::execute() {
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
+    m_ecalFreeLossTuple.reset(m_freeLossFit && m_freeLossEcal, freeLossControls,
+                              settings.sigmaLogLoss);
     m_beamFreeLossTuple.reset(m_freeLossFit && m_freeLossBeamSpotObjective,
                               beamFreeLossControls, settings.sigmaLogLoss);
     m_ordinaryLikelihood.reset();
     m_freeLikelihood.reset();
+    m_ecalFreeLikelihood.reset();
     m_beamFreeLikelihood.reset();
     m_truthLikelihood.reset();
     m_freeLossTracks.reset();
+    m_ecalFreeLossTracks.reset();
     m_beamFreeLossTracks.reset();
     for (auto& calo : m_caloStates) calo.reset();
     m_caloStates[InputKF].assignFromTrack(track, m_bz, 2);
@@ -707,17 +728,17 @@ StatusCode RecBreakpoint::execute() {
       const auto paired = fitter.fit(hits, settings, m_ordinaryBackwardFilter);
       std::optional<breakpoint::PairedFitResult> freePair;
       std::optional<breakpoint::TrackLikelihoodResult> optimizedLikelihood;
+      std::optional<breakpoint::PairedFitResult> ecalFreePair;
+      std::optional<breakpoint::TrackLikelihoodResult> optimizedEcalLikelihood;
       std::optional<breakpoint::PairedFitResult> beamFreePair;
       std::optional<breakpoint::TrackLikelihoodResult> optimizedBeamLikelihood;
       bool freeKFFallback = false;
+      bool ecalFreeKFFallback = false;
+      bool ecalFreeAttempted = false;
       bool beamFreeKFFallback = false;
       if (m_freeLossFit) {
         const breakpoint::FreeLossFitter optimizer(fitter, m_bz);
-        auto trackFreeControls = freeLossControls;
-        if (m_freeLossEcal && m_collectedNeutralStatus == 2 && settings.intervals.size() == 1)
-          trackFreeControls.ecalLoss = std::make_pair(
-              m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
-        auto freeFit = optimizer.fit(hits, settings, trackFreeControls,
+        auto freeFit = optimizer.fit(hits, settings, freeLossControls,
                                      m_freeLossBackwardFilter);
         m_freeLossTuple.assign(freeFit.diagnostics);
         if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
@@ -732,6 +753,29 @@ StatusCode RecBreakpoint::execute() {
             << " prior_mean=" << freeFit.diagnostics.b << " prior_sigma=" << settings.sigmaLogLoss
             << " nll2=" << freeFit.diagnostics.likelihood.nll2
             << " minuit_status=" << freeFit.diagnostics.minuitStatus << endmsg;
+        if (m_freeLossEcal && m_collectedNeutralStatus == 2 && settings.intervals.size() == 1) {
+          ecalFreeAttempted = true;
+          auto ecalControls = freeLossControls;
+          ecalControls.ecalLoss = std::make_pair(
+              m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+          auto ecalFit = optimizer.fit(hits, settings, ecalControls,
+                                        m_freeLossBackwardFilter);
+          m_ecalFreeLossTuple.assign(ecalFit.diagnostics);
+          if (ecalFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
+            optimizedEcalLikelihood = ecalFit.diagnostics.likelihood;
+          ecalFreePair = std::move(ecalFit.fitted);
+          ecalFreeKFFallback = ecalFit.diagnostics.status == breakpoint::FreeLossStatus::Failed ||
+                               ecalFit.diagnostics.status == breakpoint::FreeLossStatus::Unsupported;
+          if (!ecalFit.diagnostics.error.empty())
+            warning() << "ECAL-guided FreeLossFit: " << ecalFit.diagnostics.error
+                      << "; ECAL outputs use input KF" << endmsg;
+          if (m_verbose) info() << std::setprecision(17)
+              << "EcalFreeLossFit event=" << m_event << " track=" << m_trackIndex
+              << " status=" << int(ecalFit.diagnostics.status)
+              << " prior_mean=" << ecalFit.diagnostics.b
+              << " nll2=" << ecalFit.diagnostics.likelihood.nll2
+              << " minuit_status=" << ecalFit.diagnostics.minuitStatus << endmsg;
+        }
         if (m_freeLossBeamSpotObjective) {
           auto beamFit = optimizer.fit(hits, settings, beamFreeLossControls,
                                        m_beamFreeLossBackwardFilter);
@@ -1174,6 +1218,50 @@ StatusCode RecBreakpoint::execute() {
         }
       }
 
+      // Keep tracker-only free loss intact; ECAL has its own row-aligned pair.
+      const auto& ecalFreeResult = ecalFreePair ? *ecalFreePair : freeResult;
+      const bool ecalFallback = ecalFreeAttempted ? ecalFreeKFFallback : freeKFFallback;
+      if (ecalFallback) {
+        m_ecalFreeLikelihood.invalidate("ECAL free-loss output is input KF fallback");
+        try {
+          const int rtsIndex = ecalFreeRTSOutput->size();
+          const int backwardIndex = m_freeLossBackwardFilter ? ecalFreeBackwardOutput->size() : -1;
+          m_ecalFreeLossTracks.assignKF(track, m_bz, rtsIndex, backwardIndex);
+          ecalFreeRTSOutput->push_back(track.clone());
+          if (backwardIndex >= 0) ecalFreeBackwardOutput->push_back(track.clone());
+          m_caloStates[EcalFreeRTS].assignFromTrack(track, m_bz, 2);
+          if (backwardIndex >= 0)
+            m_caloStates[EcalFreeBackward].assignFromTrack(track, m_bz, 2);
+        } catch (const std::exception& error) {
+          m_ecalFreeLossTracks.reset();
+          warning() << "ECAL free-loss input KF fallback unavailable: " << error.what() << endmsg;
+        }
+      } else {
+        if (ecalFreePair) {
+          if (!optimizedEcalLikelihood)
+            m_ecalFreeLikelihood.invalidate("Accepted ECAL free fit has no likelihood");
+          else {
+            try { m_ecalFreeLikelihood.assign(*optimizedEcalLikelihood); }
+            catch (const std::exception& error) { m_ecalFreeLikelihood.invalidate(error.what()); }
+          }
+        } else {
+          m_ecalFreeLikelihood = m_freeLikelihood;
+        }
+        const int rtsIndex = publishTrack(*ecalFreeRTSOutput, ecalFreeResult.rts, hits, m_bz,
+                                          ecalFreeResult.rts.smoothedTotalChi2, adapter,
+                                          m_caloStates[EcalFreeRTS]);
+        int backwardIndex = -1;
+        if (m_freeLossBackwardFilter && ecalFreeResult.backward) {
+          const double backwardChi2 = std::accumulate(ecalFreeResult.backward->backwardChi2.begin(),
+                                                      ecalFreeResult.backward->backwardChi2.end(), 0.);
+          backwardIndex = publishTrack(*ecalFreeBackwardOutput, *ecalFreeResult.backward,
+                                       hits, m_bz, backwardChi2, adapter,
+                                       m_caloStates[EcalFreeBackward]);
+        }
+        m_ecalFreeLossTracks.assign(ecalFreeResult, m_bz, ecalFreePair ? 2 : 1,
+                                    rtsIndex, backwardIndex);
+      }
+
       // The beam is an extra scalar objective term ONLY. The accepted center
       // is refitted with the same detector hits; no beam Kalman update enters
       // either endpoint or its covariance. When disabled, copy the base free
@@ -1397,6 +1485,7 @@ StatusCode RecBreakpoint::execute() {
       if (m_fitStatus != 1) {
         m_ordinaryLikelihood.reset();
         m_freeLikelihood.reset();
+        m_ecalFreeLikelihood.reset();
         m_beamFreeLikelihood.reset();
         m_truthLikelihood.reset();
       }
@@ -1410,6 +1499,9 @@ StatusCode RecBreakpoint::execute() {
     freeResultStatuses->push_back(m_freeLossTracks.status());
     freeRTSIndices->push_back(m_freeLossTracks.rtsIndex());
     freeBackwardIndices->push_back(m_freeLossTracks.backwardIndex());
+    ecalFreeResultStatuses->push_back(m_ecalFreeLossTracks.status());
+    ecalFreeRTSIndices->push_back(m_ecalFreeLossTracks.rtsIndex());
+    ecalFreeBackwardIndices->push_back(m_ecalFreeLossTracks.backwardIndex());
     beamFreeResultStatuses->push_back(m_beamFreeLossTracks.status());
     beamFreeRTSIndices->push_back(m_beamFreeLossTracks.rtsIndex());
     beamFreeBackwardIndices->push_back(m_beamFreeLossTracks.backwardIndex());

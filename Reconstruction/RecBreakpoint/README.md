@@ -67,15 +67,18 @@ The free-loss collections are also declared: `BreakpointTracksFreeLossRTS` and
 `BreakpointTracksFreeLossBackwardFilter`, controlled by `OutputTracksFreeLossRTS`
 and `OutputTracksFreeLossBackwardFilter`. It contains independently optimized
 results when applied, ordinary copies otherwise where the corresponding
-backward fit is enabled. A second free-loss pair,
+backward fit is enabled. The separate `BreakpointTracksFreeLossEcalRTS` and
+`BreakpointTracksFreeLossEcalBackwardFilter` pair adds the neutral-ECAL objective
+when enabled and eligible, otherwise copies the tracker-only free-loss pair.
+A third free-loss pair,
 `BreakpointTracksBeamGuidedFreeLossRTS` and
 `BreakpointTracksBeamGuidedFreeLossBackwardFilter`, optimizes an additional
 beam-origin likelihood but uses exactly the same detector-hit KF/RTS refit.
 `FreeLossBeamSpotObjective` controls this pair; when disabled it copies the
-base free-loss result. A ninth, independent
+base free-loss result. An eleventh, independent
 `BreakpointTracksDiffuseAugmentedRTS` collection is controlled by
 `DiffuseAugmentedRTS` (compiled and maintained-card default on).
-The tenth, `BreakpointTracksAbsoluteNeutralRTS`, is one default-on ECAL
+The twelfth, `BreakpointTracksAbsoluteNeutralRTS`, is one default-on ECAL
 absolute-loss KF/RTS experiment controlled by `EcalLossReferenceMode`. It requires exactly one
 selected breakpoint interval and a reconstructed hit-supported neutral ECAL
 cluster near the input track's ECAL direction. Its sixth state coordinate is
@@ -605,6 +608,8 @@ maintained card, but not physics-validated.
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Optional inward-filter collection; empty when disabled |
 | OutputTracksFreeLossRTS | BreakpointTracksFreeLossRTS | Optimized RTS, or exact ordinary RTS copy |
 | OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optional optimized backward filter; empty when disabled |
+| OutputTracksFreeLossEcalRTS | BreakpointTracksFreeLossEcalRTS | Parallel ECAL-guided free-loss RTS; tracker-only free-loss copy when disabled or ineligible |
+| OutputTracksFreeLossEcalBackwardFilter | BreakpointTracksFreeLossEcalBackwardFilter | Parallel ECAL-guided backward endpoint; shares FreeLossBackwardFilter control |
 | OutputTracksBeamGuidedFreeLossRTS | BreakpointTracksBeamGuidedFreeLossRTS | Beam-objective free-loss RTS; base free-loss copy when disabled, input KF fallback on optimizer failure |
 | OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Optional beam-objective backward endpoint; empty when disabled |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
@@ -626,7 +631,7 @@ maintained card, but not physics-validated.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one interval in the selected Persistent6D or LocalMarginal representation; input KF fallback on failure/unsupported mode |
-| FreeLossEcal | false | Card default false (`BP_FREE_LOSS_ECAL=1` enables); add accepted hit-supported neutral energy to the existing Persistent6D free-loss profile objective for one interval; no-cluster tracks retain tracker-only behavior; experimental, not physics-validated |
+| FreeLossEcal | false | Card default false (`BP_FREE_LOSS_ECAL=1` enables); run a parallel Persistent6D free-loss profile search with accepted hit-supported neutral energy for one interval; base free-loss outputs never change; experimental, not physics-validated |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |
@@ -715,6 +720,11 @@ scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 All runs also save the `free_loss_*` fields described in
 [the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract). The
+parallel `free_loss_ecal_*` fields use the same schema. With the ECAL switch
+off or no accepted neutral, its result status is 1 and its endpoint and
+likelihood copy tracker-only free loss; an applied ECAL fit has status 2, while
+an ECAL-fit failure falls back only in that family. The tracker-only branches
+are unchanged in all cases.
 `beam_guided_free_loss_*` fields use the same endpoint and optimizer schema
 for the independent beam-guided result. Its `nll2` and
 `beam_guided_free_loss_likelihood_nll2` are detector-hit likelihoods;
@@ -742,14 +752,17 @@ quadratic meaning; `free_loss_nll2` separately records the fitting objective.
 
 The flat tuple also records the same normalized full-track likelihood for
 each RTS family as `ordinary_likelihood_*`, `free_loss_likelihood_*`,
-`beam_guided_free_loss_likelihood_*`, and `truth_override_likelihood_*`.
+`free_loss_ecal_likelihood_*`, `beam_guided_free_loss_likelihood_*`, and
+`truth_override_likelihood_*`.
 Each prefix has `status` (1 valid, 0 absent,
 -1 unavailable or evaluation failed), `nll2`, `quadratic`, `logdet`,
 `measurement_dimensions`, `latent_dimensions`, and `error`. All use
 `nll2 = quadratic + logdet + measurement_dimensions * log(2*pi)`, with the
 complete RTS measurement + process + seed score as `quadratic`. Free-loss
 optimized rows copy the accepted optimizer objective (also retained under
-`free_loss_nll2`); disabled/empty-interval free and truth rows copy the
+`free_loss_nll2`). Applied ECAL rows include the ECAL energy term only in
+`free_loss_ecal_likelihood_*`; disabled/ineligible ECAL rows copy tracker-only
+free loss. Disabled/empty-interval free and truth rows copy the
 ordinary likelihood. A free-loss input-KF fallback has no breakpoint
 likelihood. Likelihood failures are passive and do not discard valid tracks.
 Both LocalMarginal and Persistent6D RTS fits capture the required Gaussian
@@ -863,7 +876,7 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 | MEMORY_MB | 5000 | Scheduler memory request |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
-| BP_FREE_LOSS_ECAL | 0 | Freeze the optional neutral-ECAL term in the existing Persistent6D free-loss objective; use separate output directories for A/B |
+| BP_FREE_LOSS_ECAL | 0 | Freeze the optional parallel neutral-ECAL Persistent6D free-loss fit; base free-loss remains in the same tuple |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
 For the default full barrel chain, simulation produces `sim-barrel-SEED.root`;

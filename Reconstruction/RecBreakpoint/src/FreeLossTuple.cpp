@@ -22,7 +22,7 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("b_error", &m_errorB);
   branch("minuit_status", &m_minuitStatus);
   branch("edm", &m_edm);
-  branch("nll2", &m_nll2); // hit-only normalized likelihood
+  branch("nll2", &m_nll2); // includes ECAL only in the ECAL-guided family
   branch("quadratic", &m_quadratic);
   branch("logdet", &m_logdet);
   branch("objective_nll2", &m_objectiveNll2);
@@ -38,7 +38,7 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("covariance_conditional", &m_covarianceConditional);
   branch("error", &m_error);
   branch("trial_b", &m_trialB);
-  branch("trial_nll2", &m_trialNll2); // hit-only, retained name
+  branch("trial_nll2", &m_trialNll2); // retained name; ECAL family includes ECAL
   branch("trial_objective_nll2", &m_trialObjectiveNll2);
   branch("trial_beam_nll2", &m_trialBeamNll2);
   branch("trial_valid", &m_trialValid);

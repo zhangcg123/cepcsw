@@ -23,7 +23,7 @@ scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ```python
 fit.FreeLossFit = True
-fit.FreeLossEcal = False  # optional ECAL term in the existing free-loss search
+fit.FreeLossEcal = False  # optional parallel ECAL-guided search
 fit.SigmaLogLoss = 0.001  # SAME prior width for all four fit pairs
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
@@ -54,20 +54,25 @@ GSF worker/cards. The script's selected loss sigma is used by ordinary,
 free-loss and truth-prior fits, including every optimizer trial and final refit.
 It does not modify an input KF copy used as a failure fallback.
 
-`FreeLossEcal=True` requires `FreeLossFit=True` and `Persistent6D`. When exactly
-one breakpoint and an accepted hit-supported neutral ECAL cluster are present,
-it adds an energy term to the *existing* free-loss scalar objective. At each
+`FreeLossEcal=True` requires `FreeLossFit=True` and `Persistent6D`. It runs a
+second search while preserving the tracker-only `free_loss_*` endpoints. When
+exactly one breakpoint and an accepted hit-supported neutral ECAL cluster are
+present, that search adds an energy term to its scalar objective. At each
 trial's first smoothed post-break state, `E_pred = p_post (exp(b)-1)` and the
 energy variance is the collected neutral-energy variance plus the propagated
 6D state covariance. The term is the Gaussian squared pull plus log variance
 and normalization. The ordinary, diffuse, truth-prior, and separate beam-guided
-fits are unchanged. With no accepted cluster, the base free-loss path is
-unchanged; a failed enabled fit still uses the existing input-KF fallback.
+fits are unchanged. With the option off or no accepted cluster, the
+`free_loss_ecal_*` endpoints copy the base free-loss pair; a failed enabled
+fit uses the existing input-KF fallback only in the ECAL pair. Both RTS
+endpoints are saved in one flat-tuple row, and the optional backward endpoints
+share `FreeLossBackwardFilter`.
 This is an objective-only ECAL constraint, not an ECAL Kalman measurement or a
 fully joint trajectory/cluster fit. It is experimental: misassociated neutral
 clusters can substantially worsen momentum. Keep the option off for baseline
-production and use distinct output paths for on/off comparisons. When enabled,
-the saved base free-loss NLL includes the ECAL term on applicable tracks.
+production. When enabled and applicable, only the saved
+`free_loss_ecal_likelihood_*` NLL includes the ECAL term;
+`free_loss_likelihood_*` remains tracker-only.
 
 For one selected interval:
 
@@ -186,12 +191,13 @@ likelihood. F/H/Q also change with the trial trajectory, so the model is a
 local affine approximation to nonlinear tracking. Neither a low objective
 nor a successful Minuit call establishes correct physical loss recovery.
 
-## Eight collections: ordinary, two free-loss and truth-assisted pairs
+## Parallel endpoint families
 
 ### Shared loss prior, different inward calculations
 
-Each free-loss pair has one Minuit search and one selected mu shared by its
-RTS and backward endpoints; the beam-guided pair has an independent search.
+Each applied free-loss pair has one Minuit search and one selected mu shared
+by its RTS and backward endpoints; ECAL-guided and beam-guided pairs have
+independent searches from tracker-only free loss.
 For each trial the existing fitter uses the SAME positive SigmaLogLoss.
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
 amount sets the chosen mu. The final fitter call uses that same selected center
@@ -311,8 +317,16 @@ The same values appear as `free_loss_result_status`, `free_loss_rts_index` and
 optimized pair,3 input KF fallback. This is separate from `free_loss_status`, which describes the
 optimizer request/outcome (off0, empty1, applied2, unsupported-1, failed-2).
 
-The parallel `ordinary_likelihood_*`, `free_loss_likelihood_*`, and
-`truth_override_likelihood_*` branches contain the same normalized
+`BreakpointFreeLossEcalStatus`, `BreakpointFreeLossEcalRTSIndex`, and
+`BreakpointFreeLossEcalBackwardIndex` provide the same row-aligned contract
+for the parallel ECAL pair. `free_loss_ecal_result_status=1` means a copy of
+tracker-only free loss, 2 an applied ECAL-guided fit, and 3 input-KF fallback
+after an attempted ECAL fit failed. The ECAL optimizer's own status is stored
+separately as `free_loss_ecal_status`.
+
+The parallel `ordinary_likelihood_*`, `free_loss_likelihood_*`,
+`free_loss_ecal_likelihood_*`, and `truth_override_likelihood_*` branches
+contain the normalized
 `-2 log L = complete RTS chi2 + log det S_all + M log(2*pi)` for each RTS
 result. They save `status`, `nll2`, `quadratic`, `logdet`,
 `measurement_dimensions`, `latent_dimensions`, and `error`. Status 1 is

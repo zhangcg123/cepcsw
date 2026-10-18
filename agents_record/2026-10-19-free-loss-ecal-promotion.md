@@ -17,6 +17,27 @@ cluster, the base free-loss result is exactly the tracker-only result. Failed
 fits retain the existing input-KF fallback. The base free-loss NLL includes
 the ECAL term only when enabled and applicable.
 
+## Same-day publication correction
+
+The first promotion wrote ECAL-guided results into the existing `free_loss_*`
+outputs, replacing tracker-only free loss. This did not meet the intended
+parallel-output contract. The follow-up preserves `free_loss_*` as tracker-only
+and adds `free_loss_ecal_*` flat branches and separate RTS/backward EDM
+collections. When the ECAL option is off or no accepted neutral is present,
+the new family copies the tracker-only result. This correction supersedes the
+first paragraph's output/NLL destination statement; the ECAL likelihood is
+now saved under `free_loss_ecal_likelihood_*` only.
+
+Same-run focused gate on seed 35 event 4: base `free_loss_rts_pt` remains
+30.0358993935 GeV while `free_loss_ecal_rts_pt` is 28.1217969539 GeV.
+Both result statuses are 2. With the ECAL switch off, the new endpoint and
+NLL copy the base exactly (status 1); with the switch on but no accepted
+neutral (event 26), they also copy exactly (status 1). When the shared
+`FreeLossBackwardFilter` switch is enabled, both backward endpoints and their
+row-aligned indices are present: 30.0216997 versus 28.1084829 GeV, indices
+0/0 for the focused event. The corrected build and installation were
+revalidated after these changes.
+
 Mechanical checks: RecBreakpoint built and installed in
 `InstallArea/x86_64-el9-gcc11-opt`; installed and build plugin SHA256 hashes
 agree. RecBreakpointLikelihood and RecBreakpointNeutralLossCandidate CTests
