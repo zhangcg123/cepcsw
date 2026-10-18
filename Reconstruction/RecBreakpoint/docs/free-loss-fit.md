@@ -23,7 +23,7 @@ scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ```python
 fit.FreeLossFit = True
-fit.FreeLossEcal = False  # optional parallel ECAL-guided search
+fit.FreeLossEcal = True   # parallel ECAL-guided search in the maintained card
 fit.SigmaLogLoss = 0.001  # SAME prior width for all four fit pairs
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
@@ -35,7 +35,7 @@ fit.BeamSpotSigmaY = 3.6e-5  # mm
 fit.BackwardSeedScale = 100.0
 ```
 
-The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_ECAL (default 0), BP_FREE_LOSS_MAX_LOG_LOSS,
+The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_ECAL (default 1 when FreeLossFit is on), BP_FREE_LOSS_MAX_LOG_LOSS,
 BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
 parallel objective is controlled by BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE
 (default 1); BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y can override its
@@ -69,8 +69,10 @@ endpoints are saved in one flat-tuple row, and the optional backward endpoints
 share `FreeLossBackwardFilter`.
 This is an objective-only ECAL constraint, not an ECAL Kalman measurement or a
 fully joint trajectory/cluster fit. It is experimental: misassociated neutral
-clusters can substantially worsen momentum. Keep the option off for baseline
-production. When enabled and applicable, only the saved
+clusters can substantially worsen momentum. The maintained study card now
+enables this comparison by default, but this is not physics validation or a
+recommendation for production. Set `BP_FREE_LOSS_ECAL=0` for the tracker-only
+control. When enabled and applicable, only the saved
 `free_loss_ecal_likelihood_*` NLL includes the ECAL term;
 `free_loss_likelihood_*` remains tracker-only.
 

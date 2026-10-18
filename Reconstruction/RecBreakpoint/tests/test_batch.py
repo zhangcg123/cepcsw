@@ -221,7 +221,7 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertFalse(fit.FreeLossEcal)
+        self.assertTrue(fit.FreeLossEcal)
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
         self.assertEqual(fit.FreeLossTolerance, .001)
@@ -245,6 +245,13 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ, disabled['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertFalse(fit.FreeLossFit)
+        self.assertFalse(fit.FreeLossEcal)
+        self.prepare(OUTPUT_TUPLEPATH='ecal_disabled', BP_FREE_LOSS_ECAL='false')
+        ecal_disabled = self.manifest('ecal_disabled')
+        with patch.dict(os.environ, ecal_disabled['controls'], clear=True):
+            exec(assignments, {'fit':fit, 'os':os})
+        self.assertTrue(fit.FreeLossFit)
+        self.assertFalse(fit.FreeLossEcal)
         with self.assertRaises(ValueError):
             self.prepare(OUTPUT_TUPLEPATH='free_invalid', BP_FREE_LOSS_FIT='maybe')
 

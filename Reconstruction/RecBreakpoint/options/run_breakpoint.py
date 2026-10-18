@@ -163,10 +163,10 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
-# Optional second free-loss pair using neutral-ECAL energy (one interval).
-# The tracker-only FreeLoss pair is always retained. Off or no accepted
-# hit-supported neutral cluster copies it into the ECAL pair.
-fit.FreeLossEcal = os.environ.get("BP_FREE_LOSS_ECAL", "0") == "1"
+# Parallel free-loss pair using neutral-ECAL energy (one interval). The
+# tracker-only pair remains available; BP_FREE_LOSS_ECAL=0 disables this fit.
+# No accepted hit-supported neutral cluster gives an exact free-loss copy.
+fit.FreeLossEcal = os.environ.get("BP_FREE_LOSS_ECAL", "1" if fit.FreeLossFit else "0") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))

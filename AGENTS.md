@@ -313,14 +313,16 @@ manifest as an uncommitted analysis artifact.
 ## 2. Current focus
 
 Active work on local `breakpoint` is the optional ECAL-guided free-loss fit.
-`FreeLossEcal` is installed and default-off. It adds accepted hit-supported
+`FreeLossEcal` is installed and default-on in the maintained breakpoint card
+(compiled default off). It adds accepted hit-supported
 neutral energy in a parallel Persistent6D scalar free-loss search for one
 selected breakpoint; it does not add an ECAL Kalman hit. Tracker-only
 `free_loss_*` endpoints remain in the same tuple, while `free_loss_ecal_*`
 holds the ECAL-guided pair or a tracker-only copy when ineligible. The on/off
 no-neutral fallback and one focused ECAL recovery reproduce the isolated prototype.
-Selected neutral misassociations can cause severe momentum overshoots, so no
-physics-validation claim or default-on change is justified. Mechanics and
+Selected neutral misassociations can cause severe momentum overshoots, so the
+default-on study steering is not a physics-validation claim. All backward
+filters remain default-off. Mechanics and
 tests are in `agents_record/2026-10-19-free-loss-ecal-promotion.md`.
 
 Next: evaluate association quality and held-out categorized performance before

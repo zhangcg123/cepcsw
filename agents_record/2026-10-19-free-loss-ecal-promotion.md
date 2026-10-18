@@ -38,6 +38,22 @@ row-aligned indices are present: 30.0216997 versus 28.1084829 GeV, indices
 0/0 for the focused event. The corrected build and installation were
 revalidated after these changes.
 
+## Maintained-card steering decision
+
+The user subsequently chose `FreeLossEcal=True` as the maintained breakpoint
+run-card default, while keeping all four backward filters off. The compiled
+`FreeLossEcal` default remains false because the compiled `FreeLossFit`
+default is false and the ECAL option requires it; the maintained card enables
+both. If `BP_FREE_LOSS_FIT=0`, the card defaults the ECAL option to off as
+well. `BP_FREE_LOSS_ECAL=0` explicitly restores the tracker-only control.
+Previously generated batch cards retain their frozen steering. This changes
+which experimental outputs are produced by a new run, not the evidence or
+physics-validation status above.
+The maintained-card default was exercised on seed 35 event 4 without an
+ECAL-switch or backward-filter override: tracker-only pT 30.0358994 GeV,
+ECAL-guided pT 28.121797 GeV, ECAL result status 2, all four backward flags
+zero, and both free-loss backward indices -1. All 39 batch-helper tests pass.
+
 Mechanical checks: RecBreakpoint built and installed in
 `InstallArea/x86_64-el9-gcc11-opt`; installed and build plugin SHA256 hashes
 agree. RecBreakpointLikelihood and RecBreakpointNeutralLossCandidate CTests
