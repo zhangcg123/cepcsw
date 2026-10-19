@@ -233,6 +233,8 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   std::vector<TMatrixD> predictedMean{seed.predicted.mean}, predictedCov{seed.predicted.covariance};
   std::vector<TMatrixD> filteredMean{seed.filtered.mean}, filteredCov{seed.filtered.covariance};
   std::vector<TMatrixD> transports, noises;
+  std::vector<int> hitNodes{0}, nodeHits{0};
+  int neutralNode = -1;
   LossTrackState live;
   double closure = 0;
   for (int i = 0; i + 1 < static_cast<int>(hits.size()); ++i) {
@@ -246,12 +248,35 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
       predictedMean.push_back(step.predicted.mean); predictedCov.push_back(step.predicted.covariance);
       filteredMean.push_back(step.filtered.mean); filteredCov.push_back(step.filtered.covariance);
       transports.push_back(step.transport); noises.push_back(step.noise);
+      hitNodes.push_back(filteredMean.size() - 1); nodeHits.push_back(i + 1);
       continue;
     }
     const bool birth = i == interval;
     if (birth) live = LossTrackState::introduce(result.filtered.back(),
         priorMean, priorSigma * priorSigma);
-    const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1], birth);
+    if (birth && settings.neutralEcalEnergy) {
+      // Put the photon observation at the loss, before further material transport.
+      TMatrixD mapping(6, 6);
+      const auto mapped = applyBreakpointLoss(live, mapping);
+      result.neutralEcal = updateNeutralEnergy(mapped, settings.neutralEcalEnergy->first,
+                                              settings.neutralEcalEnergy->second);
+      TMatrixD transport(6, 5), lossColumn(6, 1);
+      for (int row = 0; row < 6; ++row) {
+        lossColumn(row, 0) = mapping(row, 5);
+        for (int col = 0; col < 5; ++col) transport(row, col) = mapping(row, col);
+      }
+      transports.push_back(transport);
+      noises.push_back(priorSigma * priorSigma * lossColumn * transpose(lossColumn));
+      predictedMean.push_back(mapped.mean); predictedCov.push_back(mapped.covariance);
+      live = result.neutralEcal->filtered;
+      filteredMean.push_back(live.mean); filteredCov.push_back(live.covariance);
+      neutralNode = filteredMean.size() - 1;
+      nodeHits.push_back(-1);
+      result.chi2 += result.neutralEcal->chi2;
+      ++result.measurementDimensions;
+    }
+    const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1],
+                                                 birth && !settings.neutralEcalEnergy);
     live = step.filtered; // Entire six-dimensional posterior is the next input.
     result.predicted.push_back(step.predicted.track());
     result.filtered.push_back(step.filtered.track());
@@ -260,12 +285,14 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     result.measurementDimensions += step.dimension;
     predictedMean.push_back(step.predicted.mean); predictedCov.push_back(step.predicted.covariance);
     filteredMean.push_back(step.filtered.mean); filteredCov.push_back(step.filtered.covariance);
+    hitNodes.push_back(filteredMean.size() - 1); nodeHits.push_back(i + 1);
+    if (birth && result.neutralEcal) result.localChi2.back() += result.neutralEcal->chi2;
     result.persistentHits.push_back(i + 1);
     result.persistentPredicted.push_back(step.predicted);
     result.persistentFiltered.push_back(step.filtered);
     result.persistentTransport.push_back(step.transport);
     result.persistentNoise.push_back(step.noise);
-    if (birth) {
+    if (birth && !settings.neutralEcalEnergy) {
       TMatrixD transport(6, 5), lossColumn(6, 1);
       for (int row = 0; row < 6; ++row) {
         lossColumn(row, 0) = step.transport(row, 5);
@@ -277,7 +304,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     } else {
       transports.push_back(step.transport); noises.push_back(step.noise);
     }
-    const TMatrixD reconstructed = transports.back() * filteredCov[i]
+    const TMatrixD reconstructed = transports.back() * filteredCov[filteredCov.size() - 2]
         * transpose(transports.back()) + noises.back();
     for (int row = 0; row < 6; ++row)
       for (int col = 0; col < 6; ++col)
@@ -394,7 +421,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     smoothedMean.back() = terminalSmoothed->mean;
     smoothedCov.back() = terminalSmoothed->covariance;
   }
-  for (int i = static_cast<int>(hits.size()) - 2; i >= 0; --i) {
+  for (int i = static_cast<int>(filteredMean.size()) - 2; i >= 0; --i) {
     const auto& f = transports[i];
     const TMatrixD gain = filteredCov[i] * transpose(f) * inverseCovariance(predictedCov[i + 1]);
     smoothedMean[i] = filteredMean[i] + gain * stateDifference(smoothedMean[i + 1], predictedMean[i + 1]);
@@ -406,16 +433,17 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     validateCovariance(smoothedCov[i]);
   }
   for (std::size_t i = 0; i < hits.size(); ++i) {
+    const int node = hitNodes[i];
     TrackState track = result.filtered[i];
     for (int row = 0; row < 5; ++row) {
-      track.mean(row, 0) = smoothedMean[i](row, 0);
-      for (int col = 0; col < 5; ++col) track.covariance(row, col) = smoothedCov[i](row, col);
+      track.mean(row, 0) = smoothedMean[node](row, 0);
+      for (int col = 0; col < 5; ++col) track.covariance(row, col) = smoothedCov[node](row, col);
     }
     result.smoothed.push_back(track);
     if (static_cast<int>(i) > interval) {
       LossTrackState joint;
       joint.pivot = track.pivot;
-      joint.mean = smoothedMean[i]; joint.covariance = smoothedCov[i];
+      joint.mean = smoothedMean[node]; joint.covariance = smoothedCov[node];
       result.persistentSmoothed.push_back(joint);
     }
   }
@@ -425,18 +453,25 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
       smoothedCov.back()(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
   result.endpoint = result.smoothed;
   result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
+  if (result.neutralEcal) {
+    auto smoothed = result.neutralEcal->filtered;
+    smoothed.mean = smoothedMean[neutralNode]; smoothed.covariance = smoothedCov[neutralNode];
+    assignSmoothedNeutralEnergy(*result.neutralEcal, smoothed);
+  }
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
-                result.predicted);
+                result.predicted,hitNodes);
   result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
   if (settings.captureGaussianModel) {
     try {
       auto model = std::make_shared<GaussianTrackModel>();
       model->seedCovariance.ResizeTo(predictedCov.front());
       model->seedCovariance = predictedCov.front();
-      for (std::size_t i = 0; i < hits.size(); ++i) {
-        auto hitModel = m_adapter.gaussianHitModel(hits[i], result.predicted[i]);
+      for (std::size_t i = 0; i < nodeHits.size(); ++i) {
+        const int hit = nodeHits[i];
+        auto hitModel = hit < 0 ? result.neutralEcal->observation
+            : m_adapter.gaussianHitModel(hits[hit], result.predicted[hit]);
         const int dimensions = predictedMean[i].GetNrows();
-        if (dimensions == 6) {
+        if (dimensions == 6 && hit >= 0) {
           TMatrixD derivative(hitModel.derivative.GetNrows(), dimensions);
           derivative.Zero();
           for (int row = 0; row < derivative.GetNrows(); ++row)
@@ -651,7 +686,8 @@ BreakpointFitter::fitDiffuseRTS(const std::vector<edm4hep::TrackerHit> &hits,
 void BreakpointFitter::scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits,
     FitResult& result, const std::vector<TMatrixD>& predictedMeans,
     const std::vector<TMatrixD>& predictedCovs, const std::vector<TMatrixD>& smoothedMeans,
-    const std::vector<TMatrixD>& noises, const std::vector<TrackState>& references) const {
+    const std::vector<TMatrixD>& noises, const std::vector<TrackState>& references,
+    const std::vector<int>& hitNodes) const {
   const double nan=std::numeric_limits<double>::quiet_NaN();
   result.smoothedChi2.assign(hits.size(),nan);
   result.smoothedMeasurementChi2.assign(hits.size(),nan);
@@ -665,22 +701,26 @@ void BreakpointFitter::scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hit
     for (std::size_t i=0;i<hits.size();++i) {
       const auto measurement=m_adapter.measurementScore(hits[i],result.smoothed[i],references[i]);
       double process=0;
-      if (i) {
-        const TMatrixD delta=stateDifference(smoothedMeans[i],predictedMeans[i]);
-        const TMatrixD u=inverseCovariance(predictedCovs[i])*delta;
+      const int first = i ? (hitNodes.empty() ? i : hitNodes[i-1]+1) : 1;
+      const int last = hitNodes.empty() ? i : hitNodes[i];
+      for (int node=first;node<=last;++node) {
+        const TMatrixD delta=stateDifference(smoothedMeans[node],predictedMeans[node]);
+        const TMatrixD u=inverseCovariance(predictedCovs[node])*delta;
         // At the RTS mean, w=Q*u, hence w^T Q^+ w = u^T Q u.
         // This exact conditional identity avoids inverting singular MS noise
         // or adding artificial noise to the static loss coordinate. Birth Q
         // contains its independent prior ONCE, also for rectangular 5->6 edges.
-        process=(transpose(u)*noises[i-1]*u)(0,0);
-        if (!std::isfinite(process) || process < -1.e-8)
+        const double penalty=(transpose(u)*noises[node-1]*u)(0,0);
+        if (!std::isfinite(penalty) || penalty < -1.e-8)
           throw std::runtime_error("Invalid smoothed process penalty");
-        process=std::max(0.,process);
+        process+=std::max(0.,penalty);
       }
-      result.smoothedMeasurementChi2[i]=measurement.affine;
+      const double neutral = result.neutralEcal && i == static_cast<std::size_t>(result.breakpoints.front().index+1)
+          ? result.neutralEcal->smoothedChi2 : 0.;
+      result.smoothedMeasurementChi2[i]=measurement.affine+neutral;
       result.smoothedNativeMeasurementChi2[i]=measurement.native;
       result.smoothedProcessChi2[i]=process;
-      result.smoothedChi2[i]=measurement.affine+process+(i==0 ? result.smoothedSeedChi2 : 0.);
+      result.smoothedChi2[i]=measurement.affine+neutral+process+(i==0 ? result.smoothedSeedChi2 : 0.);
       total+=result.smoothedChi2[i];
     }
     if (!std::isfinite(total) || total<0) throw std::runtime_error("Invalid complete smoothed chi2");

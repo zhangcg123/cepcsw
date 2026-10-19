@@ -70,13 +70,14 @@ and `BreakpointTracksBeamGuidedFreeLossBackwardFilter` pair optimizes an
 additional beam-origin likelihood while using the same detector-hit KF/RTS
 refit. `FreeLossBeamSpotObjective` controls it; when disabled it copies the
 base free-loss result. `BreakpointTracksDiffuseAugmentedRTS` is an independent
-exact-diffuse study controlled by `DiffuseAugmentedRTS`. Neutral-cluster
-constrained refits were retired; their historical designs and results remain
-in `agents_record/`.
+exact-diffuse study controlled by `DiffuseAugmentedRTS`. The old neutral
+penalty-only and absolute-prior refitters remain retired. The new optional
+`FreeLossNeutralEcalMeasurement` uses an actual scalar KF update and writes
+`BreakpointTracksNeutralFreeLossRTS` alongside the unchanged base free-loss result.
 
 The main `breakpoint` tree saves neutral-cluster selection for its own input
-track, even with no selected breakpoint or a failed tracking fit. This is
-diagnostic only: no neutral energy is passed to any breakpoint refit.
+track, even with no selected breakpoint or a failed tracking fit. These fields
+also supply the optional neutral-energy KF measurement; collection uses no truth.
 
 | Track-row branch | Meaning |
 |---|---|
@@ -98,7 +99,7 @@ hits, finite positive energy and valid position qualify; a cluster is counted
 once within a track. Different tracks may independently select the same cluster
 when their windows overlap: this is not exclusive event-wide ownership.
 The per-event `neutral_pfos` tree remains separate and is unchanged.
-All ten names must differ
+All track-output names must differ
 from each other and the input. Each successful result contains IP, first-hit,
 last-hit, and, when native extrapolation succeeds, ECAL-face (`AtCalorimeter`)
 states and the original ordered hits. The ECAL-face state starts from that
@@ -129,7 +130,7 @@ For an EDM endpoint with curvature `omega` and packed covariance element
 covariance yields NaN. The removed `backward_mode` branch no
 longer misleadingly labels a row that now contains both results.
 
-The calorimeter state is saved in the flat tuple for the input KF and all nine
+The calorimeter state is saved in the flat tuple for the input KF and the original nine
 endpoint families, using prefixes `kf_`, `rts_`, `backward_`,
 `free_loss_rts_`, `free_loss_backward_`, `beam_guided_free_loss_rts_`,
 `beam_guided_free_loss_backward_`, `truth_override_rts_`,
@@ -144,7 +145,81 @@ output, and -1 means the state was unavailable or extrapolation failed.
 and the same curvature formula. It does not include any extra uncertainty
 from the calorimeter shower. Unavailable numerical fields are NaN/empty. The default card writes only
 the flat tuple; add the optional `PodioOutput` from the card to serialize the
-nine EDM track collections themselves.
+EDM track collections themselves. The neutral-measurement RTS additionally has
+the same IP/error, per-hit score/state and ECAL-state fields with prefix
+`neutral_free_loss_` (ECAL fields: `neutral_free_loss_rts_calo_*`).
+
+## Neutral-energy KF measurement in free-loss RTS
+
+`FreeLossNeutralEcalMeasurement=false` is the compiled/card default. Enable with
+`BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT=1`; it requires `FreeLossFit=true`.
+The existing charged switch is independent: both observations can be enabled.
+The beam-guided and other fits are unchanged. No extra backward filter is run.
+Native MarlinTrk tracker-hit updates remain unchanged; this new scalar helper
+is needed because its observation depends on the package's sixth loss coordinate.
+
+For each trial of the loss-prior center, the shared Persistent6D fitter:
+
+1. Introduces `b=log(p_before/p_after)` with the existing `SigmaLogLoss` and
+   applies the existing loss mapping at the selected breakpoint.
+2. At that same position, after the loss but **before** propagation through
+   any further material, inserts a scalar neutral-energy measurement site.
+3. Updates the full six-dimensional mean/covariance, then continues all native
+   tracker updates. If requested, the charged-energy ECAL-face update follows.
+4. Smooths back through every site, including the neutral site. The cluster's
+   measured energy/error remain fixed; the fitted photon-energy estimate changes.
+
+In KalTest coordinates `(drho, phi0, kappa, dz, tanLambda, b)`, with
+`kappa=charge/pT` in GeV^-1, the predicted neutral energy and nonzero derivatives
+are (neglecting electron mass):
+
+```text
+p_after = sqrt(1 + tanLambda^2) / abs(kappa)
+h       = p_after * (exp(b) - 1)
+H[kappa]     = -h/kappa
+H[tanLambda] = h*tanLambda/(1 + tanLambda^2)
+H[b]         = p_after*exp(b)
+r = measured_E - h;  R = measured_sigma_E^2
+S = H*P*H^T + R;     K = P*H^T/S
+x_updated = x_predicted + K*r
+P_updated = (I-K*H)*P*(I-K*H)^T + K*R*K^T
+```
+
+The measurement is the sum of collected hit-supported neutral ECAL energies.
+For each cluster `sigma_E = 0.011*sqrt(E) + 0.004*E` in GeV by default;
+independent cluster variances add. Synthetic/no-hit clusters are excluded.
+The shared full-track Gaussian likelihood includes this scalar observation
+exactly once, with its covariance determinant and normalization. No additional
+neutral penalty or independently derived Gaussian prior on b is added.
+The prior-center optimizer still retains the configured `SigmaLogLoss`.
+
+`neutral_free_loss_measurement_status` and EDM `BreakpointNeutralFreeLossStatus`:
+0 disabled; 1 no usable neutral; 2 successfully applied; 3 no selected breakpoint;
+-1 optimization failure. Except for status 2, the output copies the chosen base
+free-loss RTS, including its charged constraint if enabled (and its KF fallback
+if necessary). No extra neutral fit or minimization runs on the disabled,
+no-neutral or no-breakpoint paths. `BreakpointNeutralFreeLossRTSIndex` maps the
+input track to output.
+
+The new `neutral_free_loss_*` branches include optimizer diagnostics, normalized
+likelihood, complete per-hit chi2 breakdown, IP and calorimeter pT/errors.
+`neutral_free_loss_neutral_ecal_*` retains measured/predicted/filtered/smoothed
+photon energy/error, innovation variance/chi2, all three six-dimensional states
+and covariances. `smoothed_affine_energy` and `smoothed_chi2` use the frozen
+measurement Jacobian for the complete Gaussian score; `smoothed_energy` uses
+the nonlinear energy formula at the final state. The measurement term and birth
+process penalty of the virtual site are grouped with receiving tracker hit i+1
+in the per-hit chi2 lists; native tracker-only residuals remain separate.
+
+This is an experimental constraint, not evidence of better resolution. All
+selected neutral energy is assigned to the one selected loss: contamination,
+multiple emissions and wrong interval association can bias it. Charged/neutral
+energy errors are currently treated as independent despite possible shared
+calorimeter reconstruction/calibration correlations.
+Trials whose neutral update or smoothed neutral state crosses zero curvature
+relative to its prediction are rejected: the energy Jacobian cannot be used
+across that momentum pole. The affine and nonlinear photon estimates can still
+differ substantially without crossing it; both are saved to expose this limit.
 
 ## Loss state and interval ownership
 
@@ -552,6 +627,7 @@ maintained card, but not physics-validated.
 | OutputTracks | BreakpointTracksRTS | RTS collection |
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Optional inward-filter collection; empty when disabled |
 | OutputTracksFreeLossRTS | BreakpointTracksFreeLossRTS | Optimized RTS, or exact ordinary RTS copy |
+| OutputTracksNeutralFreeLossRTS | BreakpointTracksNeutralFreeLossRTS | Separate neutral-energy KF-measurement RTS; selected base free-loss copy if disabled, unavailable or failed |
 | OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optional optimized backward filter; empty when disabled |
 | OutputTracksBeamGuidedFreeLossRTS | BreakpointTracksBeamGuidedFreeLossRTS | Beam-objective free-loss RTS; base free-loss copy when disabled, input KF fallback on optimizer failure |
 | OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Optional beam-objective backward endpoint; empty when disabled |
@@ -573,6 +649,7 @@ maintained card, but not physics-validated.
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
 | FreeLossChargedEcalMeasurement | false | Card default false; explicit ECAL-face energy-only KF update and terminal RTS edge in the tracker-only free-loss Persistent6D fit when one linked charged PFO has hit-supported ECAL energy; does not use cluster position |
+| FreeLossNeutralEcalMeasurement | false | Card default false; post-loss scalar neutral-energy KF update in a parallel free-loss RTS fit, retaining track/loss correlations; may combine with charged ECAL |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |

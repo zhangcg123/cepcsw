@@ -312,18 +312,23 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is simplifying its fit surface. The two
-neutral-cluster-constrained refitters (`FreeLossEcal` and the absolute-loss
-RTS) have been retired. Track-wise neutral-cluster fields and the event-wise
-`neutral_pfos` tree remain for diagnostics only; they do not steer a fit.
-The optional charged-ECAL terminal Kalman measurement remains default-off,
-and all backward filters remain default-off. The ordinary, free-loss,
-beam-guided, diffuse, and truth-prior approaches remain available.
+Active work on local `breakpoint` is the optional neutral-energy KF measurement
+in free-loss Persistent6D RTS. `FreeLossNeutralEcalMeasurement` defaults OFF
+and publishes `BreakpointTracksNeutralFreeLossRTS` / `neutral_free_loss_*`
+alongside the unchanged selected base free-loss result. The measured scalar
+energy updates the joint track/loss state at a virtual post-loss site, before
+further material propagation; RTS includes that site. It may combine with the
+default-OFF charged-ECAL terminal measurement. No usable neutral, no selected
+breakpoint or failed optimization copies the selected base result. All backward
+filters remain default OFF; no neutral backward workflow was added. The old
+neutral-penalty-only and absolute-prior refitters remain retired.
 
-The installed plugin passes a one-event fitted-breakpoint smoke: ordinary,
-free-loss, diffuse and truth-assisted results remain active; new flat tuples
-omit retired neutral endpoints but retain neutral diagnostics. Next: examine
-charged-cluster independence and held-out clean/light/hard-loss performance
-before considering any ECAL default-on steering. The removal, outgoing
-focus, and checks are in
-`agents_record/2026-10-20-retired-neutral-breakpoint-constraints.md`.
+Seven numerical tests pass. On eight fixed seed-1 tracks, all 476 old flat
+branches reproduce exactly with neutral OFF and ON, for charged OFF and ON.
+Two tracks apply the new update; five copy for absent neutral/interval and one
+falls back after rejecting invalid zero-curvature-crossing trials. This is a
+mechanical gate, not physics validation. The saved affine and nonlinear photon
+energies can disagree significantly even in converged fits. Next: audit that
+linearization limit and cluster/interval ownership, then use held-out categorized
+barrel/endcap comparisons before any default-on decision. Details and preserved
+outgoing focus: `agents_record/2026-10-20-neutral-energy-kf-measurement.md`.

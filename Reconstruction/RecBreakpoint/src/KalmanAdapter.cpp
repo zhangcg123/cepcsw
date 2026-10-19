@@ -342,14 +342,7 @@ LossMeasurementStep KalmanAdapter::predictPersistent(const LossTrackState& sourc
   TMatrixD lossMap(6, 6);
   lossMap.UnitMatrix();
   if (applyLoss) {
-    const double kappa = source.mean(2, 0);
-    if (!std::isfinite(kappa) || kappa == 0)
-      throw std::runtime_error("Invalid curvature at persistent breakpoint");
-    const double scale = std::exp(source.mean(5, 0));
-    mapped.mean(2, 0) *= scale;
-    lossMap(2, 2) = scale;
-    lossMap(2, 5) = mapped.mean(2, 0);
-    mapped.covariance = lossMap * source.covariance * transpose(lossMap);
+    mapped = applyBreakpointLoss(source, lossMap);
   }
   // Reuse native material/geometric propagation WITHOUT its 5D measurement
   // update. The actual live hit update below is six-dimensional.

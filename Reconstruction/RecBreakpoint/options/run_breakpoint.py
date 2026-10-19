@@ -54,6 +54,7 @@ fit.InputTracks = "CompleteTracks"
 fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
 fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"
+fit.OutputTracksNeutralFreeLossRTS = "BreakpointTracksNeutralFreeLossRTS"
 fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter"
 fit.OutputTracksBeamGuidedFreeLossRTS = "BreakpointTracksBeamGuidedFreeLossRTS"
 fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFreeLossBackwardFilter"
@@ -118,7 +119,7 @@ fit.LossStateMode = "Persistent6D"
 # Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
 fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
-# Retain neutral-cluster collection and uncertainties for diagnostics only.
+# Reconstructed hit-supported neutral collection, also used by the optional KF measurement.
 fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "10"))
 fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"))
 # Per-cluster sigma_E [GeV] = a*sqrt(E [GeV]) + c*E [GeV]; independent cluster
@@ -149,6 +150,14 @@ fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 # constrains energy (not position) before free-loss RTS smoothing. Default OFF.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.FreeLossChargedEcalMeasurement = os.environ.get("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "0") == "1"
+# Separate RTS result; the base free-loss output stays unchanged. Uses the
+# collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
+# at the breakpoint, updating all six coordinates and their correlations.
+# May be combined with charged ECAL above. Off/no usable neutral/no selected
+# breakpoint/failed neutral fit copies the selected base (including charged ECAL).
+# No neutral backward fit is run. The measured cluster energy is never changed;
+# fitted and smoothed photon-energy estimates are recorded separately.
+fit.FreeLossNeutralEcalMeasurement = os.environ.get("BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
 fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))
 fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", "0.004"))
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b

@@ -15,6 +15,7 @@ struct FreeLossSettings {
   double tolerance = .001;
   std::optional<BeamSpotSettings> beamSpot; // objective only; never a KF hit
   std::optional<std::pair<double, double>> chargedEcalEnergy; // terminal 6D KF observation [GeV]
+  std::optional<std::pair<double, double>> neutralEcalEnergy; // post-loss 6D KF observation [GeV]
 };
 
 enum class FreeLossStatus { NotAttempted = 0, NoInterval = 1, Applied = 2,
@@ -36,6 +37,7 @@ struct FreeLossTrial {
 };
 
 struct FreeLossDiagnostics {
+  std::optional<NeutralEnergyMeasurement> neutralEcal;
   FreeLossStatus status = FreeLossStatus::NotAttempted;
   int interval = -1;
   int minuitStatus = -99; // sentinel: no accepted converged minimum

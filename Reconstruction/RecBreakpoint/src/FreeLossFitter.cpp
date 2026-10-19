@@ -39,6 +39,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     auto settings = ordinary;
     settings.intervalMeanLogLoss.clear();
     settings.chargedEcalEnergy = controls.chargedEcalEnergy;
+    settings.neutralEcalEnergy = controls.neutralEcalEnergy;
     settings.captureGaussianModel = true;
     std::map<double, FreeLossTrial> cache; // scalar records only, never cached trajectories
     FreeLossTrialPhase phase = FreeLossTrialPhase::Scan;
@@ -160,6 +161,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     settings.meanLogLoss = best.b;
     settings.captureGaussianModel = false;
     result.fitted.emplace(m_fitter.fit(hits, settings, runBackward));
+    diagnostic.neutralEcal = result.fitted->rts.neutralEcal;
     if (!std::isfinite(result.fitted->rts.ip.omega) || result.fitted->rts.ip.omega == 0 ||
         (result.fitted->backward &&
          (!std::isfinite(result.fitted->backward->ip.omega) || result.fitted->backward->ip.omega == 0)))

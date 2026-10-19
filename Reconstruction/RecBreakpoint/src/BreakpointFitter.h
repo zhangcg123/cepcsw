@@ -2,6 +2,7 @@
 #define RECBREAKPOINT_FITTER_H
 
 #include "KalmanAdapter.h"
+#include "NeutralEnergyMeasurement.h"
 #include <vector>
 #include <map>
 #include <optional>
@@ -17,6 +18,7 @@ struct FitSettings {
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
   std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; free-loss RTS only
+  std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
 };
@@ -49,6 +51,7 @@ struct FitResult {
   double chargedEcalInnovationVariance = 0, chargedEcalChi2 = 0;
   double chargedEcalPostfitChi2 = 0;
   std::optional<LossTrackState> chargedEcalFiltered;
+  std::optional<NeutralEnergyMeasurement> neutralEcal;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;
   std::vector<int> persistentPredictedDiffuse, persistentFilteredDiffuse;
@@ -83,7 +86,8 @@ private:
   void scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits, FitResult& result,
       const std::vector<TMatrixD>& predictedMeans, const std::vector<TMatrixD>& predictedCovs,
       const std::vector<TMatrixD>& smoothedMeans, const std::vector<TMatrixD>& noises,
-      const std::vector<TrackState>& measurementReferences) const;
+      const std::vector<TrackState>& measurementReferences,
+      const std::vector<int>& hitNodes = {}) const;
   FitResult finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
       const FitSettings& settings, FitResult result) const;
   const KalmanAdapter& m_adapter;

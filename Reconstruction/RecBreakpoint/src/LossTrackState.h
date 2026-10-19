@@ -2,6 +2,8 @@
 #define RECBREAKPOINT_LOSSTRACKSTATE_H
 
 #include "TrackState.h"
+#include <cmath>
+#include <stdexcept>
 
 namespace breakpoint {
 /// Live six-dimensional state. Coordinate 5 always names the SAME breakpoint,
@@ -41,5 +43,21 @@ struct LossMeasurementStep {
   double chi2 = 0;
   int dimension = 0;
 };
+
+/// Outward loss at the owning surface, before geometric propagation.
+inline LossTrackState applyBreakpointLoss(const LossTrackState& source, TMatrixD& jacobian) {
+  const double kappa = source.mean(2, 0);
+  if (!std::isfinite(kappa) || kappa == 0)
+    throw std::runtime_error("Invalid curvature at persistent breakpoint");
+  LossTrackState mapped = source;
+  jacobian.ResizeTo(6, 6);
+  jacobian.UnitMatrix();
+  const double scale = std::exp(source.mean(5, 0));
+  mapped.mean(2, 0) *= scale;
+  jacobian(2, 2) = scale;
+  jacobian(2, 5) = mapped.mean(2, 0);
+  mapped.covariance = jacobian * source.covariance * transpose(jacobian);
+  return mapped;
+}
 } // namespace breakpoint
 #endif

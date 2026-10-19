@@ -238,6 +238,15 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ, charged['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossChargedEcalMeasurement)
+        self.prepare(OUTPUT_TUPLEPATH='neutral_ecal_enabled',
+                     BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT='true',
+                     BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT='true')
+        neutral = self.manifest('neutral_ecal_enabled')
+        self.assertEqual(neutral['controls']['BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT'], '1')
+        with patch.dict(os.environ, neutral['controls'], clear=True):
+            exec(assignments, {'fit':fit, 'os':os})
+        self.assertTrue(fit.FreeLossNeutralEcalMeasurement)
+        self.assertTrue(fit.FreeLossChargedEcalMeasurement)
         with self.assertRaises(ValueError):
             self.prepare(OUTPUT_TUPLEPATH='free_invalid', BP_FREE_LOSS_FIT='maybe')
 

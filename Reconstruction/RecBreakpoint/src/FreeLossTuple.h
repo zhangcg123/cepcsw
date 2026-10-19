@@ -26,6 +26,9 @@ private:
   double m_beamResidual = 0, m_beamVariance = 0, m_beamTrackVariance = 0, m_beamSpotVariance = 0;
   double m_chargedEcalPredicted = 0, m_chargedEcalResidual = 0;
   double m_chargedEcalVariance = 0, m_chargedEcalChi2 = 0;
+  NeutralEnergyMeasurement m_neutral;
+  std::vector<double> m_neutralPredictedState, m_neutralFilteredState, m_neutralSmoothedState;
+  std::vector<double> m_neutralPredictedCov, m_neutralFilteredCov, m_neutralSmoothedCov;
   std::string m_error;
   std::vector<double> m_trialB, m_trialNll2, m_trialObjectiveNll2, m_trialBeamNll2;
   std::vector<int> m_trialValid, m_trialPhase;

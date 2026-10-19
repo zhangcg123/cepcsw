@@ -37,6 +37,25 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("charged_ecal_residual", &m_chargedEcalResidual);
   branch("charged_ecal_innovation_variance", &m_chargedEcalVariance);
   branch("charged_ecal_chi2", &m_chargedEcalChi2);
+  branch("neutral_ecal_energy", &m_neutral.energy);
+  branch("neutral_ecal_energy_error", &m_neutral.sigma);
+  branch("neutral_ecal_predicted_energy", &m_neutral.predictedEnergy);
+  branch("neutral_ecal_predicted_error", &m_neutral.predictedError);
+  branch("neutral_ecal_filtered_energy", &m_neutral.filteredEnergy);
+  branch("neutral_ecal_filtered_error", &m_neutral.filteredError);
+  branch("neutral_ecal_smoothed_energy", &m_neutral.smoothedEnergy);
+  branch("neutral_ecal_smoothed_error", &m_neutral.smoothedError);
+  branch("neutral_ecal_smoothed_affine_energy", &m_neutral.smoothedAffineEnergy);
+  branch("neutral_ecal_residual", &m_neutral.residual);
+  branch("neutral_ecal_innovation_variance", &m_neutral.innovationVariance);
+  branch("neutral_ecal_chi2", &m_neutral.chi2);
+  branch("neutral_ecal_smoothed_chi2", &m_neutral.smoothedChi2);
+  branch("neutral_ecal_predicted_state", &m_neutralPredictedState);
+  branch("neutral_ecal_filtered_state", &m_neutralFilteredState);
+  branch("neutral_ecal_smoothed_state", &m_neutralSmoothedState);
+  branch("neutral_ecal_predicted_covariance", &m_neutralPredictedCov);
+  branch("neutral_ecal_filtered_covariance", &m_neutralFilteredCov);
+  branch("neutral_ecal_smoothed_covariance", &m_neutralSmoothedCov);
   branch("lower_bound", &m_lower);
   branch("upper_bound", &m_upper);
   branch("covariance_conditional", &m_covarianceConditional);
@@ -63,6 +82,9 @@ void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls, double
   m_objectiveNll2 = m_beamNll2 = m_beamQuadratic = m_beamLogdet = nan;
   m_beamResidual = m_beamVariance = m_beamTrackVariance = m_beamSpotVariance = nan;
   m_chargedEcalPredicted = m_chargedEcalResidual = m_chargedEcalVariance = m_chargedEcalChi2 = nan;
+  m_neutral = NeutralEnergyMeasurement{};
+  m_neutralPredictedState.clear(); m_neutralFilteredState.clear(); m_neutralSmoothedState.clear();
+  m_neutralPredictedCov.clear(); m_neutralFilteredCov.clear(); m_neutralSmoothedCov.clear();
   m_error.clear();
   m_trialB.clear(); m_trialNll2.clear(); m_trialObjectiveNll2.clear(); m_trialBeamNll2.clear();
   m_trialValid.clear(); m_trialPhase.clear(); m_trialError.clear();
@@ -82,6 +104,18 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
   m_lower = diagnostic.lowerBound; m_upper = diagnostic.upperBound;
   m_error = diagnostic.error;
   if (m_applied) {
+    if (diagnostic.neutralEcal) {
+      m_neutral = *diagnostic.neutralEcal;
+      auto flatten = [](const TMatrixD& matrix, std::vector<double>& values) {
+        values.assign(matrix.GetMatrixArray(), matrix.GetMatrixArray() + matrix.GetNoElements());
+      };
+      flatten(m_neutral.predicted.mean, m_neutralPredictedState);
+      flatten(m_neutral.filtered.mean, m_neutralFilteredState);
+      flatten(m_neutral.smoothed.mean, m_neutralSmoothedState);
+      flatten(m_neutral.predicted.covariance, m_neutralPredictedCov);
+      flatten(m_neutral.filtered.covariance, m_neutralFilteredCov);
+      flatten(m_neutral.smoothed.covariance, m_neutralSmoothedCov);
+    }
     m_nll2 = diagnostic.likelihood.nll2;
     m_quadratic = diagnostic.likelihood.quadratic;
     m_logdet = diagnostic.likelihood.logDeterminant;

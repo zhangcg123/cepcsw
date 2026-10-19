@@ -52,6 +52,7 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_BEAM_FREE_LOSS_BACKWARD_FILTER', 'BP_TRUTH_BACKWARD_FILTER',
                'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT',
+               'BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT',
                'BP_CHARGED_ECAL_STOCHASTIC', 'BP_CHARGED_ECAL_CONSTANT',
                'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
                'BP_FREE_LOSS_TOLERANCE',
@@ -141,6 +142,7 @@ def prepare():
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
                 'BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT',
+                'BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT',
                 'BP_DIFFUSE_AUGMENTED_RTS',
                 'BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE', 'BP_ORDINARY_BACKWARD_FILTER',
                 'BP_FREE_LOSS_BACKWARD_FILTER', 'BP_BEAM_FREE_LOSS_BACKWARD_FILTER',
@@ -327,7 +329,8 @@ def verify(path, stage):
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
                      'truth_override_result_status', 'beam_guided_free_loss_rts_pt',
                      'beam_guided_free_loss_backward_pt', 'beam_guided_free_loss_result_status',
-                     'beam_guided_free_loss_objective_nll2'):
+                     'beam_guided_free_loss_objective_nll2', 'neutral_free_loss_rts_pt',
+                     'neutral_free_loss_measurement_status', 'neutral_free_loss_likelihood_nll2'):
             if not tree.GetBranch(name): raise RuntimeError('Missing flat branch: ' + name)
         for name in ('truth_pt', 'truth_match_status', 'truth_match_purity',
                      'charged_pfo_count', 'charged_ecal_cluster_count'):

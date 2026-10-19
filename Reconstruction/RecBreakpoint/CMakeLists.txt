@@ -24,7 +24,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             src/BreakpointFitter.cpp src/DiffuseLossState.cpp
             src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
-            src/NeutralLossCandidate.cpp
+            src/NeutralLossCandidate.cpp src/NeutralEnergyMeasurement.cpp
             src/TruthLayerOwnership.cpp src/TruthBreakpointOwnership.cpp src/TruthBreakpointTuple.cpp
             src/LikelihoodTuple.cpp src/BeamSpotLikelihood.cpp
             # Reuse the exact maintained relation-driven reader, without
@@ -84,5 +84,12 @@ if(BUILD_TESTING)
       ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
     target_link_libraries(RecBreakpointDiffuseTest PRIVATE ROOT::Matrix EDM4HEP::edm4hep)
     add_test(NAME RecBreakpointDiffuse COMMAND RecBreakpointDiffuseTest)
+    add_executable(RecBreakpointNeutralEnergyTest tests/NeutralEnergyTest.cpp
+      src/NeutralEnergyMeasurement.cpp src/TrackState.cpp)
+    target_compile_features(RecBreakpointNeutralEnergyTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointNeutralEnergyTest PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
+    target_link_libraries(RecBreakpointNeutralEnergyTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep)
+    add_test(NAME RecBreakpointNeutralEnergy COMMAND RecBreakpointNeutralEnergyTest)
   endif()
 endif()
