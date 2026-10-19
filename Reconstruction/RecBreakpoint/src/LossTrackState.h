@@ -4,8 +4,6 @@
 #include "TrackState.h"
 
 namespace breakpoint {
-enum class LossCoordinate { LogRatio, AbsoluteMomentum };
-
 /// Live six-dimensional state. Coordinate 5 always names the SAME breakpoint,
 /// not the material at the current pivot. The configured loss is applied only
 /// when this state first crosses its owning interval.

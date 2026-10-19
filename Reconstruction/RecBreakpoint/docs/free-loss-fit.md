@@ -12,7 +12,7 @@ Every trial and final refit uses the same BreakpointFitter. It does
 not discover intervals and does not change Truth/Manual selection. An empty
 interval list remains the 5D reference. Truth selection now chooses only the
 interval with the largest summed absolute G4 eBrem momentum loss, shared by all
-four pairs (equal losses choose the innermost interval). Other losses are not fitted.
+remaining pairs (equal losses choose the innermost interval). Other losses are not fitted.
 Manual multiple intervals report unsupported status. Unsupported
 or failed searches copy the INPUT CompleteTracks KF into both FreeLoss outputs.
 The ordinary and truth-prior pairs are unchanged by this fallback. This limitation matches the tested
@@ -22,8 +22,7 @@ scalar prototype; a simultaneous multiple-loss optimizer is not implemented.
 
 ```python
 fit.FreeLossFit = True
-fit.FreeLossEcal = True   # parallel ECAL-guided search in the maintained card
-fit.SigmaLogLoss = 0.001  # SAME prior width for all four fit pairs
+fit.SigmaLogLoss = 0.001  # SAME prior width for ordinary, free and truth fits
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
@@ -34,7 +33,7 @@ fit.BeamSpotSigmaY = 3.6e-5  # mm
 fit.BackwardSeedScale = 100.0
 ```
 
-The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_ECAL (default 1 when FreeLossFit is on), BP_FREE_LOSS_MAX_LOG_LOSS,
+The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_MAX_LOG_LOSS,
 BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
 parallel objective is controlled by BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE
 (default 1); BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y can override its
@@ -52,28 +51,6 @@ That uses the existing input/output/stage controls and does not change the
 GSF worker/cards. The script's selected loss sigma is used by ordinary,
 free-loss and truth-prior fits, including every optimizer trial and final refit.
 It does not modify an input KF copy used as a failure fallback.
-
-`FreeLossEcal=True` requires `FreeLossFit=True` and `Persistent6D`. It runs a
-second search while preserving the tracker-only `free_loss_*` endpoints. When
-exactly one breakpoint and an accepted hit-supported neutral ECAL cluster are
-present, that search adds an energy term to its scalar objective. At each
-trial's first smoothed post-break state, `E_pred = p_post (exp(b)-1)` and the
-energy variance is the collected neutral-energy variance plus the propagated
-6D state covariance. The term is the Gaussian squared pull plus log variance
-and normalization. The ordinary, diffuse, truth-prior, and separate beam-guided
-fits are unchanged. With the option off or no accepted cluster, the
-`free_loss_ecal_*` endpoints copy the base free-loss pair; a failed enabled
-fit uses the existing input-KF fallback only in the ECAL pair. Both RTS
-endpoints are saved in one flat-tuple row, and the optional backward endpoints
-share `FreeLossBackwardFilter`.
-This is an objective-only ECAL constraint, not an ECAL Kalman measurement or a
-fully joint trajectory/cluster fit. It is experimental: misassociated neutral
-clusters can substantially worsen momentum. The maintained study card now
-enables this comparison by default, but this is not physics validation or a
-recommendation for production. Set `BP_FREE_LOSS_ECAL=0` for the tracker-only
-control. When enabled and applicable, only the saved
-`free_loss_ecal_likelihood_*` NLL includes the ECAL term;
-`free_loss_likelihood_*` remains tracker-only.
 
 For one selected interval:
 
@@ -254,7 +231,7 @@ The existing names remain:
 
 TruthOverride has NOT been redefined as a fixed-loss oracle. Its prior center
 and the configured positive sigma still go through the existing fitter. With
-free fitting enabled, all four pairs use the SAME configured Gaussian width.
+free fitting enabled, the ordinary, free-loss and truth-prior pairs use the SAME configured Gaussian width.
 Their prior centers differ: configured MeanLogLoss, optimized mu, or truth b.
 Equal prior widths do not imply equal posterior covariances or loss estimates.
 When TruthOverride is off, the truth pair ALWAYS copies the ordinary pair,
@@ -318,15 +295,8 @@ The same values appear as `free_loss_result_status`, `free_loss_rts_index` and
 optimized pair,3 input KF fallback. This is separate from `free_loss_status`, which describes the
 optimizer request/outcome (off0, empty1, applied2, unsupported-1, failed-2).
 
-`BreakpointFreeLossEcalStatus`, `BreakpointFreeLossEcalRTSIndex`, and
-`BreakpointFreeLossEcalBackwardIndex` provide the same row-aligned contract
-for the parallel ECAL pair. `free_loss_ecal_result_status=1` means a copy of
-tracker-only free loss, 2 an applied ECAL-guided fit, and 3 input-KF fallback
-after an attempted ECAL fit failed. The ECAL optimizer's own status is stored
-separately as `free_loss_ecal_status`.
-
 The parallel `ordinary_likelihood_*`, `free_loss_likelihood_*`,
-`free_loss_ecal_likelihood_*`, and `truth_override_likelihood_*` branches
+and `truth_override_likelihood_*` branches
 contain the normalized
 `-2 log L = complete RTS chi2 + log det S_all + M log(2*pi)` for each RTS
 result. They save `status`, `nll2`, `quadratic`, `logdet`,
@@ -369,7 +339,7 @@ retain their fixed-b interpretation; do not relabel them.
 
 | Component | Responsibility |
 |---|---|
-| RecBreakpoint | Gaudi steering, fallback choice and common publication for all four pairs |
+| RecBreakpoint | Gaudi steering, fallback choice and common publication for the remaining pairs |
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
 | TrackLikelihood | Add joint-measurement normalization to the supplied complete RTS-smoothed chi2; retain independent marginal evaluation for regression |

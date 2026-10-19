@@ -25,52 +25,31 @@ class BatchTest(unittest.TestCase):
         card = Path(self.manifest()['cards']['breakpoint']).read_text()
         template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         assignments = '\n'.join(line for line in template.splitlines() if line.startswith(
-            ('fit.LossStateMode =', 'fit.EcalLossReferenceMode =', 'fit.DiffuseAugmentedRTS =')))
+            ('fit.LossStateMode =', 'fit.DiffuseAugmentedRTS =')))
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, {'BP_LOSS_STATE_MODE': 'Persistent6D',
-                                     'BP_ECAL_LOSS_REFERENCE_MODE': 'Off',
                                      'BP_DIFFUSE_AUGMENTED_RTS': '0'}, clear=True):
             exec(card[:-len(template)] + '\n' + assignments, {'fit': fit, 'os': os})
         expected = {'LossStateMode': 'Persistent6D',
-                    'EcalLossReferenceMode': 'PostReference', 'DiffuseAugmentedRTS': True}
+                    'DiffuseAugmentedRTS': True}
         header = (REPO/'Reconstruction/RecBreakpoint/src/RecBreakpoint.h').read_text()
         for name, value in expected.items():
             self.assertEqual(getattr(fit, name), value)
             literal = 'true' if value is True else '"' + value + '"'
             self.assertRegex(header, r'"' + name + r'",\s*' + re.escape(literal) + r'\}')
 
-    def test_ecal_reference_mode_is_frozen_for_each_variant(self):
-        for mode in (None, 'Off', 'NoReference', 'PreReference', 'PostReference'):
-            output = 'ecal_' + (mode or 'default')
-            expected = mode or 'PostReference'
-            overrides = {} if mode is None else {'BP_ECAL_LOSS_REFERENCE_MODE': mode}
-            self.prepare(OUTPUT_TUPLEPATH=output, **overrides)
-            job = self.manifest(output)
-            template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
-            frozen = Path(job['cards']['breakpoint']).read_text()
-            self.assertTrue(frozen.endswith(template))
-            prefix = frozen[:-len(template)]
-            assignment = next(line for line in template.splitlines()
-                              if line.startswith('fit.EcalLossReferenceMode ='))
-            fit = types.SimpleNamespace()
-            # Worker ambient steering must not change the submitted mode.
-            with patch.dict(os.environ, {'BP_ECAL_LOSS_REFERENCE_MODE': 'wrong-ambient-mode'}, clear=True):
-                exec(prefix + '\n' + assignment, {'fit': fit, 'os': os})
-            self.assertEqual(fit.EcalLossReferenceMode, expected)
-            if mode is not None:
-                self.assertEqual(job['controls']['BP_ECAL_LOSS_REFERENCE_MODE'], mode)
-
     def test_retired_ecal_controls_are_rejected_before_outputs(self):
         import runpy
         card = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
         for name in ('BP_ABSOLUTE_NEUTRAL_RTS', 'BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE',
-                     'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE'):
+                     'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE', 'BP_ECAL_LOSS_REFERENCE_MODE',
+                     'BP_FREE_LOSS_ECAL'):
             self.assertNotIn(name, batch.BP_CONTROLS)
-            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'use BP_ECAL_LOSS_REFERENCE_MODE'):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'neutral-cluster-constrained'):
                 self.prepare(**{name: '1'})
             self.assertFalse((self.repo/'outputs').exists())
             with patch.dict(os.environ, {name: '1'}, clear=True):
-                with self.assertRaisesRegex(ValueError, 'use BP_ECAL_LOSS_REFERENCE_MODE'):
+                with self.assertRaisesRegex(ValueError, 'neutral-cluster-constrained'):
                     runpy.run_path(str(card))
 
     def test_retired_loss_prior_control_rejected_before_preparing_jobs(self):
@@ -224,29 +203,25 @@ class BatchTest(unittest.TestCase):
         self.prepare(OUTPUT_TUPLEPATH='free_default')
         default = self.manifest('free_default')
         card = Path(default['cards']['breakpoint']).read_text()
-        self.assertIn('fit.OutputTracksFreeLossEcalRTS = "BreakpointTracksFreeLossEcalRTS"', card)
-        self.assertIn('fit.OutputTracksFreeLossEcalBackwardFilter = "BreakpointTracksFreeLossEcalBackwardFilter"', card)
+        self.assertNotIn('OutputTracksFreeLossEcal', card)
+        self.assertNotIn('OutputTracksAbsoluteNeutralRTS', card)
         assignments = '\n'.join(line for line in card.splitlines() if line.startswith('fit.FreeLoss'))
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, {}, clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertTrue(fit.FreeLossEcal)
         self.assertFalse(fit.FreeLossChargedEcalMeasurement)
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
         self.assertEqual(fit.FreeLossTolerance, .001)
         self.prepare(OUTPUT_TUPLEPATH='free_enabled', BP_FREE_LOSS_FIT='true',
-                     BP_FREE_LOSS_ECAL='true',
                      BP_FREE_LOSS_MAX_LOG_LOSS='.5',
                      BP_FREE_LOSS_MAX_CALLS='100', BP_FREE_LOSS_TOLERANCE='.002')
         job = self.manifest('free_enabled')
         self.assertEqual(job['controls']['BP_FREE_LOSS_FIT'], '1')
-        self.assertEqual(job['controls']['BP_FREE_LOSS_ECAL'], '1')
         with patch.dict(os.environ, job['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertTrue(fit.FreeLossEcal)
         self.assertEqual(fit.FreeLossMaxLogLoss, .5)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 100)
         self.assertEqual(fit.FreeLossTolerance, .002)
@@ -256,13 +231,6 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ, disabled['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertFalse(fit.FreeLossFit)
-        self.assertFalse(fit.FreeLossEcal)
-        self.prepare(OUTPUT_TUPLEPATH='ecal_disabled', BP_FREE_LOSS_ECAL='false')
-        ecal_disabled = self.manifest('ecal_disabled')
-        with patch.dict(os.environ, ecal_disabled['controls'], clear=True):
-            exec(assignments, {'fit':fit, 'os':os})
-        self.assertTrue(fit.FreeLossFit)
-        self.assertFalse(fit.FreeLossEcal)
         self.prepare(OUTPUT_TUPLEPATH='charged_ecal_enabled',
                      BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT='true')
         charged = self.manifest('charged_ecal_enabled')

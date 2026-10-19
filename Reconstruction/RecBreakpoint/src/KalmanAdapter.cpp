@@ -1,7 +1,6 @@
 #include "KalmanAdapter.h"
 #include "BreakpointTrackSystem.h"
 #include "RecBreakpoint/AugmentedTransport.h"
-#include "RecBreakpoint/AbsoluteLossMapping.h"
 #include "TrackSystemSvc/MarlinTrkUtils.h"
 #include "UTIL/BitSet32.h"
 #include "UTIL/BitField64.h"
@@ -313,9 +312,8 @@ MeasurementStep KalmanAdapter::advanceBackward(const TrackState& source,
 }
 
 LossMeasurementStep KalmanAdapter::advancePersistent(const LossTrackState& source,
-    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss,
-    LossCoordinate coordinate, const TrackState* lossReference) const {
-  auto result = predictPersistent(source, sourceHit, targetHit, applyLoss, coordinate, lossReference);
+    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const {
+  auto result = predictPersistent(source, sourceHit, targetHit, applyLoss);
   const auto* layer = m_system->layer(targetHit);
   if (!layer) throw std::runtime_error("No persistent-6D measurement layer");
   std::unique_ptr<ILDVTrackHit> hit(layer->ConvertLCIOTrkHit(targetHit));
@@ -339,10 +337,7 @@ LossMeasurementStep KalmanAdapter::advancePersistent(const LossTrackState& sourc
 }
 
 LossMeasurementStep KalmanAdapter::predictPersistent(const LossTrackState& source,
-    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss,
-    LossCoordinate coordinate, const TrackState* lossReference) const {
-  if (lossReference && (!applyLoss || coordinate != LossCoordinate::AbsoluteMomentum))
-    throw std::invalid_argument("Loss reference is only supported at absolute-loss birth");
+    edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit, bool applyLoss) const {
   LossTrackState mapped = source;
   TMatrixD lossMap(6, 6);
   lossMap.UnitMatrix();
@@ -350,28 +345,10 @@ LossMeasurementStep KalmanAdapter::predictPersistent(const LossTrackState& sourc
     const double kappa = source.mean(2, 0);
     if (!std::isfinite(kappa) || kappa == 0)
       throw std::runtime_error("Invalid curvature at persistent breakpoint");
-    if (coordinate == LossCoordinate::AbsoluteMomentum) {
-      Vector6 liveMean{};
-      Vector5 referenceMean{};
-      for (int i = 0; i < 6; ++i) liveMean[i] = source.mean(i, 0);
-      if (lossReference) {
-        const double distance = std::hypot(std::hypot(source.pivot.x-lossReference->pivot.x,
-            source.pivot.y-lossReference->pivot.y), source.pivot.z-lossReference->pivot.z);
-        if (!std::isfinite(distance) || distance > 1.e-8)
-          throw std::runtime_error("Absolute loss reference must share the upstream pivot");
-        for (int i = 0; i < 5; ++i) referenceMean[i] = lossReference->mean(i, 0);
-      }
-      const auto mapping = absoluteLossMapping(liveMean, lossReference ? &referenceMean : nullptr);
-      for (int i = 0; i < 6; ++i) {
-        mapped.mean(i, 0) = mapping.mean[i];
-        for (int j = 0; j < 6; ++j) lossMap(i, j) = mapping.jacobian[i * 6 + j];
-      }
-    } else {
-      const double scale = std::exp(source.mean(5, 0));
-      mapped.mean(2, 0) *= scale;
-      lossMap(2, 2) = scale;
-      lossMap(2, 5) = mapped.mean(2, 0);
-    }
+    const double scale = std::exp(source.mean(5, 0));
+    mapped.mean(2, 0) *= scale;
+    lossMap(2, 2) = scale;
+    lossMap(2, 5) = mapped.mean(2, 0);
     mapped.covariance = lossMap * source.covariance * transpose(lossMap);
   }
   // Reuse native material/geometric propagation WITHOUT its 5D measurement

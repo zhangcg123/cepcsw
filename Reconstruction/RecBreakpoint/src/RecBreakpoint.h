@@ -40,11 +40,6 @@ public:
   StatusCode execute() override;
   StatusCode finalize() override;
 private:
-  bool ecalRefitEnabled() const { return m_ecalLossReferenceMode != "Off"; }
-  bool ecalUsesDiffuseReference() const {
-    return m_ecalLossReferenceMode == "PreReference" ||
-           m_ecalLossReferenceMode == "PostReference";
-  }
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
@@ -53,11 +48,6 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeResultStatus{"BreakpointFreeLossStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeRTSIndex{"BreakpointFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeBackwardIndex{"BreakpointFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_ecalFreeRTSOutput{"BreakpointTracksFreeLossEcalRTS", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_ecalFreeBackwardOutput{"BreakpointTracksFreeLossEcalBackwardFilter", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_ecalFreeResultStatus{"BreakpointFreeLossEcalStatus", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_ecalFreeRTSIndex{"BreakpointFreeLossEcalRTSIndex", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_ecalFreeBackwardIndex{"BreakpointFreeLossEcalBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_beamFreeRTSOutput{"BreakpointTracksBeamGuidedFreeLossRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_beamFreeBackwardOutput{"BreakpointTracksBeamGuidedFreeLossBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeResultStatus{"BreakpointBeamGuidedFreeLossStatus", Gaudi::DataHandle::Writer, this};
@@ -65,9 +55,6 @@ private:
   DataHandle<podio::UserDataCollection<std::int32_t>> m_beamFreeBackwardIndex{"BreakpointBeamGuidedFreeLossBackwardIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthRTSOutput{"BreakpointTracksTruthOverrideRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_diffuseRTSOutput{"BreakpointTracksDiffuseAugmentedRTS", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_absoluteRTSOutput{"BreakpointTracksAbsoluteNeutralRTS", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_absoluteStatusOutput{"BreakpointAbsoluteNeutralStatus", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_absoluteIndexOutput{"BreakpointAbsoluteNeutralIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_diffuseStatusOutput{"BreakpointDiffuseAugmentedStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_diffuseIndexOutput{"BreakpointDiffuseAugmentedIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_truthBackwardOutput{"BreakpointTracksTruthOverrideBackwardFilter", Gaudi::DataHandle::Writer, this};
@@ -107,9 +94,7 @@ private:
   Gaudi::Property<bool> m_freeLossChargedEcalMeasurement{this, "FreeLossChargedEcalMeasurement", false};
   Gaudi::Property<double> m_chargedEcalStochasticError{this, "ChargedEcalStochasticError", 0.011};
   Gaudi::Property<double> m_chargedEcalConstantError{this, "ChargedEcalConstantError", 0.004};
-  Gaudi::Property<bool> m_freeLossEcal{this, "FreeLossEcal", false};
   Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", true};
-  Gaudi::Property<std::string> m_ecalLossReferenceMode{this, "EcalLossReferenceMode", "PostReference"};
   Gaudi::Property<double> m_neutralThetaWindow{this, "NeutralLossThetaWindowMrad", 10.0};
   Gaudi::Property<double> m_neutralPhiWindow{this, "NeutralLossPhiWindowMrad", 200.0};
   Gaudi::Property<double> m_neutralStochasticError{this, "NeutralLossStochasticError", 0.011};
@@ -146,32 +131,17 @@ private:
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   std::array<int, 4> m_backwardRunFlags{};
-  breakpoint::FreeLossTuple m_freeLossTuple, m_ecalFreeLossTuple, m_beamFreeLossTuple;
-  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_ecalFreeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
-  breakpoint::FitPairTuple m_freeLossTracks, m_ecalFreeLossTracks, m_beamFreeLossTracks;
-  // KF input plus twelve parallel published breakpoint endpoint families.
-  std::array<breakpoint::CaloStateTuple, 13> m_caloStates;
+  breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
+  breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
+  breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
+  // KF input plus nine parallel published breakpoint endpoint families.
+  std::array<breakpoint::CaloStateTuple, 10> m_caloStates;
   // Collected independently for each input track, even when the ECAL fit is off.
   breakpoint::NeutralLossCandidate m_collectedNeutral;
   int m_collectedNeutralStatus = 0, m_collectedNeutralCount = 0;
   std::string m_collectedNeutralError;
   int m_chargedEcalMeasurementStatus = 0, m_chargedEcalMeasurementClusterCount = 0;
   double m_chargedEcalMeasurementEnergy = 0, m_chargedEcalMeasurementError = 0;
-  // Status: 0 disabled, 1 no usable neutral/interval (ordinary RTS copy),
-  // 2 absolute-loss RTS, -1 failed (ordinary RTS copy), -2 ordinary fit failed.
-  int m_absoluteStatus = 0, m_absoluteIndex = -1;
-  std::string m_absoluteError;
-  double m_absolutePt = 0, m_absolutePtError = 0;
-  double m_absolutePriorEnergy = 0, m_absolutePriorSigma = 0;
-  double m_absoluteFittedEnergy = 0, m_absoluteFittedVariance = 0;
-  bool m_absoluteReferenceRequested = false, m_absoluteReferenceUsed = false;
-  std::string m_absoluteReferenceSourceName;
-  double m_absoluteForwardP = 0, m_absoluteReferenceP = 0, m_absoluteReferencePostP = 0;
-  std::vector<double> m_absoluteReferenceParameters;
-  std::vector<int> m_absoluteClusterIndices;
-  std::vector<double> m_absoluteIPParameters, m_absoluteIPCovariance;
-  std::vector<int> m_absolutePersistentHits;
-  std::vector<double> m_absoluteSmoothedMean, m_absoluteSmoothedCovariance;
   int m_diffuseStatus = 0, m_diffuseIndex = -1;
   std::string m_diffuseError;
   double m_diffusePt = 0, m_diffusePtError = 0, m_diffuseB = 0, m_diffuseBVariance = 0;

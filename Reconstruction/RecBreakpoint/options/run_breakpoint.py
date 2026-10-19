@@ -11,10 +11,10 @@ if "BP_LOSS_PRIOR_MODE" in os.environ:
 if os.environ.get("BP_LOSS_STATE_MODE", "Persistent6D") != "Persistent6D":
     raise ValueError("BP_LOSS_STATE_MODE only accepts Persistent6D; LocalMarginal was removed")
 for _retired in ("BP_ABSOLUTE_NEUTRAL_RTS", "BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE",
-                 "BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE"):
+                 "BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE", "BP_ECAL_LOSS_REFERENCE_MODE",
+                 "BP_FREE_LOSS_ECAL"):
     if _retired in os.environ:
-        raise ValueError(_retired + " was removed; use BP_ECAL_LOSS_REFERENCE_MODE="
-                         "Off/NoReference/PreReference/PostReference")
+        raise ValueError(_retired + " was removed with neutral-cluster-constrained breakpoint fits")
 
 from Gaudi.Configuration import INFO
 from Configurables import (
@@ -55,14 +55,11 @@ fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
 fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"
 fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter"
-fit.OutputTracksFreeLossEcalRTS = "BreakpointTracksFreeLossEcalRTS"
-fit.OutputTracksFreeLossEcalBackwardFilter = "BreakpointTracksFreeLossEcalBackwardFilter"
 fit.OutputTracksBeamGuidedFreeLossRTS = "BreakpointTracksBeamGuidedFreeLossRTS"
 fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFreeLossBackwardFilter"
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.OutputTracksDiffuseAugmentedRTS = "BreakpointTracksDiffuseAugmentedRTS"
-fit.OutputTracksAbsoluteNeutralRTS = "BreakpointTracksAbsoluteNeutralRTS"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
 # Truth (default): select ONLY the eligible layer-owned breakpoint with the
@@ -112,7 +109,6 @@ if "BP_BACKWARD_MODE" in os.environ:
 # remains supported. The backward continuation retains its local-joint fit.
 fit.LossStateMode = "Persistent6D"
 # Independent exact-diffuse augmented 6D KF/RTS experiment (compiled/card on).
-# Required by the default ECAL PostReference. To disable, also choose ECAL
 # Off or NoReference; the diffuse output then copies ordinary RTS.
 # At the one selected interval, b=log(p_before/p_after) starts with no finite
 # Gaussian prior. Downstream hits identify b; SigmaLogLoss is NOT used here.
@@ -122,22 +118,7 @@ fit.LossStateMode = "Persistent6D"
 # Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
 fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
-# One ECAL absolute-loss KF/RTS fitter, selected by this single controller:
-# Off: copy ordinary RTS into the ECAL output.
-# NoReference: evaluate the loss map/Jacobian at the live forward state at hit i.
-# PreReference: use the diffuse smoothed state at i as the loss-map reference.
-# PostReference (default): start with that same state; replace its curvature using
-# p_diffuse(i+1)+E_neutral, with the charge sign from i+1. Keep pivot/direction i.
-# PreReference/PostReference require DiffuseAugmentedRTS=True. Only their mean
-# reference is used; the live seed/covariance are retained. No diffuse error
-# is inserted as a prior. This changes one loss map, not the whole trajectory.
-# All three active modes collect the same hit-supported neutral ECAL clusters
-# around the input track's ECAL direction and initialize the sixth coordinate
-# L=p_before-p_after with E_neutral and its error in GeV. Each runs the same
-# 6D fitter; ECAL energy is not applied as a second measurement update.
-# One selected interval is required. Missing interval/cluster or failed fit
-# produces an ordinary RTS copy, with explicit status/error in the flat tuple.
-fit.EcalLossReferenceMode = os.environ.get("BP_ECAL_LOSS_REFERENCE_MODE", "PostReference")
+# Retain neutral-cluster collection and uncertainties for diagnostics only.
 fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "10"))
 fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"))
 # Per-cluster sigma_E [GeV] = a*sqrt(E [GeV]) + c*E [GeV]; independent cluster
@@ -170,10 +151,6 @@ fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 fit.FreeLossChargedEcalMeasurement = os.environ.get("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "0") == "1"
 fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))
 fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", "0.004"))
-# Parallel free-loss pair using neutral-ECAL energy (one interval). The
-# tracker-only pair remains available; BP_FREE_LOSS_ECAL=0 disables this fit.
-# No accepted hit-supported neutral cluster gives an exact free-loss copy.
-fit.FreeLossEcal = os.environ.get("BP_FREE_LOSS_ECAL", "1" if fit.FreeLossFit else "0") == "1"
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))

@@ -46,12 +46,12 @@ TRACKER_PASSTHROUGH = (
 )
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_DIFFUSE_AUGMENTED_RTS',
-               'BP_ECAL_LOSS_REFERENCE_MODE', 'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
+               'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
                'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_BEAM_FREE_LOSS_BACKWARD_FILTER', 'BP_TRUTH_BACKWARD_FILTER',
-               'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_ECAL', 'BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT',
+               'BP_FREE_LOSS_FIT', 'BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT',
                'BP_CHARGED_ECAL_STOCHASTIC', 'BP_CHARGED_ECAL_CONSTANT',
                'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
                'BP_FREE_LOSS_TOLERANCE',
@@ -133,14 +133,14 @@ def prepare():
     if os.environ.get('BP_LOSS_STATE_MODE', 'Persistent6D') != 'Persistent6D':
         raise ValueError('BP_LOSS_STATE_MODE only accepts Persistent6D; LocalMarginal was removed')
     for retired in ('BP_ABSOLUTE_NEUTRAL_RTS', 'BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFERENCE',
-                    'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE'):
+                    'BP_ABSOLUTE_NEUTRAL_REFERENCE_SOURCE', 'BP_ECAL_LOSS_REFERENCE_MODE',
+                    'BP_FREE_LOSS_ECAL'):
         if retired in os.environ:
-            raise ValueError(retired + ' was removed; use BP_ECAL_LOSS_REFERENCE_MODE='
-                             'Off/NoReference/PreReference/PostReference')
+            raise ValueError(retired + ' was removed with neutral-cluster-constrained breakpoint fits')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
-                'BP_FREE_LOSS_ECAL', 'BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT',
+                'BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT',
                 'BP_DIFFUSE_AUGMENTED_RTS',
                 'BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE', 'BP_ORDINARY_BACKWARD_FILTER',
                 'BP_FREE_LOSS_BACKWARD_FILTER', 'BP_BEAM_FREE_LOSS_BACKWARD_FILTER',

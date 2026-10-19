@@ -312,23 +312,18 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the optional charged-ECAL measurement in
-the free-loss Persistent6D fit. Its new terminal ECAL-face state receives an
-energy-only Kalman update; RTS traverses that ECAL-to-last-tracker edge before
-continuing inward. `FreeLossChargedEcalMeasurement` remains default-off, fits
-no ECAL cluster position, and leaves the neutral-ECAL branch separate. All
-backward filters remain default-off. The OFF path reproduced all 609 focused
-pre-existing flat-tuple branches, six package CTests passed, and the fixed
-100-event barrel hard-loss/no-collected-neutral ON cohort produced 100 rows
-with 98 converged fits. Its median absolute IP pT error remained worse than
-the earlier tracker-only output; this is a mechanical gate, not physics
-validation. Native propagation does not expose the terminal transition cross
-covariance, so the ECAL transport is numerically differentiated. Charged
-cluster independence/calibration and unresolved-photon contamination remain
-the leading physics risks.
+Active work on local `breakpoint` is simplifying its fit surface. The two
+neutral-cluster-constrained refitters (`FreeLossEcal` and the absolute-loss
+RTS) have been retired. Track-wise neutral-cluster fields and the event-wise
+`neutral_pfos` tree remain for diagnostics only; they do not steer a fit.
+The optional charged-ECAL terminal Kalman measurement remains default-off,
+and all backward filters remain default-off. The ordinary, free-loss,
+beam-guided, diffuse, and truth-prior approaches remain available.
 
-Next: verify this terminal covariance model and charged-cluster truth content,
-then perform same-final-code, held-out clean/light/hard-loss A/B comparisons,
-including endcap events, before considering default-on steering. Do not add
-ECAL position constraints in this phase. Exact behavior, outgoing focus and
-tests are in `agents_record/2026-10-19-explicit-charged-ecal-face-rts.md`.
+The installed plugin passes a one-event fitted-breakpoint smoke: ordinary,
+free-loss, diffuse and truth-assisted results remain active; new flat tuples
+omit retired neutral endpoints but retain neutral diagnostics. Next: examine
+charged-cluster independence and held-out clean/light/hard-loss performance
+before considering any ECAL default-on steering. The removal, outgoing
+focus, and checks are in
+`agents_record/2026-10-20-retired-neutral-breakpoint-constraints.md`.
