@@ -44,9 +44,6 @@ private:
   DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_freeRTSOutput{"BreakpointTracksFreeLossRTS", Gaudi::DataHandle::Writer, this};
-  DataHandle<edm4hep::TrackCollection> m_neutralFreeRTSOutput{"BreakpointTracksNeutralFreeLossRTS", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_neutralFreeStatusOutput{"BreakpointNeutralFreeLossStatus", Gaudi::DataHandle::Writer, this};
-  DataHandle<podio::UserDataCollection<std::int32_t>> m_neutralFreeIndexOutput{"BreakpointNeutralFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_freeBackwardOutput{"BreakpointTracksFreeLossBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeResultStatus{"BreakpointFreeLossStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<podio::UserDataCollection<std::int32_t>> m_freeRTSIndex{"BreakpointFreeLossRTSIndex", Gaudi::DataHandle::Writer, this};
@@ -136,14 +133,11 @@ private:
   double m_recordBackwardSeedScale = 100;
   std::array<int, 4> m_backwardRunFlags{};
   breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
-  breakpoint::FreeLossTuple m_neutralFreeLossTuple;
-  breakpoint::FitPairTuple m_neutralFreeLossTracks;
-  breakpoint::LikelihoodTuple m_neutralFreeLikelihood;
   int m_neutralMeasurementStatus = 0; // 0 off, 1 no neutral, 2 applied, 3 no interval, -1 failed
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
   // KF input plus nine parallel published breakpoint endpoint families.
-  std::array<breakpoint::CaloStateTuple, 11> m_caloStates;
+  std::array<breakpoint::CaloStateTuple, 10> m_caloStates;
   // Collected independently for each input track, even when the ECAL fit is off.
   breakpoint::NeutralLossCandidate m_collectedNeutral;
   int m_collectedNeutralStatus = 0, m_collectedNeutralCount = 0;

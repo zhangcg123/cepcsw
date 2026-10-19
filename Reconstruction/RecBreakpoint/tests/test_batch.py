@@ -205,6 +205,7 @@ class BatchTest(unittest.TestCase):
         card = Path(default['cards']['breakpoint']).read_text()
         self.assertNotIn('OutputTracksFreeLossEcal', card)
         self.assertNotIn('OutputTracksAbsoluteNeutralRTS', card)
+        self.assertNotIn('OutputTracksNeutralFreeLossRTS', card)
         assignments = '\n'.join(line for line in card.splitlines() if line.startswith('fit.FreeLoss'))
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, {}, clear=True):

@@ -54,7 +54,6 @@ fit.InputTracks = "CompleteTracks"
 fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
 fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"
-fit.OutputTracksNeutralFreeLossRTS = "BreakpointTracksNeutralFreeLossRTS"
 fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter"
 fit.OutputTracksBeamGuidedFreeLossRTS = "BreakpointTracksBeamGuidedFreeLossRTS"
 fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFreeLossBackwardFilter"
@@ -150,12 +149,12 @@ fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 # constrains energy (not position) before free-loss RTS smoothing. Default OFF.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.FreeLossChargedEcalMeasurement = os.environ.get("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "0") == "1"
-# Separate RTS result; the base free-loss output stays unchanged. Uses the
+# Optional measurement in the existing free-loss result. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.
 # May be combined with charged ECAL above. Off/no usable neutral/no selected
-# breakpoint/failed neutral fit copies the selected base (including charged ECAL).
-# No neutral backward fit is run. The measured cluster energy is never changed;
+# breakpoint runs without neutral; failed neutral fits retry without it (retaining charged ECAL).
+# Backward execution still follows FreeLossBackwardFilter. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.FreeLossNeutralEcalMeasurement = os.environ.get("BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
 fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))

@@ -329,8 +329,8 @@ def verify(path, stage):
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
                      'truth_override_result_status', 'beam_guided_free_loss_rts_pt',
                      'beam_guided_free_loss_backward_pt', 'beam_guided_free_loss_result_status',
-                     'beam_guided_free_loss_objective_nll2', 'neutral_free_loss_rts_pt',
-                     'neutral_free_loss_measurement_status', 'neutral_free_loss_likelihood_nll2'):
+                     'beam_guided_free_loss_objective_nll2',
+                     'free_loss_neutral_ecal_measurement_status', 'free_loss_likelihood_nll2'):
             if not tree.GetBranch(name): raise RuntimeError('Missing flat branch: ' + name)
         for name in ('truth_pt', 'truth_match_status', 'truth_match_purity',
                      'charged_pfo_count', 'charged_ecal_cluster_count'):
