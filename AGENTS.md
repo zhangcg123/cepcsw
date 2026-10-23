@@ -312,21 +312,24 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the optional neutral-energy KF measurement
-in the existing free-loss Persistent6D result. `FreeLossNeutralEcalMeasurement`
-defaults OFF and steers `BreakpointTracksFreeLossRTS` / `free_loss_rts_*`.
-The separate neutral output family has been removed. The measured scalar
-energy updates the joint track/loss state at a virtual post-loss site, before
-further material propagation; RTS includes that site. It may combine with the
-default-OFF charged-ECAL terminal measurement. No usable neutral, no selected
-breakpoint skips the neutral measurement; failed optimization retries without
-it, retaining the charged constraint if selected. All backward filters remain
-default OFF. The old
-neutral-penalty-only and absolute-prior refitters remain retired.
+Active work on local `breakpoint` is consistency of the optional charged and
+neutral ECAL energy measurements in the existing free-loss Persistent6D result.
+Both remain default OFF and steer `BreakpointTracksFreeLossRTS` / `free_loss_rts_*`;
+no separate neutral output family exists. Charged transport now obtains its
+state/F/Q directly from native KalTest detector transport, not finite differences
+or covariance subtraction. Both energy updates use native `TVKalSite::Filter()`
+with full 6D correlations and reject curvature-sign crossings. Charged stays at
+the ECAL face; neutral stays at the virtual post-loss site. No-neutral/no-loss
+skips neutral; failed neutral retries without it, retaining charged if selected.
+All backward defaults remain OFF; retired neutral-prior/penalty families stay retired.
 
-The measurement/RTS algebra is unchanged by the output consolidation. This is
-not physics validation. The saved affine and nonlinear photon
-energies can disagree significantly even in converged fits. Next: audit that
-linearization limit and cluster/interval ownership, then use held-out categorized
-barrel/endcap comparisons before any default-on decision. Details and preserved
-outgoing focus: `agents_record/2026-10-20-neutral-output-family-removal.md`.
+The update is built/tested but NOT installed. Seven CTests pass; both-OFF matches
+all 515 branches on eight prior rows exactly. Focused native ECAL covariance
+closure passes, with no previous invalid-process-penalty failures in the tested
+ON fits. This is not physics validation: the neutral affine prediction can still
+agree with the measurement while the nonlinear final-state energy disagrees badly.
+Next: discuss/fix that remaining linearization limit, then validate cluster
+ownership, calibration/independence and held-out barrel/endcap performance before
+default-on steering. The three review points, exact tests, deployment hashes and
+complete outgoing focus are preserved in
+`agents_record/2026-10-23-native-ecal-kaltest-machinery.md`.

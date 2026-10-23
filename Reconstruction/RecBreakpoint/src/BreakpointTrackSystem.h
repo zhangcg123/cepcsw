@@ -13,6 +13,12 @@ public:
   const ILDVMeasLayer* layer(edm4hep::TrackerHit hit) const {
     return findMeasLayer(hit);
   }
+  std::vector<const ILDVMeasLayer*> layers(int layerID) const {
+    std::vector<const ILDVMeasLayer*> result;
+    getSensitiveMeasurementModulesForLayer(layerID, result);
+    return result;
+  }
+  TKalDetCradle& detector() const { return *_det; }
 };
 } // namespace breakpoint
 #endif

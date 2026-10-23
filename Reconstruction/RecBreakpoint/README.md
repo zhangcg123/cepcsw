@@ -190,6 +190,11 @@ P_updated = (I-K*H)*P*(I-K*H)^T + K*R*K^T
 The measurement is the sum of collected hit-supported neutral ECAL energies.
 For each cluster `sigma_E = 0.011*sqrt(E) + 0.004*E` in GeV by default;
 independent cluster variances add. Synthetic/no-hit clusters are excluded.
+Both charged and neutral scalar energy observations use `EnergyMeasurementSite`,
+a six-dimensional `TKalTrackSite` specialization, and native `TVKalSite::Filter()`
+just like tracker hits. The specialization supplies only the linearized energy
+observation and its derivative; it does not implement a separate Kalman gain or
+covariance update. Curvature-sign crossings are rejected for both observations.
 The shared full-track Gaussian likelihood includes this scalar observation
 exactly once, with its covariance determinant and normalization. No additional
 neutral penalty or independently derived Gaussian prior on b is added.
@@ -590,9 +595,11 @@ introduced. See [the exact objective](docs/smoothed-objective.md).
 the tracker-only free-loss pair. With exactly one charged CyberPFOPID linked to
 the input track, it sums its hit-supported `EcalCluster` energies. Native
 propagation takes the outer tracker state to the ECAL face; the propagated
-five-parameter covariance and a numerical five-parameter transport Jacobian
-form an explicit six-dimensional ECAL predicted state, retaining the loss
-coordinate and its correlations. The scalar energy measurement updates that
+state, transport Jacobian and process noise come together from the same
+`TKalDetCradle::Transport` machinery used by tracker-hit propagation. These are
+lifted to six dimensions with unchanged b, retaining the loss coordinate and
+all its correlations. No finite-difference Jacobian or covariance-subtraction
+estimate of process noise is used. The scalar energy measurement updates that
 ECAL-face state. RTS first traverses this ECAL-to-last-tracker edge, then the
 ordinary tracker edges inward. For a successful ON fit, the updated ECAL-face
 state is also the published `free_loss_rts_calo_*` state. No cluster position enters the
@@ -601,10 +608,10 @@ conditional ECAL-energy likelihood; the beam-guided pair remains separate.
 The provisional per-cluster error is
 `a*sqrt(E/GeV) GeV + c*E`, with independent variances summed (`a=0.011`,
 `c=0.004` by default). The energy derivative at ECAL is analytic in curvature
-and tan(lambda); the last-tracker-to-ECAL transport is numerical in all five
-track parameters. Because native propagation does not expose its transition
-cross covariance, the process covariance is inferred from the propagated
-covariance and this Jacobian. This is not yet a calibrated calorimeter
+and tan(lambda); the last-tracker-to-ECAL transport uses native double-precision
+state, Jacobian and process noise at the same surface pivot. Verbose output dumps
+the source/predicted/filtered six-dimensional states and covariances and the
+ECAL edge F/Q for closure checks. This is not yet a calibrated calorimeter
 measurement. CyberPFA may have used the input track
 momentum to construct the charged shower, so the observation may not be
 independent of the tracker fit. The flat tuple records

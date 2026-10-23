@@ -1,4 +1,5 @@
 #include "NeutralEnergyMeasurement.h"
+#include "EnergyMeasurementSite.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -48,27 +49,17 @@ NeutralEnergyMeasurement updateNeutralEnergy(const LossTrackState& predicted,
   result.innovationVariance = result.predictedError * result.predictedError + variance;
   if (!std::isfinite(result.innovationVariance) || result.innovationVariance <= 0)
     throw std::runtime_error("Invalid neutral-energy innovation variance");
-  const TMatrixD gain = predicted.covariance * transpose(h) * (1. / result.innovationVariance);
-  result.filtered.mean += gain * result.residual;
-  // The energy Jacobian contains 1/|kappa|; crossing its pole invalidates this trial.
-  if (result.filtered.mean(2, 0) * predicted.mean(2, 0) <= 0)
-    throw std::runtime_error("Neutral-energy update crosses zero curvature");
-  TMatrixD remaining(6, 6);
-  remaining.UnitMatrix();
-  remaining -= gain * h;
-  result.filtered.covariance = remaining * predicted.covariance * transpose(remaining)
-      + variance * gain * transpose(gain);
-  validateCovariance(result.filtered.covariance);
-  result.chi2 = result.residual * result.residual / result.innovationVariance;
-  const auto filtered = neutralEnergyProjection(result.filtered);
-  result.filteredEnergy = filtered.energy;
-  result.filteredError = energyError(filtered, result.filtered);
   result.observation.derivative.ResizeTo(h);
   result.observation.derivative = h;
   result.observation.noise.ResizeTo(1, 1);
   result.observation.noise(0, 0) = variance;
   result.observation.residual.ResizeTo(1, 1);
   result.observation.residual(0, 0) = result.residual;
+  result.filtered = updateEnergyState(predicted, result.observation);
+  result.chi2 = result.residual * result.residual / result.innovationVariance;
+  const auto filtered = neutralEnergyProjection(result.filtered);
+  result.filteredEnergy = filtered.energy;
+  result.filteredError = energyError(filtered, result.filtered);
   return result;
 }
 

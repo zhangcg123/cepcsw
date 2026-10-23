@@ -62,6 +62,9 @@ public:
   // from this endpoint's own outermost fitted state, not the input KF state.
   edm4hep::TrackState propagateToCalorimeter(const TrackState& state,
                                              edm4hep::TrackerHit lastHit) const;
+  /// Native detector transport with its F/Q retained for the terminal RTS edge.
+  LossMeasurementStep predictCalorimeter(const LossTrackState& state,
+                                        edm4hep::TrackerHit lastHit) const;
   /// Independent, unbroken MarlinTrk fit and its native smoother. Diagnostic
   /// reference for the empty-breakpoint limit, with exactly the same seed/hits.
   edm4hep::TrackState referenceKF(const std::vector<edm4hep::TrackerHit>& hits, double scale,

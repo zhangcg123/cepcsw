@@ -1,4 +1,5 @@
 #include "NeutralEnergyMeasurement.h"
+#include "EnergyMeasurementSite.h"
 #include "TrackLikelihood.h"
 #include <cmath>
 #include <stdexcept>
@@ -110,4 +111,28 @@ int main() {
   try { assignSmoothedNeutralEnergy(observation,wrongSign); }
   catch (const std::runtime_error&) { rejected=true; }
   if (!rejected) throw std::runtime_error("Smoothed energy crossed curvature pole");
+
+  // The charged observation uses exactly the same native Filter() with H_b=0.
+  const double p=std::hypot(1.,state.mean(4,0))/std::abs(state.mean(2,0));
+  GaussianHitModel charged{TMatrixD(1,6),TMatrixD(1,1),TMatrixD(1,1)};
+  charged.derivative.Zero();
+  charged.derivative(0,2)=-p/state.mean(2,0);
+  charged.derivative(0,4)=p*state.mean(4,0)/(1.+state.mean(4,0)*state.mean(4,0));
+  charged.noise(0,0)=.04*.04;
+  charged.residual(0,0)=.3;
+  const auto chargedState=updateEnergyState(state,charged);
+  const TMatrixD chargedCov=inverseCovariance(priorPrecision+
+      transpose(charged.derivative)*charged.derivative*(1./charged.noise(0,0)));
+  const TMatrixD chargedDelta=chargedCov*transpose(charged.derivative)*
+      (charged.residual(0,0)/charged.noise(0,0));
+  for (int i=0;i<6;++i) {
+    close(chargedState.mean(i,0)-state.mean(i,0),chargedDelta(i,0));
+    for (int j=0;j<6;++j) close(chargedState.covariance(i,j),chargedCov(i,j));
+  }
+  if (chargedState.mean(5,0)==state.mean(5,0))
+    throw std::runtime_error("Charged energy failed to update correlated loss");
+  charged.residual(0,0)=1.e6;
+  rejected=false;
+  try { updateEnergyState(state,charged); } catch (const std::runtime_error&) { rejected=true; }
+  if (!rejected) throw std::runtime_error("Charged energy crossed curvature pole");
 }

@@ -88,8 +88,10 @@ if(BUILD_TESTING)
       src/NeutralEnergyMeasurement.cpp src/TrackState.cpp)
     target_compile_features(RecBreakpointNeutralEnergyTest PRIVATE cxx_std_17)
     target_include_directories(RecBreakpointNeutralEnergyTest PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
-    target_link_libraries(RecBreakpointNeutralEnergyTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep)
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
+      ${KalTest_INCLUDE_DIRS})
+    target_link_libraries(RecBreakpointNeutralEnergyTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep
+      ${KalTest_LIBRARIES} ROOT::Physics)
     add_test(NAME RecBreakpointNeutralEnergy COMMAND RecBreakpointNeutralEnergyTest)
   endif()
 endif()

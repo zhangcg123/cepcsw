@@ -50,7 +50,7 @@ struct FitResult {
   double chargedEcalPredictedEnergy = 0, chargedEcalResidual = 0;
   double chargedEcalInnovationVariance = 0, chargedEcalChi2 = 0;
   double chargedEcalPostfitChi2 = 0;
-  std::optional<LossTrackState> chargedEcalFiltered;
+  std::optional<LossMeasurementStep> chargedEcalStep;
   std::optional<NeutralEnergyMeasurement> neutralEcal;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;

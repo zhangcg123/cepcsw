@@ -12,8 +12,11 @@
 #include "kaltest/TKalTrackState.h"
 #include "kaltest/TKalFilterCond.h"
 #include "kaltest/THelicalTrack.h"
+#include "kaltest/TKalDetCradle.h"
+#include "kaltest/TVSurface.h"
 
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace breakpoint {
@@ -92,19 +95,16 @@ TrackState readNative(TKalTrackSite& site, TVKalSite::EStType type) {
   return state;
 }
 
-MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maximum,
-    const TrackState& input, edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit,
-    bool inverseLoss = false, double meanLoss = 0, double sigmaLoss = 0,
-    bool predictionOnly = false) {
-  TKalTrack track;
-  track.SetOwner();
+std::unique_ptr<TKalTrackSite> sourceSite(BreakpointTrackSystem& system, double bz,
+    const TrackState& input, edm4hep::TrackerHit sourceHit, TMatrixD& pivotJacobian) {
   auto source = makeSite(system, sourceHit);
   const auto& hit = source->GetHit();
   // Retain the exact surface pivot, not its float EDM serialization.
   const TVector3 pivot = hit.GetMeasLayer().HitToXv(hit);
   THelicalTrack helix(input.mean(0, 0), input.mean(1, 0), input.mean(2, 0),
       input.mean(3, 0), input.mean(4, 0), input.pivot.x, input.pivot.y, input.pivot.z, bz);
-  TMatrixD covariance(input.covariance), pivotJacobian(5, 5);
+  TMatrixD covariance(input.covariance);
+  pivotJacobian.ResizeTo(5, 5);
   pivotJacobian.UnitMatrix();
   double angle = 0;
   helix.MoveTo(pivot, angle, &pivotJacobian, &covariance);
@@ -114,6 +114,17 @@ MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maxi
   mean(2, 0) = helix.GetKappa(); mean(3, 0) = helix.GetDz(); mean(4, 0) = helix.GetTanLambda();
   source->Add(new TKalTrackState(mean, cov, *source, TVKalSite::kPredicted, 5));
   source->Add(new TKalTrackState(mean, cov, *source, TVKalSite::kFiltered, 5));
+  return source;
+}
+
+MeasurementStep nativeStep(BreakpointTrackSystem& system, double bz, double maximum,
+    const TrackState& input, edm4hep::TrackerHit sourceHit, edm4hep::TrackerHit targetHit,
+    bool inverseLoss = false, double meanLoss = 0, double sigmaLoss = 0,
+    bool predictionOnly = false) {
+  TKalTrack track;
+  track.SetOwner();
+  TMatrixD pivotJacobian;
+  auto source = sourceSite(system, bz, input, sourceHit, pivotJacobian);
   auto* sourcePointer = source.release();
   track.Add(sourcePointer);
 
@@ -378,6 +389,78 @@ edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
   // Our published result is explicitly the interaction-point endpoint.
   ip.location = edm4hep::TrackState::AtIP;
   return ip;
+}
+
+LossMeasurementStep KalmanAdapter::predictCalorimeter(const LossTrackState& state,
+                                                     edm4hep::TrackerHit lastHit) const {
+  // A real native track supplies the material routines' current mass/context.
+  TKalTrack track;
+  track.SetOwner();
+  TMatrixD pivotJacobian;
+  auto source = sourceSite(*m_system, m_bz, state.track(), lastHit, pivotJacobian);
+  auto* sourcePointer = source.release();
+  track.Add(sourcePointer);
+  const auto helix = static_cast<const TKalTrackState&>(sourcePointer->GetCurState()).GetHelix();
+
+  UTIL::BitField64 encoder(lcio::ILDCellID0::encoder_string);
+  encoder.reset();
+  encoder[lcio::LCTrackerCellID::subdet()] = lcio::ILDDetID::ECAL;
+  encoder[lcio::LCTrackerCellID::side()] = lcio::ILDDetID::barrel;
+  encoder[lcio::LCTrackerCellID::layer()] = 0;
+  const int barrelID = encoder.lowWord();
+  encoder[lcio::LCTrackerCellID::subdet()] = lcio::ILDDetID::ECAL_ENDCAP;
+  encoder[lcio::LCTrackerCellID::side()] = state.mean(4, 0) >= 0 ?
+      lcio::ILDDetID::fwd : lcio::ILDDetID::bwd;
+  const int endcapID = encoder.lowWord();
+  const auto hit = lastHit.getPosition();
+  const TVector3 hitPoint(hit.x, hit.y, hit.z);
+  const ILDVMeasLayer* destination = nullptr;
+  double nearestDistance = std::numeric_limits<double>::infinity();
+  for (int layerID : {barrelID, endcapID}) {
+    const ILDVMeasLayer* layerCandidate = nullptr;
+    TVector3 layerPoint;
+    double nearestAngle = std::numeric_limits<double>::infinity();
+    for (const auto* layer : m_system->layers(layerID)) {
+      TVector3 point;
+      double angle = 0;
+      int cellID = 0;
+      if (layer->getIntersectionAndCellID(helix, point, angle, cellID,
+            MarlinTrk::IMarlinTrack::modeForward) > 0 && std::abs(angle) < nearestAngle) {
+        nearestAngle = std::abs(angle);
+        layerCandidate = layer;
+        layerPoint = point;
+      }
+    }
+    if (layerCandidate && (layerPoint - hitPoint).Mag() < nearestDistance) {
+      nearestDistance = (layerPoint - hitPoint).Mag();
+      destination = layerCandidate;
+    }
+  }
+  if (!destination) throw std::runtime_error("No forward ECAL-face intersection");
+  TKalMatrix mean(5, 1), transport(5, 5), noise(5, 5);
+  TVector3 pivot;
+  if (m_system->detector().Transport(*sourcePointer, *destination, pivot, mean, transport, noise) != 0 ||
+      !dynamic_cast<const TVSurface&>(*destination).IsOnSurface(pivot))
+    throw std::runtime_error("Native transport did not reach ECAL face");
+
+  LossMeasurementStep result;
+  result.transport.UnitMatrix();
+  result.noise.Zero();
+  const TMatrixD totalTransport = transport * pivotJacobian;
+  result.predicted = state;
+  result.predicted.pivot = {pivot.X(), pivot.Y(), pivot.Z()};
+  for (int i = 0; i < 5; ++i) {
+    result.predicted.mean(i, 0) = mean(i, 0);
+    for (int j = 0; j < 5; ++j) {
+      result.transport(i, j) = totalTransport(i, j);
+      result.noise(i, j) = noise(i, j);
+    }
+  }
+  result.predicted.covariance = result.transport * state.covariance *
+      transpose(result.transport) + result.noise;
+  validateCovariance(result.predicted.covariance);
+  result.filtered = result.predicted;
+  return result;
 }
 
 edm4hep::TrackState KalmanAdapter::propagateToCalorimeter(

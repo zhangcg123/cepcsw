@@ -147,11 +147,13 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 # Experimental terminal scalar KF update: one linked charged ECAL shower
 # constrains energy (not position) before free-loss RTS smoothing. Default OFF.
+# Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.FreeLossChargedEcalMeasurement = os.environ.get("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "0") == "1"
 # Optional measurement in the existing free-loss result. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.
+# Uses the same native KalTest Filter() as charged energy; no photon-position hit.
 # May be combined with charged ECAL above. Off/no usable neutral/no selected
 # breakpoint runs without neutral; failed neutral fits retry without it (retaining charged ECAL).
 # Backward execution still follows FreeLossBackwardFilter. The measured energy is never changed;

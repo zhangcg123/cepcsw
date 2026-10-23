@@ -72,8 +72,8 @@ int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& 
   // Publish the fitted ECAL node when present; other endpoints use passive
   // extrapolation, whose failure must not alter the fitted IP and hit states.
   try {
-    const auto calo = fit.chargedEcalFiltered
-        ? breakpoint::toEDM(fit.chargedEcalFiltered->track(), bz,
+    const auto calo = fit.chargedEcalStep
+        ? breakpoint::toEDM(fit.chargedEcalStep->filtered.track(), bz,
                             edm4hep::TrackState::AtCalorimeter)
         : adapter.propagateToCalorimeter(fit.endpoint.back(), hits.back());
     caloTuple.assign(calo, bz, 1);
@@ -1028,6 +1028,24 @@ StatusCode RecBreakpoint::execute() {
       }
       if (!freeKFFallback) {
         const auto& neutral = freeResult.rts;
+        if (m_verbose && neutral.chargedEcalStep) {
+          const auto& step = *neutral.chargedEcalStep;
+          info() << std::setprecision(17) << "ChargedEnergyKF event=" << m_event
+                 << " track=" << m_trackIndex << " pivot=[" << step.predicted.pivot.x << ' '
+                 << step.predicted.pivot.y << ' ' << step.predicted.pivot.z << ']' << endmsg;
+          for (const auto& item : std::vector<std::pair<const char*, const TMatrixD*>>{
+              {"source_mean", &neutral.persistentFiltered.back().mean},
+              {"source_covariance", &neutral.persistentFiltered.back().covariance},
+              {"predicted_mean", &step.predicted.mean}, {"predicted_covariance", &step.predicted.covariance},
+              {"filtered_mean", &step.filtered.mean}, {"filtered_covariance", &step.filtered.covariance},
+              {"transport", &step.transport}, {"noise", &step.noise}}) {
+            std::ostringstream dump;
+            dump << std::setprecision(17) << "ChargedEnergyKF " << item.first << "=[";
+            for (int i=0;i<item.second->GetNrows();++i)
+              for (int j=0;j<item.second->GetNcols();++j) dump << (*item.second)(i,j) << ' ';
+            info() << dump.str() << ']' << endmsg;
+          }
+        }
         if (m_verbose && neutral.neutralEcal) {
           const auto& observation = *neutral.neutralEcal;
           info() << std::setprecision(17) << "NeutralEnergyKF event=" << m_event
