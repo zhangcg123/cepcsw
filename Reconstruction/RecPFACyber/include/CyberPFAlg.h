@@ -185,6 +185,8 @@ protected:
 
   // Output collections
   DataHandle<edm4hep::CalorimeterHitCollection>             w_RecEcalCol{"RecECALBarrel", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::ClusterCollection> w_TimingClusters{"EcalClusterTiming", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::CalorimeterHitCollection> w_TimingHits{"EcalClusterTimingHits", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection>             w_RecCoreCol{"RecECALBarrelCore", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection>             w_RecHcalCol{"RecHCALBarrel", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>                      w_RecTrkCol{"RecTracks", Gaudi::DataHandle::Writer, this};

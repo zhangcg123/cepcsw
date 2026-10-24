@@ -749,6 +749,10 @@ StatusCode CyberPFAlg::execute()
   //Perform PFA algorithm
   m_algorithmManager.RunAlgorithm( m_DataCol );
 
+  // Later algorithms clone the timing clusters; export the unchanged upstream collection.
+  if (m_pOutputCreator->CreateTimingClusters(m_DataCol, w_TimingClusters, w_TimingHits).isFailure())
+    return StatusCode::FAILURE;
+
   m_pOutputCreator->CreateOutputCollections( m_DataCol, 
                                              w_RecEcalCol, 
                                              w_RecCoreCol, 

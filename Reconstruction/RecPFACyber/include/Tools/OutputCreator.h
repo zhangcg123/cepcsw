@@ -16,6 +16,11 @@ namespace Cyber{
     OutputCreator( const Settings& m_settings);
     ~OutputCreator() {};
 
+    StatusCode CreateTimingClusters(
+        const CyberDataCol& data,
+        DataHandle<edm4hep::ClusterCollection>& clusters,
+        DataHandle<edm4hep::CalorimeterHitCollection>& hits);
+
     StatusCode CreateOutputCollections( CyberDataCol& m_DataCol, 
                                         DataHandle<edm4hep::CalorimeterHitCollection>& m_outRecHitsHandler, 
                                         DataHandle<edm4hep::CalorimeterHitCollection>& m_outRecCoreHandler, 

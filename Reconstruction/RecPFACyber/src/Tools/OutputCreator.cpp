@@ -9,6 +9,38 @@ namespace Cyber{
 
   }
 
+  StatusCode OutputCreator::CreateTimingClusters(
+      const CyberDataCol& data,
+      DataHandle<edm4hep::ClusterCollection>& clusters,
+      DataHandle<edm4hep::CalorimeterHitCollection>& hits) {
+    auto* outputClusters = clusters.createAndPut();
+    auto* outputHits = hits.createAndPut();
+    const auto source = data.map_CaloCluster.find("EcalCluster");
+    if (source == data.map_CaloCluster.end()) return StatusCode::SUCCESS;
+
+    // No PFO-dependent calibration or track-momentum rescaling is applied here.
+    for (const auto& cluster : source->second) {
+      auto output = outputClusters->create();
+      const auto position = cluster->getShowerCenter();
+      output.setEnergy(cluster->getLongiE());
+      output.setPosition({float(position.X()), float(position.Y()), float(position.Z())});
+      // mergeCluster appends shower pieces without refreshing the cached 3D-hit list.
+      auto view = cluster->Clone();
+      view->setCaloHitsFrom2DCluster();
+      for (const auto* hit : view->getCaloHits()) {
+        auto copied = outputHits->create();
+        const auto point = hit->getPosition();
+        copied.setEnergy(hit->getEnergy());
+        copied.setPosition({float(point.X()), float(point.Y()), float(point.Z())});
+        // As in the existing fine-grained output, this is a display ID, not a DD4hep cell ID.
+        copied.setCellID((hit->getModule() << 5) + hit->getLayer());
+        copied.setType(hit->getSystem());
+        output.addToHits(copied);
+      }
+    }
+    return StatusCode::SUCCESS;
+  }
+
 
   StatusCode OutputCreator::CreateOutputCollections( CyberDataCol& m_DataCol,
                                                      DataHandle<edm4hep::CalorimeterHitCollection>& m_outRecHitsHandler,
