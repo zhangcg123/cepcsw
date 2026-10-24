@@ -41,6 +41,14 @@ def main():
             for method in ("ordinary", "free_loss"):
                 prefix = f"{kind}_{method}_"
                 assert not any(k.startswith(prefix + "backward_") for k in row)
+                if method == "free_loss":
+                    assert not any(k.startswith(prefix + "likelihood_") for k in row), (key, prefix)
+                    for suffix in ("status", "nll2", "quadratic", "logdet", "objective_nll2"):
+                        assert prefix + "optimizer_" + suffix in row, (key, prefix, suffix)
+                    if row[prefix + "optimizer_status"] == 2:
+                        assert math.isfinite(row[prefix + "optimizer_nll2"]), (key, prefix)
+                        assert math.isclose(row[prefix + "optimizer_nll2"],
+                                            row[prefix + "optimizer_objective_nll2"], abs_tol=1e-8)
                 status = row[prefix + "constraint_status"]
                 if kind not in enabled:
                     assert status == 0 and row[prefix + "rts_index"] == -1, (key, prefix)
@@ -58,12 +66,12 @@ def main():
                     previous[method] = expected
                     assert row[prefix + "rts_index"] >= 0, (key, prefix)
                     assert math.isfinite(row[prefix + "rts_pt"]), (key, prefix)
-                if row[prefix + "likelihood_status"] == 1:
+                if method == "ordinary" and row[prefix + "likelihood_status"] == 1:
                     expected = (row[prefix + "likelihood_quadratic"]
                                 + row[prefix + "likelihood_logdet"]
                                 + row[prefix + "likelihood_measurement_dimensions"] * math.log(2*math.pi))
                     assert math.isclose(expected, row[prefix + "likelihood_nll2"], abs_tol=1e-8)
-                    base = "ordinary_likelihood_" if method == "ordinary" else "free_loss_likelihood_"
+                    base = "ordinary_likelihood_"
                     if row[base + "status"] == 1:
                         added = bin(row[prefix + "constraint_mask"]).count("1")
                         assert row[prefix + "likelihood_measurement_dimensions"] == (

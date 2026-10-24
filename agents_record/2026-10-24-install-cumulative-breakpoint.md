@@ -49,6 +49,45 @@ stages beam -> charged -> neutral. New generated batch cards use the installed
 runtime via the existing project setup; regenerate historical cards containing
 retired controls. No additional physics/population validation is implied.
 
+## Subsequent schema cleanup: constrained free-loss likelihoods
+
+The user requested removal of the redundant constrained free-loss
+`likelihood_*` groups, then confirmed no jobs were active and authorized
+installation after validation. Removed seven fields for each of the beam,
+charged and neutral free-loss stages (21 branches total). Ordinary constrained
+likelihoods and the original unconstrained `free_loss_likelihood_*` remain.
+Accepted constrained Minuit likelihoods and their quadratic/log-determinant
+breakdown remain under the corresponding `*_free_loss_optimizer_*` prefixes.
+No optimizer run means those optimizer diagnostics are unavailable; the existing
+constraint/result status still identifies copies, OFF stages and failures.
+
+Cause: final optimized refits deliberately do not retain the auxiliary Gaussian
+model; the removed writer attempted to recalculate their likelihood and wrote
+NaNs. The optimizer already retained the accepted likelihood. No fitter,
+measurement, optimizer, steering or track-publication calculation changed.
+
+Validation on the rebuilt package:
+- All eight RecBreakpoint numerical CTests passed.
+- Seed 2 event 1 with 111: 817 retained fields match the earlier installed run
+  exactly, with precisely the 21 intended fields removed.
+- Seed 1 events 11, 16 and 17 with all constraints OFF: 2,451 retained fields
+  match exactly with the original truth/diffuse steering restored. An initial
+  comparison used disabled truth/diffuse and was discarded as a steering
+  mismatch, not a code regression.
+- The updated constraint-schema checker passes both ON and OFF outputs.
+- Batch tests remain 38/39: the unchanged wrapper-default test expects a full
+  chain, while the user's current wrapper selects breakpoint-only.
+
+The package-only cleanup was installed using rename replacement and backups at
+`/tmp/bp-schema-install-20261024.NuYLL4/previous/`.
+New installed/build plugin SHA256:
+`6704f6c2b441b4556db1f110a35ee7f4baf1921338f25b80f2cef6066db62af7`.
+The direct installed-runtime 111 smoke matches all 817 build-tree fields
+exactly; the updated schema/mask checker also passes (414 constrained-field
+comparisons). Its output is `/tmp/bp-no-duplicate-likelihood-installed-20261024.root`.
+Existing ROOT files are unchanged; regenerate outputs for the reduced schema.
+No batch jobs were submitted.
+
 ## Preserved pre-deployment focus
 
 ## 2. Current focus

@@ -95,9 +95,16 @@ at the breakpoint, charged at ECAL), not in output-stage order.
 | NeutralEcalMeasurement | neutral_ecal_ordinary_rts_ | neutral_ecal_free_loss_rts_ |
 
 Every prefix has `pt`, `pt_error`, `ip_parameters`, `ip_covariance`, and
-`calo_*` fields. Removing the final `rts_` gives the prefix for likelihood,
+`calo_*` fields. Removing the final `rts_` gives the prefix for
 per-hit chi2 breakdown, track-state diagnostics, result/index and constraint
-status. The free variants also have `optimizer_*` diagnostics. `constraint_mask`
+status. Ordinary stages also have `likelihood_*` diagnostics. Free-loss stages
+save the accepted likelihood only under `optimizer_nll2`, `optimizer_quadratic`
+and `optimizer_logdet` (with optimizer status/error and trial diagnostics).
+The redundant constrained `*_free_loss_likelihood_*` groups are not written.
+The original unconstrained `free_loss_likelihood_*` group is unchanged.
+If no optimization runs (OFF, unavailable measurement or ordinary-result copy),
+the optimizer likelihood remains unavailable; check optimizer/constraint status.
+`constraint_mask`
 records applied observations (beam=1, charged=2, neutral=4); the corresponding
 `constraint_requested_mask` records enabled observations through that stage.
 For all ON and successful, the masks are 1,3,7 for both methods.

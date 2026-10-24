@@ -237,7 +237,7 @@ StatusCode RecBreakpoint::initialize() {
     const std::string prefix = constraintPrefixes[i];
     m_constraintTracks[i].book(*m_tree, prefix, false);
     m_constraintCalo[i].book(*m_tree, prefix + "rts_");
-    m_constraintLikelihood[i].book(*m_tree, prefix + "likelihood_");
+    if (i%2 == 0) m_constraintOrdinaryLikelihood[i/2].book(*m_tree, prefix + "likelihood_");
     m_tree->Branch((prefix + "constraint_status").c_str(), &m_constraintStatus[i]);
     m_tree->Branch((prefix + "constraint_mask").c_str(), &m_constraintMask[i]);
     m_tree->Branch((prefix + "constraint_requested_mask").c_str(), &m_constraintRequestedMask[i]);
@@ -581,7 +581,7 @@ StatusCode RecBreakpoint::execute() {
     for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
       m_constraintTracks[i].reset();
       m_constraintCalo[i].reset();
-      m_constraintLikelihood[i].reset();
+      if (i%2 == 0) m_constraintOrdinaryLikelihood[i/2].reset();
       m_constraintStatus[i] = 0;
       m_constraintMask[i] = m_constraintRequestedMask[i] = 0;
       m_constraintError[i].clear();
@@ -1085,7 +1085,6 @@ StatusCode RecBreakpoint::execute() {
             m_constraintTracks[i].assignKF(track, m_bz, index, -1);
             constraintOutputs[i]->push_back(track.clone());
             m_constraintCalo[i].assignFromTrack(track, m_bz, 2);
-            m_constraintLikelihood[i].invalidate("Unconstrained free-loss input KF fallback");
           } else {
             const auto& endpoint = *previous[method];
             m_constraintMask[i] = (endpoint.rts.beamSpot ? 1 : 0)
@@ -1094,7 +1093,7 @@ StatusCode RecBreakpoint::execute() {
                 endpoint.rts.smoothedTotalChi2, adapter, m_constraintCalo[i]);
             m_constraintTracks[i].assign(endpoint, m_bz,
                 constrained[i] && (method == 0 || optimized) ? 2 : 1, index, -1);
-            m_constraintLikelihood[i].assign(endpoint.rts);
+            if (method == 0) m_constraintOrdinaryLikelihood[kind].assign(endpoint.rts);
             if (kind == 0 && endpoint.rts.beamSpot) {
               m_beamMeasurements[method] = *endpoint.rts.beamSpot;
               m_beamApplied[method] = true;

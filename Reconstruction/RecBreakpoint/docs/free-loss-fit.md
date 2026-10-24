@@ -144,6 +144,9 @@ uses the original seed/prior with its accumulated observations, not the previous
 posterior. Each free-loss stage has its own Minuit search using the same fitter
 and sigma. OFF families remain NaN/empty. Missing/failed new measurements retain
 the preceding accepted stage, with explicit status and applied/requested masks.
+Constrained free-loss likelihoods are saved in each stage's `optimizer_nll2`,
+`optimizer_quadratic` and `optimizer_logdet` fields, not a duplicate
+`likelihood_*` group. Ordinary stages retain their `likelihood_*` group.
 For each trial the existing fitter uses the SAME positive SigmaLogLoss.
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
 amount sets the chosen mu. The final fitter call uses that same selected center

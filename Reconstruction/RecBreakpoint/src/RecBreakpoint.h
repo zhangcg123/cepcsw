@@ -147,7 +147,7 @@ private:
   breakpoint::FitPairTuple m_freeLossTracks;
   std::array<breakpoint::FitPairTuple, 6> m_constraintTracks;
   std::array<breakpoint::CaloStateTuple, 6> m_constraintCalo;
-  std::array<breakpoint::LikelihoodTuple, 6> m_constraintLikelihood;
+  std::array<breakpoint::LikelihoodTuple, 3> m_constraintOrdinaryLikelihood;
   std::array<breakpoint::FreeLossTuple, 3> m_constraintOptimization;
   // 0 off, 1 unavailable (previous-stage copy), 2 applied, -1 failed (previous-stage copy).
   std::array<int, 6> m_constraintStatus{};
