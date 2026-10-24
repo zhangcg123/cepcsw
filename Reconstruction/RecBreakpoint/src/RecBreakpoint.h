@@ -41,6 +41,15 @@ public:
   StatusCode finalize() override;
 private:
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
+  // Independent one-constraint RTS fits: beam, charged, neutral; ordinary then free-loss.
+  std::array<DataHandle<edm4hep::TrackCollection>, 6> m_constraintOutputs{{
+    {"BreakpointTracksBeamSpotRTS", Gaudi::DataHandle::Writer, this},
+    {"BreakpointTracksBeamSpotFreeLossRTS", Gaudi::DataHandle::Writer, this},
+    {"BreakpointTracksChargedEcalRTS", Gaudi::DataHandle::Writer, this},
+    {"BreakpointTracksChargedEcalFreeLossRTS", Gaudi::DataHandle::Writer, this},
+    {"BreakpointTracksNeutralEcalRTS", Gaudi::DataHandle::Writer, this},
+    {"BreakpointTracksNeutralEcalFreeLossRTS", Gaudi::DataHandle::Writer, this}
+  }};
   DataHandle<edm4hep::TrackCollection> m_output{"BreakpointTracksRTS", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_backwardOutput{"BreakpointTracksBackwardFilter", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> m_freeRTSOutput{"BreakpointTracksFreeLossRTS", Gaudi::DataHandle::Writer, this};
@@ -136,6 +145,13 @@ private:
   std::string m_ordinaryEcalError;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks;
+  std::array<breakpoint::FitPairTuple, 6> m_constraintTracks;
+  std::array<breakpoint::CaloStateTuple, 6> m_constraintCalo;
+  std::array<breakpoint::LikelihoodTuple, 6> m_constraintLikelihood;
+  std::array<breakpoint::FreeLossTuple, 3> m_constraintOptimization;
+  // 0 off, 1 missing observation/breakpoint (baseline copy), 2 applied, -1 failed (baseline copy).
+  std::array<int, 6> m_constraintStatus{};
+  std::array<std::string, 6> m_constraintError;
   // KF input plus seven parallel published breakpoint endpoint families.
   std::array<breakpoint::CaloStateTuple, 8> m_caloStates;
   // Collected independently for each input track, even when the ECAL fit is off.

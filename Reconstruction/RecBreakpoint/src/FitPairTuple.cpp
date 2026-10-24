@@ -43,21 +43,21 @@ void FitPairTuple::States::assign(const std::vector<TrackState>& states) {
   }
 }
 
-void FitPairTuple::book(TTree& tree, const std::string& prefix) {
+void FitPairTuple::book(TTree& tree, const std::string& prefix, bool includeBackward) {
   tree.Branch((prefix + "result_status").c_str(), &m_status);
   tree.Branch((prefix + "rts_index").c_str(), &m_rtsIndex);
-  tree.Branch((prefix + "backward_index").c_str(), &m_backwardIndex);
+  if (includeBackward) tree.Branch((prefix + "backward_index").c_str(), &m_backwardIndex);
   tree.Branch((prefix + "kf_chi2").c_str(), &m_kfChi2);
   m_rts.book(tree, prefix + "rts_");
-  m_backward.book(tree, prefix + "backward_");
+  if (includeBackward) m_backward.book(tree, prefix + "backward_");
   tree.Branch((prefix + "breakpoint_interval").c_str(), &m_intervals);
   tree.Branch((prefix + "forward_chi2").c_str(), &m_forwardChi2);
-  tree.Branch((prefix + "backward_chi2").c_str(), &m_backwardChi2);
+  if (includeBackward) tree.Branch((prefix + "backward_chi2").c_str(), &m_backwardChi2);
   tree.Branch((prefix + "smoothed_chi2").c_str(), &m_smoothedChi2);
   tree.Branch((prefix + "smoothed_chi2_status").c_str(), &m_smoothedStatus);
   tree.Branch((prefix + "smoothed_chi2_error").c_str(), &m_smoothedError);
   tree.Branch((prefix + "forward_local_chi2").c_str(), &m_forwardLocal);
-  tree.Branch((prefix + "backward_local_chi2").c_str(), &m_backwardLocal);
+  if (includeBackward) tree.Branch((prefix + "backward_local_chi2").c_str(), &m_backwardLocal);
   tree.Branch((prefix + "smoothed_local_chi2").c_str(), &m_smoothedLocal);
   tree.Branch((prefix + "smoothed_measurement_chi2").c_str(), &m_smoothedMeasurement);
   tree.Branch((prefix + "smoothed_process_chi2").c_str(), &m_smoothedProcess);
@@ -66,8 +66,10 @@ void FitPairTuple::book(TTree& tree, const std::string& prefix) {
   m_forwardPredicted.book(tree, prefix + "forward_predicted_");
   m_forwardFiltered.book(tree, prefix + "forward_filtered_");
   m_smoothed.book(tree, prefix + "smoothed_");
-  m_backwardPredicted.book(tree, prefix + "backward_predicted_");
-  m_backwardFiltered.book(tree, prefix + "backward_filtered_");
+  if (includeBackward) {
+    m_backwardPredicted.book(tree, prefix + "backward_predicted_");
+    m_backwardFiltered.book(tree, prefix + "backward_filtered_");
+  }
 }
 
 void FitPairTuple::reset() {

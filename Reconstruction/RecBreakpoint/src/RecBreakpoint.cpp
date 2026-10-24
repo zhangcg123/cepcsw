@@ -32,6 +32,16 @@ constexpr const char* caloPrefixes[] = {
   "kf_", "rts_", "backward_", "free_loss_rts_", "free_loss_backward_",
   "truth_override_rts_", "truth_override_backward_", "diffuse_augmented_rts_"
 };
+constexpr const char* constraintPrefixes[] = {
+  "beam_spot_ordinary_", "beam_spot_free_loss_",
+  "charged_ecal_ordinary_", "charged_ecal_free_loss_",
+  "neutral_ecal_ordinary_", "neutral_ecal_free_loss_"
+};
+constexpr const char* constraintOutputProperties[] = {
+  "OutputTracksBeamSpotRTS", "OutputTracksBeamSpotFreeLossRTS",
+  "OutputTracksChargedEcalRTS", "OutputTracksChargedEcalFreeLossRTS",
+  "OutputTracksNeutralEcalRTS", "OutputTracksNeutralEcalFreeLossRTS"
+};
 // At the first hit after the breakpoint, the joint RTS state still carries
 // both the post-loss momentum and b=log(p_before/p_after). Keep their
 // covariance: treating b and momentum as independent misstates the error.
@@ -92,6 +102,9 @@ DECLARE_COMPONENT(RecBreakpoint)
 RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
     : Algorithm(name, locator) {
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
+  for (std::size_t i=0; i<m_constraintOutputs.size(); ++i)
+    declareProperty(constraintOutputProperties[i], m_constraintOutputs[i],
+                    "Independent single-constraint RTS output; empty when disabled");
   declareProperty("OutputTracks", m_output, "Successful refitted tracks");
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
   declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS; ordinary copy when off, input KF copy on failure");
@@ -132,11 +145,12 @@ StatusCode RecBreakpoint::initialize() {
             << " TruthOverride is a separate switch." << endmsg;
     return StatusCode::FAILURE;
   }
-  const std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
+  std::set<DataObjID> outputNames{m_output.fullKey(), m_backwardOutput.fullKey(),
       m_truthRTSOutput.fullKey(), m_truthBackwardOutput.fullKey(),
       m_freeRTSOutput.fullKey(), m_freeBackwardOutput.fullKey(),
       m_diffuseRTSOutput.fullKey()};
-  if (outputNames.size() != 7 || outputNames.count(m_input.fullKey())) {
+  for (const auto& output : m_constraintOutputs) outputNames.insert(output.fullKey());
+  if (outputNames.size() != 7 + m_constraintOutputs.size() || outputNames.count(m_input.fullKey())) {
     error() << "Output track collections must differ from each other and the input" << endmsg;
     return StatusCode::FAILURE;
   }
@@ -219,6 +233,15 @@ StatusCode RecBreakpoint::initialize() {
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
+  for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
+    const std::string prefix = constraintPrefixes[i];
+    m_constraintTracks[i].book(*m_tree, prefix, false);
+    m_constraintCalo[i].book(*m_tree, prefix + "rts_");
+    m_constraintLikelihood[i].book(*m_tree, prefix + "likelihood_");
+    m_tree->Branch((prefix + "constraint_status").c_str(), &m_constraintStatus[i]);
+    m_tree->Branch((prefix + "constraint_error").c_str(), &m_constraintError[i]);
+    if (i%2) m_constraintOptimization[i/2].book(*m_tree, prefix + "optimizer_");
+  }
   m_tree->Branch("free_loss_neutral_ecal_measurement_status", &m_neutralMeasurementStatus);
   m_tree->Branch("ordinary_charged_ecal_measurement_status", &m_ordinaryChargedStatus);
   m_tree->Branch("ordinary_neutral_ecal_measurement_status", &m_ordinaryNeutralStatus);
@@ -422,6 +445,9 @@ StatusCode RecBreakpoint::execute() {
   auto* backwardOutput = m_backwardOutput.createAndPut();
   auto* freeRTSOutput = m_freeRTSOutput.createAndPut();
   auto* freeBackwardOutput = m_freeBackwardOutput.createAndPut();
+  std::array<edm4hep::TrackCollection*, 6> constraintOutputs;
+  for (std::size_t i=0; i<constraintOutputs.size(); ++i)
+    constraintOutputs[i] = m_constraintOutputs[i].createAndPut();
   auto* freeResultStatuses = m_freeResultStatus.createAndPut();
   auto* freeRTSIndices = m_freeRTSIndex.createAndPut();
   auto* freeBackwardIndices = m_freeBackwardIndex.createAndPut();
@@ -461,8 +487,8 @@ StatusCode RecBreakpoint::execute() {
   breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
       static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),
       std::nullopt, std::nullopt, std::nullopt};
-  if (m_beamSpotConstraint) freeLossControls.beamSpot = breakpoint::BeamSpotSettings{
-      m_beamSpotX.value(), m_beamSpotY.value(), m_beamSpotSigmaX.value(), m_beamSpotSigmaY.value()};
+  const std::array<bool,3> constraintEnabled{{m_beamSpotConstraint.value(),
+      m_chargedEcalMeasurement.value(), m_neutralEcalMeasurement.value()}};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
       (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
@@ -550,6 +576,15 @@ StatusCode RecBreakpoint::execute() {
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
+    for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
+      m_constraintTracks[i].reset();
+      m_constraintCalo[i].reset();
+      m_constraintLikelihood[i].reset();
+      m_constraintStatus[i] = 0;
+      m_constraintError[i].clear();
+      if (i%2) m_constraintOptimization[i/2].reset(
+          constraintEnabled[i/2] && m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
+    }
     m_ordinaryLikelihood.reset();
     m_freeLikelihood.reset();
     m_truthLikelihood.reset();
@@ -705,66 +740,15 @@ StatusCode RecBreakpoint::execute() {
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
           << " seed=" << m_seedSelectionName << " ordered-hit indices="
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
-      // Select once; ordinary and optimized fits receive the same observations,
-      // but each owns its fit settings and independent failure/retry outcome.
-      auto chargedControls = freeLossControls;
-      if (m_chargedEcalMeasurementStatus == 2)
-        chargedControls.chargedEcalEnergy = std::make_pair(
-            m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
-      auto selectedControls = chargedControls;
-      if (m_neutralEcalMeasurement && m_collectedNeutralStatus == 2 && settings.intervals.size() == 1)
-        selectedControls.neutralEcalEnergy = std::make_pair(
-            m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
-      auto ordinarySettings = settings;
-      ordinarySettings.beamSpot = freeLossControls.beamSpot;
-      m_ordinaryChargedStatus = m_chargedEcalMeasurement ? 1 : 0;
-      m_ordinaryNeutralStatus = m_neutralEcalMeasurement ? 1 : 0;
-      // Keep the existing no-breakpoint five-dimensional path unchanged.
-      if (!settings.intervals.empty()) {
-        ordinarySettings.chargedEcalEnergy = selectedControls.chargedEcalEnergy;
-        ordinarySettings.neutralEcalEnergy = selectedControls.neutralEcalEnergy;
-      }
-      const auto paired = [&]() {
-        for (;;) {
-          try {
-            auto result = fitter.fit(hits, ordinarySettings, m_ordinaryBackwardFilter);
-            if (result.rts.chargedEcalStep) m_ordinaryChargedStatus = 2;
-            if (result.rts.neutralEcal) m_ordinaryNeutralStatus = 2;
-            return result;
-          } catch (const std::exception& error) {
-            if (!ordinarySettings.neutralEcalEnergy && !ordinarySettings.chargedEcalEnergy) throw;
-            if (!m_ordinaryEcalError.empty()) m_ordinaryEcalError += "; ";
-            m_ordinaryEcalError += error.what();
-            if (ordinarySettings.neutralEcalEnergy) {
-              ordinarySettings.neutralEcalEnergy.reset();
-              m_ordinaryNeutralStatus = -1;
-              warning() << "Ordinary fit: " << error.what() << "; retry without neutral ECAL" << endmsg;
-            } else {
-              ordinarySettings.chargedEcalEnergy.reset();
-              m_ordinaryChargedStatus = -1;
-              warning() << "Ordinary fit: " << error.what() << "; retry without charged ECAL" << endmsg;
-            }
-          }
-        }
-      }();
+      // Baseline families never inherit optional observations.
+      const auto paired = fitter.fit(hits, settings, m_ordinaryBackwardFilter);
       std::optional<breakpoint::PairedFitResult> freePair;
       std::optional<breakpoint::TrackLikelihoodResult> optimizedLikelihood;
       bool freeKFFallback = false;
       if (m_freeLossFit) {
         const breakpoint::FreeLossFitter optimizer(fitter);
-        if (m_neutralEcalMeasurement) {
-          m_neutralMeasurementStatus = m_collectedNeutralStatus == 2 ? 3 : 1;
-        }
-        auto freeFit = optimizer.fit(hits, settings, selectedControls,
+        auto freeFit = optimizer.fit(hits, settings, freeLossControls,
                                      m_freeLossBackwardFilter);
-        if (selectedControls.neutralEcalEnergy) {
-          m_neutralMeasurementStatus = freeFit.fitted ? 2 : -1;
-          if (!freeFit.fitted) {
-            warning() << "Neutral KF measurement: " << freeFit.diagnostics.error
-                      << "; retry without neutral measurement" << endmsg;
-            freeFit = optimizer.fit(hits, settings, chargedControls, m_freeLossBackwardFilter);
-          }
-        }
         m_freeLossTuple.assign(freeFit.diagnostics);
         if (freeFit.diagnostics.status == breakpoint::FreeLossStatus::Applied)
           optimizedLikelihood = freeFit.diagnostics.likelihood;
@@ -780,7 +764,6 @@ StatusCode RecBreakpoint::execute() {
             << " minuit_status=" << freeFit.diagnostics.minuitStatus << endmsg;
       }
       const auto& fit=paired.rts;
-      if (fit.beamSpot) { m_beamMeasurements[0] = *fit.beamSpot; m_beamApplied[0] = true; }
       const auto* inward=paired.backward ? &*paired.backward : nullptr;
       m_ordinaryLikelihood.assign(fit);
       if (!std::isfinite(fit.ip.omega) || fit.ip.omega == 0)
@@ -1038,14 +1021,78 @@ StatusCode RecBreakpoint::execute() {
         }
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
       }
-      for (const auto& named : std::vector<std::pair<const char*, const breakpoint::FitResult*>>{
-          {"ordinary", &fit}, {"free_loss", freeKFFallback ? nullptr : &freeResult.rts}}) {
+      std::array<std::optional<breakpoint::PairedFitResult>, 6> constrained;
+      for (std::size_t kind=0; kind<constraintEnabled.size(); ++kind) {
+        if (!constraintEnabled[kind]) continue;
+        auto variant = settings;
+        auto controls = freeLossControls;
+        if (kind == 0) {
+          variant.beamSpot = m_recordBeamSpotSettings;
+          controls.beamSpot = variant.beamSpot;
+        } else if (settings.intervals.size() == 1) {
+          if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
+            variant.chargedEcalEnergy = std::make_pair(
+                m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
+            controls.chargedEcalEnergy = variant.chargedEcalEnergy;
+          } else if (kind == 2 && m_collectedNeutralStatus == 2) {
+            variant.neutralEcalEnergy = std::make_pair(
+                m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+            controls.neutralEcalEnergy = variant.neutralEcalEnergy;
+          }
+        }
+        const bool available = variant.beamSpot || variant.chargedEcalEnergy || variant.neutralEcalEnergy;
+        for (std::size_t method=0; method<2; ++method) {
+          const std::size_t i = 2*kind+method;
+          m_constraintStatus[i] = available ? 2 : 1;
+          bool optimized = false;
+          try {
+            if (available) {
+              if (method == 0) constrained[i] = fitter.fit(hits, variant, false);
+              else if (!m_freeLossFit || settings.intervals.empty()) {
+                // No outer optimization: same constrained ordinary endpoint.
+                if (constrained[2*kind]) constrained[i] = constrained[2*kind];
+                else throw std::runtime_error("Constrained ordinary fit unavailable");
+              } else {
+                auto optimizedFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, controls, false);
+                m_constraintOptimization[kind].assign(optimizedFit.diagnostics);
+                if (!optimizedFit.fitted) throw std::runtime_error(optimizedFit.diagnostics.error);
+                constrained[i] = std::move(optimizedFit.fitted);
+                optimized = true;
+              }
+            }
+          } catch (const std::exception& error) {
+            m_constraintStatus[i] = -1;
+            m_constraintError[i] = error.what();
+            warning() << constraintPrefixes[i] << error.what() << "; use unconstrained endpoint" << endmsg;
+          }
+          // Missing/failed observations reuse the baseline; OFF never enters here.
+          if (!constrained[i] && method == 1 && freeKFFallback) {
+            const int index = constraintOutputs[i]->size();
+            m_constraintTracks[i].assignKF(track, m_bz, index, -1);
+            constraintOutputs[i]->push_back(track.clone());
+            m_constraintCalo[i].assignFromTrack(track, m_bz, 2);
+            m_constraintLikelihood[i].invalidate("Unconstrained free-loss input KF fallback");
+          } else {
+            const auto& endpoint = constrained[i] ? *constrained[i] : (method ? freeResult : paired);
+            const int index = publishTrack(*constraintOutputs[i], endpoint.rts, hits, m_bz,
+                endpoint.rts.smoothedTotalChi2, adapter, m_constraintCalo[i]);
+            m_constraintTracks[i].assign(endpoint, m_bz,
+                constrained[i] && (method == 0 || optimized) ? 2 : 1, index, -1);
+            m_constraintLikelihood[i].assign(endpoint.rts);
+            if (kind == 0 && endpoint.rts.beamSpot) {
+              m_beamMeasurements[method] = *endpoint.rts.beamSpot;
+              m_beamApplied[method] = true;
+            }
+          }
+        }
+      }
+      std::vector<std::pair<const char*, const breakpoint::FitResult*>> diagnosticFits{
+          {"ordinary", &fit}, {"free_loss", freeKFFallback ? nullptr : &freeResult.rts}};
+      for (std::size_t i=0; i<constrained.size(); ++i)
+        if (constrained[i]) diagnosticFits.emplace_back(constraintPrefixes[i], &constrained[i]->rts);
+      for (const auto& named : diagnosticFits) {
         if (!named.second) continue;
         const auto& neutral = *named.second;
-        if (named.second == &freeResult.rts && neutral.beamSpot) {
-          m_beamMeasurements[1] = *neutral.beamSpot;
-          m_beamApplied[1] = true;
-        }
         if (m_verbose && neutral.beamSpot) {
           const auto& beam = *neutral.beamSpot;
           info() << std::setprecision(17) << "BeamSpotKF event=" << m_event << " track=" << m_trackIndex

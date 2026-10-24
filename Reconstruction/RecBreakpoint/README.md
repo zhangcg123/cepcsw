@@ -47,11 +47,11 @@ These are separate results, not CPU threads. Backward starts from the full
 first-pass forward endpoint mean and its full covariance multiplied by
 BackwardSeedScale (default100), revisits hits N-2 through 0, and uses
 material-aware native IP propagation. RTS never consumes the backward-refiltered
-states. With `BeamSpotConstraint=false`, RTS and backward endpoints use
+states. Unconstrained RTS and backward endpoints use
 `KalmanAdapter::propagateToIP`: native MarlinTrk propagation from the innermost
 endpoint to (0,0,0), honoring MSOn/ElossOn. Independently executed truth/diffuse
 fits and optional backward refilters retain this operation.
-With the beam constraint enabled, ordinary/free-loss RTS instead smooths back
+In the separate beam-only ordinary/free-loss families, RTS instead smooths back
 through the stored native beam-to-first-hit transition and publishes that beam
 state at IP. It does not traverse the boundary material a second time. The
 optional backward refilter does not perform an additional beam update.
@@ -68,12 +68,42 @@ The free-loss collections are also declared: `BreakpointTracksFreeLossRTS` and
 and `OutputTracksFreeLossBackwardFilter`. It contains independently optimized
 results when applied, ordinary copies otherwise where the corresponding
 backward fit is enabled. The former separate beam-guided free-loss family is removed.
-`BeamSpotConstraint` now inserts a beam KF measurement in the ordinary and
-free-loss fits themselves. `BreakpointTracksDiffuseAugmentedRTS` is an independent
+`BeamSpotConstraint` adds two independent beam-only RTS families.
+`BreakpointTracksDiffuseAugmentedRTS` is an independent
 exact-diffuse study controlled by `DiffuseAugmentedRTS`. The old neutral
 penalty-only and absolute-prior refitters remain retired. The new optional
-`NeutralEcalMeasurement` uses an actual scalar KF update inside the ordinary
-`BreakpointTracksRTS` and `BreakpointTracksFreeLossRTS` results, not a separate output family.
+`NeutralEcalMeasurement` uses an actual scalar KF update in two neutral-only
+RTS families. Original `BreakpointTracksRTS` / `BreakpointTracksFreeLossRTS`
+always remain unconstrained.
+
+### Six independent constraint families
+
+Each switch enables one ordinary and one free-loss RTS result. All switches
+default OFF. Enabling several switches runs independent fits, not combined
+measurements. They reuse the existing fitter; no new fitting mathematics.
+
+| Switch | Ordinary flat prefix | Free-loss flat prefix |
+|---|---|---|
+| BeamSpotConstraint | beam_spot_ordinary_rts_ | beam_spot_free_loss_rts_ |
+| ChargedEcalMeasurement | charged_ecal_ordinary_rts_ | charged_ecal_free_loss_rts_ |
+| NeutralEcalMeasurement | neutral_ecal_ordinary_rts_ | neutral_ecal_free_loss_rts_ |
+
+Every prefix has `pt`, `pt_error`, `ip_parameters`, `ip_covariance`, and
+`calo_*` fields. Removing the final `rts_` gives the prefix for likelihood,
+per-hit chi2 breakdown, track-state diagnostics, result/index and constraint
+status. The free variants also have `optimizer_*` diagnostics.
+The corresponding six collections are `BreakpointTracks{BeamSpot,ChargedEcal,NeutralEcal}{,FreeLoss}RTS`,
+explicitly named in the maintained card.
+
+OFF performs no fit: scalar endpoint values are NaN, vectors empty, index -1,
+collection empty, `constraint_status=0`. ON but missing a usable observation
+or breakpoint copies the unconstrained family (`constraint_status=1`); failed
+variants also copy it, with status -1 and an error. Status 2 means the constraint
+was applied. The free-loss baseline can itself be an input-KF fallback; its
+result status remains explicit. With FreeLossFit OFF or no selected breakpoint,
+the enabled beam free variant copies the beam ordinary result. These six are
+RTS-only; existing three backward switches continue to control only the
+unconstrained ordinary/free-loss/truth families.
 
 The main `breakpoint` tree saves neutral-cluster selection for its own input
 track, even with no selected breakpoint or a failed tracking fit. These fields
@@ -129,8 +159,9 @@ For an EDM endpoint with curvature `omega` and packed covariance element
 covariance yields NaN. The removed `backward_mode` branch no
 longer misleadingly labels a row that now contains both results.
 
-The calorimeter state is saved in the flat tuple for the input KF and the seven
-endpoint families, using prefixes `kf_`, `rts_`, `backward_`,
+The calorimeter state is saved for the input KF, the original seven
+endpoint families, and the six independent constraint families listed above.
+The original prefixes are `kf_`, `rts_`, `backward_`,
 `free_loss_rts_`, `free_loss_backward_`, `truth_override_rts_`,
 `truth_override_backward_`, and `diffuse_augmented_rts_`. Each prefix has
 `calo_status`, `calo_error`, `calo_pt`, `calo_pt_error`, `calo_p`, `calo_parameters`,
@@ -139,9 +170,10 @@ endpoint families, using prefixes `kf_`, `rts_`, `backward_`,
 21-entry EDM covariance. Status 1 means native extrapolation succeeded, 2
 means an input-KF state was copied (including a fit fallback), 0 means no
 output, and -1 means the state was unavailable or extrapolation failed.
-`calo_pt_error` uses that family's propagated calorimeter-state covariance
-and the same curvature formula. It does not include any extra uncertainty
-from the calorimeter shower. Unavailable numerical fields are NaN/empty. The default card writes only
+`calo_pt_error` uses that family's calorimeter-state covariance and the same
+curvature formula. A charged-energy measurement is already incorporated in
+its family's updated covariance; no extra shower error is added afterward.
+Unavailable numerical fields are NaN/empty. The default card writes only
 the flat tuple; add the optional `PodioOutput` from the card to serialize the
 EDM track collections themselves. Optional neutral measurements use the existing
 `free_loss_*` diagnostics and `free_loss_rts_*` endpoint fields.
@@ -150,15 +182,16 @@ EDM track collections themselves. Optional neutral measurements use the existing
 
 `NeutralEcalMeasurement=false` is the compiled/card default. Enable with
 `BP_NEUTRAL_ECAL_MEASUREMENT=1`. This and `ChargedEcalMeasurement` steer BOTH
-ordinary augmented KF/RTS and free-loss with the same selected observations.
+separate ordinary augmented KF/RTS and free-loss variants with the same selected observations.
 They work in ordinary fitting even with `FreeLossFit=false`. Old
 `FreeLossChargedEcalMeasurement` / `FreeLossNeutralEcalMeasurement` properties
 were renamed; the corresponding old `BP_FREE_LOSS_*_ECAL_MEASUREMENT` environment
 variables are rejected, not silently ignored. Regenerate prepared batch cards.
-The existing charged switch is independent: both observations can be enabled.
+The charged switch is independent: enabling both produces separate charged-only
+and neutral-only fits, not a combined fit.
 The independently executed diffuse and truth-centered fits are unchanged.
-`FreeLossBackwardFilter` remains default OFF; when enabled it starts from the
-selected forward result, without a second inward neutral measurement.
+`FreeLossBackwardFilter` remains default OFF and affects only the original,
+unconstrained result. The six constraint variants have no backward outputs.
 Native MarlinTrk tracker-hit updates remain unchanged; this new scalar helper
 is needed because its observation depends on the package's sixth loss coordinate.
 
@@ -202,16 +235,14 @@ exactly once, with its covariance determinant and normalization. No additional
 neutral penalty or independently derived Gaussian prior on b is added.
 The prior-center optimizer still retains the configured `SigmaLogLoss`.
 
-`free_loss_neutral_ecal_measurement_status`:
-0 disabled; 1 no usable neutral; 2 successfully applied; 3 no selected breakpoint;
--1 neutral optimization failure. Disabled/no-neutral/no-breakpoint paths run
-without the neutral measurement. Failed neutral fits retry without it, retaining
-the charged constraint if enabled; if that also fails, the usual KF fallback
-applies. The existing free-loss collection and index are used in all cases.
+`neutral_ecal_{ordinary,free_loss}_constraint_status` records OFF (0),
+unavailable observation/breakpoint with baseline copy (1), applied (2), or
+failed with baseline copy (-1). Original-family measurement-status fields stay
+zero because those original families no longer consume optional observations.
 
-The existing `free_loss_*` branches include optimizer diagnostics, normalized
+The `neutral_ecal_free_loss_*` branches include optimizer diagnostics, normalized
 likelihood, complete per-hit chi2 breakdown, IP and calorimeter pT/errors.
-`free_loss_neutral_ecal_*` retains measured/predicted/filtered/smoothed
+`neutral_ecal_free_loss_optimizer_neutral_ecal_*` retains measured/predicted/filtered/smoothed
 photon energy/error, innovation variance/chi2, all three six-dimensional states
 and covariances. `smoothed_affine_energy` and `smoothed_chi2` use the frozen
 measurement Jacobian for the complete Gaussian score; `smoothed_energy` uses
@@ -604,7 +635,8 @@ all its correlations. No finite-difference Jacobian or covariance-subtraction
 estimate of process noise is used. The scalar energy measurement updates that
 ECAL-face state. RTS first traverses this ECAL-to-last-tracker edge, then the
 ordinary tracker edges inward. For a successful ON fit, the updated ECAL-face
-state is also the published `rts_calo_*` / `free_loss_rts_calo_*` state. No cluster position enters the
+state is also the published `charged_ecal_ordinary_rts_calo_*` /
+`charged_ecal_free_loss_rts_calo_*` state. No cluster position enters the
 measurement. Each free-loss trial scores the tracker likelihood plus the
 conditional ECAL-energy likelihood.
 The provisional per-cluster error is
@@ -619,16 +651,10 @@ momentum to construct the charged shower, so the observation may not be
 independent of the tracker fit. The flat tuple records
 `free_loss_charged_ecal_measurement_status` (0 off, 1 no usable cluster,
 2 selected for the fit, 3 ambiguous charged PFO), measured energy/error, predicted energy,
-innovation variance and chi2. The existing `free_loss_rts_*` endpoint is the
-constrained result when enabled; OFF retains the historical endpoint exactly.
-The ordinary `rts_*` endpoint likewise includes the selected measurements.
-Both shared measurements currently require a selected breakpoint; no-breakpoint
-fits retain the existing 5D path. Ordinary fitting retries a failed neutral fit
-without neutral, retaining charged; if that fails, it retries without charged.
-The three new branches `ordinary_charged_ecal_measurement_status`,
-`ordinary_neutral_ecal_measurement_status`, and `ordinary_ecal_measurement_error`
-record the actual outcome: 0 off, 1 unavailable/no breakpoint, 2 applied, -1
-removed during a failed-fit retry. The legacy `free_loss_charged_ecal_*` selection
+innovation variance and chi2. Original `free_loss_rts_*` and `rts_*` endpoints
+remain unconstrained for every switch combination. ECAL variants currently
+require a selected breakpoint; unavailable/failed variants copy their respective
+baseline with an explicit constraint status. The legacy `free_loss_charged_ecal_*` selection
 fields remain the shared charged observation (status 2 means selected, not success).
 Ordinary and free-loss likelihoods use the same score routine, including neutral
 in the captured tracker model and the charged conditional likelihood once.
@@ -636,8 +662,8 @@ in the captured tracker model and the charged conditional likelihood once.
 ### Shared beam-spot KF measurement
 
 `BeamSpotConstraint=false` (card/environment `BP_BEAM_SPOT_CONSTRAINT=0`) is
-independent of the charged/neutral switches and `FreeLossFit`. It applies to
-ordinary and free-loss, including tracks without a selected breakpoint.
+independent of the charged/neutral switches and `FreeLossFit`. It enables the
+beam-only ordinary/free-loss families, including tracks without a breakpoint.
 The old beam-guided optimizer, output collections, branches and backward
 switch are removed. Regenerate prepared cards; retired environment names fail
 explicitly rather than silently selecting another behavior.
@@ -666,7 +692,7 @@ beam-to-hit process penalty (in the first hit's process contribution).
 The transported beam-conditioned covariance at hit 0 is used for the conditional
 Gaussian model. Its normalization is combined with the initial beam innovation
 variance, not another smoothed covariance or a repeated beam update.
-Ordinary/free-loss output state covariances therefore include this measurement.
+Beam-only output state covariances therefore include this measurement.
 The beam width is projected once using the seed direction, not an iterated
 vertex fit. Affine and nonlinear drho fields now coincide at the beam pivot.
 Boundary process chi2 and covariance closure are saved; verbose output contains
@@ -695,10 +721,10 @@ the native source/predicted/filtered states, `F` and `Q`.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
-| ChargedEcalMeasurement | false | Shared ordinary/free-loss ECAL-face energy-only KF update and terminal RTS edge with one selected breakpoint and one linked charged PFO with hit-supported ECAL energy; does not use cluster position |
-| NeutralEcalMeasurement | false | Shared ordinary/free-loss post-loss scalar neutral-energy KF update, retaining track/loss correlations; may combine with charged ECAL |
+| ChargedEcalMeasurement | false | Two separate charged-only ordinary/free-loss RTS families; ECAL-face energy measurement requires one breakpoint and one linked charged PFO with hit-supported ECAL energy |
+| NeutralEcalMeasurement | false | Two independent neutral-only RTS families with a post-loss scalar KF update retaining track/loss correlations |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
-| BeamSpotConstraint | false | Initial transverse beam KF measurement shared by ordinary and free-loss, independent of ECAL switches and usable without a breakpoint |
+| BeamSpotConstraint | false | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Transverse beam mean for the initial scalar KF measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |
 | FreeLossMaxLogLoss | 1 | Upper bound on the optimized prior center, finite in (0,5]; lower bound zero. Does not truncate the Gaussian or bound the fitted posterior loss |
@@ -789,7 +815,8 @@ All runs also save the `free_loss_*` fields described in
 The retired `beam_guided_free_loss_*` family and free-loss external-beam
 penalty diagnostics are no longer written. Common beam configuration is saved
 as `beam_spot_constraint_enabled`, position and widths in mm.
-`ordinary_beam_spot_*` / `free_loss_beam_spot_*` retain `applied`,
+`ordinary_beam_spot_*` / `free_loss_beam_spot_*` are diagnostic aliases for the
+new beam-only families (not the unconstrained baseline). They retain `applied`,
 predicted/filtered/smoothed drho, smoothed affine drho, measurement/innovation
 variances, innovation chi2, smoothed measurement chi2,
 `boundary_process_chi2` and `boundary_covariance_closure`. Ignore the numeric

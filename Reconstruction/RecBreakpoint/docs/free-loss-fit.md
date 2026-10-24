@@ -26,7 +26,7 @@ fit.SigmaLogLoss = 0.001  # SAME prior width for ordinary, free and truth fits
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
-fit.BeamSpotConstraint = False  # initial KF measurement shared with ordinary
+fit.BeamSpotConstraint = False  # separate beam-only ordinary/free RTS families
 fit.BeamSpotX = fit.BeamSpotY = 0.0  # mm
 fit.BeamSpotSigmaX = 0.0145  # mm
 fit.BeamSpotSigmaY = 3.6e-5  # mm
@@ -39,8 +39,8 @@ shared beam measurement is controlled by BP_BEAM_SPOT_CONSTRAINT (default 0);
 BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y control its position and widths.
 It also works with FreeLossFit disabled. The beam-guided output family and
 its old environment controls are removed. This observation updates the seed
-before the first tracker hit; ordinary and free-loss use that same constrained
-KF/RTS. No post-RTS beam objective is added.
+before the first tracker hit in the beam-only families; original ordinary and
+free-loss outputs remain unconstrained. No post-RTS beam objective is added.
 
 ## One model, not three objective choices
 
@@ -136,8 +136,12 @@ nor a successful Minuit call establishes correct physical loss recovery.
 ### Shared loss prior, different inward calculations
 
 Each applied free-loss pair has one Minuit search and one selected mu shared
-by its RTS and backward endpoints. Beam, charged and neutral measurements are
-optional observations in this same fit, not separate endpoint families.
+by its RTS and backward endpoints. The original pair is always unconstrained.
+Beam, charged and neutral switches each enable independent ordinary/free-loss
+RTS-only families (six additional families); multiple ON switches do not
+combine observations. Each free-loss variant has its own Minuit search using
+the same fitter and sigma. OFF families remain NaN/empty. Missing or failed
+measurements copy the corresponding baseline with explicit constraint status.
 For each trial the existing fitter uses the SAME positive SigmaLogLoss.
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
 amount sets the chosen mu. The final fitter call uses that same selected center
@@ -170,9 +174,9 @@ Same loss-prior settings, opposite direction.
 Its seed is the final forward endpoint with covariance scaled by
 BackwardSeedScale; this scale does not change the RTS calculation or objective.
 
-With the beam constraint disabled, RTS and backward endpoints use native
+Unconstrained RTS and backward endpoints use native
 MarlinTrk propagation from their innermost state to IP, honoring MSOn/ElossOn.
-With it enabled, ordinary/free-loss RTS instead smooths back to the explicit
+In the beam-only families, ordinary/free-loss RTS instead smooths back to the explicit
 beam site through its stored native transition; the smoothed beam state supplies
 the IP endpoint without a second material traversal. Independent truth/diffuse
 fits and optional backward refilters retain native innermost-to-IP propagation;

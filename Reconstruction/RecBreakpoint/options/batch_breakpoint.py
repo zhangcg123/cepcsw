@@ -341,6 +341,13 @@ def verify(path, stage):
         for name in ('truth_pt', 'truth_match_status', 'truth_match_purity',
                      'charged_pfo_count', 'charged_ecal_cluster_count'):
             if not tree.GetBranch(name): raise RuntimeError('Missing matched flat branch: ' + name)
+        for constraint in ('beam_spot', 'charged_ecal', 'neutral_ecal'):
+            for method in ('ordinary', 'free_loss'):
+                prefix = constraint + '_' + method + '_'
+                for suffix in ('rts_pt', 'rts_pt_error', 'rts_calo_pt',
+                               'rts_calo_pt_error', 'constraint_status', 'rts_index'):
+                    if not tree.GetBranch(prefix + suffix):
+                        raise RuntimeError('Missing independent constraint branch: ' + prefix + suffix)
         neutral = file.Get('neutral_pfos')
         if not neutral or not all(neutral.GetBranch(name) for name in (
                 'neutral_ecal_cluster_energy', 'ebrem_photon_ecal_entry_status',

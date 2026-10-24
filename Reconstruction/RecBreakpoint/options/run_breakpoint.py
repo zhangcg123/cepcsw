@@ -58,6 +58,12 @@ fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.OutputTracksDiffuseAugmentedRTS = "BreakpointTracksDiffuseAugmentedRTS"
+fit.OutputTracksBeamSpotRTS = "BreakpointTracksBeamSpotRTS"
+fit.OutputTracksBeamSpotFreeLossRTS = "BreakpointTracksBeamSpotFreeLossRTS"
+fit.OutputTracksChargedEcalRTS = "BreakpointTracksChargedEcalRTS"
+fit.OutputTracksChargedEcalFreeLossRTS = "BreakpointTracksChargedEcalFreeLossRTS"
+fit.OutputTracksNeutralEcalRTS = "BreakpointTracksNeutralEcalRTS"
+fit.OutputTracksNeutralEcalFreeLossRTS = "BreakpointTracksNeutralEcalFreeLossRTS"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
 # Truth (default): select ONLY the eligible layer-owned breakpoint with the
@@ -142,9 +148,13 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
-# Shared by ordinary augmented KF/RTS and free-loss; both default OFF.
-# FreeLossFit=False does not disable these measurements in the ordinary fit.
-# Independently executed diffuse and truth-centered fits do not receive these observations.
+# Independent one-constraint variants of ordinary augmented KF/RTS and free-loss.
+# The original rts_* and free_loss_rts_* remain unconstrained. Each ON switch
+# adds TWO RTS families; multiple ON switches do NOT combine their measurements.
+# OFF: empty collection, NaN scalar endpoints, empty vectors, index -1.
+# ON but unavailable/failed: baseline copy, with constraint_status 1/-1.
+# FreeLossFit=False copies the constrained ordinary result into its free variant.
+# Diffuse/truth-centered fits and original backward endpoints remain unchanged.
 # Old free-loss-only environment names must not silently disable a requested measurement.
 for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARGED_ECAL_MEASUREMENT"),
                              ("BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT", "BP_NEUTRAL_ECAL_MEASUREMENT")):
@@ -155,14 +165,13 @@ for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARG
 # Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
-# Optional measurement in the ordinary and free-loss results. Uses the
+# Optional measurement in the two neutral-only result families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.
 # Uses the same native KalTest Filter() as charged energy; no photon-position hit.
-# May be combined with charged ECAL above. Off/no usable neutral/no selected
-# breakpoint runs without neutral; failed neutral fits retry without it (retaining charged ECAL).
-# If the ordinary charged retry also fails, retry ordinary without ECAL and record the error.
-# Backward execution follows each family's own switch. The measured energy is never changed;
+# No usable neutral/no selected breakpoint copies the corresponding unconstrained
+# result; a failed variant also copies its baseline and records the error.
+# These six extra families are RTS-only. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
 fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))
@@ -170,11 +179,12 @@ fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", 
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
-# Common ordinary/free-loss beam KF measurement BEFORE the first tracker hit.
+# Separate beam-only ordinary/free-loss RTS families; original endpoints unchanged.
+# Beam KF measurement BEFORE the first tracker hit.
 # Explicit transverse beam site (no z hit), then native material-aware transport
 # to hit 0 using MSOn/ElossOn. Its F/Q are retained for RTS back to the beam.
 # Publish the smoothed beam state at IP; do not traverse boundary material twice.
-# Included ONCE in the likelihood; no separate beam-guided output or extra penalty.
+# Included ONCE in the likelihood; no separate beam-guided objective or extra penalty.
 # Also works with no breakpoint and with FreeLossFit=False. Default OFF.
 for retired in ("BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE", "BP_BEAM_FREE_LOSS_BACKWARD_FILTER"):
     if retired in os.environ:

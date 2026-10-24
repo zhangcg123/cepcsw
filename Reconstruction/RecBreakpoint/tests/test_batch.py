@@ -482,11 +482,13 @@ class BatchTest(unittest.TestCase):
                 file.Close.assert_called_once()
 
     def test_invalid_flat_output_still_blocks_cleanup(self):
-        for defect in ('zombie', 'recovered', 'empty', 'missing_branch'):
+        for defect in ('zombie', 'recovered', 'empty', 'missing_branch', 'missing_constraint_branch'):
             with self.subTest(defect=defect):
                 tree = MagicMock()
                 tree.GetEntries.return_value = 0 if defect == 'empty' else 2
                 tree.GetBranch.return_value = None if defect == 'missing_branch' else object()
+                if defect == 'missing_constraint_branch':
+                    tree.GetBranch.side_effect = lambda name: None if name == 'neutral_ecal_free_loss_rts_pt' else object()
                 file = MagicMock()
                 file.IsZombie.return_value = defect == 'zombie'
                 file.TestBit.return_value = defect == 'recovered'

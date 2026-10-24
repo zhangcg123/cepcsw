@@ -312,31 +312,31 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the shared optional measurement workflow
-for ordinary augmented KF/RTS and free-loss Persistent6D. `BeamSpotConstraint`,
-`ChargedEcalMeasurement` and `NeutralEcalMeasurement` are independent and default
-OFF. Beam now is an explicit native KalTest measurement site. Native
-material-aware transport supplies beam-to-first-hit F/Q, honoring MSOn/ElossOn;
-RTS smooths back through that edge and publishes the beam state at IP without
-a second boundary-material traversal. Charged remains at the ECAL face and
-neutral at the virtual post-loss site. Beam works without a selected breakpoint.
+Active work on local `breakpoint` is independent optional-constraint RTS
+publication. Original ordinary augmented KF and free-loss endpoints always
+remain unconstrained. `BeamSpotConstraint`, `ChargedEcalMeasurement` and
+`NeutralEcalMeasurement` each enable TWO separate RTS families (ordinary and
+free-loss); all default OFF. Multiple ON switches run independent variants,
+not a combined fit. OFF outputs are NaN/empty with index -1. Missing/failed
+observations copy the corresponding baseline with an explicit status/error.
+FreeLossFit OFF copies the constrained ordinary endpoint into its free variant.
 
-Existing ordinary/free-loss endpoints carry enabled constraints; no separate
-beam-guided or neutral output family exists. Independently executed diffuse/
-truth fits remain unchanged. All three backward defaults remain OFF; optional
-backward refilters retain native IP propagation without a second beam update.
-Beam likelihood, complete smoothed score and boundary diagnostics count the
-measurement and transport once.
+The six families reuse the existing fitters. Beam uses an explicit native
+measurement node and material-aware boundary F/Q, with RTS back to the beam.
+Charged stays at ECAL, neutral at the post-loss site. Original diffuse/truth
+fits remain unchanged. The three original backward defaults remain OFF;
+no extra backward families were introduced. The card explicitly names the
+six collections; the batch validator requires their flat branches.
 
-Built/tested but NOT installed: eight CTests pass; beam OFF exactly reproduces
-411 retained fields on eight prior tracks. Native boundary covariance closure
-passes on 16 beam edges and six charged ECAL edges at about 2e-16; MS/Eloss
-switch tests confirm native material effects. One pre-existing batch test
-disagrees with the user's intentional breakpoint-only wrapper default.
+Built/tested but NOT installed: eight CTests pass, eight-track all-OFF outputs
+reproduce 3320 prior field values exactly, and all six variants run on three
+hard-loss tracks. Single-switch versus all-switches tests establish exact
+family independence and unchanged baseline endpoints. Native covariance closure
+passes; no-interval and FreeLossFit-OFF copies are checked. One pre-existing
+batch test still disagrees with the user's breakpoint-only wrapper default.
 
-No population/endcap validation is claimed. Beam remains transverse-only with
-its measurement variance linearized at the seed direction. The known neutral
-affine/nonlinear energy mismatch remains. Next: install when authorized, then
-assess categorized performance and cluster calibration/ownership. Full evidence
-and preserved outgoing focus:
-`agents_record/2026-10-24-native-beam-hit-boundary.md`.
+No population/endcap performance validation claimed. Neutral linearization and
+charged-cluster independence/calibration questions remain. Enabling all switches
+adds up to three Minuit searches per track. Next: install when authorized and
+compare categorized performance. Evidence and complete outgoing focus:
+`agents_record/2026-10-24-independent-constraint-families.md`.

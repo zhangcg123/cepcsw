@@ -8,10 +8,10 @@ class TTree;
 
 namespace breakpoint {
 /// A named pair of endpoint results. Serialization only; never runs a fit.
-/// Status: 0 absent, 1 ordinary copy, 2 optimized pair, 3 input KF fallback.
+/// Status: 0 absent, 1 copied endpoint, 2 fitted result, 3 input KF fallback.
 class FitPairTuple {
 public:
-  void book(TTree& tree, const std::string& prefix);
+  void book(TTree& tree, const std::string& prefix, bool includeBackward = true);
   void reset();
   void assign(const PairedFitResult& pair, double bz, int status, int rtsIndex, int backwardIndex);
   void assignKF(const edm4hep::Track& track, double bz, int rtsIndex, int backwardIndex);
