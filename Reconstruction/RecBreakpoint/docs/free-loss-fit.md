@@ -137,11 +137,13 @@ nor a successful Minuit call establishes correct physical loss recovery.
 
 Each applied free-loss pair has one Minuit search and one selected mu shared
 by its RTS and backward endpoints. The original pair is always unconstrained.
-Beam, charged and neutral switches each enable independent ordinary/free-loss
-RTS-only families (six additional families); multiple ON switches do not
-combine observations. Each free-loss variant has its own Minuit search using
-the same fitter and sigma. OFF families remain NaN/empty. Missing or failed
-measurements copy the corresponding baseline with explicit constraint status.
+Beam, charged and neutral switches enable cumulative ordinary/free-loss
+RTS-only stages (six additional families), in output order beam -> charged ->
+neutral. All ON means beam, beam+charged, then beam+charged+neutral. Each stage
+uses the original seed/prior with its accumulated observations, not the previous
+posterior. Each free-loss stage has its own Minuit search using the same fitter
+and sigma. OFF families remain NaN/empty. Missing/failed new measurements retain
+the preceding accepted stage, with explicit status and applied/requested masks.
 For each trial the existing fitter uses the SAME positive SigmaLogLoss.
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
 amount sets the chosen mu. The final fitter call uses that same selected center
@@ -176,7 +178,7 @@ BackwardSeedScale; this scale does not change the RTS calculation or objective.
 
 Unconstrained RTS and backward endpoints use native
 MarlinTrk propagation from their innermost state to IP, honoring MSOn/ElossOn.
-In the beam-only families, ordinary/free-loss RTS instead smooths back to the explicit
+In stages containing the beam, ordinary/free-loss RTS instead smooths back to the explicit
 beam site through its stored native transition; the smoothed beam state supplies
 the IP endpoint without a second material traversal. Independent truth/diffuse
 fits and optional backward refilters retain native innermost-to-IP propagation;

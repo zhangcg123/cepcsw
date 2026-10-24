@@ -312,31 +312,30 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is independent optional-constraint RTS
-publication. Original ordinary augmented KF and free-loss endpoints always
-remain unconstrained. `BeamSpotConstraint`, `ChargedEcalMeasurement` and
-`NeutralEcalMeasurement` each enable TWO separate RTS families (ordinary and
-free-loss); all default OFF. Multiple ON switches run independent variants,
-not a combined fit. OFF outputs are NaN/empty with index -1. Missing/failed
-observations copy the corresponding baseline with an explicit status/error.
-FreeLossFit OFF copies the constrained ordinary endpoint into its free variant.
+Active work on local `breakpoint` is cumulative optional-constraint publication.
+Original ordinary/free-loss endpoints remain unconstrained. Three default-OFF
+switches enable six RTS stage families (ordinary/free for each). Enabled
+measurements accumulate in saved-stage order beam -> charged -> neutral:
+all ON gives beam, beam+charged, then beam+charged+neutral. OFF stages are
+NaN/empty. Each stage refits from the original seed/prior with its accumulated
+measurements; it does not recycle a prior stage's posterior as a new prior.
 
-The six families reuse the existing fitters. Beam uses an explicit native
-measurement node and material-aware boundary F/Q, with RTS back to the beam.
-Charged stays at ECAL, neutral at the post-loss site. Original diffuse/truth
-fits remain unchanged. The three original backward defaults remain OFF;
-no extra backward families were introduced. The card explicitly names the
-six collections; the batch validator requires their flat branches.
+Missing/failed additions retain the preceding accepted constraints for each
+method. Applied/requested masks (beam=1, charged=2, neutral=4) expose exactly
+which measurements are in each saved endpoint. Physical KF site order is
+unchanged: beam, tracker/neutral breakpoint, charged ECAL. All stages reuse the
+existing fitter and native transport/measurement/RTS machinery. Diffuse/truth
+and original backward outputs remain unchanged; all backward defaults OFF.
 
-Built/tested but NOT installed: eight CTests pass, eight-track all-OFF outputs
-reproduce 3320 prior field values exactly, and all six variants run on three
-hard-loss tracks. Single-switch versus all-switches tests establish exact
-family independence and unchanged baseline endpoints. Native covariance closure
-passes; no-interval and FreeLossFit-OFF copies are checked. One pre-existing
-batch test still disagrees with the user's breakpoint-only wrapper default.
+Built/tested, NOT installed: eight CTests pass, all-OFF matches 6608 existing
+field values on eight tracks, three hard-loss tracks yield masks 1,3,7, and
+the all-three final endpoints reproduce the former combined fit exactly.
+Two-switch/no-interval/free-fit-OFF tests, native covariance closure and real
+batch tuple validation pass. One pre-existing batch-wrapper-default test still
+fails; the user's wrapper was not changed.
 
-No population/endcap performance validation claimed. Neutral linearization and
-charged-cluster independence/calibration questions remain. Enabling all switches
-adds up to three Minuit searches per track. Next: install when authorized and
-compare categorized performance. Evidence and complete outgoing focus:
-`agents_record/2026-10-24-independent-constraint-families.md`.
+No population/endcap validation claimed. Neutral linearization, charged-PFA
+independence/calibration and extra per-stage CPU cost remain. Next: install
+when authorized, then compare categorized performance. Contract, provenance,
+test details and superseded focus:
+`agents_record/2026-10-24-cumulative-constraint-stages.md`.

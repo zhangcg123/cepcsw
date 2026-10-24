@@ -104,7 +104,7 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
   for (std::size_t i=0; i<m_constraintOutputs.size(); ++i)
     declareProperty(constraintOutputProperties[i], m_constraintOutputs[i],
-                    "Independent single-constraint RTS output; empty when disabled");
+                    "Cumulative constraint-stage RTS output; empty when disabled");
   declareProperty("OutputTracks", m_output, "Successful refitted tracks");
   declareProperty("OutputTracksBackwardFilter", m_backwardOutput, "Parallel backward-filter tracks");
   declareProperty("OutputTracksFreeLossRTS", m_freeRTSOutput, "Free-loss RTS; ordinary copy when off, input KF copy on failure");
@@ -239,6 +239,8 @@ StatusCode RecBreakpoint::initialize() {
     m_constraintCalo[i].book(*m_tree, prefix + "rts_");
     m_constraintLikelihood[i].book(*m_tree, prefix + "likelihood_");
     m_tree->Branch((prefix + "constraint_status").c_str(), &m_constraintStatus[i]);
+    m_tree->Branch((prefix + "constraint_mask").c_str(), &m_constraintMask[i]);
+    m_tree->Branch((prefix + "constraint_requested_mask").c_str(), &m_constraintRequestedMask[i]);
     m_tree->Branch((prefix + "constraint_error").c_str(), &m_constraintError[i]);
     if (i%2) m_constraintOptimization[i/2].book(*m_tree, prefix + "optimizer_");
   }
@@ -581,6 +583,7 @@ StatusCode RecBreakpoint::execute() {
       m_constraintCalo[i].reset();
       m_constraintLikelihood[i].reset();
       m_constraintStatus[i] = 0;
+      m_constraintMask[i] = m_constraintRequestedMask[i] = 0;
       m_constraintError[i].clear();
       if (i%2) m_constraintOptimization[i/2].reset(
           constraintEnabled[i/2] && m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
@@ -1022,58 +1025,71 @@ StatusCode RecBreakpoint::execute() {
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
       }
       std::array<std::optional<breakpoint::PairedFitResult>, 6> constrained;
+      std::array<breakpoint::FitSettings, 2> cumulative{{settings, settings}};
+      std::array<const breakpoint::PairedFitResult*, 2> previous{{
+          &paired, freeKFFallback ? nullptr : &freeResult}};
+      int requestedMask = 0;
       for (std::size_t kind=0; kind<constraintEnabled.size(); ++kind) {
         if (!constraintEnabled[kind]) continue;
-        auto variant = settings;
-        auto controls = freeLossControls;
-        if (kind == 0) {
-          variant.beamSpot = m_recordBeamSpotSettings;
-          controls.beamSpot = variant.beamSpot;
-        } else if (settings.intervals.size() == 1) {
-          if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
-            variant.chargedEcalEnergy = std::make_pair(
-                m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
-            controls.chargedEcalEnergy = variant.chargedEcalEnergy;
-          } else if (kind == 2 && m_collectedNeutralStatus == 2) {
-            variant.neutralEcalEnergy = std::make_pair(
-                m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
-            controls.neutralEcalEnergy = variant.neutralEcalEnergy;
-          }
-        }
-        const bool available = variant.beamSpot || variant.chargedEcalEnergy || variant.neutralEcalEnergy;
+        requestedMask |= 1 << kind;
         for (std::size_t method=0; method<2; ++method) {
           const std::size_t i = 2*kind+method;
+          auto variant = cumulative[method];
+          bool available = false;
+          if (kind == 0) {
+            variant.beamSpot = m_recordBeamSpotSettings;
+            available = true;
+          } else if (settings.intervals.size() == 1) {
+            if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
+              variant.chargedEcalEnergy = std::make_pair(
+                  m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
+              available = true;
+            } else if (kind == 2 && m_collectedNeutralStatus == 2) {
+              variant.neutralEcalEnergy = std::make_pair(
+                  m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+              available = true;
+            }
+          }
           m_constraintStatus[i] = available ? 2 : 1;
+          m_constraintRequestedMask[i] = requestedMask;
           bool optimized = false;
           try {
             if (available) {
+              // Inherit observations, never an earlier posterior or optimized prior center.
               if (method == 0) constrained[i] = fitter.fit(hits, variant, false);
               else if (!m_freeLossFit || settings.intervals.empty()) {
-                // No outer optimization: same constrained ordinary endpoint.
                 if (constrained[2*kind]) constrained[i] = constrained[2*kind];
                 else throw std::runtime_error("Constrained ordinary fit unavailable");
               } else {
-                auto optimizedFit = breakpoint::FreeLossFitter(fitter).fit(hits, settings, controls, false);
+                auto controls = freeLossControls;
+                controls.beamSpot = variant.beamSpot;
+                controls.chargedEcalEnergy = variant.chargedEcalEnergy;
+                controls.neutralEcalEnergy = variant.neutralEcalEnergy;
+                auto optimizedFit = breakpoint::FreeLossFitter(fitter).fit(hits, variant, controls, false);
                 m_constraintOptimization[kind].assign(optimizedFit.diagnostics);
                 if (!optimizedFit.fitted) throw std::runtime_error(optimizedFit.diagnostics.error);
                 constrained[i] = std::move(optimizedFit.fitted);
                 optimized = true;
               }
+              cumulative[method] = variant;
+              previous[method] = &*constrained[i];
             }
           } catch (const std::exception& error) {
             m_constraintStatus[i] = -1;
             m_constraintError[i] = error.what();
-            warning() << constraintPrefixes[i] << error.what() << "; use unconstrained endpoint" << endmsg;
+            warning() << constraintPrefixes[i] << error.what() << "; retain previous constraint stage" << endmsg;
           }
-          // Missing/failed observations reuse the baseline; OFF never enters here.
-          if (!constrained[i] && method == 1 && freeKFFallback) {
+          // Missing/failed new measurements preserve earlier accepted constraints.
+          if (!previous[method]) {
             const int index = constraintOutputs[i]->size();
             m_constraintTracks[i].assignKF(track, m_bz, index, -1);
             constraintOutputs[i]->push_back(track.clone());
             m_constraintCalo[i].assignFromTrack(track, m_bz, 2);
             m_constraintLikelihood[i].invalidate("Unconstrained free-loss input KF fallback");
           } else {
-            const auto& endpoint = constrained[i] ? *constrained[i] : (method ? freeResult : paired);
+            const auto& endpoint = *previous[method];
+            m_constraintMask[i] = (endpoint.rts.beamSpot ? 1 : 0)
+                | (endpoint.rts.chargedEcalStep ? 2 : 0) | (endpoint.rts.neutralEcal ? 4 : 0);
             const int index = publishTrack(*constraintOutputs[i], endpoint.rts, hits, m_bz,
                 endpoint.rts.smoothedTotalChi2, adapter, m_constraintCalo[i]);
             m_constraintTracks[i].assign(endpoint, m_bz,

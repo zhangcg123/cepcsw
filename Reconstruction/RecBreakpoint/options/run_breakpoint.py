@@ -148,11 +148,16 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
-# Independent one-constraint variants of ordinary augmented KF/RTS and free-loss.
+# Cumulative constraint stages for ordinary augmented KF/RTS and free-loss.
 # The original rts_* and free_loss_rts_* remain unconstrained. Each ON switch
-# adds TWO RTS families; multiple ON switches do NOT combine their measurements.
+# saves TWO RTS families, accumulating enabled constraints in this output order:
+# beam -> charged -> neutral. All ON: beam; beam+charged; beam+charged+neutral.
+# This is output-stage order; the fitter applies measurements at their physical sites.
+# Each stage starts from the original seed/prior with its accumulated measurements,
+# not from an earlier fitted posterior. Each free stage has its own optimization.
 # OFF: empty collection, NaN scalar endpoints, empty vectors, index -1.
-# ON but unavailable/failed: baseline copy, with constraint_status 1/-1.
+# ON but unavailable/failed: preceding accepted stage copy, constraint_status 1/-1.
+# constraint_mask records applied observations: beam=1, charged=2, neutral=4.
 # FreeLossFit=False copies the constrained ordinary result into its free variant.
 # Diffuse/truth-centered fits and original backward endpoints remain unchanged.
 # Old free-loss-only environment names must not silently disable a requested measurement.
@@ -165,12 +170,12 @@ for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARG
 # Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
-# Optional measurement in the two neutral-only result families. Uses the
+# Optional measurement in the final cumulative neutral-stage families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.
 # Uses the same native KalTest Filter() as charged energy; no photon-position hit.
-# No usable neutral/no selected breakpoint copies the corresponding unconstrained
-# result; a failed variant also copies its baseline and records the error.
+# No usable neutral/no selected breakpoint retains earlier enabled constraints;
+# a failed stage also retains the preceding accepted result and records the error.
 # These six extra families are RTS-only. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"

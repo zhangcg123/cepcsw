@@ -41,7 +41,7 @@ public:
   StatusCode finalize() override;
 private:
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
-  // Independent one-constraint RTS fits: beam, charged, neutral; ordinary then free-loss.
+  // Cumulative RTS stages: beam, then charged, then neutral; ordinary then free-loss.
   std::array<DataHandle<edm4hep::TrackCollection>, 6> m_constraintOutputs{{
     {"BreakpointTracksBeamSpotRTS", Gaudi::DataHandle::Writer, this},
     {"BreakpointTracksBeamSpotFreeLossRTS", Gaudi::DataHandle::Writer, this},
@@ -149,8 +149,9 @@ private:
   std::array<breakpoint::CaloStateTuple, 6> m_constraintCalo;
   std::array<breakpoint::LikelihoodTuple, 6> m_constraintLikelihood;
   std::array<breakpoint::FreeLossTuple, 3> m_constraintOptimization;
-  // 0 off, 1 missing observation/breakpoint (baseline copy), 2 applied, -1 failed (baseline copy).
+  // 0 off, 1 unavailable (previous-stage copy), 2 applied, -1 failed (previous-stage copy).
   std::array<int, 6> m_constraintStatus{};
+  std::array<int, 6> m_constraintMask{}, m_constraintRequestedMask{}; // beam=1, charged=2, neutral=4
   std::array<std::string, 6> m_constraintError;
   // KF input plus seven parallel published breakpoint endpoint families.
   std::array<breakpoint::CaloStateTuple, 8> m_caloStates;

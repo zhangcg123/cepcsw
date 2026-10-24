@@ -345,9 +345,10 @@ def verify(path, stage):
             for method in ('ordinary', 'free_loss'):
                 prefix = constraint + '_' + method + '_'
                 for suffix in ('rts_pt', 'rts_pt_error', 'rts_calo_pt',
-                               'rts_calo_pt_error', 'constraint_status', 'rts_index'):
+                               'rts_calo_pt_error', 'constraint_status', 'rts_index',
+                               'constraint_mask', 'constraint_requested_mask'):
                     if not tree.GetBranch(prefix + suffix):
-                        raise RuntimeError('Missing independent constraint branch: ' + prefix + suffix)
+                        raise RuntimeError('Missing cumulative constraint branch: ' + prefix + suffix)
         neutral = file.Get('neutral_pfos')
         if not neutral or not all(neutral.GetBranch(name) for name in (
                 'neutral_ecal_cluster_energy', 'ebrem_photon_ecal_entry_status',
