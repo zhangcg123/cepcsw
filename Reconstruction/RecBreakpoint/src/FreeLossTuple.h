@@ -22,15 +22,14 @@ private:
   int m_maxCalls = 180;
   int m_status = 0, m_interval = -1, m_minuitStatus = -99;
   double m_b = 0, m_errorB = 0, m_edm = 0, m_nll2 = 0, m_quadratic = 0, m_logdet = 0;
-  double m_objectiveNll2 = 0, m_beamNll2 = 0, m_beamQuadratic = 0, m_beamLogdet = 0;
-  double m_beamResidual = 0, m_beamVariance = 0, m_beamTrackVariance = 0, m_beamSpotVariance = 0;
+  double m_objectiveNll2 = 0;
   double m_chargedEcalPredicted = 0, m_chargedEcalResidual = 0;
   double m_chargedEcalVariance = 0, m_chargedEcalChi2 = 0;
   NeutralEnergyMeasurement m_neutral;
   std::vector<double> m_neutralPredictedState, m_neutralFilteredState, m_neutralSmoothedState;
   std::vector<double> m_neutralPredictedCov, m_neutralFilteredCov, m_neutralSmoothedCov;
   std::string m_error;
-  std::vector<double> m_trialB, m_trialNll2, m_trialObjectiveNll2, m_trialBeamNll2;
+  std::vector<double> m_trialB, m_trialNll2, m_trialObjectiveNll2;
   std::vector<int> m_trialValid, m_trialPhase;
   std::vector<std::string> m_trialError;
 };

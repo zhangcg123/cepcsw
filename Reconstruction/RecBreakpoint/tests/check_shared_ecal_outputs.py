@@ -26,6 +26,7 @@ def main():
     parser.add_argument("before")
     parser.add_argument("after")
     parser.add_argument("--free-only", action="store_true")
+    parser.add_argument("--retired-beam", action="store_true", help="Allow only the explicitly removed beam-family fields")
     args = parser.parse_args()
     before, after = rows(args.before), rows(args.after)
     assert len(before) == len(after) and before, "Missing/mismatched track rows"
@@ -34,6 +35,13 @@ def main():
         identity = (old["event_index"], old["input_track_index"])
         assert identity == (new["event_index"], new["input_track_index"])
         for key, value in old.items():
+            if args.retired_beam and (key.startswith("beam_guided_free_loss_") or
+                    key in {"free_loss_beam_nll2", "free_loss_beam_quadratic", "free_loss_beam_logdet",
+                            "free_loss_beam_residual_mm", "free_loss_beam_innovation_variance_mm2",
+                            "free_loss_beam_track_variance_mm2", "free_loss_beam_spot_variance_mm2",
+                            "free_loss_trial_beam_nll2"}):
+                assert key not in new, (identity, "retired field still present", key)
+                continue
             if args.free_only and not key.startswith("free_loss_"):
                 continue
             assert key in new and equal(value, new[key]), (identity, key)

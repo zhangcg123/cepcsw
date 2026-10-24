@@ -40,6 +40,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     settings.intervalMeanLogLoss.clear();
     settings.chargedEcalEnergy = controls.chargedEcalEnergy;
     settings.neutralEcalEnergy = controls.neutralEcalEnergy;
+    settings.beamSpot = controls.beamSpot;
     settings.captureGaussianModel = true;
     std::map<double, FreeLossTrial> cache; // scalar records only, never cached trajectories
     FreeLossTrialPhase phase = FreeLossTrialPhase::Scan;
@@ -70,9 +71,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
           trial.chargedEcalInnovationVariance = rts.chargedEcalInnovationVariance;
           trial.chargedEcalChi2 = rts.chargedEcalChi2;
         }
-        if (controls.beamSpot)
-          trial.beam = evaluateBeamSpotLikelihood(rts.ip, m_bz, *controls.beamSpot);
-        trial.objectiveNll2 = trial.likelihood.nll2 + trial.beam.nll2;
+        trial.objectiveNll2 = trial.likelihood.nll2;
         trial.valid = std::isfinite(trial.objectiveNll2) &&
                       std::isfinite(rts.ip.omega) && rts.ip.omega != 0;
         if (!trial.valid) throw std::runtime_error("Nonfinite free-loss candidate");
@@ -139,7 +138,6 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     }
     diagnostic.b = best.b;
     diagnostic.likelihood = best.likelihood;
-    diagnostic.beam = best.beam;
     diagnostic.chargedEcalPredictedEnergy = best.chargedEcalPredictedEnergy;
     diagnostic.chargedEcalResidual = best.chargedEcalResidual;
     diagnostic.chargedEcalInnovationVariance = best.chargedEcalInnovationVariance;

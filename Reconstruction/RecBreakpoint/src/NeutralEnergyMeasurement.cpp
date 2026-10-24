@@ -1,5 +1,5 @@
 #include "NeutralEnergyMeasurement.h"
-#include "EnergyMeasurementSite.h"
+#include "ScalarMeasurementSite.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -55,7 +55,7 @@ NeutralEnergyMeasurement updateNeutralEnergy(const LossTrackState& predicted,
   result.observation.noise(0, 0) = variance;
   result.observation.residual.ResizeTo(1, 1);
   result.observation.residual(0, 0) = result.residual;
-  result.filtered = updateEnergyState(predicted, result.observation);
+  result.filtered = updateScalarState(predicted, result.observation);
   result.chi2 = result.residual * result.residual / result.innovationVariance;
   const auto filtered = neutralEnergyProjection(result.filtered);
   result.filteredEnergy = filtered.energy;

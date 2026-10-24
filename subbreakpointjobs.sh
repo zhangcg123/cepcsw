@@ -18,9 +18,8 @@ export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.
 # Must be finite and positive. Frozen into generated cards at preparation.
 export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
-# Freeze the default-on parallel beam-guided free-loss objective in each job.
-# The base free-loss outputs remain independent and unchanged.
-export BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE=${BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE:-1}
+# Shared ordinary/free-loss beam KF measurement, default OFF.
+export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-0}
 # New simulation files use sim-barrel-<seed>.root. SAMPLE_REGION controls that
 # filename convention, and also the gun theta range if STAGES includes sim.
 # Set SAMPLE_REGION='' to prepare an older momentum/theta-named campaign;

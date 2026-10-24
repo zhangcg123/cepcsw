@@ -26,7 +26,7 @@ fit.SigmaLogLoss = 0.001  # SAME prior width for ordinary, free and truth fits
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
-fit.FreeLossBeamSpotObjective = True  # independent, default-on second optimizer
+fit.BeamSpotConstraint = False  # initial KF measurement shared with ordinary
 fit.BeamSpotX = fit.BeamSpotY = 0.0  # mm
 fit.BeamSpotSigmaX = 0.0145  # mm
 fit.BeamSpotSigmaY = 3.6e-5  # mm
@@ -35,72 +35,31 @@ fit.BackwardSeedScale = 100.0
 
 The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_MAX_LOG_LOSS,
 BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
-parallel objective is controlled by BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE
-(default 1); BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y can override its
-mean and widths. It runs only when FreeLossFit is enabled, and setting it to
-0 leaves an exact copy of the base free-loss endpoint pair in its dedicated
-outputs. The ordinary and base free-loss pairs never receive a beam update.
-The
-dedicated batch helper freezes these controls and the card. Example:
-
-```bash
-BP_FREE_LOSS_FIT=1 ./subbreakpointjobs.sh
-```
-
-That uses the existing input/output/stage controls and does not change the
-GSF worker/cards. The script's selected loss sigma is used by ordinary,
-free-loss and truth-prior fits, including every optimizer trial and final refit.
-It does not modify an input KF copy used as a failure fallback.
-
-For one selected interval:
-
-1. Fit the ordinary pair once and preserve it independently of optimization.
-2. Scan and optimize the Gaussian loss PRIOR CENTER, called mu below.
-   The loss parameter is `b = log(p_before/p_after)`, with fractional loss
-   `1-exp(-b)`. Every trial invokes the SAME BreakpointFitter with
-   `b ~ N(mu, SigmaLogLoss^2)`. The configured sigma is positive and unchanged.
-   Measurements can change the fitted b and its variance. No truth amount
-   sets the trial center, and no extra penalty holds mu near MeanLogLoss.
-3. Read the complete RTS-smoothed chi2 (measurement + process + seed) from
-   THIS trial. Add the joint measurement covariance log determinant and
-   measurement normalization from THIS trial's captured affine model.
-4. Repeat the chosen trial without its scalar cache, then rerun the same
-   Gaussian fit with the selected mu AND configured sigma to produce the
-   ADDITIONAL FreeLoss RTS/backward output pair.
-
-The bounds on mu are [0,FreeLossMaxLogLoss], default[0,1]. They do not bound
-the posterior b or truncate the Gaussian. The tested14-point scan
-is scaled with the upper bound. Three MIGRAD starts are the best scan point,
-min(.005,upper), and min(.05,upper). The normal initial step is .002, capped
-at2% of the upper bound. Minuit ErrorDef=1, precision1e-8. A local diagnostic
-scan uses mu_best + j*.001 for j=-10..10 within bounds; it does not silently
-replace the selected minimum. Failed native trials are tagged and receive
-a large invalid-objective penalty, not a fabricated valid likelihood.
-
-The result may be at a boundary but must come from a valid converged MIGRAD
-minimum (Minimize true, status0, finite EDM). A finite scan or non-converged
-candidate alone is no longer accepted. If all starts fail this gate, use the
-input KF fallback. Always inspect the separately saved Minuit
-status, boundary flags and trial records; `status=Applied` means an endpoint
-was produced, not that its loss is accurately measured.
+shared beam measurement is controlled by BP_BEAM_SPOT_CONSTRAINT (default 0);
+BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y control its position and widths.
+It also works with FreeLossFit disabled. The beam-guided output family and
+its old environment controls are removed. This observation updates the seed
+before the first tracker hit; ordinary and free-loss use that same constrained
+KF/RTS. No post-RTS beam objective is added.
 
 ## One model, not three objective choices
 
-The base free-loss objective below remains unchanged. In parallel, a second
-Minuit search adds the predictive likelihood of a transverse beam-origin
-measurement, evaluated from each trial's hit-only RTS IP state:
+When BeamSpotConstraint is enabled, the shared fitter conditions its original
+seed on one transverse beam-origin observation before the first tracker hit:
 
 ```text
-S_beam(mu) = P_drho(mu) + cos(phi0(mu))^2*sigma_x^2 + sin(phi0(mu))^2*sigma_y^2
-beam_nll2(mu) = drho(mu)^2/S_beam(mu) + log(S_beam(mu)) + log(2*pi)
-beam_guided_objective(mu) = hit_nll2(mu) + beam_nll2(mu)
+R_beam = cos(phi0)^2*sigma_x^2 + sin(phi0)^2*sigma_y^2
+S_beam = H_beam*P_seed*H_beam^T + R_beam
+L(all observations) = L(beam | original seed) * L(hits, ECAL | beam)
 ```
 
-The IP state is geometrically repivoted to the configured beam mean for this
-score. The beam is never inserted into a Kalman update, hit list, RTS smoother,
-or published covariance. Only the selected loss-prior center can change. This
-term is a one-dimensional projected transverse likelihood, not a complete
-two-dimensional beam-spot constraint or validated event-origin model.
+Native helix repivoting supplies drho and H_beam; native KalTest filtering
+updates the full seed covariance. RTS uses this conditioned seed. The complete
+smoothed quadratic includes the original seed penalty and the affine beam
+measurement residual; the likelihood includes log(2*pi*S_beam) once. There is
+no separate beam-guided search or post-RTS penalty. This geometric, material-free
+boundary observation constrains transverse drho, not longitudinal z. Its frozen
+linearization and projected width are not a validated event-origin model.
 
 For the exact relation to complete smoothed residuals, see
 [forward likelihood and smoothed quadratic](smoothed-objective.md).
@@ -174,8 +133,8 @@ nor a successful Minuit call establishes correct physical loss recovery.
 ### Shared loss prior, different inward calculations
 
 Each applied free-loss pair has one Minuit search and one selected mu shared
-by its RTS and backward endpoints; ECAL-guided and beam-guided pairs have
-independent searches from tracker-only free loss.
+by its RTS and backward endpoints. Beam, charged and neutral measurements are
+optional observations in this same fit, not separate endpoint families.
 For each trial the existing fitter uses the SAME positive SigmaLogLoss.
 Minuit chooses the minimum normalized full-track likelihood; no truth loss
 amount sets the chosen mu. The final fitter call uses that same selected center
@@ -222,10 +181,6 @@ The existing names remain:
 - BreakpointTracksFreeLossRTS / BreakpointTracksFreeLossBackwardFilter:
   optimized-prior results when applied; ordinary copies when off/empty;
   input KF copies on failed or unsupported optimization.
-- BreakpointTracksBeamGuidedFreeLossRTS /
-  BreakpointTracksBeamGuidedFreeLossBackwardFilter: separately optimized
-  prior-center results when enabled; base free-loss copies when disabled;
-  input KF copies if the beam-guided search fails.
 - BreakpointTracksTruthOverrideRTS / BreakpointTracksTruthOverrideBackwardFilter:
   the established truth-centered positive-SigmaLogLoss comparison when enabled.
 

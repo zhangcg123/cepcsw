@@ -20,6 +20,7 @@ struct FitSettings {
   std::map<int, double> intervalMeanLogLoss;
   std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; terminal RTS measurement
   std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
+  std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
 };
@@ -35,6 +36,7 @@ struct IntervalResult {
 };
 
 struct FitResult {
+  std::optional<BeamSpotMeasurement> beamSpot;
   edm4hep::TrackState ip{};
   std::vector<TrackState> predicted, filtered, smoothed;
   std::vector<TrackState> backwardPredicted, backwardFiltered, endpoint;
@@ -92,6 +94,7 @@ private:
       const std::vector<TMatrixD>& smoothedMeans, const std::vector<TMatrixD>& noises,
       const std::vector<TrackState>& measurementReferences,
       const std::vector<int>& hitNodes = {}) const;
+  void scoreBeamSpot(FitResult& result, const BeamSpotSettings& beam) const;
   FitResult finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
       const FitSettings& settings, FitResult result) const;
   const KalmanAdapter& m_adapter;

@@ -1,5 +1,5 @@
 #include "NeutralEnergyMeasurement.h"
-#include "EnergyMeasurementSite.h"
+#include "ScalarMeasurementSite.h"
 #include "TrackLikelihood.h"
 #include <cmath>
 #include <stdexcept>
@@ -120,7 +120,7 @@ int main() {
   charged.derivative(0,4)=p*state.mean(4,0)/(1.+state.mean(4,0)*state.mean(4,0));
   charged.noise(0,0)=.04*.04;
   charged.residual(0,0)=.3;
-  const auto chargedState=updateEnergyState(state,charged);
+  const auto chargedState=updateScalarState(state,charged);
   const TMatrixD chargedCov=inverseCovariance(priorPrecision+
       transpose(charged.derivative)*charged.derivative*(1./charged.noise(0,0)));
   const TMatrixD chargedDelta=chargedCov*transpose(charged.derivative)*
@@ -133,6 +133,6 @@ int main() {
     throw std::runtime_error("Charged energy failed to update correlated loss");
   charged.residual(0,0)=1.e6;
   rejected=false;
-  try { updateEnergyState(state,charged); } catch (const std::runtime_error&) { rejected=true; }
+  try { updateScalarState(state,charged); } catch (const std::runtime_error&) { rejected=true; }
   if (!rejected) throw std::runtime_error("Charged energy crossed curvature pole");
 }

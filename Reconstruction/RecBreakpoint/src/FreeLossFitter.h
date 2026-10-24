@@ -2,7 +2,6 @@
 #define RECBREAKPOINT_FREELOSSFITTER_H
 
 #include "BreakpointFitter.h"
-#include "BeamSpotLikelihood.h"
 #include "TrackLikelihood.h"
 #include <limits>
 #include <optional>
@@ -13,7 +12,7 @@ struct FreeLossSettings {
   double maxLogLoss = 1; // prior center in [0,maxLogLoss], not a posterior bound
   unsigned maxCallsPerStart = 180;
   double tolerance = .001;
-  std::optional<BeamSpotSettings> beamSpot; // objective only; never a KF hit
+  std::optional<BeamSpotSettings> beamSpot; // initial KF measurement, shared with ordinary
   std::optional<std::pair<double, double>> chargedEcalEnergy; // terminal 6D KF observation [GeV]
   std::optional<std::pair<double, double>> neutralEcalEnergy; // post-loss 6D KF observation [GeV]
 };
@@ -25,7 +24,6 @@ enum class FreeLossTrialPhase { Scan = 0, Minimize = 1, Repeat = 2, LocalScan = 
 struct FreeLossTrial {
   double b = 0; // trial prior center; retained name for tuple compatibility
   TrackLikelihoodResult likelihood;
-  BeamSpotLikelihood beam;
   double chargedEcalPredictedEnergy = std::numeric_limits<double>::quiet_NaN();
   double chargedEcalResidual = std::numeric_limits<double>::quiet_NaN();
   double chargedEcalInnovationVariance = std::numeric_limits<double>::quiet_NaN();
@@ -46,7 +44,6 @@ struct FreeLossDiagnostics {
   double priorSigmaLogLoss = std::numeric_limits<double>::quiet_NaN();
   double edm = std::numeric_limits<double>::quiet_NaN();
   TrackLikelihoodResult likelihood;
-  BeamSpotLikelihood beam;
   double chargedEcalPredictedEnergy = std::numeric_limits<double>::quiet_NaN();
   double chargedEcalResidual = std::numeric_limits<double>::quiet_NaN();
   double chargedEcalInnovationVariance = std::numeric_limits<double>::quiet_NaN();
@@ -68,13 +65,12 @@ struct FreeLossFitResult {
 /// No truth-loss input is accepted by this interface.
 class FreeLossFitter {
 public:
-  FreeLossFitter(const BreakpointFitter& fitter, double bz) : m_fitter(fitter), m_bz(bz) {}
+  explicit FreeLossFitter(const BreakpointFitter& fitter) : m_fitter(fitter) {}
   FreeLossFitResult fit(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& ordinary, const FreeLossSettings& controls,
                        bool runBackward = true) const;
 private:
   const BreakpointFitter& m_fitter;
-  double m_bz;
 };
 
 } // namespace breakpoint

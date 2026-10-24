@@ -163,7 +163,6 @@ class BatchTest(unittest.TestCase):
         names = {
             'OrdinaryBackwardFilter': 'BP_ORDINARY_BACKWARD_FILTER',
             'FreeLossBackwardFilter': 'BP_FREE_LOSS_BACKWARD_FILTER',
-            'BeamGuidedFreeLossBackwardFilter': 'BP_BEAM_FREE_LOSS_BACKWARD_FILTER',
             'TruthOverrideBackwardFilter': 'BP_TRUTH_BACKWARD_FILTER',
         }
         self.prepare(OUTPUT_TUPLEPATH='backward_default')
@@ -280,27 +279,30 @@ class BatchTest(unittest.TestCase):
             self.assertTrue(fit.FreeLossFit)
             self.assertEqual(fit.SigmaLogLoss,float(sigma))
 
-    def test_beam_guided_free_loss_is_parallel_and_default_on(self):
+    def test_shared_beam_measurement_default_off_and_freeze(self):
         self.prepare(OUTPUT_TUPLEPATH='beam_default')
         job = self.manifest('beam_default')
         card = Path(job['cards']['breakpoint']).read_text()
-        selected = ('fit.FreeLossBeamSpotObjective =', 'fit.BeamSpotX =', 'fit.BeamSpotY =',
+        selected = ('fit.BeamSpotConstraint =', 'fit.BeamSpotX =', 'fit.BeamSpotY =',
                     'fit.BeamSpotSigmaX =', 'fit.BeamSpotSigmaY =')
         assignments = '\n'.join(line for line in card.splitlines() if line.startswith(selected))
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, job['controls'], clear=True):
             exec(assignments, {'fit': fit, 'os': os})
-        self.assertTrue(fit.FreeLossBeamSpotObjective)
+        self.assertFalse(fit.BeamSpotConstraint)
         self.assertEqual((fit.BeamSpotX, fit.BeamSpotY), (0, 0))
         self.assertEqual((fit.BeamSpotSigmaX, fit.BeamSpotSigmaY), (.0145, 3.6e-5))
-        self.assertIn('OutputTracksBeamGuidedFreeLossRTS', card)
-        self.assertIn('OutputTracksBeamGuidedFreeLossBackwardFilter', card)
-        self.prepare(OUTPUT_TUPLEPATH='beam_off', BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE='false')
-        off = self.manifest('beam_off')
-        self.assertEqual(off['controls']['BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE'], '0')
-        with patch.dict(os.environ, off['controls'], clear=True):
+        self.assertNotIn('OutputTracksBeamGuidedFreeLossRTS', card)
+        self.assertNotIn('OutputTracksBeamGuidedFreeLossBackwardFilter', card)
+        self.prepare(OUTPUT_TUPLEPATH='beam_on', BP_BEAM_SPOT_CONSTRAINT='true', BP_FREE_LOSS_FIT='false')
+        on = self.manifest('beam_on')
+        self.assertEqual(on['controls']['BP_BEAM_SPOT_CONSTRAINT'], '1')
+        with patch.dict(os.environ, on['controls'], clear=True):
             exec(assignments, {'fit': fit, 'os': os})
-        self.assertFalse(fit.FreeLossBeamSpotObjective)
+        self.assertTrue(fit.BeamSpotConstraint)
+        for name in ('BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE', 'BP_BEAM_FREE_LOSS_BACKWARD_FILTER'):
+            with self.assertRaisesRegex(ValueError, 'was removed'):
+                self.prepare(OUTPUT_TUPLEPATH='retired_beam', **{name: '0'})
 
     def test_submission_shell_freezes_shared_loss_sigma(self):
         # This fixture checks plumbing, independent of the user's active campaign default.

@@ -227,7 +227,18 @@ edm4hep::TrackState KalmanAdapter::prefit(const std::vector<edm4hep::TrackerHit>
 }
 
 MeasurementStep KalmanAdapter::seed(const std::vector<edm4hep::TrackerHit>& hits,
-                                    double scale) const {
+                                    double scale, const std::optional<BeamSpotSettings>& beam) const {
+  if (beam) {
+    // Obtain the native first-hit prediction without consuming the hit. Apply
+    // the beam observation first, then update the first tracker hit exactly once.
+    const auto prediction = nativeStep(*m_system, m_bz, m_maxChi2,
+        fromEDM(prefit(hits, scale), m_bz), hits.front(), hits.front(), false, 0, 0, true);
+    auto measurement = updateBeamSpot(prediction.predicted, m_bz, *beam);
+    auto step = nativeStep(*m_system, m_bz, m_maxChi2, measurement.filtered,
+                          hits.front(), hits.front());
+    step.beamSpot = std::move(measurement);
+    return step;
+  }
   return nativeStep(*m_system, m_bz, m_maxChi2, fromEDM(prefit(hits, scale), m_bz),
                     hits.front(), hits.front());
 }

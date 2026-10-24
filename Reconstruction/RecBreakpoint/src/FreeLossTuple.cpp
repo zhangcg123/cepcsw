@@ -22,17 +22,10 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("b_error", &m_errorB);
   branch("minuit_status", &m_minuitStatus);
   branch("edm", &m_edm);
-  branch("nll2", &m_nll2); // includes ECAL only in the ECAL-guided family
+  branch("nll2", &m_nll2); // includes all enabled KF measurements
   branch("quadratic", &m_quadratic);
   branch("logdet", &m_logdet);
   branch("objective_nll2", &m_objectiveNll2);
-  branch("beam_nll2", &m_beamNll2);
-  branch("beam_quadratic", &m_beamQuadratic);
-  branch("beam_logdet", &m_beamLogdet);
-  branch("beam_residual_mm", &m_beamResidual);
-  branch("beam_innovation_variance_mm2", &m_beamVariance);
-  branch("beam_track_variance_mm2", &m_beamTrackVariance);
-  branch("beam_spot_variance_mm2", &m_beamSpotVariance);
   branch("charged_ecal_predicted_energy", &m_chargedEcalPredicted);
   branch("charged_ecal_residual", &m_chargedEcalResidual);
   branch("charged_ecal_innovation_variance", &m_chargedEcalVariance);
@@ -61,9 +54,8 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("covariance_conditional", &m_covarianceConditional);
   branch("error", &m_error);
   branch("trial_b", &m_trialB);
-  branch("trial_nll2", &m_trialNll2); // retained name; ECAL family includes ECAL
+  branch("trial_nll2", &m_trialNll2); // includes all enabled KF measurements
   branch("trial_objective_nll2", &m_trialObjectiveNll2);
-  branch("trial_beam_nll2", &m_trialBeamNll2);
   branch("trial_valid", &m_trialValid);
   branch("trial_phase", &m_trialPhase);
   branch("trial_error", &m_trialError);
@@ -79,14 +71,13 @@ void FreeLossTuple::reset(bool enabled, const FreeLossSettings& controls, double
   m_status = 0; m_interval = -1; m_minuitStatus = -99;
   const double nan = std::numeric_limits<double>::quiet_NaN();
   m_b = m_errorB = m_edm = m_nll2 = m_quadratic = m_logdet = nan;
-  m_objectiveNll2 = m_beamNll2 = m_beamQuadratic = m_beamLogdet = nan;
-  m_beamResidual = m_beamVariance = m_beamTrackVariance = m_beamSpotVariance = nan;
+  m_objectiveNll2 = nan;
   m_chargedEcalPredicted = m_chargedEcalResidual = m_chargedEcalVariance = m_chargedEcalChi2 = nan;
   m_neutral = NeutralEnergyMeasurement{};
   m_neutralPredictedState.clear(); m_neutralFilteredState.clear(); m_neutralSmoothedState.clear();
   m_neutralPredictedCov.clear(); m_neutralFilteredCov.clear(); m_neutralSmoothedCov.clear();
   m_error.clear();
-  m_trialB.clear(); m_trialNll2.clear(); m_trialObjectiveNll2.clear(); m_trialBeamNll2.clear();
+  m_trialB.clear(); m_trialNll2.clear(); m_trialObjectiveNll2.clear();
   m_trialValid.clear(); m_trialPhase.clear(); m_trialError.clear();
 }
 
@@ -120,13 +111,6 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
     m_quadratic = diagnostic.likelihood.quadratic;
     m_logdet = diagnostic.likelihood.logDeterminant;
     m_objectiveNll2 = diagnostic.objectiveNll2;
-    m_beamNll2 = diagnostic.beam.nll2;
-    m_beamQuadratic = diagnostic.beam.quadratic;
-    m_beamLogdet = diagnostic.beam.logDeterminant;
-    m_beamResidual = diagnostic.beam.residual;
-    m_beamVariance = diagnostic.beam.innovationVariance;
-    m_beamTrackVariance = diagnostic.beam.trackVariance;
-    m_beamSpotVariance = diagnostic.beam.beamVariance;
     m_chargedEcalPredicted = diagnostic.chargedEcalPredictedEnergy;
     m_chargedEcalResidual = diagnostic.chargedEcalResidual;
     m_chargedEcalVariance = diagnostic.chargedEcalInnovationVariance;
@@ -135,8 +119,6 @@ void FreeLossTuple::assign(const FreeLossDiagnostics& diagnostic) {
   for (const auto& trial : diagnostic.trials) {
     m_trialB.push_back(trial.b); m_trialNll2.push_back(trial.likelihood.nll2);
     m_trialObjectiveNll2.push_back(trial.objectiveNll2);
-    m_trialBeamNll2.push_back(trial.valid ? trial.beam.nll2
-                                            : std::numeric_limits<double>::quiet_NaN());
     m_trialValid.push_back(trial.valid); m_trialPhase.push_back(int(trial.phase));
     m_trialError.push_back(trial.error);
   }

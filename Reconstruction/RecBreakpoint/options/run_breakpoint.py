@@ -55,8 +55,6 @@ fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
 fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"
 fit.OutputTracksFreeLossBackwardFilter = "BreakpointTracksFreeLossBackwardFilter"
-fit.OutputTracksBeamGuidedFreeLossRTS = "BreakpointTracksBeamGuidedFreeLossRTS"
-fit.OutputTracksBeamGuidedFreeLossBackwardFilter = "BreakpointTracksBeamGuidedFreeLossBackwardFilter"
 fit.OutputTracksTruthOverrideRTS = "BreakpointTracksTruthOverrideRTS"
 fit.OutputTracksTruthOverrideBackwardFilter = "BreakpointTracksTruthOverrideBackwardFilter"
 fit.OutputTracksDiffuseAugmentedRTS = "BreakpointTracksDiffuseAugmentedRTS"
@@ -96,15 +94,14 @@ fit.BackwardSeedScale = float(os.environ.get("BP_BACKWARD_SEED_SCALE", "100.0"))
 # Their flat endpoint values are NaN; RTS results remain available.
 fit.OrdinaryBackwardFilter = os.environ.get("BP_ORDINARY_BACKWARD_FILTER", "0") == "1"
 fit.FreeLossBackwardFilter = os.environ.get("BP_FREE_LOSS_BACKWARD_FILTER", "0") == "1"
-fit.BeamGuidedFreeLossBackwardFilter = os.environ.get("BP_BEAM_FREE_LOSS_BACKWARD_FILTER", "0") == "1"
 fit.TruthOverrideBackwardFilter = os.environ.get("BP_TRUTH_BACKWARD_FILTER", "0") == "1"
 # Three usable 2D hits in radius order; N//2 is the middle (upper for even N).
 # FirstThree restores the original short-lever-arm prefit for comparisons.
 fit.SeedHitSelection = os.environ.get("BP_SEED_HIT_SELECTION", "FirstMiddleLast")
-# RTS is always produced; the four backward continuations are independently optional.
+# RTS is always produced; the three backward continuations are independently optional.
 # Reject the retired environment control rather than silently ignoring it.
 if "BP_BACKWARD_MODE" in os.environ:
-    raise ValueError("BP_BACKWARD_MODE/BackwardMode was removed; use the four backward-filter switches")
+    raise ValueError("BP_BACKWARD_MODE/BackwardMode was removed; use the three backward-filter switches")
 # Compatibility property for previously generated cards; only Persistent6D
 # remains supported. The backward continuation retains its local-joint fit.
 fit.LossStateMode = "Persistent6D"
@@ -147,7 +144,7 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
 # Shared by ordinary augmented KF/RTS and free-loss; both default OFF.
 # FreeLossFit=False does not disable these measurements in the ordinary fit.
-# Beam-guided, diffuse and truth-centered fits do not receive these observations.
+# Independently executed diffuse and truth-centered fits do not receive these observations.
 # Old free-loss-only environment names must not silently disable a requested measurement.
 for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARGED_ECAL_MEASUREMENT"),
                              ("BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT", "BP_NEUTRAL_ECAL_MEASUREMENT")):
@@ -173,12 +170,15 @@ fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", 
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
-# A second free-loss optimizer adds one transverse beam-origin likelihood to
-# the OBJECTIVE at every trial. No beam hit or update enters either KF/RTS fit.
-# The ordinary FreeLoss pair above remains unchanged; when this switch is off,
-# the beam-guided pair is an exact copy of that base pair. Both use the same
-# detector hits, selected breakpoint and SigmaLogLoss.
-fit.FreeLossBeamSpotObjective = os.environ.get("BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE", "1") == "1"
+# Common ordinary/free-loss beam KF measurement BEFORE the first tracker hit.
+# Native geometric helix projection, no material/Q on this boundary, no z hit.
+# Full covariance updated; the forward fit and RTS use the constrained state.
+# Included ONCE in the likelihood; no separate beam-guided output or extra penalty.
+# Also works with no breakpoint and with FreeLossFit=False. Default OFF.
+for retired in ("BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE", "BP_BEAM_FREE_LOSS_BACKWARD_FILTER"):
+    if retired in os.environ:
+        raise ValueError(retired + " was removed; use BP_BEAM_SPOT_CONSTRAINT")
+fit.BeamSpotConstraint = os.environ.get("BP_BEAM_SPOT_CONSTRAINT", "0") == "1"
 fit.BeamSpotX = float(os.environ.get("BP_BEAM_SPOT_X", "0.0"))  # mm
 fit.BeamSpotY = float(os.environ.get("BP_BEAM_SPOT_Y", "0.0"))  # mm
 fit.BeamSpotSigmaX = float(os.environ.get("BP_BEAM_SPOT_SIGMA_X", "0.0145"))  # mm

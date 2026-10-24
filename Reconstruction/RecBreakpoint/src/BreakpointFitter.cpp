@@ -1,5 +1,5 @@
 #include "BreakpointFitter.h"
-#include "EnergyMeasurementSite.h"
+#include "ScalarMeasurementSite.h"
 #include "DiffuseLossState.h"
 
 #include <algorithm>
@@ -46,6 +46,17 @@ TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
     score.logDeterminant += std::log(result.chargedEcalInnovationVariance);
     ++score.measurementDimensions;
   }
+  if (result.beamSpot) {
+    // p(beam,hits,ECAL) = p(beam|seed) * p(hits,ECAL|beam).
+    // The complete smoothed score already includes beam; the QR tracker score does not.
+    if (result.chargedEcalStep) {
+      score.nll2 += result.beamSpot->chi2;
+      score.quadratic += result.beamSpot->chi2;
+    }
+    score.nll2 += std::log(2. * std::acos(-1.) * result.beamSpot->innovationVariance);
+    score.logDeterminant += std::log(result.beamSpot->innovationVariance);
+    ++score.measurementDimensions;
+  }
   return score;
 }
 
@@ -75,7 +86,8 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
 FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::TrackerHit>& hits,
                                       const FitSettings& settings) const {
   FitResult result;
-  const auto seed = m_adapter.seed(hits, settings.seedScale);
+  const auto seed = m_adapter.seed(hits, settings.seedScale, settings.beamSpot);
+  result.beamSpot = seed.beamSpot;
   result.predicted.push_back(seed.predicted);
   result.filtered.push_back(seed.filtered);
   result.localChi2.push_back(seed.chi2);
@@ -130,6 +142,7 @@ FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::Tracke
     if (i) noises.push_back(transitions[i-1].noise);
   }
   scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
+  if (settings.beamSpot) scoreBeamSpot(result, *settings.beamSpot);
   if (settings.captureGaussianModel) {
     try {
       auto model = std::make_shared<GaussianTrackModel>();
@@ -241,7 +254,8 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   if (hits.size() < 3 || interval < 0 || interval + 1 >= static_cast<int>(hits.size()))
     throw std::invalid_argument("Persistent6D breakpoint outside track");
   FitResult result;
-  const auto seed = m_adapter.seed(hits, settings.seedScale);
+  const auto seed = m_adapter.seed(hits, settings.seedScale, settings.beamSpot);
+  result.beamSpot = seed.beamSpot;
   result.predicted.push_back(seed.predicted);
   result.filtered.push_back(seed.filtered);
   result.localChi2.push_back(seed.chi2);
@@ -362,7 +376,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     GaussianHitModel observation{energyDerivative, TMatrixD(1, 1), TMatrixD(1, 1)};
     observation.noise(0, 0) = observationVariance;
     observation.residual(0, 0) = residual;
-    const auto ecalFiltered = updateEnergyState(ecalPredicted, observation);
+    const auto ecalFiltered = updateScalarState(ecalPredicted, observation);
     result.chargedEcalStep = ecalStep;
     result.chargedEcalStep->filtered = ecalFiltered;
     const TMatrixD smoothingGain = live.covariance * transpose(transport) *
@@ -440,6 +454,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
                 result.predicted,hitNodes);
   result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
+  if (settings.beamSpot) scoreBeamSpot(result, *settings.beamSpot);
   if (settings.captureGaussianModel) {
     try {
       auto model = std::make_shared<GaussianTrackModel>();
@@ -660,6 +675,24 @@ BreakpointFitter::fitDiffuseRTS(const std::vector<edm4hep::TrackerHit> &hits,
       "Absolute score undefined for flat diffuse b prior";
   result.smoothedTotalChi2 = std::numeric_limits<double>::quiet_NaN();
   return result;
+}
+
+void BreakpointFitter::scoreBeamSpot(FitResult& result, const BeamSpotSettings& beam) const {
+  if (!result.beamSpot) throw std::runtime_error("Beam measurement missing from fitted trajectory");
+  auto& measurement = *result.beamSpot;
+  smoothBeamSpot(measurement, result.smoothed.front(), m_adapter.bz(), beam);
+  // Split the beam-conditioned seed penalty into the original seed penalty
+  // and beam measurement residual, so the complete RTS breakdown stays physical.
+  const TMatrixD delta = stateDifference(measurement.smoothed.mean, measurement.predicted.mean);
+  const double originalSeed = (transpose(delta) * inverseCovariance(measurement.predicted.covariance) * delta)(0,0);
+  const double change = originalSeed + measurement.smoothedChi2 - result.smoothedSeedChi2;
+  result.smoothedSeedChi2 = originalSeed;
+  result.smoothedMeasurementChi2.front() += measurement.smoothedChi2;
+  result.smoothedChi2.front() += change;
+  result.smoothedTotalChi2 += change;
+  result.chi2 += measurement.chi2;
+  result.localChi2.front() += measurement.chi2;
+  ++result.measurementDimensions;
 }
 
 void BreakpointFitter::scoreSmoothed(const std::vector<edm4hep::TrackerHit>& hits,

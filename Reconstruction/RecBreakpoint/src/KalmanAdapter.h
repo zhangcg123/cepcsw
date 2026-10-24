@@ -4,15 +4,18 @@
 #include "TrackState.h"
 #include "LossTrackState.h"
 #include "GaussianTrackModel.h"
+#include "BeamSpotMeasurement.h"
 #include "RecBreakpoint/SeedHitSelection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 
 #include <memory>
 #include <vector>
+#include <optional>
 
 namespace breakpoint {
 class BreakpointTrackSystem;
 struct MeasurementStep {
+  std::optional<BeamSpotMeasurement> beamSpot;
   TrackState predicted, filtered;
   TMatrixD transport{5, 5};
   TMatrixD noise{5, 5};
@@ -35,7 +38,8 @@ public:
       : m_system(system), m_bz(bz), m_maxChi2(maxChi2), m_seedSelection(seedSelection) {}
   double bz() const { return m_bz; }
   std::array<int, 3> seedHitIndices(const std::vector<edm4hep::TrackerHit>& hits) const;
-  MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale) const;
+  MeasurementStep seed(const std::vector<edm4hep::TrackerHit>& hits, double scale,
+                       const std::optional<BeamSpotSettings>& beam = std::nullopt) const;
   /// Passive evaluation only: no hit update. The affine score uses the SAME
   /// measurement expansion point as the corresponding filter pass.
   MeasurementScore measurementScore(edm4hep::TrackerHit hit, const TrackState& state,

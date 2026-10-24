@@ -312,27 +312,33 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is shared optional ECAL energy measurements
-in ordinary augmented KF/RTS and free-loss Persistent6D. The common controls
-are now `ChargedEcalMeasurement` and `NeutralEcalMeasurement`, both default OFF;
-they work for ordinary fitting even with `FreeLossFit=false`. Regenerate cards
-using `BP_CHARGED_ECAL_MEASUREMENT` / `BP_NEUTRAL_ECAL_MEASUREMENT`; old free-loss
-names are rejected. Existing ordinary/free-loss endpoints carry the constrained
-results, without a new output family. Independently executed beam-guided,
-diffuse and truth-centered fits remain unchanged. Backward defaults remain OFF.
+Active work on local `breakpoint` is the common optional measurement workflow
+for ordinary augmented KF/RTS and free-loss Persistent6D. `BeamSpotConstraint`,
+`ChargedEcalMeasurement` and `NeutralEcalMeasurement` are independent and default
+OFF. The new beam option uses native helix projection and KalTest filtering
+before the first tracker hit; it updates the full seed covariance and is used
+by forward filtering, RTS and free-loss trials. Beam works without a breakpoint
+and with free-loss disabled. Charged remains at the ECAL face; neutral at the
+post-loss virtual site; those two still require a selected breakpoint.
 
-Both observations use native KalTest transport/update machinery. Charged is at
-the ECAL face; neutral is at the post-loss virtual site. Both currently require
-a selected breakpoint. Ordinary status/error branches distinguish application,
-skips and failed retries. One shared likelihood routine counts each observation
-once. The retired cluster-prior/penalty approaches remain retired.
+The separate beam-guided optimizer, collections, tuple family and backward
+switch are removed. Regenerate cards with `BP_BEAM_SPOT_CONSTRAINT`; old beam
+controls fail explicitly. Existing ordinary/free-loss endpoints carry whichever
+constraints are enabled, without extra endpoint families. Independently executed
+diffuse and truth-centered fits remain unchanged. All three backward defaults
+remain OFF. Likelihood/complete RTS accounting includes the beam once, with
+separate persisted beam diagnostics.
 
-Built/tested but NOT installed: seven CTests pass, all 515 legacy OFF branches
-match on eight rows, free-loss ON results are exact on three hard-loss tracks
-in all switch combinations, and ordinary fitting works with free-loss disabled.
-Native covariance closure passes. One unrelated batch test disagrees with the
-user-modified submission-wrapper default and is left unchanged.
-This does not fix or validate the known neutral affine/nonlinear energy mismatch.
-Next: resolve that limitation and assess cluster ownership, calibration and
-held-out performance before default-on steering. Full evidence, install hashes
-and outgoing focus: `agents_record/2026-10-24-shared-ordinary-free-ecal-controls.md`.
+Built/tested but NOT installed: eight CTests pass; beam OFF exactly reproduces
+388 retained fields on eight previous tracks. Beam ON works on five control
+tracks and three hard-loss ECAL tracks, also with free-loss OFF. Existing ECAL
+numerical results remain exact with beam OFF; only a helper error text changed.
+Native covariance closure passes. One pre-existing batch test disagrees with
+the user's intentional breakpoint-only wrapper default.
+
+No population validation is claimed. Beam projection is geometric/material-free,
+transverse-only and linearized once. The known neutral affine/nonlinear energy
+mismatch remains. Next: install when authorized, then assess these limitations,
+cluster calibration/ownership and held-out barrel/endcap performance before
+default-on steering. Full evidence and outgoing focus:
+`agents_record/2026-10-24-shared-beam-spot-kf.md`.

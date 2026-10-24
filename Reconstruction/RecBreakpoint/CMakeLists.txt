@@ -26,7 +26,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
             src/NeutralLossCandidate.cpp src/NeutralEnergyMeasurement.cpp
             src/TruthLayerOwnership.cpp src/TruthBreakpointOwnership.cpp src/TruthBreakpointTuple.cpp
-            src/LikelihoodTuple.cpp src/BeamSpotLikelihood.cpp
+            src/LikelihoodTuple.cpp src/BeamSpotMeasurement.cpp
             # Reuse the exact maintained relation-driven reader, without
             # linking the GSF algorithm plugin or changing its implementation.
             ../RecGsfTracking/src/TruthBHLossEventData.cpp
@@ -93,5 +93,14 @@ if(BUILD_TESTING)
     target_link_libraries(RecBreakpointNeutralEnergyTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep
       ${KalTest_LIBRARIES} ROOT::Physics)
     add_test(NAME RecBreakpointNeutralEnergy COMMAND RecBreakpointNeutralEnergyTest)
+    add_executable(RecBreakpointBeamSpotTest tests/BeamSpotTest.cpp
+      src/BeamSpotMeasurement.cpp src/TrackState.cpp)
+    target_compile_features(RecBreakpointBeamSpotTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointBeamSpotTest PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
+      ${KalTest_INCLUDE_DIRS})
+    target_link_libraries(RecBreakpointBeamSpotTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep
+      ${KalTest_LIBRARIES} ROOT::Physics)
+    add_test(NAME RecBreakpointBeamSpot COMMAND RecBreakpointBeamSpotTest)
   endif()
 endif()

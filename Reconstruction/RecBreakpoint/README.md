@@ -31,7 +31,7 @@ build.105.0.0.x86_64-el9-gcc11-opt/run \
 
 The dedicated card explicitly steers every package property. Existing files
 are refused, never overwritten. Its tracker-only TDR_o1_v01 geometry must
-match the input. `BackwardMode` is removed: each of the four backward filters
+match the input. `BackwardMode` is removed: each of the three backward filters
 has its own run switch, default off.
 The card rejects the retired `BP_BACKWARD_MODE` variable instead of ignoring it.
 
@@ -65,11 +65,9 @@ The free-loss collections are also declared: `BreakpointTracksFreeLossRTS` and
 `BreakpointTracksFreeLossBackwardFilter`, controlled by `OutputTracksFreeLossRTS`
 and `OutputTracksFreeLossBackwardFilter`. It contains independently optimized
 results when applied, ordinary copies otherwise where the corresponding
-backward fit is enabled. The separate `BreakpointTracksBeamGuidedFreeLossRTS`
-and `BreakpointTracksBeamGuidedFreeLossBackwardFilter` pair optimizes an
-additional beam-origin likelihood while using the same detector-hit KF/RTS
-refit. `FreeLossBeamSpotObjective` controls it; when disabled it copies the
-base free-loss result. `BreakpointTracksDiffuseAugmentedRTS` is an independent
+backward fit is enabled. The former separate beam-guided free-loss family is removed.
+`BeamSpotConstraint` now inserts a beam KF measurement in the ordinary and
+free-loss fits themselves. `BreakpointTracksDiffuseAugmentedRTS` is an independent
 exact-diffuse study controlled by `DiffuseAugmentedRTS`. The old neutral
 penalty-only and absolute-prior refitters remain retired. The new optional
 `NeutralEcalMeasurement` uses an actual scalar KF update inside the ordinary
@@ -115,12 +113,11 @@ rather than publishing one branch under the other's name.
 
 The flat tuple retains both branch names. With a backward switch off, that
 filter is not run: its collection is empty, its index is -1, and its flat
-endpoint/chi2 fields are NaN with per-hit vectors empty. Four
+endpoint/chi2 fields are NaN with per-hit vectors empty. Three
 `*_backward_filter_enabled` flat fields record the effective switches.
 `breakpoint_pt` remains an RTS alias. Every IP momentum endpoint has a
 matching `*_pt_error` one-sigma field in GeV: `kf`, `breakpoint`/`rts`,
 `backward`, `free_loss_rts`, `free_loss_backward`,
-`beam_guided_free_loss_rts`, `beam_guided_free_loss_backward`,
 `truth_override_rts`, `truth_override_backward`, and `diffuse_augmented`.
 The optional `reference_kf` and `reference_backward_kf` checks have the same
 field. These are fit-covariance errors, not empirical resolution estimates.
@@ -130,10 +127,9 @@ For an EDM endpoint with curvature `omega` and packed covariance element
 covariance yields NaN. The removed `backward_mode` branch no
 longer misleadingly labels a row that now contains both results.
 
-The calorimeter state is saved in the flat tuple for the input KF and the original nine
+The calorimeter state is saved in the flat tuple for the input KF and the seven
 endpoint families, using prefixes `kf_`, `rts_`, `backward_`,
-`free_loss_rts_`, `free_loss_backward_`, `beam_guided_free_loss_rts_`,
-`beam_guided_free_loss_backward_`, `truth_override_rts_`,
+`free_loss_rts_`, `free_loss_backward_`, `truth_override_rts_`,
 `truth_override_backward_`, and `diffuse_augmented_rts_`. Each prefix has
 `calo_status`, `calo_error`, `calo_pt`, `calo_pt_error`, `calo_p`, `calo_parameters`,
 `calo_covariance`, and `calo_reference_point_mm`. Parameters are the EDM
@@ -158,8 +154,7 @@ They work in ordinary fitting even with `FreeLossFit=false`. Old
 were renamed; the corresponding old `BP_FREE_LOSS_*_ECAL_MEASUREMENT` environment
 variables are rejected, not silently ignored. Regenerate prepared batch cards.
 The existing charged switch is independent: both observations can be enabled.
-The independently executed beam-guided, diffuse and truth-centered fits are unchanged. When beam guidance is
-disabled, its output copies the selected free-loss result as before.
+The independently executed diffuse and truth-centered fits are unchanged.
 `FreeLossBackwardFilter` remains default OFF; when enabled it starts from the
 selected forward result, without a second inward neutral measurement.
 Native MarlinTrk tracker-hit updates remain unchanged; this new scalar helper
@@ -609,7 +604,7 @@ ECAL-face state. RTS first traverses this ECAL-to-last-tracker edge, then the
 ordinary tracker edges inward. For a successful ON fit, the updated ECAL-face
 state is also the published `rts_calo_*` / `free_loss_rts_calo_*` state. No cluster position enters the
 measurement. Each free-loss trial scores the tracker likelihood plus the
-conditional ECAL-energy likelihood; the beam-guided pair remains separate.
+conditional ECAL-energy likelihood.
 The provisional per-cluster error is
 `a*sqrt(E/GeV) GeV + c*E`, with independent variances summed (`a=0.011`,
 `c=0.004` by default). The energy derivative at ECAL is analytic in curvature
@@ -635,15 +630,37 @@ removed during a failed-fit retry. The legacy `free_loss_charged_ecal_*` selecti
 fields remain the shared charged observation (status 2 means selected, not success).
 Ordinary and free-loss likelihoods use the same score routine, including neutral
 in the captured tracker model and the charged conditional likelihood once.
-The parallel beam-guided optimization adds one predictive term,
-`drho_beam^2/(P_drho_beam + sigma_beam^2) + log(P_drho_beam + sigma_beam^2)
-+ log(2*pi)`, evaluated from each trial's hit-only RTS IP state at the beam
-mean. `sigma_beam^2 = cos(phi0)^2*sigma_x^2 + sin(phi0)^2*sigma_y^2`.
-The beam is never passed to the Kalman measurement update; it selects a
-different fitted loss-prior center. Thus its published track parameters and
-covariance are detector-hit refits conditional on that selected center, not
-beam-constrained states. This experimental objective is default-on in the
-maintained card, but not physics-validated.
+
+### Shared beam-spot KF measurement
+
+`BeamSpotConstraint=false` (card/environment `BP_BEAM_SPOT_CONSTRAINT=0`) is
+independent of the charged/neutral switches and `FreeLossFit`. It applies to
+ordinary and free-loss, including tracks without a selected breakpoint.
+The old beam-guided optimizer, output collections, branches and backward
+switch are removed. Regenerate prepared cards; retired environment names fail
+explicitly rather than silently selecting another behavior.
+
+Before the first tracker hit, native helix `MoveTo` evaluates transverse
+`drho` at `(BeamSpotX, BeamSpotY, 0)` and its Jacobian. The measured value
+is zero. The observation is expressed at the first-hit pivot; native
+`TVKalSite::Filter()` updates all five seed parameters and their covariance.
+The first tracker hit is then used exactly once, and the constrained state
+feeds all forward/breakpoint updates and RTS. This is a geometric, material-free
+boundary projection, not a new material traversal or a longitudinal/z hit.
+The scalar beam variance is
+`cos(phi0_beam)^2*sigmaX^2 + sin(phi0_beam)^2*sigmaY^2`, frozen at the seed.
+No external beam score is appended after RTS.
+
+Likelihood accounting uses
+`p(beam,hits,ECAL) = p(beam|original seed) * p(hits,ECAL|beam)`.
+The complete RTS breakdown uses the original seed penalty and the smoothed
+affine beam residual once (in the first hit's measurement contribution).
+The beam-conditioned seed covariance is used for the conditional Gaussian
+model. Its normalization is combined with the initial beam innovation
+variance, not another smoothed covariance or a repeated beam update.
+Ordinary/free-loss output state covariances therefore include this measurement.
+The fitted beam projection is linearized, not an iterated vertex fit;
+the flat tuple retains both affine and nonlinear smoothed drho for checks.
 
 | Property | Compiled default | Meaning |
 |---|---|---|
@@ -652,13 +669,10 @@ maintained card, but not physics-validated.
 | OutputTracksBackwardFilter | BreakpointTracksBackwardFilter | Optional inward-filter collection; empty when disabled |
 | OutputTracksFreeLossRTS | BreakpointTracksFreeLossRTS | Optimized RTS, or exact ordinary RTS copy |
 | OutputTracksFreeLossBackwardFilter | BreakpointTracksFreeLossBackwardFilter | Optional optimized backward filter; empty when disabled |
-| OutputTracksBeamGuidedFreeLossRTS | BreakpointTracksBeamGuidedFreeLossRTS | Beam-objective free-loss RTS; base free-loss copy when disabled, input KF fallback on optimizer failure |
-| OutputTracksBeamGuidedFreeLossBackwardFilter | BreakpointTracksBeamGuidedFreeLossBackwardFilter | Optional beam-objective backward endpoint; empty when disabled |
 | OutputTracksTruthOverrideRTS | BreakpointTracksTruthOverrideRTS | Oracle RTS or ordinary RTS copy |
 | OutputTracksTruthOverrideBackwardFilter | BreakpointTracksTruthOverrideBackwardFilter | Optional oracle backward; empty when disabled |
 | OrdinaryBackwardFilter | false | Run the ordinary inward refilter; otherwise leave its output absent |
 | FreeLossBackwardFilter | false | Run the accepted free-loss backward refit; optimization trials never run backward |
-| BeamGuidedFreeLossBackwardFilter | false | Run the accepted beam-guided backward refit |
 | TruthOverrideBackwardFilter | false | Run the truth-prior backward refit when TruthOverride applies |
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
@@ -674,8 +688,8 @@ maintained card, but not physics-validated.
 | ChargedEcalMeasurement | false | Shared ordinary/free-loss ECAL-face energy-only KF update and terminal RTS edge with one selected breakpoint and one linked charged PFO with hit-supported ECAL energy; does not use cluster position |
 | NeutralEcalMeasurement | false | Shared ordinary/free-loss post-loss scalar neutral-energy KF update, retaining track/loss correlations; may combine with charged ECAL |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
-| FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
-| BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |
+| BeamSpotConstraint | false | Initial transverse beam KF measurement shared by ordinary and free-loss, independent of ECAL switches and usable without a breakpoint |
+| BeamSpotX, BeamSpotY | 0 mm, 0 mm | Transverse beam mean for the initial scalar KF measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |
 | FreeLossMaxLogLoss | 1 | Upper bound on the optimized prior center, finite in (0,5]; lower bound zero. Does not truncate the Gaussian or bound the fitted posterior loss |
 | FreeLossMaxCallsPerStart | 180 | Positive maximum Minuit function calls per start; does not include the coarse/local scans |
@@ -762,14 +776,13 @@ scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 All runs also save the `free_loss_*` fields described in
 [the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract).
-`beam_guided_free_loss_*` fields use the same endpoint and optimizer schema
-for the independent beam-guided result. Its `nll2` and
-`beam_guided_free_loss_likelihood_nll2` are detector-hit likelihoods;
-`beam_guided_free_loss_objective_nll2` is their sum with
-`beam_guided_free_loss_beam_nll2`. Trial-level hit, beam, and total scores are
-saved separately. When the option is off, its endpoints copy the base free-loss
-pair; when its optimization fails, only this second pair falls back to the
-input KF. The base `free_loss_*` result never changes because of this switch.
+The retired `beam_guided_free_loss_*` family and free-loss external-beam
+penalty diagnostics are no longer written. Common beam configuration is saved
+as `beam_spot_constraint_enabled`, position and widths in mm.
+`ordinary_beam_spot_*` / `free_loss_beam_spot_*` retain `applied`,
+predicted/filtered/smoothed drho, smoothed affine drho, measurement/innovation
+variances, innovation chi2 and smoothed measurement chi2. Ignore the numeric
+fields when `applied=false`; they are not a failed-fit substitute.
 The base optimizer diagnostics are inactive/NaN/empty when unused; its additional endpoint
 fields then copy the ordinary results exactly. Failed/unsupported optimization
 instead copies the original input KF (free_loss_result_status=3). Its stored
@@ -789,8 +802,7 @@ quadratic meaning; `free_loss_nll2` separately records the fitting objective.
 
 The flat tuple also records the same normalized full-track likelihood for
 each RTS family as `ordinary_likelihood_*`, `free_loss_likelihood_*`,
-`beam_guided_free_loss_likelihood_*`, and
-`truth_override_likelihood_*`.
+and `truth_override_likelihood_*`.
 Each prefix has `status` (1 valid, 0 absent,
 -1 unavailable or evaluation failed), `nll2`, `quadratic`, `logdet`,
 `measurement_dimensions`, `latent_dimensions`, and `error`. All use
@@ -1050,7 +1062,7 @@ and TruthOverride records retain their original mode-specific meanings.
 The paired-publication regression and complete-score gates are recorded in
 [the parallel implementation record](../../agents_record/2026-09-09-recbreakpoint-parallel-endpoints-chi2.md).
 
-No reconstruction-based interval discovery, positivity enforcement, beam spot or exact
+No reconstruction-based interval discovery, positivity enforcement or exact
 within-interval loss placement is implemented. Native material/mass
 conventions remain unchanged. Successful execution, convergence or smaller
 chi2 is not population validation or proof of better momentum reconstruction.
