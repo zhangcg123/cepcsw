@@ -911,7 +911,12 @@ PodioOutput lines remain in the dedicated card for optional serialization.
 Use the root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
 This workflow is independent of GSF and does not run its fitter.
 The shared loss-prior sigma is controlled by BP_SIGMA_LOG_LOSS in
-subbreakpointjobs.sh (default0.001); other fit physics remains in
+subbreakpointjobs.sh (default0.001). The batch helper defaults the shared
+beam/charged/neutral constraints to `111`, with explicit `BP_*` overrides
+supported. This is campaign steering only: standalone-card and compiled
+constraint defaults remain OFF. Successful 111 jobs save unconstrained,
+beam-only, beam+charged, and beam+charged+neutral results for ordinary/free-loss
+RTS; all backward defaults remain OFF. Other fit physics remains in
 options/run_breakpoint.py. Supported BP_* environment values are frozen at
 preparation along with the complete card. The card consumes the submitted
 sigma, with the same 0.001 fallback for direct standalone runs and in C++.
@@ -923,8 +928,9 @@ The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
 
-The submission helper defaults to the complete chain:
-`sim -> trk -> calodigi -> rec -> breakpoint`. It freezes the shared
+The submission helper defaults to `STAGES=breakpoint`, reading existing REC
+inputs from INPUT_TUPLEPATH. To run the complete chain, explicitly select
+`STAGES=sim,trk,calodigi,rec,breakpoint`. That chain freezes the shared
 `DumpGsfTrks/sim.py.bk` together with the downstream cards at preparation.
 No existing input tuple is needed for this chain. All outputs go into
 OUTPUT_TUPLEPATH; SIM and REC are retained alongside the breakpoint flat tuple.
@@ -934,7 +940,8 @@ OUTPUT_TUPLEPATH. Existing outputs/cards are never overwritten.
 Prepare a new full-chain campaign without submitting:
 
 ```bash
-DRY_RUN=1 OUTPUT_TUPLEPATH=breakpoint_barrel_full_20261018 \
+DRY_RUN=1 STAGES=sim,trk,calodigi,rec,breakpoint \
+OUTPUT_TUPLEPATH=breakpoint_barrel_full_20261018 \
 ./subbreakpointjobs.sh
 ```
 

@@ -373,24 +373,49 @@ class BatchTest(unittest.TestCase):
         self.prepare(STAGES='sim,trk,calodigi,rec,breakpoint', SEED_FIRST='13', SEED_LAST='13')
         self.assertTrue((self.repo/'outputs/runcards/e--2.0-85-13/job.json').is_file())
 
-    def test_submission_wrapper_full_chain_default_and_rec_override(self):
-        for stages in (None, 'breakpoint'):
+    def test_submission_wrapper_constraints_default_111_and_explicit_override(self):
+        controls = ('BP_BEAM_SPOT_CONSTRAINT', 'BP_CHARGED_ECAL_MEASUREMENT',
+                    'BP_NEUTRAL_ECAL_MEASUREMENT')
+        assignments = ('fit.BeamSpotConstraint =', 'fit.ChargedEcalMeasurement =',
+                       'fit.NeutralEcalMeasurement =')
+        for label, override, expected in [('default', {}, '111'),
+                                         ('override', dict(zip(controls, '101')), '101')]:
+            env = dict(self.env, OUTPUT_TUPLEPATH='constraints_' + label, **override)
+            result = batch.subprocess.run(['bash', str(self.repo/'subbreakpointjobs.sh')],
+                                          env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            carddir = self.repo/('constraints_' + label)/'runcards/barrel-12'
+            job = json.loads((carddir/'job.json').read_text())
+            self.assertEqual(''.join(job['controls'][k] for k in controls), expected)
+            card = Path(job['cards']['breakpoint']).read_text()
+            template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+            fit = types.SimpleNamespace()
+            with patch.dict(os.environ, dict(zip(controls, '000')), clear=True):
+                exec(card[:-len(template)] + '\n' + '\n'.join(
+                    line for line in template.splitlines() if line.startswith(assignments)),
+                    {'fit': fit, 'os': os})
+            self.assertEqual([fit.BeamSpotConstraint, fit.ChargedEcalMeasurement,
+                              fit.NeutralEcalMeasurement], [v == '1' for v in expected])
+            self.assertFalse((carddir/'submitted.json').exists())
+
+    def test_submission_wrapper_rec_default_and_full_chain_override(self):
+        for stages in (None, ','.join(batch.ORDER)):
             with self.subTest(stages=stages):
-                output = 'wrapper_full' if stages is None else 'wrapper_rec'
+                output = 'wrapper_rec' if stages is None else 'wrapper_full'
                 env = dict(self.env, PATH=os.environ.get('PATH', '/usr/bin:/bin'),
                            SAMPLE_REGION='barrel', OUTPUT_TUPLEPATH=output)
                 if stages is None:
                     del env['STAGES']
-                    env['INPUT_TUPLEPATH'] = 'absent_inputs'
                 else:
                     env['STAGES'] = stages
+                    env['INPUT_TUPLEPATH'] = 'absent_inputs'
                 result = batch.subprocess.run(
                     ['bash', str(self.repo/'subbreakpointjobs.sh')], env=env,
                     capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 carddir = self.repo/output/'runcards/barrel-12'
                 job = json.loads((carddir/'job.json').read_text())
-                self.assertEqual(job['stages'], list(batch.ORDER) if stages is None else ['breakpoint'])
+                self.assertEqual(job['stages'], ['breakpoint'] if stages is None else list(batch.ORDER))
                 self.assertFalse((carddir/'submitted.json').exists())
                 for stage, predecessor in zip(batch.ORDER[1:], batch.ORDER[:-1]):
                     if stage not in job['stages']: continue
