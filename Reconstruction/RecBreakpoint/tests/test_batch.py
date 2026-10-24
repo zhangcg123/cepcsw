@@ -206,12 +206,14 @@ class BatchTest(unittest.TestCase):
         self.assertNotIn('OutputTracksFreeLossEcal', card)
         self.assertNotIn('OutputTracksAbsoluteNeutralRTS', card)
         self.assertNotIn('OutputTracksNeutralFreeLossRTS', card)
-        assignments = '\n'.join(line for line in card.splitlines() if line.startswith('fit.FreeLoss'))
+        assignments = '\n'.join(line for line in card.splitlines()
+                                if line.startswith(('fit.FreeLoss', 'fit.ChargedEcalMeasurement',
+                                                    'fit.NeutralEcalMeasurement')))
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, {}, clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertFalse(fit.FreeLossChargedEcalMeasurement)
+        self.assertFalse(fit.ChargedEcalMeasurement)
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
         self.assertEqual(fit.FreeLossTolerance, .001)
@@ -233,21 +235,32 @@ class BatchTest(unittest.TestCase):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertFalse(fit.FreeLossFit)
         self.prepare(OUTPUT_TUPLEPATH='charged_ecal_enabled',
-                     BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT='true')
+                     BP_CHARGED_ECAL_MEASUREMENT='true')
         charged = self.manifest('charged_ecal_enabled')
-        self.assertEqual(charged['controls']['BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT'], '1')
+        self.assertEqual(charged['controls']['BP_CHARGED_ECAL_MEASUREMENT'], '1')
         with patch.dict(os.environ, charged['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
-        self.assertTrue(fit.FreeLossChargedEcalMeasurement)
+        self.assertTrue(fit.ChargedEcalMeasurement)
         self.prepare(OUTPUT_TUPLEPATH='neutral_ecal_enabled',
-                     BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT='true',
-                     BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT='true')
+                     BP_NEUTRAL_ECAL_MEASUREMENT='true',
+                     BP_CHARGED_ECAL_MEASUREMENT='true')
         neutral = self.manifest('neutral_ecal_enabled')
-        self.assertEqual(neutral['controls']['BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT'], '1')
+        self.assertEqual(neutral['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'], '1')
         with patch.dict(os.environ, neutral['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
-        self.assertTrue(fit.FreeLossNeutralEcalMeasurement)
-        self.assertTrue(fit.FreeLossChargedEcalMeasurement)
+        self.assertTrue(fit.NeutralEcalMeasurement)
+        self.assertTrue(fit.ChargedEcalMeasurement)
+        self.prepare(OUTPUT_TUPLEPATH='ordinary_ecal_enabled', BP_FREE_LOSS_FIT='false',
+                     BP_CHARGED_ECAL_MEASUREMENT='true', BP_NEUTRAL_ECAL_MEASUREMENT='true')
+        ordinary = self.manifest('ordinary_ecal_enabled')
+        with patch.dict(os.environ, ordinary['controls'], clear=True):
+            exec(assignments, {'fit':fit, 'os':os})
+        self.assertFalse(fit.FreeLossFit)
+        self.assertTrue(fit.ChargedEcalMeasurement)
+        self.assertTrue(fit.NeutralEcalMeasurement)
+        for retired in ('BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT', 'BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT'):
+            with self.assertRaisesRegex(ValueError, 'was renamed'):
+                self.prepare(OUTPUT_TUPLEPATH='retired_ecal', **{retired: '1'})
         with self.assertRaises(ValueError):
             self.prepare(OUTPUT_TUPLEPATH='free_invalid', BP_FREE_LOSS_FIT='maybe')
 

@@ -45,12 +45,7 @@ void LikelihoodTuple::assign(const TrackLikelihoodResult& result) {
 
 void LikelihoodTuple::assign(const FitResult& result) {
   try {
-    if (result.smoothedChi2Status != 1)
-      throw std::runtime_error("Complete RTS score unavailable: " + result.smoothedChi2Error);
-    if (!result.gaussianModel)
-      throw std::runtime_error("Gaussian model unavailable: " + result.gaussianModelError);
-    assign(evaluateSmoothedTrackLikelihood(*result.gaussianModel,
-                                           result.smoothedTotalChi2));
+    assign(evaluateFitLikelihood(result));
   } catch (const std::exception& error) {
     invalidate(error.what()); // a diagnostic must not discard the track
   }

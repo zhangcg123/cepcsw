@@ -91,8 +91,8 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
-  Gaudi::Property<bool> m_freeLossChargedEcalMeasurement{this, "FreeLossChargedEcalMeasurement", false};
-  Gaudi::Property<bool> m_freeLossNeutralEcalMeasurement{this, "FreeLossNeutralEcalMeasurement", false};
+  Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", false};
+  Gaudi::Property<bool> m_neutralEcalMeasurement{this, "NeutralEcalMeasurement", false};
   Gaudi::Property<double> m_chargedEcalStochasticError{this, "ChargedEcalStochasticError", 0.011};
   Gaudi::Property<double> m_chargedEcalConstantError{this, "ChargedEcalConstantError", 0.004};
   Gaudi::Property<bool> m_diffuseAugmentedRTS{this, "DiffuseAugmentedRTS", true};
@@ -134,6 +134,8 @@ private:
   std::array<int, 4> m_backwardRunFlags{};
   breakpoint::FreeLossTuple m_freeLossTuple, m_beamFreeLossTuple;
   int m_neutralMeasurementStatus = 0; // 0 off, 1 no neutral, 2 applied, 3 no interval, -1 failed
+  int m_ordinaryChargedStatus = 0, m_ordinaryNeutralStatus = 0; // 0 off, 1 unavailable/no breakpoint, 2 applied, -1 retry
+  std::string m_ordinaryEcalError;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_beamFreeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks, m_beamFreeLossTracks;
   // KF input plus nine parallel published breakpoint endpoint families.

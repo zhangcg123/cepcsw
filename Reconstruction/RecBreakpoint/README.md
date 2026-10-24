@@ -72,8 +72,8 @@ refit. `FreeLossBeamSpotObjective` controls it; when disabled it copies the
 base free-loss result. `BreakpointTracksDiffuseAugmentedRTS` is an independent
 exact-diffuse study controlled by `DiffuseAugmentedRTS`. The old neutral
 penalty-only and absolute-prior refitters remain retired. The new optional
-`FreeLossNeutralEcalMeasurement` uses an actual scalar KF update inside the
-existing `BreakpointTracksFreeLossRTS` result, not a separate output family.
+`NeutralEcalMeasurement` uses an actual scalar KF update inside the ordinary
+`BreakpointTracksRTS` and `BreakpointTracksFreeLossRTS` results, not a separate output family.
 
 The main `breakpoint` tree saves neutral-cluster selection for its own input
 track, even with no selected breakpoint or a failed tracking fit. These fields
@@ -150,10 +150,15 @@ EDM track collections themselves. Optional neutral measurements use the existing
 
 ## Neutral-energy KF measurement in free-loss RTS
 
-`FreeLossNeutralEcalMeasurement=false` is the compiled/card default. Enable with
-`BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT=1`; it requires `FreeLossFit=true`.
+`NeutralEcalMeasurement=false` is the compiled/card default. Enable with
+`BP_NEUTRAL_ECAL_MEASUREMENT=1`. This and `ChargedEcalMeasurement` steer BOTH
+ordinary augmented KF/RTS and free-loss with the same selected observations.
+They work in ordinary fitting even with `FreeLossFit=false`. Old
+`FreeLossChargedEcalMeasurement` / `FreeLossNeutralEcalMeasurement` properties
+were renamed; the corresponding old `BP_FREE_LOSS_*_ECAL_MEASUREMENT` environment
+variables are rejected, not silently ignored. Regenerate prepared batch cards.
 The existing charged switch is independent: both observations can be enabled.
-The independent beam-guided and other fits are unchanged. When beam guidance is
+The independently executed beam-guided, diffuse and truth-centered fits are unchanged. When beam guidance is
 disabled, its output copies the selected free-loss result as before.
 `FreeLossBackwardFilter` remains default OFF; when enabled it starts from the
 selected forward result, without a second inward neutral measurement.
@@ -590,9 +595,9 @@ For each prior-center trial, the base Minuit optimization uses the existing RTS 
 measurement, process and seed chi2; `S_all` is the joint measurement covariance,
 not the smoothed state covariance. No reference-trajectory iteration is
 introduced. See [the exact objective](docs/smoothed-objective.md).
-`FreeLossChargedEcalMeasurement` (compiled/card default **false**;
-`BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT=1`) is an experimental alternative for
-the tracker-only free-loss pair. With exactly one charged CyberPFOPID linked to
+`ChargedEcalMeasurement` (compiled/card default **false**;
+`BP_CHARGED_ECAL_MEASUREMENT=1`) is an experimental measurement for both
+ordinary and free-loss fits. With exactly one charged CyberPFOPID linked to
 the input track, it sums its hit-supported `EcalCluster` energies. Native
 propagation takes the outer tracker state to the ECAL face; the propagated
 state, transport Jacobian and process noise come together from the same
@@ -602,7 +607,7 @@ all its correlations. No finite-difference Jacobian or covariance-subtraction
 estimate of process noise is used. The scalar energy measurement updates that
 ECAL-face state. RTS first traverses this ECAL-to-last-tracker edge, then the
 ordinary tracker edges inward. For a successful ON fit, the updated ECAL-face
-state is also the published `free_loss_rts_calo_*` state. No cluster position enters the
+state is also the published `rts_calo_*` / `free_loss_rts_calo_*` state. No cluster position enters the
 measurement. Each free-loss trial scores the tracker likelihood plus the
 conditional ECAL-energy likelihood; the beam-guided pair remains separate.
 The provisional per-cluster error is
@@ -619,6 +624,17 @@ independent of the tracker fit. The flat tuple records
 2 selected for the fit, 3 ambiguous charged PFO), measured energy/error, predicted energy,
 innovation variance and chi2. The existing `free_loss_rts_*` endpoint is the
 constrained result when enabled; OFF retains the historical endpoint exactly.
+The ordinary `rts_*` endpoint likewise includes the selected measurements.
+Both shared measurements currently require a selected breakpoint; no-breakpoint
+fits retain the existing 5D path. Ordinary fitting retries a failed neutral fit
+without neutral, retaining charged; if that fails, it retries without charged.
+The three new branches `ordinary_charged_ecal_measurement_status`,
+`ordinary_neutral_ecal_measurement_status`, and `ordinary_ecal_measurement_error`
+record the actual outcome: 0 off, 1 unavailable/no breakpoint, 2 applied, -1
+removed during a failed-fit retry. The legacy `free_loss_charged_ecal_*` selection
+fields remain the shared charged observation (status 2 means selected, not success).
+Ordinary and free-loss likelihoods use the same score routine, including neutral
+in the captured tracker model and the charged conditional likelihood once.
 The parallel beam-guided optimization adds one predictive term,
 `drho_beam^2/(P_drho_beam + sigma_beam^2) + log(P_drho_beam + sigma_beam^2)
 + log(2*pi)`, evaluated from each trial's hit-only RTS IP state at the beam
@@ -655,8 +671,8 @@ maintained card, but not physics-validated.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
-| FreeLossChargedEcalMeasurement | false | Card default false; explicit ECAL-face energy-only KF update and terminal RTS edge in the tracker-only free-loss Persistent6D fit when one linked charged PFO has hit-supported ECAL energy; does not use cluster position |
-| FreeLossNeutralEcalMeasurement | false | Card default false; post-loss scalar neutral-energy KF update in the existing free-loss fit, retaining track/loss correlations; may combine with charged ECAL |
+| ChargedEcalMeasurement | false | Shared ordinary/free-loss ECAL-face energy-only KF update and terminal RTS edge with one selected breakpoint and one linked charged PFO with hit-supported ECAL energy; does not use cluster position |
+| NeutralEcalMeasurement | false | Shared ordinary/free-loss post-loss scalar neutral-energy KF update, retaining track/loss correlations; may combine with charged ECAL |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | FreeLossBeamSpotObjective | true | When FreeLossFit is active, run an independent beam-guided free-loss optimization in parallel; when false, copy base free-loss outputs |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Beam mean for the objective-only virtual measurement |

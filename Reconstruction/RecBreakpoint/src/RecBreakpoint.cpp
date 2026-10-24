@@ -165,10 +165,6 @@ StatusCode RecBreakpoint::initialize() {
     error() << "MeanLogLoss must be finite in [0,5] and SigmaLogLoss finite/positive" << endmsg;
     return StatusCode::FAILURE;
   }
-  if ((m_freeLossChargedEcalMeasurement || m_freeLossNeutralEcalMeasurement) && !m_freeLossFit) {
-    error() << "ECAL KF measurements require FreeLossFit" << endmsg;
-    return StatusCode::FAILURE;
-  }
   if (!std::isfinite(m_chargedEcalStochasticError.value()) ||
       m_chargedEcalStochasticError < 0 ||
       !std::isfinite(m_chargedEcalConstantError.value()) ||
@@ -232,6 +228,9 @@ StatusCode RecBreakpoint::initialize() {
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
   m_tree->Branch("free_loss_neutral_ecal_measurement_status", &m_neutralMeasurementStatus);
+  m_tree->Branch("ordinary_charged_ecal_measurement_status", &m_ordinaryChargedStatus);
+  m_tree->Branch("ordinary_neutral_ecal_measurement_status", &m_ordinaryNeutralStatus);
+  m_tree->Branch("ordinary_ecal_measurement_error", &m_ordinaryEcalError);
   m_beamFreeLossTracks.book(*m_tree, "beam_guided_free_loss_");
   m_tree->Branch("diffuse_augmented_status", &m_diffuseStatus);
   m_tree->Branch("diffuse_augmented_index", &m_diffuseIndex);
@@ -493,7 +492,7 @@ StatusCode RecBreakpoint::execute() {
     m_chargedEcalMeasurementStatus = 0;
     m_chargedEcalMeasurementClusterCount = 0;
     m_chargedEcalMeasurementEnergy = m_chargedEcalMeasurementError = nan;
-    if (m_freeLossChargedEcalMeasurement) {
+    if (m_chargedEcalMeasurement) {
       int linkedPfos = 0;
       std::set<edm4hep::Cluster> ecal;
       for (const auto& cluster : *ecalClusters) ecal.insert(cluster);
@@ -554,6 +553,8 @@ StatusCode RecBreakpoint::execute() {
     m_truthLikelihood.reset();
     m_freeLossTracks.reset();
     m_neutralMeasurementStatus = 0;
+    m_ordinaryChargedStatus = m_ordinaryNeutralStatus = 0;
+    m_ordinaryEcalError.clear();
     m_beamFreeLossTracks.reset();
     for (auto& calo : m_caloStates) calo.reset();
     m_caloStates[InputKF].assignFromTrack(track, m_bz, 2);
@@ -701,7 +702,47 @@ StatusCode RecBreakpoint::execute() {
       if (m_verbose) info() << "event=" << m_event << " track=" << m_trackIndex
           << " seed=" << m_seedSelectionName << " ordered-hit indices="
           << seedIndices[0] << ',' << seedIndices[1] << ',' << seedIndices[2] << endmsg;
-      const auto paired = fitter.fit(hits, settings, m_ordinaryBackwardFilter);
+      // Select once; ordinary and optimized fits receive the same observations,
+      // but each owns its fit settings and independent failure/retry outcome.
+      auto chargedControls = freeLossControls;
+      if (m_chargedEcalMeasurementStatus == 2)
+        chargedControls.chargedEcalEnergy = std::make_pair(
+            m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
+      auto selectedControls = chargedControls;
+      if (m_neutralEcalMeasurement && m_collectedNeutralStatus == 2 && settings.intervals.size() == 1)
+        selectedControls.neutralEcalEnergy = std::make_pair(
+            m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+      auto ordinarySettings = settings;
+      m_ordinaryChargedStatus = m_chargedEcalMeasurement ? 1 : 0;
+      m_ordinaryNeutralStatus = m_neutralEcalMeasurement ? 1 : 0;
+      // Keep the existing no-breakpoint five-dimensional path unchanged.
+      if (!settings.intervals.empty()) {
+        ordinarySettings.chargedEcalEnergy = selectedControls.chargedEcalEnergy;
+        ordinarySettings.neutralEcalEnergy = selectedControls.neutralEcalEnergy;
+      }
+      const auto paired = [&]() {
+        for (;;) {
+          try {
+            auto result = fitter.fit(hits, ordinarySettings, m_ordinaryBackwardFilter);
+            if (result.rts.chargedEcalStep) m_ordinaryChargedStatus = 2;
+            if (result.rts.neutralEcal) m_ordinaryNeutralStatus = 2;
+            return result;
+          } catch (const std::exception& error) {
+            if (!ordinarySettings.neutralEcalEnergy && !ordinarySettings.chargedEcalEnergy) throw;
+            if (!m_ordinaryEcalError.empty()) m_ordinaryEcalError += "; ";
+            m_ordinaryEcalError += error.what();
+            if (ordinarySettings.neutralEcalEnergy) {
+              ordinarySettings.neutralEcalEnergy.reset();
+              m_ordinaryNeutralStatus = -1;
+              warning() << "Ordinary fit: " << error.what() << "; retry without neutral ECAL" << endmsg;
+            } else {
+              ordinarySettings.chargedEcalEnergy.reset();
+              m_ordinaryChargedStatus = -1;
+              warning() << "Ordinary fit: " << error.what() << "; retry without charged ECAL" << endmsg;
+            }
+          }
+        }
+      }();
       std::optional<breakpoint::PairedFitResult> freePair;
       std::optional<breakpoint::TrackLikelihoodResult> optimizedLikelihood;
       std::optional<breakpoint::PairedFitResult> beamFreePair;
@@ -710,16 +751,8 @@ StatusCode RecBreakpoint::execute() {
       bool beamFreeKFFallback = false;
       if (m_freeLossFit) {
         const breakpoint::FreeLossFitter optimizer(fitter, m_bz);
-        auto chargedControls = freeLossControls;
-        if (m_chargedEcalMeasurementStatus == 2)
-          chargedControls.chargedEcalEnergy = std::make_pair(
-              m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
-        auto selectedControls = chargedControls;
-        if (m_freeLossNeutralEcalMeasurement) {
+        if (m_neutralEcalMeasurement) {
           m_neutralMeasurementStatus = m_collectedNeutralStatus == 2 ? 3 : 1;
-          if (m_collectedNeutralStatus == 2 && settings.intervals.size() == 1)
-            selectedControls.neutralEcalEnergy = std::make_pair(
-                m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
         }
         auto freeFit = optimizer.fit(hits, settings, selectedControls,
                                      m_freeLossBackwardFilter);
@@ -1026,12 +1059,14 @@ StatusCode RecBreakpoint::execute() {
         }
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
       }
-      if (!freeKFFallback) {
-        const auto& neutral = freeResult.rts;
+      for (const auto& named : std::vector<std::pair<const char*, const breakpoint::FitResult*>>{
+          {"ordinary", &fit}, {"free_loss", freeKFFallback ? nullptr : &freeResult.rts}}) {
+        if (!named.second) continue;
+        const auto& neutral = *named.second;
         if (m_verbose && neutral.chargedEcalStep) {
           const auto& step = *neutral.chargedEcalStep;
           info() << std::setprecision(17) << "ChargedEnergyKF event=" << m_event
-                 << " track=" << m_trackIndex << " pivot=[" << step.predicted.pivot.x << ' '
+                 << " track=" << m_trackIndex << " family=" << named.first << " pivot=[" << step.predicted.pivot.x << ' '
                  << step.predicted.pivot.y << ' ' << step.predicted.pivot.z << ']' << endmsg;
           for (const auto& item : std::vector<std::pair<const char*, const TMatrixD*>>{
               {"source_mean", &neutral.persistentFiltered.back().mean},
@@ -1049,7 +1084,7 @@ StatusCode RecBreakpoint::execute() {
         if (m_verbose && neutral.neutralEcal) {
           const auto& observation = *neutral.neutralEcal;
           info() << std::setprecision(17) << "NeutralEnergyKF event=" << m_event
-                 << " track=" << m_trackIndex << " measured=" << observation.energy
+                 << " track=" << m_trackIndex << " family=" << named.first << " measured=" << observation.energy
                  << " sigma=" << observation.sigma << " predicted=" << observation.predictedEnergy
                  << " filtered=" << observation.filteredEnergy << " smoothed=" << observation.smoothedEnergy
                  << " chi2=" << observation.chi2 << " IPpt="

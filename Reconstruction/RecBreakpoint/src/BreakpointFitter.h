@@ -3,6 +3,7 @@
 
 #include "KalmanAdapter.h"
 #include "NeutralEnergyMeasurement.h"
+#include "TrackLikelihood.h"
 #include <vector>
 #include <map>
 #include <optional>
@@ -17,7 +18,7 @@ struct FitSettings {
   // Optional per-interval prior centers. All intervals retain sigmaLogLoss;
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
-  std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; free-loss RTS only
+  std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; terminal RTS measurement
   std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
@@ -67,6 +68,9 @@ struct PairedFitResult {
   FitResult rts;
   std::optional<FitResult> backward;
 };
+
+// Score the shared fit, including each enabled ECAL observation exactly once.
+TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result);
 
 /// Persistent6D: one loss coordinate stays live through every downstream hit.
 class BreakpointFitter {

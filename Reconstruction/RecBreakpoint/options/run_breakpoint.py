@@ -145,20 +145,29 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
+# Shared by ordinary augmented KF/RTS and free-loss; both default OFF.
+# FreeLossFit=False does not disable these measurements in the ordinary fit.
+# Beam-guided, diffuse and truth-centered fits do not receive these observations.
+# Old free-loss-only environment names must not silently disable a requested measurement.
+for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARGED_ECAL_MEASUREMENT"),
+                             ("BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT", "BP_NEUTRAL_ECAL_MEASUREMENT")):
+    if retired in os.environ:
+        raise ValueError(retired + " was renamed to " + replacement)
 # Experimental terminal scalar KF update: one linked charged ECAL shower
-# constrains energy (not position) before free-loss RTS smoothing. Default OFF.
+# constrains energy (not position) before RTS smoothing. Requires a selected breakpoint.
 # Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
-fit.FreeLossChargedEcalMeasurement = os.environ.get("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "0") == "1"
-# Optional measurement in the existing free-loss result. Uses the
+fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
+# Optional measurement in the ordinary and free-loss results. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.
 # Uses the same native KalTest Filter() as charged energy; no photon-position hit.
 # May be combined with charged ECAL above. Off/no usable neutral/no selected
 # breakpoint runs without neutral; failed neutral fits retry without it (retaining charged ECAL).
-# Backward execution still follows FreeLossBackwardFilter. The measured energy is never changed;
+# If the ordinary charged retry also fails, retry ordinary without ECAL and record the error.
+# Backward execution follows each family's own switch. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
-fit.FreeLossNeutralEcalMeasurement = os.environ.get("BP_FREE_LOSS_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
+fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
 fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))
 fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", "0.004"))
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b

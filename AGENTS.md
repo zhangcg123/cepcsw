@@ -312,24 +312,27 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is consistency of the optional charged and
-neutral ECAL energy measurements in the existing free-loss Persistent6D result.
-Both remain default OFF and steer `BreakpointTracksFreeLossRTS` / `free_loss_rts_*`;
-no separate neutral output family exists. Charged transport now obtains its
-state/F/Q directly from native KalTest detector transport, not finite differences
-or covariance subtraction. Both energy updates use native `TVKalSite::Filter()`
-with full 6D correlations and reject curvature-sign crossings. Charged stays at
-the ECAL face; neutral stays at the virtual post-loss site. No-neutral/no-loss
-skips neutral; failed neutral retries without it, retaining charged if selected.
-All backward defaults remain OFF; retired neutral-prior/penalty families stay retired.
+Active work on local `breakpoint` is shared optional ECAL energy measurements
+in ordinary augmented KF/RTS and free-loss Persistent6D. The common controls
+are now `ChargedEcalMeasurement` and `NeutralEcalMeasurement`, both default OFF;
+they work for ordinary fitting even with `FreeLossFit=false`. Regenerate cards
+using `BP_CHARGED_ECAL_MEASUREMENT` / `BP_NEUTRAL_ECAL_MEASUREMENT`; old free-loss
+names are rejected. Existing ordinary/free-loss endpoints carry the constrained
+results, without a new output family. Independently executed beam-guided,
+diffuse and truth-centered fits remain unchanged. Backward defaults remain OFF.
 
-The update is built/tested but NOT installed. Seven CTests pass; both-OFF matches
-all 515 branches on eight prior rows exactly. Focused native ECAL covariance
-closure passes, with no previous invalid-process-penalty failures in the tested
-ON fits. This is not physics validation: the neutral affine prediction can still
-agree with the measurement while the nonlinear final-state energy disagrees badly.
-Next: discuss/fix that remaining linearization limit, then validate cluster
-ownership, calibration/independence and held-out barrel/endcap performance before
-default-on steering. The three review points, exact tests, deployment hashes and
-complete outgoing focus are preserved in
-`agents_record/2026-10-23-native-ecal-kaltest-machinery.md`.
+Both observations use native KalTest transport/update machinery. Charged is at
+the ECAL face; neutral is at the post-loss virtual site. Both currently require
+a selected breakpoint. Ordinary status/error branches distinguish application,
+skips and failed retries. One shared likelihood routine counts each observation
+once. The retired cluster-prior/penalty approaches remain retired.
+
+Built/tested but NOT installed: seven CTests pass, all 515 legacy OFF branches
+match on eight rows, free-loss ON results are exact on three hard-loss tracks
+in all switch combinations, and ordinary fitting works with free-loss disabled.
+Native covariance closure passes. One unrelated batch test disagrees with the
+user-modified submission-wrapper default and is left unchanged.
+This does not fix or validate the known neutral affine/nonlinear energy mismatch.
+Next: resolve that limitation and assess cluster ownership, calibration and
+held-out performance before default-on steering. Full evidence, install hashes
+and outgoing focus: `agents_record/2026-10-24-shared-ordinary-free-ecal-controls.md`.

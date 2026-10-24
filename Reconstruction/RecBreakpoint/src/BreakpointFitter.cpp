@@ -30,6 +30,25 @@ FitSettings intervalSettings(const FitSettings& settings, int interval) {
 
 } // namespace
 
+TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
+  if (result.smoothedChi2Status != 1)
+    throw std::runtime_error("Complete RTS score unavailable: " + result.smoothedChi2Error);
+  if (!result.gaussianModel)
+    throw std::runtime_error("Gaussian model unavailable: " + result.gaussianModelError);
+  auto score = result.chargedEcalStep
+      ? evaluateTrackLikelihood(*result.gaussianModel)
+      : evaluateSmoothedTrackLikelihood(*result.gaussianModel, result.smoothedTotalChi2);
+  // The captured tracker model includes neutral, but not the terminal charged site.
+  if (result.chargedEcalStep) {
+    score.nll2 += result.chargedEcalChi2 +
+        std::log(2. * std::acos(-1.) * result.chargedEcalInnovationVariance);
+    score.quadratic += result.chargedEcalChi2;
+    score.logDeterminant += std::log(result.chargedEcalInnovationVariance);
+    ++score.measurementDimensions;
+  }
+  return score;
+}
+
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                      const FitSettings& settings, bool runBackward) const {
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)

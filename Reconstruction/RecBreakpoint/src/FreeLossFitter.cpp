@@ -63,19 +63,12 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
         // Score this trial's existing RTS trajectory: measurement + process
         // + seed chi2, then the SAME joint-measurement normalization. No new
         // filter pass, reference iteration, or backward chi2 is added.
-        trial.likelihood = controls.chargedEcalEnergy
-            ? evaluateTrackLikelihood(*rts.gaussianModel)
-            : evaluateSmoothedTrackLikelihood(*rts.gaussianModel, rts.smoothedTotalChi2);
+        trial.likelihood = evaluateFitLikelihood(rts);
         if (controls.chargedEcalEnergy) {
           trial.chargedEcalPredictedEnergy = rts.chargedEcalPredictedEnergy;
           trial.chargedEcalResidual = rts.chargedEcalResidual;
           trial.chargedEcalInnovationVariance = rts.chargedEcalInnovationVariance;
           trial.chargedEcalChi2 = rts.chargedEcalChi2;
-          trial.likelihood.nll2 += rts.chargedEcalChi2 +
-              std::log(2. * std::acos(-1.) * rts.chargedEcalInnovationVariance);
-          trial.likelihood.quadratic += rts.chargedEcalChi2;
-          trial.likelihood.logDeterminant += std::log(rts.chargedEcalInnovationVariance);
-          ++trial.likelihood.measurementDimensions;
         }
         if (controls.beamSpot)
           trial.beam = evaluateBeamSpotLikelihood(rts.ip, m_bz, *controls.beamSpot);
