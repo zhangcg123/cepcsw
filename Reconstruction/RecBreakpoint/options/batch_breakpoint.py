@@ -262,13 +262,16 @@ def prepare():
 
 
 def submit_jobs(jobs, dry):
+    group = os.environ.get('SUBMIT_GROUP', 'cms')
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', group):
+        raise ValueError('SUBMIT_GROUP must be a nonempty group name (e.g. cms or higgs)')
     failures = 0
     for carddir, job in jobs:
         repo = Path(job['repo'])
         output = carddir.parent.parent
         worker = repo/'dump_breakpoint.sh'
         memory = job['memory_mb']
-        command = ['hep_sub', str(worker), '-g', 'cms', '-mem', str(memory),
+        command = ['hep_sub', str(worker), '-g', group, '-mem', str(memory),
                    '-o', str(output/'outlog'/f'{job["sample"]}.out'),
                    '-e', str(output/'outlog'/f'{job["sample"]}.err'), '-argu', str(carddir/'job.json')]
         print(shlex.join(command), flush=True)

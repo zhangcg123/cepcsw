@@ -964,8 +964,12 @@ After inspecting the generated cards, submit those exact prepared jobs:
 Omit DRY_RUN=1 on the first command to prepare and submit immediately. Do not
 rerun preparation over the same sample/output directory; use `submit` after
 a dry run. DRY_RUN=1 also works with `submit` to print commands only.
-The scripts use the existing IHEP `hep_sub -g cms -mem ... -argu JOB.json`
-convention. Scheduler stdout/stderr are preserved in each job's submitted.json.
+The scripts use IHEP `hep_sub -g GROUP -mem ... -argu JOB.json`.
+Set `SUBMIT_GROUP` in `subbreakpointjobs.sh` (default `cms`), or override it:
+`SUBMIT_GROUP=higgs ./subbreakpointjobs.sh`. It is read at submission time,
+including `SUBMIT_GROUP=higgs ./subbreakpointjobs.sh submit OUTPUT_DIR` for
+already-prepared jobs; cards/checksums do not change.
+Scheduler stdout/stderr are preserved in each job's submitted.json.
 The worker sources the project's `setup.sh` and launches `gaudirun.py` directly
 for every stage, using the standard `InstallArea` runtime like a manual
 `source setup.sh; ./run.sh CARD.py` run. It no longer selects a build-directory

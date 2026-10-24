@@ -14,6 +14,8 @@ export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-bp_flat_barrel_20261018}
 # Retain SIM/REC/flat outputs; remove owned TRK/calodigi only after validation.
 export STAGES=${STAGES:-breakpoint}
 export MEMORY_MB=${MEMORY_MB:-5000}
+# hep_sub -g group, used for both new and already-prepared jobs.
+export SUBMIT_GROUP=${SUBMIT_GROUP:-cms}
 export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.
 # Must be finite and positive. Frozen into generated cards at preparation.

@@ -448,12 +448,26 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(args[-2],'-argu')
         self.assertTrue(Path(args[-1]).is_file())
 
+    def test_submission_shell_group_override_and_validation(self):
+        env = dict(self.env, SUBMIT_GROUP='higgs')
+        result = batch.subprocess.run(['bash', str(self.repo/'subbreakpointjobs.sh')],
+                                      env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('-g higgs ', result.stdout)
+        carddir = self.repo/'outputs/runcards/barrel-12'
+        self.assertFalse((carddir/'submitted.json').exists())
+        for group in ('', '-cms', 'cms higgs', 'cms;echo'):
+            with patch.dict(os.environ, {'SUBMIT_GROUP': group}, clear=True):
+                with self.assertRaisesRegex(ValueError, 'SUBMIT_GROUP'):
+                    batch.submit_jobs([], True)
+
     def test_submit_prepared_preserves_cards_and_blocks_duplicates(self):
         self.prepare()
         job=self.manifest()
         hashes=dict(job['checksums'])
-        with patch.dict(os.environ,self.env,clear=True), contextlib.redirect_stdout(io.StringIO()):
+        with patch.dict(os.environ,dict(self.env, SUBMIT_GROUP='higgs'),clear=True), contextlib.redirect_stdout(io.StringIO()) as stdout:
             batch.submit_prepared('outputs')  # dry run: no scheduler
+        self.assertIn('-g higgs ', stdout.getvalue())
         self.assertEqual(self.manifest()['checksums'],hashes)
         marker=Path(job['cards']['trk']).parent/'submitted.json'; marker.write_text('{}')
         with patch.dict(os.environ,self.env,clear=True), self.assertRaises(ValueError):
