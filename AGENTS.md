@@ -327,15 +327,20 @@ unchanged: beam, tracker/neutral breakpoint, charged ECAL. All stages reuse the
 existing fitter and native transport/measurement/RTS machinery. Diffuse/truth
 and original backward outputs remain unchanged; all backward defaults OFF.
 
-Built/tested, NOT installed: eight CTests pass, all-OFF matches 6608 existing
+Installed in the project default InstallArea (source 66d8477): eight CTests pass,
+all-OFF matches 6608 existing
 field values on eight tracks, three hard-loss tracks yield masks 1,3,7, and
 the all-three final endpoints reproduce the former combined fit exactly.
 Two-switch/no-interval/free-fit-OFF tests, native covariance closure and real
 batch tuple validation pass. One pre-existing batch-wrapper-default test still
 fails; the user's wrapper was not changed.
 
+Installed-runtime 1/0/1 smoke reproduces all 838 build-tree fields exactly;
+configuration and library hashes match. No batch jobs submitted. Defaults remain
+OFF. Deployment and rollback backup are recorded in
+`agents_record/2026-10-24-install-cumulative-breakpoint.md`.
+
 No population/endcap validation claimed. Neutral linearization, charged-PFA
-independence/calibration and extra per-stage CPU cost remain. Next: install
-when authorized, then compare categorized performance. Contract, provenance,
-test details and superseded focus:
+independence/calibration and extra per-stage CPU cost remain. Next: compare
+categorized performance. Cumulative contract and earlier test details:
 `agents_record/2026-10-24-cumulative-constraint-stages.md`.
