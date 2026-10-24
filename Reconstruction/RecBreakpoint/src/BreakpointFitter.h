@@ -94,7 +94,7 @@ private:
       const std::vector<TMatrixD>& smoothedMeans, const std::vector<TMatrixD>& noises,
       const std::vector<TrackState>& measurementReferences,
       const std::vector<int>& hitNodes = {}) const;
-  void scoreBeamSpot(FitResult& result, const BeamSpotSettings& beam) const;
+  void finishBeamSpot(FitResult& result) const;
   FitResult finishBackward(const std::vector<edm4hep::TrackerHit>& hits,
       const FitSettings& settings, FitResult result) const;
   const KalmanAdapter& m_adapter;

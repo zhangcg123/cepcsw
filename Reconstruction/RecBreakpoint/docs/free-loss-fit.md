@@ -53,13 +53,16 @@ S_beam = H_beam*P_seed*H_beam^T + R_beam
 L(all observations) = L(beam | original seed) * L(hits, ECAL | beam)
 ```
 
-Native helix repivoting supplies drho and H_beam; native KalTest filtering
-updates the full seed covariance. RTS uses this conditioned seed. The complete
-smoothed quadratic includes the original seed penalty and the affine beam
-measurement residual; the likelihood includes log(2*pi*S_beam) once. There is
-no separate beam-guided search or post-RTS penalty. This geometric, material-free
-boundary observation constrains transverse drho, not longitudinal z. Its frozen
-linearization and projected width are not a validated event-origin model.
+The beam is an explicit first site at the configured beam pivot, with
+H_beam=(1,0,0,0,0). Native KalTest filtering updates its full seed covariance.
+Native detector transport then supplies the first tracker prediction and F/Q,
+including enabled material effects. RTS returns through this retained edge to
+the beam, which supplies the published IP state without a second material pass.
+The complete smoothed quadratic includes the original beam seed penalty, beam
+measurement residual and beam-to-hit process penalty. The likelihood uses the
+transported conditioned seed at hit 0 and includes log(2*pi*S_beam) once.
+There is no separate beam-guided search or post-RTS penalty. This transverse
+observation does not constrain z; the projected width is frozen at the seed.
 
 For the exact relation to complete smoothed residuals, see
 [forward likelihood and smoothed quadratic](smoothed-objective.md).
@@ -167,11 +170,14 @@ Same loss-prior settings, opposite direction.
 Its seed is the final forward endpoint with covariance scaled by
 BackwardSeedScale; this scale does not change the RTS calculation or objective.
 
-All ordinary/free/truth RTS and backward endpoints now share native MarlinTrk
-propagation from their innermost state to the IP, honoring MSOn/ElossOn. The
-removed RTS-only geometric extrapolation is not an alternative live path.
-This synchronizes the final transport, not the distinct endpoint estimates;
-it adds neither a beam-spot measurement nor an extra loss breakpoint.
+With the beam constraint disabled, RTS and backward endpoints use native
+MarlinTrk propagation from their innermost state to IP, honoring MSOn/ElossOn.
+With it enabled, ordinary/free-loss RTS instead smooths back to the explicit
+beam site through its stored native transition; the smoothed beam state supplies
+the IP endpoint without a second material traversal. Independent truth/diffuse
+fits and optional backward refilters retain native innermost-to-IP propagation;
+the backward refilter does not add a second beam update. No extra loss
+breakpoint is introduced at this boundary.
 
 ### Output contract
 

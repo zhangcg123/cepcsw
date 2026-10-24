@@ -2,6 +2,7 @@
 #define RECBREAKPOINT_TRACKSYSTEM_H
 
 #include "MarlinKalTest.h"
+#include "kaldet/ILDCylinderMeasLayer.h"
 
 namespace breakpoint {
 /// Expose the existing protected layer lookup through a narrow adapter.
@@ -19,6 +20,7 @@ public:
     return result;
   }
   TKalDetCradle& detector() const { return *_det; }
+  const ILDCylinderMeasLayer* ipLayer() const { return getIPLayer(); }
 };
 } // namespace breakpoint
 #endif

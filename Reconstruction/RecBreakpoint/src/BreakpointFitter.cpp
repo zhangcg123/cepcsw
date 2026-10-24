@@ -132,7 +132,7 @@ FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::Tracke
       throw std::runtime_error("Smoothed covariance at hit " + std::to_string(i) + ": " + error.what());
     }
   }
-  result.ip = m_adapter.propagateToIP(result.smoothed.front(), hits.front());
+  if (!settings.beamSpot) result.ip = m_adapter.propagateToIP(result.smoothed.front(), hits.front());
   result.endpoint = result.smoothed;
   std::vector<TMatrixD> predicted, covariances, smoothed, noises;
   for (std::size_t i=0;i<hits.size();++i) {
@@ -142,7 +142,7 @@ FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::Tracke
     if (i) noises.push_back(transitions[i-1].noise);
   }
   scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
-  if (settings.beamSpot) scoreBeamSpot(result, *settings.beamSpot);
+  if (settings.beamSpot) finishBeamSpot(result);
   if (settings.captureGaussianModel) {
     try {
       auto model = std::make_shared<GaussianTrackModel>();
@@ -445,7 +445,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   result.breakpoints.push_back({interval, loss.meanLogLoss, smoothedMean.back()(5, 0),
       smoothedCov.back()(5, 5), local.mean(5, 0), local.covariance(5, 5), closure});
   result.endpoint = result.smoothed;
-  result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
+  if (!settings.beamSpot) result.ip = m_adapter.propagateToIP(result.endpoint.front(), hits.front());
   if (result.neutralEcal) {
     auto smoothed = result.neutralEcal->filtered;
     smoothed.mean = smoothedMean[neutralNode]; smoothed.covariance = smoothedCov[neutralNode];
@@ -454,7 +454,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
                 result.predicted,hitNodes);
   result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
-  if (settings.beamSpot) scoreBeamSpot(result, *settings.beamSpot);
+  if (settings.beamSpot) finishBeamSpot(result);
   if (settings.captureGaussianModel) {
     try {
       auto model = std::make_shared<GaussianTrackModel>();
@@ -677,17 +677,22 @@ BreakpointFitter::fitDiffuseRTS(const std::vector<edm4hep::TrackerHit> &hits,
   return result;
 }
 
-void BreakpointFitter::scoreBeamSpot(FitResult& result, const BeamSpotSettings& beam) const {
+void BreakpointFitter::finishBeamSpot(FitResult& result) const {
   if (!result.beamSpot) throw std::runtime_error("Beam measurement missing from fitted trajectory");
   auto& measurement = *result.beamSpot;
-  smoothBeamSpot(measurement, result.smoothed.front(), m_adapter.bz(), beam);
-  // Split the beam-conditioned seed penalty into the original seed penalty
-  // and beam measurement residual, so the complete RTS breakdown stays physical.
+  smoothBeamSpot(measurement, result.smoothed.front());
+  // The beam is the first measurement node. Complete the retained boundary RTS
+  // edge and publish it, without traversing the same material inward a second time.
+  result.ip = toEDM(repivotBeamState(measurement.smoothed, {0,0,0}, m_adapter.bz()),
+                    m_adapter.bz(), edm4hep::TrackState::AtIP);
+  // Replace the marginalized first-hit seed penalty by the original beam seed,
+  // beam observation and beam-to-hit process terms of this same trajectory.
   const TMatrixD delta = stateDifference(measurement.smoothed.mean, measurement.predicted.mean);
   const double originalSeed = (transpose(delta) * inverseCovariance(measurement.predicted.covariance) * delta)(0,0);
-  const double change = originalSeed + measurement.smoothedChi2 - result.smoothedSeedChi2;
+  const double change = originalSeed + measurement.smoothedChi2 + measurement.processChi2 - result.smoothedSeedChi2;
   result.smoothedSeedChi2 = originalSeed;
   result.smoothedMeasurementChi2.front() += measurement.smoothedChi2;
+  result.smoothedProcessChi2.front() += measurement.processChi2;
   result.smoothedChi2.front() += change;
   result.smoothedTotalChi2 += change;
   result.chi2 += measurement.chi2;

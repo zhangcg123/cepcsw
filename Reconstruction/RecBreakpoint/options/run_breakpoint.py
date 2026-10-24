@@ -171,8 +171,9 @@ fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"
 fit.FreeLossMaxCallsPerStart = int(os.environ.get("BP_FREE_LOSS_MAX_CALLS", "180"))
 fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
 # Common ordinary/free-loss beam KF measurement BEFORE the first tracker hit.
-# Native geometric helix projection, no material/Q on this boundary, no z hit.
-# Full covariance updated; the forward fit and RTS use the constrained state.
+# Explicit transverse beam site (no z hit), then native material-aware transport
+# to hit 0 using MSOn/ElossOn. Its F/Q are retained for RTS back to the beam.
+# Publish the smoothed beam state at IP; do not traverse boundary material twice.
 # Included ONCE in the likelihood; no separate beam-guided output or extra penalty.
 # Also works with no breakpoint and with FreeLossFit=False. Default OFF.
 for retired in ("BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE", "BP_BEAM_FREE_LOSS_BACKWARD_FILTER"):

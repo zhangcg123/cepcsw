@@ -244,6 +244,8 @@ StatusCode RecBreakpoint::initialize() {
     branch("innovation_variance_mm2", &beam.innovationVariance);
     branch("innovation_chi2", &beam.chi2);
     branch("smoothed_chi2", &beam.smoothedChi2);
+    branch("boundary_process_chi2", &beam.processChi2);
+    branch("boundary_covariance_closure", &beam.covarianceClosure);
   }
   m_tree->Branch("diffuse_augmented_status", &m_diffuseStatus);
   m_tree->Branch("diffuse_augmented_index", &m_diffuseIndex);
@@ -1050,13 +1052,28 @@ StatusCode RecBreakpoint::execute() {
                  << " family=" << named.first << " predicted=" << beam.predictedDrho
                  << " filtered=" << beam.filteredDrho << " smoothed=" << beam.smoothedDrho
                  << " affine=" << beam.smoothedAffineDrho << " variance=" << beam.beamVariance
-                 << " innovationVariance=" << beam.innovationVariance << " chi2=" << beam.chi2 << endmsg;
+                 << " innovationVariance=" << beam.innovationVariance << " chi2=" << beam.chi2
+                 << " boundaryProcessChi2=" << beam.processChi2
+                 << " boundaryCovarianceClosure=" << beam.covarianceClosure << endmsg;
           for (const auto* state : {&beam.predicted, &beam.filtered, &beam.smoothed}) {
             std::ostringstream dump;
             dump << std::setprecision(17) << "BeamSpotKF mean=[";
             for (int i=0;i<5;++i) dump << state->mean(i,0) << ' ';
             dump << "] covariance=[";
             for (int i=0;i<5;++i) for (int j=0;j<5;++j) dump << state->covariance(i,j) << ' ';
+            info() << dump.str() << ']' << endmsg;
+          }
+          for (const auto& item : std::vector<std::pair<const char*, const TMatrixD*>>{
+              {"source_mean", &beam.filtered.mean}, {"source_covariance", &beam.filtered.covariance},
+              {"predicted_mean", &beam.firstHitPredicted.mean},
+              {"predicted_covariance", &beam.firstHitPredicted.covariance},
+              {"filtered_mean", &neutral.filtered.front().mean},
+              {"filtered_covariance", &neutral.filtered.front().covariance},
+              {"transport", &beam.transport}, {"noise", &beam.noise}}) {
+            std::ostringstream dump;
+            dump << std::setprecision(17) << "BeamBoundaryKF " << item.first << "=[";
+            for (int i=0;i<item.second->GetNrows();++i)
+              for (int j=0;j<item.second->GetNcols();++j) dump << (*item.second)(i,j) << ' ';
             info() << dump.str() << ']' << endmsg;
           }
         }

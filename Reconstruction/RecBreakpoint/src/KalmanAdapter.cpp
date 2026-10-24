@@ -7,6 +7,7 @@
 #include "UTIL/ILDConf.h"
 #include "kaldet/ILDVMeasLayer.h"
 #include "kaldet/ILDVTrackHit.h"
+#include "kaldet/ILDCylinderHit.h"
 #include "kaltest/TKalTrack.h"
 #include "kaltest/TKalTrackSite.h"
 #include "kaltest/TKalTrackState.h"
@@ -229,13 +230,54 @@ edm4hep::TrackState KalmanAdapter::prefit(const std::vector<edm4hep::TrackerHit>
 MeasurementStep KalmanAdapter::seed(const std::vector<edm4hep::TrackerHit>& hits,
                                     double scale, const std::optional<BeamSpotSettings>& beam) const {
   if (beam) {
-    // Obtain the native first-hit prediction without consuming the hit. Apply
-    // the beam observation first, then update the first tracker hit exactly once.
-    const auto prediction = nativeStep(*m_system, m_bz, m_maxChi2,
-        fromEDM(prefit(hits, scale), m_bz), hits.front(), hits.front(), false, 0, 0, true);
-    auto measurement = updateBeamSpot(prediction.predicted, m_bz, *beam);
-    auto step = nativeStep(*m_system, m_bz, m_maxChi2, measurement.filtered,
-                          hits.front(), hits.front());
+    const auto beamSeed = repivotBeamState(fromEDM(prefit(hits, scale), m_bz),
+                                           {beam->x, beam->y, 0}, m_bz);
+    auto measurement = updateBeamSpot(beamSeed, *beam);
+    const auto* ipLayer = m_system->ipLayer();
+    if (!ipLayer || std::hypot(beam->x, beam->y) + std::abs(measurement.filtered.mean(0,0)) >= ipLayer->GetR())
+      throw std::runtime_error("Beam state must lie inside the native IP navigation layer");
+
+    TKalTrack track;
+    track.SetOwner();
+    // The existing vacuum IP layer supplies navigation, not a second hit update.
+    // The physical source state and beam observation are at the beam pivot.
+    double coordinates[2] = {0,0}, errors[2] = {1,1};
+    auto anchor = std::make_unique<ILDCylinderHit>(*ipLayer, coordinates, errors, m_bz, edm4hep::TrackerHit{});
+    auto source = std::make_unique<TKalTrackSite>(*anchor, 5);
+    source->SetHitOwner();
+    anchor.release();
+    source->SetOwner();
+    source->SetPivot(TVector3(beam->x, beam->y, 0));
+    source->Add(new TKalTrackState(TKalMatrix(measurement.predicted.mean),
+        TKalMatrix(measurement.predicted.covariance), *source, TVKalSite::kPredicted, 5));
+    source->Add(new TKalTrackState(TKalMatrix(measurement.filtered.mean),
+        TKalMatrix(measurement.filtered.covariance), *source, TVKalSite::kFiltered, 5));
+    auto* sourcePointer = source.release();
+    track.Add(sourcePointer);
+    auto target = makeSite(*m_system, hits.front());
+    HitAcceptance acceptance(m_maxChi2);
+    target->SetFilterCond(&acceptance);
+    // Exactly the same native propagation + real-hit update as nativeStep().
+    if (!track.AddAndFilter(*target))
+      throw std::runtime_error("KalTest rejected beam-to-first-hit propagation/update");
+    auto* targetPointer = target.release();
+    MeasurementStep step;
+    step.predicted = readNative(*targetPointer, TVKalSite::kPredicted);
+    step.filtered = readNative(*targetPointer, TVKalSite::kFiltered);
+    step.transport = sourcePointer->GetState(TVKalSite::kFiltered).GetPropMat();
+    step.noise = sourcePointer->GetState(TVKalSite::kFiltered).GetProcNoiseMat();
+    step.chi2 = targetPointer->GetDeltaChi2();
+    step.dimension = targetPointer->GetDimension();
+    measurement.firstHitPredicted = step.predicted;
+    measurement.transport = step.transport;
+    measurement.noise = step.noise;
+    const TMatrixD expected = step.transport * measurement.filtered.covariance * transpose(step.transport) + step.noise;
+    for (int i=0;i<5;++i) for (int j=0;j<5;++j)
+      measurement.covarianceClosure = std::max(measurement.covarianceClosure,
+          std::abs(expected(i,j)-step.predicted.covariance(i,j)) /
+          std::sqrt(step.predicted.covariance(i,i)*step.predicted.covariance(j,j)));
+    if (measurement.covarianceClosure > 1.e-8)
+      throw std::runtime_error("Beam-to-first-hit native covariance closure failed");
     step.beamSpot = std::move(measurement);
     return step;
   }

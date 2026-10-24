@@ -47,12 +47,14 @@ These are separate results, not CPU threads. Backward starts from the full
 first-pass forward endpoint mean and its full covariance multiplied by
 BackwardSeedScale (default100), revisits hits N-2 through 0, and uses
 material-aware native IP propagation. RTS never consumes the backward-refiltered
-states. Both endpoints now use the SAME KalmanAdapter::propagateToIP operation:
-initialize from the innermost endpoint and call native MarlinTrk propagation
-to (0,0,0), honoring the existing MSOn/ElossOn settings. This applies to ordinary,
-free-loss and truth-prior results in Persistent6D mode.
-The former purely geometric RTS-only atIP helper has been removed. No beam-spot
-measurement or extra breakpoint is introduced by this common IP operation.
+states. With `BeamSpotConstraint=false`, RTS and backward endpoints use
+`KalmanAdapter::propagateToIP`: native MarlinTrk propagation from the innermost
+endpoint to (0,0,0), honoring MSOn/ElossOn. Independently executed truth/diffuse
+fits and optional backward refilters retain this operation.
+With the beam constraint enabled, ordinary/free-loss RTS instead smooths back
+through the stored native beam-to-first-hit transition and publishes that beam
+state at IP. It does not traverse the boundary material a second time. The
+optional backward refilter does not perform an additional beam update.
 Backward still reuses forward hit evidence; it is NOT an independent Bayesian
 smoother. Neither branch adds a beam-to-first-hit breakpoint.
 
@@ -640,27 +642,35 @@ The old beam-guided optimizer, output collections, branches and backward
 switch are removed. Regenerate prepared cards; retired environment names fail
 explicitly rather than silently selecting another behavior.
 
-Before the first tracker hit, native helix `MoveTo` evaluates transverse
-`drho` at `(BeamSpotX, BeamSpotY, 0)` and its Jacobian. The measured value
-is zero. The observation is expressed at the first-hit pivot; native
-`TVKalSite::Filter()` updates all five seed parameters and their covariance.
-The first tracker hit is then used exactly once, and the constrained state
-feeds all forward/breakpoint updates and RTS. This is a geometric, material-free
-boundary projection, not a new material traversal or a longitudinal/z hit.
+The loose three-hit prefit is expressed at `(BeamSpotX, BeamSpotY, 0)`.
+This is an explicit first measurement site: measured `drho=0`,
+`H=(1,0,0,0,0)`. Native `TVKalSite::Filter()` updates all five seed coordinates
+and their covariance there. The native IP vacuum layer supplies the navigation
+anchor, not an additional measurement. Native `AddAndFilter()` then propagates
+to the first tracker hit through the configured detector material and updates
+that hit exactly once. Its native `F` and `Q` are retained; `MSOn` and `ElossOn`
+control material effects as for tracker-to-tracker transport.
+RTS returns through that boundary transition to the beam site. The published
+IP state/covariance come from the smoothed beam state; only a coordinate
+repivot to the origin is needed for an offset beam mean. Do not propagate
+again from the innermost hit and count boundary material twice. There is no z hit.
 The scalar beam variance is
 `cos(phi0_beam)^2*sigmaX^2 + sin(phi0_beam)^2*sigmaY^2`, frozen at the seed.
 No external beam score is appended after RTS.
 
 Likelihood accounting uses
 `p(beam,hits,ECAL) = p(beam|original seed) * p(hits,ECAL|beam)`.
-The complete RTS breakdown uses the original seed penalty and the smoothed
-affine beam residual once (in the first hit's measurement contribution).
-The beam-conditioned seed covariance is used for the conditional Gaussian
-model. Its normalization is combined with the initial beam innovation
+The complete RTS breakdown uses the original beam seed penalty, the beam
+measurement residual (in the first hit's measurement contribution), and the
+beam-to-hit process penalty (in the first hit's process contribution).
+The transported beam-conditioned covariance at hit 0 is used for the conditional
+Gaussian model. Its normalization is combined with the initial beam innovation
 variance, not another smoothed covariance or a repeated beam update.
 Ordinary/free-loss output state covariances therefore include this measurement.
-The fitted beam projection is linearized, not an iterated vertex fit;
-the flat tuple retains both affine and nonlinear smoothed drho for checks.
+The beam width is projected once using the seed direction, not an iterated
+vertex fit. Affine and nonlinear drho fields now coincide at the beam pivot.
+Boundary process chi2 and covariance closure are saved; verbose output contains
+the native source/predicted/filtered states, `F` and `Q`.
 
 | Property | Compiled default | Meaning |
 |---|---|---|
@@ -781,7 +791,8 @@ penalty diagnostics are no longer written. Common beam configuration is saved
 as `beam_spot_constraint_enabled`, position and widths in mm.
 `ordinary_beam_spot_*` / `free_loss_beam_spot_*` retain `applied`,
 predicted/filtered/smoothed drho, smoothed affine drho, measurement/innovation
-variances, innovation chi2 and smoothed measurement chi2. Ignore the numeric
+variances, innovation chi2, smoothed measurement chi2,
+`boundary_process_chi2` and `boundary_covariance_closure`. Ignore the numeric
 fields when `applied=false`; they are not a failed-fit substitute.
 The base optimizer diagnostics are inactive/NaN/empty when unused; its additional endpoint
 fields then copy the ordinary results exactly. Failed/unsupported optimization

@@ -12,18 +12,19 @@ struct BeamSpotSettings {
 
 struct BeamSpotMeasurement {
   TrackState predicted, filtered, smoothed;
+  TrackState firstHitPredicted;
+  TMatrixD transport{5,5}, noise{5,5}; // native beam -> first tracker hit
   GaussianHitModel observation{TMatrixD(1,5), TMatrixD(1,1), TMatrixD(1,1)};
   double predictedDrho = 0, filteredDrho = 0, smoothedDrho = 0, smoothedAffineDrho = 0;
   double beamVariance = 0, innovationVariance = 0, chi2 = 0, smoothedChi2 = 0;
+  double processChi2 = 0, covarianceClosure = 0;
 };
 
-// The physical beam observation is expressed at the first-hit pivot using the
-// native helix Jacobian. This boundary projection is geometric/material-free.
-GaussianHitModel beamSpotObservation(const TrackState& state, double bz,
-                                    const BeamSpotSettings& beam);
-BeamSpotMeasurement updateBeamSpot(const TrackState& state, double bz,
-                                   const BeamSpotSettings& beam);
-void smoothBeamSpot(BeamSpotMeasurement& measurement, const TrackState& state,
-                    double bz, const BeamSpotSettings& beam);
+// Coordinate change only: used for the loose seed and beam-to-origin output.
+// Physical beam -> tracker transport is performed separately by KalTest.
+TrackState repivotBeamState(const TrackState& state, const edm4hep::Vector3d& pivot, double bz);
+GaussianHitModel beamSpotObservation(const TrackState& state, const BeamSpotSettings& beam);
+BeamSpotMeasurement updateBeamSpot(const TrackState& state, const BeamSpotSettings& beam);
+void smoothBeamSpot(BeamSpotMeasurement& measurement, const TrackState& firstHitSmoothed);
 } // namespace breakpoint
 #endif

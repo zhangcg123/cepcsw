@@ -312,33 +312,31 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is the common optional measurement workflow
+Active work on local `breakpoint` is the shared optional measurement workflow
 for ordinary augmented KF/RTS and free-loss Persistent6D. `BeamSpotConstraint`,
 `ChargedEcalMeasurement` and `NeutralEcalMeasurement` are independent and default
-OFF. The new beam option uses native helix projection and KalTest filtering
-before the first tracker hit; it updates the full seed covariance and is used
-by forward filtering, RTS and free-loss trials. Beam works without a breakpoint
-and with free-loss disabled. Charged remains at the ECAL face; neutral at the
-post-loss virtual site; those two still require a selected breakpoint.
+OFF. Beam now is an explicit native KalTest measurement site. Native
+material-aware transport supplies beam-to-first-hit F/Q, honoring MSOn/ElossOn;
+RTS smooths back through that edge and publishes the beam state at IP without
+a second boundary-material traversal. Charged remains at the ECAL face and
+neutral at the virtual post-loss site. Beam works without a selected breakpoint.
 
-The separate beam-guided optimizer, collections, tuple family and backward
-switch are removed. Regenerate cards with `BP_BEAM_SPOT_CONSTRAINT`; old beam
-controls fail explicitly. Existing ordinary/free-loss endpoints carry whichever
-constraints are enabled, without extra endpoint families. Independently executed
-diffuse and truth-centered fits remain unchanged. All three backward defaults
-remain OFF. Likelihood/complete RTS accounting includes the beam once, with
-separate persisted beam diagnostics.
+Existing ordinary/free-loss endpoints carry enabled constraints; no separate
+beam-guided or neutral output family exists. Independently executed diffuse/
+truth fits remain unchanged. All three backward defaults remain OFF; optional
+backward refilters retain native IP propagation without a second beam update.
+Beam likelihood, complete smoothed score and boundary diagnostics count the
+measurement and transport once.
 
 Built/tested but NOT installed: eight CTests pass; beam OFF exactly reproduces
-388 retained fields on eight previous tracks. Beam ON works on five control
-tracks and three hard-loss ECAL tracks, also with free-loss OFF. Existing ECAL
-numerical results remain exact with beam OFF; only a helper error text changed.
-Native covariance closure passes. One pre-existing batch test disagrees with
-the user's intentional breakpoint-only wrapper default.
+411 retained fields on eight prior tracks. Native boundary covariance closure
+passes on 16 beam edges and six charged ECAL edges at about 2e-16; MS/Eloss
+switch tests confirm native material effects. One pre-existing batch test
+disagrees with the user's intentional breakpoint-only wrapper default.
 
-No population validation is claimed. Beam projection is geometric/material-free,
-transverse-only and linearized once. The known neutral affine/nonlinear energy
-mismatch remains. Next: install when authorized, then assess these limitations,
-cluster calibration/ownership and held-out barrel/endcap performance before
-default-on steering. Full evidence and outgoing focus:
-`agents_record/2026-10-24-shared-beam-spot-kf.md`.
+No population/endcap validation is claimed. Beam remains transverse-only with
+its measurement variance linearized at the seed direction. The known neutral
+affine/nonlinear energy mismatch remains. Next: install when authorized, then
+assess categorized performance and cluster calibration/ownership. Full evidence
+and preserved outgoing focus:
+`agents_record/2026-10-24-native-beam-hit-boundary.md`.
