@@ -1,5 +1,19 @@
 # Passive timing-matched ECAL cluster export
 
+## Prominent deployment reminder
+
+**This was a PFA-package C++ source modification, not merely a tuple-analysis
+script. Commit `9063895` is committed and pushed on `breakpoint`, but its
+`CrystalCaloRec` module is built/tested only and is NOT installed into the
+default runtime.** Existing batch jobs therefore do not automatically save
+these new products. No installation is authorized by a plot-server request.
+
+The user explicitly requested highlighting and retaining this fact in project
+memory. The live warning is in `AGENTS.md` section 2. Its complete preceding
+version, including the outgoing cumulative-constraint focus and unchanged
+active laws, is preserved in
+`2026-10-25-agents-before-timing-ecal-focus.md`.
+
 User requested the internal `EcalCluster` produced by
 `EnergyTimeMatchingAlg`, not the final EDM collection with the same old name,
 for ten no-eBrem and ten >1% eBrem/no-hit-supported-neutral z-phi examples.

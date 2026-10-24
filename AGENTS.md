@@ -312,35 +312,45 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-Active work on local `breakpoint` is cumulative optional-constraint publication.
-Original ordinary/free-loss endpoints remain unconstrained. Three default-OFF
-switches enable six RTS stage families (ordinary/free for each). Enabled
-measurements accumulate in saved-stage order beam -> charged -> neutral:
-all ON gives beam, beam+charged, then beam+charged+neutral. OFF stages are
-NaN/empty. Each stage refits from the original seed/prior with its accumulated
-measurements; it does not recycle a prior stage's posterior as a new prior.
+**PFA SOURCE MODIFICATION — BUILT/TESTED, NOT INSTALLED (2026-10-25).**
+On local/remote `breakpoint`, commit `9063895` changes
+`Reconstruction/RecPFACyber` to add the passive `EcalClusterTiming` and
+`EcalClusterTimingHits` outputs. This is an actual PFA-package source change,
+not an analysis-only reader. Highlight this distinction whenever discussing
+deployment: the default installed PFA module and existing batch runtime remain
+unchanged, so ordinary batch jobs do not yet produce these new collections.
+Do not install this modification as part of a plot or documentation task.
 
-Missing/failed additions retain the preceding accepted constraints for each
-method. Applied/requested masks (beam=1, charged=2, neutral=4) expose exactly
-which measurements are in each saved endpoint. Physical KF site order is
-unchanged: beam, tracker/neutral breakpoint, charged ECAL. All stages reuse the
-existing fitter and native transport/measurement/RTS machinery. Diffuse/truth
-and original backward outputs remain unchanged; all backward defaults OFF.
+The new output exposes the internal `EcalCluster` produced by
+`EnergyTimeMatchingAlg`, before later `TrackClusterConnectingAlg` fragment
+absorption and final `PFOReclusteringAlg` energy redistribution. It does not
+change clustering, merging, calibration, PFO or breakpoint algorithms.
+Internal merges leave a potentially incomplete cached hit list; the exporter
+refreshes the complete constituent-hit list on a **private clone only**.
+Earlier track-assisted clustering and same-track merging remain. No new PFO
+collection or exported track associations are added, and breakpoint does not
+yet consume these outputs.
 
-Installed in the project default InstallArea (source 66d8477): eight CTests pass,
-all-OFF matches 6608 existing
-field values on eight tracks, three hard-loss tracks yield masks 1,3,7, and
-the all-three final endpoints reproduce the former combined fit exactly.
-Two-switch/no-interval/free-fit-OFF tests, native covariance closure and real
-batch tuple validation pass. One pre-existing batch-wrapper-default test still
-fails; the user's wrapper was not changed.
+Mechanical gate: 20 full-chain versus timing-only event reruns match all
+32 timing fields exactly; all 199 checked existing final-PFA fields match
+the original rec entries exactly. Default installation hashes, source details,
+the cached-hit finding and explicit limitations are recorded in
+`agents_record/2026-10-25-timing-ecal-cluster-export.md`.
+The superseded cumulative-constraint focus is preserved verbatim in
+`agents_record/2026-10-25-agents-before-timing-ecal-focus.md`; its installed
+breakpoint behavior is unchanged by this PFA export.
 
-Installed-runtime 1/0/1 smoke reproduces all 838 build-tree fields exactly;
-configuration and library hashes match. No batch jobs submitted. Defaults remain
-OFF. Deployment and rollback backup are recorded in
-`agents_record/2026-10-24-install-cumulative-breakpoint.md`.
+Current study: inspect the internal timing-cluster z-phi hit patterns for ten
+topology-clear no-eBrem electrons versus ten with truth loss >1% and zero final
+hit-supported neutral ECAL clusters anywhere in the event. Plots, exact
+entries and selection definitions live in
+`TrackingPerformanceStudies/breakpoint_ecal_timing_hits_20261025/`.
+No-neutral is not proof of photon containment or electron/photon shower merging.
+These are reconstructed U/V-matched 3D points, not raw crystal or Geant4 hits.
 
-No population/endcap validation claimed. Neutral linearization, charged-PFA
-independence/calibration and extra per-stage CPU cost remain. Next: compare
-categorized performance. Cumulative contract and earlier test details:
-`agents_record/2026-10-24-cumulative-constraint-stages.md`.
+Next: review these displays and determine which pre-absorption/calibrated
+cluster product could support an unresolved electron-plus-photon energy
+measurement. Any refitter integration, PFA physics change, calibration change
+or runtime installation requires its own explicit scope and validation.
+Do not implement constraints or the free-loss wrapper in diffuse tracking now;
+the user explicitly deferred that work.
