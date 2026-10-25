@@ -12,6 +12,8 @@
 #include <vector>
 #include <optional>
 
+class TVSurface;
+
 namespace breakpoint {
 class BreakpointTrackSystem;
 struct MeasurementStep {
@@ -66,6 +68,8 @@ public:
   // from this endpoint's own outermost fitted state, not the input KF state.
   edm4hep::TrackState propagateToCalorimeter(const TrackState& state,
                                              edm4hep::TrackerHit lastHit) const;
+  /// Geometry-only entrance faces for passive straight-photon projection.
+  std::vector<const TVSurface*> calorimeterSurfaces() const;
   /// Native detector transport with its F/Q retained for the terminal RTS edge.
   LossMeasurementStep predictCalorimeter(const LossTrackState& state,
                                         edm4hep::TrackerHit lastHit) const;

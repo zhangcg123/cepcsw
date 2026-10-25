@@ -444,6 +444,21 @@ edm4hep::TrackState KalmanAdapter::propagateToIP(const TrackState& state,
   return ip;
 }
 
+std::vector<const TVSurface*> KalmanAdapter::calorimeterSurfaces() const {
+  std::vector<const TVSurface*> result;
+  UTIL::BitField64 encoder(lcio::ILDCellID0::encoder_string);
+  for (int side : {lcio::ILDDetID::barrel,lcio::ILDDetID::fwd,lcio::ILDDetID::bwd}) {
+    encoder.reset();
+    encoder[lcio::LCTrackerCellID::subdet()] = side==lcio::ILDDetID::barrel ?
+        lcio::ILDDetID::ECAL : lcio::ILDDetID::ECAL_ENDCAP;
+    encoder[lcio::LCTrackerCellID::side()] = side;
+    encoder[lcio::LCTrackerCellID::layer()] = 0;
+    for (const auto* layer : m_system->layers(encoder.lowWord()))
+      result.push_back(&dynamic_cast<const TVSurface&>(*layer));
+  }
+  return result;
+}
+
 LossMeasurementStep KalmanAdapter::predictCalorimeter(const LossTrackState& state,
                                                      edm4hep::TrackerHit lastHit) const {
   // A real native track supplies the material routines' current mass/context.

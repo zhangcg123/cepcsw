@@ -827,6 +827,61 @@ scale the independent breakpoint loss prior, or change the forward fit/RTS.
 
 ## Other automatic tuple information
 
+### Passive collinear photon projection at ECAL
+
+`rts_photon_calo_*` and `free_loss_rts_photon_calo_*` are default-on derived
+diagnostics for the unconstrained ordinary and free-loss RTS results. They
+never enter the fit, objective, ECAL measurements or endpoint selection.
+No extra KF parameter, measurement or photon propagation noise is introduced.
+No backward, diffuse, truth or cumulative-constraint output family is changed.
+
+For the one selected breakpoint `i`, the ray starts at the fitted position of
+`smoothed[i]`, immediately before the outward loss mapping, along its outward
+electron tangent. The origin is **not** the IP and is not borrowed from truth.
+The breakpoint location itself still follows the configured interval selector.
+The common loss mapping changes curvature, not direction, at this site.
+The straight ray intersects the same native barrel/endcap ECAL entrance
+surfaces used by the existing electron extrapolation. It uses generic
+`TVSurface` geometry with `TStraightTrack`, deliberately bypassing charged-helix
+intersection specializations. The nearest valid positive ray intersection wins.
+No nominal cylindrical ECAL radius is substituted for native geometry.
+
+If `x(a,t)` is the native straight ray and `S(x)=0` the selected surface, its
+surface-aware position derivative is
+`J = dx/da - (dx/dt) * [(dS/dx)*(dx/da)] / [(dS/dx)*(dx/dt)]`.
+The output covariance is `J*C*J^T`, using **all** entries of the smoothed 5D
+track covariance. This is the exact relevant marginal of the augmented
+posterior for this collinear location model: the ray has zero direct
+derivative with respect to the loss scalar, and its curvature derivative is
+also zero. Position/direction correlations are retained; loss-induced
+uncertainty already present in the track marginal is not discarded.
+
+Branches include `status`, `error`, `breakpoint_hit`, `surface_index`,
+`origin_mm`, unit `direction`, `position_mm`, full row-major 3x3
+`covariance_mm2`, and full row-major 2x2 `z_phi_covariance` in the order
+`(z [mm], phi [rad])`. The source `source_mean` (KalTest order),
+`source_covariance` (5x5), `source_pivot_mm` and `position_derivative` (3x5)
+are saved for numerical auditing. `surface_index` is only an index into that
+runtime's face list, not a stable detector identifier.
+
+`fitted_log_loss` and the signed diagnostic energy
+`energy_GeV = p_before * (1-exp(-b))` use the fitted breakpoint quantities.
+The ray is a conditional collinear hypothesis, not an identified photon.
+Status 1 means a geometrically valid projection; 0 means no fitted breakpoint
+state (including no interval or input-KF fallback), with empty vectors/NaNs;
+-1 means projection failure with an error string. A failed projection never
+invalidates an otherwise accepted electron fit. No photon point is invented
+for no-breakpoint controls.
+
+Uncertainty is tracking-only and first order. It excludes unknown emission
+position within a layer, finite bremsstrahlung opening angle, photon
+conversion/scattering and geometry/calibration uncertainties. Free-loss track
+covariance remains conditional on the optimized prior centre: Minuit centre
+uncertainty is not added. The generic ray/surface covariance is tested against
+finite differences and 6,000 correlated sampled rays; this is not physical
+photon-position coverage validation. Check `RecBreakpointPhotonProjection`
+with CTest.
+
 All runs also save the `free_loss_*` fields described in
 [the free-loss schema](docs/free-loss-fit.md#flat-tuple-contract).
 The retired `beam_guided_free_loss_*` family and free-loss external-beam

@@ -24,6 +24,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             src/BreakpointFitter.cpp src/DiffuseLossState.cpp
             src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
+            src/PhotonCaloProjection.cpp src/PhotonCaloTuple.cpp
             src/NeutralLossCandidate.cpp src/NeutralEnergyMeasurement.cpp
             src/TruthLayerOwnership.cpp src/TruthBreakpointOwnership.cpp src/TruthBreakpointTuple.cpp
             src/LikelihoodTuple.cpp src/BeamSpotMeasurement.cpp
@@ -52,6 +53,15 @@ if(BUILD_TESTING)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
   if(TARGET RecBreakpointLikelihood)
+    add_executable(RecBreakpointPhotonProjectionTest tests/PhotonProjectionTest.cpp
+      src/PhotonCaloProjection.cpp)
+    target_compile_features(RecBreakpointPhotonProjectionTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointPhotonProjectionTest PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
+      ${KalTest_INCLUDE_DIRS})
+    target_link_libraries(RecBreakpointPhotonProjectionTest PRIVATE EDM4HEP::edm4hep
+      ${KalTest_LIBRARIES} ROOT::Matrix ROOT::Physics)
+    add_test(NAME RecBreakpointPhotonProjection COMMAND RecBreakpointPhotonProjectionTest)
     add_executable(RecBreakpointTruthOwnershipTest tests/TruthOwnershipTest.cpp src/TruthLayerOwnership.cpp)
     target_compile_features(RecBreakpointTruthOwnershipTest PRIVATE cxx_std_17)
     target_include_directories(RecBreakpointTruthOwnershipTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src

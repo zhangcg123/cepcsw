@@ -348,6 +348,17 @@ entries and selection definitions live in
 No-neutral is not proof of photon containment or electron/photon shower merging.
 These are reconstructed U/V-matched 3D points, not raw crystal or Geant4 hits.
 
+The post-fit collinear photon projection is now also implemented in
+`RecBreakpoint` and **built/tested only, NOT installed**. Passive
+`rts_photon_calo_*` / `free_loss_rts_photon_calo_*` fields use the smoothed
+breakpoint track and full covariance to project a straight ray to native ECAL
+faces. No KF parameter, measurement or objective changes. Nine numerical tests
+pass; all 817 prior branches match exactly on 11 direct A/B rows. The same
+20 displays now overlay electron/photon locations and tracking-only ellipses;
+eight hard examples have a fitted breakpoint/ray. A ray is not a photon
+detection or proof of energy recovery. Details and limitations:
+`agents_record/2026-10-25-postfit-photon-ecal-projection.md`.
+
 Next: review these displays and determine which pre-absorption/calibrated
 cluster product could support an unresolved electron-plus-photon energy
 measurement. Any refitter integration, PFA physics change, calibration change

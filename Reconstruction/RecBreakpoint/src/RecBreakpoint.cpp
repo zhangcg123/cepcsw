@@ -228,6 +228,8 @@ StatusCode RecBreakpoint::initialize() {
   m_neutralPfoTuple.book(*m_neutralTree);
   for (std::size_t i = 0; i < m_caloStates.size(); ++i)
     m_caloStates[i].book(*m_tree, caloPrefixes[i]);
+  m_photonCalo[0].book(*m_tree,"rts_photon_calo_");
+  m_photonCalo[1].book(*m_tree,"free_loss_rts_photon_calo_");
   m_freeLossTuple.book(*m_tree);
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
@@ -598,6 +600,7 @@ StatusCode RecBreakpoint::execute() {
     m_beamApplied.fill(false);
     for (auto& measurement : m_beamMeasurements) measurement = breakpoint::BeamSpotMeasurement{};
     for (auto& calo : m_caloStates) calo.reset();
+    for (auto& photon : m_photonCalo) photon.reset();
     m_caloStates[InputKF].assignFromTrack(track, m_bz, 2);
     m_diffuseStatus = 0; m_diffuseIndex = -1; m_diffuseError.clear();
     m_diffusePt = m_diffusePtError = m_diffuseB = m_diffuseBVariance = nan;
@@ -896,6 +899,7 @@ StatusCode RecBreakpoint::execute() {
       m_rtsLossVariance = m_lossVariance;
       outputIndices->push_back(publishTrack(*output, fit, hits, m_bz, fit.smoothedTotalChi2,
                                             adapter, m_caloStates[OrdinaryRTS]));
+      m_photonCalo[0].assign(fit,adapter);
       backwardOutputIndices->push_back(inward ? publishTrack(*backwardOutput, *inward, hits, m_bz,
                                                     m_backwardTotalChi2, adapter,
                                                     m_caloStates[OrdinaryBackward]) : -1);
@@ -1023,6 +1027,7 @@ StatusCode RecBreakpoint::execute() {
                                            m_caloStates[FreeBackward]);
         }
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
+        m_photonCalo[1].assign(freeResult.rts,adapter);
       }
       std::array<std::optional<breakpoint::PairedFitResult>, 6> constrained;
       std::array<breakpoint::FitSettings, 2> cumulative{{settings, settings}};

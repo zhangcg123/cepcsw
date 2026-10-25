@@ -17,6 +17,7 @@
 #include "FitPairTuple.h"
 #include "LikelihoodTuple.h"
 #include "CaloStateTuple.h"
+#include "PhotonCaloProjection.h"
 #include "RecoAssociationTuple.h"
 #include "NeutralLossCandidate.h"
 #include "TruthBreakpointTuple.h"
@@ -155,6 +156,7 @@ private:
   std::array<std::string, 6> m_constraintError;
   // KF input plus seven parallel published breakpoint endpoint families.
   std::array<breakpoint::CaloStateTuple, 8> m_caloStates;
+  std::array<breakpoint::PhotonCaloTuple, 2> m_photonCalo;
   // Collected independently for each input track, even when the ECAL fit is off.
   breakpoint::NeutralLossCandidate m_collectedNeutral;
   int m_collectedNeutralStatus = 0, m_collectedNeutralCount = 0;
