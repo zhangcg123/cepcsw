@@ -189,6 +189,12 @@ protected:
   DataHandle<edm4hep::CalorimeterHitCollection> w_TimingHits{"EcalClusterTimingHits", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection> w_MergedClusters{"TrkMergedECAL", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection> w_MergedHits{"TrkMergedECALHits", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::ReconstructedParticleCollection> w_PrePFOs{"CyberPFOPreReclustering", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::ClusterCollection> w_PreEcal{"EcalClusterPreReclustering", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::CalorimeterHitCollection> w_PreEcalHits{"EcalHitsPreReclustering", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::ClusterCollection> w_PreHcal{"HcalClusterPreReclustering", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::CalorimeterHitCollection> w_PreHcalHits{"HcalHitsPreReclustering", Gaudi::DataHandle::Writer, this};
+  DataHandle<edm4hep::TrackCollection> w_PreTruthTracks{"TracksPreReclustering", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection>             w_RecCoreCol{"RecECALBarrelCore", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection>             w_RecHcalCol{"RecHCALBarrel", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>                      w_RecTrkCol{"RecTracks", Gaudi::DataHandle::Writer, this};

@@ -38,8 +38,9 @@ These are reconstructed
 3D hit points, not the original digitized crystal bars or Geant4 deposits.
 The hit cell ID uses the existing display convention `(module << 5) + layer`;
 it is not a DD4hep cell ID. Hit type stores the internal detector-system code.
-Cluster-to-hit links are persisted; track associations are not yet exported
-for this visualization-only output, and no new PFO collection is created.
+Cluster-to-hit links are persisted. These visualization-only cluster snapshots
+do not themselves carry track associations; the separate pre-reclustering PFO
+snapshot below preserves the existing PFO-to-track and PFO-to-cluster links.
 
 Neither snapshot is a track-independent clustering result: earlier
 track-guided axis reconstruction and same-track merging within
@@ -49,6 +50,76 @@ energy measurement for a refitter, and breakpoint input steering is unchanged.
 The existing `EcalCluster`, `EcalCore`, `HcalCluster`, hits and PFO outputs are
 unchanged. Existing rec files do not gain these collections without rerunning
 reconstruction; simulation need not be repeated when digitized inputs survive.
+
+## Pre-reclustering PFO snapshot
+
+`CyberPFOPreReclustering` is materialized immediately after
+`TrackClusterConnectingAlg`, including its HCAL association, before
+`PFOReclusteringAlg` changes the PFOs. It is automatic and does not replace
+`CyberPFO` or `CyberPFOPID`. It contains the existing reconstructed associations,
+not new geometric matching or truth matching.
+
+| Collection | Contents |
+|---|---|
+| `CyberPFOPreReclustering` | PFO charge, momentum, energy, mass, preliminary charged PID; links to tracks and ECAL/HCAL clusters |
+| `EcalClusterPreReclustering` | Independent merged ECAL cluster energy, position and hit links |
+| `EcalHitsPreReclustering` | Full reconstructed constituent hits, refreshed on a private clone |
+| `HcalClusterPreReclustering` | Independent associated HCAL cluster energy, position and hit links |
+| `HcalHitsPreReclustering` | Independent HCAL hits |
+| `TracksPreReclustering` | Fallback tracks only for truth-track inputs without an ordinary reconstructed-track link; empty in the maintained reconstructed-track workflow |
+
+All existing **PFO** track links are retained, normally to `CompleteTracks`;
+tracks are not duplicated. Shared cluster/hit objects are exported once with
+shared links. A trackless PFO stays trackless, and a track-only PFO stays
+track-only. This does not export additional internal cluster-associated tracks
+discarded by the upstream PFO creator: that creator chooses the first associated
+track when creating a PFO. Track-unassociated does not mean truth-neutral.
+
+Cluster energies are the internal pre-reclustering `getLongiE()` (ECAL) and
+`getHitsE()` (HCAL), including internal energy scales but **without** the final
+exporter's additional PFO-dependent calibration. Therefore a charged snapshot
+cluster is not rescaled to the track momentum. Cluster energy need not equal
+its unscaled constituent-hit sum. HCAL hit origin metadata is retained; ECAL
+hits use the same display cell-ID convention as the timing/merged snapshots.
+No cluster energy error or fitted shower axis is invented.
+
+PFO kinematics follow the standard export convention: charged momentum is the
+leading track's IP momentum, mass is initially the pion mass, and energy is
+computed from that momentum and mass. The charged `type` stores the preliminary
+internal PID; it is not final PID. Trackless internal PFOs have no initialized
+PID, so the snapshot leaves `type=0` rather than reading an undefined value.
+Trackless PFO energy sums ECAL/HCAL cluster energies with the configured neutral
+calibration factors, and momentum points along the energy-weighted cluster
+position, with zero mass. Hence HCAL-containing neutral PFO energy need not
+equal the sum of the raw snapshot cluster energies. Empty directional information
+leaves zero momentum. These conventions do not alter the original output writer.
+
+The snapshot copies scalar values and calorimeter objects at the stage boundary;
+later in-place PFO/cluster changes cannot alter it. The existing algorithm
+manager calls a read-only observer after each stage; only the connecting stage
+triggers this export. If that stage is omitted, the snapshot collections are
+empty. The maintained `keep *` rec card already retains them. Breakpoint input
+selection is **not** changed by this export.
+
+Run the focused ownership and real-event regression tests:
+
+```bash
+source setup.sh
+build.105.0.0.x86_64-el9-gcc11-opt/run python3 \
+  Reconstruction/RecPFACyber/tests/check_pre_pfo_snapshot.py
+python3 Reconstruction/RecPFACyber/tests/check_pre_pfo_output.py \
+  full.root connected_only.root previous_runtime.root
+```
+
+The first test exercises multiple original track links, shared cluster/hit
+identity, trackless/track-only PFOs, empty events and subsequent source mutation.
+The second compares the snapshot against the same events stopped after
+`TrackClusterConnectingAlg`, checks serialized links and energy conventions,
+compares its ECAL objects/hits with `TrkMergedECAL`, and requires exact equality
+of all existing final-PFA fields with the old runtime. The integration check's
+calibration expectations are for the maintained card (1.26 charged ECAL,
+1 neutral ECAL, 4 HCAL). Snapshot cluster ordering is not a general identity
+contract across unrelated builds.
 
 Build without installing into the default runtime:
 

@@ -9,6 +9,98 @@ namespace Cyber{
 
   }
 
+  StatusCode OutputCreator::CreatePFOSnapshot(
+      const CyberDataCol& data, edm4hep::ReconstructedParticleCollection& pfos,
+      edm4hep::ClusterCollection& ecal, edm4hep::CalorimeterHitCollection& ecalHits,
+      edm4hep::ClusterCollection& hcal, edm4hep::CalorimeterHitCollection& hcalHits,
+      edm4hep::TrackCollection& truthTracks) {
+    const auto source = data.map_PFObjects.find(settings.map_stringPars.at("OutputPFO"));
+    if (source == data.map_PFObjects.end()) return StatusCode::FAILURE;
+    std::map<const Calo3DCluster*, edm4hep::Cluster> savedEcal, savedHcal;
+    std::map<const CaloHit*, edm4hep::CalorimeterHit> savedEcalHits, savedHcalHits;
+    std::map<const Track*, edm4hep::Track> savedTracks;
+
+    auto saveCluster = [&](const Calo3DCluster* cluster, bool isEcal) {
+      auto& saved = isEcal ? savedEcal : savedHcal;
+      auto found = saved.find(cluster);
+      if (found != saved.end()) return found->second;
+      auto output = (isEcal ? ecal : hcal).create();
+      const auto position = isEcal ? cluster->getShowerCenter() : cluster->getHitCenter();
+      output.setEnergy(isEcal ? cluster->getLongiE() : cluster->getHitsE());
+      output.setPosition({float(position.X()), float(position.Y()), float(position.Z())});
+      auto view = cluster->Clone();
+      // ECAL merges leave the cached hit list incomplete; do not mutate the source.
+      if (isEcal) view->setCaloHitsFrom2DCluster();
+      auto& savedHits = isEcal ? savedEcalHits : savedHcalHits;
+      for (const auto* hit : view->getCaloHits()) {
+        auto existing = savedHits.find(hit);
+        if (existing == savedHits.end()) {
+          auto copied = isEcal ? ecalHits.create() : hit->getOriginHit().clone();
+          if (!isEcal) hcalHits.push_back(copied);
+          const auto point = hit->getPosition();
+          copied.setEnergy(hit->getEnergy());
+          copied.setPosition({float(point.X()), float(point.Y()), float(point.Z())});
+          if (isEcal) {
+            copied.setCellID((hit->getModule() << 5) + hit->getLayer());
+            copied.setType(hit->getSystem());
+          }
+          existing = savedHits.emplace(hit, copied).first;
+        }
+        output.addToHits(existing->second);
+      }
+      return saved.emplace(cluster, output).first->second;
+    };
+
+    for (const auto& pfo : source->second) {
+      auto output = pfos.create();
+      double neutralEnergy = 0.;
+      TVector3 weightedPosition;
+      for (bool isEcal : {true, false}) {
+        const double calibration = settings.map_floatPars.at(
+            isEcal ? "ECALNeutralCalib" : "HCALNeutralCalib");
+        for (const auto* cluster : isEcal ? pfo->getECALClusters() : pfo->getHCALClusters()) {
+          auto copied = saveCluster(cluster, isEcal);
+          output.addToClusters(copied);
+          const double energy = calibration *
+              (isEcal ? cluster->getLongiE() : cluster->getHitsE());
+          neutralEnergy += energy;
+          weightedPosition += energy *
+              (isEcal ? cluster->getShowerCenter() : cluster->getHitCenter());
+        }
+      }
+      const Track* leading = nullptr;
+      for (const auto* track : pfo->getTracks()) {
+        auto found = savedTracks.find(track);
+        if (found == savedTracks.end()) {
+          auto original = track->getOriginTrack();
+          if (!original.isAvailable() || settings.map_boolPars.at("UseTruthTrk") ||
+              settings.map_boolPars.at("UseTruthMatchTrk"))
+            original = TruthTrack(track->getLeadingMCP(), &truthTracks);
+          found = savedTracks.emplace(track, original).first;
+        }
+        output.addToTracks(found->second);
+        if (!leading || track->getMomentum() > leading->getMomentum()) leading = track;
+      }
+      if (leading) {
+        // Same pre-final-PID charged kinematics convention as the standard exporter.
+        const auto momentum = leading->getP3();
+        output.setMomentum({float(momentum.X()), float(momentum.Y()), float(momentum.Z())});
+        output.setCharge(leading->getCharge());
+        output.setMass(0.139570);
+        output.setEnergy(std::hypot(leading->getMomentum(), 0.139570));
+        output.setType(pfo->getPID());
+      } else {
+        // Trackless PFObject::m_pid is not initialized by PFOCreating; leave type=0.
+        output.setEnergy(neutralEnergy);
+        if (weightedPosition.Mag() > 0.) {
+          const auto momentum = weightedPosition.Unit() * neutralEnergy;
+          output.setMomentum({float(momentum.X()), float(momentum.Y()), float(momentum.Z())});
+        }
+      }
+    }
+    return StatusCode::SUCCESS;
+  }
+
   StatusCode OutputCreator::CreateClusterSnapshot(
       const CyberDataCol& data,
       const std::string& sourceName,

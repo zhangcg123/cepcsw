@@ -312,60 +312,51 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CONFIGURABLE CHARGED ECAL ENERGY CONSTRAINT — INSTALLED (2026-10-25).**
-RecBreakpoint now has two sub-options under `ChargedEcalMeasurement`:
-`ChargedEcalInputClusters` selects the input energy collection, and
-`ChargedEcalEnergyMode` selects `ElectronOnly` or `ElectronPhoton`.
-The compiled compatibility defaults remain final `EcalCluster` and
-`ElectronOnly`; the maintained card explicitly defaults its source to
-`TrkMergedECAL`, with `ElectronOnly` unless changed. Both options are explicit
-in `Reconstruction/RecBreakpoint/options/run_breakpoint.py` and frozen by the
-batch helper. Sum mode uses `p_ECAL*exp(b)`, requires `ElossOn=False` and
-`NeutralEcalMeasurement=False`, and assumes one loss with both showers inside
-the measured cluster. It reuses the same native scalar KF update, full 6D
-covariance, material transport, RTS and objective in ordinary/free-loss fits.
-No new endpoint family or fit parameter is introduced. Original unconstrained,
-truth, diffuse and backward workflows remain separate.
+**PRE-RECLUSTERING PFO SNAPSHOT — BUILT/TESTED, NOT INSTALLED (2026-10-25).**
+The user authorized a passive `Reconstruction/RecPFACyber` change to preserve
+PFOs immediately after `TrackClusterConnectingAlg` (including HCAL association)
+and before `PFOReclusteringAlg`. This is another actual PFA source change;
+the default installed PFA library remains unchanged. Do not confuse it with a
+breakpoint change or claim existing rec files already contain the new products.
 
-No new PFA change or rec rerun was needed for this feature. To select a merged
-source without geometric guessing, the final track-linked charged cluster's
-constituent hit identities must belong to exactly one source cluster. Missing
-or ambiguous matches preserve the preceding accepted constraint stage. The
-source can include additional hits; its energy is used without final PFO
-track-momentum rescaling. Other neutral clusters in the input collection are not
-summed automatically. Source, mode, selected source indices and selection errors
-are recorded per track. Selection status is not successful-fit status.
+New `CyberPFOPreReclustering` links to the original reconstructed tracks and
+independent `EcalClusterPreReclustering` / `HcalClusterPreReclustering`,
+with `EcalHitsPreReclustering` / `HcalHitsPreReclustering` constituent links.
+`TracksPreReclustering` is empty in reconstructed-track mode and only supplies
+truth-track fallback objects. Shared objects retain shared links. ECAL hit
+caches are refreshed on private clones. Cluster energies preserve the internal
+stage values, without the final PFO-dependent export rescaling. PFO kinematics
+use the standard charged-track/pion-mass and neutral-calorimeter conventions;
+this is not final PID. There is no invented shower axis or energy error.
+The maintained rec card already uses `keep *`; no workflow card was changed.
+No breakpoint input consumer was changed.
 
-Validation: all 11 helper tests pass; compatibility code reproduces all 817
-previous branches exactly on 10 same-input rows. Both modes run via the
-maintained card, with seven eligible rows applying the new merged constraint
-and ineligible rows preserving prior results; one extra selected event is a
-split-track control. The installed-runtime sum smoke matches all 851 build
-branches exactly on 10 rows. Two installed beam+charged sum events apply both
-ordinary/free stages with mask 3. Invalid combined/neutral settings fail before
-batch submission and at algorithm initialization. No batch was submitted.
-Detailed controls, limits, exact entries, hashes and rollback backup:
-`agents_record/2026-10-25-configured-charged-energy.md`.
-Full outgoing status is archived in
-`agents_record/2026-10-25-agents-before-configured-charged-energy.md`.
+Mechanical gate: focused ownership/mutation test passed, including multiple
+track links, shared cluster/hit identities, track-only/trackless PFOs and empty
+events. Two 20-event samples (32 distinct seed-1 events, including 11/16/17)
+each match all 159 snapshot fields against the same run stopped before
+reclustering and all 206 checked final-PFA/PID fields against the previous
+installed runtime. All serialized track/cluster/hit links and cluster-energy
+conventions pass. Full evidence, paths, tests and limitations:
+`agents_record/2026-10-25-pre-reclustering-pfo-snapshot.md`.
+Outgoing AGENTS preserved in
+`agents_record/2026-10-25-agents-before-pre-reclustering-pfo.md`.
+This validates persistence, not physics matching accuracy or energy resolution.
 
-The user explicitly approved installing this update with no breakpoint jobs
-active, including the previously built passive photon projection. Therefore
-`rts_photon_calo_*` / `free_loss_rts_photon_calo_*` are now installed too;
-earlier NOT INSTALLED records are historical. A ray is not a photon detection
-or proof of energy recovery.
+The installed breakpoint charged-energy feature remains as recorded in
+`agents_record/2026-10-25-configured-charged-energy.md`; its source selector
+still maps final charged-PFO hits into `TrkMergedECAL`. Sum mode still rejects
+a simultaneously enabled separate neutral constraint. The requested conditional
+111 behavior (electron-only when a selected resolved neutral exists, summed
+electron+photon otherwise, charged-only when no breakpoint) is NOT implemented.
+The neutral collector still uses final PFOs, not this new snapshot.
+The proposed native pre-PFO input would remove the missing-link workaround,
+but requires its own consumer integration and regenerated rec files.
 
-PFA still saves `EcalClusterTiming` / `EcalClusterTimingHits`,
-`TrkMergedECAL` / `TrkMergedECALHits`, and the unchanged final
-`EcalCluster` / `RecECALBarrel` and PFOs. Its event-lifetime repair remains
-installed and its module was untouched by this deployment. Provenance:
-`agents_record/2026-10-25-three-stage-pfa-install.md` and
-`agents_record/2026-10-25-pfa-event-lifetime-repair.md`.
-Existing timing-hit and photon/electron displays remain in
-`TrackingPerformanceStudies/breakpoint_ecal_timing_hits_20261025/`.
-
-Next: evaluate the configured sum constraint on correctly selected unresolved
-showers, separating resolved photons, containment/calibration and breakpoint
-assignment effects before performance claims. No-neutral is not proof of
-containment. Do not implement constraints or the free-loss wrapper in diffuse
-tracking now; the user deferred that work.
+Next: report the tested export, then obtain installation direction before
+changing the default PFA runtime. After deployment, rerun reconstruction to
+persist the new products; simulation need not be repeated when required
+upstream inputs survive. Keep final CyberPFO/CyberPFOPID alongside the snapshot.
+Existing three-stage ECAL exports, PFA lifetime repair, installed passive photon
+projection and all tracking algorithms remain unchanged. Do not implement
+constraints or the free-loss wrapper in diffuse tracking; the user deferred it.

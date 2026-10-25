@@ -2,6 +2,7 @@
 #define ALGORITHM_MANAGER_H
 
 #include "Tools/Algorithm.h"
+#include <functional>
 
 namespace Cyber{
 
@@ -41,12 +42,15 @@ namespace Cyber{
     }
    
     //StatusCode CreateAlgorithm(const std::map<std::string, Settings>& m_algorithmSettings); 
-    StatusCode RunAlgorithm( CyberDataCol& m_datacol ){
+    StatusCode RunAlgorithm( CyberDataCol& m_datacol,
+        const std::function<StatusCode(const std::string&, const CyberDataCol&)>& after = {}){
       for(auto iter : m_algorithmNames){
 cout<<"Processing Algorithm: "<<iter<<endl;
         m_algorithmMap[iter]->Initialize(m_datacol);
         m_algorithmMap[iter]->RunAlgorithm(m_datacol);
+        const auto status = after ? after(iter, m_datacol) : StatusCode::SUCCESS;
         m_algorithmMap[iter]->ClearAlgorithm();
+        if (status.isFailure()) return status;
       }
       return StatusCode::SUCCESS;
     }

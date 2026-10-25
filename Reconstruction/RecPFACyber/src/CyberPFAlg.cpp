@@ -747,7 +747,19 @@ StatusCode CyberPFAlg::execute()
   m_pCaloHitsCreator->CreateCaloHits( m_DataCol, r_CaloHitCols, map_readout_decoder, map_CaloMCPAssoCols, m_geosvc, barNumberMapEndcapMap);
 
   //Perform PFA algorithm
-  m_algorithmManager.RunAlgorithm( m_DataCol );
+  auto* prePFOs = w_PrePFOs.createAndPut();
+  auto* preEcal = w_PreEcal.createAndPut();
+  auto* preEcalHits = w_PreEcalHits.createAndPut();
+  auto* preHcal = w_PreHcal.createAndPut();
+  auto* preHcalHits = w_PreHcalHits.createAndPut();
+  auto* preTruthTracks = w_PreTruthTracks.createAndPut();
+  // Materialize independent EDM objects before reclustering can mutate the PFOs.
+  if (m_algorithmManager.RunAlgorithm(m_DataCol,
+      [&](const std::string& name, const CyberDataCol& data) -> StatusCode {
+        if (name != "TrackClusterConnectingAlg") return StatusCode::SUCCESS;
+        return m_pOutputCreator->CreatePFOSnapshot(data, *prePFOs,
+            *preEcal, *preEcalHits, *preHcal, *preHcalHits, *preTruthTracks);
+      }).isFailure()) return StatusCode::FAILURE;
 
   // Preserve both upstream stages without changing the final PFO-associated output.
   if (m_pOutputCreator->CreateClusterSnapshot(m_DataCol, "EcalCluster", w_TimingClusters, w_TimingHits).isFailure())

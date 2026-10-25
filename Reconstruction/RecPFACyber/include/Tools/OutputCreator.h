@@ -23,6 +23,13 @@ namespace Cyber{
         DataHandle<edm4hep::ClusterCollection>& clusters,
         DataHandle<edm4hep::CalorimeterHitCollection>& hits);
 
+    StatusCode CreatePFOSnapshot(
+        const CyberDataCol& data,
+        edm4hep::ReconstructedParticleCollection& pfos,
+        edm4hep::ClusterCollection& ecal, edm4hep::CalorimeterHitCollection& ecalHits,
+        edm4hep::ClusterCollection& hcal, edm4hep::CalorimeterHitCollection& hcalHits,
+        edm4hep::TrackCollection& truthTracks);
+
     StatusCode CreateOutputCollections( CyberDataCol& m_DataCol, 
                                         DataHandle<edm4hep::CalorimeterHitCollection>& m_outRecHitsHandler, 
                                         DataHandle<edm4hep::CalorimeterHitCollection>& m_outRecCoreHandler, 
