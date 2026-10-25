@@ -312,7 +312,7 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CONDITIONAL CHARGED ENERGY — BUILT/TESTED, NOT INSTALLED (2026-10-26).**
+**PRE-PFO INPUT + CONDITIONAL CHARGED ENERGY — INSTALLED (2026-10-26).**
 RecBreakpoint now supports the requested track-wise ElectronPhoton routing:
 with one selected breakpoint and no usable collected neutral, constrain the
 electron+photon sum; with a collected hit-supported neutral, constrain the
@@ -353,10 +353,23 @@ that user setting. No population/endcap performance claim.
 Evidence: agents_record/2026-10-26-conditional-charged-energy.md.
 Outgoing AGENTS: agents_record/2026-10-26-agents-before-conditional-charged-energy.md.
 
-This consumer and the preceding PFA snapshot exporter are NOT INSTALLED.
-No PFA source change, installation or batch submission was made for routing.
-Next: coordinate deployment, install verified packages, then regenerate rec
-with pre-PFO collections before batch use of the new default. Older rec files
+The consumer and preceding PFA snapshot exporter are now installed in the
+project-default InstallArea/x86_64-el9-gcc11-opt after explicit user approval
+and confirmation of no active jobs. Package-scoped rename replacement preserved
+rollback copies; no GSF/shared tracking libraries or batch settings changed.
+Direct installed-runtime smoke: 18 rec events reproduce all 447 affected PFA
+fields exactly; seven selected breakpoint rows reproduce all 855 track fields
+and 57 side-tree fields exactly against build-tree results. All 11 CTests pass.
+Deployment/rollback evidence:
+agents_record/2026-10-26-install-pre-pfo-and-charged-routing.md.
+Outgoing status: agents_record/2026-10-26-agents-before-pre-pfo-install.md.
+
+Next: regenerate rec and breakpoint flat tuples with newly prepared cards.
+The worker already uses project setup/default installation. The user submit
+script still selects trk,calodigi,rec, not breakpoint; do not silently change
+its stages/paths. ElectronOnly remains the default energy mode: explicitly
+select BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton for conditional sum routing.
+No batch was submitted and no prior tuples were removed. Older rec files
 need explicit legacy steering or regeneration. Snapshot/input evidence remains
 in agents_record/2026-10-25-pre-reclustering-pfo-snapshot.md and
 agents_record/2026-10-26-pre-pfo-constraint-input.md.
