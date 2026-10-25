@@ -106,16 +106,18 @@ quadratic or a product of independent smoothed-hit residual densities.
 The determinant term matters when changing mu changes the uncertainty.
 Continuous-density -2logL may be negative; it is not a chi-square statistic.
 
-The production objective reads `FitResult::smoothedTotalChi2` directly from
-the existing RTS pass. `evaluateSmoothedTrackLikelihood` adds the normalization;
-QR of [I,A]^T supplies the joint covariance determinant without forming an
-ill-conditioned C. It does NOT compute or substitute the marginal quadratic.
-`S_all` is not the RTS-smoothed state covariance. Original V, Q and seed
-covariance enter the complete smoothed chi2; no independent smoothed-hit
-likelihoods are multiplied together.
+Production calls `evaluateFitLikelihood` on the existing trial fit. Without
+terminal charged ECAL, it reads `FitResult::smoothedTotalChi2` directly and
+`evaluateSmoothedTrackLikelihood` adds the normalization. With charged ECAL,
+it uses `evaluateTrackLikelihood` for the captured model (including any neutral
+measurement), then adds the terminal charged innovation quadratic and
+normalization. The beam factor is included once in either path. The exact
+dispatch and definitions are in [the objective reference](smoothed-objective.md#which-objective-is-currently-minimized).
 
-The separate `evaluateTrackLikelihood` marginal quadratic remains a numerical
-regression reference, not the Minuit objective path. There is no runtime
+QR of [I,A]^T supplies the captured covariance determinant without forming an
+ill-conditioned C. `S_all` is not the RTS-smoothed state covariance. The two
+factorizations agree for the same fixed affine Gaussian model; no independent
+smoothed-hit likelihoods are multiplied together. There is no runtime
 cross-formulation audit, new iteration, or Forward/Backward/Smoothed selector.
 BackwardSeedScale changes that refilter's endpoint, not the likelihood.
 
@@ -233,7 +235,7 @@ actual optimized-extra-pair method. Disabled runs retain all old values exactly.
 | status | 0 not attempted; 1 no interval/5D; 2 applied; -1 unsupported KF fallback; -2 failed-search KF fallback |
 | interval | Selected scalar breakpoint index, or -1 |
 | b, b_error, minuit_status, edm | b is a compatibility alias for prior_mean_log_loss; b_error is the Minuit center error, NOT SigmaLogLoss or posterior sigma_b; successful minima have status0; -99 means no accepted minimum |
-| nll2, quadratic, logdet | Normalized objective, the complete RTS-smoothed chi2 used by Minuit, and logdet(S_all); m*log(2*pi) is also included in nll2 |
+| nll2, quadratic, logdet | Normalized objective, the quadratic used by evaluateFitLikelihood, and logdet(S_all); m*log(2*pi) is also included in nll2. With charged ECAL, quadratic uses the marginal/innovation factorization rather than copying the complete RTS score. |
 | lower_bound, upper_bound | Selected prior center within1e-6 of a bound |
 | covariance_conditional | Legacy exact-fixed-b flag; false for the new Gaussian-prior fit. Center-estimation uncertainty is still not integrated |
 | error | Unsupported/failed-search explanation |
@@ -268,8 +270,9 @@ optimizer request/outcome (off0, empty1, applied2, unsupported-1, failed-2).
 The parallel `ordinary_likelihood_*`, `free_loss_likelihood_*`,
 and `truth_override_likelihood_*` branches
 contain the normalized
-`-2 log L = complete RTS chi2 + log det S_all + M log(2*pi)` for each RTS
-result. They save `status`, `nll2`, `quadratic`, `logdet`,
+`-2 log L = quadratic + log det S_all + M log(2*pi)` for each RTS
+result, using the dispatch above. For a consistent fixed affine model,
+`quadratic` equals the complete RTS chi2. They save `status`, `nll2`, `quadratic`, `logdet`,
 `measurement_dimensions`, `latent_dimensions`, and `error`. Status 1 is
 valid, 0 absent, -1 unavailable/failed. An optimized free-loss result uses
 the accepted Minuit objective; an off/no-interval result copies ordinary;
@@ -312,7 +315,7 @@ retain their fixed-b interpretation; do not relabel them.
 | RecBreakpoint | Gaudi steering, fallback choice and common publication for the remaining pairs |
 | BreakpointFitter + KalmanAdapter | Existing physical fitting; optional passive native model capture |
 | GaussianTrackModel | Data-only affine model, with no detector/KalTest ownership |
-| TrackLikelihood | Add joint-measurement normalization to the supplied complete RTS-smoothed chi2; retain independent marginal evaluation for regression |
+| TrackLikelihood | Evaluate the captured-model marginal likelihood or add its normalization to a supplied complete RTS score; evaluateFitLikelihood in BreakpointFitter selects the path and includes terminal charged/beam factors |
 | FreeLossFitter | Blind bounded prior-center search; calls the existing Gaussian fitter with shared sigma for each trial |
 | FreeLossTuple | Serialization only; no fitting or likelihood logic |
 | FitPairTuple | Additional result-pair serialization; exact copies use the existing fit object |

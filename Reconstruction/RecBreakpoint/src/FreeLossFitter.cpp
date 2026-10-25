@@ -62,9 +62,9 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
             !std::isfinite(rts.breakpoints.front().fittedVariance) ||
             rts.breakpoints.front().fittedVariance < 0 || !rts.gaussianModel)
           throw std::runtime_error("Gaussian-prior free-loss fit invariant failed");
-        // Score this trial's existing RTS trajectory: measurement + process
-        // + seed chi2, then the SAME joint-measurement normalization. No new
-        // filter pass, reference iteration, or backward chi2 is added.
+        // Shared likelihood dispatch uses the complete RTS score without charged
+        // ECAL, or the captured marginal plus terminal innovation with it.
+        // No extra filter pass, reference iteration, or backward chi2 is added.
         trial.likelihood = evaluateFitLikelihood(rts);
         if (controls.chargedEcalEnergy) {
           trial.chargedEcalPredictedEnergy = rts.chargedEcalPredictedEnergy;

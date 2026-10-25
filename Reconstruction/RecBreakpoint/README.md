@@ -638,11 +638,15 @@ Previously prepared cards are not changed. This is an implementation promotion, 
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
 
-For each prior-center trial, the base Minuit optimization uses the existing RTS pass directly:
-`complete smoothed chi2 + log det S_all + M log(2*pi)`. The first term includes
-measurement, process and seed chi2; `S_all` is the joint measurement covariance,
-not the smoothed state covariance. No reference-trajectory iteration is
-introduced. See [the exact objective](docs/smoothed-objective.md).
+For each prior-center trial, Minuit calls `evaluateFitLikelihood` on the shared
+fit: `quadratic + log det S_all + M log(2*pi)`. Without terminal charged ECAL,
+`quadratic` comes directly from the complete RTS measurement + process + seed
+score. With charged ECAL, it uses the captured-model marginal quadratic
+(including any neutral measurement) plus the terminal charged innovation
+quadratic. The beam factor is counted once in either path. These are equivalent
+factorizations for the same fixed affine Gaussian model. `S_all` is the joint
+measurement covariance, not the smoothed state covariance. No reference-trajectory
+iteration is introduced. See [the exact objective](docs/smoothed-objective.md).
 `ChargedEcalMeasurement` (compiled/card default **false**;
 `BP_CHARGED_ECAL_MEASUREMENT=1`) is an experimental measurement for both
 ordinary and free-loss fits. With exactly one charged PFO from the selected input
@@ -1030,7 +1034,8 @@ Each prefix has `status` (1 valid, 0 absent,
 -1 unavailable or evaluation failed), `nll2`, `quadratic`, `logdet`,
 `measurement_dimensions`, `latent_dimensions`, and `error`. All use
 `nll2 = quadratic + logdet + measurement_dimensions * log(2*pi)`, with the
-complete RTS measurement + process + seed score as `quadratic`. Free-loss
+quadratic from the dispatch described above, not always a direct copy of the
+complete RTS measurement + process + seed score. Free-loss
 optimized rows copy the accepted optimizer objective (also retained under
 `free_loss_nll2`). Disabled/empty-interval free and truth rows copy the
 ordinary likelihood. A free-loss input-KF fallback has no breakpoint

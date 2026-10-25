@@ -67,16 +67,18 @@ add new observations to the likelihood.
 
 ## Which objective is currently minimized
 
-The current Minuit objective evaluates the NORMALIZED marginal likelihood
-using the complete RTS-smoothed chi2 directly:
+The current Minuit objective evaluates the NORMALIZED marginal likelihood.
+For the same fixed affine Gaussian model it can be written as:
 
 ```text
 J(mu; sigma) = C(X_s,mu) + log det S(mu; sigma) + M log(2*pi).
 ```
 
 S is the joint covariance of all UNWHITENED measurements and M their total
-dimension. QR of the captured model supplies its log determinant. The existing
-RTS pass supplies C(X_s,mu) through `FitResult::smoothedTotalChi2`.
+dimension. Without a terminal charged-ECAL measurement, the existing RTS pass
+supplies C(X_s,mu) through `FitResult::smoothedTotalChi2`; QR of the captured
+model supplies the covariance normalization. With charged ECAL, production
+uses the equivalent marginal/innovation factorization described below.
 Replacing J by smoothedTotalChi2 alone would drop the determinant term. It
 would be a change of objective, not just a different way to evaluate J.
 Sharing SigmaLogLoss does not remove either normalization term: the new loss
@@ -92,13 +94,29 @@ J(mu; sigma) = smoothedTotalChi2(mu; sigma)
 
 S_all is the same joint measurement covariance denoted S above, NOT the
 RTS-smoothed state covariance. M is the same total measurement dimension.
-The production `FreeLossFitter` passes this trial's complete RTS-smoothed chi2
-and captured model to `evaluateSmoothedTrackLikelihood`. That helper uses
-the supplied chi2 without replacing it by a marginal quadratic, and adds
-exactly these two normalization terms. Invalid smoothed scores invalidate
-the trial; there is no silent fallback to another objective. The independent
-`evaluateTrackLikelihood` is retained for numerical regression only. No
-reference-trajectory iteration, new filter, or new run-card control is added.
+The production `FreeLossFitter` calls `evaluateFitLikelihood` on the existing
+trial fit. That function requires both a valid complete smoothed score and a
+captured Gaussian model, then dispatches as follows:
+
+- **No terminal charged ECAL:** `evaluateSmoothedTrackLikelihood` uses
+  `smoothedTotalChi2` directly and adds the captured-model normalization.
+- **Terminal charged ECAL present:** `evaluateTrackLikelihood` computes the
+  captured-model marginal quadratic and normalization. The captured model
+  includes any neutral measurement, but excludes the terminal charged site.
+  The charged innovation adds `r_c^2/S_c + log(S_c) + log(2*pi)`, where `r_c`
+  is measured minus predicted charged-site energy and `S_c` is its scalar
+  innovation variance (prediction uncertainty plus measurement noise).
+- **Beam present:** the captured model is conditioned on the beam update.
+  Add `log(S_B) + log(2*pi)`, where `S_B` is the beam innovation variance.
+  In the charged-ECAL branch also add the beam innovation quadratic
+  `r_B^2/S_B`, with `r_B` the beam measurement residual. In the other branch
+  the complete smoothed score already includes the beam quadratic. Thus the
+  beam observation is counted once in either branch.
+
+`quadratic` records the value used by this dispatch; it is not always a direct
+copy of `smoothedTotalChi2`. The total is the same normalized likelihood for a
+consistent fixed affine model, not a sum of independent smoothed-hit densities.
+No reference-trajectory iteration or additional filter pass is introduced.
 
 The equalities above require the same fixed affine model. In the actual
 native tracking code the nonlinear measurement evaluations/reference choices

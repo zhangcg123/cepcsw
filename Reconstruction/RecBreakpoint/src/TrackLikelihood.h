@@ -7,7 +7,7 @@ namespace breakpoint {
 
 struct TrackLikelihoodResult {
   double nll2 = 0; // normalized -2 log L; a continuous-density value can be negative
-  double quadratic = 0; // complete RTS-smoothed chi2 of this fit
+  double quadratic = 0; // supplied complete RTS score or evaluated marginal/innovation quadratic
   double logDeterminant = 0; // log det of the joint measurement covariance S_all
   int measurementDimensions = 0;
   int latentDimensions = 0;
