@@ -334,11 +334,23 @@ Mechanical gate: 20 events match 32 timing fields against timing-only runs,
 32 middle fields against connected-only runs and 199 final-PFA fields against
 original rec entries exactly; snapshot hit links are valid. Three fresh
 default-runtime events match all 263 checked fields of the verified build.
-Only four PFA runtime files were deployed atomically; installed RecBreakpoint
-is unchanged. Hashes, commands, rollback backup and limitations are in
+The original export deployment replaced four PFA runtime files atomically;
+installed RecBreakpoint is unchanged. Hashes, commands, rollback backup and limitations are in
 `agents_record/2026-10-25-three-stage-pfa-install.md`. The outgoing complete
 status is preserved in
 `agents_record/2026-10-25-agents-before-three-stage-pfa-install.md`.
+
+The default PFA runtime also includes the event-lifetime cleanup repair in
+`TruthClusteringAlg`: release cached tracks and V-view showers before their
+input event is destroyed. The new ownership regression fails on the old module
+and passes on the repair; three failed seeds each completed 100 repaired-build
+events, and a fresh default-runtime seed-16 run completed 100 events. The
+257-success/119-failure rec campaign predates this repair; its failed rec files
+still need reruns from the 119 retained calodigi inputs. No jobs were
+resubmitted or existing batch files deleted. Exact comparisons, ordering caveat,
+deployment hash and rollback copy are in
+`agents_record/2026-10-25-pfa-event-lifetime-repair.md`; full outgoing status is
+in `agents_record/2026-10-25-agents-before-pfa-lifetime-repair.md`.
 
 Current study: inspect internal cluster z-phi hit patterns and determine which
 pre-absorption/calibrated product can support an unresolved electron-plus-photon
@@ -356,7 +368,9 @@ no fit parameter, measurement or objective changes. Nine numerical tests and
 `agents_record/2026-10-25-postfit-photon-ecal-projection.md`.
 A ray is not a photon detection or proof of energy recovery.
 
-Next: compare the three saved cluster stages before proposing refitter inputs.
+Next: rerun the 119 failed rec stages when requested, retaining their calodigi
+inputs until successful recovery; then compare the three saved cluster stages
+before proposing refitter inputs.
 Any refitter integration, PFA physics/calibration change or separate breakpoint
 deployment requires explicit scope and validation. Do not implement constraints
 or the free-loss wrapper in diffuse tracking now; the user deferred that work.

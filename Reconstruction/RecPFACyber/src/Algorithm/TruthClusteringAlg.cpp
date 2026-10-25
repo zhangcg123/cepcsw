@@ -299,8 +299,11 @@ cout<<endl;
 };
 
 StatusCode TruthClusteringAlg::ClearAlgorithm(){
+  // Release event-owned PODIO handles before the input event is destroyed.
+  m_TrackCol.clear();
   m_bars.clear();
   m_1dclusterUCol.clear();
+  m_1dclusterVCol.clear();
   m_halfclusterU.clear();
   m_halfclusterV.clear();
 

@@ -83,3 +83,25 @@ cmake --install build.105.0.0.x86_64-el9-gcc11-opt/Reconstruction/RecPFACyber
 
 Stop relevant jobs before replacing shared runtime libraries or stage the
 package and atomically deploy its verified files. Keep a rollback backup.
+
+## Event-lifetime regression
+
+`TruthClusteringAlg::ClearAlgorithm()` releases its track and both U/V shower
+lists before the owning PODIO input event is destroyed. Keeping those handles
+until the next event's initialization can dereference freed PODIO objects,
+causing allocator-dependent segmentation faults. The owning `CyberDataCol`
+still retains the current event's tracks and published clusters for downstream
+algorithms; this cleanup does not remove reconstruction outputs.
+
+Run the focused lifecycle regression in the CEPCSW environment:
+
+```bash
+source setup.sh
+python3 Reconstruction/RecPFACyber/tests/check_truth_clustering_lifetime.py
+```
+
+Pass `--library /absolute/path/to/libCrystalCaloRec.so` to test an isolated
+build before installation. The test checks event-track release, empty events
+and repeated cleanup. Multi-cluster snapshot ordering is not an identity
+contract: compare cluster values with their linked hits, not only vector
+indices, when allocation order differs between builds.
