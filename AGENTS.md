@@ -329,8 +329,9 @@ but do not cover these failures. A separate 1D-strip adapter issue is a syntheti
 probe finding, not established as relevant to the current campaign.
 
 Only objective documentation/comments were corrected (3ca66e1); no numerical
-repair, installation, or new batch run. Push failed on SSH system-config
-permissions. Next discuss point 2: inspect per-start Minuit behavior and scan
+repair, installation, or new batch run. Documentation and audit handoff were
+pushed to origin/breakpoint from the host context after the sandbox SSH failure.
+Next discuss point 2: inspect per-start Minuit behavior and scan
 objective versus prior center with/without neutral, recording physical/affine
 energy and invalid regions. Do not silently promote scan candidates, clip
 states, or implement acceptance repairs before user discussion.

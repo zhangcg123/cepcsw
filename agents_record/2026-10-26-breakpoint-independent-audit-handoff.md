@@ -7,8 +7,9 @@ correction only (point 4), and asked to record the issues for tomorrow.
 Three independent reviewers covered KF/RTS, external constraints, and likelihood
 optimization. Numerical implementation audited at c355cd8 on breakpoint.
 Documentation/comments corrected in 3ca66e1; no algorithm, card, test, or installed
-runtime changed. Push of that commit failed because SSH rejected permissions on
-/etc/ssh/ssh_config.d/50-redhat.conf. Do not assume the remote contains it.
+runtime changed. The initial sandbox push failed because SSH rejected permissions
+on /etc/ssh/ssh_config.d/50-redhat.conf. A subsequent authorized host-context push
+succeeded, including 3ca66e1 and handoff checkpoint b9d4d6d on origin/breakpoint.
 All 11 existing C++ tests and 44 batch-helper tests passed. They do not cover the
 demonstrated failures. No batch jobs or detector reruns were launched for this audit.
 Outgoing full project status is preserved in
@@ -143,3 +144,6 @@ renormalized within the display window; bins are .08 percentage points wide.
 The truth gate uses KF below1% and breakpoint at/above1% (42986/18434 tracks).
 Other analysis plots unchanged. Old four hybrid PNGs moved recoverably outside
 the gallery to /tmp/bp-hybrid-old-views-sqARLs; plotting script reproduces new views.
+Gallery verified: 86 PNGs in six sections, every PNG matched exactly once;
+leaf page and new PNG return HTTP200. Existing server PID902008 on
+ailogin001.ihep.ac.cn still serves the parent TrackingPerformanceStudies root.
