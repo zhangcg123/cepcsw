@@ -170,6 +170,20 @@ for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARG
 # Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
+# Sub-options of ChargedEcalMeasurement, shared by ordinary and free-loss RTS.
+# Source EcalCluster retains the old final-PFO energy. TrkMergedECAL uses the
+# pre-reclustering shower energy, selected by a unique constituent-hit match
+# to the final track-linked charged shower. No new track links are written;
+# no match/ambiguous match preserves the preceding constraint stage.
+# The maintained card selects TrkMergedECAL; the compiled compatibility default
+# remains EcalCluster so existing frozen cards retain their source.
+fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", "TrkMergedECAL")
+# ElectronOnly: predicted E = electron momentum at the ECAL face (mass ignored).
+# ElectronPhoton: predicted E = electron momentum * exp(b), the unresolved
+# electron+photon sum for ONE breakpoint and no other energy loss to ECAL.
+# ElectronPhoton requires ElossOn=False and NeutralEcalMeasurement=False;
+# do not observe the same photon again with the separate neutral constraint.
+fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "ElectronOnly")
 # Optional measurement in the final cumulative neutral-stage families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.
@@ -229,6 +243,10 @@ fit.OutputFile = output_file  # Existing files cause failure, never overwrite.
 fit.OutputLevel = INFO
 
 # Derive input needs from the final property values, including manual edits.
+if fit.ChargedEcalMeasurement:
+    _charged_source = str(fit.ChargedEcalInputClusters)
+    if _charged_source not in reader.collections:
+        reader.collections.append(_charged_source)
 if fit.IntervalSelectionMode == "Truth" or (fit.TruthOverride and fit.BreakpointIntervals):
     reader.collections += [
         "VXDCollection", "ITKBarrelCollection", "ITKEndcapCollection",

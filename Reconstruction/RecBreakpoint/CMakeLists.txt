@@ -26,6 +26,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
             src/PhotonCaloProjection.cpp src/PhotonCaloTuple.cpp
             src/NeutralLossCandidate.cpp src/NeutralEnergyMeasurement.cpp
+            src/ChargedEnergyCandidate.cpp
             src/TruthLayerOwnership.cpp src/TruthBreakpointOwnership.cpp src/TruthBreakpointTuple.cpp
             src/LikelihoodTuple.cpp src/BeamSpotMeasurement.cpp
             # Reuse the exact maintained relation-driven reader, without
@@ -83,6 +84,12 @@ if(BUILD_TESTING)
     target_include_directories(RecBreakpointNeutralLossCandidateTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(RecBreakpointNeutralLossCandidateTest PRIVATE EDM4HEP::edm4hep)
     add_test(NAME RecBreakpointNeutralLossCandidate COMMAND RecBreakpointNeutralLossCandidateTest)
+    add_executable(RecBreakpointChargedEnergyCandidateTest tests/ChargedEnergyCandidateTest.cpp
+      src/ChargedEnergyCandidate.cpp)
+    target_compile_features(RecBreakpointChargedEnergyCandidateTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointChargedEnergyCandidateTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(RecBreakpointChargedEnergyCandidateTest PRIVATE EDM4HEP::edm4hep)
+    add_test(NAME RecBreakpointChargedEnergyCandidate COMMAND RecBreakpointChargedEnergyCandidateTest)
     add_executable(RecBreakpointLikelihoodTest tests/LikelihoodTest.cpp)
     target_link_libraries(RecBreakpointLikelihoodTest PRIVATE RecBreakpointLikelihood)
     add_test(NAME RecBreakpointLikelihood COMMAND RecBreakpointLikelihoodTest)
@@ -103,6 +110,14 @@ if(BUILD_TESTING)
     target_link_libraries(RecBreakpointNeutralEnergyTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep
       ${KalTest_LIBRARIES} ROOT::Physics)
     add_test(NAME RecBreakpointNeutralEnergy COMMAND RecBreakpointNeutralEnergyTest)
+    add_executable(RecBreakpointChargedEnergyTest tests/ChargedEnergyTest.cpp src/TrackState.cpp)
+    target_compile_features(RecBreakpointChargedEnergyTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointChargedEnergyTest PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
+      ${KalTest_INCLUDE_DIRS})
+    target_link_libraries(RecBreakpointChargedEnergyTest PRIVATE EDM4HEP::edm4hep
+      ROOT::Matrix ${KalTest_LIBRARIES} ROOT::Physics)
+    add_test(NAME RecBreakpointChargedEnergy COMMAND RecBreakpointChargedEnergyTest)
     add_executable(RecBreakpointBeamSpotTest tests/BeamSpotTest.cpp
       src/BeamSpotMeasurement.cpp src/TrackState.cpp)
     target_compile_features(RecBreakpointBeamSpotTest PRIVATE cxx_std_17)

@@ -3,6 +3,7 @@
 
 #include "KalmanAdapter.h"
 #include "NeutralEnergyMeasurement.h"
+#include "ChargedEnergyMeasurement.h"
 #include "TrackLikelihood.h"
 #include <vector>
 #include <map>
@@ -19,6 +20,7 @@ struct FitSettings {
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
   std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; terminal RTS measurement
+  ChargedEnergyMode chargedEcalEnergyMode = ChargedEnergyMode::ElectronOnly;
   std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
   std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement
   // Passive capture for the same normalized likelihood in each RTS family.

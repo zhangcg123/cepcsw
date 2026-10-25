@@ -312,65 +312,60 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**THREE-STAGE PFA ECAL EXPORT — INSTALLED (2026-10-25).**
-The user authorized implementing and installing all three cluster stages.
-The project-default `CrystalCaloRec` now saves:
+**CONFIGURABLE CHARGED ECAL ENERGY CONSTRAINT — INSTALLED (2026-10-25).**
+RecBreakpoint now has two sub-options under `ChargedEcalMeasurement`:
+`ChargedEcalInputClusters` selects the input energy collection, and
+`ChargedEcalEnergyMode` selects `ElectronOnly` or `ElectronPhoton`.
+The compiled compatibility defaults remain final `EcalCluster` and
+`ElectronOnly`; the maintained card explicitly defaults its source to
+`TrkMergedECAL`, with `ElectronOnly` unless changed. Both options are explicit
+in `Reconstruction/RecBreakpoint/options/run_breakpoint.py` and frozen by the
+batch helper. Sum mode uses `p_ECAL*exp(b)`, requires `ElossOn=False` and
+`NeutralEcalMeasurement=False`, and assumes one loss with both showers inside
+the measured cluster. It reuses the same native scalar KF update, full 6D
+covariance, material transport, RTS and objective in ordinary/free-loss fits.
+No new endpoint family or fit parameter is introduced. Original unconstrained,
+truth, diffuse and backward workflows remain separate.
 
-- `EcalClusterTiming` / `EcalClusterTimingHits`: internal timing-matched clusters;
-- `TrkMergedECAL` / `TrkMergedECALHits`: track-connected, fragment-merged clusters;
-- existing final `EcalCluster` / `RecECALBarrel` and PFOs, unchanged.
+No new PFA change or rec rerun was needed for this feature. To select a merged
+source without geometric guessing, the final track-linked charged cluster's
+constituent hit identities must belong to exactly one source cluster. Missing
+or ambiguous matches preserve the preceding accepted constraint stage. The
+source can include additional hits; its energy is used without final PFO
+track-momentum rescaling. Other neutral clusters in the input collection are not
+summed automatically. Source, mode, selected source indices and selection errors
+are recorded per track. Selection status is not successful-fit status.
 
-This is an actual `Reconstruction/RecPFACyber` source/runtime change, not an
-analysis-only reader. Both snapshots share one exporter; it refreshes cached
-constituent hits on a private clone only. Earlier track-assisted clustering,
-middle-stage correction and merging, and final PFO calibration remain intact.
-No new snapshot-to-track associations or PFO collection are exported, and
-breakpoint input steering is unchanged. Maintained rec cards use `keep *`;
-new rec runs persist all stages without a card change. Existing rec tuples
-need reconstruction reruns to gain them; simulation need not be repeated if
-the required digitized inputs survive.
+Validation: all 11 helper tests pass; compatibility code reproduces all 817
+previous branches exactly on 10 same-input rows. Both modes run via the
+maintained card, with seven eligible rows applying the new merged constraint
+and ineligible rows preserving prior results; one extra selected event is a
+split-track control. The installed-runtime sum smoke matches all 851 build
+branches exactly on 10 rows. Two installed beam+charged sum events apply both
+ordinary/free stages with mask 3. Invalid combined/neutral settings fail before
+batch submission and at algorithm initialization. No batch was submitted.
+Detailed controls, limits, exact entries, hashes and rollback backup:
+`agents_record/2026-10-25-configured-charged-energy.md`.
+Full outgoing status is archived in
+`agents_record/2026-10-25-agents-before-configured-charged-energy.md`.
 
-Mechanical gate: 20 events match 32 timing fields against timing-only runs,
-32 middle fields against connected-only runs and 199 final-PFA fields against
-original rec entries exactly; snapshot hit links are valid. Three fresh
-default-runtime events match all 263 checked fields of the verified build.
-The original export deployment replaced four PFA runtime files atomically;
-installed RecBreakpoint is unchanged. Hashes, commands, rollback backup and limitations are in
-`agents_record/2026-10-25-three-stage-pfa-install.md`. The outgoing complete
-status is preserved in
-`agents_record/2026-10-25-agents-before-three-stage-pfa-install.md`.
+The user explicitly approved installing this update with no breakpoint jobs
+active, including the previously built passive photon projection. Therefore
+`rts_photon_calo_*` / `free_loss_rts_photon_calo_*` are now installed too;
+earlier NOT INSTALLED records are historical. A ray is not a photon detection
+or proof of energy recovery.
 
-The default PFA runtime also includes the event-lifetime cleanup repair in
-`TruthClusteringAlg`: release cached tracks and V-view showers before their
-input event is destroyed. The new ownership regression fails on the old module
-and passes on the repair; three failed seeds each completed 100 repaired-build
-events, and a fresh default-runtime seed-16 run completed 100 events. The
-257-success/119-failure rec campaign predates this repair; its failed rec files
-still need reruns from the 119 retained calodigi inputs. No jobs were
-resubmitted or existing batch files deleted. Exact comparisons, ordering caveat,
-deployment hash and rollback copy are in
-`agents_record/2026-10-25-pfa-event-lifetime-repair.md`; full outgoing status is
-in `agents_record/2026-10-25-agents-before-pfa-lifetime-repair.md`.
-
-Current study: inspect internal cluster z-phi hit patterns and determine which
-pre-absorption/calibrated product can support an unresolved electron-plus-photon
-measurement. Examples and exact selection definitions are in
+PFA still saves `EcalClusterTiming` / `EcalClusterTimingHits`,
+`TrkMergedECAL` / `TrkMergedECALHits`, and the unchanged final
+`EcalCluster` / `RecECALBarrel` and PFOs. Its event-lifetime repair remains
+installed and its module was untouched by this deployment. Provenance:
+`agents_record/2026-10-25-three-stage-pfa-install.md` and
+`agents_record/2026-10-25-pfa-event-lifetime-repair.md`.
+Existing timing-hit and photon/electron displays remain in
 `TrackingPerformanceStudies/breakpoint_ecal_timing_hits_20261025/`.
-No-neutral is not proof of photon containment or shower merging. These are
-reconstructed U/V-matched points, not raw crystal or Geant4 hits. Snapshot
-mechanical checks do not validate energy response or photon separation.
 
-The passive post-fit photon projection in RecBreakpoint remains **built/tested,
-NOT installed**. Its `rts_photon_calo_*` / `free_loss_rts_photon_calo_*`
-fields use the smoothed breakpoint state/covariance and native ECAL faces;
-no fit parameter, measurement or objective changes. Nine numerical tests and
-817 prior branches on 11 direct A/B rows passed. Details remain in
-`agents_record/2026-10-25-postfit-photon-ecal-projection.md`.
-A ray is not a photon detection or proof of energy recovery.
-
-Next: rerun the 119 failed rec stages when requested, retaining their calodigi
-inputs until successful recovery; then compare the three saved cluster stages
-before proposing refitter inputs.
-Any refitter integration, PFA physics/calibration change or separate breakpoint
-deployment requires explicit scope and validation. Do not implement constraints
-or the free-loss wrapper in diffuse tracking now; the user deferred that work.
+Next: evaluate the configured sum constraint on correctly selected unresolved
+showers, separating resolved photons, containment/calibration and breakpoint
+assignment effects before performance claims. No-neutral is not proof of
+containment. Do not implement constraints or the free-loss wrapper in diffuse
+tracking now; the user deferred that work.

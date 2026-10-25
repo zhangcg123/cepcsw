@@ -39,6 +39,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     auto settings = ordinary;
     settings.intervalMeanLogLoss.clear();
     settings.chargedEcalEnergy = controls.chargedEcalEnergy;
+    settings.chargedEcalEnergyMode = controls.chargedEcalEnergyMode;
     settings.neutralEcalEnergy = controls.neutralEcalEnergy;
     settings.beamSpot = controls.beamSpot;
     settings.captureGaussianModel = true;

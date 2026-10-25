@@ -15,6 +15,7 @@ struct FreeLossSettings {
   std::optional<BeamSpotSettings> beamSpot; // initial KF measurement, shared with ordinary
   std::optional<std::pair<double, double>> chargedEcalEnergy; // terminal 6D KF observation [GeV]
   std::optional<std::pair<double, double>> neutralEcalEnergy; // post-loss 6D KF observation [GeV]
+  ChargedEnergyMode chargedEcalEnergyMode = ChargedEnergyMode::ElectronOnly;
 };
 
 enum class FreeLossStatus { NotAttempted = 0, NoInterval = 1, Applied = 2,

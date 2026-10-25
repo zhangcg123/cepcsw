@@ -102,6 +102,8 @@ DECLARE_COMPONENT(RecBreakpoint)
 RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
     : Algorithm(name, locator) {
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
+  declareProperty("ChargedEcalInputClusters", m_chargedEcalClusters,
+                  "ECAL energy source; alternate snapshots are selected by constituent-hit provenance");
   for (std::size_t i=0; i<m_constraintOutputs.size(); ++i)
     declareProperty(constraintOutputProperties[i], m_constraintOutputs[i],
                     "Cumulative constraint-stage RTS output; empty when disabled");
@@ -120,6 +122,7 @@ StatusCode RecBreakpoint::initialize() {
   if (Algorithm::initialize().isFailure()) return StatusCode::FAILURE;
   try {
     breakpoint::parseSeedHitSelection(m_seedHitSelection.value());
+    breakpoint::parseChargedEnergyMode(m_chargedEcalEnergyMode.value());
   } catch (const std::exception& exception) {
     error() << exception.what() << endmsg;
     return StatusCode::FAILURE;
@@ -127,6 +130,14 @@ StatusCode RecBreakpoint::initialize() {
   m_seedSelectionName = m_seedHitSelection.value();
   m_lossStateModeName = m_lossStateMode.value();
   m_intervalSelectionName = m_intervalSelection.value();
+  m_recordChargedEcalInput = m_chargedEcalClusters.objKey();
+  m_recordChargedEcalEnergyMode = m_chargedEcalEnergyMode.value();
+  if (m_chargedEcalMeasurement && (m_recordChargedEcalInput.empty() ||
+      (m_recordChargedEcalEnergyMode == "ElectronPhoton" && (m_eloss || m_neutralEcalMeasurement)))) {
+    error() << "ChargedEcalInputClusters must be nonempty; ElectronPhoton requires"
+            << " ElossOn=False and NeutralEcalMeasurement=False" << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_intervalSelectionName == "Auto") {
     error() << "IntervalSelectionMode=Auto is reserved: the reconstruction-based interval finder is not implemented."
             << " Use Truth for this diagnostic or Manual for a fixed list." << endmsg;
@@ -311,6 +322,10 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("free_loss_charged_ecal_cluster_count", &m_chargedEcalMeasurementClusterCount);
   m_tree->Branch("free_loss_charged_ecal_energy", &m_chargedEcalMeasurementEnergy);
   m_tree->Branch("free_loss_charged_ecal_energy_error", &m_chargedEcalMeasurementError);
+  m_tree->Branch("charged_ecal_input_clusters", &m_recordChargedEcalInput);
+  m_tree->Branch("charged_ecal_energy_mode", &m_recordChargedEcalEnergyMode);
+  m_tree->Branch("charged_ecal_source_cluster_indices", &m_chargedEcalClusterIndices);
+  m_tree->Branch("charged_ecal_selection_error", &m_chargedEcalSelectionError);
   m_recordBackwardSeedScale = m_backwardSeedScale.value();
   m_tree->Branch("backward_seed_scale", &m_recordBackwardSeedScale);
   m_backwardRunFlags = {int(m_ordinaryBackwardFilter.value()), int(m_freeLossBackwardFilter.value()),
@@ -473,6 +488,9 @@ StatusCode RecBreakpoint::execute() {
   const auto* trackTruthAssociations = selected ? m_trackTruthAssociations.get() : nullptr;
   const auto* pidPfos = selected ? m_pidPfos.get() : nullptr;
   const auto* ecalClusters = selected ? m_ecalClusters.get() : nullptr;
+  const auto* chargedClusters = selected && m_chargedEcalMeasurement
+      ? (m_chargedEcalClusters.objKey() == m_ecalClusters.objKey()
+          ? ecalClusters : m_chargedEcalClusters.get()) : nullptr;
   if (selected) {
     m_neutralPfoTuple.assign(m_event, *pidPfos, *ecalClusters,
                              *m_bremsPhotons.get(), *m_bremsPhotonSteps.get());
@@ -488,9 +506,11 @@ StatusCode RecBreakpoint::execute() {
   settings.seedScale = m_seedScale;
   settings.backwardSeedScale = m_backwardSeedScale;
   settings.captureGaussianModel = true; // passive score for ordinary and truth RTS
+  settings.chargedEcalEnergyMode = breakpoint::parseChargedEnergyMode(m_recordChargedEcalEnergyMode);
   breakpoint::FreeLossSettings freeLossControls{m_freeLossMax.value(),
       static_cast<unsigned>(m_freeLossMaxCalls.value()), m_freeLossTolerance.value(),
       std::nullopt, std::nullopt, std::nullopt};
+  freeLossControls.chargedEcalEnergyMode = settings.chargedEcalEnergyMode;
   const std::array<bool,3> constraintEnabled{{m_beamSpotConstraint.value(),
       m_chargedEcalMeasurement.value(), m_neutralEcalMeasurement.value()}};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
@@ -527,37 +547,23 @@ StatusCode RecBreakpoint::execute() {
     m_chargedEcalMeasurementStatus = 0;
     m_chargedEcalMeasurementClusterCount = 0;
     m_chargedEcalMeasurementEnergy = m_chargedEcalMeasurementError = nan;
+    m_chargedEcalClusterIndices.clear();
+    m_chargedEcalSelectionError.clear();
     if (m_chargedEcalMeasurement) {
-      int linkedPfos = 0;
-      std::set<edm4hep::Cluster> ecal;
-      for (const auto& cluster : *ecalClusters) ecal.insert(cluster);
-      std::set<edm4hep::Cluster> selectedClusters;
-      double energy = 0, variance = 0;
-      for (const auto& pfo : *pidPfos) {
-        if (pfo.getCharge() == 0) continue;
-        bool ownsTrack = false;
-        for (const auto& linked : pfo.getTracks())
-          if (linked == track) { ownsTrack = true; break; }
-        if (!ownsTrack) continue;
-        ++linkedPfos;
-        for (const auto& cluster : pfo.getClusters()) {
-          if (!ecal.count(cluster) || cluster.hits_size() == 0 ||
-              selectedClusters.count(cluster)) continue;
-          const double value = cluster.getEnergy();
-          if (!std::isfinite(value) || value <= 0) continue;
-          selectedClusters.insert(cluster);
-          energy += value;
-          const double sigma = m_chargedEcalStochasticError * std::sqrt(value) +
-              m_chargedEcalConstantError * value;
-          variance += sigma * sigma;
+      try {
+        const auto measurement = breakpoint::collectChargedEnergy(track, *pidPfos,
+            *ecalClusters, *chargedClusters, m_chargedEcalStochasticError.value(),
+            m_chargedEcalConstantError.value());
+        m_chargedEcalMeasurementStatus = measurement.status;
+        if (measurement.status == 2) {
+          m_chargedEcalClusterIndices = measurement.clusterIndices;
+          m_chargedEcalMeasurementClusterCount = measurement.clusterIndices.size();
+          m_chargedEcalMeasurementEnergy = measurement.energy;
+          m_chargedEcalMeasurementError = measurement.sigma;
         }
-      }
-      m_chargedEcalMeasurementStatus = linkedPfos > 1 ? 3 :
-          linkedPfos == 1 && energy > 0 ? 2 : 1;
-      if (m_chargedEcalMeasurementStatus == 2) {
-        m_chargedEcalMeasurementClusterCount = selectedClusters.size();
-        m_chargedEcalMeasurementEnergy = energy;
-        m_chargedEcalMeasurementError = std::sqrt(variance);
+      } catch (const std::exception& error) {
+        m_chargedEcalMeasurementStatus = -1;
+        m_chargedEcalSelectionError = error.what();
       }
     }
     // Preserve neutral-cluster observations for diagnostics independently of fit success.
@@ -1069,6 +1075,7 @@ StatusCode RecBreakpoint::execute() {
                 auto controls = freeLossControls;
                 controls.beamSpot = variant.beamSpot;
                 controls.chargedEcalEnergy = variant.chargedEcalEnergy;
+                controls.chargedEcalEnergyMode = variant.chargedEcalEnergyMode;
                 controls.neutralEcalEnergy = variant.neutralEcalEnergy;
                 auto optimizedFit = breakpoint::FreeLossFitter(fitter).fit(hits, variant, controls, false);
                 m_constraintOptimization[kind].assign(optimizedFit.diagnostics);

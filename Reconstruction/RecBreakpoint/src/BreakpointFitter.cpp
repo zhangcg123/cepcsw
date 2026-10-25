@@ -66,6 +66,9 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
   if (settings.intervals.size() > 1)
     throw std::invalid_argument("Persistent6D requires at most one breakpoint");
+  if (settings.chargedEcalEnergy && settings.neutralEcalEnergy &&
+      settings.chargedEcalEnergyMode == ChargedEnergyMode::ElectronPhoton)
+    throw std::invalid_argument("ElectronPhoton cannot reuse a separate neutral-energy measurement");
   if (hits.size() < 3) throw std::runtime_error("Insufficient hits");
   for (int interval : settings.intervals)
     if (interval < 0 || static_cast<std::size_t>(interval + 1) >= hits.size())
@@ -357,15 +360,9 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     const auto& ecalPredicted = ecalStep.predicted;
     const auto& transport = ecalStep.transport;
     const auto& noise = ecalStep.noise;
-    const double predictedEnergy = std::hypot(1., ecalPredicted.mean(4, 0)) /
-        std::abs(ecalPredicted.mean(2, 0));
-    if (!std::isfinite(predictedEnergy) || predictedEnergy <= 0)
-      throw std::runtime_error("Invalid predicted charged ECAL energy");
-    TMatrixD energyDerivative(1, 6);
-    energyDerivative.Zero();
-    energyDerivative(0, 2) = -predictedEnergy / ecalPredicted.mean(2, 0);
-    energyDerivative(0, 4) = predictedEnergy * ecalPredicted.mean(4, 0) /
-        (1. + ecalPredicted.mean(4, 0) * ecalPredicted.mean(4, 0));
+    const auto projection = chargedEnergyProjection(ecalPredicted, settings.chargedEcalEnergyMode);
+    const double predictedEnergy = projection.energy;
+    const auto& energyDerivative = projection.derivative;
     const double observationVariance = sigmaEnergy * sigmaEnergy;
     const double innovationVariance =
         (energyDerivative * ecalPredicted.covariance * transpose(energyDerivative))(0, 0)

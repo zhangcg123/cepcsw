@@ -52,6 +52,7 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_TRUTH_BACKWARD_FILTER',
                'BP_FREE_LOSS_FIT', 'BP_CHARGED_ECAL_MEASUREMENT',
+               'BP_CHARGED_ECAL_INPUT_CLUSTERS', 'BP_CHARGED_ECAL_ENERGY_MODE',
                'BP_NEUTRAL_ECAL_MEASUREMENT',
                'BP_CHARGED_ECAL_STOCHASTIC', 'BP_CHARGED_ECAL_CONSTANT',
                'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
@@ -155,6 +156,14 @@ def prepare():
                 'BP_FREE_LOSS_BACKWARD_FILTER',
                 'BP_TRUTH_BACKWARD_FILTER'):
         if key in controls: controls[key] = str(int(boolean(controls[key])))
+    charged_mode = controls.get('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronOnly')
+    if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
+        raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')
+    if controls.get('BP_CHARGED_ECAL_MEASUREMENT', '0') == '1':
+        if not controls.get('BP_CHARGED_ECAL_INPUT_CLUSTERS', 'TrkMergedECAL').strip():
+            raise ValueError('BP_CHARGED_ECAL_INPUT_CLUSTERS must not be empty')
+        if charged_mode == 'ElectronPhoton' and controls.get('BP_NEUTRAL_ECAL_MEASUREMENT', '0') == '1':
+            raise ValueError('ElectronPhoton requires BP_NEUTRAL_ECAL_MEASUREMENT=0')
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
              'calodigi': repo/'DumpGsfTrks/calodigi.py.bk',
