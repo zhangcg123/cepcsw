@@ -135,3 +135,7 @@ must separate truly unresolved showers, independently resolved photons,
 containment/calibration effects and correctly selected breakpoints.
 Full outgoing AGENTS.md is preserved in
 2026-10-25-agents-before-configured-charged-energy.md; global laws unchanged.
+
+Follow-up: paired tests on ten additional clean >1%-loss, event-wide no-real-
+neutral tracks are recorded in
+[the no-neutral check](2026-10-25-charged-sum-no-neutral-check.md).
