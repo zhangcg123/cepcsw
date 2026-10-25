@@ -19,6 +19,13 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_sum_mode_allows_neutral_for_trackwise_routing(self):
+        self.prepare(BP_CHARGED_ECAL_MEASUREMENT='1', BP_NEUTRAL_ECAL_MEASUREMENT='1',
+                     BP_CHARGED_ECAL_ENERGY_MODE='ElectronPhoton')
+        controls = self.manifest()['controls']
+        self.assertEqual(controls['BP_CHARGED_ECAL_ENERGY_MODE'], 'ElectronPhoton')
+        self.assertEqual(controls['BP_NEUTRAL_ECAL_MEASUREMENT'], '1')
+
     def test_ecal_input_default_and_legacy_are_frozen(self):
         template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         assignments = '\n'.join(line for line in template.splitlines() if line.startswith(

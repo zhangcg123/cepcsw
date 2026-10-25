@@ -684,16 +684,28 @@ the independent neutral clusters in `TrkMergedECAL` as charged.
 | Value | Predicted scalar energy at ECAL |
 |---|---|
 | `ElectronOnly` (compiled/card default) | `p = sqrt(1+tanl^2)/abs(kappa)` |
-| `ElectronPhoton` | `p*exp(b)`, for an unresolved electron plus its modeled photon |
+| `ElectronPhoton` | `p*exp(b)` only with one breakpoint and no collected neutral; otherwise electron-only `p` |
+
+The decision is per input track. A usable hit-supported neutral in the configured
+collection window switches the charged interpretation to electron-only even when
+`NeutralEcalMeasurement=false`. That switch controls application of the separate
+photon measurement, not collection. A neutral elsewhere in the event does not
+trigger the change. With no selected breakpoint the charged update still runs,
+in five dimensions, and measures electron energy only; no artificial loss
+coordinate/prior is introduced. Its free-loss endpoint copies the constrained
+ordinary RTS because there is no loss parameter to optimize. The neutral stage
+then retains the preceding accepted result. Requested and effective modes are
+saved separately as `charged_ecal_energy_mode` and `charged_ecal_effective_energy_mode`.
 
 The sum mode uses the same six coordinates and native KF update, with
 `H[2]=-E/kappa`, `H[4]=E*tanl/(1+tanl^2)`, and `H[5]=E`; other entries are zero.
 Electron-only has the same first two derivatives and `H[5]=0`. Full state
 covariances, including curvature/loss cross-covariance, enter the update.
 The scalar is included once in each ordinary/free-loss likelihood; no extra
-penalty or new output family is introduced. Sum mode requires `ElossOn=False`
-and `NeutralEcalMeasurement=False`: its initial model assumes one loss and no
-additional energy change before ECAL, and must not count the same photon again.
+penalty or new output family is introduced. Requesting sum mode still requires
+`ElossOn=False`: the unresolved-shower model assumes one loss and no additional
+energy change before ECAL. The neutral switch may be ON: a collected neutral
+forces electron-only charged energy, then the separate photon update is applied.
 It is not a containment correction or a photon-detection claim.
 
 Example steering for the new unresolved-shower constraint:
@@ -703,7 +715,7 @@ fit.ChargedEcalMeasurement = True
 fit.EcalConstraintInput = "PreReclustering"
 fit.ChargedEcalInputClusters = ""
 fit.ChargedEcalEnergyMode = "ElectronPhoton"  # or "ElectronOnly"
-fit.NeutralEcalMeasurement = False
+fit.NeutralEcalMeasurement = True  # applied only with a collected neutral and a breakpoint
 fit.ElossOn = False
 ```
 
@@ -712,15 +724,15 @@ collection. An alternate charged energy collection is added only when the charge
 constraint is enabled. The input controls and `BP_CHARGED_ECAL_ENERGY_MODE`
 are frozen into prepared batch jobs. For example,
 `BP_CHARGED_ECAL_MEASUREMENT=1 BP_ECAL_CONSTRAINT_INPUT=PreReclustering
-BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton BP_NEUTRAL_ECAL_MEASUREMENT=0`.
+BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton BP_NEUTRAL_ECAL_MEASUREMENT=1`.
 Old cards that omit the selector now inherit the new compiled pre-PFO default:
 reprepare them with explicit FinalPFO for legacy inputs, or with the new card
 for regenerated rec files. Do not silently edit frozen cards. Native
 propagation takes the outer tracker state to the ECAL face; the propagated
 state, transport Jacobian and process noise come together from the same
 `TKalDetCradle::Transport` machinery used by tracker-hit propagation. These are
-lifted to six dimensions with unchanged b, retaining the loss coordinate and
-all its correlations. No finite-difference Jacobian or covariance-subtraction
+lifted to six dimensions when a breakpoint exists, retaining b and all its
+correlations; unbroken tracks retain the native five dimensions. No finite-difference Jacobian or covariance-subtraction
 estimate of process noise is used. The scalar energy measurement updates that
 ECAL-face state. RTS first traverses this ECAL-to-last-tracker edge, then the
 ordinary tracker edges inward. For a successful ON fit, the updated ECAL-face
@@ -741,8 +753,8 @@ independent of the tracker fit. The flat tuple records
 `free_loss_charged_ecal_measurement_status` (0 off, 1 no usable cluster,
 2 selected for the fit, 3 ambiguous charged PFO/source match, -1 selection error), measured energy/error, predicted energy,
 innovation variance and chi2. Original `free_loss_rts_*` and `rts_*` endpoints
-remain unconstrained for every switch combination. ECAL variants currently
-require a selected breakpoint; unavailable/failed additions preserve the preceding
+remain unconstrained for every switch combination. Only the neutral update
+requires a selected breakpoint; unavailable/failed additions preserve the preceding
 accepted constraints with an explicit status. The legacy `free_loss_charged_ecal_*` selection
 fields remain the shared charged observation (status 2 means selected, not success).
 `charged_ecal_input_clusters`, `charged_ecal_energy_mode`,
@@ -836,10 +848,10 @@ the native source/predicted/filtered states, `F` and `Q`.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
-| ChargedEcalMeasurement | false | Two cumulative charged-stage RTS families; inherit enabled beam, add ECAL-face energy with one breakpoint and one linked charged PFO |
+| ChargedEcalMeasurement | false | Two cumulative charged-stage RTS families; inherit enabled beam, add ECAL-face energy with one linked charged PFO, with or without a breakpoint |
 | EcalConstraintInput | PreReclustering | Common charged/neutral PFO source: PreReclustering or FinalPFO; BP_ECAL_CONSTRAINT_INPUT |
 | ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
-| ChargedEcalEnergyMode | ElectronOnly | ElectronOnly or ElectronPhoton scalar prediction; BP_CHARGED_ECAL_ENERGY_MODE; sum mode requires ElossOn and NeutralEcalMeasurement off |
+| ChargedEcalEnergyMode | ElectronOnly | ElectronPhoton uses sum only with one breakpoint and no collected neutral, otherwise electron-only; BP_CHARGED_ECAL_ENERGY_MODE; sum request requires ElossOn off |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | BeamSpotConstraint | false | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |

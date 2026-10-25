@@ -170,6 +170,7 @@ private:
   int m_chargedEcalMeasurementStatus = 0, m_chargedEcalMeasurementClusterCount = 0;
   double m_chargedEcalMeasurementEnergy = 0, m_chargedEcalMeasurementError = 0;
   std::string m_recordChargedEcalInput, m_recordChargedEcalEnergyMode;
+  std::string m_recordChargedEcalEffectiveMode;
   std::string m_recordEcalConstraintInput, m_recordEcalConstraintPfos, m_recordEcalConstraintClusters;
   std::string m_chargedEcalSelectionError;
   std::vector<int> m_chargedEcalClusterIndices;

@@ -162,9 +162,6 @@ def prepare():
     charged_mode = controls.get('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronOnly')
     if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
         raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')
-    if controls.get('BP_CHARGED_ECAL_MEASUREMENT', '0') == '1':
-        if charged_mode == 'ElectronPhoton' and controls.get('BP_NEUTRAL_ECAL_MEASUREMENT', '0') == '1':
-            raise ValueError('ElectronPhoton requires BP_NEUTRAL_ECAL_MEASUREMENT=0')
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
              'calodigi': repo/'DumpGsfTrks/calodigi.py.bk',

@@ -312,55 +312,53 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PRE-RECLUSTERING PFO CONSTRAINT INPUT — BUILT/TESTED, NOT INSTALLED (2026-10-26).**
-RecBreakpoint now uses one shared `EcalConstraintInput` selector for charged
-and neutral ECAL observations. Compiled/card default `PreReclustering` reads
-`CyberPFOPreReclustering` / `EcalClusterPreReclustering`; `FinalPFO` reads
-`CyberPFOPID` / `EcalCluster`. Charged selection uses the saved input-track
-link directly; neutral selection uses trackless, zero-charge, hit-supported
-ECAL clusters in the existing theta/phi window. No fit algebra, energy-error
-formula, output family, truth selection or constraint-routing rule changed.
-The new empty default `ChargedEcalInputClusters` means use the selected linked
-ECAL collection. Explicit alternate sources retain unique hit-provenance
-matching. The old maintained route is reproduced by FinalPFO plus TrkMergedECAL.
+**CONDITIONAL CHARGED ENERGY — BUILT/TESTED, NOT INSTALLED (2026-10-26).**
+RecBreakpoint now supports the requested track-wise ElectronPhoton routing:
+with one selected breakpoint and no usable collected neutral, constrain the
+electron+photon sum; with a collected hit-supported neutral, constrain the
+charged electron only and optionally apply the separate neutral measurement.
+With no selected breakpoint, still apply the charged electron-energy update,
+using a genuine 5D native ECAL-face KF update and RTS back through the tracker.
+No artificial loss coordinate/prior is added. The no-breakpoint free endpoint
+copies the constrained ordinary fit. Missing charged observations and failed
+updates retain earlier accepted constraints; no cluster is manufactured.
 
-The final-PFO flat diagnostics and `neutral_pfos` side tree are unchanged.
-New track-row source fields identify which PFO/ECAL collections supply the
-constraints. Pre-PFO selected-cluster indices refer to the rec snapshot, NOT
-the final-PFO side-tree indices. Main-tree neutral energies/errors remain saved.
-Missing pre-PFO inputs fail; the maintained card prechecks ROOT branches before
-PodioInput, which otherwise can segfault on missing collections. The batch
-helper freezes BP_ECAL_CONSTRAINT_INPUT and verifies new pre-PFO graph products
-after rec before owned-calodigi cleanup. User-modified submission stages/paths/
-group were not changed. Old frozen cards need explicit legacy steering or
-regeneration; they do not silently inherit old compiled defaults.
+ElectronOnly remains the compiled/card default. ElectronPhoton requires
+ElossOn=False but now permits NeutralEcalMeasurement=True. Passive collection
+(with the existing theta/phi window) steers the charged interpretation even when
+the neutral measurement is OFF. The new charged_ecal_effective_energy_mode
+field records the per-track choice alongside the requested mode; statuses and
+masks identify actual measurement application. Beam/charged/neutral stages
+remain cumulative from the original seed/prior, not previous fitted posteriors.
 
-Validation: all 11 C++ tests pass. On seed-1 entries 0,3,5,12,13,16,17 (8 rows,
-including a two-track control), explicit legacy mode reproduces all 851 old
-track branches exactly. The new default selects 7 charged and 2 neutral
-observations with energies matching the saved snapshot; physics branches match
-the old merged-source route in this fixture, and all 57 final-PFO side-tree
-fields remain exact. One event applies beam+charged+neutral; no-neutral rows
-retain the earlier-stage behavior. Missing-input rejection and valid-input
-preflight pass. Of 43 batch tests, 42 pass; the existing wrapper-default test
-fails because the user's subbreakpointjobs.sh defaults to trk,calodigi,rec
-rather than the test's expected breakpoint. Do not override that user edit.
-Evidence and limitations:
-`agents_record/2026-10-26-pre-pfo-constraint-input.md`.
-Outgoing AGENTS:
-`agents_record/2026-10-26-agents-before-pre-pfo-constraint-input.md`.
+The shared EcalConstraintInput default remains PreReclustering, reading
+CyberPFOPreReclustering/EcalClusterPreReclustering through saved track links.
+FinalPFO remains available; empty ChargedEcalInputClusters uses linked ECAL,
+explicit alternates retain unique hit matching. Final-PFO diagnostic branches
+and neutral_pfos side tree are unchanged. Selected pre-PFO cluster indices are
+rec-snapshot indices, not final neutral_pfos indices. Missing pre-PFO input fails
+explicitly; maintained cards preflight it before PodioInput.
 
-Both this consumer and the preceding PFA snapshot exporter remain uninstalled.
-The PFA exporter is documented in
-`agents_record/2026-10-25-pre-reclustering-pfo-snapshot.md`; no additional PFA
-changes were made for this consumer. Existing rec files do not gain snapshot
-collections automatically. Next: obtain deployment direction, install verified
-PFA/breakpoint packages with safe job coordination, then regenerate rec before
-using the pre-PFO default. No batch jobs were submitted.
+Mechanical gate: all 11 C++ tests pass. A 20-event/22-track local fixture gives
+15 successful no-breakpoint charged updates, one resolved breakpoint with all
+three constraints, five unresolved breakpoints with beam+charged, and one
+missing-charged event retaining beam. Two multi-track events are controls, not
+topology-clean optimization evidence. Previous electron-only breakpoint rows
+and all ten previous unresolved sum endpoints reproduce exactly. Resolved
+routing matches explicit ElectronOnly; neutral-OFF routing, manual empty-list
+beam ON/OFF, native 5D covariance contraction and unconstrained endpoint
+regression pass. 43/44 batch tests pass; the sole existing failure expects
+breakpoint-only while the user submit script selects trk,calodigi,rec. Preserve
+that user setting. No population/endcap performance claim.
+Evidence: agents_record/2026-10-26-conditional-charged-energy.md.
+Outgoing AGENTS: agents_record/2026-10-26-agents-before-conditional-charged-energy.md.
 
-The requested conditional 111 ElectronPhoton routing is still NOT implemented:
-sum mode continues to reject a separate neutral constraint, and charged/neutral
-KF additions still require one selected breakpoint. Do not claim this input
-migration fixes those separate rules. Diffuse constraints/free-loss wrapper
-remain explicitly deferred. Previous installed charged-energy behavior and
-passive photon projection remain documented in the 2026-10-25 records.
+This consumer and the preceding PFA snapshot exporter are NOT INSTALLED.
+No PFA source change, installation or batch submission was made for routing.
+Next: coordinate deployment, install verified packages, then regenerate rec
+with pre-PFO collections before batch use of the new default. Older rec files
+need explicit legacy steering or regeneration. Snapshot/input evidence remains
+in agents_record/2026-10-25-pre-reclustering-pfo-snapshot.md and
+agents_record/2026-10-26-pre-pfo-constraint-input.md.
+Do not implement constraints or the free-loss wrapper in diffuse tracking;
+the user explicitly deferred that work.

@@ -8,6 +8,36 @@ void close(double a, double b, double tolerance=1.e-7) {
     throw std::runtime_error("Charged energy projection regression failed");
 }
 int main() {
+  for (auto requested : {ChargedEnergyMode::ElectronOnly, ChargedEnergyMode::ElectronPhoton})
+    for (bool breakpoint : {false, true}) for (bool neutral : {false, true}) {
+      const auto expected = breakpoint && !neutral ? requested : ChargedEnergyMode::ElectronOnly;
+      if (effectiveChargedEnergyMode(requested, breakpoint, neutral) != expected)
+        throw std::runtime_error("Wrong charged-energy routing");
+    }
+  TrackState unbroken;
+  unbroken.mean.Zero(); unbroken.covariance.UnitMatrix(); unbroken.covariance *= 1.e-5;
+  unbroken.mean(2,0)=.1; unbroken.mean(4,0)=.4;
+  const auto electronProjection = chargedEnergyProjection(unbroken, ChargedEnergyMode::ElectronOnly);
+  if (electronProjection.derivative.GetNcols() != 5)
+    throw std::runtime_error("Unbroken charged update must stay five-dimensional");
+  const auto augmented = LossTrackState::introduce(unbroken, .15, 1.e-5);
+  const auto augmentedProjection = chargedEnergyProjection(augmented, ChargedEnergyMode::ElectronOnly);
+  close(electronProjection.energy, augmentedProjection.energy);
+  GaussianHitModel electronObservation{electronProjection.derivative,TMatrixD(1,1),TMatrixD(1,1)};
+  electronObservation.noise(0,0)=.04; electronObservation.residual(0,0)=.1;
+  auto augmentedObservation=electronObservation;
+  augmentedObservation.derivative.ResizeTo(augmentedProjection.derivative);
+  augmentedObservation.derivative=augmentedProjection.derivative;
+  const auto electronFiltered=updateScalarState(unbroken,electronObservation);
+  const auto augmentedFiltered=updateScalarState(augmented,augmentedObservation);
+  for (int i=0;i<5;++i) {
+    close(electronFiltered.mean(i,0),augmentedFiltered.mean(i,0));
+    for (int j=0;j<5;++j) close(electronFiltered.covariance(i,j),augmentedFiltered.covariance(i,j));
+  }
+  bool invalidSum=false;
+  try { chargedEnergyProjection(unbroken,ChargedEnergyMode::ElectronPhoton); }
+  catch (const std::invalid_argument&) { invalidSum=true; }
+  if (!invalidSum) throw std::runtime_error("Sum without a loss coordinate accepted");
   for (double kappa : {-.1, .1}) for (double b : {0., .15}) {
     LossTrackState state;
     state.mean.Zero(); state.covariance.UnitMatrix(); state.covariance *= 1.e-5;

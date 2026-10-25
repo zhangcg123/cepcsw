@@ -71,6 +71,8 @@ public:
   /// Geometry-only entrance faces for passive straight-photon projection.
   std::vector<const TVSurface*> calorimeterSurfaces() const;
   /// Native detector transport with its F/Q retained for the terminal RTS edge.
+  MeasurementStep predictCalorimeter(const TrackState& state,
+                                    edm4hep::TrackerHit lastHit) const;
   LossMeasurementStep predictCalorimeter(const LossTrackState& state,
                                         edm4hep::TrackerHit lastHit) const;
   /// Independent, unbroken MarlinTrk fit and its native smoother. Diagnostic

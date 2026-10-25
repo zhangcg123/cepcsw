@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <optional>
+#include <variant>
 
 namespace breakpoint {
 struct FitSettings {
@@ -55,7 +56,7 @@ struct FitResult {
   double chargedEcalPredictedEnergy = 0, chargedEcalResidual = 0;
   double chargedEcalInnovationVariance = 0, chargedEcalChi2 = 0;
   double chargedEcalPostfitChi2 = 0;
-  std::optional<LossMeasurementStep> chargedEcalStep;
+  std::optional<std::variant<MeasurementStep, LossMeasurementStep>> chargedEcalStep;
   std::optional<NeutralEnergyMeasurement> neutralEcal;
   std::vector<int> persistentHits;
   std::vector<LossTrackState> persistentPredicted, persistentFiltered, persistentSmoothed;

@@ -166,7 +166,7 @@ for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARG
     if retired in os.environ:
         raise ValueError(retired + " was renamed to " + replacement)
 # Experimental terminal scalar KF update: one linked charged ECAL shower
-# constrains energy (not position) before RTS smoothing. Requires a selected breakpoint.
+# constrains energy (not position) before RTS smoothing, also without a breakpoint.
 # Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
@@ -181,10 +181,12 @@ fit.EcalConstraintInput = os.environ.get("BP_ECAL_CONSTRAINT_INPUT", "PreReclust
 # matching is retained. Legacy campaign: FinalPFO plus TrkMergedECAL.
 fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", "")
 # ElectronOnly: predicted E = electron momentum at the ECAL face (mass ignored).
-# ElectronPhoton: predicted E = electron momentum * exp(b), the unresolved
-# electron+photon sum for ONE breakpoint and no other energy loss to ECAL.
-# ElectronPhoton requires ElossOn=False and NeutralEcalMeasurement=False;
-# do not observe the same photon again with the separate neutral constraint.
+# ElectronPhoton: use electron momentum * exp(b) only with one breakpoint and
+# no collected hit-supported neutral. Otherwise use ElectronOnly, including
+# tracks with no breakpoint. Neutral collection steers this choice even when
+# NeutralEcalMeasurement is OFF; that switch only controls the neutral update.
+# Sum interpretation requires ElossOn=False. The effective per-track choice is
+# saved as charged_ecal_effective_energy_mode; the requested mode is also saved.
 fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "ElectronOnly")
 # Optional measurement in the final cumulative neutral-stage families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)

@@ -459,13 +459,13 @@ std::vector<const TVSurface*> KalmanAdapter::calorimeterSurfaces() const {
   return result;
 }
 
-LossMeasurementStep KalmanAdapter::predictCalorimeter(const LossTrackState& state,
+MeasurementStep KalmanAdapter::predictCalorimeter(const TrackState& state,
                                                      edm4hep::TrackerHit lastHit) const {
   // A real native track supplies the material routines' current mass/context.
   TKalTrack track;
   track.SetOwner();
   TMatrixD pivotJacobian;
-  auto source = sourceSite(*m_system, m_bz, state.track(), lastHit, pivotJacobian);
+  auto source = sourceSite(*m_system, m_bz, state, lastHit, pivotJacobian);
   auto* sourcePointer = source.release();
   track.Add(sourcePointer);
   const auto helix = static_cast<const TKalTrackState&>(sourcePointer->GetCurState()).GetHelix();
@@ -511,7 +511,7 @@ LossMeasurementStep KalmanAdapter::predictCalorimeter(const LossTrackState& stat
       !dynamic_cast<const TVSurface&>(*destination).IsOnSurface(pivot))
     throw std::runtime_error("Native transport did not reach ECAL face");
 
-  LossMeasurementStep result;
+  MeasurementStep result;
   result.transport.UnitMatrix();
   result.noise.Zero();
   const TMatrixD totalTransport = transport * pivotJacobian;
@@ -522,6 +522,28 @@ LossMeasurementStep KalmanAdapter::predictCalorimeter(const LossTrackState& stat
     for (int j = 0; j < 5; ++j) {
       result.transport(i, j) = totalTransport(i, j);
       result.noise(i, j) = noise(i, j);
+    }
+  }
+  result.predicted.covariance = result.transport * state.covariance *
+      transpose(result.transport) + result.noise;
+  validateCovariance(result.predicted.covariance);
+  result.filtered = result.predicted;
+  return result;
+}
+
+LossMeasurementStep KalmanAdapter::predictCalorimeter(const LossTrackState& state,
+                                                     edm4hep::TrackerHit lastHit) const {
+  const auto trackStep = predictCalorimeter(state.track(), lastHit);
+  LossMeasurementStep result;
+  result.transport.UnitMatrix();
+  result.noise.Zero();
+  result.predicted = state;
+  result.predicted.pivot = trackStep.predicted.pivot;
+  for (int i = 0; i < 5; ++i) {
+    result.predicted.mean(i, 0) = trackStep.predicted.mean(i, 0);
+    for (int j = 0; j < 5; ++j) {
+      result.transport(i, j) = trackStep.transport(i, j);
+      result.noise(i, j) = trackStep.noise(i, j);
     }
   }
   result.predicted.covariance = result.transport * state.covariance *

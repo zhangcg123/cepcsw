@@ -18,12 +18,21 @@ struct ChargedEnergyProjection {
   TMatrixD derivative{1, 6};
 };
 
-/// ECAL-face scalar energy; mass neglected, with the existing persistent loss b.
-inline ChargedEnergyProjection chargedEnergyProjection(const LossTrackState& state,
+inline ChargedEnergyMode effectiveChargedEnergyMode(ChargedEnergyMode requested,
+                                                   bool hasBreakpoint, bool hasNeutral) {
+  return !hasBreakpoint || hasNeutral ? ChargedEnergyMode::ElectronOnly : requested;
+}
+
+/// ECAL-face scalar energy; no loss coordinate is needed for an unbroken track.
+template<class State>
+ChargedEnergyProjection chargedEnergyProjection(const State& state,
                                                        ChargedEnergyMode mode) {
+  if (mode == ChargedEnergyMode::ElectronPhoton && state.mean.GetNrows() != 6)
+    throw std::invalid_argument("ElectronPhoton requires a breakpoint loss coordinate");
   const double kappa = state.mean(2, 0), tanl = state.mean(4, 0);
   const double momentum = std::hypot(1., tanl) / std::abs(kappa);
   ChargedEnergyProjection result;
+  result.derivative.ResizeTo(1, state.mean.GetNrows());
   result.energy = mode == ChargedEnergyMode::ElectronPhoton
       ? momentum * std::exp(state.mean(5, 0)) : momentum;
   if (!std::isfinite(kappa) || kappa == 0 || !std::isfinite(tanl) ||

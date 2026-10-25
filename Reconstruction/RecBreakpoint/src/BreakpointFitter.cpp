@@ -28,6 +28,61 @@ FitSettings intervalSettings(const FitSettings& settings, int interval) {
   return result;
 }
 
+// One terminal native KF update and RTS edge, for both 5D and 6D tracks.
+template<class State, class Step>
+State constrainChargedEnergy(FitResult& result, const State& live, Step ecalStep,
+                            const FitSettings& settings) {
+  const auto [measuredEnergy, sigmaEnergy] = *settings.chargedEcalEnergy;
+  if (!std::isfinite(measuredEnergy) || measuredEnergy <= 0 ||
+      !std::isfinite(sigmaEnergy) || sigmaEnergy <= 0)
+    throw std::invalid_argument("Invalid charged ECAL energy measurement");
+  const auto& ecalPredicted = ecalStep.predicted;
+  const auto& transport = ecalStep.transport;
+  const auto& noise = ecalStep.noise;
+  const auto projection = chargedEnergyProjection(ecalPredicted, settings.chargedEcalEnergyMode);
+  const double predictedEnergy = projection.energy;
+  const auto& energyDerivative = projection.derivative;
+  const double observationVariance = sigmaEnergy * sigmaEnergy;
+  const double innovationVariance =
+      (energyDerivative * ecalPredicted.covariance * transpose(energyDerivative))(0, 0)
+      + observationVariance;
+  if (!std::isfinite(innovationVariance) || innovationVariance <= 0)
+    throw std::runtime_error("Invalid charged ECAL innovation variance");
+  const double residual = measuredEnergy - predictedEnergy;
+  GaussianHitModel observation{energyDerivative, TMatrixD(1, 1), TMatrixD(1, 1)};
+  observation.noise(0, 0) = observationVariance;
+  observation.residual(0, 0) = residual;
+  const auto ecalFiltered = updateScalarState(ecalPredicted, observation);
+  ecalStep.filtered = ecalFiltered;
+  result.chargedEcalStep = ecalStep;
+  const TMatrixD smoothingGain = live.covariance * transpose(transport) *
+      inverseCovariance(ecalPredicted.covariance);
+  TMatrixD complement(live.mean.GetNrows(), live.mean.GetNrows());
+  complement.UnitMatrix();
+  complement -= smoothingGain * transport;
+  State terminalSmoothed;
+  terminalSmoothed.pivot = live.pivot;
+  terminalSmoothed.mean = live.mean + smoothingGain *
+      stateDifference(ecalFiltered.mean, ecalPredicted.mean);
+  terminalSmoothed.covariance = complement * live.covariance * transpose(complement) +
+      smoothingGain * (noise + ecalFiltered.covariance) * transpose(smoothingGain);
+  validateCovariance(terminalSmoothed.covariance);
+  result.chargedEcalPredictedEnergy = predictedEnergy;
+  result.chargedEcalResidual = residual;
+  result.chargedEcalInnovationVariance = innovationVariance;
+  result.chargedEcalChi2 = residual * residual / innovationVariance;
+  const TMatrixD innovationShift = stateDifference(ecalFiltered.mean, ecalPredicted.mean);
+  const TMatrixD processScoreDirection = inverseCovariance(ecalPredicted.covariance) * innovationShift;
+  const double processChi2 = (transpose(processScoreDirection) * noise * processScoreDirection)(0, 0);
+  if (!std::isfinite(processChi2) || processChi2 < -1.e-8)
+    throw std::runtime_error("Invalid tracker-to-ECAL process penalty");
+  result.chargedEcalPostfitChi2 = residual * residual * observationVariance /
+      (innovationVariance * innovationVariance) + std::max(0., processChi2);
+  result.chi2 += result.chargedEcalChi2;
+  ++result.measurementDimensions;
+  return terminalSmoothed;
+}
+
 } // namespace
 
 TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
@@ -69,6 +124,9 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
   if (settings.chargedEcalEnergy && settings.neutralEcalEnergy &&
       settings.chargedEcalEnergyMode == ChargedEnergyMode::ElectronPhoton)
     throw std::invalid_argument("ElectronPhoton cannot reuse a separate neutral-energy measurement");
+  if (settings.intervals.empty() && (settings.neutralEcalEnergy ||
+      (settings.chargedEcalEnergy && settings.chargedEcalEnergyMode == ChargedEnergyMode::ElectronPhoton)))
+    throw std::invalid_argument("No-breakpoint fit only supports electron-only charged energy");
   if (hits.size() < 3) throw std::runtime_error("Insufficient hits");
   for (int interval : settings.intervals)
     if (interval < 0 || static_cast<std::size_t>(interval + 1) >= hits.size())
@@ -118,6 +176,9 @@ FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::Tracke
   // Rauch-Tung-Striebel backward pass using each retained transition joint.
   // With no breakpoint, every transition stays five-dimensional.
   result.smoothed = result.filtered;
+  if (settings.chargedEcalEnergy)
+    result.smoothed.back() = constrainChargedEnergy(result, result.filtered.back(),
+        m_adapter.predictCalorimeter(result.filtered.back(), hits.back()), settings);
   for (int i = static_cast<int>(transitions.size()) - 1; i >= 0; --i) {
     const auto& edge = transitions[i];
     const auto& downstream = result.smoothed[i + 1];
@@ -145,6 +206,7 @@ FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::Tracke
     if (i) noises.push_back(transitions[i-1].noise);
   }
   scoreSmoothed(hits,result,predicted,covariances,smoothed,noises,result.predicted);
+  result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
   if (settings.beamSpot) finishBeamSpot(result);
   if (settings.captureGaussianModel) {
     try {
@@ -352,57 +414,8 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
 
   std::optional<LossTrackState> terminalSmoothed;
   if (settings.chargedEcalEnergy) {
-    const auto [measuredEnergy, sigmaEnergy] = *settings.chargedEcalEnergy;
-    if (!std::isfinite(measuredEnergy) || measuredEnergy <= 0 ||
-        !std::isfinite(sigmaEnergy) || sigmaEnergy <= 0)
-      throw std::invalid_argument("Invalid charged ECAL energy measurement");
-    const auto ecalStep = m_adapter.predictCalorimeter(live, hits.back());
-    const auto& ecalPredicted = ecalStep.predicted;
-    const auto& transport = ecalStep.transport;
-    const auto& noise = ecalStep.noise;
-    const auto projection = chargedEnergyProjection(ecalPredicted, settings.chargedEcalEnergyMode);
-    const double predictedEnergy = projection.energy;
-    const auto& energyDerivative = projection.derivative;
-    const double observationVariance = sigmaEnergy * sigmaEnergy;
-    const double innovationVariance =
-        (energyDerivative * ecalPredicted.covariance * transpose(energyDerivative))(0, 0)
-        + observationVariance;
-    if (!std::isfinite(innovationVariance) || innovationVariance <= 0)
-      throw std::runtime_error("Invalid charged ECAL innovation variance");
-    const double residual = measuredEnergy - predictedEnergy;
-    GaussianHitModel observation{energyDerivative, TMatrixD(1, 1), TMatrixD(1, 1)};
-    observation.noise(0, 0) = observationVariance;
-    observation.residual(0, 0) = residual;
-    const auto ecalFiltered = updateScalarState(ecalPredicted, observation);
-    result.chargedEcalStep = ecalStep;
-    result.chargedEcalStep->filtered = ecalFiltered;
-    const TMatrixD smoothingGain = live.covariance * transpose(transport) *
-        inverseCovariance(ecalPredicted.covariance);
-    TMatrixD complement(6, 6);
-    complement.UnitMatrix();
-    complement -= smoothingGain * transport;
-    terminalSmoothed.emplace();
-    terminalSmoothed->pivot = live.pivot;
-    terminalSmoothed->mean = live.mean + smoothingGain *
-        stateDifference(ecalFiltered.mean, ecalPredicted.mean);
-    terminalSmoothed->covariance = complement * live.covariance * transpose(complement) +
-        smoothingGain * (noise + ecalFiltered.covariance) * transpose(smoothingGain);
-    validateCovariance(terminalSmoothed->covariance);
-    result.chargedEcalPredictedEnergy = predictedEnergy;
-    result.chargedEcalResidual = residual;
-    result.chargedEcalInnovationVariance = innovationVariance;
-    result.chargedEcalChi2 = residual * residual / innovationVariance;
-    const TMatrixD innovationShift = stateDifference(ecalFiltered.mean, ecalPredicted.mean);
-    const TMatrixD processScoreDirection =
-        inverseCovariance(ecalPredicted.covariance) * innovationShift;
-    const double processChi2 = (transpose(processScoreDirection) * noise *
-        processScoreDirection)(0, 0);
-    if (!std::isfinite(processChi2) || processChi2 < -1.e-8)
-      throw std::runtime_error("Invalid tracker-to-ECAL process penalty");
-    result.chargedEcalPostfitChi2 = residual * residual * observationVariance /
-        (innovationVariance * innovationVariance) + std::max(0., processChi2);
-    result.chi2 += result.chargedEcalChi2;
-    ++result.measurementDimensions;
+    terminalSmoothed = constrainChargedEnergy(result, live,
+        m_adapter.predictCalorimeter(live, hits.back()), settings);
   }
 
   auto smoothedMean = filteredMean;

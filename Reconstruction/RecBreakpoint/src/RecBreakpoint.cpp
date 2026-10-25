@@ -22,6 +22,7 @@
 #include <numeric>
 #include <optional>
 #include <utility>
+#include <type_traits>
 
 namespace {
 enum CaloFamily {
@@ -82,8 +83,11 @@ int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& 
   // extrapolation, whose failure must not alter the fitted IP and hit states.
   try {
     const auto calo = fit.chargedEcalStep
-        ? breakpoint::toEDM(fit.chargedEcalStep->filtered.track(), bz,
-                            edm4hep::TrackState::AtCalorimeter)
+        ? std::visit([bz](const auto& step) {
+            if constexpr (std::is_same_v<std::decay_t<decltype(step)>, breakpoint::MeasurementStep>)
+              return breakpoint::toEDM(step.filtered, bz, edm4hep::TrackState::AtCalorimeter);
+            else return breakpoint::toEDM(step.filtered.track(), bz, edm4hep::TrackState::AtCalorimeter);
+          }, *fit.chargedEcalStep)
         : adapter.propagateToCalorimeter(fit.endpoint.back(), hits.back());
     caloTuple.assign(calo, bz, 1);
     track.addToTrackStates(calo);
@@ -142,9 +146,9 @@ StatusCode RecBreakpoint::initialize() {
       ? m_recordEcalConstraintClusters : m_chargedEcalClusters.objKey();
   m_recordChargedEcalEnergyMode = m_chargedEcalEnergyMode.value();
   if (m_chargedEcalMeasurement && (m_recordChargedEcalInput.empty() ||
-      (m_recordChargedEcalEnergyMode == "ElectronPhoton" && (m_eloss || m_neutralEcalMeasurement)))) {
+      (m_recordChargedEcalEnergyMode == "ElectronPhoton" && m_eloss))) {
     error() << "ChargedEcalInputClusters must be nonempty; ElectronPhoton requires"
-            << " ElossOn=False and NeutralEcalMeasurement=False" << endmsg;
+            << " ElossOn=False" << endmsg;
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName == "Auto") {
@@ -333,6 +337,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("free_loss_charged_ecal_energy_error", &m_chargedEcalMeasurementError);
   m_tree->Branch("charged_ecal_input_clusters", &m_recordChargedEcalInput);
   m_tree->Branch("ecal_constraint_input", &m_recordEcalConstraintInput);
+  m_tree->Branch("charged_ecal_effective_energy_mode", &m_recordChargedEcalEffectiveMode);
   m_tree->Branch("ecal_constraint_input_pfos", &m_recordEcalConstraintPfos);
   m_tree->Branch("ecal_constraint_input_clusters", &m_recordEcalConstraintClusters);
   m_tree->Branch("charged_ecal_energy_mode", &m_recordChargedEcalEnergyMode);
@@ -574,6 +579,7 @@ StatusCode RecBreakpoint::execute() {
     m_chargedEcalMeasurementEnergy = m_chargedEcalMeasurementError = nan;
     m_chargedEcalClusterIndices.clear();
     m_chargedEcalSelectionError.clear();
+    m_recordChargedEcalEffectiveMode.clear();
     if (m_chargedEcalMeasurement) {
       try {
         const auto measurement = breakpoint::collectChargedEnergy(track, *constraintPfos,
@@ -1062,6 +1068,11 @@ StatusCode RecBreakpoint::execute() {
       }
       std::array<std::optional<breakpoint::PairedFitResult>, 6> constrained;
       std::array<breakpoint::FitSettings, 2> cumulative{{settings, settings}};
+      const auto chargedMode = breakpoint::effectiveChargedEnergyMode(settings.chargedEcalEnergyMode,
+          !settings.intervals.empty(), m_collectedNeutralStatus == 2);
+      m_recordChargedEcalEffectiveMode = chargedMode == breakpoint::ChargedEnergyMode::ElectronPhoton
+          ? "ElectronPhoton" : "ElectronOnly";
+      for (auto& variant : cumulative) variant.chargedEcalEnergyMode = chargedMode;
       std::array<const breakpoint::PairedFitResult*, 2> previous{{
           &paired, freeKFFallback ? nullptr : &freeResult}};
       int requestedMask = 0;
@@ -1075,12 +1086,12 @@ StatusCode RecBreakpoint::execute() {
           if (kind == 0) {
             variant.beamSpot = m_recordBeamSpotSettings;
             available = true;
-          } else if (settings.intervals.size() == 1) {
+          } else {
             if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
               variant.chargedEcalEnergy = std::make_pair(
                   m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
               available = true;
-            } else if (kind == 2 && m_collectedNeutralStatus == 2) {
+            } else if (kind == 2 && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2) {
               variant.neutralEcalEnergy = std::make_pair(
                   m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
               available = true;
@@ -1177,22 +1188,25 @@ StatusCode RecBreakpoint::execute() {
           }
         }
         if (m_verbose && neutral.chargedEcalStep) {
-          const auto& step = *neutral.chargedEcalStep;
-          info() << std::setprecision(17) << "ChargedEnergyKF event=" << m_event
-                 << " track=" << m_trackIndex << " family=" << named.first << " pivot=[" << step.predicted.pivot.x << ' '
-                 << step.predicted.pivot.y << ' ' << step.predicted.pivot.z << ']' << endmsg;
-          for (const auto& item : std::vector<std::pair<const char*, const TMatrixD*>>{
-              {"source_mean", &neutral.persistentFiltered.back().mean},
-              {"source_covariance", &neutral.persistentFiltered.back().covariance},
-              {"predicted_mean", &step.predicted.mean}, {"predicted_covariance", &step.predicted.covariance},
-              {"filtered_mean", &step.filtered.mean}, {"filtered_covariance", &step.filtered.covariance},
-              {"transport", &step.transport}, {"noise", &step.noise}}) {
-            std::ostringstream dump;
-            dump << std::setprecision(17) << "ChargedEnergyKF " << item.first << "=[";
-            for (int i=0;i<item.second->GetNrows();++i)
-              for (int j=0;j<item.second->GetNcols();++j) dump << (*item.second)(i,j) << ' ';
-            info() << dump.str() << ']' << endmsg;
-          }
+          std::visit([&](const auto& step) {
+            info() << std::setprecision(17) << "ChargedEnergyKF event=" << m_event
+                   << " track=" << m_trackIndex << " family=" << named.first << " pivot=[" << step.predicted.pivot.x << ' '
+                   << step.predicted.pivot.y << ' ' << step.predicted.pivot.z << ']' << endmsg;
+            for (const auto& item : std::vector<std::pair<const char*, const TMatrixD*>>{
+                {"source_mean", neutral.persistentFiltered.empty() ? &neutral.filtered.back().mean
+                    : &neutral.persistentFiltered.back().mean},
+                {"source_covariance", neutral.persistentFiltered.empty() ? &neutral.filtered.back().covariance
+                    : &neutral.persistentFiltered.back().covariance},
+                {"predicted_mean", &step.predicted.mean}, {"predicted_covariance", &step.predicted.covariance},
+                {"filtered_mean", &step.filtered.mean}, {"filtered_covariance", &step.filtered.covariance},
+                {"transport", &step.transport}, {"noise", &step.noise}}) {
+              std::ostringstream dump;
+              dump << std::setprecision(17) << "ChargedEnergyKF " << item.first << "=[";
+              for (int i=0;i<item.second->GetNrows();++i)
+                for (int j=0;j<item.second->GetNcols();++j) dump << (*item.second)(i,j) << ' ';
+              info() << dump.str() << ']' << endmsg;
+            }
+          }, *neutral.chargedEcalStep);
         }
         if (m_verbose && neutral.neutralEcal) {
           const auto& observation = *neutral.neutralEcal;
