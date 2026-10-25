@@ -312,70 +312,38 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PRE-PFO INPUT + CONDITIONAL CHARGED ENERGY — INSTALLED (2026-10-26).**
-RecBreakpoint now supports the requested track-wise ElectronPhoton routing:
-with one selected breakpoint and no usable collected neutral, constrain the
-electron+photon sum; with a collected hit-supported neutral, constrain the
-charged electron only and optionally apply the separate neutral measurement.
-With no selected breakpoint, still apply the charged electron-energy update,
-using a genuine 5D native ECAL-face KF update and RTS back through the tracker.
-No artificial loss coordinate/prior is added. The no-breakpoint free endpoint
-copies the constrained ordinary fit. Missing charged observations and failed
-updates retain earlier accepted constraints; no cluster is manufactured.
+**BREAKPOINT AUDIT: NEUTRAL-CONSTRAINED FREE-LOSS ACCEPTANCE (2026-10-26).**
+Current installed pre-PFO/conditional charged routing remains unchanged. The
+rec_bp_barrel_20261026 campaign has 376 analyzed files (80,360 track rows).
+Beam/charged/neutral stages are cumulative (111); PreReclustering inputs and
+ElectronPhoton campaign steering remain active. Standalone/compiled charged
+mode remains ElectronOnly. Diffuse constraints/free-loss work remains deferred.
 
-ElectronOnly remains the compiled/card default. ElectronPhoton requires
-ElossOn=False but now permits NeutralEcalMeasurement=True. Passive collection
-(with the existing theta/phi window) steers the charged interpretation even when
-the neutral measurement is OFF. The new charged_ecal_effective_energy_mode
-field records the per-track choice alongside the requested mode; statuses and
-masks identify actual measurement application. Beam/charged/neutral stages
-remain cumulative from the original seed/prior, not previous fitted posteriors.
+Independent audit found (1) grossly invalid physical photon energy accepted by
+frozen energy linearizations and (2) accepted Minuit endpoints worse than valid
+already-evaluated candidates. Point 2 affects 303/7163 accepted neutral-stage
+fits (4.23%, absolute NLL2 gap >0.001), versus 17/30170 tracker-only, 13/30038 beam,
+and 8/28986 charged. These counts INCLUDE topology controls. The link between
+points 1 and 2 is suspected, not established. All 11 C++ and 44 batch tests pass
+but do not cover these failures. A separate 1D-strip adapter issue is a synthetic
+probe finding, not established as relevant to the current campaign.
 
-The shared EcalConstraintInput default remains PreReclustering, reading
-CyberPFOPreReclustering/EcalClusterPreReclustering through saved track links.
-FinalPFO remains available; empty ChargedEcalInputClusters uses linked ECAL,
-explicit alternates retain unique hit matching. Final-PFO diagnostic branches
-and neutral_pfos side tree are unchanged. Selected pre-PFO cluster indices are
-rec-snapshot indices, not final neutral_pfos indices. Missing pre-PFO input fails
-explicitly; maintained cards preflight it before PodioInput.
+Only objective documentation/comments were corrected (3ca66e1); no numerical
+repair, installation, or new batch run. Push failed on SSH system-config
+permissions. Next discuss point 2: inspect per-start Minuit behavior and scan
+objective versus prior center with/without neutral, recording physical/affine
+energy and invalid regions. Do not silently promote scan candidates, clip
+states, or implement acceptance repairs before user discussion.
 
-Mechanical gate: all 11 C++ tests pass. A 20-event/22-track local fixture gives
-15 successful no-breakpoint charged updates, one resolved breakpoint with all
-three constraints, five unresolved breakpoints with beam+charged, and one
-missing-charged event retaining beam. Two multi-track events are controls, not
-topology-clean optimization evidence. Previous electron-only breakpoint rows
-and all ten previous unresolved sum endpoints reproduce exactly. Resolved
-routing matches explicit ElectronOnly; neutral-OFF routing, manual empty-list
-beam ON/OFF, native 5D covariance contraction and unconstrained endpoint
-regression pass. All 44 batch tests now pass after the user requested the
-SIM-reuse full-reconstruction submission defaults and the wrapper test was
-synchronized. No population/endcap performance claim.
-Evidence: agents_record/2026-10-26-conditional-charged-energy.md.
-Outgoing AGENTS: agents_record/2026-10-26-agents-before-conditional-charged-energy.md.
+Detailed numerical evidence, audit scope, reproduction recipe, and tomorrow's
+checklist: agents_record/2026-10-26-breakpoint-independent-audit-handoff.md.
+Outgoing full status preserved in
+agents_record/2026-10-26-agents-before-breakpoint-audit-handoff.md, including
+installation gates and batch defaults. Deployment records remain authoritative.
 
-The consumer and preceding PFA snapshot exporter are now installed in the
-project-default InstallArea/x86_64-el9-gcc11-opt after explicit user approval
-and confirmation of no active jobs. Package-scoped rename replacement preserved
-rollback copies; no GSF/shared tracking libraries or batch settings changed.
-Direct installed-runtime smoke: 18 rec events reproduce all 447 affected PFA
-fields exactly; seven selected breakpoint rows reproduce all 855 track fields
-and 57 side-tree fields exactly against build-tree results. All 11 CTests pass.
-Deployment/rollback evidence:
-agents_record/2026-10-26-install-pre-pfo-and-charged-routing.md.
-Outgoing status: agents_record/2026-10-26-agents-before-pre-pfo-install.md.
-
-Next: regenerate rec and breakpoint flat tuples with newly prepared cards.
-The worker already uses project setup/default installation. The user-requested
-subbreakpointjobs.sh campaign defaults are now STAGES=trk,calodigi,rec,breakpoint,
-OUTPUT_TUPLEPATH=rec_bp_barrel_20261026 and
-BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton, with environment overrides retained.
-It reuses sim_large_barrel_20261018, keeps 111 and group cms. The standalone
-card/compiled energy-mode default remains ElectronOnly; the submission wrapper
-explicitly selects the conditional sum mode for this campaign.
-Record: agents_record/2026-10-26-rec-bp-batch-defaults.md.
-No batch was submitted and no prior tuples were removed. Older rec files
-need explicit legacy steering or regeneration. Snapshot/input evidence remains
-in agents_record/2026-10-25-pre-reclustering-pfo-snapshot.md and
-agents_record/2026-10-26-pre-pfo-constraint-input.md.
-Do not implement constraints or the free-loss wrapper in diffuse tracking;
-the user explicitly deferred that work.
+Latest gallery: TrackingPerformanceStudies/breakpoint_prereco111_pt_resolution_20261026,
+served under the TrackingPerformanceStudies root on localhost8000. Inclusive
+hybrid now shows only +/-2%, normalized over all 61,420 paired tracks, baseline
+versus free000 or free111 hybrid (truth-loss gate at1%). No truth-override curve.
+Other plots unchanged. This idealized truth-gated hybrid is not a reconstructed
+classifier or proof of tail safety.
