@@ -347,9 +347,9 @@ topology-clean optimization evidence. Previous electron-only breakpoint rows
 and all ten previous unresolved sum endpoints reproduce exactly. Resolved
 routing matches explicit ElectronOnly; neutral-OFF routing, manual empty-list
 beam ON/OFF, native 5D covariance contraction and unconstrained endpoint
-regression pass. 43/44 batch tests pass; the sole existing failure expects
-breakpoint-only while the user submit script selects trk,calodigi,rec. Preserve
-that user setting. No population/endcap performance claim.
+regression pass. All 44 batch tests now pass after the user requested the
+SIM-reuse full-reconstruction submission defaults and the wrapper test was
+synchronized. No population/endcap performance claim.
 Evidence: agents_record/2026-10-26-conditional-charged-energy.md.
 Outgoing AGENTS: agents_record/2026-10-26-agents-before-conditional-charged-energy.md.
 
@@ -365,10 +365,14 @@ agents_record/2026-10-26-install-pre-pfo-and-charged-routing.md.
 Outgoing status: agents_record/2026-10-26-agents-before-pre-pfo-install.md.
 
 Next: regenerate rec and breakpoint flat tuples with newly prepared cards.
-The worker already uses project setup/default installation. The user submit
-script still selects trk,calodigi,rec, not breakpoint; do not silently change
-its stages/paths. ElectronOnly remains the default energy mode: explicitly
-select BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton for conditional sum routing.
+The worker already uses project setup/default installation. The user-requested
+subbreakpointjobs.sh campaign defaults are now STAGES=trk,calodigi,rec,breakpoint,
+OUTPUT_TUPLEPATH=rec_bp_barrel_20261026 and
+BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton, with environment overrides retained.
+It reuses sim_large_barrel_20261018, keeps 111 and group cms. The standalone
+card/compiled energy-mode default remains ElectronOnly; the submission wrapper
+explicitly selects the conditional sum mode for this campaign.
+Record: agents_record/2026-10-26-rec-bp-batch-defaults.md.
 No batch was submitted and no prior tuples were removed. Older rec files
 need explicit legacy steering or regeneration. Snapshot/input evidence remains
 in agents_record/2026-10-25-pre-reclustering-pfo-snapshot.md and

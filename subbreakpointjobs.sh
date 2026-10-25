@@ -8,11 +8,11 @@ export NEVT=${NEVT:-200}
 export SEED_FIRST=${SEED_FIRST:-1}
 export SEED_LAST=${SEED_LAST:-500}
 export INPUT_TUPLEPATH=${INPUT_TUPLEPATH:-sim_large_barrel_20261018}
-export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-bp_flat_barrel_20261018}
-# Breakpoint-only by default, using existing REC inputs. For existing SIM,
-# use STAGES=trk,calodigi,rec,breakpoint; prepend sim for a complete new chain.
+export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-rec_bp_barrel_20261026}
+# Reconstruct existing SIM through REC and breakpoint by default.
+# Use STAGES=breakpoint for existing REC; prepend sim for a complete new chain.
 # Retain SIM/REC/flat outputs; remove owned TRK/calodigi only after validation.
-export STAGES=${STAGES:-breakpoint}
+export STAGES=${STAGES:-trk,calodigi,rec,breakpoint}
 export MEMORY_MB=${MEMORY_MB:-5000}
 # hep_sub -g group, used for both new and already-prepared jobs.
 export SUBMIT_GROUP=${SUBMIT_GROUP:-cms}
@@ -24,6 +24,8 @@ export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
 export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-1}
 export BP_CHARGED_ECAL_MEASUREMENT=${BP_CHARGED_ECAL_MEASUREMENT:-1}
 export BP_NEUTRAL_ECAL_MEASUREMENT=${BP_NEUTRAL_ECAL_MEASUREMENT:-1}
+# Sum for unresolved photons; electron-only with a collected neutral or no breakpoint.
+export BP_CHARGED_ECAL_ENERGY_MODE=${BP_CHARGED_ECAL_ENERGY_MODE:-ElectronPhoton}
 # New simulation files use sim-barrel-<seed>.root. SAMPLE_REGION controls that
 # filename convention, and also the gun theta range if STAGES includes sim.
 # Set SAMPLE_REGION='' to prepare an older momentum/theta-named campaign;

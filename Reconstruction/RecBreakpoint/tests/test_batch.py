@@ -425,7 +425,7 @@ class BatchTest(unittest.TestCase):
                               fit.NeutralEcalMeasurement], [v == '1' for v in expected])
             self.assertFalse((carddir/'submitted.json').exists())
 
-    def test_submission_wrapper_rec_default_and_full_chain_override(self):
+    def test_submission_wrapper_sim_reuse_default_and_full_chain_override(self):
         for stages in (None, ','.join(batch.ORDER)):
             with self.subTest(stages=stages):
                 output = 'wrapper_rec' if stages is None else 'wrapper_full'
@@ -442,7 +442,8 @@ class BatchTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 carddir = self.repo/output/'runcards/barrel-12'
                 job = json.loads((carddir/'job.json').read_text())
-                self.assertEqual(job['stages'], ['breakpoint'] if stages is None else list(batch.ORDER))
+                self.assertEqual(job['stages'], list(batch.ORDER[1:]) if stages is None else list(batch.ORDER))
+                self.assertEqual(job['controls']['BP_CHARGED_ECAL_ENERGY_MODE'], 'ElectronPhoton')
                 self.assertFalse((carddir/'submitted.json').exists())
                 for stage, predecessor in zip(batch.ORDER[1:], batch.ORDER[:-1]):
                     if stage not in job['stages']: continue
