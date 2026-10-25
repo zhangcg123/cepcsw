@@ -131,7 +131,7 @@ also supply the optional neutral-energy KF measurement; collection uses no truth
 | collected_neutral_ecal_status | 0: no input AtCalorimeter reference; 1: valid reference, no qualifying cluster; 2: clusters selected; -1: collection error |
 | collected_neutral_ecal_error | Error text for status -1 |
 | collected_neutral_ecal_cluster_count | Number of selected unique hit-supported neutral ECAL clusters |
-| collected_neutral_ecal_cluster_indices | EcalCluster indices, linking to the event-level neutral_pfos tree |
+| collected_neutral_ecal_cluster_indices | Indices in ecal_constraint_input_clusters; pre-PFO indices are NOT final neutral_pfos-tree indices |
 | collected_neutral_ecal_cluster_energy | Aligned per-cluster energies in GeV |
 | collected_neutral_ecal_cluster_energy_error | Aligned per-cluster errors in GeV using the configured resolution |
 | collected_neutral_ecal_energy | Sum of selected cluster energies in GeV |
@@ -141,11 +141,14 @@ No selection gives empty vectors, count zero and zero energy/error; status
 distinguishes a missing track reference from an empty window. A collection
 error gives empty vectors/count zero and NaN summed energy/error. Each track
 uses its input KF ECAL reference point with the configured theta/phi windows.
-Only neutral PFO clusters belonging to EcalCluster with actual calorimeter
+Only neutral PFO clusters belonging to the selected ECAL collection with actual calorimeter
 hits, finite positive energy and valid position qualify; a cluster is counted
 once within a track. Different tracks may independently select the same cluster
 when their windows overlap: this is not exclusive event-wide ownership.
-The per-event `neutral_pfos` tree remains separate and is unchanged.
+The per-event `neutral_pfos` tree remains separate and records final CyberPFOPID,
+unchanged. Track-row charged_pfo_* diagnostics also remain final-PFO information.
+The constraint observations use `EcalConstraintInput`, default PreReclustering;
+their source collection names are saved explicitly in each track row.
 All track-output names must differ
 from each other and the input. Each successful result contains IP, first-hit,
 last-hit, and, when native extrapolation succeeds, ECAL-face (`AtCalorimeter`)
@@ -642,12 +645,32 @@ not the smoothed state covariance. No reference-trajectory iteration is
 introduced. See [the exact objective](docs/smoothed-objective.md).
 `ChargedEcalMeasurement` (compiled/card default **false**;
 `BP_CHARGED_ECAL_MEASUREMENT=1`) is an experimental measurement for both
-ordinary and free-loss fits. With exactly one charged CyberPFOPID linked to
-the input track, it selects its hit-supported ECAL shower(s). The configurable
-`ChargedEcalInputClusters` chooses the energy source. Compiled compatibility
-default `EcalCluster` uses the final PFO-linked energy unchanged. The maintained
-card explicitly selects `TrkMergedECAL`, before final PFO energy redistribution.
-For an alternate snapshot, every final charged-cluster hit identity (cell ID
+ordinary and free-loss fits. With exactly one charged PFO from the selected input
+linked to the input track, it selects its hit-supported ECAL shower(s).
+
+`EcalConstraintInput` is the shared source selector for charged and neutral
+observations (compiled/card default **PreReclustering**):
+
+| Value | PFOs | Linked ECAL clusters |
+|---|---|---|
+| PreReclustering | CyberPFOPreReclustering | EcalClusterPreReclustering |
+| FinalPFO | CyberPFOPID | EcalCluster |
+
+The default uses the actual saved pre-PFO track/cluster links, without geometric
+or constituent-hit rematching. The neutral collector takes trackless, zero-charge,
+hit-supported ECAL clusters from the same PFO source, still within the input KF
+ECAL-reference theta/phi window. No PID requirement, HCAL addition, synthetic
+neutral, energy-error change or KF/objective modification is introduced.
+Missing pre-PFO collections are an error; no silent final-PFO fallback is allowed.
+An existing collection with no eligible cluster retains the existing earlier-stage
+fallback behavior. Passive neutral collection uses this selector even when its
+fit constraint is off.
+
+`ChargedEcalInputClusters` remains an optional energy-source override; its new
+compiled/card default is the empty string, meaning the linked ECAL collection
+selected above. To reproduce the previous maintained merged-source campaign,
+set `EcalConstraintInput="FinalPFO"` and `ChargedEcalInputClusters="TrkMergedECAL"`.
+For an explicit alternate snapshot, every linked charged-cluster hit identity (cell ID
 and copied 3D position, not calibrated energy or new collection index) must
 belong to exactly one input cluster. The source may contain additional hits
 absent from the final cached hit list. No match or multiple matches leave the
@@ -677,19 +700,22 @@ Example steering for the new unresolved-shower constraint:
 
 ```python
 fit.ChargedEcalMeasurement = True
-fit.ChargedEcalInputClusters = "TrkMergedECAL"
+fit.EcalConstraintInput = "PreReclustering"
+fit.ChargedEcalInputClusters = ""
 fit.ChargedEcalEnergyMode = "ElectronPhoton"  # or "ElectronOnly"
 fit.NeutralEcalMeasurement = False
 fit.ElossOn = False
 ```
 
-The maintained card adds the selected input collection to PodioInput only when
-the charged constraint is enabled. `BP_CHARGED_ECAL_INPUT_CLUSTERS` and
-`BP_CHARGED_ECAL_ENERGY_MODE` are frozen into prepared batch jobs. For example,
-`BP_CHARGED_ECAL_MEASUREMENT=1 BP_CHARGED_ECAL_INPUT_CLUSTERS=TrkMergedECAL
+The maintained card loads the selected pre-PFO graph even for passive neutral
+collection. An alternate charged energy collection is added only when the charged
+constraint is enabled. The input controls and `BP_CHARGED_ECAL_ENERGY_MODE`
+are frozen into prepared batch jobs. For example,
+`BP_CHARGED_ECAL_MEASUREMENT=1 BP_ECAL_CONSTRAINT_INPUT=PreReclustering
 BP_CHARGED_ECAL_ENERGY_MODE=ElectronPhoton BP_NEUTRAL_ECAL_MEASUREMENT=0`.
-Existing frozen cards that omit these new properties retain electron-only
-final-PFO behavior. Native
+Old cards that omit the selector now inherit the new compiled pre-PFO default:
+reprepare them with explicit FinalPFO for legacy inputs, or with the new card
+for regenerated rec files. Do not silently edit frozen cards. Native
 propagation takes the outer tracker state to the ECAL face; the propagated
 state, transport Jacobian and process noise come together from the same
 `TKalDetCradle::Transport` machinery used by tracker-hit propagation. These are
@@ -722,6 +748,29 @@ fields remain the shared charged observation (status 2 means selected, not succe
 `charged_ecal_input_clusters`, `charged_ecal_energy_mode`,
 `charged_ecal_source_cluster_indices` and `charged_ecal_selection_error`
 record the source and interpretation of that observation.
+`ecal_constraint_input`, `ecal_constraint_input_pfos`, and
+`ecal_constraint_input_clusters` record the common selector and resolved PFO/ECAL
+names; the charged override, when present, is separately recorded by
+`charged_ecal_input_clusters`. Pre-PFO cluster indices refer to the rec snapshot,
+not to the unchanged final-PFO diagnostic tree. The main tree still saves all
+selected neutral energies and errors directly.
+
+Steering (ordinary and free-loss share these inputs):
+
+```python
+fit.EcalConstraintInput = "PreReclustering"  # default; alternative: "FinalPFO"
+fit.ChargedEcalInputClusters = ""           # direct linked ECAL energy
+```
+
+The batch helper freezes `BP_ECAL_CONSTRAINT_INPUT` (default PreReclustering)
+and `BP_CHARGED_ECAL_INPUT_CLUSTERS` into the generated card. New manifests
+requesting PreReclustering require the pre-PFO/cluster/hit collections during
+rec verification, before deleting their owned calodigi input. Existing manifests
+without this new control retain their previous rec-validation contract.
+No submission-script stage/path/group setting is changed. Deployment requires
+both the PFA snapshot exporter and this breakpoint consumer; old rec files need
+rec regeneration, or explicit FinalPFO selection. Neither update is installed
+by a build alone.
 Ordinary and free-loss likelihoods use the same score routine, including neutral
 in the captured tracker model and the charged conditional likelihood once.
 
@@ -788,7 +837,8 @@ the native source/predicted/filtered states, `F` and `Q`.
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
 | ChargedEcalMeasurement | false | Two cumulative charged-stage RTS families; inherit enabled beam, add ECAL-face energy with one breakpoint and one linked charged PFO |
-| ChargedEcalInputClusters | EcalCluster | Input energy collection; maintained card explicitly selects TrkMergedECAL; BP_CHARGED_ECAL_INPUT_CLUSTERS |
+| EcalConstraintInput | PreReclustering | Common charged/neutral PFO source: PreReclustering or FinalPFO; BP_ECAL_CONSTRAINT_INPUT |
+| ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
 | ChargedEcalEnergyMode | ElectronOnly | ElectronOnly or ElectronPhoton scalar prediction; BP_CHARGED_ECAL_ENERGY_MODE; sum mode requires ElossOn and NeutralEcalMeasurement off |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |

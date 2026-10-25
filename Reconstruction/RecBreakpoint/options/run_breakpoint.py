@@ -171,13 +171,15 @@ for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARG
 # CyberPFA may have used the input track momentum when constructing this shower.
 fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
 # Sub-options of ChargedEcalMeasurement, shared by ordinary and free-loss RTS.
-# Source EcalCluster retains the old final-PFO energy. TrkMergedECAL uses the
-# pre-reclustering shower energy, selected by a unique constituent-hit match
-# to the final track-linked charged shower. No new track links are written;
-# no match/ambiguous match preserves the preceding constraint stage.
-# The maintained card selects TrkMergedECAL; the compiled compatibility default
-# remains EcalCluster so existing frozen cards retain their source.
-fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", "TrkMergedECAL")
+# Shared charged/neutral source: PreReclustering uses CyberPFOPreReclustering
+# and its EcalClusterPreReclustering links; FinalPFO uses CyberPFOPID/EcalCluster.
+# Missing pre collections are an error, never a silent switch to final PFOs.
+# Final-PFO diagnostic branches/neutral_pfos tree remain final-PFO information.
+fit.EcalConstraintInput = os.environ.get("BP_ECAL_CONSTRAINT_INPUT", "PreReclustering")
+# Empty: use the charged shower directly linked by the selected PFO.
+# Optional alternate energy collection (e.g. TrkMergedECAL): unique hit-provenance
+# matching is retained. Legacy campaign: FinalPFO plus TrkMergedECAL.
+fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", "")
 # ElectronOnly: predicted E = electron momentum at the ECAL face (mass ignored).
 # ElectronPhoton: predicted E = electron momentum * exp(b), the unresolved
 # electron+photon sum for ONE breakpoint and no other energy loss to ECAL.
@@ -243,9 +245,30 @@ fit.OutputFile = output_file  # Existing files cause failure, never overwrite.
 fit.OutputLevel = INFO
 
 # Derive input needs from the final property values, including manual edits.
+if fit.EcalConstraintInput not in ("PreReclustering", "FinalPFO"):
+    raise ValueError("EcalConstraintInput must be PreReclustering or FinalPFO")
+if fit.EcalConstraintInput == "PreReclustering":
+    _pre_collections = ["CyberPFOPreReclustering", "EcalClusterPreReclustering",
+                        "EcalHitsPreReclustering", "HcalClusterPreReclustering",
+                        "HcalHitsPreReclustering"]
+    # The legacy PodioInput can dereference a missing collection instead of failing cleanly.
+    import ROOT
+    _input = ROOT.TFile.Open(input_file, "READ")
+    if not _input or _input.IsZombie():
+        raise ValueError("Cannot open breakpoint input: " + input_file)
+    try:
+        _events = _input.Get("events")
+        _missing = [name for name in _pre_collections if not _events or not _events.GetBranch(name)]
+    finally:
+        _input.Close()
+    if _missing:
+        raise ValueError("Missing pre-reclustering inputs: " + ", ".join(_missing) +
+                         "; regenerate rec with the PFA snapshot exporter or explicitly set "
+                         "EcalConstraintInput=FinalPFO (BP_ECAL_CONSTRAINT_INPUT=FinalPFO)")
+    reader.collections += _pre_collections
 if fit.ChargedEcalMeasurement:
     _charged_source = str(fit.ChargedEcalInputClusters)
-    if _charged_source not in reader.collections:
+    if _charged_source and _charged_source not in reader.collections:
         reader.collections.append(_charged_source)
 if fit.IntervalSelectionMode == "Truth" or (fit.TruthOverride and fit.BreakpointIntervals):
     reader.collections += [

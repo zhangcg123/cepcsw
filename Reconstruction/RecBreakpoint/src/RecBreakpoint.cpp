@@ -103,7 +103,7 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
     : Algorithm(name, locator) {
   declareProperty("InputTracks", m_input, "Tracks whose reconstructed hits are refitted");
   declareProperty("ChargedEcalInputClusters", m_chargedEcalClusters,
-                  "ECAL energy source; alternate snapshots are selected by constituent-hit provenance");
+                  "Empty uses the selected PFO's ECAL collection; explicit alternate sources use constituent-hit provenance");
   for (std::size_t i=0; i<m_constraintOutputs.size(); ++i)
     declareProperty(constraintOutputProperties[i], m_constraintOutputs[i],
                     "Cumulative constraint-stage RTS output; empty when disabled");
@@ -130,7 +130,16 @@ StatusCode RecBreakpoint::initialize() {
   m_seedSelectionName = m_seedHitSelection.value();
   m_lossStateModeName = m_lossStateMode.value();
   m_intervalSelectionName = m_intervalSelection.value();
-  m_recordChargedEcalInput = m_chargedEcalClusters.objKey();
+  m_recordEcalConstraintInput = m_ecalConstraintInput.value();
+  if (m_recordEcalConstraintInput != "PreReclustering" && m_recordEcalConstraintInput != "FinalPFO") {
+    error() << "EcalConstraintInput must be PreReclustering or FinalPFO" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  const bool preReclustering = m_recordEcalConstraintInput == "PreReclustering";
+  m_recordEcalConstraintPfos = preReclustering ? m_prePfos.objKey() : m_pidPfos.objKey();
+  m_recordEcalConstraintClusters = preReclustering ? m_preEcalClusters.objKey() : m_ecalClusters.objKey();
+  m_recordChargedEcalInput = m_chargedEcalClusters.objKey().empty()
+      ? m_recordEcalConstraintClusters : m_chargedEcalClusters.objKey();
   m_recordChargedEcalEnergyMode = m_chargedEcalEnergyMode.value();
   if (m_chargedEcalMeasurement && (m_recordChargedEcalInput.empty() ||
       (m_recordChargedEcalEnergyMode == "ElectronPhoton" && (m_eloss || m_neutralEcalMeasurement)))) {
@@ -323,6 +332,9 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("free_loss_charged_ecal_energy", &m_chargedEcalMeasurementEnergy);
   m_tree->Branch("free_loss_charged_ecal_energy_error", &m_chargedEcalMeasurementError);
   m_tree->Branch("charged_ecal_input_clusters", &m_recordChargedEcalInput);
+  m_tree->Branch("ecal_constraint_input", &m_recordEcalConstraintInput);
+  m_tree->Branch("ecal_constraint_input_pfos", &m_recordEcalConstraintPfos);
+  m_tree->Branch("ecal_constraint_input_clusters", &m_recordEcalConstraintClusters);
   m_tree->Branch("charged_ecal_energy_mode", &m_recordChargedEcalEnergyMode);
   m_tree->Branch("charged_ecal_source_cluster_indices", &m_chargedEcalClusterIndices);
   m_tree->Branch("charged_ecal_selection_error", &m_chargedEcalSelectionError);
@@ -488,9 +500,22 @@ StatusCode RecBreakpoint::execute() {
   const auto* trackTruthAssociations = selected ? m_trackTruthAssociations.get() : nullptr;
   const auto* pidPfos = selected ? m_pidPfos.get() : nullptr;
   const auto* ecalClusters = selected ? m_ecalClusters.get() : nullptr;
+  const auto* constraintPfos = pidPfos;
+  const auto* constraintClusters = ecalClusters;
+  if (selected && m_recordEcalConstraintInput == "PreReclustering") {
+    try {
+      constraintPfos = m_prePfos.get();
+      constraintClusters = m_preEcalClusters.get();
+    } catch (const std::exception& exception) {
+      error() << "PreReclustering input unavailable: regenerate rec files with the PFA snapshot exporter"
+              << " or explicitly select EcalConstraintInput=FinalPFO. " << exception.what() << endmsg;
+      return StatusCode::FAILURE;
+    }
+    if (!constraintPfos || !constraintClusters) return StatusCode::FAILURE;
+  }
   const auto* chargedClusters = selected && m_chargedEcalMeasurement
-      ? (m_chargedEcalClusters.objKey() == m_ecalClusters.objKey()
-          ? ecalClusters : m_chargedEcalClusters.get()) : nullptr;
+      ? (m_recordChargedEcalInput == m_recordEcalConstraintClusters
+          ? constraintClusters : m_chargedEcalClusters.get()) : nullptr;
   if (selected) {
     m_neutralPfoTuple.assign(m_event, *pidPfos, *ecalClusters,
                              *m_bremsPhotons.get(), *m_bremsPhotonSteps.get());
@@ -551,8 +576,8 @@ StatusCode RecBreakpoint::execute() {
     m_chargedEcalSelectionError.clear();
     if (m_chargedEcalMeasurement) {
       try {
-        const auto measurement = breakpoint::collectChargedEnergy(track, *pidPfos,
-            *ecalClusters, *chargedClusters, m_chargedEcalStochasticError.value(),
+        const auto measurement = breakpoint::collectChargedEnergy(track, *constraintPfos,
+            *constraintClusters, *chargedClusters, m_chargedEcalStochasticError.value(),
             m_chargedEcalConstantError.value());
         m_chargedEcalMeasurementStatus = measurement.status;
         if (measurement.status == 2) {
@@ -572,7 +597,7 @@ StatusCode RecBreakpoint::execute() {
     m_collectedNeutralError.clear();
     try {
       m_collectedNeutral = breakpoint::collectNeutralLoss(
-          track, *pidPfos, *ecalClusters,
+          track, *constraintPfos, *constraintClusters,
           m_neutralThetaWindow.value() * 1.e-3,
           m_neutralPhiWindow.value() * 1.e-3,
           m_neutralStochasticError.value(), m_neutralConstantError.value());

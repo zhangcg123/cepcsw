@@ -49,6 +49,10 @@ int main() {
   auto duplicate = pfos.create();
   duplicate.setCharge(0);
   duplicate.addToClusters(shared.getClusters()[0]);
+  // Pre-PFOs include HCAL links too; only membership in the selected ECAL counts.
+  edm4hep::ClusterCollection hcal;
+  auto hc = hcal.create(); hc.setEnergy(100); hc.setPosition({1000, 0, 0});
+  hc.addToHits(hits.create()); shared.addToClusters(hc);
   auto collect = [&](const edm4hep::Track& track) {
     return breakpoint::collectNeutralLoss(track, pfos, clusters, .01, .2, .011, .004);
   };

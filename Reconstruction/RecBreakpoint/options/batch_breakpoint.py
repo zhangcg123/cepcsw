@@ -52,7 +52,7 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_TRUTH_BACKWARD_FILTER',
                'BP_FREE_LOSS_FIT', 'BP_CHARGED_ECAL_MEASUREMENT',
-               'BP_CHARGED_ECAL_INPUT_CLUSTERS', 'BP_CHARGED_ECAL_ENERGY_MODE',
+               'BP_ECAL_CONSTRAINT_INPUT', 'BP_CHARGED_ECAL_INPUT_CLUSTERS', 'BP_CHARGED_ECAL_ENERGY_MODE',
                'BP_NEUTRAL_ECAL_MEASUREMENT',
                'BP_CHARGED_ECAL_STOCHASTIC', 'BP_CHARGED_ECAL_CONSTANT',
                'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
@@ -148,6 +148,7 @@ def prepare():
             raise ValueError(retired + ' was removed; use BP_BEAM_SPOT_CONSTRAINT')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
+    controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT',
@@ -156,12 +157,12 @@ def prepare():
                 'BP_FREE_LOSS_BACKWARD_FILTER',
                 'BP_TRUTH_BACKWARD_FILTER'):
         if key in controls: controls[key] = str(int(boolean(controls[key])))
+    if controls.get('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering') not in ('PreReclustering', 'FinalPFO'):
+        raise ValueError('BP_ECAL_CONSTRAINT_INPUT must be PreReclustering or FinalPFO')
     charged_mode = controls.get('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronOnly')
     if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
         raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')
     if controls.get('BP_CHARGED_ECAL_MEASUREMENT', '0') == '1':
-        if not controls.get('BP_CHARGED_ECAL_INPUT_CLUSTERS', 'TrkMergedECAL').strip():
-            raise ValueError('BP_CHARGED_ECAL_INPUT_CLUSTERS must not be empty')
         if charged_mode == 'ElectronPhoton' and controls.get('BP_NEUTRAL_ECAL_MEASUREMENT', '0') == '1':
             raise ValueError('ElectronPhoton requires BP_NEUTRAL_ECAL_MEASUREMENT=0')
     templates = {}
@@ -324,7 +325,7 @@ def submit_prepared(value):
     submit_jobs(jobs,dry)
 
 
-def verify(path, stage):
+def verify(path, stage, ecal_constraint_input=None):
     import ROOT
     file = ROOT.TFile.Open(str(path))
     if not file or file.IsZombie() or file.TestBit(ROOT.TFile.kRecovered):
@@ -343,6 +344,13 @@ def verify(path, stage):
                 'EcalCluster', 'CyberPFO', 'CyberPFOPID',
                 'GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps'):
             if not tree.GetBranch(name): raise RuntimeError('Missing rec collection: ' + name)
+        if ecal_constraint_input == 'PreReclustering':
+            for name in ('CyberPFOPreReclustering', 'EcalClusterPreReclustering',
+                         'EcalHitsPreReclustering', 'HcalClusterPreReclustering',
+                         'HcalHitsPreReclustering'):
+                if not tree.GetBranch(name):
+                    raise RuntimeError('Missing pre-reclustering collection: ' + name +
+                                       '; install the PFA snapshot exporter and rerun rec')
         print(f'rec events={tree.GetEntries()}', flush=True)
     elif stage == 'breakpoint':
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
@@ -424,7 +432,8 @@ def run(manifest):
     for stage in job['stages']:
         print('Running ' + stage + ': ' + job['cards'][stage], flush=True)
         subprocess.run([runner, job['cards'][stage]], cwd=repo, check=True)
-        ready = verify(Path(job['files'][stage]), stage)
+        ready = verify(Path(job['files'][stage]), stage,
+                       job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'))
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))
         if stage == 'calodigi':

@@ -34,6 +34,15 @@ int main() {
   require(collectChargedEnergy(other, pfos, final, merged, .011, .004).status == 1);
   auto duplicate = merged.create(); duplicate.setEnergy(12); duplicate.addToHits(copied);
   require(collectChargedEnergy(track, pfos, final, merged, .011, .004).status == 3);
+  // Pre-PFOs link directly to merged-energy copies: no hit-rematching ambiguity.
+  edm4hep::ReconstructedParticleCollection prePfos;
+  auto pre = prePfos.create(); pre.setCharge(-1); pre.addToTracks(track);
+  pre.addToClusters(source);
+  edm4hep::ClusterCollection hcal;
+  auto hc = hcal.create(); hc.setEnergy(50); hc.addToHits(extra);
+  pre.addToClusters(hc); // HCAL is not part of the ECAL energy measurement.
+  const auto direct = collectChargedEnergy(track, prePfos, merged, merged, .011, .004);
+  require(direct.status == 2 && direct.energy == 13 && direct.clusterIndices == std::vector<int>{0});
   edm4hep::ClusterCollection missing;
   require(collectChargedEnergy(track, pfos, final, missing, .011, .004).status == 1);
   auto secondPfo = pfos.create(); secondPfo.setCharge(-1); secondPfo.addToTracks(track);

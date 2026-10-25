@@ -13,8 +13,8 @@ struct ChargedEnergyCandidate {
   std::vector<int> clusterIndices;
 };
 
-/// Keep final PFO-track ownership; alternate snapshots must uniquely contain
-/// the final charged cluster's constituent hit identities. No geometry guess.
+/// Keep the selected PFO-track ownership; alternate snapshots must uniquely
+/// contain the linked charged cluster's constituent hits. No geometry guess.
 ChargedEnergyCandidate collectChargedEnergy(const edm4hep::Track& track,
     const edm4hep::ReconstructedParticleCollection& pfos,
     const edm4hep::ClusterCollection& finalClusters,

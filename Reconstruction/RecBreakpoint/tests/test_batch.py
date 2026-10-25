@@ -19,6 +19,26 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_ecal_input_default_and_legacy_are_frozen(self):
+        template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        assignments = '\n'.join(line for line in template.splitlines() if line.startswith(
+            ('fit.EcalConstraintInput =', 'fit.ChargedEcalInputClusters =')))
+        self.prepare()
+        job = self.manifest()
+        self.assertEqual(job['controls']['BP_ECAL_CONSTRAINT_INPUT'], 'PreReclustering')
+        fit = types.SimpleNamespace()
+        with patch.dict(os.environ, job['controls'], clear=True):
+            exec(assignments, {'fit': fit, 'os': os})
+        self.assertEqual(fit.EcalConstraintInput, 'PreReclustering')
+        self.assertEqual(fit.ChargedEcalInputClusters, '')
+        self.prepare(OUTPUT_TUPLEPATH='legacy', BP_ECAL_CONSTRAINT_INPUT='FinalPFO',
+                     BP_CHARGED_ECAL_INPUT_CLUSTERS='TrkMergedECAL')
+        legacy = self.manifest('legacy')
+        self.assertEqual(legacy['controls']['BP_ECAL_CONSTRAINT_INPUT'], 'FinalPFO')
+        self.assertEqual(legacy['controls']['BP_CHARGED_ECAL_INPUT_CLUSTERS'], 'TrkMergedECAL')
+        with self.assertRaisesRegex(ValueError, 'BP_ECAL_CONSTRAINT_INPUT'):
+            self.prepare(OUTPUT_TUPLEPATH='invalid', BP_ECAL_CONSTRAINT_INPUT='typo')
+
     def test_compiled_and_frozen_card_tracking_defaults_agree(self):
         import re
         self.prepare()
@@ -552,6 +572,20 @@ class BatchTest(unittest.TestCase):
         job,manifest,paths,identities=self.cleanup_fixture('rec,breakpoint')
         result=batch.cleanup_intermediate(job,manifest,'calodigi',None,True)
         self.assertEqual(result['status'],'retained_external');self.assertTrue(paths['calodigi'].exists())
+
+    def test_missing_pre_pfo_blocks_rec_cleanup_only_when_requested(self):
+        tree = MagicMock()
+        tree.GetEntries.return_value = 2
+        tree.GetBranch.side_effect = lambda name: None if name == 'CyberPFOPreReclustering' else object()
+        file = MagicMock()
+        file.IsZombie.return_value = False
+        file.TestBit.return_value = False
+        file.Get.return_value = tree
+        root = types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path: file, kRecovered=1))
+        with patch.dict('sys.modules', ROOT=root):
+            self.assertTrue(batch.verify(Path('fixture.root'), 'rec', 'FinalPFO'))
+            with self.assertRaisesRegex(RuntimeError, 'CyberPFOPreReclustering'):
+                batch.verify(Path('fixture.root'), 'rec', 'PreReclustering')
 
     def test_cleanup_retains_trk_only_output(self):
         job,manifest,paths,identities=self.cleanup_fixture('trk')

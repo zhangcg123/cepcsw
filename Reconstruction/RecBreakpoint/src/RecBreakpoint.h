@@ -73,7 +73,9 @@ private:
   DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_trackTruthAssociations{"CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ReconstructedParticleCollection> m_pidPfos{"CyberPFOPID", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ClusterCollection> m_ecalClusters{"EcalCluster", Gaudi::DataHandle::Reader, this};
-  DataHandle<edm4hep::ClusterCollection> m_chargedEcalClusters{"EcalCluster", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::ReconstructedParticleCollection> m_prePfos{"CyberPFOPreReclustering", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::ClusterCollection> m_preEcalClusters{"EcalClusterPreReclustering", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::ClusterCollection> m_chargedEcalClusters{"", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4BremsPhotonCollection> m_bremsPhotons{"GsfG4BremsPhotons", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4BremsPhotonStepCollection> m_bremsPhotonSteps{"GsfG4BremsPhotonSteps", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4MaterialStepCollection> m_truthSteps{"GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
@@ -98,6 +100,7 @@ private:
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
   Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", false};
+  Gaudi::Property<std::string> m_ecalConstraintInput{this, "EcalConstraintInput", "PreReclustering"};
   Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronOnly"};
   Gaudi::Property<bool> m_neutralEcalMeasurement{this, "NeutralEcalMeasurement", false};
   Gaudi::Property<double> m_chargedEcalStochasticError{this, "ChargedEcalStochasticError", 0.011};
@@ -167,6 +170,7 @@ private:
   int m_chargedEcalMeasurementStatus = 0, m_chargedEcalMeasurementClusterCount = 0;
   double m_chargedEcalMeasurementEnergy = 0, m_chargedEcalMeasurementError = 0;
   std::string m_recordChargedEcalInput, m_recordChargedEcalEnergyMode;
+  std::string m_recordEcalConstraintInput, m_recordEcalConstraintPfos, m_recordEcalConstraintClusters;
   std::string m_chargedEcalSelectionError;
   std::vector<int> m_chargedEcalClusterIndices;
   int m_diffuseStatus = 0, m_diffuseIndex = -1;
