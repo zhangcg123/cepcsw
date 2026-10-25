@@ -6,6 +6,7 @@
 #include "edm4hep/Vector3f.h"
 #include "CyberDataCol.h"
 #include "Tools/Algorithm.h"
+#include <string>
 //#include "Tools/HelixClassD.h"
 
 namespace Cyber{
@@ -16,8 +17,9 @@ namespace Cyber{
     OutputCreator( const Settings& m_settings);
     ~OutputCreator() {};
 
-    StatusCode CreateTimingClusters(
+    StatusCode CreateClusterSnapshot(
         const CyberDataCol& data,
+        const std::string& sourceName,
         DataHandle<edm4hep::ClusterCollection>& clusters,
         DataHandle<edm4hep::CalorimeterHitCollection>& hits);
 

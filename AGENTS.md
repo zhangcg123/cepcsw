@@ -312,56 +312,51 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PFA SOURCE MODIFICATION — BUILT/TESTED, NOT INSTALLED (2026-10-25).**
-On local/remote `breakpoint`, commit `9063895` changes
-`Reconstruction/RecPFACyber` to add the passive `EcalClusterTiming` and
-`EcalClusterTimingHits` outputs. This is an actual PFA-package source change,
-not an analysis-only reader. Highlight this distinction whenever discussing
-deployment: the default installed PFA module and existing batch runtime remain
-unchanged, so ordinary batch jobs do not yet produce these new collections.
-Do not install this modification as part of a plot or documentation task.
+**THREE-STAGE PFA ECAL EXPORT — INSTALLED (2026-10-25).**
+The user authorized implementing and installing all three cluster stages.
+The project-default `CrystalCaloRec` now saves:
 
-The new output exposes the internal `EcalCluster` produced by
-`EnergyTimeMatchingAlg`, before later `TrackClusterConnectingAlg` fragment
-absorption and final `PFOReclusteringAlg` energy redistribution. It does not
-change clustering, merging, calibration, PFO or breakpoint algorithms.
-Internal merges leave a potentially incomplete cached hit list; the exporter
-refreshes the complete constituent-hit list on a **private clone only**.
-Earlier track-assisted clustering and same-track merging remain. No new PFO
-collection or exported track associations are added, and breakpoint does not
-yet consume these outputs.
+- `EcalClusterTiming` / `EcalClusterTimingHits`: internal timing-matched clusters;
+- `TrkMergedECAL` / `TrkMergedECALHits`: track-connected, fragment-merged clusters;
+- existing final `EcalCluster` / `RecECALBarrel` and PFOs, unchanged.
 
-Mechanical gate: 20 full-chain versus timing-only event reruns match all
-32 timing fields exactly; all 199 checked existing final-PFA fields match
-the original rec entries exactly. Default installation hashes, source details,
-the cached-hit finding and explicit limitations are recorded in
-`agents_record/2026-10-25-timing-ecal-cluster-export.md`.
-The superseded cumulative-constraint focus is preserved verbatim in
-`agents_record/2026-10-25-agents-before-timing-ecal-focus.md`; its installed
-breakpoint behavior is unchanged by this PFA export.
+This is an actual `Reconstruction/RecPFACyber` source/runtime change, not an
+analysis-only reader. Both snapshots share one exporter; it refreshes cached
+constituent hits on a private clone only. Earlier track-assisted clustering,
+middle-stage correction and merging, and final PFO calibration remain intact.
+No new snapshot-to-track associations or PFO collection are exported, and
+breakpoint input steering is unchanged. Maintained rec cards use `keep *`;
+new rec runs persist all stages without a card change. Existing rec tuples
+need reconstruction reruns to gain them; simulation need not be repeated if
+the required digitized inputs survive.
 
-Current study: inspect the internal timing-cluster z-phi hit patterns for ten
-topology-clear no-eBrem electrons versus ten with truth loss >1% and zero final
-hit-supported neutral ECAL clusters anywhere in the event. Plots, exact
-entries and selection definitions live in
+Mechanical gate: 20 events match 32 timing fields against timing-only runs,
+32 middle fields against connected-only runs and 199 final-PFA fields against
+original rec entries exactly; snapshot hit links are valid. Three fresh
+default-runtime events match all 263 checked fields of the verified build.
+Only four PFA runtime files were deployed atomically; installed RecBreakpoint
+is unchanged. Hashes, commands, rollback backup and limitations are in
+`agents_record/2026-10-25-three-stage-pfa-install.md`. The outgoing complete
+status is preserved in
+`agents_record/2026-10-25-agents-before-three-stage-pfa-install.md`.
+
+Current study: inspect internal cluster z-phi hit patterns and determine which
+pre-absorption/calibrated product can support an unresolved electron-plus-photon
+measurement. Examples and exact selection definitions are in
 `TrackingPerformanceStudies/breakpoint_ecal_timing_hits_20261025/`.
-No-neutral is not proof of photon containment or electron/photon shower merging.
-These are reconstructed U/V-matched 3D points, not raw crystal or Geant4 hits.
+No-neutral is not proof of photon containment or shower merging. These are
+reconstructed U/V-matched points, not raw crystal or Geant4 hits. Snapshot
+mechanical checks do not validate energy response or photon separation.
 
-The post-fit collinear photon projection is now also implemented in
-`RecBreakpoint` and **built/tested only, NOT installed**. Passive
-`rts_photon_calo_*` / `free_loss_rts_photon_calo_*` fields use the smoothed
-breakpoint track and full covariance to project a straight ray to native ECAL
-faces. No KF parameter, measurement or objective changes. Nine numerical tests
-pass; all 817 prior branches match exactly on 11 direct A/B rows. The same
-20 displays now overlay electron/photon locations and tracking-only ellipses;
-eight hard examples have a fitted breakpoint/ray. A ray is not a photon
-detection or proof of energy recovery. Details and limitations:
+The passive post-fit photon projection in RecBreakpoint remains **built/tested,
+NOT installed**. Its `rts_photon_calo_*` / `free_loss_rts_photon_calo_*`
+fields use the smoothed breakpoint state/covariance and native ECAL faces;
+no fit parameter, measurement or objective changes. Nine numerical tests and
+817 prior branches on 11 direct A/B rows passed. Details remain in
 `agents_record/2026-10-25-postfit-photon-ecal-projection.md`.
+A ray is not a photon detection or proof of energy recovery.
 
-Next: review these displays and determine which pre-absorption/calibrated
-cluster product could support an unresolved electron-plus-photon energy
-measurement. Any refitter integration, PFA physics change, calibration change
-or runtime installation requires its own explicit scope and validation.
-Do not implement constraints or the free-loss wrapper in diffuse tracking now;
-the user explicitly deferred that work.
+Next: compare the three saved cluster stages before proposing refitter inputs.
+Any refitter integration, PFA physics/calibration change or separate breakpoint
+deployment requires explicit scope and validation. Do not implement constraints
+or the free-loss wrapper in diffuse tracking now; the user deferred that work.

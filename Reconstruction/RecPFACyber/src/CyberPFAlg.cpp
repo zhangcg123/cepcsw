@@ -749,8 +749,10 @@ StatusCode CyberPFAlg::execute()
   //Perform PFA algorithm
   m_algorithmManager.RunAlgorithm( m_DataCol );
 
-  // Later algorithms clone the timing clusters; export the unchanged upstream collection.
-  if (m_pOutputCreator->CreateTimingClusters(m_DataCol, w_TimingClusters, w_TimingHits).isFailure())
+  // Preserve both upstream stages without changing the final PFO-associated output.
+  if (m_pOutputCreator->CreateClusterSnapshot(m_DataCol, "EcalCluster", w_TimingClusters, w_TimingHits).isFailure())
+    return StatusCode::FAILURE;
+  if (m_pOutputCreator->CreateClusterSnapshot(m_DataCol, "TrkMergedECAL", w_MergedClusters, w_MergedHits).isFailure())
     return StatusCode::FAILURE;
 
   m_pOutputCreator->CreateOutputCollections( m_DataCol, 

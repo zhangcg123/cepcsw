@@ -9,13 +9,14 @@ namespace Cyber{
 
   }
 
-  StatusCode OutputCreator::CreateTimingClusters(
+  StatusCode OutputCreator::CreateClusterSnapshot(
       const CyberDataCol& data,
+      const std::string& sourceName,
       DataHandle<edm4hep::ClusterCollection>& clusters,
       DataHandle<edm4hep::CalorimeterHitCollection>& hits) {
     auto* outputClusters = clusters.createAndPut();
     auto* outputHits = hits.createAndPut();
-    const auto source = data.map_CaloCluster.find("EcalCluster");
+    const auto source = data.map_CaloCluster.find(sourceName);
     if (source == data.map_CaloCluster.end()) return StatusCode::SUCCESS;
 
     // No PFO-dependent calibration or track-momentum rescaling is applied here.
