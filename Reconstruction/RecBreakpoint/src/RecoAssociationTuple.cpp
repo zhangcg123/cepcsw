@@ -43,6 +43,15 @@ void TrackRecoTuple::book(TTree& tree) {
   tree.Branch("truth_endpoint_x", &m_truthEndpointX);
   tree.Branch("truth_endpoint_y", &m_truthEndpointY);
   tree.Branch("truth_endpoint_z", &m_truthEndpointZ);
+  tree.Branch("truth_ecal_entry_status", &m_truthEcalStatus);
+  tree.Branch("truth_ecal_entry_g4_track_id", &m_truthEcalTrackID);
+  tree.Branch("truth_ecal_entry_step_number", &m_truthEcalStep);
+  tree.Branch("truth_ecal_entry_x", &m_truthEcalX);
+  tree.Branch("truth_ecal_entry_y", &m_truthEcalY);
+  tree.Branch("truth_ecal_entry_z", &m_truthEcalZ);
+  tree.Branch("truth_ecal_entry_px", &m_truthEcalPx);
+  tree.Branch("truth_ecal_entry_py", &m_truthEcalPy);
+  tree.Branch("truth_ecal_entry_pz", &m_truthEcalPz);
   tree.Branch("truth_parent_mc_index", &m_truthParentMCIndex);
   tree.Branch("truth_track_hit_count", &m_truthTrackHitCount);
   tree.Branch("truth_best_mc_hit_count", &m_truthBestHitCount);
@@ -67,12 +76,17 @@ void TrackRecoTuple::book(TTree& tree) {
 void TrackRecoTuple::assign(const edm4hep::Track& track,
                             const edm4hep::MCRecoTrackParticleAssociationCollection& associations,
                             const edm4hep::ReconstructedParticleCollection& pfos,
-                            const edm4hep::ClusterCollection& ecalClusters) {
+                            const edm4hep::ClusterCollection& ecalClusters,
+                            const gsftruth::G4MaterialStepCollection* steps,
+                            const gsftruth::SimTrackerHitG4StepLinkCollection* links) {
   const double nan = std::numeric_limits<double>::quiet_NaN();
   m_truthPt = m_truthEnergy = m_truthPurity = nan;
   m_truthPx = m_truthPy = m_truthPz = m_truthCharge = nan;
   m_truthVertexX = m_truthVertexY = m_truthVertexZ = nan;
   m_truthEndpointX = m_truthEndpointY = m_truthEndpointZ = nan;
+  m_truthEcalStatus = m_truthEcalTrackID = m_truthEcalStep = -1;
+  m_truthEcalX = m_truthEcalY = m_truthEcalZ = nan;
+  m_truthEcalPx = m_truthEcalPy = m_truthEcalPz = nan;
   m_truthStatus = m_truthPDG = m_truthGeneratorStatus = m_truthSimulatorStatus = 0;
   m_truthMCIndex = -1;
   m_truthParentMCIndex.clear();
@@ -122,6 +136,7 @@ void TrackRecoTuple::assign(const edm4hep::Track& track,
       m_truthSimulatorStatus = best.getSimulatorStatus();
       for (const auto& parent : best.getParents())
         m_truthParentMCIndex.push_back(parent.id().index);
+      assignEcalEntry(best, steps, links);
     }
   }
 
@@ -153,6 +168,44 @@ void TrackRecoTuple::assign(const edm4hep::Track& track,
       m_chargedEcalClusterZ.push_back(position.z);
     }
   }
+}
+
+void TrackRecoTuple::assignEcalEntry(const edm4hep::MCParticle& particle,
+                                    const gsftruth::G4MaterialStepCollection* steps,
+                                    const gsftruth::SimTrackerHitG4StepLinkCollection* links) {
+  if (!steps || !links) { m_truthEcalStatus = -5; return; }
+  std::set<int> trackIDs;
+  for (const auto& link : *links) {
+    const auto hit = link.getSimHit();
+    if (hit.isAvailable() && hit.getMCParticle().isAvailable() &&
+        hit.getMCParticle() == particle && link.getTrackID() > 0)
+      trackIDs.insert(link.getTrackID());
+  }
+  if (trackIDs.empty()) { m_truthEcalStatus = -2; return; }
+  if (trackIDs.size() != 1) { m_truthEcalStatus = -3; return; }
+  m_truthEcalTrackID = *trackIDs.begin();
+  gsftruth::G4MaterialStep entry{nullptr};
+  for (const auto& step : *steps) {
+    if (step.getTrackID() != m_truthEcalTrackID || !step.getFirstEcalEntry()) continue;
+    if (entry.isAvailable() || step.getPdg() != particle.getPDG()) {
+      m_truthEcalStatus = -3;
+      return;
+    }
+    entry = step;
+  }
+  // Legacy files and particles without a recorded arrival are indistinguishable.
+  if (!entry.isAvailable()) { m_truthEcalStatus = 0; return; }
+  const auto position = entry.getPostPosition();
+  const auto momentum = entry.getPostMomentum();
+  if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z) ||
+      !std::isfinite(momentum.x) || !std::isfinite(momentum.y) || !std::isfinite(momentum.z)) {
+    m_truthEcalStatus = -4;
+    return;
+  }
+  m_truthEcalStatus = 1;
+  m_truthEcalStep = entry.getStepNumber();
+  m_truthEcalX = position.x; m_truthEcalY = position.y; m_truthEcalZ = position.z;
+  m_truthEcalPx = momentum.x; m_truthEcalPy = momentum.y; m_truthEcalPz = momentum.z;
 }
 
 void NeutralPfoTuple::book(TTree& tree) {

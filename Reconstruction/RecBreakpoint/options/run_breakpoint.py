@@ -47,6 +47,10 @@ reader = PodioInput("PodioReader", collections=[
     "CyberPFOPID", "EcalCluster", "GsfG4BremsPhotons", "GsfG4BremsPhotonSteps",
     "VXDTrackerHits", "ITKBarrelTrackerHits", "ITKEndcapTrackerHits",
     "TPCTrackerHits", "OTKBarrelTrackerHits", "OTKEndcapTrackerHits",
+    # Passive per-track truth ECAL entrance, independent of breakpoint selection.
+    "GsfG4MaterialSteps", "GsfSimTrackerHitG4StepLinks",
+    "VXDCollection", "ITKBarrelCollection", "ITKEndcapCollection",
+    "TPCCollection", "OTKBarrelCollection", "OTKEndcapCollection",
 ])
 
 fit = RecBreakpoint("RecBreakpoint")
@@ -274,11 +278,8 @@ if fit.ChargedEcalMeasurement:
         reader.collections.append(_charged_source)
 if fit.IntervalSelectionMode == "Truth" or (fit.TruthOverride and fit.BreakpointIntervals):
     reader.collections += [
-        "VXDCollection", "ITKBarrelCollection", "ITKEndcapCollection",
-        "TPCCollection", "OTKBarrelCollection", "OTKEndcapCollection",
         "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
         "TPCTrackerHitAss", "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",
-        "GsfG4MaterialSteps", "GsfSimTrackerHitG4StepLinks",
     ]
 
 # The flat tuple is written by RecBreakpoint. To persist the event collections:

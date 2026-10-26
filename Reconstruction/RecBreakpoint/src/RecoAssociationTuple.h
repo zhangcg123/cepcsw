@@ -7,6 +7,8 @@
 #include "edm4hep/Track.h"
 #include "GsfTruthEventData/G4BremsPhotonCollection.h"
 #include "GsfTruthEventData/G4BremsPhotonStepCollection.h"
+#include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 
 #include <vector>
 
@@ -22,9 +24,17 @@ public:
   void assign(const edm4hep::Track& track,
               const edm4hep::MCRecoTrackParticleAssociationCollection& associations,
               const edm4hep::ReconstructedParticleCollection& pfos,
-              const edm4hep::ClusterCollection& ecalClusters);
+              const edm4hep::ClusterCollection& ecalClusters,
+              const gsftruth::G4MaterialStepCollection* steps,
+              const gsftruth::SimTrackerHitG4StepLinkCollection* links);
 
 private:
+  void assignEcalEntry(const edm4hep::MCParticle& particle,
+                       const gsftruth::G4MaterialStepCollection* steps,
+                       const gsftruth::SimTrackerHitG4StepLinkCollection* links);
+  int m_truthEcalStatus = -1, m_truthEcalTrackID = -1, m_truthEcalStep = -1;
+  double m_truthEcalX = 0, m_truthEcalY = 0, m_truthEcalZ = 0;
+  double m_truthEcalPx = 0, m_truthEcalPy = 0, m_truthEcalPz = 0;
   double m_truthPt = 0, m_truthEnergy = 0, m_truthPurity = 0;
   double m_truthPx = 0, m_truthPy = 0, m_truthPz = 0, m_truthCharge = 0;
   double m_truthVertexX = 0, m_truthVertexY = 0, m_truthVertexZ = 0;

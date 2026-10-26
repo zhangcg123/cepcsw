@@ -548,6 +548,12 @@ StatusCode RecBreakpoint::execute() {
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
   std::string truthEventError;
+  const gsftruth::G4MaterialStepCollection* truthSteps = nullptr;
+  const gsftruth::SimTrackerHitG4StepLinkCollection* truthLinks = nullptr;
+  if (selected) {
+    try { truthSteps = m_truthSteps.get(); truthLinks = m_truthLinks.get(); }
+    catch (const std::exception& error) { truthEventError = error.what(); }
+  }
   if (needTruthData) {
     try {
       std::vector<const edm4hep::MCRecoTrackerAssociationCollection*> associations;
@@ -558,7 +564,7 @@ StatusCode RecBreakpoint::execute() {
       addAvailable(m_vxdAssociations); addAvailable(m_itkbAssociations);
       addAvailable(m_itkeAssociations); addAvailable(m_tpcAssociations);
       addAvailable(m_otkbAssociations); addAvailable(m_otkeAssociations);
-      truthPrepared = truthReader.prepare(m_truthSteps.get(), m_truthLinks.get(),
+      truthPrepared = truthReader.prepare(truthSteps, truthLinks,
                                          associations, truthEventError);
     } catch (const std::exception& error) { truthEventError = error.what(); }
     catch (...) { truthEventError = "Cannot retrieve embedded truth collections"; }
@@ -573,7 +579,8 @@ StatusCode RecBreakpoint::execute() {
       diffuseStatuses->push_back(0); diffuseIndices->push_back(-1);
       continue;
     }
-    m_trackRecoTuple.assign(track, *trackTruthAssociations, *pidPfos, *ecalClusters);
+    m_trackRecoTuple.assign(track, *trackTruthAssociations, *pidPfos, *ecalClusters,
+                            truthSteps, truthLinks);
     m_chargedEcalMeasurementStatus = 0;
     m_chargedEcalMeasurementClusterCount = 0;
     m_chargedEcalMeasurementEnergy = m_chargedEcalMeasurementError = nan;

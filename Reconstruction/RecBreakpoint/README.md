@@ -903,6 +903,36 @@ association-driven contracts. For primary-electron pT resolution, require a
 valid unique match to the generator-status primary and retain the existing
 topology/track-completeness selection; a short fragment can have purity 1.
 
+Every track row also saves `truth_ecal_entry_{x,y,z}` (mm) and
+`truth_ecal_entry_{px,py,pz}` (GeV), plus `truth_ecal_entry_g4_track_id`,
+`truth_ecal_entry_step_number`, and `truth_ecal_entry_status`. These are the
+post-point of the matched particle's first recorded outside-to-ECAL boundary,
+not an extrapolation or the MCParticle endpoint. The match follows the unique
+track-matched MCParticle through `GsfSimTrackerHitG4StepLinks.simHit.MCParticle`
+to its unique Geant4 track ID, then reads the flagged `GsfG4MaterialSteps` entry.
+No generator index or Geant4 ID is assumed. Status codes are:
+
+| Status | Meaning |
+|---|---|
+| 1 | Unique entry with finite position and momentum |
+| 0 | Unique Geant4 identity, but no recorded entry |
+| -1 | No unique track-matched MCParticle |
+| -2 | No matching MC-to-Geant4 provenance link |
+| -3 | Multiple Geant4 IDs, duplicate entries, or inconsistent entry PDG |
+| -4 | Nonfinite entry position or momentum |
+| -5 | Step or provenance-link input unavailable |
+
+For every status other than 1, position/momentum are NaN and step number is -1.
+A uniquely resolved Geant4 ID is retained even without an entry. Status 0
+does **not** establish that the particle failed to reach ECAL: legacy simulation
+files and unrecorded arrivals have the same status. Only newly simulated data
+with the entrance recorder can provide these fields; rerunning reconstruction
+cannot recover an entrance absent from simulation. The maintained card reads
+the necessary truth collections regardless of breakpoint selection mode.
+These passive fields never affect fitting. Within the same event, the recorded
+Geant4 ID can be compared with `neutral_pfos.ebrem_photon_parent_g4_track_id`;
+the photon arrays remain independent of reconstructed neutral clusters.
+
 Each track row also records all `CyberPFOPID` charged PFOs whose track link is
 that exact `CompleteTracks` object: `charged_pfo_count`, PFO index/PDG/energy,
 and flattened PID hypothesis PDG/likelihood arrays keyed by PFO index. Its

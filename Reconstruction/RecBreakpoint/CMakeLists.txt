@@ -57,6 +57,15 @@ if(BUILD_TESTING)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
   if(TARGET RecBreakpointLikelihood)
+    add_executable(RecBreakpointTruthEcalTupleTest tests/TruthEcalTupleTest.cpp
+      src/RecoAssociationTuple.cpp)
+    target_compile_features(RecBreakpointTruthEcalTupleTest PRIVATE cxx_std_17)
+    target_include_directories(RecBreakpointTruthEcalTupleTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_include_directories(RecBreakpointTruthEcalTupleTest BEFORE PRIVATE
+      ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
+    target_link_libraries(RecBreakpointTruthEcalTupleTest PRIVATE GsfTruthEventData
+      EDM4HEP::edm4hep ROOT::Tree)
+    add_test(NAME RecBreakpointTruthEcalTuple COMMAND RecBreakpointTruthEcalTupleTest)
     add_executable(RecBreakpointPhotonProjectionTest tests/PhotonProjectionTest.cpp
       src/PhotonCaloProjection.cpp)
     target_compile_features(RecBreakpointPhotonProjectionTest PRIVATE cxx_std_17)
