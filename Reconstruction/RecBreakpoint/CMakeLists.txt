@@ -39,6 +39,9 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   target_include_directories(RecBreakpoint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/../RecGsfTracking/src
     ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/src)
+  # A schema update must build against generated headers, not the old install.
+  target_include_directories(RecBreakpoint BEFORE PRIVATE
+    ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
   install(TARGETS RecBreakpoint
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib)
   # Keep this plugin discoverable after a package-only build/install, without
@@ -75,6 +78,8 @@ if(BUILD_TESTING)
     target_compile_features(RecBreakpointTruthMatchTest PRIVATE cxx_std_17)
     target_include_directories(RecBreakpointTruthMatchTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
       ${CMAKE_CURRENT_SOURCE_DIR}/../RecGsfTracking/src ${LCIO_INCLUDE_DIRS})
+    target_include_directories(RecBreakpointTruthMatchTest BEFORE PRIVATE
+      ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
     target_link_libraries(RecBreakpointTruthMatchTest PRIVATE GsfTruthEventData EDM4HEP::edm4hep
       ${ROOT_LIBRARIES} ${LCIO_LIBRARIES})
     add_test(NAME RecBreakpointTruthMatch COMMAND RecBreakpointTruthMatchTest)

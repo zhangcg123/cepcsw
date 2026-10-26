@@ -60,6 +60,8 @@ bool TruthBHLossEventData::prepare(
   }
 
   for (const auto& step : *steps) {
+    // ECAL-only boundary records are diagnostics, not extra tracker material.
+    if (step.getEcalEntryOnly()) continue;
     const StepKey key{step.getTrackID(), step.getStepNumber()};
     StepRecord record;
     record.trackID = step.getTrackID();

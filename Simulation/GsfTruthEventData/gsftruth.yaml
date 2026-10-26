@@ -1,5 +1,5 @@
 ---
-schema_version: 1
+schema_version: 2
 
 options:
   getSyntax: True
@@ -8,7 +8,7 @@ options:
 
 datatypes:
   gsftruth::G4MaterialStep:
-    Description: "One Geant4 tracker-material step used for GSF truth diagnostics"
+    Description: "One selected Geant4 material step or explicitly flagged first ECAL entrance"
     Author: "CEPCSW GSF development"
     Members:
       - std::int32_t trackID // Geant4 track identifier
@@ -40,6 +40,8 @@ datatypes:
       - float postTrackLength // accumulated track length at the post-step point [mm]
       - float preGlobalTime // pre-step global time [ns]
       - float postGlobalTime // post-step global time [ns]
+      - std::int16_t firstEcalEntry // 1 only on the first outside-to-ECAL boundary step; entrance is postPosition/postMomentum
+      - std::int16_t ecalEntryOnly // 1 if retained only for ECAL entrance, outside the configured material-step selection; exclude from tracker-material truth
 
   gsftruth::G4BremsPhoton:
     Description: "Geant4 bremsstrahlung photon emitted by one selected primary electron/positron inside the tracker"

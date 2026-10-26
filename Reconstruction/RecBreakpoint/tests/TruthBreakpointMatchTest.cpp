@@ -83,6 +83,22 @@ int main() {
     check(old.materialIntervals[i].truthTX0==match.hooks.materialIntervals[i].truthTX0 &&
           old.retainedFractions[i]==match.hooks.retainedFractions[i], "legacy hook results changed");
 
+  // A diagnostic ECAL entry must not create an emission or change hook losses.
+  auto ecal = steps.create();
+  ecal.setTrackID(1); ecal.setParentID(0); ecal.setPdg(11); ecal.setStepNumber(100);
+  ecal.setFirstEcalEntry(1); ecal.setEcalEntryOnly(1); ecal.setProcessSubtype(3);
+  ecal.setPrePosition({9.,0.,0.}); ecal.setPostPosition({10.,0.,0.});
+  ecal.setPreMomentum({10.f,0.f,0.f}); ecal.setPostMomentum({1.f,0.f,0.f});
+  ecal.setMomentumLoss(9.); ecal.setStepTX0(10.);
+  check(reader.prepare(&steps,&links,{&associations},error), error.c_str());
+  TruthBreakpointMatch withEntry;
+  check(reader.matchBreakpoints(hits,1.,navigator,withEntry,error), error.c_str());
+  check(withEntry.emissions.size()==match.emissions.size() &&
+        withEntry.breakpoints.size()==match.breakpoints.size(), "ECAL entry changed ownership");
+  check(withEntry.breakpoints.front().ebremLoss==match.breakpoints.front().ebremLoss,
+        "ECAL entry changed breakpoint loss");
+  check(withEntry.hooks.retainedFractions==old.retainedFractions, "ECAL entry changed hook losses");
+
   gsftruth::G4MaterialStepCollection effectiveSteps; effectiveSteps.setID(11);
   gsftruth::SimTrackerHitG4StepLinkCollection effectiveLinks; effectiveLinks.setID(12);
   edm4hep::SimTrackerHitCollection effectiveSim; effectiveSim.setID(13);

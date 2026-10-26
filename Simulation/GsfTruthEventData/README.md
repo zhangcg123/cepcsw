@@ -8,7 +8,8 @@ The simulation writes four provenance collections:
 
 - `GsfG4MaterialSteps` (`gsftruth::G4MaterialStep`): selected Geant4 pre/post
   steps, including positions, momenta, process subtype, local material
-  thickness, energy deposits, and track-length coordinates;
+  thickness, energy deposits, and track-length coordinates, plus each selected
+  particle's first ECAL-volume entrance;
 - `GsfSimTrackerHitG4StepLinks`
   (`gsftruth::SimTrackerHitG4StepLink`): the exact persisted `SimTrackerHit`,
   its first and last contributing Geant4 steps, and its measurement hook.
@@ -30,6 +31,54 @@ The simulation writes four provenance collections:
   Geant4 touchable volume ancestry, not a cylindrical radius approximation.
   Tracking beyond first ECAL entry and daughter-particle trajectories are not
   recorded in this collection.
+
+## Selected-particle ECAL entrances (schema 2)
+
+`GsfG4MaterialSteps.firstEcalEntry=1` identifies the first Geant4 step from
+outside ECAL to a volume with an ECAL touchable ancestor. Its `postPosition`
+is the true entrance location in mm and its `postMomentum` is the entrance
+momentum in GeV. `trackID`, `parentID`, `pdg`, `stepNumber`, `postKineticEnergy`
+and `postGlobalTime` retain their ordinary meanings. This uses the same ECAL
+volume test as the photon recorder, not the nominal tracker radius/z cut.
+
+The feature follows `WriteGsfTruthEventData`, `GsfTruthPDGs` and
+`GsfTruthPrimaryOnly`; it is not restricted to electrons or one particle per
+event. The maintained selection includes primary e-/e+ and mu-/mu+. Each
+track can have at most one first-entry flag. A particle born inside ECAL has
+no outside-to-inside entrance, and a particle which never enters ECAL has no
+flagged record. IDs are local to the event. There is no extrapolated entrance
+or invented zero-valued position for such particles.
+
+`ecalEntryOnly=1` means that this boundary step was outside the configured
+material-step selection and was retained solely for its entrance information.
+It must **not** be included in tracker material/loss/ownership calculations.
+The shared `TruthBHLossEventData` reader excludes these diagnostic records.
+If the boundary step already passed the material selection, it is stored
+once with `firstEcalEntry=1, ecalEntryOnly=0`. Existing selected steps and
+their physical values are otherwise unchanged; ordinary photon birth and
+step selection are unchanged. To recover the former material-step population,
+select `ecalEntryOnly==0` before any aggregation. Additional records can shift
+collection indices: follow the persisted relations, not assumed row numbers.
+
+This adds at most one step per selected particle, rather than recording its
+whole ECAL shower. The existing `keep *` workflow preserves the fields from
+sim through rec without new collection controls. Existing files cannot gain
+missing entrance truth by reconstruction alone. These fields are in the EDM
+collection; this change does not add electron-entry branches to the breakpoint
+flat tuple.
+
+Old schema-1 ROOT files remain readable in the tested native PODIO reader;
+the added flags default to zero. In an old file, zero means the entrance was
+not recorded, not proof that the particle failed to reach ECAL. Rebuild the
+data model/dictionary and their consumers together; do not mix old generated
+headers with the schema-2 libraries. The installed runtime is not updated by
+a source-only build.
+
+Focused validation and deployment state are recorded in
+`agents_record/2026-10-26-selected-particle-ecal-entrance.md`. The reusable
+`tests/check_ecal_entries.py NEW.root [OLD.root]` checks first-entry uniqueness,
+finite coordinates/momenta, photon-parent relations and optional same-seed
+preservation of the old material and photon data.
 
 The Geant4 photon ID is not reliable at secondary creation, so the recorder
 temporarily associates the secondary `G4Track` pointer with its birth record
@@ -82,7 +131,7 @@ edm4hep_writer.GsfTruthPrimaryOnly = True
 edm4hep_writer.GsfTruthTrackerOnly = True
 ```
 
-All three collections are written into the same `sim*.root` event and survive the
+All four collections are written into the same `sim*.root` event and survive the
 normal `keep *` chain. ROOT dictionary PCM/rootmap files are installed beside
 the generated libraries so generic PODIO readers can deserialize them.
 Photons below the generic `MCParticle` secondary threshold are included; do

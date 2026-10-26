@@ -162,6 +162,7 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
     // reset
     m_track2primary.clear();
     m_gsfTruthSteps.clear();
+    m_gsfTruthReachedEcal.clear();
     m_gsfBremsPhotons.clear();
     m_pendingGsfBremsPhotons.clear();
     m_gsfBremsPhotonByTrackID.clear();
@@ -214,6 +215,8 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
             stored.setPostTrackLength(record.postTrackLength);
             stored.setPreGlobalTime(record.preGlobalTime);
             stored.setPostGlobalTime(record.postGlobalTime);
+            stored.setFirstEcalEntry(record.firstEcalEntry);
+            stored.setEcalEntryOnly(record.ecalEntryOnly);
             gsfTruthStepByKey.emplace(
                 std::make_pair(record.trackID, record.stepNumber),
                 static_cast<gsftruth::G4MaterialStep>(stored));
@@ -286,7 +289,7 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
         const double hz = hit.position.z() / CLHEP::mm;
         double bestDistance2 = std::numeric_limits<double>::infinity();
         for (const auto& record : m_gsfTruthSteps) {
-            if (record.trackID != hit.truth.trackID ||
+            if (record.ecalEntryOnly || record.trackID != hit.truth.trackID ||
                 record.stepNumber < hit.firstStepNumber ||
                 record.stepNumber > hit.lastStepNumber) {
                 continue;
@@ -904,13 +907,23 @@ void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
     if (!particle || !pre || !post) return;
     if (!acceptGsfTruthPdg(particle->GetPDGEncoding())) return;
     if (m_gsfTruthPrimaryOnly.value() && track->GetParentID() != 0) return;
-    if (m_gsfTruthTrackerOnly.value() &&
-        !insideGsfTruthTracker(pre->GetPosition()) &&
-        !insideGsfTruthTracker(post->GetPosition())) {
-        return;
+    const bool materialSelected = !m_gsfTruthTrackerOnly.value() ||
+        insideGsfTruthTracker(pre->GetPosition()) || insideGsfTruthTracker(post->GetPosition());
+    // Preserve the material-step selection; retain just one extra boundary
+    // step when the actual ECAL volume lies beyond the nominal tracker bounds.
+    const int trackID = track->GetTrackID();
+    bool firstEcalEntry = false;
+    if (m_gsfTruthReachedEcal.count(trackID) == 0) {
+        const bool preInEcal = isEcalPoint(pre);
+        const bool postInEcal = isEcalPoint(post);
+        if (preInEcal || postInEcal) m_gsfTruthReachedEcal.insert(trackID);
+        firstEcalEntry = !preInEcal && postInEcal;
     }
+    if (!materialSelected && !firstEcalEntry) return;
 
     GsfTruthStepRecord record;
+    record.firstEcalEntry = firstEcalEntry;
+    record.ecalEntryOnly = !materialSelected;
     record.trackID = track->GetTrackID();
     record.parentID = track->GetParentID();
     record.stepNumber = track->GetCurrentStepNumber();
@@ -969,6 +982,8 @@ void Edm4hepWriterAnaElemTool::recordGsfTruthStep(const G4Step* step) {
     record.preGlobalTime = pre->GetGlobalTime() / CLHEP::ns;
     record.postGlobalTime = post->GetGlobalTime() / CLHEP::ns;
     m_gsfTruthSteps.push_back(record);
+
+    if (!materialSelected) return;
 
     // A photon can be below the generic MCParticle secondary threshold. Read
     // Geant4's secondaries for this exact step, before their tracks are stacked

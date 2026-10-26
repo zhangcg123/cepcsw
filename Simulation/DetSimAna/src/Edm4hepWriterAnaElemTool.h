@@ -80,7 +80,7 @@ private:
 
     Gaudi::Property<bool> m_writeGsfTruthEventData{
         this, "WriteGsfTruthEventData", false,
-        "Embed selected Geant4 material steps, primary-electron brems photons and their pre-ECAL steps, and exact SimTrackerHit provenance"};
+        "Embed selected Geant4 material steps and first ECAL entrances, primary-electron brems photons and their pre-ECAL steps, and exact SimTrackerHit provenance"};
     Gaudi::Property<std::vector<int>> m_gsfTruthPdgs{
         this, "GsfTruthPDGs", {11, -11},
         "PDG codes whose Geant4 tracker steps are embedded"};
@@ -89,7 +89,7 @@ private:
         "Embed Geant4 steps only for primary tracks"};
     Gaudi::Property<bool> m_gsfTruthTrackerOnly{
         this, "GsfTruthTrackerOnly", true,
-        "Embed only steps with a pre or post point inside the tracker bounds"};
+        "Select material steps with a pre or post point inside tracker bounds; also retain the first ECAL entrance as an explicitly flagged diagnostic"};
 
     // the name here is without suffix "Collection"
     Gaudi::Property<std::vector<std::string>> m_trackerColNames{this, 
@@ -163,9 +163,12 @@ private:
         float postTrackLength = 0.0f;
         float preGlobalTime = 0.0f;
         float postGlobalTime = 0.0f;
+        int firstEcalEntry = 0;
+        int ecalEntryOnly = 0;
     };
 
     std::vector<GsfTruthStepRecord> m_gsfTruthSteps;
+    std::set<int> m_gsfTruthReachedEcal;
 
     struct GsfBremsPhotonRecord {
         int parentTrackID = -1;

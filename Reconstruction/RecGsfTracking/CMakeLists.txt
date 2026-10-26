@@ -19,6 +19,8 @@ gaudi_add_module(RecGsfTracking
                       ${ROOT_LIBRARIES}
 )
 
+target_include_directories(RecGsfTracking BEFORE PRIVATE
+  ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
 target_include_directories(RecGsfTracking PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/src
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
