@@ -97,3 +97,28 @@ files as input. No sim/trk/calodigi/rec regeneration is required. Recompute owne
 population tables after rerunning; prior tables describe the old ownership rules.
 The independent neutral/free-loss acceptance issues recorded in the separate
 2026-10-26 audit handoff remain unresolved and unchanged by this patch.
+
+## Installed after explicit approval
+
+User confirmed no active jobs and authorized immediate installation. Source
+checkpoint c37574a was pushed to origin/breakpoint. Package-specific CMake
+installation was staged under `/tmp/bp-effective-owner-5Ap8b5/staged`, then
+three changed files were replaced by same-directory rename:
+`lib/libRecBreakpoint.so`, `lib/RecBreakpoint.confdb`, and
+`python/RecBreakpoint/RecBreakpointConf.py`. The latter two differ only in their
+generated timestamps; property defaults/allowed values are unchanged. Previous
+files are under `/tmp/bp-effective-owner-5Ap8b5/previous`, with `install.sh` and
+`install.log` recording the operation. No other package was installed.
+
+Installed library hash now equals the new build hash above. Direct
+`source setup.sh; gaudirun.py installed.py`, with no temporary library override,
+reran seed1 events 26,38,90. All 856 breakpoint branches and all 57 neutral_pfos
+branches reproduce the new-library reference exactly on all three rows
+(NaN-aware). The persisted ownership validator also passes. Cards/output/checker
+are in the same temporary directory. Installation is complete; the preceding
+"not installed" sections describe the pre-approval validation stage only.
+
+Outgoing AGENTS snapshot:
+`agents_record/2026-10-26-agents-before-effective-boundary-owners.md`, verified
+byte-identical before editing. Global status/laws/commands retained unchanged;
+only current focus replaced. No history directory migration was needed.

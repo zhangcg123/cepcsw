@@ -312,39 +312,51 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BREAKPOINT AUDIT: NEUTRAL-CONSTRAINED FREE-LOSS ACCEPTANCE (2026-10-26).**
-Current installed pre-PFO/conditional charged routing remains unchanged. The
-rec_bp_barrel_20261026 campaign has 376 analyzed files (80,360 track rows).
-Beam/charged/neutral stages are cumulative (111); PreReclustering inputs and
-ElectronPhoton campaign steering remain active. Standalone/compiled charged
-mode remains ElectronOnly. Diffuse constraints/free-loss work remains deferred.
+**EFFECTIVE BOUNDARY TRUTH OWNERS — INSTALLED (2026-10-26).**
+RecBreakpoint now maps audited barrel IP-beam-pipe emissions to VXD layer 0
+and TPC-inner-wall emissions to TPC row 0. This is an explicit effective
+assignment, not physical sensor ownership. Preserve actual G4 emission
+positions/material paths and record truth_ebrem_effective_owner_rule (0 none,
+1 beam pipe, 2 inner wall). Require the exact subsequent target layer, valid
+geometry/provenance, and an accepted hit without crossing another sensor
+assembly; never substitute another layer. Existing missing/ambiguous/outermost
+guards remain. Fitter loss placement is unchanged (owner hit, before outward
+propagation), so a true pre-layer loss is displaced outward in this model.
 
-Independent audit found (1) grossly invalid physical photon energy accepted by
-frozen energy linearizations and (2) accepted Minuit endpoints worse than valid
-already-evaluated candidates. Point 2 affects 303/7163 accepted neutral-stage
-fits (4.23%, absolute NLL2 gap >0.001), versus 17/30170 tracker-only, 13/30038 beam,
-and 8/28986 charged. These counts INCLUDE topology controls. The link between
-points 1 and 2 is suspected, not established. All 11 C++ and 44 batch tests pass
-but do not cover these failures. A separate 1D-strip adapter issue is a synthetic
-probe finding, not established as relevant to the current campaign.
+Source checkpoint c37574a is pushed to origin/breakpoint. After explicit user
+confirmation of no active jobs, the package-only update was installed into
+project-default InstallArea/x86_64-el9-gcc11-opt. No GSF/shared KF/PFA library,
+rec/sim producer, or workflow card changed. Pre-PFO inputs, cumulative 111 and
+conditional charged routing remain; campaign ElectronPhoton versus compiled/
+standalone ElectronOnly defaults remain unchanged. Diffuse constraints/free-loss
+work remains deferred. Identification shares the package mapper/tuple tag;
+its training/workflow was not independently modified or validated here.
 
-Only objective documentation/comments were corrected (3ca66e1); no numerical
-repair, installation, or new batch run. Documentation and audit handoff were
-pushed to origin/breakpoint from the host context after the sandbox SSH failure.
-Next discuss point 2: inspect per-start Minuit behavior and scan
-objective versus prior center with/without neutral, recording physical/affine
-energy and invalid regions. Do not silently promote scan candidates, clip
-states, or implement acceptance repairs before user discussion.
+Gate: all 11 C++ tests pass. Nine fresh before/after event reruns preserve
+physical truth exactly; four unaffected tracks reproduce 11 endpoint pT fields
+exactly, while five acquire the requested breakpoint. Installed-runtime smoke
+on three rows reproduces all 856 breakpoint and 57 side-tree branches exactly.
+Beam-pipe examples did not improve unconstrained free-loss pT despite gaining
+an owner. No population/endcap validation is claimed. Deployment hashes,
+rollback files, tests and event table:
+agents_record/2026-10-26-effective-boundary-truth-owners.md.
 
-Detailed numerical evidence, audit scope, reproduction recipe, and tomorrow's
-checklist: agents_record/2026-10-26-breakpoint-independent-audit-handoff.md.
-Outgoing full status preserved in
-agents_record/2026-10-26-agents-before-breakpoint-audit-handoff.md, including
-installation gates and batch defaults. Deployment records remain authoritative.
+Next: rerun breakpoint only from existing rec inputs (STAGES=breakpoint), then
+recompute eligibility and categorized IP performance. No sim/rec regeneration
+is needed. Old 376-file/80,360-row campaign and ownership percentages describe
+the previous rules. No new batch was submitted. Outgoing complete AGENTS is
+preserved in agents_record/2026-10-26-agents-before-effective-boundary-owners.md.
+
+The independent neutral/free-loss acceptance audit remains unresolved:
+unphysical frozen-linearization energy and ignored better valid candidates
+(303/7163 accepted neutral fits, 4.23%, including controls). Do not silently
+promote scan candidates, clip states, or implement acceptance repairs before
+user discussion. Per-start scans and physical/affine energy comparisons remain
+the pending diagnostic; full evidence and other audit findings are retained in
+agents_record/2026-10-26-breakpoint-independent-audit-handoff.md.
 
 Latest gallery: TrackingPerformanceStudies/breakpoint_prereco111_pt_resolution_20261026,
-served under the TrackingPerformanceStudies root on localhost8000. Inclusive
-hybrid now shows only +/-2%, normalized over all 61,420 paired tracks, baseline
-versus free000 or free111 hybrid (truth-loss gate at1%). No truth-override curve.
-Other plots unchanged. This idealized truth-gated hybrid is not a reconstructed
-classifier or proof of tail safety.
+served under TrackingPerformanceStudies on localhost8000. Includes light-owner
+plots and hard/light ownership tables. Hybrid plots use the common 61,420-track
+sample but normalize each histogram within +/-2%; other plots use full paired
+sample normalization. Truth-gated hybrids are not reconstructed classifiers.
