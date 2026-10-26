@@ -352,6 +352,13 @@ accepted hit. Both halves of a sensitive traversal belong to that same hit;
 audited barrel support/cooling follows its physical sensor assembly, never
 nearest radius. Shared structures and unresolved/missing/ambiguous hits are
 recorded but cannot select a breakpoint. Unknown passive layouts fail closed.
+Explicit effective barrel rules map the IP beam pipe to VXD layer 0 and the
+TPC inner wall to row 0 when that subsequent target has a usable exact track
+association. They preserve actual emission position/material path and record
+`truth_ebrem_effective_owner_rule` (1/2; 0 otherwise). Missing target layers
+are not replaced by another hit. These relocate a pre-layer physical loss to
+the existing owner-hit loss map; they are not a validated geometry equivalence.
+See [truth-layer-ownership.md](docs/truth-layer-ownership.md) for the contract.
 The selected index i means a loss at hit[i], before outward propagation to
 hit[i+1]; inward propagation reaches hit[i] before applying inverse loss and
 updating measurement i. The outermost hit has no supported outward interval.

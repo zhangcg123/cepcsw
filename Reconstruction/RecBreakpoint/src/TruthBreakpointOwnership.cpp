@@ -96,14 +96,18 @@ bool TruthBHLossEventData::matchBreakpoints(
     } else if (!location.second) {
       owner = {TruthLossOwner::GeometryMismatch, location.first, -1, -1, {}};
     } else if (owner.kind == TruthLossOwner::Passive) {
+      const bool effective = breakpoint::effectiveOwnerRule(owner.key) != 0;
       for (const auto& sensor : sensors) {
-        if (sensor.owner.key != owner.key) continue;
+        if (effective) {
+          if (sensor.owner.system != owner.system || sensor.owner.layer != owner.layer ||
+              step.stepNumber >= sensor.link->firstStepNumber) continue;
+        } else if (sensor.owner.key != owner.key) continue;
         const int low = std::min(step.stepNumber, sensor.link->hookStepNumber);
         const int high = std::max(step.stepNumber, sensor.link->hookStepNumber);
         // Do not attach a returning primary's material loss to an earlier visit
         // to this assembly across an intervening different sensor assembly.
         const bool crossedOther = std::any_of(sensors.begin(), sensors.end(), [&](const auto& other) {
-          return other.owner.key != owner.key && other.link->hookStepNumber > low &&
+          return other.owner.key != sensor.owner.key && other.link->hookStepNumber > low &&
               other.link->hookStepNumber < high;
         });
         if (!crossedOther) candidates.push_back(&sensor);

@@ -1,4 +1,6 @@
 #include "TruthBHLossEventData.h"
+#include "TruthLayerOwnership.h"
+#include "DD4hep/DD4hepUnits.h"
 #include "edm4hep/TrackerHitCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "TGeoManager.h"
@@ -6,6 +8,7 @@
 #include "TGeoMedium.h"
 #include "TGeoVolume.h"
 #include "TGeoNavigator.h"
+#include "TGeoMatrix.h"
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -16,6 +19,10 @@ int main() {
   auto* material = new TGeoMaterial("test-air", 14., 7., .001);
   auto* medium = new TGeoMedium("test", 1, material);
   auto* world = geometry.MakeBox("world", medium, 100., 100., 100.);
+  world->AddNode(geometry.MakeBox("BeamPipe_IPInnerTube", medium, .03, .03, .03), 2,
+                new TGeoTranslation(20.*dd4hep::mm, 0., 0.));
+  world->AddNode(geometry.MakeBox("TPCinnerWallLog", medium, .03, .03, .03), 0,
+                new TGeoTranslation(40.*dd4hep::mm, 0., 0.));
   geometry.SetTopVolume(world); geometry.CloseGeometry();
   TGeoNavigator navigator(&geometry);
   navigator.BuildCache(); navigator.GetCache()->BuildInfoBranch();
@@ -75,5 +82,70 @@ int main() {
   for (std::size_t i=0;i<old.materialIntervals.size();++i)
     check(old.materialIntervals[i].truthTX0==match.hooks.materialIntervals[i].truthTX0 &&
           old.retainedFractions[i]==match.hooks.retainedFractions[i], "legacy hook results changed");
+
+  gsftruth::G4MaterialStepCollection effectiveSteps; effectiveSteps.setID(11);
+  gsftruth::SimTrackerHitG4StepLinkCollection effectiveLinks; effectiveLinks.setID(12);
+  edm4hep::SimTrackerHitCollection effectiveSim; effectiveSim.setID(13);
+  edm4hep::TrackerHitCollection effectiveReco; effectiveReco.setID(14);
+  edm4hep::MCRecoTrackerAssociationCollection effectiveAssociations; effectiveAssociations.setID(15);
+  const double positions[] = {20.,30.,35.,40.,50.,55.,60.};
+  for (int i=0; i<7; ++i) {
+    auto s = effectiveSteps.create(); s.setTrackID(1); s.setParentID(0); s.setPdg(11); s.setStepNumber(i);
+    s.setPrePosition({positions[i],0.,0.}); s.setPostPosition({positions[i]+.1,0.,0.});
+    s.setProcessSubtype(i==0 || i==3 ? 3 : 0); s.setPreMomentum({10.f,0.f,0.f});
+    s.setPostMomentum({9.9f,0.f,0.f}); s.setMomentumLoss(i==0 || i==3 ? .1 : 0.);
+    s.setStepTX0(.001); s.setMaterialRadiationLength(material->GetRadLen()/dd4hep::mm);
+  }
+  auto effectiveHit = [&](int step, int system, int layer) {
+    const unsigned cell = unsigned(system) | (unsigned(layer)<<7);
+    auto s = effectiveSim.create(); s.setCellID(system==4 ? layer+1 : cell);
+    s.setPosition({positions[step]+.05,0.,0.});
+    auto link = effectiveLinks.create(); link.setTrackID(1); link.setSimHit(s);
+    link.setFirstStepNumber(step); link.setLastStepNumber(step); link.setHookStepNumber(step);
+    link.setHookFraction(.5); link.setStatus(31); link.setHookKind(4); link.setProvenanceType(system==4 ? 3 : 2);
+    link.setFirstStep(effectiveSteps[step]); link.setLastStep(effectiveSteps[step]); link.setHookStep(effectiveSteps[step]);
+    auto h = effectiveReco.create(); h.setCellID(cell); h.setPosition(s.getPosition());
+    auto a = effectiveAssociations.create(); a.setRec(h); a.setSim(s); a.setWeight(1.);
+  };
+  effectiveHit(1,1,0); effectiveHit(2,1,1); effectiveHit(4,4,0);
+  effectiveHit(5,4,1); effectiveHit(6,5,0);
+  std::vector<edm4hep::TrackerHit> effectiveHits;
+  for (const auto& h : effectiveReco) effectiveHits.push_back(h);
+  TruthBHLossEventData effectiveReader;
+  check(effectiveReader.prepare(&effectiveSteps,&effectiveLinks,{&effectiveAssociations},error), error.c_str());
+  check(effectiveReader.matchBreakpoints(effectiveHits,1.,navigator,match,error), error.c_str());
+  check(match.breakpoints.size()==2 && match.emissions.size()==2, "both effective owners must be eligible");
+  for (int i=0; i<2; ++i) {
+    const auto& e = match.emissions[i];
+    check(e.status==TruthBreakpointStatus::Eligible && e.hitIndex==2*i && e.layer==0,
+          "effective loss must use the exact first-layer hit");
+    check(breakpoint::effectiveOwnerRule(e.ownerKey)==i+1, "effective rule must persist in key");
+    check(e.position.x==effectiveSteps[3*i].getPostPosition().x &&
+          e.momentumLoss==effectiveSteps[3*i].getMomentumLoss() && !e.materialPath.empty(),
+          "effective assignment must not move or replace physical truth");
+  }
+  auto missing = effectiveHits; missing.erase(missing.begin()+2); missing.erase(missing.begin());
+  check(effectiveReader.matchBreakpoints(missing,1.,navigator,match,error), error.c_str());
+  check(match.breakpoints.empty() && match.emissions[0].status==TruthBreakpointStatus::MissingHit &&
+        match.emissions[1].status==TruthBreakpointStatus::MissingHit, "never substitute another accepted layer");
+  auto outer = effectiveHits; outer.resize(3);
+  check(effectiveReader.matchBreakpoints(outer,1.,navigator,match,error), error.c_str());
+  check(match.emissions[1].status==TruthBreakpointStatus::OutermostHit, "effective owner still needs downstream interval");
+  effectiveSteps[3].setPrePosition({20.,0.,0.}); effectiveSteps[3].setPostPosition({20.1,0.,0.});
+  check(effectiveReader.prepare(&effectiveSteps,&effectiveLinks,{&effectiveAssociations},error), error.c_str());
+  check(effectiveReader.matchBreakpoints(effectiveHits,1.,navigator,match,error), error.c_str());
+  check(match.emissions[1].status==TruthBreakpointStatus::MissingHit,
+        "returning beam-pipe emission must not attach to an earlier VXD0 visit");
+  effectiveSteps[3].setPrePosition({40.,0.,0.}); effectiveSteps[3].setPostPosition({40.1,0.,0.});
+  effectiveSim[0].setCellID(1u | (1u<<7)); effectiveSim[1].setCellID(1u);
+  check(effectiveReader.prepare(&effectiveSteps,&effectiveLinks,{&effectiveAssociations},error), error.c_str());
+  check(effectiveReader.matchBreakpoints(effectiveHits,1.,navigator,match,error), error.c_str());
+  check(match.emissions[0].status==TruthBreakpointStatus::MissingHit,
+        "effective assignment must not cross an intervening different sensor");
+  effectiveSteps[0].setMaterialRadiationLength(1.);
+  check(effectiveReader.prepare(&effectiveSteps,&effectiveLinks,{&effectiveAssociations},error), error.c_str());
+  check(effectiveReader.matchBreakpoints(effectiveHits,1.,navigator,match,error), error.c_str());
+  check(match.emissions[0].owner==TruthLossOwner::GeometryMismatch && match.emissions[0].hitIndex==-1,
+        "effective assignment must not bypass geometry/G4 consistency");
   std::cout << "Truth breakpoint full association test passed\n";
 }

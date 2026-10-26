@@ -37,6 +37,17 @@ def check(path):
         assert all(a <= b for a, b in zip(offsets, offsets[1:]))
         owners = row["truth_ebrem_owner_status"]
         eligibility = row["truth_ebrem_breakpoint_status"]
+        if "truth_ebrem_effective_owner_rule" in row:
+            rules = row["truth_ebrem_effective_owner_rule"]
+            assert len(rules) == n
+            for i, rule in enumerate(rules):
+                assert rule in (0, 1, 2)
+                if rule:
+                    assert owners[i] == 2
+                    assert row["truth_ebrem_owner_system"][i] == (1 if rule == 1 else 4)
+                    assert row["truth_ebrem_owner_layer"][i] == 0
+                    assert row["truth_ebrem_owner_key"][i] == (
+                        "effective:beam-pipe-to-vxd0" if rule == 1 else "effective:tpc-inner-wall-to-row0")
         assert row["truth_ebrem_no_unique_owner_count"] == sum(o not in (1, 2) for o in owners)
         assert row["truth_ebrem_ineligible_count"] == sum(s != 1 for s in eligibility)
         ownership.update(owners); statuses.update(eligibility)

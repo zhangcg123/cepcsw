@@ -31,8 +31,15 @@ int main() {
   check(materialOwner("/world/VXD_assembly_1/VXD_ShellLogical_0").kind == TruthLossOwner::Shared, "VXD shell");
   const auto bent = materialOwner("/world/VXD_assembly_1/VXD_Layer03_Stave01_8/VXD_Layer03_Stave01Flex_1/VXD_Layer03_Stave01Flex_0_0");
   check(bent.kind == TruthLossOwner::Passive && bent.layer == 3, "bent VXD stave");
-  for (const auto* path : {"/world", "/world/BeamPipe_IPInnerTube_2",
-       "/world/TPC_envelope_4/TPCLog_0/TPCinnerWallLog_0", "/world/OTKBarrel_envelope_5",
+  const auto pipe = materialOwner("/world/BeamPipe_IPInnerTube_2");
+  check(pipe.kind == TruthLossOwner::Passive && pipe.system == 1 && pipe.layer == 0 &&
+        breakpoint::effectiveOwnerRule(pipe.key) == 1, "beam pipe effective VXD0 owner");
+  const auto wall = materialOwner("/world/TPC_envelope_4/TPCLog_0/TPCinnerWallLog_0/TPCinnerWallLog_2_2");
+  check(wall.kind == TruthLossOwner::Passive && wall.system == 4 && wall.layer == 0 &&
+        breakpoint::effectiveOwnerRule(wall.key) == 2, "TPC inner wall effective row0 owner");
+  check(breakpoint::effectiveOwnerRule(tube.key) == 0, "physical ownership must not be marked effective");
+  for (const auto* path : {"/world", "/world/BeamPipe_EndcapTube_2",
+       "/world/TPCouterWallLog_0", "/world/OTKBarrel_envelope_5",
        "/world/ITKEndcap_unknown_support", "/world/VXD_UnknownDesign"})
     check(materialOwner(path).kind == TruthLossOwner::Unassigned, "unknown/shared environment must not invent a layer");
   std::cout << "Truth ownership geometry rules passed\n";

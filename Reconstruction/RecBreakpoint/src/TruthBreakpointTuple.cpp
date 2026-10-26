@@ -1,4 +1,5 @@
 #include "TruthBreakpointTuple.h"
+#include "TruthLayerOwnership.h"
 #include "TTree.h"
 namespace breakpoint {
 void TruthBreakpointTuple::book(TTree& tree) {
@@ -12,6 +13,7 @@ void TruthBreakpointTuple::book(TTree& tree) {
   tree.Branch("truth_ebrem_owner_layer", &layer);
   tree.Branch("truth_ebrem_breakpoint_hit", &hit);
   tree.Branch("truth_ebrem_owner_key", &ownerKey);
+  tree.Branch("truth_ebrem_effective_owner_rule", &effectiveRule);
   tree.Branch("truth_ebrem_material_path", &materialPath);
   tree.Branch("truth_ebrem_candidate_layer_offset", &candidateOffset);
   tree.Branch("truth_ebrem_candidate_layer", &candidateLayer);
@@ -27,6 +29,8 @@ void TruthBreakpointTuple::assign(const TruthBreakpointMatch& match) {
     eligibility.push_back(static_cast<int>(e.status));
     system.push_back(e.system); layer.push_back(e.layer); hit.push_back(e.hitIndex);
     ownerKey.push_back(e.ownerKey); materialPath.push_back(e.materialPath);
+    effectiveRule.push_back(e.owner == TruthLossOwner::Passive ?
+        effectiveOwnerRule(e.ownerKey) : 0);
     x.push_back(e.position.x); y.push_back(e.position.y); z.push_back(e.position.z);
     momentumBefore.push_back(e.momentumBefore); loss.push_back(e.momentumLoss);
     candidateLayer.insert(candidateLayer.end(), e.candidateLayers.begin(), e.candidateLayers.end());

@@ -9,6 +9,7 @@ struct TruthBreakpointTuple {
   void assign(const TruthBreakpointMatch& match);
   int status = 0, noUniqueOwner = 0, ineligible = 0;
   std::vector<int> step, owner, eligibility, system, layer, hit, candidateOffset, candidateLayer;
+  std::vector<int> effectiveRule;
   std::vector<double> x, y, z, momentumBefore, loss;
   std::vector<std::string> ownerKey, materialPath;
 };
