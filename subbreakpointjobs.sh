@@ -7,15 +7,16 @@ export CEPCSW_BREAKPOINT_DIR=${CEPCSW_BREAKPOINT_DIR:-${script_dir}}
 export NEVT=${NEVT:-200}
 export SEED_FIRST=${SEED_FIRST:-1}
 export SEED_LAST=${SEED_LAST:-500}
+# Unused by the full chain; set this to existing inputs when omitting stages.
 export INPUT_TUPLEPATH=${INPUT_TUPLEPATH:-sim_large_barrel_20261018}
-export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-rec_bp_barrel_20261026}
-# Reconstruct existing SIM through REC and breakpoint by default.
-# Use STAGES=breakpoint for existing REC; prepend sim for a complete new chain.
+export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-sim_large_barrel_20261026}
+# Regenerate simulation too: old SIM files lack the new truth ECAL entrances.
+# Use STAGES=breakpoint with an existing REC input path for later refits.
 # Retain SIM/REC/flat outputs; remove owned TRK/calodigi only after validation.
-export STAGES=${STAGES:-trk,calodigi,rec,breakpoint}
+export STAGES=${STAGES:-sim,trk,calodigi,rec,breakpoint}
 export MEMORY_MB=${MEMORY_MB:-5000}
 # hep_sub -g group, used for both new and already-prepared jobs.
-export SUBMIT_GROUP=${SUBMIT_GROUP:-cms}
+export SUBMIT_GROUP=${SUBMIT_GROUP:-higgs}
 export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.
 # Must be finite and positive. Frozen into generated cards at preparation.

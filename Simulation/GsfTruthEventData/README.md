@@ -63,9 +63,9 @@ collection indices: follow the persisted relations, not assumed row numbers.
 This adds at most one step per selected particle, rather than recording its
 whole ECAL shower. The existing `keep *` workflow preserves the fields from
 sim through rec without new collection controls. Existing files cannot gain
-missing entrance truth by reconstruction alone. These fields are in the EDM
-collection; this change does not add electron-entry branches to the breakpoint
-flat tuple.
+missing entrance truth by reconstruction alone. The breakpoint flat tupliser
+also exports `truth_ecal_entry_*` position, momentum, identity and status for
+each track's uniquely matched truth particle; see the RecBreakpoint README.
 
 Old schema-1 ROOT files remain readable in the tested native PODIO reader;
 the added flags default to zero. In an old file, zero means the entrance was
@@ -75,7 +75,11 @@ headers with the schema-2 libraries. The installed runtime is not updated by
 a source-only build.
 
 Focused validation and deployment state are recorded in
-`agents_record/2026-10-26-selected-particle-ecal-entrance.md`. The reusable
+`agents_record/2026-10-26-selected-particle-ecal-entrance.md`. The
+flat-tuple validation is in
+`agents_record/2026-10-26-breakpoint-truth-ecal-entry-flat.md`, and the installed
+runtime/full-chain defaults are recorded in
+`agents_record/2026-10-26-truth-ecal-full-chain-deployment.md`. The reusable
 `tests/check_ecal_entries.py NEW.root [OLD.root]` checks first-entry uniqueness,
 finite coordinates/momenta, photon-parent relations and optional same-seed
 preservation of the old material and photon data.

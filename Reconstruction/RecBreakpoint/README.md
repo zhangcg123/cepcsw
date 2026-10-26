@@ -1138,9 +1138,10 @@ The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
 
-The submission helper defaults to `STAGES=breakpoint`, reading existing REC
-inputs from INPUT_TUPLEPATH. To run the complete chain, explicitly select
-`STAGES=sim,trk,calodigi,rec,breakpoint`. That chain freezes the shared
+The submission helper defaults to `STAGES=sim,trk,calodigi,rec,breakpoint`,
+regenerating simulation so the new truth ECAL entrance records are available.
+Use `STAGES=breakpoint` with an existing REC input path for later refits.
+The full chain freezes the shared
 `DumpGsfTrks/sim.py.bk` together with the downstream cards at preparation.
 No existing input tuple is needed for this chain. All outputs go into
 OUTPUT_TUPLEPATH; SIM and REC are retained alongside the breakpoint flat tuple.
@@ -1175,7 +1176,7 @@ Omit DRY_RUN=1 on the first command to prepare and submit immediately. Do not
 rerun preparation over the same sample/output directory; use `submit` after
 a dry run. DRY_RUN=1 also works with `submit` to print commands only.
 The scripts use IHEP `hep_sub -g GROUP -mem ... -argu JOB.json`.
-Set `SUBMIT_GROUP` in `subbreakpointjobs.sh` (default `cms`), or override it:
+Set `SUBMIT_GROUP` in `subbreakpointjobs.sh` (current campaign default `higgs`), or override it:
 `SUBMIT_GROUP=higgs ./subbreakpointjobs.sh`. It is read at submission time,
 including `SUBMIT_GROUP=higgs ./subbreakpointjobs.sh submit OUTPUT_DIR` for
 already-prepared jobs; cards/checksums do not change.
@@ -1190,10 +1191,10 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 | Control | Default | Meaning |
 |---|---|---|
 | STAGES | sim,trk,calodigi,rec,breakpoint | Any nonduplicated subset of these stages; physical order always used |
-| INPUT_TUPLEPATH | sim_large_barrel_20261001 | Existing predecessor tuples, relative to repository or absolute |
-| OUTPUT_TUPLEPATH | breakpoint_barrel | Results/cards/logs; existing files or run-card directories block preparation rather than being overwritten |
+| INPUT_TUPLEPATH | sim_large_barrel_20261018 | Existing predecessor tuples; unused in the full chain; must differ from output |
+| OUTPUT_TUPLEPATH | sim_large_barrel_20261026 | Results/cards/logs; existing files or run-card directories block preparation rather than being overwritten |
 | NEVT | 200 | Maximum events per job |
-| SEED_FIRST / SEED_LAST | 1 / 100 | Inclusive seed/file indices; generated sim/trk cards use that RNG seed |
+| SEED_FIRST / SEED_LAST | 1 / 500 | Inclusive seed/file indices; generated sim/trk cards use that RNG seed |
 | SAMPLE_REGION | barrel | `barrel` or `endcap`: use region-and-seed filenames; empty restores legacy naming |
 | PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Particle remains active; theta and pT are filename labels only when SAMPLE_REGION is empty |
 | MEMORY_MB | 5000 | Scheduler memory request |

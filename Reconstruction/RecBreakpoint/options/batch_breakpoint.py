@@ -356,7 +356,11 @@ def verify(path, stage, ecal_constraint_input=None):
                      'free_loss_neutral_ecal_measurement_status', 'free_loss_likelihood_nll2'):
             if not tree.GetBranch(name): raise RuntimeError('Missing flat branch: ' + name)
         for name in ('truth_pt', 'truth_match_status', 'truth_match_purity',
-                     'charged_pfo_count', 'charged_ecal_cluster_count'):
+                     'charged_pfo_count', 'charged_ecal_cluster_count',
+                     'truth_ecal_entry_status', 'truth_ecal_entry_g4_track_id',
+                     'truth_ecal_entry_step_number', 'truth_ecal_entry_x',
+                     'truth_ecal_entry_y', 'truth_ecal_entry_z',
+                     'truth_ecal_entry_px', 'truth_ecal_entry_py', 'truth_ecal_entry_pz'):
             if not tree.GetBranch(name): raise RuntimeError('Missing matched flat branch: ' + name)
         for constraint in ('beam_spot', 'charged_ecal', 'neutral_ecal'):
             for method in ('ordinary', 'free_loss'):

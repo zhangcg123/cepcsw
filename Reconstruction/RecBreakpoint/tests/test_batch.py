@@ -425,24 +425,24 @@ class BatchTest(unittest.TestCase):
                               fit.NeutralEcalMeasurement], [v == '1' for v in expected])
             self.assertFalse((carddir/'submitted.json').exists())
 
-    def test_submission_wrapper_sim_reuse_default_and_full_chain_override(self):
-        for stages in (None, ','.join(batch.ORDER)):
+    def test_submission_wrapper_full_chain_default_and_sim_reuse_override(self):
+        for stages in (None, ','.join(batch.ORDER[1:])):
             with self.subTest(stages=stages):
-                output = 'wrapper_rec' if stages is None else 'wrapper_full'
+                output = 'wrapper_full' if stages is None else 'wrapper_rec'
                 env = dict(self.env, PATH=os.environ.get('PATH', '/usr/bin:/bin'),
                            SAMPLE_REGION='barrel', OUTPUT_TUPLEPATH=output)
                 if stages is None:
                     del env['STAGES']
+                    env['INPUT_TUPLEPATH'] = 'absent_inputs'
                 else:
                     env['STAGES'] = stages
-                    env['INPUT_TUPLEPATH'] = 'absent_inputs'
                 result = batch.subprocess.run(
                     ['bash', str(self.repo/'subbreakpointjobs.sh')], env=env,
                     capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 carddir = self.repo/output/'runcards/barrel-12'
                 job = json.loads((carddir/'job.json').read_text())
-                self.assertEqual(job['stages'], list(batch.ORDER[1:]) if stages is None else list(batch.ORDER))
+                self.assertEqual(job['stages'], list(batch.ORDER) if stages is None else list(batch.ORDER[1:]))
                 self.assertEqual(job['controls']['BP_CHARGED_ECAL_ENERGY_MODE'], 'ElectronPhoton')
                 self.assertFalse((carddir/'submitted.json').exists())
                 for stage, predecessor in zip(batch.ORDER[1:], batch.ORDER[:-1]):
@@ -549,13 +549,16 @@ class BatchTest(unittest.TestCase):
                 file.Close.assert_called_once()
 
     def test_invalid_flat_output_still_blocks_cleanup(self):
-        for defect in ('zombie', 'recovered', 'empty', 'missing_branch', 'missing_constraint_branch'):
+        for defect in ('zombie', 'recovered', 'empty', 'missing_branch',
+                       'missing_constraint_branch', 'missing_truth_entry_branch'):
             with self.subTest(defect=defect):
                 tree = MagicMock()
                 tree.GetEntries.return_value = 0 if defect == 'empty' else 2
                 tree.GetBranch.return_value = None if defect == 'missing_branch' else object()
                 if defect == 'missing_constraint_branch':
                     tree.GetBranch.side_effect = lambda name: None if name == 'neutral_ecal_free_loss_rts_pt' else object()
+                if defect == 'missing_truth_entry_branch':
+                    tree.GetBranch.side_effect = lambda name: None if name == 'truth_ecal_entry_status' else object()
                 file = MagicMock()
                 file.IsZombie.return_value = defect == 'zombie'
                 file.TestBit.return_value = defect == 'recovered'
