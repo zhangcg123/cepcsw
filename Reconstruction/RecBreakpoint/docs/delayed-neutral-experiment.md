@@ -93,3 +93,80 @@ Not validated: broad population performance, endcap, multiple breakpoints,
 backward fits, or other constraint combinations. No superiority over simple
 addition is established. Full raw evidence, scripts and isolated binary remain
 in `/tmp/bp-delayed-neutral-ab-pCpNAi`; temporary files may be cleaned by the OS.
+
+## Expanded local comparison, 2026-10-28
+
+The original temporary directory was unavailable on the current host. Reused the
+saved comparison harness with the branch-built library, without installation or
+any further fitter changes. Expanded evidence is retained under
+`TrackingPerformanceStudies/breakpoint_delayed_neutral_ab_20261028/`:
+`full_comparison.csv`, `full_summary.json`, paired ROOT files/cards/logs,
+`full_runs.json`, the two installed-runtime regression runs, `ctest.log`, and
+the copied branch runtime. A/B differ only in `ExperimentalDelayedNeutral`.
+
+Sample: all 39 topology-clear, single-recorded-eBrem, accepted cumulative-111
+tracks in the previous first-ten-seed neutral audit, plus controls 1:11, 1:16,
+1:17. This includes the original seven and **32 additional signal tracks**.
+It is conditioned on the earlier fit/neutral selection, not a population or
+held-out performance test. All 20 paired jobs exited successfully; all 39 ON
+signal tracks applied the delayed measurement. No Condor jobs were submitted.
+
+The frozen campaign uses Persistent6D, SigmaLogLoss=0.001, truth-selected
+breakpoint, beam/charged/neutral=111, PreReclustering inputs, conditional
+ElectronPhoton charged routing, and all backward filters OFF. Simple addition
+is independently recalculated from the same rec input's KF AtIP direction,
+KF momentum and collected neutral energy, with electron-mass conversion.
+
+| Method | Median absolute pT residual | Within +/-1% | Within +/-5% | RMS residual |
+|---|---:|---:|---:|---:|
+| Current early neutral | 1.151% | 16/39 | 33/39 | 25.842% |
+| Delayed neutral | 0.859% | 23/39 | 38/39 | 5.552% |
+| KF + neutral addition | 0.937% | 21/39 | 38/39 | 15.570% |
+
+Absolute residual improves in 26 tracks and worsens in 13. Among the 32 newly
+tested signal tracks, early/delayed/addition counts within +/-1% are 14/18/16;
+within +/-5% they are 29/31/31. Thus the gain is not solely from revisiting the
+original seven examples, but some individual changes are tiny.
+
+| Owner region | Tracks | Early within +/-1% | Delayed within +/-1% | Addition within +/-1% |
+|---|---:|---:|---:|---:|
+| VXD | 16 | 5 | 12 | 12 |
+| ITK | 14 | 7 | 7 | 7 |
+| TPC | 9 | 4 | 4 | 2 |
+
+The clear improvement is concentrated in VXD; this sample does not show a
+general ITK/TPC core improvement over the existing refit.
+
+The maximum affine-versus-full-formula neutral-energy difference falls from
+69.192 GeV to 0.001187 GeV. However, the frozen loss-map inconsistency is not
+universally removed: maximum |p_before-p_after-E_gamma| remains 0.155157 GeV.
+Both delayed maxima occur in the bad-input case 6:87: collected neutral energy
+47.0755 GeV versus truth photon birth energy 1.07097 GeV. Its early/delayed/
+addition pT residuals are +33.2325%, +33.8973%, +96.7637%, respectively, with
+the fit prior center at its upper bound b0=1. This case remains in every main
+comparison; delayed evaluation cannot repair an inappropriate energy input.
+The exact cluster-association cause was not audited here.
+
+Regression and deployment:
+
+- All 13 C++ tests pass again, including the dense-Gaussian conditioning test.
+- Across all 42 pairs, every non-target main-tree branch and the entire neutral
+  side tree are unchanged; all three no-neutral control endpoints are exact.
+- Fresh installed-versus-branch-OFF runs of 2:10 and 6:157 match all 865 existing
+  main-tree fields exactly. Historical stored endpoints are **not universally
+  bit-identical**: 20 field differences are listed in `full_summary.json`, with
+  maximum 0.00209942 GeV (8:130 beam-only free-loss IP pT). Their cause has not
+  been established; conclusions use the fresh same-code A/B, not stored values.
+- No accepted fit in this sample ignores a valid recorded trial better by more
+  than 0.001 in the objective. This does not close the separate optimizer audit.
+- Loaded-library records verify the isolated branch runtime for every A/B job.
+  Its SHA256 is `911962a6b7e9e91d533018fc699c522a7e3c3d68e50dd58dbbdea774872ec986`.
+- Installed library SHA256 remains
+  `a7f75cd2c64b91a846df1823d69b206babe7a968b07aa55f9de9189c7ba4089b`;
+  `breakpoint` remains at `e4a77baa0459689c02b86c068bb6ce8587bc9dab`.
+  No installation, default promotion, remote push, or PFA/shared-KF change.
+
+Conclusion: delayed neutral evaluation substantially reduces the previously
+observed overshoots and is competitive with simple addition in this selected
+sample. It is not a complete cure for input contamination or frozen loss-map
+effects, and it is not yet a validated production replacement.
