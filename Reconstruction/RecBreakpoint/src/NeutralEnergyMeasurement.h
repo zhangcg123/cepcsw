@@ -15,6 +15,7 @@ struct NeutralEnergyProjection {
 NeutralEnergyProjection neutralEnergyProjection(const LossTrackState& state);
 
 struct NeutralEnergyMeasurement {
+  bool delayed = false;
   LossTrackState predicted, filtered, smoothed;
   GaussianHitModel observation{TMatrixD(1, 6), TMatrixD(1, 1), TMatrixD(1, 1)};
   double energy = std::numeric_limits<double>::quiet_NaN(), sigma = energy;

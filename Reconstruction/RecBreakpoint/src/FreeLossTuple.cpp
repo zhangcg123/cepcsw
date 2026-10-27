@@ -31,6 +31,7 @@ void FreeLossTuple::book(TTree& tree, const std::string& prefix) {
   branch("charged_ecal_innovation_variance", &m_chargedEcalVariance);
   branch("charged_ecal_chi2", &m_chargedEcalChi2);
   branch("neutral_ecal_energy", &m_neutral.energy);
+  branch("neutral_ecal_delayed_update", &m_neutral.delayed);
   branch("neutral_ecal_energy_error", &m_neutral.sigma);
   branch("neutral_ecal_predicted_energy", &m_neutral.predictedEnergy);
   branch("neutral_ecal_predicted_error", &m_neutral.predictedError);

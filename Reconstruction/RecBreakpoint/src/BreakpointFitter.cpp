@@ -1,6 +1,7 @@
 #include "BreakpointFitter.h"
 #include "ScalarMeasurementSite.h"
 #include "DiffuseLossState.h"
+#include "DelayedNeutralConditioning.h"
 
 #include <algorithm>
 #include <cmath>
@@ -90,6 +91,19 @@ TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
     throw std::runtime_error("Complete RTS score unavailable: " + result.smoothedChi2Error);
   if (!result.gaussianModel)
     throw std::runtime_error("Gaussian model unavailable: " + result.gaussianModelError);
+  if (result.neutralEcal && result.neutralEcal->delayed) {
+    // The experimental model contains BOTH ECAL observations exactly once.
+    auto score = evaluateTrackLikelihood(*result.gaussianModel);
+    if (result.beamSpot) {
+      score.quadratic += result.beamSpot->chi2;
+      score.logDeterminant += std::log(result.beamSpot->innovationVariance);
+      score.nll2 += result.beamSpot->chi2 + std::log(2.*std::acos(-1.)*result.beamSpot->innovationVariance);
+      ++score.measurementDimensions;
+    }
+    if (std::abs(score.quadratic-result.smoothedTotalChi2)>1.e-4*std::max(1.,score.quadratic))
+      throw std::runtime_error("Delayed joint score does not match corrected trajectory");
+    return score;
+  }
   auto score = result.chargedEcalStep
       ? evaluateTrackLikelihood(*result.gaussianModel)
       : evaluateSmoothedTrackLikelihood(*result.gaussianModel, result.smoothedTotalChi2);
@@ -117,6 +131,8 @@ TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
 
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                      const FitSettings& settings, bool runBackward) const {
+  if (settings.delayedNeutral && (runBackward || !settings.neutralEcalEnergy || settings.intervals.size()!=1))
+    throw std::runtime_error("Delayed experiment requires neutral, one breakpoint, RTS only");
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
     throw std::invalid_argument("BackwardSeedScale must be finite and positive");
   if (settings.intervals.size() > 1)
@@ -334,6 +350,8 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   std::vector<TMatrixD> transports, noises;
   std::vector<int> hitNodes{0}, nodeHits{0};
   int neutralNode = -1;
+  std::optional<LossTrackState> delayedNeutralReference;
+  GaussianHitModel delayedChargedObservation;
   LossTrackState live;
   double closure = 0;
   for (int i = 0; i + 1 < static_cast<int>(hits.size()); ++i) {
@@ -357,8 +375,14 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
       // Put the photon observation at the loss, before further material transport.
       TMatrixD mapping(6, 6);
       const auto mapped = applyBreakpointLoss(live, mapping);
-      result.neutralEcal = updateNeutralEnergy(mapped, settings.neutralEcalEnergy->first,
-                                              settings.neutralEcalEnergy->second);
+      if (settings.delayedNeutral) {
+        delayedNeutralReference = mapped;
+        live = mapped; // no neutral information enters the forward recursion
+      } else {
+        result.neutralEcal = updateNeutralEnergy(mapped, settings.neutralEcalEnergy->first,
+                                                settings.neutralEcalEnergy->second);
+        live = result.neutralEcal->filtered;
+      }
       TMatrixD transport(6, 5), lossColumn(6, 1);
       for (int row = 0; row < 6; ++row) {
         lossColumn(row, 0) = mapping(row, 5);
@@ -367,12 +391,13 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
       transports.push_back(transport);
       noises.push_back(priorSigma * priorSigma * lossColumn * transpose(lossColumn));
       predictedMean.push_back(mapped.mean); predictedCov.push_back(mapped.covariance);
-      live = result.neutralEcal->filtered;
       filteredMean.push_back(live.mean); filteredCov.push_back(live.covariance);
       neutralNode = filteredMean.size() - 1;
       nodeHits.push_back(-1);
-      result.chi2 += result.neutralEcal->chi2;
-      ++result.measurementDimensions;
+      if (!settings.delayedNeutral) {
+        result.chi2 += result.neutralEcal->chi2;
+        ++result.measurementDimensions;
+      }
     }
     const auto step = m_adapter.advancePersistent(live, hits[i], hits[i + 1],
                                                  birth && !settings.neutralEcalEnergy);
@@ -416,6 +441,22 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   if (settings.chargedEcalEnergy) {
     terminalSmoothed = constrainChargedEnergy(result, live,
         m_adapter.predictCalorimeter(live, hits.back()), settings);
+    if (settings.delayedNeutral) {
+      // Retain ECAL as an explicit node so the later neutral update also
+      // corrects its published state and covariance through correlations.
+      const auto& step = std::get<LossMeasurementStep>(*result.chargedEcalStep);
+      const auto projection = chargedEnergyProjection(step.predicted, settings.chargedEcalEnergyMode);
+      delayedChargedObservation.derivative.ResizeTo(projection.derivative);
+      delayedChargedObservation.derivative = projection.derivative;
+      delayedChargedObservation.noise.ResizeTo(1,1);
+      delayedChargedObservation.noise(0,0) = std::pow(settings.chargedEcalEnergy->second,2);
+      delayedChargedObservation.residual.ResizeTo(1,1);
+      delayedChargedObservation.residual(0,0) = result.chargedEcalResidual;
+      predictedMean.push_back(step.predicted.mean); predictedCov.push_back(step.predicted.covariance);
+      filteredMean.push_back(step.filtered.mean); filteredCov.push_back(step.filtered.covariance);
+      transports.push_back(step.transport); noises.push_back(step.noise); nodeHits.push_back(-2);
+      terminalSmoothed.reset();
+    }
   }
 
   auto smoothedMean = filteredMean;
@@ -424,9 +465,11 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     smoothedMean.back() = terminalSmoothed->mean;
     smoothedCov.back() = terminalSmoothed->covariance;
   }
+  std::vector<TMatrixD> delayedGains(transports.size());
   for (int i = static_cast<int>(filteredMean.size()) - 2; i >= 0; --i) {
     const auto& f = transports[i];
     const TMatrixD gain = filteredCov[i] * transpose(f) * inverseCovariance(predictedCov[i + 1]);
+    if (settings.delayedNeutral) { delayedGains[i].ResizeTo(gain); delayedGains[i]=gain; }
     smoothedMean[i] = filteredMean[i] + gain * stateDifference(smoothedMean[i + 1], predictedMean[i + 1]);
     TMatrixD remaining(filteredCov[i].GetNrows(), filteredCov[i].GetNrows());
     remaining.UnitMatrix();
@@ -435,6 +478,36 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
         + gain * (noises[i] + smoothedCov[i + 1]) * transpose(gain);
     validateCovariance(smoothedCov[i]);
   }
+  if (settings.delayedNeutral) {
+    auto reference = *delayedNeutralReference;
+    reference.mean = smoothedMean[neutralNode]; reference.covariance = smoothedCov[neutralNode];
+    result.neutralEcal = updateNeutralEnergy(reference, settings.neutralEcalEnergy->first,
+                                            settings.neutralEcalEnergy->second);
+    result.neutralEcal->delayed = true;
+    conditionTrajectory(smoothedMean, smoothedCov, delayedGains, neutralNode,
+                        result.neutralEcal->observation);
+    result.chi2 += result.neutralEcal->chi2;
+    result.localChi2.at(interval+1) += result.neutralEcal->chi2;
+    ++result.measurementDimensions;
+    if (result.chargedEcalStep) {
+      auto& step = std::get<LossMeasurementStep>(*result.chargedEcalStep);
+      step.filtered.mean = smoothedMean.back(); step.filtered.covariance = smoothedCov.back();
+    }
+  }
+  auto nodeObservation = [&](std::size_t node) {
+    const int hit = nodeHits[node];
+    auto observation = hit == -2 ? delayedChargedObservation : hit == -1
+        ? result.neutralEcal->observation : m_adapter.gaussianHitModel(hits[hit], result.predicted[hit]);
+    if (hit == -1 && settings.delayedNeutral)
+      observation.residual += observation.derivative *
+          stateDifference(result.neutralEcal->predicted.mean, predictedMean[node]);
+    if (predictedMean[node].GetNrows()==6 && hit>=0) {
+      TMatrixD h(observation.derivative.GetNrows(),6); h.Zero();
+      for (int r=0;r<h.GetNrows();++r) for (int c=0;c<5;++c) h(r,c)=observation.derivative(r,c);
+      observation.derivative.ResizeTo(h); observation.derivative=h;
+    }
+    return observation;
+  };
   for (std::size_t i = 0; i < hits.size(); ++i) {
     const int node = hitNodes[i];
     TrackState track = result.filtered[i];
@@ -461,9 +534,44 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     smoothed.mean = smoothedMean[neutralNode]; smoothed.covariance = smoothedCov[neutralNode];
     assignSmoothedNeutralEnergy(*result.neutralEcal, smoothed);
   }
-  scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
-                result.predicted,hitNodes);
-  result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
+  if (!settings.delayedNeutral) {
+    scoreSmoothed(hits,result,predictedMean,predictedCov,smoothedMean,noises,
+                  result.predicted,hitNodes);
+    result.smoothedTotalChi2 += result.chargedEcalPostfitChi2;
+  } else {
+    // Original forward covariances cannot be used in the old conditional-Q
+    // shortcut after a past measurement is added. Score actual affine factors.
+    result.smoothedChi2.assign(hits.size(),0);
+    result.smoothedMeasurementChi2.assign(hits.size(),0);
+    result.smoothedProcessChi2.assign(hits.size(),0);
+    result.smoothedNativeMeasurementChi2.assign(hits.size(),0);
+    result.smoothedSeedChi2 = supportedQuadratic(stateDifference(smoothedMean.front(),predictedMean.front()),predictedCov.front());
+    result.smoothedChi2.front() = result.smoothedSeedChi2;
+    result.smoothedTotalChi2 = result.smoothedSeedChi2;
+    result.chargedEcalPostfitChi2=0;
+    for (std::size_t node=0;node<nodeHits.size();++node) {
+      const auto obs=nodeObservation(node);
+      const TMatrixD residual=obs.residual-obs.derivative*stateDifference(smoothedMean[node],predictedMean[node]);
+      const double measurement=supportedQuadratic(residual,obs.noise);
+      double process=0;
+      if (node) {
+        const TMatrixD w=stateDifference(smoothedMean[node],predictedMean[node])-
+            transports[node-1]*stateDifference(smoothedMean[node-1],filteredMean[node-1]);
+        process=supportedQuadratic(w,noises[node-1]);
+      }
+      result.smoothedTotalChi2+=measurement+process;
+      if (nodeHits[node]==-2) result.chargedEcalPostfitChi2=measurement+process;
+      else {
+        const int hit=nodeHits[node]<0 ? interval+1 : nodeHits[node];
+        result.smoothedMeasurementChi2[hit]+=measurement;
+        result.smoothedProcessChi2[hit]+=process;
+        result.smoothedChi2[hit]+=measurement+process;
+        if (nodeHits[node]>=0)
+          result.smoothedNativeMeasurementChi2[hit]=m_adapter.measurementScore(hits[hit],result.smoothed[hit],result.predicted[hit]).native;
+      }
+    }
+    result.smoothedChi2Status=1;
+  }
   if (settings.beamSpot) finishBeamSpot(result);
   if (settings.captureGaussianModel) {
     try {
@@ -472,18 +580,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
       model->seedCovariance = predictedCov.front();
       for (std::size_t i = 0; i < nodeHits.size(); ++i) {
         const int hit = nodeHits[i];
-        auto hitModel = hit < 0 ? result.neutralEcal->observation
-            : m_adapter.gaussianHitModel(hits[hit], result.predicted[hit]);
-        const int dimensions = predictedMean[i].GetNrows();
-        if (dimensions == 6 && hit >= 0) {
-          TMatrixD derivative(hitModel.derivative.GetNrows(), dimensions);
-          derivative.Zero();
-          for (int row = 0; row < derivative.GetNrows(); ++row)
-            for (int column = 0; column < 5; ++column)
-              derivative(row, column) = hitModel.derivative(row, column);
-          hitModel.derivative.ResizeTo(derivative);
-          hitModel.derivative = derivative; // hit observes helix, not latent b directly
-        }
+        auto hitModel = nodeObservation(i);
         model->hits.push_back(std::move(hitModel));
         if (i) model->transitions.push_back({transports[i - 1], noises[i - 1],
             stateDifference(predictedMean[i - 1], filteredMean[i - 1])});

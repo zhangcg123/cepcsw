@@ -26,6 +26,7 @@ struct FitSettings {
   std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
+  bool delayedNeutral = false; // branch experiment; preserves the original path when off
 };
 
 struct IntervalResult {

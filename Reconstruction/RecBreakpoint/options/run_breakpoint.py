@@ -201,6 +201,10 @@ fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "Elect
 # These six extra families are RTS-only. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
+# Branch experiment: delay only the neutral free-loss update until after the
+# first RTS pass, then condition the whole trajectory through cross-covariances.
+# Requires FreeLossFit and a selected breakpoint/neutral; ordinary stays unchanged.
+fit.ExperimentalDelayedNeutral = os.environ.get("BP_EXPERIMENTAL_DELAYED_NEUTRAL", "0") == "1"
 fit.ChargedEcalStochasticError = float(os.environ.get("BP_CHARGED_ECAL_STOCHASTIC", "0.011"))
 fit.ChargedEcalConstantError = float(os.environ.get("BP_CHARGED_ECAL_CONSTANT", "0.004"))
 fit.FreeLossMaxLogLoss = float(os.environ.get("BP_FREE_LOSS_MAX_LOG_LOSS", "1.0"))  # bounds prior center, not fitted b

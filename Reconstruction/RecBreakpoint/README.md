@@ -200,6 +200,18 @@ EDM track collections themselves. Optional neutral measurements use the existing
 
 ## Neutral-energy KF measurement in free-loss RTS
 
+On `breakpoint-delayed-neutral`, `ExperimentalDelayedNeutral=false` preserves
+the original algorithm. Enable the branch experiment with
+`BP_EXPERIMENTAL_DELAYED_NEUTRAL=1`, together with `FreeLossFit` and
+`NeutralEcalMeasurement`. It changes only the neutral-constrained free-loss RTS
+family: each Minuit trial first smooths without the neutral observation, then
+conditions all states on that observation using the smoother cross-covariances.
+There is no repeated tracker-hit processing or loss-Jacobian iteration. Ordinary,
+diffuse, truth, and earlier cumulative constraint families remain unchanged.
+Missing neutral input retains the existing fallback. This branch is not deployed
+automatically; its card requires its rebuilt configurable/runtime. See the
+[experiment contract and regression results](docs/delayed-neutral-experiment.md).
+
 `NeutralEcalMeasurement=false` is the compiled/card default. Enable with
 `BP_NEUTRAL_ECAL_MEASUREMENT=1`. This and `ChargedEcalMeasurement` steer BOTH
 separate ordinary augmented KF/RTS and free-loss variants with the same selected observations.
@@ -864,6 +876,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
 | ChargedEcalEnergyMode | ElectronOnly | ElectronPhoton uses sum only with one breakpoint and no collected neutral, otherwise electron-only; BP_CHARGED_ECAL_ENERGY_MODE; sum request requires ElossOn off |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
+| ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | BeamSpotConstraint | false | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Transverse beam mean for the initial scalar KF measurement |

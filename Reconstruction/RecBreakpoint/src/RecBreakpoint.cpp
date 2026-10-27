@@ -1101,6 +1101,7 @@ StatusCode RecBreakpoint::execute() {
             } else if (kind == 2 && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2) {
               variant.neutralEcalEnergy = std::make_pair(
                   m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+              if (method == 1) variant.delayedNeutral = m_delayedNeutralExperiment;
               available = true;
             }
           }

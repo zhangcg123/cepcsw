@@ -124,6 +124,15 @@ if(BUILD_TESTING)
     target_link_libraries(RecBreakpointNeutralEnergyTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep
       ${KalTest_LIBRARIES} ROOT::Physics)
     add_test(NAME RecBreakpointNeutralEnergy COMMAND RecBreakpointNeutralEnergyTest)
+    add_executable(RecBreakpointDelayedNeutralTest tests/DelayedNeutralTest.cpp src/TrackState.cpp)
+    target_compile_features(RecBreakpointDelayedNeutralTest PRIVATE cxx_std_17)
+    target_compile_options(RecBreakpointDelayedNeutralTest PRIVATE -UNDEBUG)
+    target_include_directories(RecBreakpointDelayedNeutralTest PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
+      ${KalTest_INCLUDE_DIRS})
+    target_link_libraries(RecBreakpointDelayedNeutralTest PRIVATE RecBreakpointLikelihood EDM4HEP::edm4hep
+      ${KalTest_LIBRARIES} ROOT::Physics)
+    add_test(NAME RecBreakpointDelayedNeutral COMMAND RecBreakpointDelayedNeutralTest)
     add_executable(RecBreakpointChargedEnergyTest tests/ChargedEnergyTest.cpp src/TrackState.cpp)
     target_compile_features(RecBreakpointChargedEnergyTest PRIVATE cxx_std_17)
     target_include_directories(RecBreakpointChargedEnergyTest PRIVATE
