@@ -9,6 +9,12 @@ The tested temporary implementation is now checkpointed on this branch;
 push is part of this checkpoint. Existing unrelated working-tree edits are
 neither committed nor reverted.
 
+Installation update (2026-10-28): the user subsequently requested installation;
+the package is now installed in the project-default
+`InstallArea/x86_64-el9-gcc11-opt`. The default remains OFF. See the deployment
+record at the end of this document; earlier no-install statements describe the
+validation checkpoints, not the current deployment.
+
 Set `BP_EXPERIMENTAL_DELAYED_NEUTRAL=1` in the dedicated run card, with free-loss
 and neutral measurements enabled. This affects ONLY the cumulative
 `neutral_ecal_free_loss_rts_*` result. Other families retain their existing
@@ -170,3 +176,27 @@ Conclusion: delayed neutral evaluation substantially reduces the previously
 observed overshoots and is competitive with simple addition in this selected
 sample. It is not a complete cure for input contamination or frozen loss-map
 effects, and it is not yet a validated production replacement.
+
+## Project-default deployment (2026-10-28)
+
+Installed only the RecBreakpoint package using its generated CMake install
+script, after a focused rebuild and all 13 C++ tests passed. The existing
+runtime/configuration was backed up to
+`/tmp/recbreakpoint-pre-delayed-install-mupUIS` before replacement. No GSF,
+PFA, shared KF, submission helpers, or default constraint settings changed.
+
+Installed and branch-build library SHA256 both equal
+`911962a6b7e9e91d533018fc699c522a7e3c3d68e50dd58dbbdea774872ec986`.
+The installed configurable exposes `ExperimentalDelayedNeutral=false` and
+accepts explicit true. A fresh one-event delayed run (seed 2, event 10) loaded
+the library from InstallArea, confirmed through the live process maps, and
+terminated successfully. Its card, log, tuple and comparison check are under
+`TrackingPerformanceStudies/breakpoint_delayed_neutral_ab_20261028/`, named
+`installed_delayed_smoke.*` and `check_installed_smoke.py`.
+All 869 main-tree branches and 57 neutral side-tree branches reproduce the
+isolated delayed-build result exactly, including the applied-delayed flag.
+
+Batch readiness is a separate pending step: `batch_breakpoint.py` still needs
+to preserve `BP_EXPERIMENTAL_DELAYED_NEUTRAL` in frozen cards; submission stage
+and input/output directories must be set for breakpoint-only reruns. No batch
+was submitted and no existing tuple was overwritten.
