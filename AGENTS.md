@@ -312,51 +312,56 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**EFFECTIVE BOUNDARY TRUTH OWNERS — INSTALLED (2026-10-26).**
-RecBreakpoint now maps audited barrel IP-beam-pipe emissions to VXD layer 0
-and TPC-inner-wall emissions to TPC row 0. This is an explicit effective
-assignment, not physical sensor ownership. Preserve actual G4 emission
-positions/material paths and record truth_ebrem_effective_owner_rule (0 none,
-1 beam pipe, 2 inner wall). Require the exact subsequent target layer, valid
-geometry/provenance, and an accepted hit without crossing another sensor
-assembly; never substitute another layer. Existing missing/ambiguous/outermost
-guards remain. Fitter loss placement is unchanged (owner hit, before outward
-propagation), so a true pre-layer loss is displaced outward in this model.
+**CHARGED-CLUSTER ELECTRON+PHOTON CONSTRAINT — DISCUSSION (2026-10-29).**
+Work on the user-authorized `breakpoint-delayed-neutral` branch; preserve the
+original `breakpoint`. Delayed-neutral runtime is installed; this discussion
+and the latest temporary experiments did not change the installation. Do not
+change algorithms, production defaults, PFA or installed libraries for this
+new focus without authorization. Fit experiments remain in /tmp pending solid
+evidence and review; no remote publication of this branch was requested.
 
-Source checkpoint c37574a is pushed to origin/breakpoint. After explicit user
-confirmation of no active jobs, the package-only update was installed into
-project-default InstallArea/x86_64-el9-gcc11-opt. No GSF/shared KF/PFA library,
-rec/sim producer, or workflow card changed. Pre-PFO inputs, cumulative 111 and
-conditional charged routing remain; campaign ElectronPhoton versus compiled/
-standalone ElectronOnly defaults remain unchanged. Diffuse constraints/free-loss
-work remains deferred. Identification shares the package mapper/tuple tag;
-its training/workflow was not independently modified or validated here.
+The user paused neutral-update development to discuss unresolved charged
+clusters. Current ElectronPhoton mode predicts h_sum=p_ECAL*exp(b) and applies
+a terminal ECAL-face KF energy measurement followed by RTS. With no breakpoint
+or a collected separate neutral, routing uses ElectronOnly instead. Review the
+charged sum's measurement model, covariance/linearization and cluster-energy
+completeness separately; do not conflate them with loss-transition mapping or
+optimizer bounds. No change is yet selected. Diffuse constraints/free-loss work
+remains deferred.
 
-Gate: all 11 C++ tests pass. Nine fresh before/after event reruns preserve
-physical truth exactly; four unaffected tracks reproduce 11 endpoint pT fields
-exactly, while five acquire the requested breakpoint. Installed-runtime smoke
-on three rows reproduces all 856 breakpoint and 57 side-tree branches exactly.
-Beam-pipe examples did not improve unconstrained free-loss pT despite gaining
-an owner. No population/endcap validation is claimed. Deployment hashes,
-rollback files, tests and event table:
-agents_record/2026-10-26-effective-boundary-truth-owners.md.
+Preserve these distinctions from the completed temporary 12-track comparison:
+- The early neutral-measurement approximation is a REAL demonstrated issue,
+  not declared harmless. Delayed update resolves tested exact-versus-affine
+  photon-energy discrepancies, including early 4:11's 17.77-sigma discrepancy.
+- FreeLossMaxLogLoss=1 bounds Minuit's Gaussian prior CENTER b0, not final b.
+  Widening to 2 fixes much of two saturated delayed VXD fits, but not early
+  update's failures. A lower-bound-only optimizer is discussed, NOT implemented.
+  The compiled/maintained default remains 1; SigmaLogLoss remains 0.001.
+- Loss-transition closure mismatch is separate. It is not established as the
+  main cause of remaining delayed-fit degradation; leave that mapping unchanged.
+  Four bad ITK/TPC cases remain unexplained. No population-wide claim follows.
 
-Next: rerun breakpoint only from existing rec inputs (STAGES=breakpoint), then
-recompute eligibility and categorized IP performance. No sim/rec regeneration
-is needed. Old 376-file/80,360-row campaign and ownership percentages describe
-the previous rules. No new batch was submitted. Outgoing complete AGENTS is
-preserved in agents_record/2026-10-26-agents-before-effective-boundary-owners.md.
+Next: discuss the charged electron+photon constraint with code-backed equations;
+agree any temporary diagnostic before implementation. Exact event tables,
+optimizer checks, deployment identity and limitations are retained in
+`agents_record/2026-10-29-neutral-bound-audit-and-charged-sum-handoff.md`.
+Earlier unresolved charged-sum diagnostics are in
+`Reconstruction/RecBreakpoint/docs/unresolved-loss-map-diagnostic.md`.
+Latest delayed-neutral/simple-addition gallery is
+`TrackingPerformanceStudies/breakpoint_delayed_neutral_pt_resolution_20261028`,
+under the TrackingPerformanceStudies server on localhost8000. Historical early
+population comparisons have endpoint drift; the temporary 12-track A/B uses
+one library and identical inputs.
 
-The independent neutral/free-loss acceptance audit remains unresolved:
-unphysical frozen-linearization energy and ignored better valid candidates
-(303/7163 accepted neutral fits, 4.23%, including controls). Do not silently
-promote scan candidates, clip states, or implement acceptance repairs before
-user discussion. Per-start scans and physical/affine energy comparisons remain
-the pending diagnostic; full evidence and other audit findings are retained in
-agents_record/2026-10-26-breakpoint-independent-audit-handoff.md.
-
-Latest gallery: TrackingPerformanceStudies/breakpoint_prereco111_pt_resolution_20261026,
-served under TrackingPerformanceStudies on localhost8000. Includes light-owner
-plots and hard/light ownership tables. Hybrid plots use the common 61,420-track
-sample but normalize each histogram within +/-2%; other plots use full paired
-sample normalization. Truth-gated hybrids are not reconstructed classifiers.
+Existing effective ownership rules/guards remain active: preserve actual G4
+positions/material paths and truth_ebrem_effective_owner_rule (0 none, 1 beam
+pipe, 2 TPC inner wall). Require the exact subsequent target layer, valid
+geometry/provenance and an accepted hit without crossing another sensor
+assembly; never substitute another layer. Missing/ambiguous/outermost guards
+remain; owner-hit loss placement is unchanged. Deployment history remains in
+`agents_record/2026-10-26-effective-boundary-truth-owners.md`.
+The independent acceptance audit is not closed: do not silently promote scan
+candidates, clip states, or implement acceptance repairs before user discussion.
+See `agents_record/2026-10-26-breakpoint-independent-audit-handoff.md`.
+The complete outgoing AGENTS is preserved in
+`agents_record/2026-10-29-agents-before-charged-sum-focus.md`.
