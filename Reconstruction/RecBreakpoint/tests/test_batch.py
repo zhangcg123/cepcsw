@@ -19,6 +19,25 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_delayed_neutral_is_validated_and_frozen(self):
+        template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        assignment = next(line for line in template.splitlines()
+                          if line.startswith('fit.ExperimentalDelayedNeutral ='))
+        for value, expected in [('true', True), ('false', False)]:
+            output = 'delayed_' + value
+            self.prepare(STAGES='breakpoint', OUTPUT_TUPLEPATH=output,
+                         BP_EXPERIMENTAL_DELAYED_NEUTRAL=value)
+            job = self.manifest(output)
+            self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'], str(int(expected)))
+            card = Path(job['cards']['breakpoint']).read_text()
+            fit = types.SimpleNamespace()
+            with patch.dict(os.environ, {'BP_EXPERIMENTAL_DELAYED_NEUTRAL': str(int(not expected))}, clear=True):
+                exec(card[:-len(template)] + '\n' + assignment, {'fit': fit, 'os': os})
+            self.assertEqual(fit.ExperimentalDelayedNeutral, expected)
+        with self.assertRaisesRegex(ValueError, 'Expected a boolean'):
+            self.prepare(OUTPUT_TUPLEPATH='invalid', BP_EXPERIMENTAL_DELAYED_NEUTRAL='typo')
+        self.assertFalse((self.repo/'invalid').exists())
+
     def test_sum_mode_allows_neutral_for_trackwise_routing(self):
         self.prepare(BP_CHARGED_ECAL_MEASUREMENT='1', BP_NEUTRAL_ECAL_MEASUREMENT='1',
                      BP_CHARGED_ECAL_ENERGY_MODE='ElectronPhoton')
@@ -425,15 +444,14 @@ class BatchTest(unittest.TestCase):
                               fit.NeutralEcalMeasurement], [v == '1' for v in expected])
             self.assertFalse((carddir/'submitted.json').exists())
 
-    def test_submission_wrapper_full_chain_default_and_sim_reuse_override(self):
-        for stages in (None, ','.join(batch.ORDER[1:])):
+    def test_submission_wrapper_refit_default_and_full_chain_overrides(self):
+        for stages in (None, ','.join(batch.ORDER), ','.join(batch.ORDER[1:])):
             with self.subTest(stages=stages):
-                output = 'wrapper_full' if stages is None else 'wrapper_rec'
+                output = 'wrapper_default' if stages is None else 'wrapper_' + stages.replace(',', '_')
                 env = dict(self.env, PATH=os.environ.get('PATH', '/usr/bin:/bin'),
                            SAMPLE_REGION='barrel', OUTPUT_TUPLEPATH=output)
                 if stages is None:
                     del env['STAGES']
-                    env['INPUT_TUPLEPATH'] = 'absent_inputs'
                 else:
                     env['STAGES'] = stages
                 result = batch.subprocess.run(
@@ -442,8 +460,9 @@ class BatchTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 carddir = self.repo/output/'runcards/barrel-12'
                 job = json.loads((carddir/'job.json').read_text())
-                self.assertEqual(job['stages'], list(batch.ORDER) if stages is None else list(batch.ORDER[1:]))
+                self.assertEqual(job['stages'], ['breakpoint'] if stages is None else stages.split(','))
                 self.assertEqual(job['controls']['BP_CHARGED_ECAL_ENERGY_MODE'], 'ElectronPhoton')
+                self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'], '1')
                 self.assertFalse((carddir/'submitted.json').exists())
                 for stage, predecessor in zip(batch.ORDER[1:], batch.ORDER[:-1]):
                     if stage not in job['stages']: continue

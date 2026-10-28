@@ -196,7 +196,23 @@ terminated successfully. Its card, log, tuple and comparison check are under
 All 869 main-tree branches and 57 neutral side-tree branches reproduce the
 isolated delayed-build result exactly, including the applied-delayed flag.
 
-Batch readiness is a separate pending step: `batch_breakpoint.py` still needs
-to preserve `BP_EXPERIMENTAL_DELAYED_NEUTRAL` in frozen cards; submission stage
-and input/output directories must be set for breakpoint-only reruns. No batch
-was submitted and no existing tuple was overwritten.
+## Batch rerun preparation (2026-10-28)
+
+The subsequent batch-plumbing update preserves and validates
+`BP_EXPERIMENTAL_DELAYED_NEUTRAL` in frozen cards. The submission wrapper now
+defaults to breakpoint-only, input `sim_large_barrel_20261026`, output
+`breakpoint_delayed_neutral_20261028`, cumulative 111, and delayed neutral ON.
+SigmaLogLoss remains 0.001; backward filters remain OFF. Compiled and standalone
+delayed-update defaults remain OFF. The user's existing local `-g cms` choice
+was preserved; that pre-existing edit was not included in this checkpoint.
+
+All 45 batch-helper tests pass, including true/false normalization, invalid
+switch rejection, frozen controls overriding ambient worker values, and the
+new refit default with full-chain overrides. Shell syntax checks pass.
+A real one-event local worker test was prepared through the submission helper
+with DRY_RUN=1, then executed with `dump_breakpoint.sh`; output verification
+passed and the input REC was retained. Its manifest/cards/log/output are in
+`/tmp/bp-delayed-batchcheck-BnMNsI`. This does not test Condor execution.
+No batch was submitted, no production campaign cards were generated, and no
+existing tuple was overwritten. Run `./subbreakpointjobs.sh` to prepare and
+submit fresh jobs; existing prepared cards do not acquire the new switch.

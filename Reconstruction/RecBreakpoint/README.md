@@ -208,8 +208,10 @@ family: each Minuit trial first smooths without the neutral observation, then
 conditions all states on that observation using the smoother cross-covariances.
 There is no repeated tracker-hit processing or loss-Jacobian iteration. Ordinary,
 diffuse, truth, and earlier cumulative constraint families remain unchanged.
-Missing neutral input retains the existing fallback. This branch is not deployed
-automatically; its card requires its rebuilt configurable/runtime. See the
+Missing neutral input retains the existing fallback. The validated branch build
+was installed into the project-default runtime on 2026-10-28; the compiled and
+standalone-card delayed-update defaults remain OFF. The current submission
+campaign explicitly enables it and freezes the switch into each job card. See the
 [experiment contract and regression results](docs/delayed-neutral-experiment.md).
 
 `NeutralEcalMeasurement=false` is the compiled/card default. Enable with
@@ -1151,9 +1153,15 @@ The default Truth selection chooses per-track locations from embedded Geant4
 provenance. Auto reconstruction-based selection is not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
 
-The submission helper defaults to `STAGES=sim,trk,calodigi,rec,breakpoint`,
-regenerating simulation so the new truth ECAL entrance records are available.
-Use `STAGES=breakpoint` with an existing REC input path for later refits.
+The current submission helper defaults to `STAGES=breakpoint`, reading existing
+REC files in `sim_large_barrel_20261026` and writing new flat tuples under
+`breakpoint_delayed_neutral_20261028`. It enables
+`BP_EXPERIMENTAL_DELAYED_NEUTRAL=1` with cumulative 111; missing neutrals retain
+the preceding constraint result. Earlier flat tuples and REC inputs are retained.
+Run `./subbreakpointjobs.sh` to prepare and submit this campaign, or override
+`DRY_RUN=1` and a separate output path to prepare without submitting.
+For a new full simulation campaign explicitly set
+`STAGES=sim,trk,calodigi,rec,breakpoint` and a fresh output directory.
 The full chain freezes the shared
 `DumpGsfTrks/sim.py.bk` together with the downstream cards at preparation.
 No existing input tuple is needed for this chain. All outputs go into
