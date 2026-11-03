@@ -54,15 +54,22 @@ detector layer numbers. Residual = 100*(pT_reco-pT_truth)/pT_truth at IP.
 All scans use threshold zero, free-loss 110, ElectronPhoton for candidates,
 truth override/diffuse/backward filters OFF and verbose component dumps ON.
 
-| Seed:event | Photon loss [%] | Truth-owned hit | Scan hit | Candidates | Gain in NLL2 | KF residual [%] | Scan free-loss 110 residual [%] |
-|---|---:|---|---|---:|---:|---:|---:|
-| 1:38 | 2.666820 | VXD h5 | VXD h0 | 9 | 10.205547 | -2.685639 | -0.442512 |
-| 1:79 | 6.988072 | VXD h5 | VXD h5 | 9 | 265.805159 | -6.944192 | +2.896996 |
-| 1:112 | 3.552839 | ITK h6 | ITK h9 | 10 | 17.561872 | -3.482321 | -1.861786 |
-| 2:45 | 4.961242 | ITK h8 | ITK h8 | 9 | 166.469036 | -4.454243 | +1.430608 |
-| 2:189 | 2.284023 | VXD h0 | VXD h5 | 10 | 6.111415 | -2.274262 | -0.623925 |
-| 3:40 | 2.226259 | ITK h7 | VXD h5 | 9 | 15.873250 | -2.229331 | +0.650142 |
-| 1:11 control | 0 | none | ITK h7 | 8 | 1.996840 | -0.208432 | -0.513638 |
+| Seed:event | Photon loss [%] | Truth-owned hit | Scan hit | Candidates | Gain in NLL2 | KF residual [%] | Scan free-loss 110 residual [%] | Truth-location free-loss 110 residual [%] |
+|---|---:|---|---|---:|---:|---:|---:|---:|
+| 1:38 | 2.666820 | VXD h5 | VXD h0 | 9 | 10.205547 | -2.685639 | -0.442512 | -0.494561 |
+| 1:79 | 6.988072 | VXD h5 | VXD h5 | 9 | 265.805159 | -6.944192 | +2.896996 | +2.896996 |
+| 1:112 | 3.552839 | ITK h6 | ITK h9 | 10 | 17.561872 | -3.482321 | -1.861786 | -1.396546 |
+| 2:45 | 4.961242 | ITK h8 | ITK h8 | 9 | 166.469036 | -4.454243 | +1.430608 | +1.430608 |
+| 2:189 | 2.284023 | VXD h0 | VXD h5 | 10 | 6.111415 | -2.274262 | -0.623925 | -0.629505 |
+| 3:40 | 2.226259 | ITK h7 | VXD h5 | 9 | 15.873250 | -2.229331 | +0.650142 | -1.686691 |
+| 1:11 control | 0 | none | ITK h7 | 8 | 1.996840 | -0.208432 | -0.513638 | -0.401622 |
+
+The added truth-location column uses the same free-loss 110 fit with ONLY the
+breakpoint location selected by Truth mode; TruthOverride=False, so the loss
+amount is still fitted, not supplied from truth. The control has no breakpoint.
+Independent reruns reproduce the original scan's candidate NLL/IP omega at all
+six true locations, and the control reproduces the scan's 5D null NLL. Correct
+location alone does not guarantee a small IP pT residual.
 
 Event2:45 candidates h0/h1 failed with "No converged valid Minuit minimum";
 all other candidate optimizations succeeded. Its minimum is over seven valid
@@ -109,7 +116,13 @@ gain. Gain zero is a ranking rule, not a calibrated no-eBrem test.
 Artifacts: `/tmp/bp-hit-scan110-gR1LL9/`: `run_case.py`, `null_case.py`,
 `candidates.json`, `s{1,2,3}_110.root/log`, `s1_000.root/log`,
 `null110.root/log`, `updated_truth.root/log`, `check_results.py`, `results.json`
-and the staged `runtime/`. Temporary files may expire; this table is durable.
+and the staged `runtime/`. Added truth-location artifacts are
+`truth_location.py`, `s{1,2,3}_truth_location110_rerun.root/log`,
+`compare_truth_location.py`, and `truth_location_comparison.json`. The initial
+wrapper changed mode after the card's input-selection stage without adding hit
+associations; it produced failed rows and was corrected in /tmp before these
+reruns. Those initial outputs are NOT used. No production-card change was needed.
+Temporary files may expire; this table is durable.
 
 Tested staged library SHA256:
 `5f756445881ec9eb18ae4656afecb9a0c822208d34ce1713737a07c2b834fc1f`.
