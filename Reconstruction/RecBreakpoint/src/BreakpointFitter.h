@@ -32,6 +32,8 @@ struct FitSettings {
 
 // One terminal total-energy observation replaces, never supplements, the two parts.
 inline bool combineResolvedEcalMeasurements(FitSettings& settings) {
+  if (settings.resolvedEcalSum && settings.chargedEcalEnergyMode != ChargedEnergyMode::ElectronPhoton)
+    throw std::invalid_argument("Resolved ECAL sum requires ElectronPhoton");
   if (!settings.resolvedEcalSum ||
       settings.intervals.size()!=1 || !settings.chargedEcalEnergy || !settings.neutralEcalEnergy)
     return false;
@@ -44,7 +46,6 @@ inline bool combineResolvedEcalMeasurements(FitSettings& settings) {
   if (!std::isfinite(energy) || !std::isfinite(sigma))
     throw std::invalid_argument("Nonfinite resolved ECAL sum");
   settings.chargedEcalEnergy=std::make_pair(energy,sigma);
-  settings.chargedEcalEnergyMode=ChargedEnergyMode::ElectronPhoton;
   settings.neutralEcalEnergy.reset();
   settings.delayedNeutral=false;
   return true;

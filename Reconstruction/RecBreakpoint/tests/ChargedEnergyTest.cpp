@@ -14,6 +14,7 @@ int main() {
     for (bool breakpoint : {false,true}) for (bool charged : {false,true}) for (bool neutral : {false,true}) {
       FitSettings original;
       original.resolvedEcalSum=sumStage;
+      original.chargedEcalEnergyMode=ChargedEnergyMode::ElectronPhoton;
       original.delayedNeutral=true;
       if (breakpoint) original.intervals={3};
       if (charged) original.chargedEcalEnergy=std::make_pair(10.,.2);
@@ -34,6 +35,7 @@ int main() {
         // The next stage uses raw observations, not the sum-fitted state.
         auto separate111=original;
         separate111.resolvedEcalSum=false;
+        separate111.chargedEcalEnergyMode=ChargedEnergyMode::ElectronOnly;
         if (combineResolvedEcalMeasurements(separate111) || !separate111.neutralEcalEnergy)
           throw std::runtime_error("111 must retain the separate neutral measurement");
         close(separate111.chargedEcalEnergy->first,10.);
@@ -47,6 +49,7 @@ int main() {
   for (double bad : {0.,-1.,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
     FitSettings invalid;
     invalid.resolvedEcalSum=true;
+    invalid.chargedEcalEnergyMode=ChargedEnergyMode::ElectronPhoton;
     invalid.intervals={3}; invalid.chargedEcalEnergy=std::make_pair(10.,.2);
     invalid.neutralEcalEnergy=std::make_pair(3.,bad);
     bool rejected=false;
@@ -55,10 +58,22 @@ int main() {
   }
   for (auto requested : {ChargedEnergyMode::ElectronOnly, ChargedEnergyMode::ElectronPhoton})
     for (bool breakpoint : {false, true}) for (bool neutral : {false, true}) {
+      if (useResolvedEcalSum(requested,breakpoint,neutral) !=
+          (requested==ChargedEnergyMode::ElectronPhoton && breakpoint && neutral))
+        throw std::runtime_error("ElectronOnly must never use the resolved sum");
       const auto expected = breakpoint && !neutral ? requested : ChargedEnergyMode::ElectronOnly;
       if (effectiveChargedEnergyMode(requested, breakpoint, neutral) != expected)
         throw std::runtime_error("Wrong charged-energy routing");
     }
+  FitSettings forbidden;
+  forbidden.resolvedEcalSum=true;
+  forbidden.intervals={3};
+  forbidden.chargedEcalEnergy=std::make_pair(10.,.2);
+  forbidden.neutralEcalEnergy=std::make_pair(3.,.1);
+  bool rejectedOverride=false;
+  try { combineResolvedEcalMeasurements(forbidden); }
+  catch (const std::invalid_argument&) { rejectedOverride=true; }
+  if (!rejectedOverride) throw std::runtime_error("ElectronOnly was silently changed to ElectronPhoton");
   TrackState unbroken;
   unbroken.mean.Zero(); unbroken.covariance.UnitMatrix(); unbroken.covariance *= 1.e-5;
   unbroken.mean(2,0)=.1; unbroken.mean(4,0)=.4;

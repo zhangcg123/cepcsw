@@ -24,7 +24,7 @@ export BP_CHARGED_ECAL_MEASUREMENT=${BP_CHARGED_ECAL_MEASUREMENT:-1}
 export BP_NEUTRAL_ECAL_MEASUREMENT=${BP_NEUTRAL_ECAL_MEASUREMENT:-1}
 # Campaign-only: delayed neutral update for free-loss RTS when a neutral is available.
 export BP_EXPERIMENTAL_DELAYED_NEUTRAL=${BP_EXPERIMENTAL_DELAYED_NEUTRAL:-1}
-# Unresolved110 choice; resolved110 always sums charged+neutral energies.
+# 110: ElectronOnly uses charged energy; ElectronPhoton adds collected neutral energy.
 export BP_CHARGED_ECAL_ENERGY_MODE=${BP_CHARGED_ECAL_ENERGY_MODE:-ElectronPhoton}
 # New simulation files use sim-barrel-<seed>.root. SAMPLE_REGION controls that
 # filename convention, and also the gun theta range if STAGES includes sim.

@@ -146,8 +146,8 @@ StatusCode RecBreakpoint::initialize() {
       ? m_recordEcalConstraintClusters : m_chargedEcalClusters.objKey();
   m_recordChargedEcalEnergyMode = m_chargedEcalEnergyMode.value();
   if (m_chargedEcalMeasurement && (m_recordChargedEcalInput.empty() ||
-      m_eloss)) {
-    error() << "ChargedEcalInputClusters must be nonempty; automatic resolved sum requires"
+      (m_recordChargedEcalEnergyMode == "ElectronPhoton" && m_eloss))) {
+    error() << "ChargedEcalInputClusters must be nonempty; ElectronPhoton requires"
             << " ElossOn=False" << endmsg;
     return StatusCode::FAILURE;
   }
@@ -812,8 +812,7 @@ StatusCode RecBreakpoint::execute() {
         if (m_collectedNeutralStatus==2)
           observations.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
         observations.delayedNeutral=m_delayedNeutralExperiment;
-        observations.chargedEcalEnergyMode=breakpoint::effectiveChargedEnergyMode(
-            settings.chargedEcalEnergyMode,true,m_collectedNeutralStatus==2);
+        observations.chargedEcalEnergyMode=settings.chargedEcalEnergyMode;
         std::optional<int> owner;
         std::string referenceError;
         try {
@@ -1164,10 +1163,11 @@ StatusCode RecBreakpoint::execute() {
       }
       std::array<std::optional<breakpoint::PairedFitResult>, 6> constrained;
       std::array<breakpoint::FitSettings, 2> cumulative{{settings, settings}};
-      const auto chargedMode = breakpoint::effectiveChargedEnergyMode(settings.chargedEcalEnergyMode,
-          !settings.intervals.empty(), m_collectedNeutralStatus == 2);
-      const bool resolvedSum = settings.intervals.size() == 1 && m_collectedNeutralStatus == 2;
-      m_recordChargedEcalEffectiveMode = resolvedSum || chargedMode == breakpoint::ChargedEnergyMode::ElectronPhoton
+      const auto chargedMode = settings.intervals.empty() ? breakpoint::ChargedEnergyMode::ElectronOnly
+          : settings.chargedEcalEnergyMode;
+      const bool resolvedSum = breakpoint::useResolvedEcalSum(chargedMode,
+          settings.intervals.size() == 1, m_collectedNeutralStatus == 2);
+      m_recordChargedEcalEffectiveMode = chargedMode == breakpoint::ChargedEnergyMode::ElectronPhoton
           ? "ElectronPhoton" : "ElectronOnly";
       for (auto& variant : cumulative) variant.chargedEcalEnergyMode = chargedMode;
       std::array<const breakpoint::PairedFitResult*, 2> previous{{
@@ -1197,6 +1197,7 @@ StatusCode RecBreakpoint::execute() {
             } else if (kind == 2 && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2) {
               // Refit the separate observations; never add neutral on top of the sum.
               variant.resolvedEcalSum = false;
+              variant.chargedEcalEnergyMode = breakpoint::ChargedEnergyMode::ElectronOnly;
               variant.neutralEcalEnergy = std::make_pair(
                   m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
               if (method == 1) variant.delayedNeutral = m_delayedNeutralExperiment;

@@ -236,12 +236,14 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
         proposed.beamSpot=observations.beamSpot; available=true;
       } else if (configuration==110 && observations.chargedEcalEnergy) {
         proposed.chargedEcalEnergy=observations.chargedEcalEnergy; available=true;
-        if (site>=0 && observations.neutralEcalEnergy) {
+        if (useResolvedEcalSum(observations.chargedEcalEnergyMode,site>=0,
+                               observations.neutralEcalEnergy.has_value())) {
           proposed.resolvedEcalSum=true;
           proposed.neutralEcalEnergy=observations.neutralEcalEnergy;
         }
       } else if (configuration==111 && site>=0 && observations.neutralEcalEnergy) {
         proposed.resolvedEcalSum=false;
+        proposed.chargedEcalEnergyMode=ChargedEnergyMode::ElectronOnly;
         proposed.neutralEcalEnergy=observations.neutralEcalEnergy;
         proposed.delayedNeutral=observations.delayedNeutral; available=true;
       }

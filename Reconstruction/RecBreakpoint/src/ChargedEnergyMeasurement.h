@@ -17,9 +17,14 @@ struct ChargedEnergyProjection {
   TMatrixD derivative{1, 6};
 };
 
+// Legacy HitScan omits neutrals, so its resolved charged shower stays electron-only.
 inline ChargedEnergyMode effectiveChargedEnergyMode(ChargedEnergyMode requested,
                                                    bool hasBreakpoint, bool hasNeutral) {
   return !hasBreakpoint || hasNeutral ? ChargedEnergyMode::ElectronOnly : requested;
+}
+
+inline bool useResolvedEcalSum(ChargedEnergyMode requested, bool hasBreakpoint, bool hasNeutral) {
+  return requested == ChargedEnergyMode::ElectronPhoton && hasBreakpoint && hasNeutral;
 }
 
 /// ECAL-face scalar energy; no loss coordinate is needed for an unbroken track.

@@ -901,8 +901,8 @@ the independent neutral clusters in `TrkMergedECAL` as charged.
 
 | Value | Predicted scalar energy at ECAL |
 |---|---|
-| `ElectronOnly` (compiled/card default) | Unresolved case: `p = sqrt(1+tanl^2)/abs(kappa)` |
-| `ElectronPhoton` | Unresolved case with one breakpoint: `p*exp(b)` |
+| `ElectronOnly` (compiled/card default) | Charged energy measures only the electron: `p = sqrt(1+tanl^2)/abs(kappa)`, with or without a neutral |
+| `ElectronPhoton` | With one breakpoint: `p*exp(b)`; use charged energy alone without a neutral, charged+neutral total when collected |
 
 The routing is automatic and shared by ordinary and free-loss RTS, including
 HitScanAll:
@@ -911,9 +911,10 @@ HitScanAll:
 |---|---|---|
 | No selected breakpoint | Charged energy measures electron only | Copy preceding accepted stage |
 | One breakpoint, no collected neutral | Charged energy measures electron only or electron+photon, according to ChargedEcalEnergyMode | Copy preceding accepted stage |
-| One breakpoint, collected neutral | Charged+neutral total measures electron+photon total | Charged electron and neutral photon measured separately |
+| One breakpoint, collected neutral, ElectronOnly | Charged energy measures electron only | Charged electron and neutral photon measured separately |
+| One breakpoint, collected neutral, ElectronPhoton | Charged+neutral total measures electron+photon total | Charged electron and neutral photon measured separately |
 
-Resolved110 always uses one terminal ECAL measurement:
+ElectronPhoton resolved110 uses one terminal ECAL measurement:
 ```text
 measured energy = charged energy + collected neutral energy
 measurement sigma = hypot(charged sigma, collected neutral sigma)
@@ -939,8 +940,9 @@ including track/loss cross-covariance, enters the update. Each measurement is
 included once in its ordinary/free-loss likelihood. No new output family,
 reference iteration, containment correction or photon-detection claim.
 
-ChargedEcalMeasurement now requires ElossOn=False: resolved tracks automatically
-use the single-loss sum model, which assumes no other energy change before ECAL.
+ElectronPhoton requires ElossOn=False: its single-loss sum model assumes no
+other energy change before ECAL. ElectronOnly does not acquire this restriction
+merely because a neutral was collected, and is never overridden to use the sum.
 Quadrature assumes independent charged/neutral measurement errors and does not
 establish an inclusive performance improvement.
 
@@ -955,7 +957,7 @@ location_scan_resolved_ecal_sum_applied. Sum110 with beam has mask3, not7:
 there is one terminal total-energy observation, not a separate neutral update.
 Use the flag with mask/dimensions to distinguish Sum from charged-only fallback.
 Raw charged/neutral energies and errors remain separately saved.
-charged_ecal_effective_energy_mode reports ElectronPhoton for resolved110;
+charged_ecal_effective_energy_mode reports the actual routed110 model;
 111 uses its separate measurements regardless. Historical111Sum and optional
 Sum110 files remain identifiable through the actual applied flags. Do not
 compare NLL values for different observation models as equal-dimensional tests.
@@ -966,7 +968,7 @@ Example steering for the charged/neutral constraints:
 fit.ChargedEcalMeasurement = True
 fit.EcalConstraintInput = "PreReclustering"
 fit.ChargedEcalInputClusters = ""
-fit.ChargedEcalEnergyMode = "ElectronPhoton"  # unresolved only; or "ElectronOnly"
+fit.ChargedEcalEnergyMode = "ElectronPhoton"  # or "ElectronOnly", resolved or unresolved
 fit.NeutralEcalMeasurement = True  # applied only with a collected neutral and a breakpoint
 fit.ElossOn = False
 ```
@@ -1101,10 +1103,10 @@ the native source/predicted/filtered states, `F` and `Q`.
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
-| ChargedEcalMeasurement | false | Two cumulative charged-stage RTS families; automatically sum charged+neutral energy for a resolved breakpoint; requires ElossOn off |
+| ChargedEcalMeasurement | false | Two cumulative charged-stage RTS families; ChargedEcalEnergyMode chooses electron-only or total-energy treatment |
 | EcalConstraintInput | PreReclustering | Common charged/neutral PFO source: PreReclustering or FinalPFO; BP_ECAL_CONSTRAINT_INPUT |
 | ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
-| ChargedEcalEnergyMode | ElectronOnly | Unresolved110: ElectronOnly or ElectronPhoton; resolved110 always measures charged+neutral total,111 stays separate; BP_CHARGED_ECAL_ENERGY_MODE |
+| ChargedEcalEnergyMode | ElectronOnly | 110: ElectronOnly always charged-only; ElectronPhoton uses charged energy without a neutral, charged+neutral total when collected; no breakpoint uses electron-only;111 stays separate; BP_CHARGED_ECAL_ENERGY_MODE |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |

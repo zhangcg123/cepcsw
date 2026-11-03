@@ -312,11 +312,14 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**AUTOMATIC RESOLVED-ECAL SUM110 (2026-11-04).**
-User removed the resolved-energy selector. With one selected breakpoint and
-valid charged/collected neutral energies,110 ALWAYS uses one
-terminal measurement, E=C+N and sigma=hypot(sigmaC,sigmaN), using the existing
-p_ECAL*exp(b) KF projection. Passive neutral collection supplies N even when
+**HONOR ELECTRONONLY IN110 (2026-11-04).**
+The user corrected the unconditional resolved-sum override. ChargedEcalEnergyMode
+controls110 in both resolved/unresolved cases: ElectronOnly ALWAYS constrains
+electron energy using charged energy alone; ElectronPhoton constrains electron+
+photon using charged energy without a neutral, or C+N with a collected neutral
+(sigma=hypot(sigmaC,sigmaN), existing p_ECAL*exp(b) projection). One breakpoint
+is required for a photon coordinate; otherwise electron-only. No resolved-mode
+selector. Passive neutral collection supplies N for ElectronPhoton even when
 the separate-neutral switch is off. 111 ALWAYS attempts separate charged and
 neutral measurements from raw observations, never sum plus repeated neutral.
 Shared ordinary/free-loss core and HitScanAll; earlier000/100 unchanged. Missing parts,
@@ -325,16 +328,18 @@ loss-map or optimizer-acceptance change; no batch/data overwrite authorized.
 Actual applied sum is saved per endpoint and scan entry; mask3 can now mean
 beam+sum, not just beam+charged, so analyses must also check the sum flag.
 ResolvedEcalEnergyMode/property/env and requested-mode tuple scalar are removed;
-regenerate old cards. Stale env requests are rejected. Charged ECAL fitting
-requires ElossOn=False (already set in the maintained card).
+regenerate old cards. Stale env requests are rejected. ElectronPhoton requires
+ElossOn=False (already set in the maintained card); ElectronOnly does not.
 Validation/deployment evidence belongs in
-`agents_record/2026-11-04-automatic-resolved-sum110.md`; superseded optional110
-and111Sum contracts remain in the two earlier resolved-sum records. Installation is authorized
-after validation; no active jobs were reported. Do not claim population gain
+`agents_record/2026-11-04-honor-electron-only.md`; the incorrect unconditional
+override remains documented in the automatic-resolved-sum record. Superseded optional110
+and111Sum contracts remain in the two earlier resolved-sum records. Installation
+awaits validation and the requested quiet-window confirmation. Do not claim population gain
 from focused checks. The user-visible control and caveats are in the package
-README and run card. Unit and focused normal/scan regressions pass; installed
-in the project-default runtime, with a successful default-environment property/
-schema probe. No existing cards refreshed.
+README and run card. Unit and both-mode normal/scan regressions pass. The fix is
+built/staged but NOT installed yet: quiet-window confirmation is pending; the
+current installed preceding version still overrides ElectronOnly. No existing
+cards refreshed.
 
 The continuing scan-campaign contract is preserved below and in the complete
 outgoing snapshot `agents_record/2026-11-04-agents-before-resolved-sum-option.md`.

@@ -148,7 +148,7 @@ def prepare():
         if retired in os.environ:
             raise ValueError(retired + ' was removed; use BP_BEAM_SPOT_CONSTRAINT')
     if 'BP_RESOLVED_ECAL_ENERGY_MODE' in os.environ:
-        raise ValueError('BP_RESOLVED_ECAL_ENERGY_MODE was removed; resolved110 always uses the sum')
+        raise ValueError('BP_RESOLVED_ECAL_ENERGY_MODE was removed; use BP_CHARGED_ECAL_ENERGY_MODE')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
