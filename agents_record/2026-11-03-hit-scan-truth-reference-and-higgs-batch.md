@@ -61,8 +61,16 @@ dump_breakpoint.sh perform freezing, submission and execution; no new worker.
 - 50 jobs x 200 events = 10,000 requested events, not necessarily 10,000 tracks.
 - Metadata audit: all 50 files readable, at least 200 events each, required
   pre-reclustering/truth provenance present; no inputs skipped.
-- Mode HitScan; FreeLossFit=True; threshold 0; beam/charged/neutral=110;
+- Initially prepared as 110. User subsequently requested final cumulative 111:
+  all 50 unsubmitted cards/manifests were refreshed in place, with new checksums,
+  neutral measurement ON and ExperimentalDelayedNeutral ON. Location ranking
+  and passive truth-location scoring remain 110; algorithm/library unchanged.
+  The 55 tests, all 50 card/manifest environment/hash comparisons and dry
+  submission passed again. No numerical-fit rerun was needed for this
+  steering-only change; the Higgs smoke results below used the initial 110.
+- Mode HitScan; FreeLossFit=True; threshold 0; final beam/charged/neutral=111;
   ElectronPhoton with the maintained separate-neutral/no-breakpoint routing.
+  Missing neutral retains the previous accepted 110 stage.
 - SigmaLogLoss=0.001; prior-center bound [0,1]; 180 calls/start; tolerance0.001.
 - TruthOverride=False; diffuse/backward filters OFF; verbose dumps OFF in batch.
 - Requested group higgs, override SUBMIT_GROUP; 5000 MB/job from normal helper.

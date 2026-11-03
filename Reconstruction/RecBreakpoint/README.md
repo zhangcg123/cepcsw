@@ -458,7 +458,10 @@ For 10,000 existing Higgs events (50 files x 200), without rerunning sim/rec:
 The first command only prepares frozen cards. Input defaults to
 `higgs_full_20261030`, output to `higgs_silicon_scan_20261103`, group to `higgs`
 (override `SUBMIT_GROUP`). The new scan runtime must be installed first.
-The campaign uses 110, ElectronPhoton with existing resolved routing,
+The campaign publishes cumulative delayed **111**, falling back to 110 when
+the neutral measurement is unavailable. Location-ranking scores and the passive
+truth-location reference remain **110**; no separate neutral steers the locator.
+It uses ElectronPhoton with existing resolved routing,
 SigmaLogLoss=0.001, prior-center upper bound 1, threshold 0, truth loss override,
 diffuse and backward filters OFF. Both blind scores and passive truth-location
 references are in each flat tuple. External rec files are retained. Missing

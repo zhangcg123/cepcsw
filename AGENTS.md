@@ -340,7 +340,9 @@ family, which is not a truth-location parallel endpoint.
 
 Prepared campaign: 50 existing `higgs_full_20261030/rec-higgs-{1..50}.root`
 files x 200 events, breakpoint-only, output `higgs_silicon_scan_20261103`,
-110, ElectronPhoton with existing resolved routing, no truth loss override,
+delayed 111 final endpoints (110 fallback without a usable neutral), while
+location ranking and the passive truth-location reference remain 110.
+ElectronPhoton with existing resolved routing, no truth loss override,
 diffuse or backward filters. No Condor jobs submitted by the assistant.
 `./subbreakpointhiggsscanjobs.sh` prepares; explicit
 `./subbreakpointhiggsscanjobs.sh submit-prepared` submits the frozen cards
