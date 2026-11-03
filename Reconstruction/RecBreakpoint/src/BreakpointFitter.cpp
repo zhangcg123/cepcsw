@@ -130,7 +130,9 @@ TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
 }
 
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
-                                     const FitSettings& settings, bool runBackward) const {
+                                     const FitSettings& input, bool runBackward) const {
+  auto settings=input;
+  const bool resolvedSum=combineResolvedEcalMeasurements(settings);
   if (settings.delayedNeutral && (runBackward || !settings.neutralEcalEnergy || settings.intervals.size()!=1))
     throw std::runtime_error("Delayed experiment requires neutral, one breakpoint, RTS only");
   if (!std::isfinite(settings.backwardSeedScale) || settings.backwardSeedScale <= 0)
@@ -153,8 +155,9 @@ PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
       throw std::invalid_argument("Invalid per-interval loss prior center");
 
   // Share the first forward population. Neither continuation feeds the other.
-  const auto first = settings.intervals.empty()
+  auto first = settings.intervals.empty()
       ? fitNoBreakpointRTS(hits, settings) : fitPersistent(hits, settings);
+  first.resolvedEcalSum=resolvedSum;
   if (!runBackward) return {std::move(first), std::nullopt};
   auto inward = finishBackward(hits,settings,first);
   return {std::move(first), std::move(inward)};

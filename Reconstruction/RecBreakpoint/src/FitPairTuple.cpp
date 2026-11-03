@@ -10,6 +10,7 @@ namespace breakpoint {
 void FitPairTuple::Endpoint::book(TTree& tree, const std::string& prefix) {
   tree.Branch((prefix + "pt").c_str(), &pt);
   tree.Branch((prefix + "pt_error").c_str(), &ptError);
+  tree.Branch((prefix + "resolved_ecal_sum_applied").c_str(), &resolvedEcalSum);
   tree.Branch((prefix + "ip_parameters").c_str(), &parameters);
   tree.Branch((prefix + "ip_covariance").c_str(), &covariance);
   tree.Branch((prefix + "fitted_log_loss").c_str(), &loss);
@@ -20,6 +21,7 @@ void FitPairTuple::Endpoint::assign(const FitResult& fit, double bz) {
   const auto& ip = fit.ip;
   pt = std::abs(bz * 2.99792458e-4 / ip.omega);
   ptError = transverseMomentumError(ip, bz);
+  resolvedEcalSum = fit.resolvedEcalSum;
   parameters = {ip.D0, ip.phi, ip.omega, ip.Z0, ip.tanLambda};
   covariance.assign(ip.covMatrix.begin(), ip.covMatrix.end());
   for (const auto& item : fit.breakpoints) {

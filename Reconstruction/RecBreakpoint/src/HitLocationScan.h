@@ -115,6 +115,7 @@ struct LocationFitScan {
   std::string truthError;
   // kind: 0 null, 1 silicon candidate, 2 truth-only reference, 3 TPC row0 candidate.
   std::vector<int> point, kind, hit, system, layer, setup, actualMask;
+  std::vector<int> resolvedEcalSum;
   std::vector<int> fitStatus, attemptStatus, minuitStatus, attemptMinuitStatus;
   std::vector<int> sourceSetup, measurementDimensions;
   std::vector<double> nll2, chi2, logDeterminant, pt, ptError;

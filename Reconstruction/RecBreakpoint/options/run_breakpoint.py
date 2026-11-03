@@ -232,6 +232,14 @@ fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "Elect
 # These six extra families are RTS-only. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
+# Resolved events with one breakpoint and BOTH usable measurements:
+# Separate (default): charged electron-only update plus the separate photon update.
+# Sum: at the final neutral stage replace these with ONE terminal ECAL update,
+# E=E_charged+E_neutral, sigma=hypot(sigma_charged,sigma_neutral), predicted
+# p_ECAL*exp(b). No separate neutral update; delayed-neutral is then inapplicable.
+# 000/100/110 stay unchanged. Missing either part retains the ordinary routing;
+# no-breakpoint controls remain electron-only and 111 copies 110. Requires ElossOn=False.
+fit.ResolvedEcalEnergyMode = os.environ.get("BP_RESOLVED_ECAL_ENERGY_MODE", "Separate")
 # Branch experiment: delay only the neutral free-loss update until after the
 # first RTS pass, then condition the whole trajectory through cross-covariances.
 # Requires FreeLossFit and a selected breakpoint/neutral; ordinary stays unchanged.

@@ -21,6 +21,7 @@ public:
 private:
   struct Endpoint {
     double pt = 0, ptError = 0;
+    bool resolvedEcalSum = false;
     std::vector<double> parameters, covariance, loss, lossVariance;
     void book(TTree& tree, const std::string& prefix);
     void assign(const FitResult& fit, double bz);

@@ -13,6 +13,7 @@ void LocationFitScan::book(TTree& tree) {
   branch("point",&point); branch("kind",&kind); branch("hit",&hit);
   branch("system",&system); branch("layer",&layer); branch("setup",&setup);
   branch("actual_constraint_mask",&actualMask); branch("fit_status",&fitStatus);
+  branch("resolved_ecal_sum_applied",&resolvedEcalSum);
   branch("attempt_status",&attemptStatus); branch("minuit_status",&minuitStatus);
   branch("attempt_minuit_status",&attemptMinuitStatus); branch("source_setup",&sourceSetup);
   branch("measurement_dimensions",&measurementDimensions);

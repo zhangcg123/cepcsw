@@ -926,6 +926,46 @@ energy change before ECAL. The neutral switch may be ON: a collected neutral
 forces electron-only charged energy, then the separate photon update is applied.
 It is not a containment correction or a photon-detection claim.
 
+For **resolved** showers, `ResolvedEcalEnergyMode="Separate"` (compiled/card
+default) preserves the charged-electron and separate neutral-photon observations.
+The opt-in `"Sum"` instead replaces both observations in the **final neutral
+stage (111)** with one terminal ECAL KF energy measurement:
+
+```text
+measured energy = charged energy + collected neutral energy
+measurement sigma = hypot(charged sigma, collected neutral sigma)
+predicted energy = p_track_at_ECAL * exp(b)
+```
+
+It reuses the existing electron-plus-photon projection, native propagation,
+scalar KF update, RTS smoothing and likelihood. There is no additional neutral
+update (early or delayed), and no second likelihood for the component energies.
+Quadrature assumes independent charged/neutral measurement errors. This is an
+alternative observation model, not a containment correction or an established
+population improvement. The existing single-loss/no-other-energy-change
+assumption still applies; `ElossOn=False` is required when sum can be used.
+
+The switch is shared by ordinary and free-loss RTS, including `HitScanAll`.
+Earlier 000/100/110 results are unchanged; resolved 110 remains charged-electron
+only. Sum is applied only when both enabled ECAL measurements and one selected
+breakpoint are available. Missing observations, no-breakpoint fits and failed
+new fits retain the existing routing/fallback rules. Enabling Sum does not enable
+either ECAL switch, change the diffuse workflow or add an output family.
+
+Set `fit.ResolvedEcalEnergyMode="Sum"`, or
+`BP_RESOLVED_ECAL_ENERGY_MODE=Sum` for the maintained card/batch helpers.
+Batch steering is frozen at preparation; regenerate cards to change this mode.
+The tuple saves `resolved_ecal_energy_mode` and an actual
+`<family>rts_resolved_ecal_sum_applied` flag. Scan entries save
+`location_scan_resolved_ecal_sum_applied`; missing/failed entries inherit the
+accepted source flag, not the requested mode. The actual constraint mask has no
+separate neutral bit for a sum observation (mask 3 with beam), so distinguish
+sum from charged-only fallback using this flag as well as mask/dimensions.
+The raw charged and neutral measurements remain separately recorded;
+`charged_ecal_effective_energy_mode` still describes the earlier charged stage,
+not the final sum treatment. Do not compare NLL values for different observation
+models as equal-dimensional hypotheses.
+
 Example steering for the new unresolved-shower constraint:
 
 ```python
@@ -1072,6 +1112,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
 | ChargedEcalEnergyMode | ElectronOnly | ElectronPhoton uses sum only with one breakpoint and no collected neutral, otherwise electron-only; BP_CHARGED_ECAL_ENERGY_MODE; sum request requires ElossOn off |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
+| ResolvedEcalEnergyMode | Separate | Separate or Sum: final resolved stage uses separate charged/neutral measurements, or one terminal sum with quadrature error; earlier stages unchanged; BP_RESOLVED_ECAL_ENERGY_MODE |
 | ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
 | BeamSpotConstraint | false | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |

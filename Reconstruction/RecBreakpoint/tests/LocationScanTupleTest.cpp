@@ -19,24 +19,29 @@ int main() {
   tuple.appendIP(&state);
   tuple.appendIP(&inherited);
   tuple.appendIP(nullptr);
+  tuple.resolvedEcalSum={0,0,1,0};
   assert(tuple.ipParameters.size()==20 && tuple.ipCovariance.size()==84);
   assert(tuple.ipReferencePoint.size()==12 && tuple.ipTime.size()==4 && tuple.ipLocation.size()==4);
   tree.Fill();
   tuple.reset();
   assert(tuple.ipParameters.empty() && tuple.ipCovariance.empty() && tuple.ipReferencePoint.empty());
   assert(tuple.ipTime.empty() && tuple.ipLocation.empty());
+  assert(tuple.resolvedEcalSum.empty());
   tuple.appendIP(nullptr);
   tree.Fill();
 
   std::vector<double> parameters,covariance,reference,time;
-  std::vector<int> location;
+  std::vector<int> location,resolvedSum;
   auto* p=&parameters; auto* c=&covariance; auto* r=&reference; auto* t=&time; auto* l=&location;
+  auto* sum=&resolvedSum;
   assert(tree.SetBranchAddress("location_scan_ip_parameters",&p)>=0);
   assert(tree.SetBranchAddress("location_scan_ip_covariance",&c)>=0);
   assert(tree.SetBranchAddress("location_scan_ip_reference_point",&r)>=0);
   assert(tree.SetBranchAddress("location_scan_ip_time",&t)>=0);
   assert(tree.SetBranchAddress("location_scan_ip_location",&l)>=0);
+  assert(tree.SetBranchAddress("location_scan_resolved_ecal_sum_applied",&sum)>=0);
   tree.GetEntry(0);
+  assert((resolvedSum==std::vector<int>{0,0,1,0}));
   assert(parameters.size()==20 && covariance.size()==84 && reference.size()==12);
   assert((std::vector<double>(parameters.begin(),parameters.begin()+5)==std::vector<double>{1,2,3,4,5}));
   assert(parameters[6]==-2 && parameters[9]==-5);
@@ -49,6 +54,7 @@ int main() {
   for (int i=9;i<12;++i) assert(std::isnan(reference[i]));
   assert(std::isnan(time[3]) && location[3]==-1);
   tree.GetEntry(1);
+  assert(resolvedSum.empty());
   assert(parameters.size()==5 && covariance.size()==21 && reference.size()==3);
   assert(time.size()==1 && location.size()==1 && location[0]==-1);
   assert(std::all_of(parameters.begin(),parameters.end(),[](double x){return std::isnan(x);}));

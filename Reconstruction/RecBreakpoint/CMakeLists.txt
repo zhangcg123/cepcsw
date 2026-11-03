@@ -149,7 +149,8 @@ if(BUILD_TESTING)
     add_executable(RecBreakpointChargedEnergyTest tests/ChargedEnergyTest.cpp src/TrackState.cpp)
     target_compile_features(RecBreakpointChargedEnergyTest PRIVATE cxx_std_17)
     target_include_directories(RecBreakpointChargedEnergyTest PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
+      ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include
+      ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include
       ${KalTest_INCLUDE_DIRS})
     target_link_libraries(RecBreakpointChargedEnergyTest PRIVATE EDM4HEP::edm4hep
       ROOT::Matrix ${KalTest_LIBRARIES} ROOT::Physics)

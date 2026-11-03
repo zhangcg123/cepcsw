@@ -104,6 +104,7 @@ private:
   Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", false};
   Gaudi::Property<std::string> m_ecalConstraintInput{this, "EcalConstraintInput", "PreReclustering"};
   Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronOnly"};
+  Gaudi::Property<std::string> m_resolvedEcalEnergyMode{this, "ResolvedEcalEnergyMode", "Separate"};
   Gaudi::Property<bool> m_neutralEcalMeasurement{this, "NeutralEcalMeasurement", false};
   Gaudi::Property<bool> m_delayedNeutralExperiment{this, "ExperimentalDelayedNeutral", false};
   Gaudi::Property<double> m_chargedEcalStochasticError{this, "ChargedEcalStochasticError", 0.011};
@@ -175,6 +176,7 @@ private:
   int m_chargedEcalMeasurementStatus = 0, m_chargedEcalMeasurementClusterCount = 0;
   double m_chargedEcalMeasurementEnergy = 0, m_chargedEcalMeasurementError = 0;
   std::string m_recordChargedEcalInput, m_recordChargedEcalEnergyMode;
+  std::string m_recordResolvedEcalEnergyMode;
   std::string m_recordChargedEcalEffectiveMode;
   std::string m_recordEcalConstraintInput, m_recordEcalConstraintPfos, m_recordEcalConstraintClusters;
   std::string m_chargedEcalSelectionError;

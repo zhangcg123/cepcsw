@@ -148,6 +148,7 @@ void HitLocationScan::reference(const BreakpointFitter& fitter,
 namespace {
 struct LocationScanResult {
   int status=-2, mask=0, minuit=-99, source=-1, dimensions=0;
+  bool resolvedEcalSum=false;
   double nll2=std::numeric_limits<double>::quiet_NaN(), chi2=nll2, logDet=nll2;
   double pt=nll2, ptError=nll2, prior=nll2, loss=nll2, variance=nll2;
   std::optional<edm4hep::TrackState> ip;
@@ -187,6 +188,7 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
     result.pt=std::abs(bz*2.99792458e-4/fit.ip.omega);
     result.ptError=transverseMomentumError(fit.ip,bz);
     result.ip=fit.ip;
+    result.resolvedEcalSum=fit.resolvedEcalSum;
     result.mask=(fit.beamSpot ? 1 : 0) | (fit.chargedEcalStep ? 2 : 0) | (fit.neutralEcal ? 4 : 0);
     result.status=2;
   } catch (const std::exception& failure) { result.error=failure.what(); }
@@ -258,6 +260,7 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
       point.push_back(p); kind.push_back(type); hit.push_back(site);
       system.push_back(site<0 ? -1 : systems[site]); layer.push_back(site<0 ? -1 : layers[site]);
       setup.push_back(configuration); actualMask.push_back(result.mask);
+      resolvedEcalSum.push_back(result.resolvedEcalSum);
       fitStatus.push_back(result.status); attemptStatus.push_back(attempt);
       minuitStatus.push_back(result.minuit); attemptMinuitStatus.push_back(attemptMinuit);
       sourceSetup.push_back(result.source); measurementDimensions.push_back(result.dimensions);

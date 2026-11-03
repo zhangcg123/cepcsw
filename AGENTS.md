@@ -312,83 +312,50 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**SCAN-ONLY SILICON + TPC ROW-0 DATA — FOUR SETUPS (2026-11-04).**
-The user clarified: NO online location ranking, NLL-gain cut or selected
-location. Optimize the loss at EVERY site under 000/100/110/111, save all
-results and decide later in analysis. Do not silently restore the previous
-ranking proposal. Work on `breakpoint-delayed-neutral`; preserve `breakpoint`.
-No branch/remote operation, PFA/shared-KF change, loss-map adjustment or optimizer
-acceptance repair is authorized by this scan task. Default Truth steering is
-unchanged; legacy HitScan remains an explicit comparison.
+**OPTIONAL RESOLVED-ECAL SUM CONSTRAINT (2026-11-04).**
+User requested an option to constrain the charged+neutral total for resolved
+showers. `ResolvedEcalEnergyMode=Separate` remains the compiled/card/batch
+default; opt-in `Sum` replaces the two ECAL observations in final111 with one
+terminal measurement, E=C+N and sigma=hypot(sigmaC,sigmaN), using the existing
+p_ECAL*exp(b) KF projection. No separate early/delayed neutral update is added.
+Shared ordinary/free-loss core; earlier000/100/110 unchanged. Missing parts,
+no breakpoint or failed fits retain existing routing/fallback. No PFA/shared-KF,
+loss-map or optimizer-acceptance change; no batch/data overwrite authorized.
+Actual applied sum is saved per endpoint and scan entry; mask3 can now mean
+beam+sum, not just beam+charged, so analyses must also check the sum flag.
+Validation/deployment evidence belongs in
+`agents_record/2026-11-04-resolved-ecal-sum-option.md`. Installation is authorized
+after validation; no active jobs were reported. Do not claim population gain
+from focused checks. The user-visible control and caveats are in the package
+README and run card. Focused tests passed and the option is installed in the
+project-default runtime; default remains Separate. No existing cards refreshed.
 
-New opt-in `IntervalSelectionMode="HitScanAll"` reuses the maintained fitter.
-Requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF.
-Enumerate the 5D null, all reconstructed VXD/ITK hits (IDs1/2/3), and the first
-exact reconstructed TPC row-0 hit (system4/layer0), except the last track hit.
-Never substitute another TPC row if row0 is missing. Keep all TPC/OTK
-measurements. Candidate kinds are1 silicon and3 TPC row0; kind2 remains a
-truth-only reference. A truth owner already in the candidate list reuses that
-point; any other eligible owner adds a reference-only point last. Truth changes
-neither the reconstructed candidate list nor fit loss amounts. Legacy HitScan
-remains silicon-only. The row0 extension passed focused validation and is
-installed in the project-default runtime (2026-11-04); no /tmp override is
-needed by subsequent jobs.
+The continuing scan-campaign contract is preserved below and in the complete
+outgoing snapshot `agents_record/2026-11-04-agents-before-resolved-sum-option.md`.
+Scan-only HitScanAll remains active and default Truth steering is unchanged.
+It evaluates the 5D null, every reconstructed VXD/ITK hit and first exact TPC
+row0 (never the last hit), under000/100/110/111. No online selection/ranking or
+NLL-gain cut. Keep all detector hits; truth adds only an optional reference,
+never fit amounts. Missing/failed observations inherit the previous accepted
+setup at the SAME point, without carrying a fitted posterior to another fit.
+No-breakpoint111 copies110; it is not a neutral-constrained same-observation null.
+Full native IP parameters/covariance/reference/time/location and fit/status/
+source/mask data are saved per point. Scan-only main endpoints remain inactive.
+SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. All four setups and
+passive truth ownership remain available; the old independent optimizer
+acceptance audit is still open. No clipping, bound change or acceptance repair.
 
-The `location_scan_*` vectors in each track row contain four entries per point,
-with setup labels 0/100/110/111, normalized NLL2, likelihood chi2/logdet/dimensions,
-IP pT/error, optimized prior center, fitted b/variance and status/error/source.
-Full native IP parameters/covariance/reference/time/location are also saved
-per entry for momentum directions and recoil studies, without changing fits;
-the installed schema and regression gates are documented in
-`agents_record/2026-11-04-location-scan-full-ip-state.md`.
-Missing/failed observations retain the previous accepted setup at the SAME
-point; no previous fitted prior/posterior is passed to the next fit. Actual
-constraint masks distinguish applied observations from requested labels.
-Missing neutral reuses110. The 111 no-breakpoint control also copies110: no
-loss coordinate exists, and no artificial zero-photon likelihood is added.
-Do not treat that copy as a same-observation null for neutral-constrained fits.
+The completed original200-file x50 Higgs silicon scan remains in
+higgs_silicon_scan_20261103. Its files are not retroactively extended with TPC
+row0 or full IP records; reruns need separate outputs unless the user directs
+otherwise. Existing rec inputs remain usable. Launcher
+./subbreakpointhiggsscanjobs.sh prepares; submit-prepared submits only on request.
+Keep branch breakpoint-delayed-neutral and preserve breakpoint; no remote or
+branch operation is authorized. No jobs submitted by this change.
 
-There is no published selected-site refit in this mode. Main status2 and
-selection status6 identify scan-only rows; selected intervals are empty and
-ordinary/free-loss endpoint families are inactive/NaN. Use per-point scan
-outputs, while matched input-KF/truth/PFO information remains available.
-SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. Offline location
-choice, charged-energy compatibility fallback and physics validation are later
-analysis tasks, not scan steering.
-
-The original silicon-only 10k Higgs campaign has completed:200 existing rec
-files x50 from `higgs_full_20261030`, output `higgs_silicon_scan_20261103`.
-Its200 completed files were read successfully; the refreshed gallery contains
-2358 common hard-silicon tracks under all four setups. This is a conditional
-comparison, not inclusive eBrem-detection efficiency. Those tuples are NOT
-retroactively extended with a TPC candidate. A fair scan including row0 needs
-a breakpoint-stage rerun; existing rec inputs remain usable. No new batch was
-submitted. Preserve current data/cards and use a separate output for a rerun.
-The prior installed silicon-only scanner and earlier archived cards remain.
-Launcher `./subbreakpointhiggsscanjobs.sh`; submit frozen cards explicitly with
-`./subbreakpointhiggsscanjobs.sh submit-prepared` (group cms by default).
-Use input IDs1..201 excluding absent123, first50 events/file; this is not the
-identical event subset of the earlier50-file x200 preparation. Previous cards
-are archived. Preparation never submits unless explicitly requested.
-
-Original implementation/validation/deployment record:
-`agents_record/2026-11-03-four-setup-scan-only.md`.
-TPC row0 extension and validation:
-`agents_record/2026-11-04-tpc-row0-location-scan.md`.
-Earlier ranked-scan numerical evidence and original batch preparation remain in
-`agents_record/2026-11-03-silicon-hit-scan110.md` and
-`agents_record/2026-11-03-hit-scan-truth-reference-and-higgs-batch.md`.
-Complete outgoing AGENTS is preserved in
-`agents_record/2026-11-04-agents-before-tpc-row0-scan.md`. No location-efficiency,
-purity or population pT-recovery claim follows from smoke tests.
-
-Existing effective ownership rules/guards remain active: preserve actual G4
-positions/material paths and truth_ebrem_effective_owner_rule (0 none, 1 beam
-pipe, 2 TPC inner wall). Require the exact subsequent target layer, valid
-geometry/provenance and an accepted hit without crossing another sensor
-assembly; never substitute another layer. Missing/ambiguous/outermost guards
-remain; owner-hit loss placement is unchanged. Deployment history remains in
-`agents_record/2026-10-26-effective-boundary-truth-owners.md`.
-The independent acceptance audit is not closed: do not silently promote scan
-candidates, clip states, or implement acceptance repairs before user discussion.
-See `agents_record/2026-10-26-breakpoint-independent-audit-handoff.md`.
+Scan/ownership contracts and history:
+- agents_record/2026-11-03-four-setup-scan-only.md
+- agents_record/2026-11-04-tpc-row0-location-scan.md
+- agents_record/2026-11-04-location-scan-full-ip-state.md
+- agents_record/2026-10-26-effective-boundary-truth-owners.md
+- agents_record/2026-10-26-breakpoint-independent-audit-handoff.md

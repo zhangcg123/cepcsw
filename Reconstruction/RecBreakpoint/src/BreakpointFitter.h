@@ -22,12 +22,33 @@ struct FitSettings {
   std::map<int, double> intervalMeanLogLoss;
   std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; terminal RTS measurement
   ChargedEnergyMode chargedEcalEnergyMode = ChargedEnergyMode::ElectronOnly;
+  ResolvedEcalEnergyMode resolvedEcalEnergyMode = ResolvedEcalEnergyMode::Separate;
   std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
   std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
   bool delayedNeutral = false; // branch experiment; preserves the original path when off
 };
+
+// One terminal total-energy observation replaces, never supplements, the two parts.
+inline bool combineResolvedEcalMeasurements(FitSettings& settings) {
+  if (settings.resolvedEcalEnergyMode != ResolvedEcalEnergyMode::Sum ||
+      settings.intervals.size()!=1 || !settings.chargedEcalEnergy || !settings.neutralEcalEnergy)
+    return false;
+  const auto charged=*settings.chargedEcalEnergy, neutral=*settings.neutralEcalEnergy;
+  for (const auto& value : {charged,neutral})
+    if (!std::isfinite(value.first) || value.first<=0 || !std::isfinite(value.second) || value.second<=0)
+      throw std::invalid_argument("Invalid resolved ECAL energy or uncertainty");
+  const double energy=charged.first+neutral.first;
+  const double sigma=std::hypot(charged.second,neutral.second);
+  if (!std::isfinite(energy) || !std::isfinite(sigma))
+    throw std::invalid_argument("Nonfinite resolved ECAL sum");
+  settings.chargedEcalEnergy=std::make_pair(energy,sigma);
+  settings.chargedEcalEnergyMode=ChargedEnergyMode::ElectronPhoton;
+  settings.neutralEcalEnergy.reset();
+  settings.delayedNeutral=false;
+  return true;
+}
 
 struct IntervalResult {
   int index = -1;
@@ -40,6 +61,7 @@ struct IntervalResult {
 };
 
 struct FitResult {
+  bool resolvedEcalSum = false; // actual total-energy update, not merely requested mode
   std::optional<BeamSpotMeasurement> beamSpot;
   edm4hep::TrackState ip{};
   std::vector<TrackState> predicted, filtered, smoothed;

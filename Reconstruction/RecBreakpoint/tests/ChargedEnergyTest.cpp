@@ -1,5 +1,7 @@
 #include "ChargedEnergyMeasurement.h"
+#include "BreakpointFitter.h"
 #include "ScalarMeasurementSite.h"
+#include <limits>
 #include <stdexcept>
 
 using namespace breakpoint;
@@ -8,6 +10,48 @@ void close(double a, double b, double tolerance=1.e-7) {
     throw std::runtime_error("Charged energy projection regression failed");
 }
 int main() {
+  for (auto mode : {ResolvedEcalEnergyMode::Separate,ResolvedEcalEnergyMode::Sum})
+    for (bool breakpoint : {false,true}) for (bool charged : {false,true}) for (bool neutral : {false,true}) {
+      FitSettings original;
+      original.resolvedEcalEnergyMode=mode;
+      original.delayedNeutral=true;
+      if (breakpoint) original.intervals={3};
+      if (charged) original.chargedEcalEnergy=std::make_pair(10.,.2);
+      if (neutral) original.neutralEcalEnergy=std::make_pair(3.,.1);
+      auto settings=original;
+      const bool expected=mode==ResolvedEcalEnergyMode::Sum && breakpoint && charged && neutral;
+      if (combineResolvedEcalMeasurements(settings)!=expected)
+        throw std::runtime_error("Wrong resolved ECAL routing");
+      if (expected) {
+        close(settings.chargedEcalEnergy->first,13.);
+        close(settings.chargedEcalEnergy->second,std::hypot(.2,.1));
+        if (settings.neutralEcalEnergy || settings.delayedNeutral ||
+            settings.chargedEcalEnergyMode!=ChargedEnergyMode::ElectronPhoton)
+          throw std::runtime_error("Resolved sum retains a duplicate neutral update");
+        if (combineResolvedEcalMeasurements(settings))
+          throw std::runtime_error("Resolved sum applied twice");
+        close(original.chargedEcalEnergy->first,10.); close(original.neutralEcalEnergy->first,3.);
+      } else if (settings.chargedEcalEnergy!=original.chargedEcalEnergy ||
+                 settings.neutralEcalEnergy!=original.neutralEcalEnergy || !settings.delayedNeutral)
+        throw std::runtime_error("Inapplicable resolved mode changed observations");
+      close(settings.sigmaLogLoss,original.sigmaLogLoss);
+      if (settings.intervals!=original.intervals) throw std::runtime_error("Resolved mode changed location");
+    }
+  if (parseResolvedEcalEnergyMode("Sum")!=ResolvedEcalEnergyMode::Sum ||
+      parseResolvedEcalEnergyMode("Separate")!=ResolvedEcalEnergyMode::Separate)
+    throw std::runtime_error("Wrong resolved mode parser");
+  bool badMode=false;
+  try { parseResolvedEcalEnergyMode("Auto"); } catch (const std::invalid_argument&) { badMode=true; }
+  if (!badMode) throw std::runtime_error("Invalid resolved mode accepted");
+  for (double bad : {0.,-1.,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
+    FitSettings invalid;
+    invalid.resolvedEcalEnergyMode=ResolvedEcalEnergyMode::Sum;
+    invalid.intervals={3}; invalid.chargedEcalEnergy=std::make_pair(10.,.2);
+    invalid.neutralEcalEnergy=std::make_pair(3.,bad);
+    bool rejected=false;
+    try { combineResolvedEcalMeasurements(invalid); } catch (const std::invalid_argument&) { rejected=true; }
+    if (!rejected) throw std::runtime_error("Invalid sum uncertainty accepted");
+  }
   for (auto requested : {ChargedEnergyMode::ElectronOnly, ChargedEnergyMode::ElectronPhoton})
     for (bool breakpoint : {false, true}) for (bool neutral : {false, true}) {
       const auto expected = breakpoint && !neutral ? requested : ChargedEnergyMode::ElectronOnly;

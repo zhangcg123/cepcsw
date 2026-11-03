@@ -19,6 +19,33 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_resolved_ecal_mode_is_frozen(self):
+        for mode in ('Separate','Sum'):
+            with self.subTest(mode=mode):
+                output='resolved_'+mode
+                self.prepare(OUTPUT_TUPLEPATH=output,BP_RESOLVED_ECAL_ENERGY_MODE=mode)
+                job=self.manifest(output)
+                self.assertEqual(job['controls']['BP_RESOLVED_ECAL_ENERGY_MODE'],mode)
+                self.assertIn('fit.ResolvedEcalEnergyMode =',Path(job['cards']['breakpoint']).read_text())
+
+    def test_resolved_ecal_mode_default_and_validation(self):
+        self.prepare()
+        self.assertEqual(self.manifest()['controls']['BP_RESOLVED_ECAL_ENERGY_MODE'],'Separate')
+        with self.assertRaisesRegex(ValueError,'BP_RESOLVED_ECAL_ENERGY_MODE'):
+            self.prepare(OUTPUT_TUPLEPATH='bad_resolved',BP_RESOLVED_ECAL_ENERGY_MODE='Auto')
+
+    def test_resolved_ecal_output_requires_mode_and_applied_flag(self):
+        for missing in ('resolved_ecal_energy_mode','neutral_ecal_free_loss_rts_resolved_ecal_sum_applied'):
+            with self.subTest(missing=missing):
+                tree=MagicMock(); tree.GetEntries.return_value=2
+                tree.GetBranch.side_effect=lambda name: None if name==missing else object()
+                file=MagicMock(); file.Get.return_value=tree
+                file.IsZombie.return_value=False; file.TestBit.return_value=False
+                root=types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path:file,kRecovered=1))
+                with patch.dict('sys.modules',ROOT=root):
+                    with self.assertRaisesRegex(RuntimeError,missing):
+                        batch.verify(Path('fixture.root'),'breakpoint')
+
     def test_hit_scan_property_guard_keeps_old_runtime_truth_manual_usable(self):
         import ast
         text = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()

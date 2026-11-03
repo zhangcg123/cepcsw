@@ -26,6 +26,8 @@ export BP_NEUTRAL_ECAL_MEASUREMENT=${BP_NEUTRAL_ECAL_MEASUREMENT:-1}
 export BP_EXPERIMENTAL_DELAYED_NEUTRAL=${BP_EXPERIMENTAL_DELAYED_NEUTRAL:-1}
 # Sum for unresolved photons; electron-only with a collected neutral or no breakpoint.
 export BP_CHARGED_ECAL_ENERGY_MODE=${BP_CHARGED_ECAL_ENERGY_MODE:-ElectronPhoton}
+# Optional final resolved stage: Separate or one charged+neutral Sum measurement.
+export BP_RESOLVED_ECAL_ENERGY_MODE=${BP_RESOLVED_ECAL_ENERGY_MODE:-Separate}
 # New simulation files use sim-barrel-<seed>.root. SAMPLE_REGION controls that
 # filename convention, and also the gun theta range if STAGES includes sim.
 # Set SAMPLE_REGION='' to prepare an older momentum/theta-named campaign;
