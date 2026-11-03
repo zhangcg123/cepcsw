@@ -312,10 +312,9 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**OPTIONAL RESOLVED-ECAL SUM CONSTRAINT (2026-11-04).**
-User requested an option to constrain the charged+neutral total for resolved
-showers. `ResolvedEcalEnergyMode=Separate` remains the compiled/card/batch
-default; opt-in `Sum` replaces the resolved110 charged observation with one
+**AUTOMATIC RESOLVED-ECAL SUM110 (2026-11-04).**
+User removed the resolved-energy selector. With one selected breakpoint and
+valid charged/collected neutral energies,110 ALWAYS uses one
 terminal measurement, E=C+N and sigma=hypot(sigmaC,sigmaN), using the existing
 p_ECAL*exp(b) KF projection. Passive neutral collection supplies N even when
 the separate-neutral switch is off. 111 ALWAYS attempts separate charged and
@@ -325,14 +324,17 @@ no breakpoint or failed fits retain existing routing/fallback. No PFA/shared-KF,
 loss-map or optimizer-acceptance change; no batch/data overwrite authorized.
 Actual applied sum is saved per endpoint and scan entry; mask3 can now mean
 beam+sum, not just beam+charged, so analyses must also check the sum flag.
+ResolvedEcalEnergyMode/property/env and requested-mode tuple scalar are removed;
+regenerate old cards. Stale env requests are rejected. Charged ECAL fitting
+requires ElossOn=False (already set in the maintained card).
 Validation/deployment evidence belongs in
-`agents_record/2026-11-04-resolved-sum-in-110.md`; the superseded111Sum contract
-is retained in `agents_record/2026-11-04-resolved-ecal-sum-option.md`. Installation is authorized
+`agents_record/2026-11-04-automatic-resolved-sum110.md`; superseded optional110
+and111Sum contracts remain in the two earlier resolved-sum records. Installation is authorized
 after validation; no active jobs were reported. Do not claim population gain
 from focused checks. The user-visible control and caveats are in the package
-README and run card. Unit and focused normal/scan regressions passed; the option
-is installed in the project-default runtime and a default-environment event is
-exactly reproduced. Default remains Separate. No existing cards refreshed.
+README and run card. Unit and focused normal/scan regressions pass; installed
+in the project-default runtime, with a successful default-environment property/
+schema probe. No existing cards refreshed.
 
 The continuing scan-campaign contract is preserved below and in the complete
 outgoing snapshot `agents_record/2026-11-04-agents-before-resolved-sum-option.md`.

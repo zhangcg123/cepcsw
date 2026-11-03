@@ -19,23 +19,17 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
-    def test_resolved_ecal_mode_is_frozen(self):
-        for mode in ('Separate','Sum'):
-            with self.subTest(mode=mode):
-                output='resolved_'+mode
-                self.prepare(OUTPUT_TUPLEPATH=output,BP_RESOLVED_ECAL_ENERGY_MODE=mode)
-                job=self.manifest(output)
-                self.assertEqual(job['controls']['BP_RESOLVED_ECAL_ENERGY_MODE'],mode)
-                self.assertIn('fit.ResolvedEcalEnergyMode =',Path(job['cards']['breakpoint']).read_text())
-
-    def test_resolved_ecal_mode_default_and_validation(self):
+    def test_resolved_ecal_mode_removed(self):
         self.prepare()
-        self.assertEqual(self.manifest()['controls']['BP_RESOLVED_ECAL_ENERGY_MODE'],'Separate')
-        with self.assertRaisesRegex(ValueError,'BP_RESOLVED_ECAL_ENERGY_MODE'):
-            self.prepare(OUTPUT_TUPLEPATH='bad_resolved',BP_RESOLVED_ECAL_ENERGY_MODE='Auto')
+        job=self.manifest()
+        self.assertNotIn('BP_RESOLVED_ECAL_ENERGY_MODE',job['controls'])
+        self.assertNotIn('fit.ResolvedEcalEnergyMode',Path(job['cards']['breakpoint']).read_text())
+        for stale in ('Separate','Sum'):
+            with self.assertRaisesRegex(ValueError,'was removed'):
+                self.prepare(OUTPUT_TUPLEPATH='stale_'+stale,BP_RESOLVED_ECAL_ENERGY_MODE=stale)
 
-    def test_resolved_ecal_output_requires_mode_and_applied_flag(self):
-        for missing in ('resolved_ecal_energy_mode','neutral_ecal_free_loss_rts_resolved_ecal_sum_applied'):
+    def test_resolved_ecal_output_requires_applied_flag(self):
+        for missing in ('charged_ecal_free_loss_rts_resolved_ecal_sum_applied','neutral_ecal_free_loss_rts_resolved_ecal_sum_applied'):
             with self.subTest(missing=missing):
                 tree=MagicMock(); tree.GetEntries.return_value=2
                 tree.GetBranch.side_effect=lambda name: None if name==missing else object()

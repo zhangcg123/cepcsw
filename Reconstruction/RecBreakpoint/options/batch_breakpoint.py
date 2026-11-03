@@ -54,7 +54,6 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_TRUTH_BACKWARD_FILTER',
                'BP_FREE_LOSS_FIT', 'BP_CHARGED_ECAL_MEASUREMENT',
                'BP_ECAL_CONSTRAINT_INPUT', 'BP_CHARGED_ECAL_INPUT_CLUSTERS', 'BP_CHARGED_ECAL_ENERGY_MODE',
-               'BP_RESOLVED_ECAL_ENERGY_MODE',
                'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
                'BP_CHARGED_ECAL_STOCHASTIC', 'BP_CHARGED_ECAL_CONSTANT',
                'BP_FREE_LOSS_MAX_LOG_LOSS', 'BP_FREE_LOSS_MAX_CALLS',
@@ -148,10 +147,11 @@ def prepare():
     for retired in ('BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE', 'BP_BEAM_FREE_LOSS_BACKWARD_FILTER'):
         if retired in os.environ:
             raise ValueError(retired + ' was removed; use BP_BEAM_SPOT_CONSTRAINT')
+    if 'BP_RESOLVED_ECAL_ENERGY_MODE' in os.environ:
+        raise ValueError('BP_RESOLVED_ECAL_ENERGY_MODE was removed; resolved110 always uses the sum')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
-    controls.setdefault('BP_RESOLVED_ECAL_ENERGY_MODE', 'Separate')
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
@@ -165,8 +165,6 @@ def prepare():
     charged_mode = controls.get('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronOnly')
     if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
         raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')
-    if controls['BP_RESOLVED_ECAL_ENERGY_MODE'] not in ('Separate','Sum'):
-        raise ValueError('BP_RESOLVED_ECAL_ENERGY_MODE must be Separate or Sum')
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
              'calodigi': repo/'DumpGsfTrks/calodigi.py.bk',
@@ -374,7 +372,6 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
                 if not tree.GetBranch(name):
                     raise RuntimeError('Missing hit-scan branch: ' + name)
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
-                     'resolved_ecal_energy_mode',
                      'truth_override_result_status', 'beam_spot_constraint_enabled',
                      'ordinary_beam_spot_applied', 'free_loss_beam_spot_applied',
                      'free_loss_neutral_ecal_measurement_status', 'free_loss_likelihood_nll2'):

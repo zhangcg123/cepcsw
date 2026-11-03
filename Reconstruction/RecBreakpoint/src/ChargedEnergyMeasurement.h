@@ -6,14 +6,6 @@
 
 namespace breakpoint {
 enum class ChargedEnergyMode { ElectronOnly, ElectronPhoton };
-enum class ResolvedEcalEnergyMode { Separate, Sum };
-
-inline ResolvedEcalEnergyMode parseResolvedEcalEnergyMode(const std::string& value) {
-  if (value == "Separate") return ResolvedEcalEnergyMode::Separate;
-  if (value == "Sum") return ResolvedEcalEnergyMode::Sum;
-  throw std::invalid_argument("ResolvedEcalEnergyMode must be Separate or Sum");
-}
-
 inline ChargedEnergyMode parseChargedEnergyMode(const std::string& value) {
   if (value == "ElectronOnly") return ChargedEnergyMode::ElectronOnly;
   if (value == "ElectronPhoton") return ChargedEnergyMode::ElectronPhoton;

@@ -215,14 +215,13 @@ fit.EcalConstraintInput = os.environ.get("BP_ECAL_CONSTRAINT_INPUT", "PreReclust
 # Optional alternate energy collection (e.g. TrkMergedECAL): unique hit-provenance
 # matching is retained. Legacy campaign: FinalPFO plus TrkMergedECAL.
 fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", "")
-# ElectronOnly: predicted E = electron momentum at the ECAL face (mass ignored).
-# ElectronPhoton: use electron momentum * exp(b) only with one breakpoint and
-# no collected hit-supported neutral. Otherwise use ElectronOnly, including
-# tracks with no breakpoint. Neutral collection steers this choice even when
-# NeutralEcalMeasurement is OFF; that switch only controls the neutral update.
-# Sum interpretation requires ElossOn=False. The effective per-track choice is
-# saved as charged_ecal_effective_energy_mode; the requested mode is also saved.
-# ResolvedEcalEnergyMode below can override resolved110 to Sum; 111 stays separate.
+# One breakpoint, no collected neutral: ElectronOnly measures electron energy;
+# ElectronPhoton measures electron+photon energy using p_ECAL*exp(b), mass ignored.
+# Collected neutral:110 ALWAYS measures the charged+neutral sum;111 is separate.
+# No breakpoint: charged energy measures electron only. Neutral collection stays
+# passive even when its separate-measurement switch is OFF.
+# ChargedEcalMeasurement requires ElossOn=False for the automatic resolved sum.
+# Requested/base mode and effective110 mode are saved separately.
 fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "ElectronOnly")
 # Optional measurement in the final cumulative neutral-stage families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
@@ -233,15 +232,15 @@ fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "Elect
 # These six extra families are RTS-only. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
-# Resolved events with one breakpoint and BOTH usable measurements, charged stage110:
-# Separate (default): constrain only the charged electron.
-# Sum: use ONE terminal ECAL update (also when NeutralEcalMeasurement is OFF),
+# Resolved110 with one breakpoint and BOTH usable energies ALWAYS uses ONE
+# terminal ECAL update (also when NeutralEcalMeasurement is OFF),
 # E=E_charged+E_neutral, sigma=hypot(sigma_charged,sigma_neutral), predicted
 # p_ECAL*exp(b). Stage111 ALWAYS refits charged electron + separate neutral;
 # it does not add neutral on top of110's sum. Delayed-neutral still steers111.
 # 000/100 stay unchanged. Missing either part retains the ordinary routing;
 # no-breakpoint controls remain electron-only and 111 copies 110. Requires ElossOn=False.
-fit.ResolvedEcalEnergyMode = os.environ.get("BP_RESOLVED_ECAL_ENERGY_MODE", "Separate")
+if "BP_RESOLVED_ECAL_ENERGY_MODE" in os.environ:
+    raise ValueError("BP_RESOLVED_ECAL_ENERGY_MODE was removed; resolved110 always uses the sum")
 # Branch experiment: delay only the neutral free-loss update until after the
 # first RTS pass, then condition the whole trajectory through cross-covariances.
 # Requires FreeLossFit and a selected breakpoint/neutral; ordinary stays unchanged.

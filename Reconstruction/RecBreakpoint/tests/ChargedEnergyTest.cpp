@@ -10,16 +10,16 @@ void close(double a, double b, double tolerance=1.e-7) {
     throw std::runtime_error("Charged energy projection regression failed");
 }
 int main() {
-  for (auto mode : {ResolvedEcalEnergyMode::Separate,ResolvedEcalEnergyMode::Sum})
+  for (bool sumStage : {false,true})
     for (bool breakpoint : {false,true}) for (bool charged : {false,true}) for (bool neutral : {false,true}) {
       FitSettings original;
-      original.resolvedEcalEnergyMode=mode;
+      original.resolvedEcalSum=sumStage;
       original.delayedNeutral=true;
       if (breakpoint) original.intervals={3};
       if (charged) original.chargedEcalEnergy=std::make_pair(10.,.2);
       if (neutral) original.neutralEcalEnergy=std::make_pair(3.,.1);
       auto settings=original;
-      const bool expected=mode==ResolvedEcalEnergyMode::Sum && breakpoint && charged && neutral;
+      const bool expected=sumStage && breakpoint && charged && neutral;
       if (combineResolvedEcalMeasurements(settings)!=expected)
         throw std::runtime_error("Wrong resolved ECAL routing");
       if (expected) {
@@ -33,7 +33,7 @@ int main() {
         close(original.chargedEcalEnergy->first,10.); close(original.neutralEcalEnergy->first,3.);
         // The next stage uses raw observations, not the sum-fitted state.
         auto separate111=original;
-        separate111.resolvedEcalEnergyMode=ResolvedEcalEnergyMode::Separate;
+        separate111.resolvedEcalSum=false;
         if (combineResolvedEcalMeasurements(separate111) || !separate111.neutralEcalEnergy)
           throw std::runtime_error("111 must retain the separate neutral measurement");
         close(separate111.chargedEcalEnergy->first,10.);
@@ -44,15 +44,9 @@ int main() {
       close(settings.sigmaLogLoss,original.sigmaLogLoss);
       if (settings.intervals!=original.intervals) throw std::runtime_error("Resolved mode changed location");
     }
-  if (parseResolvedEcalEnergyMode("Sum")!=ResolvedEcalEnergyMode::Sum ||
-      parseResolvedEcalEnergyMode("Separate")!=ResolvedEcalEnergyMode::Separate)
-    throw std::runtime_error("Wrong resolved mode parser");
-  bool badMode=false;
-  try { parseResolvedEcalEnergyMode("Auto"); } catch (const std::invalid_argument&) { badMode=true; }
-  if (!badMode) throw std::runtime_error("Invalid resolved mode accepted");
   for (double bad : {0.,-1.,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
     FitSettings invalid;
-    invalid.resolvedEcalEnergyMode=ResolvedEcalEnergyMode::Sum;
+    invalid.resolvedEcalSum=true;
     invalid.intervals={3}; invalid.chargedEcalEnergy=std::make_pair(10.,.2);
     invalid.neutralEcalEnergy=std::make_pair(3.,bad);
     bool rejected=false;
