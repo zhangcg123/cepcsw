@@ -22,7 +22,7 @@ struct FitSettings {
   std::map<int, double> intervalMeanLogLoss;
   std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; terminal RTS measurement
   ChargedEnergyMode chargedEcalEnergyMode = ChargedEnergyMode::ElectronOnly;
-  ResolvedEcalEnergyMode resolvedEcalEnergyMode = ResolvedEcalEnergyMode::Separate;
+  ResolvedEcalEnergyMode resolvedEcalEnergyMode = ResolvedEcalEnergyMode::Separate; // resolved 110; 111 forces Separate
   std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
   std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement
   // Passive capture for the same normalized likelihood in each RTS family.

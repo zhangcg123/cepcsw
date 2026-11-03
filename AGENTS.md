@@ -315,20 +315,24 @@ manifest as an uncommitted analysis artifact.
 **OPTIONAL RESOLVED-ECAL SUM CONSTRAINT (2026-11-04).**
 User requested an option to constrain the charged+neutral total for resolved
 showers. `ResolvedEcalEnergyMode=Separate` remains the compiled/card/batch
-default; opt-in `Sum` replaces the two ECAL observations in final111 with one
+default; opt-in `Sum` replaces the resolved110 charged observation with one
 terminal measurement, E=C+N and sigma=hypot(sigmaC,sigmaN), using the existing
-p_ECAL*exp(b) KF projection. No separate early/delayed neutral update is added.
-Shared ordinary/free-loss core; earlier000/100/110 unchanged. Missing parts,
+p_ECAL*exp(b) KF projection. Passive neutral collection supplies N even when
+the separate-neutral switch is off. 111 ALWAYS attempts separate charged and
+neutral measurements from raw observations, never sum plus repeated neutral.
+Shared ordinary/free-loss core and HitScanAll; earlier000/100 unchanged. Missing parts,
 no breakpoint or failed fits retain existing routing/fallback. No PFA/shared-KF,
 loss-map or optimizer-acceptance change; no batch/data overwrite authorized.
 Actual applied sum is saved per endpoint and scan entry; mask3 can now mean
 beam+sum, not just beam+charged, so analyses must also check the sum flag.
 Validation/deployment evidence belongs in
-`agents_record/2026-11-04-resolved-ecal-sum-option.md`. Installation is authorized
+`agents_record/2026-11-04-resolved-sum-in-110.md`; the superseded111Sum contract
+is retained in `agents_record/2026-11-04-resolved-ecal-sum-option.md`. Installation is authorized
 after validation; no active jobs were reported. Do not claim population gain
 from focused checks. The user-visible control and caveats are in the package
-README and run card. Focused tests passed and the option is installed in the
-project-default runtime; default remains Separate. No existing cards refreshed.
+README and run card. Unit and focused normal/scan regressions passed; the option
+is installed in the project-default runtime and a default-environment event is
+exactly reproduced. Default remains Separate. No existing cards refreshed.
 
 The continuing scan-campaign contract is preserved below and in the complete
 outgoing snapshot `agents_record/2026-11-04-agents-before-resolved-sum-option.md`.

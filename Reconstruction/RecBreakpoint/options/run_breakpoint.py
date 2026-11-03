@@ -222,6 +222,7 @@ fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", 
 # NeutralEcalMeasurement is OFF; that switch only controls the neutral update.
 # Sum interpretation requires ElossOn=False. The effective per-track choice is
 # saved as charged_ecal_effective_energy_mode; the requested mode is also saved.
+# ResolvedEcalEnergyMode below can override resolved110 to Sum; 111 stays separate.
 fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "ElectronOnly")
 # Optional measurement in the final cumulative neutral-stage families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
@@ -232,12 +233,13 @@ fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "Elect
 # These six extra families are RTS-only. The measured energy is never changed;
 # fitted and smoothed photon-energy estimates are recorded separately.
 fit.NeutralEcalMeasurement = os.environ.get("BP_NEUTRAL_ECAL_MEASUREMENT", "0") == "1"
-# Resolved events with one breakpoint and BOTH usable measurements:
-# Separate (default): charged electron-only update plus the separate photon update.
-# Sum: at the final neutral stage replace these with ONE terminal ECAL update,
+# Resolved events with one breakpoint and BOTH usable measurements, charged stage110:
+# Separate (default): constrain only the charged electron.
+# Sum: use ONE terminal ECAL update (also when NeutralEcalMeasurement is OFF),
 # E=E_charged+E_neutral, sigma=hypot(sigma_charged,sigma_neutral), predicted
-# p_ECAL*exp(b). No separate neutral update; delayed-neutral is then inapplicable.
-# 000/100/110 stay unchanged. Missing either part retains the ordinary routing;
+# p_ECAL*exp(b). Stage111 ALWAYS refits charged electron + separate neutral;
+# it does not add neutral on top of110's sum. Delayed-neutral still steers111.
+# 000/100 stay unchanged. Missing either part retains the ordinary routing;
 # no-breakpoint controls remain electron-only and 111 copies 110. Requires ElossOn=False.
 fit.ResolvedEcalEnergyMode = os.environ.get("BP_RESOLVED_ECAL_ENERGY_MODE", "Separate")
 # Branch experiment: delay only the neutral free-loss update until after the

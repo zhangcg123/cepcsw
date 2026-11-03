@@ -149,7 +149,7 @@ StatusCode RecBreakpoint::initialize() {
   m_recordResolvedEcalEnergyMode = m_resolvedEcalEnergyMode.value();
   if (m_chargedEcalMeasurement && (m_recordChargedEcalInput.empty() ||
       ((m_recordChargedEcalEnergyMode == "ElectronPhoton" ||
-        (m_recordResolvedEcalEnergyMode == "Sum" && m_neutralEcalMeasurement)) && m_eloss))) {
+        m_recordResolvedEcalEnergyMode == "Sum") && m_eloss))) {
     error() << "ChargedEcalInputClusters must be nonempty; electron+photon sum requires"
             << " ElossOn=False" << endmsg;
     return StatusCode::FAILURE;
@@ -1171,7 +1171,9 @@ StatusCode RecBreakpoint::execute() {
       std::array<breakpoint::FitSettings, 2> cumulative{{settings, settings}};
       const auto chargedMode = breakpoint::effectiveChargedEnergyMode(settings.chargedEcalEnergyMode,
           !settings.intervals.empty(), m_collectedNeutralStatus == 2);
-      m_recordChargedEcalEffectiveMode = chargedMode == breakpoint::ChargedEnergyMode::ElectronPhoton
+      const bool resolvedSum = settings.resolvedEcalEnergyMode == breakpoint::ResolvedEcalEnergyMode::Sum
+          && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2;
+      m_recordChargedEcalEffectiveMode = resolvedSum || chargedMode == breakpoint::ChargedEnergyMode::ElectronPhoton
           ? "ElectronPhoton" : "ElectronOnly";
       for (auto& variant : cumulative) variant.chargedEcalEnergyMode = chargedMode;
       std::array<const breakpoint::PairedFitResult*, 2> previous{{
@@ -1191,8 +1193,13 @@ StatusCode RecBreakpoint::execute() {
             if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
               variant.chargedEcalEnergy = std::make_pair(
                   m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
+              // Raw parts enter the shared sum projection, even with the neutral switch off.
+              if (resolvedSum) variant.neutralEcalEnergy = std::make_pair(
+                  m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
               available = true;
             } else if (kind == 2 && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2) {
+              // Refit the separate observations; never add neutral on top of the sum.
+              variant.resolvedEcalEnergyMode = breakpoint::ResolvedEcalEnergyMode::Separate;
               variant.neutralEcalEnergy = std::make_pair(
                   m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
               if (method == 1) variant.delayedNeutral = m_delayedNeutralExperiment;

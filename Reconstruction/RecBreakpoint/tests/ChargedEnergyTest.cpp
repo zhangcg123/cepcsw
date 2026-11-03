@@ -31,6 +31,13 @@ int main() {
         if (combineResolvedEcalMeasurements(settings))
           throw std::runtime_error("Resolved sum applied twice");
         close(original.chargedEcalEnergy->first,10.); close(original.neutralEcalEnergy->first,3.);
+        // The next stage uses raw observations, not the sum-fitted state.
+        auto separate111=original;
+        separate111.resolvedEcalEnergyMode=ResolvedEcalEnergyMode::Separate;
+        if (combineResolvedEcalMeasurements(separate111) || !separate111.neutralEcalEnergy)
+          throw std::runtime_error("111 must retain the separate neutral measurement");
+        close(separate111.chargedEcalEnergy->first,10.);
+        close(separate111.neutralEcalEnergy->first,3.);
       } else if (settings.chargedEcalEnergy!=original.chargedEcalEnergy ||
                  settings.neutralEcalEnergy!=original.neutralEcalEnergy || !settings.delayedNeutral)
         throw std::runtime_error("Inapplicable resolved mode changed observations");
