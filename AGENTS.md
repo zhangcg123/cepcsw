@@ -312,46 +312,57 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CHARGED-CLUSTER ELECTRON+PHOTON CONSTRAINT — DISCUSSION (2026-10-29).**
-Work on the user-authorized `breakpoint-delayed-neutral` branch; preserve the
-original `breakpoint`. Delayed-neutral runtime is installed; this discussion
-and the latest temporary experiments did not change the installation. Do not
-change algorithms, production defaults, PFA or installed libraries for this
-new focus without authorization. Fit experiments remain in /tmp pending solid
-evidence and review; no remote publication of this branch was requested.
+**RECONSTRUCTED SILICON BREAKPOINT SCAN — HIGGS BATCH (2026-11-03).**
+Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No remote
+publication or branch operation is authorized for this campaign. The user
+authorized validating/installing this scan update with no active batch jobs.
+Do not modify PFA, shared KF, loss maps, optimizer acceptance, or production
+fit defaults to improve the scanner without a separate request.
 
-The user paused neutral-update development to discuss unresolved charged
-clusters. Current ElectronPhoton mode predicts h_sum=p_ECAL*exp(b) and applies
-a terminal ECAL-face KF energy measurement followed by RTS. With no breakpoint
-or a collected separate neutral, routing uses ElectronOnly instead. Review the
-charged sum's measurement model, covariance/linearization and cluster-energy
-completeness separately; do not conflate them with loss-transition mapping or
-optimizer bounds. No change is yet selected. Diffuse constraints/free-loss work
-remains deferred.
+`IntervalSelectionMode="HitScan"` is opt-in and requires FreeLossFit=True
+and empty BreakpointIntervals. Scan reconstructed VXD/ITK hits (subdetector
+IDs 1/2/3), excluding the last track hit; retain all TPC/OTK measurements but
+do not scan their locations. Score the same enabled/available beam and charged
+ECAL observations in null and candidate models (110 when both are available).
+The null is a separate 5D fit, not a finite-width b0=0 fit. Gain is
+null NLL2 minus the minimum candidate NLL2, using normalized -2 log L.
+Separate neutral measurements are excluded from this locator's scores.
+SigmaLogLoss=0.001 and prior-center upper bound 1 remain unchanged.
+Default Truth steering is NOT replaced by HitScan.
 
-Preserve these distinctions from the completed temporary 12-track comparison:
-- The early neutral-measurement approximation is a REAL demonstrated issue,
-  not declared harmless. Delayed update resolves tested exact-versus-affine
-  photon-energy discrepancies, including early 4:11's 17.77-sigma discrepancy.
-- FreeLossMaxLogLoss=1 bounds Minuit's Gaussian prior CENTER b0, not final b.
-  Widening to 2 fixes much of two saturated delayed VXD fits, but not early
-  update's failures. A lower-bound-only optimizer is discussed, NOT implemented.
-  The compiled/maintained default remains 1; SigmaLogLoss remains 0.001.
-- Loss-transition closure mismatch is separate. It is not established as the
-  main cause of remaining delayed-fit degradation; leave that mapping unchanged.
-  Four bad ITK/TPC cases remain unexplained. No population-wide claim follows.
+Flat tuples save every candidate score/status and the null, not only the winner.
+A parallel passive `hit_scan_truth_*` reference uses the same free-loss scorer
+at the largest eligible truth-owned location, NOT truth loss energy. Reuse the
+candidate for silicon owners; fit one additional non-silicon owner as reference
+only. No eligible owner uses the tagged null reference. Missing truth leaves the
+blind selection intact. This is distinct from the old `truth_override_*`
+family, which is not a truth-location parallel endpoint.
 
-Next: discuss the charged electron+photon constraint with code-backed equations;
-agree any temporary diagnostic before implementation. Exact event tables,
-optimizer checks, deployment identity and limitations are retained in
+Prepared campaign: 50 existing `higgs_full_20261030/rec-higgs-{1..50}.root`
+files x 200 events, breakpoint-only, output `higgs_silicon_scan_20261103`,
+110, ElectronPhoton with existing resolved routing, no truth loss override,
+diffuse or backward filters. No Condor jobs submitted by the assistant.
+`./subbreakpointhiggsscanjobs.sh` prepares; explicit
+`./subbreakpointhiggsscanjobs.sh submit-prepared` submits the frozen cards
+with group higgs (SUBMIT_GROUP overrides). Already prepared cards refuse
+overwrite. The validated package is installed in the project-default runtime;
+the deployment record below retains its exact identity and checks.
+
+Six selected >1% inner-silicon loss tests improve absolute pT residual versus
+KF but locate the exact truth-owned hit only 2/6 times; the clean control
+worsens. No calibrated detection threshold, efficiency/purity, general pT
+improvement or production validation is established. Next evaluate the 10k-event
+batch by loss, owner and topology; do not label a no-candidate/failure/null
+decision as truth no-eBrem.
+
+Numerical tests, scoring definitions and truth-location pT comparisons:
+`agents_record/2026-11-03-silicon-hit-scan110.md`.
+Current batch/deployment handoff:
+`agents_record/2026-11-03-hit-scan-truth-reference-and-higgs-batch.md`.
+The complete outgoing AGENTS is preserved in
+`agents_record/2026-11-03-agents-before-hit-scan-batch.md`; the early/delayed
+neutral, bound and loss-map distinctions remain documented in
 `agents_record/2026-10-29-neutral-bound-audit-and-charged-sum-handoff.md`.
-Earlier unresolved charged-sum diagnostics are in
-`Reconstruction/RecBreakpoint/docs/unresolved-loss-map-diagnostic.md`.
-Latest delayed-neutral/simple-addition gallery is
-`TrackingPerformanceStudies/breakpoint_delayed_neutral_pt_resolution_20261028`,
-under the TrackingPerformanceStudies server on localhost8000. Historical early
-population comparisons have endpoint drift; the temporary 12-track A/B uses
-one library and identical inputs.
 
 Existing effective ownership rules/guards remain active: preserve actual G4
 positions/material paths and truth_ebrem_effective_owner_rule (0 none, 1 beam
@@ -363,5 +374,3 @@ remain; owner-hit loss placement is unchanged. Deployment history remains in
 The independent acceptance audit is not closed: do not silently promote scan
 candidates, clip states, or implement acceptance repairs before user discussion.
 See `agents_record/2026-10-26-breakpoint-independent-audit-handoff.md`.
-The complete outgoing AGENTS is preserved in
-`agents_record/2026-10-29-agents-before-charged-sum-focus.md`.

@@ -419,8 +419,9 @@ scanner inherits the existing BeamSpotConstraint/ChargedEcalMeasurement switches
 turn both OFF to reproduce the earlier **000** scan. Missing/ambiguous charged
 input leaves only the available beam observation; the actual scored mask is
 persisted. This is a single-breakpoint
-search, not multi-emission recovery. When TruthOverride is enabled, truth is
-read only for its separate diagnostic after reconstruction-based selection.
+search, not multi-emission recovery. HitScan reads truth only for a passive
+truth-location reference after reconstruction-based selection. TruthOverride
+is a separate truth-loss-amount diagnostic at the selected reconstructed site.
 
 Flat fields are always booked as `hit_scan_*`. Status is 0 not run, 1 null
 preferred, 2 breakpoint preferred, 3 no silicon candidates, -1 null-fit failure,
@@ -435,6 +436,33 @@ and `charged_energy_mode` is the candidate's effective mode (None if unavailable
 At the existing selection level, status 5 means a completed scan decision
 (including no-candidate status 3), and -3 means scan failure; inspect
 `hit_scan_status` for the exact meaning. Earlier selection codes are unchanged.
+
+In HitScan mode `hit_scan_truth_*` saves the same beam/charged free-loss fit at
+the largest eligible truth-owned breakpoint, without overriding the loss amount.
+It reuses an already scanned silicon candidate exactly, including a failed
+candidate's status; an eligible truth owner outside silicon gets one additional
+reference fit and never enters the candidate list or ranking. No eligible owner
+uses the 5D null reference, not evidence of no physical eBrem. The status is 0
+inactive, 1 null, 2 fitted, -1 truth-association failure or -2 fit failure.
+Saved fields are hit, NLL2, IP omega/pT, optimized prior center, fitted b/variance,
+Minuit status, reused-candidate flag and error. Missing truth never fails or
+changes the blind selection. Existing ownership diagnostics explain eligibility.
+
+For 10,000 existing Higgs events (50 files x 200), without rerunning sim/rec:
+
+```bash
+./subbreakpointhiggsscanjobs.sh
+./subbreakpointhiggsscanjobs.sh submit-prepared
+```
+
+The first command only prepares frozen cards. Input defaults to
+`higgs_full_20261030`, output to `higgs_silicon_scan_20261103`, group to `higgs`
+(override `SUBMIT_GROUP`). The new scan runtime must be installed first.
+The campaign uses 110, ElectronPhoton with existing resolved routing,
+SigmaLogLoss=0.001, prior-center upper bound 1, threshold 0, truth loss override,
+diffuse and backward filters OFF. Both blind scores and passive truth-location
+references are in each flat tuple. External rec files are retained. Missing
+input files are skipped, so check the reported eligible-job count before submit.
 
 Scanning is opt-in and expensive. Neighboring sites can be indistinguishable,
 end losses can be underconstrained, and one breakpoint can approximate several

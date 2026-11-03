@@ -550,7 +550,7 @@ StatusCode RecBreakpoint::execute() {
   freeLossControls.chargedEcalEnergyMode = settings.chargedEcalEnergyMode;
   const std::array<bool,3> constraintEnabled{{m_beamSpotConstraint.value(),
       m_chargedEcalMeasurement.value(), m_neutralEcalMeasurement.value()}};
-  const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
+  const bool needTruthData = selected && (m_intervalSelectionName == "Truth" || m_intervalSelectionName == "HitScan" ||
       (m_enableTruthOverride && (!settings.intervals.empty() || m_intervalSelectionName=="HitScan")));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
@@ -756,6 +756,12 @@ StatusCode RecBreakpoint::execute() {
         }
         return matchedTruth;
       };
+      auto largestOwnedBreakpoint = [&]() {
+        const TruthBreakpointLoss* largest = nullptr;
+        for (const auto& loss : ownedMatch.breakpoints)
+          if (loss.ebremLoss>0 && (!largest || loss.ebremLoss>largest->ebremLoss)) largest=&loss;
+        return largest;
+      };
       if (m_intervalSelectionName == "Truth") {
         if (!truthPrepared) {
           m_intervalSelectionStatus = -1;
@@ -771,9 +777,7 @@ StatusCode RecBreakpoint::execute() {
         m_intervalTruthDistance = match.maxEndpointDistance;
         // One shared physical breakpoint: largest eligible layer-owned loss;
         // ties keep the innermost hit. Unowned emissions remain in the tuple.
-        const TruthBreakpointLoss* largest = nullptr;
-        for (const auto& loss : ownedMatch.breakpoints)
-          if (loss.ebremLoss > 0 && (!largest || loss.ebremLoss > largest->ebremLoss)) largest = &loss;
+        const auto* largest = largestOwnedBreakpoint();
         if (largest) {
           settings.intervals.push_back(largest->hitIndex);
           m_intervalTruthLoss.push_back(largest->ebremLoss);
@@ -792,6 +796,17 @@ StatusCode RecBreakpoint::execute() {
         if (m_hitScan.selectedHit>=0) settings.intervals.push_back(m_hitScan.selectedHit);
         m_intervalSelectionStatus=m_hitScan.status>0 ? 5 : -3;
         m_intervalSelectionError=m_hitScan.error;
+        // Selection is already frozen; truth can populate only this passive reference.
+        try {
+          if (!truthPrepared) throw std::runtime_error(truthEventError);
+          if (!matchTruth()) throw std::runtime_error(matchError);
+          const auto* largest=largestOwnedBreakpoint();
+          m_hitScan.reference(fitter,hits,scanSettings,freeLossControls,largest ? largest->hitIndex : -1);
+          if (std::isfinite(m_hitScan.truthIpOmega) && m_hitScan.truthIpOmega!=0)
+            m_hitScan.truthPt=std::abs(m_bz*2.99792458e-4/m_hitScan.truthIpOmega);
+        } catch (const std::exception& failure) {
+          m_hitScan.truthStatus=-1; m_hitScan.truthError=failure.what();
+        }
         if (m_verbose) info() << "HitScan event=" << m_event << " track=" << m_trackIndex
             << " status=" << m_hitScan.status << " null_nll2=" << m_hitScan.nullNll2
             << " best_hit=" << m_hitScan.bestHit << " best_nll2=" << m_hitScan.bestNll2

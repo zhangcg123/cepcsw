@@ -88,6 +88,8 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Requires FreeLossFit=True. With beam/charged OFF this is the original 000 scan.
 # The winning location, or empty list for the null, is shared by all endpoints;
 # each endpoint is then fitted with its own configured constraint stage.
+# HitScan also saves a passive truth-location free-loss reference (same 110 inputs),
+# not a truth energy override. Missing truth is tagged and never changes selection.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")
@@ -296,7 +298,7 @@ if fit.ChargedEcalMeasurement:
     _charged_source = str(fit.ChargedEcalInputClusters)
     if _charged_source and _charged_source not in reader.collections:
         reader.collections.append(_charged_source)
-if fit.IntervalSelectionMode == "Truth" or (fit.TruthOverride and
+if fit.IntervalSelectionMode in ("Truth", "HitScan") or (fit.TruthOverride and
         (fit.BreakpointIntervals or fit.IntervalSelectionMode == "HitScan")):
     reader.collections += [
         "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",

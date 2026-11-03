@@ -50,6 +50,49 @@ class BatchTest(unittest.TestCase):
         self.assertIn("'BP_HIT_SCAN_MIN_NLL_GAIN': '4.5'", card)
         self.assertIn('fit.HitScanMinNllGain =', card)
 
+    def test_hit_scan_verification_requires_truth_reference_schema(self):
+        tree=MagicMock(); tree.GetEntries.return_value=2
+        tree.GetBranch.side_effect=lambda name: None if name=='hit_scan_truth_nll2' else object()
+        file=MagicMock(); file.Get.return_value=tree
+        file.IsZombie.return_value=False; file.TestBit.return_value=False
+        root=types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path:file,kRecovered=1))
+        with patch.dict('sys.modules',ROOT=root):
+            with self.assertRaisesRegex(RuntimeError,'Missing hit-scan branch: hit_scan_truth_nll2'):
+                batch.verify(Path('fixture.root'),'breakpoint',hit_scan=True)
+
+    def test_hit_scan_reads_truth_associations_without_loss_override(self):
+        import ast
+        text=(self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        block=next(n for n in ast.parse(text).body if isinstance(n,ast.If)
+                   and ast.unparse(n.test).startswith("fit.IntervalSelectionMode in ('Truth', 'HitScan')"))
+        reader=types.SimpleNamespace(collections=[])
+        fit=types.SimpleNamespace(IntervalSelectionMode='HitScan',TruthOverride=False)
+        exec(compile(ast.Module(body=[block],type_ignores=[]),'<truth-inputs>','exec'),
+             {'fit':fit,'reader':reader})
+        self.assertIn('VXDTrackerHitAssociation',reader.collections)
+        self.assertIn('TPCTrackerHitAss',reader.collections)
+
+    def test_higgs_scan_launcher_prepares_10k_and_submits_only_on_request(self):
+        import subprocess
+        for seed in range(1,51):
+            (self.repo/'inputs'/f'rec-higgs-{seed}.root').write_bytes(b'planning fixture')
+        launcher=str(self.repo/'subbreakpointhiggsscanjobs.sh')
+        result=subprocess.run([launcher],env=self.env,capture_output=True,text=True,check=True)
+        self.assertIn('Prepared 50 jobs: breakpoint',result.stdout)
+        self.assertIn('-g higgs ',result.stdout)
+        manifests=list((self.repo/'outputs/runcards').glob('*/job.json'))
+        self.assertEqual(len(manifests),50)
+        jobs=[json.loads(p.read_text()) for p in manifests]
+        self.assertEqual(sum(j['nevt'] for j in jobs),10000)
+        for job in jobs:
+            self.assertEqual(job['stages'],['breakpoint'])
+            self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'HitScan')
+            self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'0')
+            self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'0')
+        self.assertFalse(list((self.repo/'outputs').rglob('submitted.json')))
+        subprocess.run([launcher,'submit-prepared'],env=self.env,capture_output=True,text=True,check=True)
+        self.assertFalse(list((self.repo/'outputs').rglob('submitted.json')))
+
     def test_delayed_neutral_is_validated_and_frozen(self):
         template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         assignment = next(line for line in template.splitlines()
@@ -191,7 +234,8 @@ class BatchTest(unittest.TestCase):
         for rel in ['DumpGsfTrks/sim.py.bk', 'DumpGsfTrks/trk.py.bk',
                     'DumpGsfTrks/calodigi.py.bk', 'DumpGsfTrks/rec.py.bk',
                     'Reconstruction/RecBreakpoint/options/run_breakpoint.py', 'dump_breakpoint.sh',
-                    'subbreakpointjobs.sh', 'Reconstruction/RecBreakpoint/options/batch_breakpoint.py']:
+                    'subbreakpointjobs.sh', 'subbreakpointhiggsscanjobs.sh',
+                    'Reconstruction/RecBreakpoint/options/batch_breakpoint.py']:
             dest = self.repo/rel; dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO/rel, dest)
         (self.repo/'inputs').mkdir()

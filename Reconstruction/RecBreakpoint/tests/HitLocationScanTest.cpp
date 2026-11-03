@@ -26,7 +26,11 @@ int main() {
   rejected=false; try { scan.select(); } catch(const std::invalid_argument&) { rejected=true; }
   assert(rejected);
   scan.constraintMask=3; scan.chargedEnergyMode="ElectronPhoton";
+  scan.truthStatus=2; scan.truthHit=5; scan.truthNll2=1.; scan.truthReusedCandidate=true;
+  scan.nullNll2=10; scan.hit={0,2}; scan.nll2={8,7}; scan.fitStatus={2,2};
+  scan.select(); assert(scan.selectedHit==2); // Passive truth h5 never enters ranking.
   scan.reset(2.);
   assert(scan.constraintMask==0 && scan.chargedEnergyMode=="None" && scan.minNllGain==2.);
+  assert(scan.truthStatus==0 && scan.truthHit==-1 && !scan.truthReusedCandidate && std::isnan(scan.truthNll2));
   std::cout<<"PASS: silicon-only candidates, last-hit exclusion, null test, threshold, ties and failed fits\n";
 }

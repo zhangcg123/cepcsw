@@ -43,10 +43,24 @@ struct HitLocationScan {
   std::vector<double> nll2, priorCenter, fittedLoss, fittedVariance, ipOmega;
   std::vector<std::string> candidateError;
 
+  // Passive truth-location reference: 0 inactive, 1 null, 2 fitted,
+  // -1 truth association failed, -2 fit failed. Never enters select().
+  int truthStatus = 0, truthHit = -1, truthMinuitStatus = -99;
+  bool truthReusedCandidate = false;
+  double truthNll2 = std::numeric_limits<double>::quiet_NaN();
+  double truthIpOmega = std::numeric_limits<double>::quiet_NaN();
+  double truthPt = std::numeric_limits<double>::quiet_NaN();
+  double truthPriorCenter = std::numeric_limits<double>::quiet_NaN();
+  double truthFittedLoss = std::numeric_limits<double>::quiet_NaN();
+  double truthFittedVariance = std::numeric_limits<double>::quiet_NaN();
+  std::string truthError;
+
   void reset(double minimumGain) { *this = HitLocationScan{}; minNllGain=minimumGain; }
   void book(TTree& tree);
   void run(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
            const FitSettings& settings, const FreeLossSettings& controls);
+  void reference(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
+                 const FitSettings& settings, const FreeLossSettings& controls, int ownerHit);
 
   // Pure decision step, also exercised without Gaudi/geometry in unit tests.
   void select() {

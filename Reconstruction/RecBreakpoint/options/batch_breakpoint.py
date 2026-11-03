@@ -323,7 +323,7 @@ def submit_prepared(value):
     submit_jobs(jobs,dry)
 
 
-def verify(path, stage, ecal_constraint_input=None):
+def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
     import ROOT
     file = ROOT.TFile.Open(str(path))
     if not file or file.IsZombie() or file.TestBit(ROOT.TFile.kRecovered):
@@ -351,6 +351,14 @@ def verify(path, stage, ecal_constraint_input=None):
                                        '; install the PFA snapshot exporter and rerun rec')
         print(f'rec events={tree.GetEntries()}', flush=True)
     elif stage == 'breakpoint':
+        if hit_scan:
+            for name in ('hit_scan_status', 'hit_scan_constraint_mask',
+                         'hit_scan_candidate_hit', 'hit_scan_candidate_nll2',
+                         'hit_scan_candidate_fit_status', 'hit_scan_null_nll2',
+                         'hit_scan_nll_gain', 'hit_scan_truth_status',
+                         'hit_scan_truth_hit', 'hit_scan_truth_nll2', 'hit_scan_truth_pt'):
+                if not tree.GetBranch(name):
+                    raise RuntimeError('Missing hit-scan branch: ' + name)
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
                      'truth_override_result_status', 'beam_spot_constraint_enabled',
                      'ordinary_beam_spot_applied', 'free_loss_beam_spot_applied',
@@ -435,7 +443,8 @@ def run(manifest):
         print('Running ' + stage + ': ' + job['cards'][stage], flush=True)
         subprocess.run([runner, job['cards'][stage]], cwd=repo, check=True)
         ready = verify(Path(job['files'][stage]), stage,
-                       job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'))
+                       job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
+                       hit_scan=job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')=='HitScan')
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))
         if stage == 'calodigi':

@@ -3,6 +3,7 @@
 #include "UTIL/BitField64.h"
 #include "UTIL/ILDConf.h"
 #include "TTree.h"
+#include <algorithm>
 
 namespace breakpoint {
 void HitLocationScan::book(TTree& tree) {
@@ -31,6 +32,17 @@ void HitLocationScan::book(TTree& tree) {
   tree.Branch("hit_scan_candidate_fitted_variance", &fittedVariance);
   tree.Branch("hit_scan_candidate_ip_omega", &ipOmega);
   tree.Branch("hit_scan_candidate_error", &candidateError);
+  tree.Branch("hit_scan_truth_status", &truthStatus);
+  tree.Branch("hit_scan_truth_hit", &truthHit);
+  tree.Branch("hit_scan_truth_minuit_status", &truthMinuitStatus);
+  tree.Branch("hit_scan_truth_reused_candidate", &truthReusedCandidate);
+  tree.Branch("hit_scan_truth_nll2", &truthNll2);
+  tree.Branch("hit_scan_truth_ip_omega", &truthIpOmega);
+  tree.Branch("hit_scan_truth_pt", &truthPt);
+  tree.Branch("hit_scan_truth_prior_center", &truthPriorCenter);
+  tree.Branch("hit_scan_truth_fitted_log_loss", &truthFittedLoss);
+  tree.Branch("hit_scan_truth_fitted_variance", &truthFittedVariance);
+  tree.Branch("hit_scan_truth_error", &truthError);
 }
 
 void HitLocationScan::run(const BreakpointFitter& fitter,
@@ -90,5 +102,47 @@ void HitLocationScan::run(const BreakpointFitter& fitter,
   }
   select();
   if (status==-2) error="All silicon candidate optimizations failed; keep no-breakpoint refit";
+}
+
+void HitLocationScan::reference(const BreakpointFitter& fitter,
+    const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& settings,
+    const FreeLossSettings& controls, int ownerHit) {
+  truthHit=ownerHit;
+  if (ownerHit<0) {
+    truthStatus=std::isfinite(nullNll2) ? 1 : -2;
+    truthNll2=nullNll2; truthIpOmega=nullIpOmega;
+    if (truthStatus<0) truthError="No valid no-breakpoint reference";
+    return;
+  }
+  const auto found=std::find(hit.begin(),hit.end(),ownerHit);
+  if (found!=hit.end()) {
+    const auto i=std::distance(hit.begin(),found);
+    truthReusedCandidate=true;
+    truthStatus=fitStatus[i]==2 ? 2 : -2;
+    truthNll2=nll2[i]; truthIpOmega=ipOmega[i]; truthMinuitStatus=minuitStatus[i];
+    truthPriorCenter=priorCenter[i]; truthFittedLoss=fittedLoss[i];
+    truthFittedVariance=fittedVariance[i]; truthError=candidateError[i];
+    return;
+  }
+  // A non-silicon truth owner is a reference only, never a scan candidate.
+  auto hypothesis=settings;
+  hypothesis.intervals={ownerHit}; hypothesis.intervalMeanLogLoss.clear();
+  hypothesis.neutralEcalEnergy.reset(); hypothesis.delayedNeutral=false;
+  auto referenceControls=controls;
+  referenceControls.beamSpot=hypothesis.beamSpot;
+  referenceControls.chargedEcalEnergy=hypothesis.chargedEcalEnergy;
+  referenceControls.chargedEcalEnergyMode=hypothesis.chargedEcalEnergyMode;
+  referenceControls.neutralEcalEnergy.reset();
+  const auto result=FreeLossFitter(fitter).fit(hits,hypothesis,referenceControls,false);
+  truthStatus=-2; truthMinuitStatus=result.diagnostics.minuitStatus;
+  truthError=result.diagnostics.error;
+  if (result.diagnostics.status==FreeLossStatus::Applied && result.fitted &&
+      result.diagnostics.likelihood.measurementDimensions==measurementDimensions) {
+    truthStatus=2; truthNll2=result.diagnostics.objectiveNll2;
+    truthIpOmega=result.fitted->rts.ip.omega;
+    truthPriorCenter=result.diagnostics.b;
+    truthFittedLoss=result.fitted->rts.breakpoints.front().fittedLogLoss;
+    truthFittedVariance=result.fitted->rts.breakpoints.front().fittedVariance;
+  } else if (truthError.empty()) truthError="Invalid truth-location fit or measurement dimensions";
 }
 } // namespace breakpoint
