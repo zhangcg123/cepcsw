@@ -18,10 +18,10 @@ export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.
 # Must be finite and positive. Frozen into generated cards at preparation.
 export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
-# This batch campaign defaults to cumulative beam/charged/neutral = 111.
+# Default beam/charged/neutral = 110; enable the separate-neutral stage explicitly.
 export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-1}
 export BP_CHARGED_ECAL_MEASUREMENT=${BP_CHARGED_ECAL_MEASUREMENT:-1}
-export BP_NEUTRAL_ECAL_MEASUREMENT=${BP_NEUTRAL_ECAL_MEASUREMENT:-1}
+export BP_NEUTRAL_ECAL_MEASUREMENT=${BP_NEUTRAL_ECAL_MEASUREMENT:-0}
 # Campaign-only: delayed neutral update for free-loss RTS when a neutral is available.
 export BP_EXPERIMENTAL_DELAYED_NEUTRAL=${BP_EXPERIMENTAL_DELAYED_NEUTRAL:-1}
 # 110: ElectronOnly uses charged energy; ElectronPhoton adds collected neutral energy.

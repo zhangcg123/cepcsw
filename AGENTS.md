@@ -320,11 +320,17 @@ photon using charged energy without a neutral, or C+N with a collected neutral
 (sigma=hypot(sigmaC,sigmaN), existing p_ECAL*exp(b) projection). One breakpoint
 is required for a photon coordinate; otherwise electron-only. No resolved-mode
 selector. Passive neutral collection supplies N for ElectronPhoton even when
-the separate-neutral switch is off. 111 ALWAYS attempts separate charged and
+the separate-neutral switch is off. When enabled,111 attempts separate charged and
 neutral measurements from raw observations, never sum plus repeated neutral.
 Shared ordinary/free-loss core and HitScanAll; earlier000/100 unchanged. Missing parts,
 no breakpoint or failed fits retain existing routing/fallback. No PFA/shared-KF,
 loss-map or optimizer-acceptance change; no batch/data overwrite authorized.
+
+Ordinary batch default is110: NeutralEcalMeasurement OFF, as already in the
+standalone card/compiled default. Enable explicitly to run111. The dedicated
+four-setup scan launcher still explicitly enables111; passive collection and
+110's resolved ElectronPhoton sum are unchanged. Existing cards stay frozen.
+
 Actual applied sum is saved per endpoint and scan entry; mask3 can now mean
 beam+sum, not just beam+charged, so analyses must also check the sum flag.
 ResolvedEcalEnergyMode/property/env and requested-mode tuple scalar are removed;

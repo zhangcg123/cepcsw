@@ -545,12 +545,13 @@ class BatchTest(unittest.TestCase):
         self.prepare(STAGES='sim,trk,calodigi,rec,breakpoint', SEED_FIRST='13', SEED_LAST='13')
         self.assertTrue((self.repo/'outputs/runcards/e--2.0-85-13/job.json').is_file())
 
-    def test_submission_wrapper_constraints_default_111_and_explicit_override(self):
+    def test_submission_wrapper_constraints_default_110_and_explicit_override(self):
         controls = ('BP_BEAM_SPOT_CONSTRAINT', 'BP_CHARGED_ECAL_MEASUREMENT',
                     'BP_NEUTRAL_ECAL_MEASUREMENT')
         assignments = ('fit.BeamSpotConstraint =', 'fit.ChargedEcalMeasurement =',
                        'fit.NeutralEcalMeasurement =')
-        for label, override, expected in [('default', {}, '111'),
+        for label, override, expected in [('default', {}, '110'),
+                                         ('enable_111', dict(zip(controls, '111')), '111'),
                                          ('override', dict(zip(controls, '101')), '101')]:
             env = dict(self.env, OUTPUT_TUPLEPATH='constraints_' + label, **override)
             result = batch.subprocess.run(['bash', str(self.repo/'subbreakpointjobs.sh')],

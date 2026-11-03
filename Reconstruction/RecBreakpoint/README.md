@@ -907,7 +907,7 @@ the independent neutral clusters in `TrkMergedECAL` as charged.
 The routing is automatic and shared by ordinary and free-loss RTS, including
 HitScanAll:
 
-| Track situation | Charged stage110 | Neutral stage111 |
+| Track situation | Charged stage110 | Neutral stage111 (when enabled) |
 |---|---|---|
 | No selected breakpoint | Charged energy measures electron only | Copy preceding accepted stage |
 | One breakpoint, no collected neutral | Charged energy measures electron only or electron+photon, according to ChargedEcalEnergyMode | Copy preceding accepted stage |
@@ -926,7 +926,7 @@ collected neutral energy and one breakpoint; no artificial loss coordinate is
 introduced for an unbroken track. No extra neutral update or component likelihood
 is added to110. 000/100 remain ECAL-free.
 
-111 always attempts the separate observations from the original seed/prior,
+When enabled,111 attempts the separate observations from the original seed/prior,
 not the Sum110 posterior. Ordinary111 uses the early neutral update; free-loss111
 uses the existing ExperimentalDelayedNeutral choice. A failed111 can retain
 Sum110 as an explicitly flagged fallback, not a selectable111 sum workflow.
@@ -1367,9 +1367,11 @@ Use the root scripts `subbreakpointjobs.sh` and `dump_breakpoint.sh`.
 This workflow is independent of GSF and does not run its fitter.
 The shared loss-prior sigma is controlled by BP_SIGMA_LOG_LOSS in
 subbreakpointjobs.sh (default0.001). The batch helper defaults the shared
-beam/charged/neutral constraints to `111`, with explicit `BP_*` overrides
+beam/charged/neutral constraints to `110`, with explicit `BP_*` overrides
 supported. This is campaign steering only: standalone-card and compiled
-constraint defaults remain OFF. Successful 111 jobs save unconstrained,
+constraint defaults remain OFF. Set BP_NEUTRAL_ECAL_MEASUREMENT=1 to opt into111.
+The dedicated four-setup HitScanAll launcher explicitly enables111; its scan
+campaign is unchanged by this ordinary-job default. Successful 111 jobs save unconstrained,
 beam-only, beam+charged, and beam+charged+neutral results for ordinary/free-loss
 RTS; all backward defaults remain OFF. Other fit physics remains in
 options/run_breakpoint.py. Supported BP_* environment values are frozen at
@@ -1387,8 +1389,9 @@ uses one configured list for every track; an empty Manual list is the baseline.
 The current submission helper defaults to `STAGES=breakpoint`, reading existing
 REC files in `sim_large_barrel_20261026` and writing new flat tuples under
 `breakpoint_delayed_neutral_20261028`. It enables
-`BP_EXPERIMENTAL_DELAYED_NEUTRAL=1` with cumulative 111; missing neutrals retain
-the preceding constraint result. Earlier flat tuples and REC inputs are retained.
+`BP_EXPERIMENTAL_DELAYED_NEUTRAL=1`, which is inert unless the separate-neutral
+stage is explicitly enabled. Default110 still collects neutrals passively for
+ElectronPhoton's resolved sum. Earlier flat tuples and REC inputs are retained.
 Run `./subbreakpointjobs.sh` to prepare and submit this campaign, or override
 `DRY_RUN=1` and a separate output path to prepare without submitting.
 For a new full simulation campaign explicitly set
