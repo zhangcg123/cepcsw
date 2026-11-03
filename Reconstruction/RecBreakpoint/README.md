@@ -359,7 +359,7 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 | Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
 | HitScan | Free-loss VXD/ITK location scan plus no-breakpoint hypothesis; inherits enabled beam/charged measurements, requires FreeLossFit |
-| HitScanAll | Scan-only: optimized 000/100/110/111 fit at every silicon site, null and truth reference; no location selection or published refit |
+| HitScanAll | Scan-only: optimized 000/100/110/111 fit at every silicon site plus TPC row 0, null and truth reference; no location selection or published refit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
 ### Scan-only data for offline location studies
@@ -374,10 +374,14 @@ BreakpointFitter/FreeLossFitter, not another KF implementation.
 The `location_scan_*` vectors contain one aligned entry per `(point, setup)`:
 
 - Point 0 is the separate 5D no-breakpoint control. Reconstructed VXD/ITK sites
-  follow, excluding the final track hit. TPC/OTK measurements remain in every fit.
-- A truth owner in silicon points to that same point without another fit. An
-  eligible non-silicon truth owner adds a `kind=2` reference-only point last.
-  Missing truth never removes or reorders reconstructed silicon points.
+  and the first exact reconstructed TPC row-0 hit follow in track-hit order,
+  excluding the final track hit. A missing row-0 hit is not replaced by another
+  TPC row. All TPC/OTK measurements remain in every fit.
+- A truth owner already in this list points to that same point without another
+  fit; this includes the effective TPC-inner-wall owner at row 0. Any other
+  eligible truth owner adds a `kind=2` reference-only point last. Missing truth
+  never removes or reorders reconstructed candidates. Legacy HitScan remains
+  silicon-only.
 - Each point has four entries, `setup=[0,100,110,111]`. These are requested
   configurations, not a ranking. `actual_constraint_mask` uses bit values
   beam=1, charged=2, neutral=4. Every new stage starts a fresh fit with the
@@ -389,7 +393,7 @@ The `location_scan_*` vectors contain one aligned entry per `(point, setup)`:
   even when a neutral exists. It is explicitly not a same-observation null for
   a neutral-constrained fit. No artificial zero-photon likelihood is introduced.
 
-Saved fields: `point`, `kind` (0 null,1 silicon,2 truth-only), `hit`, `system`,
+Saved fields: `point`, `kind` (0 null,1 silicon,2 truth-only,3 TPC row-0 candidate), `hit`, `system`,
 `layer`, `setup`, `actual_constraint_mask`, `source_setup`, fit/attempt/Minuit
 statuses, `nll2`, likelihood `chi2`, `log_determinant`, `measurement_dimensions`,
 IP `pt`/`pt_error`, optimized `prior_center`, posterior `fitted_log_loss` and
@@ -406,6 +410,9 @@ Main `status=2` and `interval_selection_status=6` denote scan-only rows.
 There is no selected interval. Usual refit collections are empty and their flat
 endpoint fields remain NaN/inactive; matched input-KF/truth/PFO data are retained.
 Use the per-point `location_scan_pt` values, not the inactive refit families.
+Offline scans must include both candidate kinds 1 and 3; kind 2 is never a
+blind candidate. Existing silicon-only tuples do not acquire the new point
+without rerunning the breakpoint stage; sim/rec inputs remain valid.
 
 Choose locations later in analysis. Do not compare raw NLLs across different
 measurement sets or treat a missing/inherited constraint as an applied one.

@@ -227,12 +227,14 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
   }
   truthStatus=truthOwner ? (*truthOwner<0 ? 1 : 2) : -1;
   truthHit=truthOwner.value_or(-1);
-  const auto points=locationScanPoints(systems,truthHit);
+  const auto candidatePointCount=locationScanPoints(systems,layers).size();
+  const auto points=locationScanPoints(systems,layers,truthHit);
   pointCount=points.size();
   for (std::size_t p=0;p<points.size();++p) {
     const int site=points[p];
     if (truthOwner && site==truthHit) truthPoint=p;
-    const int type=site<0 ? 0 : (systems[site]>=1 && systems[site]<=3 ? 1 : 2);
+    const int type=site<0 ? 0 : p>=candidatePointCount ? 2 :
+        (systems[site]>=1 && systems[site]<=3 ? 1 : 3);
     auto accepted=observations;
     accepted.intervals=site<0 ? std::vector<int>{} : std::vector<int>{site};
     accepted.intervalMeanLogLoss.clear();

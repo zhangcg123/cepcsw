@@ -86,11 +86,20 @@ struct HitLocationScan {
   }
 };
 
-// Null first, all reconstructed silicon sites next, then an optional truth-only
-// site. Truth never removes, reorders or promotes a reconstructed silicon site.
-inline std::vector<int> locationScanPoints(const std::vector<int>& systems, int truthHit=-1) {
+// Null, reconstructed silicon sites plus the first exact TPC row0, then an
+// optional truth-only site. Truth never changes the reconstructed candidates.
+inline std::vector<int> locationScanPoints(const std::vector<int>& systems,
+    const std::vector<int>& layers, int truthHit=-1) {
+  if (systems.size()!=layers.size())
+    throw std::invalid_argument("Misaligned location-scan detector and layer IDs");
   std::vector<int> points{-1};
-  for (int i : siliconScanHits(systems)) points.push_back(i);
+  bool addedTpcRow0=false;
+  for (std::size_t i=0;i+1<systems.size();++i) {
+    const bool silicon=systems[i]>=1 && systems[i]<=3;
+    const bool tpcRow0=systems[i]==4 && layers[i]==0 && !addedTpcRow0;
+    if (silicon || tpcRow0) points.push_back(static_cast<int>(i));
+    if (tpcRow0) addedTpcRow0=true;
+  }
   if (truthHit>=0 && static_cast<std::size_t>(truthHit+1)<systems.size()) {
     bool present=false;
     for (int i : points) if (i==truthHit) present=true;
@@ -104,6 +113,7 @@ inline std::vector<int> locationScanPoints(const std::vector<int>& systems, int 
 struct LocationFitScan {
   int status=0, pointCount=0, truthStatus=0, truthHit=-1, truthPoint=-1;
   std::string truthError;
+  // kind: 0 null, 1 silicon candidate, 2 truth-only reference, 3 TPC row0 candidate.
   std::vector<int> point, kind, hit, system, layer, setup, actualMask;
   std::vector<int> fitStatus, attemptStatus, minuitStatus, attemptMinuitStatus;
   std::vector<int> sourceSetup, measurementDimensions;

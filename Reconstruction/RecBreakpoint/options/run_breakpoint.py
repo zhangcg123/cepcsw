@@ -91,13 +91,15 @@ fit.BreakpointIntervals = breakpoint_intervals
 # HitScan also saves a passive truth-location free-loss reference (same 110 inputs),
 # not a truth energy override. Missing truth is tagged and never changes selection.
 # HitScanAll: scan-only diagnostic, no ranking or NLL-gain cut. Save optimized
-# 000/100/110/111 fits at EVERY silicon site, plus 5D null and truth-location
+# 000/100/110/111 fits at EVERY silicon site and the first exact TPC row-0 hit,
+# plus 5D null and truth-location
 # controls in location_scan_* vectors. No refitted track family is published.
 # Requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF.
 # ExperimentalDelayedNeutral steers 111. Missing/failed observations retain the
 # preceding accepted setup, with actual mask/source/status saved. The 111 null
 # copies 110 because it has no loss parameter; do not compare its NLL gain to a
-# neutral-constrained fit. A truth-only non-silicon point never adds scan sites.
+# neutral-constrained fit. TPC row0 is kind=3, independent of truth; if absent,
+# no other TPC row substitutes. Other truth-only sites (kind=2) are not candidates.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")

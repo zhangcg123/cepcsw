@@ -312,7 +312,7 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**SCAN-ONLY SILICON LOCATION DATA — FOUR SETUPS (2026-11-03).**
+**SCAN-ONLY SILICON + TPC ROW-0 DATA — FOUR SETUPS (2026-11-04).**
 The user clarified: NO online location ranking, NLL-gain cut or selected
 location. Optimize the loss at EVERY site under 000/100/110/111, save all
 results and decide later in analysis. Do not silently restore the previous
@@ -323,10 +323,16 @@ unchanged; legacy HitScan remains an explicit comparison.
 
 New opt-in `IntervalSelectionMode="HitScanAll"` reuses the maintained fitter.
 Requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF.
-Enumerate the 5D null and all reconstructed VXD/ITK hits (IDs1/2/3), except the
-last track hit. Keep TPC/OTK measurements. A truth owner in silicon references
-the same point; an eligible non-silicon owner adds a reference-only point last.
-Truth changes neither the silicon list nor fit loss amounts.
+Enumerate the 5D null, all reconstructed VXD/ITK hits (IDs1/2/3), and the first
+exact reconstructed TPC row-0 hit (system4/layer0), except the last track hit.
+Never substitute another TPC row if row0 is missing. Keep all TPC/OTK
+measurements. Candidate kinds are1 silicon and3 TPC row0; kind2 remains a
+truth-only reference. A truth owner already in the candidate list reuses that
+point; any other eligible owner adds a reference-only point last. Truth changes
+neither the reconstructed candidate list nor fit loss amounts. Legacy HitScan
+remains silicon-only. The row0 extension passed focused validation and is
+installed in the project-default runtime (2026-11-04); no /tmp override is
+needed by subsequent jobs.
 
 The `location_scan_*` vectors in each track row contain four entries per point,
 with setup labels 0/100/110/111, normalized NLL2, likelihood chi2/logdet/dimensions,
@@ -346,25 +352,30 @@ SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. Offline location
 choice, charged-energy compatibility fallback and physics validation are later
 analysis tasks, not scan steering.
 
-The 10k Higgs campaign uses 200 existing rec files x50 from
-`higgs_full_20261030`, output `higgs_silicon_scan_20261103`. The user confirmed
-no active jobs and authorized install/refreeze after validation. The validated
-scan-only package is installed in the project-default runtime and all200 cards
-are refreshed. The previous unsubmitted ranked-scan cards are archived under
-the output directory, not discarded. No Condor jobs submitted.
+The original silicon-only 10k Higgs campaign has completed:200 existing rec
+files x50 from `higgs_full_20261030`, output `higgs_silicon_scan_20261103`.
+Its200 completed files were read successfully; the refreshed gallery contains
+2358 common hard-silicon tracks under all four setups. This is a conditional
+comparison, not inclusive eBrem-detection efficiency. Those tuples are NOT
+retroactively extended with a TPC candidate. A fair scan including row0 needs
+a breakpoint-stage rerun; existing rec inputs remain usable. No new batch was
+submitted. Preserve current data/cards and use a separate output for a rerun.
+The prior installed silicon-only scanner and earlier archived cards remain.
 Launcher `./subbreakpointhiggsscanjobs.sh`; submit frozen cards explicitly with
 `./subbreakpointhiggsscanjobs.sh submit-prepared` (group cms by default).
 Use input IDs1..201 excluding absent123, first50 events/file; this is not the
 identical event subset of the earlier50-file x200 preparation. Previous cards
 are archived. Preparation never submits unless explicitly requested.
 
-Current implementation/validation/deployment record:
+Original implementation/validation/deployment record:
 `agents_record/2026-11-03-four-setup-scan-only.md`.
+TPC row0 extension and validation:
+`agents_record/2026-11-04-tpc-row0-location-scan.md`.
 Earlier ranked-scan numerical evidence and original batch preparation remain in
 `agents_record/2026-11-03-silicon-hit-scan110.md` and
 `agents_record/2026-11-03-hit-scan-truth-reference-and-higgs-batch.md`.
 Complete outgoing AGENTS is preserved in
-`agents_record/2026-11-03-agents-before-scan-only.md`. No location-efficiency,
+`agents_record/2026-11-04-agents-before-tpc-row0-scan.md`. No location-efficiency,
 purity or population pT-recovery claim follows from smoke tests.
 
 Existing effective ownership rules/guards remain active: preserve actual G4
