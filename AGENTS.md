@@ -362,10 +362,13 @@ SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. All four setups and
 passive truth ownership remain available; the old independent optimizer
 acceptance audit is still open. No clipping, bound change or acceptance repair.
 
-The completed original200-file x50 Higgs silicon scan remains in
-higgs_silicon_scan_20261103. Its files are not retroactively extended with TPC
-row0 or full IP records; reruns need separate outputs unless the user directs
-otherwise. Existing rec inputs remain usable. Launcher
+The original200-file x50 Higgs scan ROOT outputs in higgs_silicon_scan_20261103
+were DELETED at the user's request (2026-11-04); do not treat them as available.
+Logs/cards/completion markers, analysis plots/tables and REC inputs remain.
+Counts in historical studies refer to the formerly available outputs, not a
+new read. Cleanup/recovery details:
+agents_record/2026-11-04-location-scan-tuples-removed.md. Reruns need fresh output/
+cards unless the user directs otherwise; no worker state was reset. Launcher
 ./subbreakpointhiggsscanjobs.sh prepares; submit-prepared submits only on request.
 Keep branch breakpoint-delayed-neutral and preserve breakpoint; no remote or
 branch operation is authorized. No jobs submitted by this change.
