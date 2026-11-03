@@ -351,7 +351,14 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
                                        '; install the PFA snapshot exporter and rerun rec')
         print(f'rec events={tree.GetEntries()}', flush=True)
     elif stage == 'breakpoint':
-        if hit_scan:
+        if hit_scan=='HitScanAll':
+            for name in ('location_scan_status','location_scan_point','location_scan_kind',
+                         'location_scan_hit','location_scan_setup','location_scan_actual_constraint_mask',
+                         'location_scan_fit_status','location_scan_nll2','location_scan_pt',
+                         'location_scan_pt_error','location_scan_truth_status','location_scan_truth_point'):
+                if not tree.GetBranch(name):
+                    raise RuntimeError('Missing scan-only branch: '+name)
+        elif hit_scan:
             for name in ('hit_scan_status', 'hit_scan_constraint_mask',
                          'hit_scan_candidate_hit', 'hit_scan_candidate_nll2',
                          'hit_scan_candidate_fit_status', 'hit_scan_null_nll2',
@@ -388,6 +395,8 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
         good = int(tree.GetEntries('status==1'))
         invalid_truth = int(tree.GetEntries('truth_override_result_status<0'))
         print(f'Flat rows={tree.GetEntries()}, ordinary success={good}, invalid oracle={invalid_truth}', flush=True)
+        if hit_scan=='HitScanAll':
+            print(f'Scan-only rows={tree.GetEntries("status==2")}; no online breakpoint selection',flush=True)
         # Job completion/output integrity, not per-track fit success, permits
         # cleanup. Failed ordinary/oracle rows remain tagged in the flat tuple.
     else: print(f'{stage} events={tree.GetEntries()}', flush=True)
@@ -444,7 +453,8 @@ def run(manifest):
         subprocess.run([runner, job['cards'][stage]], cwd=repo, check=True)
         ready = verify(Path(job['files'][stage]), stage,
                        job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
-                       hit_scan=job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')=='HitScan')
+                       hit_scan=job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
+                       if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False)
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))
         if stage == 'calodigi':

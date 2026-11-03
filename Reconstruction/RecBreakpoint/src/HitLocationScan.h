@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -83,6 +84,38 @@ struct HitLocationScan {
     status=gain>minNllGain ? 2 : 1; // Ties and insufficient gains prefer no breakpoint.
     if (status==2) selectedHit=bestHit;
   }
+};
+
+// Null first, all reconstructed silicon sites next, then an optional truth-only
+// site. Truth never removes, reorders or promotes a reconstructed silicon site.
+inline std::vector<int> locationScanPoints(const std::vector<int>& systems, int truthHit=-1) {
+  std::vector<int> points{-1};
+  for (int i : siliconScanHits(systems)) points.push_back(i);
+  if (truthHit>=0 && static_cast<std::size_t>(truthHit+1)<systems.size()) {
+    bool present=false;
+    for (int i : points) if (i==truthHit) present=true;
+    if (!present) points.push_back(truthHit);
+  }
+  return points;
+}
+
+/// Diagnostic only: one aligned vector entry per (point, setup). No ranking,
+/// NLL-gain cut, selected location or published refitted-track endpoint.
+struct LocationFitScan {
+  int status=0, pointCount=0, truthStatus=0, truthHit=-1, truthPoint=-1;
+  std::string truthError;
+  std::vector<int> point, kind, hit, system, layer, setup, actualMask;
+  std::vector<int> fitStatus, attemptStatus, minuitStatus, attemptMinuitStatus;
+  std::vector<int> sourceSetup, measurementDimensions;
+  std::vector<double> nll2, chi2, logDeterminant, pt, ptError;
+  std::vector<double> priorCenter, fittedLoss, fittedVariance;
+  std::vector<std::string> error;
+
+  void reset() { *this=LocationFitScan{}; }
+  void book(TTree& tree);
+  void run(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
+           const FitSettings& observations, const FreeLossSettings& controls,
+           double bz, std::optional<int> truthOwner);
 };
 } // namespace breakpoint
 #endif

@@ -32,5 +32,14 @@ int main() {
   scan.reset(2.);
   assert(scan.constraintMask==0 && scan.chargedEnergyMode=="None" && scan.minNllGain==2.);
   assert(scan.truthStatus==0 && scan.truthHit==-1 && !scan.truthReusedCandidate && std::isnan(scan.truthNll2));
+  using breakpoint::locationScanPoints;
+  assert((locationScanPoints({1,1,2,3,4,5,6})==std::vector<int>{-1,0,1,2,3}));
+  assert((locationScanPoints({1,1,2,3,4,5,6},2)==std::vector<int>{-1,0,1,2,3}));
+  assert((locationScanPoints({1,1,2,3,4,5,6},4)==std::vector<int>{-1,0,1,2,3,4}));
+  assert((locationScanPoints({4,5,1},0)==std::vector<int>{-1,0}));
+  assert((locationScanPoints({4,5,1},2)==std::vector<int>{-1})); // Invalid last owner ignored.
+  breakpoint::LocationFitScan all;
+  all.status=1; all.setup={0,100,110,111}; all.nll2={4,3,2,1}; all.truthPoint=2;
+  all.reset(); assert(all.status==0 && all.setup.empty() && all.nll2.empty() && all.truthPoint==-1);
   std::cout<<"PASS: silicon-only candidates, last-hit exclusion, null test, threshold, ties and failed fits\n";
 }

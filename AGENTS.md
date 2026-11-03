@@ -312,59 +312,57 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**RECONSTRUCTED SILICON BREAKPOINT SCAN — HIGGS BATCH (2026-11-03).**
-Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No remote
-publication or branch operation is authorized for this campaign. The user
-authorized validating/installing this scan update with no active batch jobs.
-Do not modify PFA, shared KF, loss maps, optimizer acceptance, or production
-fit defaults to improve the scanner without a separate request.
+**SCAN-ONLY SILICON LOCATION DATA — FOUR SETUPS (2026-11-03).**
+The user clarified: NO online location ranking, NLL-gain cut or selected
+location. Optimize the loss at EVERY site under 000/100/110/111, save all
+results and decide later in analysis. Do not silently restore the previous
+ranking proposal. Work on `breakpoint-delayed-neutral`; preserve `breakpoint`.
+No branch/remote operation, PFA/shared-KF change, loss-map adjustment or optimizer
+acceptance repair is authorized by this scan task. Default Truth steering is
+unchanged; legacy HitScan remains an explicit comparison.
 
-`IntervalSelectionMode="HitScan"` is opt-in and requires FreeLossFit=True
-and empty BreakpointIntervals. Scan reconstructed VXD/ITK hits (subdetector
-IDs 1/2/3), excluding the last track hit; retain all TPC/OTK measurements but
-do not scan their locations. Score the same enabled/available beam and charged
-ECAL observations in null and candidate models (110 when both are available).
-The null is a separate 5D fit, not a finite-width b0=0 fit. Gain is
-null NLL2 minus the minimum candidate NLL2, using normalized -2 log L.
-Separate neutral measurements are excluded from this locator's scores.
-SigmaLogLoss=0.001 and prior-center upper bound 1 remain unchanged.
-Default Truth steering is NOT replaced by HitScan.
+New opt-in `IntervalSelectionMode="HitScanAll"` reuses the maintained fitter.
+Requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF.
+Enumerate the 5D null and all reconstructed VXD/ITK hits (IDs1/2/3), except the
+last track hit. Keep TPC/OTK measurements. A truth owner in silicon references
+the same point; an eligible non-silicon owner adds a reference-only point last.
+Truth changes neither the silicon list nor fit loss amounts.
 
-Flat tuples save every candidate score/status and the null, not only the winner.
-A parallel passive `hit_scan_truth_*` reference uses the same free-loss scorer
-at the largest eligible truth-owned location, NOT truth loss energy. Reuse the
-candidate for silicon owners; fit one additional non-silicon owner as reference
-only. No eligible owner uses the tagged null reference. Missing truth leaves the
-blind selection intact. This is distinct from the old `truth_override_*`
-family, which is not a truth-location parallel endpoint.
+The `location_scan_*` vectors in each track row contain four entries per point,
+with setup labels 0/100/110/111, normalized NLL2, likelihood chi2/logdet/dimensions,
+IP pT/error, optimized prior center, fitted b/variance and status/error/source.
+Missing/failed observations retain the previous accepted setup at the SAME
+point; no previous fitted prior/posterior is passed to the next fit. Actual
+constraint masks distinguish applied observations from requested labels.
+Missing neutral reuses110. The 111 no-breakpoint control also copies110: no
+loss coordinate exists, and no artificial zero-photon likelihood is added.
+Do not treat that copy as a same-observation null for neutral-constrained fits.
 
-Prepared campaign: 50 existing `higgs_full_20261030/rec-higgs-{1..50}.root`
-files x 200 events, breakpoint-only, output `higgs_silicon_scan_20261103`,
-delayed 111 final endpoints (110 fallback without a usable neutral), while
-location ranking and the passive truth-location reference remain 110.
-ElectronPhoton with existing resolved routing, no truth loss override,
-diffuse or backward filters. No Condor jobs submitted by the assistant.
-`./subbreakpointhiggsscanjobs.sh` prepares; explicit
-`./subbreakpointhiggsscanjobs.sh submit-prepared` submits the frozen cards
-with group higgs (SUBMIT_GROUP overrides). Already prepared cards refuse
-overwrite. The validated package is installed in the project-default runtime;
-the deployment record below retains its exact identity and checks.
+There is no published selected-site refit in this mode. Main status2 and
+selection status6 identify scan-only rows; selected intervals are empty and
+ordinary/free-loss endpoint families are inactive/NaN. Use per-point scan
+outputs, while matched input-KF/truth/PFO information remains available.
+SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. Offline location
+choice, charged-energy compatibility fallback and physics validation are later
+analysis tasks, not scan steering.
 
-Six selected >1% inner-silicon loss tests improve absolute pT residual versus
-KF but locate the exact truth-owned hit only 2/6 times; the clean control
-worsens. No calibrated detection threshold, efficiency/purity, general pT
-improvement or production validation is established. Next evaluate the 10k-event
-batch by loss, owner and topology; do not label a no-candidate/failure/null
-decision as truth no-eBrem.
+The 10k Higgs campaign uses 50 existing rec files x200 from
+`higgs_full_20261030`, output `higgs_silicon_scan_20261103`. The user confirmed
+no active jobs and authorized install/refreeze after validation. The validated
+scan-only package is installed in the project-default runtime and all50 cards
+are refreshed. The previous unsubmitted ranked-scan cards are archived under
+the output directory, not discarded. No Condor jobs submitted.
+Launcher `./subbreakpointhiggsscanjobs.sh`; submit frozen cards explicitly with
+`./subbreakpointhiggsscanjobs.sh submit-prepared` (group higgs by default).
 
-Numerical tests, scoring definitions and truth-location pT comparisons:
-`agents_record/2026-11-03-silicon-hit-scan110.md`.
-Current batch/deployment handoff:
+Current implementation/validation/deployment record:
+`agents_record/2026-11-03-four-setup-scan-only.md`.
+Earlier ranked-scan numerical evidence and original batch preparation remain in
+`agents_record/2026-11-03-silicon-hit-scan110.md` and
 `agents_record/2026-11-03-hit-scan-truth-reference-and-higgs-batch.md`.
-The complete outgoing AGENTS is preserved in
-`agents_record/2026-11-03-agents-before-hit-scan-batch.md`; the early/delayed
-neutral, bound and loss-map distinctions remain documented in
-`agents_record/2026-10-29-neutral-bound-audit-and-charged-sum-handoff.md`.
+Complete outgoing AGENTS is preserved in
+`agents_record/2026-11-03-agents-before-scan-only.md`. No location-efficiency,
+purity or population pT-recovery claim follows from smoke tests.
 
 Existing effective ownership rules/guards remain active: preserve actual G4
 positions/material paths and truth_ebrem_effective_owner_rule (0 none, 1 beam

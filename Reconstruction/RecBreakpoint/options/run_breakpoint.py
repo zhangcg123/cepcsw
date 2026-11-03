@@ -90,6 +90,14 @@ fit.BreakpointIntervals = breakpoint_intervals
 # each endpoint is then fitted with its own configured constraint stage.
 # HitScan also saves a passive truth-location free-loss reference (same 110 inputs),
 # not a truth energy override. Missing truth is tagged and never changes selection.
+# HitScanAll: scan-only diagnostic, no ranking or NLL-gain cut. Save optimized
+# 000/100/110/111 fits at EVERY silicon site, plus 5D null and truth-location
+# controls in location_scan_* vectors. No refitted track family is published.
+# Requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF.
+# ExperimentalDelayedNeutral steers 111. Missing/failed observations retain the
+# preceding accepted setup, with actual mask/source/status saved. The 111 null
+# copies 110 because it has no loss parameter; do not compare its NLL gain to a
+# neutral-constrained fit. A truth-only non-silicon point never adds scan sites.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")
@@ -98,7 +106,7 @@ fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth"
 # significance. Failed/partial scans are tagged separately in hit_scan_* fields.
 if "HitScanMinNllGain" in fit.getDefaultProperties():
     fit.HitScanMinNllGain = float(os.environ.get("BP_HIT_SCAN_MIN_NLL_GAIN", "0.0"))
-elif fit.IntervalSelectionMode == "HitScan" or "BP_HIT_SCAN_MIN_NLL_GAIN" in os.environ:
+elif fit.IntervalSelectionMode in ("HitScan", "HitScanAll") or "BP_HIT_SCAN_MIN_NLL_GAIN" in os.environ:
     raise ValueError("HitScan requires the updated RecBreakpoint runtime; Truth/Manual remain usable before installation")
 # b = log(p_before/p_after). Fractional loss is 1-exp(-b).
 # MeanLogLoss is the center of the Gaussian prior on b at each selected edge.
@@ -298,7 +306,7 @@ if fit.ChargedEcalMeasurement:
     _charged_source = str(fit.ChargedEcalInputClusters)
     if _charged_source and _charged_source not in reader.collections:
         reader.collections.append(_charged_source)
-if fit.IntervalSelectionMode in ("Truth", "HitScan") or (fit.TruthOverride and
+if fit.IntervalSelectionMode in ("Truth", "HitScan", "HitScanAll") or (fit.TruthOverride and
         (fit.BreakpointIntervals or fit.IntervalSelectionMode == "HitScan")):
     reader.collections += [
         "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",

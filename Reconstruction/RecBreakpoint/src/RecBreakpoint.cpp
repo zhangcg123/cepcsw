@@ -157,12 +157,17 @@ StatusCode RecBreakpoint::initialize() {
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName != "Truth" && m_intervalSelectionName != "Manual" &&
-      m_intervalSelectionName != "HitScan") {
-    error() << "IntervalSelectionMode must be Truth, Manual, HitScan, or reserved Auto" << endmsg;
+      m_intervalSelectionName != "HitScan" && m_intervalSelectionName != "HitScanAll") {
+    error() << "IntervalSelectionMode must be Truth, Manual, HitScan, HitScanAll, or reserved Auto" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (!std::isfinite(m_hitScanMinNllGain.value()) || m_hitScanMinNllGain<0 ||
-      (m_intervalSelectionName=="HitScan" && !m_freeLossFit)) {
+  if (m_intervalSelectionName=="HitScanAll" && (!m_freeLossFit || !m_beamSpotConstraint ||
+      !m_chargedEcalMeasurement || !m_neutralEcalMeasurement || m_enableTruthOverride)) {
+    error() << "HitScanAll requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_intervalSelectionName!="HitScanAll" && (!std::isfinite(m_hitScanMinNllGain.value()) || m_hitScanMinNllGain<0 ||
+      (m_intervalSelectionName=="HitScan" && !m_freeLossFit))) {
     error() << "HitScan requires FreeLossFit=True; HitScanMinNllGain must be finite/nonnegative" << endmsg;
     return StatusCode::FAILURE;
   }
@@ -394,6 +399,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_truthOwnership.book(*m_tree);
   m_hitScan.book(*m_tree);
+  m_locationScan.book(*m_tree);
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
   m_tree->Branch("selected_breakpoint_interval", &m_selectedIntervals);
@@ -551,6 +557,7 @@ StatusCode RecBreakpoint::execute() {
   const std::array<bool,3> constraintEnabled{{m_beamSpotConstraint.value(),
       m_chargedEcalMeasurement.value(), m_neutralEcalMeasurement.value()}};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" || m_intervalSelectionName == "HitScan" ||
+      m_intervalSelectionName == "HitScanAll" ||
       (m_enableTruthOverride && (!settings.intervals.empty() || m_intervalSelectionName=="HitScan")));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
@@ -686,6 +693,7 @@ StatusCode RecBreakpoint::execute() {
     settings.intervalMeanLogLoss.clear();
     m_truthOwnership.reset();
     m_hitScan.reset(m_hitScanMinNllGain.value());
+    m_locationScan.reset();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
     m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
@@ -719,6 +727,18 @@ StatusCode RecBreakpoint::execute() {
         m_kfPt = std::abs(m_bz * 2.99792458e-4 / state.omega);
         m_kfPtError = breakpoint::transverseMomentumError(state, m_bz);
       }
+    auto finishRow = [&]() {
+      statuses->push_back(m_fitStatus);
+      truthResultStatuses->push_back(m_truthResultCode);
+      truthRTSIndices->push_back(truthRTSIndex);
+      truthBackwardIndices->push_back(truthBackwardIndex);
+      freeResultStatuses->push_back(m_freeLossTracks.status());
+      freeRTSIndices->push_back(m_freeLossTracks.rtsIndex());
+      freeBackwardIndices->push_back(m_freeLossTracks.backwardIndex());
+      diffuseStatuses->push_back(m_diffuseStatus);
+      diffuseIndices->push_back(m_diffuseIndex);
+      m_tree->Fill();
+    };
     try {
       std::vector<edm4hep::TrackerHit> hits;
       for (auto hit : track.getTrackerHits()) hits.push_back(hit);
@@ -784,6 +804,34 @@ StatusCode RecBreakpoint::execute() {
           m_intervalTruthZ.push_back(largest->retainedFraction);
         }
         m_intervalSelectionStatus = largest ? 2 : ownedMatch.emissions.empty() ? 3 : 4;
+      } else if (m_intervalSelectionName=="HitScanAll") {
+        auto observations=settings;
+        observations.beamSpot=m_recordBeamSpotSettings;
+        if (m_chargedEcalMeasurementStatus==2)
+          observations.chargedEcalEnergy=std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
+        if (m_collectedNeutralStatus==2)
+          observations.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
+        observations.delayedNeutral=m_delayedNeutralExperiment;
+        observations.chargedEcalEnergyMode=breakpoint::effectiveChargedEnergyMode(
+            settings.chargedEcalEnergyMode,true,m_collectedNeutralStatus==2);
+        std::optional<int> owner;
+        std::string referenceError;
+        try {
+          if (!truthPrepared) throw std::runtime_error(truthEventError);
+          if (!matchTruth()) throw std::runtime_error(matchError);
+          const auto* largest=largestOwnedBreakpoint();
+          owner=largest ? largest->hitIndex : -1;
+        } catch (const std::exception& failure) { referenceError=failure.what(); }
+        m_locationScan.run(fitter,hits,observations,freeLossControls,m_bz,owner);
+        if (!referenceError.empty()) m_locationScan.truthError=referenceError;
+        m_intervalSelectionStatus=6; // Diagnostic only: no selected interval or published refit.
+        m_fitStatus=2;
+        outputIndices->push_back(-1); backwardOutputIndices->push_back(-1);
+        if (m_verbose) info() << "LocationScan event=" << m_event << " track=" << m_trackIndex
+            << " points=" << m_locationScan.pointCount << " entries=" << m_locationScan.setup.size()
+            << " truth_point=" << m_locationScan.truthPoint << "; no location selected" << endmsg;
+        finishRow();
+        continue;
       } else if (m_intervalSelectionName=="HitScan") {
         auto scanSettings=settings;
         if (m_beamSpotConstraint) scanSettings.beamSpot=m_recordBeamSpotSettings;
@@ -1455,16 +1503,7 @@ StatusCode RecBreakpoint::execute() {
       outputIndices->push_back(-1);
       backwardOutputIndices->push_back(-1);
     }
-    statuses->push_back(m_fitStatus);
-    truthResultStatuses->push_back(m_truthResultCode);
-    truthRTSIndices->push_back(truthRTSIndex);
-    truthBackwardIndices->push_back(truthBackwardIndex);
-    freeResultStatuses->push_back(m_freeLossTracks.status());
-    freeRTSIndices->push_back(m_freeLossTracks.rtsIndex());
-    freeBackwardIndices->push_back(m_freeLossTracks.backwardIndex());
-    diffuseStatuses->push_back(m_diffuseStatus);
-    diffuseIndices->push_back(m_diffuseIndex);
-    m_tree->Fill();
+    finishRow();
   }
   return StatusCode::SUCCESS;
 }

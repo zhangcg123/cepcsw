@@ -135,6 +135,7 @@ private:
   std::unique_ptr<TGeoNavigator> m_truthNavigator;
   breakpoint::TruthBreakpointTuple m_truthOwnership;
   breakpoint::HitLocationScan m_hitScan;
+  breakpoint::LocationFitScan m_locationScan;
   double m_bz = 0;
   std::unique_ptr<TFile> m_file;
   TTree* m_tree = nullptr; // file owned

@@ -359,9 +359,58 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 | Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
 | HitScan | Free-loss VXD/ITK location scan plus no-breakpoint hypothesis; inherits enabled beam/charged measurements, requires FreeLossFit |
+| HitScanAll | Scan-only: optimized 000/100/110/111 fit at every silicon site, null and truth reference; no location selection or published refit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
-### Reconstructed silicon hit scan (opt-in)
+### Scan-only data for offline location studies
+
+`IntervalSelectionMode="HitScanAll"` records fits; it does not rank locations,
+apply HitScanMinNllGain or select an endpoint. It requires FreeLossFit and the
+beam/charged/neutral input switches ON, TruthOverride OFF. Missing measurements
+are still allowed. ExperimentalDelayedNeutral controls the 111 update timing;
+the dedicated Higgs scan launcher enables it. All fits call the maintained
+BreakpointFitter/FreeLossFitter, not another KF implementation.
+
+The `location_scan_*` vectors contain one aligned entry per `(point, setup)`:
+
+- Point 0 is the separate 5D no-breakpoint control. Reconstructed VXD/ITK sites
+  follow, excluding the final track hit. TPC/OTK measurements remain in every fit.
+- A truth owner in silicon points to that same point without another fit. An
+  eligible non-silicon truth owner adds a `kind=2` reference-only point last.
+  Missing truth never removes or reorders reconstructed silicon points.
+- Each point has four entries, `setup=[0,100,110,111]`. These are requested
+  configurations, not a ranking. `actual_constraint_mask` uses bit values
+  beam=1, charged=2, neutral=4. Every new stage starts a fresh fit with the
+  previously accepted observations, never a previous fitted prior or posterior.
+- Missing/failed observations retain the preceding accepted setup at the SAME
+  point. In particular, missing neutral copies 110. Status/source/error fields
+  distinguish a real fit from a copy. Failed 000 fits are NaN, not invented NLLs.
+- No-breakpoint controls have no loss coordinate: their 111 entry copies 110,
+  even when a neutral exists. It is explicitly not a same-observation null for
+  a neutral-constrained fit. No artificial zero-photon likelihood is introduced.
+
+Saved fields: `point`, `kind` (0 null,1 silicon,2 truth-only), `hit`, `system`,
+`layer`, `setup`, `actual_constraint_mask`, `source_setup`, fit/attempt/Minuit
+statuses, `nll2`, likelihood `chi2`, `log_determinant`, `measurement_dimensions`,
+IP `pt`/`pt_error`, optimized `prior_center`, posterior `fitted_log_loss` and
+`fitted_variance`, and errors. Fit status 2 means newly fitted, 1 inherited,
+-2 no valid fit; attempt status 0 means no new fit, 2 success, -2 failure.
+`minuit_status` describes the saved fit; `attempt_minuit_status` describes the
+new attempt, including a failed attempt whose output inherited an earlier fit.
+
+`truth_point` identifies the point shared by all four truth references (-1 if
+unavailable); truth status is 1 matched/no eligible owner (null reference),
+2 matched/eligible owner, -1 unavailable. This is not truth energy override.
+`location_scan_status=1` means data recorded, not correct location or good fit.
+Main `status=2` and `interval_selection_status=6` denote scan-only rows.
+There is no selected interval. Usual refit collections are empty and their flat
+endpoint fields remain NaN/inactive; matched input-KF/truth/PFO data are retained.
+Use the per-point `location_scan_pt` values, not the inactive refit families.
+
+Choose locations later in analysis. Do not compare raw NLLs across different
+measurement sets or treat a missing/inherited constraint as an applied one.
+
+### Legacy reconstructed silicon selector (opt-in comparison)
 
 ```python
 fit.IntervalSelectionMode = "HitScan"
@@ -458,13 +507,12 @@ For 10,000 existing Higgs events (50 files x 200), without rerunning sim/rec:
 The first command only prepares frozen cards. Input defaults to
 `higgs_full_20261030`, output to `higgs_silicon_scan_20261103`, group to `higgs`
 (override `SUBMIT_GROUP`). The new scan runtime must be installed first.
-The campaign publishes cumulative delayed **111**, falling back to 110 when
-the neutral measurement is unavailable. Location-ranking scores and the passive
-truth-location reference remain **110**; no separate neutral steers the locator.
-It uses ElectronPhoton with existing resolved routing,
-SigmaLogLoss=0.001, prior-center upper bound 1, threshold 0, truth loss override,
-diffuse and backward filters OFF. Both blind scores and passive truth-location
-references are in each flat tuple. External rec files are retained. Missing
+The campaign uses **HitScanAll**, saving all locations under **000/100/110/111**
+without ranking or a gain cut. The 111 fits use delayed neutral updates; absent
+neutrals inherit 110 at each point. ElectronPhoton uses existing resolved routing.
+SigmaLogLoss=0.001 and prior-center upper bound 1 are unchanged; truth loss
+override, diffuse and backward filters are OFF. Per-point fits and truth-location
+references share each flat tuple. External rec files are retained. Missing
 input files are skipped, so check the reported eligible-job count before submit.
 
 Scanning is opt-in and expensive. Neighboring sites can be indistinguishable,
@@ -976,8 +1024,8 @@ the native source/predicted/filtered states, `F` and `Q`.
 | TruthOverrideBackwardFilter | false | Run the truth-prior backward refit when TruthOverride applies |
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
-| IntervalSelectionMode | Truth | Truth, Manual, HitScan, or reserved/unimplemented Auto |
-| HitScanMinNllGain | 0 | Finite nonnegative required null-minus-best -2logL improvement; strict >; BP_HIT_SCAN_MIN_NLL_GAIN |
+| IntervalSelectionMode | Truth | Truth, Manual, legacy HitScan selector, scan-only HitScanAll, or reserved/unimplemented Auto |
+| HitScanMinNllGain | 0 | Legacy HitScan selector only; ignored by HitScanAll. Required null-minus-best -2logL improvement; strict >; BP_HIT_SCAN_MIN_NLL_GAIN |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |

@@ -30,9 +30,10 @@ class BatchTest(unittest.TestCase):
                 fit = types.SimpleNamespace(IntervalSelectionMode=mode, getDefaultProperties=lambda: {})
                 exec(code, {'fit': fit, 'os': os})
                 self.assertFalse(hasattr(fit, 'HitScanMinNllGain'))
-            with self.assertRaisesRegex(ValueError, 'updated RecBreakpoint runtime'):
-                exec(code, {'fit': types.SimpleNamespace(IntervalSelectionMode='HitScan',
-                                                       getDefaultProperties=lambda: {}), 'os': os})
+            for mode in ('HitScan','HitScanAll'):
+                with self.assertRaisesRegex(ValueError, 'updated RecBreakpoint runtime'):
+                    exec(code, {'fit': types.SimpleNamespace(IntervalSelectionMode=mode,
+                                                           getDefaultProperties=lambda: {}), 'os': os})
         with patch.dict(os.environ, {'BP_HIT_SCAN_MIN_NLL_GAIN': '4.5'}, clear=True):
             fit = types.SimpleNamespace(IntervalSelectionMode='HitScan', HitScanMinNllGain=0.,
                                         getDefaultProperties=lambda: {'HitScanMinNllGain': 0.})
@@ -60,13 +61,23 @@ class BatchTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'Missing hit-scan branch: hit_scan_truth_nll2'):
                 batch.verify(Path('fixture.root'),'breakpoint',hit_scan=True)
 
+    def test_scan_only_verification_requires_all_setup_schema(self):
+        tree=MagicMock(); tree.GetEntries.return_value=2
+        tree.GetBranch.side_effect=lambda name: None if name=='location_scan_setup' else object()
+        file=MagicMock(); file.Get.return_value=tree
+        file.IsZombie.return_value=False; file.TestBit.return_value=False
+        root=types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path:file,kRecovered=1))
+        with patch.dict('sys.modules',ROOT=root):
+            with self.assertRaisesRegex(RuntimeError,'Missing scan-only branch: location_scan_setup'):
+                batch.verify(Path('fixture.root'),'breakpoint',hit_scan='HitScanAll')
+
     def test_hit_scan_reads_truth_associations_without_loss_override(self):
         import ast
         text=(self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         block=next(n for n in ast.parse(text).body if isinstance(n,ast.If)
-                   and ast.unparse(n.test).startswith("fit.IntervalSelectionMode in ('Truth', 'HitScan')"))
+                   and ast.unparse(n.test).startswith("fit.IntervalSelectionMode in ('Truth', 'HitScan', 'HitScanAll')"))
         reader=types.SimpleNamespace(collections=[])
-        fit=types.SimpleNamespace(IntervalSelectionMode='HitScan',TruthOverride=False)
+        fit=types.SimpleNamespace(IntervalSelectionMode='HitScanAll',TruthOverride=False)
         exec(compile(ast.Module(body=[block],type_ignores=[]),'<truth-inputs>','exec'),
              {'fit':fit,'reader':reader})
         self.assertIn('VXDTrackerHitAssociation',reader.collections)
@@ -86,7 +97,7 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(sum(j['nevt'] for j in jobs),10000)
         for job in jobs:
             self.assertEqual(job['stages'],['breakpoint'])
-            self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'HitScan')
+            self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'HitScanAll')
             self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'0')
             self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'1')
             self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'],'1')
