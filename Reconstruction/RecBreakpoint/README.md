@@ -359,16 +359,18 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 | Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
 | HitScan | Free-loss VXD/ITK location scan plus no-breakpoint hypothesis; inherits enabled beam/charged measurements, requires FreeLossFit |
-| HitScanAll | Scan-only: optimized 000/100/110/111 fit at every silicon site plus TPC row 0, null and truth reference; no location selection or published refit |
+| HitScanAll | Scan-only: optimized 000/100/110 at every silicon site plus TPC row 0, null and truth reference; optional111; no location selection or published refit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
 ### Scan-only data for offline location studies
 
 `IntervalSelectionMode="HitScanAll"` records fits; it does not rank locations,
 apply HitScanMinNllGain or select an endpoint. It requires FreeLossFit and the
-beam/charged/neutral input switches ON, TruthOverride OFF. Missing measurements
-are still allowed. ExperimentalDelayedNeutral controls the 111 update timing;
-the dedicated Higgs scan launcher enables it. All fits call the maintained
+beam/charged input switches ON, TruthOverride OFF. NeutralEcalMeasurement
+controls only whether111 entries are included; its default is OFF. Passive
+neutral collection still supplies resolved ElectronPhoton110's sum. Missing
+measurements are allowed. ExperimentalDelayedNeutral controls111 timing only
+when explicitly enabled. All fits call the maintained
 BreakpointFitter/FreeLossFitter, not another KF implementation.
 
 The `location_scan_*` vectors contain one aligned entry per `(point, setup)`:
@@ -382,12 +384,14 @@ The `location_scan_*` vectors contain one aligned entry per `(point, setup)`:
   eligible truth owner adds a `kind=2` reference-only point last. Missing truth
   never removes or reorders reconstructed candidates. Legacy HitScan remains
   silicon-only.
-- Each point has four entries, `setup=[0,100,110,111]`. These are requested
+- Each point has three entries, `setup=[0,100,110]`, or four with111 explicitly
+  enabled. Read the saved setup/point labels, never assume a fixed four-entry
+  stride. These are requested
   configurations, not a ranking. `actual_constraint_mask` uses bit values
   beam=1, charged=2, neutral=4. Every new stage starts a fresh fit with the
   previously accepted observations, never a previous fitted prior or posterior.
 - Missing/failed observations retain the preceding accepted setup at the SAME
-  point. In particular, missing neutral copies 110. Status/source/error fields
+  point. In particular, an enabled111 with missing neutral copies110. Status/source/error fields
   distinguish a real fit from a copy. Failed 000 fits are NaN, not invented NLLs.
 - No-breakpoint controls have no loss coordinate: their 111 entry copies 110,
   even when a neutral exists. It is explicitly not a same-observation null for
@@ -527,7 +531,7 @@ Saved fields are hit, NLL2, IP omega/pT, optimized prior center, fitted b/varian
 Minuit status, reused-candidate flag and error. Missing truth never fails or
 changes the blind selection. Existing ownership diagnostics explain eligibility.
 
-For 10,000 existing Higgs events (200 files x 50), without rerunning sim/rec:
+For all available Higgs REC events (current inventory249 files x200), without rerunning sim/rec:
 
 ```bash
 ./subbreakpointhiggsscanjobs.sh
@@ -535,14 +539,17 @@ For 10,000 existing Higgs events (200 files x 50), without rerunning sim/rec:
 ```
 
 The first command only prepares frozen cards. Input defaults to
-`higgs_full_20261030`, output to `higgs_silicon_scan_20261103`, group to `cms`
-(override `SUBMIT_GROUP`). It reads the first 50 events from each existing file
-in IDs1..201, skipping absent file123: exactly 200 jobs. The new scan runtime
-must be installed first. This is a different 10k-event subset from the earlier
-50-file x200 preparation, not a repartition of those identical events.
-The campaign uses **HitScanAll**, saving all locations under **000/100/110/111**
-without ranking or a gain cut. The 111 fits use delayed neutral updates; absent
-neutrals inherit 110 at each point. ElectronPhoton uses existing resolved routing.
+`higgs_full_20261030`, output to `higgs_location_scan_20261104`, group to `cms`
+(override `SUBMIT_GROUP`). It reads all200 events from every available input
+in IDs1..250, skipping absent file123:249 jobs and49,800 input events. The
+new scan runtime must be installed first. This replaces the removed ROOT output
+campaign of200 files x first50 events; its old cards/logs remain unchanged.
+The campaign uses **HitScanAll**, saving all locations under **000/100/110**
+without ranking or a gain cut.111 is OFF; explicitly setting
+BP_NEUTRAL_ECAL_MEASUREMENT=1 can restore the extra comparison. No neutral
+measurement is fitted separately by default, but collected neutral energy is
+still used by resolved ElectronPhoton110. Truth locations remain passive
+reference fits in each tuple, never truth energy overrides.
 SigmaLogLoss=0.001 and prior-center upper bound 1 are unchanged; truth loss
 override, diffuse and backward filters are OFF. Per-point fits and truth-location
 references share each flat tuple. External rec files are retained. Missing
@@ -1370,8 +1377,8 @@ subbreakpointjobs.sh (default0.001). The batch helper defaults the shared
 beam/charged/neutral constraints to `110`, with explicit `BP_*` overrides
 supported. This is campaign steering only: standalone-card and compiled
 constraint defaults remain OFF. Set BP_NEUTRAL_ECAL_MEASUREMENT=1 to opt into111.
-The dedicated four-setup HitScanAll launcher explicitly enables111; its scan
-campaign is unchanged by this ordinary-job default. Successful 111 jobs save unconstrained,
+The dedicated HitScanAll launcher also defaults to000/100/110; explicitly
+enabling111 adds the fourth scan comparison. Successful 111 jobs save unconstrained,
 beam-only, beam+charged, and beam+charged+neutral results for ordinary/free-loss
 RTS; all backward defaults remain OFF. Other fit physics remains in
 options/run_breakpoint.py. Supported BP_* environment values are frozen at

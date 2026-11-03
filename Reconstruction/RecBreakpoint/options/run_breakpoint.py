@@ -91,10 +91,12 @@ fit.BreakpointIntervals = breakpoint_intervals
 # HitScan also saves a passive truth-location free-loss reference (same 110 inputs),
 # not a truth energy override. Missing truth is tagged and never changes selection.
 # HitScanAll: scan-only diagnostic, no ranking or NLL-gain cut. Save optimized
-# 000/100/110/111 fits at EVERY silicon site and the first exact TPC row-0 hit,
+# 000/100/110 fits at EVERY silicon site and the first exact TPC row-0 hit,
+# plus111 only when NeutralEcalMeasurement is ON,
 # plus 5D null and truth-location
 # controls in location_scan_* vectors. No refitted track family is published.
-# Requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF.
+# Requires FreeLossFit and beam/charged switches ON, TruthOverride OFF.
+# The neutral switch controls only inclusion of111, not passive collection for110.
 # ExperimentalDelayedNeutral steers 111. Missing/failed observations retain the
 # preceding accepted setup, with actual mask/source/status saved. The 111 null
 # copies 110 because it has no loss parameter; do not compare its NLL gain to a

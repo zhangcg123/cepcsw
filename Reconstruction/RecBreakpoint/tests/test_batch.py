@@ -117,29 +117,29 @@ class BatchTest(unittest.TestCase):
         self.assertIn('VXDTrackerHitAssociation',reader.collections)
         self.assertIn('TPCTrackerHitAss',reader.collections)
 
-    def test_higgs_scan_launcher_prepares_10k_and_submits_only_on_request(self):
+    def test_higgs_scan_launcher_prepares_all_rec_events_and_submits_only_on_request(self):
         import subprocess
-        for seed in range(1,202):
+        for seed in range(1,251):
             if seed!=123:
                 (self.repo/'inputs'/f'rec-higgs-{seed}.root').write_bytes(b'planning fixture')
         launcher=str(self.repo/'subbreakpointhiggsscanjobs.sh')
         result=subprocess.run([launcher],env=self.env,capture_output=True,text=True,check=True)
-        self.assertIn('Prepared 200 jobs: breakpoint',result.stdout)
+        self.assertIn('Prepared 249 jobs: breakpoint',result.stdout)
         self.assertIn('Skipped 1 samples',result.stdout)
         self.assertIn('-g cms ',result.stdout)
         manifests=list((self.repo/'outputs/runcards').glob('*/job.json'))
-        self.assertEqual(len(manifests),200)
+        self.assertEqual(len(manifests),249)
         jobs=[json.loads(p.read_text()) for p in manifests]
-        self.assertEqual(sum(j['nevt'] for j in jobs),10000)
+        self.assertEqual(sum(j['nevt'] for j in jobs),49800)
         for job in jobs:
-            self.assertEqual(job['nevt'],50)
+            self.assertEqual(job['nevt'],200)
             self.assertEqual(job['stages'],['breakpoint'])
             self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'HitScanAll')
             self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'0')
-            self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'1')
+            self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'0')
             self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'],'1')
         self.assertNotIn(123,[j['seed'] for j in jobs])
-        self.assertIn(201,[j['seed'] for j in jobs])
+        self.assertIn(250,[j['seed'] for j in jobs])
         self.assertFalse(list((self.repo/'outputs').rglob('submitted.json')))
         subprocess.run([launcher,'submit-prepared'],env=self.env,capture_output=True,text=True,check=True)
         self.assertFalse(list((self.repo/'outputs').rglob('submitted.json')))

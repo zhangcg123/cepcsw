@@ -162,8 +162,8 @@ StatusCode RecBreakpoint::initialize() {
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName=="HitScanAll" && (!m_freeLossFit || !m_beamSpotConstraint ||
-      !m_chargedEcalMeasurement || !m_neutralEcalMeasurement || m_enableTruthOverride)) {
-    error() << "HitScanAll requires FreeLossFit and beam/charged/neutral switches ON, TruthOverride OFF" << endmsg;
+      !m_chargedEcalMeasurement || m_enableTruthOverride)) {
+    error() << "HitScanAll requires FreeLossFit and beam/charged switches ON, TruthOverride OFF; neutral is optional" << endmsg;
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName!="HitScanAll" && (!std::isfinite(m_hitScanMinNllGain.value()) || m_hitScanMinNllGain<0 ||
@@ -821,7 +821,7 @@ StatusCode RecBreakpoint::execute() {
           const auto* largest=largestOwnedBreakpoint();
           owner=largest ? largest->hitIndex : -1;
         } catch (const std::exception& failure) { referenceError=failure.what(); }
-        m_locationScan.run(fitter,hits,observations,freeLossControls,m_bz,owner);
+        m_locationScan.run(fitter,hits,observations,freeLossControls,m_bz,owner,m_neutralEcalMeasurement.value());
         if (!referenceError.empty()) m_locationScan.truthError=referenceError;
         m_intervalSelectionStatus=6; // Diagnostic only: no selected interval or published refit.
         m_fitStatus=2;

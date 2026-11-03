@@ -198,7 +198,7 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
 
 void LocationFitScan::run(const BreakpointFitter& fitter,
     const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& observations,
-    const FreeLossSettings& controls, double bz, std::optional<int> truthOwner) {
+    const FreeLossSettings& controls, double bz, std::optional<int> truthOwner, bool neutralEnabled) {
   reset();
   std::vector<int> systems,layers;
   UTIL::BitField64 cell(lcio::ILDCellID0::encoder_string);
@@ -228,7 +228,7 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
     accepted.captureGaussianModel=true;
     accepted.chargedEcalEnergyMode=site<0 ? ChargedEnergyMode::ElectronOnly : observations.chargedEcalEnergyMode;
     LocationScanResult previous;
-    for (int configuration : {0,100,110,111}) {
+    for (int configuration : locationScanSetups(neutralEnabled)) {
       auto proposed=accepted;
       bool available=configuration==0;
       std::string reason;

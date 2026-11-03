@@ -312,70 +312,63 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**HONOR ELECTRONONLY IN110 (2026-11-04).**
-The user corrected the unconditional resolved-sum override. ChargedEcalEnergyMode
-controls110 in both resolved/unresolved cases: ElectronOnly ALWAYS constrains
-electron energy using charged energy alone; ElectronPhoton constrains electron+
-photon using charged energy without a neutral, or C+N with a collected neutral
-(sigma=hypot(sigmaC,sigmaN), existing p_ECAL*exp(b) projection). One breakpoint
-is required for a photon coordinate; otherwise electron-only. No resolved-mode
-selector. Passive neutral collection supplies N for ElectronPhoton even when
-the separate-neutral switch is off. When enabled,111 attempts separate charged and
-neutral measurements from raw observations, never sum plus repeated neutral.
-Shared ordinary/free-loss core and HitScanAll; earlier000/100 unchanged. Missing parts,
-no breakpoint or failed fits retain existing routing/fallback. No PFA/shared-KF,
-loss-map or optimizer-acceptance change; no batch/data overwrite authorized.
+**FULL HIGGS REC LOCATION SCAN —000/100/110 (2026-11-04).**
+Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No branch/remote,
+PFA/shared-KF, loss-map, optimizer acceptance/bound or truth-owner changes are
+authorized by this task. Default Truth steering and legacy HitScan are unchanged.
 
-Ordinary batch default is110: NeutralEcalMeasurement OFF, as already in the
-standalone card/compiled default. Enable explicitly to run111. The dedicated
-four-setup scan launcher still explicitly enables111; passive collection and
-110's resolved ElectronPhoton sum are unchanged. Existing cards stay frozen.
+The user selected Higgs only, location scans only, all available REC events,
+and000/100/110 only. All249 readable REC files in `higgs_full_20261030`
+contain200 events with required collections:49,800 input events, IDs1..250
+excluding absent123. The new `higgs_location_scan_20261104` has249 frozen
+REC-only cards,200 events/job, group cms. No jobs submitted. Run
+`./subbreakpointhiggsscanjobs.sh submit-prepared` only at user request.
+No-argument launcher prepares without submitting. Existing REC inputs and old
+cards/logs are retained; the prior200 scan ROOT files were deleted by request.
 
-Actual applied sum is saved per endpoint and scan entry; mask3 can now mean
-beam+sum, not just beam+charged, so analyses must also check the sum flag.
-ResolvedEcalEnergyMode/property/env and requested-mode tuple scalar are removed;
-regenerate old cards. Stale env requests are rejected. ElectronPhoton requires
-ElossOn=False (already set in the maintained card); ElectronOnly does not.
-Validation/deployment evidence belongs in
-`agents_record/2026-11-04-honor-electron-only.md`; the incorrect unconditional
-override remains documented in the automatic-resolved-sum record. Superseded optional110
-and111Sum contracts remain in the two earlier resolved-sum records. Installation
-awaits validation and the requested quiet-window confirmation. Do not claim population gain
-from focused checks. The user-visible control and caveats are in the package
-README and run card. Unit and both-mode normal/scan regressions pass. The fix is
-built/staged but NOT installed yet: quiet-window confirmation is pending; the
-current installed preceding version still overrides ElectronOnly. No existing
-cards refreshed.
+HitScanAll saves every reconstructed VXD/ITK point, first exact TPC row0,
+5D null and passive eligible truth-owner reference. Never rank/select online
+or apply an NLL-gain cut; keep all detector measurements. Truth never supplies
+fit loss amounts. NeutralEcalMeasurement OFF produces three entries per point
+(setup0/100/110); explicit ON restores111. Read point/setup labels, not a
+fixed four-entry stride. Missing/failed observations retain the preceding
+accepted setup at the SAME point; every fit starts from original inputs,
+not the previous fitted prior/posterior. Main refit endpoints remain NaN in
+scan-only rows; full native IP state/covariance/reference/time/location and
+NLL/status/source/mask data persist for every point.
 
-The continuing scan-campaign contract is preserved below and in the complete
-outgoing snapshot `agents_record/2026-11-04-agents-before-resolved-sum-option.md`.
-Scan-only HitScanAll remains active and default Truth steering is unchanged.
-It evaluates the 5D null, every reconstructed VXD/ITK hit and first exact TPC
-row0 (never the last hit), under000/100/110/111. No online selection/ranking or
-NLL-gain cut. Keep all detector hits; truth adds only an optional reference,
-never fit amounts. Missing/failed observations inherit the previous accepted
-setup at the SAME point, without carrying a fitted posterior to another fit.
-No-breakpoint111 copies110; it is not a neutral-constrained same-observation null.
-Full native IP parameters/covariance/reference/time/location and fit/status/
-source/mask data are saved per point. Scan-only main endpoints remain inactive.
-SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. All four setups and
-passive truth ownership remain available; the old independent optimizer
-acceptance audit is still open. No clipping, bound change or acceptance repair.
+ChargedEcalEnergyMode controls110 even with collected neutrals: ElectronOnly
+uses charged energy for the electron; ElectronPhoton uses charged energy for
+electron+photon without a neutral, or C+N with a neutral. No breakpoint means
+electron-only. Passive neutral collection remains active for110's sum when
+111 is OFF.111, when explicitly enabled, always attempts separate charged and
+neutral measurements, independent of this mode. Missing neutral/no-breakpoint
+111 copies110 with flags; the null is not a same-observation neutral control.
+ElectronPhoton requires ElossOn=False. No ResolvedEcalEnergyMode selector.
+Inspect the sum-applied flag as well as the actual mask.
 
-The original200-file x50 Higgs scan ROOT outputs in higgs_silicon_scan_20261103
-were DELETED at the user's request (2026-11-04); do not treat them as available.
-Logs/cards/completion markers, analysis plots/tables and REC inputs remain.
-Counts in historical studies refer to the formerly available outputs, not a
-new read. Cleanup/recovery details:
-agents_record/2026-11-04-location-scan-tuples-removed.md. Reruns need fresh output/
-cards unless the user directs otherwise; no worker state was reset. Launcher
-./subbreakpointhiggsscanjobs.sh prepares; submit-prepared submits only on request.
-Keep branch breakpoint-delayed-neutral and preserve breakpoint; no remote or
-branch operation is authorized. No jobs submitted by this change.
+FreeLossFit/beam/charged ON, TruthOverride/diffuse/all backward filters OFF;
+SigmaLogLoss0.001, prior-center bound[0,1], MaxCalls180 and tolerance0.001
+unchanged. Delayed-neutral steering is frozen ON but inert without111.
+The independent optimizer acceptance audit remains open; no clipping/repair.
+Effective boundary ownership rules and guards remain unchanged.
 
-Scan/ownership contracts and history:
-- agents_record/2026-11-03-four-setup-scan-only.md
-- agents_record/2026-11-04-tpc-row0-location-scan.md
-- agents_record/2026-11-04-location-scan-full-ip-state.md
-- agents_record/2026-10-26-effective-boundary-truth-owners.md
-- agents_record/2026-10-26-breakpoint-independent-audit-handoff.md
+The ElectronOnly fix and optional111 scan loop are validated and installed
+in the project-default runtime.15 CTests,59 batch tests and both-mode focused
+scans passed; all34 scan fields for000/100/110 exactly reproduce the retained
+entries from prior four-setup scans. All249 manifests/cards/checksums were
+audited. A default-runtime frozen-card initialization probe is recorded with
+the deployment evidence; smoke tests do not establish population gain.
+
+Current campaign/deployment:
+`agents_record/2026-11-04-full-higgs-three-setup-scan.md`.
+Complete outgoing focus and all prior unique details:
+`agents_record/2026-11-04-agents-before-full-higgs-scan.md`.
+Further contracts:
+- `agents_record/2026-11-04-honor-electron-only.md`
+- `agents_record/2026-11-03-four-setup-scan-only.md`
+- `agents_record/2026-11-04-tpc-row0-location-scan.md`
+- `agents_record/2026-11-04-location-scan-full-ip-state.md`
+- `agents_record/2026-11-04-location-scan-tuples-removed.md`
+- `agents_record/2026-10-26-effective-boundary-truth-owners.md`
+- `agents_record/2026-10-26-breakpoint-independent-audit-handoff.md`

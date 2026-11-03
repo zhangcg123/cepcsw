@@ -86,6 +86,10 @@ struct HitLocationScan {
   }
 };
 
+inline std::vector<int> locationScanSetups(bool neutralEnabled) {
+  return neutralEnabled ? std::vector<int>{0,100,110,111} : std::vector<int>{0,100,110};
+}
+
 // Null, reconstructed silicon sites plus the first exact TPC row0, then an
 // optional truth-only site. Truth never changes the reconstructed candidates.
 inline std::vector<int> locationScanPoints(const std::vector<int>& systems,
@@ -130,7 +134,7 @@ struct LocationFitScan {
   void appendIP(const edm4hep::TrackState* state);
   void run(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
            const FitSettings& observations, const FreeLossSettings& controls,
-           double bz, std::optional<int> truthOwner);
+           double bz, std::optional<int> truthOwner, bool neutralEnabled);
 };
 } // namespace breakpoint
 #endif

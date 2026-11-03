@@ -1,5 +1,9 @@
 # Honor ElectronOnly even when a neutral is collected
 
+Deployment follow-up: this fix is now installed with the optional111 scanner;
+see `2026-11-04-full-higgs-three-setup-scan.md`. The pending-install wording
+below describes the original staged correction, not the current runtime.
+
 The user clarified that ElectronOnly must constrain the electron only even
 with a collected neutral. The unconditional override installed in6e505af was
 incorrect; its complete implementation/testing evidence remains preserved in
