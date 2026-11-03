@@ -7,6 +7,8 @@
 namespace breakpoint {
 void HitLocationScan::book(TTree& tree) {
   tree.Branch("hit_scan_status", &status);
+  tree.Branch("hit_scan_constraint_mask", &constraintMask);
+  tree.Branch("hit_scan_charged_energy_mode", &chargedEnergyMode);
   tree.Branch("hit_scan_min_nll_gain", &minNllGain);
   tree.Branch("hit_scan_null_nll2", &nullNll2);
   tree.Branch("hit_scan_null_ip_omega", &nullIpOmega);
@@ -36,16 +38,24 @@ void HitLocationScan::run(const BreakpointFitter& fitter,
     const FreeLossSettings& controls) {
   const double minimumGain=minNllGain;
   reset(minimumGain);
-  auto tracker=settings;
-  tracker.intervals.clear(); tracker.intervalMeanLogLoss.clear();
-  tracker.beamSpot.reset(); tracker.chargedEcalEnergy.reset(); tracker.neutralEcalEnergy.reset();
-  tracker.delayedNeutral=false; tracker.captureGaussianModel=true;
-  auto trackerControls=controls;
-  trackerControls.beamSpot.reset(); trackerControls.chargedEcalEnergy.reset();
-  trackerControls.neutralEcalEnergy.reset();
+  auto hypothesis=settings;
+  hypothesis.intervals.clear(); hypothesis.intervalMeanLogLoss.clear();
+  hypothesis.neutralEcalEnergy.reset(); hypothesis.delayedNeutral=false;
+  hypothesis.captureGaussianModel=true;
+  constraintMask=(hypothesis.beamSpot ? 1 : 0) | (hypothesis.chargedEcalEnergy ? 2 : 0);
+  const auto candidateMode=hypothesis.chargedEcalEnergyMode;
+  if (hypothesis.chargedEcalEnergy)
+    chargedEnergyMode=candidateMode==ChargedEnergyMode::ElectronPhoton ? "ElectronPhoton" : "ElectronOnly";
+  auto candidateControls=controls;
+  candidateControls.beamSpot=hypothesis.beamSpot;
+  candidateControls.chargedEcalEnergy=hypothesis.chargedEcalEnergy;
+  candidateControls.chargedEcalEnergyMode=candidateMode;
+  candidateControls.neutralEcalEnergy.reset();
   // The null is a separate 5D model, not b0=0 with finite SigmaLogLoss.
   try {
-    const auto null=fitter.fit(hits,tracker,false);
+    // Same measured cluster and beam; an unbroken track has no photon coordinate.
+    hypothesis.chargedEcalEnergyMode=ChargedEnergyMode::ElectronOnly;
+    const auto null=fitter.fit(hits,hypothesis,false);
     const auto score=evaluateFitLikelihood(null.rts);
     nullNll2=score.nll2; measurementDimensions=score.measurementDimensions;
     nullIpOmega=null.rts.ip.omega;
@@ -53,6 +63,7 @@ void HitLocationScan::run(const BreakpointFitter& fitter,
   } catch (const std::exception& failure) {
     status=-1; error=failure.what(); return;
   }
+  hypothesis.chargedEcalEnergyMode=candidateMode;
   std::vector<int> systems, layers;
   UTIL::BitField64 cell(lcio::ILDCellID0::encoder_string);
   for (const auto& measurement : hits) {
@@ -60,8 +71,8 @@ void HitLocationScan::run(const BreakpointFitter& fitter,
     systems.push_back(cell["subdet"]); layers.push_back(cell["layer"]);
   }
   for (int index : siliconScanHits(systems)) {
-    tracker.intervals={index};
-    const auto candidate=FreeLossFitter(fitter).fit(hits,tracker,trackerControls,false);
+    hypothesis.intervals={index};
+    const auto candidate=FreeLossFitter(fitter).fit(hits,hypothesis,candidateControls,false);
     const auto& diagnostic=candidate.diagnostics;
     const bool sameMeasurements=diagnostic.likelihood.measurementDimensions==measurementDimensions;
     const bool valid=diagnostic.status==FreeLossStatus::Applied && candidate.fitted.has_value() && sameMeasurements;

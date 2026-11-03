@@ -358,7 +358,7 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 |---|---|
 | Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
-| HitScan | Tracker-only free-loss location scan over VXD/ITK hits plus a separate no-breakpoint hypothesis; requires FreeLossFit |
+| HitScan | Free-loss VXD/ITK location scan plus no-breakpoint hypothesis; inherits enabled beam/charged measurements, requires FreeLossFit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
 ### Reconstructed silicon hit scan (opt-in)
@@ -369,6 +369,9 @@ fit.BreakpointIntervals = []
 fit.FreeLossFit = True
 fit.HitScanMinNllGain = 0.0
 fit.TruthOverride = False  # optional truth-prior diagnostic is not the selector
+fit.BeamSpotConstraint = True
+fit.ChargedEcalMeasurement = True
+fit.ChargedEcalEnergyMode = "ElectronPhoton"
 ```
 
 Batch equivalents: `BP_INTERVAL_SELECTION_MODE=HitScan`,
@@ -384,11 +387,19 @@ it does not implement another filter or smoother. Candidates are reconstructed
 hit indices with subdetector ID 1 (VXD), 2 (ITK barrel) or 3 (ITK endcap).
 Every such hit is scanned except the final track hit. TPC and OTK hits remain
 measurements in every fit but are not breakpoint candidates. No truth owner,
-photon location, material-truth eligibility or ECAL observation selects candidates.
+photon location or material-truth eligibility selects candidates. Reconstructed
+beam/charged-ECAL observations can affect candidate scores, not candidate scope.
 
 First fit a separate 5D no-breakpoint model. For each candidate, optimize the
 Gaussian loss-prior center using the maintained Minuit procedure, same
-SigmaLogLoss, same seed and all the same tracker measurements. Compare their
+SigmaLogLoss, same seed and all the same tracker measurements. Include the same
+enabled/available beam and charged-ECAL observations in null and candidate fits.
+With both enabled this is **110**, never a comparison of 110 against a 000 null.
+For an unresolved shower candidates use the configured ElectronPhoton sum;
+the no-breakpoint model uses ElectronOnly because it has no photon coordinate.
+Both use exactly the same measured cluster energy/error. A collected separate
+neutral routes candidate charged energy to ElectronOnly as usual, but the
+separate neutral measurement is never added to scan scores. Compare their
 normalized full-track **-2 log L**, including log-determinant/normalization terms.
 No-breakpoint is not equivalent to center zero with a finite loss variance.
 The scanner checks that null and candidate measurement dimensions agree.
@@ -404,8 +415,10 @@ No supported silicon hit is separately tagged, not evidence of no eBrem.
 
 The selected index (or empty null list) is then used by the existing ordinary,
 free-loss, truth-prior, diffuse and cumulative beam/ECAL output machinery. The
-scanner itself always uses unconstrained tracker-only **000** fits, independent
-of which downstream constraints are enabled. This is a single-breakpoint
+scanner inherits the existing BeamSpotConstraint/ChargedEcalMeasurement switches;
+turn both OFF to reproduce the earlier **000** scan. Missing/ambiguous charged
+input leaves only the available beam observation; the actual scored mask is
+persisted. This is a single-breakpoint
 search, not multi-emission recovery. When TruthOverride is enabled, truth is
 read only for its separate diagnostic after reconstruction-based selection.
 
@@ -417,6 +430,8 @@ or -2 all candidate fits failed. `failed_candidates` counts incomplete coverage.
 Aligned `candidate_*` vectors store each hit/system/layer, optimizer and Minuit
 status/error, NLL, optimized prior center, fitted b/variance and IP omega.
 `best_hit` can exist when the null wins; `selected_hit` is then -1.
+`constraint_mask` records the actual scored beam/charged observations (0/1/2/3),
+and `charged_energy_mode` is the candidate's effective mode (None if unavailable).
 At the existing selection level, status 5 means a completed scan decision
 (including no-candidate status 3), and -3 means scan failure; inspect
 `hit_scan_status` for the exact meaning. Earlier selection codes are unchanged.

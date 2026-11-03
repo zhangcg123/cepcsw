@@ -81,10 +81,13 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Manual: use only BreakpointIntervals above, even if actual eBrem occurs elsewhere.
 # HitScan: independently optimize a breakpoint at every reconstructed VXD/ITK
 # hit (barrel and endcap; not TPC/OTK or the last track hit) and compare with a
-# separate no-breakpoint 5D fit. All scores use tracker-only 000 measurements,
-# the same seed and SigmaLogLoss, and no truth. Requires FreeLossFit=True.
+# separate no-breakpoint 5D fit. Scores inherit enabled/available beam and
+# charged-ECAL observations (110 when both apply); no separate neutral update.
+# Null/candidates share measured inputs and seed; candidate losses use SigmaLogLoss.
+# The 5D null has no loss coordinate or loss prior. No truth steering.
+# Requires FreeLossFit=True. With beam/charged OFF this is the original 000 scan.
 # The winning location, or empty list for the null, is shared by all endpoints;
-# enabled beam/ECAL constraints are fitted AFTER this location decision.
+# each endpoint is then fitted with its own configured constraint stage.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")

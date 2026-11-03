@@ -25,5 +25,8 @@ int main() {
   scan.reset(0); scan.nullNll2=10; scan.hit={0};
   rejected=false; try { scan.select(); } catch(const std::invalid_argument&) { rejected=true; }
   assert(rejected);
+  scan.constraintMask=3; scan.chargedEnergyMode="ElectronPhoton";
+  scan.reset(2.);
+  assert(scan.constraintMask==0 && scan.chargedEnergyMode=="None" && scan.minNllGain==2.);
   std::cout<<"PASS: silicon-only candidates, last-hit exclusion, null test, threshold, ties and failed fits\n";
 }

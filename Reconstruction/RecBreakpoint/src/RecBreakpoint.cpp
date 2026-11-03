@@ -781,7 +781,14 @@ StatusCode RecBreakpoint::execute() {
         }
         m_intervalSelectionStatus = largest ? 2 : ownedMatch.emissions.empty() ? 3 : 4;
       } else if (m_intervalSelectionName=="HitScan") {
-        m_hitScan.run(fitter,hits,settings,freeLossControls);
+        auto scanSettings=settings;
+        if (m_beamSpotConstraint) scanSettings.beamSpot=m_recordBeamSpotSettings;
+        if (m_chargedEcalMeasurement && m_chargedEcalMeasurementStatus==2)
+          scanSettings.chargedEcalEnergy=std::make_pair(
+              m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
+        scanSettings.chargedEcalEnergyMode=breakpoint::effectiveChargedEnergyMode(
+            settings.chargedEcalEnergyMode,true,m_collectedNeutralStatus==2);
+        m_hitScan.run(fitter,hits,scanSettings,freeLossControls);
         if (m_hitScan.selectedHit>=0) settings.intervals.push_back(m_hitScan.selectedHit);
         m_intervalSelectionStatus=m_hitScan.status>0 ? 5 : -3;
         m_intervalSelectionError=m_hitScan.error;
@@ -789,6 +796,7 @@ StatusCode RecBreakpoint::execute() {
             << " status=" << m_hitScan.status << " null_nll2=" << m_hitScan.nullNll2
             << " best_hit=" << m_hitScan.bestHit << " best_nll2=" << m_hitScan.bestNll2
             << " gain=" << m_hitScan.gain << " selected_hit=" << m_hitScan.selectedHit
+            << " constraint_mask=" << m_hitScan.constraintMask
             << " failed_candidates=" << m_hitScan.failedCandidates << endmsg;
       } else {
         m_intervalSelectionStatus = 1;

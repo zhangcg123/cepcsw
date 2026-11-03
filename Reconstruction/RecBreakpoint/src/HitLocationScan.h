@@ -22,13 +22,15 @@ inline std::vector<int> siliconScanHits(const std::vector<int>& systems) {
   return hits;
 }
 
-/// Tracker-only location selection. No truth, ECAL or earlier fit posterior.
+/// Location selection with configured beam/charged observations. No truth,
+/// separate neutral measurement or earlier fit posterior.
 /// Candidate vectors remain aligned, including failed optimizations.
 struct HitLocationScan {
   // 0 not run, 1 null preferred, 2 breakpoint preferred, 3 no silicon candidates,
   // -1 null failed, -2 all candidate optimizations failed. Partial failures are
   // counted separately: a minimum over successful candidates is not exhaustive.
   int status = 0, bestHit = -1, selectedHit = -1, failedCandidates = 0, measurementDimensions = 0;
+  int constraintMask = 0; // beam=1, charged=2; separate neutral is never scored
   double minNllGain = 0;
   double nullNll2 = std::numeric_limits<double>::quiet_NaN();
   double nullIpOmega = std::numeric_limits<double>::quiet_NaN();
@@ -36,6 +38,7 @@ struct HitLocationScan {
   double secondNll2 = std::numeric_limits<double>::quiet_NaN();
   double gain = std::numeric_limits<double>::quiet_NaN();
   std::string error;
+  std::string chargedEnergyMode = "None"; // candidate mode; null is always electron-only
   std::vector<int> hit, system, layer, fitStatus, minuitStatus;
   std::vector<double> nll2, priorCenter, fittedLoss, fittedVariance, ipOmega;
   std::vector<std::string> candidateError;
