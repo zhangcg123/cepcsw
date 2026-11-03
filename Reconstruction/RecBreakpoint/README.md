@@ -497,7 +497,7 @@ Saved fields are hit, NLL2, IP omega/pT, optimized prior center, fitted b/varian
 Minuit status, reused-candidate flag and error. Missing truth never fails or
 changes the blind selection. Existing ownership diagnostics explain eligibility.
 
-For 10,000 existing Higgs events (50 files x 200), without rerunning sim/rec:
+For 10,000 existing Higgs events (200 files x 50), without rerunning sim/rec:
 
 ```bash
 ./subbreakpointhiggsscanjobs.sh
@@ -505,8 +505,11 @@ For 10,000 existing Higgs events (50 files x 200), without rerunning sim/rec:
 ```
 
 The first command only prepares frozen cards. Input defaults to
-`higgs_full_20261030`, output to `higgs_silicon_scan_20261103`, group to `higgs`
-(override `SUBMIT_GROUP`). The new scan runtime must be installed first.
+`higgs_full_20261030`, output to `higgs_silicon_scan_20261103`, group to `cms`
+(override `SUBMIT_GROUP`). It reads the first 50 events from each existing file
+in IDs1..201, skipping absent file123: exactly 200 jobs. The new scan runtime
+must be installed first. This is a different 10k-event subset from the earlier
+50-file x200 preparation, not a repartition of those identical events.
 The campaign uses **HitScanAll**, saving all locations under **000/100/110/111**
 without ranking or a gain cut. The 111 fits use delayed neutral updates; absent
 neutrals inherit 110 at each point. ElectronPhoton uses existing resolved routing.

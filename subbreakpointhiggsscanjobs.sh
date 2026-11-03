@@ -1,12 +1,13 @@
 #!/bin/bash
-# Silicon location scan of the first 10,000 existing Higgs events; no sim/rec rerun.
+# Scan 50 events from each of 200 existing rec files; no sim/rec rerun.
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
 export SAMPLE_REGION=higgs
 export INPUT_TUPLEPATH=${INPUT_TUPLEPATH:-higgs_full_20261030}
 export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-higgs_silicon_scan_20261103}
 export STAGES=breakpoint
-export NEVT=200 SEED_FIRST=1 SEED_LAST=50
-export SUBMIT_GROUP=${SUBMIT_GROUP:-higgs}
+# rec-higgs-123.root is absent; 1..201 with that file skipped gives 200 jobs.
+export NEVT=50 SEED_FIRST=1 SEED_LAST=201
+export SUBMIT_GROUP=${SUBMIT_GROUP:-cms}
 export BP_INTERVAL_SELECTION_MODE=HitScanAll BP_INTERVALS=
 export BP_FREE_LOSS_FIT=1 BP_TRUTH_OVERRIDE=0
 # Save every location in all four setups; no location selection or gain cut.

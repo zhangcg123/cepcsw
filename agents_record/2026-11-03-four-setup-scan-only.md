@@ -128,6 +128,11 @@ these mechanism checks. All local Gaudi applications terminated successfully.
 
 ## Batch cards and deployment
 
+Batch layout was subsequently changed by the user to **200 jobs x50 events,
+group cms**. Current details/command are in
+`2026-11-03-hit-scan-batch-200x50-cms.md`. The 50x200 preparation below is
+historical and archived; scan-only implementation/data contract are unchanged.
+
 The existing50 unstarted/unsubmitted ranked-scan cards were checksum/marker
 checked and MOVED recoverably to
 higgs_silicon_scan_20261103/runcards_before_scan_only_20261103/.

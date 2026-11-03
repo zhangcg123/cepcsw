@@ -346,14 +346,17 @@ SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged. Offline location
 choice, charged-energy compatibility fallback and physics validation are later
 analysis tasks, not scan steering.
 
-The 10k Higgs campaign uses 50 existing rec files x200 from
+The 10k Higgs campaign uses 200 existing rec files x50 from
 `higgs_full_20261030`, output `higgs_silicon_scan_20261103`. The user confirmed
 no active jobs and authorized install/refreeze after validation. The validated
-scan-only package is installed in the project-default runtime and all50 cards
+scan-only package is installed in the project-default runtime and all200 cards
 are refreshed. The previous unsubmitted ranked-scan cards are archived under
 the output directory, not discarded. No Condor jobs submitted.
 Launcher `./subbreakpointhiggsscanjobs.sh`; submit frozen cards explicitly with
-`./subbreakpointhiggsscanjobs.sh submit-prepared` (group higgs by default).
+`./subbreakpointhiggsscanjobs.sh submit-prepared` (group cms by default).
+Use input IDs1..201 excluding absent123, first50 events/file; this is not the
+identical event subset of the earlier50-file x200 preparation. Previous cards
+are archived. Preparation never submits unless explicitly requested.
 
 Current implementation/validation/deployment record:
 `agents_record/2026-11-03-four-setup-scan-only.md`.
