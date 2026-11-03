@@ -337,6 +337,10 @@ needed by subsequent jobs.
 The `location_scan_*` vectors in each track row contain four entries per point,
 with setup labels 0/100/110/111, normalized NLL2, likelihood chi2/logdet/dimensions,
 IP pT/error, optimized prior center, fitted b/variance and status/error/source.
+Full native IP parameters/covariance/reference/time/location are also saved
+per entry for momentum directions and recoil studies, without changing fits;
+the installed schema and regression gates are documented in
+`agents_record/2026-11-04-location-scan-full-ip-state.md`.
 Missing/failed observations retain the previous accepted setup at the SAME
 point; no previous fitted prior/posterior is passed to the next fit. Actual
 constraint masks distinguish applied observations from requested labels.

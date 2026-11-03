@@ -23,6 +23,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             src/RecBreakpointIdentification.cpp src/BaselineKFDiagnostics.cpp
             src/BreakpointFitter.cpp src/DiffuseLossState.cpp
             src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp src/HitLocationScan.cpp
+            src/LocationScanTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp
             src/PhotonCaloProjection.cpp src/PhotonCaloTuple.cpp
             src/NeutralLossCandidate.cpp src/NeutralEnergyMeasurement.cpp
@@ -62,6 +63,13 @@ if(BUILD_TESTING)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
   if(TARGET RecBreakpointLikelihood)
+    add_executable(RecBreakpointLocationScanTupleTest tests/LocationScanTupleTest.cpp
+      src/LocationScanTuple.cpp)
+    target_compile_features(RecBreakpointLocationScanTupleTest PRIVATE cxx_std_17)
+    target_compile_options(RecBreakpointLocationScanTupleTest PRIVATE -UNDEBUG)
+    target_include_directories(RecBreakpointLocationScanTupleTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(RecBreakpointLocationScanTupleTest PRIVATE EDM4HEP::edm4hep ROOT::Tree)
+    add_test(NAME RecBreakpointLocationScanTuple COMMAND RecBreakpointLocationScanTupleTest)
     add_executable(RecBreakpointTruthEcalTupleTest tests/TruthEcalTupleTest.cpp
       src/RecoAssociationTuple.cpp)
     target_compile_features(RecBreakpointTruthEcalTupleTest PRIVATE cxx_std_17)

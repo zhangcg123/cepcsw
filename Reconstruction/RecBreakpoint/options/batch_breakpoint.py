@@ -355,7 +355,9 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
             for name in ('location_scan_status','location_scan_point','location_scan_kind',
                          'location_scan_hit','location_scan_setup','location_scan_actual_constraint_mask',
                          'location_scan_fit_status','location_scan_nll2','location_scan_pt',
-                         'location_scan_pt_error','location_scan_truth_status','location_scan_truth_point'):
+                         'location_scan_pt_error','location_scan_ip_parameters','location_scan_ip_covariance',
+                         'location_scan_ip_reference_point','location_scan_ip_time','location_scan_ip_location',
+                         'location_scan_truth_status','location_scan_truth_point'):
                 if not tree.GetBranch(name):
                     raise RuntimeError('Missing scan-only branch: '+name)
         elif hit_scan:

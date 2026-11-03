@@ -9,7 +9,7 @@
 #include <vector>
 
 class TTree;
-namespace edm4hep { class TrackerHit; }
+namespace edm4hep { class TrackerHit; class TrackState; }
 namespace breakpoint {
 class BreakpointFitter;
 struct FitSettings;
@@ -118,11 +118,15 @@ struct LocationFitScan {
   std::vector<int> fitStatus, attemptStatus, minuitStatus, attemptMinuitStatus;
   std::vector<int> sourceSetup, measurementDimensions;
   std::vector<double> nll2, chi2, logDeterminant, pt, ptError;
+  // Fixed strides per (point,setup): 5 helix parameters, 21 EDM covariances, 3 reference coordinates.
+  std::vector<double> ipParameters, ipCovariance, ipReferencePoint, ipTime;
+  std::vector<int> ipLocation;
   std::vector<double> priorCenter, fittedLoss, fittedVariance;
   std::vector<std::string> error;
 
   void reset() { *this=LocationFitScan{}; }
   void book(TTree& tree);
+  void appendIP(const edm4hep::TrackState* state);
   void run(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
            const FitSettings& observations, const FreeLossSettings& controls,
            double bz, std::optional<int> truthOwner);

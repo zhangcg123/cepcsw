@@ -71,6 +71,19 @@ class BatchTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'Missing scan-only branch: location_scan_setup'):
                 batch.verify(Path('fixture.root'),'breakpoint',hit_scan='HitScanAll')
 
+    def test_scan_only_verification_requires_full_ip_state(self):
+        for missing in ('location_scan_ip_parameters','location_scan_ip_covariance',
+                        'location_scan_ip_reference_point','location_scan_ip_time','location_scan_ip_location'):
+            with self.subTest(missing=missing):
+                tree=MagicMock(); tree.GetEntries.return_value=2
+                tree.GetBranch.side_effect=lambda name: None if name==missing else object()
+                file=MagicMock(); file.Get.return_value=tree
+                file.IsZombie.return_value=False; file.TestBit.return_value=False
+                root=types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path:file,kRecovered=1))
+                with patch.dict('sys.modules',ROOT=root):
+                    with self.assertRaisesRegex(RuntimeError,'Missing scan-only branch: '+missing):
+                        batch.verify(Path('fixture.root'),'breakpoint',hit_scan='HitScanAll')
+
     def test_hit_scan_reads_truth_associations_without_loss_override(self):
         import ast
         text=(self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()

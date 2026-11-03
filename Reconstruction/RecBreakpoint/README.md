@@ -410,6 +410,29 @@ Main `status=2` and `interval_selection_status=6` denote scan-only rows.
 There is no selected interval. Usual refit collections are empty and their flat
 endpoint fields remain NaN/inactive; matched input-KF/truth/PFO data are retained.
 Use the per-point `location_scan_pt` values, not the inactive refit families.
+Each scan entry also saves the complete native IP state, from the SAME fit
+as its NLL and pT:
+
+- `location_scan_ip_parameters`: flattened blocks of 5 values in EDM order
+  `[D0, phi, omega, Z0, tanLambda]` (mm, rad, 1/mm, mm, dimensionless).
+- `location_scan_ip_covariance`: flattened blocks of 21 values, the native EDM
+  lower triangle in row-major order for `[D0, phi, omega, Z0, tanLambda, time]`.
+  The leading 15 values are the fitted five-dimensional helix covariance.
+  The fitter does not estimate time; its native time/covariance entries are
+  preserved rather than interpreted as a timing measurement.
+- `location_scan_ip_reference_point`: flattened `[x,y,z]` blocks of 3, in mm.
+- `location_scan_ip_time` and `location_scan_ip_location`: one value per scan
+  entry, copied from the native state. A failed fit has NaN floating fields
+  at the same fixed strides and location=-1; an inherited fit copies its
+  accepted source state exactly, including the no-breakpoint control.
+
+For scan entry j, use parameters `[5*j:5*j+5]`, covariance `[21*j:21*j+21]`
+and reference point `[3*j:3*j+3]`. With its saved pT, the momentum is
+`(pT*cos(phi), pT*sin(phi), pT*tanLambda)`, in GeV. This supports recoil-mass
+calculation after an offline site choice. It does not choose a site or add
+the separate charged-energy 2-sigma analysis-fallback diagnostics. Older
+tuples must be regenerated to obtain these fields; sim/rec are unchanged.
+
 Offline scans must include both candidate kinds 1 and 3; kind 2 is never a
 blind candidate. Existing silicon-only tuples do not acquire the new point
 without rerunning the breakpoint stage; sim/rec inputs remain valid.

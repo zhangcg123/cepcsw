@@ -100,6 +100,9 @@ fit.BreakpointIntervals = breakpoint_intervals
 # copies 110 because it has no loss parameter; do not compare its NLL gain to a
 # neutral-constrained fit. TPC row0 is kind=3, independent of truth; if absent,
 # no other TPC row substitutes. Other truth-only sites (kind=2) are not candidates.
+# Every point/setup also saves the IP helix parameters (5), native covariance
+# (21), reference point (3), time and location; use these SAME-entry states for
+# momentum directions/recoil mass, never an inactive endpoint family's state.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")

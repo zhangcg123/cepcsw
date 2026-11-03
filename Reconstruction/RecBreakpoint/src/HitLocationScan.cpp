@@ -150,6 +150,7 @@ struct LocationScanResult {
   int status=-2, mask=0, minuit=-99, source=-1, dimensions=0;
   double nll2=std::numeric_limits<double>::quiet_NaN(), chi2=nll2, logDet=nll2;
   double pt=nll2, ptError=nll2, prior=nll2, loss=nll2, variance=nll2;
+  std::optional<edm4hep::TrackState> ip;
   std::string error;
 };
 
@@ -185,31 +186,13 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
     result.logDet=score.logDeterminant; result.dimensions=score.measurementDimensions;
     result.pt=std::abs(bz*2.99792458e-4/fit.ip.omega);
     result.ptError=transverseMomentumError(fit.ip,bz);
+    result.ip=fit.ip;
     result.mask=(fit.beamSpot ? 1 : 0) | (fit.chargedEcalStep ? 2 : 0) | (fit.neutralEcal ? 4 : 0);
     result.status=2;
   } catch (const std::exception& failure) { result.error=failure.what(); }
   return result;
 }
 } // namespace
-
-void LocationFitScan::book(TTree& tree) {
-  auto branch=[&](const char* suffix, auto* value) {
-    tree.Branch((std::string("location_scan_")+suffix).c_str(),value);
-  };
-  branch("status",&status); branch("point_count",&pointCount);
-  branch("truth_status",&truthStatus); branch("truth_hit",&truthHit);
-  branch("truth_point",&truthPoint); branch("truth_error",&truthError);
-  branch("point",&point); branch("kind",&kind); branch("hit",&hit);
-  branch("system",&system); branch("layer",&layer); branch("setup",&setup);
-  branch("actual_constraint_mask",&actualMask); branch("fit_status",&fitStatus);
-  branch("attempt_status",&attemptStatus); branch("minuit_status",&minuitStatus);
-  branch("attempt_minuit_status",&attemptMinuitStatus); branch("source_setup",&sourceSetup);
-  branch("measurement_dimensions",&measurementDimensions);
-  branch("nll2",&nll2); branch("chi2",&chi2); branch("log_determinant",&logDeterminant);
-  branch("pt",&pt); branch("pt_error",&ptError); branch("prior_center",&priorCenter);
-  branch("fitted_log_loss",&fittedLoss); branch("fitted_variance",&fittedVariance);
-  branch("error",&error);
-}
 
 void LocationFitScan::run(const BreakpointFitter& fitter,
     const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& observations,
@@ -280,6 +263,7 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
       sourceSetup.push_back(result.source); measurementDimensions.push_back(result.dimensions);
       nll2.push_back(result.nll2); chi2.push_back(result.chi2); logDeterminant.push_back(result.logDet);
       pt.push_back(result.pt); ptError.push_back(result.ptError); priorCenter.push_back(result.prior);
+      appendIP(result.ip ? &*result.ip : nullptr);
       fittedLoss.push_back(result.loss); fittedVariance.push_back(result.variance);
       error.push_back(result.error);
     }
