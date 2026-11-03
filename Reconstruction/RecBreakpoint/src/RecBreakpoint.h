@@ -22,6 +22,7 @@
 #include "NeutralLossCandidate.h"
 #include "ChargedEnergyCandidate.h"
 #include "TruthBreakpointTuple.h"
+#include "HitLocationScan.h"
 
 #include <array>
 #include <cstdint>
@@ -89,6 +90,7 @@ private:
 
   Gaudi::Property<std::vector<int>> m_intervals{this, "BreakpointIntervals", {}};
   Gaudi::Property<std::string> m_intervalSelection{this, "IntervalSelectionMode", "Truth"};
+  Gaudi::Property<double> m_hitScanMinNllGain{this, "HitScanMinNllGain", 0.0};
   Gaudi::Property<double> m_meanLoss{this, "MeanLogLoss", 0.0};
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.001};
   Gaudi::Property<double> m_seedScale{this, "SeedScale", 1.0};
@@ -132,6 +134,7 @@ private:
   std::unique_ptr<breakpoint::BreakpointTrackSystem> m_system;
   std::unique_ptr<TGeoNavigator> m_truthNavigator;
   breakpoint::TruthBreakpointTuple m_truthOwnership;
+  breakpoint::HitLocationScan m_hitScan;
   double m_bz = 0;
   std::unique_ptr<TFile> m_file;
   TTree* m_tree = nullptr; // file owned

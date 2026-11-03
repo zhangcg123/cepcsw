@@ -358,7 +358,73 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 |---|---|
 | Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
+| HitScan | Tracker-only free-loss location scan over VXD/ITK hits plus a separate no-breakpoint hypothesis; requires FreeLossFit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
+
+### Reconstructed silicon hit scan (opt-in)
+
+```python
+fit.IntervalSelectionMode = "HitScan"
+fit.BreakpointIntervals = []
+fit.FreeLossFit = True
+fit.HitScanMinNllGain = 0.0
+fit.TruthOverride = False  # optional truth-prior diagnostic is not the selector
+```
+
+Batch equivalents: `BP_INTERVAL_SELECTION_MODE=HitScan`,
+`BP_HIT_SCAN_MIN_NLL_GAIN=0`, `BP_FREE_LOSS_FIT=1` and `BP_TRUTH_OVERRIDE=0`.
+The new controls are frozen in generated batch cards. Existing Truth/Manual
+defaults and the reserved Auto spelling are unchanged.
+The maintained card still accepts an older installed plugin in Truth/Manual
+mode; requesting HitScan or its new threshold then fails with an explicit
+updated-runtime requirement rather than silently using old behavior.
+
+`HitLocationScan` calls the existing `BreakpointFitter` and `FreeLossFitter`;
+it does not implement another filter or smoother. Candidates are reconstructed
+hit indices with subdetector ID 1 (VXD), 2 (ITK barrel) or 3 (ITK endcap).
+Every such hit is scanned except the final track hit. TPC and OTK hits remain
+measurements in every fit but are not breakpoint candidates. No truth owner,
+photon location, material-truth eligibility or ECAL observation selects candidates.
+
+First fit a separate 5D no-breakpoint model. For each candidate, optimize the
+Gaussian loss-prior center using the maintained Minuit procedure, same
+SigmaLogLoss, same seed and all the same tracker measurements. Compare their
+normalized full-track **-2 log L**, including log-determinant/normalization terms.
+No-breakpoint is not equivalent to center zero with a finite loss variance.
+The scanner checks that null and candidate measurement dimensions agree.
+
+The decision is `null_nll2 - best_candidate_nll2 > HitScanMinNllGain`.
+Otherwise choose the no-breakpoint model. Zero therefore means plain minimum
+NLL, with null winning ties; it is NOT a calibrated eBrem significance or a
+>1% truth-loss selection. Exact candidate-score ties retain the first/innermost
+hit. Candidate optimization failures cannot win. Partial failures are counted;
+the reported minimum is then only over successful candidates. If all candidates
+fail, retain a no-breakpoint refit but mark the scan failed, not a clean track.
+No supported silicon hit is separately tagged, not evidence of no eBrem.
+
+The selected index (or empty null list) is then used by the existing ordinary,
+free-loss, truth-prior, diffuse and cumulative beam/ECAL output machinery. The
+scanner itself always uses unconstrained tracker-only **000** fits, independent
+of which downstream constraints are enabled. This is a single-breakpoint
+search, not multi-emission recovery. When TruthOverride is enabled, truth is
+read only for its separate diagnostic after reconstruction-based selection.
+
+Flat fields are always booked as `hit_scan_*`. Status is 0 not run, 1 null
+preferred, 2 breakpoint preferred, 3 no silicon candidates, -1 null-fit failure,
+or -2 all candidate fits failed. `failed_candidates` counts incomplete coverage.
+`null_nll2`, `null_ip_omega`, `measurement_dimensions`, `best_hit`, `best_nll2`,
+`second_nll2`, `nll_gain`, `selected_hit` and `min_nll_gain` summarize the scan.
+Aligned `candidate_*` vectors store each hit/system/layer, optimizer and Minuit
+status/error, NLL, optimized prior center, fitted b/variance and IP omega.
+`best_hit` can exist when the null wins; `selected_hit` is then -1.
+At the existing selection level, status 5 means a completed scan decision
+(including no-candidate status 3), and -3 means scan failure; inspect
+`hit_scan_status` for the exact meaning. Earlier selection codes are unchanged.
+
+Scanning is opt-in and expensive. Neighboring sites can be indistinguishable,
+end losses can be underconstrained, and one breakpoint can approximate several
+physical emissions. Tune detection thresholds on independent no-loss controls;
+successful execution is not location-efficiency or pT-recovery validation.
 
 Truth follows reconstructed-hit associations and exact embedded G4 provenance.
 `TruthBHLossEventData::matchBreakpoints` resolves each emission's owner and its
@@ -864,7 +930,8 @@ the native source/predicted/filtered states, `F` and `Q`.
 | TruthOverrideBackwardFilter | false | Run the truth-prior backward refit when TruthOverride applies |
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
-| IntervalSelectionMode | Truth | Truth, Manual, or reserved/unimplemented Auto |
+| IntervalSelectionMode | Truth | Truth, Manual, HitScan, or reserved/unimplemented Auto |
+| HitScanMinNllGain | 0 | Finite nonnegative required null-minus-best -2logL improvement; strict >; BP_HIT_SCAN_MIN_NLL_GAIN |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
@@ -1150,7 +1217,8 @@ explicitly assigned in the maintained card; a source/card audit test checks cove
 Prepared cards containing the retired likelihood-audit property must be
 regenerated before use with the updated plugin; do not edit checksummed cards.
 The default Truth selection chooses per-track locations from embedded Geant4
-provenance. Auto reconstruction-based selection is not implemented. Manual
+provenance. HitScan provides opt-in tracker-only silicon location selection;
+the reserved Auto spelling is still not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
 
 The current submission helper defaults to `STAGES=breakpoint`, reading existing

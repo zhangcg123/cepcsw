@@ -79,9 +79,22 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Other loss locations are not fitted;
 # keep BreakpointIntervals empty here, since the list is built for each track.
 # Manual: use only BreakpointIntervals above, even if actual eBrem occurs elsewhere.
+# HitScan: independently optimize a breakpoint at every reconstructed VXD/ITK
+# hit (barrel and endcap; not TPC/OTK or the last track hit) and compare with a
+# separate no-breakpoint 5D fit. All scores use tracker-only 000 measurements,
+# the same seed and SigmaLogLoss, and no truth. Requires FreeLossFit=True.
+# The winning location, or empty list for the null, is shared by all endpoints;
+# enabled beam/ECAL constraints are fitted AFTER this location decision.
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")
+# Required improvement in -2logL relative to the no-breakpoint fit. Strict >.
+# Zero selects the lower NLL, preferring null on ties; NOT a calibrated detection
+# significance. Failed/partial scans are tagged separately in hit_scan_* fields.
+if "HitScanMinNllGain" in fit.getDefaultProperties():
+    fit.HitScanMinNllGain = float(os.environ.get("BP_HIT_SCAN_MIN_NLL_GAIN", "0.0"))
+elif fit.IntervalSelectionMode == "HitScan" or "BP_HIT_SCAN_MIN_NLL_GAIN" in os.environ:
+    raise ValueError("HitScan requires the updated RecBreakpoint runtime; Truth/Manual remain usable before installation")
 # b = log(p_before/p_after). Fractional loss is 1-exp(-b).
 # MeanLogLoss is the center of the Gaussian prior on b at each selected edge.
 # The default 0 represents the no-loss hypothesis; hits may update b.
@@ -280,7 +293,8 @@ if fit.ChargedEcalMeasurement:
     _charged_source = str(fit.ChargedEcalInputClusters)
     if _charged_source and _charged_source not in reader.collections:
         reader.collections.append(_charged_source)
-if fit.IntervalSelectionMode == "Truth" or (fit.TruthOverride and fit.BreakpointIntervals):
+if fit.IntervalSelectionMode == "Truth" or (fit.TruthOverride and
+        (fit.BreakpointIntervals or fit.IntervalSelectionMode == "HitScan")):
     reader.collections += [
         "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
         "TPCTrackerHitAss", "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",

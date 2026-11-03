@@ -156,8 +156,14 @@ StatusCode RecBreakpoint::initialize() {
             << " Use Truth for this diagnostic or Manual for a fixed list." << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_intervalSelectionName != "Truth" && m_intervalSelectionName != "Manual") {
-    error() << "IntervalSelectionMode must be Truth, Manual, or reserved Auto" << endmsg;
+  if (m_intervalSelectionName != "Truth" && m_intervalSelectionName != "Manual" &&
+      m_intervalSelectionName != "HitScan") {
+    error() << "IntervalSelectionMode must be Truth, Manual, HitScan, or reserved Auto" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (!std::isfinite(m_hitScanMinNllGain.value()) || m_hitScanMinNllGain<0 ||
+      (m_intervalSelectionName=="HitScan" && !m_freeLossFit)) {
+    error() << "HitScan requires FreeLossFit=True; HitScanMinNllGain must be finite/nonnegative" << endmsg;
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName != "Manual" && !m_intervals.value().empty()) {
@@ -387,6 +393,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_truthOwnership.book(*m_tree);
+  m_hitScan.book(*m_tree);
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
   m_tree->Branch("selected_breakpoint_interval", &m_selectedIntervals);
@@ -544,7 +551,7 @@ StatusCode RecBreakpoint::execute() {
   const std::array<bool,3> constraintEnabled{{m_beamSpotConstraint.value(),
       m_chargedEcalMeasurement.value(), m_neutralEcalMeasurement.value()}};
   const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
-      (m_enableTruthOverride && !settings.intervals.empty()));
+      (m_enableTruthOverride && (!settings.intervals.empty() || m_intervalSelectionName=="HitScan")));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
   std::string truthEventError;
@@ -678,6 +685,7 @@ StatusCode RecBreakpoint::execute() {
     m_intervalTruthTrack = -1; m_intervalTruthDistance = nan;
     settings.intervalMeanLogLoss.clear();
     m_truthOwnership.reset();
+    m_hitScan.reset(m_hitScanMinNllGain.value());
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
     m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
@@ -772,6 +780,16 @@ StatusCode RecBreakpoint::execute() {
           m_intervalTruthZ.push_back(largest->retainedFraction);
         }
         m_intervalSelectionStatus = largest ? 2 : ownedMatch.emissions.empty() ? 3 : 4;
+      } else if (m_intervalSelectionName=="HitScan") {
+        m_hitScan.run(fitter,hits,settings,freeLossControls);
+        if (m_hitScan.selectedHit>=0) settings.intervals.push_back(m_hitScan.selectedHit);
+        m_intervalSelectionStatus=m_hitScan.status>0 ? 5 : -3;
+        m_intervalSelectionError=m_hitScan.error;
+        if (m_verbose) info() << "HitScan event=" << m_event << " track=" << m_trackIndex
+            << " status=" << m_hitScan.status << " null_nll2=" << m_hitScan.nullNll2
+            << " best_hit=" << m_hitScan.bestHit << " best_nll2=" << m_hitScan.bestNll2
+            << " gain=" << m_hitScan.gain << " selected_hit=" << m_hitScan.selectedHit
+            << " failed_candidates=" << m_hitScan.failedCandidates << endmsg;
       } else {
         m_intervalSelectionStatus = 1;
       }

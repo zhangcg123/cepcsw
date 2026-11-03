@@ -19,6 +19,37 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_hit_scan_property_guard_keeps_old_runtime_truth_manual_usable(self):
+        import ast
+        text = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        block = next(node for node in ast.parse(text).body if isinstance(node, ast.If)
+                     and ast.unparse(node.test) == "'HitScanMinNllGain' in fit.getDefaultProperties()")
+        code = compile(ast.Module(body=[block], type_ignores=[]), '<hit-scan-guard>', 'exec')
+        with patch.dict(os.environ, {}, clear=True):
+            for mode in ('Truth', 'Manual'):
+                fit = types.SimpleNamespace(IntervalSelectionMode=mode, getDefaultProperties=lambda: {})
+                exec(code, {'fit': fit, 'os': os})
+                self.assertFalse(hasattr(fit, 'HitScanMinNllGain'))
+            with self.assertRaisesRegex(ValueError, 'updated RecBreakpoint runtime'):
+                exec(code, {'fit': types.SimpleNamespace(IntervalSelectionMode='HitScan',
+                                                       getDefaultProperties=lambda: {}), 'os': os})
+        with patch.dict(os.environ, {'BP_HIT_SCAN_MIN_NLL_GAIN': '4.5'}, clear=True):
+            fit = types.SimpleNamespace(IntervalSelectionMode='HitScan', HitScanMinNllGain=0.,
+                                        getDefaultProperties=lambda: {'HitScanMinNllGain': 0.})
+            exec(code, {'fit': fit, 'os': os})
+            self.assertEqual(fit.HitScanMinNllGain, 4.5)
+
+    def test_silicon_hit_scan_controls_are_frozen(self):
+        self.prepare(STAGES='breakpoint', BP_INTERVAL_SELECTION_MODE='HitScan',
+                     BP_HIT_SCAN_MIN_NLL_GAIN='4.5', BP_TRUTH_OVERRIDE='0')
+        job = self.manifest()
+        self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'], 'HitScan')
+        self.assertEqual(job['controls']['BP_HIT_SCAN_MIN_NLL_GAIN'], '4.5')
+        self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'], '0')
+        card = Path(job['cards']['breakpoint']).read_text()
+        self.assertIn("'BP_HIT_SCAN_MIN_NLL_GAIN': '4.5'", card)
+        self.assertIn('fit.HitScanMinNllGain =', card)
+
     def test_delayed_neutral_is_validated_and_frozen(self):
         template = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         assignment = next(line for line in template.splitlines()
