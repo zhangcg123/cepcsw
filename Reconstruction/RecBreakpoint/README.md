@@ -968,8 +968,8 @@ the independent neutral clusters in `TrkMergedECAL` as charged.
 
 | Value | Predicted scalar energy at ECAL |
 |---|---|
-| `ElectronOnly` (compiled/card default) | Charged energy measures only the electron: `p = sqrt(1+tanl^2)/abs(kappa)`, with or without a neutral |
-| `ElectronPhoton` | With one breakpoint: `p*exp(b)`; use charged energy alone without a neutral, charged+neutral total when collected |
+| `ElectronOnly` | Charged energy measures only the electron: `p = sqrt(1+tanl^2)/abs(kappa)`, with or without a neutral |
+| `ElectronPhoton` (compiled/card/batch default) | With one breakpoint: `p*exp(b)`; use charged energy alone without a neutral, charged+neutral total when collected |
 
 The routing is automatic and shared by ordinary and free-loss RTS, including
 HitScanAll:
@@ -1174,7 +1174,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | ChargedEcalMeasurement | true | Two cumulative charged-stage RTS families; ChargedEcalEnergyMode chooses electron-only or total-energy treatment |
 | EcalConstraintInput | PreReclustering | Common charged/neutral PFO source: PreReclustering or FinalPFO; BP_ECAL_CONSTRAINT_INPUT |
 | ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
-| ChargedEcalEnergyMode | ElectronOnly | 110: ElectronOnly always charged-only; ElectronPhoton uses charged energy without a neutral, charged+neutral total when collected; no breakpoint uses electron-only;111 stays separate; BP_CHARGED_ECAL_ENERGY_MODE |
+| ChargedEcalEnergyMode | ElectronPhoton | 110: ElectronOnly always charged-only; ElectronPhoton uses charged energy without a neutral, charged+neutral total when collected; no breakpoint uses electron-only;111 stays separate; BP_CHARGED_ECAL_ENERGY_MODE |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |

@@ -30,6 +30,7 @@ fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
 fit.BeamSpotConstraint = True  # separate beam-only ordinary/free RTS families
 fit.ChargedEcalMeasurement = True
+fit.ChargedEcalEnergyMode = "ElectronPhoton"  # compiled/card/batch default; ElectronOnly is explicit
 fit.NeutralEcalMeasurement = False
 fit.LocationScanSetups = [110]  # normal truth endpoints first, then only110 scans
 fit.BeamSpotX = fit.BeamSpotY = 0.0  # mm

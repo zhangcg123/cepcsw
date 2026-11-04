@@ -231,14 +231,14 @@ fit.EcalConstraintInput = os.environ.get("BP_ECAL_CONSTRAINT_INPUT", "PreReclust
 # matching is retained. Legacy campaign: FinalPFO plus TrkMergedECAL.
 fit.ChargedEcalInputClusters = os.environ.get("BP_CHARGED_ECAL_INPUT_CLUSTERS", "")
 # ElectronOnly:110 uses charged energy to constrain the electron, even with a neutral.
-# ElectronPhoton:110 measures electron+photon energy using p_ECAL*exp(b), mass ignored;
+# Default ElectronPhoton:110 measures electron+photon energy using p_ECAL*exp(b), mass ignored;
 # use charged energy alone without a collected neutral, charged+neutral sum otherwise.
 # 111 always uses separate charged-electron and neutral-photon measurements.
 # No breakpoint: charged energy measures electron only. Neutral collection stays
 # passive even when its separate-measurement switch is OFF.
 # ElectronPhoton requires ElossOn=False for its sum model.
 # Requested/base mode and effective110 mode are saved separately.
-fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "ElectronOnly")
+fit.ChargedEcalEnergyMode = os.environ.get("BP_CHARGED_ECAL_ENERGY_MODE", "ElectronPhoton")
 # Optional measurement in the final cumulative neutral-stage families. Uses the
 # collected hit-supported ECAL energy as a scalar observation of p_after*(exp(b)-1)
 # at the breakpoint, updating all six coordinates and their correlations.

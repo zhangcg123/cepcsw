@@ -1,5 +1,6 @@
 #include "ChargedEnergyMeasurement.h"
 #include "BreakpointFitter.h"
+#include "FreeLossFitter.h"
 #include "ScalarMeasurementSite.h"
 #include <limits>
 #include <stdexcept>
@@ -10,6 +11,9 @@ void close(double a, double b, double tolerance=1.e-7) {
     throw std::runtime_error("Charged energy projection regression failed");
 }
 int main() {
+  if (FitSettings{}.chargedEcalEnergyMode!=ChargedEnergyMode::ElectronPhoton ||
+      FreeLossSettings{}.chargedEcalEnergyMode!=ChargedEnergyMode::ElectronPhoton)
+    throw std::runtime_error("Charged energy must default to ElectronPhoton in both fitters");
   for (bool sumStage : {false,true})
     for (bool breakpoint : {false,true}) for (bool charged : {false,true}) for (bool neutral : {false,true}) {
       FitSettings original;
@@ -66,6 +70,7 @@ int main() {
         throw std::runtime_error("Wrong charged-energy routing");
     }
   FitSettings forbidden;
+  forbidden.chargedEcalEnergyMode=ChargedEnergyMode::ElectronOnly;
   forbidden.resolvedEcalSum=true;
   forbidden.intervals={3};
   forbidden.chargedEcalEnergy=std::make_pair(10.,.2);

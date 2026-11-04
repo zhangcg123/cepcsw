@@ -156,6 +156,7 @@ def prepare():
                        ('BP_LOCATION_SCAN_SETUPS','110')):
         controls.setdefault(key, value)
     controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
+    controls.setdefault('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronPhoton')
     for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
@@ -166,7 +167,7 @@ def prepare():
         if key in controls: controls[key] = str(int(boolean(controls[key])))
     if controls.get('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering') not in ('PreReclustering', 'FinalPFO'):
         raise ValueError('BP_ECAL_CONSTRAINT_INPUT must be PreReclustering or FinalPFO')
-    charged_mode = controls.get('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronOnly')
+    charged_mode = controls['BP_CHARGED_ECAL_ENERGY_MODE']
     if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
         raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')
     if 'BP_LOCATION_SCAN_SETUPS' in controls:

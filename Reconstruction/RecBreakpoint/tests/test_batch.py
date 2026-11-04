@@ -23,10 +23,10 @@ class BatchTest(unittest.TestCase):
         import ast
         properties = {'FreeLossFit': True, 'BeamSpotConstraint': True,
                       'ChargedEcalMeasurement': True, 'NeutralEcalMeasurement': False,
-                      'LocationScanSetups': [110]}
+                      'LocationScanSetups': [110], 'ChargedEcalEnergyMode': 'ElectronPhoton'}
         expected = {'BP_FREE_LOSS_FIT':'1', 'BP_BEAM_SPOT_CONSTRAINT':'1',
                     'BP_CHARGED_ECAL_MEASUREMENT':'1', 'BP_NEUTRAL_ECAL_MEASUREMENT':'0',
-                    'BP_LOCATION_SCAN_SETUPS':'110'}
+                    'BP_LOCATION_SCAN_SETUPS':'110', 'BP_CHARGED_ECAL_ENERGY_MODE':'ElectronPhoton'}
         text=(REPO/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         nodes=[]
         for node in ast.parse(text).body:
@@ -43,7 +43,9 @@ class BatchTest(unittest.TestCase):
         for key,value in properties.items(): self.assertEqual(getattr(fit,key),value)
         header=(REPO/'Reconstruction/RecBreakpoint/src/RecBreakpoint.h').read_text()
         for key,value in properties.items():
-            literal=r'\{110\}' if isinstance(value,list) else 'true' if value else 'false'
+            if isinstance(value,list): literal=r'\{110\}'
+            elif isinstance(value,str): literal='"'+value+'"'
+            else: literal='true' if value else 'false'
             self.assertRegex(header,r'"'+key+r'",\s*'+literal+r'\}')
         self.prepare(OUTPUT_TUPLEPATH='direct_defaults')
         direct=self.manifest('direct_defaults')
@@ -58,6 +60,7 @@ class BatchTest(unittest.TestCase):
             self.assertEqual({k:job['controls'][k] for k in expected},expected)
             off={key:'0' for key in expected}
             off['BP_LOCATION_SCAN_SETUPS']=''
+            off['BP_CHARGED_ECAL_ENERGY_MODE']='ElectronOnly'
             off_output=output+'_off'
             result=batch.subprocess.run(['bash',str(self.repo/script)],
                 env=dict(env,OUTPUT_TUPLEPATH=off_output,**off),capture_output=True,text=True)

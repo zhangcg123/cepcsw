@@ -357,8 +357,12 @@ Point definitions are unchanged: 5D null, VXD/ITK, exact first TPC row0,
 optional eligible truth reference last if outside that list. Keep all hits.
 No online ranking/gain cut; truth never supplies scan loss amounts.
 ChargedEcalEnergyMode still controls110: ElectronOnly uses C for electron;
-ElectronPhoton uses C or C+N for the sum. Passive neutral collection stays
-active for110 even with111 OFF;111 always uses separate C/N. Sum flag plus
+ElectronPhoton uses C or C+N for the sum.
+The compiled, internal fitter, standard-card and batch default is now ElectronPhoton;
+ElectronOnly remains an explicit override. Deployment evidence:
+`agents_record/2026-11-04-electron-photon-global-default.md`.
+Passive neutral collection stays active for110 even with111 OFF;111 always
+uses separate C/N. Sum flag plus
 actual mask/source/status remain authoritative. Existing ownership guards,
 SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged.
 

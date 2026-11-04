@@ -21,7 +21,7 @@ struct FitSettings {
   // the fitter does not distinguish truth-supplied from manually set centers.
   std::map<int, double> intervalMeanLogLoss;
   std::optional<std::pair<double, double>> chargedEcalEnergy; // measured E, sigma [GeV]; terminal RTS measurement
-  ChargedEnergyMode chargedEcalEnergyMode = ChargedEnergyMode::ElectronOnly;
+  ChargedEnergyMode chargedEcalEnergyMode = ChargedEnergyMode::ElectronPhoton;
   bool resolvedEcalSum = false; // internal110 routing; never a configurable option
   std::optional<std::pair<double, double>> neutralEcalEnergy; // photon E, sigma [GeV]; post-loss virtual site
   std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement

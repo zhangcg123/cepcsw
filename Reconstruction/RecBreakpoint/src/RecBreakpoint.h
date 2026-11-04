@@ -104,7 +104,7 @@ private:
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", true};
   Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", true};
   Gaudi::Property<std::string> m_ecalConstraintInput{this, "EcalConstraintInput", "PreReclustering"};
-  Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronOnly"};
+  Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronPhoton"};
   Gaudi::Property<bool> m_neutralEcalMeasurement{this, "NeutralEcalMeasurement", false};
   Gaudi::Property<bool> m_delayedNeutralExperiment{this, "ExperimentalDelayedNeutral", false};
   Gaudi::Property<double> m_chargedEcalStochasticError{this, "ChargedEcalStochasticError", 0.011};
