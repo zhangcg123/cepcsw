@@ -312,107 +312,93 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**TRUTH ENDPOINTS PLUS CONFIGURABLE LOCATION SCANS (2026-11-04).**
+**SAME-OBSERVATION NULL FOR BREAKPOINT LOCATION SCANS (2026-11-05).**
 Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No branch/remote,
 PFA/shared-KF, loss-map, optimizer bound/acceptance or truth-owner change is
-authorized. The independent acceptance audit remains open.
+authorized. The independent optimizer-acceptance audit remains open.
+The user confirmed no active breakpoint jobs and authorized installation after
+validation. The narrow correction below is installed in the project default.
+Do not change source/cards or install while future batch jobs are running;
+reconfirm a quiet window and preserve frozen cards and existing outputs.
 
-**Deferred reminder (2026-11-05): user reports active breakpoint batch jobs.**
-Do not change source/cards or install an update while they run. Revisit the
-scan-null ECAL mismatch later today/tomorrow: for collected neutrals,110
-candidates use C+N but the5D null uses C. A fair likelihood comparison needs
-the same measured energy and uncertainty in both, without adding a null loss
-coordinate. No fix implemented; reconfirm a quiet window before installation.
-Exact evidence, scope and reminder limitations:
-`agents_record/2026-11-05-pending-scan-null-ecal-observation.md`.
+### Active workflow and defaults
 
-The user requires every enabled free-loss approach to retain its normal
-truth-location result, independently of which approaches scan locations.
-Use `IntervalSelectionMode="Truth"` and the existing FreeLossFit/beam/charged/
-neutral switches. User-mandated defaults are identical in compiled code,
-standard card and batch helpers: FreeLossFit=True, BeamSpotConstraint=True,
-ChargedEcalMeasurement=True, NeutralEcalMeasurement=False,
-LocationScanSetups=[110]. Thus retain truth-location000/100/110 and scan only110.
-Explicit [] adds no scans; [0,100,110] adds those three. Allowed entries
-are unique0/100/110/111, canonically sorted. Nonempty lists require Truth and
-FreeLossFit;100 needs beam,110 beam+charged,111 all three enabled. TruthOverride
-is a separate loss-prior oracle, not required for truth-location free fits.
+Keep normal truth-location endpoints independently of location scans.
+Compiled code, maintained card and batch helpers use FreeLossFit=True,
+BeamSpotConstraint=True, ChargedEcalMeasurement=True,
+NeutralEcalMeasurement=False, LocationScanSetups=[110] and
+ChargedEcalEnergyMode=ElectronPhoton. SigmaLogLoss=0.001 and prior-center
+bound[0,1] are unchanged. TruthOverride is a separate loss-prior oracle,
+not required for truth-location free fits.
 
-Normal endpoint families run first at the eligible truth owner and remain
-published in their existing collections/flat branches. Only afterwards are
-requested location scans run from original inputs, not any fitted posterior.
-They record `location_scan_*` without selecting/overwriting an endpoint.
-An optional scan exception cannot invalidate preserved truth results.
-The list controls actual scans, not just saving: omitted predecessor approaches
-supply raw observations but are not optimized secretly. Failure can retain only
-an earlier successful REQUESTED setup at the same point; with none, save an
-invalid/NaN entry. In a111-only scan its inapplicable null is therefore invalid,
-not a fabricated110 result.
+Use IntervalSelectionMode=Truth for additional scans. Normal enabled
+truth-location000/100/110 (optional111) families run first and remain published.
+Only afterwards do requested scans restart from original hits/observations,
+not fitted posteriors. They save location_scan_* without selecting/overwriting
+an endpoint or invalidating preserved truth fits. [] disables scans; unique
+0/100/110/111 entries are canonically sorted. Nonempty lists require Truth
+and FreeLossFit;100 needs beam,110 beam+charged,111 all three enabled.
+Legacy modes/FreeLossFit=False must explicitly clear LocationScanSetups.
+An omitted predecessor provides raw observations, never a hidden optimization.
+Failure retains only an earlier successful REQUESTED setup at the same point;
+otherwise the entry stays invalid/NaN. Honor actual source/mask/status.
 
-The maintained Higgs launcher now prepares Truth plus configurable scans,
-default110 only, with fresh default output
-`higgs_location_scan_truth_20261104`. Override BP_LOCATION_SCAN_SETUPS
-(comma-separated, explicitly empty disables scans). All enabled truth
-approaches remain saved regardless of this list. Generic batch forwarding,
-frozen-card steering and worker schema checks are synchronized. Earlier agent
-validation prepared only one dry-run test card under /tmp; the user now reports
-a running batch. Do not refresh its frozen cards or installation.
-Existing frozen cards remain unchanged. Legacy HitScanAll stays an explicit
-scan-only comparison with inactive normal endpoints and its old ordering,
-default0/100/110 plus optional111. Explicitly clear LocationScanSetups for
-legacy modes or FreeLossFit=False. Frozen old cards are not rewritten; regenerate
-or explicitly opt out before a legacy rerun under the new compiled defaults.
+Points remain the 5D null, reconstructed VXD/ITK and exact first TPC row0,
+then an eligible truth reference if outside the blind list. Keep all hits.
+No online ranking, no/light-eBrem selection or NLL-gain calibration was added.
+Truth supplies eligible locations only, not scan loss amounts.
 
-Point definitions are unchanged: 5D null, VXD/ITK, exact first TPC row0,
-optional eligible truth reference last if outside that list. Keep all hits.
-No online ranking/gain cut; truth never supplies scan loss amounts.
-ChargedEcalEnergyMode still controls110: ElectronOnly uses C for electron;
-ElectronPhoton uses C or C+N for the sum.
-The compiled, internal fitter, standard-card and batch default is now ElectronPhoton;
-ElectronOnly remains an explicit override. Deployment evidence:
-`agents_record/2026-11-04-electron-photon-global-default.md`.
-Passive neutral collection stays active for110 even with111 OFF;111 always
-uses separate C/N. Sum flag plus
-actual mask/source/status remain authoritative. Existing ownership guards,
-SigmaLogLoss0.001 and prior-center bound[0,1] are unchanged.
+### Corrected null observation
 
-Validation:15 CTests and61 batch tests pass. Direct comparisons with the
-previous project-installed module on events11/16/17 preserve every one of
-913 non-scan branches per row with110-only scanning (2,739 branch-row values).
-Legacy event5 reproduces all947 branches exactly.111-only event5 preserves
-all four truth-location free-loss families and all913 main branches;8 scan
-candidates have separate mask7,1 fails Minuit and stays invalid (no acceptance
-repair). Verbose evidence and deployment details:
-`agents_record/2026-11-04-truth-endpoints-configurable-scans.md`.
-User confirmed no active jobs and authorized install after validation.
-The package-only project-default update is installed; no temporary runtime
-pin is used by batch workers. No population performance claim follows.
-Unified-default deployment and latest tests:
-`agents_record/2026-11-04-unified-breakpoint-defaults.md`.
-The five shared defaults pass62 batch tests and15 CTests; events11/16/17
-using no overrides for those controls exactly reproduce all947 branches per
-event from the prior explicit110 configuration. No new physics claim.
+For ElectronPhoton110 with a collected hit-supported neutral, the null and
+breakpoint candidates now both use measured C+N and
+sigma=hypot(sigma_C,sigma_N). The null remains a 5D electron-only KF/RTS,
+without a loss coordinate, loss prior or Minuit. The existing sum flag is1
+on a corrected resolved null; actual mask remains3 with beam+ECAL.
+ElectronOnly/no-neutral110,000/100, ordinary no-breakpoint endpoint families
+and all non-null scan fits are unchanged. Passive collection stays active
+with111 OFF.111 still uses separate C/N: its111-only null is invalid; when110
+is also requested it may inherit110, not a same-observation separate-C/N null.
+Different fitted parameter counts do not invalidate same-data comparison;
+gain thresholds still require loss-boundary/location-search calibration.
 
-All249 ROOT files from `higgs_location_scan_20261104` are now deleted by user
-request (0.61 GiB). Its80 completed/169 timed-out job logs/cards remain history,
-not currently available tuples. All249 Higgs REC inputs are preserved.
-Deletion evidence: `agents_record/2026-11-04-old-higgs-scan-flats-removed.md`.
-The old200 scan ROOTs in
-`higgs_silicon_scan_20261103` remain deleted by prior request; logs/cards and
-historical plots remain. New200-event default scans can still hit the runtime
-limit; no chunking/rerun of that failed batch is part of this control change.
-The completed80-file analysis remains at
-TrackingPerformanceStudies/breakpoint_higgs_location_scan_20261104.
-It includes truth-assisted TPC recoil routing and truth/fitted loss histograms;
-the sample is runtime-selected. No-brem/null model selection is NOT applied
-in those offline minimum-site plots. Server root remains TrackingPerformanceStudies.
+All15 CTests and62 batch tests pass. Direct old-install/build reruns on gun
+seed1 events5/11/16/17/38, Higgs seed1 events0/17/22 and ElectronOnly event5
+preserve11,869 non-scan branch-row values across13 track rows, all348 non-null
+scan entries and the event-side tree exactly (NaN-aware). Only5 resolved110
+nulls change, including2 without an eligible truth owner. These are mechanical
+regressions including secondary controls, not population physics validation.
+Only RecBreakpoint was installed through its105 package cmake_install.cmake;
+default-setup initialization passes. Build/installed library SHA256:
+`25fb531ed7774c8c3f9be6607935660d088557ac335ac79fa7d0365f64c872c9`.
+No temporary runtime pin, new option, batch submission or frozen-card rewrite.
+Evidence and deployment details:
+`agents_record/2026-11-05-scan-null-same-ecal-observation.md`.
+The original deferred reminder is preserved and marked superseded.
 
-Complete outgoing AGENTS:
-`agents_record/2026-11-04-agents-before-configurable-truth-scans.md`.
-Earlier contracts:
-- `agents_record/2026-11-04-full-higgs-three-setup-scan.md`
-- `agents_record/2026-11-04-honor-electron-only.md`
-- `agents_record/2026-11-04-tpc-row0-location-scan.md`
-- `agents_record/2026-11-04-location-scan-full-ip-state.md`
-- `agents_record/2026-10-26-effective-boundary-truth-owners.md`
-- `agents_record/2026-10-26-breakpoint-independent-audit-handoff.md`
+### Data, next step and provenance
+
+Old tuples retain the old resolved null (C only, sum flag0). Rerun the
+breakpoint stage, not sim/REC, before using corrected null/candidate NLL gains.
+No existing outputs were relabeled or deleted. The Higgs launcher still
+reads all available `higgs_full_20261030` REC inputs and defaults to
+`higgs_location_scan_truth_20261104`; do not overwrite an existing campaign
+without explicit user direction. Submission helpers and all controls are unchanged.
+
+The latest gallery at
+`TrackingPerformanceStudies/breakpoint_higgs_location_scan_20261104`
+uses a frozen224-completed-file /44,800-input-event snapshot of the pre-fix
+campaign. Its31 refreshed resolution/location/recoil/loss plots plus one
+10ab^-1 muon/electron overlay do NOT apply null model selection. The forced
+scan broadens clean/light-track cores; do not claim a production classifier
+or unbiased full-campaign sample. The overlay is122–132GeV, counts/0.1GeV
+at10ab^-1, with unchanged123.5–128GeV Crystal Ball core fits.
+Server root remains TrackingPerformanceStudies on localhost8000.
+Analysis artifacts remain uncommitted and are not evidence of a fitter change.
+
+Complete outgoing AGENTS, including all superseded campaign/history details:
+`agents_record/2026-11-05-agents-before-scan-null-ecal-fix.md`.
+The global introduction/laws/commands are unchanged. Earlier control and truth
+contracts remain in the dated records referenced by that snapshot. No history
+directory migration/deletion occurred. Next development is a user-directed
+same-observation no/light-eBrem decision study, not an automatic new batch.

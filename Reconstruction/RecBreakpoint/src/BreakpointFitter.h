@@ -31,11 +31,13 @@ struct FitSettings {
 };
 
 // One terminal total-energy observation replaces, never supplements, the two parts.
-inline bool combineResolvedEcalMeasurements(FitSettings& settings) {
+// Only the location-scan null opts in without a breakpoint; ordinary fits do not.
+inline bool combineResolvedEcalMeasurements(FitSettings& settings, bool allowNoBreakpoint=false) {
   if (settings.resolvedEcalSum && settings.chargedEcalEnergyMode != ChargedEnergyMode::ElectronPhoton)
     throw std::invalid_argument("Resolved ECAL sum requires ElectronPhoton");
   if (!settings.resolvedEcalSum ||
-      settings.intervals.size()!=1 || !settings.chargedEcalEnergy || !settings.neutralEcalEnergy)
+      (settings.intervals.size()!=1 && !(allowNoBreakpoint && settings.intervals.empty())) ||
+      !settings.chargedEcalEnergy || !settings.neutralEcalEnergy)
     return false;
   const auto charged=*settings.chargedEcalEnergy, neutral=*settings.neutralEcalEnergy;
   for (const auto& value : {charged,neutral})

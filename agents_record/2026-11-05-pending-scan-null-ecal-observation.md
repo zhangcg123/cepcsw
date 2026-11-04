@@ -1,5 +1,10 @@
 # Deferred: consistent ECAL observation for the scan null
 
+**Resolved later on2026-11-05:** the user confirmed a quiet window; the narrow
+scan-null correction was validated and installed. See
+`2026-11-05-scan-null-same-ecal-observation.md`. The original deferred note below
+is preserved as history, not the current implementation status.
+
 Status: identified by code inspection, NOT implemented. The user reports
 breakpoint batch jobs running and explicitly deferred changes until later
 today or tomorrow. Do not modify fitter/scan code, run cards, frozen jobs or

@@ -163,7 +163,13 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
     std::optional<PairedFitResult> pair;
     TrackLikelihoodResult score;
     if (settings.intervals.empty()) {
-      pair.emplace(fitter.fit(hits,settings,false));
+      auto null=settings;
+      // Compare the same observed C+N, but predict electron energy with a 5D state.
+      const bool sum=combineResolvedEcalMeasurements(null,true);
+      null.resolvedEcalSum=false;
+      null.chargedEcalEnergyMode=ChargedEnergyMode::ElectronOnly;
+      pair.emplace(fitter.fit(hits,null,false));
+      pair->rts.resolvedEcalSum=sum;
       score=evaluateFitLikelihood(pair->rts);
     } else {
       controls.beamSpot=settings.beamSpot;
@@ -231,6 +237,7 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
     accepted.intervalMeanLogLoss.clear();
     accepted.beamSpot.reset(); accepted.chargedEcalEnergy.reset();
     accepted.neutralEcalEnergy.reset(); accepted.delayedNeutral=false;
+    accepted.resolvedEcalSum=false;
     accepted.captureGaussianModel=true;
     accepted.chargedEcalEnergyMode=site<0 ? ChargedEnergyMode::ElectronOnly : observations.chargedEcalEnergyMode;
     LocationScanResult previous;
@@ -246,9 +253,10 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
         proposed.beamSpot=observations.beamSpot; available=true;
       } else if (configuration==110 && observations.chargedEcalEnergy) {
         proposed.chargedEcalEnergy=observations.chargedEcalEnergy; available=true;
-        if (useResolvedEcalSum(observations.chargedEcalEnergyMode,site>=0,
-                               observations.neutralEcalEnergy.has_value())) {
+        if (observations.chargedEcalEnergyMode==ChargedEnergyMode::ElectronPhoton &&
+            observations.neutralEcalEnergy) {
           proposed.resolvedEcalSum=true;
+          proposed.chargedEcalEnergyMode=ChargedEnergyMode::ElectronPhoton;
           proposed.neutralEcalEnergy=observations.neutralEcalEnergy;
         }
       } else if (configuration==111 && site>=0 && observations.neutralEcalEnergy) {

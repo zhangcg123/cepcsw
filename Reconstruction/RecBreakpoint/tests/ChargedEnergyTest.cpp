@@ -14,7 +14,7 @@ int main() {
   if (FitSettings{}.chargedEcalEnergyMode!=ChargedEnergyMode::ElectronPhoton ||
       FreeLossSettings{}.chargedEcalEnergyMode!=ChargedEnergyMode::ElectronPhoton)
     throw std::runtime_error("Charged energy must default to ElectronPhoton in both fitters");
-  for (bool sumStage : {false,true})
+  for (bool allowNoBreakpoint : {false,true}) for (bool sumStage : {false,true})
     for (bool breakpoint : {false,true}) for (bool charged : {false,true}) for (bool neutral : {false,true}) {
       FitSettings original;
       original.resolvedEcalSum=sumStage;
@@ -24,8 +24,8 @@ int main() {
       if (charged) original.chargedEcalEnergy=std::make_pair(10.,.2);
       if (neutral) original.neutralEcalEnergy=std::make_pair(3.,.1);
       auto settings=original;
-      const bool expected=sumStage && breakpoint && charged && neutral;
-      if (combineResolvedEcalMeasurements(settings)!=expected)
+      const bool expected=sumStage && (breakpoint || allowNoBreakpoint) && charged && neutral;
+      if (combineResolvedEcalMeasurements(settings,allowNoBreakpoint)!=expected)
         throw std::runtime_error("Wrong resolved ECAL routing");
       if (expected) {
         close(settings.chargedEcalEnergy->first,13.);
@@ -50,15 +50,31 @@ int main() {
       close(settings.sigmaLogLoss,original.sigmaLogLoss);
       if (settings.intervals!=original.intervals) throw std::runtime_error("Resolved mode changed location");
     }
+  // Opting into a scan null must never invent a loss coordinate or alter its prior.
+  FitSettings null;
+  null.resolvedEcalSum=true;
+  null.chargedEcalEnergy=std::make_pair(10.,.2);
+  null.neutralEcalEnergy=std::make_pair(3.,.1);
+  if (!combineResolvedEcalMeasurements(null,true) || !null.intervals.empty() ||
+      !null.intervalMeanLogLoss.empty() || null.meanLogLoss!=0 || null.sigmaLogLoss!=.001)
+    throw std::runtime_error("Resolved scan null introduced a loss parameter");
+  close(null.chargedEcalEnergy->first,13.);
+  close(null.chargedEcalEnergy->second,std::hypot(.2,.1));
+  for (bool hasBreakpoint : {false,true}) for (int field=0;field<4;++field)
   for (double bad : {0.,-1.,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
     FitSettings invalid;
     invalid.resolvedEcalSum=true;
     invalid.chargedEcalEnergyMode=ChargedEnergyMode::ElectronPhoton;
-    invalid.intervals={3}; invalid.chargedEcalEnergy=std::make_pair(10.,.2);
-    invalid.neutralEcalEnergy=std::make_pair(3.,bad);
+    if (hasBreakpoint) invalid.intervals={3};
+    invalid.chargedEcalEnergy=std::make_pair(10.,.2);
+    invalid.neutralEcalEnergy=std::make_pair(3.,.1);
+    if (field==0) invalid.chargedEcalEnergy->first=bad;
+    if (field==1) invalid.chargedEcalEnergy->second=bad;
+    if (field==2) invalid.neutralEcalEnergy->first=bad;
+    if (field==3) invalid.neutralEcalEnergy->second=bad;
     bool rejected=false;
-    try { combineResolvedEcalMeasurements(invalid); } catch (const std::invalid_argument&) { rejected=true; }
-    if (!rejected) throw std::runtime_error("Invalid sum uncertainty accepted");
+    try { combineResolvedEcalMeasurements(invalid,true); } catch (const std::invalid_argument&) { rejected=true; }
+    if (!rejected) throw std::runtime_error("Invalid resolved ECAL measurement accepted");
   }
   for (auto requested : {ChargedEnergyMode::ElectronOnly, ChargedEnergyMode::ElectronPhoton})
     for (bool breakpoint : {false, true}) for (bool neutral : {false, true}) {

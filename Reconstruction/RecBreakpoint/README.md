@@ -501,6 +501,45 @@ without rerunning the breakpoint stage; sim/rec inputs remain valid.
 Choose locations later in analysis. Do not compare raw NLLs across different
 measurement sets or treat a missing/inherited constraint as an applied one.
 
+#### Same-observation no-breakpoint reference
+
+For `LocationScanSetups` and legacy `HitScanAll`, the 110 null uses the same
+measured ECAL input as its non-null 110 candidates:
+
+| Configured charged mode | Collected neutral | Null ECAL observation | Candidate ECAL observation |
+|---|---|---|---|
+| ElectronOnly | either | C, sigma_C | C, sigma_C |
+| ElectronPhoton | absent | C, sigma_C | C, sigma_C |
+| ElectronPhoton | present | C+N, hypot(sigma_C,sigma_N) | C+N, hypot(sigma_C,sigma_N) |
+
+C and N are fixed raw reconstructed observations, collected independently of
+truth or the scanned site. The null is still a **5D electron-only** KF/RTS fit:
+it predicts electron energy, introduces no loss coordinate or Gaussian loss
+prior, and does not run Minuit. A breakpoint candidate predicts the configured
+electron or electron+photon energy and optimizes the loss-prior center as before.
+This changes neither ordinary no-breakpoint endpoint families nor non-null
+location fits, including passive truth-location scan references. Legacy ranked
+`HitScan` retains its separate charged-only/effective-mode behavior.
+
+The sum is consumed once before the null fit; it is not also added as a
+separate neutral measurement. Its actual scan mask remains 3 with beam+ECAL,
+and `location_scan_resolved_ecal_sum_applied=1` identifies the summed observation
+even for `kind=0`. The null's prior center/posterior loss/variance stay NaN.
+Missing/failed measurements retain the existing per-point requested-setup
+fallback rules. A 111-only null remains invalid rather than inventing a 110 fit;
+with 110 also requested it may inherit 110, but is not a same-observation null
+for the separate C/N 111 hypothesis.
+
+No new steering is required. Previously generated tuples are unchanged: in the
+old runtime, a resolved 110 null used only C and its sum flag was 0 while the
+candidates used C+N. Do not treat that old NLL difference as a same-observation
+likelihood ratio. Rerun only breakpoint tuples to obtain corrected null scores;
+REC/sim and non-null fit results do not need regeneration for this correction.
+Comparing the same observation does not require equal fitted-parameter counts,
+but an NLL-gain threshold must still be calibrated for the loss boundary and
+location search; it is not automatically a chi-square significance or eBrem
+probability. No online no/light-eBrem decision is added here.
+
 ### Legacy reconstructed silicon selector (opt-in comparison)
 
 ```python
