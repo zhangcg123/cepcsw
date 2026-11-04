@@ -317,6 +317,15 @@ Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No branch/remote,
 PFA/shared-KF, loss-map, optimizer bound/acceptance or truth-owner change is
 authorized. The independent acceptance audit remains open.
 
+**Deferred reminder (2026-11-05): user reports active breakpoint batch jobs.**
+Do not change source/cards or install an update while they run. Revisit the
+scan-null ECAL mismatch later today/tomorrow: for collected neutrals,110
+candidates use C+N but the5D null uses C. A fair likelihood comparison needs
+the same measured energy and uncertainty in both, without adding a null loss
+coordinate. No fix implemented; reconfirm a quiet window before installation.
+Exact evidence, scope and reminder limitations:
+`agents_record/2026-11-05-pending-scan-null-ecal-observation.md`.
+
 The user requires every enabled free-loss approach to retain its normal
 truth-location result, independently of which approaches scan locations.
 Use `IntervalSelectionMode="Truth"` and the existing FreeLossFit/beam/charged/
@@ -345,8 +354,9 @@ default110 only, with fresh default output
 `higgs_location_scan_truth_20261104`. Override BP_LOCATION_SCAN_SETUPS
 (comma-separated, explicitly empty disables scans). All enabled truth
 approaches remain saved regardless of this list. Generic batch forwarding,
-frozen-card steering and worker schema checks are synchronized. No real
-campaign prepared/submitted; only one dry-run test card under /tmp.
+frozen-card steering and worker schema checks are synchronized. Earlier agent
+validation prepared only one dry-run test card under /tmp; the user now reports
+a running batch. Do not refresh its frozen cards or installation.
 Existing frozen cards remain unchanged. Legacy HitScanAll stays an explicit
 scan-only comparison with inactive normal endpoints and its old ordering,
 default0/100/110 plus optional111. Explicitly clear LocationScanSetups for
