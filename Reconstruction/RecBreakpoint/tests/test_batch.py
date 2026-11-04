@@ -19,6 +19,52 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_unified_free_loss_defaults_in_cpp_card_and_both_wrappers(self):
+        import ast
+        properties = {'FreeLossFit': True, 'BeamSpotConstraint': True,
+                      'ChargedEcalMeasurement': True, 'NeutralEcalMeasurement': False,
+                      'LocationScanSetups': [110]}
+        expected = {'BP_FREE_LOSS_FIT':'1', 'BP_BEAM_SPOT_CONSTRAINT':'1',
+                    'BP_CHARGED_ECAL_MEASUREMENT':'1', 'BP_NEUTRAL_ECAL_MEASUREMENT':'0',
+                    'BP_LOCATION_SCAN_SETUPS':'110'}
+        text=(REPO/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        nodes=[]
+        for node in ast.parse(text).body:
+            if isinstance(node,ast.Assign) and any(
+                    isinstance(t,ast.Attribute) and isinstance(t.value,ast.Name)
+                    and t.value.id=='fit' and t.attr in properties or
+                    isinstance(t,ast.Name) and t.id=='location_scan_setups' for t in node.targets):
+                nodes.append(node)
+            elif isinstance(node,ast.If) and ast.unparse(node.test)=="'LocationScanSetups' in fit.getDefaultProperties()":
+                nodes.append(node)
+        fit=types.SimpleNamespace(getDefaultProperties=lambda: {'LocationScanSetups':[110]})
+        with patch.dict(os.environ,{},clear=True):
+            exec(compile(ast.Module(body=nodes,type_ignores=[]),'<default-steering>','exec'), {'fit':fit,'os':os})
+        for key,value in properties.items(): self.assertEqual(getattr(fit,key),value)
+        header=(REPO/'Reconstruction/RecBreakpoint/src/RecBreakpoint.h').read_text()
+        for key,value in properties.items():
+            literal=r'\{110\}' if isinstance(value,list) else 'true' if value else 'false'
+            self.assertRegex(header,r'"'+key+r'",\s*'+literal+r'\}')
+        self.prepare(OUTPUT_TUPLEPATH='direct_defaults')
+        direct=self.manifest('direct_defaults')
+        self.assertEqual({k:direct['controls'][k] for k in expected},expected)
+        (self.repo/'inputs/rec-higgs-1.root').write_bytes(b'planning fixture')
+        for script,sample in [('subbreakpointjobs.sh','barrel-12'),('subbreakpointhiggsscanjobs.sh','higgs-1')]:
+            output='defaults_'+script
+            env=dict(self.env,STAGES='breakpoint',SAMPLE_REGION='barrel',OUTPUT_TUPLEPATH=output)
+            result=batch.subprocess.run(['bash',str(self.repo/script)],env=env,capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+            job=json.loads((self.repo/output/'runcards'/sample/'job.json').read_text())
+            self.assertEqual({k:job['controls'][k] for k in expected},expected)
+            off={key:'0' for key in expected}
+            off['BP_LOCATION_SCAN_SETUPS']=''
+            off_output=output+'_off'
+            result=batch.subprocess.run(['bash',str(self.repo/script)],
+                env=dict(env,OUTPUT_TUPLEPATH=off_output,**off),capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+            disabled=json.loads((self.repo/off_output/'runcards'/sample/'job.json').read_text())
+            self.assertEqual({k:disabled['controls'][k] for k in off},off)
+
     def test_truth_endpoints_and_scan_setups_are_independently_frozen(self):
         self.prepare(BP_INTERVAL_SELECTION_MODE='Truth', BP_FREE_LOSS_FIT='1',
                      BP_BEAM_SPOT_CONSTRAINT='1', BP_CHARGED_ECAL_MEASUREMENT='1',
@@ -94,7 +140,7 @@ class BatchTest(unittest.TestCase):
 
     def test_silicon_hit_scan_controls_are_frozen(self):
         self.prepare(STAGES='breakpoint', BP_INTERVAL_SELECTION_MODE='HitScan',
-                     BP_HIT_SCAN_MIN_NLL_GAIN='4.5', BP_TRUTH_OVERRIDE='0')
+                     BP_HIT_SCAN_MIN_NLL_GAIN='4.5', BP_TRUTH_OVERRIDE='0', BP_LOCATION_SCAN_SETUPS='')
         job = self.manifest()
         self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'], 'HitScan')
         self.assertEqual(job['controls']['BP_HIT_SCAN_MIN_NLL_GAIN'], '4.5')
@@ -166,7 +212,7 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(job['nevt'],200)
             self.assertEqual(job['stages'],['breakpoint'])
             self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'Truth')
-            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'],'0,100,110')
+            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'],'110')
             self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'0')
             self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'0')
             self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'],'1')
@@ -392,7 +438,7 @@ class BatchTest(unittest.TestCase):
     def test_controls_frozen_and_originals_unchanged(self):
         source = self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
         before = source.read_bytes()
-        self.prepare(BP_TRUTH_OVERRIDE='true', BP_INTERVAL_SELECTION_MODE='Manual', BP_INTERVALS='5', BP_BACKWARD_SEED_SCALE='100')
+        self.prepare(BP_TRUTH_OVERRIDE='true', BP_INTERVAL_SELECTION_MODE='Manual', BP_INTERVALS='5', BP_BACKWARD_SEED_SCALE='100', BP_LOCATION_SCAN_SETUPS='')
         job = self.manifest()
         self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'1')
         self.assertEqual(job['controls']['BP_INTERVALS'],'5')
@@ -416,7 +462,7 @@ class BatchTest(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             exec(assignments, {'fit':fit, 'os':os})
         self.assertTrue(fit.FreeLossFit)
-        self.assertFalse(fit.ChargedEcalMeasurement)
+        self.assertTrue(fit.ChargedEcalMeasurement)
         self.assertEqual(fit.FreeLossMaxLogLoss, 1)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 180)
         self.assertEqual(fit.FreeLossTolerance, .001)
@@ -431,7 +477,7 @@ class BatchTest(unittest.TestCase):
         self.assertEqual(fit.FreeLossMaxLogLoss, .5)
         self.assertEqual(fit.FreeLossMaxCallsPerStart, 100)
         self.assertEqual(fit.FreeLossTolerance, .002)
-        self.prepare(OUTPUT_TUPLEPATH='free_disabled', BP_FREE_LOSS_FIT='false')
+        self.prepare(OUTPUT_TUPLEPATH='free_disabled', BP_FREE_LOSS_FIT='false', BP_LOCATION_SCAN_SETUPS='')
         disabled = self.manifest('free_disabled')
         self.assertEqual(disabled['controls']['BP_FREE_LOSS_FIT'], '0')
         with patch.dict(os.environ, disabled['controls'], clear=True):
@@ -454,7 +500,7 @@ class BatchTest(unittest.TestCase):
         self.assertTrue(fit.NeutralEcalMeasurement)
         self.assertTrue(fit.ChargedEcalMeasurement)
         self.prepare(OUTPUT_TUPLEPATH='ordinary_ecal_enabled', BP_FREE_LOSS_FIT='false',
-                     BP_CHARGED_ECAL_MEASUREMENT='true', BP_NEUTRAL_ECAL_MEASUREMENT='true')
+                     BP_CHARGED_ECAL_MEASUREMENT='true', BP_NEUTRAL_ECAL_MEASUREMENT='true', BP_LOCATION_SCAN_SETUPS='')
         ordinary = self.manifest('ordinary_ecal_enabled')
         with patch.dict(os.environ, ordinary['controls'], clear=True):
             exec(assignments, {'fit':fit, 'os':os})
@@ -483,7 +529,7 @@ class BatchTest(unittest.TestCase):
             self.assertTrue(fit.FreeLossFit)
             self.assertEqual(fit.SigmaLogLoss,float(sigma))
 
-    def test_shared_beam_measurement_default_off_and_freeze(self):
+    def test_shared_beam_measurement_default_on_and_freeze(self):
         self.prepare(OUTPUT_TUPLEPATH='beam_default')
         job = self.manifest('beam_default')
         card = Path(job['cards']['breakpoint']).read_text()
@@ -493,12 +539,12 @@ class BatchTest(unittest.TestCase):
         fit = types.SimpleNamespace()
         with patch.dict(os.environ, job['controls'], clear=True):
             exec(assignments, {'fit': fit, 'os': os})
-        self.assertFalse(fit.BeamSpotConstraint)
+        self.assertTrue(fit.BeamSpotConstraint)
         self.assertEqual((fit.BeamSpotX, fit.BeamSpotY), (0, 0))
         self.assertEqual((fit.BeamSpotSigmaX, fit.BeamSpotSigmaY), (.0145, 3.6e-5))
         self.assertNotIn('OutputTracksBeamGuidedFreeLossRTS', card)
         self.assertNotIn('OutputTracksBeamGuidedFreeLossBackwardFilter', card)
-        self.prepare(OUTPUT_TUPLEPATH='beam_on', BP_BEAM_SPOT_CONSTRAINT='true', BP_FREE_LOSS_FIT='false')
+        self.prepare(OUTPUT_TUPLEPATH='beam_on', BP_BEAM_SPOT_CONSTRAINT='true', BP_FREE_LOSS_FIT='false', BP_LOCATION_SCAN_SETUPS='')
         on = self.manifest('beam_on')
         self.assertEqual(on['controls']['BP_BEAM_SPOT_CONSTRAINT'], '1')
         with patch.dict(os.environ, on['controls'], clear=True):
@@ -584,7 +630,7 @@ class BatchTest(unittest.TestCase):
                        'fit.NeutralEcalMeasurement =')
         for label, override, expected in [('default', {}, '110'),
                                          ('enable_111', dict(zip(controls, '111')), '111'),
-                                         ('override', dict(zip(controls, '101')), '101')]:
+                                         ('override', dict(zip(controls, '101'), BP_LOCATION_SCAN_SETUPS=''), '101')]:
             env = dict(self.env, OUTPUT_TUPLEPATH='constraints_' + label, **override)
             result = batch.subprocess.run(['bash', str(self.repo/'subbreakpointjobs.sh')],
                                           env=env, capture_output=True, text=True)

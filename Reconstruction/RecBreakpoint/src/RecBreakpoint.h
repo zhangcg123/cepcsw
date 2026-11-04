@@ -90,7 +90,7 @@ private:
 
   Gaudi::Property<std::vector<int>> m_intervals{this, "BreakpointIntervals", {}};
   Gaudi::Property<std::string> m_intervalSelection{this, "IntervalSelectionMode", "Truth"};
-  Gaudi::Property<std::vector<int>> m_locationScanSetups{this, "LocationScanSetups", {}};
+  Gaudi::Property<std::vector<int>> m_locationScanSetups{this, "LocationScanSetups", {110}};
   Gaudi::Property<double> m_hitScanMinNllGain{this, "HitScanMinNllGain", 0.0};
   Gaudi::Property<double> m_meanLoss{this, "MeanLogLoss", 0.0};
   Gaudi::Property<double> m_sigmaLoss{this, "SigmaLogLoss", 0.001};
@@ -101,8 +101,8 @@ private:
   Gaudi::Property<bool> m_truthBackwardFilter{this, "TruthOverrideBackwardFilter", false};
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
-  Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", false};
-  Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", false};
+  Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", true};
+  Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", true};
   Gaudi::Property<std::string> m_ecalConstraintInput{this, "EcalConstraintInput", "PreReclustering"};
   Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronOnly"};
   Gaudi::Property<bool> m_neutralEcalMeasurement{this, "NeutralEcalMeasurement", false};
@@ -114,7 +114,7 @@ private:
   Gaudi::Property<double> m_neutralPhiWindow{this, "NeutralLossPhiWindowMrad", 200.0};
   Gaudi::Property<double> m_neutralStochasticError{this, "NeutralLossStochasticError", 0.011};
   Gaudi::Property<double> m_neutralConstantError{this, "NeutralLossConstantError", 0.004};
-  Gaudi::Property<bool> m_beamSpotConstraint{this, "BeamSpotConstraint", false};
+  Gaudi::Property<bool> m_beamSpotConstraint{this, "BeamSpotConstraint", true};
   Gaudi::Property<double> m_beamSpotX{this, "BeamSpotX", 0.0};
   Gaudi::Property<double> m_beamSpotY{this, "BeamSpotY", 0.0};
   Gaudi::Property<double> m_beamSpotSigmaX{this, "BeamSpotSigmaX", 0.0145};

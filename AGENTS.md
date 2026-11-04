@@ -320,8 +320,11 @@ authorized. The independent acceptance audit remains open.
 The user requires every enabled free-loss approach to retain its normal
 truth-location result, independently of which approaches scan locations.
 Use `IntervalSelectionMode="Truth"` and the existing FreeLossFit/beam/charged/
-neutral switches. New `LocationScanSetups=[]` (compiled/standard-card default)
-adds no scans; [110] adds only110, [0,100,110] adds those three. Allowed entries
+neutral switches. User-mandated defaults are identical in compiled code,
+standard card and batch helpers: FreeLossFit=True, BeamSpotConstraint=True,
+ChargedEcalMeasurement=True, NeutralEcalMeasurement=False,
+LocationScanSetups=[110]. Thus retain truth-location000/100/110 and scan only110.
+Explicit [] adds no scans; [0,100,110] adds those three. Allowed entries
 are unique0/100/110/111, canonically sorted. Nonempty lists require Truth and
 FreeLossFit;100 needs beam,110 beam+charged,111 all three enabled. TruthOverride
 is a separate loss-prior oracle, not required for truth-location free fits.
@@ -338,7 +341,7 @@ invalid/NaN entry. In a111-only scan its inapplicable null is therefore invalid,
 not a fabricated110 result.
 
 The maintained Higgs launcher now prepares Truth plus configurable scans,
-default0/100/110, with fresh default output
+default110 only, with fresh default output
 `higgs_location_scan_truth_20261104`. Override BP_LOCATION_SCAN_SETUPS
 (comma-separated, explicitly empty disables scans). All enabled truth
 approaches remain saved regardless of this list. Generic batch forwarding,
@@ -346,7 +349,9 @@ frozen-card steering and worker schema checks are synchronized. No real
 campaign prepared/submitted; only one dry-run test card under /tmp.
 Existing frozen cards remain unchanged. Legacy HitScanAll stays an explicit
 scan-only comparison with inactive normal endpoints and its old ordering,
-default0/100/110 plus optional111.
+default0/100/110 plus optional111. Explicitly clear LocationScanSetups for
+legacy modes or FreeLossFit=False. Frozen old cards are not rewritten; regenerate
+or explicitly opt out before a legacy rerun under the new compiled defaults.
 
 Point definitions are unchanged: 5D null, VXD/ITK, exact first TPC row0,
 optional eligible truth reference last if outside that list. Keep all hits.
@@ -368,6 +373,11 @@ repair). Verbose evidence and deployment details:
 User confirmed no active jobs and authorized install after validation.
 The package-only project-default update is installed; no temporary runtime
 pin is used by batch workers. No population performance claim follows.
+Unified-default deployment and latest tests:
+`agents_record/2026-11-04-unified-breakpoint-defaults.md`.
+The five shared defaults pass62 batch tests and15 CTests; events11/16/17
+using no overrides for those controls exactly reproduce all947 branches per
+event from the prior explicit110 configuration. No new physics claim.
 
 Earlier campaign `higgs_location_scan_20261104` has249 files but only80
 verified complete jobs (16,000 events);169 were killed at the10-hour limit.

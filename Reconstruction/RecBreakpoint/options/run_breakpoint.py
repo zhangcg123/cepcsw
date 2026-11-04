@@ -109,13 +109,14 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")
 # Keep every enabled approach's normal truth-location endpoint. Optionally scan
-# only these free-loss setups AFTER publishing those endpoints; [] disables scans.
+# only these free-loss setups AFTER publishing those endpoints; default [110].
+# [] disables scans; clear the list when FreeLossFit is OFF or mode is not Truth.
 # 0=tracker,100=+beam,110=+charged,111=+separate neutral. Required switches must
 # already be ON. No online ranking; full scan values go to location_scan_*.
 # Examples: [110] scans only110; [0,100,110] scans all three; scan loss stays fitted.
 # TruthOverride controls separate oracle endpoints, independently of this list.
 # HitScanAll remains the older scan-only workflow; do not combine these controls.
-location_scan_setups = [int(value) for value in os.environ.get("BP_LOCATION_SCAN_SETUPS", "").split(",") if value.strip()]
+location_scan_setups = [int(value) for value in os.environ.get("BP_LOCATION_SCAN_SETUPS", "110").split(",") if value.strip()]
 if "LocationScanSetups" in fit.getDefaultProperties():
     fit.LocationScanSetups = location_scan_setups
 elif location_scan_setups:
@@ -218,7 +219,7 @@ for retired, replacement in (("BP_FREE_LOSS_CHARGED_ECAL_MEASUREMENT", "BP_CHARG
 # constrains energy (not position) before RTS smoothing, also without a breakpoint.
 # Uses native KalTest detector transport F/Q and Filter(), as tracker hits do.
 # CyberPFA may have used the input track momentum when constructing this shower.
-fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "0") == "1"
+fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "1") == "1"
 # Sub-options of ChargedEcalMeasurement, shared by ordinary and free-loss RTS.
 # Shared charged/neutral source: PreReclustering uses CyberPFOPreReclustering
 # and its EcalClusterPreReclustering links; FinalPFO uses CyberPFOPID/EcalCluster.
@@ -275,7 +276,7 @@ fit.FreeLossTolerance = float(os.environ.get("BP_FREE_LOSS_TOLERANCE", "0.001"))
 for retired in ("BP_FREE_LOSS_BEAM_SPOT_OBJECTIVE", "BP_BEAM_FREE_LOSS_BACKWARD_FILTER"):
     if retired in os.environ:
         raise ValueError(retired + " was removed; use BP_BEAM_SPOT_CONSTRAINT")
-fit.BeamSpotConstraint = os.environ.get("BP_BEAM_SPOT_CONSTRAINT", "0") == "1"
+fit.BeamSpotConstraint = os.environ.get("BP_BEAM_SPOT_CONSTRAINT", "1") == "1"
 fit.BeamSpotX = float(os.environ.get("BP_BEAM_SPOT_X", "0.0"))  # mm
 fit.BeamSpotY = float(os.environ.get("BP_BEAM_SPOT_Y", "0.0"))  # mm
 fit.BeamSpotSigmaX = float(os.environ.get("BP_BEAM_SPOT_SIGMA_X", "0.0145"))  # mm

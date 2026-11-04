@@ -2,8 +2,10 @@
 
 `FreeLossFit=True` enables the promoted normalized-likelihood prototype inside
 RecBreakpoint. `False` retains the established Gaussian-prior fitting exactly.
-The compiled default is false, while the maintained standalone/batch card defaults
-to true. `BP_FREE_LOSS_FIT=0` explicitly disables it; previously prepared cards
+Compiled code, the standard card and batch helpers default to free-loss/beam/
+charged ON, neutral OFF and LocationScanSetups=[110]. `BP_FREE_LOSS_FIT=0`
+together with `BP_LOCATION_SCAN_SETUPS=''` explicitly disables free fitting and
+its dependent scans; previously prepared cards
 retain their frozen settings. Ordinary results are ALWAYS retained; the optional method
 occupies a separate pair of collections and flat branches.
 
@@ -26,7 +28,10 @@ fit.SigmaLogLoss = 0.001  # SAME prior width for ordinary, free and truth fits
 fit.FreeLossMaxLogLoss = 1.0
 fit.FreeLossMaxCallsPerStart = 180
 fit.FreeLossTolerance = 0.001
-fit.BeamSpotConstraint = False  # separate beam-only ordinary/free RTS families
+fit.BeamSpotConstraint = True  # separate beam-only ordinary/free RTS families
+fit.ChargedEcalMeasurement = True
+fit.NeutralEcalMeasurement = False
+fit.LocationScanSetups = [110]  # normal truth endpoints first, then only110 scans
 fit.BeamSpotX = fit.BeamSpotY = 0.0  # mm
 fit.BeamSpotSigmaX = 0.0145  # mm
 fit.BeamSpotSigmaY = 3.6e-5  # mm
@@ -35,7 +40,7 @@ fit.BackwardSeedScale = 100.0
 
 The dedicated card supports BP_FREE_LOSS_FIT, BP_FREE_LOSS_MAX_LOG_LOSS,
 BP_FREE_LOSS_MAX_CALLS and BP_FREE_LOSS_TOLERANCE. The
-shared beam measurement is controlled by BP_BEAM_SPOT_CONSTRAINT (default 0);
+shared beam measurement is controlled by BP_BEAM_SPOT_CONSTRAINT (default 1);
 BP_BEAM_SPOT_X/Y and BP_BEAM_SPOT_SIGMA_X/Y control its position and widths.
 It also works with FreeLossFit disabled. The beam-guided output family and
 its old environment controls are removed. This observation updates the seed

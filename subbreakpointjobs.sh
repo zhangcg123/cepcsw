@@ -19,8 +19,9 @@ export DRY_RUN=${DRY_RUN:-0}
 # Must be finite and positive. Frozen into generated cards at preparation.
 export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
 # Optional additional location scans; truth-location approaches remain enabled.
-# Example: 110 scans only110; empty runs no scans. Use IntervalSelectionMode=Truth.
-export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS:-}
+# Default110 scans only110; explicitly empty runs no scans. Use Truth mode.
+export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS-110}
+export BP_FREE_LOSS_FIT=${BP_FREE_LOSS_FIT:-1}
 # Default beam/charged/neutral = 110; enable the separate-neutral stage explicitly.
 export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-1}
 export BP_CHARGED_ECAL_MEASUREMENT=${BP_CHARGED_ECAL_MEASUREMENT:-1}

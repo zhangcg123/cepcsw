@@ -367,8 +367,9 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 Use `IntervalSelectionMode="Truth"` for the normal endpoint families. Existing
 `FreeLossFit`, `BeamSpotConstraint`, `ChargedEcalMeasurement` and
 `NeutralEcalMeasurement` switches continue to control their truth-location
-fits, independently of the new `LocationScanSetups` list (compiled/card default
-`[]`, no additional scans). For example:
+fits, independently of the `LocationScanSetups` list. Compiled code, standard
+card and both batch helpers now share FreeLossFit/beam/charged ON, neutral OFF,
+and `LocationScanSetups=[110]`. The common default steering is:
 
 ```python
 fit.IntervalSelectionMode = "Truth"
@@ -399,6 +400,11 @@ Missing/failed observations can copy an earlier successful **requested** setup
 at the same point. If none exists, that entry stays invalid/NaN: an unrequested
 fallback setup is not secretly fitted. Actual source/mask/status remain saved.
 
+To use Manual, legacy HitScan/HitScanAll, or FreeLossFit=False, explicitly set
+LocationScanSetups=[] (BP_LOCATION_SCAN_SETUPS=''). Disabling a prerequisite
+constraint also requires a compatible scan list. Old frozen cards are not
+rewritten; regenerate them or explicitly clear this new default for legacy modes.
+
 Null, VXD/ITK, exact TPC row0 and passive eligible truth references retain the
 same point definitions. The requested setup entries and full IP states are
 saved in `location_scan_*`; no online best-location choice is made. Existing
@@ -409,13 +415,13 @@ diagnostic fits do not replace the separately preserved normal endpoint families
 
 Batch environment: `BP_LOCATION_SCAN_SETUPS=110`, `0,100,110`, or empty; it is
 frozen into cards with all other steering. Old frozen cards are not rewritten.
-The dedicated Higgs launcher now selects Truth plus this list (default0/100/110)
+The dedicated Higgs launcher selects Truth plus this list (default110 only)
 and writes future cards to a fresh output path. Explicitly empty
 BP_LOCATION_SCAN_SETUPS disables all scans while preserving normal truth fits.
 
 ### Legacy scan-only data for offline location studies
 
-`IntervalSelectionMode="HitScanAll"` records fits; it does not rank locations,
+`IntervalSelectionMode="HitScanAll"` with `LocationScanSetups=[]` records fits; it does not rank locations,
 apply HitScanMinNllGain or select an endpoint. It requires FreeLossFit and the
 beam/charged input switches ON, TruthOverride OFF. NeutralEcalMeasurement
 controls only whether111 entries are included; its default is OFF. Passive
@@ -550,6 +556,7 @@ No supported silicon hit is separately tagged, not evidence of no eBrem.
 The selected index (or empty null list) is then used by the existing ordinary,
 free-loss, truth-prior, diffuse and cumulative beam/ECAL output machinery. The
 scanner inherits the existing BeamSpotConstraint/ChargedEcalMeasurement switches;
+explicitly clear LocationScanSetups for this legacy mode, then
 turn both OFF to reproduce the earlier **000** scan. Missing/ambiguous charged
 input leaves only the available beam observation; the actual scored mask is
 persisted. This is a single-breakpoint
@@ -906,8 +913,8 @@ Optional normalized-likelihood free-loss fitting is now implemented in this
 package, not in an external prototype. Set `FreeLossFit=True` to add a separate
 FreeLoss RTS result with the shared Gaussian fitter at the optimized prior center. The ordinary
 RTS result and its tuple fields are never replaced. The
-compiled compatibility default is false; the maintained standalone/batch card
-defaults to true. Set `BP_FREE_LOSS_FIT=0` to disable it for newly prepared jobs.
+compiled, standalone and batch default is true. Set `BP_FREE_LOSS_FIT=0` and
+`BP_LOCATION_SCAN_SETUPS=''` to disable it and its dependent scans for newly prepared jobs.
 Previously prepared cards are not changed. This is an implementation promotion, not a
 claim of physics validation. See [Free-loss fitting](docs/free-loss-fit.md)
 for the model, code organization, output contract and limitations.
@@ -921,7 +928,7 @@ quadratic. The beam factor is counted once in either path. These are equivalent
 factorizations for the same fixed affine Gaussian model. `S_all` is the joint
 measurement covariance, not the smoothed state covariance. No reference-trajectory
 iteration is introduced. See [the exact objective](docs/smoothed-objective.md).
-`ChargedEcalMeasurement` (compiled/card default **false**;
+`ChargedEcalMeasurement` (compiled/card default **true**;
 `BP_CHARGED_ECAL_MEASUREMENT=1`) is an experimental measurement for both
 ordinary and free-loss fits. With exactly one charged PFO from the selected input
 linked to the input track, it selects its hit-supported ECAL shower(s).
@@ -1154,7 +1161,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, legacy HitScan selector, scan-only HitScanAll, or reserved/unimplemented Auto |
-| LocationScanSetups | [] | Additional scans alongside retained Truth endpoints: unique0/100/110/111, enabled approaches only; requires Truth and FreeLossFit; BP_LOCATION_SCAN_SETUPS |
+| LocationScanSetups | [110] | Additional scans alongside retained Truth endpoints: unique0/100/110/111, enabled approaches only; requires Truth and FreeLossFit; explicit [] disables; BP_LOCATION_SCAN_SETUPS |
 | HitScanMinNllGain | 0 | Legacy HitScan selector only; ignored by HitScanAll. Required null-minus-best -2logL improvement; strict >; BP_HIT_SCAN_MIN_NLL_GAIN |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
@@ -1163,15 +1170,15 @@ the native source/predicted/filtered states, `F` and `Q`.
 | DiffuseAugmentedRTS | true | Independent one-interval, flat-prior 6D KF/RTS fit; ignores SigmaLogLoss |
 | NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
-| FreeLossFit | false | Card default true; normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
-| ChargedEcalMeasurement | false | Two cumulative charged-stage RTS families; ChargedEcalEnergyMode chooses electron-only or total-energy treatment |
+| FreeLossFit | true | Normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
+| ChargedEcalMeasurement | true | Two cumulative charged-stage RTS families; ChargedEcalEnergyMode chooses electron-only or total-energy treatment |
 | EcalConstraintInput | PreReclustering | Common charged/neutral PFO source: PreReclustering or FinalPFO; BP_ECAL_CONSTRAINT_INPUT |
 | ChargedEcalInputClusters | empty | Use selected PFO-linked ECAL collection; optional alternate collection uses hit matching; BP_CHARGED_ECAL_INPUT_CLUSTERS |
 | ChargedEcalEnergyMode | ElectronOnly | 110: ElectronOnly always charged-only; ElectronPhoton uses charged energy without a neutral, charged+neutral total when collected; no breakpoint uses electron-only;111 stays separate; BP_CHARGED_ECAL_ENERGY_MODE |
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
-| BeamSpotConstraint | false | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |
+| BeamSpotConstraint | true | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Transverse beam mean for the initial scalar KF measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |
 | FreeLossMaxLogLoss | 1 | Upper bound on the optimized prior center, finite in (0,5]; lower bound zero. Does not truncate the Gaussian or bound the fitted posterior loss |
@@ -1429,10 +1436,11 @@ This workflow is independent of GSF and does not run its fitter.
 The shared loss-prior sigma is controlled by BP_SIGMA_LOG_LOSS in
 subbreakpointjobs.sh (default0.001). The batch helper defaults the shared
 beam/charged/neutral constraints to `110`, with explicit `BP_*` overrides
-supported. This is campaign steering only: standalone-card and compiled
-constraint defaults remain OFF. Set BP_NEUTRAL_ECAL_MEASUREMENT=1 to opt into111.
+supported. These five defaults are now shared with the standalone card and
+compiled package: free-loss/beam/charged ON, neutral OFF, scans110 only.
+Set BP_NEUTRAL_ECAL_MEASUREMENT=1 to opt into111 truth-location results.
 The dedicated Higgs scan launcher preserves normal Truth-mode endpoints and
-independently defaults LocationScanSetups to000/100/110. Explicitly enabling111
+independently defaults LocationScanSetups to110 only. Explicitly enabling111
 does not scan it unless included in that list. Successful 111 jobs save unconstrained,
 beam-only, beam+charged, and beam+charged+neutral results for ordinary/free-loss
 RTS; all backward defaults remain OFF. Other fit physics remains in
