@@ -383,9 +383,11 @@ The five shared defaults pass62 batch tests and15 CTests; events11/16/17
 using no overrides for those controls exactly reproduce all947 branches per
 event from the prior explicit110 configuration. No new physics claim.
 
-Earlier campaign `higgs_location_scan_20261104` has249 files but only80
-verified complete jobs (16,000 events);169 were killed at the10-hour limit.
-Partial files are not usable as completed outputs. The old200 scan ROOTs in
+All249 ROOT files from `higgs_location_scan_20261104` are now deleted by user
+request (0.61 GiB). Its80 completed/169 timed-out job logs/cards remain history,
+not currently available tuples. All249 Higgs REC inputs are preserved.
+Deletion evidence: `agents_record/2026-11-04-old-higgs-scan-flats-removed.md`.
+The old200 scan ROOTs in
 `higgs_silicon_scan_20261103` remain deleted by prior request; logs/cards and
 historical plots remain. New200-event default scans can still hit the runtime
 limit; no chunking/rerun of that failed batch is part of this control change.
