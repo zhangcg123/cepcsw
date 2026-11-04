@@ -166,6 +166,22 @@ StatusCode RecBreakpoint::initialize() {
     error() << "HitScanAll requires FreeLossFit and beam/charged switches ON, TruthOverride OFF; neutral is optional" << endmsg;
     return StatusCode::FAILURE;
   }
+  try {
+    m_locationScanSetups = breakpoint::checkedLocationScanSetups(m_locationScanSetups.value());
+    if (!m_locationScanSetups.value().empty()) {
+      if (m_intervalSelectionName!="Truth" || !m_freeLossFit)
+        throw std::invalid_argument("LocationScanSetups requires IntervalSelectionMode=Truth and FreeLossFit=True");
+      for (int setup : m_locationScanSetups.value()) {
+        if ((setup>=100 && !m_beamSpotConstraint) ||
+            (setup>=110 && !m_chargedEcalMeasurement) ||
+            (setup==111 && !m_neutralEcalMeasurement))
+          throw std::invalid_argument("LocationScanSetups must select enabled free-loss approaches: 100 needs beam, 110 beam+charged, 111 all three");
+      }
+    }
+  } catch (const std::exception& failure) {
+    error() << failure.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
   if (m_intervalSelectionName!="HitScanAll" && (!std::isfinite(m_hitScanMinNllGain.value()) || m_hitScanMinNllGain<0 ||
       (m_intervalSelectionName=="HitScan" && !m_freeLossFit))) {
     error() << "HitScan requires FreeLossFit=True; HitScanMinNllGain must be finite/nonnegative" << endmsg;
@@ -782,6 +798,16 @@ StatusCode RecBreakpoint::execute() {
           if (loss.ebremLoss>0 && (!largest || loss.ebremLoss>largest->ebremLoss)) largest=&loss;
         return largest;
       };
+      auto locationObservations = [&]() {
+        auto observations=settings;
+        if (m_beamSpotConstraint) observations.beamSpot=m_recordBeamSpotSettings;
+        if (m_chargedEcalMeasurement && m_chargedEcalMeasurementStatus==2)
+          observations.chargedEcalEnergy=std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
+        if (m_collectedNeutralStatus==2)
+          observations.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
+        observations.delayedNeutral=m_delayedNeutralExperiment;
+        return observations;
+      };
       if (m_intervalSelectionName == "Truth") {
         if (!truthPrepared) {
           m_intervalSelectionStatus = -1;
@@ -805,14 +831,7 @@ StatusCode RecBreakpoint::execute() {
         }
         m_intervalSelectionStatus = largest ? 2 : ownedMatch.emissions.empty() ? 3 : 4;
       } else if (m_intervalSelectionName=="HitScanAll") {
-        auto observations=settings;
-        observations.beamSpot=m_recordBeamSpotSettings;
-        if (m_chargedEcalMeasurementStatus==2)
-          observations.chargedEcalEnergy=std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
-        if (m_collectedNeutralStatus==2)
-          observations.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
-        observations.delayedNeutral=m_delayedNeutralExperiment;
-        observations.chargedEcalEnergyMode=settings.chargedEcalEnergyMode;
+        auto observations=locationObservations();
         std::optional<int> owner;
         std::string referenceError;
         try {
@@ -1502,6 +1521,20 @@ StatusCode RecBreakpoint::execute() {
         m_truthBackwardLoss.clear(); m_truthBackwardLossVariance.clear();
         m_truthOverrideError = exception.what();
         warning() << "Ordinary pair retained; additional truth pair failed: " << exception.what() << endmsg;
+      }
+      if (!m_locationScanSetups.value().empty()) {
+        try {
+          const int owner=settings.intervals.empty() ? -1 : settings.intervals.front();
+          m_locationScan.run(fitter,hits,locationObservations(),freeLossControls,m_bz,owner,
+                            m_neutralEcalMeasurement.value(),m_locationScanSetups.value());
+          if (m_verbose) info() << "Truth endpoints retained; additional location scan event=" << m_event
+              << " track=" << m_trackIndex << " points=" << m_locationScan.pointCount
+              << " entries=" << m_locationScan.setup.size() << endmsg;
+        } catch (const std::exception& failure) {
+          m_locationScan.status=-1;
+          m_locationScan.truthError=failure.what();
+          warning() << "Truth endpoints retained; optional location scan failed: " << failure.what() << endmsg;
+        }
       }
     } catch (const std::exception& exception) {
       warning() << "event=" << m_event << " track=" << m_trackIndex << ": " << exception.what() << endmsg;

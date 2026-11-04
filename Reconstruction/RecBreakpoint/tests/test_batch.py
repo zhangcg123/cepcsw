@@ -19,6 +19,37 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_truth_endpoints_and_scan_setups_are_independently_frozen(self):
+        self.prepare(BP_INTERVAL_SELECTION_MODE='Truth', BP_FREE_LOSS_FIT='1',
+                     BP_BEAM_SPOT_CONSTRAINT='1', BP_CHARGED_ECAL_MEASUREMENT='1',
+                     BP_LOCATION_SCAN_SETUPS='110,0')
+        job = self.manifest()
+        self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'], '0,110')
+        self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'], 'Truth')
+        self.assertEqual(job['controls']['BP_BEAM_SPOT_CONSTRAINT'], '1')
+        self.assertIn('fit.LocationScanSetups = location_scan_setups',
+                      Path(job['cards']['breakpoint']).read_text())
+        for invalid in ('110,110', '10'):
+            with self.assertRaisesRegex(ValueError, 'unique'):
+                self.prepare(OUTPUT_TUPLEPATH='bad_'+invalid.replace(',','_'), BP_LOCATION_SCAN_SETUPS=invalid)
+        with self.assertRaisesRegex(ValueError, 'requires Truth'):
+            self.prepare(OUTPUT_TUPLEPATH='bad_mode', BP_INTERVAL_SELECTION_MODE='HitScanAll', BP_LOCATION_SCAN_SETUPS='0')
+        with self.assertRaisesRegex(ValueError, 'BP_BEAM_SPOT_CONSTRAINT'):
+            self.prepare(OUTPUT_TUPLEPATH='missing_beam', BP_LOCATION_SCAN_SETUPS='100', BP_BEAM_SPOT_CONSTRAINT='0')
+        with self.assertRaisesRegex(ValueError, 'BP_NEUTRAL_ECAL_MEASUREMENT'):
+            self.prepare(OUTPUT_TUPLEPATH='missing_neutral', BP_LOCATION_SCAN_SETUPS='111',
+                         BP_BEAM_SPOT_CONSTRAINT='1', BP_CHARGED_ECAL_MEASUREMENT='1', BP_NEUTRAL_ECAL_MEASUREMENT='0')
+
+    def test_truth_scan_verification_requires_scan_schema_without_scan_only_mode(self):
+        tree=MagicMock(); tree.GetEntries.return_value=2
+        tree.GetBranch.side_effect=lambda name: None if name=='location_scan_setup' else object()
+        file=MagicMock(); file.Get.return_value=tree
+        file.IsZombie.return_value=False; file.TestBit.return_value=False
+        root=types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path:file,kRecovered=1))
+        with patch.dict('sys.modules',ROOT=root):
+            with self.assertRaisesRegex(RuntimeError,'Missing location-scan branch'):
+                batch.verify(Path('fixture.root'),'breakpoint',hit_scan='TruthWithLocationScan')
+
     def test_resolved_ecal_mode_removed(self):
         self.prepare()
         job=self.manifest()
@@ -134,7 +165,8 @@ class BatchTest(unittest.TestCase):
         for job in jobs:
             self.assertEqual(job['nevt'],200)
             self.assertEqual(job['stages'],['breakpoint'])
-            self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'HitScanAll')
+            self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'Truth')
+            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'],'0,100,110')
             self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'0')
             self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'0')
             self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'],'1')

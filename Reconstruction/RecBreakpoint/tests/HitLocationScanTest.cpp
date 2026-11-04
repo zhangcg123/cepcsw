@@ -6,6 +6,14 @@ using breakpoint::HitLocationScan;
 int main() {
   assert((breakpoint::locationScanSetups(false)==std::vector<int>{0,100,110}));
   assert((breakpoint::locationScanSetups(true)==std::vector<int>{0,100,110,111}));
+  assert(breakpoint::checkedLocationScanSetups({}).empty());
+  assert((breakpoint::checkedLocationScanSetups({110})==std::vector<int>{110}));
+  assert((breakpoint::checkedLocationScanSetups({111,0,100})==std::vector<int>{0,100,111}));
+  for (const auto& invalid : {std::vector<int>{110,110}, std::vector<int>{10}, std::vector<int>{-1}}) {
+    bool bad=false;
+    try { breakpoint::checkedLocationScanSetups(invalid); } catch (const std::invalid_argument&) { bad=true; }
+    assert(bad);
+  }
   using breakpoint::siliconScanHits;
   assert((siliconScanHits({1,1,2,3,4,5,6})==std::vector<int>{0,1,2,3}));
   assert((siliconScanHits({4,5,1})==std::vector<int>{})); // Last hit is never a candidate.

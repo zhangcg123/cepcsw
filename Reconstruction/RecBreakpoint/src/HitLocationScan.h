@@ -1,6 +1,7 @@
 #ifndef RECBREAKPOINT_HIT_LOCATION_SCAN_H
 #define RECBREAKPOINT_HIT_LOCATION_SCAN_H
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <optional>
@@ -90,6 +91,16 @@ inline std::vector<int> locationScanSetups(bool neutralEnabled) {
   return neutralEnabled ? std::vector<int>{0,100,110,111} : std::vector<int>{0,100,110};
 }
 
+inline std::vector<int> checkedLocationScanSetups(std::vector<int> requested) {
+  std::sort(requested.begin(), requested.end());
+  if (std::adjacent_find(requested.begin(), requested.end()) != requested.end())
+    throw std::invalid_argument("LocationScanSetups must not contain duplicates");
+  for (int setup : requested)
+    if (setup!=0 && setup!=100 && setup!=110 && setup!=111)
+      throw std::invalid_argument("LocationScanSetups accepts only 0,100,110,111");
+  return requested;
+}
+
 // Null, reconstructed silicon sites plus the first exact TPC row0, then an
 // optional truth-only site. Truth never changes the reconstructed candidates.
 inline std::vector<int> locationScanPoints(const std::vector<int>& systems,
@@ -134,7 +145,8 @@ struct LocationFitScan {
   void appendIP(const edm4hep::TrackState* state);
   void run(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
            const FitSettings& observations, const FreeLossSettings& controls,
-           double bz, std::optional<int> truthOwner, bool neutralEnabled);
+           double bz, std::optional<int> truthOwner, bool neutralEnabled,
+           const std::vector<int>& requestedSetups = {});
 };
 } // namespace breakpoint
 #endif

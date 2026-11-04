@@ -108,6 +108,18 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Auto: reserved; initialization fails, regardless of TruthOverride.
 # Selection provides locations, not truth loss amounts, to the ordinary fit.
 fit.IntervalSelectionMode = os.environ.get("BP_INTERVAL_SELECTION_MODE", "Truth")
+# Keep every enabled approach's normal truth-location endpoint. Optionally scan
+# only these free-loss setups AFTER publishing those endpoints; [] disables scans.
+# 0=tracker,100=+beam,110=+charged,111=+separate neutral. Required switches must
+# already be ON. No online ranking; full scan values go to location_scan_*.
+# Examples: [110] scans only110; [0,100,110] scans all three; scan loss stays fitted.
+# TruthOverride controls separate oracle endpoints, independently of this list.
+# HitScanAll remains the older scan-only workflow; do not combine these controls.
+location_scan_setups = [int(value) for value in os.environ.get("BP_LOCATION_SCAN_SETUPS", "").split(",") if value.strip()]
+if "LocationScanSetups" in fit.getDefaultProperties():
+    fit.LocationScanSetups = location_scan_setups
+elif location_scan_setups:
+    raise ValueError("LocationScanSetups requires the updated RecBreakpoint runtime")
 # Required improvement in -2logL relative to the no-breakpoint fit. Strict >.
 # Zero selects the lower NLL, preferring null on ties; NOT a calibrated detection
 # significance. Failed/partial scans are tagged separately in hit_scan_* fields.

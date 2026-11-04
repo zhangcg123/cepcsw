@@ -198,8 +198,14 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
 
 void LocationFitScan::run(const BreakpointFitter& fitter,
     const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& observations,
-    const FreeLossSettings& controls, double bz, std::optional<int> truthOwner, bool neutralEnabled) {
+    const FreeLossSettings& controls, double bz, std::optional<int> truthOwner, bool neutralEnabled,
+    const std::vector<int>& requestedSetups) {
   reset();
+  const auto configurations = requestedSetups.empty() ? locationScanSetups(neutralEnabled)
+      : checkedLocationScanSetups(requestedSetups);
+  const auto requested = [&](int setup) {
+    return std::find(configurations.begin(), configurations.end(), setup) != configurations.end();
+  };
   std::vector<int> systems,layers;
   UTIL::BitField64 cell(lcio::ILDCellID0::encoder_string);
   for (const auto& measurement : hits) {
@@ -228,8 +234,12 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
     accepted.captureGaussianModel=true;
     accepted.chargedEcalEnergyMode=site<0 ? ChargedEnergyMode::ElectronOnly : observations.chargedEcalEnergyMode;
     LocationScanResult previous;
-    for (int configuration : locationScanSetups(neutralEnabled)) {
+    for (int configuration : configurations) {
       auto proposed=accepted;
+      // An omitted predecessor supplies raw observations, never an extra fit.
+      if (configuration>=100 && !requested(100)) proposed.beamSpot=observations.beamSpot;
+      if (configuration==111 && !requested(110))
+        proposed.chargedEcalEnergy=observations.chargedEcalEnergy;
       bool available=configuration==0;
       std::string reason;
       if (configuration==100 && observations.beamSpot) {

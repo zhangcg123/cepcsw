@@ -362,7 +362,58 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 | HitScanAll | Scan-only: optimized 000/100/110 at every silicon site plus TPC row 0, null and truth reference; optional111; no location selection or published refit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
-### Scan-only data for offline location studies
+### Preserve truth-location endpoints and choose additional scans
+
+Use `IntervalSelectionMode="Truth"` for the normal endpoint families. Existing
+`FreeLossFit`, `BeamSpotConstraint`, `ChargedEcalMeasurement` and
+`NeutralEcalMeasurement` switches continue to control their truth-location
+fits, independently of the new `LocationScanSetups` list (compiled/card default
+`[]`, no additional scans). For example:
+
+```python
+fit.IntervalSelectionMode = "Truth"
+fit.FreeLossFit = True
+fit.BeamSpotConstraint = True
+fit.ChargedEcalMeasurement = True
+fit.NeutralEcalMeasurement = False
+fit.LocationScanSetups = [110]  # also [0,100,110], or [] to disable scanning
+```
+
+This preserves the enabled truth-location free-loss000/100/110 results in
+their normal collections and endpoint branches, even though only110 scans
+locations.111 can likewise be retained by enabling the neutral switch, without
+requiring a111 scan. Truth supplies the existing eligible breakpoint location,
+not fitted loss amounts; `TruthOverride` remains a separate diagnostic switch.
+
+The normal truth-location workflow runs first. Additional scans then restart
+from the original hits/seed/prior, never a truth-fit posterior. They do not
+change the selected truth breakpoint, published endpoints or their status.
+An optional scan exception is tagged in `location_scan_status/truth_error`
+without invalidating already-published truth-location results.
+
+Allowed scan entries are0/100/110/111, unique and canonically sorted. A nonempty
+list requires Truth and FreeLossFit.100 requires beam ON,110 beam+charged ON,
+111 all three ON. Scans run only the requested configurations; an omitted
+predecessor supplies its raw configured observations, not an extra optimization.
+Missing/failed observations can copy an earlier successful **requested** setup
+at the same point. If none exists, that entry stays invalid/NaN: an unrequested
+fallback setup is not secretly fitted. Actual source/mask/status remain saved.
+
+Null, VXD/ITK, exact TPC row0 and passive eligible truth references retain the
+same point definitions. The requested setup entries and full IP states are
+saved in `location_scan_*`; no online best-location choice is made. Existing
+main truth-location endpoint families are now active alongside those vectors.
+A truth site already in the candidate list uses that point's scan entry as its
+scan-side reference; other truth sites are appended as before. These additional
+diagnostic fits do not replace the separately preserved normal endpoint families.
+
+Batch environment: `BP_LOCATION_SCAN_SETUPS=110`, `0,100,110`, or empty; it is
+frozen into cards with all other steering. Old frozen cards are not rewritten.
+The dedicated Higgs launcher now selects Truth plus this list (default0/100/110)
+and writes future cards to a fresh output path. Explicitly empty
+BP_LOCATION_SCAN_SETUPS disables all scans while preserving normal truth fits.
+
+### Legacy scan-only data for offline location studies
 
 `IntervalSelectionMode="HitScanAll"` records fits; it does not rank locations,
 apply HitScanMinNllGain or select an endpoint. It requires FreeLossFit and the
@@ -539,14 +590,16 @@ For all available Higgs REC events (current inventory249 files x200), without re
 ```
 
 The first command only prepares frozen cards. Input defaults to
-`higgs_full_20261030`, output to `higgs_location_scan_20261104`, group to `cms`
+`higgs_full_20261030`, output to `higgs_location_scan_truth_20261104`, group to `cms`
 (override `SUBMIT_GROUP`). It reads all200 events from every available input
 in IDs1..250, skipping absent file123:249 jobs and49,800 input events. The
 new scan runtime must be installed first. This replaces the removed ROOT output
 campaign of200 files x first50 events; its old cards/logs remain unchanged.
-The campaign uses **HitScanAll**, saving all locations under **000/100/110**
-without ranking or a gain cut.111 is OFF; explicitly setting
-BP_NEUTRAL_ECAL_MEASUREMENT=1 can restore the extra comparison. No neutral
+Future cards use **Truth + LocationScanSetups=[0,100,110]**, preserving all
+enabled truth-location endpoint families and recording the selected scan
+approaches without ranking or a gain cut. Override BP_LOCATION_SCAN_SETUPS
+to select a subset.111 is OFF; explicitly enable its neutral switch and include
+111 in the scan list to add that scan. No neutral
 measurement is fitted separately by default, but collected neutral energy is
 still used by resolved ElectronPhoton110. Truth locations remain passive
 reference fits in each tuple, never truth energy overrides.
@@ -1101,6 +1154,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
 | IntervalSelectionMode | Truth | Truth, Manual, legacy HitScan selector, scan-only HitScanAll, or reserved/unimplemented Auto |
+| LocationScanSetups | [] | Additional scans alongside retained Truth endpoints: unique0/100/110/111, enabled approaches only; requires Truth and FreeLossFit; BP_LOCATION_SCAN_SETUPS |
 | HitScanMinNllGain | 0 | Legacy HitScan selector only; ignored by HitScanAll. Required null-minus-best -2logL improvement; strict >; BP_HIT_SCAN_MIN_NLL_GAIN |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
@@ -1377,8 +1431,9 @@ subbreakpointjobs.sh (default0.001). The batch helper defaults the shared
 beam/charged/neutral constraints to `110`, with explicit `BP_*` overrides
 supported. This is campaign steering only: standalone-card and compiled
 constraint defaults remain OFF. Set BP_NEUTRAL_ECAL_MEASUREMENT=1 to opt into111.
-The dedicated HitScanAll launcher also defaults to000/100/110; explicitly
-enabling111 adds the fourth scan comparison. Successful 111 jobs save unconstrained,
+The dedicated Higgs scan launcher preserves normal Truth-mode endpoints and
+independently defaults LocationScanSetups to000/100/110. Explicitly enabling111
+does not scan it unless included in that list. Successful 111 jobs save unconstrained,
 beam-only, beam+charged, and beam+charged+neutral results for ordinary/free-loss
 RTS; all backward defaults remain OFF. Other fit physics remains in
 options/run_breakpoint.py. Supported BP_* environment values are frozen at

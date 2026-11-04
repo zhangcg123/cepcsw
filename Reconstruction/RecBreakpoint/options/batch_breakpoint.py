@@ -45,7 +45,7 @@ TRACKER_PASSTHROUGH = (
     'RecTofCollection', 'DndxTracks',
 )
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
-               'BP_HIT_SCAN_MIN_NLL_GAIN',
+               'BP_HIT_SCAN_MIN_NLL_GAIN', 'BP_LOCATION_SCAN_SETUPS',
                'BP_DIFFUSE_AUGMENTED_RTS',
                'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
                'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
@@ -165,6 +165,19 @@ def prepare():
     charged_mode = controls.get('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronOnly')
     if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
         raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')
+    if 'BP_LOCATION_SCAN_SETUPS' in controls:
+        setups = [int(value) for value in controls['BP_LOCATION_SCAN_SETUPS'].split(',') if value.strip()]
+        if len(setups) != len(set(setups)) or any(value not in (0,100,110,111) for value in setups):
+            raise ValueError('BP_LOCATION_SCAN_SETUPS accepts unique 0,100,110,111 values')
+        if setups and (controls.get('BP_INTERVAL_SELECTION_MODE', 'Truth') != 'Truth' or
+                       controls.get('BP_FREE_LOSS_FIT', '1') != '1'):
+            raise ValueError('BP_LOCATION_SCAN_SETUPS requires Truth and FreeLossFit=True')
+        for setup in setups:
+            for limit, key in ((100,'BP_BEAM_SPOT_CONSTRAINT'), (110,'BP_CHARGED_ECAL_MEASUREMENT'),
+                               (111,'BP_NEUTRAL_ECAL_MEASUREMENT')):
+                if setup >= limit and controls.get(key, '0') != '1':
+                    raise ValueError('BP_LOCATION_SCAN_SETUPS requires '+key+'=1')
+        controls['BP_LOCATION_SCAN_SETUPS'] = ','.join(map(str, sorted(setups)))
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
              'calodigi': repo/'DumpGsfTrks/calodigi.py.bk',
@@ -353,7 +366,7 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
                                        '; install the PFA snapshot exporter and rerun rec')
         print(f'rec events={tree.GetEntries()}', flush=True)
     elif stage == 'breakpoint':
-        if hit_scan=='HitScanAll':
+        if hit_scan in ('HitScanAll', 'TruthWithLocationScan'):
             for name in ('location_scan_status','location_scan_point','location_scan_kind',
                          'location_scan_hit','location_scan_setup','location_scan_actual_constraint_mask',
                          'location_scan_fit_status','location_scan_nll2','location_scan_pt',
@@ -362,7 +375,8 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
                          'location_scan_resolved_ecal_sum_applied',
                          'location_scan_truth_status','location_scan_truth_point'):
                 if not tree.GetBranch(name):
-                    raise RuntimeError('Missing scan-only branch: '+name)
+                    raise RuntimeError(('Missing scan-only branch: ' if hit_scan=='HitScanAll'
+                                        else 'Missing location-scan branch: ')+name)
         elif hit_scan:
             for name in ('hit_scan_status', 'hit_scan_constraint_mask',
                          'hit_scan_candidate_hit', 'hit_scan_candidate_nll2',
@@ -458,7 +472,8 @@ def run(manifest):
         subprocess.run([runner, job['cards'][stage]], cwd=repo, check=True)
         ready = verify(Path(job['files'][stage]), stage,
                        job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
-                       hit_scan=job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
+                       hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
+                       else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
                        if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False)
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))

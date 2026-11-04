@@ -18,6 +18,9 @@ export DRY_RUN=${DRY_RUN:-0}
 # Prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits.
 # Must be finite and positive. Frozen into generated cards at preparation.
 export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
+# Optional additional location scans; truth-location approaches remain enabled.
+# Example: 110 scans only110; empty runs no scans. Use IntervalSelectionMode=Truth.
+export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS:-}
 # Default beam/charged/neutral = 110; enable the separate-neutral stage explicitly.
 export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-1}
 export BP_CHARGED_ECAL_MEASUREMENT=${BP_CHARGED_ECAL_MEASUREMENT:-1}
