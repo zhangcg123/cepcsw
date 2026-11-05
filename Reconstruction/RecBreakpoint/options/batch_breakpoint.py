@@ -45,6 +45,7 @@ TRACKER_PASSTHROUGH = (
     'RecTofCollection', 'DndxTracks',
 )
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
+               'BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
                'BP_HIT_SCAN_MIN_NLL_GAIN', 'BP_LOCATION_SCAN_SETUPS',
                'BP_DIFFUSE_AUGMENTED_RTS',
                'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
@@ -151,13 +152,15 @@ def prepare():
         raise ValueError('BP_RESOLVED_ECAL_ENERGY_MODE was removed; use BP_CHARGED_ECAL_ENERGY_MODE')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
-    for key, value in (('BP_FREE_LOSS_FIT','1'), ('BP_BEAM_SPOT_CONSTRAINT','1'),
+    for key, value in (('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS','0'),
+                       ('BP_FREE_LOSS_FIT','1'), ('BP_BEAM_SPOT_CONSTRAINT','1'),
                        ('BP_CHARGED_ECAL_MEASUREMENT','1'), ('BP_NEUTRAL_ECAL_MEASUREMENT','0'),
                        ('BP_LOCATION_SCAN_SETUPS','110')):
         controls.setdefault(key, value)
     controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
     controls.setdefault('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronPhoton')
-    for key in ('BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
+    for key in ('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
+                'BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
                 'BP_DIFFUSE_AUGMENTED_RTS',

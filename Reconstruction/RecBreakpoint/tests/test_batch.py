@@ -19,6 +19,16 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_truth_production_electron_selection_is_optional_and_frozen(self):
+        self.prepare(OUTPUT_TUPLEPATH='selection_off')
+        self.assertEqual(self.manifest('selection_off')['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '0')
+        self.prepare(OUTPUT_TUPLEPATH='selection_on', BP_SELECT_TRUTH_PRODUCTION_ELECTRONS='true')
+        job = self.manifest('selection_on')
+        self.assertEqual(job['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '1')
+        self.assertIn('fit.SelectTruthProductionElectrons =', Path(job['cards']['breakpoint']).read_text())
+        with self.assertRaisesRegex(ValueError, 'Expected a boolean'):
+            self.prepare(OUTPUT_TUPLEPATH='selection_invalid', BP_SELECT_TRUTH_PRODUCTION_ELECTRONS='maybe')
+
     def test_unified_free_loss_defaults_in_cpp_card_and_both_wrappers(self):
         import ast
         properties = {'FreeLossFit': True, 'BeamSpotConstraint': True,

@@ -35,6 +35,46 @@ match the input. `BackwardMode` is removed: each of the three backward filters
 has its own run switch, default off.
 The card rejects the retired `BP_BACKWARD_MODE` variable instead of ignoring it.
 
+## Optional production-electron selection for eeH studies
+
+`SelectTruthProductionElectrons=False` (compiled/card/batch default) processes
+all input tracks as before. Set `fit.SelectTruthProductionElectrons=True` or
+`BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=1` to run the standalone
+`TruthElectronSelector` before expensive refits and location scans. This is a
+truth-assisted CPU-saving study gate, **not** reconstructed PID or proof of a
+pure on-shell ZH process. Nothing in REC, PFOs, clusters or CompleteTracks is
+deleted, cloned or renumbered.
+
+The selector requires a generator Higgs record, then exactly one stable
+generator electron and positron (`abs(PDG)=11`, `generatorStatus=1`) without a
+Higgs ancestor. It follows all parent links, including generator copy/shower
+nodes. An explicit production-Z parent is not required: the current eeH
+generator omits it. Higgs-decay electrons and Geant4 secondaries are excluded.
+Additional non-Higgs generator electrons make the pair ambiguous and skip all
+fits; this gate must be checked on each new generator/process record before use.
+
+Each selected MC particle is matched using the same aggregated association
+hit-count rule as `truth_pt`. A tied best MC match is unusable. Duplicate tracks
+are ranked by matched-hit count, then purity (matched hits / track hits); an
+exact tie is skipped. A missing/tied reconstructed partner does not discard the
+other uniquely matched track. Original `input_track_index` and PODIO references
+remain unchanged. Unselected tracks keep their baseline/truth/observation row,
+with `status=0`, invalid refit indices, NaN refit endpoints and empty scan vectors.
+
+Both `breakpoint` and event-side `neutral_pfos` trees save
+`production_electron_selection_status`, `_error`,
+`production_electron_mc_indices`, `production_electron_track_indices`, and
+`production_electron_candidate_counts`. The vectors are ordered e-, e+; `-1`
+means absent/unselected. Selection status: 0 disabled, 1 both tracks selected,
+2 one selected, -1 no generator Higgs, -2 nonunique/missing truth pair,
+-3 neither track uniquely reconstructed, -4 invalid ancestry/input.
+The main-tree `production_electron_track_selected` is 0 disabled, 1 selected,
+-1 skipped. Thus missing input truth is not confused with an event without tracks.
+
+This option is independent of truth breakpoint-location selection, truth loss
+override, fit constraints and `LocationScanSetups`; those run unchanged for the
+selected tracks only. It does not select a closest-Z pair or change the fitter.
+
 ## RTS and optional backward endpoints
 
 ```text

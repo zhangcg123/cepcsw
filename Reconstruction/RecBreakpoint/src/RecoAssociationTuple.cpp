@@ -1,4 +1,5 @@
 #include "RecoAssociationTuple.h"
+#include "TrackTruthMatch.h"
 
 #include "edm4hep/EDM4hepVersion.h"
 #include "TTree.h"
@@ -99,21 +100,10 @@ void TrackRecoTuple::assign(const edm4hep::Track& track,
   m_chargedEcalClusterEnergy.clear(); m_chargedEcalClusterX.clear();
   m_chargedEcalClusterY.clear(); m_chargedEcalClusterZ.clear();
 
-  // The association producer counts one truth assignment per reconstructed hit.
-  // Aggregate by MC object in case a collection contains repeated links.
-  std::map<edm4hep::MCParticle, int> hitCounts;
-  for (const auto& association : associations) {
-    if (!(association.getRec() == track) || !association.getSim().isAvailable()) continue;
-    const int count = static_cast<int>(std::lround(association.getWeight()));
-    if (count > 0) hitCounts[association.getSim()] += count;
-  }
-  edm4hep::MCParticle best;
-  int bestCount = 0, bestMultiplicity = 0;
-  for (const auto& [particle, count] : hitCounts) {
-    m_truthLinkedHitCount += count;
-    if (count > bestCount) { best = particle; bestCount = count; bestMultiplicity = 1; }
-    else if (count == bestCount) ++bestMultiplicity;
-  }
+  const auto match = matchTrackTruth(track, associations);
+  const auto best = match.particle;
+  const int bestCount = match.count, bestMultiplicity = match.multiplicity;
+  m_truthLinkedHitCount = match.linkedCount;
   m_truthBestHitCount = bestCount;
   if (m_truthTrackHitCount > 0)
     m_truthPurity = static_cast<double>(bestCount) / m_truthTrackHitCount;

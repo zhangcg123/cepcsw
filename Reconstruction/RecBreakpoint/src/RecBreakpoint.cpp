@@ -277,6 +277,14 @@ StatusCode RecBreakpoint::initialize() {
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
   m_neutralTree = new TTree("neutral_pfos", "Neutral CyberPFOPID and ECAL clusters, once per selected event");
   m_neutralPfoTuple.book(*m_neutralTree);
+  for (auto* tree : {m_tree, m_neutralTree}) {
+    tree->Branch("production_electron_selection_status", &m_electronSelection.status);
+    tree->Branch("production_electron_selection_error", &m_electronSelection.error);
+    tree->Branch("production_electron_mc_indices", &m_electronSelection.mcIndices);
+    tree->Branch("production_electron_track_indices", &m_electronSelection.trackIndices);
+    tree->Branch("production_electron_candidate_counts", &m_electronSelection.candidateCounts);
+  }
+  m_tree->Branch("production_electron_track_selected", &m_electronTrackSelected);
   for (std::size_t i = 0; i < m_caloStates.size(); ++i)
     m_caloStates[i].book(*m_tree, caloPrefixes[i]);
   m_photonCalo[0].book(*m_tree,"rts_photon_calo_");
@@ -532,6 +540,25 @@ StatusCode RecBreakpoint::execute() {
       std::find(m_selected.value().begin(), m_selected.value().end(), m_event) != m_selected.value().end();
   const double nan = std::numeric_limits<double>::quiet_NaN();
   const auto* trackTruthAssociations = selected ? m_trackTruthAssociations.get() : nullptr;
+  m_electronSelection = {};
+  if (selected && m_selectTruthElectrons) {
+    try {
+      const auto* particles = m_mcParticles.get();
+      if (!particles) throw std::runtime_error("MCParticle unavailable for production-electron selection");
+      m_electronSelection = breakpoint::TruthElectronSelector{}.select(
+          *particles, *tracks, *trackTruthAssociations);
+    } catch (const std::exception& failure) {
+      m_electronSelection.status = -4;
+      m_electronSelection.error = failure.what();
+    }
+    if (m_electronSelection.status != 1)
+      warning() << "Production electron selection event=" << m_event
+                << " status=" << m_electronSelection.status << ": "
+                << m_electronSelection.error << endmsg;
+    if (m_verbose) info() << "Production electron selection event=" << m_event
+        << " input tracks(e-,e+)=" << m_electronSelection.trackIndices[0] << ','
+        << m_electronSelection.trackIndices[1] << endmsg;
+  }
   const auto* pidPfos = selected ? m_pidPfos.get() : nullptr;
   const auto* ecalClusters = selected ? m_ecalClusters.get() : nullptr;
   const auto* constraintPfos = pidPfos;
@@ -755,6 +782,14 @@ StatusCode RecBreakpoint::execute() {
       diffuseIndices->push_back(m_diffuseIndex);
       m_tree->Fill();
     };
+    m_electronTrackSelected = !m_selectTruthElectrons ? 0 :
+        (m_electronSelection.accepts(m_trackIndex) ? 1 : -1);
+    if (m_electronTrackSelected == -1) {
+      m_fitStatus = 0;
+      outputIndices->push_back(-1); backwardOutputIndices->push_back(-1);
+      finishRow();
+      continue;
+    }
     try {
       std::vector<edm4hep::TrackerHit> hits;
       for (auto hit : track.getTrackerHits()) hits.push_back(hit);

@@ -23,6 +23,7 @@
 #include "ChargedEnergyCandidate.h"
 #include "TruthBreakpointTuple.h"
 #include "HitLocationScan.h"
+#include "TruthElectronSelector.h"
 
 #include <array>
 #include <cstdint>
@@ -44,6 +45,7 @@ public:
   StatusCode finalize() override;
 private:
   DataHandle<edm4hep::TrackCollection> m_input{"CompleteTracks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCParticleCollection> m_mcParticles{"MCParticle", Gaudi::DataHandle::Reader, this};
   // Cumulative RTS stages: beam, then charged, then neutral; ordinary then free-loss.
   std::array<DataHandle<edm4hep::TrackCollection>, 6> m_constraintOutputs{{
     {"BreakpointTracksBeamSpotRTS", Gaudi::DataHandle::Writer, this},
@@ -130,6 +132,7 @@ private:
   Gaudi::Property<bool> m_verbose{this, "VerboseDump", false};
   Gaudi::Property<bool> m_verifyReference{this, "VerifyKFReference", false};
   Gaudi::Property<std::vector<int>> m_selected{this, "SelectedEventIndices", {}};
+  Gaudi::Property<bool> m_selectTruthElectrons{this, "SelectTruthProductionElectrons", false};
   Gaudi::Property<std::string> m_tupleName{this, "OutputFile", "breakpoint_flat.root"};
 
   std::unique_ptr<breakpoint::BreakpointTrackSystem> m_system;
@@ -142,6 +145,8 @@ private:
   TTree* m_tree = nullptr; // file owned
   TTree* m_neutralTree = nullptr; // file owned; one entry per processed event
   int m_event = -1, m_trackIndex = -1, m_fitStatus = 0, m_hitCount = 0;
+  breakpoint::TruthElectronSelector::Result m_electronSelection;
+  int m_electronTrackSelected = 0; // 0 disabled, 1 selected, -1 skipped
   double m_kfPt = 0, m_kfPtError = 0, m_fitPt = 0, m_fitPtError = 0, m_fitChi2 = 0;
   breakpoint::TrackRecoTuple m_trackRecoTuple;
   breakpoint::NeutralPfoTuple m_neutralPfoTuple;

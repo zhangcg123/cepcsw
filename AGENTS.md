@@ -312,93 +312,71 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**SAME-OBSERVATION NULL FOR BREAKPOINT LOCATION SCANS (2026-11-05).**
+**OPTIONAL PRODUCTION-ELECTRON GATE FOR eeH STUDIES (2026-11-05).**
 Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No branch/remote,
-PFA/shared-KF, loss-map, optimizer bound/acceptance or truth-owner change is
-authorized. The independent optimizer-acceptance audit remains open.
-The user confirmed no active breakpoint jobs and authorized installation after
-validation. The narrow correction below is installed in the project default.
-Do not change source/cards or install while future batch jobs are running;
-reconfirm a quiet window and preserve frozen cards and existing outputs.
+PFA/shared-KF/GSF, loss-map, optimizer bound/acceptance or truth-owner change
+is authorized. The independent optimizer-acceptance audit remains open.
+The user confirmed no active jobs and authorized installation after validation.
+Reconfirm a quiet window before future source/card changes or installation;
+preserve frozen cards and existing outputs.
 
-### Active workflow and defaults
+### Current implementation and controls
 
-Keep normal truth-location endpoints independently of location scans.
-Compiled code, maintained card and batch helpers use FreeLossFit=True,
-BeamSpotConstraint=True, ChargedEcalMeasurement=True,
-NeutralEcalMeasurement=False, LocationScanSetups=[110] and
-ChargedEcalEnergyMode=ElectronPhoton. SigmaLogLoss=0.001 and prior-center
-bound[0,1] are unchanged. TruthOverride is a separate loss-prior oracle,
-not required for truth-location free fits.
+`TruthElectronSelector` is a standalone helper inside RecBreakpoint, called
+once per selected event before expensive track refits and scans, not a new
+Gaudi algorithm or duplicate fitter. `SelectTruthProductionElectrons=False`
+is the compiled/card/batch default; enable with
+`BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=1`. Batch preparation freezes the switch.
+Only accepted original track IDs are fitted. CompleteTracks/PFOs/clusters
+are unchanged; all input tracks retain baseline/truth/observation tuple rows,
+with explicit skipped flags, NaN refits and empty scans for unselected tracks.
+The event-side tree saves selection status even when there is no track.
 
-Use IntervalSelectionMode=Truth for additional scans. Normal enabled
-truth-location000/100/110 (optional111) families run first and remain published.
-Only afterwards do requested scans restart from original hits/observations,
-not fitted posteriors. They save location_scan_* without selecting/overwriting
-an endpoint or invalidating preserved truth fits. [] disables scans; unique
-0/100/110/111 entries are canonically sorted. Nonempty lists require Truth
-and FreeLossFit;100 needs beam,110 beam+charged,111 all three enabled.
-Legacy modes/FreeLossFit=False must explicitly clear LocationScanSetups.
-An omitted predecessor provides raw observations, never a hidden optimization.
-Failure retains only an earlier successful REQUESTED setup at the same point;
-otherwise the entry stays invalid/NaN. Honor actual source/mask/status.
+This is truth-assisted production-pair selection, not real-data PID or a
+pure-ZH certification. The current generator omits the production-Z parent.
+Require exactly one stable generator e-/e+ outside Higgs ancestry, and a
+generator Higgs record. No closest-Z guess for ambiguity. The shared truth
+association matcher chooses unique largest aggregate matched-hit count;
+duplicate tracks are ranked by matched hits then purity, with exact ties
+skipped. One usable partner remains selected if the other is missing/tied.
+Check a new visible-Higgs generator's ancestry before enabling this gate there.
 
-Points remain the 5D null, reconstructed VXD/ITK and exact first TPC row0,
-then an eligible truth reference if outside the blind list. Keep all hits.
-No online ranking, no/light-eBrem selection or NLL-gain calibration was added.
-Truth supplies eligible locations only, not scan loss amounts.
+Other workflow defaults remain FreeLossFit/beam/charged ON, neutral OFF,
+LocationScanSetups=[110], ChargedEcalEnergyMode=ElectronPhoton,
+SigmaLogLoss=0.001, prior-center bound[0,1]. Normal truth-location endpoint
+families remain independent of additional scans. The same-observation C+N
+5D-null correction remains installed; no gain threshold or production
+no/light-eBrem classifier is calibrated. The selector does not change these
+fitters, observations, constraints, interval selection or scan definitions.
 
-### Corrected null observation
+### Evidence and deployment
 
-For ElectronPhoton110 with a collected hit-supported neutral, the null and
-breakpoint candidates now both use measured C+N and
-sigma=hypot(sigma_C,sigma_N). The null remains a 5D electron-only KF/RTS,
-without a loss coordinate, loss prior or Minuit. The existing sum flag is1
-on a corrected resolved null; actual mask remains3 with beam+ECAL.
-ElectronOnly/no-neutral110,000/100, ordinary no-breakpoint endpoint families
-and all non-null scan fits are unchanged. Passive collection stays active
-with111 OFF.111 still uses separate C/N: its111-only null is invalid; when110
-is also requested it may inherit110, not a same-observation separate-C/N null.
-Different fitted parameter counts do not invalidate same-data comparison;
-gain thresholds still require loss-boundary/location-search calibration.
+All16 CTests and64 batch tests pass. A selector-only check of200 existing
+Higgs REC events selects398 of433 input tracks:198 events have both
+reconstructed partners and2 have one. Direct old/OFF/ON runs on gun11/16/17
+and Higgs0/17/22 preserve all9,812 previous branch-row values with OFF;
+ON preserves5,682 values for6 accepted Higgs tracks and correctly skips4
+control/extra rows without changing original indices or event-side data.
+These are mechanism/regression gates, not population physics validation.
 
-All15 CTests and62 batch tests pass. Direct old-install/build reruns on gun
-seed1 events5/11/16/17/38, Higgs seed1 events0/17/22 and ElectronOnly event5
-preserve11,869 non-scan branch-row values across13 track rows, all348 non-null
-scan entries and the event-side tree exactly (NaN-aware). Only5 resolved110
-nulls change, including2 without an eligible truth owner. These are mechanical
-regressions including secondary controls, not population physics validation.
-Only RecBreakpoint was installed through its105 package cmake_install.cmake;
-default-setup initialization passes. Build/installed library SHA256:
-`25fb531ed7774c8c3f9be6607935660d088557ac335ac79fa7d0365f64c872c9`.
-No temporary runtime pin, new option, batch submission or frozen-card rewrite.
-Evidence and deployment details:
-`agents_record/2026-11-05-scan-null-same-ecal-observation.md`.
-The original deferred reminder is preserved and marked superseded.
+The package-only update is installed in the project-default105 runtime;
+build/installed library SHA256:
+`ca0f7ac186577d9a8123beda61bdd1ffdfe89acc0b55934eec839438afba534a`.
+No batch was submitted, no existing card/tuple was overwritten, no remote
+changed, and unrelated batch/helper edits were preserved.
+Details: `agents_record/2026-11-05-truth-production-electron-selector.md`.
+The complete outgoing AGENTS is preserved in
+`agents_record/2026-11-05-agents-before-production-electron-selector.md`;
+all global laws/introduction/commands are unchanged. No history was moved.
 
-### Data, next step and provenance
+### Next step and analysis context
 
-Old tuples retain the old resolved null (C only, sum flag0). Rerun the
-breakpoint stage, not sim/REC, before using corrected null/candidate NLL gains.
-No existing outputs were relabeled or deleted. The Higgs launcher still
-reads all available `higgs_full_20261030` REC inputs and defaults to
-`higgs_location_scan_truth_20261104`; do not overwrite an existing campaign
-without explicit user direction. Submission helpers and all controls are unchanged.
-
-The latest gallery at
-`TrackingPerformanceStudies/breakpoint_higgs_location_scan_20261104`
-uses a frozen224-completed-file /44,800-input-event snapshot of the pre-fix
-campaign. Its31 refreshed resolution/location/recoil/loss plots plus one
-10ab^-1 muon/electron overlay do NOT apply null model selection. The forced
-scan broadens clean/light-track cores; do not claim a production classifier
-or unbiased full-campaign sample. The overlay is122–132GeV, counts/0.1GeV
-at10ab^-1, with unchanged123.5–128GeV Crystal Ball core fits.
-Server root remains TrackingPerformanceStudies on localhost8000.
-Analysis artifacts remain uncommitted and are not evidence of a fitter change.
-
-Complete outgoing AGENTS, including all superseded campaign/history details:
-`agents_record/2026-11-05-agents-before-scan-null-ecal-fix.md`.
-The global introduction/laws/commands are unchanged. Earlier control and truth
-contracts remain in the dated records referenced by that snapshot. No history
-directory migration/deletion occurred. Next development is a user-directed
-same-observation no/light-eBrem decision study, not an automatic new batch.
+User-directed next work is selecting a visible-Higgs eeH sample, checking its
+production-electron ancestry, then explicitly enabling the gate to save fit
+CPU. Do not launch a batch automatically. No visible-Higgs population, timing
+speedup or new physics-performance claim has been established.
+Plot server root remains TrackingPerformanceStudies on localhost8000; it was
+not changed for this task. Latest simple-calorimeter hybrid comparisons are
+in `TrackingPerformanceStudies/breakpoint_higgs_simple_hybrid_20261105`;
+these are analysis artifacts, not fitter validation. Previous scan-null and
+campaign provenance remains in the outgoing snapshot and dated records.

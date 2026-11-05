@@ -22,6 +22,8 @@ export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
 # Default110 scans only110; explicitly empty runs no scans. Use Truth mode.
 export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS-110}
 export BP_FREE_LOSS_FIT=${BP_FREE_LOSS_FIT:-1}
+# Optional truth-assisted eeH production-pair gate; 0 preserves all input tracks.
+export BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=${BP_SELECT_TRUTH_PRODUCTION_ELECTRONS:-0}
 # Default beam/charged/neutral = 110; enable the separate-neutral stage explicitly.
 export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-1}
 export BP_CHARGED_ECAL_MEASUREMENT=${BP_CHARGED_ECAL_MEASUREMENT:-1}
