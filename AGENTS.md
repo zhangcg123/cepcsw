@@ -371,10 +371,20 @@ all global laws/introduction/commands are unchanged. No history was moved.
 
 ### Next step and analysis context
 
-User-directed next work is selecting a visible-Higgs eeH sample, checking its
-production-electron ancestry, then explicitly enabling the gate to save fit
-CPU. Do not launch a batch automatically. No visible-Higgs population, timing
-speedup or new physics-performance claim has been established.
+The user selected inclusive eeHX and requested500 jobs x200 events.
+`subbreakpointhiggsjobs.sh` now defaults to the inclusive `Pe1e1h_X` STDHEP
+files0001-0500, full sim/trk/calodigi/rec/breakpoint chain, group cms and truth
+production-electron selection ON.500 frozen jobs are prepared under
+`higgs_eeHX_full_20261105`, with110 scans unchanged; NONE were submitted.
+Submit explicitly with `DRY_RUN=0 ./subbreakpointhiggsjobs.sh submit-prepared`.
+All65 batch tests and the500-card/source checks pass. The first200 inclusive
+generator events each have exactly one eligible non-Higgs stable e-/e+pair.
+No full detector-chain local smoke, CPU speedup or physics-performance
+validation was done for this inclusive campaign. No C++ or installation change.
+Details and outgoing-next-step provenance are in
+`agents_record/2026-11-05-eehx-full-chain-campaign.md`; the full pre-edit
+AGENTS is in `agents_record/2026-11-05-agents-before-eehx-campaign.md`.
+Do not launch a batch automatically.
 Plot server root remains TrackingPerformanceStudies on localhost8000; it was
 not changed for this task. Latest simple-calorimeter hybrid comparisons are
 in `TrackingPerformanceStudies/breakpoint_higgs_simple_hybrid_20261105`;

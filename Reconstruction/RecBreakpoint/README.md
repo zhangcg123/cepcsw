@@ -75,6 +75,18 @@ This option is independent of truth breakpoint-location selection, truth loss
 override, fit constraints and `LocationScanSetups`; those run unchanged for the
 selected tracks only. It does not select a closest-Z pair or change the fitter.
 
+The inclusive eeHX full-chain launcher is `./subbreakpointhiggsjobs.sh`:
+500 jobs x200 events from `E240.Pe1e1h_X.e0.p0.whizard195`, output directory
+`higgs_eeHX_full_20261105`, submission group `cms`. It enables the truth
+production-electron gate, retaining all other current card/fit/110-scan defaults.
+It runs sim -> trk -> calodigi -> rec -> breakpoint. Verified job-owned sim,
+trk and calodigi intermediates are removed downstream; REC and flat tuples stay.
+No arguments (or `prepare`) prepares frozen cards without submitting;
+`./subbreakpointhiggsjobs.sh submit-prepared` submits those existing cards.
+`NEVT`, `SEED_FIRST/LAST`, `STDHEP_INPUT_PATTERN`, `OUTPUT_TUPLEPATH`,
+`SUBMIT_GROUP` and `BP_*` can be overridden before preparation; later overrides
+do not change frozen fit cards.
+
 ## RTS and optional backward endpoints
 
 ```text

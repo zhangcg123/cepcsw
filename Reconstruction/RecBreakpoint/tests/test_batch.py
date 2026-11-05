@@ -19,6 +19,35 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_eehx_wrapper_full_chain_with_truth_electron_selection(self):
+        launcher = self.repo/'subbreakpointhiggsjobs.sh'
+        shutil.copy2(REPO/launcher.name, launcher)
+        source = self.repo/'stdhep_eehx'; source.mkdir()
+        for index in (1, 2):
+            (source/f'eehx.{index:04d}.stdhep').write_bytes(b'STDHEP fixture')
+        env = dict(self.env, PATH=os.environ.get('PATH', '/usr/bin:/bin'),
+                   STDHEP_INPUT_PATTERN=str(source/'eehx.{seed:04d}.stdhep'),
+                   NEVT='200', SEED_FIRST='1', SEED_LAST='2')
+        result = batch.subprocess.run(['bash', str(launcher)], env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        for index in (1, 2):
+            carddir = self.repo/f'outputs/runcards/higgs-{index}'
+            job = json.loads((carddir/'job.json').read_text())
+            self.assertEqual(job['stages'], ['sim', 'trk', 'calodigi', 'rec', 'breakpoint'])
+            self.assertEqual(job['nevt'], 200)
+            self.assertEqual(job['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '1')
+            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'], '110')
+            self.assertIn('genalg.GenTools = ["StdHepRdr"]', (carddir/'sim.py').read_text())
+            self.assertIn("'BP_SELECT_TRUTH_PRODUCTION_ELECTRONS': '1'", (carddir/'breakpoint.py').read_text())
+            self.assertFalse((carddir/'submitted.json').exists())
+        result = batch.subprocess.run(['bash', str(launcher), 'submit-prepared'],
+                                      env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('-g cms ', result.stdout)
+        self.assertFalse(list((self.repo/'outputs/runcards').glob('*/submitted.json')))
+        self.assertIn('SEED_LAST=${SEED_LAST:-500}', launcher.read_text())
+        self.assertIn('E240.Pe1e1h_X.e0.p0.whizard195', launcher.read_text())
+
     def test_truth_production_electron_selection_is_optional_and_frozen(self):
         self.prepare(OUTPUT_TUPLEPATH='selection_off')
         self.assertEqual(self.manifest('selection_off')['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '0')
