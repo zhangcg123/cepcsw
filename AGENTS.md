@@ -312,7 +312,7 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**COMPACT ELECTRON/PHOTON TRUTH AND GENERATOR FSR (2026-11-09).**
+**COMPACT TRUTH; COMPLETE-EVENT REPRODUCTION AUDIT (2026-11-09).**
 The user explicitly requested implementation of a smaller truth recorder,
 old/new reproduction checks, and FSR photons in the existing eBrem photon
 format, identified from generator history. The user confirmed no jobs were
@@ -345,6 +345,18 @@ preserves all 324 detector branches; six generator FSR photons survive the
 native SIM-to-REC/flat chain with their correct entry/last-step data. Storage
 and exact scope/limitations are in
 [the implementation record](agents_record/2026-11-09-compact-truth-generator-fsr.md).
+The follow-up complete-chain check uses only two generator events, not 18.
+All 40 CompleteTracks have identical fit states/covariances after hit matching;
+all PFO kinematics and calorimeter constituents also agree after reordering.
+The four selected production-electron rows agree in 952/953 fields; only a
+neutral-cluster index list changes. Complete event data is NOT strictly
+identical: one other PFO's final PID likelihoods vary, also reproduced by an
+identical compact-input repeat. No PFA/PID/ordering fix was made. Exact scope,
+controls and limits are in
+[the follow-up audit](agents_record/2026-11-09-total-reconstruction-regression.md).
+The previous focus is preserved in
+[the snapshot](agents_record/2026-11-09-agents-before-total-reconstruction-check.md).
+
 `CompactTruthRecords=false` retains full debug histories. Compact files require
 the updated span-aware readers and companion input collections.
 
