@@ -337,6 +337,13 @@ bitwise with the same seed. Batch MEMORY_MB now defaults to 8000, because the
 focused combined process already exceeded the former 5000 MB request during
 initialization. Explicit overrides remain available.
 
+The normal ISR/FSR eeHX rerun is now PREPARED ONLY in
+`higgs_eeHX_ISRFSRON_inmemory_100k_20261109/`: 500 jobs x200 events, source
+STDHEP indices1--500, memory8000MB, cms group, current110scans. Every job uses
+`full_chain.py`; prepared-card submission dry run verifies all checksums.
+No jobs submitted. Exact source, controls and submission command are in
+[the batch preparation record](agents_record/2026-11-09-eehx-radiation-on-batch-preparation.md).
+
 Core implementation checkpoint: `dc7b097`. All 74 relevant Python tests pass.
 Standalone events 0,11,16,17 reproduce all 1,067 flat branches exactly. The
 complete two-event native worker succeeds: REC 2,064,573 bytes, flat 3,351,268
