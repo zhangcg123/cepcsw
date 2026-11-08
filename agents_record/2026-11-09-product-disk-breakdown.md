@@ -145,3 +145,53 @@ ROOT baskets and do not estimate filesystem-level compression/deduplication.
 The collection percentages are from one representative 200-event radiation-on
 file plus the paired two-event tests; no population compression-ratio claim is
 made. No data were deleted or rewritten, and no policy was changed.
+
+## Consumer trace: are raw calorimeter hits used?
+
+Follow-up question: whether the simulated ECAL/HCAL hits provide information or
+start any manipulation. Source inspection confirms the following boundaries:
+
+1. Digitization reads raw `Ecal{Barrel,Endcaps}Collection` and
+   `Hcal{Barrel,Endcaps}Collection` and their contributions. EcalDigiAlg first
+   merges step hits into bars in memory, retaining step energy, position, time
+   and MC labels. The contribution loop uses step position/time for two-ended
+   bar response and accumulates MC energy weights. It writes ECALBarrel and
+   ECALEndcaps digitized hits and direct reconstructed-hit-to-MC associations.
+   HcalDigiAlg similarly merges raw steps, calculates the configured response,
+   time and MC energy fractions, and writes HCALBarrel/HCALEndcaps. The inspected
+   card enables realistic ECAL digitization; realistic HCAL digitization is off,
+   but energy/time/MC-weight construction still consumes raw contributions.
+2. CyberPFA reads digitized ECAL/HCAL hits and the direct hit-to-MC associations,
+   plus reconstructed tracks. CaloHitsCreator creates local calorimeter hits/
+   bars and attaches the supplied MC weights. Clustering, track-cluster matching
+   and PFO creation then use these objects. The card also runs truth HCAL
+   clustering into a separate collection; this likewise uses derived MC weights,
+   not direct access to the original raw SimCalorimeterHit collections.
+3. FinalPIDAlg reads CyberPFO, TOF, Dndx and muon tracker-hit inputs; its current
+   interface has no raw simulated ECAL/HCAL-hit input. RecBreakpoint similarly
+   has no raw simulated calorimeter-hit/contribution handle. Its default ECAL
+   measurements come from CyberPFOPreReclustering/EcalClusterPreReclustering
+   charged and phi-window-collected neutral clusters. FinalPFO is an explicit
+   alternative. Electron/photon truth checkpoints are separate Gsf collections.
+   The existing FSR/eBrem plots do not perform calorimeter-shower deposit
+   attribution from these raw contribution records.
+
+Consequently these raw hits are essential BEFORE digitization and for rerunning
+or validating it. Their unconditional retention in final REC is not a direct
+requirement of the current breakpoint fitting path. They also retain useful
+shower-level truth information for future studies. Derived MC associations
+label deposited energy by retained MC particles; the simulation's ancestor/
+primary policy and secondary-recording threshold must be respected before
+claiming exact attribution to an original FSR/eBrem photon.
+
+No filtered-REC experiment has yet verified output pruning. Digitized hits,
+cluster constituents and the direct MC associations consumed by PFA must remain;
+any retained relation targeting a removed collection needs consistent handling.
+This trace is not a request or permission to alter merging, prune collections,
+or investigate the excluded many-to-many association topic.
+
+Source anchors: `Digitization/DigiCalo/src/EcalDigiAlg.cpp` (MergeHits and
+execute contribution loop), `HcalDigiAlg.cpp` (response/time/MC-weight loop),
+`Reconstruction/RecPFACyber/src/Tools/CaloHitsCreator.cpp`,
+`Reconstruction/ParticleID/src/FinalPIDAlg.h`, and
+`Reconstruction/RecBreakpoint/options/run_breakpoint.py`.
