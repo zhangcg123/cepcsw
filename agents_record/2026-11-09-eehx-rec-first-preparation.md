@@ -34,3 +34,7 @@ Later prepare breakpoint-only jobs from these REC files after deciding and
 implementing the FSR-aware fit. Do not regenerate detector simulation for fit
 iterations. No new native simulation test was run for this preparation; it uses
 the existing supported REC-only configuration, without any code change.
+
+Superseded by the user's larger per-job request: see
+[the 1k preparation](2026-11-09-eehx-rec-1k-preparation.md). The500x200 cards
+remain unchanged; the current preparation is100 jobs with up to1000 each.

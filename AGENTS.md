@@ -337,14 +337,17 @@ bitwise with the same seed. Batch MEMORY_MB now defaults to 8000, because the
 focused combined process already exceeded the former 5000 MB request during
 initialization. Explicit overrides remain available.
 
-The current campaign is REC FIRST: `higgs_eeHX_ISRFSRON_REC_inmemory_100k_20261109/`
-is PREPARED ONLY (500 jobs x200 events, source STDHEP indices1--500,8000MB,cms).
-Each single-process job embeds ONLY sim,trk,calodigi,rec; no breakpoint fitting.
-All cards/source dictionaries and prepared-submission checksums are verified.
-No jobs submitted. The earlier all-five-stage preparation is superseded for
-this request and retained. Run breakpoint separately on these REC files later;
-the FSR/beam-spot floating-radiation extension is still pending. Exact commands
-are in [the REC-first record](agents_record/2026-11-09-eehx-rec-first-preparation.md).
+The current campaign is REC FIRST, PREPARED ONLY in
+`higgs_eeHX_ISRFSRON_REC_100jobs_1k_20261109/`:100 jobs, up to1000 events each,
+original normal-ISR/FSR STDHEP indices1--100,8000MB,cms. Actual generator reads
+find60 files with1000 available and40 with997--999:99,952 events total. Each
+frozen job NEVT matches its available count. No input repacking or source/code
+change. Every single-process job embeds ONLY sim,trk,calodigi,rec; no breakpoint.
+All prepared cards/checksums verified; no jobs submitted. Prior500x200/all-five
+preparations are retained and superseded. Later breakpoint-only jobs read these
+REC files; the FSR/beam-spot radiation extension is still pending. Exact input
+counts and commands are in
+[the 1k preparation record](agents_record/2026-11-09-eehx-rec-1k-preparation.md).
 
 Core implementation checkpoint: `dc7b097`. All 74 relevant Python tests pass.
 Standalone events 0,11,16,17 reproduce all 1,067 flat branches exactly. The
