@@ -312,55 +312,52 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**COMPACT TRUTH; COMPLETE-EVENT REPRODUCTION AUDIT (2026-11-09).**
-The user explicitly requested implementation of a smaller truth recorder,
-old/new reproduction checks, and FSR photons in the existing eBrem photon
-format, identified from generator history. The user confirmed no jobs were
-active before this implementation/build. This narrow request authorizes
-`Simulation/GsfTruthEventData`, `Simulation/DetSimAna`, the shared embedded-truth
-reader/callers in `RecGsfTracking`, and `RecBreakpoint` consumers, input-card
-compatibility, tests and documentation. Input-card changes only retain optional
-companion truth; they do not alter GSF steering. This does not authorize
-shared-KF/PFA changes or migration.
+**REC CALORIMETER OUTPUT PRUNING; PRESERVE BREAKPOINT INPUTS (2026-11-09).**
+The user now explicitly requests preserving all information used by the full
+breakpoint/ECAL method while cancelling raw simulated calorimeter hits in REC.
+A fresh idle-job question was answered **No jobs are active** before this
+implementation. This is a narrow output-policy exception for dedicated
+breakpoint batch cards/helper, tests and documentation; it does not authorize
+PFA/PID, digitization, shared tracking, loss/optimizer or fit-objective changes.
+No build/install is needed. Stay on `breakpoint-delayed-neutral`; Hive migration
+remains paused and both workspaces/branches must be preserved.
 
-Work remains on `breakpoint-delayed-neutral`; preserve `breakpoint` and both
-workspaces. Hive migration remains paused. The previous focus is preserved
-byte-for-byte in [the outgoing snapshot](agents_record/2026-11-09-agents-before-truth-recorder.md)
-and [the compatibility handoff](agents_record/2026-11-08-session-handoff.md).
-Do not silently fix existing invalid hit provenance or missing truth ownership;
-optimizer acceptance and parallel reproducibility remain separate open issues.
+Newly prepared REC outputs omit eight raw ECAL/HCAL hit/contribution collections
+and four digitized-hit-to-SimHit association collections. Preserve ALL other
+collections: reconstructed calorimeter hits and cluster constituents, final
+and pre-reclustering PFOs/clusters and exact track links, direct hit-to-MC
+associations, tracks/tracker-hit truth, generator particles, compact material
+spans and eBrem/FSR checkpoints. The current ECAL constraint uses measured
+charged plus collected-neutral cluster energy with the same uncertainties,
+terminal KF update and RTS/free-loss objective. No FSR subtraction or beam-spot
+loss point is introduced here.
 
-The compact contract retains exact hit hooks, eBrem emissions, ECAL entrances
-and track boundaries, with contiguous non-eBrem material sums between them.
-Photon histories retain their last pre-ECAL/entrance or termination checkpoint.
-Generator FSR has separate collections of the same photon/step types and an
-explicit generator-origin link. No angular matching defines FSR, and no new
-many-to-many hit or shower-contribution association is in scope.
+The output filter is only after PFA/PID. Earlier simulation/digitization and
+existing intermediate cleanup are unchanged; external inputs and old frozen
+cards/manifests are not rewritten. New pruned REC cannot replace a raw SIM/
+calodigi copy for shower-deposit studies or calorimeter re-digitization. Do not
+assume job-owned SIM is retained by the active campaign cleanup policy.
+No bulk conversion/deletion of existing production REC is authorized here.
 
-Implementation and focused verification are complete. Fixed events 0,11,16,17
-reproduce all 1,015 pre-existing tuple branches exactly; compacted copies also
-reproduce all 1,067 current branches. All 18 focused C++ tests, 65 existing batch
-tests and two optional-card tests pass. Clean same-seed full/compact simulation
-preserves all 324 detector branches; six generator FSR photons survive the
-native SIM-to-REC/flat chain with their correct entry/last-step data. Storage
-and exact scope/limitations are in
-[the implementation record](agents_record/2026-11-09-compact-truth-generator-fsr.md).
-The follow-up complete-chain check uses only two generator events, not 18.
-All 40 CompleteTracks have identical fit states/covariances after hit matching;
-all PFO kinematics and calorimeter constituents also agree after reordering.
-The four selected production-electron rows agree in 952/953 fields; only a
-neutral-cluster index list changes. Complete event data is NOT strictly
-identical: one other PFO's final PID likelihoods vary, also reproduced by an
-identical compact-input repeat. No PFA/PID/ordering fix was made. Exact scope,
-controls and limits are in
-[the follow-up audit](agents_record/2026-11-09-total-reconstruction-regression.md).
-The previous focus is preserved in
-[the snapshot](agents_record/2026-11-09-agents-before-total-reconstruction-check.md).
+Implementation and focused verification are complete (core checkpoint
+`c37cea1`). Two-event REC is 28.78 -> 2.47 MB (91.4% smaller); an 18-event
+fixture is 316.95 -> 22.04 MB (93.0% smaller). All 76/73 retained collections
+compare exactly and no retained valid relation targets an omitted collection.
+Default breakpoint outputs reproduce all 1,067 branches on the two-event case
+and direct same-code events 0,11,16,17 (including existing failure flags).
+A native PFA/PID run using the generated output policy also preserves every
+retained collection and all breakpoint outputs on the two events. All 69
+relevant Python tests pass. No source C++ or installation changed. Exact
+inputs, limits and evidence are in
+[the pruning record](agents_record/2026-11-09-rec-calorimeter-output-pruning.md).
+The policy applies to newly prepared jobs; no production REC was rewritten.
 
-`CompactTruthRecords=false` retains full debug histories. Compact files require
-the updated span-aware readers and companion input collections.
-
-No population campaign, FSR-corrected fit objective or shower-to-cluster truth
-attribution was implemented. Wait for a new concrete request before those steps
-or any Hive migration. Reconfirm idle jobs before future implementation/install;
-this task's quiet-window confirmation is not continuing authority.
+The outgoing focus is preserved byte-for-byte in
+[the snapshot](agents_record/2026-11-09-agents-before-rec-calo-pruning.md).
+Prior compact truth and full-event repeatability/storage evidence remains in
+[the implementation record](agents_record/2026-11-09-compact-truth-generator-fsr.md),
+[the full-event audit](agents_record/2026-11-09-total-reconstruction-regression.md)
+and [the storage audit](agents_record/2026-11-09-product-disk-breakdown.md).
+The baseline ordering/PID variation, invalid provenance and ownership issues
+are not repaired. Reconfirm idle jobs before a future implementation/install;
+this task's confirmation is not continuing authority.

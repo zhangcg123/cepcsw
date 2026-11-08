@@ -184,7 +184,9 @@ label deposited energy by retained MC particles; the simulation's ancestor/
 primary policy and secondary-recording threshold must be respected before
 claiming exact attribution to an original FSR/eBrem photon.
 
-No filtered-REC experiment has yet verified output pruning. Digitized hits,
+At the time of this consumer trace, filtered-REC pruning was untested. The
+subsequent user-authorized implementation and exact regression results are in
+[the pruning record](2026-11-09-rec-calorimeter-output-pruning.md). Digitized hits,
 cluster constituents and the direct MC associations consumed by PFA must remain;
 any retained relation targeting a removed collection needs consistent handling.
 This trace is not a request or permission to alter merging, prune collections,
