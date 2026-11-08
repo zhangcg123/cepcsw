@@ -312,52 +312,48 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**REC CALORIMETER OUTPUT PRUNING; PRESERVE BREAKPOINT INPUTS (2026-11-09).**
-The user now explicitly requests preserving all information used by the full
-breakpoint/ECAL method while cancelling raw simulated calorimeter hits in REC.
-A fresh idle-job question was answered **No jobs are active** before this
-implementation. This is a narrow output-policy exception for dedicated
-breakpoint batch cards/helper, tests and documentation; it does not authorize
-PFA/PID, digitization, shared tracking, loss/optimizer or fit-objective changes.
-No build/install is needed. Stay on `breakpoint-delayed-neutral`; Hive migration
-remains paused and both workspaces/branches must be preserved.
+**SINGLE-PROCESS BREAKPOINT PRODUCTION CHAIN (2026-11-09).**
+The user explicitly requests merging separate batch stages to avoid intermediate
+ROOT write/read transformations and deletion. Work only with our
+`DumpGsfTrks/*.py.bk` copies and dedicated breakpoint helper/card/tests/docs;
+`Detector/DetCRD/scripts/` originals remain unchanged. A fresh idle-job check
+was answered **No jobs are active** for this implementation. Do not treat it as
+continuing permission for future implementation/install.
 
-Newly prepared REC outputs omit eight raw ECAL/HCAL hit/contribution collections
-and four digitized-hit-to-SimHit association collections. Preserve ALL other
-collections: reconstructed calorimeter hits and cluster constituents, final
-and pre-reclustering PFOs/clusters and exact track links, direct hit-to-MC
-associations, tracks/tracker-hit truth, generator particles, compact material
-spans and eBrem/FSR checkpoints. The current ECAL constraint uses measured
-charged plus collected-neutral cluster energy with the same uncertainties,
-terminal KF update and RTS/free-loss objective. No FSR subtraction or beam-spot
-loss point is introduced here.
+New complete-chain preparations embed frozen SIM/TRK/calodigi/REC and optional
+breakpoint sources in one generated `full_chain.py`, based on
+`DumpGsfTrks/full_chain.py.bk`. They run sequentially in one Gaudi event loop,
+with no PodioInput and no SIM/TRK/calodigi ROOT files or cleanup. REC is written
+before the breakpoint endpoint collections are created; the fit reads the same
+live collections and writes its flat tuple. The existing twelve-collection raw
+calorimeter REC omission policy remains. Old frozen jobs and partial-stage
+workflows retain separate execution. No production campaign has been submitted.
 
-The output filter is only after PFA/PID. Earlier simulation/digitization and
-existing intermediate cleanup are unchanged; external inputs and old frozen
-cards/manifests are not rewritten. New pruned REC cannot replace a raw SIM/
-calodigi copy for shower-deposit studies or calorimeter re-digitization. Do not
-assume job-owned SIM is retained by the active campaign cleanup policy.
-No bulk conversion/deletion of existing production REC is authorized here.
+Use the SIM full detector geometry and preserve TRK SimplePIDSvc parameters
+across singleton configuration. Skip standalone metadata probes only in the
+in-memory card; runtime required-collection checks remain active. A combined
+process shares random services and need not reproduce separate-process samples
+bitwise with the same seed. Batch MEMORY_MB now defaults to 8000, because the
+focused combined process already exceeded the former 5000 MB request during
+initialization. Explicit overrides remain available.
 
-Implementation and focused verification are complete (core checkpoint
-`c37cea1`). Two-event REC is 28.78 -> 2.47 MB (91.4% smaller); an 18-event
-fixture is 316.95 -> 22.04 MB (93.0% smaller). All 76/73 retained collections
-compare exactly and no retained valid relation targets an omitted collection.
-Default breakpoint outputs reproduce all 1,067 branches on the two-event case
-and direct same-code events 0,11,16,17 (including existing failure flags).
-A native PFA/PID run using the generated output policy also preserves every
-retained collection and all breakpoint outputs on the two events. All 69
-relevant Python tests pass. No source C++ or installation changed. Exact
-inputs, limits and evidence are in
-[the pruning record](agents_record/2026-11-09-rec-calorimeter-output-pruning.md).
-The policy applies to newly prepared jobs; no production REC was rewritten.
+Core implementation checkpoint: `dc7b097`. All 74 relevant Python tests pass.
+Standalone events 0,11,16,17 reproduce all 1,067 flat branches exactly. The
+complete two-event native worker succeeds: REC 2,064,573 bytes, flat 3,351,268
+bytes (32 track rows, two event rows), no intermediate ROOT files and no
+breakpoint endpoint collections in REC. All intermediate statuses are
+`not_written_in_memory`. Observed memory high-water sample is about 5.76 GiB.
+The same frozen breakpoint fit rerun from saved REC also succeeds: ALL 1,067
+branches agree EXACTLY with the in-memory fit over 32 track rows/two events,
+including existing failures and full scans/covariances. Focused implementation
+and verification are complete. Artifacts are under
+`/tmp/breakpoint-in-memory-20261109/`. No C++/shared-package source or
+installation changed; no production campaign submitted. Exact evidence and
+limits are in [the chain record](agents_record/2026-11-09-in-memory-breakpoint-chain.md).
 
-The outgoing focus is preserved byte-for-byte in
-[the snapshot](agents_record/2026-11-09-agents-before-rec-calo-pruning.md).
-Prior compact truth and full-event repeatability/storage evidence remains in
-[the implementation record](agents_record/2026-11-09-compact-truth-generator-fsr.md),
-[the full-event audit](agents_record/2026-11-09-total-reconstruction-regression.md)
-and [the storage audit](agents_record/2026-11-09-product-disk-breakdown.md).
-The baseline ordering/PID variation, invalid provenance and ownership issues
-are not repaired. Reconfirm idle jobs before a future implementation/install;
-this task's confirmation is not continuing authority.
+Stay on `breakpoint-delayed-neutral`; Hive migration remains paused. Preserve
+both workspaces/branches, prior known provenance/PID-order/optimizer issues and
+unrelated dirty changes. Prior focus is preserved in
+[the snapshot](agents_record/2026-11-09-agents-before-in-memory-chain.md);
+[the REC pruning gate](agents_record/2026-11-09-rec-calorimeter-output-pruning.md)
+remains applicable to the output policy, not a full-chain physics validation.
