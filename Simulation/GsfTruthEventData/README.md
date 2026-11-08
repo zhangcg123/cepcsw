@@ -4,10 +4,13 @@ This PODIO extension stores the Geant4 information needed by default-off GSF
 mechanism diagnostics inside the ordinary EDM event. It is not a production
 tracking input and does not make the normal GSF truth-dependent.
 
-The simulation writes four provenance collections:
+With `Edm4hepWriterAnaElemTool.WriteGsfTruthEventData=true`, the simulation
+writes the following provenance collections. `CompactTruthRecords=true` is
+the default; `false` preserves the previous full electron/photon step histories
+for direct regression/debug runs.
 
 - `GsfG4MaterialSteps` (`gsftruth::G4MaterialStep`): selected Geant4 pre/post
-  steps, including positions, momenta, process subtype, local material
+  checkpoints, including positions, momenta, process subtype, local material
   thickness, energy deposits, and track-length coordinates, plus each selected
   particle's first ECAL-volume entrance;
 - `GsfSimTrackerHitG4StepLinks`
@@ -20,17 +23,60 @@ The simulation writes four provenance collections:
   process is not used as a photon filter. Each photon retains its exact
   `parentStep`, secondary-list index, creation kinematics and time, and its
   Geant4 track ID once tracking starts (`-1` if it does not start).
-- `GsfG4BremsPhotonSteps` (`gsftruth::G4BremsPhotonStep`): every Geant4 step of
-  each recorded photon, including the boundary step that first enters an ECAL
-  volume but no subsequent ECAL step. Each step links directly to its photon
+- `GsfG4BremsPhotonSteps` (`gsftruth::G4BremsPhotonStep`): the last recorded
+  step of each photon, frozen at first ECAL entry. Full mode keeps every step
+  up to and including that entrance. Each step links directly to its photon
   and stores the pre/post position, momentum, total energy and time, process
   subtype, statuses, volume copy numbers, path length and energy deposit.
   `postInEcal=1` marks the first ECAL-entry step. If a photon stops before
   ECAL, its final stored step records that termination; if it never reaches
-  ECAL, all its tracked steps are retained. ECAL entry is identified from the
+  ECAL, its final tracked step is retained. ECAL entry is identified from the
   Geant4 touchable volume ancestry, not a cylindrical radius approximation.
   Tracking beyond first ECAL entry and daughter-particle trajectories are not
   recorded in this collection.
+
+- `GsfG4MaterialStepSpans` (`gsftruth::G4MaterialStepSpan`): inclusive contiguous
+  ranges of omitted non-eBrem steps, their count, and the double-precision sum
+  of their original float `stepTX0` values. Exact first/last/hook steps requested
+  by all simulated tracker hits, every subtype-3 emission and eBrem-photon
+  parent (even with another step limiter), track boundaries,
+  first ECAL entry and invalid material values remain full checkpoints. Real
+  gaps are never bridged. The reader combines these spans with full hook steps
+  to reproduce fractional hook-to-hook material and eBrem integrals, including
+  selections that skip hits. Floating-point regrouping of t/X0 sums can change
+  the last rounding bits. Full mode writes an empty span collection.
+- `GsfG4FsrPhotons` and `GsfG4FsrPhotonSteps`: the same types and checkpoint
+  format as the eBrem photon collections, in separate collections.
+- `GsfGeneratorFsrLinks` (`gsftruth::GeneratorPhotonLink`): each FSR photon's
+  original `MCParticleGen` index, direct emitting electron-copy index, final
+  stable electron index, status and exact photon relation.
+
+FSR identification uses only generator PDG, status and parent relations. Starting
+from each generator-status-1 electron/positron, walk backwards through copies
+of the same signed PDG, stopping at non-electron production nodes. A generator-
+status-1 photon with a direct parent on that outgoing chain is tagged. This does
+not cross the production node into the incoming beam chain, and excludes Geant4
+photons (generator status 0). There is no energy or opening-angle cut. All final
+electrons are considered; downstream analyses may select the production legs.
+Status 1 means a unique emitter and final electron; status 2 records ambiguity
+instead of guessing. Ambiguous indices are -1. The photon is followed through
+Geant4 using the primary converter's exact generator-index-to-G4-track map.
+
+For FSR, `creatorProcessSubtype=0`, `parentStepNumber=-1`,
+`secondaryIndexInStep=-1`, and the material `parentStep` relation is absent.
+`parentTrackID` identifies the final electron's G4 track when available (-1
+otherwise), rather than a fictitious material emission. Birth kinematics come
+from the generator; entry/termination kinematics come from Geant4. Neither
+format records conversion-descendant shower contributions or assigns ECAL
+clusters to a photon.
+
+The original datatype layouts remain unchanged. New readers accept old files
+without these companion collections. Compact files require span-aware readers
+and pass-through of all companion collections; do not discard spans while
+keeping compact material checkpoints. The maintained breakpoint cards discover
+the optional collections from input metadata and retain them through tracker,
+calorimeter and REC stages. Full transient Geant4 histories are still buffered
+inside the writer; this change reduces persisted output, not simulation RAM.
 
 ## Selected-particle ECAL entrances (schema 2)
 
@@ -54,10 +100,10 @@ material-step selection and was retained solely for its entrance information.
 It must **not** be included in tracker material/loss/ownership calculations.
 The shared `TruthBHLossEventData` reader excludes these diagnostic records.
 If the boundary step already passed the material selection, it is stored
-once with `firstEcalEntry=1, ecalEntryOnly=0`. Existing selected steps and
-their physical values are otherwise unchanged; ordinary photon birth and
-step selection are unchanged. To recover the former material-step population,
-select `ecalEntryOnly==0` before any aggregation. Additional records can shift
+once with `firstEcalEntry=1, ecalEntryOnly=0`. Persisted checkpoints retain
+their physical values. In full mode, select `ecalEntryOnly==0` to recover the
+former material-step population. Compact mode reproduces the supported
+integrals/checkpoints, not every discarded step. Additional records can shift
 collection indices: follow the persisted relations, not assumed row numbers.
 
 This adds at most one step per selected particle, rather than recording its

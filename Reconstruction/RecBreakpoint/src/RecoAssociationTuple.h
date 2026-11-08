@@ -8,9 +8,12 @@
 #include "GsfTruthEventData/G4BremsPhotonCollection.h"
 #include "GsfTruthEventData/G4BremsPhotonStepCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/GeneratorPhotonLinkCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 
+#include <cstdint>
 #include <vector>
+#include <string>
 
 class TTree;
 
@@ -55,7 +58,8 @@ private:
 // Its event_index joins to the per-track breakpoint tree within the same file.
 class NeutralPfoTuple {
 public:
-  void book(TTree& tree);
+  void book(TTree& tree, const std::string& photonPrefix="ebrem_photon_", bool includePfos=true);
+  void assignOrigins(const gsftruth::GeneratorPhotonLinkCollection* origins);
   void assign(int eventIndex, const edm4hep::ReconstructedParticleCollection& pfos,
               const edm4hep::ClusterCollection& ecalClusters,
               const gsftruth::G4BremsPhotonCollection& photons,
@@ -63,9 +67,11 @@ public:
 
 private:
   int m_eventIndex = -1;
+  std::uint32_t m_photonCollectionID = 0;
   std::vector<int> m_pfoIndex, m_pfoPDG, m_ecalClusterPfoIndex, m_ecalClusterIndex;
   std::vector<double> m_pfoEnergy, m_ecalClusterEnergy;
   std::vector<double> m_ecalClusterX, m_ecalClusterY, m_ecalClusterZ;
+  std::vector<int> m_generatorIndex, m_emitterIndex, m_finalElectronIndex, m_originStatus;
   std::vector<int> m_photonIndex, m_photonTrackID, m_photonParentTrackID;
   std::vector<int> m_photonParentStepNumber, m_photonEcalEntryStatus, m_photonEcalEntryStepNumber;
   std::vector<double> m_photonBirthX, m_photonBirthY, m_photonBirthZ;

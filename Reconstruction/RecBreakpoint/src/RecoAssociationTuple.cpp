@@ -198,7 +198,8 @@ void TrackRecoTuple::assignEcalEntry(const edm4hep::MCParticle& particle,
   m_truthEcalPx = momentum.x; m_truthEcalPy = momentum.y; m_truthEcalPz = momentum.z;
 }
 
-void NeutralPfoTuple::book(TTree& tree) {
+void NeutralPfoTuple::book(TTree& tree, const std::string& photonPrefix, bool includePfos) {
+  if (includePfos) {
   tree.Branch("event_index", &m_eventIndex);
   tree.Branch("neutral_pfo_index", &m_pfoIndex);
   tree.Branch("neutral_pfo_pdg", &m_pfoPDG);
@@ -209,53 +210,60 @@ void NeutralPfoTuple::book(TTree& tree) {
   tree.Branch("neutral_ecal_cluster_x", &m_ecalClusterX);
   tree.Branch("neutral_ecal_cluster_y", &m_ecalClusterY);
   tree.Branch("neutral_ecal_cluster_z", &m_ecalClusterZ);
-  tree.Branch("ebrem_photon_index", &m_photonIndex);
-  tree.Branch("ebrem_photon_g4_track_id", &m_photonTrackID);
-  tree.Branch("ebrem_photon_parent_g4_track_id", &m_photonParentTrackID);
-  tree.Branch("ebrem_photon_parent_step_number", &m_photonParentStepNumber);
-  tree.Branch("ebrem_photon_birth_x", &m_photonBirthX);
-  tree.Branch("ebrem_photon_birth_y", &m_photonBirthY);
-  tree.Branch("ebrem_photon_birth_z", &m_photonBirthZ);
-  tree.Branch("ebrem_photon_birth_energy", &m_photonBirthEnergy);
-  tree.Branch("ebrem_photon_birth_px", &m_photonBirthPx);
-  tree.Branch("ebrem_photon_birth_py", &m_photonBirthPy);
-  tree.Branch("ebrem_photon_birth_pz", &m_photonBirthPz);
-  tree.Branch("ebrem_photon_ecal_entry_status", &m_photonEcalEntryStatus);
-  tree.Branch("ebrem_photon_ecal_entry_step_number", &m_photonEcalEntryStepNumber);
-  tree.Branch("ebrem_photon_ecal_entry_x", &m_photonEcalEntryX);
-  tree.Branch("ebrem_photon_ecal_entry_y", &m_photonEcalEntryY);
-  tree.Branch("ebrem_photon_ecal_entry_z", &m_photonEcalEntryZ);
-  tree.Branch("ebrem_photon_ecal_entry_energy", &m_photonEcalEntryEnergy);
-  tree.Branch("ebrem_photon_ecal_entry_px", &m_photonEcalEntryPx);
-  tree.Branch("ebrem_photon_ecal_entry_py", &m_photonEcalEntryPy);
-  tree.Branch("ebrem_photon_ecal_entry_pz", &m_photonEcalEntryPz);
-  tree.Branch("ebrem_photon_last_step_status", &m_photonLastStepStatus);
-  tree.Branch("ebrem_photon_last_step_number", &m_photonLastStepNumber);
-  tree.Branch("ebrem_photon_last_step_process_subtype", &m_photonLastStepProcessSubtype);
-  tree.Branch("ebrem_photon_last_step_pre_step_status", &m_photonLastStepPreStepStatus);
-  tree.Branch("ebrem_photon_last_step_post_step_status", &m_photonLastStepPostStepStatus);
-  tree.Branch("ebrem_photon_last_step_track_status", &m_photonLastStepTrackStatus);
-  tree.Branch("ebrem_photon_last_step_pre_volume_copy_no", &m_photonLastStepPreVolumeCopyNo);
-  tree.Branch("ebrem_photon_last_step_post_volume_copy_no", &m_photonLastStepPostVolumeCopyNo);
-  tree.Branch("ebrem_photon_last_step_post_in_ecal", &m_photonLastStepPostInEcal);
-  tree.Branch("ebrem_photon_last_step_pre_x", &m_photonLastStepPreX);
-  tree.Branch("ebrem_photon_last_step_pre_y", &m_photonLastStepPreY);
-  tree.Branch("ebrem_photon_last_step_pre_z", &m_photonLastStepPreZ);
-  tree.Branch("ebrem_photon_last_step_post_x", &m_photonLastStepPostX);
-  tree.Branch("ebrem_photon_last_step_post_y", &m_photonLastStepPostY);
-  tree.Branch("ebrem_photon_last_step_post_z", &m_photonLastStepPostZ);
-  tree.Branch("ebrem_photon_last_step_pre_energy", &m_photonLastStepPreEnergy);
-  tree.Branch("ebrem_photon_last_step_post_energy", &m_photonLastStepPostEnergy);
-  tree.Branch("ebrem_photon_last_step_pre_px", &m_photonLastStepPrePx);
-  tree.Branch("ebrem_photon_last_step_pre_py", &m_photonLastStepPrePy);
-  tree.Branch("ebrem_photon_last_step_pre_pz", &m_photonLastStepPrePz);
-  tree.Branch("ebrem_photon_last_step_post_px", &m_photonLastStepPostPx);
-  tree.Branch("ebrem_photon_last_step_post_py", &m_photonLastStepPostPy);
-  tree.Branch("ebrem_photon_last_step_post_pz", &m_photonLastStepPostPz);
-  tree.Branch("ebrem_photon_last_step_pre_time", &m_photonLastStepPreTime);
-  tree.Branch("ebrem_photon_last_step_post_time", &m_photonLastStepPostTime);
-  tree.Branch("ebrem_photon_last_step_length", &m_photonLastStepLength);
-  tree.Branch("ebrem_photon_last_step_energy_deposit", &m_photonLastStepEnergyDeposit);
+  }
+  tree.Branch((photonPrefix+"index").c_str(), &m_photonIndex);
+  tree.Branch((photonPrefix+"g4_track_id").c_str(), &m_photonTrackID);
+  tree.Branch((photonPrefix+"parent_g4_track_id").c_str(), &m_photonParentTrackID);
+  tree.Branch((photonPrefix+"parent_step_number").c_str(), &m_photonParentStepNumber);
+  tree.Branch((photonPrefix+"birth_x").c_str(), &m_photonBirthX);
+  tree.Branch((photonPrefix+"birth_y").c_str(), &m_photonBirthY);
+  tree.Branch((photonPrefix+"birth_z").c_str(), &m_photonBirthZ);
+  tree.Branch((photonPrefix+"birth_energy").c_str(), &m_photonBirthEnergy);
+  tree.Branch((photonPrefix+"birth_px").c_str(), &m_photonBirthPx);
+  tree.Branch((photonPrefix+"birth_py").c_str(), &m_photonBirthPy);
+  tree.Branch((photonPrefix+"birth_pz").c_str(), &m_photonBirthPz);
+  tree.Branch((photonPrefix+"ecal_entry_status").c_str(), &m_photonEcalEntryStatus);
+  tree.Branch((photonPrefix+"ecal_entry_step_number").c_str(), &m_photonEcalEntryStepNumber);
+  tree.Branch((photonPrefix+"ecal_entry_x").c_str(), &m_photonEcalEntryX);
+  tree.Branch((photonPrefix+"ecal_entry_y").c_str(), &m_photonEcalEntryY);
+  tree.Branch((photonPrefix+"ecal_entry_z").c_str(), &m_photonEcalEntryZ);
+  tree.Branch((photonPrefix+"ecal_entry_energy").c_str(), &m_photonEcalEntryEnergy);
+  tree.Branch((photonPrefix+"ecal_entry_px").c_str(), &m_photonEcalEntryPx);
+  tree.Branch((photonPrefix+"ecal_entry_py").c_str(), &m_photonEcalEntryPy);
+  tree.Branch((photonPrefix+"ecal_entry_pz").c_str(), &m_photonEcalEntryPz);
+  tree.Branch((photonPrefix+"last_step_status").c_str(), &m_photonLastStepStatus);
+  tree.Branch((photonPrefix+"last_step_number").c_str(), &m_photonLastStepNumber);
+  tree.Branch((photonPrefix+"last_step_process_subtype").c_str(), &m_photonLastStepProcessSubtype);
+  tree.Branch((photonPrefix+"last_step_pre_step_status").c_str(), &m_photonLastStepPreStepStatus);
+  tree.Branch((photonPrefix+"last_step_post_step_status").c_str(), &m_photonLastStepPostStepStatus);
+  tree.Branch((photonPrefix+"last_step_track_status").c_str(), &m_photonLastStepTrackStatus);
+  tree.Branch((photonPrefix+"last_step_pre_volume_copy_no").c_str(), &m_photonLastStepPreVolumeCopyNo);
+  tree.Branch((photonPrefix+"last_step_post_volume_copy_no").c_str(), &m_photonLastStepPostVolumeCopyNo);
+  tree.Branch((photonPrefix+"last_step_post_in_ecal").c_str(), &m_photonLastStepPostInEcal);
+  tree.Branch((photonPrefix+"last_step_pre_x").c_str(), &m_photonLastStepPreX);
+  tree.Branch((photonPrefix+"last_step_pre_y").c_str(), &m_photonLastStepPreY);
+  tree.Branch((photonPrefix+"last_step_pre_z").c_str(), &m_photonLastStepPreZ);
+  tree.Branch((photonPrefix+"last_step_post_x").c_str(), &m_photonLastStepPostX);
+  tree.Branch((photonPrefix+"last_step_post_y").c_str(), &m_photonLastStepPostY);
+  tree.Branch((photonPrefix+"last_step_post_z").c_str(), &m_photonLastStepPostZ);
+  tree.Branch((photonPrefix+"last_step_pre_energy").c_str(), &m_photonLastStepPreEnergy);
+  tree.Branch((photonPrefix+"last_step_post_energy").c_str(), &m_photonLastStepPostEnergy);
+  tree.Branch((photonPrefix+"last_step_pre_px").c_str(), &m_photonLastStepPrePx);
+  tree.Branch((photonPrefix+"last_step_pre_py").c_str(), &m_photonLastStepPrePy);
+  tree.Branch((photonPrefix+"last_step_pre_pz").c_str(), &m_photonLastStepPrePz);
+  tree.Branch((photonPrefix+"last_step_post_px").c_str(), &m_photonLastStepPostPx);
+  tree.Branch((photonPrefix+"last_step_post_py").c_str(), &m_photonLastStepPostPy);
+  tree.Branch((photonPrefix+"last_step_post_pz").c_str(), &m_photonLastStepPostPz);
+  tree.Branch((photonPrefix+"last_step_pre_time").c_str(), &m_photonLastStepPreTime);
+  tree.Branch((photonPrefix+"last_step_post_time").c_str(), &m_photonLastStepPostTime);
+  tree.Branch((photonPrefix+"last_step_length").c_str(), &m_photonLastStepLength);
+  tree.Branch((photonPrefix+"last_step_energy_deposit").c_str(), &m_photonLastStepEnergyDeposit);
+  if (!includePfos) {
+    tree.Branch((photonPrefix+"generator_mc_index").c_str(),&m_generatorIndex);
+    tree.Branch((photonPrefix+"emitter_mc_index").c_str(),&m_emitterIndex);
+    tree.Branch((photonPrefix+"final_electron_mc_index").c_str(),&m_finalElectronIndex);
+    tree.Branch((photonPrefix+"origin_status").c_str(),&m_originStatus);
+  }
 }
 
 void NeutralPfoTuple::assign(int eventIndex,
@@ -264,6 +272,7 @@ void NeutralPfoTuple::assign(int eventIndex,
                              const gsftruth::G4BremsPhotonCollection& photons,
                              const gsftruth::G4BremsPhotonStepCollection& photonSteps) {
   m_eventIndex = eventIndex;
+  m_photonCollectionID = photons.getID();
   m_pfoIndex.clear(); m_pfoPDG.clear(); m_pfoEnergy.clear();
   m_ecalClusterPfoIndex.clear(); m_ecalClusterIndex.clear();
   m_ecalClusterEnergy.clear(); m_ecalClusterX.clear();
@@ -397,6 +406,27 @@ void NeutralPfoTuple::assign(int eventIndex,
       m_photonEcalEntryPx.push_back(p.x); m_photonEcalEntryPy.push_back(p.y);
       m_photonEcalEntryPz.push_back(p.z);
     }
+  }
+}
+void NeutralPfoTuple::assignOrigins(const gsftruth::GeneratorPhotonLinkCollection* origins) {
+  m_generatorIndex.assign(m_photonIndex.size(),-1); m_emitterIndex=m_finalElectronIndex=m_generatorIndex;
+  m_originStatus.assign(m_photonIndex.size(),0);
+  if (!origins) return;
+  std::map<int,gsftruth::GeneratorPhotonLink> byIndex;
+  for (const auto& link : *origins) {
+    if (!link.getPhoton().isAvailable()) continue;
+    if (link.getPhoton().id().collectionID!=m_photonCollectionID)
+      throw std::runtime_error("Generator origin refers to a different photon collection");
+    if (!byIndex.emplace(link.getPhoton().id().index,link).second)
+      throw std::runtime_error("Duplicate generator photon provenance");
+  }
+  for (std::size_t i=0;i<m_photonIndex.size();++i) {
+    const auto found=byIndex.find(m_photonIndex[i]);
+    if (found==byIndex.end()) continue;
+    m_generatorIndex[i]=found->second.getPhotonMCIndex();
+    m_emitterIndex[i]=found->second.getEmitterMCIndex();
+    m_finalElectronIndex[i]=found->second.getFinalElectronMCIndex();
+    m_originStatus[i]=found->second.getStatus();
   }
 }
 } // namespace breakpoint

@@ -60,6 +60,16 @@ podioinput = PodioInput("PodioReader", collections=[
     "GsfSimTrackerHitG4StepLinks",
 ])
 
+# Companion truth is absent in legacy full-step files.
+import ROOT
+_truth_input=ROOT.TFile.Open(inputfilename,"READ")
+if not _truth_input or _truth_input.IsZombie():
+    raise RuntimeError("Cannot inspect input truth collections")
+_truth_names={b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
+for _name in ("GsfG4MaterialStepSpans",):
+    if _name in _truth_names: podioinput.collections += [_name]
+_truth_input.Close()
+
 from Configurables import RecGsfTracking, TrackSystemSvc, GearSvc
 tracksys = TrackSystemSvc("TrackSystemSvc")
 gearsvc = GearSvc("GearSvc")

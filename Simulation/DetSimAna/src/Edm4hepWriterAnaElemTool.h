@@ -24,6 +24,8 @@
 #include "GsfTruthEventData/G4BremsPhotonCollection.h"
 #include "GsfTruthEventData/G4BremsPhotonStepCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
+#include "GsfTruthEventData/G4MaterialStepSpanCollection.h"
+#include "GsfTruthEventData/GeneratorPhotonLinkCollection.h"
 
 class Edm4hepWriterAnaElemTool: public extends<AlgTool, IAnaElemTool> {
 
@@ -77,6 +79,16 @@ private:
         "GsfG4BremsPhotonSteps", Gaudi::DataHandle::Writer, this};
     DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_gsfTruthLinkCol{
         "GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Writer, this};
+    DataHandle<gsftruth::G4MaterialStepSpanCollection> m_gsfTruthSpanCol{
+        "GsfG4MaterialStepSpans", Gaudi::DataHandle::Writer, this};
+    DataHandle<gsftruth::G4BremsPhotonCollection> m_fsrPhotonCol{
+        "GsfG4FsrPhotons", Gaudi::DataHandle::Writer, this};
+    DataHandle<gsftruth::G4BremsPhotonStepCollection> m_fsrPhotonStepCol{
+        "GsfG4FsrPhotonSteps", Gaudi::DataHandle::Writer, this};
+    DataHandle<gsftruth::GeneratorPhotonLinkCollection> m_fsrOriginCol{
+        "GsfGeneratorFsrLinks", Gaudi::DataHandle::Writer, this};
+    Gaudi::Property<bool> m_compactTruth{this, "CompactTruthRecords", true,
+        "Persist hit/emission checkpoints and non-radiative spans; retain only the last pre-ECAL photon step"};
 
     Gaudi::Property<bool> m_writeGsfTruthEventData{
         this, "WriteGsfTruthEventData", false,
@@ -171,6 +183,8 @@ private:
     std::set<int> m_gsfTruthReachedEcal;
 
     struct GsfBremsPhotonRecord {
+        bool generatorFsr = false;
+        int generatorPhoton = -1, emitterMC = -1, finalElectronMC = -1, originStatus = 0;
         int parentTrackID = -1;
         int parentStepNumber = -1;
         int secondaryIndexInStep = -1;
@@ -186,6 +200,9 @@ private:
     // its track ID at PreUserTrackingAction. Never persist this pointer.
     std::map<const G4Track*, std::size_t> m_pendingGsfBremsPhotons;
     std::map<int, std::size_t> m_gsfBremsPhotonByTrackID;
+    std::map<int, std::size_t> m_fsrPhotonByMCIndex;
+    std::map<int, int> m_primaryTrackByMCIndex;
+    std::map<std::size_t, std::size_t> m_lastPhotonStep;
     std::set<int> m_gsfBremsPhotonReachedEcal;
 
     struct GsfBremsPhotonStepRecord {

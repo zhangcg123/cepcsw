@@ -2,6 +2,7 @@
 #define RecGsfTracking_TruthBHLossEventData_h
 
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/G4MaterialStepSpanCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "edm4hep/TrackerHit.h"
@@ -77,7 +78,8 @@ public:
       const gsftruth::SimTrackerHitG4StepLinkCollection* links,
       const std::vector<const edm4hep::MCRecoTrackerAssociationCollection*>&
           associations,
-      std::string& error);
+      std::string& error,
+      const gsftruth::G4MaterialStepSpanCollection* spans = nullptr);
 
   bool matchTrack(const std::vector<edm4hep::TrackerHit>& orderedHits,
                   double maxEndpointDistance,
@@ -125,6 +127,8 @@ private:
   static double momentumMagnitude(const edm4hep::Vector3f& momentum);
 
   std::map<StepKey, StepRecord> m_steps;
+  struct SpanRecord { int last=-1, count=0; double tx0=0; };
+  std::map<StepKey, SpanRecord> m_spans;
   std::map<ObjectKey, LinkRecord> m_linksBySimHit;
   std::map<ObjectKey, std::set<ObjectKey>> m_simHitsByRecoHit;
 };

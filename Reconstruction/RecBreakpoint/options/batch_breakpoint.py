@@ -21,6 +21,8 @@ SIM_CALO_COLLECTIONS = (
     'HcalEndcapsCollection', 'HcalEndcapsContributionCollection',
 )
 SIM_BREMS_COLLECTIONS = ('GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps')
+OPTIONAL_COMPACT_TRUTH = ('GsfG4MaterialStepSpans', 'GsfG4FsrPhotons',
+                          'GsfG4FsrPhotonSteps', 'GsfGeneratorFsrLinks')
 BREAKPOINT_INPUT_COLLECTIONS = (
     'MCParticle', 'CompleteTracks', 'CompleteTracksParticleAssociation',
     'GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps',
@@ -95,6 +97,16 @@ def pass_through(text, reader, collections):
     addition = (f'for _collection in {collections!r}:\n'
                 f'    if _collection not in {reader}.collections:\n'
                 f'        {reader}.collections.append(_collection)\n\n')
+    # Companion truth is optional in old SIM/REC files, but must pass through new ones.
+    addition += ('import ROOT\n'
+                 '_truth_file = ROOT.TFile.Open(k4DataSvc("EventDataSvc").input)\n'
+                 'if not _truth_file or _truth_file.IsZombie():\n'
+                 '    raise RuntimeError("Cannot inspect input truth collections")\n'
+                 '_truth_names = {b.GetName().split("/")[0] for b in _truth_file.Get("events").GetListOfBranches()}\n'
+                 f'for _collection in {OPTIONAL_COMPACT_TRUTH!r}:\n'
+                 f'    if _collection in _truth_names and _collection not in {reader}.collections:\n'
+                 f'        {reader}.collections.append(_collection)\n'
+                 '_truth_file.Close()\n\n')
     anchor = ('# ApplicationMgr\n' if reader == 'podioinput'
               else 'from Configurables import ApplicationMgr\n')
     return replace_once(text, anchor, addition + anchor)
@@ -242,9 +254,9 @@ def prepare():
                                 # The tracker output is the calodigi input.
                                 # Preserve simulated calorimeter hits and
                                 # primary eBrem-photon provenance through it.
-                                if 'calodigi' in stages:
-                                    text = pass_through(text, 'podioinput',
-                                                        SIM_CALO_COLLECTIONS + SIM_BREMS_COLLECTIONS)
+                                text = pass_through(text, 'podioinput',
+                                                    SIM_CALO_COLLECTIONS + SIM_BREMS_COLLECTIONS
+                                                    if 'calodigi' in stages else ())
                             elif stage == 'calodigi':
                                 text = replace_once(text, 'digitizationseed = 12340', f'digitizationseed = {seed}')
                                 text = replace_once(text, '"trk.root"', repr(files['trk']))

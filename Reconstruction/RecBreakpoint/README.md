@@ -1376,6 +1376,29 @@ floating-point step fields are NaN; the photon's birth record remains intact.
 The final-step process and track status help identify absorption, conversion,
 or escape, but they are raw Geant4 codes and not a reconstructed PFO match.
 
+New simulations also populate parallel `fsr_photon_*` arrays in `neutral_pfos`,
+using exactly the same birth, ECAL-entry and last-step fields. Additional
+`fsr_photon_{generator_mc_index,emitter_mc_index,final_electron_mc_index,origin_status}`
+fields retain generator ancestry. Origin status 1 is unique, 2 is ambiguous;
+an unavailable/ambiguous index is -1. `fsr_truth_available=0` means the input
+lacks the three FSR collections; empty arrays in that case do not establish
+zero FSR. With all three collections present it is 1, including events with
+no tagged photons. FSR is identified from outgoing generator electron-copy
+ancestry, with no angular/energy matching. `parent_g4_track_id` is the final
+electron's G4 ID when known; `parent_step_number=-1` distinguishes generator
+emission from a material step. No ECAL-cluster truth assignment is implied.
+See [the embedded truth format](../../Simulation/GsfTruthEventData/README.md).
+
+The simulation's default compact format keeps full hit hooks, emissions and
+ECAL entrances, with omitted non-eBrem material intervals in
+`GsfG4MaterialStepSpans`. The shared truth reader and interval-identification
+algorithm accept this optional collection and still read old full-step files.
+Invalid provenance remains invalid. The original-photon last-step checkpoint
+reproduces the existing photon tuple fields without retaining the intermediate
+trajectory. New compact files must retain their span collection throughout
+reconstruction; `CompactTruthRecords=false` enables full simulation truth for
+direct regression/debugging. These additions never steer the fit.
+
 The dedicated card exposes `fit.BackwardSeedScale` and optional environment
 variable `BP_BACKWARD_SEED_SCALE` (default100). All 25 covariance entries are
 scaled, preserving correlation coefficients; standard deviations scale by

@@ -1,4 +1,6 @@
 #include "Edm4hepWriterAnaElemTool.h"
+#include "GsfTruthEventData/CompactTruth.h"
+#include "GsfTruthEventData/GeneratorFsr.h"
 
 #include "G4Step.hh"
 #include "G4StepPoint.hh"
@@ -168,6 +170,32 @@ Edm4hepWriterAnaElemTool::BeginOfEventAction(const G4Event* anEvent) {
     m_gsfBremsPhotonByTrackID.clear();
     m_gsfBremsPhotonReachedEcal.clear();
     m_gsfBremsPhotonSteps.clear();
+    m_fsrPhotonByMCIndex.clear();
+    m_primaryTrackByMCIndex.clear();
+    m_lastPhotonStep.clear();
+    if (m_writeGsfTruthEventData.value()) {
+        std::vector<int> pdg, status;
+        std::vector<std::vector<int>> parents;
+        for (const auto& particle : *mcGenCol) {
+            pdg.push_back(particle.getPDG()); status.push_back(particle.getGeneratorStatus());
+            parents.emplace_back();
+            for (const auto& parent : particle.getParents()) parents.back().push_back(parent.id().index);
+        }
+        for (const auto& tag : gsftruth::generatorFsr(pdg,status,parents)) {
+            const auto particle=mcGenCol->at(tag.photon);
+            GsfBremsPhotonRecord record;
+            record.generatorFsr=true; record.generatorPhoton=tag.photon;
+            record.emitterMC=tag.emitter; record.finalElectronMC=tag.electron; record.originStatus=tag.status;
+            record.position=particle.getVertex();
+            const auto generatedMomentum=particle.getMomentum();
+            record.momentum={static_cast<float>(generatedMomentum.x),static_cast<float>(generatedMomentum.y),static_cast<float>(generatedMomentum.z)};
+            const auto& v=record.momentum;
+            record.energy=std::sqrt(double(v.x)*v.x+double(v.y)*v.y+double(v.z)*v.z+particle.getMass()*particle.getMass());
+            record.globalTime=particle.getTime();
+            m_fsrPhotonByMCIndex.emplace(tag.photon,m_gsfBremsPhotons.size());
+            m_gsfBremsPhotons.push_back(record);
+        }
+    }
  
 }
 
@@ -175,107 +203,6 @@ void
 Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
 
     msg() << "mcCol size (after simulation) : " << mcCol->size() << endmsg;
-
-    gsftruth::SimTrackerHitG4StepLinkCollection* gsfTruthLinks = nullptr;
-    std::map<std::pair<int, int>, gsftruth::G4MaterialStep> gsfTruthStepByKey;
-    std::set<int> gsfTruthTrackIDs;
-    if (m_writeGsfTruthEventData.value()) {
-        auto* gsfTruthSteps = m_gsfTruthStepCol.createAndPut();
-        auto* gsfBremsPhotons = m_gsfBremsPhotonCol.createAndPut();
-        auto* gsfBremsPhotonSteps = m_gsfBremsPhotonStepCol.createAndPut();
-        gsfTruthLinks = m_gsfTruthLinkCol.createAndPut();
-        for (const auto& record : m_gsfTruthSteps) {
-            auto stored = gsfTruthSteps->create();
-            stored.setTrackID(record.trackID);
-            stored.setParentID(record.parentID);
-            stored.setStepNumber(record.stepNumber);
-            stored.setPdg(record.pdg);
-            stored.setCharge(record.charge);
-            stored.setPreStepStatus(record.preStepStatus);
-            stored.setPostStepStatus(record.postStepStatus);
-            stored.setProcessSubtype(record.processSubtype);
-            stored.setPreVolumeCopyNo(record.preVolumeCopyNo);
-            stored.setPostVolumeCopyNo(record.postVolumeCopyNo);
-            stored.setPreSensitive(record.preSensitive);
-            stored.setPostSensitive(record.postSensitive);
-            stored.setPrePosition(record.prePosition);
-            stored.setPostPosition(record.postPosition);
-            stored.setPreMomentum(record.preMomentum);
-            stored.setPostMomentum(record.postMomentum);
-            stored.setMomentumLoss(record.momentumLoss);
-            stored.setRetainedMomentumFraction(record.retainedMomentumFraction);
-            stored.setPreKineticEnergy(record.preKineticEnergy);
-            stored.setPostKineticEnergy(record.postKineticEnergy);
-            stored.setEnergyDeposit(record.energyDeposit);
-            stored.setNonIonizingEnergyDeposit(record.nonIonizingEnergyDeposit);
-            stored.setStepLength(record.stepLength);
-            stored.setMaterialRadiationLength(record.materialRadiationLength);
-            stored.setStepTX0(record.stepTX0);
-            stored.setPreTrackLength(record.preTrackLength);
-            stored.setPostTrackLength(record.postTrackLength);
-            stored.setPreGlobalTime(record.preGlobalTime);
-            stored.setPostGlobalTime(record.postGlobalTime);
-            stored.setFirstEcalEntry(record.firstEcalEntry);
-            stored.setEcalEntryOnly(record.ecalEntryOnly);
-            gsfTruthStepByKey.emplace(
-                std::make_pair(record.trackID, record.stepNumber),
-                static_cast<gsftruth::G4MaterialStep>(stored));
-            gsfTruthTrackIDs.insert(record.trackID);
-        }
-        std::map<std::size_t, gsftruth::G4BremsPhoton> gsfPhotonByIndex;
-        for (std::size_t index = 0; index < m_gsfBremsPhotons.size(); ++index) {
-            const auto& record = m_gsfBremsPhotons[index];
-            const auto parent = gsfTruthStepByKey.find(
-                std::make_pair(record.parentTrackID, record.parentStepNumber));
-            if (parent == gsfTruthStepByKey.end()) {
-                warning() << "Missing stored parent eBrem step for photon: track "
-                          << record.parentTrackID << ", step "
-                          << record.parentStepNumber << endmsg;
-                continue;
-            }
-            auto photon = gsfBremsPhotons->create();
-            photon.setParentTrackID(record.parentTrackID);
-            photon.setParentStepNumber(record.parentStepNumber);
-            photon.setSecondaryIndexInStep(record.secondaryIndexInStep);
-            photon.setCreatorProcessSubtype(record.creatorProcessSubtype);
-            photon.setTrackID(record.trackID);
-            photon.setPosition(record.position);
-            photon.setMomentum(record.momentum);
-            photon.setEnergy(record.energy);
-            photon.setGlobalTime(record.globalTime);
-            photon.setParentStep(parent->second);
-            gsfPhotonByIndex.emplace(index, static_cast<gsftruth::G4BremsPhoton>(photon));
-        }
-        for (const auto& record : m_gsfBremsPhotonSteps) {
-            const auto photon = gsfPhotonByIndex.find(record.photonIndex);
-            if (photon == gsfPhotonByIndex.end()) {
-                warning() << "Missing photon for Geant4 step: track "
-                          << record.trackID << ", step " << record.stepNumber << endmsg;
-                continue;
-            }
-            auto stored = gsfBremsPhotonSteps->create();
-            stored.setTrackID(record.trackID);
-            stored.setStepNumber(record.stepNumber);
-            stored.setProcessSubtype(record.processSubtype);
-            stored.setPreStepStatus(record.preStepStatus);
-            stored.setPostStepStatus(record.postStepStatus);
-            stored.setTrackStatus(record.trackStatus);
-            stored.setPreVolumeCopyNo(record.preVolumeCopyNo);
-            stored.setPostVolumeCopyNo(record.postVolumeCopyNo);
-            stored.setPostInEcal(record.postInEcal);
-            stored.setPrePosition(record.prePosition);
-            stored.setPostPosition(record.postPosition);
-            stored.setPreMomentum(record.preMomentum);
-            stored.setPostMomentum(record.postMomentum);
-            stored.setPreEnergy(record.preEnergy);
-            stored.setPostEnergy(record.postEnergy);
-            stored.setPreGlobalTime(record.preGlobalTime);
-            stored.setPostGlobalTime(record.postGlobalTime);
-            stored.setStepLength(record.stepLength);
-            stored.setEnergyDeposit(record.energyDeposit);
-            stored.setPhoton(photon->second);
-        }
-    }
 
     const auto resolveTraversalHook = [&](const dd4hep::sim::Geant4TrackerHit& hit,
                                           int& hookStepNumber,
@@ -318,6 +245,148 @@ Edm4hepWriterAnaElemTool::EndOfEventAction(const G4Event* anEvent) {
             }
         }
     };
+
+    gsftruth::SimTrackerHitG4StepLinkCollection* gsfTruthLinks = nullptr;
+    std::map<std::pair<int, int>, gsftruth::G4MaterialStep> gsfTruthStepByKey;
+    std::set<int> gsfTruthTrackIDs;
+    if (m_writeGsfTruthEventData.value()) {
+        auto* gsfTruthSteps = m_gsfTruthStepCol.createAndPut();
+        auto* gsfBremsPhotons = m_gsfBremsPhotonCol.createAndPut();
+        auto* gsfBremsPhotonSteps = m_gsfBremsPhotonStepCol.createAndPut();
+        auto* fsrPhotons=m_fsrPhotonCol.createAndPut();
+        auto* fsrSteps=m_fsrPhotonStepCol.createAndPut();
+        auto* fsrOrigins=m_fsrOriginCol.createAndPut();
+        auto* spans=m_gsfTruthSpanCol.createAndPut();
+        std::set<std::pair<int,int>> checkpoints;
+        if (auto* collections=anEvent->GetHCofThisEvent()) {
+            for (int c=0;c<collections->GetCapacity();++c) {
+                auto* hits=dynamic_cast<G4THitsCollection<dd4hep::sim::Geant4Hit>*>(collections->GetHC(c));
+                if (!hits) continue;
+                for (std::size_t i=0;i<hits->GetSize();++i) {
+                    const auto* hit=dynamic_cast<dd4hep::sim::Geant4TrackerHit*>(hits->GetHit(i));
+                    if (!hit) continue;
+                    int hook=hit->hookStepNumber; float fraction=hit->hookStepFraction;
+                    resolveTraversalHook(*hit,hook,fraction);
+                    for (int n : {hit->firstStepNumber,hit->lastStepNumber,hook})
+                        if (n>=0) checkpoints.emplace(hit->truth.trackID,n);
+                }
+            }
+        }
+        // The step limiter need not be the process that emitted the photon.
+        for (const auto& photon : m_gsfBremsPhotons)
+            if (!photon.generatorFsr) checkpoints.emplace(photon.parentTrackID,photon.parentStepNumber);
+        auto compact=gsftruth::compactSteps(m_gsfTruthSteps,checkpoints);
+        if (!m_compactTruth.value()) {
+            compact.kept.clear(); compact.spans.clear();
+            for (std::size_t i=0;i<m_gsfTruthSteps.size();++i) compact.kept.push_back(i);
+        }
+        for (const auto& span : compact.spans) {
+            auto stored=spans->create(); stored.setTrackID(span.trackID);
+            stored.setFirstStepNumber(span.first); stored.setLastStepNumber(span.last);
+            stored.setStepCount(span.count); stored.setIntegratedTX0(span.tx0);
+        }
+        gsfTruthLinks = m_gsfTruthLinkCol.createAndPut();
+        for (std::size_t index : compact.kept) {
+            const auto& record=m_gsfTruthSteps[index];
+            auto stored = gsfTruthSteps->create();
+            stored.setTrackID(record.trackID);
+            stored.setParentID(record.parentID);
+            stored.setStepNumber(record.stepNumber);
+            stored.setPdg(record.pdg);
+            stored.setCharge(record.charge);
+            stored.setPreStepStatus(record.preStepStatus);
+            stored.setPostStepStatus(record.postStepStatus);
+            stored.setProcessSubtype(record.processSubtype);
+            stored.setPreVolumeCopyNo(record.preVolumeCopyNo);
+            stored.setPostVolumeCopyNo(record.postVolumeCopyNo);
+            stored.setPreSensitive(record.preSensitive);
+            stored.setPostSensitive(record.postSensitive);
+            stored.setPrePosition(record.prePosition);
+            stored.setPostPosition(record.postPosition);
+            stored.setPreMomentum(record.preMomentum);
+            stored.setPostMomentum(record.postMomentum);
+            stored.setMomentumLoss(record.momentumLoss);
+            stored.setRetainedMomentumFraction(record.retainedMomentumFraction);
+            stored.setPreKineticEnergy(record.preKineticEnergy);
+            stored.setPostKineticEnergy(record.postKineticEnergy);
+            stored.setEnergyDeposit(record.energyDeposit);
+            stored.setNonIonizingEnergyDeposit(record.nonIonizingEnergyDeposit);
+            stored.setStepLength(record.stepLength);
+            stored.setMaterialRadiationLength(record.materialRadiationLength);
+            stored.setStepTX0(record.stepTX0);
+            stored.setPreTrackLength(record.preTrackLength);
+            stored.setPostTrackLength(record.postTrackLength);
+            stored.setPreGlobalTime(record.preGlobalTime);
+            stored.setPostGlobalTime(record.postGlobalTime);
+            stored.setFirstEcalEntry(record.firstEcalEntry);
+            stored.setEcalEntryOnly(record.ecalEntryOnly);
+            gsfTruthStepByKey.emplace(
+                std::make_pair(record.trackID, record.stepNumber),
+                static_cast<gsftruth::G4MaterialStep>(stored));
+            gsfTruthTrackIDs.insert(record.trackID);
+        }
+        std::map<std::size_t, gsftruth::G4BremsPhoton> gsfPhotonByIndex;
+        for (std::size_t index = 0; index < m_gsfBremsPhotons.size(); ++index) {
+            const auto& record = m_gsfBremsPhotons[index];
+            const auto parent = gsfTruthStepByKey.find(
+                std::make_pair(record.parentTrackID, record.parentStepNumber));
+            if (!record.generatorFsr && parent == gsfTruthStepByKey.end()) {
+                warning() << "Missing stored parent eBrem step for photon: track "
+                          << record.parentTrackID << ", step "
+                          << record.parentStepNumber << endmsg;
+                continue;
+            }
+            auto photon = record.generatorFsr ? fsrPhotons->create() : gsfBremsPhotons->create();
+            const auto electron=m_primaryTrackByMCIndex.find(record.finalElectronMC);
+            photon.setParentTrackID(record.generatorFsr ?
+                (electron==m_primaryTrackByMCIndex.end() ? -1 : electron->second) : record.parentTrackID);
+            photon.setParentStepNumber(record.parentStepNumber);
+            photon.setSecondaryIndexInStep(record.secondaryIndexInStep);
+            photon.setCreatorProcessSubtype(record.creatorProcessSubtype);
+            photon.setTrackID(record.trackID);
+            photon.setPosition(record.position);
+            photon.setMomentum(record.momentum);
+            photon.setEnergy(record.energy);
+            photon.setGlobalTime(record.globalTime);
+            if (!record.generatorFsr) photon.setParentStep(parent->second);
+            else {
+                auto origin=fsrOrigins->create(); origin.setPhotonMCIndex(record.generatorPhoton);
+                origin.setEmitterMCIndex(record.emitterMC); origin.setFinalElectronMCIndex(record.finalElectronMC);
+                origin.setStatus(record.originStatus); origin.setPhoton(photon);
+            }
+            gsfPhotonByIndex.emplace(index, static_cast<gsftruth::G4BremsPhoton>(photon));
+        }
+        for (const auto& record : m_gsfBremsPhotonSteps) {
+            const auto photon = gsfPhotonByIndex.find(record.photonIndex);
+            if (photon == gsfPhotonByIndex.end()) {
+                warning() << "Missing photon for Geant4 step: track "
+                          << record.trackID << ", step " << record.stepNumber << endmsg;
+                continue;
+            }
+            auto stored = m_gsfBremsPhotons[record.photonIndex].generatorFsr ?
+                fsrSteps->create() : gsfBremsPhotonSteps->create();
+            stored.setTrackID(record.trackID);
+            stored.setStepNumber(record.stepNumber);
+            stored.setProcessSubtype(record.processSubtype);
+            stored.setPreStepStatus(record.preStepStatus);
+            stored.setPostStepStatus(record.postStepStatus);
+            stored.setTrackStatus(record.trackStatus);
+            stored.setPreVolumeCopyNo(record.preVolumeCopyNo);
+            stored.setPostVolumeCopyNo(record.postVolumeCopyNo);
+            stored.setPostInEcal(record.postInEcal);
+            stored.setPrePosition(record.prePosition);
+            stored.setPostPosition(record.postPosition);
+            stored.setPreMomentum(record.preMomentum);
+            stored.setPostMomentum(record.postMomentum);
+            stored.setPreEnergy(record.preEnergy);
+            stored.setPostEnergy(record.postEnergy);
+            stored.setPreGlobalTime(record.preGlobalTime);
+            stored.setPostGlobalTime(record.postGlobalTime);
+            stored.setStepLength(record.stepLength);
+            stored.setEnergyDeposit(record.energyDeposit);
+            stored.setPhoton(photon->second);
+        }
+    }
 
     // Note about this part: DD4hep readout name is same to the collection name in Geant4.
     // However, some collections are created in Geant4 only, which should be also saved into EDM4hep.
@@ -604,6 +673,15 @@ Edm4hepWriterAnaElemTool::PreUserTrackingAction(const G4Track* track) {
     int curparid = track->GetParentID();
     int pritrkid = curparid;
 
+    if (m_writeGsfTruthEventData.value() && curparid==0 && m_userinfo) {
+        const int mc=m_userinfo->idxG4Track2Edm4hep(curtrkid);
+        if (mc>=0) m_primaryTrackByMCIndex.emplace(mc,curtrkid);
+        const auto fsr=m_fsrPhotonByMCIndex.find(mc);
+        if (fsr!=m_fsrPhotonByMCIndex.end()) {
+            m_gsfBremsPhotons[fsr->second].trackID=curtrkid;
+            m_gsfBremsPhotonByTrackID.emplace(curtrkid,fsr->second);
+        }
+    }
     if (m_writeGsfTruthEventData.value()) {
         const auto pending = m_pendingGsfBremsPhotons.find(track);
         if (pending != m_pendingGsfBremsPhotons.end()) {
@@ -1081,7 +1159,13 @@ void Edm4hepWriterAnaElemTool::recordGsfBremsPhotonStep(const G4Step* step) {
     record.postGlobalTime = post->GetGlobalTime() / CLHEP::ns;
     record.stepLength = step->GetStepLength() / CLHEP::mm;
     record.energyDeposit = step->GetTotalEnergyDeposit() / CLHEP::GeV;
-    m_gsfBremsPhotonSteps.push_back(record);
+    const auto previous=m_lastPhotonStep.find(record.photonIndex);
+    if (m_compactTruth.value() && previous!=m_lastPhotonStep.end())
+        m_gsfBremsPhotonSteps[previous->second]=record;
+    else {
+        m_lastPhotonStep[record.photonIndex]=m_gsfBremsPhotonSteps.size();
+        m_gsfBremsPhotonSteps.push_back(record);
+    }
     if (record.postInEcal) m_gsfBremsPhotonReachedEcal.insert(trackID);
 }
 

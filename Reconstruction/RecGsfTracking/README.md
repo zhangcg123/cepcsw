@@ -175,6 +175,13 @@ configured deterministic energy-loss treatment. The rest of the GSF workflow
 is unchanged. This makes the mode a truth-dependent mechanism test, not a
 candidate reconstruction algorithm or a BH-model validation.
 
+Compact simulation truth additionally requires `GsfG4MaterialStepSpans` in
+the input reader. The maintained card and reverse template discover this
+optional companion from metadata, preserving old full-step input support.
+It supplies omitted non-eBrem material sums; exact hooks/emissions remain
+in `GsfG4MaterialSteps`. This changes no configurable fit property or steering.
+See [the compact format](../../Simulation/GsfTruthEventData/README.md).
+
 The current input event must contain `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` together with the standard reconstructed-to-
 simulated tracker-hit association collections. The algorithm maps every

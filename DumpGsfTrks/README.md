@@ -31,14 +31,26 @@ Simulation/DetSimAna/src/Edm4hepWriterAnaElemTool.{h,cpp}
 ```
 
 With `Edm4hepWriterAnaElemTool.WriteGsfTruthEventData=True`, simulation writes
-three PODIO collections into the ordinary event:
+PODIO provenance into the ordinary event:
 
-- `GsfG4MaterialSteps`: selected Geant4 pre/post material steps;
+- `GsfG4MaterialSteps`: selected Geant4 pre/post material checkpoints;
+- `GsfG4MaterialStepSpans`: omitted contiguous non-eBrem ranges and their t/X0
+  sums in compact mode; the tracker and GSF cards discover this optional
+  collection from input metadata, preserving old full-step input support;
 - `GsfSimTrackerHitG4StepLinks`: one relation from a persisted
   `SimTrackerHit` to its exact contributing step range and measurement hook.
 - `GsfG4BremsPhotons`: bremsstrahlung photons from selected electron/positron
   steps, with creation kinematics and a direct relation to each parent `GsfG4MaterialSteps`
   object. This is creation truth, not a reconstructed or calorimeter photon.
+
+`GsfG4BremsPhotonSteps` now retains the original photon's last pre-ECAL step,
+frozen at first ECAL entry (or its last step if it never enters).
+`CompactTruthRecords=false` restores full histories for regression/debugging.
+The tracker card also retains the optional `GsfG4FsrPhotons`,
+`GsfG4FsrPhotonSteps` and `GsfGeneratorFsrLinks` collections. FSR uses the same
+photon/checkpoint format with explicit outgoing generator electron ancestry;
+there is no angular/energy matching. Details and compatibility limitations are
+in [the embedded truth contract](../Simulation/GsfTruthEventData/README.md).
 
 The transient detector hit records the first/last contributing Geant4 step
 and the hook convention when the hit is made. Combined silicon hits expose a

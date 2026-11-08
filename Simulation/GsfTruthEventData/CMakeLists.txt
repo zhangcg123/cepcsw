@@ -18,6 +18,8 @@ PODIO_ADD_DATAMODEL_CORE_LIB(
   OUTPUT_FOLDER "${GSF_TRUTH_EDM_GENERATED_DIR}"
 )
 target_link_libraries(GsfTruthEventData PUBLIC EDM4HEP::edm4hep)
+target_include_directories(GsfTruthEventData PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+install(DIRECTORY include/GsfTruthEventData DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 PODIO_ADD_ROOT_IO_DICT(
   GsfTruthEventDataDict
@@ -62,3 +64,11 @@ install(FILES "${GSF_TRUTH_ROOTMAP}" "${GSF_TRUTH_PCM}"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   COMPONENT dev
 )
+
+if(BUILD_TESTING)
+  add_executable(GsfTruthRecordsTest tests/TruthRecordsTest.cpp)
+  target_include_directories(GsfTruthRecordsTest PRIVATE include)
+  target_compile_features(GsfTruthRecordsTest PRIVATE cxx_std_17)
+  target_compile_options(GsfTruthRecordsTest PRIVATE -UNDEBUG)
+  add_test(NAME GsfTruthRecords COMMAND GsfTruthRecordsTest)
+endif()

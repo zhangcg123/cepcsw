@@ -4,6 +4,8 @@
 #include "edm4hep/TrackCollection.h"
 #include "TLeaf.h"
 #include "TTree.h"
+#include "TTreeReader.h"
+#include "TTreeReaderArray.h"
 
 #include <cmath>
 #include <limits>
@@ -84,4 +86,40 @@ int main() {
   check(first, 1, &steps, &links); // Repeated links to the same ID are not ambiguity.
   auto tie = associations.create(); tie.setRec(first); tie.setSim(muon); tie.setWeight(4);
   check(first, -1, &steps, &links);
+
+  gsftruth::G4BremsPhotonCollection photons;
+  gsftruth::G4BremsPhotonStepCollection photonSteps;
+  gsftruth::GeneratorPhotonLinkCollection origins;
+  photons.setID(101); photonSteps.setID(102); origins.setID(103);
+  auto photon=photons.create(); photon.setTrackID(73); photon.setParentTrackID(42);
+  photon.setEnergy(2); photon.setMomentum({2,0,0});
+  auto entry=photonSteps.create(); entry.setPhoton(photon); entry.setStepNumber(9);
+  entry.setPostInEcal(1); entry.setPostEnergy(2); entry.setPostPosition({1831,0,0});
+  auto origin=origins.create(); origin.setPhoton(photon); origin.setPhotonMCIndex(17);
+  origin.setEmitterMCIndex(12); origin.setFinalElectronMCIndex(15); origin.setStatus(1);
+  TTree photonTree("photons","photons");
+  breakpoint::NeutralPfoTuple brem,fsr;
+  brem.book(photonTree); fsr.book(photonTree,"fsr_photon_",false);
+  brem.assign(0,pfos,clusters,photons,photonSteps);
+  fsr.assign(0,pfos,clusters,photons,photonSteps); fsr.assignOrigins(&origins);
+  photonTree.Fill();
+  fsr.assignOrigins(nullptr); photonTree.Fill();
+  TTreeReader reader(&photonTree);
+  TTreeReaderArray<int> generator(reader,"fsr_photon_generator_mc_index");
+  TTreeReaderArray<int> finalElectron(reader,"fsr_photon_final_electron_mc_index");
+  TTreeReaderArray<int> originStatus(reader,"fsr_photon_origin_status");
+  TTreeReaderArray<double> bremEnergy(reader,"ebrem_photon_birth_energy");
+  TTreeReaderArray<double> fsrEnergy(reader,"fsr_photon_birth_energy");
+  TTreeReaderArray<double> entryX(reader,"fsr_photon_ecal_entry_x");
+  require(reader.Next() && generator.GetSize()==1 && generator[0]==17 &&
+          finalElectron[0]==15 && originStatus[0]==1,"FSR generator provenance lost");
+  require(bremEnergy[0]==2 && fsrEnergy[0]==bremEnergy[0] && entryX[0]==1831,
+          "FSR and eBrem formats differ");
+  require(reader.Next() && originStatus[0]==0 && generator[0]==-1,
+          "Missing provenance retained previous event");
+  gsftruth::G4BremsPhotonCollection unrelated;
+  unrelated.setID(104); origin.setPhoton(unrelated.create());
+  bool rejected=false;
+  try { fsr.assignOrigins(&origins); } catch (const std::runtime_error&) { rejected=true; }
+  require(rejected,"An origin from another photon collection was accepted");
 }

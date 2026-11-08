@@ -43,8 +43,29 @@ datatypes:
       - std::int16_t firstEcalEntry // 1 only on the first outside-to-ECAL boundary step; entrance is postPosition/postMomentum
       - std::int16_t ecalEntryOnly // 1 if retained only for ECAL entrance, outside the configured material-step selection; exclude from tracker-material truth
 
+  gsftruth::G4MaterialStepSpan:
+    Description: "Contiguous omitted non-eBrem electron steps; exact hit/emission/ECAL checkpoints remain in G4MaterialStep"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t trackID // Geant4 track identifier
+      - std::int32_t firstStepNumber // first omitted step, inclusive
+      - std::int32_t lastStepNumber // last omitted step, inclusive
+      - std::int32_t stepCount // number of omitted steps; no gaps are allowed
+      - double integratedTX0 // sum of the original persisted float stepTX0 values
+
+  gsftruth::GeneratorPhotonLink:
+    Description: "Generator-history origin of one FSR photon; never inferred from its direction or a Geant4 creator process"
+    Author: "CEPCSW GSF development"
+    Members:
+      - std::int32_t photonMCIndex // original MCParticleGen photon index
+      - std::int32_t emitterMCIndex // direct same-sign electron-copy parent, or -1 if ambiguous
+      - std::int32_t finalElectronMCIndex // final stable generator electron owning the copy chain, or -1
+      - std::int32_t status // 1 unique generator-history assignment; 2 ambiguous assignment
+    OneToOneRelations:
+      - gsftruth::G4BremsPhoton photon // photon in the separate FSR collection, with the same format as material photons
+
   gsftruth::G4BremsPhoton:
-    Description: "Geant4 bremsstrahlung photon emitted by one selected primary electron/positron inside the tracker"
+    Description: "Radiation photon: material eBrem has an exact emitting G4 step; generator FSR is stored separately with GeneratorPhotonLink provenance"
     Author: "CEPCSW GSF development"
     Members:
       - std::int32_t parentTrackID // Geant4 electron/positron track identifier

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <sstream>
 
 namespace {
@@ -44,8 +45,10 @@ bool TruthBHLossEventData::prepare(
     const gsftruth::SimTrackerHitG4StepLinkCollection* links,
     const std::vector<const edm4hep::MCRecoTrackerAssociationCollection*>&
         associations,
-    std::string& error) {
+    std::string& error,
+    const gsftruth::G4MaterialStepSpanCollection* spans) {
   m_steps.clear();
+  m_spans.clear();
   m_linksBySimHit.clear();
   m_simHitsByRecoHit.clear();
   error.clear();
@@ -82,6 +85,24 @@ bool TruthBHLossEventData::prepare(
               << " step=" << key.second;
       error = message.str();
       return false;
+    }
+  }
+
+  if (spans) for (const auto& span : *spans) {
+    const StepKey key{span.getTrackID(),span.getFirstStepNumber()};
+    const int last=span.getLastStepNumber();
+    const auto next=m_steps.lower_bound(key);
+    if (key.second<0 || last<key.second || span.getStepCount()!=int64_t(last)-key.second+1 ||
+        !std::isfinite(span.getIntegratedTX0()) || span.getIntegratedTX0()<0 ||
+        (next!=m_steps.end() && next->first.first==key.first && next->first.second<=last) ||
+        !m_spans.emplace(key,SpanRecord{last,span.getStepCount(),span.getIntegratedTX0()}).second) {
+      error="invalid or overlapping compact material span"; return false;
+    }
+  }
+  for (auto it=m_spans.begin();it!=m_spans.end();++it) {
+    auto next=std::next(it);
+    if (next!=m_spans.end() && next->first.first==it->first.first && next->first.second<=it->second.last) {
+      error="overlapping compact material spans"; return false;
     }
   }
 
@@ -295,6 +316,15 @@ bool TruthBHLossEventData::matchTrack(
          stepNumber <= to.hookStepNumber; ++stepNumber) {
       const auto step = m_steps.find({from.trackID, stepNumber});
       if (step == m_steps.end()) {
+        const auto span=m_spans.find({from.trackID,stepNumber});
+        if (span!=m_spans.end() && span->second.last<to.hookStepNumber) {
+          if (collectMaterialIntervals) {
+            materialInterval.truthTX0+=span->second.tx0;
+            materialInterval.stepCount+=span->second.count;
+          }
+          stepNumber=span->second.last;
+          continue;
+        }
         std::ostringstream message;
         message << "missing embedded G4 step " << stepNumber
                 << " inside accepted-hit interval";

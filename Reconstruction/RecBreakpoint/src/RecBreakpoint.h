@@ -10,6 +10,7 @@
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/ClusterCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
+#include "GsfTruthEventData/G4MaterialStepSpanCollection.h"
 #include "GsfTruthEventData/SimTrackerHitG4StepLinkCollection.h"
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
@@ -79,9 +80,13 @@ private:
   DataHandle<edm4hep::ReconstructedParticleCollection> m_prePfos{"CyberPFOPreReclustering", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ClusterCollection> m_preEcalClusters{"EcalClusterPreReclustering", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ClusterCollection> m_chargedEcalClusters{"", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4BremsPhotonCollection> m_fsrPhotons{"GsfG4FsrPhotons", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4BremsPhotonStepCollection> m_fsrSteps{"GsfG4FsrPhotonSteps", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::GeneratorPhotonLinkCollection> m_fsrOrigins{"GsfGeneratorFsrLinks", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4BremsPhotonCollection> m_bremsPhotons{"GsfG4BremsPhotons", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4BremsPhotonStepCollection> m_bremsPhotonSteps{"GsfG4BremsPhotonSteps", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4MaterialStepCollection> m_truthSteps{"GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4MaterialStepSpanCollection> m_truthSpans{"GsfG4MaterialStepSpans", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_truthLinks{"GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_vxdAssociations{"VXDTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCRecoTrackerAssociationCollection> m_itkbAssociations{"ITKBarrelTrackerHitAssociation", Gaudi::DataHandle::Reader, this};
@@ -149,7 +154,8 @@ private:
   int m_electronTrackSelected = 0; // 0 disabled, 1 selected, -1 skipped
   double m_kfPt = 0, m_kfPtError = 0, m_fitPt = 0, m_fitPtError = 0, m_fitChi2 = 0;
   breakpoint::TrackRecoTuple m_trackRecoTuple;
-  breakpoint::NeutralPfoTuple m_neutralPfoTuple;
+  breakpoint::NeutralPfoTuple m_neutralPfoTuple, m_fsrPfoTuple;
+  int m_fsrTruthAvailable=0;
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   std::array<int, 3> m_backwardRunFlags{};

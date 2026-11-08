@@ -63,6 +63,15 @@ if(BUILD_TESTING)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
   if(TARGET RecBreakpointLikelihood)
+    add_executable(RecBreakpointCompactTruthReaderTest tests/CompactTruthReaderTest.cpp
+      ../RecGsfTracking/src/TruthBHLossEventData.cpp)
+    target_compile_features(RecBreakpointCompactTruthReaderTest PRIVATE cxx_std_17)
+    target_compile_options(RecBreakpointCompactTruthReaderTest PRIVATE -UNDEBUG)
+    target_include_directories(RecBreakpointCompactTruthReaderTest PRIVATE ../RecGsfTracking/src)
+    target_include_directories(RecBreakpointCompactTruthReaderTest BEFORE PRIVATE
+      ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
+    target_link_libraries(RecBreakpointCompactTruthReaderTest PRIVATE GsfTruthEventData EDM4HEP::edm4hep)
+    add_test(NAME RecBreakpointCompactTruthReader COMMAND RecBreakpointCompactTruthReaderTest)
     add_executable(RecBreakpointTruthElectronSelectorTest tests/TruthElectronSelectorTest.cpp
       src/TruthElectronSelector.cpp)
     target_compile_features(RecBreakpointTruthElectronSelectorTest PRIVATE cxx_std_17)
@@ -84,7 +93,7 @@ if(BUILD_TESTING)
     target_include_directories(RecBreakpointTruthEcalTupleTest BEFORE PRIVATE
       ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
     target_link_libraries(RecBreakpointTruthEcalTupleTest PRIVATE GsfTruthEventData
-      EDM4HEP::edm4hep ROOT::Tree)
+      EDM4HEP::edm4hep ROOT::Tree ROOT::TreePlayer)
     add_test(NAME RecBreakpointTruthEcalTuple COMMAND RecBreakpointTruthEcalTupleTest)
     add_executable(RecBreakpointPhotonProjectionTest tests/PhotonProjectionTest.cpp
       src/PhotonCaloProjection.cpp)

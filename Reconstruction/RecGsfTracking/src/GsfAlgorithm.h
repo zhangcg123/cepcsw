@@ -244,6 +244,8 @@ private:
       "GSFTruthMaterialRecordStatus", Gaudi::DataHandle::Writer, this};
   DataHandle<gsftruth::G4MaterialStepCollection> m_gsfTruthSteps{
       "GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4MaterialStepSpanCollection> m_gsfTruthSpans{
+      "GsfG4MaterialStepSpans", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> m_gsfTruthLinks{
       "GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCRecoTrackerAssociationCollection>

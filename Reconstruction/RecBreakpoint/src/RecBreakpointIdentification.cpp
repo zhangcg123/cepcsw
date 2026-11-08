@@ -116,6 +116,8 @@ private:
       "EventHeader", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4MaterialStepCollection> steps{
       "GsfG4MaterialSteps", Gaudi::DataHandle::Reader, this};
+  DataHandle<gsftruth::G4MaterialStepSpanCollection> spans{
+      "GsfG4MaterialStepSpans", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::SimTrackerHitG4StepLinkCollection> links{
       "GsfSimTrackerHitG4StepLinks", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> trackLinks{
@@ -519,7 +521,9 @@ void RecBreakpointIdentification::recordTruth(
     truthNavigator->BuildCache();
     truthNavigator->GetCache()->BuildInfoBranch();
   }
-  if (!reader.prepare(material, links.get(), associations, truthError) ||
+  const gsftruth::G4MaterialStepSpanCollection* compactSpans=nullptr;
+  try { compactSpans=spans.get(); } catch (...) {} // Legacy full-step records.
+  if (!reader.prepare(material, links.get(), associations, truthError,compactSpans) ||
       !reader.matchBreakpoints(hits, endpointTolerance, *truthNavigator, ownedMatch, truthError)) {
     truthStatus = -1;
     ownership.status = -1;

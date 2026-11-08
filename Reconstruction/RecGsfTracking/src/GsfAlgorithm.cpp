@@ -3140,9 +3140,11 @@ StatusCode RecGsfTracking::execute() {
         eventDataTruthEventError =
             "no requested tracker truth-association collection is available";
       } else {
+        const gsftruth::G4MaterialStepSpanCollection* spans=nullptr;
+        try { spans=m_gsfTruthSpans.get(); } catch (...) {} // Old full-step input remains supported.
         eventDataPrepared = eventDataTruth.prepare(
             m_gsfTruthSteps.get(), m_gsfTruthLinks.get(), associations,
-            eventDataTruthEventError);
+            eventDataTruthEventError,spans);
       }
     } catch (const std::exception& exception) {
       eventDataTruthEventError =

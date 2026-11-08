@@ -277,6 +277,8 @@ StatusCode RecBreakpoint::initialize() {
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
   m_neutralTree = new TTree("neutral_pfos", "Neutral CyberPFOPID and ECAL clusters, once per selected event");
   m_neutralPfoTuple.book(*m_neutralTree);
+  m_fsrPfoTuple.book(*m_neutralTree,"fsr_photon_",false);
+  m_neutralTree->Branch("fsr_truth_available",&m_fsrTruthAvailable);
   for (auto* tree : {m_tree, m_neutralTree}) {
     tree->Branch("production_electron_selection_status", &m_electronSelection.status);
     tree->Branch("production_electron_selection_error", &m_electronSelection.error);
@@ -580,6 +582,16 @@ StatusCode RecBreakpoint::execute() {
   if (selected) {
     m_neutralPfoTuple.assign(m_event, *pidPfos, *ecalClusters,
                              *m_bremsPhotons.get(), *m_bremsPhotonSteps.get());
+    const gsftruth::G4BremsPhotonCollection* fsr=nullptr;
+    const gsftruth::G4BremsPhotonStepCollection* fsrSteps=nullptr;
+    const gsftruth::GeneratorPhotonLinkCollection* origins=nullptr;
+    try { fsr=m_fsrPhotons.get(); fsrSteps=m_fsrSteps.get(); origins=m_fsrOrigins.get(); } catch (...) {}
+    m_fsrTruthAvailable=fsr && fsrSteps && origins;
+    const gsftruth::G4BremsPhotonCollection emptyPhotons;
+    const gsftruth::G4BremsPhotonStepCollection emptySteps;
+    m_fsrPfoTuple.assign(m_event,*pidPfos,*ecalClusters,
+        fsr ? *fsr : emptyPhotons,fsrSteps ? *fsrSteps : emptySteps);
+    m_fsrPfoTuple.assignOrigins(origins);
     m_neutralTree->Fill();
   }
   breakpoint::KalmanAdapter adapter(m_system.get(), m_bz, m_maxChi2,
@@ -621,8 +633,10 @@ StatusCode RecBreakpoint::execute() {
       addAvailable(m_vxdAssociations); addAvailable(m_itkbAssociations);
       addAvailable(m_itkeAssociations); addAvailable(m_tpcAssociations);
       addAvailable(m_otkbAssociations); addAvailable(m_otkeAssociations);
+      const gsftruth::G4MaterialStepSpanCollection* spans=nullptr;
+      try { spans=m_truthSpans.get(); } catch (...) {} // Legacy full-step files have no spans.
       truthPrepared = truthReader.prepare(truthSteps, truthLinks,
-                                         associations, truthEventError);
+                                         associations, truthEventError,spans);
     } catch (const std::exception& error) { truthEventError = error.what(); }
     catch (...) { truthEventError = "Cannot retrieve embedded truth collections"; }
   }

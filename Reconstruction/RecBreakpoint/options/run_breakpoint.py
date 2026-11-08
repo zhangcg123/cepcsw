@@ -53,6 +53,16 @@ reader = PodioInput("PodioReader", collections=[
     "TPCCollection", "OTKBarrelCollection", "OTKEndcapCollection",
 ])
 
+# New compact/FSR truth is optional for legacy REC files. Inspect metadata only.
+import ROOT
+_truth_input = ROOT.TFile.Open(input_file,"READ")
+if not _truth_input or _truth_input.IsZombie():
+    raise RuntimeError("Cannot inspect input truth collections: " + input_file)
+_truth_branches = {b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
+for _name in ("GsfG4MaterialStepSpans","GsfG4FsrPhotons","GsfG4FsrPhotonSteps","GsfGeneratorFsrLinks"):
+    if _name in _truth_branches: reader.collections += [_name]
+_truth_input.Close()
+
 fit = RecBreakpoint("RecBreakpoint")
 fit.InputTracks = "CompleteTracks"
 # Truth-assisted eeH study gate, before any refit/scan. Does not filter REC/PFOs.
