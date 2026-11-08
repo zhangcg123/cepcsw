@@ -312,81 +312,43 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**OPTIONAL PRODUCTION-ELECTRON GATE FOR eeH STUDIES (2026-11-05).**
-Work on `breakpoint-delayed-neutral`; preserve `breakpoint`. No branch/remote,
-PFA/shared-KF/GSF, loss-map, optimizer bound/acceptance or truth-owner change
-is authorized. The independent optimizer-acceptance audit remains open.
-The user confirmed no active jobs and authorized installation after validation.
-Reconfirm a quiet window before future source/card changes or installation;
-preserve frozen cards and existing outputs.
+**COMPACT ELECTRON/PHOTON TRUTH AND GENERATOR FSR (2026-11-09).**
+The user explicitly requested implementation of a smaller truth recorder,
+old/new reproduction checks, and FSR photons in the existing eBrem photon
+format, identified from generator history. The user confirmed no jobs were
+active before this implementation/build. This narrow request authorizes
+`Simulation/GsfTruthEventData`, `Simulation/DetSimAna`, the shared embedded-truth
+reader/callers in `RecGsfTracking`, and `RecBreakpoint` consumers, input-card
+compatibility, tests and documentation. Input-card changes only retain optional
+companion truth; they do not alter GSF steering. This does not authorize
+shared-KF/PFA changes or migration.
 
-### Current implementation and controls
+Work remains on `breakpoint-delayed-neutral`; preserve `breakpoint` and both
+workspaces. Hive migration remains paused. The previous focus is preserved
+byte-for-byte in [the outgoing snapshot](agents_record/2026-11-09-agents-before-truth-recorder.md)
+and [the compatibility handoff](agents_record/2026-11-08-session-handoff.md).
+Do not silently fix existing invalid hit provenance or missing truth ownership;
+optimizer acceptance and parallel reproducibility remain separate open issues.
 
-`TruthElectronSelector` is a standalone helper inside RecBreakpoint, called
-once per selected event before expensive track refits and scans, not a new
-Gaudi algorithm or duplicate fitter. `SelectTruthProductionElectrons=False`
-is the compiled/card/batch default; enable with
-`BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=1`. Batch preparation freezes the switch.
-Only accepted original track IDs are fitted. CompleteTracks/PFOs/clusters
-are unchanged; all input tracks retain baseline/truth/observation tuple rows,
-with explicit skipped flags, NaN refits and empty scans for unselected tracks.
-The event-side tree saves selection status even when there is no track.
+The compact contract retains exact hit hooks, eBrem emissions, ECAL entrances
+and track boundaries, with contiguous non-eBrem material sums between them.
+Photon histories retain their last pre-ECAL/entrance or termination checkpoint.
+Generator FSR has separate collections of the same photon/step types and an
+explicit generator-origin link. No angular matching defines FSR, and no new
+many-to-many hit or shower-contribution association is in scope.
 
-This is truth-assisted production-pair selection, not real-data PID or a
-pure-ZH certification. The current generator omits the production-Z parent.
-Require exactly one stable generator e-/e+ outside Higgs ancestry, and a
-generator Higgs record. No closest-Z guess for ambiguity. The shared truth
-association matcher chooses unique largest aggregate matched-hit count;
-duplicate tracks are ranked by matched hits then purity, with exact ties
-skipped. One usable partner remains selected if the other is missing/tied.
-Check a new visible-Higgs generator's ancestry before enabling this gate there.
+Implementation and focused verification are complete. Fixed events 0,11,16,17
+reproduce all 1,015 pre-existing tuple branches exactly; compacted copies also
+reproduce all 1,067 current branches. All 18 focused C++ tests, 65 existing batch
+tests and two optional-card tests pass. Clean same-seed full/compact simulation
+preserves all 324 detector branches; six generator FSR photons survive the
+native SIM-to-REC/flat chain with their correct entry/last-step data. Storage
+and exact scope/limitations are in
+[the implementation record](agents_record/2026-11-09-compact-truth-generator-fsr.md).
+`CompactTruthRecords=false` retains full debug histories. Compact files require
+the updated span-aware readers and companion input collections.
 
-Other workflow defaults remain FreeLossFit/beam/charged ON, neutral OFF,
-LocationScanSetups=[110], ChargedEcalEnergyMode=ElectronPhoton,
-SigmaLogLoss=0.001, prior-center bound[0,1]. Normal truth-location endpoint
-families remain independent of additional scans. The same-observation C+N
-5D-null correction remains installed; no gain threshold or production
-no/light-eBrem classifier is calibrated. The selector does not change these
-fitters, observations, constraints, interval selection or scan definitions.
-
-### Evidence and deployment
-
-All16 CTests and64 batch tests pass. A selector-only check of200 existing
-Higgs REC events selects398 of433 input tracks:198 events have both
-reconstructed partners and2 have one. Direct old/OFF/ON runs on gun11/16/17
-and Higgs0/17/22 preserve all9,812 previous branch-row values with OFF;
-ON preserves5,682 values for6 accepted Higgs tracks and correctly skips4
-control/extra rows without changing original indices or event-side data.
-These are mechanism/regression gates, not population physics validation.
-
-The package-only update is installed in the project-default105 runtime;
-build/installed library SHA256:
-`ca0f7ac186577d9a8123beda61bdd1ffdfe89acc0b55934eec839438afba534a`.
-No batch was submitted, no existing card/tuple was overwritten, no remote
-changed, and unrelated batch/helper edits were preserved.
-Details: `agents_record/2026-11-05-truth-production-electron-selector.md`.
-The complete outgoing AGENTS is preserved in
-`agents_record/2026-11-05-agents-before-production-electron-selector.md`;
-all global laws/introduction/commands are unchanged. No history was moved.
-
-### Next step and analysis context
-
-The user selected inclusive eeHX and requested500 jobs x200 events.
-`subbreakpointhiggsjobs.sh` now defaults to the inclusive `Pe1e1h_X` STDHEP
-files0001-0500, full sim/trk/calodigi/rec/breakpoint chain, group cms and truth
-production-electron selection ON.500 frozen jobs are prepared under
-`higgs_eeHX_full_20261105`, with110 scans unchanged; NONE were submitted.
-Submit explicitly with `DRY_RUN=0 ./subbreakpointhiggsjobs.sh submit-prepared`.
-All65 batch tests and the500-card/source checks pass. The first200 inclusive
-generator events each have exactly one eligible non-Higgs stable e-/e+pair.
-No full detector-chain local smoke, CPU speedup or physics-performance
-validation was done for this inclusive campaign. No C++ or installation change.
-Details and outgoing-next-step provenance are in
-`agents_record/2026-11-05-eehx-full-chain-campaign.md`; the full pre-edit
-AGENTS is in `agents_record/2026-11-05-agents-before-eehx-campaign.md`.
-Do not launch a batch automatically.
-Plot server root remains TrackingPerformanceStudies on localhost8000; it was
-not changed for this task. Latest simple-calorimeter hybrid comparisons are
-in `TrackingPerformanceStudies/breakpoint_higgs_simple_hybrid_20261105`;
-these are analysis artifacts, not fitter validation. Previous scan-null and
-campaign provenance remains in the outgoing snapshot and dated records.
+No population campaign, FSR-corrected fit objective or shower-to-cluster truth
+attribution was implemented. Wait for a new concrete request before those steps
+or any Hive migration. Reconfirm idle jobs before future implementation/install;
+this task's quiet-window confirmation is not continuing authority.
