@@ -20,6 +20,10 @@ SIM_CALO_COLLECTIONS = (
     'HcalBarrelCollection', 'HcalBarrelContributionCollection',
     'HcalEndcapsCollection', 'HcalEndcapsContributionCollection',
 )
+REC_DROP_COLLECTIONS = SIM_CALO_COLLECTIONS + (
+    'ECALBarrelAssoCol', 'ECALEndcapsAssoCol',
+    'HCALBarrelAssoCol', 'HCALEndcapsAssoCol',
+)
 SIM_BREMS_COLLECTIONS = ('GsfG4BremsPhotons', 'GsfG4BremsPhotonSteps')
 OPTIONAL_COMPACT_TRUTH = ('GsfG4MaterialStepSpans', 'GsfG4FsrPhotons',
                           'GsfG4FsrPhotonSteps', 'GsfGeneratorFsrLinks')
@@ -90,6 +94,13 @@ def replace_once(text, old, new):
     if text.count(old) != 1:
         raise ValueError('Card template changed; expected exactly one ' + repr(old))
     return text.replace(old, new, 1)
+
+
+def rec_output_policy(text):
+    # Preserve reconstructed cluster hits and direct MC links; omit only raw calo truth.
+    commands = ['keep *'] + ['drop ' + name for name in REC_DROP_COLLECTIONS]
+    return replace_once(text, 'out.outputCommands = ["keep *"]',
+                        'out.outputCommands = ' + repr(commands))
 
 
 def pass_through(text, reader, collections):
@@ -235,6 +246,7 @@ def prepare():
                     job = dict(repo=str(repo), sample=sample, sample_region=sample_region,
                                seed=seed, nevt=nevt,
                                stages=stages, files=files, cards={}, checksums={}, controls=controls, memory_mb=memory)
+                    if 'rec' in stages: job['rec_drop_collections'] = list(REC_DROP_COLLECTIONS)
                     cards = {}
                     for stage in stages:
                         text = templates[stage]
@@ -273,6 +285,7 @@ def prepare():
                                 text = replace_once(text, '"Jets_TDR_o1_v01.root"',
                                                     repr(f'Jets-{sample}.root'))
                                 text = pass_through(text, 'inp', TRACKER_PASSTHROUGH)
+                                text = rec_output_policy(text)
                         else:
                             env = dict(controls, BP_INPUT=files['rec'], BP_OUTPUT=files['breakpoint'], BP_EVENTS=str(nevt))
                             # Clear worker ambient BP_* so batch nodes cannot silently
@@ -358,13 +371,18 @@ def submit_prepared(value):
     submit_jobs(jobs,dry)
 
 
-def verify(path, stage, ecal_constraint_input=None, hit_scan=False):
+def verify(path, stage, ecal_constraint_input=None, hit_scan=False,
+           forbidden_collections=()):
     import ROOT
     file = ROOT.TFile.Open(str(path))
     if not file or file.IsZombie() or file.TestBit(ROOT.TFile.kRecovered):
         raise RuntimeError('Invalid ROOT output: ' + str(path))
     tree = file.Get('breakpoint' if stage == 'breakpoint' else 'events')
     if not tree or tree.GetEntries() == 0: raise RuntimeError('Empty output tree: ' + str(path))
+    present = [name for name in forbidden_collections if tree.GetBranch(name)]
+    if present:
+        file.Close()
+        raise RuntimeError('REC output retained omitted calorimeter collections: ' + ', '.join(present))
     cleanup_ready = True
     if stage == 'calodigi':
         for name in BREAKPOINT_INPUT_COLLECTIONS + (
@@ -494,7 +512,8 @@ def run(manifest):
                        job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
                        hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
                        else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
-                       if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False)
+                       if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False,
+                       forbidden_collections=job.get('rec_drop_collections', ()) if stage == 'rec' else ())
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))
         if stage == 'calodigi':

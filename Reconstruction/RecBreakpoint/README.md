@@ -1644,13 +1644,37 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 For the default full barrel chain, simulation produces `sim-barrel-SEED.root`;
 downstream outputs are `trk-barrel-SEED.root`, `calodigi-barrel-SEED.root`,
 `rec-barrel-SEED.root`, and `breakpoint_flat-barrel-SEED.root`.
-The breakpoint fitter reads **rec**, not trk. The retained rec event contains
-`EcalCluster`, `CyberPFO`, digitized ECAL/HCAL hits, `CompleteTracks`, and
-the Geant4 tracker-step and bremsstrahlung-photon path provenance. The tracker
-steps are used by truth interval selection. ECAL
-PFO PID, charged-track ECAL clusters, and event-level neutral ECAL clusters are
-now copied into the flat tuple as passive diagnostics; they do not steer the
-fit. The full REC event remains available for later external eBrem studies.
+The breakpoint fitter reads **rec**, not trk. New breakpoint-batch REC cards keep
+the reconstructed ECAL/HCAL hits, final and pre-reclustering clusters/PFOs,
+`CompleteTracks` and tracker-hit provenance, MC particles, and dedicated
+electron/eBrem/FSR truth. The selected cluster energies and positions feed the
+enabled ECAL constraint; their flat-tuple copies are diagnostics.
+
+After PFA/PID finishes, the REC output omits the four raw simulated ECAL/HCAL
+hit collections, their four contribution collections, and the four
+digitized-hit-to-SimHit association collections (`ECALBarrelAssoCol`,
+`ECALEndcapsAssoCol`, `HCALBarrelAssoCol`, `HCALEndcapsAssoCol`). Direct
+digitized-hit-to-MC `*ParticleAssoCol` collections remain. Explicit collection
+names are used: reconstructed cluster hits must not be dropped. SIM/tracker/
+calodigi production and all fit settings are unchanged. The policy and expected
+omissions are frozen in each newly prepared job; old frozen cards/manifests
+and external REC inputs remain readable with their existing content.
+
+The charged measurement follows the PFO's exact track link and ECAL clusters.
+Neutral energy comes from hit-supported neutral ECAL clusters in the configured
+angular window around the track's calorimeter reference. Resolved
+ElectronPhoton110 applies one scalar ECAL observation of charged plus collected
+neutral energy, with their errors combined in quadrature, to the predicted
+`p_ECAL*exp(b)`. The native KF update and RTS correlations constrain the track
+and loss coordinate; the measurement also contributes to the free-loss NLL.
+Preserving these reconstructed hits, clusters, PFOs and links preserves this
+measurement without retaining raw simulated calorimeter deposits in REC.
+
+Raw shower-deposit studies or calorimeter re-digitization require a separate
+SIM/calodigi source. Do not assume job-owned intermediate files survive cleanup:
+the current campaign worker can also remove SIM after verified tracker
+pass-through. Check the frozen manifest's cleanup outcomes. This REC policy
+does not rewrite existing production files or alter intermediate cleanup rules.
 `submit` selects only prepared cards matching the current `SAMPLE_REGION`, so
 old `e--2.0-85-*` manifests in the same directory are not resubmitted.
 For existing reconstructed inputs, set STAGES=breakpoint and point
@@ -1712,7 +1736,7 @@ OUTPUT_TUPLEPATH/
   rec-barrel-SEED.root                # retained ECAL reconstruction and tracker provenance
   calodigi-barrel-SEED.root           # removed after verified rec, if made in this job
   trk-barrel-SEED.root                # removed after verified calodigi, if made in this job
-  sim-barrel-SEED.root                # only if sim selected; retained
+  sim-barrel-SEED.root                # only if sim selected; follows intermediate cleanup policy
   outlog/barrel-SEED.out, .err
   runcards/barrel-SEED/
     job.json, trk.py, calodigi.py, rec.py, breakpoint.py  # selected stages only
@@ -1724,15 +1748,19 @@ The flat tuple contains ordinary RTS/backward and oracle/copied RTS/backward
 results. No breakpoint EDM file is written by the default card. Once
 `calodigi` passes ROOT/tree/collection verification, the worker removes its
 own `trk` tuple. Once `rec` passes verification, it removes its own
-`calodigi` tuple. It never removes an external input, the simulation tuple,
-or the `rec` tuple; a stage without its immediate consumer keeps its output.
+`calodigi` tuple. It never removes an external input or the `rec` tuple;
+a stage without its immediate consumer keeps its output. Job-owned SIM
+handling follows the frozen job and worker cleanup policy; inspect the
+recorded outcomes rather than assuming a raw simulation copy remains.
 Breakpoint fit failures do not affect this cleanup because the durable `rec`
 tuple has already passed verification, and failure tags remain in the flat
 tuple. The cleanup checks the exact expected path and its production-time file
 identity (device/inode/size/modification time), refuses symlinks or changed
 files, and records both outcomes in completed.json under
-`intermediate_cleanup`. Removed intermediates can be regenerated from the
-retained simulation and frozen cards; they are not moved to trash. Existing
+`intermediate_cleanup`. Removed intermediates can be regenerated from retained
+predecessors, or by rerunning earlier stages with the generator/frozen cards;
+they are not moved to trash. Filtered REC does not retain raw calorimeter
+deposits for re-digitization. Existing
 completed campaigns are not cleaned retroactively. A selected stage consumes a predecessor
 made in the same job, otherwise an external predecessor from the input path.
 Cards are checksum-checked by the worker; never edit a frozen card in place.
