@@ -33,3 +33,8 @@ DRY_RUN=0 SUBMIT_GROUP=cms ./subbreakpointhiggsjobs.sh submit-prepared
 Do not run preparation again over that directory. Current installed libraries
 are not frozen by card checksums; keep the runtime stable while jobs run.
 No build/install or batch queue action was performed during preparation.
+
+Superseded for the current request: the user subsequently chose REC production
+first, with breakpoint fitting later. Use the new directory/command in
+[the REC-first record](2026-11-09-eehx-rec-first-preparation.md). The original
+prepared cards remain unchanged and had no submitted/started markers.
