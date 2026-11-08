@@ -67,15 +67,16 @@ podioinput = PodioInput("PodioReader", collections=[
     ])
 
 
-# Companion truth is absent in legacy full-step files.
-import ROOT
-_truth_input=ROOT.TFile.Open(dsvc.input,"READ")
-if not _truth_input or _truth_input.IsZombie():
-    raise RuntimeError("Cannot inspect input truth collections")
-_truth_names={b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
-for _name in ("GsfG4MaterialStepSpans","GsfG4FsrPhotons","GsfG4FsrPhotonSteps","GsfGeneratorFsrLinks"):
-    if _name in _truth_names: podioinput.collections += [_name]
-_truth_input.Close()
+if not globals().get("_in_memory_chain", False):
+    # Companion truth is absent in legacy full-step files.
+    import ROOT
+    _truth_input=ROOT.TFile.Open(dsvc.input,"READ")
+    if not _truth_input or _truth_input.IsZombie():
+        raise RuntimeError("Cannot inspect input truth collections")
+    _truth_names={b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
+    for _name in ("GsfG4MaterialStepSpans","GsfG4FsrPhotons","GsfG4FsrPhotonSteps","GsfGeneratorFsrLinks"):
+        if _name in _truth_names: podioinput.collections += [_name]
+    _truth_input.Close()
 
 ##################
 # Digitization

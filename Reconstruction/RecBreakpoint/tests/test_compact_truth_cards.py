@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import types
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -18,6 +19,7 @@ class CompactTruthCardsTest(unittest.TestCase):
         for name in ('DumpGsfTrks/trk.py.bk','DumpGsfTrks/gsf.py.bk'):
             text=(repo/name).read_text().split('# Companion truth is absent in legacy full-step files.\n')[1]
             text=text.split('_truth_input.Close()')[0]+'_truth_input.Close()'
+            text=textwrap.dedent(text)
             expected=list(batch.OPTIONAL_COMPACT_TRUTH) if name.endswith('trk.py.bk') else ['GsfG4MaterialStepSpans']
             for present in ((),batch.OPTIONAL_COMPACT_TRUTH):
                 branches=[types.SimpleNamespace(GetName=lambda name=n: name) for n in present]

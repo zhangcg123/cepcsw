@@ -11,7 +11,8 @@ export SEED_LAST=${SEED_LAST:-500}
 export INPUT_TUPLEPATH=${INPUT_TUPLEPATH:-sim_large_barrel_20261026}
 export OUTPUT_TUPLEPATH=${OUTPUT_TUPLEPATH:-breakpoint_delayed_neutral_20261028}
 export STAGES=${STAGES:-breakpoint}
-export MEMORY_MB=${MEMORY_MB:-5000}
+# Full-chain jobs retain simulation geometry and PID models in one process.
+export MEMORY_MB=${MEMORY_MB:-8000}
 # hep_sub -g group, used for both new and already-prepared jobs.
 export SUBMIT_GROUP=${SUBMIT_GROUP:-higgs}
 export DRY_RUN=${DRY_RUN:-0}

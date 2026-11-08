@@ -1,0 +1,32 @@
+"""One event loop using frozen copies of the SIM/TRK/calodigi/REC cards."""
+from Configurables import ApplicationMgr
+
+# Filled by batch preparation; the generated card also runs locally with gaudirun.py.
+stage_cards = {}
+if not {'sim', 'trk', 'calodigi', 'rec'} <= stage_cards.keys():
+    raise ValueError('Prepare this card through subbreakpointjobs.sh with all four detector stages')
+
+algorithms, services = [], []
+for stage, source in stage_cards.items():
+    namespace = {'__file__': __file__, '_in_memory_chain': True}
+    exec(compile(source, stage + '.py', 'exec'), namespace)
+    app = ApplicationMgr()
+    algorithms += [alg for alg in app.TopAlg if alg.getType() not in ('PodioInput', 'PodioOutput')]
+    for service in app.ExtSvc:
+        if service not in services:
+            services.append(service)
+    if stage == 'sim':
+        full_geometry = namespace['geometry_path']
+    elif stage == 'trk':
+        tracker_pid_parameters = namespace['pidsvc'].ParFile
+    elif stage == 'rec':
+        # Persist REC before breakpoint creates its extra endpoint collections.
+        algorithms.append(namespace['out'])
+
+# These services are singletons; later standalone cards configured partial geometry/input.
+from Configurables import DetGeomSvc, k4DataSvc, SimplePIDSvc
+k4DataSvc('EventDataSvc').input = ''
+DetGeomSvc('GeomSvc').compact = full_geometry
+DetGeomSvc('GeomSvc').fastinit = False
+SimplePIDSvc('SimplePIDSvc').ParFile = tracker_pid_parameters
+ApplicationMgr(TopAlg=algorithms, ExtSvc=services)

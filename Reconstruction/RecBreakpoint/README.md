@@ -1582,8 +1582,16 @@ For a new full simulation campaign explicitly set
 `STAGES=sim,trk,calodigi,rec,breakpoint` and a fresh output directory.
 The full chain freezes the shared
 `DumpGsfTrks/sim.py.bk` together with the downstream cards at preparation.
-No existing input tuple is needed for this chain. All outputs go into
-OUTPUT_TUPLEPATH; SIM and REC are retained alongside the breakpoint flat tuple.
+No existing input tuple is needed for this chain. Newly prepared full-chain
+jobs use `DumpGsfTrks/full_chain.py.bk`: SIM, tracking, calorimeter digitization,
+PFA/PID and breakpoint run in ONE sequential Gaudi event loop. Only REC and the
+breakpoint flat tuple are written into OUTPUT_TUPLEPATH. SIM/TRK/calodigi
+collections pass in memory; their ROOT files and deletion steps are absent.
+The generated `full_chain.py` embeds the frozen stage-card sources and can also
+be run locally through `gaudirun.py`. The submission wrapper now defaults to
+`MEMORY_MB=8000`: the combined process retains full simulation geometry and PID
+models together. Explicit memory overrides remain available. Existing prepared manifests retain their
+original separate-stage execution.
 INPUT_TUPLEPATH is unused for this complete chain, but must still differ from
 OUTPUT_TUPLEPATH. Existing outputs/cards are never overwritten.
 
@@ -1621,7 +1629,8 @@ including `SUBMIT_GROUP=higgs ./subbreakpointjobs.sh submit OUTPUT_DIR` for
 already-prepared jobs; cards/checksums do not change.
 Scheduler stdout/stderr are preserved in each job's submitted.json.
 The worker sources the project's `setup.sh` and launches `gaudirun.py` directly
-for every stage, using the standard `InstallArea` runtime like a manual
+once for a newly prepared complete chain, or once per stage for partial/legacy
+jobs, using the standard `InstallArea` runtime like a manual
 `source setup.sh; ./run.sh CARD.py` run. It no longer selects a build-directory
 launcher. Install verified builds before submission; rebuilding alone does not
 update this runtime. Cards are frozen at preparation, but libraries are not.
@@ -1739,13 +1748,26 @@ OUTPUT_TUPLEPATH/
   sim-barrel-SEED.root                # only if sim selected; follows intermediate cleanup policy
   outlog/barrel-SEED.out, .err
   runcards/barrel-SEED/
-    job.json, trk.py, calodigi.py, rec.py, breakpoint.py  # selected stages only
+    job.json, sim.py, trk.py, calodigi.py, rec.py, breakpoint.py  # frozen selected stages
+    full_chain.py                    # new complete-chain jobs execute this one card
     submitted.json                  # successful scheduler submission
     started.json, completed.json    # worker lifecycle
 ```
 
+For new complete-chain jobs, SIM/TRK/calodigi files shown above are NOT
+created; `completed.json` records `not_written_in_memory`. REC is written
+before the breakpoint algorithm creates its extra endpoint collections.
+The common geometry is the SIM card's full detector geometry (DD4hep mode);
+the TRK SimplePIDSvc parameters are retained when the calodigi card also
+configures that singleton. No PodioInput is scheduled in the combined loop.
+Only standalone-file metadata checks are skipped; RecBreakpoint still checks
+its required collections at execution. One process shares random services,
+so identical seeds do not promise bitwise agreement with separate-process
+simulation/digitization. Physics settings and fit controls are not retuned.
+
 The flat tuple contains ordinary RTS/backward and oracle/copied RTS/backward
-results. No breakpoint EDM file is written by the default card. Once
+results. No breakpoint EDM file is written by the default card. For partial
+chains and previously prepared separate-stage jobs, once
 `calodigi` passes ROOT/tree/collection verification, the worker removes its
 own `trk` tuple. Once `rec` passes verification, it removes its own
 `calodigi` tuple. It never removes an external input or the `rec` tuple;

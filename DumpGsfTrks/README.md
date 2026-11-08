@@ -20,6 +20,15 @@ The default-on passive material recorder and the optional default-off
 the tracker output's EventData. Calorimeter digitization and reconstruction are
 not part of the maintained GSF worker at present.
 
+The independent breakpoint batch uses these SIM/TRK/calodigi/REC templates too.
+Newly prepared jobs selecting all four detector stages use `full_chain.py.bk`
+to run them, followed by the optional breakpoint fit, in one sequential event
+loop. Frozen stage sources are embedded in the generated `full_chain.py`;
+only final REC and the requested flat tuple are written. Partial chains and
+old frozen jobs keep their separate-stage behavior. The templates under
+`Detector/DetCRD/scripts/` are never modified by this workflow. See the
+[breakpoint batch instructions](../Reconstruction/RecBreakpoint/README.md).
+
 ## Embedded Geant4 truth provenance
 
 The implementation spans:

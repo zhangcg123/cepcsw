@@ -120,6 +120,8 @@ def pass_through(text, reader, collections):
                  '_truth_file.Close()\n\n')
     anchor = ('# ApplicationMgr\n' if reader == 'podioinput'
               else 'from Configurables import ApplicationMgr\n')
+    addition = ('if not globals().get("_in_memory_chain", False):\n' +
+                ''.join('    ' + line if line.strip() else line for line in addition.splitlines(True)))
     return replace_once(text, anchor, addition + anchor)
 
 
@@ -215,6 +217,8 @@ def prepare():
              'rec': repo/'DumpGsfTrks/rec.py.bk',
              'breakpoint': repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'}
     for stage in stages: templates[stage] = paths[stage].read_text()
+    if set(ORDER[:4]) <= set(stages):
+        templates['full_chain'] = (repo/'DumpGsfTrks/full_chain.py.bk').read_text()
     jobs = []
     skipped = 0
     for particle in os.environ['PARTICLES'].split(','):
@@ -298,6 +302,13 @@ def prepare():
                         cards[stage] = text
                         job['cards'][stage] = str(carddir/f'{stage}.py')
                         job['checksums'][stage] = hashlib.sha256(text.encode()).hexdigest()
+                    if 'full_chain' in templates:
+                        text = replace_once(templates['full_chain'], 'stage_cards = {}',
+                                            'stage_cards = ' + repr(cards))
+                        compile(text, str(carddir/'full_chain.py'), 'exec')
+                        cards['full_chain'] = text
+                        job['cards']['full_chain'] = str(carddir/'full_chain.py')
+                        job['checksums']['full_chain'] = hashlib.sha256(text.encode()).hexdigest()
                     jobs.append((carddir, job, cards))
     if not jobs:
         raise ValueError(f'No eligible jobs: skipped {skipped} samples with missing or empty external inputs')
@@ -361,8 +372,9 @@ def submit_prepared(value):
         if (manifest.parent/'started.json').exists(): raise ValueError('Job already started: ' + str(manifest))
         for stage in job['stages']:
             if Path(job['files'][stage]).exists(): raise ValueError('Output already exists: ' + job['files'][stage])
-            if hashlib.sha256(Path(job['cards'][stage]).read_bytes()).hexdigest() != job['checksums'][stage]:
-                raise ValueError('Frozen card changed: ' + job['cards'][stage])
+        for stage, card in job['cards'].items():
+            if hashlib.sha256(Path(card).read_bytes()).hexdigest() != job['checksums'][stage]:
+                raise ValueError('Frozen card changed: ' + card)
         for suffix in ('out','err'):
             if (output/'outlog'/f'{job["sample"]}.{suffix}').exists():
                 raise ValueError('Existing scheduler log: inspect job state before resubmission')
@@ -488,6 +500,15 @@ def cleanup_intermediate(job, manifest, stage, produced_identity, cleanup_ready)
     return {'status':'removed', 'path':str(intermediate)}
 
 
+def verify_job_output(job, stage):
+    return verify(Path(job['files'][stage]), stage,
+                  job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
+                  hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
+                  else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
+                  if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False,
+                  forbidden_collections=job.get('rec_drop_collections', ()) if stage == 'rec' else ())
+
+
 def run(manifest):
     job = json.loads(manifest.read_text())
     repo = Path(job['repo'])
@@ -495,25 +516,33 @@ def run(manifest):
     # dump_breakpoint.sh sources the project's installed runtime via setup.sh.
     runner = shutil.which('gaudirun.py')
     if not runner: raise ValueError('gaudirun.py is unavailable; source project setup.sh first')
-    for stage in job['stages']:
-        card = Path(job['cards'][stage])
+    for stage, path in job['cards'].items():
+        card = Path(path)
         if hashlib.sha256(card.read_bytes()).hexdigest() != job['checksums'][stage]:
             raise ValueError('Frozen card changed: ' + str(card))
+    for stage in job['stages']:
         if Path(job['files'][stage]).exists(): raise ValueError('Output already exists: ' + job['files'][stage])
     # Exclusive marker prevents two workers using the same outputs concurrently.
     create(manifest.parent/'started.json', json.dumps({'pid':os.getpid(), 'host':os.uname().nodename})+'\n')
     produced = {}
     cleanup = {stage: {'status': 'retained_external' if stage not in job['stages']
                        else 'retained_no_downstream'} for stage in ('trk', 'calodigi')}
+    if 'full_chain' in job['cards']:
+        print('Running in-memory full chain: ' + job['cards']['full_chain'], flush=True)
+        subprocess.run([runner, job['cards']['full_chain']], cwd=repo, check=True)
+        for stage in ('rec', 'breakpoint'):
+            if stage in job['stages'] and not verify_job_output(job, stage):
+                raise RuntimeError('Full-chain output verification failed: ' + stage)
+        cleanup = {stage: {'status': 'not_written_in_memory'} for stage in ('sim', 'trk', 'calodigi')}
+        create(manifest.parent/'completed.json', json.dumps({
+            'outputs': {stage: job['files'][stage] for stage in ('rec', 'breakpoint') if stage in job['stages']},
+            'stages': job['stages'], 'intermediate_cleanup': cleanup}, indent=2)+'\n')
+        print('Completed. REC/flat outputs retained; no intermediate files were written.', flush=True)
+        return
     for stage in job['stages']:
         print('Running ' + stage + ': ' + job['cards'][stage], flush=True)
         subprocess.run([runner, job['cards'][stage]], cwd=repo, check=True)
-        ready = verify(Path(job['files'][stage]), stage,
-                       job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
-                       hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
-                       else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
-                       if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False,
-                       forbidden_collections=job.get('rec_drop_collections', ()) if stage == 'rec' else ())
+        ready = verify_job_output(job, stage)
         if stage in ('trk', 'calodigi'):
             produced[stage] = file_identity(Path(job['files'][stage]))
         if stage == 'calodigi':

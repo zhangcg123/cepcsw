@@ -53,15 +53,16 @@ reader = PodioInput("PodioReader", collections=[
     "TPCCollection", "OTKBarrelCollection", "OTKEndcapCollection",
 ])
 
-# New compact/FSR truth is optional for legacy REC files. Inspect metadata only.
-import ROOT
-_truth_input = ROOT.TFile.Open(input_file,"READ")
-if not _truth_input or _truth_input.IsZombie():
-    raise RuntimeError("Cannot inspect input truth collections: " + input_file)
-_truth_branches = {b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
-for _name in ("GsfG4MaterialStepSpans","GsfG4FsrPhotons","GsfG4FsrPhotonSteps","GsfGeneratorFsrLinks"):
-    if _name in _truth_branches: reader.collections += [_name]
-_truth_input.Close()
+if not globals().get("_in_memory_chain", False):
+    # New compact/FSR truth is optional for legacy REC files. Inspect metadata only.
+    import ROOT
+    _truth_input = ROOT.TFile.Open(input_file,"READ")
+    if not _truth_input or _truth_input.IsZombie():
+        raise RuntimeError("Cannot inspect input truth collections: " + input_file)
+    _truth_branches = {b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
+    for _name in ("GsfG4MaterialStepSpans","GsfG4FsrPhotons","GsfG4FsrPhotonSteps","GsfGeneratorFsrLinks"):
+        if _name in _truth_branches: reader.collections += [_name]
+    _truth_input.Close()
 
 fit = RecBreakpoint("RecBreakpoint")
 fit.InputTracks = "CompleteTracks"
@@ -332,20 +333,21 @@ if fit.EcalConstraintInput == "PreReclustering":
     _pre_collections = ["CyberPFOPreReclustering", "EcalClusterPreReclustering",
                         "EcalHitsPreReclustering", "HcalClusterPreReclustering",
                         "HcalHitsPreReclustering"]
-    # The legacy PodioInput can dereference a missing collection instead of failing cleanly.
-    import ROOT
-    _input = ROOT.TFile.Open(input_file, "READ")
-    if not _input or _input.IsZombie():
-        raise ValueError("Cannot open breakpoint input: " + input_file)
-    try:
-        _events = _input.Get("events")
-        _missing = [name for name in _pre_collections if not _events or not _events.GetBranch(name)]
-    finally:
-        _input.Close()
-    if _missing:
-        raise ValueError("Missing pre-reclustering inputs: " + ", ".join(_missing) +
-                         "; regenerate rec with the PFA snapshot exporter or explicitly set "
-                         "EcalConstraintInput=FinalPFO (BP_ECAL_CONSTRAINT_INPUT=FinalPFO)")
+    if not globals().get("_in_memory_chain", False):
+        # The legacy PodioInput can dereference a missing collection instead of failing cleanly.
+        import ROOT
+        _input = ROOT.TFile.Open(input_file, "READ")
+        if not _input or _input.IsZombie():
+            raise ValueError("Cannot open breakpoint input: " + input_file)
+        try:
+            _events = _input.Get("events")
+            _missing = [name for name in _pre_collections if not _events or not _events.GetBranch(name)]
+        finally:
+            _input.Close()
+        if _missing:
+            raise ValueError("Missing pre-reclustering inputs: " + ", ".join(_missing) +
+                             "; regenerate rec with the PFA snapshot exporter or explicitly set "
+                             "EcalConstraintInput=FinalPFO (BP_ECAL_CONSTRAINT_INPUT=FinalPFO)")
     reader.collections += _pre_collections
 if fit.ChargedEcalMeasurement:
     _charged_source = str(fit.ChargedEcalInputClusters)

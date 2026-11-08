@@ -404,6 +404,7 @@ class BatchTest(unittest.TestCase):
         self.repo = Path(self.temp.name)
         for rel in ['DumpGsfTrks/sim.py.bk', 'DumpGsfTrks/trk.py.bk',
                     'DumpGsfTrks/calodigi.py.bk', 'DumpGsfTrks/rec.py.bk',
+                    'DumpGsfTrks/full_chain.py.bk',
                     'Reconstruction/RecBreakpoint/options/run_breakpoint.py', 'dump_breakpoint.sh',
                     'subbreakpointjobs.sh', 'subbreakpointhiggsscanjobs.sh',
                     'Reconstruction/RecBreakpoint/options/batch_breakpoint.py']:
