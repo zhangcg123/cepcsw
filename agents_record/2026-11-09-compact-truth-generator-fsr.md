@@ -219,3 +219,13 @@ complete text is in the dated snapshot, and the global-status/laws/build
 section is byte-identical to that snapshot. No history directory was moved,
 so a directory-migration manifest was unnecessary. Earlier handoff/snapshot
 files are preserved unchanged. Hive migration remains paused.
+
+## Storage attribution follow-up
+
+The user questioned the small whole-file reduction. A read-only branch-size
+audit confirms SIM -1.5535% and REC -1.4739% for the two-event A/B. In an existing
+200-event 3.639 GB production REC, raw ECAL simulation is 83.603%, HCAL 7.162%,
+and all Gsf truth only 1.555%. In the corresponding 268.46 MB flat file,
+covariance branches occupy 65.605%. Details, per-collection sizes and current
+campaign totals are in [the storage audit](2026-11-09-product-disk-breakdown.md).
+No retention/merge policy was changed.
