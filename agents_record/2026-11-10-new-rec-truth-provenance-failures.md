@@ -106,3 +106,37 @@ and merely dropping status checks or increasing the cut is not a complete fix.
 `check_hit_provenance.py`, `hits.json`, `bad-hits.json`, `inspect.log`,
 `inspect_tpc_context.py`, `tpc-context.log`. These are uncommitted analysis
 artifacts. They read the completed new REC file; no simulation/refit was rerun.
+
+## Git provenance and scan dependency audit
+
+The user asked whether these were recently injected or longstanding bugs.
+`git blame` and the introducing patch establish:
+
+- `b633efb`, 2026-08-22, our "Embed GSF truth provenance in event data"
+  change added PadRowFirstStepNumber, its event/row-exit resets and the
+  first/last/hook fields. That patch omitted particle-boundary handling.
+  The invalid-range defect belongs to our provenance extension, rather than
+  an unchanged upstream truth recorder. It predates the November changes.
+- The same August commit added the reconstructed-hit versus hook distance
+  check in TruthBHLossEventData. It was not newly introduced by compact truth
+  or generator-FSR recording on November 9.
+- Merged-TPC averaging and Gaussian smearing using sigma_z=_binningZ date
+  to upstream `f7e98ce7`, 2020-10-21, in the former
+  Digitisers/SimpleDigi/src/TPCDigiAlg.cpp path. This is existing digitization
+  behavior, not a recent change in these tests.
+- `e0dd260`, 2026-11-04, added LocationScanSetups as scans after publishing
+  the truth-location endpoints. A failed truth match throws before reaching
+  those scans. The comparison's Truth plus [110] steering exposes that
+  dependency; the scan minimization has no need for exact Geant4 hooks.
+
+`LocationFitScan::run` accepts an optional truth owner. Its reconstructed
+candidate list comes from hit detector/layer IDs: silicon plus the first
+exact TPC row zero and the no-breakpoint case. Truth can label a point or
+append a separate kind-2 diagnostic reference; that reference is excluded
+from the maintained analysis ranking. Candidate energy losses remain fitted.
+`HitScanAll` catches truth-reference errors and still runs this scanner.
+`HitScan` freezes its reconstruction-based selection before attempting its
+passive truth reference. These established paths show why malformed exact
+truth need not prevent an actual reconstructed-location scan. The separate
+generator/association gate selecting the two production electrons is not
+the same as the exact Geant4 step-provenance requirement.
