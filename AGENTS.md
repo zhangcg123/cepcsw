@@ -317,59 +317,50 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**TPC FIX: REAL DOWNSTREAM CHECKS PASS TRUTH; SEPARATE GSF SEED FAILURE (2026-11-10).**
-The user asked whether the corrected files also work in actual GSF/breakpoint
-runs. Tracker reconstruction plus native GSF and breakpoint jobs are complete
-on the two isolated new normal-ISR/FSR generator-source cases1,17. No source,
-installed library, maintained card or production REC file changed in these
-checks. Preserve the user's restriction to our added truth code; do not change
-older simulation hit-building, tracking or PFA code. Full evidence:
-[the downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
+**OVERNIGHT TPC-FIX REC RERUN PREPARED; SUBMISSION NEEDS BATCH LOGIN (2026-11-10).**
+The user deferred BH discussion until tomorrow and requested regenerating normal
+ISR/FSR REC with corrected TPC truth links. Prepared
+`higgs_eeHX_ISRFSRON_REC_TPCFIX_500jobs_200evt_20261110/`:500 jobs x200 events,
+100,000 target, original generator files/seeds1--500, memory8000MB, group cms.
+Run sim/trk/calodigi/rec in one process; no GSF/breakpoint fits or intermediate
+ROOT files. All2500 cards reproduce previous steering exactly apart from output
+paths; checksums, input existence and installed tested-library hashes pass.
+Prepared-submission dry run prints500 commands. Existing500 old REC files remain.
 
-The original malformed first/last G4 range errors do not recur. GSF matched
-all four selected reconstructed tracks through the unchanged strict truth
-reader, with maximum distances0.532/1.851/1.290/1.782mm below5mm. Breakpoint
-Truth mode also passes for all four and publishes four ordinary/null fits.
-All selected breakpoint interval lists are empty: no eligible owned eBrem
-location was selected. These cases test the formerly blocking provenance
-path and subsequent fitting, not nontrivial6D loss recovery or an ECAL scan.
+No new jobs are submitted. Local batch scripts cannot import htcondor; SSH to
+lxlogin.ihep.ac.cn is network-unreachable. Run from the usual batch-login shell:
 
-| Generator-source event | New CompleteTracks inputs | GSF truth match | GSF published | BP Truth-mode fits |
-| --- | --- | --- | --- | --- |
-| 1 |2,3|2/2|2/2|2/2|
-| 17 |26,32|2/2|1/2|2/2|
+```bash
+SAMPLE_REGION=higgs DRY_RUN=0 SUBMIT_GROUP=cms \
+./subbreakpointjobs.sh submit higgs_eeHX_ISRFSRON_REC_TPCFIX_500jobs_200evt_20261110
+```
 
-GSF's separate failure is source17/input32, whose first three hits are TPC
-rows at radii637.5/642.5/647.5mm. Its outward three-hit prefit gives
-omega=-0.00769407861 (pT about0.11689GeV); all ten forward candidates are
-rejected at hit0 and no endpoint is published. Truth matching already passed
-223 intervals. The passive status remains-4 because no fit is published;
-this is not invalid-provenance status-3. A recorder-off same-code rerun
-reproduces the failure and all206 non-material flat fields exactly. No seed,
-beam, BH or fit change is authorized/implemented by this check.
+After actual submission, freeze normal source/build/install paths used by jobs;
+continue development only in isolated paths. No code, cards, libraries or SSH
+configuration changed for preparation. Full preparation evidence and limits:
+[the rerun record](agents_record/2026-11-10-eehx-tpcfix-rec-rerun-preparation.md).
 
-Only isolated tracker inputs were prepared: a seed EventHeader was added to
-copies of the trimmed SIM files, unused muon digitization omitted, and empty
-PFO/ECAL collections supplied for breakpoint's mandatory passive tuple inputs.
-PFA was not run; ECAL constraints and location scans were disabled. Tracking
-algorithms themselves were unchanged. The source cases are fresh standalone
-SIM tests, not bit-identical old REC events; fit entry0 maps to source1 or17.
-All seven successful native tracker/fit/control jobs completed; the initial
-missing-header setup attempts are preserved separately. Existing REC files
-still carry their old metadata. The separate5mm merged-hit issue is not fixed.
+Producer fix872d760 is installed and changes only our August truth extension,
+zero older simulation/hit-building/tracking/PFA lines. Native SIM A/B removed
+2 malformed TPC ranges and preserved37699 SimTrackerHits plus1295 MCParticles
+exactly. Real downstream checks pass strict truth matching on4/4 tracks;
+GSF publishes3/4 and BP4/4 ordinary/null fits, with no selected eBrem intervals.
+The separate GSF failure is a TPC-only outward three-hit seed, not provenance;
+recorder-off reproduces it. The separate5mm merged-hit rejection remains.
+Full evidence is in the
+[downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
+Fresh campaign completion and population provenance checks remain pending.
 
-Producer fix872d760 remains installed and limited to our August truth extension:
-all17 replaced lines are ours, zero older lines changed. Native SIM A/B showed
-2->0 malformed ranges,2285 complete TPC links, and exact preservation of37699
-SimTrackerHits plus1295 MCParticles. Its earlier synthetic-hook reader check
-was6/8->8/8; the real-track checks above are subsequent evidence. See
-[the producer record](agents_record/2026-11-10-tpc-truth-owner-fix.md).
+Tomorrow's BH discussion starts from the
+[ACTS source audit](agents_record/2026-11-10-acts-default-bh-source-audit.md).
+All108 coefficients and10022 installed-mixture evaluations match the pinned
+ACTS default. Local covariance application differs; upstream default has a
+thin-material boundary discontinuity and caps at0.2X0. No model change is made.
+GSF remains43 properties; pair selector on, recorder/oracle off, fresh inward-1,
+look-ahead0, both BH gates and beam on, ECAL off, MaxComponents10,
+LocalMeasurement. Neither BH model is physics-validated.
 
-GSF remains43 properties, automatic processed-track truth scope, oracle/recorder
-default off, maintained pair selector on, look-ahead0, fresh inward-1, both BH
-gates/beam on, ECAL off, MaxComponents10, LocalMeasurement. No user campaign
-was submitted. Stay on breakpoint-delayed-neutral and preserve private/original
-workspaces. Material/BH thick-endcap limits, truth-before-additional-scan
-coupling, floating beam-spot FSR loss and Hive remain unresolved/deferred.
-Complete outgoing status:
-[the snapshot](agents_record/2026-11-10-agents-before-tpc-truth-downstream-check.md).
+Keep breakpoint-delayed-neutral and all existing workspaces. Truth-before-scan
+coupling, floating beam-spot FSR loss and Hive remain deferred. Outgoing focus
+is preserved in the
+[snapshot](agents_record/2026-11-10-agents-before-tpcfix-rec-rerun.md).
