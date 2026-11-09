@@ -312,44 +312,42 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**REC-ONLY PRODUCTION: SMALLER JOBS AFTER TIMEOUTS (2026-11-09).**
-The previous100-job, up-to1000-event campaign was submitted by the user and
-hit the scheduler's10-hour limit. At the last pre-deletion snapshot:0 completed,
-39 confirmed timeouts,27 logs progressing,34 unresolved. Confirmed timeouts
-reached roughly382--443 events. The user deleted the previous production;
-old campaign directories are absent. Do not assume the queue is idle from
-removed output directories. Reconfirm idle jobs before implementation/install.
+**ACTIVE REC PRODUCTION; ISOLATED GSF SELECTION DEVELOPMENT (2026-11-09).**
+Latest user confirmation: jobs ARE ACTIVE, superseding the earlier idle answer.
+The user requested continued development without waiting. While jobs are active,
+use isolated source/build/install paths; never rebuild/install into paths used
+by a job. The normal build and `InstallArea/x86_64-el9-gcc11-opt` stay frozen
+until fresh idle confirmation. Primary branch stays `breakpoint-delayed-neutral`;
+preserve `breakpoint` and both original workspaces. No shared-package changes
+or new batch submissions are part of this development task.
 
-New campaign is PREPARED ONLY in
-`higgs_eeHX_ISRFSRON_REC_500jobs_200evt_20261109/`:500 jobs x200 events,
-target100,000, original normal-ISR/FSR STDHEP indices1--500,8000MB,cms.
-All500 frozen cards/metadata and submission-dry-run checksums pass. No new
-jobs submitted by the agent. Exact outcome, limits and submission command:
-[the restart record](agents_record/2026-11-09-eehx-200event-time-limit-restart.md).
-The200-event size is based on observed throughput, not a new full runtime test.
+Private source: `build.gsf-selection-dev/source` (detached, no branch created
+or switched); build: `build.gsf-selection-dev/package-build`; install:
+`build.gsf-selection-dev/install`. It builds GSF only against read-only installed
+dependencies. New tests use a fresh shell and
+`source build.gsf-selection-dev/setup-dev.sh`. Do not replace even the private
+install once a job uses it. Production source/cards/build/install fingerprints
+remain unchanged; only project knowledge changes in the primary tree.
 
-Each job runs ONLY sim,trk,calodigi,rec in one sequential Gaudi event loop,
-based on our DumpGsfTrks/*.py.bk copies. No PodioInput or intermediate ROOT files/
-cleanup; keep final REC, compact electron/eBrem/FSR truth, reconstructed ECAL
-hits/clusters/PFO links and tracker provenance. The twelve raw calorimeter
-hit/contribution/SimHit-association drops remain. Detector/DetCRD/scripts/
-originals are untouched. Later breakpoint-only fits read completed verified
-REC files, without repeating simulation/reconstruction. The proposed floating
-beam-spot radiation contribution for FSR is NOT implemented.
+Private-only `SelectTruthProductionElectrons=False` is implemented and tested.
+Enable it for eeHX to reuse breakpoint's standalone generator/association
+selector before per-track work. Original indices, selection status and published
+row maps are saved; missing inputs fail closed. The generic card stays off.
+Main-workspace code/installed GSF still fit all eligible tracks. The private
+44-property audit and READMEs/card are synchronized. Legacy scalar flat fields
+are not a two-electron benchmark.
 
-Core single-process checkpoint dc7b097 passed74 Python tests, a two-event native
-chain, exact1,067-branch in-memory/file-fit comparison, and standalone hard-event
-checks0,11,16,17. Use SIM full geometry and TRK SimplePIDSvc parameters across
-singletons; source/card metadata checks are skipped only for the in-memory
-path, with runtime collection checks intact. Observed two-event memory sample
-was5.76GiB; no1000-event memory bound or campaign speedup is established.
-Detailed evidence remains in
-[the chain record](agents_record/2026-11-09-in-memory-breakpoint-chain.md) and
-[the REC pruning record](agents_record/2026-11-09-rec-calorimeter-output-pruning.md).
-Shared random services mean identical seeds need not reproduce separate-process
-simulation bitwise. Prior provenance/PID-order/optimizer issues remain open.
+Five selected physics events exercised ten tracks with nine fit outputs,
+including normal-ISR/FSR event 0 fitting inputs 9 and 18 out of 41 and compact
+0/11/16/17 selecting eight tracks with seven outputs. One first-hit rejection
+remains. Default-off installed/private control matches 250 legacy branches
+across nine rows exactly; unit and missing-association checks pass. These are
+mechanical checks, not population or momentum-resolution validation.
 
-Stay on breakpoint-delayed-neutral; preserve breakpoint and both workspaces.
-Hive migration remains paused. No C++/shared-package or installation change is
-part of this preparation. Preserve unrelated dirty changes. The complete prior
-focus is in [the snapshot](agents_record/2026-11-09-agents-before-200event-restart.md).
+The 500 x 200-event REC-only campaign is active, not prepared only; exact queue
+counts are not rechecked. Preserve its one-loop sim/trk/calodigi/rec, compact
+truth and twelve raw-calorimeter drops. Later fits read verified completed REC.
+Floating beam-spot FSR loss is NOT implemented; Hive migration remains paused.
+Next: further GSF checks in the private environment, with production runtime
+frozen. Complete evidence, limitations, commands and the archived prior focus:
+[the isolation record](agents_record/2026-11-09-isolated-gsf-selection.md).
