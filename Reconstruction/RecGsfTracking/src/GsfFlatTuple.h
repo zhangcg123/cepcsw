@@ -341,7 +341,9 @@ private:
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   int    m_truth_bh_scope_valid = 0;
-  // passive truth/DD4hep/runtime material record for its configured track
+  // Passive material statuses retain original input-track ordinals.
+  std::vector<int> m_truth_material_track_status;
+  // Legacy scalar view of the first non-NotSelected input status.
   int    m_truth_material_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   int    m_truth_material_scope_valid = 0;

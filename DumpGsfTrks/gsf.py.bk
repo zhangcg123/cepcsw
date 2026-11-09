@@ -56,19 +56,7 @@ podioinput = PodioInput("PodioReader", collections=[
     "TPCTrackerHitAss",
     "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",
     "CompleteTracks",
-    "GsfG4MaterialSteps",
-    "GsfSimTrackerHitG4StepLinks",
 ])
-
-# Companion truth is absent in legacy full-step files.
-import ROOT
-_truth_input=ROOT.TFile.Open(inputfilename,"READ")
-if not _truth_input or _truth_input.IsZombie():
-    raise RuntimeError("Cannot inspect input truth collections")
-_truth_names={b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
-for _name in ("GsfG4MaterialStepSpans",):
-    if _name in _truth_names: podioinput.collections += [_name]
-_truth_input.Close()
 
 from Configurables import RecGsfTracking, TrackSystemSvc, GearSvc
 tracksys = TrackSystemSvc("TrackSystemSvc")
@@ -92,8 +80,8 @@ gsf.BHModel = bh_model
 gsf.MaterialPathMode = "DD4hepBetweenSurfaces"
 gsf.BHSplitThreshold = 1.0e-4
 # Independent BH-process gates. The common base is double-off; a method branch
-# may explicitly override either direction. Material-path evaluation/recording
-# remains enabled in both directions.
+# may explicitly override either direction. Material-path evaluation remains
+# active; passive recording has its own switch below.
 gsf.ForwardBHSplitting = False
 gsf.InwardBHSplitting = False
 
@@ -113,10 +101,19 @@ gsf.InwardBHSplitting = False
 gsf.TruthBHLossOverride = False
 gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
-# RecordTruthMaterialIntervals deliberately inherits its compiled default true.
-# Its two embedded provenance collections are unconditional PodioInput members
-# above, so ordinary maintained cards do not need conditional truth-input
-# steering. The recorder remains passive and cannot alter filtering/selection.
+# Optional diagnostics for every track processed by GSF, with no track index.
+gsf.RecordTruthMaterialIntervals = False
+if gsf.RecordTruthMaterialIntervals or gsf.TruthBHLossOverride:
+    podioinput.collections += ["GsfG4MaterialSteps", "GsfSimTrackerHitG4StepLinks"]
+    # Companion truth is absent in legacy full-step files.
+    import ROOT
+    _truth_input=ROOT.TFile.Open(inputfilename,"READ")
+    if not _truth_input or _truth_input.IsZombie():
+        raise RuntimeError("Cannot inspect input truth collections")
+    _truth_names={b.GetName().split("/")[0] for b in _truth_input.Get("events").GetListOfBranches()}
+    for _name in ("GsfG4MaterialStepSpans",):
+        if _name in _truth_names: podioinput.collections += [_name]
+    _truth_input.Close()
 
 gsf.MaxComponents = 10
 gsf.ReductionTargetComponents = 0

@@ -3143,20 +3143,14 @@ StatusCode RecGsfTracking::execute() {
   for (std::size_t index = 0; index < in->size(); ++index)
     (*truthMaterialStatus)[index] =
         truthBHLossStatusValue(initialMaterialStatus);
-  const int materialInputTrack = m_truthBHLossInputTrackIndex.value();
+  const int oracleInputTrack = m_truthBHLossInputTrackIndex.value();
   const bool truthTrackSelected = !m_selectTruthProductionElectrons.value() ||
-      selection.accepts(materialInputTrack);
-  if (m_recordTruthMaterialIntervals.value() && materialInputTrack >= 0 &&
-      truthTrackSelected &&
-      materialInputTrack < static_cast<int>(truthMaterialStatus->size())) {
-    (*truthMaterialStatus)[static_cast<std::size_t>(materialInputTrack)] =
-        truthBHLossStatusValue(TruthBHLossScopeStatus::TrackNotProcessed);
-  }
+      selection.accepts(oracleInputTrack);
 
   TruthBHLossEventData eventDataTruth;
   const bool needEventDataTruth =
-      truthTrackSelected && (m_recordTruthMaterialIntervals.value() ||
-      m_truthBHLossOverride.value());
+      m_recordTruthMaterialIntervals.value() ||
+      (truthTrackSelected && m_truthBHLossOverride.value());
   bool eventDataTruthEventValid = true;
   std::string eventDataTruthEventError;
   if (needEventDataTruth) {
@@ -3206,12 +3200,7 @@ StatusCode RecGsfTracking::execute() {
                    "GSF workflow remains unchanged"
                 << endmsg;
       const int selectedTrack = m_truthBHLossInputTrackIndex.value();
-      if (m_recordTruthMaterialIntervals.value() && selectedTrack >= 0 &&
-          selectedTrack < static_cast<int>(truthMaterialStatus->size())) {
-        (*truthMaterialStatus)[static_cast<std::size_t>(selectedTrack)] =
-            truthBHLossStatusValue(TruthBHLossScopeStatus::InvalidTruthEvent);
-      }
-      if (m_truthBHLossOverride.value()) {
+      if (truthTrackSelected && m_truthBHLossOverride.value()) {
         ++m_truthBHLossInvalidTruthEvents;
         if (selectedTrack >= 0 &&
             selectedTrack < static_cast<int>(truthBHLossStatus->size())) {
@@ -3260,8 +3249,7 @@ StatusCode RecGsfTracking::execute() {
     (*truthBHLossStatus)[static_cast<std::size_t>(inputTrackIndex)] =
         truthBHLossStatusValue(truthBHLossScopeStatus);
     const bool materialSourceSelectsTrack =
-        m_recordTruthMaterialIntervals.value() &&
-        inputTrackIndex == m_truthBHLossInputTrackIndex.value();
+        m_recordTruthMaterialIntervals.value();
     TruthBHLossScopeStatus truthMaterialScopeStatus =
         m_recordTruthMaterialIntervals.value()
             ? TruthBHLossScopeStatus::NotSelected

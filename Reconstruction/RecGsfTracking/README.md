@@ -106,9 +106,9 @@ distinction matters because that template enables `ElossOn` and
 | `SelectTruthProductionElectrons` | `false` | `false` | Optional truth-assisted eeH study gate before all per-track fit workflows. Select the unique stable generator e-/e+ outside Higgs ancestry and their uniquely matched original input tracks, using `MCParticle` and `CompleteTracksParticleAssociation`. Missing or ambiguous inputs skip the affected fits; they never fall back to fitting all tracks. This is independent of `ElectronHypothesis`, not reconstructed PID. |
 | `BHModel` | `CEPCRuntimeCategoryAligned9Clear` | same | Select the BH Gaussian-mixture parameterization. The supported values are the default `CEPCRuntimeCategoryAligned9Clear` and the default-off `ActsAtlas` control. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
-| `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used by the embedded-EventData truth oracle and passive material recorder. Other input tracks use the configured BH model and have no interval record. It must be nonnegative. |
+| `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used only by the embedded-EventData truth oracle. Other input tracks use the configured BH model. It must be nonnegative; it does not scope the passive material recorder. |
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
-| `RecordTruthMaterialIntervals` | `true` | `true` | Passively record material-consistency information for the `CompleteTracks` index and endpoint guard configured by the two preceding properties. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-on diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
+| `RecordTruthMaterialIntervals` | `false` | `false` | Passively record material-consistency information for every track processed by GSF, after any production-electron selection, using the endpoint guard above. No recorder track index is needed. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-off diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
 | `ForwardBHSplitting` | `false` | `false` | Enable BH component creation in the shared outward filter. The ordinary path begins with hit-0 to hit-1; beam-boundary mode additionally applies this same gate to the canonical DD4hep beam-to-hit-0 interval before hit 0 is updated. Every later outgoing accepted-hit interval remains governed by this property and `BHSplitThreshold`. `BeamSpotConstraint` never forces this gate on. When false, propagation, measurement updates, material evaluation, and passive recording remain active without forward BH children. This does not disable deterministic `ElossOn` or `MSOn`. |
 | `InwardBHSplitting` | `false` | `false` | Enable BH component creation in the independent reverse filter for every outer-to-inner interval above `BHSplitThreshold`. Beam-boundary mode additionally applies this same gate to the canonical hit-0-to-beam interval after hit 0 has been updated. `BeamSpotConstraint` never forces it on. The property is inert unless `ReverseFiltering=true` and does not govern `GaussianSumSmoothing`. When false, inward propagation, hit and beam updates, same-surface products, and passive material evaluation remain active without new reverse BH children. With positive `InwardSeedCovarianceScale`, components copied from the final forward mixture are not collapsed. This does not disable deterministic `ElossOn` or `MSOn`. The maintained reverse branch explicitly enables inward splitting; the common compiled and template default remains false. |
@@ -228,8 +228,10 @@ The per-input-track status codes are:
 
 `RecordTruthMaterialIntervals` is independent of `TruthBHLossOverride`. When
 enabled, it uses the embedded `EventData` provenance and the same exact
-reconstructed-hit association, selected input-track index, and endpoint
-integrity guard described above, but it only writes diagnostic information.
+reconstructed-hit association and endpoint integrity guard described above,
+but it only writes diagnostic information. It automatically follows every
+track that GSF processes, after any production-electron selection;
+`TruthBHLossInputTrackIndex` scopes only the optional oracle.
 It does not replace `pathTX0` or the configured `BHModel` response, and it does
 not alter propagation, split gating, measurement updates, reduction, reverse
 weights, or final selection.
@@ -251,26 +253,37 @@ The runtime values are the actual component-path material summaries seen in
 the ordinary forward and reverse workflows. They are stored separately by
 direction as weighted, minimum, maximum, and leading-path values; they are not
 per-BH-call child records. `GSFTruthMaterialIntervals` contains one passive
-summary per accepted-hit interval for the configured input track, while
+summary per accepted-hit interval for each successfully published, truth-matched
+track, preserving its original input and output indices, while
 `GSFTruthMaterialRecordStatus` contains the per-input-track scope status. The
-flat-tuple representation uses the `truth_material_` prefix, including scalar
-scope status/validity and interval vectors. The material-record status uses
-the same numeric status table as the truth oracle above, interpreted as
-recording validity rather than permission to steer BH. Keeping these
-quantities side by side permits a later diagnostic to separate
-Geant4/DD4hep material-map
-differences from reconstructed-endpoint/component-path differences without
+flat-tuple representation uses the `truth_material_` prefix. The authoritative
+`truth_material_track_status` vector is indexed by original `CompleteTracks`
+ordinal for processed events, including tracks without valid intervals.
+Focused-out events retain the existing singleton sentinel (`-4` enabled or
+`0` disabled), since the input-track collection is not retrieved. The legacy
+scalar
+`truth_material_scope_status` is the first status other than `NotSelected`
+(or zero if none); `truth_material_scope_valid` describes that scalar only,
+not the complete selected pair. The interval vectors retain input/output maps.
+The material-record status uses the same numeric table as the oracle above,
+interpreted as recording validity: `0` disabled, `1` recorded, `2` excluded
+by track selection, `-4` unprocessed/unusable, and `-1`/`-2`/`-3` unavailable
+event truth, failed distance guard or invalid interval mapping respectively.
+Keeping these quantities side by side permits a later diagnostic to separate
+Geant4/DD4hep material-map differences from reconstructed-endpoint/component-path differences without
 using truth to steer the fit. Missing or invalid provenance is represented in
 the recorded interval validity/status; it has no effect on an otherwise
 ordinary GSF job when the truth BH-loss oracle itself is off.
 
 Because this recorder reads `GsfG4MaterialSteps` and
 `GsfSimTrackerHitG4StepLinks` from the current event, an enabled input card must
-request both collections. The compiled and active reverse-template value is
-true, so the maintained simulation workflow and reverse template request both
-by default. A control using a historical input without embedded provenance must
-set `RecordTruthMaterialIntervals=false` explicitly and omit those collection
-requests. Disabling the recorder changes only diagnostic output availability.
+request both collections plus `GsfG4MaterialStepSpans` when the compact input
+contains that companion. The compiled, active reverse-template and maintained
+card defaults are false. The maintained card requests embedded truth only when
+the recorder or oracle is enabled; the reverse template requests it only when
+its recorder is enabled. Disabled diagnostics therefore do not require embedded
+truth collections. Disabling the recorder changes only diagnostic output
+availability.
 Unrequested association collections for detector regions unused by the
 selected track are tolerated. The selected track itself remains strict: every
 accepted hit must resolve through one available standard truth association or
@@ -518,7 +531,7 @@ The former public runtime material/BH-audit CSV option and writer are retired,
 and the runtime CSV and side-ROOT readers have also been removed. Historical
 audit CSVs and project records remain valid as evidence, but current code does
 not consume those helper files and stale cards that assign removed properties
-must be regenerated. The maintained recording path is now the default-on
+must be regenerated. The maintained recording path is now the optional default-off
 `GSFTruthMaterialIntervals` EDM collection and matching
 `truth_material_*` final flat-tuple vectors. They preserve accepted-hit truth,
 truth-hook DD4hep, and summarized forward/reverse runtime material values, not
@@ -556,8 +569,8 @@ gate runs before per-track truth matching, hit preparation, initialization,
 and forward/smoother/reverse fitting. It never deletes, clones, or renumbers
 the input tracks, and an invalid selection never falls back to all-track fits.
 `TruthBHLossInputTrackIndex` remains an original input ordinal: selection does
-not retarget the truth oracle or passive material recorder from index 0 to a
-selected electron.
+not retarget the truth oracle from index 0 to a selected electron. The optional
+passive material recorder automatically follows all processed selected tracks.
 
 Five integer EDM collections preserve the selection and output mapping:
 
@@ -645,7 +658,8 @@ tuple also fills the corresponding parallel scalar set:
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
 | `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, FullMixtureMode, and ECAL-constrained fractional pT residuals relative to the first truth particle. In a beam-boundary run the ordinary three reverse endpoint residuals already describe the beam-updated live mixture. |
 | `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
-| `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Passive material-record scope status/validity for the configured track and number of interval-vector entries. |
+| `truth_material_track_status` | Authoritative per-input-track passive recorder status, indexed by original `CompleteTracks` ordinal. Includes disabled, unselected and failed tracks even when they have no interval rows. |
+| `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Legacy first-non-NotSelected status and its validity, plus total interval-vector entries across recorded tracks. Use the full status vector for multi-track events. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
 | `truth_material_track_id`, `truth_material_first_step`, `truth_material_last_step`, `truth_material_start_hook_fraction`, `truth_material_end_hook_fraction`, `truth_material_start_x`, `truth_material_start_y`, `truth_material_start_z`, `truth_material_end_x`, `truth_material_end_y`, `truth_material_end_z`, `truth_material_step_count` | Exact matched Geant4 track, boundary steps/fractions, hook positions in mm, and positive-length step-piece count. |
 | `truth_material_g4_tx0`, `truth_material_p_before`, `truth_material_ebrem_loss`, `truth_material_retained_fraction` | Fractionally integrated Geant4 t/X0, inner-hook momentum in GeV, subtype-3 eBrem loss in GeV, and its retained-momentum fraction. |
@@ -739,9 +753,9 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 43 of the 44 `RecGsfTracking`
-properties. It deliberately inherits only the compiled
-`RecordTruthMaterialIntervals=true` default. Its reverse material,
+`DumpGsfTrks/gsf.py.bk` explicitly configures all 44 `RecGsfTracking`
+properties, including explicit default-off
+`RecordTruthMaterialIntervals=false` steering. Its reverse material,
 split/cutoff, and ECAL settings agree with the production baseline:
 `BHSplitThreshold=1e-4`, `ComponentWeightCutoff=1e-4`,
 `DD4hepBetweenSurfaces` and ECAL off. For the current live beam-boundary
@@ -753,7 +767,7 @@ compiled and active-template default `CEPCRuntimeCategoryAligned9Clear`;
 `ActsAtlas` remains the sole default-off model control. The retired runtime
 BH-audit CSV is no
 longer steered. The card's `RecGsfFlatTuple` instance writes
-the default-on `truth_material_*` vectors alongside BestBranch
+the optional `truth_material_*` interval vectors and per-track statuses alongside BestBranch
 `bestbranch_gsf_*`, paired `weighted_gsf_*` and `fullmixture_gsf_*`, generic
 `gsf_*`, and default-zero `ecal_gsf_*` scalar branch sets.
 It explicitly sets `BeamSpotConstraint=true` with the four nominal
@@ -772,7 +786,7 @@ The maintained `gsf.py.bk` template keeps the compiled and active
 reverse-template `TruthBHLossOverride=false` base value. For a truth-oracle
 diagnostic, the generated per-job card may set it true. Embedded EventData is
 the fixed source; there is no source selector or helper-file input property.
-The card reads `GsfG4MaterialSteps` plus
+When either diagnostic is enabled, the card reads `GsfG4MaterialSteps` plus
 `GsfSimTrackerHitG4StepLinks` from the ordinary input event, keeps
 `TruthBHLossInputTrackIndex=0` and
 `TruthBHLossMaxEndpointDistance=5.0`, and requires no side material file. The
@@ -782,10 +796,11 @@ production-default change.
 Generated truth-on cards append `truth-bh`; generated off controls append
 `truth-bh-off` to their GSF EDM and flat-tuple filenames.
 
-The maintained card inherits the compiled and active reverse-template
-`RecordTruthMaterialIntervals=true` default. It unconditionally requests
-`GsfG4MaterialSteps` and `GsfSimTrackerHitG4StepLinks` in its base `PodioInput`
-list, including when `TruthBHLossOverride=false`. The recorded
+The maintained card explicitly sets `RecordTruthMaterialIntervals=false`,
+matching the compiled and active reverse-template defaults. When the recorder
+or oracle is enabled, it requests `GsfG4MaterialSteps`,
+`GsfSimTrackerHitG4StepLinks` and the optional compact-span collection.
+Enabling the recorder covers every processed track without an index setting. The recorded
 truth/DD4hep/runtime values remain passive and do not affect the GSF workflow.
 Their directional `*_above_threshold_count` values describe thickness-eligible
 material paths, not executed BH splits, so they remain populated when a split

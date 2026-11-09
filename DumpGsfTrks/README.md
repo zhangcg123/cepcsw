@@ -16,7 +16,7 @@ The simulation event itself carries the optional truth-diagnostic provenance.
 `keep *` preserves it through tracking, so the GSF truth-oracle control needs
 no side ROOT tuple or event-number join. Normal fit dynamics do not use truth
 losses; the maintained eeHX card uses truth-assisted track selection.
-The default-on passive material recorder and the optional default-off
+The optional default-off passive material recorder and default-off
 `TruthBHLossOverride=true` control read the embedded provenance directly from
 the tracker output's EventData. Calorimeter digitization and reconstruction are
 not part of the maintained GSF worker at present.
@@ -281,9 +281,9 @@ compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 43 of the 44
-properties. It deliberately inherits only the compiled
-`RecordTruthMaterialIntervals=true` default. Its explicit
+For this maintained workflow, `gsf.py.bk` explicitly configures all 44
+properties, including `RecordTruthMaterialIntervals=false`, matching the
+compiled and active reverse-template default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
 submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
 generated per-job card to enable the truth-dependent BH-loss oracle. The card
@@ -329,22 +329,24 @@ propagation and scalar likelihood. The ordinary hit-0 update and subsequent
 live beam-boundary processing still run. The maintained isolated beam card
 keeps depth zero so this feedback remains a separate comparison axis.
 
-The maintained card inherits the compiled and active reverse-template
-`RecordTruthMaterialIntervals=true` default. `GsfG4MaterialSteps` and
-`GsfSimTrackerHitG4StepLinks` are unconditional members of its base
-`PodioInput` collection list, whether or not the truth BH-loss override is
-enabled. The property passively writes the exact
+The maintained card explicitly sets `RecordTruthMaterialIntervals=false`.
+When enabled, it automatically follows every track processed by GSF, after
+any production-electron selection, without consulting the oracle track index.
+The card requests `GsfG4MaterialSteps`, `GsfSimTrackerHitG4StepLinks` and the
+optional compact spans only when the recorder or oracle is enabled.
+The recorder passively writes the exact
 Geant4 t/X0 between associated truth hooks, the DD4hep integral between those
 same positions, and forward/reverse runtime material summaries to in-memory
 EDM collections consumed by the flat-tuple algorithm. Other cards may persist
 `GSFTruthMaterialIntervals` and `GSFTruthMaterialRecordStatus` with
 `PodioOutput`; the maintained batch card does not. Its durable flat branches
-use the `truth_material_` prefix. The recorder never replaces a runtime path
+use the `truth_material_` prefix. The full `truth_material_track_status` vector
+is indexed by original input-track ordinal; interval rows preserve input/output
+maps. Legacy scalar status fields describe only the first non-NotSelected
+status, so use the vector for Higgs pairs. The recorder never replaces a runtime path
 or BH response and cannot change split gating, component weights, or track
-selection. Historical inputs without the
-embedded collections require an explicit
-`RecordTruthMaterialIntervals=false` control card; this affects diagnostic
-availability only.
+selection. With both diagnostics off, embedded G4 collections are not required.
+The switch affects diagnostic availability only.
 Invalid event or track truth no longer terminates the batch job. The selected
 track instead uses ordinary BH throughout and records a negative validity code
 in `GSFTruthBHLossStatus`, `truth_bh_scope_status`/
@@ -445,9 +447,7 @@ Although it retains the `.bk` name, `gsf.py.bk` is the maintained runnable
 comparison card for this workflow. When the package adds, removes,
 renames, or changes a configurable property, a dedicated sub-agent must audit
 this workflow in the same change.
-`DumpGsfTrks/gsf.py.bk` must explicitly steer the property unless the user has
-deliberately designated it as a maintained inherited default, as for
-`RecordTruthMaterialIntervals=true`; any such exception or deliberate
+`DumpGsfTrks/gsf.py.bk` must explicitly steer each property; any deliberate
 difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
@@ -455,8 +455,7 @@ authoritative property meanings and full inventory remain in
 At the historical retirement of the configurable endpoint-output selectors
 and deprecated common curvature-seed alias, `RecGsfTracking` had 37 compiled
 properties and the card explicitly steered 36. The current counts are 44 and
-43 respectively; only `RecordTruthMaterialIntervals=true` remains deliberately
-inherited.
+44 respectively, with no inherited-property exception.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
@@ -529,7 +528,8 @@ reconstructed partner can still be fitted. Default-off selection does not
 retrieve the association input and preserves the all-track fit workflow.
 
 Input tracks and their original ordinals are preserved. Selection does not
-retarget `TruthBHLossInputTrackIndex=0`. The five EDM outputs
+retarget the oracle-only `TruthBHLossInputTrackIndex=0`; the optional passive
+recorder automatically follows all processed selected tracks. The five EDM outputs
 `GSFProductionElectronSelectionStatus`, `GSFProductionElectronMCIndices`,
 `GSFProductionElectronTrackIndices`, `GSFProductionElectronCandidateCounts`,
 and `GSFTrackInputIndices` retain the event status, e-/e+ pair, and successful

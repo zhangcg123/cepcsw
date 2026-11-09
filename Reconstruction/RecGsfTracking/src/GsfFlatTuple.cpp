@@ -298,6 +298,7 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
   // passive truth/DD4hep/runtime material intervals
+  m_tree->Branch("truth_material_track_status", &m_truth_material_track_status);
   m_tree->Branch("truth_material_scope_status",
                  &m_truth_material_scope_status);
   m_tree->Branch("truth_material_scope_valid",
@@ -901,6 +902,7 @@ StatusCode RecGsfFlatTuple::execute() {
   m_truth_material_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   m_truth_material_scope_valid = 0;
+  m_truth_material_track_status.clear();
   m_truth_material_interval_n = 0;
   m_truth_material_input_track_index.clear();
   m_truth_material_output_track_index.clear();
@@ -953,6 +955,7 @@ StatusCode RecGsfFlatTuple::execute() {
   try {
     const auto* materialStatus = m_inTruthMaterialStatus.get();
     if (materialStatus && !materialStatus->empty()) {
+      m_truth_material_track_status.assign(materialStatus->begin(), materialStatus->end());
       const auto notSelected =
           truthBHLossStatusValue(TruthBHLossScopeStatus::NotSelected);
       const auto selectedStatus = std::find_if(

@@ -123,7 +123,8 @@ A passive interval recorder now persists, in the final
 GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual
 forward/reverse component paths. These values never steer the GSF. The
-compiled, active reverse-template, and maintained-card default is on.
+compiled, active reverse-template, and maintained-card default is off. When
+enabled it covers every track processed by GSF, independent of the oracle index.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
@@ -231,8 +232,7 @@ explicit provenance. Historical detail does not override this live status.
   `Reconstruction/RecGsfTracking` still require explicit authorization. Also
   track the specifically maintained workflow card `DumpGsfTrks/gsf.py.bk`,
   whose complete property steering is part of the documentation contract
-  except for the deliberate inherited
-  `RecordTruthMaterialIntervals=true` default.
+  including explicit `RecordTruthMaterialIntervals=false` steering.
   Keep other run cards/options, analysis scripts, build files, generated ROOT
   files, logs, plots, tables, notebooks, batch cards, and experiment outputs
   uncommitted unless the user explicitly authorizes a specific exception. Do
@@ -312,58 +312,49 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**HIGGS ENDCAP MATERIAL AUDIT: BH RANGE LIMIT (2026-11-10).**
-The user asked whether saved compact G4 truth supports passive GSF recording,
-how to replace index0 gun steering for Higgs pairs, and whether material/BH
-controls work for endcap electrons. Read-only audit plus temporary diagnostic
-cards is complete; no source, installed library, maintained default or user
-batch changed in this audit. Evidence:
-[the material audit](agents_record/2026-11-10-higgs-material-audit.md).
+**GSF PASSIVE RECORDER: DEFAULT OFF, AUTOMATIC TRACK SCOPE (2026-11-10).**
+The user authorized this recorder change before further material/BH discussion.
+Implementation, normal package installation and focused verification are complete.
+`RecordTruthMaterialIntervals=false` is the compiled, active reverse-template and
+explicit maintained `DumpGsfTrks/gsf.py.bk` default. Setting it true automatically
+attempts recording for every track processed by GSF, after any production-electron
+selection; no recorder input index is needed. `TruthBHLossInputTrackIndex` now
+scopes only the optional oracle. The original endpoint/coverage guards remain.
+Full evidence and commands:
+[the recorder record](agents_record/2026-11-10-gsf-recorder-auto-scope.md).
 
-New job4's200 events yield397 uniquely selected reconstructed electron tracks.
-319 pass strict raw-REC hook checks. Of85 tracks with actual endcap hits,67
-pass and58 of those67 have G4 intervals thicker than0.03 X0. Scope/counts
-are raw-hit material diagnostics from one file, not GSF efficiency/resolution.
-The compact format retains hook/radiation checkpoints and non-radiative t/X0
-spans, sufficient for its saved interval quantities when provenance is valid.
-Known invalid TPC ranges/missing associations remain explicitly excluded.
+The new flat `truth_material_track_status` mirrors per-original-input EDM statuses.
+Existing interval input/output maps remain; legacy scalar statuses describe only
+the first non-NotSelected status. Focused-out events retain singleton sentinels.
+Maintained cards request embedded step/link/optional-span inputs only for enabled
+diagnostics. The required dedicated audit passed44 properties,44 README entries,
+44 explicit maintained-card settings; the old inherited-default exception is gone.
 
-Three actual Higgs tracks (barrel event0/track9, positive endcap17/23,
-negative endcap24/10) have valid native passive records. G4/DD4hep same-hook
-material totals differ by -0.0103%,+0.0587%,-0.0078%, respectively. Endcap
-runtime intervals reach0.17375 and0.27206 X0. The active CEPC BH table stops
-at0.03 and returns its final response above that knot; ActsAtlas also caps
-at0.2. Successful execution therefore does not establish correct endcap BH
-response. Keep geometry consistency distinct from BH parameterization and
-momentum recovery. Agree on thick-interval handling and validate before a
-population endcap claim; no automatic model/path switch or fix was made.
+Same-code native off/on runs use only completed new normal-ISR/FSR job4 REC events
+0,1,11,16,17, with oracle off and index99999 to test recorder independence.
+Both publish all ten selected tracks; all205 non-material fields are exactly
+unchanged. Seven tracks record1553 intervals, while event1 tracks23/30 and
+17/22 retain the established distance/range failures without blocking GSF fits.
+Comprehensive component dumps, the selector/compact-reader CTests and flat
+selection/component/lineage mapping checks pass. These five events establish
+passivity and scope behavior, not population resolution or endcap BH validation.
 
-RecordTruthMaterialIntervals remains restricted by TruthBHLossInputTrackIndex=0;
-only27/397 selected tracks in this file have original index0 before hook cuts.
-Proposed next change: record all processed selected tracks with per-track
-statuses, keep original-index interval maps, and reserve the index option for
-the optional oracle. This scope change is NOT implemented. Passive-recording
-index overrides left205 non-material fields exactly unchanged in the two
-same-settings comparisons. The recorder is useful for material/BH validation;
-its current scope is legacy gun steering, not a Higgs requirement.
+Normal maintained GSF remains pair-selection on, look-ahead0, fresh inward-1,
+both BH gates on, beam on, ECAL/oracle off, MaxComponents10, LocalMeasurement.
+Bare/active-template selector remainsFalse. Private source/build/install and
+original workspaces remain preserved; stay on breakpoint-delayed-neutral.
+Latest user confirmation is no running jobs; both agent validation runs finished.
+No user batch submission or simulation rerun is part of this task.
 
-Normal GSF promotion1549ed8 remains installed: maintained card selectionTrue,
-look-ahead0, reverse fresh inward-1, both BH gates on, beam on, ECAL/oracle off,
-MaxComponents10 and LocalMeasurement. Bare/active-template selector defaults
-remainFalse. Full44-option audit, focused255-field exact private/normal A/B
-and8-track validation passed; see
-[the promotion record](agents_record/2026-11-10-gsf-default-selector-and-depth-zero.md).
-The detached private source/build/install and original workspaces remain
-preserved. Stay on breakpoint-delayed-neutral. Latest user confirmation is no
-running jobs; no new campaign was submitted by the agent. The five-event older
-comparison used look-ahead2 and is not a numerical reference for depth0.
-
-Ranked HitScan/threshold/36 fields are retired; HitScanAll keeps reconstructed
-candidates, a true5D null and saved IP states without online selection/refit.
-Truth-before-additional-scan coupling and the TPC truth-hook faults remain
-unfixed. Do not loosen guards or modify simulation without agreement. The last
-REC campaign inspection found497 verified jobs and3 unverified partial jobs;
-idle confirmation does not validate those partial files. Use completed REC
-inputs. Floating beam-spot FSR loss and Hive migration remain pending/paused.
-The outgoing complete status is retained in
-[the snapshot](agents_record/2026-11-10-agents-before-higgs-material-audit.md).
+Material-path/BH changes are deferred. Prior focused barrel/both-endcap G4/DD4hep
+geometry checks agree closely, but real endcap intervals0.174/0.272 X0 exceed
+the active CEPC table ceiling0.03 (ActsAtlas also caps0.2). Saved compact truth
+supports its interval quantities when links are valid; the319/397 raw-hit truth
+availability count is not fitting efficiency. See
+[the audit](agents_record/2026-11-10-higgs-material-audit.md).
+Do not loosen provenance guards or change simulation/BH/material steering without
+agreement. Ranked HitScan remains retired; HitScanAll and truth-before-additional-
+scan coupling remain. The last campaign inspection found497 verified REC jobs
+and3 unverified partials. Floating beam-spot FSR loss and Hive remain pending.
+The complete outgoing focus is retained in
+[the snapshot](agents_record/2026-11-10-agents-before-recorder-auto-scope.md).
