@@ -312,60 +312,44 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**SINGLE-PROCESS BREAKPOINT PRODUCTION CHAIN (2026-11-09).**
-The user explicitly requests merging separate batch stages to avoid intermediate
-ROOT write/read transformations and deletion. Work only with our
-`DumpGsfTrks/*.py.bk` copies and dedicated breakpoint helper/card/tests/docs;
-`Detector/DetCRD/scripts/` originals remain unchanged. A fresh idle-job check
-was answered **No jobs are active** for this implementation. Do not treat it as
-continuing permission for future implementation/install.
+**REC-ONLY PRODUCTION: SMALLER JOBS AFTER TIMEOUTS (2026-11-09).**
+The previous100-job, up-to1000-event campaign was submitted by the user and
+hit the scheduler's10-hour limit. At the last pre-deletion snapshot:0 completed,
+39 confirmed timeouts,27 logs progressing,34 unresolved. Confirmed timeouts
+reached roughly382--443 events. The user deleted the previous production;
+old campaign directories are absent. Do not assume the queue is idle from
+removed output directories. Reconfirm idle jobs before implementation/install.
 
-New complete-chain preparations embed frozen SIM/TRK/calodigi/REC and optional
-breakpoint sources in one generated `full_chain.py`, based on
-`DumpGsfTrks/full_chain.py.bk`. They run sequentially in one Gaudi event loop,
-with no PodioInput and no SIM/TRK/calodigi ROOT files or cleanup. REC is written
-before the breakpoint endpoint collections are created; the fit reads the same
-live collections and writes its flat tuple. The existing twelve-collection raw
-calorimeter REC omission policy remains. Old frozen jobs and partial-stage
-workflows retain separate execution. No production campaign has been submitted.
+New campaign is PREPARED ONLY in
+`higgs_eeHX_ISRFSRON_REC_500jobs_200evt_20261109/`:500 jobs x200 events,
+target100,000, original normal-ISR/FSR STDHEP indices1--500,8000MB,cms.
+All500 frozen cards/metadata and submission-dry-run checksums pass. No new
+jobs submitted by the agent. Exact outcome, limits and submission command:
+[the restart record](agents_record/2026-11-09-eehx-200event-time-limit-restart.md).
+The200-event size is based on observed throughput, not a new full runtime test.
 
-Use the SIM full detector geometry and preserve TRK SimplePIDSvc parameters
-across singleton configuration. Skip standalone metadata probes only in the
-in-memory card; runtime required-collection checks remain active. A combined
-process shares random services and need not reproduce separate-process samples
-bitwise with the same seed. Batch MEMORY_MB now defaults to 8000, because the
-focused combined process already exceeded the former 5000 MB request during
-initialization. Explicit overrides remain available.
+Each job runs ONLY sim,trk,calodigi,rec in one sequential Gaudi event loop,
+based on our DumpGsfTrks/*.py.bk copies. No PodioInput or intermediate ROOT files/
+cleanup; keep final REC, compact electron/eBrem/FSR truth, reconstructed ECAL
+hits/clusters/PFO links and tracker provenance. The twelve raw calorimeter
+hit/contribution/SimHit-association drops remain. Detector/DetCRD/scripts/
+originals are untouched. Later breakpoint-only fits read completed verified
+REC files, without repeating simulation/reconstruction. The proposed floating
+beam-spot radiation contribution for FSR is NOT implemented.
 
-The current campaign is REC FIRST, PREPARED ONLY in
-`higgs_eeHX_ISRFSRON_REC_100jobs_1k_20261109/`:100 jobs, up to1000 events each,
-original normal-ISR/FSR STDHEP indices1--100,8000MB,cms. Actual generator reads
-find60 files with1000 available and40 with997--999:99,952 events total. Each
-frozen job NEVT matches its available count. No input repacking or source/code
-change. Every single-process job embeds ONLY sim,trk,calodigi,rec; no breakpoint.
-All prepared cards/checksums verified; no jobs submitted. Prior500x200/all-five
-preparations are retained and superseded. Later breakpoint-only jobs read these
-REC files; the FSR/beam-spot radiation extension is still pending. Exact input
-counts and commands are in
-[the 1k preparation record](agents_record/2026-11-09-eehx-rec-1k-preparation.md).
+Core single-process checkpoint dc7b097 passed74 Python tests, a two-event native
+chain, exact1,067-branch in-memory/file-fit comparison, and standalone hard-event
+checks0,11,16,17. Use SIM full geometry and TRK SimplePIDSvc parameters across
+singletons; source/card metadata checks are skipped only for the in-memory
+path, with runtime collection checks intact. Observed two-event memory sample
+was5.76GiB; no1000-event memory bound or campaign speedup is established.
+Detailed evidence remains in
+[the chain record](agents_record/2026-11-09-in-memory-breakpoint-chain.md) and
+[the REC pruning record](agents_record/2026-11-09-rec-calorimeter-output-pruning.md).
+Shared random services mean identical seeds need not reproduce separate-process
+simulation bitwise. Prior provenance/PID-order/optimizer issues remain open.
 
-Core implementation checkpoint: `dc7b097`. All 74 relevant Python tests pass.
-Standalone events 0,11,16,17 reproduce all 1,067 flat branches exactly. The
-complete two-event native worker succeeds: REC 2,064,573 bytes, flat 3,351,268
-bytes (32 track rows, two event rows), no intermediate ROOT files and no
-breakpoint endpoint collections in REC. All intermediate statuses are
-`not_written_in_memory`. Observed memory high-water sample is about 5.76 GiB.
-The same frozen breakpoint fit rerun from saved REC also succeeds: ALL 1,067
-branches agree EXACTLY with the in-memory fit over 32 track rows/two events,
-including existing failures and full scans/covariances. Focused implementation
-and verification are complete. Artifacts are under
-`/tmp/breakpoint-in-memory-20261109/`. No C++/shared-package source or
-installation changed; no production campaign submitted. Exact evidence and
-limits are in [the chain record](agents_record/2026-11-09-in-memory-breakpoint-chain.md).
-
-Stay on `breakpoint-delayed-neutral`; Hive migration remains paused. Preserve
-both workspaces/branches, prior known provenance/PID-order/optimizer issues and
-unrelated dirty changes. Prior focus is preserved in
-[the snapshot](agents_record/2026-11-09-agents-before-in-memory-chain.md);
-[the REC pruning gate](agents_record/2026-11-09-rec-calorimeter-output-pruning.md)
-remains applicable to the output policy, not a full-chain physics validation.
+Stay on breakpoint-delayed-neutral; preserve breakpoint and both workspaces.
+Hive migration remains paused. No C++/shared-package or installation change is
+part of this preparation. Preserve unrelated dirty changes. The complete prior
+focus is in [the snapshot](agents_record/2026-11-09-agents-before-200event-restart.md).
