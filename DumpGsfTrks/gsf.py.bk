@@ -89,7 +89,7 @@ gsf.InwardBHSplitting = False
 # EventData is its fixed source; no helper-file source/input steering remains.
 # This template keeps the explicit off-side value; dump_gsftrk.sh replaces it
 # from its truth_bh_override argument for an explicitly truth-on submission.
-# When enabled, it maps CompleteTracks index 0 through the standard tracker-hit
+# When enabled, it maps every processed track through the standard tracker-hit
 # associations to the embedded SimTrackerHit-to-Geant4-step provenance. Every
 # accepted-hit endpoint must pass the configured integrity guard. An invalid
 # scope uses ordinary BH for the whole track and is tagged in
@@ -99,7 +99,6 @@ gsf.InwardBHSplitting = False
 # truth intervals do not include the beam-to-hit-0 boundary and initialization
 # deliberately rejects that combination.
 gsf.TruthBHLossOverride = False
-gsf.TruthBHLossInputTrackIndex = 0
 gsf.TruthBHLossMaxEndpointDistance = 5.0
 # Optional diagnostics for every track processed by GSF, with no track index.
 gsf.RecordTruthMaterialIntervals = False

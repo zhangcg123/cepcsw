@@ -401,10 +401,6 @@ private:
       "fully validated selected track with one exact embedded-event "
       "Geant4 eBrem retained-momentum fraction; invalid truth scopes use the "
       "configured BH model and emit a negative status tag"};
-  Gaudi::Property<int> m_truthBHLossInputTrackIndex{
-      this, "TruthBHLossInputTrackIndex", 0,
-      "CompleteTracks index receiving the embedded-event truth oracle; other "
-      "tracks use the configured BH model"};
   Gaudi::Property<double> m_truthBHLossMaxEndpointDistance{
       this, "TruthBHLossMaxEndpointDistance", 5.0,
       "Maximum allowed distance in mm between a runtime accepted hit and its "
@@ -413,7 +409,7 @@ private:
       this, "RecordTruthMaterialIntervals", false,
       "Passively write exact Geant4, truth-hook DD4hep, and actual runtime "
       "GSF material summaries for every processed track's consecutive "
-      "accepted-hit intervals; independent of TruthBHLossInputTrackIndex; never "
+      "accepted-hit intervals; never "
       "steers propagation, BH splitting, component weights, or selection"};
   Gaudi::Property<std::string> m_materialPathMode{
       this, "MaterialPathMode", "DD4hepBetweenSurfaces",

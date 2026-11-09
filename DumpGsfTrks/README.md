@@ -276,20 +276,20 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 44 `RecGsfTracking` properties, their
+The authoritative explanation of all 43 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures all 44
+For this maintained workflow, `gsf.py.bk` explicitly configures all 43
 properties, including `RecordTruthMaterialIntervals=false`, matching the
 compiled and active reverse-template default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
 submission passes `truth_bh_override=true`, and `dump_gsftrk.sh` rewrites each
 generated per-job card to enable the truth-dependent BH-loss oracle. The card
 uses the fixed embedded-EventData source with
-`TruthBHLossInputTrackIndex=0` and
-`TruthBHLossMaxEndpointDistance=5.0` mm. No source selector or helper-file
+`TruthBHLossMaxEndpointDistance=5.0` mm and automatically follows all processed
+tracks, with independent whole-track truth validation and fallback. No source selector or helper-file
 input property remains. Only generated truth-on cards differ from the false
 override base. This remains a diagnostic campaign, not production steering.
 The current beam-on card must be submitted with the false override: the live
@@ -331,7 +331,7 @@ keeps depth zero so this feedback remains a separate comparison axis.
 
 The maintained card explicitly sets `RecordTruthMaterialIntervals=false`.
 When enabled, it automatically follows every track processed by GSF, after
-any production-electron selection, without consulting the oracle track index.
+any production-electron selection, with no separate index setting.
 The card requests `GsfG4MaterialSteps`, `GsfSimTrackerHitG4StepLinks` and the
 optional compact spans only when the recorder or oracle is enabled.
 The recorder passively writes the exact
@@ -398,8 +398,8 @@ The same card's `RecGsfFlatTuple` output records BestBranch in
 their residuals, the full-mixture mode in `fullmixture_gsf_*` with
 `fullmixture_gsf_available`, `fullmixture_gsf_changed`,
 `fullmixture_gsf_status`, and `res_pT_fullmixture_gsf`, and records
-`truth_bh_scope_status` and
-`truth_bh_scope_valid`, and adds the paired constrained `ecal_gsf_*` fields,
+the full per-input `truth_bh_track_status` vector, legacy `truth_bh_scope_status`
+and `truth_bh_scope_valid`, and adds the paired constrained `ecal_gsf_*` fields,
 `ecal_gsf_available`, `ecal_gsf_changed`, and `res_pT_ecal_gsf`. Default-off
 jobs remain valid: their ordinary fields are populated and their constrained
 fields are marked unavailable and zeroed. The constrained track copies the
@@ -454,8 +454,8 @@ authoritative property meanings and full inventory remain in
 
 At the historical retirement of the configurable endpoint-output selectors
 and deprecated common curvature-seed alias, `RecGsfTracking` had 37 compiled
-properties and the card explicitly steered 36. The current counts are 44 and
-44 respectively, with no inherited-property exception.
+properties and the card explicitly steered 36. The current counts are 43 and
+43 respectively, with no inherited-property exception.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
@@ -527,9 +527,10 @@ truth-assisted eeH study steering, not reconstructed PID. A single uniquely
 reconstructed partner can still be fitted. Default-off selection does not
 retrieve the association input and preserves the all-track fit workflow.
 
-Input tracks and their original ordinals are preserved. Selection does not
-retarget the oracle-only `TruthBHLossInputTrackIndex=0`; the optional passive
-recorder automatically follows all processed selected tracks. The five EDM outputs
+Input tracks and their original ordinals are preserved. The optional oracle
+and passive recorder automatically follow all processed selected tracks.
+Oracle statuses are available for every original input in
+`truth_bh_track_status`; legacy scalar fields still describe original input0. The five EDM outputs
 `GSFProductionElectronSelectionStatus`, `GSFProductionElectronMCIndices`,
 `GSFProductionElectronTrackIndices`, `GSFProductionElectronCandidateCounts`,
 and `GSFTrackInputIndices` retain the event status, e-/e+ pair, and successful

@@ -2606,10 +2606,6 @@ StatusCode RecGsfTracking::initialize() {
                "DD4hepBetweenSurfaces" << endmsg;
     return StatusCode::FAILURE;
   }
-  if (m_truthBHLossInputTrackIndex.value() < 0) {
-    error() << "TruthBHLossInputTrackIndex must be nonnegative" << endmsg;
-    return StatusCode::FAILURE;
-  }
   if (!(m_truthBHLossMaxEndpointDistance.value() > 0.0) ||
       !std::isfinite(m_truthBHLossMaxEndpointDistance.value())) {
     error() << "TruthBHLossMaxEndpointDistance must be finite and positive"
@@ -2631,10 +2627,8 @@ StatusCode RecGsfTracking::initialize() {
       return StatusCode::FAILURE;
     }
     info() << "Truth BH-loss oracle: using GsfG4MaterialSteps and "
-              "GsfSimTrackerHitG4StepLinks from the current event; runtime "
-              "input track "
-           << m_truthBHLossInputTrackIndex.value()
-           << " will be joined through MCRecoTrackerAssociation"
+              "GsfSimTrackerHitG4StepLinks from the current event; every "
+              "processed track will be joined through MCRecoTrackerAssociation"
            << endmsg;
   }
   if (m_gaussianSumSmoothing.value() && m_reverseFiltering.value()) {
@@ -3143,14 +3137,10 @@ StatusCode RecGsfTracking::execute() {
   for (std::size_t index = 0; index < in->size(); ++index)
     (*truthMaterialStatus)[index] =
         truthBHLossStatusValue(initialMaterialStatus);
-  const int oracleInputTrack = m_truthBHLossInputTrackIndex.value();
-  const bool truthTrackSelected = !m_selectTruthProductionElectrons.value() ||
-      selection.accepts(oracleInputTrack);
-
   TruthBHLossEventData eventDataTruth;
   const bool needEventDataTruth =
       m_recordTruthMaterialIntervals.value() ||
-      (truthTrackSelected && m_truthBHLossOverride.value());
+      m_truthBHLossOverride.value();
   bool eventDataTruthEventValid = true;
   std::string eventDataTruthEventError;
   if (needEventDataTruth) {
@@ -3199,15 +3189,8 @@ StatusCode RecGsfTracking::execute() {
                 << "; passive records are unavailable and the configured "
                    "GSF workflow remains unchanged"
                 << endmsg;
-      const int selectedTrack = m_truthBHLossInputTrackIndex.value();
-      if (truthTrackSelected && m_truthBHLossOverride.value()) {
+      if (m_truthBHLossOverride.value()) {
         ++m_truthBHLossInvalidTruthEvents;
-        if (selectedTrack >= 0 &&
-            selectedTrack < static_cast<int>(truthBHLossStatus->size())) {
-          (*truthBHLossStatus)[static_cast<std::size_t>(selectedTrack)] =
-              truthBHLossStatusValue(
-                  TruthBHLossScopeStatus::InvalidTruthEvent);
-        }
       }
     }
   }
@@ -3226,9 +3209,7 @@ StatusCode RecGsfTracking::execute() {
     ++inputTrackIndex;
     if (m_selectTruthProductionElectrons.value() && !selection.accepts(inputTrackIndex))
       continue;
-    const bool truthSourceSelectsTrack =
-        m_truthBHLossOverride.value() &&
-        inputTrackIndex == m_truthBHLossInputTrackIndex.value();
+    const bool truthSourceSelectsTrack = m_truthBHLossOverride.value();
     TruthBHLossScopeStatus truthBHLossScopeStatus =
         m_truthBHLossOverride.value()
             ? TruthBHLossScopeStatus::NotSelected
@@ -3446,13 +3427,6 @@ StatusCode RecGsfTracking::execute() {
 
     if (m_truthBHLossOverride.value() && !applyTruthBHLossOverride) {
       ++m_truthBHLossPassthroughTracks;
-      if (truthBHLossScopeStatus == TruthBHLossScopeStatus::NotSelected) {
-        info() << "Truth BH-loss oracle has no scope for event=" << eventIndex
-               << " inputTrack=" << inputTrackIndex
-               << "; this whole unselected track uses the configured BH "
-                  "model"
-               << endmsg;
-      }
     }
 
     // These summaries mirror material values already computed by the live

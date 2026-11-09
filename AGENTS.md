@@ -124,7 +124,8 @@ GSF EDM and flat tuple, fractionally integrated Geant4 t/X0/eBrem truth,
 DD4hep t/X0 between the same exact truth hooks, and summaries of the actual
 forward/reverse component paths. These values never steer the GSF. The
 compiled, active reverse-template, and maintained-card default is off. When
-enabled it covers every track processed by GSF, independent of the oracle index.
+enabled it covers every track processed by GSF. The optional truth oracle also
+follows processed tracks automatically, with no separate track-index property.
 
 The active production candidate remains the reverse multi-component refit. It
 starts from the complete final forward mixture, scales each full covariance by
@@ -312,49 +313,52 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF PASSIVE RECORDER: DEFAULT OFF, AUTOMATIC TRACK SCOPE (2026-11-10).**
-The user authorized this recorder change before further material/BH discussion.
-Implementation, normal package installation and focused verification are complete.
-`RecordTruthMaterialIntervals=false` is the compiled, active reverse-template and
-explicit maintained `DumpGsfTrks/gsf.py.bk` default. Setting it true automatically
-attempts recording for every track processed by GSF, after any production-electron
-selection; no recorder input index is needed. `TruthBHLossInputTrackIndex` now
-scopes only the optional oracle. The original endpoint/coverage guards remain.
-Full evidence and commands:
+**GSF ORACLE INDEX REMOVED: AUTOMATIC PROCESSED-TRACK SCOPE (2026-11-10).**
+The user explicitly requested removing TruthBHLossInputTrackIndex. Implementation,
+normal package installation and focused verification are complete. The property
+and maintained-card assignment are removed, without an alias or replacement.
+Older generated cards assigning it must be regenerated or have that line removed;
+the installed configuration rejects it. Full evidence:
+[the removal record](agents_record/2026-11-10-gsf-oracle-index-removal.md).
+
+TruthBHLossOverride and RecordTruthMaterialIntervals both remain default-off.
+Each independently follows every track processed by GSF after the existing
+production-electron selector. The oracle validates/falls back separately per
+track, preserving the original exact-hook, coverage and5mm guards. The passive
+recorder never steers fits. Full per-input oracle/material statuses are mirrored
+in truth_bh_track_status/truth_material_track_status; original interval/output
+maps remain. Legacy oracle scalar status still describes original input0;
+legacy material scalar describes the first non-NotSelected status. Use the full
+vectors for Higgs pairs. Focused skipped events retain singleton sentinels.
+The required dedicated audit passed43 properties,43 README rows and43 explicit
+maintained-card settings, with all surviving defaults unchanged.
+
+Same-code native oracle-off/on tests use only completed new normal-ISR/FSR job4
+REC events0,1,11,16,17. Identical test cards are beam-off (existing oracle
+incompatibility), passive recorder off, and verbose dumps on. Both publish ten
+tracks; oracle-on validates seven scopes and replaces154 BH responses. The
+known failed scopes event1/23,1/30,17/22 preserve their ordinary-BH component
+and lineage data exactly. Event1 also preserves all254 non-oracle flat fields.
+Selector/compact-reader CTests and selected-output/component/lineage mapping
+checks pass. These establish scope and fallback mechanics, not physics validation.
+
+Normal maintained card remains pair-selection on, look-ahead0, fresh inward-1,
+both BH gates on, beam on, ECAL/oracle/recorder off, MaxComponents10 and
+LocalMeasurement. Bare/active-template selector staysFalse. No user batch
+submission, simulation rerun or shared-package modification is part of this task.
+Latest user idle confirmation remains applicable; both native tests finished.
+Private source/build/install and original workspaces are preserved; stay on
+breakpoint-delayed-neutral. Prior passive on/off evidence is in
 [the recorder record](agents_record/2026-11-10-gsf-recorder-auto-scope.md).
 
-The new flat `truth_material_track_status` mirrors per-original-input EDM statuses.
-Existing interval input/output maps remain; legacy scalar statuses describe only
-the first non-NotSelected status. Focused-out events retain singleton sentinels.
-Maintained cards request embedded step/link/optional-span inputs only for enabled
-diagnostics. The required dedicated audit passed44 properties,44 README entries,
-44 explicit maintained-card settings; the old inherited-default exception is gone.
-
-Same-code native off/on runs use only completed new normal-ISR/FSR job4 REC events
-0,1,11,16,17, with oracle off and index99999 to test recorder independence.
-Both publish all ten selected tracks; all205 non-material fields are exactly
-unchanged. Seven tracks record1553 intervals, while event1 tracks23/30 and
-17/22 retain the established distance/range failures without blocking GSF fits.
-Comprehensive component dumps, the selector/compact-reader CTests and flat
-selection/component/lineage mapping checks pass. These five events establish
-passivity and scope behavior, not population resolution or endcap BH validation.
-
-Normal maintained GSF remains pair-selection on, look-ahead0, fresh inward-1,
-both BH gates on, beam on, ECAL/oracle off, MaxComponents10, LocalMeasurement.
-Bare/active-template selector remainsFalse. Private source/build/install and
-original workspaces remain preserved; stay on breakpoint-delayed-neutral.
-Latest user confirmation is no running jobs; both agent validation runs finished.
-No user batch submission or simulation rerun is part of this task.
-
-Material-path/BH changes are deferred. Prior focused barrel/both-endcap G4/DD4hep
-geometry checks agree closely, but real endcap intervals0.174/0.272 X0 exceed
-the active CEPC table ceiling0.03 (ActsAtlas also caps0.2). Saved compact truth
-supports its interval quantities when links are valid; the319/397 raw-hit truth
-availability count is not fitting efficiency. See
-[the audit](agents_record/2026-11-10-higgs-material-audit.md).
-Do not loosen provenance guards or change simulation/BH/material steering without
-agreement. Ranked HitScan remains retired; HitScanAll and truth-before-additional-
-scan coupling remain. The last campaign inspection found497 verified REC jobs
-and3 unverified partials. Floating beam-spot FSR loss and Hive remain pending.
-The complete outgoing focus is retained in
-[the snapshot](agents_record/2026-11-10-agents-before-recorder-auto-scope.md).
+Material-path/BH changes remain deferred. Real endcap intervals0.174/0.272 X0
+exceed the CEPC table ceiling0.03 (ActsAtlas caps0.2), despite close focused
+G4/DD4hep geometry agreement. Compact truth supports its interval quantities
+when links are valid;319/397 raw-hit truth availability is not fit efficiency.
+See [the material audit](agents_record/2026-11-10-higgs-material-audit.md).
+Do not loosen guards or modify simulation/BH/material steering without agreement.
+Ranked HitScan is retired; HitScanAll, truth-before-additional-scan coupling and
+truth-hook producer faults remain. The last REC inspection found497 verified
+jobs and3 unverified partials. Floating beam-spot FSR loss/Hive remain pending.
+The complete outgoing status is retained in
+[the snapshot](agents_record/2026-11-10-agents-before-oracle-index-removal.md).

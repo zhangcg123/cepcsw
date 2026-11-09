@@ -91,7 +91,7 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-11-09. `RecGsfTracking` exposes 44 Gaudi properties in
+Reference date: 2026-11-10. `RecGsfTracking` exposes 43 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -106,7 +106,6 @@ distinction matters because that template enables `ElossOn` and
 | `SelectTruthProductionElectrons` | `false` | `false` | Optional truth-assisted eeH study gate before all per-track fit workflows. Select the unique stable generator e-/e+ outside Higgs ancestry and their uniquely matched original input tracks, using `MCParticle` and `CompleteTracksParticleAssociation`. Missing or ambiguous inputs skip the affected fits; they never fall back to fitting all tracks. This is independent of `ElectronHypothesis`, not reconstructed PID. |
 | `BHModel` | `CEPCRuntimeCategoryAligned9Clear` | same | Select the BH Gaussian-mixture parameterization. The supported values are the default `CEPCRuntimeCategoryAligned9Clear` and the default-off `ActsAtlas` control. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
-| `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used only by the embedded-EventData truth oracle. Other input tracks use the configured BH model. It must be nonnegative; it does not scope the passive material recorder. |
 | `TruthBHLossMaxEndpointDistance` | `5.0 mm` | same | Maximum allowed endpoint discrepancy between an accepted runtime hit and its exactly associated embedded Geant4 truth hook. It must be finite and positive. |
 | `RecordTruthMaterialIntervals` | `false` | `false` | Passively record material-consistency information for every track processed by GSF, after any production-electron selection, using the endpoint guard above. No recorder track index is needed. Each accepted-hit interval records Geant4 truth t/X0 between exact associated hooks, DD4hep t/X0 between those same truth positions, and forward/reverse runtime GSF material-path summaries in `GSFTruthMaterialIntervals` and the flat tuple. Per-track status is written to `GSFTruthMaterialRecordStatus`. This default-off diagnostic never supplies material or loss to the GSF and cannot change a BH call, split threshold, component, weight, or published track. |
 | `BHSplitThreshold` | `1e-4` | same | Minimum component-local outgoing material thickness used to trigger a BH process split. |
@@ -160,7 +159,8 @@ steering decision, not a claim of production physics validation.
 Geant4 eBrem loss would survive the ordinary downstream GSF measurement,
 reduction, reverse-filtering, and publication workflow. Its only supported
 truth source is the embedded `EventData` provenance stored in the current EDM
-event. On the configured input track, every otherwise eligible BH call
+event. It automatically follows every track processed by GSF after any
+production-electron selection. On each track, every otherwise eligible BH call
 receives the normal component and material path, but its configured `BHModel`
 response is replaced by one child with conditional process weight one at
 
@@ -203,8 +203,9 @@ The override requires `ElectronHypothesis=true` and
 validated per event. Missing coverage of any exact consecutive accepted-hit
 interval—including hit 0 to hit 1—invalidates the selected track's complete
 scope before filtering and falls back to the ordinary BH model for that whole
-track; it never assumes zero loss. Other input tracks are outside the oracle
-scope and use the configured BH model unchanged. This all-or-nothing boundary
+track; it never assumes zero loss. Truth validity and fallback are independent
+for each processed track. Tracks excluded by the existing selector are not
+fitted or truth-matched. This all-or-nothing boundary
 prevents an undocumented truth/BH hybrid within one fitted track.
 
 `TruthBHLossOverride` and `BeamSpotConstraint` are intentionally incompatible.
@@ -217,7 +218,7 @@ The per-input-track status codes are:
 | Status | Meaning |
 |---:|---|
 | `1` | Complete truth scope validated before filtering; eligible BH calls use the truth response. |
-| `2` | Input track is not `TruthBHLossInputTrackIndex`; ordinary BH used. |
+| `2` | Input track is excluded by track selection; no fit or oracle attempt. |
 | `0` | Truth override disabled. |
 | `-1` | Embedded `EventData` truth is invalid or unavailable; ordinary BH used. |
 | `-2` | Runtime-hit/truth-anchor endpoint guard failed; ordinary BH used. |
@@ -230,8 +231,8 @@ The per-input-track status codes are:
 enabled, it uses the embedded `EventData` provenance and the same exact
 reconstructed-hit association and endpoint integrity guard described above,
 but it only writes diagnostic information. It automatically follows every
-track that GSF processes, after any production-electron selection;
-`TruthBHLossInputTrackIndex` scopes only the optional oracle.
+track that GSF processes, after any production-electron selection.
+It and the oracle use the same processed-track scope without an index setting.
 It does not replace `pathTX0` or the configured `BHModel` response, and it does
 not alter propagation, split gating, measurement updates, reduction, reverse
 weights, or final selection.
@@ -568,9 +569,8 @@ or tied reconstructed partner does not discard the other unique match. The
 gate runs before per-track truth matching, hit preparation, initialization,
 and forward/smoother/reverse fitting. It never deletes, clones, or renumbers
 the input tracks, and an invalid selection never falls back to all-track fits.
-`TruthBHLossInputTrackIndex` remains an original input ordinal: selection does
-not retarget the truth oracle from index 0 to a selected electron. The optional
-passive material recorder automatically follows all processed selected tracks.
+The optional truth oracle and passive material recorder both automatically
+follow all processed selected tracks without separate input-index steering.
 
 Five integer EDM collections preserve the selection and output mapping:
 
@@ -594,7 +594,7 @@ and successful output order need not match.
 
 ### Collection handles
 
-The data handles are configurable separately from the 44 properties:
+The data handles are configurable separately from the 43 properties:
 
 | Role | Default collection |
 |---|---|
@@ -657,7 +657,8 @@ tuple also fills the corresponding parallel scalar set:
 | `ecal_gsf_available` | One when a constrained track is present for the tuple row; otherwise zero. |
 | `ecal_gsf_changed` | One when the constrained and ordinary AtIP track parameters or fit quality differ; otherwise zero. |
 | `res_pT_gsf`, `res_pT_bestbranch_gsf`, `res_pT_weighted_gsf`, `res_pT_fullmixture_gsf`, `res_pT_ecal_gsf` | Generic method, BestBranch, WeightedMean, FullMixtureMode, and ECAL-constrained fractional pT residuals relative to the first truth particle. In a beam-boundary run the ordinary three reverse endpoint residuals already describe the beam-updated live mixture. |
-| `truth_bh_scope_status`, `truth_bh_scope_valid` | Status code above and a convenience one/zero validity tag for `CompleteTracks` index 0. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
+| `truth_bh_track_status` | Authoritative per-input-track oracle status, indexed by original `CompleteTracks` ordinal for processed events. Focused-out events retain a singleton sentinel (`-4` enabled or `0` disabled); older producers without the status collection yield an empty vector. |
+| `truth_bh_scope_status`, `truth_bh_scope_valid` | Legacy status/validity for original `CompleteTracks` index 0, retained for compatibility. Use `truth_bh_track_status` for selected Higgs pairs. Older inputs without `GSFTruthBHLossStatus` receive the disabled/invalid defaults `0,0`. |
 | `truth_material_track_status` | Authoritative per-input-track passive recorder status, indexed by original `CompleteTracks` ordinal. Includes disabled, unselected and failed tracks even when they have no interval rows. |
 | `truth_material_scope_status`, `truth_material_scope_valid`, `truth_material_interval_n` | Legacy first-non-NotSelected status and its validity, plus total interval-vector entries across recorded tracks. Use the full status vector for multi-track events. |
 | `truth_material_input_track_index`, `truth_material_output_track_index`, `truth_material_hit_from_index`, `truth_material_hit_to_index`, `truth_material_surface_from_index`, `truth_material_surface_to_index`, `truth_material_cell_from`, `truth_material_cell_to` | Per-interval reconstructed-track, accepted-hit, matched-surface, and cell-ID bounds. |
@@ -753,7 +754,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures all 44 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures all 43 `RecGsfTracking`
 properties, including explicit default-off
 `RecordTruthMaterialIntervals=false` steering. Its reverse material,
 split/cutoff, and ECAL settings agree with the production baseline:
@@ -788,10 +789,9 @@ diagnostic, the generated per-job card may set it true. Embedded EventData is
 the fixed source; there is no source selector or helper-file input property.
 When either diagnostic is enabled, the card reads `GsfG4MaterialSteps` plus
 `GsfSimTrackerHitG4StepLinks` from the ordinary input event, keeps
-`TruthBHLossInputTrackIndex=0` and
-`TruthBHLossMaxEndpointDistance=5.0`, and requires no side material file. The
-compiled and active reverse-template values remain false, track index 0, and
-5.0 mm. This is deliberate truth-diagnostic campaign steering, not a
+`TruthBHLossMaxEndpointDistance=5.0`, and requires no side material file or
+track-index steering. The compiled and active reverse-template values remain
+false and 5.0 mm. This is deliberate truth-diagnostic campaign steering, not a
 production-default change.
 Generated truth-on cards append `truth-bh`; generated off controls append
 `truth-bh-off` to their GSF EDM and flat-tuple filenames.
@@ -811,7 +811,11 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 44-property inventory above is part of the configurable interface, not a
+`TruthBHLossInputTrackIndex` has been removed. Regenerate older cards or
+remove that assignment; both truth diagnostics now follow processed tracks
+automatically, without a replacement index option.
+
+The 43-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

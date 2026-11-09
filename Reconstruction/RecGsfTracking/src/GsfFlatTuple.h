@@ -337,7 +337,8 @@ private:
   std::vector<int> m_lineage_edge_from_node_id;
   std::vector<int> m_lineage_edge_to_node_id;
   std::vector<int> m_lineage_edge_operation;
-  // truth BH-loss oracle scope for CompleteTracks index 0
+  std::vector<int> m_truth_bh_track_status;
+  // Legacy oracle scalar scope for CompleteTracks index 0.
   int    m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   int    m_truth_bh_scope_valid = 0;

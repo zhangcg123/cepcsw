@@ -295,6 +295,7 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("lineage_edge_to_node_id", &m_lineage_edge_to_node_id);
   m_tree->Branch("lineage_edge_operation", &m_lineage_edge_operation);
   // truth BH-loss oracle validity for CompleteTracks index 0
+  m_tree->Branch("truth_bh_track_status", &m_truth_bh_track_status);
   m_tree->Branch("truth_bh_scope_status", &m_truth_bh_scope_status);
   m_tree->Branch("truth_bh_scope_valid",  &m_truth_bh_scope_valid);
   // passive truth/DD4hep/runtime material intervals
@@ -884,9 +885,11 @@ StatusCode RecGsfFlatTuple::execute() {
   m_truth_bh_scope_status =
       truthBHLossStatusValue(TruthBHLossScopeStatus::Disabled);
   m_truth_bh_scope_valid = 0;
+  m_truth_bh_track_status.clear();
   try {
     const auto* truthStatus = m_inTruthBHLossStatus.get();
     if (truthStatus && !truthStatus->empty()) {
+      m_truth_bh_track_status.assign(truthStatus->begin(), truthStatus->end());
       m_truth_bh_scope_status = (*truthStatus)[0];
       m_truth_bh_scope_valid =
           m_truth_bh_scope_status ==
