@@ -312,42 +312,43 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ACTIVE REC PRODUCTION; ISOLATED GSF SELECTION DEVELOPMENT (2026-11-09).**
-Latest user confirmation: jobs ARE ACTIVE, superseding the earlier idle answer.
-The user requested continued development without waiting. While jobs are active,
-use isolated source/build/install paths; never rebuild/install into paths used
-by a job. The normal build and `InstallArea/x86_64-el9-gcc11-opt` stay frozen
-until fresh idle confirmation. Primary branch stays `breakpoint-delayed-neutral`;
+**NEW-PRODUCTION-ONLY GSF / BREAKPOINT COMPARISON (2026-11-09).**
+Current user scope is the newly reproduced normal-ISR/FSR REC files only.
+Keep historical regression fixtures separate from physics comparisons unless
+explicitly requested. Use actual campaign/job/event identifiers in tables;
+truth-storage format is not a physics sample label.
+
+Current comparison uses only completed
+`higgs_eeHX_ISRFSRON_REC_500jobs_200evt_20261109/rec-higgs-4.root`, source events
+0,1,11,16,17, ten selected production-electron tracks. All six native jobs
+completed. GSF published ten endpoints; breakpoint's truth-location workflow
+published seven, with three strict truth-hook failures (event1 tracks23/30,
+event17 track22). The maintained 110 scan and analysis calorimeter fallback
+are recorded separately. No source/fit/guard change is part of these tests.
+Full evidence and current report links:
+[the new-production record](agents_record/2026-11-09-new-production-gsf-breakpoint-comparison.md).
+These five events do not establish population efficiency or resolution.
+
+Jobs remain ACTIVE per the latest user confirmation. Continue development in
+isolated source/build/install paths; never replace paths used by running jobs.
+The normal build and `InstallArea/x86_64-el9-gcc11-opt` stay frozen until fresh
+idle confirmation. Primary branch remains `breakpoint-delayed-neutral`;
 preserve `breakpoint` and both original workspaces. No shared-package changes
-or new batch submissions are part of this development task.
+or new batch submissions are part of this task.
 
-Private source: `build.gsf-selection-dev/source` (detached, no branch created
-or switched); build: `build.gsf-selection-dev/package-build`; install:
-`build.gsf-selection-dev/install`. It builds GSF only against read-only installed
-dependencies. New tests use a fresh shell and
-`source build.gsf-selection-dev/setup-dev.sh`. Do not replace even the private
-install once a job uses it. Production source/cards/build/install fingerprints
-remain unchanged; only project knowledge changes in the primary tree.
-
-Private-only `SelectTruthProductionElectrons=False` is implemented and tested.
-Enable it for eeHX to reuse breakpoint's standalone generator/association
-selector before per-track work. Original indices, selection status and published
-row maps are saved; missing inputs fail closed. The generic card stays off.
-Main-workspace code/installed GSF still fit all eligible tracks. The private
-44-property audit and READMEs/card are synchronized. Legacy scalar flat fields
-are not a two-electron benchmark.
-
-Five selected physics events exercised ten tracks with nine fit outputs,
-including normal-ISR/FSR event 0 fitting inputs 9 and 18 out of 41 and compact
-0/11/16/17 selecting eight tracks with seven outputs. One first-hit rejection
-remains. Default-off installed/private control matches 250 legacy branches
-across nine rows exactly; unit and missing-association checks pass. These are
-mechanical checks, not population or momentum-resolution validation.
-
-The 500 x 200-event REC-only campaign is active, not prepared only; exact queue
-counts are not rechecked. Preserve its one-loop sim/trk/calodigi/rec, compact
-truth and twelve raw-calorimeter drops. Later fits read verified completed REC.
-Floating beam-spot FSR loss is NOT implemented; Hive migration remains paused.
-Next: further GSF checks in the private environment, with production runtime
-frozen. Complete evidence, limitations, commands and the archived prior focus:
+Private source: `build.gsf-selection-dev/source` (detached); build:
+`build.gsf-selection-dev/package-build`; install:
+`build.gsf-selection-dev/install`. Use a fresh shell and
+`source build.gsf-selection-dev/setup-dev.sh`. This overlay reads installed
+dependencies; do not replace even its private libraries while a job uses them.
+Private-only SelectTruthProductionElectrons is default-off, enabled for eeHX,
+and retains original input/MC/output maps. The full 44-property audit passed.
+Main-workspace code/installed GSF still fit all eligible tracks; ordinary jobs
+keep their established environment. Implementation and regression history:
 [the isolation record](agents_record/2026-11-09-isolated-gsf-selection.md).
+
+The 500 x200-event REC-only campaign stays sim/trk/calodigi/rec in one loop,
+with compact truth and twelve raw-calorimeter drops. Later fits consume verified
+completed REC files. Floating beam-spot FSR loss is NOT implemented; Hive
+migration remains paused. Next work must preserve this current sample scope
+and distinguish genuine fits, unavailable truth, and fallback outputs.
