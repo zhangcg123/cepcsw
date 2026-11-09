@@ -22,7 +22,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     SOURCES src/RecBreakpoint.cpp src/TrackState.cpp src/KalmanAdapter.cpp
             src/RecBreakpointIdentification.cpp src/BaselineKFDiagnostics.cpp
             src/BreakpointFitter.cpp src/DiffuseLossState.cpp
-            src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp src/HitLocationScan.cpp
+            src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp src/LocationFitScan.cpp
             src/LocationScanTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp src/TruthElectronSelector.cpp
             src/PhotonCaloProjection.cpp src/PhotonCaloTuple.cpp
@@ -54,11 +54,11 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 if(BUILD_TESTING)
-  add_executable(RecBreakpointHitLocationScanTest tests/HitLocationScanTest.cpp)
-  target_compile_features(RecBreakpointHitLocationScanTest PRIVATE cxx_std_17)
-  target_compile_options(RecBreakpointHitLocationScanTest PRIVATE -UNDEBUG)
-  target_include_directories(RecBreakpointHitLocationScanTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-  add_test(NAME RecBreakpointHitLocationScan COMMAND RecBreakpointHitLocationScanTest)
+  add_executable(RecBreakpointLocationScanPointsTest tests/LocationScanPointsTest.cpp)
+  target_compile_features(RecBreakpointLocationScanPointsTest PRIVATE cxx_std_17)
+  target_compile_options(RecBreakpointLocationScanPointsTest PRIVATE -UNDEBUG)
+  target_include_directories(RecBreakpointLocationScanPointsTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  add_test(NAME RecBreakpointLocationScanPoints COMMAND RecBreakpointLocationScanPointsTest)
   add_executable(RecBreakpointTransportTest tests/TransportTest.cpp)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)

@@ -52,7 +52,7 @@ TRACKER_PASSTHROUGH = (
 )
 BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE', 'BP_TRUTH_OVERRIDE',
                'BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
-               'BP_HIT_SCAN_MIN_NLL_GAIN', 'BP_LOCATION_SCAN_SETUPS',
+               'BP_LOCATION_SCAN_SETUPS',
                'BP_DIFFUSE_AUGMENTED_RTS',
                'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
                'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
@@ -175,6 +175,8 @@ def prepare():
             raise ValueError(retired + ' was removed; use BP_BEAM_SPOT_CONSTRAINT')
     if 'BP_RESOLVED_ECAL_ENERGY_MODE' in os.environ:
         raise ValueError('BP_RESOLVED_ECAL_ENERGY_MODE was removed; use BP_CHARGED_ECAL_ENERGY_MODE')
+    if os.environ.get('BP_INTERVAL_SELECTION_MODE') == 'HitScan' or 'BP_HIT_SCAN_MIN_NLL_GAIN' in os.environ:
+        raise ValueError('HitScan and BP_HIT_SCAN_MIN_NLL_GAIN were removed; use HitScanAll')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key, value in (('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS','0'),
@@ -428,13 +430,7 @@ def verify(path, stage, ecal_constraint_input=None, hit_scan=False,
                     raise RuntimeError(('Missing scan-only branch: ' if hit_scan=='HitScanAll'
                                         else 'Missing location-scan branch: ')+name)
         elif hit_scan:
-            for name in ('hit_scan_status', 'hit_scan_constraint_mask',
-                         'hit_scan_candidate_hit', 'hit_scan_candidate_nll2',
-                         'hit_scan_candidate_fit_status', 'hit_scan_null_nll2',
-                         'hit_scan_nll_gain', 'hit_scan_truth_status',
-                         'hit_scan_truth_hit', 'hit_scan_truth_nll2', 'hit_scan_truth_pt'):
-                if not tree.GetBranch(name):
-                    raise RuntimeError('Missing hit-scan branch: ' + name)
+            raise ValueError('Unsupported location-scan verification mode: ' + repr(hit_scan))
         for name in ('rts_pt','backward_pt','truth_override_rts_pt','truth_override_backward_pt',
                      'truth_override_result_status', 'beam_spot_constraint_enabled',
                      'ordinary_beam_spot_applied', 'free_loss_beam_spot_applied',
@@ -505,7 +501,7 @@ def verify_job_output(job, stage):
                   job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
                   hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
                   else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
-                  if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') in ('HitScan','HitScanAll') else False,
+                  if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') == 'HitScanAll' else False,
                   forbidden_collections=job.get('rec_drop_collections', ()) if stage == 'rec' else ())
 
 

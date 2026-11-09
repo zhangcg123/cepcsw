@@ -312,43 +312,51 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEW-PRODUCTION-ONLY GSF / BREAKPOINT COMPARISON (2026-11-09).**
-Current user scope is the newly reproduced normal-ISR/FSR REC files only.
-Keep historical regression fixtures separate from physics comparisons unless
-explicitly requested. Use actual campaign/job/event identifiers in tables;
-truth-storage format is not a physics sample label.
+**HITSCAN RETIREMENT AND TRUTH-HOOK DIAGNOSIS (2026-11-10).**
+The user authorized removing the ranked `HitScan` workflow and freshly confirmed
+no running jobs. That confirmation supersedes the earlier installation freeze.
+Stay on `breakpoint-delayed-neutral`; preserve both original workspaces and the
+detached GSF selector development area. No simulation/shared-package fix or
+new production submission is authorized by this retirement.
 
-Current comparison uses only completed
-`higgs_eeHX_ISRFSRON_REC_500jobs_200evt_20261109/rec-higgs-4.root`, source events
-0,1,11,16,17, ten selected production-electron tracks. All six native jobs
-completed. GSF published ten endpoints; breakpoint's truth-location workflow
-published seven, with three strict truth-hook failures (event1 tracks23/30,
-event17 track22). The maintained 110 scan and analysis calorimeter fallback
-are recorded separately. No source/fit/guard change is part of these tests.
-Full evidence and current report links:
-[the new-production record](agents_record/2026-11-09-new-production-gsf-breakpoint-comparison.md).
-These five events do not establish population efficiency or resolution.
+`HitScan`, `HitScanMinNllGain`, its batch threshold, ranked selector helper and
+36 obsolete `hit_scan_*` fields are removed. `HitScanAll` and `location_scan_*`
+retain every reconstructed candidate, the true 5D no-breakpoint fit, optional
+truth reference and full saved IP states/covariances. No online selection or
+post-selection refit is added. Truth/Manual endpoints and the existing
+Truth-plus-LocationScanSetups flow remain. Regenerate old frozen breakpoint
+cards assigning the retired property. Validation and runtime installation
+status are recorded in
+[the retirement record](agents_record/2026-11-10-hitscan-retirement.md).
 
-Jobs remain ACTIVE per the latest user confirmation. Continue development in
-isolated source/build/install paths; never replace paths used by running jobs.
-The normal build and `InstallArea/x86_64-el9-gcc11-opt` stay frozen until fresh
-idle confirmation. Primary branch remains `breakpoint-delayed-neutral`;
-preserve `breakpoint` and both original workspaces. No shared-package changes
-or new batch submissions are part of this task.
+Truth-hook failures remain unrepaired: new job4/event1/track30 has TPC range
+459->170 (status28), event17/track22 has490->132 (status30). Both hooks exist
+and coincide with SimTrackerHit positions. Our August22 provenance extension
+omitted particle-boundary resets. Event1/track23 instead has a merged positron/
+muon TPC measurement 7.78976 mm from its valid electron hook, rejected by the
+absolute5mm cut. Full evidence and Git introduction dates:
+[the diagnosis](agents_record/2026-11-10-new-rec-truth-provenance-failures.md).
+Keep truth reference availability separate from reconstructed scanning;
+retiring HitScan alone does not fix the Truth-before-additional-scan dependency.
+Do not loosen guards or change simulation before agreeing on that separate fix.
 
-Private source: `build.gsf-selection-dev/source` (detached); build:
-`build.gsf-selection-dev/package-build`; install:
-`build.gsf-selection-dev/install`. Use a fresh shell and
-`source build.gsf-selection-dev/setup-dev.sh`. This overlay reads installed
-dependencies; do not replace even its private libraries while a job uses them.
-Private-only SelectTruthProductionElectrons is default-off, enabled for eeHX,
-and retains original input/MC/output maps. The full 44-property audit passed.
-Main-workspace code/installed GSF still fit all eligible tracks; ordinary jobs
-keep their established environment. Implementation and regression history:
+Current physics-comparison scope remains the newly reproduced normal-ISR/FSR
+REC files. The five-event job4 comparison is documented in
+[the comparison record](agents_record/2026-11-09-new-production-gsf-breakpoint-comparison.md).
+Historical fixtures stay separate unless requested. Distinguish actual fits,
+unavailable truth and analysis fallback; no population-efficiency/resolution
+claim follows from these events. The last campaign inspection found497 verified
+REC jobs and3 unverified jobs on aliws002; see
+[the runtime record](agents_record/2026-11-10-200event-rec-runtime.md). The idle
+confirmation does not validate their partial files.
+
+The private-only GSF production-electron selector remains in
+`build.gsf-selection-dev/source` (detached), `package-build`, and `install`;
+its environment is `build.gsf-selection-dev/setup-dev.sh`. Main installed GSF
+still uses its established all-track selection; no GSF promotion is part of
+this change. Implementation/audit history:
 [the isolation record](agents_record/2026-11-09-isolated-gsf-selection.md).
-
-The 500 x200-event REC-only campaign stays sim/trk/calodigi/rec in one loop,
-with compact truth and twelve raw-calorimeter drops. Later fits consume verified
-completed REC files. Floating beam-spot FSR loss is NOT implemented; Hive
-migration remains paused. Next work must preserve this current sample scope
-and distinguish genuine fits, unavailable truth, and fallback outputs.
+The REC campaign stays one-loop sim/trk/calodigi/rec with compact truth and
+twelve raw-calorimeter drops. Floating beam-spot FSR loss and Hive migration
+remain unimplemented/paused. The outgoing complete AGENTS.md is preserved in
+[the snapshot](agents_record/2026-11-10-agents-before-hitscan-retirement.md).

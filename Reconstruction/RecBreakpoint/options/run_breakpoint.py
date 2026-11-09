@@ -16,6 +16,9 @@ for _retired in ("BP_ABSOLUTE_NEUTRAL_RTS", "BP_ABSOLUTE_NEUTRAL_DIFFUSE_REFEREN
     if _retired in os.environ:
         raise ValueError(_retired + " was removed with neutral-cluster-constrained breakpoint fits")
 
+if os.environ.get("BP_INTERVAL_SELECTION_MODE") == "HitScan" or "BP_HIT_SCAN_MIN_NLL_GAIN" in os.environ:
+    raise ValueError("HitScan and BP_HIT_SCAN_MIN_NLL_GAIN were removed; use HitScanAll")
+
 from Gaudi.Configuration import INFO
 from Configurables import (
     ApplicationMgr, DetGeomSvc, GearSvc, PodioInput, RecBreakpoint,
@@ -95,17 +98,6 @@ fit.BreakpointIntervals = breakpoint_intervals
 # Other loss locations are not fitted;
 # keep BreakpointIntervals empty here, since the list is built for each track.
 # Manual: use only BreakpointIntervals above, even if actual eBrem occurs elsewhere.
-# HitScan: independently optimize a breakpoint at every reconstructed VXD/ITK
-# hit (barrel and endcap; not TPC/OTK or the last track hit) and compare with a
-# separate no-breakpoint 5D fit. Scores inherit enabled/available beam and
-# charged-ECAL observations (110 when both apply); no separate neutral update.
-# Null/candidates share measured inputs and seed; candidate losses use SigmaLogLoss.
-# The 5D null has no loss coordinate or loss prior. No truth steering.
-# Requires FreeLossFit=True. With beam/charged OFF this is the original 000 scan.
-# The winning location, or empty list for the null, is shared by all endpoints;
-# each endpoint is then fitted with its own configured constraint stage.
-# HitScan also saves a passive truth-location free-loss reference (same 110 inputs),
-# not a truth energy override. Missing truth is tagged and never changes selection.
 # HitScanAll: scan-only diagnostic, no ranking or NLL-gain cut. Save optimized
 # 000/100/110 fits at EVERY silicon site and the first exact TPC row-0 hit,
 # plus111 only when NeutralEcalMeasurement is ON,
@@ -137,13 +129,6 @@ if "LocationScanSetups" in fit.getDefaultProperties():
     fit.LocationScanSetups = location_scan_setups
 elif location_scan_setups:
     raise ValueError("LocationScanSetups requires the updated RecBreakpoint runtime")
-# Required improvement in -2logL relative to the no-breakpoint fit. Strict >.
-# Zero selects the lower NLL, preferring null on ties; NOT a calibrated detection
-# significance. Failed/partial scans are tagged separately in hit_scan_* fields.
-if "HitScanMinNllGain" in fit.getDefaultProperties():
-    fit.HitScanMinNllGain = float(os.environ.get("BP_HIT_SCAN_MIN_NLL_GAIN", "0.0"))
-elif fit.IntervalSelectionMode in ("HitScan", "HitScanAll") or "BP_HIT_SCAN_MIN_NLL_GAIN" in os.environ:
-    raise ValueError("HitScan requires the updated RecBreakpoint runtime; Truth/Manual remain usable before installation")
 # b = log(p_before/p_after). Fractional loss is 1-exp(-b).
 # MeanLogLoss is the center of the Gaussian prior on b at each selected edge.
 # The default 0 represents the no-loss hypothesis; hits may update b.
@@ -353,8 +338,7 @@ if fit.ChargedEcalMeasurement:
     _charged_source = str(fit.ChargedEcalInputClusters)
     if _charged_source and _charged_source not in reader.collections:
         reader.collections.append(_charged_source)
-if fit.IntervalSelectionMode in ("Truth", "HitScan", "HitScanAll") or (fit.TruthOverride and
-        (fit.BreakpointIntervals or fit.IntervalSelectionMode == "HitScan")):
+if fit.IntervalSelectionMode in ("Truth", "HitScanAll") or (fit.TruthOverride and fit.BreakpointIntervals):
     reader.collections += [
         "VXDTrackerHitAssociation", "ITKBarrelTrackerHitAssociation", "ITKEndcapTrackerHitAssociation",
         "TPCTrackerHitAss", "OTKBarrelTrackerHitAssociation", "OTKEndcapTrackerHitAssociation",

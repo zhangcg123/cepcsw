@@ -410,7 +410,6 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 |---|---|
 | Truth (compiled/card default) | Select the eligible layer-owned breakpoint with the largest summed Geant4 eBrem momentum loss; ties choose innermost |
 | Manual | Use BreakpointIntervals exactly; [] is the no-breakpoint reference |
-| HitScan | Free-loss VXD/ITK location scan plus no-breakpoint hypothesis; inherits enabled beam/charged measurements, requires FreeLossFit |
 | HitScanAll | Scan-only: optimized 000/100/110 at every silicon site plus TPC row 0, null and truth reference; optional111; no location selection or published refit |
 | Auto | Reserved reconstruction-based finder; initialization fails explicitly until implemented |
 
@@ -452,7 +451,7 @@ Missing/failed observations can copy an earlier successful **requested** setup
 at the same point. If none exists, that entry stays invalid/NaN: an unrequested
 fallback setup is not secretly fitted. Actual source/mask/status remain saved.
 
-To use Manual, legacy HitScan/HitScanAll, or FreeLossFit=False, explicitly set
+To use Manual, HitScanAll, or FreeLossFit=False, explicitly set
 LocationScanSetups=[] (BP_LOCATION_SCAN_SETUPS=''). Disabling a prerequisite
 constraint also requires a compatible scan list. Old frozen cards are not
 rewritten; regenerate them or explicitly clear this new default for legacy modes.
@@ -471,10 +470,10 @@ The dedicated Higgs launcher selects Truth plus this list (default110 only)
 and writes future cards to a fresh output path. Explicitly empty
 BP_LOCATION_SCAN_SETUPS disables all scans while preserving normal truth fits.
 
-### Legacy scan-only data for offline location studies
+### Scan-only data for offline location studies
 
 `IntervalSelectionMode="HitScanAll"` with `LocationScanSetups=[]` records fits; it does not rank locations,
-apply HitScanMinNllGain or select an endpoint. It requires FreeLossFit and the
+apply an NLL-gain threshold or select an endpoint. It requires FreeLossFit and the
 beam/charged input switches ON, TruthOverride OFF. NeutralEcalMeasurement
 controls only whether111 entries are included; its default is OFF. Passive
 neutral collection still supplies resolved ElectronPhoton110's sum. Missing
@@ -491,8 +490,7 @@ The `location_scan_*` vectors contain one aligned entry per `(point, setup)`:
 - A truth owner already in this list points to that same point without another
   fit; this includes the effective TPC-inner-wall owner at row 0. Any other
   eligible truth owner adds a `kind=2` reference-only point last. Missing truth
-  never removes or reorders reconstructed candidates. Legacy HitScan remains
-  silicon-only.
+  never removes or reorders reconstructed candidates.
 - Each point has three entries, `setup=[0,100,110]`, or four with111 explicitly
   enabled. Read the saved setup/point labels, never assume a fixed four-entry
   stride. These are requested
@@ -555,7 +553,7 @@ measurement sets or treat a missing/inherited constraint as an applied one.
 
 #### Same-observation no-breakpoint reference
 
-For `LocationScanSetups` and legacy `HitScanAll`, the 110 null uses the same
+For `LocationScanSetups` and `HitScanAll`, the 110 null uses the same
 measured ECAL input as its non-null 110 candidates:
 
 | Configured charged mode | Collected neutral | Null ECAL observation | Candidate ECAL observation |
@@ -570,8 +568,7 @@ it predicts electron energy, introduces no loss coordinate or Gaussian loss
 prior, and does not run Minuit. A breakpoint candidate predicts the configured
 electron or electron+photon energy and optimizes the loss-prior center as before.
 This changes neither ordinary no-breakpoint endpoint families nor non-null
-location fits, including passive truth-location scan references. Legacy ranked
-`HitScan` retains its separate charged-only/effective-mode behavior.
+location fits, including passive truth-location scan references.
 
 The sum is consumed once before the null fit; it is not also added as a
 separate neutral measurement. Its actual scan mask remains 3 with beam+ECAL,
@@ -592,93 +589,21 @@ but an NLL-gain threshold must still be calibrated for the loss boundary and
 location search; it is not automatically a chi-square significance or eBrem
 probability. No online no/light-eBrem decision is added here.
 
-### Legacy reconstructed silicon selector (opt-in comparison)
+### Retired ranked selector
 
-```python
-fit.IntervalSelectionMode = "HitScan"
-fit.BreakpointIntervals = []
-fit.FreeLossFit = True
-fit.HitScanMinNllGain = 0.0
-fit.TruthOverride = False  # optional truth-prior diagnostic is not the selector
-fit.BeamSpotConstraint = True
-fit.ChargedEcalMeasurement = True
-fit.ChargedEcalEnergyMode = "ElectronPhoton"
-```
-
-Batch equivalents: `BP_INTERVAL_SELECTION_MODE=HitScan`,
-`BP_HIT_SCAN_MIN_NLL_GAIN=0`, `BP_FREE_LOSS_FIT=1` and `BP_TRUTH_OVERRIDE=0`.
-The new controls are frozen in generated batch cards. Existing Truth/Manual
-defaults and the reserved Auto spelling are unchanged.
-The maintained card still accepts an older installed plugin in Truth/Manual
-mode; requesting HitScan or its new threshold then fails with an explicit
-updated-runtime requirement rather than silently using old behavior.
-
-`HitLocationScan` calls the existing `BreakpointFitter` and `FreeLossFitter`;
-it does not implement another filter or smoother. Candidates are reconstructed
-hit indices with subdetector ID 1 (VXD), 2 (ITK barrel) or 3 (ITK endcap).
-Every such hit is scanned except the final track hit. TPC and OTK hits remain
-measurements in every fit but are not breakpoint candidates. No truth owner,
-photon location or material-truth eligibility selects candidates. Reconstructed
-beam/charged-ECAL observations can affect candidate scores, not candidate scope.
-
-First fit a separate 5D no-breakpoint model. For each candidate, optimize the
-Gaussian loss-prior center using the maintained Minuit procedure, same
-SigmaLogLoss, same seed and all the same tracker measurements. Include the same
-enabled/available beam and charged-ECAL observations in null and candidate fits.
-With both enabled this is **110**, never a comparison of 110 against a 000 null.
-For an unresolved shower candidates use the configured ElectronPhoton sum;
-the no-breakpoint model uses ElectronOnly because it has no photon coordinate.
-Both use exactly the same measured cluster energy/error. A collected separate
-neutral routes candidate charged energy to ElectronOnly as usual, but the
-separate neutral measurement is never added to scan scores. Compare their
-normalized full-track **-2 log L**, including log-determinant/normalization terms.
-No-breakpoint is not equivalent to center zero with a finite loss variance.
-The scanner checks that null and candidate measurement dimensions agree.
-
-The decision is `null_nll2 - best_candidate_nll2 > HitScanMinNllGain`.
-Otherwise choose the no-breakpoint model. Zero therefore means plain minimum
-NLL, with null winning ties; it is NOT a calibrated eBrem significance or a
->1% truth-loss selection. Exact candidate-score ties retain the first/innermost
-hit. Candidate optimization failures cannot win. Partial failures are counted;
-the reported minimum is then only over successful candidates. If all candidates
-fail, retain a no-breakpoint refit but mark the scan failed, not a clean track.
-No supported silicon hit is separately tagged, not evidence of no eBrem.
-
-The selected index (or empty null list) is then used by the existing ordinary,
-free-loss, truth-prior, diffuse and cumulative beam/ECAL output machinery. The
-scanner inherits the existing BeamSpotConstraint/ChargedEcalMeasurement switches;
-explicitly clear LocationScanSetups for this legacy mode, then
-turn both OFF to reproduce the earlier **000** scan. Missing/ambiguous charged
-input leaves only the available beam observation; the actual scored mask is
-persisted. This is a single-breakpoint
-search, not multi-emission recovery. HitScan reads truth only for a passive
-truth-location reference after reconstruction-based selection. TruthOverride
-is a separate truth-loss-amount diagnostic at the selected reconstructed site.
-
-Flat fields are always booked as `hit_scan_*`. Status is 0 not run, 1 null
-preferred, 2 breakpoint preferred, 3 no silicon candidates, -1 null-fit failure,
-or -2 all candidate fits failed. `failed_candidates` counts incomplete coverage.
-`null_nll2`, `null_ip_omega`, `measurement_dimensions`, `best_hit`, `best_nll2`,
-`second_nll2`, `nll_gain`, `selected_hit` and `min_nll_gain` summarize the scan.
-Aligned `candidate_*` vectors store each hit/system/layer, optimizer and Minuit
-status/error, NLL, optimized prior center, fitted b/variance and IP omega.
-`best_hit` can exist when the null wins; `selected_hit` is then -1.
-`constraint_mask` records the actual scored beam/charged observations (0/1/2/3),
-and `charged_energy_mode` is the candidate's effective mode (None if unavailable).
-At the existing selection level, status 5 means a completed scan decision
-(including no-candidate status 3), and -3 means scan failure; inspect
-`hit_scan_status` for the exact meaning. Earlier selection codes are unchanged.
-
-In HitScan mode `hit_scan_truth_*` saves the same beam/charged free-loss fit at
-the largest eligible truth-owned breakpoint, without overriding the loss amount.
-It reuses an already scanned silicon candidate exactly, including a failed
-candidate's status; an eligible truth owner outside silicon gets one additional
-reference fit and never enters the candidate list or ranking. No eligible owner
-uses the 5D null reference, not evidence of no physical eBrem. The status is 0
-inactive, 1 null, 2 fitted, -1 truth-association failure or -2 fit failure.
-Saved fields are hit, NLL2, IP omega/pT, optimized prior center, fitted b/variance,
-Minuit status, reused-candidate flag and error. Missing truth never fails or
-changes the blind selection. Existing ownership diagnostics explain eligibility.
+`IntervalSelectionMode="HitScan"`, `HitScanMinNllGain` and
+`BP_HIT_SCAN_MIN_NLL_GAIN` were removed. Use `HitScanAll` with
+`LocationScanSetups=[]` and `TruthOverride=False` for reconstructed-location
+studies. It retains the 5D no-breakpoint hypothesis and complete candidate IP
+states/covariances in `location_scan_*`. It performs no online ranking,
+post-selection refit or selected-track publication. Analysis must explicitly
+choose whether to compare the null with the reconstructed candidates.
+The obsolete `hit_scan_*` fields are no longer written. Existing ROOT files
+remain readable with their original schemas; regenerate frozen cards that
+set the removed property. The retained Truth and Manual output families and
+the Truth-plus-LocationScanSetups workflow are unchanged. In particular,
+removing the ranked selector does not decouple those additional scans from
+the initial Truth-match requirement.
 
 For all available Higgs REC events (current inventory249 files x200), without rerunning sim/rec:
 
@@ -1251,9 +1176,8 @@ the native source/predicted/filtered states, `F` and `Q`.
 | TruthOverrideBackwardFilter | false | Run the truth-prior backward refit when TruthOverride applies |
 | OutputTracksDiffuseAugmentedRTS | BreakpointTracksDiffuseAugmentedRTS | Exact-diffuse augmented RTS or ordinary copy; input KF fallback on failure |
 | TruthOverride | true | Extra pair uses truth b prior centers with SAME SigmaLogLoss/mode; otherwise copy ordinary pair |
-| IntervalSelectionMode | Truth | Truth, Manual, legacy HitScan selector, scan-only HitScanAll, or reserved/unimplemented Auto |
+| IntervalSelectionMode | Truth | Truth, Manual, scan-only HitScanAll, or reserved/unimplemented Auto |
 | LocationScanSetups | [110] | Additional scans alongside retained Truth endpoints: unique0/100/110/111, enabled approaches only; requires Truth and FreeLossFit; explicit [] disables; BP_LOCATION_SCAN_SETUPS |
-| HitScanMinNllGain | 0 | Legacy HitScan selector only; ignored by HitScanAll. Required null-minus-best -2logL improvement; strict >; BP_HIT_SCAN_MIN_NLL_GAIN |
 | BreakpointIntervals | [] | Manual-only radius-ordered hit intervals; must be empty outside Manual |
 | MeanLogLoss | 0 | Finite in [0,5]: ordinary Gaussian prior center; truth-prior pair uses matched truth centers instead |
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
@@ -1566,7 +1490,7 @@ explicitly assigned in the maintained card; a source/card audit test checks cove
 Prepared cards containing the retired likelihood-audit property must be
 regenerated before use with the updated plugin; do not edit checksummed cards.
 The default Truth selection chooses per-track locations from embedded Geant4
-provenance. HitScan provides opt-in tracker-only silicon location selection;
+provenance. HitScanAll records reconstructed-location fits without online selection;
 the reserved Auto spelling is still not implemented. Manual
 uses one configured list for every track; an empty Manual list is the baseline.
 

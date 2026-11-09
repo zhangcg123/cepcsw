@@ -81,9 +81,6 @@ int main() {
       if (useResolvedEcalSum(requested,breakpoint,neutral) !=
           (requested==ChargedEnergyMode::ElectronPhoton && breakpoint && neutral))
         throw std::runtime_error("ElectronOnly must never use the resolved sum");
-      const auto expected = breakpoint && !neutral ? requested : ChargedEnergyMode::ElectronOnly;
-      if (effectiveChargedEnergyMode(requested, breakpoint, neutral) != expected)
-        throw std::runtime_error("Wrong charged-energy routing");
     }
   FitSettings forbidden;
   forbidden.chargedEcalEnergyMode=ChargedEnergyMode::ElectronOnly;

@@ -1,4 +1,4 @@
-#include "HitLocationScan.h"
+#include "LocationFitScan.h"
 #include "edm4hep/TrackState.h"
 #include "TTree.h"
 #include <algorithm>

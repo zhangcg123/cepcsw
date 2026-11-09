@@ -157,8 +157,8 @@ StatusCode RecBreakpoint::initialize() {
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName != "Truth" && m_intervalSelectionName != "Manual" &&
-      m_intervalSelectionName != "HitScan" && m_intervalSelectionName != "HitScanAll") {
-    error() << "IntervalSelectionMode must be Truth, Manual, HitScan, HitScanAll, or reserved Auto" << endmsg;
+      m_intervalSelectionName != "HitScanAll") {
+    error() << "IntervalSelectionMode must be Truth, Manual, HitScanAll, or reserved Auto" << endmsg;
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName=="HitScanAll" && (!m_freeLossFit || !m_beamSpotConstraint ||
@@ -180,11 +180,6 @@ StatusCode RecBreakpoint::initialize() {
     }
   } catch (const std::exception& failure) {
     error() << failure.what() << endmsg;
-    return StatusCode::FAILURE;
-  }
-  if (m_intervalSelectionName!="HitScanAll" && (!std::isfinite(m_hitScanMinNllGain.value()) || m_hitScanMinNllGain<0 ||
-      (m_intervalSelectionName=="HitScan" && !m_freeLossFit))) {
-    error() << "HitScan requires FreeLossFit=True; HitScanMinNllGain must be finite/nonnegative" << endmsg;
     return StatusCode::FAILURE;
   }
   if (m_intervalSelectionName != "Manual" && !m_intervals.value().empty()) {
@@ -424,7 +419,6 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("loss_state_mode", &m_lossStateModeName);
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_truthOwnership.book(*m_tree);
-  m_hitScan.book(*m_tree);
   m_locationScan.book(*m_tree);
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
@@ -611,9 +605,9 @@ StatusCode RecBreakpoint::execute() {
   freeLossControls.chargedEcalEnergyMode = settings.chargedEcalEnergyMode;
   const std::array<bool,3> constraintEnabled{{m_beamSpotConstraint.value(),
       m_chargedEcalMeasurement.value(), m_neutralEcalMeasurement.value()}};
-  const bool needTruthData = selected && (m_intervalSelectionName == "Truth" || m_intervalSelectionName == "HitScan" ||
+  const bool needTruthData = selected && (m_intervalSelectionName == "Truth" ||
       m_intervalSelectionName == "HitScanAll" ||
-      (m_enableTruthOverride && (!settings.intervals.empty() || m_intervalSelectionName=="HitScan")));
+      (m_enableTruthOverride && !settings.intervals.empty()));
   TruthBHLossEventData truthReader; // event-local maps, released after this event
   bool truthPrepared = false;
   std::string truthEventError;
@@ -749,7 +743,6 @@ StatusCode RecBreakpoint::execute() {
     m_intervalTruthTrack = -1; m_intervalTruthDistance = nan;
     settings.intervalMeanLogLoss.clear();
     m_truthOwnership.reset();
-    m_hitScan.reset(m_hitScanMinNllGain.value());
     m_locationScan.reset();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
@@ -899,35 +892,6 @@ StatusCode RecBreakpoint::execute() {
             << " truth_point=" << m_locationScan.truthPoint << "; no location selected" << endmsg;
         finishRow();
         continue;
-      } else if (m_intervalSelectionName=="HitScan") {
-        auto scanSettings=settings;
-        if (m_beamSpotConstraint) scanSettings.beamSpot=m_recordBeamSpotSettings;
-        if (m_chargedEcalMeasurement && m_chargedEcalMeasurementStatus==2)
-          scanSettings.chargedEcalEnergy=std::make_pair(
-              m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
-        scanSettings.chargedEcalEnergyMode=breakpoint::effectiveChargedEnergyMode(
-            settings.chargedEcalEnergyMode,true,m_collectedNeutralStatus==2);
-        m_hitScan.run(fitter,hits,scanSettings,freeLossControls);
-        if (m_hitScan.selectedHit>=0) settings.intervals.push_back(m_hitScan.selectedHit);
-        m_intervalSelectionStatus=m_hitScan.status>0 ? 5 : -3;
-        m_intervalSelectionError=m_hitScan.error;
-        // Selection is already frozen; truth can populate only this passive reference.
-        try {
-          if (!truthPrepared) throw std::runtime_error(truthEventError);
-          if (!matchTruth()) throw std::runtime_error(matchError);
-          const auto* largest=largestOwnedBreakpoint();
-          m_hitScan.reference(fitter,hits,scanSettings,freeLossControls,largest ? largest->hitIndex : -1);
-          if (std::isfinite(m_hitScan.truthIpOmega) && m_hitScan.truthIpOmega!=0)
-            m_hitScan.truthPt=std::abs(m_bz*2.99792458e-4/m_hitScan.truthIpOmega);
-        } catch (const std::exception& failure) {
-          m_hitScan.truthStatus=-1; m_hitScan.truthError=failure.what();
-        }
-        if (m_verbose) info() << "HitScan event=" << m_event << " track=" << m_trackIndex
-            << " status=" << m_hitScan.status << " null_nll2=" << m_hitScan.nullNll2
-            << " best_hit=" << m_hitScan.bestHit << " best_nll2=" << m_hitScan.bestNll2
-            << " gain=" << m_hitScan.gain << " selected_hit=" << m_hitScan.selectedHit
-            << " constraint_mask=" << m_hitScan.constraintMask
-            << " failed_candidates=" << m_hitScan.failedCandidates << endmsg;
       } else {
         m_intervalSelectionStatus = 1;
       }

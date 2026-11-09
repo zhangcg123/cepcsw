@@ -159,47 +159,26 @@ class BatchTest(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError,missing):
                         batch.verify(Path('fixture.root'),'breakpoint')
 
-    def test_hit_scan_property_guard_keeps_old_runtime_truth_manual_usable(self):
-        import ast
-        text = (self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
-        block = next(node for node in ast.parse(text).body if isinstance(node, ast.If)
-                     and ast.unparse(node.test) == "'HitScanMinNllGain' in fit.getDefaultProperties()")
-        code = compile(ast.Module(body=[block], type_ignores=[]), '<hit-scan-guard>', 'exec')
-        with patch.dict(os.environ, {}, clear=True):
-            for mode in ('Truth', 'Manual'):
-                fit = types.SimpleNamespace(IntervalSelectionMode=mode, getDefaultProperties=lambda: {})
-                exec(code, {'fit': fit, 'os': os})
-                self.assertFalse(hasattr(fit, 'HitScanMinNllGain'))
-            for mode in ('HitScan','HitScanAll'):
-                with self.assertRaisesRegex(ValueError, 'updated RecBreakpoint runtime'):
-                    exec(code, {'fit': types.SimpleNamespace(IntervalSelectionMode=mode,
-                                                           getDefaultProperties=lambda: {}), 'os': os})
-        with patch.dict(os.environ, {'BP_HIT_SCAN_MIN_NLL_GAIN': '4.5'}, clear=True):
-            fit = types.SimpleNamespace(IntervalSelectionMode='HitScan', HitScanMinNllGain=0.,
-                                        getDefaultProperties=lambda: {'HitScanMinNllGain': 0.})
-            exec(code, {'fit': fit, 'os': os})
-            self.assertEqual(fit.HitScanMinNllGain, 4.5)
+    def test_retired_hit_scan_requests_are_rejected(self):
+        import runpy
+        for controls in ({'BP_INTERVAL_SELECTION_MODE': 'HitScan'},
+                         {'BP_HIT_SCAN_MIN_NLL_GAIN': '0'}):
+            with self.subTest(controls=controls):
+                with self.assertRaisesRegex(ValueError, 'were removed; use HitScanAll'):
+                    self.prepare(STAGES='breakpoint', **controls)
+                with patch.dict(os.environ, controls, clear=True):
+                    with self.assertRaisesRegex(ValueError, 'were removed; use HitScanAll'):
+                        runpy.run_path(str(self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'))
+        self.assertFalse((self.repo/'outputs/runcards').exists())
 
-    def test_silicon_hit_scan_controls_are_frozen(self):
-        self.prepare(STAGES='breakpoint', BP_INTERVAL_SELECTION_MODE='HitScan',
-                     BP_HIT_SCAN_MIN_NLL_GAIN='4.5', BP_TRUTH_OVERRIDE='0', BP_LOCATION_SCAN_SETUPS='')
+    def test_scan_only_controls_are_frozen_without_retired_threshold(self):
+        self.prepare(STAGES='breakpoint', BP_INTERVAL_SELECTION_MODE='HitScanAll',
+                     BP_TRUTH_OVERRIDE='0', BP_LOCATION_SCAN_SETUPS='')
         job = self.manifest()
-        self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'], 'HitScan')
-        self.assertEqual(job['controls']['BP_HIT_SCAN_MIN_NLL_GAIN'], '4.5')
-        self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'], '0')
+        self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'], 'HitScanAll')
+        self.assertNotIn('BP_HIT_SCAN_MIN_NLL_GAIN', job['controls'])
         card = Path(job['cards']['breakpoint']).read_text()
-        self.assertIn("'BP_HIT_SCAN_MIN_NLL_GAIN': '4.5'", card)
-        self.assertIn('fit.HitScanMinNllGain =', card)
-
-    def test_hit_scan_verification_requires_truth_reference_schema(self):
-        tree=MagicMock(); tree.GetEntries.return_value=2
-        tree.GetBranch.side_effect=lambda name: None if name=='hit_scan_truth_nll2' else object()
-        file=MagicMock(); file.Get.return_value=tree
-        file.IsZombie.return_value=False; file.TestBit.return_value=False
-        root=types.SimpleNamespace(TFile=types.SimpleNamespace(Open=lambda path:file,kRecovered=1))
-        with patch.dict('sys.modules',ROOT=root):
-            with self.assertRaisesRegex(RuntimeError,'Missing hit-scan branch: hit_scan_truth_nll2'):
-                batch.verify(Path('fixture.root'),'breakpoint',hit_scan=True)
+        self.assertNotIn('fit.HitScanMinNllGain', card)
 
     def test_scan_only_verification_requires_all_setup_schema(self):
         tree=MagicMock(); tree.GetEntries.return_value=2
@@ -224,11 +203,11 @@ class BatchTest(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError,'Missing scan-only branch: '+missing):
                         batch.verify(Path('fixture.root'),'breakpoint',hit_scan='HitScanAll')
 
-    def test_hit_scan_reads_truth_associations_without_loss_override(self):
+    def test_scan_only_reads_truth_associations_without_loss_override(self):
         import ast
         text=(self.repo/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         block=next(n for n in ast.parse(text).body if isinstance(n,ast.If)
-                   and ast.unparse(n.test).startswith("fit.IntervalSelectionMode in ('Truth', 'HitScan', 'HitScanAll')"))
+                   and ast.unparse(n.test).startswith("fit.IntervalSelectionMode in ('Truth', 'HitScanAll')"))
         reader=types.SimpleNamespace(collections=[])
         fit=types.SimpleNamespace(IntervalSelectionMode='HitScanAll',TruthOverride=False)
         exec(compile(ast.Module(body=[block],type_ignores=[]),'<truth-inputs>','exec'),
