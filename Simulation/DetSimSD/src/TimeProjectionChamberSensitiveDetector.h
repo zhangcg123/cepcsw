@@ -11,6 +11,7 @@
 #include "DDG4/Defs.h"
 #include "DetSimInterface/IDedxSimTool.h"
 #include "GaudiKernel/ToolHandle.h"
+#include "TpcPadRowTruth.h"
 
 class TimeProjectionChamberSensitiveDetector: public DDG4SensitiveDetector {
  public:
@@ -56,9 +57,7 @@ class TimeProjectionChamberSensitiveDetector: public DDG4SensitiveDetector {
   double                dEInPadRow;
   double                globalTimeAtPadRingCentre;
   double                pathLengthInPadRow;
-  int                   PadRowFirstStepNumber;
-  int                   PadRowLastStepNumber;
-  int                   PadRowHookStepNumber;
+  TpcPadRowTruth         PadRowTruth;
   double                CumulativePathLength;
   double                CumulativeEnergyDeposit;
   dd4hep::Position      CumulativeMeanPosition; 

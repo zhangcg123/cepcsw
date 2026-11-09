@@ -202,6 +202,10 @@ explicit provenance. Historical detail does not override this live status.
   Current explicit exception: develop `Reconstruction/RecBreakpoint` and its
   dedicated card/build registration. Keep existing GSF and shared KF sources
   and maintained workflow cards unchanged for this experiment.
+  Current additional user-authorized scope: fix only our August-added TPC
+  truth-provenance bookkeeping in `Simulation/DetSimSD`, with new focused tests.
+  Preserve all pre-existing simulation hit-building, tracking and PFA code.
+  Report any necessary change to those older parts before editing them.
 - Do not modify KalTest, TrackSystemSvc, MarlinTrk, DDKalTest, or other shared
   CEPCSW packages to compensate for a GSF-specific state-management problem
   unless the user explicitly authorizes a narrow shared interface change.
@@ -313,52 +317,54 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF ORACLE INDEX REMOVED: AUTOMATIC PROCESSED-TRACK SCOPE (2026-11-10).**
-The user explicitly requested removing TruthBHLossInputTrackIndex. Implementation,
-normal package installation and focused verification are complete. The property
-and maintained-card assignment are removed, without an alias or replacement.
-Older generated cards assigning it must be regenerated or have that line removed;
-the installed configuration rejects it. Full evidence:
-[the removal record](agents_record/2026-11-10-gsf-oracle-index-removal.md).
+**TPC TRUTH OWNERSHIP FIX: OUR BOOKKEEPING ONLY (2026-11-10).**
+The user authorized fixing malformed TPC step provenance, explicitly forbidding
+changes to older simulation, tracking or PFA code. The added pad-row truth
+state now tracks its owning G4 particle and clears first/last/hook metadata
+when that owner changes. No pre-existing energy, position, path, timing, hit
+creation or low-pT accumulation code changed. Git blame confirms all17 replaced
+lines came from our August22 b633efb truth extension; zero older lines changed.
+New helper/unit-test files are confined to Simulation/DetSimSD. The original
+CMake file is unchanged; the standalone unit-test command is in
+[the fix record](agents_record/2026-11-10-tpc-truth-owner-fix.md).
 
-TruthBHLossOverride and RecordTruthMaterialIntervals both remain default-off.
-Each independently follows every track processed by GSF after the existing
-production-electron selector. The oracle validates/falls back separately per
-track, preserving the original exact-hook, coverage and5mm guards. The passive
-recorder never steers fits. Full per-input oracle/material statuses are mirrored
-in truth_bh_track_status/truth_material_track_status; original interval/output
-maps remain. Legacy oracle scalar status still describes original input0;
-legacy material scalar describes the first non-NotSelected status. Use the full
-vectors for Higgs pairs. Focused skipped events retain singleton sentinels.
-The required dedicated audit passed43 properties,43 README rows and43 explicit
-maintained-card settings, with all surviving defaults unchanged.
+Build/install of DetSimSDLib/DetSimSD passed. Before/after standalone SIM tests
+use the same normal-ISR/FSR job4 generator source events0,1,17, one event per
+case with identical seeds. Both versions complete all three runs. Malformed
+ranges change0->0,1->0,1->0; all2285 type3 TPC links are complete afterward.
+A focused shared-reader test using TPC links and synthetic measurements at
+SimTrackerHit positions improves6/8 to8/8 primary-electron TPC paths. This is
+truth-reader validation, not reconstruction efficiency or momentum validation.
 
-Same-code native oracle-off/on tests use only completed new normal-ISR/FSR job4
-REC events0,1,11,16,17. Identical test cards are beam-off (existing oracle
-incompatibility), passive recorder off, and verbose dumps on. Both publish ten
-tracks; oracle-on validates seven scopes and replaces154 BH responses. The
-known failed scopes event1/23,1/30,17/22 preserve their ordinary-BH component
-and lineage data exactly. Event1 also preserves all254 non-oracle flat fields.
-Selector/compact-reader CTests and selected-output/component/lineage mapping
-checks pass. These establish scope and fallback mechanics, not physics validation.
+All stored fields and relations of37699 SimTrackerHits across eight tracker
+collections and1295 MCParticles agree exactly, as do event headers. These
+small SIM test outputs are isolated under build.gsf-selection-dev/validation/;
+no tracking/PFA jobs or REC regeneration were performed. Existing campaign
+REC files retain their original malformed provenance and prior strict Truth-
+workflow failures; this fix affects future simulation. GSF and breakpoint
+library hashes are unchanged. Neither shared truth-reader guards nor the
+merged-hit5mm distance issue were changed. All six native SIM tests finished.
 
-Normal maintained card remains pair-selection on, look-ahead0, fresh inward-1,
-both BH gates on, beam on, ECAL/oracle/recorder off, MaxComponents10 and
-LocalMeasurement. Bare/active-template selector staysFalse. No user batch
-submission, simulation rerun or shared-package modification is part of this task.
-Latest user idle confirmation remains applicable; both native tests finished.
-Private source/build/install and original workspaces are preserved; stay on
-breakpoint-delayed-neutral. Prior passive on/off evidence is in
-[the recorder record](agents_record/2026-11-10-gsf-recorder-auto-scope.md).
+The task does not repair pre-existing physical TPC accumulation behavior.
+A particle change without a fresh centre crossing clears the old truth hook,
+leaving provenance unavailable rather than inventing an association. The
+standalone unit test covers old reversed-range sequences, same-owner updates,
+owner changes with smaller/equal/larger step counters, hook invalidation,
+resumed tracks and row/event resets. Any broader fix requires reporting first.
 
-Material-path/BH changes remain deferred. Real endcap intervals0.174/0.272 X0
-exceed the CEPC table ceiling0.03 (ActsAtlas caps0.2), despite close focused
-G4/DD4hep geometry agreement. Compact truth supports its interval quantities
-when links are valid;319/397 raw-hit truth availability is not fit efficiency.
-See [the material audit](agents_record/2026-11-10-higgs-material-audit.md).
-Do not loosen guards or modify simulation/BH/material steering without agreement.
-Ranked HitScan is retired; HitScanAll, truth-before-additional-scan coupling and
-truth-hook producer faults remain. The last REC inspection found497 verified
-jobs and3 unverified partials. Floating beam-spot FSR loss/Hive remain pending.
-The complete outgoing status is retained in
-[the snapshot](agents_record/2026-11-10-agents-before-oracle-index-removal.md).
+Current GSF remains43 properties; TruthBHLossInputTrackIndex is removed. Oracle
+and passive recorder default off and automatically follow processed tracks;
+full per-input status vectors are authoritative, legacy scalars preserved.
+See [the oracle record](agents_record/2026-11-10-gsf-oracle-index-removal.md).
+Maintained card remains pair-selection on, look-ahead0, fresh inward-1, both BH
+gates on, beam on, ECAL/oracle/recorder off, MaxComponents10, LocalMeasurement.
+Stay on breakpoint-delayed-neutral; preserve private and original workspaces.
+
+Material/BH changes remain deferred. GSF uses thickness gating without a blanket
+TPC veto; breakpoint scan includes the first TPC row0 boundary candidate.
+Real endcap intervals0.174/0.272 X0 exceed CEPC table0.03 (ActsAtlas caps0.2);
+see [the audit](agents_record/2026-11-10-higgs-material-audit.md).
+Ranked HitScan remains retired; truth-before-additional-scan coupling remains.
+The last REC inspection found497 verified jobs and3 unverified partials. Floating
+beam-spot FSR loss and Hive remain pending. Complete outgoing status:
+[the snapshot](agents_record/2026-11-10-agents-before-tpc-truth-owner-fix.md).

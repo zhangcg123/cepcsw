@@ -46,9 +46,7 @@ void TimeProjectionChamberSensitiveDetector::Initialize(G4HCofThisEvent* HCE){
   CumulativeEnergyDeposit = 0.0;
   globalTimeAtPadRingCentre=0.0;
   pathLengthInPadRow=0.0;
-  PadRowFirstStepNumber=-1;
-  PadRowLastStepNumber=-1;
-  PadRowHookStepNumber=-1;
+  PadRowTruth = {};
   CumulativePathLength=0.0;
   CrossingOfPadRingCentre.SetXYZ(0,0,0);// = dd4hep::Position(0,0,0);
   MomentumAtPadRingCentre.SetXYZ(0,0,0);// = dd4hep::sim::Momentum(0,0,0);
@@ -111,10 +109,7 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
   float ptSQRD = Momentum.X()*Momentum.X()+Momentum.Y()*Momentum.Y();
   if( ptSQRD >= (m_lowPtCut*m_lowPtCut) ){
     const int currentStepNumber = h.track->GetCurrentStepNumber();
-    if (PadRowFirstStepNumber < 0) {
-      PadRowFirstStepNumber = currentStepNumber;
-    }
-    PadRowLastStepNumber = currentStepNumber;
+    PadRowTruth.addStep(h.trkID(), currentStepNumber);
     // Step finishes at a geometric boundry
     if(step->GetPostStepPoint()->GetStepStatus() == fGeomBoundary){
     //if(h.postStepStatus() == "GeomBoundary"){
@@ -129,7 +124,7 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
         dEInPadRow               += h.deposit();
         globalTimeAtPadRingCentre = h.trkTime();
         pathLengthInPadRow       += h.stepLength();
-        PadRowHookStepNumber      = currentStepNumber;
+        PadRowTruth.hookStep      = currentStepNumber;
         
         //	    G4cout << "step must have ended on the boundry between these two pad ring halfs" << G4endl;
         //	    G4cout << "CrossingOfPadRingCentre = "   
@@ -166,9 +161,9 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
 	  hit->position      = CrossingOfPadRingCentre;
 	  hit->momentum      = MomentumAtPadRingCentre;
 	  hit->length        = h.stepLength()+pathLengthInPadRow;
-          hit->firstStepNumber = PadRowFirstStepNumber;
-          hit->lastStepNumber = PadRowLastStepNumber;
-          hit->hookStepNumber = PadRowHookStepNumber;
+          hit->firstStepNumber = PadRowTruth.firstStep;
+          hit->lastStepNumber = PadRowTruth.lastStep;
+          hit->hookStepNumber = PadRowTruth.hookStep;
           hit->hookStepFraction = 1.0;
           hit->hookKind = 2;
           hit->provenanceType = 3;
@@ -181,9 +176,7 @@ G4bool TimeProjectionChamberSensitiveDetector::ProcessHits(G4Step* step, G4Touch
         pathLengthInPadRow        = 0.0;
         CrossingOfPadRingCentre.SetXYZ(0.,0.,0.);
         MomentumAtPadRingCentre.SetXYZ(0.,0.,0.);
-        PadRowFirstStepNumber = -1;
-        PadRowLastStepNumber = -1;
-        PadRowHookStepNumber = -1;
+        PadRowTruth = {};
         return true;
       }
     }
