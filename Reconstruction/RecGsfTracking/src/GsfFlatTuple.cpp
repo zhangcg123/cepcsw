@@ -50,6 +50,11 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->SetDirectory(m_file);
 
   m_tree->Branch("iev",        &m_iev);
+  m_tree->Branch("production_electron_selection_status", &m_production_electron_selection_status);
+  m_tree->Branch("production_electron_mc_indices", &m_production_electron_mc_indices);
+  m_tree->Branch("production_electron_track_indices", &m_production_electron_track_indices);
+  m_tree->Branch("production_electron_candidate_counts", &m_production_electron_candidate_counts);
+  m_tree->Branch("gsf_input_track_indices", &m_gsf_input_track_indices);
   // MC truth
   m_tree->Branch("mc_pdg",     &m_mc_pdg);
   m_tree->Branch("mc_px",      &m_mc_px);
@@ -416,6 +421,21 @@ StatusCode RecGsfFlatTuple::initialize() {
 
 StatusCode RecGsfFlatTuple::execute() {
   m_iev++;
+  auto readIndices = [this](const char* name, std::vector<int>& values) {
+    values.clear();
+    SmartDataPtr<DataWrapper<podio::UserDataCollection<std::int32_t>>> wrapper(eventSvc(), name);
+    if (wrapper && wrapper->getData()) {
+      const auto* collection = wrapper->getData();
+      values.assign(collection->begin(), collection->end());
+    }
+  };
+  std::vector<int> selectionStatus;
+  readIndices("GSFProductionElectronSelectionStatus", selectionStatus);
+  m_production_electron_selection_status = selectionStatus.empty() ? 0 : selectionStatus.front();
+  readIndices("GSFProductionElectronMCIndices", m_production_electron_mc_indices);
+  readIndices("GSFProductionElectronTrackIndices", m_production_electron_track_indices);
+  readIndices("GSFProductionElectronCandidateCounts", m_production_electron_candidate_counts);
+  readIndices("GSFTrackInputIndices", m_gsf_input_track_indices);
 
   double alpha = m_bField * 2.99792458e-4;  // GeV/(mm·T)
 

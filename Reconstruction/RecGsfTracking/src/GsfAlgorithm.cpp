@@ -4,6 +4,7 @@
 #include "GsfMixture.h"
 #include "BetheHeitlerSplitter.h"
 #include "FullMixtureModeStatus.h"
+#include "TruthElectronSelector.h"
 
 #include "DD4hep/Detector.h"
 #include "DD4hep/DD4hepUnits.h"
@@ -41,6 +42,7 @@
 #include <algorithm>
 #include <sstream>
 #include <exception>
+#include <stdexcept>
 #include <memory>
 #include <limits>
 #include <map>
@@ -2874,6 +2876,7 @@ StatusCode RecGsfTracking::initialize() {
          << " ecalConstraint=" << m_ecalComponentConstraint.value()
          << " beamSpotConstraint=" << m_beamSpotConstraint.value()
          << " truthBHLossOverride=" << m_truthBHLossOverride.value()
+         << " selectTruthProductionElectrons=" << m_selectTruthProductionElectrons.value()
          << endmsg;
   if (m_gaussianSumSmoothing.value() || m_reverseFiltering.value()) {
     info() << "Three-view GSF publication: BestBranch -> GSFTracksBestBranch, "
@@ -3061,6 +3064,17 @@ StatusCode RecGsfTracking::execute() {
   auto* truthBHLossStatus = m_truthBHLossStatus.createAndPut();
   auto* truthMaterialIntervals = m_truthMaterialIntervals.createAndPut();
   auto* truthMaterialStatus = m_truthMaterialStatus.createAndPut();
+  auto* selectionStatus = m_productionElectronSelectionStatus.createAndPut();
+  auto* selectionMCIndices = m_productionElectronMCIndices.createAndPut();
+  auto* selectionTrackIndices = m_productionElectronTrackIndices.createAndPut();
+  auto* selectionCandidateCounts = m_productionElectronCandidateCounts.createAndPut();
+  auto* outputInputTrackIndices = m_outputInputTrackIndices.createAndPut();
+  selectionStatus->push_back(m_selectTruthProductionElectrons.value() ? -5 : 0);
+  for (int charge = 0; charge < 2; ++charge) {
+    selectionMCIndices->push_back(-1);
+    selectionTrackIndices->push_back(-1);
+    selectionCandidateCounts->push_back(0);
+  }
   edm4hep::TrackCollection* ecalOut = nullptr;
   if (m_ecalComponentConstraint.value())
     ecalOut = m_ecalConstrainedOutputTracks.createAndPut();
@@ -3089,6 +3103,33 @@ StatusCode RecGsfTracking::execute() {
   const auto* in = m_inputTracks.get();
   if (!in) return StatusCode::SUCCESS;
 
+  breakpoint::TruthElectronSelector::Result selection;
+  if (m_selectTruthProductionElectrons.value()) {
+    try {
+      const auto* particles = m_mcParticles.get();
+      const auto* associations = m_trackTruthAssociations.get();
+      if (!particles || !associations)
+        throw std::runtime_error("Missing production-electron truth or track associations");
+      selection = breakpoint::TruthElectronSelector{}.select(*particles, *in, *associations);
+    } catch (const std::exception& failure) {
+      selection.status = -4;
+      selection.error = failure.what();
+    }
+    (*selectionStatus)[0] = selection.status;
+    for (int charge = 0; charge < 2; ++charge) {
+      (*selectionMCIndices)[charge] = selection.mcIndices[charge];
+      (*selectionTrackIndices)[charge] = selection.trackIndices[charge];
+      (*selectionCandidateCounts)[charge] = selection.candidateCounts[charge];
+    }
+    if (selection.status != 1)
+      warning() << "Production-electron selection event=" << eventIndex
+                << " status=" << selection.status << ": " << selection.error << endmsg;
+    if (m_verboseDump.value())
+      info() << "Production-electron selection event=" << eventIndex
+             << " status=" << selection.status << " e- input=" << selection.trackIndices[0]
+             << " e+ input=" << selection.trackIndices[1] << endmsg;
+  }
+
   const auto initialTruthStatus = m_truthBHLossOverride.value()
       ? TruthBHLossScopeStatus::NotSelected
       : TruthBHLossScopeStatus::Disabled;
@@ -3103,7 +3144,10 @@ StatusCode RecGsfTracking::execute() {
     (*truthMaterialStatus)[index] =
         truthBHLossStatusValue(initialMaterialStatus);
   const int materialInputTrack = m_truthBHLossInputTrackIndex.value();
+  const bool truthTrackSelected = !m_selectTruthProductionElectrons.value() ||
+      selection.accepts(materialInputTrack);
   if (m_recordTruthMaterialIntervals.value() && materialInputTrack >= 0 &&
+      truthTrackSelected &&
       materialInputTrack < static_cast<int>(truthMaterialStatus->size())) {
     (*truthMaterialStatus)[static_cast<std::size_t>(materialInputTrack)] =
         truthBHLossStatusValue(TruthBHLossScopeStatus::TrackNotProcessed);
@@ -3111,8 +3155,8 @@ StatusCode RecGsfTracking::execute() {
 
   TruthBHLossEventData eventDataTruth;
   const bool needEventDataTruth =
-      m_recordTruthMaterialIntervals.value() ||
-      m_truthBHLossOverride.value();
+      truthTrackSelected && (m_recordTruthMaterialIntervals.value() ||
+      m_truthBHLossOverride.value());
   bool eventDataTruthEventValid = true;
   std::string eventDataTruthEventError;
   if (needEventDataTruth) {
@@ -3191,6 +3235,8 @@ StatusCode RecGsfTracking::execute() {
 
   for (const auto& trk : *in) {
     ++inputTrackIndex;
+    if (m_selectTruthProductionElectrons.value() && !selection.accepts(inputTrackIndex))
+      continue;
     const bool truthSourceSelectsTrack =
         m_truthBHLossOverride.value() &&
         inputTrackIndex == m_truthBHLossInputTrackIndex.value();
@@ -6108,6 +6154,7 @@ StatusCode RecGsfTracking::execute() {
 
       // Write output track
       auto ot = out->create();
+      outputInputTrackIndices->push_back(inputTrackIndex);
       ot.setType(2);
       const double outputChi2 = usedReverseOutput
           ? reverseOutputChi2 : componentFitChi2(*best);

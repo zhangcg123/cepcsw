@@ -14,7 +14,8 @@ particle gun + Geant4 simulation
 
 The simulation event itself carries the optional truth-diagnostic provenance.
 `keep *` preserves it through tracking, so the GSF truth-oracle control needs
-no side ROOT tuple or event-number join. The normal GSF remains truth-blind.
+no side ROOT tuple or event-number join. Normal fit dynamics do not use truth
+losses; the maintained eeHX card uses truth-assisted track selection.
 The default-on passive material recorder and the optional default-off
 `TruthBHLossOverride=true` control read the embedded provenance directly from
 the tracker output's EventData. Calorimeter digitization and reconstruction are
@@ -264,8 +265,9 @@ ECAL settings:
 campaign explicitly selects `BeamSpotConstraint=True` and
 `ForwardBHSplitting=True, InwardBHSplitting=True`; the compiled and inherited
 active reverse-template defaults remain false/false. These gates control BH
-child creation only; deterministic energy loss, multiple scattering,
-material-path evaluation, and passive material recording remain active. Its
+child creation only. Multiple scattering, material-path evaluation and passive
+material recording remain active. Deterministic energy loss follows `ElossOn`: the
+maintained card sets it False; the active reverse template sets it True. Its
 top-level `bh_model` selector explicitly uses the production baseline
 `CEPCRuntimeCategoryAligned9Clear`, matching the compiled and active-template
 default. `ActsAtlas` is the sole default-off model control. The retained
@@ -274,12 +276,12 @@ radiative Gaussians fitted over 0.2--100% loss. Their untruncated shapes are
 shared across knots and their weights are knot-local; the selector no longer
 denotes the historical fixed-center proposal bank.
 
-The authoritative explanation of all 43 `RecGsfTracking` properties, their
+The authoritative explanation of all 44 `RecGsfTracking` properties, their
 compiled defaults, active reverse-template values, allowed modes, and
 diagnostic status is maintained in
 `Reconstruction/RecGsfTracking/README.md`.
 
-For this maintained workflow, `gsf.py.bk` explicitly configures 42 of the 43
+For this maintained workflow, `gsf.py.bk` explicitly configures 43 of the 44
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its explicit
 `TruthBHLossOverride=false` is the template's off-side base value. A truth-on
@@ -450,10 +452,11 @@ difference from the active reverse template must be summarized here. The
 authoritative property meanings and full inventory remain in
 `Reconstruction/RecGsfTracking/README.md`.
 
-After retiring the configurable endpoint-output selectors and the deprecated
-common curvature-seed alias,
-`RecGsfTracking` has 37 compiled properties. This card explicitly steers 36
-and deliberately inherits only `RecordTruthMaterialIntervals=true`.
+At the historical retirement of the configurable endpoint-output selectors
+and deprecated common curvature-seed alias, `RecGsfTracking` had 37 compiled
+properties and the card explicitly steered 36. The current counts are 44 and
+43 respectively; only `RecordTruthMaterialIntervals=true` remains deliberately
+inherited.
 Generated cards assigning the removed `CmsGsfSmoothing`, `CounterfactualLossScan`,
 `CounterfactualTruthTransitionMap`, `CounterfactualLossFractions`, or
 `CounterfactualLossVariance` properties, assigning the removed
@@ -499,8 +502,9 @@ replace live reverse weights. Experimental `SmoothedMarginal` remains
 available as a default-off comparison; it reuses overlapping forward evidence
 at successive surfaces and is not a calibrated posterior.
 
-The maintained card sets `InwardLookaheadDepth=0` for the current reverse
-beam-boundary campaign, matching the compiled and inherited-template default.
+The maintained card sets `InwardLookaheadDepth=0` for the default reverse
+workflow, matching the compiled and inherited-template defaults. Positive
+depths are explicit diagnostic settings.
 For a positive depth `N`, temporary copies of each newly split reverse child
 probe the farther-inward hits `i-1` through `i-N`; separately normalized probe
 posteriors are averaged, then combined at equal status with the original BH
@@ -510,6 +514,32 @@ recursion. This is an uncalibrated evidence-reuse diagnostic, not a production
 default. The retired `NextMeasurement` and `NextNextMeasurement` strings are
 invalid; use numeric depths one and two respectively when reproducing their
 reach.
+
+The independent `SelectTruthProductionElectrons` gate compiles to false.
+The maintained `gsf.py.bk` card now explicitly sets it true by default for
+the eeHX study; its conditional input block requests
+`CompleteTracksParticleAssociation`. `MCParticle` is already requested.
+Single-particle or all-track cards must explicitly set the gate false before
+that conditional input block. Before expensive per-track work, GSF reuses breakpoint's standalone
+`TruthElectronSelector`: require a unique stable generator e-/e+ outside Higgs
+ancestry, match by aggregated association hit counts, and skip ambiguous or
+missing matches. No explicit production-Z parent is required. This is
+truth-assisted eeH study steering, not reconstructed PID. A single uniquely
+reconstructed partner can still be fitted. Default-off selection does not
+retrieve the association input and preserves the all-track fit workflow.
+
+Input tracks and their original ordinals are preserved. Selection does not
+retarget `TruthBHLossInputTrackIndex=0`. The five EDM outputs
+`GSFProductionElectronSelectionStatus`, `GSFProductionElectronMCIndices`,
+`GSFProductionElectronTrackIndices`, `GSFProductionElectronCandidateCounts`,
+and `GSFTrackInputIndices` retain the event status, e-/e+ pair, and successful
+output-to-input mapping. The flat tuple mirrors them as
+`production_electron_selection_status`, `production_electron_mc_indices`,
+`production_electron_track_indices`, `production_electron_candidate_counts`,
+and `gsf_input_track_indices`; the exact status codes are documented in the
+package README. The old scalar first-track/first-MC residuals do not measure
+both eeHX electrons. Persist the EDM endpoints and use the original-index
+mapping for a two-electron resolution or recoil-mass comparison.
 
 The same comparison card sets `ProtectIdentityLineage=True`, matching the
 compiled and active-template default, so the beam-boundary comparison does not

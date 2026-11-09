@@ -5,6 +5,7 @@ gaudi_add_module(RecGsfTracking
                         src/GsfMixture.cpp
                         src/BetheHeitlerSplitter.cpp
                         src/TruthBHLossEventData.cpp
+                        ../RecBreakpoint/src/TruthElectronSelector.cpp
                         src/GsfAlgorithm.cpp
                  LINK ${DDKalTest_LIBRARIES}
                       ${KalTest_LIBRARIES}
@@ -21,6 +22,7 @@ gaudi_add_module(RecGsfTracking
 
 target_include_directories(RecGsfTracking BEFORE PRIVATE
   ${PROJECT_BINARY_DIR}/Simulation/GsfTruthEventData/generated)
+target_include_directories(RecGsfTracking PRIVATE ../RecBreakpoint/src)
 target_include_directories(RecGsfTracking PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/src
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
@@ -70,3 +72,13 @@ install(TARGETS RecGsfSimHitTuple
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
   COMPONENT dev)
+
+if(BUILD_TESTING)
+  add_executable(RecGsfTruthElectronSelectorTest
+    ../RecBreakpoint/tests/TruthElectronSelectorTest.cpp
+    ../RecBreakpoint/src/TruthElectronSelector.cpp)
+  target_compile_options(RecGsfTruthElectronSelectorTest PRIVATE -UNDEBUG)
+  target_include_directories(RecGsfTruthElectronSelectorTest PRIVATE ../RecBreakpoint/src)
+  target_link_libraries(RecGsfTruthElectronSelectorTest PRIVATE EDM4HEP::edm4hep)
+  add_test(NAME RecGsfTruthElectronSelector COMMAND RecGsfTruthElectronSelectorTest)
+endif()

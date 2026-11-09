@@ -6,6 +6,7 @@
 #include "edm4hep/ClusterCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include "edm4hep/MCParticleCollection.h"
+#include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
 #include "edm4hep/MCRecoTrackerAssociationCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
 #include "GsfTruthEventData/MaterialIntervalCollection.h"
@@ -73,6 +74,18 @@ public:
 private:
   DataHandle<edm4hep::TrackCollection>       m_inputTracks{
       "CompleteTracks", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::MCRecoTrackParticleAssociationCollection> m_trackTruthAssociations{
+      "CompleteTracksParticleAssociation", Gaudi::DataHandle::Reader, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_productionElectronSelectionStatus{
+      "GSFProductionElectronSelectionStatus", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_productionElectronMCIndices{
+      "GSFProductionElectronMCIndices", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_productionElectronTrackIndices{
+      "GSFProductionElectronTrackIndices", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_productionElectronCandidateCounts{
+      "GSFProductionElectronCandidateCounts", Gaudi::DataHandle::Writer, this};
+  DataHandle<podio::UserDataCollection<std::int32_t>> m_outputInputTrackIndices{
+      "GSFTrackInputIndices", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_outputTracks{
       "GSFTracks", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection>       m_bestBranchOutputTracks{
@@ -294,6 +307,10 @@ private:
       "Enable Bethe-Heitler component splitting in the independent reverse "
       "inward filter; inert unless ReverseFiltering is enabled"};
   Gaudi::Property<bool>   m_isElectron{this,"ElectronHypothesis",true};
+  Gaudi::Property<bool> m_selectTruthProductionElectrons{
+      this, "SelectTruthProductionElectrons", false,
+      "Before refitting, select the unique stable generator e-/e+ outside Higgs "
+      "ancestry using CompleteTracksParticleAssociation; truth-assisted eeH study only"};
   Gaudi::Property<bool>   m_materialIPExtrap{this,"MaterialIPExtrapolation",false};
   Gaudi::Property<bool>   m_reverseFiltering{this,"ReverseFiltering",false};
   Gaudi::Property<double> m_inwardSeedCovarianceScale{

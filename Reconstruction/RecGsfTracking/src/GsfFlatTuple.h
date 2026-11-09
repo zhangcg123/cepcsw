@@ -206,6 +206,11 @@ private:
 
   // ── branch variables ──
   int    m_iev = 0;
+  int m_production_electron_selection_status = 0;
+  std::vector<int> m_production_electron_mc_indices;
+  std::vector<int> m_production_electron_track_indices;
+  std::vector<int> m_production_electron_candidate_counts;
+  std::vector<int> m_gsf_input_track_indices;
   // truth
   double m_mc_px = 0, m_mc_py = 0, m_mc_pz = 0;
   double m_mc_pT = 0, m_mc_p = 0, m_mc_eta = 0, m_mc_theta = 0, m_mc_phi = 0;

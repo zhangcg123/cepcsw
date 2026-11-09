@@ -91,7 +91,7 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-09-07. `RecGsfTracking` exposes 43 Gaudi properties in
+Reference date: 2026-11-09. `RecGsfTracking` exposes 44 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
@@ -103,6 +103,7 @@ distinction matters because that template enables `ElossOn` and
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `ElectronHypothesis` | `true` | `true` | Enable electron-hypothesis BH processing. Set false for forced no-BH particle controls. |
+| `SelectTruthProductionElectrons` | `false` | `false` | Optional truth-assisted eeH study gate before all per-track fit workflows. Select the unique stable generator e-/e+ outside Higgs ancestry and their uniquely matched original input tracks, using `MCParticle` and `CompleteTracksParticleAssociation`. Missing or ambiguous inputs skip the affected fits; they never fall back to fitting all tracks. This is independent of `ElectronHypothesis`, not reconstructed PID. |
 | `BHModel` | `CEPCRuntimeCategoryAligned9Clear` | same | Select the BH Gaussian-mixture parameterization. The supported values are the default `CEPCRuntimeCategoryAligned9Clear` and the default-off `ActsAtlas` control. |
 | `TruthBHLossOverride` | `false` | `false` | Enable the all-or-nothing, truth-dependent BH-loss oracle described below. Invalid event/track truth falls back to the configured BH model with an explicit status tag. This diagnostic is never production steering. |
 | `TruthBHLossInputTrackIndex` | `0` | same | Zero-based `CompleteTracks` index used by the embedded-EventData truth oracle and passive material recorder. Other input tracks use the configured BH model and have no interval record. It must be nonnegative. |
@@ -315,7 +316,7 @@ each child at a time.
 | `ReverseFiltering` | `false` | `true` | Run the independent inward multi-component refit from the complete final forward mixture. This is the active production candidate. |
 | `InwardSeedCovarianceScale` | `100` | `100` | For reverse, a finite positive value copies every final forward component into the inward seed and multiplies every element of its covariance by this factor. A finite value `<=0` instead constructs one fresh standard-KF-style backward seed, updates the outermost hit `N-1` exactly once, and starts the live inward recursion at `N-2`. The maintained comparison card now uses `-1` as fresh-seed campaign steering; this does not change the compiled or active-template default. |
 | `InwardWeightMode` | `LocalMeasurement` | same | Select the live inward weighting family. The only accepted values are `LocalMeasurement` and experimental `SmoothedMarginal`; the retired `NextMeasurement` and `NextNextMeasurement` strings are invalid. `LocalMeasurement` updates children from `i+1 -> i` at hit `i` and uses the adjacent likelihood, optionally with `InwardLookaheadDepth` feedback. `SmoothedMarginal` instead uses the normalized unreduced pair weights `weight(F_updated) x weight(B_predicted) x GaussianOverlap(F_updated,B_predicted)`, summed over all valid forward partners for each backward component. It applies only at interior surfaces; hit 0 retains the local-measurement weight because there is no explicit interior product. A missing/nonpositive marginal rejects that candidate rather than silently falling back. Reusing overlapping forward evidence at successive surfaces is intentional but not a calibrated Bayesian posterior. |
-| `InwardLookaheadDepth` | `0` | `0` | Nonnegative number of unique farther-inward boundaries probed after an actual inward BH split while `InwardWeightMode=LocalMeasurement`. Zero is the ordinary adjacent-only workflow; one reproduces the former `NextMeasurement` target; two includes the former `NextMeasurement` and `NextNextMeasurement` targets before averaging. Real-hit targets descend through hit 0. With `BeamSpotConstraint=true`, the beam spot is the next target after hit 0 and uses the same hit-to-beam propagation and scalar likelihood as the live terminal beam update; without beam mode, probing stops at hit 0. A failed component probe contributes zero at that probe without deleting the live component. A wholly invalid probe is omitted from the average; if none is valid, the feedback vector falls back to the original prior, which reduces to baseline weighting after normalization. A positive value with `SmoothedMarginal` is invalid. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch currently keeps depth `0` for the isolated beam comparison, without changing the compiled or active-template default zero. |
+| `InwardLookaheadDepth` | `0` | `0` | Nonnegative number of unique farther-inward boundaries probed after an actual inward BH split while `InwardWeightMode=LocalMeasurement`. Zero is the ordinary adjacent-only workflow; one reproduces the former `NextMeasurement` target; two includes the former `NextMeasurement` and `NextNextMeasurement` targets before averaging. Real-hit targets descend through hit 0. With `BeamSpotConstraint=true`, the beam spot is the next target after hit 0 and uses the same hit-to-beam propagation and scalar likelihood as the live terminal beam update; without beam mode, probing stops at hit 0. A failed component probe contributes zero at that probe without deleting the live component. A wholly invalid probe is omitted from the average; if none is valid, the feedback vector falls back to the original prior, which reduces to baseline weighting after normalization. A positive value with `SmoothedMarginal` is invalid. The maintained `DumpGsfTrks/gsf.py.bk` reverse branch selects depth `0`, matching the compiled and active-template defaults; positive depths are opt-in diagnostics. |
 | `ReverseInitialWeightMode` | `ForwardPosterior` | same | Copied-mixture reverse-start weights: active `ForwardPosterior` or default-off `Uniform` diagnostic. It is ignored by fresh inward initialization, whose single root has unit weight. |
 `ProtectIdentityLineage` is a reduction safeguard and does not alter this
 fixed endpoint selection.
@@ -523,13 +524,71 @@ must be regenerated. The maintained recording path is now the default-on
 truth-hook DD4hep, and summarized forward/reverse runtime material values, not
 one row per BH parent or child.
 
+### Truth-assisted production-electron selection
+
+The maintained `DumpGsfTrks/gsf.py.bk` card sets
+`SelectTruthProductionElectrons=True` by default for the eeHX study and reads
+`CompleteTracksParticleAssociation` conditionally. Compiled and unsteered
+active-template defaults remain false. Single-particle or all-track cards must
+explicitly set it false before the conditional input block.
+
+`SelectTruthProductionElectrons=false` preserves the ordinary all-track
+workflow and does not retrieve the track-to-MC association input. For an eeHX
+study, set `gsf.SelectTruthProductionElectrons=True` and request
+`CompleteTracksParticleAssociation` in `PodioInput`, alongside `MCParticle`.
+The maintained generic card enables the gate and association input by default
+for eeHX. Other cards can explicitly disable this study selection.
+
+The gate reuses breakpoint's standalone `TruthElectronSelector` class, compiled
+into GSF from the same source. It requires a generator Higgs record
+and exactly one stable generator electron and positron outside Higgs ancestry.
+All parent links are followed, including shower/copy nodes; an explicit
+production-Z parent is not required because some eeH records omit it. Higgs
+descendants and Geant4 secondaries are excluded. Additional non-Higgs stable
+electrons make the truth pair ambiguous. This is a process-specific,
+truth-assisted study selection, not reconstructed PID or an on-shell-Z test.
+
+Track matching uses aggregated association hit counts. A tied best MC match
+is unusable. Duplicate reconstructed tracks are ranked by matched-hit count,
+then purity (matched hits / track hits); an exact tie is skipped. One missing
+or tied reconstructed partner does not discard the other unique match. The
+gate runs before per-track truth matching, hit preparation, initialization,
+and forward/smoother/reverse fitting. It never deletes, clones, or renumbers
+the input tracks, and an invalid selection never falls back to all-track fits.
+`TruthBHLossInputTrackIndex` remains an original input ordinal: selection does
+not retarget the truth oracle or passive material recorder from index 0 to a
+selected electron.
+
+Five integer EDM collections preserve the selection and output mapping:
+
+| Collection | Meaning |
+|---|---|
+| `GSFProductionElectronSelectionStatus` | One event status: `0` disabled, `1` both tracks selected, `2` one selected, `-1` no generator Higgs, `-2` missing/nonunique truth pair, `-3` neither reconstructed match usable, `-4` invalid ancestry or missing/invalid input, `-5` event not processed, including entries excluded by `SelectedEventIndices`. Selection success does not imply fit success. |
+| `GSFProductionElectronMCIndices` | Original MC indices ordered e-, e+; `-1` means unavailable. |
+| `GSFProductionElectronTrackIndices` | Original input-track ordinals ordered e-, e+; `-1` means unselected. |
+| `GSFProductionElectronCandidateCounts` | Stable non-Higgs truth-candidate counts ordered e-, e+. |
+| `GSFTrackInputIndices` | One original input-track ordinal for each successfully published output row, in output order. The reverse/smoother endpoint triplet shares this row mapping; ordinary forward uses `GSFTracks`. Selection off still writes this mapping. |
+
+`RecGsfFlatTuple` mirrors these as `production_electron_selection_status`,
+`production_electron_mc_indices`, `production_electron_track_indices`,
+`production_electron_candidate_counts`, and `gsf_input_track_indices`.
+Older producers without these collections yield status 0 and empty vectors.
+The existing scalar kinematics/residual fields still use the first MC
+particle, first baseline track, and first output track independently. They
+are not a two-electron resolution or recoil-mass measure. Use the EDM endpoint
+tracks and original-index mapping for that comparison; selected pair order
+and successful output order need not match.
+
 ### Collection handles
 
-The data handles are configurable separately from the 43 properties:
+The data handles are configurable separately from the 44 properties:
 
 | Role | Default collection |
 |---|---|
 | input reconstructed tracks | `CompleteTracks` |
+| optional production-electron track truth input | `CompleteTracksParticleAssociation` |
+| production-electron selection status and pair | `GSFProductionElectronSelectionStatus`, `GSFProductionElectronMCIndices`, `GSFProductionElectronTrackIndices`, `GSFProductionElectronCandidateCounts` |
+| published-output to original-input mapping | `GSFTrackInputIndices` |
 | generic forward output tracks | `GSFTracks` |
 | selected smoother/reverse BestBranch output tracks | `GSFTracksBestBranch` |
 | paired smoother/reverse moment-matched tracks | `GSFTracksWeightedMean` |
@@ -680,7 +739,7 @@ rather than one entry per parent or BH child.
 
 ### Historical `DumpGsfTrks` card compatibility
 
-`DumpGsfTrks/gsf.py.bk` explicitly configures 42 of the 43 `RecGsfTracking`
+`DumpGsfTrks/gsf.py.bk` explicitly configures 43 of the 44 `RecGsfTracking`
 properties. It deliberately inherits only the compiled
 `RecordTruthMaterialIntervals=true` default. Its reverse material,
 split/cutoff, and ECAL settings agree with the production baseline:
@@ -700,9 +759,9 @@ the default-on `truth_material_*` vectors alongside BestBranch
 It explicitly sets `BeamSpotConstraint=true` with the four nominal
 coordinate/width values. Beam-boundary runs fill the ordinary three reverse
 endpoint families; no `beamspot_*` flat schema or separate status exists.
-The same campaign sets `ProtectIdentityLineage=true` and
-`InwardLookaheadDepth=0`, matching their compiled and active-template values
-so the boundary A/B does not also change those mechanisms. Its filename tag is
+The same campaign sets `ProtectIdentityLineage=true`, matching the compiled
+and active-template value, and `InwardLookaheadDepth=0`, matching their
+default zero. Its filename tag is
 `beamspot`; an unconstrained comparison requires a separate beam-off job and
 output path.
 
@@ -737,7 +796,7 @@ no oracle replacement.
 
 ### Configuration-maintenance contract
 
-The 43-property inventory above is part of the configurable interface, not a
+The 44-property inventory above is part of the configurable interface, not a
 one-time snapshot. Any change that adds, removes, or renames a
 `RecGsfTracking` property, changes its compiled or active default, or changes
 its accepted values must include a dedicated sub-agent configuration audit.

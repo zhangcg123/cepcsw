@@ -76,6 +76,11 @@ gearsvc = GearSvc("GearSvc")
 
 gsf = RecGsfTracking("RecGsfTracking")
 gsf.ElectronHypothesis = True
+# Default eeHX study: fit only the associated production-electron pair.
+# Set False explicitly for gun samples or all-track comparisons.
+gsf.SelectTruthProductionElectrons = True
+if gsf.SelectTruthProductionElectrons:
+    podioinput.collections += ["CompleteTracksParticleAssociation"]
 # Common options used by the smoother/reverse comparisons.
 # CEPCRuntimeCategoryAligned9Clear is the compiled and active-template default:
 # one effective identity plus nine globally optimized radiative Gaussians fitted
