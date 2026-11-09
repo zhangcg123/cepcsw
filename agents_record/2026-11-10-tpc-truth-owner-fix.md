@@ -112,3 +112,13 @@ build.gsf-selection-dev/validation/tpc-provenance-owner-fix-20261110/:
 unit executable, six cards/logs/SIM outputs/run results, baseline libraries,
 scope-audit.json, baseline-truth.json, fixed-truth.json,
 physical-payload-comparison.json and validation.json, with their inspector scripts.
+
+## Subsequent downstream check and header clarification
+
+Actual reconstructed-track GSF/breakpoint checks were subsequently run; see
+2026-11-10-tpc-truth-downstream-check.md. The initial SIM files omit EventHeader.
+The initial physical comparator accepted both missing header collections as
+empty, so its header-equality check was vacuous. The complete SimTrackerHit and
+MCParticle field/relation comparisons remain valid. Downstream standalone
+tracking received a new EventHeader only in isolated test fixtures; no simulation
+or original reconstruction source was changed to supply it.
