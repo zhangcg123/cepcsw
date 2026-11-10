@@ -328,43 +328,36 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**COMPLETED GSF RECOIL/pT COMPARISONS (2026-11-11).**
-Eight new figures compare GSF BestBranch with Baseline KF using496 matched
-completed GSF jobs x200=99,200 events. The500x200 GSF campaign has498 completed
-jobs;55/421 failed(exit139). Completed40/429 lack the frozen BP truth/KF cache
-and are excluded. No BP fit-success gate is applied. Input/event/track/MC
-identity and native GSF endpoint/curvature gates pass. No scalar or KF-direction
-substitution: each recoil leg uses its own method's per-track AtIP state.
+**NEARBY NEUTRAL FOUR-MOMENTUM ADDITION PLOTTED (2026-11-11).**
+A new separate recoil figure adds saved surrounding pre-reclustering neutral
+ECAL clusters to all four electron-pair four-vectors (Baseline KF, BP100,
+GSF BestBranch, BP110). It retains the original 72,784 valid common pairs:
+left neither electron has generator FSR (11,750); right at least one does
+(61,034). Every method uses identical events and the same neutral sum within
+its panel. Window 120--130 GeV / 0.1 GeV bins; full denominators retain
+undefined/out-of-window masses. No additional eBrem selection or fit rerun.
 
-Inclusive common population:184,073 tracks/85,327 pairs. Isolated no-FSR/eBrem:
-27,090 tracks/12,612 pairs. There are12,771 unpublished GSF rows, zero invalid
-published endpoints and zero unknown-FSR tracks. Both views use no+light/hard
-material fraction at1%, pT core/wide, recoil linear/log-y120--130GeV/0.1GeV bins.
-Hard-eBrem pT central68% width improves(~10.00% KF to4.08% GSF inclusive), but
-no+light core is slightly broader and GSF extreme outliers remain. These are
-stored-output distribution summaries, not physics validation. BP and GSF panels
-have different common valid-fit populations. The first single recoil overlay
-now shows side-by-side FSR categories for ALL FOUR methods: BaselineKF,
-BP100, GSFBestBranch andBP110. Left: neither electron has FSR,11,750 identical
-valid pairs(unchanged). Right: at least one has FSR,61,034 identical valid pairs.
-All four use identical events and full normalization within each panel; panels
-normalize separately, undefined/out-of-window masses retained, no extra eBrem cut.
-Recoil120--130GeV/0.1GeV bins with shared y-axis; own directions, truth-selected
-BP location/fitted loss, ECALon only for110. Panel partition is disjoint and
-complete over72,784 four-method-valid pairs; prior single-panel artifacts saved.
-Other separate panels remain unchanged. Details, failures, QA and gallery verification:
-[the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
+Use the recorded neutral collection: charge-zero trackless PFO ECAL clusters,
+|deltaTheta|<=10 mrad, |deltaPhi|<=200 mrad around the original KF AtCalorimeter
+position. Each contributes (E,E*r/|r|) from nominal IP; the union around both
+electrons is counted once per pair. There are 2,376 no-FSR / 20,374 with-FSR
+events with added neutrals (2,788 / 24,892 clusters). No unavailable collections
+or shared clusters occur. Truth only defines FSR categories, never recovery
+membership. The collection can include material eBrem and other activity;
+adding it can double count loss already recovered by a track fit. BP110's
+charged ECAL constraint remains unchanged. This is a diagnostic, not physics
+validation. Definitions, counts, QA and gallery status:
+[the neutral-addition record](agents_record/2026-11-11-nearby-neutral-recoil.md).
 
-The existing eight BP figures and three photon/electron ECAL-entry geometry
-figures remain unchanged in the same gallery on localhost8000. New GSF figures
-follow the common FSR-split overlay; combined20 PNGs across6 sections. BP definitions/counts:
-[the BP record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
-Truth geometry angles and exact3D distances in mm, missing-entry coverage and
-ownership rules: [the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md).
-FSR photon-to-cluster MC attribution/replay limits remain in
-[the survey](agents_record/2026-11-10-fsr-cluster-membership.md).
+The preceding four-method FSR-split plot and all 40 earlier PNG/PDFs are
+unchanged; gallery now has 21 PNGs across 7 sections on localhost8000, with the
+new plot first. Original GSF/BP common-population definitions, source failures
+and QA remain in [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
+Truth ECAL geometry and FSR-to-cluster survey limits remain in
+[the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md) and
+[the membership survey](agents_record/2026-11-10-fsr-cluster-membership.md).
 
-No fitter source/runtime/card or job-state changes. Preserve normal/private
-libraries and breakpoint-delayed-neutral/workspaces. BH-model, floating
-beam-spot FSR loss and Hive development remain deferred. Complete outgoing
-status: [the snapshot](agents_record/2026-11-11-agents-before-completed-gsf-plots.md).
+No fitter/PFA source, runtime library, original card or job-state changes.
+Preserve normal/private libraries, breakpoint-delayed-neutral and workspaces.
+BH-model, floating beam-spot FSR loss and Hive development remain deferred.
+Outgoing focus is preserved in [the snapshot](agents_record/2026-11-11-agents-before-neutral-recoil.md).
