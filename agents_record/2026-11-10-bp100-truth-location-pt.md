@@ -112,3 +112,12 @@ The dedicated gallery agent verified4 PNGs across4 sections, each exactly
 once. Existing PID384311 remains healthy on ailogin002 localhost8000; page
 and new recoil peak PNG returnHTTP200(image/png for the latter). Main review
 confirms manifest semantics and both recoil figures. URL is unchanged.
+
+## Matched GSF overlay supersedes two-curve display
+
+The user subsequently requested adding matched GSF BestBranch to all four
+figures. The preceding BP-only results remain historical evidence. Active
+curves now share17535 valid tracks and7759 valid pairs across all three
+methods, using198 completed GSF jobs and excluding timed-out32/36. Full
+coverage, reproduction, limits and archive location are in
+[the overlay record](2026-11-10-matched-gsf-bp-overlays.md).

@@ -328,9 +328,10 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP100 TRUTH-LOCATION pT AND RECOIL BENCHMARK ACTIVE (2026-11-10).**
-The user approved using saved truth-location100 histograms, instead of a new
-blind100 rerun, for the next comparison with GSF. Existing BP100 uses tracker
+**MATCHED GSF / BP100 / BASELINE KF PLOTS ACTIVE (2026-11-10).**
+The user requested overlaying the completed matched GSF BestBranch onto the
+existing BP pT and recoil plots. Saved truth-location100 histograms remain
+user-approved for this comparison; no blind100 rerun is required. Existing BP100 uses tracker
 plus beam spot only, ECAL off, with the same beam center/widths as GSF. Truth
 chooses an eligible loss site or null; the loss amount remains fitted, with no
 truth-energy override. This is a truth-location-assisted benchmark and must
@@ -339,7 +340,8 @@ No ranking, source, card, library, job or physics file is changed.
 
 Active directory `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`
 has four PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide and
-recoil_bp100_truth_ebrem_peak/wide. Each contains
+recoil_bp100_truth_ebrem_peak/wide. All now compare Baseline KF, BP100(truth
+location), and GSF BestBranch on identical valid intersections. Each contains
 two eBrem panels:combined none+light(f<1%) and hard(f>=1%). The fraction
 is summed recorded tracker eBrem photon birth energy / matched generator
 electron energy afterFSR,before material. Original three-bin labels remain cached. FSR is retained and excluded from the numerator. The previous110
@@ -347,35 +349,38 @@ plots are archived at
 `.analysis_archive/bp110_ebrem_pt_before_truth100_20261110T131721Z/`.
 No110, extra control, tail-survival or quantile figure is active.
 Recoil event categories require both legs<1% for no/light or either>=1% for
-hard. Use both methods' own native directions at nominal240GeV, without photon
-addition. Common/selected pairs2473/2646 and6418/7197;952 unavailable pairs
-are excluded from both curves. Undefined KF/BP masses0/1 and1/43 remain in
-the full common-pair denominators. Existing pT images are byte-identical.
+hard. Use all three methods' own native directions at nominal240GeV, without photon
+addition. Common/selected pairs2275/2646 and5484/7197; total7759 common.
+Undefined KF/BP/GSF masses0/1/2 and1/37/50 remain in full common-pair
+denominators. All four figures were redrawn for the three-method intersection;
+previous two-method artifacts remain archived outside the served root.
 
 Use saved beam_spot_free_loss_rts endpoints. Require result1/2, applied
 constraint_status2, requested/actual mask1, finite native IP state/positivepT
 and curvature closure. Valid null controls are retained. Producer input-KF
-fallbacks and unavailable/unapplied100 stages are excluded from both curves,
-not silently substituted. Common valid18,868/19,855; exclusions863 unavailable/
-failed,121 beam not applied,3 input-KF fallbacks. Merged none+light/hard common counts9882/8986 versus selected10224/9631.
-Central68% pT half-widths(KF->100) are0.24658->0.26394%,14.11583->7.58419%.
-Null counts6793/3019; breakpoint counts3089/5967. Prior three-panel plots
-are archived at .analysis_archive/bp100_three_panels_20261110T132442Z/. These are identical-track quantiles,
-not Gaussian sigmas or population validation. Detailed schema/coverage/limits:
+fallbacks and unavailable/unapplied100 stages are excluded from all three curves,
+not silently substituted. Common tracks17535/19855: no/light9466/10224,
+hard8069/9631. Central68% pT half-widths(KF/BP100/GSF) are
+0.24567/0.26295/0.25164% and9.40882/4.29640/3.52242%. These are conditional
+identical-track quantiles, not Gaussian sigmas or population validation.
+Extreme finite GSF tails remain in full statistics. Prior BP-only selection,
+coverage and null counts are preserved in
 [the BP100 record](agents_record/2026-11-10-bp100-truth-location-pt.md).
-All400 source identities, joins, masks and accounting checks pass. Gallery
-remains ailogin002 localhost8000 with these4 labelled100 plots.
+Current matching, coverage, limits and artifacts:
+[the overlay record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
+Gallery remains ailogin002 localhost8000 with four three-method plots.
 
-The matched GSF200x50 campaign is active; freeze normal installed dependencies
-and `build.gsf-ecal-tuple-dev/install`. Do separately authorized development
-only in isolated paths. New GSF uses4000MB,cms,-wt short(30min), matching REC
-jobs1--200 entries0--49. Preparation/timing limits:
+Matched GSF200x50:198 jobs completed and were independently read as50rows
+(9900 events); jobs32/36 exceeded the30-minute limit. Both partial files are
+excluded, with no retries submitted. Completed selected19656, published18361;
+1295 tracks lack GSF output,199 selected rows belong to killed jobs. Original
+GSF resources were4000MB,cms,-wt short(30min), REC jobs1--200 entries0--49:
 [the batch record](agents_record/2026-11-10-gsf-matched-bp-200x50-preparation.md).
-No submission/retry is part of this plotting change. GSF event join is
-iev-1 = BP event_index; track join uses original CompleteTracks index. Future
-comparisons use common valid BP100/GSF tracks and retain the truth-location
-assistance label. Blind100 scan locations are not saved in the current BP
-campaign; a blind comparison would still require a separate BP-only rerun.
+GSF iev-1 = BP event_index; join by original CompleteTracks index and verify
+MC identity. All198 selected-track sets and396 BP/REC size/mtime checks pass.
+Both tracks use native per-track GSF directions. No build/install/runtime-card
+change accompanies these plots. Future comparisons must retain BP's
+truth-location assistance label; blind100 scan locations are not saved.
 
 The multi-track writer fix404a498 stays installed; schema/hashes:
 [the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
