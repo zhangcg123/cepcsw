@@ -352,7 +352,7 @@ physics validation. No extra photon-energy cut is applied; absence means no
 recorded photon within recorder coverage. ECAL is off in this campaign.
 Full GSF recoil directions are unavailable for the second track, so the
 user-approved GSF-pT+Baseline-KF-directions estimate remains explicitly labelled.
-Sixteen PNG/PDF pairs and category data are under
+Fifteen PNG/PDF pairs and category data are under
 `TrackingPerformanceStudies/gsf_finished_recoil_pt_20261110/`; definitions,
 counts and limits are in the
 [radiation-split record](agents_record/2026-11-10-gsf-bestbranch-radiation-split.md).

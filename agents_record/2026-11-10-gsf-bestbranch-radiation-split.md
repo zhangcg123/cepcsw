@@ -125,3 +125,11 @@ The dedicated gallery agent updated the radiation pT section and validated
 all16 PNGs exactly once across8 sections. Existing PID48142 remained healthy;
 HTTP page and pt_radiation_core.png returned200, with removed plot wording
 absent from the page. URL remains http://127.0.0.1:8000/ on ailogin002.
+
+## Inclusive tail-survival display removed
+
+The user additionally requested removing pt_tail_fraction. Its PNG/PDF and
+prior renderer/manifest/README were archived outside the gallery at
+`.analysis_archive/gsf_pt_tail_fraction_removed_20261110T112212Z`. Removed its renderer block to prevent recreation; fifteen PNG/PDF
+pairs remain. Numerical data and all other plots are unchanged. Renderer
+syntax and matching fifteen-file PNG/PDF stem checks pass; no refit is run.
