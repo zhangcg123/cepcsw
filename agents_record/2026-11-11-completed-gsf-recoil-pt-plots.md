@@ -163,3 +163,30 @@ selection is explicitly no-FSR. The personal gallery agent verified live text
 and the served new PNG hash, with20 PNGs/6sections each exactly once; parent
 manifest/hash review passes. Healthy server remains ailogin002 PID2122174,
 http://127.0.0.1:8000/. Remaining19 PNGs/five sections are unchanged.
+
+## Follow-up: with-FSR panel beside no-FSR
+
+User requested the with-FSR sample beside the existing no-FSR panel. The same
+first gallery figure now has LEFT neither electron generator FSR:11,750pairs;
+RIGHT at least one electron generator FSR:61,034pairs. Four methods BaselineKF,
+BP100,GSFBestBranch,BP110 share identical valid event keys and normalization
+within each panel, retaining undefined and outside-window masses. Panels
+normalize separately, all material-eBrem categories retained, no extra eBrem cut.
+Both legs must have known0/1 saved FSR tags, never angular inference. Each
+method uses own directions, truth-selected BP locations/fitted loss, ECALon
+only for110. No added photons/generator recoil. Range120--130GeV/0.1GeV bins,
+shared y-axis. Right in-window KF/100/GSF/110 counts27,549/31,718/32,039/35,917;
+undefined18/352/377/11. Left counts/masses unchanged from the preceding record.
+
+The disjoint panels cover72,784 four-method-valid pairs; original three-method
+common pool77,817. Of12,504 no-FSR candidates,754 fail110; of65,313 with-FSR
+candidates,4,279 fail110. Those failures are removed from allfour curves.
+Unique pair/leg identity, source hashes, FSR-tag knowledge, category sums and
+histogram gates pass. validation_fsr_panels.json independently checks that all
+11,750 left event keys and allfour masses are unchanged and the panel partition
+is disjoint/complete. Layout visually inspected. Single-panel artifacts are
+preserved under before-fsr-panels/; all38 other plot products are unchanged.
+Personal plot-gallery agent verified live two-panel text and served PNG hash,
+20PNG across6sections each exactly once; parent manifest/hash review passes.
+Server remains ailogin002 PID2122174, http://127.0.0.1:8000/.
+No native fitting/reconstruction/runtime/job changes or new ROOT read.

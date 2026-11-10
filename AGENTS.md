@@ -344,18 +344,20 @@ Hard-eBrem pT central68% width improves(~10.00% KF to4.08% GSF inclusive), but
 no+light core is slightly broader and GSF extreme outliers remain. These are
 stored-output distribution summaries, not physics validation. BP and GSF panels
 have different common valid-fit populations. The first single recoil overlay
-now uses11,750 identical valid no-FSR pairs for ALL FOUR methods: BaselineKF,
-BP100, GSFBestBranch andBP110. Neither electron has FSR; no extra eBrem cut.
-All curves use the same full11,750-pair denominator, including undefined and
-out-of-window masses. Recoil120--130GeV/0.1GeV bins; own directions, truth-selected
-BP location/fitted loss, ECALon only for110. This supersedes the previous
-inclusive-plus-subset plot; its prior artifacts and counts are preserved.
+now shows side-by-side FSR categories for ALL FOUR methods: BaselineKF,
+BP100, GSFBestBranch andBP110. Left: neither electron has FSR,11,750 identical
+valid pairs(unchanged). Right: at least one has FSR,61,034 identical valid pairs.
+All four use identical events and full normalization within each panel; panels
+normalize separately, undefined/out-of-window masses retained, no extra eBrem cut.
+Recoil120--130GeV/0.1GeV bins with shared y-axis; own directions, truth-selected
+BP location/fitted loss, ECALon only for110. Panel partition is disjoint and
+complete over72,784 four-method-valid pairs; prior single-panel artifacts saved.
 Other separate panels remain unchanged. Details, failures, QA and gallery verification:
 [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
 
 The existing eight BP figures and three photon/electron ECAL-entry geometry
 figures remain unchanged in the same gallery on localhost8000. New GSF figures
-follow the common no-FSR overlay; combined20 PNGs across6 sections. BP definitions/counts:
+follow the common FSR-split overlay; combined20 PNGs across6 sections. BP definitions/counts:
 [the BP record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
 Truth geometry angles and exact3D distances in mm, missing-entry coverage and
 ownership rules: [the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md).
