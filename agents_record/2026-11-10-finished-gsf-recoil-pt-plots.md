@@ -1,5 +1,10 @@
 # Finished GSF snapshot: pT and recoil plots
 
+Historical initial figures and display policy. The user subsequently requested
+BestBranch vs Baseline KF only, no generator recoil, and FSR/eBrem splits.
+Current definitions/results/gallery are in
+[the superseding record](2026-11-10-gsf-bestbranch-radiation-split.md).
+
 The user requested recoil-mass and pT-resolution plots from finished GSF
 tuples and a gallery on port8000. Runtime/fit files remain frozen and unchanged.
 Only NEW normal-ISR/FSR TPC-fixed inputs are used. The analysis is under

@@ -197,6 +197,9 @@ explicit provenance. Historical detail does not override this live status.
 
 ### Project laws and work scope
 
+- In plots, call the `CompleteTracks` result **Baseline KF**. Do not draw
+  generator recoil mass unless the user explicitly requests it. Generator
+  momentum remains the reference for pT-resolution residuals.
 - Keep implementation changes inside `Reconstruction/RecGsfTracking` unless
   the user explicitly authorizes broader scope for a concrete reason.
   Current explicit exception: develop `Reconstruction/RecBreakpoint` and its
@@ -336,19 +339,28 @@ object release during collection cleanup, with cause unestablished. No memory-
 or walltime-kill conclusion is supported. Full bounded evidence:
 [the running status record](agents_record/2026-11-10-gsf-running-status-sample.md).
 
-Completed-subset analysis is now available from87 completed jobs/17,400 events:
-32,176 common pT tracks and14,870 common recoil pairs. pT central68% half-widths
-are KF3.272%,BestBranch0.964%,WeightedMean1.022%, but GSF has rare severe
-positive tails and worse RMS. All17,300 first-track component/native pT checks
-per method pass. Full GSF recoil is unavailable from this flat schema; the user
-approved explicitly labelled GSF-pT+KF-direction recoil estimates. No fits are
-rerun. Twelve PNG/PDF plots and CSVs are under
-`TrackingPerformanceStudies/gsf_finished_recoil_pt_20261110/`; the
-[analysis record](agents_record/2026-11-10-finished-gsf-recoil-pt-plots.md)
-records populations, invalid masses, methods and limitations. This fixed snapshot
-is separate from subsequent campaign completions and is not population validation.
-The verified gallery serves this directory on ailogin002 localhost8000,PID48142
-(12 PNGs/7 sections,HTTP page+PNG200); the old FSR gallery was safely replaced.
+Current plots compare **GSF BestBranch vs Baseline KF only**, from the same87
+completed jobs/17,400 events:32,176 common pT tracks,14,870 common recoil pairs.
+Generator recoil is absent. Truth splits use each track's own recorded eBrem
+and generator-linked FSR; event flags OR the two selected reconstructed legs.
+Track populations neither/eBrem-only/FSR-only/both are3521/10189/5472/15335,
+with no unknown ownership. Common-track pT central68% half-widths(KF->BestBranch)
+are0.2090->0.2154%,5.4209->1.7073%,0.2075->0.2132%,5.8095->1.8822%.
+The eBrem categories show the central gain; clean-category broadening and rare
+severe GSF tails remain. These are descriptive completed-subset results, not
+physics validation. No extra photon-energy cut is applied; absence means no
+recorded photon within recorder coverage. ECAL is off in this campaign.
+Full GSF recoil directions are unavailable for the second track, so the
+user-approved GSF-pT+Baseline-KF-directions estimate remains explicitly labelled.
+Eighteen PNG/PDF pairs and category data are under
+`TrackingPerformanceStudies/gsf_finished_recoil_pt_20261110/`; definitions,
+counts and limits are in the
+[radiation-split record](agents_record/2026-11-10-gsf-bestbranch-radiation-split.md).
+The [initial record](agents_record/2026-11-10-finished-gsf-recoil-pt-plots.md)
+preserves the native pT closure evidence and superseded initial display policy.
+The gallery serves this directory on ailogin002 localhost8000; refreshed
+manifest and HTTP verification are recorded in the radiation-split record.
+No fits, source cards or libraries are changed for this analysis.
 
 The GSF campaign is500 x200 events, memory4000MB, cms default10hour walltime,
 reverse, production-pair selector on, fresh inward-1, directional seeds1,
