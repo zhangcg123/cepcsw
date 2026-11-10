@@ -329,9 +329,9 @@ manifest as an uncommitted analysis artifact.
 ## 2. Current focus
 
 **BP PANELS REFRESHED FROM COMPLETED SCAN-OFF PRODUCTION (2026-11-11).**
-Eight existing pT/recoil figures now use a fixed171 completed BP files x200
-events (34,200 events). Inclusive Baseline KF/BP100:64,481 common tracks and
-30,340 pairs. No-FSR+eBrem Baseline KF/BP100/BP110:9,041 tracks and4,133 pairs.
+Eight existing pT/recoil figures now use a fixed498 completed BP files x200
+events (99,600 events). Inclusive Baseline KF/BP100:187,996 common tracks and
+88,598 pairs. No-FSR+eBrem Baseline KF/BP100/BP110:26,632 tracks and12,148 pairs.
 No+light/hard1% split is unchanged; recoil remains120--130GeV with0.1GeV bins (user-requested finer rebin).
 Truth selects BP locations while loss remains fitted; ECAL only for BP110.
 All curves within a panel share valid tracks/pairs, without fallback copies,
@@ -340,10 +340,11 @@ Earlier matched GSF overlays/caches are archived outside the served gallery;
 the new larger BP sample is not mixed with old50-event GSF curves.
 
 Saved generator FSR tags and material-photon records define the categories;
-4,080 overlapping tracks and41 REC identities match the prior cache. All171
+19,757 overlapping tracks and199 REC identities match the prior cache. All498
 closed files have200 sequential event rows; constraint/curvature, identity,
-normalization and layout checks pass. Full artifacts, counts, limits and
-reproduction: [the BP refresh record](agents_record/2026-11-11-completed-bp-plot-refresh.md).
+normalization and layout checks pass.171 verified files were reused and327
+new files read; a fresh399-track cache check agrees exactly. Full artifacts, limits and
+reproduction: [the latest BP refresh record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
 The gallery remains on localhost8000; its verified server state is in that record.
 
 Both500x200 BP and matching GSF campaigns are submitted and active. Their
