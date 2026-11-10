@@ -328,49 +328,54 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF RERUN MATCHED TO BP PREPARED:200 x50,SHORT (2026-11-10).**
-Prepared only `higgs_eeHX_ISRFSRON_GSF_MATCHBP_200jobs_50evt_20261110/`:
-200 jobs x50 events =10,000, exactly the REC paths and entries0--49 from BP
-jobs1--200. All200 BP manifests/checksummed cards and source REC manifests
-agree; six sampled REC/BP ROOT pairs verify source counts/event ranges.
-Resources are4000MB,cms,explicit `-wt short` (30minutes). Prior sampled200-event
-GSF runtimes54--92minutes suggest14--23minutes for50; no full50-event benchmark
-or guaranteed walltime margin. No new fit or submission is performed here.
-Local Python lacks htcondor; submit from the usual batch-login shell:
+**BP MATCHED-SAMPLE PLOTS COMPLETE; MATCHED GSF RERUN ACTIVE (2026-11-10).**
+The user requested BP recoil mass and per-track pT plots while waiting for new
+GSF. All200 completed BP jobs/10,000 input events are analyzed from
+`higgs_eeHX_ISRFSRON_BP_TPCFIX_200jobs_50evt_20261110/`, with matching REC jobs
+1--200 entries0--49. The analysis directory is
+`TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`.
+Main overlays are Baseline KF versus the existing scan110 + per-electron
+calorimeter fallback; strict complete-scan controls use a separate common cohort.
+Successful scans use their own full BP directions; fallback uses KF directions.
+No truth-location or generator-recoil curve is included. No ranking policy,
+source, card, library, fit or production file is changed.
 
-```bash
-bash higgs_eeHX_ISRFSRON_GSF_MATCHBP_200jobs_50evt_20261110/submit.sh --submit
-```
+Selected tracks19,855; reconstructed opposite-charge pairs9843. Complete scans
+17,300 tracks/7478 pairs, all actualmask3/source110. The2555 fallback tracks
+are1110 neutral additions,1350 charged/KF weighting,95 KF-retained. Main pT
+central68% widths(KF->BP composite) are0.2085->0.6248% neither,
+8.2991->1.2853% eBrem only,0.2068->3.5675% FSR only,8.5207->4.6744% both.
+Inclusive4.5362->2.3209% central width improves but RMS worsens21.48->31.86%;
+undefined recoil counts are2 KF versus104 composite BP. This is not tail safety
+or physics validation. FSR/material labels use persisted generator/photon truth
+with no extra energy cut; unknown0. An independent same-REC truth-cache check
+agrees on4571 overlapping tracks. All400 BP/REC identities/accounting checks
+pass. Sixteen PNG/PDF pairs include radiation splits, strict controls and wide
+histograms; no tail-fraction or radiation-quantile figures. Full definitions,
+populations, limits and gallery checks:
+[the BP plot record](agents_record/2026-11-10-bp-matched-recoil-pt-plots.md).
+The BP gallery replaces the prior GSF gallery at ailogin002 localhost8000.
+Old GSF analysis files remain intact.
 
-Omit --submit for the verified200-command dry run. Cards preserve all previous
-GSF physics exactly apart from output paths/EvtMax. The new worker requires
-all40 per-track endpoint vectors plus passive pre-reclustering ECAL data and
-selection/output maps. Its exact output-verification block passes on18 native
-rows:10 selected,9 published tracks,876 ECAL clusters. Fresh runtime hashes
-pin the repaired installed writer/fitter/setup/helpers; old campaigns/data and
-hashes are unchanged. Freeze these runtime paths after actual submission.
-Full preparation and limits:
+The matched GSF campaign
+`higgs_eeHX_ISRFSRON_GSF_MATCHBP_200jobs_50evt_20261110/` has200 submitted markers;
+a bounded sample saw77 started,0 complete,0 failed before BP plotting. This
+is not a live scheduler inventory. Freeze normal installed dependencies and
+`build.gsf-ecal-tuple-dev/install`; continue separately authorized development
+only in isolated paths. It is200x50,4000MB,cms,-wt short(30min). Preparation
+and timing limits are in
 [the matched-batch record](agents_record/2026-11-10-gsf-matched-bp-200x50-preparation.md).
+No new submission or retry is part of this analysis. Once completed, new GSF
+endpoints can be joined via original CompleteTracks index and GSF iev-1 = BP
+event_index; do not compare BP to the older87-job GSF cohort as a matched result.
 
-The GSF multi-track endpoint fix404a498 remains installed in normal and batch
-overlay locations. All27 reverse endpoint records on five focused events match
-native states, all257 existing fields match the fresh baseline, and forward
-control passes. Fitter/properties/physics are unchanged. Schema and installation
-hashes: [the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
-Existing old flat files still lack the other electron's direction. The new
-GSF-only campaign reads matching TPC-fixed REC; no simulation/REC rerun or BP
-rerun is included. GSF physical-event join is iev-1 = BP event_index; track join
-uses original CompleteTracks index. GSF pre_ecal_* stores pre-reclustering
-cluster energies/positions and PFO charge/links. BP's final-PFO diagnostic
-cluster indices refer to a different collection; they are not interchangeable.
-
-The existing15-plot gallery remains the frozen87-job/17,400-event subset,
-BestBranch vs Baseline KF only, with explicitly approximate GSF-pT+KF-direction
-recoil and generator-linked FSR/material-eBrem splits. No plot regeneration
-is requested; definitions/results/limits remain in
-[the radiation record](agents_record/2026-11-10-gsf-bestbranch-radiation-split.md).
-TPC producer872d760 remains limited to our provenance extension; separate5mm
-merged-hit rejection and seed-fit failures are not repaired here. BH discussion,
-floating beam-spot FSR loss and Hive remain deferred. Keep breakpoint-delayed-neutral
-and existing workspaces. Complete outgoing status:
-[the pre-batch snapshot](agents_record/2026-11-10-agents-before-matched-gsf-batch.md).
+The multi-track tuple fix404a498 remains installed and mechanically checked;
+[its record](agents_record/2026-11-10-gsf-per-track-endpoints.md) gives all schema
+and installation hashes. No old flat file gains the omitted direction. New
+GSF pre_ecal_* stores pre-reclustering cluster energies/positions and PFO links;
+BP final-PFO diagnostic cluster indices refer to a different collection.
+TPC producer872d760, the separate5mm merged-hit guard and seed-fit failure
+remain unchanged. BH, floating beam-spot FSR loss and Hive stay deferred.
+Keep breakpoint-delayed-neutral and existing workspaces. Complete outgoing
+focus is preserved in
+[the snapshot](agents_record/2026-11-10-agents-before-bp-recoil-pt-plots.md).
