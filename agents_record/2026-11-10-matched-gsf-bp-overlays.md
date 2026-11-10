@@ -106,3 +106,37 @@ The dedicated gallery agent updated the manifest and verified4 PNGs across
 ailogin002.ihep.ac.cn, http://127.0.0.1:8000/. Page and overlaid pT core PNG
 returnedHTTP200(image/png for the latter); page shows all three methods,
 common totals and revised categories. Main review confirmed manifest semantics.
+
+## No-FSR + eBrem events isolated
+
+The user requested removing FSR while retaining eBrem and the no/light versus
+hard split. Added four *_no_fsr_ebrem PNG/PDF pairs alongside the four inclusive
+figures. Select exactly two reconstructed production-electron tracks with
+has_fsr=0 on BOTH and has_ebrem=1 on at least one, before fit validity. Unknown
+flags and missing selected partners cannot pass. Tags use saved generator-origin
+FSR/material-photon records, not angular inference; no extra energy threshold.
+The veto concerns the two selected electrons, not unrelated event particles.
+Both tracks enter pT, including a zero-eBrem partner. Per-track split remains
+f<1% versus f>=1%; recoil event hard if either>=1%, otherwise both<1%.
+
+Selected1507 events/3014 tracks, including619 zero-eBrem partner tracks.
+Common2657 tracks: no/light1325/1425 selected; hard1332/1589. Central68 pT
+widths(KF/BP100/GSF) are0.26483/0.27508/0.26826% and
+9.26315/4.44794/3.40275%. Common recoil1183 pairs: no/light269/311 selected;
+hard914/1196. Undefined KF/BP/GSF masses0/0/0 and0/5/8 stay in full common
+denominators. Own native directions, BP truth-location assistance and fitted
+loss magnitude, beam constraints, ECAL off and no photon addition are unchanged.
+ISR remains physical spread; these are not intrinsic-resolution estimates.
+
+Uncommitted no_fsr.py reads existing matched CSV caches only and reuses the
+same renderer, with a specific subset label and filename suffix. Outputs are
+no_fsr_summary.json, tracks_no_fsr_ebrem.csv, pairs_no_fsr_ebrem.csv and four
+new PNG/PDF pairs. Inclusive plot SHA256 hashes are unchanged. No ROOT files,
+fits, source/runtime cards, libraries or jobs were modified/rerun. The original
+matched_summary.json remains the inclusive summary. Selection boundary/unknown
+tests, both-leg common validity and population assertions pass; all four new
+figures were visually reviewed.
+The dedicated gallery agent verified8 PNGs across8 sections exactly once,
+with the four no-FSR figures first. PID384311 remains healthy on ailogin002
+localhost8000. Page and new no-FSR core PNG returnHTTP200; main review confirms
+the pair-level veto, pre-validity selection, both-leg pT handling and counts.

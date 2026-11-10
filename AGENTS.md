@@ -328,7 +328,7 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**MATCHED GSF / BP100 / BASELINE KF PLOTS ACTIVE (2026-11-10).**
+**MATCHED GSF / BP100: NO-FSR + eBREM SUBSET ADDED (2026-11-10).**
 The user requested overlaying the completed matched GSF BestBranch onto the
 existing BP pT and recoil plots. Saved truth-location100 histograms remain
 user-approved for this comparison; no blind100 rerun is required. Existing BP100 uses tracker
@@ -339,7 +339,7 @@ remain labelled as such. No new BP rerun is needed for these requested plots.
 No ranking, source, card, library, job or physics file is changed.
 
 Active directory `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`
-has four PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide and
+has four inclusive PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide and
 recoil_bp100_truth_ebrem_peak/wide. All now compare Baseline KF, BP100(truth
 location), and GSF BestBranch on identical valid intersections. Each contains
 two eBrem panels:combined none+light(f<1%) and hard(f>=1%). The fraction
@@ -368,7 +368,21 @@ coverage and null counts are preserved in
 [the BP100 record](agents_record/2026-11-10-bp100-truth-location-pt.md).
 Current matching, coverage, limits and artifacts:
 [the overlay record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
-Gallery remains ailogin002 localhost8000 with four three-method plots.
+Gallery remains ailogin002 localhost8000; the inclusive set has four plots.
+
+Additional four *_no_fsr_ebrem PNG/PDF pairs now isolate events with exactly
+two selected production electrons, neither generator-tagged FSR and at least
+one recorded material-eBrem photon. Select before fit validity; unknown truth
+or missing selected partners cannot pass. Both tracks enter pT, including a
+zero-eBrem partner. Per-track no/light<1%, hard>=1%; recoil both<1% versus
+either>=1%. Selected1507 events/3014 tracks, including619 zero-eBrem partners.
+Common pT no/light1325/1425 selected, hard1332/1589; common recoil269/311,
+914/1196. Total2657 tracks/1183 pairs. Central68 pT widths(KF/BP100/GSF):
+0.26483/0.27508/0.26826%,9.26315/4.44794/3.40275%. Undefined recoil
+KF/BP/GSF0/0/0 and0/5/8 retain full denominators. Original inclusive plots
+are byte-identical; eight PNG/PDF pairs total. No ROOT reread or fit rerun.
+ISR and BP truth-location assistance remain; no intrinsic-resolution claim.
+The overlay record also documents this cut; no_fsr_summary.json is its summary.
 
 Matched GSF200x50:198 jobs completed and were independently read as50rows
 (9900 events); jobs32/36 exceeded the30-minute limit. Both partial files are
