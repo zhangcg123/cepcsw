@@ -349,7 +349,12 @@ This is not population validation. Preparation/build details:
 
 BP's maintained run card and batch helper now default the canonical
 BP_SELECT_TRUTH_PRODUCTION_ELECTRONS to1; explicit0 handles gun/all-track runs.
-Compiled default stays false;64 batch tests pass. No BP campaign is prepared.
+Compiled default stays false;64 batch tests pass. Prepared only
+`higgs_eeHX_ISRFSRON_BP_TPCFIX_200jobs_50evt_20261110/`:200 x50=10,000 events,
+first50 entries from REC jobs1--200, selector on, Truth+110,4000MB,cms/default10h.
+All200 cards/checksums/effective defaults and200 dry-run commands pass. No BP
+jobs submitted; hold until GSF finishes. See
+[the BP preparation record](agents_record/2026-11-10-breakpoint-200x50-preparation.md).
 BP Truth mode still precedes additional110 scans; scan timing is unbenchmarked.
 Truth eBrem/FSR is exported by BP, but current GSF flats require joining REC for
 photon truth. Existing scalar GSF track fields retain first-track semantics.
