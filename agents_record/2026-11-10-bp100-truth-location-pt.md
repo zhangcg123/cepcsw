@@ -70,3 +70,21 @@ files and explicitly labels truth-location assistance, tracker+beam, ECAL off,
 no fallback and matched-valid coverage. Core PNG returns200 image/png.
 The main agent reviewed the core figure and manifest semantics. Old110 file
 references are absent. URL:http://127.0.0.1:8000/ on that host.
+
+## None/light panels merged
+
+At the user's request, pooled none and light tracks into one f<1% panel,
+keeping hard f>=1% separate in both core/wide figures. Original cached data
+and all18868 valid endpoints are unchanged; no ROOT input is reread or fit run.
+Merged common/selected9882/10224; hard8986/9631. Recomputed central68% widths
+are KF0.24658%,BP1000.26394% in the merged panel; hard14.11583%,7.58419% is
+unchanged. The previous three-panel images and renderer/README/manifest/summary
+are preserved at .analysis_archive/bp100_three_panels_20261110T132442Z/.
+Original three-bin CSV labels remain intact; only display grouping changes.
+The main agent visually reviewed the merged core figure and checked population
+closure. FSR retention, truth-location assistance, masks/eligibility and absence
+of ECAL/fallback are unchanged.
+The dedicated gallery agent updated the two-panel descriptions/counts, validated
+2 PNGs across2 sections exactly once, and reused healthy PID384311. Page and
+core PNG returnHTTP200 and the page contains the merged/hard counts. Main
+review confirms the current manifest and figure layout. URL is unchanged.

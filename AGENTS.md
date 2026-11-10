@@ -339,9 +339,9 @@ No ranking, source, card, library, job or physics file is changed.
 
 Active directory `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`
 has exactly two PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide. Each contains
-no/light/hard eBrem panels: fraction=sum recorded tracker eBrem photon birth
-energy / matched generator-electron energy afterFSR,before material; bins0,
-0<f<1%,f>=1%. FSR is retained and excluded from the numerator. The previous110
+two eBrem panels:combined none+light(f<1%) and hard(f>=1%). The fraction
+is summed recorded tracker eBrem photon birth energy / matched generator
+electron energy afterFSR,before material. Original three-bin labels remain cached. FSR is retained and excluded from the numerator. The previous110
 plots are archived at
 `.analysis_archive/bp110_ebrem_pt_before_truth100_20261110T131721Z/`.
 No recoil,110, extra control, tail-survival or quantile figure is active.
@@ -351,10 +351,10 @@ constraint_status2, requested/actual mask1, finite native IP state/positivepT
 and curvature closure. Valid null controls are retained. Producer input-KF
 fallbacks and unavailable/unapplied100 stages are excluded from both curves,
 not silently substituted. Common valid18,868/19,855; exclusions863 unavailable/
-failed,121 beam not applied,3 input-KF fallbacks. No/light/hard common counts
-5038/4844/8986 versus selected5180/5044/9631. Central68% pT half-widths(KF->100)
-are0.20482->0.20298%,0.29460->0.38170%,14.11583->7.58419%. Null counts5028/
-1765/3019; breakpoint counts10/3079/5967. These are identical-track quantiles,
+failed,121 beam not applied,3 input-KF fallbacks. Merged none+light/hard common counts9882/8986 versus selected10224/9631.
+Central68% pT half-widths(KF->100) are0.24658->0.26394%,14.11583->7.58419%.
+Null counts6793/3019; breakpoint counts3089/5967. Prior three-panel plots
+are archived at .analysis_archive/bp100_three_panels_20261110T132442Z/. These are identical-track quantiles,
 not Gaussian sigmas or population validation. Detailed schema/coverage/limits:
 [the BP100 record](agents_record/2026-11-10-bp100-truth-location-pt.md).
 All400 source identities, joins, masks and accounting checks pass. Gallery
