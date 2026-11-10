@@ -865,6 +865,39 @@ knot also remains a limitation.
 non-CEPC control. New steering should use one of the two supported values
 listed in the property table.
 
+### Passive pre-reclustering ECAL measurements in the flat tuple
+
+When the reader supplies `CyberPFOPreReclustering` and
+`EcalClusterPreReclustering`, `RecGsfFlatTuple` automatically saves their
+measurements once per event. This does not enable `EcalComponentConstraint`
+or change any track fit. Load the corresponding ECAL/HCAL snapshot clusters
+and hits together so all saved PFO relations resolve.
+
+| Flat fields | Meaning |
+| --- | --- |
+| `pre_ecal_available` | 1 when both snapshot collections were supplied; 0 with empty vectors for tracker-only input |
+| `pre_ecal_cluster_index` | Original index in `EcalClusterPreReclustering` |
+| `pre_ecal_cluster_energy` | Saved cluster energy in GeV, before the final PFO-dependent export calibration |
+| `pre_ecal_cluster_x/y/z` | Saved cluster position in mm |
+| `pre_ecal_cluster_hit_count` | Number of reconstructed constituent hits; individual hit data are not duplicated |
+| `pre_ecal_pfo_charge` | Charge indexed by original `CyberPFOPreReclustering` PFO index |
+| `pre_ecal_pfo_track_pfo_index`, `pre_ecal_pfo_track_input_index` | Parallel PFO-to-original-`CompleteTracks` relation vectors |
+| `pre_ecal_pfo_cluster_pfo_index`, `pre_ecal_pfo_cluster_index` | Parallel PFO-to-ECAL-cluster relation vectors |
+
+All pre-reclustering ECAL clusters are retained, including track-unassociated
+ones. A missing charged-cluster association remains missing. No geometric
+association or neutral-window collection is inferred. Charged-PFO energy is
+not substituted for measured cluster energy. One missing snapshot collection,
+an unavailable cluster relation, or a track relation outside `CompleteTracks`
+fails the tuple job rather than writing a misleading association. Original
+collection indices are preserved for joining to the GSF selection/output maps.
+These optional fields also fill on events excluded by `SelectedEventIndices`.
+The existing `ecal_gsf_*` fields continue to describe optional refitted tracks.
+
+`tests/check_pre_ecal_tuple.py REC TUPLE [--baseline OLD_TUPLE]` compares every
+new value and association to REC, and optionally checks all existing fields
+against a same-event baseline. It uses the existing uproot analysis environment.
+
 ## Historical Geant4 transition dataset
 
 The maintained workflow no longer schedules

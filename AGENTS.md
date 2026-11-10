@@ -317,50 +317,55 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**OVERNIGHT TPC-FIX REC RERUN PREPARED; SUBMISSION NEEDS BATCH LOGIN (2026-11-10).**
-The user deferred BH discussion until tomorrow and requested regenerating normal
-ISR/FSR REC with corrected TPC truth links. Prepared
-`higgs_eeHX_ISRFSRON_REC_TPCFIX_500jobs_200evt_20261110/`:500 jobs x200 events,
-100,000 target, original generator files/seeds1--500, memory8000MB, group cms.
-Run sim/trk/calodigi/rec in one process; no GSF/breakpoint fits or intermediate
-ROOT files. All2500 cards reproduce previous steering exactly apart from output
-paths; checksums, input existence and installed tested-library hashes pass.
-Prepared-submission dry run prints500 commands. Existing500 old REC files remain.
-
-No new jobs are submitted. Local batch scripts cannot import htcondor; SSH to
-lxlogin.ihep.ac.cn is network-unreachable. Run from the usual batch-login shell:
+**GSF-ONLY BATCH PREPARED FROM COMPLETED TPC-FIX REC (2026-11-10).**
+All500 new normal-ISR/FSR REC jobs have completion markers and matching files.
+Prepared `higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/`:500 x200 events,
+100,000 target, group cms, memory8000MB, direct matching REC inputs retained.
+No GSF batch submission yet. From a working batch-login shell at repository root:
 
 ```bash
-SAMPLE_REGION=higgs DRY_RUN=0 SUBMIT_GROUP=cms \
-./subbreakpointjobs.sh submit higgs_eeHX_ISRFSRON_REC_TPCFIX_500jobs_200evt_20261110
+bash higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/submit.sh --submit
 ```
 
-After actual submission, freeze normal source/build/install paths used by jobs;
-continue development only in isolated paths. No code, cards, libraries or SSH
-configuration changed for preparation. Full preparation evidence and limits:
-[the rerun record](agents_record/2026-11-10-eehx-tpcfix-rec-rerun-preparation.md).
+Omit --submit for the dry run. All500 cards/checksums and500 printed submission
+commands pass. Runtime/library hashes are frozen; the submitter requires a
+scheduler cluster ID, and workers verify outputs before completed.json.
+After submission, freeze normal dependencies and the private tuple-writer
+install `build.gsf-ecal-tuple-dev/install`; use another isolated build for work.
+No normal installed library was replaced for this preparation.
+Full evidence and limits:
+[the batch record](agents_record/2026-11-10-gsf-rec-ecal-batch-preparation.md).
 
-Producer fix872d760 is installed and changes only our August truth extension,
-zero older simulation/hit-building/tracking/PFA lines. Native SIM A/B removed
-2 malformed TPC ranges and preserved37699 SimTrackerHits plus1295 MCParticles
-exactly. Real downstream checks pass strict truth matching on4/4 tracks;
-GSF publishes3/4 and BP4/4 ordinary/null fits, with no selected eBrem intervals.
-The separate GSF failure is a TPC-only outward three-hit seed, not provenance;
-recorder-off reproduces it. The separate5mm merged-hit rejection remains.
-Full evidence is in the
+The private RecGsfFlatTuple writer adds12 automatic passive pre_ecal_* fields:
+pre-reclustering cluster energy/position/hit count and original PFO/track/cluster
+relations. All clusters are retained once per event; hits are not duplicated.
+No fit/core/configurable property changed. No simulation, tracking or PFA change.
+All46 event0 clusters/links match REC; all257 old fields agree with baseline.
+Native detailed checks on NEW REC job4 source0,11,16,17 publish8/8 selected tracks;
+all876 ECAL clusters/links across18 read event rows reproduce REC. Component/
+lineage selection checks and the worker's output verifier pass. This does not
+establish population performance. Existing scalar track fields remain first-track
+views; use original selection/output/component maps for per-track joins.
+
+Frozen GSF physics remains reverse, pair selector on, fresh inward-1,
+directional seeds1, look-ahead0, both BH gates/beam on, ECAL constraint off,
+CEPC BH model, DD4hepBetweenSurfaces, MaxComponents10, LocalMeasurement,
+recorder/oracle off. All43 fitter properties are unchanged. Full component/
+lineage output remains automatic: focused output suggests order0.8TiB for100k
+fitted events, an extrapolation only. No200-event worker/resource benchmark
+or full-population truth check has run.
+
+Producer fix872d760 remains installed and limited to our August TPC truth code.
+Its SIM A/B preserved physical hits/MC exactly; malformed ownership ranges are
+fixed in fresh output. The separate5mm merged-hit rejection and TPC-only GSF
+seed failure remain distinct known issues; see the
 [downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
-Fresh campaign completion and population provenance checks remain pending.
+BH discussion stays deferred: the
+[ACTS audit](agents_record/2026-11-10-acts-default-bh-source-audit.md)
+found exact default-mixture parity but different local covariance application,
+a thin-step discontinuity and0.2X0 cap. Neither model is physics-validated.
 
-Tomorrow's BH discussion starts from the
-[ACTS source audit](agents_record/2026-11-10-acts-default-bh-source-audit.md).
-All108 coefficients and10022 installed-mixture evaluations match the pinned
-ACTS default. Local covariance application differs; upstream default has a
-thin-material boundary discontinuity and caps at0.2X0. No model change is made.
-GSF remains43 properties; pair selector on, recorder/oracle off, fresh inward-1,
-look-ahead0, both BH gates and beam on, ECAL off, MaxComponents10,
-LocalMeasurement. Neither BH model is physics-validated.
-
-Keep breakpoint-delayed-neutral and all existing workspaces. Truth-before-scan
+Keep breakpoint-delayed-neutral and existing workspaces. Truth-before-scan
 coupling, floating beam-spot FSR loss and Hive remain deferred. Outgoing focus
 is preserved in the
-[snapshot](agents_record/2026-11-10-agents-before-tpcfix-rec-rerun.md).
+[snapshot](agents_record/2026-11-10-agents-before-gsf-rec-ecal-batch.md).

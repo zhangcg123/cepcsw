@@ -2,6 +2,8 @@
 
 #include "GaudiKernel/SmartDataPtr.h"
 #include "k4FWCore/DataWrapper.h"
+#include "edm4hep/ClusterCollection.h"
+#include "edm4hep/ReconstructedParticleCollection.h"
 
 #include <TFile.h>
 #include <TTree.h>
@@ -55,6 +57,18 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("production_electron_track_indices", &m_production_electron_track_indices);
   m_tree->Branch("production_electron_candidate_counts", &m_production_electron_candidate_counts);
   m_tree->Branch("gsf_input_track_indices", &m_gsf_input_track_indices);
+  m_tree->Branch("pre_ecal_available", &m_pre_ecal_available);
+  m_tree->Branch("pre_ecal_cluster_index", &m_pre_ecal_cluster_index);
+  m_tree->Branch("pre_ecal_cluster_hit_count", &m_pre_ecal_cluster_hit_count);
+  m_tree->Branch("pre_ecal_cluster_energy", &m_pre_ecal_cluster_energy);
+  m_tree->Branch("pre_ecal_cluster_x", &m_pre_ecal_cluster_x);
+  m_tree->Branch("pre_ecal_cluster_y", &m_pre_ecal_cluster_y);
+  m_tree->Branch("pre_ecal_cluster_z", &m_pre_ecal_cluster_z);
+  m_tree->Branch("pre_ecal_pfo_charge", &m_pre_ecal_pfo_charge);
+  m_tree->Branch("pre_ecal_pfo_track_pfo_index", &m_pre_ecal_pfo_track_pfo_index);
+  m_tree->Branch("pre_ecal_pfo_track_input_index", &m_pre_ecal_pfo_track_input_index);
+  m_tree->Branch("pre_ecal_pfo_cluster_pfo_index", &m_pre_ecal_pfo_cluster_pfo_index);
+  m_tree->Branch("pre_ecal_pfo_cluster_index", &m_pre_ecal_pfo_cluster_index);
   // MC truth
   m_tree->Branch("mc_pdg",     &m_mc_pdg);
   m_tree->Branch("mc_px",      &m_mc_px);
@@ -443,6 +457,66 @@ StatusCode RecGsfFlatTuple::execute() {
 
   const auto* mcCol = m_inMCParticles.get();
   const auto* lcioCol = m_inCompleteTracks.get();
+  // Optional passive REC snapshot; generic tracker-only inputs remain readable.
+  m_pre_ecal_available = 0;
+  m_pre_ecal_cluster_index.clear();
+  m_pre_ecal_cluster_hit_count.clear();
+  m_pre_ecal_cluster_energy.clear();
+  m_pre_ecal_cluster_x.clear();
+  m_pre_ecal_cluster_y.clear();
+  m_pre_ecal_cluster_z.clear();
+  m_pre_ecal_pfo_charge.clear();
+  m_pre_ecal_pfo_track_pfo_index.clear();
+  m_pre_ecal_pfo_track_input_index.clear();
+  m_pre_ecal_pfo_cluster_pfo_index.clear();
+  m_pre_ecal_pfo_cluster_index.clear();
+  SmartDataPtr<DataWrapper<edm4hep::ClusterCollection>> preClusters(
+      eventSvc(), "EcalClusterPreReclustering");
+  SmartDataPtr<DataWrapper<edm4hep::ReconstructedParticleCollection>> prePfos(
+      eventSvc(), "CyberPFOPreReclustering");
+  const auto* clusters = preClusters ? preClusters->getData() : nullptr;
+  const auto* pfos = prePfos ? prePfos->getData() : nullptr;
+  if (bool(clusters) != bool(pfos)) {
+    error() << "Incomplete pre-reclustering ECAL/PFO snapshot" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (clusters && pfos) {
+    m_pre_ecal_available = 1;
+    for (const auto& cluster : *clusters) {
+      const auto position = cluster.getPosition();
+      m_pre_ecal_cluster_index.push_back(cluster.id().index);
+      m_pre_ecal_cluster_hit_count.push_back(cluster.hits_size());
+      m_pre_ecal_cluster_energy.push_back(cluster.getEnergy());
+      m_pre_ecal_cluster_x.push_back(position.x);
+      m_pre_ecal_cluster_y.push_back(position.y);
+      m_pre_ecal_cluster_z.push_back(position.z);
+    }
+    for (const auto& pfo : *pfos) {
+      m_pre_ecal_pfo_charge.push_back(pfo.getCharge());
+      for (const auto& track : pfo.getTracks()) {
+        if (!track.isAvailable() || track.id().collectionID != lcioCol->getID() ||
+            track.id().index < 0 || size_t(track.id().index) >= lcioCol->size()) {
+          error() << "Pre-reclustering PFO has an invalid CompleteTracks link" << endmsg;
+          return StatusCode::FAILURE;
+        }
+        m_pre_ecal_pfo_track_pfo_index.push_back(pfo.id().index);
+        m_pre_ecal_pfo_track_input_index.push_back(track.id().index);
+      }
+      for (const auto& cluster : pfo.getClusters()) {
+        if (!cluster.isAvailable()) {
+          error() << "Pre-reclustering PFO has an unavailable cluster link" << endmsg;
+          return StatusCode::FAILURE;
+        }
+        if (cluster.id().collectionID != clusters->getID()) continue;
+        if (cluster.id().index < 0 || size_t(cluster.id().index) >= clusters->size()) {
+          error() << "Pre-reclustering PFO has an invalid ECAL cluster link" << endmsg;
+          return StatusCode::FAILURE;
+        }
+        m_pre_ecal_pfo_cluster_pfo_index.push_back(pfo.id().index);
+        m_pre_ecal_pfo_cluster_index.push_back(cluster.id().index);
+      }
+    }
+  }
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> genericGsfWrapper(
       eventSvc(), "GSFTracks");
   const auto* gsfCol = genericGsfWrapper

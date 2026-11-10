@@ -204,6 +204,14 @@ private:
   TFile* m_file = nullptr;
   TTree* m_tree = nullptr;
 
+  int m_pre_ecal_available = 0;
+  std::vector<int> m_pre_ecal_cluster_index, m_pre_ecal_cluster_hit_count;
+  std::vector<double> m_pre_ecal_cluster_energy, m_pre_ecal_cluster_x;
+  std::vector<double> m_pre_ecal_cluster_y, m_pre_ecal_cluster_z;
+  std::vector<double> m_pre_ecal_pfo_charge;
+  std::vector<int> m_pre_ecal_pfo_track_pfo_index, m_pre_ecal_pfo_track_input_index;
+  std::vector<int> m_pre_ecal_pfo_cluster_pfo_index, m_pre_ecal_pfo_cluster_index;
+
   // ── branch variables ──
   int    m_iev = 0;
   int m_production_electron_selection_status = 0;
