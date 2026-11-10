@@ -20,8 +20,8 @@ export DRY_RUN=${DRY_RUN:-0}
 # Must be finite and positive. Frozen into generated cards at preparation.
 export BP_SIGMA_LOG_LOSS=${BP_SIGMA_LOG_LOSS:-0.001}
 # Optional additional location scans; truth-location approaches remain enabled.
-# Default110 scans only110; explicitly empty runs no scans. Use Truth mode.
-export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS-110}
+# Scans are off by default; set BP_LOCATION_SCAN_SETUPS=110 to opt in.
+export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS-}
 export BP_FREE_LOSS_FIT=${BP_FREE_LOSS_FIT:-1}
 # Default eeH production-pair gate; set 0 for gun samples or all-track refits.
 export BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=${BP_SELECT_TRUTH_PRODUCTION_ELECTRONS:-1}

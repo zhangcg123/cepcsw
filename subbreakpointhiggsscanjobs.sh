@@ -1,5 +1,5 @@
 #!/bin/bash
-# Scan all 200 events from all 249 existing Higgs REC files; no sim/rec rerun.
+# Refit all 200 events from all 249 existing Higgs REC files; scans are opt-in.
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
 export SAMPLE_REGION=higgs
 export INPUT_TUPLEPATH=${INPUT_TUPLEPATH:-higgs_full_20261030}
@@ -9,7 +9,7 @@ export STAGES=breakpoint
 export NEVT=200 SEED_FIRST=1 SEED_LAST=250
 export SUBMIT_GROUP=${SUBMIT_GROUP:-cms}
 export BP_INTERVAL_SELECTION_MODE=Truth BP_INTERVALS=
-export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS-110}
+export BP_LOCATION_SCAN_SETUPS=${BP_LOCATION_SCAN_SETUPS-}
 export BP_FREE_LOSS_FIT=${BP_FREE_LOSS_FIT:-1} BP_TRUTH_OVERRIDE=0
 # Preserve truth-location endpoints; separately choose which approaches scan.
 export BP_BEAM_SPOT_CONSTRAINT=${BP_BEAM_SPOT_CONSTRAINT:-1}

@@ -36,7 +36,7 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(job['stages'], ['sim', 'trk', 'calodigi', 'rec', 'breakpoint'])
             self.assertEqual(job['nevt'], 200)
             self.assertEqual(job['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '1')
-            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'], '110')
+            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'], '')
             self.assertIn('genalg.GenTools = ["StdHepRdr"]', (carddir/'sim.py').read_text())
             self.assertIn("'BP_SELECT_TRUTH_PRODUCTION_ELECTRONS': '1'", (carddir/'breakpoint.py').read_text())
             self.assertFalse((carddir/'submitted.json').exists())
@@ -60,14 +60,14 @@ class BatchTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Expected a boolean'):
             self.prepare(OUTPUT_TUPLEPATH='selection_invalid', BP_SELECT_TRUTH_PRODUCTION_ELECTRONS='maybe')
 
-    def test_unified_free_loss_defaults_in_cpp_card_and_both_wrappers(self):
+    def test_fit_defaults_and_disabled_scans_in_card_and_both_wrappers(self):
         import ast
         properties = {'FreeLossFit': True, 'BeamSpotConstraint': True,
                       'ChargedEcalMeasurement': True, 'NeutralEcalMeasurement': False,
-                      'LocationScanSetups': [110], 'ChargedEcalEnergyMode': 'ElectronPhoton'}
+                      'LocationScanSetups': [], 'ChargedEcalEnergyMode': 'ElectronPhoton'}
         expected = {'BP_FREE_LOSS_FIT':'1', 'BP_BEAM_SPOT_CONSTRAINT':'1',
                     'BP_CHARGED_ECAL_MEASUREMENT':'1', 'BP_NEUTRAL_ECAL_MEASUREMENT':'0',
-                    'BP_LOCATION_SCAN_SETUPS':'110', 'BP_CHARGED_ECAL_ENERGY_MODE':'ElectronPhoton'}
+                    'BP_LOCATION_SCAN_SETUPS':'', 'BP_CHARGED_ECAL_ENERGY_MODE':'ElectronPhoton'}
         text=(REPO/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
         nodes=[]
         for node in ast.parse(text).body:
@@ -84,7 +84,7 @@ class BatchTest(unittest.TestCase):
         for key,value in properties.items(): self.assertEqual(getattr(fit,key),value)
         header=(REPO/'Reconstruction/RecBreakpoint/src/RecBreakpoint.h').read_text()
         for key,value in properties.items():
-            if isinstance(value,list): literal=r'\{110\}'
+            if isinstance(value,list): literal=r'\{110\}'  # Compiled default; the card overrides it to [].
             elif isinstance(value,str): literal='"'+value+'"'
             else: literal='true' if value else 'false'
             self.assertRegex(header,r'"'+key+r'",\s*'+literal+r'\}')
@@ -235,7 +235,7 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(job['nevt'],200)
             self.assertEqual(job['stages'],['breakpoint'])
             self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'],'Truth')
-            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'],'110')
+            self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'],'')
             self.assertEqual(job['controls']['BP_TRUTH_OVERRIDE'],'0')
             self.assertEqual(job['controls']['BP_NEUTRAL_ECAL_MEASUREMENT'],'0')
             self.assertEqual(job['controls']['BP_EXPERIMENTAL_DELAYED_NEUTRAL'],'1')

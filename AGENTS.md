@@ -329,6 +329,13 @@ manifest as an uncommitted analysis artifact.
 ## 2. Current focus
 
 **BP PRE-RECLUSTERING ECAL SNAPSHOT IMPLEMENTED AND INSTALLED (2026-11-11).**
+Maintained BP run card, batch helper and both shell launchers now default to
+`LocationScanSetups=[]` / `BP_LOCATION_SCAN_SETUPS=''`: truth-location fits
+continue, additional location scans are off. Explicit nonempty overrides remain
+supported; compiled default[110] and existing frozen cards are unchanged.
+All64 batch tests pass. See
+[the steering record](agents_record/2026-11-11-bp-location-scan-default-off.md).
+
 New BP flat files save the same 12 `pre_ecal_*` branches as GSF in the
 once-per-selected-event `neutral_pfos` tree; join tracks by `event_index`.
 They include complete pre-cluster energy/xyz, indices/hit counts, PFO charges

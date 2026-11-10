@@ -182,7 +182,7 @@ def prepare():
     for key, value in (('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS','1'),
                        ('BP_FREE_LOSS_FIT','1'), ('BP_BEAM_SPOT_CONSTRAINT','1'),
                        ('BP_CHARGED_ECAL_MEASUREMENT','1'), ('BP_NEUTRAL_ECAL_MEASUREMENT','0'),
-                       ('BP_LOCATION_SCAN_SETUPS','110')):
+                       ('BP_LOCATION_SCAN_SETUPS','')):
         controls.setdefault(key, value)
     controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
     controls.setdefault('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronPhoton')
