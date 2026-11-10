@@ -336,6 +336,20 @@ object release during collection cleanup, with cause unestablished. No memory-
 or walltime-kill conclusion is supported. Full bounded evidence:
 [the running status record](agents_record/2026-11-10-gsf-running-status-sample.md).
 
+Completed-subset analysis is now available from87 completed jobs/17,400 events:
+32,176 common pT tracks and14,870 common recoil pairs. pT central68% half-widths
+are KF3.272%,BestBranch0.964%,WeightedMean1.022%, but GSF has rare severe
+positive tails and worse RMS. All17,300 first-track component/native pT checks
+per method pass. Full GSF recoil is unavailable from this flat schema; the user
+approved explicitly labelled GSF-pT+KF-direction recoil estimates. No fits are
+rerun. Twelve PNG/PDF plots and CSVs are under
+`TrackingPerformanceStudies/gsf_finished_recoil_pt_20261110/`; the
+[analysis record](agents_record/2026-11-10-finished-gsf-recoil-pt-plots.md)
+records populations, invalid masses, methods and limitations. This fixed snapshot
+is separate from subsequent campaign completions and is not population validation.
+The verified gallery serves this directory on ailogin002 localhost8000,PID48142
+(12 PNGs/7 sections,HTTP page+PNG200); the old FSR gallery was safely replaced.
+
 The GSF campaign is500 x200 events, memory4000MB, cms default10hour walltime,
 reverse, production-pair selector on, fresh inward-1, directional seeds1,
 look-ahead0, both BH gates/beam on, ECAL constraint off, CEPC BH model,
