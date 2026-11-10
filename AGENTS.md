@@ -328,49 +328,34 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP PRE-RECLUSTERING ECAL SNAPSHOT IMPLEMENTED AND INSTALLED (2026-11-11).**
-Maintained BP run card, batch helper and both shell launchers now default to
-`LocationScanSetups=[]` / `BP_LOCATION_SCAN_SETUPS=''`: truth-location fits
-continue, additional location scans are off. Explicit nonempty overrides remain
-supported; compiled default[110] and existing frozen cards are unchanged.
-All64 batch tests pass. See
-[the steering record](agents_record/2026-11-11-bp-location-scan-default-off.md).
+**BP PANELS REFRESHED FROM COMPLETED SCAN-OFF PRODUCTION (2026-11-11).**
+Eight existing pT/recoil figures now use a fixed171 completed BP files x200
+events (34,200 events). Inclusive Baseline KF/BP100:64,481 common tracks and
+30,340 pairs. No-FSR+eBrem Baseline KF/BP100/BP110:9,041 tracks and4,133 pairs.
+No+light/hard1% split is unchanged; recoil remains120--130GeV/0.25GeV bins.
+Truth selects BP locations while loss remains fitted; ECAL only for BP110.
+All curves within a panel share valid tracks/pairs, without fallback copies,
+window normalization, photon addition or a generator-recoil curve.
+Earlier matched GSF overlays/caches are archived outside the served gallery;
+the new larger BP sample is not mixed with old50-event GSF curves.
 
-New BP flat files save the same 12 `pre_ecal_*` branches as GSF in the
-once-per-selected-event `neutral_pfos` tree; join tracks by `event_index`.
-They include complete pre-cluster energy/xyz, indices/hit counts, PFO charges
-and PFO-to-CompleteTracks/ECAL links for charged/neutral ownership. No hit
-payload duplication, truth shower matching, new property or fit steering.
-The default PreReclustering card already loads the required collections;
-legacy FinalPFO cards that omit them record availability0. Partial snapshots
-or invalid links fail explicitly, matching GSF.
+Saved generator FSR tags and material-photon records define the categories;
+4,080 overlapping tracks and41 REC identities match the prior cache. All171
+closed files have200 sequential event rows; constraint/curvature, identity,
+normalization and layout checks pass. Full artifacts, counts, limits and
+reproduction: [the BP refresh record](agents_record/2026-11-11-completed-bp-plot-refresh.md).
+The gallery remains on localhost8000; its verified server state is in that record.
 
-The tuple regression test passes. Same-input native old/new reruns on REC
-job11 entries0,11,16,17 (eight selected electrons, verbose dumps) preserve all
-917 old branches over151 track rows and114 old branches over4 event rows
-exactly. All12 new fields/types match GSF; values match REC exactly for
-248 clusters/248 PFO-ECAL links. Only the RecBreakpoint package is installed;
-its module matches the tested build. Full location scanning was disabled in
-both bounded reruns; no full-scan/population validation claim. Existing
-production tuples need regeneration. A BP-only campaign is now prepared for
-all500 current REC files x200 events (100,000 events), with scans off and
-4000MB/job; not submitted. Verified counts/cards and submission command:
-[the campaign record](agents_record/2026-11-11-bp-all-rec-noscan-campaign.md).
-Matching GSF-only500x200 is also prepared,4000MB/job, scheduler-default walltime
-(no short cap), same verified reverse physics/writer as the prior matched
-campaign; not submitted. Per-track endpoints and passive pre_ecal snapshot
-remain enabled. Runtime/card checks and command:
-[the GSF campaign record](agents_record/2026-11-11-gsf-all-rec-matched-bp-campaign.md).
-
-Schema, commands/evidence and limits:
-[the BP snapshot record](agents_record/2026-11-11-bp-pre-ecal-tuple.md).
-
-The FSR charged/neutral membership survey remains complete with its replay
-limits preserved in
-[the FSR record](agents_record/2026-11-10-fsr-cluster-membership.md).
-Existing eight recoil/pT comparison plots and all plot settings are retained:
-[the comparison record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
-Preserve breakpoint-delayed-neutral and all workspaces. BH-model, floating
-beam-spot FSR loss and Hive development remain deferred. Complete outgoing
-status is preserved in
-[the snapshot](agents_record/2026-11-11-agents-before-bp-pre-ecal-tuple.md).
+Both500x200 BP and matching GSF campaigns are submitted and active. Their
+normal/private runtime dependencies must remain intact; this plotting task
+changes no fitter source, installed library, run card or job. GSF55 was observed to
+crash with exit139; no fix/retry yet. New BP cards default scans off; truth-
+location000/100/110 endpoints remain saved independently of scan vectors.
+New BP and GSF flat tuples retain their12 pre_ecal snapshot fields and links.
+Campaigns: [BP](agents_record/2026-11-11-bp-all-rec-noscan-campaign.md),
+[GSF](agents_record/2026-11-11-gsf-all-rec-matched-bp-campaign.md).
+FSR membership survey limits remain in
+[its record](agents_record/2026-11-10-fsr-cluster-membership.md).
+BH-model, floating beam-spot FSR loss and Hive work remain deferred. Preserve
+breakpoint-delayed-neutral and all workspaces. Complete outgoing status:
+[the snapshot](agents_record/2026-11-11-agents-before-completed-bp-plot-refresh.md).
