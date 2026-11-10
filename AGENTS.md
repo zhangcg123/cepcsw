@@ -320,7 +320,7 @@ manifest as an uncommitted analysis artifact.
 **GSF-ONLY BATCH PREPARED FROM COMPLETED TPC-FIX REC (2026-11-10).**
 All500 new normal-ISR/FSR REC jobs have completion markers and matching files.
 Prepared `higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/`:500 x200 events,
-100,000 target, group cms, memory8000MB, direct matching REC inputs retained.
+100,000 target, group cms, memory4000MB, direct matching REC inputs retained.
 No GSF batch submission yet. From a working batch-login shell at repository root:
 
 ```bash

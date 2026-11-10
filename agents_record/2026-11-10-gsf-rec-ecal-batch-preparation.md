@@ -114,3 +114,25 @@ No 200-event runtime/resource benchmark or population validation was added.
 At preparation the mounted project filesystem reports1.8TB available; this is
 not a separate user-quota measurement. Keep normal/private runtime paths frozen
 after actual submission; use another isolated build for further development.
+
+## Memory-request correction before submission
+
+The user questioned the inherited8000MB request because it reduces scheduling
+flexibility. It was carried over from the REC production, not established by
+a measured GSF requirement. All500 still-unsubmitted job manifests, campaign
+summary, README and the current AGENTS focus now use4000MB. Cards, fit settings
+and runtime hashes are unchanged. Time flavour remains the cms default10hours.
+
+Earlier focused GSF measurements are:
+
+| Native test | Peak RSS KiB | Peak GiB |
+| --- | --- | --- |
+| build.gsf-selection-dev/validation/gsf-card-defaults-20261110/focused/run-result.json | 1864356 | 1.778 |
+| build.gsf-selection-dev/validation/gsf-card-defaults-20261110/regression/run-result.json | 1987084 | 1.895 |
+| build.gsf-selection-dev/validation/new-production-comparison-sf3tovpa/gsf/run-result.json | 2175640 | 2.075 |
+
+These are prior comparable GSF tests, not measurements of the exact new ECAL
+writer over200 events. The previous new-writer validation did not record peak
+RSS.4000MB is a headroom-based request, not a proven200-event upper bound.
+No claim is made about the site priority formula; a larger memory request can
+reduce eligible slots. No new jobs were submitted for this correction.
