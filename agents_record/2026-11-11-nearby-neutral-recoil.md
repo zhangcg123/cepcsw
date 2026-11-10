@@ -84,3 +84,30 @@ installed library, branch or batch state is changed. Complete outgoing status:
 [the snapshot](2026-11-11-agents-before-neutral-recoil.md); original four-method
 FSR split and GSF source/failure/QA details remain in
 [the GSF plotting record](2026-11-11-completed-gsf-recoil-pt-plots.md).
+
+## Follow-up: inclusive three-method neutral-added recoil
+
+The user requested one inclusive recoil plot with KF,110 andGSF, all adding
+the neutral four-momenta. New recoil_inclusive_neutral_added_kf_bp110_gsf.png/pdf
+combines FSR-free and with-FSR samples with no FSR/eBrem cut. Only BaselineKF,
+BP110 andGSFBestBranch are drawn. All three use72,784 identical valid pairs
+and the same neutral sum and full denominator. The plotted three-method
+intersection was independently enumerated from GSF/KF valid pairs and both-leg
+BP110 validity, with no BP100 success condition: it exactly matches the cached
+neutral cohort. Therefore no new ROOT input read, extraction or fitting occurs.
+
+There are22,750 pairs with added neutrals and27,680 unique added clusters.
+In-window KF/110/GSF counts43,696/45,941/46,628; undefined185/188/786. The
+120--130GeV/0.1GeV histograms close to the sum of the previous FSR panels.
+All three curves use original own directions and the existing massless
+neutral-cluster sum; BP110 remains truth-location/fitted-loss/ECALon.
+Window/geometry and material-radiation double-counting caveats unchanged.
+
+Artifacts remain uncommitted in the same study: inclusive_kf110gsf.py/.log,
+new PNG/PDF and recoil_inclusive_neutral_added_kf_bp110_gsf_summary.json. Input
+hashes, unique event keys, exact three-way intersection, shared denominators
+and every histogram count pass. Layout visually inspected. All42 previous
+PNG/PDFs are unchanged. Gallery agent verified the new inclusive plot first,
+22 PNGs across8 sections exactly once, live selection/count text and served
+PNG hash matching disk; parent manifest/hash review passes. The earlier split
+plots remain unchanged. Server ailogin002 PID2122174, http://127.0.0.1:8000/.

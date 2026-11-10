@@ -328,14 +328,16 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEARBY NEUTRAL FOUR-MOMENTUM ADDITION PLOTTED (2026-11-11).**
-A new separate recoil figure adds saved surrounding pre-reclustering neutral
-ECAL clusters to all four electron-pair four-vectors (Baseline KF, BP100,
-GSF BestBranch, BP110). It retains the original 72,784 valid common pairs:
-left neither electron has generator FSR (11,750); right at least one does
-(61,034). Every method uses identical events and the same neutral sum within
-its panel. Window 120--130 GeV / 0.1 GeV bins; full denominators retain
-undefined/out-of-window masses. No additional eBrem selection or fit rerun.
+**INCLUSIVE NEUTRAL-ADDED KF/BP110/GSF RECOIL PLOTTED (2026-11-11).**
+The latest first figure is one inclusive recoil panel comparing Baseline KF,
+BP110 and GSF BestBranch, all with the same nearby-neutral four-momentum
+addition. All three share 72,784 valid pairs and full normalization, including
+undefined/out-of-window masses. No FSR/eBrem cut; no BP100 success gate. An
+independent three-method intersection check exactly matches the cached cohort,
+so no new ROOT read or fit is needed. Recoil 120--130 GeV / 0.1 GeV bins.
+There are 22,750 events with neutral addition (27,680 unique clusters).
+The preceding four-method split figure keeps no-FSR left (11,750) and with-FSR
+right (61,034), with the same events and neutral sum within each panel.
 
 Use the recorded neutral collection: charge-zero trackless PFO ECAL clusters,
 |deltaTheta|<=10 mrad, |deltaPhi|<=200 mrad around the original KF AtCalorimeter
@@ -349,9 +351,9 @@ charged ECAL constraint remains unchanged. This is a diagnostic, not physics
 validation. Definitions, counts, QA and gallery status:
 [the neutral-addition record](agents_record/2026-11-11-nearby-neutral-recoil.md).
 
-The preceding four-method FSR-split plot and all 40 earlier PNG/PDFs are
-unchanged; gallery now has 21 PNGs across 7 sections on localhost8000, with the
-new plot first. Original GSF/BP common-population definitions, source failures
+The preceding FSR-split plots and all 42 earlier PNG/PDFs are unchanged;
+gallery now has 22 PNGs across 8 sections on localhost8000, with the inclusive
+three-method plot first. Original GSF/BP common-population definitions, source failures
 and QA remain in [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
 Truth ECAL geometry and FSR-to-cluster survey limits remain in
 [the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md) and
