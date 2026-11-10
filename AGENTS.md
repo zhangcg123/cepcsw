@@ -328,96 +328,62 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NO-FSR eBREM: TRUTH-LOCATION BP110 ADDED (2026-11-10).**
-The user requested overlaying the completed matched GSF BestBranch onto the
-existing BP pT and recoil plots. Saved truth-location100 histograms remain
-user-approved for this comparison; no blind100 rerun is required. Existing BP100 uses tracker
-plus beam spot only, ECAL off, with the same beam center/widths as GSF. Truth
-chooses an eligible loss site or null; the loss amount remains fitted, with no
-truth-energy override. This is a truth-location-assisted benchmark and must
-remain labelled as such. No new BP rerun is needed for these requested plots.
-No ranking, source, card, library, job or physics file is changed.
+**FSR CHARGED/NEUTRAL ECAL MEMBERSHIP SURVEY COMPLETE (2026-11-10).**
+The user asked how many generator FSR photons enter the track-matched charged
+cluster versus a separate neutral cluster. Read-only-input analysis covers1000
+normal ISR/FSR REC events: jobs1,11,...,191, first50 each from the current TPC-fix
+REC campaign. No BP/GSF fit-success selection. There are1979 selected reconstructed
+production-electron tracks and1800 generator-tagged FSR photons.
 
-Active directory `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`
-has four inclusive PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide and
-recoil_bp100_truth_ebrem_peak/wide. All now compare Baseline KF, BP100(truth
-location), and GSF BestBranch on identical valid intersections. Each contains
-two eBrem panels:combined none+light(f<1%) and hard(f>=1%). The fraction
-is summed recorded tracker eBrem photon birth energy / matched generator
-electron energy afterFSR,before material. Original three-bin labels remain cached. FSR is retained and excluded from the numerator. The previous110
-plots are archived at
-`.analysis_archive/bp110_ebrem_pt_before_truth100_20261110T131721Z/`.
-No extra control, tail-survival or quantile figure is active.
-Recoil event categories require both legs<1% for no/light or either>=1% for
-hard. Use all three methods' own native directions at nominal240GeV, without photon
-addition. Common/selected pairs2275/2646 and5484/7197; total7759 common.
-Undefined KF/BP/GSF masses0/1/2 and1/37/50 remain in full common-pair
-denominators. All four figures were redrawn for the three-method intersection;
-previous two-method artifacts remain archived outside the served root.
+Attribution uses saved generator-origin status1, recorded MC descendants
+(including conversions) and existing PFA MC contribution weights. No angular
+matching defines FSR or shower membership. A temporary analysis card replays
+unchanged PFA only through TrackClusterConnectingAlg with its built-in WriteAna,
+then matches exact original pre-cluster energy/xyz, complete hit multisets and
+PFO track-index/charge ownership, allowing collection permutations.928/1000
+events pass;72 events/131 photons remain unresolved, including33 photons>=1GeV.
+Their replay clusters are never substituted for the originals. The cause of
+remaining differences is unestablished; no older PFA/tracking code is changed.
 
-Use saved beam_spot_free_loss_rts endpoints. Require result1/2, applied
-constraint_status2, requested/actual mask1, finite native IP state/positivepT
-and curvature closure. Valid null controls are retained. Producer input-KF
-fallbacks and unavailable/unapplied100 stages are excluded from all three curves,
-not silently substituted. Common tracks17535/19855: no/light9466/10224,
-hard8069/9631. Central68% pT half-widths(KF/BP100/GSF) are
-0.24567/0.26295/0.25164% and9.40882/4.29640/3.52242%. These are conditional
-identical-track quantiles, not Gaussian sigmas or population validation.
-Extreme finite GSF tails remain in full statistics. Prior BP-only selection,
-coverage and null counts are preserved in
-[the BP100 record](agents_record/2026-11-10-bp100-truth-location-pt.md).
-Current matching, coverage, limits and artifacts:
-[the overlay record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
-Gallery remains ailogin002 localhost8000; the inclusive set has four plots.
+| Photon outcome (overlapping) | All1800 | Eγ>=1GeV:420 |
+| --- | ---: | ---: |
+| Own-electron charged cluster | 782 | 299 |
+| Any trackless neutral cluster | 472 | 303 |
+| Both charged and neutral | 333 | 224 |
+| FSR-dominated neutral (>50% MC content) | 240 | 206 |
+| Both charged and FSR-dominated neutral | 143 | 135 |
+| Unresolved | 131 | 33 |
 
-The four *_no_fsr_ebrem subset plots now add BP110(truth location, green)
-to KF/BP100/GSF. Event cut remains exactly two selected production electrons,
-neither generator-tagged FSR and at least one recorded material-eBrem photon;
-unknown truth or missing partners cannot pass. Both tracks enter pT, including
-a zero-eBrem partner. Selected1507 events/3014 tracks,619 zero-eBrem partners.
-Per-track no/light<1%, hard>=1%; recoil both<1% versus either>=1%.
+Counts concern usable finite positive-energy nonempty pre-reclustering clusters,
+as required by BP measurements.240 photons yield276 distinct FSR-dominated
+neutral clusters (206/242 for>=1GeV); fragmentation makes counts many-to-many.
+All-photon exclusive classes:449 own-charged/no-neutral,139 neutral/no-own-charge,
+333 both,22 only-other-charged,723 no usable signal,3 only-invalid-cluster,
+131 unresolved. MC-attributed reconstructed-response proxy is26.9% own charged,
+68.3% neutral,4.8% other charged; it is not raw deposited or true photon energy.
+The nominal BP neutral window includes contributions from283 photons(175>=1GeV),
+not proof that neutral was applied in a successful110 fit.
 
-BP110 is charged_ecal_free_loss_rts at the SAME truth-owned breakpoint/null
-as100, independent of the scan. Require result1/2, constraint_status2,
-requested/applied mask3 and finite native state/pT/curvature closure. No
-retained earlier constraint stage qualifies. Among3014 selected tracks,
-2758 full110 pass;129 unavailable/failed,127 full110 not applied. All four
-methods share2585 tracks and1117 pairs. Track no/light1308/1425 selected,
-hard1277/1589; recoil259/311 and858/1196. Central68 pT widths
-(KF/BP100/BP110/GSF):0.26464/0.27483/0.34073/0.26629% and
-8.82945/3.89668/2.14204/3.30498%. Hard recoil distribution half-widths
-8.27037/6.30547/4.63055/5.67929GeV. Undefined recoil0/0/0/0 and0/5/0/7
-retain full denominators. Hard category improves with110; no/light broadens.
-Only110 uses ECAL;100/GSF remain tracker+beam. BothBP locations are truth-
-assisted, loss amounts fitted; no intrinsic-resolution/production-validation claim.
+Full definitions, source/replay limits, thresholds and parent-loss split:
+[the FSR membership record](agents_record/2026-11-10-fsr-cluster-membership.md).
+Artifacts: TrackingPerformanceStudies/fsr_cluster_membership_20261110/,
+README.md, summary.json, photons.csv, photon_cluster_links.csv, validation.json,
+runtime-sha256.json and per-event/per-job gates. Photon/ancestry energy closure,
+unique keys, source identities, response/category sums and matching edge cases
+pass. Initial raw-row gate failures remain preserved; accepted assignments use
+the corrected physical-object check. Native diagnostic artifacts total~578MB.
+No simulation, tracking/PFA/fitter implementation, original card, installed
+library, source data, branch or batch submission changes. Further recorder or
+FSR-fit development still needs agreement; this task is investigation only.
 
-Eight PNG/PDF pairs remain active.
-Subsequent user display change: ALL four recoil figures now show120--130GeV
-with0.25GeV bins, linear/log-y at the same range. Selections, pair denominators,
-full-distribution statistics and pT images remain unchanged; cached redraw only.
-truth110_summary.json is authoritative for the displayed isolated subset;
-no_fsr_summary.json describes its three-method precursor. That precursor is
-archived at .analysis_archive/bp100_gsf_no_fsr_before_truth110_20261110T215331/.
-200 existing BP files were read; no fit, source/runtime card, library or job
-changes. Same-location, statuses/masks, joins, four-vectors/quantiles and
-inclusive-hash checks pass. Full details are in the overlay record.
-
-Matched GSF200x50:198 jobs completed and were independently read as50rows
-(9900 events); jobs32/36 exceeded the30-minute limit. Both partial files are
-excluded, with no retries submitted. Completed selected19656, published18361;
-1295 tracks lack GSF output,199 selected rows belong to killed jobs. Original
-GSF resources were4000MB,cms,-wt short(30min), REC jobs1--200 entries0--49:
-[the batch record](agents_record/2026-11-10-gsf-matched-bp-200x50-preparation.md).
-GSF iev-1 = BP event_index; join by original CompleteTracks index and verify
-MC identity. All198 selected-track sets and396 BP/REC size/mtime checks pass.
-Both tracks use native per-track GSF directions. No build/install/runtime-card
-change accompanies these plots. Future comparisons must retain BP's
-truth-location assistance label; blind100 scan locations are not saved.
-
-The multi-track writer fix404a498 stays installed; schema/hashes:
-[the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
-Old GSF files do not gain missing directions. TPC fix872d760 and separate
-merged-hit/seed failures are unchanged. BH, floating beam-spot FSR loss and
-Hive stay deferred. Keep breakpoint-delayed-neutral and existing workspaces.
-Complete outgoing focus:
-[the snapshot](agents_record/2026-11-10-agents-before-bp100-truth-pt.md).
+The existing eight recoil/pT plots remain on ailogin002 localhost8000(PID384311).
+All recoil views use120--130GeV,0.25GeV bins. Inclusive plots compare Baseline KF,
+truth-location BP100 and GSF BestBranch; isolated no-FSR/eBrem plots also include
+truth-location BP110, with ECAL only for110. Both BP loss amounts remain fitted.
+Details and all prior coverage/results:
+[the comparison record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
+Matched GSF campaign198x50 completed;32/36 were killed at30minutes, no retries.
+Per-track writer fix404a498 and TPC fix872d760 remain installed; no runtime changes
+here. BH model, floating beam-spot FSR loss and Hive remain deferred. Preserve
+breakpoint-delayed-neutral and all workspaces. Complete outgoing focus:
+[the preserved snapshot](agents_record/2026-11-10-agents-before-fsr-cluster-membership.md).
