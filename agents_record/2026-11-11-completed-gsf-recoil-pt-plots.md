@@ -90,3 +90,27 @@ private runtime dependencies. This is stored-output plotting, not an algorithm
 selection or validation claim. Outgoing full status is preserved in
 [the pre-update snapshot](2026-11-11-agents-before-completed-gsf-plots.md).
 Prior BP and truth geometry definitions/results remain in their dated records.
+
+## Follow-up: one inclusive three-method recoil plot
+
+User requested one120--130GeV plot with BaselineKF,100 andGSF. The new single
+panel uses77,817 identical valid pairs across KF/BP100/GSFBestBranch, inclusive
+of FSR and all material-loss groups. It joins the existing88,598 BP-common and
+85,327 GSF-common pairs by job/event, with exact electron/positron original
+input indices, material category and BaselineKFfour-vector equality. Thus the
+three curves share the same population; no BP/GSF direction substitution.
+BP100 retains truth-selected location/fitted loss, tracker+beam andECALoff.
+Recoil definitions unchanged,0.1GeV bins, no photon addition/generator recoil.
+Fullcommon-pair normalization retains undefined masses and out-of-view entries.
+In-window KF/BP100/GSF36,715/42,057/42,584; undefined22/468/567. This is a
+stored-output comparison, not an algorithm-validation claim.
+
+Artifacts in the same GSF study: inclusive_three_methods.py/.log,
+recoil_inclusive_kf_bp100_gsf.csv, PNG/PDF and _summary.json. Input hashes,
+unique pair keys, exact baseline/leg identities and histogram counts pass;
+all38 preceding plot artifacts remain unchanged. Layout visually inspected.
+The personal gallery agent verified20 PNGs across6 sections exactly once,
+with this plot first; parent manifest/hash review passes. The live page and
+served PNG hash match disk at http://127.0.0.1:8000/, ailogin002 PID2122174.
+Separate existing panels remain unchanged. No ROOT reread,
+reconstruction/fit, installed-library or job-state changes.

@@ -343,13 +343,16 @@ material fraction at1%, pT core/wide, recoil linear/log-y120--130GeV/0.1GeV bins
 Hard-eBrem pT central68% width improves(~10.00% KF to4.08% GSF inclusive), but
 no+light core is slightly broader and GSF extreme outliers remain. These are
 stored-output distribution summaries, not physics validation. BP and GSF panels
-have different common valid-fit populations and need rematching for direct
-three-method claims. Details, failures, QA and gallery verification:
+have different common valid-fit populations. A new single inclusive recoil
+overlay now uses77,817 identical valid pairs for KF/BP100/GSFBestBranch;
+120--130GeV/0.1GeV bins, all FSR/eBrem groups combined. BaselineKFfour-vectors
+and both original track indices match exactly. Full denominators retain
+undefined/out-of-view masses; the prior separate panels remain unchanged. Details, failures, QA and gallery verification:
 [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
 
 The existing eight BP figures and three photon/electron ECAL-entry geometry
 figures remain unchanged in the same gallery on localhost8000. New GSF figures
-are grouped first; combined19 PNGs across5 sections. BP definitions/counts:
+follow the new inclusive overlay; combined20 PNGs across6 sections. BP definitions/counts:
 [the BP record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
 Truth geometry angles and exact3D distances in mm, missing-entry coverage and
 ownership rules: [the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md).
