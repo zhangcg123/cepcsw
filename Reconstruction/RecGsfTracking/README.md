@@ -622,6 +622,33 @@ The data handles are configurable separately from the 43 properties:
 
 ### Flat-tuple paired-track branches
 
+Every newly written tuple also saves all published AtIP endpoints as vectors.
+Use these vectors for multi-track analyses and two-electron recoil mass;
+the legacy scalar endpoint branches below describe only collection element 0.
+For each prefix `gsf`, `bestbranch_gsf`, `weighted_gsf`, `fullmixture_gsf`, and
+`ecal_gsf`, the following branches are automatic, with no new run-card option:
+
+| Branch suffix after the prefix | Meaning |
+|---|---|
+| `_track_input_index` | Original `CompleteTracks` index for each published output, in output collection order. It matches `gsf_input_track_indices` for a present endpoint collection. Failed selected fits have no output entry; do not assume element 0 is the first selected electron. |
+| `_track_d0`, `_track_phi`, `_track_omega`, `_track_z0`, `_track_tanl` | That track's complete five-parameter **AtIP** state copied directly from its GSF collection: mm, radians, inverse mm, mm, and dimensionless tanLambda, respectively. No Baseline KF direction substitution. |
+| `_track_pT` | `abs(BField * 2.99792458e-4 / omega)` in GeV, using that published state. |
+| `_track_valid` | One for a finite five-parameter AtIP state with usable positive pT. Missing AtIP states retain their row with NaN parameters and `valid=0`; unusable pT is NaN. The writer never substitutes a different surface. |
+
+All eight vectors have the endpoint collection's length and are cleared every
+event. Missing endpoint collections produce empty vectors, including the
+inactive generic/paired/ECAL views. A present collection must have the same
+length as `GSFTrackInputIndices`; an inconsistent, duplicate, or out-of-range
+mapping fails the tuple job rather than misidentifying a track. Historical EDM
+without that mapping cannot supply these identified endpoints. Legacy scalar
+branch names, types, values, and first-track semantics are retained.
+
+`tests/check_track_endpoints.py EDM TUPLE [--baseline OLD_TUPLE]` compares every
+new vector entry to the same run's native GSF TrackState, checks first-entry
+scalar closure, inactive/empty views and output mapping, and optionally requires
+every pre-existing branch to agree exactly with a baseline run. Existing flat
+files do not acquire the omitted directions; rerun only the GSF stage from REC.
+
 `RecGsfFlatTuple` keeps method-explicit tracker-result schemas. The
 `bestbranch_gsf_*` fields come only from `GSFTracksBestBranch`, while the
 generic `gsf_*` fields come from an optional `GSFTracks` collection. When

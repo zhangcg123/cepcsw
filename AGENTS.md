@@ -27,6 +27,14 @@ Its definition and gates are in
 `agents_record/2026-08-24-full-mixture-mode-endpoint.md`; historical CMS-like
 extensions remain in dated records only.
 
+RecGsfFlatTuple now saves every published GSF AtIP endpoint in per-track
+`*_track_input_index`, `*_track_valid`, five-parameter and pT vectors for all
+five endpoint views. These identify both selected electrons independently,
+including one-surviving-fit events. Legacy scalar fields retain collection-0
+semantics. Old flat files still lack the other track's direction. The schema
+and direct native-state checker are documented in
+`Reconstruction/RecGsfTracking/README.md`.
+
 Positive-weight final components and complete component lineage are persisted
 automatically for smoother and reverse. The `final_mixture_component_*`,
 `lineage_node_*`, and `lineage_edge_*` flat vectors retain the final mixture
@@ -320,81 +328,53 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF CAMPAIGN ACTIVE; BP SUBMISSION HOLD RELEASED (2026-11-10).**
-The user confirmed running GSF jobs, then released the earlier BP submission
-hold: prepared BP jobs may be submitted alongside GSF. Freeze normal installed dependencies and the private tuple
-writer `build.gsf-ecal-tuple-dev/install`; do not rebuild/install over active
-paths. Continue any separately authorized development in another isolated area.
-No cancellation/retry is authorized. The user requested the BP submission
-command; the agent has not executed submission.
+**GSF MULTI-TRACK ENDPOINT TUPLE FIX INSTALLED (2026-11-10).**
+The user confirmed Condor jobs were finished and explicitly requested fixing
+our single-track tuple omission. RecGsfFlatTuple now writes all published AtIP
+states, including each electron's own phi/tanLambda, pT, five parameters and
+original CompleteTracks index. Five endpoint views share the same small writer;
+legacy scalar fields are retained. No fitter, property, selector, BH/material,
+shared tracking/simulation/PFA source or run-card steering changed. The43
+RecGsfTracking properties remain unchanged.
 
-Campaign `higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/` has500 submitted
-and started markers,0 verified completions,3 failed markers at the inspection.
-Five sampled outputs are growing after about35minutes; warning logs reach
-indices69/71/118/120/82 for jobs1/2/4/10/50. These are lower bounds, not exact
-completed-event counts. Live ROOT files have no saved tree key yet; no recovery
-or flush was attempted. No live scheduler inventory or RSS measurement exists.
-Failures87,144,195 report segmentation violation/exit139; stack sites are PODIO
-object release during collection cleanup, with cause unestablished. No memory-
-or walltime-kill conclusion is supported. Full bounded evidence:
-[the running status record](agents_record/2026-11-10-gsf-running-status-sample.md).
+Native reverse A/B on new REC job4 source events0,2,11,16,17 uses18 rows with
+comprehensive verbose component/split/lineage dumps. All27 endpoint records
+(9 published tracks across three reverse views) match native GSF states exactly;
+all257 pre-existing fields agree with the fresh baseline. Event2 correctly maps
+its sole surviving output to input3, not failed input1. Empty/skipped rows clear
+all vectors. The876 ECAL clusters/links still reproduce REC exactly. Forward
+control passes4 endpoint states across3 rows. This validates persistence only,
+not GSF/BH physics or population performance. Normal and batch-overlay writers
+are rebuilt/installed; the actual GSF fitter binary hash is unchanged. Details,
+commands, schema and installation hashes are in
+[the endpoint-fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
+No new production batch is submitted. Existing campaign files are unchanged;
+frozen runtime hashes must not be edited to reuse old campaign cards after
+replacing their writer. Prepare fresh cards/hashes for any later production.
 
-Current plots compare **GSF BestBranch vs Baseline KF only**, from the same87
-completed jobs/17,400 events:32,176 common pT tracks,14,870 common recoil pairs.
-Generator recoil is absent. Truth splits use each track's own recorded eBrem
-and generator-linked FSR; event flags OR the two selected reconstructed legs.
-Track populations neither/eBrem-only/FSR-only/both are3521/10189/5472/15335,
-with no unknown ownership. Common-track pT central68% half-widths(KF->BestBranch)
-are0.2090->0.2154%,5.4209->1.7073%,0.2075->0.2132%,5.8095->1.8822%.
-The eBrem categories show the central gain; clean-category broadening and rare
-severe GSF tails remain. These are descriptive completed-subset results, not
-physics validation. No extra photon-energy cut is applied; absence means no
-recorded photon within recorder coverage. ECAL is off in this campaign.
-Full GSF recoil directions are unavailable for the second track, so the
-user-approved GSF-pT+Baseline-KF-directions estimate remains explicitly labelled.
-Fifteen PNG/PDF pairs and category data are under
-`TrackingPerformanceStudies/gsf_finished_recoil_pt_20261110/`; definitions,
-counts and limits are in the
-[radiation-split record](agents_record/2026-11-10-gsf-bestbranch-radiation-split.md).
-The [initial record](agents_record/2026-11-10-finished-gsf-recoil-pt-plots.md)
-preserves the native pT closure evidence and superseded initial display policy.
-The gallery serves this directory on ailogin002 localhost8000; refreshed
-manifest and HTTP verification are recorded in the radiation-split record.
-No fits, source cards or libraries are changed for this analysis.
+Existing completed-campaign flat files lack the omitted direction. Rerun only
+GSF from matching TPC-fixed REC when requested; no simulation/REC rerun is needed.
+Current gallery plots still use their frozen87-job/17,400-event snapshot and
+explicitly approximate GSF-pT+Baseline-KF-direction recoil. They compare only
+BestBranch vs Baseline KF, with generator-linked FSR and recorded material-eBrem
+categories. Fifteen plots remain on ailogin002 localhost8000 after the requested
+tail/quantile removals. Counts, widths, tail risks and truth definitions are in
+[the radiation record](agents_record/2026-11-10-gsf-bestbranch-radiation-split.md).
+The new writer does not retroactively change those plots or files.
 
-The GSF campaign is500 x200 events, memory4000MB, cms default10hour walltime,
-reverse, production-pair selector on, fresh inward-1, directional seeds1,
-look-ahead0, both BH gates/beam on, ECAL constraint off, CEPC BH model,
-DD4hepBetweenSurfaces, MaxComponents10, LocalMeasurement, oracle/recorder off.
-All43 fitter properties are unchanged. Passive pre_ecal_* snapshots record
-all cluster measurements/relations once per event. Full component/lineage
-output remains automatic and dominates disk use. Earlier focused checks on
-new REC job4 source0,11,16,17 published8/8 selected tracks;876 ECAL clusters
-across18 rows reproduce REC and257 old event0 fields agree with baseline.
-This is not population validation. Preparation/build details:
-[the batch record](agents_record/2026-11-10-gsf-rec-ecal-batch-preparation.md).
-
-BP's maintained run card and batch helper now default the canonical
-BP_SELECT_TRUTH_PRODUCTION_ELECTRONS to1; explicit0 handles gun/all-track runs.
-Compiled default stays false;64 batch tests pass. Prepared only
-`higgs_eeHX_ISRFSRON_BP_TPCFIX_200jobs_50evt_20261110/`:200 x50=10,000 events,
-first50 entries from REC jobs1--200, selector on, Truth+110,4000MB,cms/default10h.
-All200 cards/checksums/effective defaults and200 dry-run commands pass. No BP
-jobs submitted by the agent; the user has released the GSF-related hold. See
-[the BP preparation record](agents_record/2026-11-10-breakpoint-200x50-preparation.md).
-BP Truth mode still precedes additional110 scans; scan timing is unbenchmarked.
-Truth eBrem/FSR is exported by BP, but current GSF flats require joining REC for
-photon truth. Existing scalar GSF track fields retain first-track semantics.
-
-Producer fix872d760 remains limited to our August TPC truth bookkeeping and
-preserves physical hits/MC in its focused SIM A/B. The separate5mm merged-hit
-rejection and TPC-only GSF seed failure remain distinct known issues; see the
-[downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
-BH discussion remains deferred: the
-[ACTS audit](agents_record/2026-11-10-acts-default-bh-source-audit.md)
-found exact default-mixture parity but different covariance application,
-a thin-step discontinuity and0.2X0 cap. Neither model is physics-validated.
+The normal-ISR/FSR TPC-fixed REC campaign remains the GSF/BP input. BP's maintained
+card/helper selector default remains1, compiled default false. Its prepared
+200x50 campaign and released submission hold are historical preparation, with
+no new submission authorized by this fix; see
+[the BP record](agents_record/2026-11-10-breakpoint-200x50-preparation.md).
+Producer872d760 fixes only our August TPC provenance bookkeeping. The separate
+5mm merged-hit rejection and TPC-only GSF seed failure remain distinct known
+issues; see [the downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
+BH discussion stays deferred; the [ACTS audit](agents_record/2026-11-10-acts-default-bh-source-audit.md)
+found mixture parity but covariance differences, a thin-step discontinuity and
+0.2X0 cap. Neither BH model is physics-validated.
 
 Keep breakpoint-delayed-neutral and existing workspaces. Floating beam-spot
-FSR loss and Hive remain deferred. Outgoing focus and unique prior detail:
-[the snapshot](agents_record/2026-11-10-agents-before-running-gsf-status.md).
+FSR loss and Hive remain deferred. All outgoing status and active-campaign
+history is preserved in
+[the pre-fix snapshot](agents_record/2026-11-10-agents-before-gsf-track-endpoints.md).

@@ -219,6 +219,15 @@ private:
   std::vector<int> m_production_electron_track_indices;
   std::vector<int> m_production_electron_candidate_counts;
   std::vector<int> m_gsf_input_track_indices;
+  struct TrackEndpoints {
+    std::vector<int> inputTrackIndex, valid;
+    std::vector<double> d0, phi, omega, z0, tanl, pT;
+    void book(TTree* tree, const std::string& prefix);
+    bool fill(const edm4hep::TrackCollection* tracks,
+              const std::vector<int>& inputIndices, double alpha);
+  };
+  TrackEndpoints m_gsf_tracks, m_bestbranch_gsf_tracks, m_weighted_gsf_tracks;
+  TrackEndpoints m_fullmixture_gsf_tracks, m_ecal_gsf_tracks;
   // truth
   double m_mc_px = 0, m_mc_py = 0, m_mc_pz = 0;
   double m_mc_pT = 0, m_mc_p = 0, m_mc_eta = 0, m_mc_theta = 0, m_mc_phi = 0;

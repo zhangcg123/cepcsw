@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <set>
 #include <vector>
 
 DECLARE_COMPONENT(RecGsfFlatTuple)
@@ -30,6 +31,46 @@ static void helixToKinematics(double omega, double tanLambda,
   if (sinTheta < 1e-15) sinTheta = 1e-15;
   p = pT / sinTheta;
   eta = std::asinh(tanLambda);
+}
+
+void RecGsfFlatTuple::TrackEndpoints::book(TTree* tree, const std::string& prefix) {
+  tree->Branch((prefix + "_track_input_index").c_str(), &inputTrackIndex);
+  tree->Branch((prefix + "_track_valid").c_str(), &valid);
+  tree->Branch((prefix + "_track_d0").c_str(), &d0);
+  tree->Branch((prefix + "_track_phi").c_str(), &phi);
+  tree->Branch((prefix + "_track_omega").c_str(), &omega);
+  tree->Branch((prefix + "_track_z0").c_str(), &z0);
+  tree->Branch((prefix + "_track_tanl").c_str(), &tanl);
+  tree->Branch((prefix + "_track_pT").c_str(), &pT);
+}
+
+bool RecGsfFlatTuple::TrackEndpoints::fill(
+    const edm4hep::TrackCollection* tracks,
+    const std::vector<int>& inputIndices, double alpha) {
+  inputTrackIndex.clear(); valid.clear();
+  d0.clear(); phi.clear(); omega.clear(); z0.clear(); tanl.clear(); pT.clear();
+  if (!tracks) return true;
+  if (tracks->size() != inputIndices.size()) return false;
+  inputTrackIndex = inputIndices;
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  for (const auto& track : *tracks) {
+    const auto& states = track.getTrackStates();
+    const auto ip = std::find_if(states.begin(), states.end(),
+        [](const DH& state) { return state.location == DH::AtIP; });
+    d0.push_back(ip != states.end() ? ip->D0 : nan);
+    phi.push_back(ip != states.end() ? ip->phi : nan);
+    omega.push_back(ip != states.end() ? ip->omega : nan);
+    z0.push_back(ip != states.end() ? ip->Z0 : nan);
+    tanl.push_back(ip != states.end() ? ip->tanLambda : nan);
+    const double pt = std::isfinite(omega.back()) && std::abs(omega.back()) > 1e-15
+        ? std::abs(alpha / omega.back()) : nan;
+    const bool usable = std::isfinite(d0.back()) && std::isfinite(phi.back()) &&
+        std::isfinite(z0.back()) && std::isfinite(tanl.back()) &&
+        std::isfinite(pt) && pt > 0;
+    valid.push_back(usable ? 1 : 0);
+    pT.push_back(usable ? pt : nan);
+  }
+  return true;
 }
 
 // ── algorithm ─────────────────────────────────────────────────────────
@@ -57,6 +98,11 @@ StatusCode RecGsfFlatTuple::initialize() {
   m_tree->Branch("production_electron_track_indices", &m_production_electron_track_indices);
   m_tree->Branch("production_electron_candidate_counts", &m_production_electron_candidate_counts);
   m_tree->Branch("gsf_input_track_indices", &m_gsf_input_track_indices);
+  m_gsf_tracks.book(m_tree, "gsf");
+  m_bestbranch_gsf_tracks.book(m_tree, "bestbranch_gsf");
+  m_weighted_gsf_tracks.book(m_tree, "weighted_gsf");
+  m_fullmixture_gsf_tracks.book(m_tree, "fullmixture_gsf");
+  m_ecal_gsf_tracks.book(m_tree, "ecal_gsf");
   m_tree->Branch("pre_ecal_available", &m_pre_ecal_available);
   m_tree->Branch("pre_ecal_cluster_index", &m_pre_ecal_cluster_index);
   m_tree->Branch("pre_ecal_cluster_hit_count", &m_pre_ecal_cluster_hit_count);
@@ -457,6 +503,14 @@ StatusCode RecGsfFlatTuple::execute() {
 
   const auto* mcCol = m_inMCParticles.get();
   const auto* lcioCol = m_inCompleteTracks.get();
+  std::set<int> uniqueInputs;
+  for (int input : m_gsf_input_track_indices) {
+    if (!lcioCol || input < 0 || std::size_t(input) >= lcioCol->size() ||
+        !uniqueInputs.insert(input).second) {
+      error() << "Invalid GSFTrackInputIndices entry " << input << endmsg;
+      return StatusCode::FAILURE;
+    }
+  }
   // Optional passive REC snapshot; generic tracker-only inputs remain readable.
   m_pre_ecal_available = 0;
   m_pre_ecal_cluster_index.clear();
@@ -1162,6 +1216,21 @@ StatusCode RecGsfFlatTuple::execute() {
       fullMixtureModeStatusValue(FullMixtureModeStatus::NotApplicable);
   if (fullMixtureStatus && !fullMixtureStatus->empty())
     m_fullmixture_gsf_status = (*fullMixtureStatus)[0];
+
+  auto fillEndpoints = [&](TrackEndpoints& values,
+                           const edm4hep::TrackCollection* tracks,
+                           const char* name) {
+    if (values.fill(tracks, m_gsf_input_track_indices, alpha)) return true;
+    error() << name << " size does not match GSFTrackInputIndices; "
+               "cannot identify per-track endpoints" << endmsg;
+    return false;
+  };
+  if (!fillEndpoints(m_gsf_tracks, gsfCol, "GSFTracks") ||
+      !fillEndpoints(m_bestbranch_gsf_tracks, bestBranchGsfCol, "GSFTracksBestBranch") ||
+      !fillEndpoints(m_weighted_gsf_tracks, weightedGsfCol, "GSFTracksWeightedMean") ||
+      !fillEndpoints(m_fullmixture_gsf_tracks, fullMixtureGsfCol, "GSFTracksFullMixtureMode") ||
+      !fillEndpoints(m_ecal_gsf_tracks, ecalGsfCol, "GSFTracksEcalConstrained"))
+    return StatusCode::FAILURE;
 
   // ── MC truth (first particle = primary) ──
   if (mcCol && mcCol->size() > 0) {
