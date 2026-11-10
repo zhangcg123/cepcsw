@@ -328,35 +328,38 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP PANELS REFRESHED FROM COMPLETED SCAN-OFF PRODUCTION (2026-11-11).**
-Eight existing pT/recoil figures now use a fixed498 completed BP files x200
-events (99,600 events). Inclusive Baseline KF/BP100:187,996 common tracks and
-88,598 pairs. No-FSR+eBrem Baseline KF/BP100/BP110:26,632 tracks and12,148 pairs.
-No+light/hard1% split is unchanged; recoil remains120--130GeV with0.1GeV bins (user-requested finer rebin).
-Truth selects BP locations while loss remains fitted; ECAL only for BP110.
-All curves within a panel share valid tracks/pairs, without fallback copies,
-window normalization, photon addition or a generator-recoil curve.
-Earlier matched GSF overlays/caches are archived outside the served gallery;
-the new larger BP sample is not mixed with old50-event GSF curves.
+**TRUTH PHOTON–ELECTRON ECAL ENTRY ANGLES PLOTTED (2026-11-11).**
+Two new figures compare FSR/main electron and eBrem/main electron using saved
+G4 ECAL entry positions, in the same498 completed BP files/99,600 events.
+No BP/GSF fit-success cut: all197,637 selected production-electron tracks are
+considered. FSR ownership uses saved generator links; eBrem ownership uses
+exact parent G4 IDs. Angles are between rays from the common electron truth
+production vertex to the two entry points, not momentum/emission angles or
+cluster directions. Both entries must exist; no extrapolation or conversion-
+daughter substitution. No photon-to-PFO/cluster truth link is inferred.
 
-Saved generator FSR tags and material-photon records define the categories;
-19,757 overlapping tracks and199 REC identities match the prior cache. All498
-closed files have200 sequential event rows; constraint/curvature, identity,
-normalization and layout checks pass.171 verified files were reused and327
-new files read; a fresh399-track cache check agrees exactly. Full artifacts, limits and
-reproduction: [the latest BP refresh record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
-The gallery remains on localhost8000; its verified server state is in that record.
+Valid pairs:123,581 FSR and317,862 eBrem; median3D opening36.716mrad and
+3.325mrad. A labelled>=1GeV birth-energy control has35,304/104,496 pairs,
+medians29.715/4.399mrad. Missing-original-entry coverage is explicitly recorded.
+Synthetic geometry,498-file identity/ordering/owner/population gates and441
+independent angle calculations pass; maximum disagreement7.84e-6mrad.
+The new opening-angle and delta-phi/theta PNG/PDFs join the existing gallery;
+all16 prior BP comparison PNG/PDFs are unchanged. Combined gallery:10 PNGs
+on localhost8000, verified server details in
+[the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md).
 
-Both500x200 BP and matching GSF campaigns are submitted and active. Their
-normal/private runtime dependencies must remain intact; this plotting task
-changes no fitter source, installed library, run card or job. GSF55 was observed to
-crash with exit139; no fix/retry yet. New BP cards default scans off; truth-
-location000/100/110 endpoints remain saved independently of scan vectors.
-New BP and GSF flat tuples retain their12 pre_ecal snapshot fields and links.
-Campaigns: [BP](agents_record/2026-11-11-bp-all-rec-noscan-campaign.md),
-[GSF](agents_record/2026-11-11-gsf-all-rec-matched-bp-campaign.md).
-FSR membership survey limits remain in
+The eight BP comparison figures retain their498-file sample, no+light/hard1%
+split and recoil120--130GeV/0.1GeV bins. Inclusive KF/BP100:187,996 tracks,
+88,598 pairs. No-FSR/eBrem KF/BP100/BP110:26,632 tracks,12,148 pairs.
+Their definitions/checks remain in
+[the BP record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
+Earlier matched GSF overlays remain archived; no new GSF overlay here.
+
+Both500x200 BP/GSF campaigns are submitted; preserve normal/private runtime
+libraries while jobs use them. No fitter source/library/card or job changes
+in this analysis. GSF55 was observed to crash with exit139; no fix/retry here.
+The FSR membership survey's MC attribution/replay limits remain in
 [its record](agents_record/2026-11-10-fsr-cluster-membership.md).
-BH-model, floating beam-spot FSR loss and Hive work remain deferred. Preserve
-breakpoint-delayed-neutral and all workspaces. Complete outgoing status:
-[the snapshot](agents_record/2026-11-11-agents-before-completed-bp-plot-refresh.md).
+BH-model, floating beam-spot FSR loss and Hive development remain deferred.
+Preserve breakpoint-delayed-neutral and all workspaces. Full outgoing status:
+[the snapshot](agents_record/2026-11-11-agents-before-ecal-photon-angles.md).
