@@ -140,3 +140,54 @@ The dedicated gallery agent verified8 PNGs across8 sections exactly once,
 with the four no-FSR figures first. PID384311 remains healthy on ailogin002
 localhost8000. Page and new no-FSR core PNG returnHTTP200; main review confirms
 the pair-level veto, pre-validity selection, both-leg pT handling and counts.
+
+## Truth-location BP110 tested on isolated events
+
+The user expected truth-location110 to improve these no-FSR/eBrem events.
+Added native charged_ecal_free_loss_rts_pt/ip_parameters to the four subset
+figures, green, preserving the inclusive four figures byte-for-byte. Read200
+existing BP files and joined only the3014 isolated track keys. No fit, source,
+runtime card, library or job changes. The previous three-curve subset, its
+caches/notes and renderer are preserved at
+.analysis_archive/bp100_gsf_no_fsr_before_truth110_20261110T215331/.
+
+BP110 remains at the same selected truth-owned breakpoint/null as100, with
+loss amount fitted. It is independent of location_scan_* and is not the
+minimum-NLL scan candidate. Require result1/2, constraint_status2, requested/
+applied mask3, finite native five-parameter IP state, positive pT and3T
+curvature closure. A retained previous stage is not accepted as110. Among3014
+selected tracks,2758 satisfy full110;129 unavailable/failed,127 without
+successful full110. Valid null controls remain. All four curves use the same
+valid intersection,2585 tracks and1117 pairs,72 tracks/66 pairs fewer than
+the preceding three-method subset. Only110 receives ECAL;100/GSF are tracker
+plus beam. BP is truth-location-assisted and GSF does not receive this location.
+
+| Track category | Selected | Common | KF width[%] | BP100[%] | BP110[%] | GSF[%] |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| no+light | 1425 | 1308 | 0.26464 | 0.27483 | 0.34073 | 0.26629 |
+| hard | 1589 | 1277 | 8.82945 | 3.89668 | 2.14204 | 3.30498 |
+
+Widths are full-distribution central68% half-widths, not Gaussian sigmas.
+Hard-event recoil widths(KF/100/110/GSF)8.27037/6.30547/4.63055/5.67929GeV;
+no/light1.55638/1.41917/1.66617/1.60515GeV. These include ISR physical spread
+and are not intrinsic detector resolution. Common no/light pairs259/311
+selected; hard858/1196. Undefined masses KF/100/110/GSF0/0/0/0 and0/5/0/7
+retain the full common-pair denominators. Results support improved hard-eBrem
+performance with110 on this conditional sample, but no/light pT is broadened.
+Neither a universal improvement nor production validation is established.
+
+Uncommitted truth110.py writes tracks_no_fsr_truth110.csv,
+pairs_no_fsr_truth110.csv and truth110_summary.json and redraws the four
+subset figures using the same renderer. The110 summary supersedes
+no_fsr_summary.json for the displayed isolated subset. The precursor
+no_fsr.py would regenerate the earlier three-curve plots. All four updated
+figures were visually reviewed. Independent checks pass for exact original
+row/value preservation, common-track masks/statuses, same100/110 location,
+both-leg joins, native110 four-vectors/recoil, all-method quantiles, coverage
+and inclusive PNG/PDF hashes. The selected-event and radiation definitions
+are unchanged. No generator recoil or extra plot was added.
+The dedicated gallery agent updated the first four sections for BP110 and
+its ECAL-only difference; the final four remain inclusive three-method plots.
+Validation confirms8 PNGs in8 sections exactly once. PID384311 remains healthy
+on ailogin002 localhost8000; page and updated no-FSR core PNG returnHTTP200.
+Main review confirms the four-method counts, mask3 gate and ECAL distinction.

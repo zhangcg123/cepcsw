@@ -328,7 +328,7 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**MATCHED GSF / BP100: NO-FSR + eBREM SUBSET ADDED (2026-11-10).**
+**NO-FSR eBREM: TRUTH-LOCATION BP110 ADDED (2026-11-10).**
 The user requested overlaying the completed matched GSF BestBranch onto the
 existing BP pT and recoil plots. Saved truth-location100 histograms remain
 user-approved for this comparison; no blind100 rerun is required. Existing BP100 uses tracker
@@ -347,7 +347,7 @@ is summed recorded tracker eBrem photon birth energy / matched generator
 electron energy afterFSR,before material. Original three-bin labels remain cached. FSR is retained and excluded from the numerator. The previous110
 plots are archived at
 `.analysis_archive/bp110_ebrem_pt_before_truth100_20261110T131721Z/`.
-No110, extra control, tail-survival or quantile figure is active.
+No extra control, tail-survival or quantile figure is active.
 Recoil event categories require both legs<1% for no/light or either>=1% for
 hard. Use all three methods' own native directions at nominal240GeV, without photon
 addition. Common/selected pairs2275/2646 and5484/7197; total7759 common.
@@ -370,19 +370,34 @@ Current matching, coverage, limits and artifacts:
 [the overlay record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
 Gallery remains ailogin002 localhost8000; the inclusive set has four plots.
 
-Additional four *_no_fsr_ebrem PNG/PDF pairs now isolate events with exactly
-two selected production electrons, neither generator-tagged FSR and at least
-one recorded material-eBrem photon. Select before fit validity; unknown truth
-or missing selected partners cannot pass. Both tracks enter pT, including a
-zero-eBrem partner. Per-track no/light<1%, hard>=1%; recoil both<1% versus
-either>=1%. Selected1507 events/3014 tracks, including619 zero-eBrem partners.
-Common pT no/light1325/1425 selected, hard1332/1589; common recoil269/311,
-914/1196. Total2657 tracks/1183 pairs. Central68 pT widths(KF/BP100/GSF):
-0.26483/0.27508/0.26826%,9.26315/4.44794/3.40275%. Undefined recoil
-KF/BP/GSF0/0/0 and0/5/8 retain full denominators. Original inclusive plots
-are byte-identical; eight PNG/PDF pairs total. No ROOT reread or fit rerun.
-ISR and BP truth-location assistance remain; no intrinsic-resolution claim.
-The overlay record also documents this cut; no_fsr_summary.json is its summary.
+The four *_no_fsr_ebrem subset plots now add BP110(truth location, green)
+to KF/BP100/GSF. Event cut remains exactly two selected production electrons,
+neither generator-tagged FSR and at least one recorded material-eBrem photon;
+unknown truth or missing partners cannot pass. Both tracks enter pT, including
+a zero-eBrem partner. Selected1507 events/3014 tracks,619 zero-eBrem partners.
+Per-track no/light<1%, hard>=1%; recoil both<1% versus either>=1%.
+
+BP110 is charged_ecal_free_loss_rts at the SAME truth-owned breakpoint/null
+as100, independent of the scan. Require result1/2, constraint_status2,
+requested/applied mask3 and finite native state/pT/curvature closure. No
+retained earlier constraint stage qualifies. Among3014 selected tracks,
+2758 full110 pass;129 unavailable/failed,127 full110 not applied. All four
+methods share2585 tracks and1117 pairs. Track no/light1308/1425 selected,
+hard1277/1589; recoil259/311 and858/1196. Central68 pT widths
+(KF/BP100/BP110/GSF):0.26464/0.27483/0.34073/0.26629% and
+8.82945/3.89668/2.14204/3.30498%. Hard recoil distribution half-widths
+8.27037/6.30547/4.63055/5.67929GeV. Undefined recoil0/0/0/0 and0/5/0/7
+retain full denominators. Hard category improves with110; no/light broadens.
+Only110 uses ECAL;100/GSF remain tracker+beam. BothBP locations are truth-
+assisted, loss amounts fitted; no intrinsic-resolution/production-validation claim.
+
+Original inclusive plots are byte-identical; eight PNG/PDF pairs total.
+truth110_summary.json is authoritative for the displayed isolated subset;
+no_fsr_summary.json describes its three-method precursor. That precursor is
+archived at .analysis_archive/bp100_gsf_no_fsr_before_truth110_20261110T215331/.
+200 existing BP files were read; no fit, source/runtime card, library or job
+changes. Same-location, statuses/masks, joins, four-vectors/quantiles and
+inclusive-hash checks pass. Full details are in the overlay record.
 
 Matched GSF200x50:198 jobs completed and were independently read as50rows
 (9900 events); jobs32/36 exceeded the30-minute limit. Both partial files are
