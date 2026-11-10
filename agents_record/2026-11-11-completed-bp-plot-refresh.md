@@ -119,3 +119,20 @@ server and verified the homepage plus a current PNG whose SHA256 agrees with
 disk. Host ailogin002.ihep.ac.cn, PID2122174, localhost port8000, URL
 http://127.0.0.1:8000/. The main agent reviewed the manifest against the new
 README/summary and inspected four representative image layouts.
+
+## Finer recoil bins requested after the update
+
+The user asked to stop using0.25GeV bins now that more events are available.
+All four current recoil PNG/PDF figures are regenerated from the same cached
+pairs with100 bins over120--130GeV, i.e.0.1GeV/bin. The rendering script and
+README are synchronized; no ROOT input/fit rerun or sample refresh.
+SHA256 checks prove all pT PNG/PDF files and summary_completed_bp.json
+(full-distribution statistics/counts) unchanged. Histogram count assertions
+pass with the finer edges; a no-FSR recoil layout is visually checked. The
+previous0.25GeV recoil figures and metadata are archived outside the gallery
+at the path in before-recoil-010-rebin-archive.txt. Earlier0.25GeV references
+in this dated record describe the preceding version, not current figures.
+The personal gallery agent updated gallery.json to0.1GeV/100 bins, confirmed
+eight PNGs covered exactly once, verified the live homepage and matched a
+served updated recoil PNG against its disk hash. The healthy server remains
+ailogin002.ihep.ac.cn PID2122174 at http://127.0.0.1:8000/.

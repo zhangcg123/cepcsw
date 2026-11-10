@@ -332,7 +332,7 @@ manifest as an uncommitted analysis artifact.
 Eight existing pT/recoil figures now use a fixed171 completed BP files x200
 events (34,200 events). Inclusive Baseline KF/BP100:64,481 common tracks and
 30,340 pairs. No-FSR+eBrem Baseline KF/BP100/BP110:9,041 tracks and4,133 pairs.
-No+light/hard1% split is unchanged; recoil remains120--130GeV/0.25GeV bins.
+No+light/hard1% split is unchanged; recoil remains120--130GeV with0.1GeV bins (user-requested finer rebin).
 Truth selects BP locations while loss remains fitted; ECAL only for BP110.
 All curves within a panel share valid tracks/pairs, without fallback copies,
 window normalization, photon addition or a generator-recoil curve.
