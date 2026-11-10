@@ -352,7 +352,10 @@ exactly. All12 new fields/types match GSF; values match REC exactly for
 248 clusters/248 PFO-ECAL links. Only the RecBreakpoint package is installed;
 its module matches the tested build. Full location scanning was disabled in
 both bounded reruns; no full-scan/population validation claim. Existing
-production tuples need regeneration; no new batch submission or rerun.
+production tuples need regeneration. A BP-only campaign is now prepared for
+all500 current REC files x200 events (100,000 events), with scans off and
+4000MB/job; not submitted. Verified counts/cards and submission command:
+[the campaign record](agents_record/2026-11-11-bp-all-rec-noscan-campaign.md).
 Schema, commands/evidence and limits:
 [the BP snapshot record](agents_record/2026-11-11-bp-pre-ecal-tuple.md).
 
