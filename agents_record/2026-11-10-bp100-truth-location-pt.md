@@ -88,3 +88,27 @@ The dedicated gallery agent updated the two-panel descriptions/counts, validated
 2 PNGs across2 sections exactly once, and reused healthy PID384311. Page and
 core PNG returnHTTP200 and the page contains the merged/hard counts. Main
 review confirms the current manifest and figure layout. URL is unchanged.
+
+## Recoil plots added
+
+At the user's request, added recoil peak[115,150]GeV and wide[80,240]GeV
+log-y figures comparing Baseline KF and BP100(truth location). Existing four
+pT PNG/PDF files are unchanged by SHA256. Recoil uses nominal(240,0,0,0)GeV
+minus the two electron four-vectors, including electron mass and each method's
+own native directions. No generator recoil curve or photon addition; FSR is
+retained and ECAL off. Cached tracks only, no ROOT reread or fit rerun.
+
+No/light events require both fractions<1%; hard requires either>=1%.
+From10000 events,145 lack a selected partner and12 have same reconstructed
+KF charge. Selected opposite-charge pairs9843; common valid100 pairs8891,
+with952 unavailable pairs excluded from both curves. No/light common/selected
+2473/2646; hard6418/7197. Undefined KF/BP recoil counts0/1 and1/43 remain
+in the full common-pair denominators; no visible-window renormalization.
+The distributions include physical ISR/FSR spread and are not intrinsic
+detector-resolution estimates. pairs_bp100_truth.csv retains full four-vectors;
+recoil_summary.json records accounting/statistics. Boundary/mass assertions,
+unique-pair accounting and visual inspection of both new figures pass.
+The dedicated gallery agent verified4 PNGs across4 sections, each exactly
+once. Existing PID384311 remains healthy on ailogin002 localhost8000; page
+and new recoil peak PNG returnHTTP200(image/png for the latter). Main review
+confirms manifest semantics and both recoil figures. URL is unchanged.

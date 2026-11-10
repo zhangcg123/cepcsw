@@ -328,7 +328,7 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP100 TRUTH-LOCATION pT BENCHMARK ACTIVE (2026-11-10).**
+**BP100 TRUTH-LOCATION pT AND RECOIL BENCHMARK ACTIVE (2026-11-10).**
 The user approved using saved truth-location100 histograms, instead of a new
 blind100 rerun, for the next comparison with GSF. Existing BP100 uses tracker
 plus beam spot only, ECAL off, with the same beam center/widths as GSF. Truth
@@ -338,13 +338,19 @@ remain labelled as such. No new BP rerun is needed for these requested plots.
 No ranking, source, card, library, job or physics file is changed.
 
 Active directory `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`
-has exactly two PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide. Each contains
+has four PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide and
+recoil_bp100_truth_ebrem_peak/wide. Each contains
 two eBrem panels:combined none+light(f<1%) and hard(f>=1%). The fraction
 is summed recorded tracker eBrem photon birth energy / matched generator
 electron energy afterFSR,before material. Original three-bin labels remain cached. FSR is retained and excluded from the numerator. The previous110
 plots are archived at
 `.analysis_archive/bp110_ebrem_pt_before_truth100_20261110T131721Z/`.
-No recoil,110, extra control, tail-survival or quantile figure is active.
+No110, extra control, tail-survival or quantile figure is active.
+Recoil event categories require both legs<1% for no/light or either>=1% for
+hard. Use both methods' own native directions at nominal240GeV, without photon
+addition. Common/selected pairs2473/2646 and6418/7197;952 unavailable pairs
+are excluded from both curves. Undefined KF/BP masses0/1 and1/43 remain in
+the full common-pair denominators. Existing pT images are byte-identical.
 
 Use saved beam_spot_free_loss_rts endpoints. Require result1/2, applied
 constraint_status2, requested/actual mask1, finite native IP state/positivepT
@@ -358,7 +364,7 @@ are archived at .analysis_archive/bp100_three_panels_20261110T132442Z/. These ar
 not Gaussian sigmas or population validation. Detailed schema/coverage/limits:
 [the BP100 record](agents_record/2026-11-10-bp100-truth-location-pt.md).
 All400 source identities, joins, masks and accounting checks pass. Gallery
-remains ailogin002 localhost8000 with only these2 labelled100 plots.
+remains ailogin002 localhost8000 with these4 labelled100 plots.
 
 The matched GSF200x50 campaign is active; freeze normal installed dependencies
 and `build.gsf-ecal-tuple-dev/install`. Do separately authorized development
