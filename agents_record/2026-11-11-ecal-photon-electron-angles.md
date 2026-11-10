@@ -99,3 +99,34 @@ manifest against the study README/summary and rechecked old/new plot hashes.
 The healthy existing server remains on ailogin002.ihep.ac.cn, PID2122174,
 http://127.0.0.1:8000/. Live homepage and served opening-angle PNG SHA256
 agree with the updated disk artifacts.
+
+## Follow-up: exact distance in millimetres
+
+The user requested physical distance inmm. A new first geometry figure uses
+`d = hypot(x_gamma-x_e, y_gamma-y_e, z_gamma-z_e)` from the saved truth
+coordinates. This is3D point-to-point separation, not an ECAL surface geodesic
+or an angle-times-assumed-radius approximation. Same123,581 FSR/317,862 eBrem
+pairs, same all-energy and>=1GeV birth-energy populations, same no-fit-success
+selection and original-photon/missing-entry limitations. No ROOT reread or fit.
+
+| Birth energy | FSR median [mm] | eBrem median [mm] |
+| --- | ---: | ---: |
+| All | 90.95325 | 8.79999 |
+| >=1GeV | 71.36600 | 11.37115 |
+
+The core view is0--200mm, with0.001--10000mm log-wide view; full pair-count
+normalization is retained. The maximum observed all-energy distance is
+6708.13mm (FSR)/6616.80mm (eBrem). Synthetic3-4-5, identical-point and unequal-
+radius examples pass.441 independent law-of-cosines checks agree within
+2.49e-5mm; populations and source CSV identities are unchanged. Final layout
+is inspected; log-view legends are placed below the spectra.
+
+Uncommitted study artifacts: distance_mm.py/.log, summary_distance_mm.json,
+validation_distance_mm.json and truth_photon_electron_ecal_distance_mm.png/pdf,
+plus the preserved-before-distance SHA256 manifest. Copies are added to the
+existing gallery first; all20 preceding PNG/PDF files remain byte-identical.
+Study/gallery READMEs and current focus are synchronized. The personal gallery
+agent verified11 PNGs across3 sections, each exactly once; the parent reviewed
+the manifest and rechecked all20 old hashes plus both new plot hashes. The healthy
+server remains on ailogin002.ihep.ac.cn, PID2122174, http://127.0.0.1:8000/.
+The live page shows the mm results and the served distance PNG hash matches disk.

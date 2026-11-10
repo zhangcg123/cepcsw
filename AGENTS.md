@@ -328,8 +328,8 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**TRUTH PHOTON–ELECTRON ECAL ENTRY ANGLES PLOTTED (2026-11-11).**
-Two new figures compare FSR/main electron and eBrem/main electron using saved
+**TRUTH PHOTON–ELECTRON ECAL ENTRY SEPARATION PLOTTED (2026-11-11).**
+Three geometry figures compare FSR/main electron and eBrem/main electron using saved
 G4 ECAL entry positions, in the same498 completed BP files/99,600 events.
 No BP/GSF fit-success cut: all197,637 selected production-electron tracks are
 considered. FSR ownership uses saved generator links; eBrem ownership uses
@@ -343,8 +343,11 @@ Valid pairs:123,581 FSR and317,862 eBrem; median3D opening36.716mrad and
 medians29.715/4.399mrad. Missing-original-entry coverage is explicitly recorded.
 Synthetic geometry,498-file identity/ordering/owner/population gates and441
 independent angle calculations pass; maximum disagreement7.84e-6mrad.
-The new opening-angle and delta-phi/theta PNG/PDFs join the existing gallery;
-all16 prior BP comparison PNG/PDFs are unchanged. Combined gallery:10 PNGs
+Exact3D distance in mm is now shown first: medians90.953mm FSR/8.800mm eBrem
+(all energies),71.366/11.371mm for photon birth energy>=1GeV. It uses the same
+entry pairs and cached coordinates;441 law-of-cosines checks agree within
+2.49e-5mm. The distance, opening-angle and delta-phi/theta PNG/PDFs join the gallery;
+all16 prior BP comparison PNG/PDFs are unchanged. Combined gallery:11 PNGs
 on localhost8000, verified server details in
 [the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md).
 
