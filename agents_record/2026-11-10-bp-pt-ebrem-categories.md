@@ -74,3 +74,9 @@ is at the truth-selected location. It is an oracle-location control, not the
 blind100 result. New100 location scans require rerunning only BP from the same
 REC events. The already-running matched GSF settings need no change. No source,
 card, job, current plot or installed library is changed for this decision.
+
+The user subsequently approved existing truth-location BP100 histograms for
+the immediate/future benchmark. That supersedes the preceding requirement for
+a blind100 rerun for the current plots. The110 figures above are archived;
+active100 definitions/results and the remaining information advantage are in
+`2026-11-10-bp100-truth-location-pt.md`. No blind100 scan is claimed.

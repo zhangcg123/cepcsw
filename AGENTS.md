@@ -328,54 +328,53 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP PLOTTING RESET:TRACK pT IN NO/LIGHT/HARD eBREM (2026-11-10).**
-The user requested cleaning the plotting directory and starting comparisons
-with per-track pT resolution by eBrem severity. Only two PNG/PDF pairs remain
-at `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`:
-pt_ebrem_core and pt_ebrem_wide, each with three panels. The previous complete
-BP directory is archived outside the gallery at
-`.analysis_archive/bp_before_ebrem_pt_20261110T130402Z/`; old data/plots are not
-lost. Old recoil, radiation and control figures are no longer active.
+**BP100 TRUTH-LOCATION pT BENCHMARK ACTIVE (2026-11-10).**
+The user approved using saved truth-location100 histograms, instead of a new
+blind100 rerun, for the next comparison with GSF. Existing BP100 uses tracker
+plus beam spot only, ECAL off, with the same beam center/widths as GSF. Truth
+chooses an eligible loss site or null; the loss amount remains fitted, with no
+truth-energy override. This is a truth-location-assisted benchmark and must
+remain labelled as such. No new BP rerun is needed for these requested plots.
+No ranking, source, card, library, job or physics file is changed.
 
-Fraction=sum recorded primary-electron tracker eBrem photon birth energies /
-matched stable generator-electron energy after FSR and before material.
-Denominator is read exactly from matching REC with MC-index/PDG/status/pT
-closure checks. No eBrem:f=0; light:0<f<1%; hard:f>=1%. No extra photon-energy
-cut. All FSR cases are retained and FSR does not enter the numerator. This is
-not an FSR-free control. All19,855 selected tracks from200x50 BP events remain,
-with no pair/opposite-charge requirement. Baseline KF versus BP scan110 plus
-existing per-track calorimeter fallback uses identical tracks within each bin.
-No estimator, ranking, fit, source, card, library, production file or job change.
+Active directory `TrackingPerformanceStudies/bp_matched_recoil_pt_20261110/`
+has exactly two PNG/PDF pairs:pt_bp100_truth_ebrem_core/wide. Each contains
+no/light/hard eBrem panels: fraction=sum recorded tracker eBrem photon birth
+energy / matched generator-electron energy afterFSR,before material; bins0,
+0<f<1%,f>=1%. FSR is retained and excluded from the numerator. The previous110
+plots are archived at
+`.analysis_archive/bp110_ebrem_pt_before_truth100_20261110T131721Z/`.
+No recoil,110, extra control, tail-survival or quantile figure is active.
 
-Counts no/light/hard:5180/5044/9631. pT central68% half-widths(KF->BP composite)
-are0.2075->1.6020%,0.2985->1.9755%,15.4058->3.9189%. FSR counts3065/2957/5840;
-complete-scan counts4784/4582/7934. Full statistics retain tails. This is not a
-Gaussian sigma fit or physics validation. All estimates/routes are unchanged;
-all400 input identities and category/FSR/scan totals close. The gallery remains
-on ailogin002 localhost8000. Exact definitions/results/archive and gallery checks:
-[the category record](agents_record/2026-11-10-bp-pt-ebrem-categories.md).
-The prior full-sample BP recoil analysis and its strict controls are preserved
-in [the prior record](agents_record/2026-11-10-bp-matched-recoil-pt-plots.md).
+Use saved beam_spot_free_loss_rts endpoints. Require result1/2, applied
+constraint_status2, requested/actual mask1, finite native IP state/positivepT
+and curvature closure. Valid null controls are retained. Producer input-KF
+fallbacks and unavailable/unapplied100 stages are excluded from both curves,
+not silently substituted. Common valid18,868/19,855; exclusions863 unavailable/
+failed,121 beam not applied,3 input-KF fallbacks. No/light/hard common counts
+5038/4844/8986 versus selected5180/5044/9631. Central68% pT half-widths(KF->100)
+are0.20482->0.20298%,0.29460->0.38170%,14.11583->7.58419%. Null counts5028/
+1765/3019; breakpoint counts10/3079/5967. These are identical-track quantiles,
+not Gaussian sigmas or population validation. Detailed schema/coverage/limits:
+[the BP100 record](agents_record/2026-11-10-bp100-truth-location-pt.md).
+All400 source identities, joins, masks and accounting checks pass. Gallery
+remains ailogin002 localhost8000 with only these2 labelled100 plots.
 
 The matched GSF200x50 campaign is active; freeze normal installed dependencies
 and `build.gsf-ecal-tuple-dev/install`. Do separately authorized development
 only in isolated paths. New GSF uses4000MB,cms,-wt short(30min), matching REC
 jobs1--200 entries0--49. Preparation/timing limits:
 [the batch record](agents_record/2026-11-10-gsf-matched-bp-200x50-preparation.md).
-No submission/retry is part of this plotting change. GSF physical-event join
-is iev-1 = BP event_index; track join uses original CompleteTracks index.
-The multi-track writer fix404a498 remains installed; its schema/hashes are in
-[the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
-Old GSF files still lack the other track's direction. No matched GSF-versus-BP
-performance claim is made before the new tuples are compared on identical tracks.
-For the future matched comparison the user selected BP setup100: tracker plus
-beam spot, ECAL off, matching the current GSF external constraints/beam widths.
-Use fit-selected100 scan locations, no truth-location steering or calorimeter
-fallback, common valid tracks, and separate failure coverage. Current BP files
-have110 scans only; their beam-only endpoint family is at truth-selected sites,
-so it cannot substitute for a blind100 scan. A BP-only rerun is needed.
+No submission/retry is part of this plotting change. GSF event join is
+iev-1 = BP event_index; track join uses original CompleteTracks index. Future
+comparisons use common valid BP100/GSF tracks and retain the truth-location
+assistance label. Blind100 scan locations are not saved in the current BP
+campaign; a blind comparison would still require a separate BP-only rerun.
 
-TPC provenance fix872d760 and separate merged-hit/seed failures are unchanged.
-BH, floating beam-spot FSR loss and Hive stay deferred. Keep
-breakpoint-delayed-neutral and existing workspaces. Complete outgoing focus:
-[the pre-reset snapshot](agents_record/2026-11-10-agents-before-bp-ebrem-pt-reset.md).
+The multi-track writer fix404a498 stays installed; schema/hashes:
+[the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
+Old GSF files do not gain missing directions. TPC fix872d760 and separate
+merged-hit/seed failures are unchanged. BH, floating beam-spot FSR loss and
+Hive stay deferred. Keep breakpoint-delayed-neutral and existing workspaces.
+Complete outgoing focus:
+[the snapshot](agents_record/2026-11-10-agents-before-bp100-truth-pt.md).
