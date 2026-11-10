@@ -73,7 +73,7 @@ fit.InputTracks = "CompleteTracks"
 # Require a unique stable generator e-/e+ outside Higgs ancestry; no explicit Z
 # parent is required (some generators omit it). Ambiguities are flagged/skipped.
 # Unselected tracks retain baseline/truth rows and original input_track_index.
-fit.SelectTruthProductionElectrons = os.environ.get("BP_SELECT_TRUTH_PRODUCTION_ELECTRONS", "0") == "1"
+fit.SelectTruthProductionElectrons = os.environ.get("BP_SELECT_TRUTH_PRODUCTION_ELECTRONS", "1") == "1"
 fit.OutputTracks = "BreakpointTracksRTS"
 fit.OutputTracksBackwardFilter = "BreakpointTracksBackwardFilter"
 fit.OutputTracksFreeLossRTS = "BreakpointTracksFreeLossRTS"

@@ -49,7 +49,9 @@ class BatchTest(unittest.TestCase):
         self.assertIn('E240.Pe1e1h_X.e0.p0.whizard195', launcher.read_text())
 
     def test_truth_production_electron_selection_is_optional_and_frozen(self):
-        self.prepare(OUTPUT_TUPLEPATH='selection_off')
+        self.prepare(OUTPUT_TUPLEPATH='selection_default')
+        self.assertEqual(self.manifest('selection_default')['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '1')
+        self.prepare(OUTPUT_TUPLEPATH='selection_off', BP_SELECT_TRUTH_PRODUCTION_ELECTRONS='0')
         self.assertEqual(self.manifest('selection_off')['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '0')
         self.prepare(OUTPUT_TUPLEPATH='selection_on', BP_SELECT_TRUTH_PRODUCTION_ELECTRONS='true')
         job = self.manifest('selection_on')

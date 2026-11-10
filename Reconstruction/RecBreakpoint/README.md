@@ -37,10 +37,12 @@ The card rejects the retired `BP_BACKWARD_MODE` variable instead of ignoring it.
 
 ## Optional production-electron selection for eeH studies
 
-`SelectTruthProductionElectrons=False` (compiled/card/batch default) processes
-all input tracks as before. Set `fit.SelectTruthProductionElectrons=True` or
-`BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=1` to run the standalone
-`TruthElectronSelector` before expensive refits and location scans. This is a
+The maintained run card and batch helpers default to
+`BP_SELECT_TRUTH_PRODUCTION_ELECTRONS=1`, enabling
+`SelectTruthProductionElectrons=True`. Set the variable to `0` for particle-gun
+samples or all-track refits. The compiled property default remains false for
+custom cards that omit it; previously frozen batch cards retain their steering.
+The standalone `TruthElectronSelector` runs before expensive refits and location scans. This is a
 truth-assisted CPU-saving study gate, **not** reconstructed PID or proof of a
 pure on-shell ZH process. Nothing in REC, PFOs, clusters or CompleteTracks is
 deleted, cloned or renumbered.

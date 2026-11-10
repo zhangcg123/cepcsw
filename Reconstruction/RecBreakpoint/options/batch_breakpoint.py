@@ -179,7 +179,7 @@ def prepare():
         raise ValueError('HitScan and BP_HIT_SCAN_MIN_NLL_GAIN were removed; use HitScanAll')
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
-    for key, value in (('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS','0'),
+    for key, value in (('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS','1'),
                        ('BP_FREE_LOSS_FIT','1'), ('BP_BEAM_SPOT_CONSTRAINT','1'),
                        ('BP_CHARGED_ECAL_MEASUREMENT','1'), ('BP_NEUTRAL_ECAL_MEASUREMENT','0'),
                        ('BP_LOCATION_SCAN_SETUPS','110')):
