@@ -206,3 +206,14 @@ Gallery verification passes8 PNGs/8 sections exactly once; all four recoil
 titles now specify120--130GeV and linear/log-y. Existing PID384311 remains
 healthy; page and updated no-FSR recoil PNG returnHTTP200. Main manifest
 review confirms range and unchanged-normalization descriptions.
+
+## Recoil rebinning only
+
+The user chose0.25GeV bins rather than a larger matched production. Redrew
+all four recoil views with40 bins across120--130GeV; same cached events,
+selections, full denominators and statistics. This increases counts per bin,
+not sample size or statistical precision. No production prepared/submitted.
+Hash checks pass; main review inspected the rebinned isolated linear figure.
+Gallery agent verified8 PNGs/8 sections exact-once,0.25GeV wording in all
+four recoil sections, and HTTP200 for page/updated recoil PNG. PID384311 and
+ailogin002 localhost8000 are unchanged; main manifest review passes.

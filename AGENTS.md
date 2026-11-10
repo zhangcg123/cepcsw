@@ -393,7 +393,7 @@ assisted, loss amounts fitted; no intrinsic-resolution/production-validation cla
 
 Eight PNG/PDF pairs remain active.
 Subsequent user display change: ALL four recoil figures now show120--130GeV
-with0.1GeV bins, linear/log-y at the same range. Selections, pair denominators,
+with0.25GeV bins, linear/log-y at the same range. Selections, pair denominators,
 full-distribution statistics and pT images remain unchanged; cached redraw only.
 truth110_summary.json is authoritative for the displayed isolated subset;
 no_fsr_summary.json describes its three-method precursor. That precursor is
