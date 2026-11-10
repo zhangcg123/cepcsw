@@ -347,7 +347,11 @@ have different common valid-fit populations. A new single inclusive recoil
 overlay now uses77,817 identical valid pairs for KF/BP100/GSFBestBranch;
 120--130GeV/0.1GeV bins, all FSR/eBrem groups combined. BaselineKFfour-vectors
 and both original track indices match exactly. Full denominators retain
-undefined/out-of-view masses; the prior separate panels remain unchanged. Details, failures, QA and gallery verification:
+undefined/out-of-view masses. An additional green BP110 line uses11,750 valid
+pairs with neither electron carrying FSR, from the same inclusive cohort. It
+has its own subset normalization, ECALon, no extra eBrem cut; the three inclusive
+curves and all prior separate panels remain unchanged. This fourth curve has
+a different FSR population, so its peak is not a direct algorithm-only comparison. Details, failures, QA and gallery verification:
 [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
 
 The existing eight BP figures and three photon/electron ECAL-entry geometry

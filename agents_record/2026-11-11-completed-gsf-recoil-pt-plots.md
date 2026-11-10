@@ -114,3 +114,29 @@ with this plot first; parent manifest/hash review passes. The live page and
 served PNG hash match disk at http://127.0.0.1:8000/, ailogin002 PID2122174.
 Separate existing panels remain unchanged. No ROOT reread,
 reconstruction/fit, installed-library or job-state changes.
+
+## Follow-up: BP110 line for events with neither electron carrying FSR
+
+The user clarified: add BP110 only for no-FSR-on-either-electron events,
+not a per-track110/100 hybrid. No additional eBrem requirement. The fourth
+green curve is the subset of the77,817 existing common inclusive pairs with
+no saved generator FSR on either leg and two valid BP110 endpoints. There
+are12,504 no-FSR candidates;11,750 pass both110 endpoints and754 do not. Each
+leg uses its own BP110 native momentum and direction, truth-selected location
+and fitted loss, ECALon. No FSR inference, photon addition, fallback or fit rerun.
+
+The fourth curve uses its own full11,750-pair denominator, including two
+undefined masses and out-of-window entries;8,970 pairs lie in120--130GeV.
+The three inclusive curves retain exactly the original77,817 pairs and all
+stored recoil values, with unchanged input source hashes. They have a different
+FSR population from BP110; peak-height/shape differences are not an isolated
+measurement of algorithm performance. Bins remain0.1GeV; extra label and footer
+state the differing selection and normalization. Layout visually inspected.
+All38 otherPNG/PDFs remain unchanged; original three-curve figure and analysis
+artifacts are preserved in the study's before-no-fsr-bp110/ directory. Source
+CSV hashes, original curves and overlapping old110 recoil values are checked
+in validation_no_fsr_bp110.json. Gallery first section is updated by the
+personal gallery agent: live text and new PNG hash agree with disk,20 PNGs
+across6sections each exactly once; parent manifest/hash review passes. Healthy
+server remains ailogin002 PID2122174, http://127.0.0.1:8000/.
+Only uncommitted analysis products and these durable status records change.
