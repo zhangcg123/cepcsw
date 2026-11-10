@@ -343,20 +343,19 @@ material fraction at1%, pT core/wide, recoil linear/log-y120--130GeV/0.1GeV bins
 Hard-eBrem pT central68% width improves(~10.00% KF to4.08% GSF inclusive), but
 no+light core is slightly broader and GSF extreme outliers remain. These are
 stored-output distribution summaries, not physics validation. BP and GSF panels
-have different common valid-fit populations. A new single inclusive recoil
-overlay now uses77,817 identical valid pairs for KF/BP100/GSFBestBranch;
-120--130GeV/0.1GeV bins, all FSR/eBrem groups combined. BaselineKFfour-vectors
-and both original track indices match exactly. Full denominators retain
-undefined/out-of-view masses. An additional green BP110 line uses11,750 valid
-pairs with neither electron carrying FSR, from the same inclusive cohort. It
-has its own subset normalization, ECALon, no extra eBrem cut; the three inclusive
-curves and all prior separate panels remain unchanged. This fourth curve has
-a different FSR population, so its peak is not a direct algorithm-only comparison. Details, failures, QA and gallery verification:
+have different common valid-fit populations. The first single recoil overlay
+now uses11,750 identical valid no-FSR pairs for ALL FOUR methods: BaselineKF,
+BP100, GSFBestBranch andBP110. Neither electron has FSR; no extra eBrem cut.
+All curves use the same full11,750-pair denominator, including undefined and
+out-of-window masses. Recoil120--130GeV/0.1GeV bins; own directions, truth-selected
+BP location/fitted loss, ECALon only for110. This supersedes the previous
+inclusive-plus-subset plot; its prior artifacts and counts are preserved.
+Other separate panels remain unchanged. Details, failures, QA and gallery verification:
 [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
 
 The existing eight BP figures and three photon/electron ECAL-entry geometry
 figures remain unchanged in the same gallery on localhost8000. New GSF figures
-follow the new inclusive overlay; combined20 PNGs across6 sections. BP definitions/counts:
+follow the common no-FSR overlay; combined20 PNGs across6 sections. BP definitions/counts:
 [the BP record](agents_record/2026-11-11-bp-plots-498-completed-jobs.md).
 Truth geometry angles and exact3D distances in mm, missing-entry coverage and
 ownership rules: [the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md).

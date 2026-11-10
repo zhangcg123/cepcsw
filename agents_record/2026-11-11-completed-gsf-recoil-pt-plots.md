@@ -140,3 +140,26 @@ personal gallery agent: live text and new PNG hash agree with disk,20 PNGs
 across6sections each exactly once; parent manifest/hash review passes. Healthy
 server remains ailogin002 PID2122174, http://127.0.0.1:8000/.
 Only uncommitted analysis products and these durable status records change.
+
+## Latest correction: identical no-FSR events for all four curves
+
+The user required all curves to use FSR-free events for recoil. The first
+gallery plot now uses11,750 identical valid pairs for BaselineKF,BP100,
+GSFBestBranch andBP110: neither electron has generator-tagged FSR, bothlegs
+valid in all four methods, no additional eBrem requirement. This supersedes
+the preceding inclusive-plus-subset normalization. All four denominators are
+11,750, including undefined/out-of-view masses. In-window counts KF/BP100/GSF/110
+are7,526/8,409/8,574/8,970; undefined1/68/78/2. Bins120--130GeV/0.1GeV, own
+fitted directions, truth-selected BP location/fitted loss, ECALon only for110.
+No new fit or input ROOT read. The prior version is preserved with its script,
+CSV/summary/PNG/PDF under before-common-no-fsr/ in the same GSF study.
+
+All11,750 event keys and allfour recoil values match the prior no-FSR110
+subset exactly; FSR tags, common normalization, original source hashes and
+histogram counts pass. validation_common_no_fsr.json records this independent
+cache check. Layout inspected; all38 otherPNG/PDFs remain unchanged. The
+historical inclusive plot basename is retained, but current plot/gallery
+selection is explicitly no-FSR. The personal gallery agent verified live text
+and the served new PNG hash, with20 PNGs/6sections each exactly once; parent
+manifest/hash review passes. Healthy server remains ailogin002 PID2122174,
+http://127.0.0.1:8000/. Remaining19 PNGs/five sections are unchanged.
