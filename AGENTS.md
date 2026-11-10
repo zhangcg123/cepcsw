@@ -391,7 +391,10 @@ retain full denominators. Hard category improves with110; no/light broadens.
 Only110 uses ECAL;100/GSF remain tracker+beam. BothBP locations are truth-
 assisted, loss amounts fitted; no intrinsic-resolution/production-validation claim.
 
-Original inclusive plots are byte-identical; eight PNG/PDF pairs total.
+Eight PNG/PDF pairs remain active.
+Subsequent user display change: ALL four recoil figures now show120--130GeV
+with0.1GeV bins, linear/log-y at the same range. Selections, pair denominators,
+full-distribution statistics and pT images remain unchanged; cached redraw only.
 truth110_summary.json is authoritative for the displayed isolated subset;
 no_fsr_summary.json describes its three-method precursor. That precursor is
 archived at .analysis_archive/bp100_gsf_no_fsr_before_truth110_20261110T215331/.

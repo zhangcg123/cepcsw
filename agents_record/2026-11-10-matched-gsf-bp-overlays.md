@@ -191,3 +191,18 @@ its ECAL-only difference; the final four remain inclusive three-method plots.
 Validation confirms8 PNGs in8 sections exactly once. PID384311 remains healthy
 on ailogin002 localhost8000; page and updated no-FSR core PNG returnHTTP200.
 Main review confirms the four-method counts, mask3 gate and ECAL distinction.
+
+## All recoil displays restricted to120--130GeV
+
+At the user's request, all four active recoil PNG/PDF pairs now show only
+120--130GeV with0.1GeV bins: inclusive three-method and isolated four-method,
+each linear and log-y. Legacy wide filenames now mean the log-y view at this
+same range. Cached recoil_window.py redraws from existing pair CSVs; no ROOT
+read or fit. In-window counts update but full common-pair denominators,
+undefined-mass accounting and full-distribution summaries remain unchanged.
+Hash assertions confirm all pT PNG/PDF files, CSVs and summary JSON unchanged.
+Main review visually checked an inclusive linear and isolated log-y figure.
+Gallery verification passes8 PNGs/8 sections exactly once; all four recoil
+titles now specify120--130GeV and linear/log-y. Existing PID384311 remains
+healthy; page and updated no-FSR recoil PNG returnHTTP200. Main manifest
+review confirms range and unchanged-normalization descriptions.
