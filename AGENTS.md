@@ -356,6 +356,12 @@ production tuples need regeneration. A BP-only campaign is now prepared for
 all500 current REC files x200 events (100,000 events), with scans off and
 4000MB/job; not submitted. Verified counts/cards and submission command:
 [the campaign record](agents_record/2026-11-11-bp-all-rec-noscan-campaign.md).
+Matching GSF-only500x200 is also prepared,4000MB/job, scheduler-default walltime
+(no short cap), same verified reverse physics/writer as the prior matched
+campaign; not submitted. Per-track endpoints and passive pre_ecal snapshot
+remain enabled. Runtime/card checks and command:
+[the GSF campaign record](agents_record/2026-11-11-gsf-all-rec-matched-bp-campaign.md).
+
 Schema, commands/evidence and limits:
 [the BP snapshot record](agents_record/2026-11-11-bp-pre-ecal-tuple.md).
 
