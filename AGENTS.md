@@ -317,55 +317,52 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF-ONLY BATCH PREPARED FROM COMPLETED TPC-FIX REC (2026-11-10).**
-All500 new normal-ISR/FSR REC jobs have completion markers and matching files.
-Prepared `higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/`:500 x200 events,
-100,000 target, group cms, memory4000MB, direct matching REC inputs retained.
-No GSF batch submission yet. From a working batch-login shell at repository root:
+**GSF CAMPAIGN ACTIVE; BP SUBMISSION MUST WAIT (2026-11-10).**
+The user confirmed running GSF jobs and explicitly deferred all BP submission
+until GSF finishes. Freeze normal installed dependencies and the private tuple
+writer `build.gsf-ecal-tuple-dev/install`; do not rebuild/install over active
+paths. Continue any separately authorized development in another isolated area.
+No cancellation, retry, new fit job, or BP submission is authorized by this check.
 
-```bash
-bash higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/submit.sh --submit
-```
+Campaign `higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/` has500 submitted
+and started markers,0 verified completions,3 failed markers at the inspection.
+Five sampled outputs are growing after about35minutes; warning logs reach
+indices69/71/118/120/82 for jobs1/2/4/10/50. These are lower bounds, not exact
+completed-event counts. Live ROOT files have no saved tree key yet; no recovery
+or flush was attempted. No live scheduler inventory or RSS measurement exists.
+Failures87,144,195 report segmentation violation/exit139; stack sites are PODIO
+object release during collection cleanup, with cause unestablished. No memory-
+or walltime-kill conclusion is supported. Full bounded evidence:
+[the running status record](agents_record/2026-11-10-gsf-running-status-sample.md).
 
-Omit --submit for the dry run. All500 cards/checksums and500 printed submission
-commands pass. Runtime/library hashes are frozen; the submitter requires a
-scheduler cluster ID, and workers verify outputs before completed.json.
-After submission, freeze normal dependencies and the private tuple-writer
-install `build.gsf-ecal-tuple-dev/install`; use another isolated build for work.
-No normal installed library was replaced for this preparation.
-Full evidence and limits:
+The GSF campaign is500 x200 events, memory4000MB, cms default10hour walltime,
+reverse, production-pair selector on, fresh inward-1, directional seeds1,
+look-ahead0, both BH gates/beam on, ECAL constraint off, CEPC BH model,
+DD4hepBetweenSurfaces, MaxComponents10, LocalMeasurement, oracle/recorder off.
+All43 fitter properties are unchanged. Passive pre_ecal_* snapshots record
+all cluster measurements/relations once per event. Full component/lineage
+output remains automatic and dominates disk use. Earlier focused checks on
+new REC job4 source0,11,16,17 published8/8 selected tracks;876 ECAL clusters
+across18 rows reproduce REC and257 old event0 fields agree with baseline.
+This is not population validation. Preparation/build details:
 [the batch record](agents_record/2026-11-10-gsf-rec-ecal-batch-preparation.md).
 
-The private RecGsfFlatTuple writer adds12 automatic passive pre_ecal_* fields:
-pre-reclustering cluster energy/position/hit count and original PFO/track/cluster
-relations. All clusters are retained once per event; hits are not duplicated.
-No fit/core/configurable property changed. No simulation, tracking or PFA change.
-All46 event0 clusters/links match REC; all257 old fields agree with baseline.
-Native detailed checks on NEW REC job4 source0,11,16,17 publish8/8 selected tracks;
-all876 ECAL clusters/links across18 read event rows reproduce REC. Component/
-lineage selection checks and the worker's output verifier pass. This does not
-establish population performance. Existing scalar track fields remain first-track
-views; use original selection/output/component maps for per-track joins.
+BP's maintained run card and batch helper now default the canonical
+BP_SELECT_TRUTH_PRODUCTION_ELECTRONS to1; explicit0 handles gun/all-track runs.
+Compiled default stays false;64 batch tests pass. No BP campaign is prepared.
+BP Truth mode still precedes additional110 scans; scan timing is unbenchmarked.
+Truth eBrem/FSR is exported by BP, but current GSF flats require joining REC for
+photon truth. Existing scalar GSF track fields retain first-track semantics.
 
-Frozen GSF physics remains reverse, pair selector on, fresh inward-1,
-directional seeds1, look-ahead0, both BH gates/beam on, ECAL constraint off,
-CEPC BH model, DD4hepBetweenSurfaces, MaxComponents10, LocalMeasurement,
-recorder/oracle off. All43 fitter properties are unchanged. Full component/
-lineage output remains automatic: focused output suggests order0.8TiB for100k
-fitted events, an extrapolation only. No200-event worker/resource benchmark
-or full-population truth check has run.
-
-Producer fix872d760 remains installed and limited to our August TPC truth code.
-Its SIM A/B preserved physical hits/MC exactly; malformed ownership ranges are
-fixed in fresh output. The separate5mm merged-hit rejection and TPC-only GSF
-seed failure remain distinct known issues; see the
+Producer fix872d760 remains limited to our August TPC truth bookkeeping and
+preserves physical hits/MC in its focused SIM A/B. The separate5mm merged-hit
+rejection and TPC-only GSF seed failure remain distinct known issues; see the
 [downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
-BH discussion stays deferred: the
+BH discussion remains deferred: the
 [ACTS audit](agents_record/2026-11-10-acts-default-bh-source-audit.md)
-found exact default-mixture parity but different local covariance application,
+found exact default-mixture parity but different covariance application,
 a thin-step discontinuity and0.2X0 cap. Neither model is physics-validated.
 
-Keep breakpoint-delayed-neutral and existing workspaces. Truth-before-scan
-coupling, floating beam-spot FSR loss and Hive remain deferred. Outgoing focus
-is preserved in the
-[snapshot](agents_record/2026-11-10-agents-before-gsf-rec-ecal-batch.md).
+Keep breakpoint-delayed-neutral and existing workspaces. Floating beam-spot
+FSR loss and Hive remain deferred. Outgoing focus and unique prior detail:
+[the snapshot](agents_record/2026-11-10-agents-before-running-gsf-status.md).
