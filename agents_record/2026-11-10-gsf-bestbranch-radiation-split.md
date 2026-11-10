@@ -110,3 +110,18 @@ BestBranch/Baseline KF labels, with WeightedMean absent. The main agent reviewed
 the new manifest and figure categories. URL:http://127.0.0.1:8000/ on that host.
 Remote access uses
 `ssh -L 8000:127.0.0.1:8000 zhangcg@ailogin002.ihep.ac.cn`.
+
+## Display reduction requested by user
+
+The user subsequently requested removing the radiation tails and quantiles
+plots. Removed only `pt_radiation_tails` and `pt_radiation_quantiles` PNG/PDF
+pairs from the served directory and removed their generation blocks from the
+analysis renderer. Archived copies and prior renderer/manifest/README are in
+`.analysis_archive/gsf_radiation_tails_quantiles_removed_20261110T111911Z/`.
+Sixteen PNG/PDF pairs remain. The wide residual histograms, all other figures,
+CSV/JSON values and statistical tables are unchanged. Renderer syntax and
+16-file PNG/PDF count checks pass; no refit or ROOT reread is needed.
+The dedicated gallery agent updated the radiation pT section and validated
+all16 PNGs exactly once across8 sections. Existing PID48142 remained healthy;
+HTTP page and pt_radiation_core.png returned200, with removed plot wording
+absent from the page. URL remains http://127.0.0.1:8000/ on ailogin002.
