@@ -328,53 +328,49 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF MULTI-TRACK ENDPOINT TUPLE FIX INSTALLED (2026-11-10).**
-The user confirmed Condor jobs were finished and explicitly requested fixing
-our single-track tuple omission. RecGsfFlatTuple now writes all published AtIP
-states, including each electron's own phi/tanLambda, pT, five parameters and
-original CompleteTracks index. Five endpoint views share the same small writer;
-legacy scalar fields are retained. No fitter, property, selector, BH/material,
-shared tracking/simulation/PFA source or run-card steering changed. The43
-RecGsfTracking properties remain unchanged.
+**GSF RERUN MATCHED TO BP PREPARED:200 x50,SHORT (2026-11-10).**
+Prepared only `higgs_eeHX_ISRFSRON_GSF_MATCHBP_200jobs_50evt_20261110/`:
+200 jobs x50 events =10,000, exactly the REC paths and entries0--49 from BP
+jobs1--200. All200 BP manifests/checksummed cards and source REC manifests
+agree; six sampled REC/BP ROOT pairs verify source counts/event ranges.
+Resources are4000MB,cms,explicit `-wt short` (30minutes). Prior sampled200-event
+GSF runtimes54--92minutes suggest14--23minutes for50; no full50-event benchmark
+or guaranteed walltime margin. No new fit or submission is performed here.
+Local Python lacks htcondor; submit from the usual batch-login shell:
 
-Native reverse A/B on new REC job4 source events0,2,11,16,17 uses18 rows with
-comprehensive verbose component/split/lineage dumps. All27 endpoint records
-(9 published tracks across three reverse views) match native GSF states exactly;
-all257 pre-existing fields agree with the fresh baseline. Event2 correctly maps
-its sole surviving output to input3, not failed input1. Empty/skipped rows clear
-all vectors. The876 ECAL clusters/links still reproduce REC exactly. Forward
-control passes4 endpoint states across3 rows. This validates persistence only,
-not GSF/BH physics or population performance. Normal and batch-overlay writers
-are rebuilt/installed; the actual GSF fitter binary hash is unchanged. Details,
-commands, schema and installation hashes are in
-[the endpoint-fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
-No new production batch is submitted. Existing campaign files are unchanged;
-frozen runtime hashes must not be edited to reuse old campaign cards after
-replacing their writer. Prepare fresh cards/hashes for any later production.
+```bash
+bash higgs_eeHX_ISRFSRON_GSF_MATCHBP_200jobs_50evt_20261110/submit.sh --submit
+```
 
-Existing completed-campaign flat files lack the omitted direction. Rerun only
-GSF from matching TPC-fixed REC when requested; no simulation/REC rerun is needed.
-Current gallery plots still use their frozen87-job/17,400-event snapshot and
-explicitly approximate GSF-pT+Baseline-KF-direction recoil. They compare only
-BestBranch vs Baseline KF, with generator-linked FSR and recorded material-eBrem
-categories. Fifteen plots remain on ailogin002 localhost8000 after the requested
-tail/quantile removals. Counts, widths, tail risks and truth definitions are in
+Omit --submit for the verified200-command dry run. Cards preserve all previous
+GSF physics exactly apart from output paths/EvtMax. The new worker requires
+all40 per-track endpoint vectors plus passive pre-reclustering ECAL data and
+selection/output maps. Its exact output-verification block passes on18 native
+rows:10 selected,9 published tracks,876 ECAL clusters. Fresh runtime hashes
+pin the repaired installed writer/fitter/setup/helpers; old campaigns/data and
+hashes are unchanged. Freeze these runtime paths after actual submission.
+Full preparation and limits:
+[the matched-batch record](agents_record/2026-11-10-gsf-matched-bp-200x50-preparation.md).
+
+The GSF multi-track endpoint fix404a498 remains installed in normal and batch
+overlay locations. All27 reverse endpoint records on five focused events match
+native states, all257 existing fields match the fresh baseline, and forward
+control passes. Fitter/properties/physics are unchanged. Schema and installation
+hashes: [the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
+Existing old flat files still lack the other electron's direction. The new
+GSF-only campaign reads matching TPC-fixed REC; no simulation/REC rerun or BP
+rerun is included. GSF physical-event join is iev-1 = BP event_index; track join
+uses original CompleteTracks index. GSF pre_ecal_* stores pre-reclustering
+cluster energies/positions and PFO charge/links. BP's final-PFO diagnostic
+cluster indices refer to a different collection; they are not interchangeable.
+
+The existing15-plot gallery remains the frozen87-job/17,400-event subset,
+BestBranch vs Baseline KF only, with explicitly approximate GSF-pT+KF-direction
+recoil and generator-linked FSR/material-eBrem splits. No plot regeneration
+is requested; definitions/results/limits remain in
 [the radiation record](agents_record/2026-11-10-gsf-bestbranch-radiation-split.md).
-The new writer does not retroactively change those plots or files.
-
-The normal-ISR/FSR TPC-fixed REC campaign remains the GSF/BP input. BP's maintained
-card/helper selector default remains1, compiled default false. Its prepared
-200x50 campaign and released submission hold are historical preparation, with
-no new submission authorized by this fix; see
-[the BP record](agents_record/2026-11-10-breakpoint-200x50-preparation.md).
-Producer872d760 fixes only our August TPC provenance bookkeeping. The separate
-5mm merged-hit rejection and TPC-only GSF seed failure remain distinct known
-issues; see [the downstream record](agents_record/2026-11-10-tpc-truth-downstream-check.md).
-BH discussion stays deferred; the [ACTS audit](agents_record/2026-11-10-acts-default-bh-source-audit.md)
-found mixture parity but covariance differences, a thin-step discontinuity and
-0.2X0 cap. Neither BH model is physics-validated.
-
-Keep breakpoint-delayed-neutral and existing workspaces. Floating beam-spot
-FSR loss and Hive remain deferred. All outgoing status and active-campaign
-history is preserved in
-[the pre-fix snapshot](agents_record/2026-11-10-agents-before-gsf-track-endpoints.md).
+TPC producer872d760 remains limited to our provenance extension; separate5mm
+merged-hit rejection and seed-fit failures are not repaired here. BH discussion,
+floating beam-spot FSR loss and Hive remain deferred. Keep breakpoint-delayed-neutral
+and existing workspaces. Complete outgoing status:
+[the pre-batch snapshot](agents_record/2026-11-10-agents-before-matched-gsf-batch.md).
