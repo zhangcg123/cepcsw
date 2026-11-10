@@ -36,3 +36,11 @@ This task changes no fitter, source helper, maintained card, library, build,
 installation, GSF job or REC output. At the initial bounded preparation check,
 GSF had500 started,4 completed and3 failed markers; this is a transient marker
 snapshot, not a fresh scheduler inventory. Keep active GSF runtime paths frozen.
+
+## Submission hold released
+
+The user subsequently requested the submission command and explicitly said
+waiting for GSF is no longer required. BP may now be submitted alongside GSF.
+Only the hold metadata/documentation changes; frozen cards and runtime remain
+unchanged. The agent supplies the command but does not execute submission.
+The normal/private GSF runtime paths remain frozen while jobs use them.

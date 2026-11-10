@@ -317,12 +317,13 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF CAMPAIGN ACTIVE; BP SUBMISSION MUST WAIT (2026-11-10).**
-The user confirmed running GSF jobs and explicitly deferred all BP submission
-until GSF finishes. Freeze normal installed dependencies and the private tuple
+**GSF CAMPAIGN ACTIVE; BP SUBMISSION HOLD RELEASED (2026-11-10).**
+The user confirmed running GSF jobs, then released the earlier BP submission
+hold: prepared BP jobs may be submitted alongside GSF. Freeze normal installed dependencies and the private tuple
 writer `build.gsf-ecal-tuple-dev/install`; do not rebuild/install over active
 paths. Continue any separately authorized development in another isolated area.
-No cancellation, retry, new fit job, or BP submission is authorized by this check.
+No cancellation/retry is authorized. The user requested the BP submission
+command; the agent has not executed submission.
 
 Campaign `higgs_eeHX_ISRFSRON_GSF_TPCFIX_500jobs_200evt_20261110/` has500 submitted
 and started markers,0 verified completions,3 failed markers at the inspection.
@@ -353,7 +354,7 @@ Compiled default stays false;64 batch tests pass. Prepared only
 `higgs_eeHX_ISRFSRON_BP_TPCFIX_200jobs_50evt_20261110/`:200 x50=10,000 events,
 first50 entries from REC jobs1--200, selector on, Truth+110,4000MB,cms/default10h.
 All200 cards/checksums/effective defaults and200 dry-run commands pass. No BP
-jobs submitted; hold until GSF finishes. See
+jobs submitted by the agent; the user has released the GSF-related hold. See
 [the BP preparation record](agents_record/2026-11-10-breakpoint-200x50-preparation.md).
 BP Truth mode still precedes additional110 scans; scan timing is unbenchmarked.
 Truth eBrem/FSR is exported by BP, but current GSF flats require joining REC for
