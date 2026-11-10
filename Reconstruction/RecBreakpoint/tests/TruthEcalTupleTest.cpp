@@ -1,4 +1,5 @@
 #include "RecoAssociationTuple.h"
+#include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/MCParticleCollection.h"
 #include "edm4hep/SimTrackerHitCollection.h"
 #include "edm4hep/TrackCollection.h"
@@ -6,6 +7,7 @@
 #include "TTree.h"
 #include "TTreeReader.h"
 #include "TTreeReaderArray.h"
+#include "TTreeReaderValue.h"
 
 #include <cmath>
 #include <limits>
@@ -15,9 +17,82 @@ namespace {
 void require(bool ok, const char* message) {
   if (!ok) throw std::runtime_error(message);
 }
+
+void checkPreEcalTuple() {
+  edm4hep::TrackCollection tracks, otherTracks;
+  edm4hep::ReconstructedParticleCollection pfos;
+  edm4hep::ClusterCollection clusters, hcal;
+  edm4hep::CalorimeterHitCollection hits;
+  tracks.setID(201); otherTracks.setID(202); pfos.setID(203);
+  clusters.setID(204); hcal.setID(205); hits.setID(206);
+  auto track = tracks.create();
+  auto charged = pfos.create(), neutral = pfos.create();
+  charged.setCharge(-1); neutral.setCharge(0);
+  auto first = clusters.create(), second = clusters.create();
+  first.setEnergy(12.5); first.setPosition({1, 2, 3}); first.addToHits(hits.create());
+  second.setEnergy(-2); second.setPosition({4, 5, 6});
+  charged.addToTracks(track); charged.addToClusters(first);
+  charged.addToClusters(hcal.create()); neutral.addToClusters(second);
+  TTree tree("pre", "pre");
+  breakpoint::PreEcalTuple tuple;
+  tuple.book(tree);
+  tuple.assign(tracks, &pfos, &clusters); tree.Fill();
+  tuple.assign(tracks, nullptr, nullptr); tree.Fill();
+  edm4hep::ReconstructedParticleCollection emptyPfos;
+  edm4hep::ClusterCollection emptyClusters;
+  tuple.assign(tracks, &emptyPfos, &emptyClusters); tree.Fill();
+  TTreeReader reader(&tree);
+  TTreeReaderValue<int> available(reader, "pre_ecal_available");
+  TTreeReaderArray<int> index(reader, "pre_ecal_cluster_index");
+  TTreeReaderArray<int> count(reader, "pre_ecal_cluster_hit_count");
+  TTreeReaderArray<double> energy(reader, "pre_ecal_cluster_energy");
+  TTreeReaderArray<double> x(reader, "pre_ecal_cluster_x"), y(reader, "pre_ecal_cluster_y");
+  TTreeReaderArray<double> z(reader, "pre_ecal_cluster_z"), charge(reader, "pre_ecal_pfo_charge");
+  TTreeReaderArray<int> trackPfo(reader, "pre_ecal_pfo_track_pfo_index");
+  TTreeReaderArray<int> trackIndex(reader, "pre_ecal_pfo_track_input_index");
+  TTreeReaderArray<int> clusterPfo(reader, "pre_ecal_pfo_cluster_pfo_index");
+  TTreeReaderArray<int> clusterIndex(reader, "pre_ecal_pfo_cluster_index");
+  require(reader.Next() && *available == 1 && index.GetSize() == 2 && index[1] == 1 &&
+          count[0] == 1 && count[1] == 0 && energy[0] == 12.5 && energy[1] == -2 &&
+          x[0] == 1 && y[0] == 2 && z[0] == 3 && x[1] == 4 && y[1] == 5 && z[1] == 6,
+          "Pre-ECAL snapshot changed cluster order, hit counts or measurements");
+  require(charge.GetSize() == 2 && charge[0] == -1 && charge[1] == 0 &&
+          trackPfo.GetSize() == 1 && trackPfo[0] == 0 && trackIndex[0] == track.id().index &&
+          clusterPfo.GetSize() == 2 && clusterPfo[0] == 0 && clusterPfo[1] == 1 &&
+          clusterIndex[0] == 0 && clusterIndex[1] == 1,
+          "Pre-ECAL ownership links lost identity or included HCAL");
+  for (int expected : {0, 1}) {
+    require(reader.Next() && *available == expected && index.GetSize() == 0 &&
+            count.GetSize() == 0 && energy.GetSize() == 0 && x.GetSize() == 0 &&
+            y.GetSize() == 0 && z.GetSize() == 0 && charge.GetSize() == 0 &&
+            trackPfo.GetSize() == 0 && trackIndex.GetSize() == 0 &&
+            clusterPfo.GetSize() == 0 && clusterIndex.GetSize() == 0,
+            "Missing/empty pre-ECAL snapshot retained stale values");
+  }
+  auto rejects = [&](const edm4hep::ReconstructedParticleCollection* inputPfos,
+                     const edm4hep::ClusterCollection* inputClusters) {
+    bool rejected = false;
+    try { tuple.assign(tracks, inputPfos, inputClusters); }
+    catch (const std::runtime_error&) { rejected = true; }
+    require(rejected, "Incomplete snapshot or invalid ownership link accepted");
+  };
+  rejects(nullptr, &clusters); rejects(&pfos, nullptr);
+  edm4hep::ReconstructedParticleCollection badTrackPfos, badClusterPfos;
+  badTrackPfos.create().addToTracks(otherTracks.create());
+  rejects(&badTrackPfos, &clusters);
+  badClusterPfos.create().addToClusters(edm4hep::Cluster(nullptr));
+  rejects(&badClusterPfos, &clusters);
+  edm4hep::ReconstructedParticleCollection unavailableTrackPfos, outOfRangePfos;
+  unavailableTrackPfos.create().addToTracks(edm4hep::Track(nullptr));
+  rejects(&unavailableTrackPfos, &clusters);
+  otherTracks.setID(tracks.getID());
+  outOfRangePfos.create().addToTracks(otherTracks.create());
+  rejects(&outOfRangePfos, &clusters);
+}
 }
 
 int main() {
+  checkPreEcalTuple();
   edm4hep::TrackCollection tracks;
   edm4hep::MCParticleCollection particles;
   edm4hep::SimTrackerHitCollection hits;

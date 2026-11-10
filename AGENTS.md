@@ -328,62 +328,33 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FSR CHARGED/NEUTRAL ECAL MEMBERSHIP SURVEY COMPLETE (2026-11-10).**
-The user asked how many generator FSR photons enter the track-matched charged
-cluster versus a separate neutral cluster. Read-only-input analysis covers1000
-normal ISR/FSR REC events: jobs1,11,...,191, first50 each from the current TPC-fix
-REC campaign. No BP/GSF fit-success selection. There are1979 selected reconstructed
-production-electron tracks and1800 generator-tagged FSR photons.
+**BP PRE-RECLUSTERING ECAL SNAPSHOT IMPLEMENTED AND INSTALLED (2026-11-11).**
+New BP flat files save the same 12 `pre_ecal_*` branches as GSF in the
+once-per-selected-event `neutral_pfos` tree; join tracks by `event_index`.
+They include complete pre-cluster energy/xyz, indices/hit counts, PFO charges
+and PFO-to-CompleteTracks/ECAL links for charged/neutral ownership. No hit
+payload duplication, truth shower matching, new property or fit steering.
+The default PreReclustering card already loads the required collections;
+legacy FinalPFO cards that omit them record availability0. Partial snapshots
+or invalid links fail explicitly, matching GSF.
 
-Attribution uses saved generator-origin status1, recorded MC descendants
-(including conversions) and existing PFA MC contribution weights. No angular
-matching defines FSR or shower membership. A temporary analysis card replays
-unchanged PFA only through TrackClusterConnectingAlg with its built-in WriteAna,
-then matches exact original pre-cluster energy/xyz, complete hit multisets and
-PFO track-index/charge ownership, allowing collection permutations.928/1000
-events pass;72 events/131 photons remain unresolved, including33 photons>=1GeV.
-Their replay clusters are never substituted for the originals. The cause of
-remaining differences is unestablished; no older PFA/tracking code is changed.
+The tuple regression test passes. Same-input native old/new reruns on REC
+job11 entries0,11,16,17 (eight selected electrons, verbose dumps) preserve all
+917 old branches over151 track rows and114 old branches over4 event rows
+exactly. All12 new fields/types match GSF; values match REC exactly for
+248 clusters/248 PFO-ECAL links. Only the RecBreakpoint package is installed;
+its module matches the tested build. Full location scanning was disabled in
+both bounded reruns; no full-scan/population validation claim. Existing
+production tuples need regeneration; no new batch submission or rerun.
+Schema, commands/evidence and limits:
+[the BP snapshot record](agents_record/2026-11-11-bp-pre-ecal-tuple.md).
 
-| Photon outcome (overlapping) | All1800 | Eγ>=1GeV:420 |
-| --- | ---: | ---: |
-| Own-electron charged cluster | 782 | 299 |
-| Any trackless neutral cluster | 472 | 303 |
-| Both charged and neutral | 333 | 224 |
-| FSR-dominated neutral (>50% MC content) | 240 | 206 |
-| Both charged and FSR-dominated neutral | 143 | 135 |
-| Unresolved | 131 | 33 |
-
-Counts concern usable finite positive-energy nonempty pre-reclustering clusters,
-as required by BP measurements.240 photons yield276 distinct FSR-dominated
-neutral clusters (206/242 for>=1GeV); fragmentation makes counts many-to-many.
-All-photon exclusive classes:449 own-charged/no-neutral,139 neutral/no-own-charge,
-333 both,22 only-other-charged,723 no usable signal,3 only-invalid-cluster,
-131 unresolved. MC-attributed reconstructed-response proxy is26.9% own charged,
-68.3% neutral,4.8% other charged; it is not raw deposited or true photon energy.
-The nominal BP neutral window includes contributions from283 photons(175>=1GeV),
-not proof that neutral was applied in a successful110 fit.
-
-Full definitions, source/replay limits, thresholds and parent-loss split:
-[the FSR membership record](agents_record/2026-11-10-fsr-cluster-membership.md).
-Artifacts: TrackingPerformanceStudies/fsr_cluster_membership_20261110/,
-README.md, summary.json, photons.csv, photon_cluster_links.csv, validation.json,
-runtime-sha256.json and per-event/per-job gates. Photon/ancestry energy closure,
-unique keys, source identities, response/category sums and matching edge cases
-pass. Initial raw-row gate failures remain preserved; accepted assignments use
-the corrected physical-object check. Native diagnostic artifacts total~578MB.
-No simulation, tracking/PFA/fitter implementation, original card, installed
-library, source data, branch or batch submission changes. Further recorder or
-FSR-fit development still needs agreement; this task is investigation only.
-
-The existing eight recoil/pT plots remain on ailogin002 localhost8000(PID384311).
-All recoil views use120--130GeV,0.25GeV bins. Inclusive plots compare Baseline KF,
-truth-location BP100 and GSF BestBranch; isolated no-FSR/eBrem plots also include
-truth-location BP110, with ECAL only for110. Both BP loss amounts remain fitted.
-Details and all prior coverage/results:
+The FSR charged/neutral membership survey remains complete with its replay
+limits preserved in
+[the FSR record](agents_record/2026-11-10-fsr-cluster-membership.md).
+Existing eight recoil/pT comparison plots and all plot settings are retained:
 [the comparison record](agents_record/2026-11-10-matched-gsf-bp-overlays.md).
-Matched GSF campaign198x50 completed;32/36 were killed at30minutes, no retries.
-Per-track writer fix404a498 and TPC fix872d760 remain installed; no runtime changes
-here. BH model, floating beam-spot FSR loss and Hive remain deferred. Preserve
-breakpoint-delayed-neutral and all workspaces. Complete outgoing focus:
-[the preserved snapshot](agents_record/2026-11-10-agents-before-fsr-cluster-membership.md).
+Preserve breakpoint-delayed-neutral and all workspaces. BH-model, floating
+beam-spot FSR loss and Hive development remain deferred. Complete outgoing
+status is preserved in
+[the snapshot](agents_record/2026-11-11-agents-before-bp-pre-ecal-tuple.md).

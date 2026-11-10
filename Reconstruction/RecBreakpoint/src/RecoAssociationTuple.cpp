@@ -8,6 +8,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <stdexcept>
 
 namespace breakpoint {
 namespace {
@@ -25,6 +26,61 @@ std::set<edm4hep::Cluster> ecalObjects(const edm4hep::ClusterCollection& cluster
   return result;
 }
 } // namespace
+
+void PreEcalTuple::book(TTree& tree) {
+  tree.Branch("pre_ecal_available", &m_available);
+  tree.Branch("pre_ecal_cluster_index", &m_clusterIndex);
+  tree.Branch("pre_ecal_cluster_hit_count", &m_clusterHitCount);
+  tree.Branch("pre_ecal_cluster_energy", &m_energy);
+  tree.Branch("pre_ecal_cluster_x", &m_x);
+  tree.Branch("pre_ecal_cluster_y", &m_y);
+  tree.Branch("pre_ecal_cluster_z", &m_z);
+  tree.Branch("pre_ecal_pfo_charge", &m_pfoCharge);
+  tree.Branch("pre_ecal_pfo_track_pfo_index", &m_trackPfoIndex);
+  tree.Branch("pre_ecal_pfo_track_input_index", &m_trackInputIndex);
+  tree.Branch("pre_ecal_pfo_cluster_pfo_index", &m_clusterPfoIndex);
+  tree.Branch("pre_ecal_pfo_cluster_index", &m_pfoClusterIndex);
+}
+
+void PreEcalTuple::assign(const edm4hep::TrackCollection& tracks,
+                          const edm4hep::ReconstructedParticleCollection* pfos,
+                          const edm4hep::ClusterCollection* clusters) {
+  m_available = 0;
+  m_clusterIndex.clear(); m_clusterHitCount.clear();
+  m_energy.clear(); m_x.clear(); m_y.clear(); m_z.clear(); m_pfoCharge.clear();
+  m_trackPfoIndex.clear(); m_trackInputIndex.clear();
+  m_clusterPfoIndex.clear(); m_pfoClusterIndex.clear();
+  if (bool(pfos) != bool(clusters))
+    throw std::runtime_error("Incomplete pre-reclustering ECAL/PFO snapshot");
+  if (!clusters) return;
+  m_available = 1;
+  for (const auto& cluster : *clusters) {
+    const auto position = cluster.getPosition();
+    m_clusterIndex.push_back(cluster.id().index);
+    m_clusterHitCount.push_back(cluster.hits_size());
+    m_energy.push_back(cluster.getEnergy());
+    m_x.push_back(position.x); m_y.push_back(position.y); m_z.push_back(position.z);
+  }
+  for (const auto& pfo : *pfos) {
+    m_pfoCharge.push_back(pfo.getCharge());
+    for (const auto& track : pfo.getTracks()) {
+      if (!track.isAvailable() || track.id().collectionID != tracks.getID() ||
+          track.id().index < 0 || size_t(track.id().index) >= tracks.size())
+        throw std::runtime_error("Pre-reclustering PFO has an invalid CompleteTracks link");
+      m_trackPfoIndex.push_back(pfo.id().index);
+      m_trackInputIndex.push_back(track.id().index);
+    }
+    for (const auto& cluster : pfo.getClusters()) {
+      if (!cluster.isAvailable())
+        throw std::runtime_error("Pre-reclustering PFO has an unavailable cluster link");
+      if (cluster.id().collectionID != clusters->getID()) continue;
+      if (cluster.id().index < 0 || size_t(cluster.id().index) >= clusters->size())
+        throw std::runtime_error("Pre-reclustering PFO has an invalid ECAL cluster link");
+      m_clusterPfoIndex.push_back(pfo.id().index);
+      m_pfoClusterIndex.push_back(cluster.id().index);
+    }
+  }
+}
 
 void TrackRecoTuple::book(TTree& tree) {
   tree.Branch("truth_pt", &m_truthPt);

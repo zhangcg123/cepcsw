@@ -152,6 +152,7 @@ private:
   int m_electronTrackSelected = 0; // 0 disabled, 1 selected, -1 skipped
   double m_kfPt = 0, m_kfPtError = 0, m_fitPt = 0, m_fitPtError = 0, m_fitChi2 = 0;
   breakpoint::TrackRecoTuple m_trackRecoTuple;
+  breakpoint::PreEcalTuple m_preEcalTuple;
   breakpoint::NeutralPfoTuple m_neutralPfoTuple, m_fsrPfoTuple;
   int m_fsrTruthAvailable=0;
   double m_referencePt = 0, m_referencePtError = 0;

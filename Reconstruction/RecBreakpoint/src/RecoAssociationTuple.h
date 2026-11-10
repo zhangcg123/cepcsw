@@ -5,6 +5,7 @@
 #include "edm4hep/MCRecoTrackParticleAssociationCollection.h"
 #include "edm4hep/ReconstructedParticleCollection.h"
 #include "edm4hep/Track.h"
+#include "edm4hep/TrackCollection.h"
 #include "GsfTruthEventData/G4BremsPhotonCollection.h"
 #include "GsfTruthEventData/G4BremsPhotonStepCollection.h"
 #include "GsfTruthEventData/G4MaterialStepCollection.h"
@@ -18,6 +19,21 @@
 class TTree;
 
 namespace breakpoint {
+
+// The same event-level pre-reclustering snapshot schema as RecGsfFlatTuple.
+class PreEcalTuple {
+public:
+  void book(TTree& tree);
+  void assign(const edm4hep::TrackCollection& tracks,
+              const edm4hep::ReconstructedParticleCollection* pfos,
+              const edm4hep::ClusterCollection* clusters);
+
+private:
+  int m_available = 0;
+  std::vector<int> m_clusterIndex, m_clusterHitCount;
+  std::vector<double> m_energy, m_x, m_y, m_z, m_pfoCharge;
+  std::vector<int> m_trackPfoIndex, m_trackInputIndex, m_clusterPfoIndex, m_pfoClusterIndex;
+};
 
 // One record per CompleteTracks row. Association weights are matched-hit
 // counts, not probabilities; truth_pt is never filled from the event gun.

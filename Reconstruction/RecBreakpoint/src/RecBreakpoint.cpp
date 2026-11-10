@@ -272,6 +272,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree = new TTree("breakpoint", "Selected-interval breakpoint KF diagnostics");
   m_neutralTree = new TTree("neutral_pfos", "Neutral CyberPFOPID and ECAL clusters, once per selected event");
   m_neutralPfoTuple.book(*m_neutralTree);
+  m_preEcalTuple.book(*m_neutralTree);
   m_fsrPfoTuple.book(*m_neutralTree,"fsr_photon_",false);
   m_neutralTree->Branch("fsr_truth_available",&m_fsrTruthAvailable);
   for (auto* tree : {m_tree, m_neutralTree}) {
@@ -559,16 +560,26 @@ StatusCode RecBreakpoint::execute() {
   const auto* ecalClusters = selected ? m_ecalClusters.get() : nullptr;
   const auto* constraintPfos = pidPfos;
   const auto* constraintClusters = ecalClusters;
-  if (selected && m_recordEcalConstraintInput == "PreReclustering") {
+  const edm4hep::ReconstructedParticleCollection* prePfos = nullptr;
+  const edm4hep::ClusterCollection* preClusters = nullptr;
+  if (selected) {
+    try { prePfos = m_prePfos.get(); } catch (const std::exception&) {}
+    try { preClusters = m_preEcalClusters.get(); } catch (const std::exception&) {}
     try {
-      constraintPfos = m_prePfos.get();
-      constraintClusters = m_preEcalClusters.get();
+      m_preEcalTuple.assign(*tracks, prePfos, preClusters);
     } catch (const std::exception& exception) {
-      error() << "PreReclustering input unavailable: regenerate rec files with the PFA snapshot exporter"
-              << " or explicitly select EcalConstraintInput=FinalPFO. " << exception.what() << endmsg;
+      error() << exception.what() << endmsg;
       return StatusCode::FAILURE;
     }
-    if (!constraintPfos || !constraintClusters) return StatusCode::FAILURE;
+  }
+  if (selected && m_recordEcalConstraintInput == "PreReclustering") {
+    constraintPfos = prePfos;
+    constraintClusters = preClusters;
+    if (!constraintPfos || !constraintClusters) {
+      error() << "PreReclustering input unavailable: regenerate rec files with the PFA snapshot exporter"
+              << " or explicitly select EcalConstraintInput=FinalPFO." << endmsg;
+      return StatusCode::FAILURE;
+    }
   }
   const auto* chargedClusters = selected && m_chargedEcalMeasurement
       ? (m_recordChargedEcalInput == m_recordEcalConstraintClusters

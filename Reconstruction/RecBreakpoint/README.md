@@ -1277,7 +1277,29 @@ row per processed event**, including an empty row when no neutral PFO exists.
 Its `event_index` joins to the per-track `breakpoint` TTree; neutral PFO
 index/PDG/energy and ECAL-cluster PFO/cluster indices, energies, and x/y/z
 positions are stored once for the event, not repeated for every charged track.
-These fields describe CyberPFO reconstruction ownership, not a neutral-cluster
+The event row also contains the same passive pre-reclustering ECAL snapshot
+schema as `RecGsfFlatTuple`:
+
+| Branches | Meaning |
+| --- | --- |
+| `pre_ecal_available` | 1 when both pre-PFO and pre-ECAL collections are loaded; 0 with empty vectors when both are absent |
+| `pre_ecal_cluster_index`, `pre_ecal_cluster_hit_count` | Original ECAL cluster index and reconstructed constituent-hit count |
+| `pre_ecal_cluster_energy`, `pre_ecal_cluster_x/y/z` | Original pre-reclustering energy (GeV) and position (mm), in collection order |
+| `pre_ecal_pfo_charge` | Charge indexed by original `CyberPFOPreReclustering` PFO index |
+| `pre_ecal_pfo_track_pfo_index`, `pre_ecal_pfo_track_input_index` | Parallel PFO-to-`CompleteTracks` link vectors |
+| `pre_ecal_pfo_cluster_pfo_index`, `pre_ecal_pfo_cluster_index` | Parallel PFO-to-pre-ECAL-cluster link vectors; HCAL links are excluded |
+
+Join this snapshot to `breakpoint` rows using `event_index`. PFO charge and
+track links identify charged and trackless neutral ownership; the arrays include
+all pre-ECAL clusters, including those unrelated to the selected electrons.
+Individual calorimeter hits are not duplicated. The default `PreReclustering`
+card loads both snapshots and their relation targets. Legacy `FinalPFO` cards
+may omit them and then record availability 0. A partial snapshot or an invalid
+PFO track/ECAL link fails explicitly, as in the GSF exporter. These fields are
+passive and do not change the ECAL observations or fits. Existing flat files
+do not acquire these branches; they require regeneration.
+
+The existing final-PFO fields describe CyberPFO reconstruction ownership, not a neutral-cluster
 truth match. The same event row also stores one entry per recorded primary-
 electron eBrem photon in parallel `ebrem_photon_*` arrays. The photon index,
 Geant4 track ID, parent track ID, and parent step number identify its origin;
