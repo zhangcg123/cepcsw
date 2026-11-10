@@ -368,6 +368,12 @@ The multi-track writer fix404a498 remains installed; its schema/hashes are in
 [the fix record](agents_record/2026-11-10-gsf-per-track-endpoints.md).
 Old GSF files still lack the other track's direction. No matched GSF-versus-BP
 performance claim is made before the new tuples are compared on identical tracks.
+For the future matched comparison the user selected BP setup100: tracker plus
+beam spot, ECAL off, matching the current GSF external constraints/beam widths.
+Use fit-selected100 scan locations, no truth-location steering or calorimeter
+fallback, common valid tracks, and separate failure coverage. Current BP files
+have110 scans only; their beam-only endpoint family is at truth-selected sites,
+so it cannot substitute for a blind100 scan. A BP-only rerun is needed.
 
 TPC provenance fix872d760 and separate merged-hit/seed failures are unchanged.
 BH, floating beam-spot FSR loss and Hive stay deferred. Keep

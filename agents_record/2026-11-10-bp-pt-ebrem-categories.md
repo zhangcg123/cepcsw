@@ -59,3 +59,18 @@ The core PNG returns200 image/png. The main agent reviewed the manifest's
 threshold/population/method definitions and figure layouts. Old plots and
 analysis artifacts remain archived outside the served root. URL remains
 http://127.0.0.1:8000/ on the same host/forwarding setup.
+
+## Future GSF comparison: setup100
+
+The user selected100 as the fair basis for the future GSF comparison. Current
+GSF has beam constraint on and ECAL constraint off. BP and GSF beam centers
+and widths agree:0,0 mm and0.0145,3.6e-5 mm. Main comparison should therefore
+use tracker+beam100 without calorimeter fallback, location selected using100
+fit quality rather than truth or110-calorimeter-ranked locations, on identical
+valid tracks with failures reported separately. The current BP campaign has
+LocationScanSetups=[110] and IntervalSelectionMode=Truth; a native job4 check
+confirms only110 entries and the existing beam_spot_free_loss_rts_* endpoint
+is at the truth-selected location. It is an oracle-location control, not the
+blind100 result. New100 location scans require rerunning only BP from the same
+REC events. The already-running matched GSF settings need no change. No source,
+card, job, current plot or installed library is changed for this decision.
