@@ -212,3 +212,30 @@ hashmatch, other12PNGs unchanged. Same ailogin002 PID2122174 localhost8000,
 no restart. Main independently reviewed copied source hash, category coverage
 and manifest definitions. Prior served plot and sectionJSON archived under
 before_tagged_collection_bars/gallery/. Artifact: tagged_collection_bars_gallery_verification.json.
+
+## Follow-up: merged black Others; neutral energy per selected track
+
+User requested merge Other origin+Unknown as black Others, clarify charged
+cluster exclusion in y-axis, and evaluate bars per track. Charged clusters
+are NOT included: existing trackless neutral pre-PFO cluster selection kept.
+Four display components nowFSR,eBrem,other electron descendants,Others.
+All raw five-category energy sums/counts unchanged; merged energy closes.
+
+Common denominator198430selected electron tracks for all3bars, including zero
+collection; cached100000width10event rows independently sumselected_tracks
+andtracks_with_calo to198430, matching audit. It is total unique event-union
+neutral energy divided by all selected tracks, not a category-conditioned
+track average. Positive-contribution cluster tags still overlap. Y-axis now
+Mean collected neutral energy per track [GeV]. TotalsFSR-tagged1.6819947344648525,
+eBrem-tagged2.7056449169527754,Inclusive3.2064092136989797GeV/track; mergedOthers
+0.0042889504272453855/0.008731486933902223/0.015714916818778138GeV/track.
+No REC/PFA/fit rerun. Source tagged_collection_bars.json records raw+display
+energies and denominator. Prior files preserved in before_per_track_others_bars/.
+Independent denominator, oldrawenergies/counts, merger closure, black RGBA and
+four-component stacks, plot hashes pass; layout viewed. Other source plots
+unchanged. Delegated gallery verification:13PNGs/6sections/exact-once, page and
+replacementPNGHTTP200/sourcehashmatch, other12PNGs unchanged. Same ailogin002
+PID2122174 localhost8000, no restart. Main independently reviewed copied PNG
+hash, category coverage and section normalization/neutral-only definitions.
+Prior served bar and sectionJSON archived in before_per_track_others_bars/gallery/.
+Artifact: per_track_others_gallery_verification.json in source-study directory.

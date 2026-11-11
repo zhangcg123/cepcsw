@@ -364,9 +364,11 @@ Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/
 and reco_neutral_ecal_centered_5k_20261112/. Native fractions/windows match cache;
 same source identities, keys, cap, axis/wrap and PNG/PDF hashes checked.
 100k-event neutral-energy section shows three current10/200mrad stacks in order
-FSR-tagged,eBrem-tagged,Inclusive; unknown BLACK(zero here), other colors kept.
-Positive-contribution tagged samples overlap; all bars use100000input events.
-Inclusive remains6.36248GeV/input event. Middle spectrum removed; per-event plot kept.
+FSR-tagged,eBrem-tagged,Inclusive; Other origin+Unknown merged as BLACK Others.
+Neutral trackless clusters ONLY. Common denominator198430selected electron
+tracks(including zero collection), independently checked from event rows.
+Tagged samples overlap. Inclusive3.20641GeV/track. Middle spectrum removed;
+separate per-event distribution kept.
 Gallery verified:13PNGs/6sections, every PNG categorized once. Energy-bar PNG
 and page HTTP200, source hash matches; remaining12images unchanged. Same localhost8000 directory, ailogin002 PID2122174,
 no restart. Main reviewed manifest coverage and source/copied hashes.
