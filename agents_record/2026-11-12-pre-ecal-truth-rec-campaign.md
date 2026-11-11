@@ -96,3 +96,20 @@ Backups and before/after hashes are in the campaign installation_backup/ and
 default-installation.json. The earlier no-install statements above describe
 preparation before this later explicit request. Normal setup.sh now selects
 the new exporter; the prepared campaign still pins its identical local copy.
+
+## Existing1000-event mismatch inspection
+
+Read-only examination of saved inputs/snapshots (no reconstruction rerun):
+70 of71 excluded events have different full cluster constituent-hit multisets;
+11 of those also change the number of clusters. The remaining event,
+seed22/event161, has identical cluster keys and hit contents but a different
+track assignment. The CSV reasons are70 cluster_energy_or_position_differs
+and1 cluster_track_assignment_differs; not all71 are scalar-energy failures.
+Example seed1/event8: original33clusters, replay32; three affected clusters
+(E=1.52695,1.42207,0.173259GeV) become two (1.65577,1.45403GeV).
+Collection-index permutation alone cannot explain these differences.
+Analysis: photon_ecal_fresh_1k_20261111/inspect_mismatches.py and
+mismatch_details.json under TrackingPerformanceStudies. The exact source-level
+cause has NOT been established. Separate old/old replay variation supports
+existing PFA reproducibility concerns, not a proven explanation of every case.
+No original PFA code changed or additional native test run for this inspection.
