@@ -331,10 +331,17 @@ manifest as an uncommitted analysis artifact.
 **SINGLE MUON/ELECTRON BASELINE KF RECOIL AT 10 ab^-1 (2026-11-11).**
 The user requested clearing all displayed plots and showing one inclusive
 recoil figure,120--130GeV/0.1GeV bins, only bare muon and electron Baseline
-KF. The graph has axis labels, a two-curve legend and10ab^-1 at the top-left;
+KF. The graph has axis labels, a short legend and10ab^-1 at the top-left;
 no title, long annotation, neutral addition, BP or GSF curve. Canvas is square
 with faint grid lines(alpha0.2) and zero outer layout padding. Muon is solid
-black; electron is gray filled.
+black; electron is gray filled. Axis tick/label fonts are14pt. Dashed DSCB
+peak fits use the same123.5--128GeV range and raw-count bin-integrated
+likelihood, reusing the existing ROOT fitter. Both fits have status0/cov3,
+consistent three-start minima and no boundary parameters. Core sigma is
+0.27266+/-0.00361GeV muon and0.29941+/-0.00644GeV electron; this is not
+full-spectrum or pure tracking resolution. Fit details and latest plot
+hashes are in the study's dscb_fit_summary.json; source summary.json retains
+pre-fit provenance. No fit-range systematic study was performed.
 
 Electron now uses all498 completed source files/99,600 generated inputs,
 with97,910 valid opposite-charge Baseline KF pairs and no GSF/BPfit-success
@@ -354,7 +361,7 @@ sample details/QA are in
 The served gallery on localhost8000 now contains only this figure. Previous
 32 displayed PNGs and matching PDFs/manifest are archived outside the served
 directory with hash verification; source study files and analysis caches
-remain preserved. No fit, ROOT read, library, card or job-state change.
+remain preserved. No tracking refit, event ROOT read, library, card or job-state change.
 All preceding truth photon maps, BP110/GSF comparisons and neutral-recovery
 definitions remain in dated records. BP110 may include the charged+neutral
 sum already; do not blindly add those neutrals again to its fitted endpoint.

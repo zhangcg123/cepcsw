@@ -81,3 +81,45 @@ and expected yields are unchanged. Parent visually inspected the final plot.
 Final PNG SHA256:
 `ba7432622fe14457a0824bd0e8dfb1bb91020f92cea06eadd1545028d6ec350b`;
 PDF`3a67c7b216a7316509017f2b060d98f4a88ed7daf27ea6e9b0fe877d7a1eb3fb`.
+
+## DSCB fits and larger tick labels
+
+User requested larger tick labels and fitting both peaks with DSCB. New
+fit_dscb.py reuses the unchanged existing ROOT RooCrystalBall helper in
+higgs_muon_recoil_reference_20261102/fit_crystal_ball.py. Both channels use
+one Gaussian core sigma and independent tails, a123.5--128GeV fit window,
+raw-count bin-integrated likelihood, three starts and Minuit2/migrad strategy2.
+Every trial has status0/covariance quality3 with consistent minima; no fitted
+parameter is near a configured bound. No new dependency or parallel DSCB
+implementation is introduced. Model definition:
+https://root.cern.ch/doc/master/classRooCrystalBall.html .
+
+Muon mean125.07425+/-0.00318GeV, sigma0.27266+/-0.00361GeV,
+Poisson deviance47.472/38ndf. Electron mean125.17035+/-0.00793GeV,
+sigma0.29941+/-0.00644GeV, deviance45.134/38ndf. Errors are MC statistical.
+Right-tail powers0.964muon/0.641electron are allowed by finite-range
+normalization; there is no whole-line extrapolation. Core sigma is not a
+full-spectrum RMS/sigma68 or pure detector resolution. Fit-range/systematic
+variations have not been evaluated.
+
+Underlying100 histogram bins, source caches, generated-input weights and
+yields are unchanged. Each fit's integral over the fit window equals the
+raw fit-window count times that channel's fixed10ab^-1 weight. Curves use
+the0.1GeV bin width to overlay expected events/bin. Helper checks exact
+bin-integral/yield closure. New curve CSV, summary and fit log preserve all
+parameters, covariance matrices and trial diagnostics; dscb_fit_summary.json
+is authoritative for current plot hashes while source summary.json remains
+unchanged as pre-fit provenance.
+
+Ticks and axis labels are14pt. Existing square1260canvas, top-left luminosity,
+black solid muon reference, gray-filled electron, alpha0.2grid and zero outer
+padding are preserved. Dashed red/blue curves show muon/electron fits; the
+four-entry legend has no numerical/long annotations. Parent inspected layout.
+Final PNG`45efbe4d03d041f07943ba8ed9b27ec64d86a201102a91919a497e193a588e9f`;
+PDF`17117ad802ac686dab4ff51500a674e867c5dff9130da946990671884b00c928`.
+
+Independent numeric integration of the700-point plotted curves reproduces
+the fit-window expected yields within1.3e-7relative (tolerance2e-5); both
+saved covariance matrices have positive eigenvalues. All input histogram,
+source-summary and maintained-fitter hashes remain unchanged; output PNG
+dimensions remain1260x1260. No fit-range or binning-variation claim is made.
