@@ -81,3 +81,18 @@ Outgoing complete AGENTS is preserved in
 `2026-11-12-agents-before-ecal-truth-rec.md`; only Current focus is replaced,
 and the explicit passive-export scope exception is added. Other laws remain.
 No history directory was moved; no manifest migration required.
+
+## Subsequent default-installation refresh
+
+User explicitly requested making the verified development the default install,
+with no tests. Promoted the already verified campaign libCrystalCaloRec.so to
+InstallArea/x86_64-el9-gcc11-opt/lib and the reference build/lib output, using
+atomic replacement. Synchronized the two modified installed headers,
+CyberPFAlg.h and Tools/OutputCreator.h. Unchanged support-library checksums
+match the campaign copies. The default library now has the campaign SHA256
+00929285cba2e516494f3f92922bcd7236837b391b9de774c85ad9976ddd7296.
+No rebuild, test, event processing or submission performed for this refresh.
+Backups and before/after hashes are in the campaign installation_backup/ and
+default-installation.json. The earlier no-install statements above describe
+preparation before this later explicit request. Normal setup.sh now selects
+the new exporter; the prepared campaign still pins its identical local copy.

@@ -340,7 +340,11 @@ simulation, digitization, tracking, GSF or BP stage runs. External input REC
 files are retained. Output and frozen cards/local libraries live under
 `higgs_eeHX_ISRFSRON_REC_ECALTRUTH_500jobs_200evt_20261112/`.
 
-Campaign-local library only; no shared install. Request4000MB, walltime short.
+The verified library is now also the default InstallArea library (user requested
+2026-11-12); build-library output and two installed headers are synchronized.
+Rollback copies and hashes are recorded in the campaign installation_backup/
+and default-installation.json. No tests or jobs run for this refresh.
+Campaign-local runtime remains pinned. Request4000MB, walltime short.
 Prepared and ready, NOT SUBMITTED. On the usual batch login node run:
 
 ```bash
@@ -354,6 +358,6 @@ collection order. One pre-PFO HCAL assignment differs; an independent old/old
 repeat also changes PFA output, so replay is not bitwise deterministic.
 Do not claim universal exact PFA reproduction. No original PFA algorithm fix.
 The500-job campaign has not run, and local htcondor imports are unavailable.
-Keep current plotting server, datasets and installed runtime unchanged.
+Keep current plotting server and datasets unchanged.
 Details and scope: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
 Outgoing fresh1000-event study: [snapshot](agents_record/2026-11-12-agents-before-ecal-truth-rec.md).
