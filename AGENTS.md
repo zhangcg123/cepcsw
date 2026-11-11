@@ -328,61 +328,42 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PRESERVED KF-ONLY AND KF+GSF RECOIL PLOTS AT 10 ab^-1 (2026-11-11).**
-The user requested clearing all displayed plots and showing one inclusive
-recoil figure,120--130GeV/0.1GeV bins, only bare muon and electron Baseline
-KF. The graph has axis labels, a short legend and10ab^-1 at the top-left;
-no title, long annotation, neutral addition or BP curve. An orange bare
-electron GSF BestBranch comparison is now a separate second plot: preserve
-both rather than replacing the first. The original
-recoil_muon_electron_baseline_kf_10ab filename/link is KF-only; the second
-is recoil_muon_electron_baseline_kf_gsf_10ab. Both have bold16pt
-"AGORA full simulation" outside the axes above the upper-left frame;
-10ab^-1 stays inside at the top-left. Canvas is square
-with faint grid lines(alpha0.2) and zero outer layout padding. Muon is solid
-black; electron is gray filled. Axis fonts are18pt,ticks16pt,legend14pt,
-luminosity16pt. The legend has the two Baseline KF entries plus electron GSF,
-without fit entries. Compact14pt
-notes show core sigma and expected120--130GeV yields (49,987muon/30,133electron).
-Dashed DSCB
-peak fits use the same123.5--128GeV range and raw-count bin-integrated
-likelihood, reusing the existing ROOT fitter. Both fits have status0/cov3,
-consistent three-start minima and no boundary parameters. Core sigma is
-0.27266+/-0.00361GeV muon and0.29941+/-0.00644GeV electron KF. Bare GSF
-has sigma0.34136+/-0.00846GeV, fit status0/cov3 and no boundary parameters.
-GSF has85,327 valid cached pairs in496matched files,45,919 in the window,
-753 undefined masses. It uses the SAME99,600-generated electron denominator
-and weight0.7068273092369478; expected window yield32,456.803(display32,457),
-without successful-file/fit renormalization. All GSF event keys are a subset
-of the unchanged electron KF pool. These widths are not
-full-spectrum or pure tracking resolution. Fit details and latest plot
-hashes are in the study's dscb_fit_summary.json; source summary.json retains
-pre-fit provenance. No fit-range systematic study was performed.
+**KF/GSF RECOIL SPLIT BY MATERIAL eBREM AT 1% (2026-11-11).**
+Two new electron-only plots isolate no+light material eBrem (BOTH electrons
+below1%, includingzero) and hard eBrem (AT LEAST ONE electron>=1%). They
+share85,327 both-leg-valid KF/GSF event keys, split24,647/60,680. FSR is
+retained, no BP-success gate or neutral recovery. The original KF-only and
+KF+GSF inclusive plots remain byte-identical and available separately.
 
-Electron now uses all498 completed source files/99,600 generated inputs,
-with97,910 valid opposite-charge Baseline KF pairs and no GSF/BPfit-success
-or FSR/eBrem gate. Weight10000*7.04/99600=0.7068273092369478. Muon retains
-48,636 cached pairs from50,000 generated inputs, weight1.354. Denominators
-are all generated inputs before any selection, never window counts. Raw
-window counts are42,631 electron and36,918 muon; expected30,132.755 and
-49,986.972. Undefined masses29/11 remain outside the plot but in denominators.
+All new curves use generated-input weight10000*7.04/99600=0.7068273092369478,
+never category/window or successful-fit renormalization. Recoil120--130GeV,
+0.1GeV bins. Matching removes the different KF/GSF-success pools as a shape
+comparison confound; these diagnostic KF curves use the common GSF-valid
+pool, while the original inclusive KF retains97,910 pairs.
 
-Muon has forced invisible Higgs decays; electron is inclusive eeHX. The muon
-curve is an inclusive-production tracking reference with Higgs factor1, not
-an inclusive-decay efficiency prediction or physical SM invisible rate.
-Original muon REC files remain missing. Reference cross sections and all
-sample details/QA are in
-[the recoil gallery record](agents_record/2026-11-11-kf-only-recoil-gallery.md).
+No+light expected window yields are11,586KF/11,487GSF; core DSCB sigma
+0.290+/-0.007/0.300+/-0.007GeV. Hard yields16,393KF/20,969GSF (+27.92%);
+core sigma0.317+/-0.016/0.422+/-0.026GeV. The gain is recovery into the
+window while the fitted core broadens:6,922 hard events move from KF>130GeV
+into the GSF120--130GeV window; net raw-window gain6,475. Sigma alone is
+not the full recoil performance or pure detector resolution. No+light GSF
+DSCB shape is imperfect (Poisson deviance75.49/38ndf); fit-range/model
+systematics are not evaluated. Same123.5--128GeV fit range; all12 trial
+starts have status0/covariance quality3 and no boundary parameter.
 
-The served gallery on localhost8000 now contains these two figures, KF-only
-first and KF+GSF second. Both share exactly the same KF histograms/fits. Previous
-32 displayed PNGs and matching PDFs/manifest are archived outside the served
-directory with hash verification; source study files and analysis caches
-remain preserved. No tracking refit, event ROOT read, library, card or job-state change.
-All preceding truth photon maps, BP110/GSF comparisons and neutral-recovery
-definitions remain in dated records. BP110 may include the charged+neutral
-sum already; do not blindly add those neutrals again to its fitted endpoint.
+Both new plots retain square canvas, large fonts, faint grid, AGORA bold
+outside the axes and10ab^-1 inside. Category and sigma/yield labels appear
+left of the peak. Gallery localhost8000 has four PNGs across two sections:
+the category plots first, then preserved KF-only and KF+GSF inclusive plots.
+Source caches and four original inclusive PNG/PDFs are unchanged. No event
+ROOT read, tracking refit, card, library or job change. Definitions, exact
+matching, fit checks, transition counts and gallery verification:
+[the eBrem split record](agents_record/2026-11-11-ebrem-split-kf-gsf-recoil.md).
+
+Previous32 plots/66 files remain archived with their hashes. Inclusive
+normalization and muon forced-invisible reference caveats remain in
+[the inclusive record](agents_record/2026-11-11-kf-only-recoil-gallery.md).
 No new recovery window, BH model, beam-spot FSR-loss or Hive development.
 Preserve runtime dependencies, breakpoint-delayed-neutral and workspaces.
-Full outgoing focus is preserved in
-[the snapshot](agents_record/2026-11-11-agents-before-kf-only-gallery.md).
+Full outgoing focus and global laws are preserved in
+[the snapshot](agents_record/2026-11-11-agents-before-ebrem-split-recoil.md).
