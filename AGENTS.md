@@ -360,6 +360,9 @@ independent axis/wrap tests, CSV readback and plot hashes pass; layouts viewed.
 Previous1kFSRmechanism and100kneutral-acceptance plots/results are preserved.
 Both new figures are the first localhost8000 gallery section: 16 PNGs across
 7 sections, ailogin002 PID2122174, no restart. Earlier plots are intact.
+All 16 current gallery plots now use **AGORA simulation**; preserve this label
+in future rerenders. The cosmetic refresh reuses cached data and fit parameters;
+no refit or event processing. [Label record](agents_record/2026-11-12-agora-simulation-plot-label.md).
 Details: [5k truth geometry record](agents_record/2026-11-12-centered-truth-ecal-photons-5k.md).
 FSRmissdiagnosis: [record](agents_record/2026-11-12-missed-fsr-neutral-diagnosis.md).
 Actualneutralacceptance: [record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
