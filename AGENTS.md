@@ -362,11 +362,13 @@ matched inclusive, then low/hard category plots first; preserved KF-only and
 KF+GSF inclusive plots remain in the second section. All eight preceding
 PNG/PDF artifacts remain byte-identical. Matched-inclusive diagnostics are
 in ebrem_inclusive_matched_summary.json in the same study directory.
-A new third plot in section2 adds neutral recovery to BOTH electron KF and
-GSF on the same85,327events; muon KF stays bare. Existing10/200mrad window,
+A new third plot in section2 adds neutral recovery ONLY to electron GSF;
+both KF baselines remain exactly unchanged, including97,910electron and
+48,636muon pairs. GSF+neutrals uses85,327valid pairs. Existing10/200mrad window,
 massless neutral four-vector union, same electron weight/gen99600. Expected
-window yields34,517KF+neutrals/36,649GSF+neutrals/49,987muon; DSCB core
-sigma0.322/0.358/0.273GeV. There are29,335events with37,497neutral clusters.
+window yields30,133bareKF/36,649GSF+neutrals/49,987muon; DSCB core
+sigma0.299/0.358/0.273GeV. Every raw/weighted bin of both KF baselines is
+verified identical to the original. There are29,335events with37,497neutral clusters.
 All9fit starts pass0/cov3; no boundary parameter. Blind GSF addition can
 double count material recovery; muon forced-invisible reference caveat
 remains. New diagnostics:neutral_recovery_fit_summary.json. Gallery now

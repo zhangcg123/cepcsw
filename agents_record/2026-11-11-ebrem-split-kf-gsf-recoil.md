@@ -144,3 +144,31 @@ and prior plot/source hashes. All10priorPNG/PDFs unchanged; parent inspected
 the new square/large-font/outside-header layout. No event ROOT read.
 PNG`11f9d35b3fad26077b168bc9dc6aeb004fe9810b3f5ef8376e1fc428c9a0dc2a`;
 PDF`9fd2e75d825290a36b94fe54e24643ceea7fe209898e9bde2f16329158b7e19c`.
+
+## User correction: keep both KF baselines bare and unchanged
+
+The user rejected adding neutrals to KF and explicitly requested keeping
+the KF baseline unchanged, replacing only GSF with GSF+neutrals. The new
+neutral-recovery plot is corrected in place. Other five plots remain
+unchanged. Both original raw and weighted100-bin baseline histograms are
+identical to the original inclusive histogram.csv, with their full original
+cohorts (97,910electron,48,636muon) and core fit parameters. Electron KF
+has no neutral addition and no extra GSF-success gate. GSF+neutrals alone
+uses85,327pairs; those keys are checked as a subset of the KF baseline.
+
+Corrected plot: bare electron KF42,631raw/30,132.755expected window events,
+29undefined,sigma0.29941+/-0.00644GeV; muon unchanged36,918raw/
+49,986.972expected,sigma0.27266+/-0.00361GeV; GSF+neutrals unchanged
+51,850raw/36,648.996expected,2,039undefined,sigma0.35783+/-0.01080GeV.
+Generated-input normalization, recovery window and GSF cached neutral
+four-vectors are unchanged. Selected DSCB fits and all9starts pass0/cov3,
+no boundary parameters. Bare KF sigma values are explicitly checked against
+the original inclusive fit summary. No tracking refit or event ROOT read.
+
+The revised neutral_recovery_fit_summary.json uses method keykf_bare,
+records baseline/GSF cohort sizes and asserts both baseline histograms
+identical. Parent inspected corrected layout and checked every raw/weighted
+baseline bin. The prior KF+neutrals interpretation/table above is superseded
+by this explicit user correction; it is historical, not the current plot.
+Corrected PNG`f594fe1e160de66782e64fd4e48455eda5a70bf407c00a35239287926b16d8a3`;
+PDF`592999d78fb262ae87fbc89b02a3b9c70d16153f3d529e756bb2a3fcddf1f7bb`.
