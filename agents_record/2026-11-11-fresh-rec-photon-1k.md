@@ -222,3 +222,41 @@ Homepage and both fresh PNG URLs return HTTP200, with PNG bytes verified.
 Existing managed server remains healthy on ailogin002.ihep.ac.cn,
 localhost8000, PID2122174; no restart was needed. Main-agent review confirms
 the manifest, preserved figures, archive and final plot hashes.
+
+## Proposed compact REC cluster truth persistence (2026-11-12, not implemented)
+
+The user asked what the truth links contain, how trustworthy/heavy they are,
+and whether the next generation can persist them directly. Read-only code
+review confirms digitization assigns hit MC weights from Geant4 contribution
+energies; PFA propagates energy-weighted maps through bars/half-clusters and
+recomputes the merged map in TrackClusterConnectingAlg before pre-reclustering
+export. This map exists in ordinary PFA without enabling full WriteAna.
+
+Measured on all1000fresh native events:42,173pre-ECAL clusters and245,786
+cluster-MC map entries, mean42.173clusters/245.786links per event. All weights
+are finite and positive; nonempty maps sum to unity within5.88e-6. Median/
+95th-percentile/max links per event:243/426/3270. These are consistency checks,
+not independent physical validation of every shower split or exact digitized
+energy contribution. Native MC retention/ancestry limits still apply.
+
+The installed EDM4hep already supplies
+MCRecoClusterParticleAssociationCollection: one float weight and references
+to Cluster/MCParticle. Proposed collection name:
+EcalClusterPreReclusteringParticleAssociation. Save the complete original
+native map for every charged AND neutral pre-cluster in our passive snapshot
+exporter. Do not save only a leading MC or selected photon/electron subset;
+purity needs the other contributors. Do not duplicate MC momentum/PDG/endpoints
+or enable the complete debug ntuple. Preserve raw native weights; downstream
+ancestry classifies generator FSR/material eBrem. Direct ObjectID relations
+remove debug-fingerprint matching and the replay-object mismatch requirement
+for new files, but do not restore missing MC photon roots.
+
+Two8byte ObjectIDs plus a4byte weight give20bytes/link raw payload, about
+4.916kB/event or491.6MB/100,000events before compression/I/O overhead. This
+payload is0.332%of the current compressed REC bytes/event(1.483MB). The full
+PFA debug output was433.3MB/1000events and is not the proposed output.
+Actual added compressed PODIO size and serialization time are unmeasured.
+Before next production, verify a passive exporter leaves original clusters,
+hits, PFOs and tracking outputs unchanged and reproduces native maps/purity
+with direct IDs. No production implementation or library/card change has
+been made for this proposal. Artifact: cluster_truth_storage_estimate.json.
