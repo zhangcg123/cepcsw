@@ -12,7 +12,11 @@ contains 14,542 events; 21 have same-sign Baseline KF curvature and 3,717
 fail at least one required endpoint. No recoil-window cut selects pT tracks.
 
 BP110 uses its saved truth-selected eligible breakpoint or valid null and
-fitted loss, with tracker+beam+charged ECAL constraints. It is not a scan
+fitted loss, with tracker+beam+ECAL constraints. In ElectronPhoton mode,
+one breakpoint plus a usable collected neutral enables the charged+neutral
+sum observation, even when the separate neutral-measurement switch is off.
+Without usable neutrals it uses the charged observation; null fits use
+electron-only charged energy. It is not a scan
 minimum or a truth loss-energy override. GSF BestBranch has ECAL off. All
 methods use each electron's own native fitted pT/phi/tanLambda. No neutral
 or other photon four-vectors are added.
@@ -73,3 +77,26 @@ served image bytes match disk and final summary SHA256s. Both final layouts
 were inspected by the parent. No migration of a history directory was needed;
 the outgoing AGENTS snapshot is exact and all text before Current focus,
 including global status, active laws and compile/run commands, is unchanged.
+
+## Correction: BP110 can already include nearby neutral energy
+
+The earlier explanation that BP110 consumed only charged-cluster energy was
+incorrect. In `RecBreakpoint.cpp`, the charged-ECAL stage sets
+`resolvedEcalSum` and passes the collected neutral energy when ElectronPhoton,
+one selected breakpoint and collected-neutral status2 hold. This deliberately
+works with `BP_NEUTRAL_ECAL_MEASUREMENT=0`. Job1's manifest explicitly selects
+ElectronPhoton and this separate-neutral-off setting.
+`combineResolvedEcalMeasurements` in `BreakpointFitter.h` replaces the two
+raw observations with one energy sum and quadrature uncertainty, then clears
+the separate neutral observation. Thus mask3/110 is compatible with a
+charged+neutral sum constraint. The actual saved endpoint flag is
+`charged_ecal_free_loss_rts_resolved_ecal_sum_applied`.
+
+For a summed BP110 endpoint, adding the same nearby neutrals to its fitted
+IP momentum would double count them. A later KF/GSF neutral-addition diagnostic
+must preserve BP110's existing observation and explain that GSF itself can
+already recover material loss. The provisional recovery.py execution failed
+before producing any plot (circular import); no recovery figure was added to
+the gallery. That comparison is paused during this clarification. All existing
+plots and native fits remain unchanged; no numerical result is invalidated by
+this correction to the explanation.

@@ -338,7 +338,10 @@ Recoil is 120--130 GeV in 0.1 GeV bins, with own fitted directions and no
 photon addition. All histograms use full common panel denominators.
 
 BP110 uses truth-selected eligible location or valid null, fitted loss and
-tracker+beam+charged ECAL; GSF BestBranch has ECAL off. Panels show the full
+tracker+beam+ECAL; its ElectronPhoton stage includes the charged+collected
+neutral energy sum when one breakpoint and usable neutrals exist, even with
+the separate neutral-measurement switch off. Do not add those neutrals again
+to that BP110 endpoint. GSF BestBranch has ECAL off. Panels show the full
 sample and no+light versus hard material loss (1% boundary). Hard-track pT
 central-68% half-widths are 1.919% BP110 versus 3.392% GSF; no+light is broader
 with BP110 (0.342% versus 0.265%). Inclusive recoil-window counts are
