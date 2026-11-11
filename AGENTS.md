@@ -331,45 +331,38 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**5,000-EVENT ELECTRON-CENTERED TRUTH ECAL PHOTONS (2026-11-12).**
-User requested x=deltaTheta,y=deltaPhi,electron at center, FSR/eBrem separate.
-Read25current REC_ECALTRUTH files x200events, evenly spread through completed
-500-job campaign.9916selected production tracks all have unique exact G4 IDs.
-No source/library/card/job change or native simulation/PFA/fit rerun.
+**INDIVIDUAL TRUTH AND RECO NEUTRAL-CLUSTER FIGURES (2026-11-12).**
+Same5000current REC_ECALTRUTH events,25seeds,9916selected recoil Z->ee tracks.
+Four independent square figures: truth FSR/eBrem photon ECAL entries, then
+reconstructed pre-reclustering neutral clusters with ANY positive FSR/eBrem
+MC contribution. Previous combined truth figure archived. No native code,
+card, installation, job or event reconstruction changed.
 
-One zoom PNG/PDF shows separate FSR/eBrem panels, electron implicitly(0,0),
-only photon points. Position rays use the owning electron truth production
-vertex and both original G4firstECALentries. FSR uses saved generator history;
-eBrem uses the exact emitting G4trackID, resolved through complete silicon SimHit truth
-links and cross-checked against FSR parent IDs. No angular matching.
+Truth photons use their own and electron first G4 ECAL entries from the shared
+truth production vertex, all birth energies. Counts6246FSR/16169eBrem;
+current-window geometric fractions49.1%/97.3%. Reco uses cluster centroids
+relative to the owning electron Baseline KF first AtCalorimeter reference,
+from nominal IP. Owner is largest category MC weight; no angular truth matching.
+Keep fixed55.75722694396976GeV cluster cap, no >50% dominance cut. Counts
+2871FSR/3858eBrem; own-window geometric count fractions41.9%/50.7%.
+Counts condition on tagged neutral clusters, not photon-finding efficiency;
+tiny contributions qualify and one cluster can enter both categories.
 
-Valid pairs6246FSR/16169eBrem in5000events. FSR9067selected-owner records lose
-16electron entries and2805original photon entries; eBrem17686lose538/979.
-Zoom theta +/-150, phi +/-400mrad; full-range figure archived/removed from page.
-No bottom captions/legend/out-of-view text. Actual tuple box is theta +/-10mrad
-(20mradTOTALwidth), phi +/-200mrad, verified on500frozen cards and399actual
-selected-track collection lists. On-plot geometric photon-count efficiencies
-3069/6246=49.1%FSR and15728/16169=97.3%eBrem, using ALLvalid truth pairs,
-including out-of-view points. Not actual neutral-cluster energy recovery.
+All plots x=deltaTheta,y=wrappedDeltaPhi,mrad; electron implicit at(0,0),
+zoom theta+/-150,phi+/-400. Actual tuple box theta+/-10mrad(20TOTAL),phi+/-200.
+Efficiencies include out-of-view points. Preserve **AGORA simulation** branding,
+no bottom captions. Earlier gallery plots/results remain intact.
 
-This sample includes ALL valid original truth photons at all recorded energies,
-including photons merged into charged clusters. No neutral-only or fit-success
-selection, no photon energy cut; previous upper-2% cluster-energy trim does not apply.
-Original missing entries are excluded, not inferred or replaced by daughters.
-These are geometric point distributions, not neutral collection efficiencies.
-
-Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/.
-Source identities,22415unique pair keys, population closure, MC/G4 parent checks,
-independent axis/wrap tests, CSV readback and plot hashes pass; layouts viewed.
-Previous1kFSRmechanism and100kneutral-acceptance plots/results are preserved.
-The updated zoom is the first localhost8000 gallery section: 15 PNGs across
-7 sections, ailogin002 PID2122174, no restart. Earlier plots are intact.
-All current gallery plots use **AGORA simulation**; preserve this label
-in future rerenders. The cosmetic refresh reuses cached data and fit parameters;
-no refit or event processing. [Label record](agents_record/2026-11-12-agora-simulation-plot-label.md).
-Window/layout/efficiency: [revision record](agents_record/2026-11-12-truth-window-plot-efficiency.md).
-Original definitions: [5k truth geometry record](agents_record/2026-11-12-centered-truth-ecal-photons-5k.md).
-FSRmissdiagnosis: [record](agents_record/2026-11-12-missed-fsr-neutral-diagnosis.md).
-Actualneutralacceptance: [record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
-Tailcut: [record](agents_record/2026-11-12-window-energy-upper2pct.md).
-Outgoing focus: [snapshot](agents_record/2026-11-12-agents-before-centered-5k-photons.md).
+Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/
+and reco_neutral_ecal_centered_5k_20261112/. Native fractions/windows match cache;
+same source identities, keys, cap, axis/wrap and PNG/PDF hashes checked.
+Gallery verified:18PNGs/8sections, all4newimages HTTP200 and source hashes match;
+other14plots unchanged. Same localhost8000 directory, ailogin002 PID2122174,
+no restart. Main reviewed manifest coverage and source/copied hashes.
+Details: [individual plots record](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
+Actual window: [record](agents_record/2026-11-12-truth-window-plot-efficiency.md).
+Truth definitions: [record](agents_record/2026-11-12-centered-truth-ecal-photons-5k.md).
+FSR misses: [record](agents_record/2026-11-12-missed-fsr-neutral-diagnosis.md).
+Neutral acceptance: [record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
+Tail cut: [record](agents_record/2026-11-12-window-energy-upper2pct.md).
+Outgoing complete status: [snapshot](agents_record/2026-11-12-agents-before-individual-truth-reco-plots.md).
