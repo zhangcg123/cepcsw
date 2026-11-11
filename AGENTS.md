@@ -328,60 +328,46 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**KF/GSF RECOIL SPLIT BY MATERIAL eBREM AT 1% (2026-11-11).**
-Two new electron-only plots isolate no+light material eBrem (BOTH electrons
-below1%, includingzero) and hard eBrem (AT LEAST ONE electron>=1%). They
-share85,327 both-leg-valid KF/GSF event keys, split24,647/60,680. FSR is
-retained, no BP-success gate or neutral recovery. The original KF-only and
-KF+GSF inclusive plots remain byte-identical and available separately.
-A third electron-only diagnostic shows the inclusive union of both categories
-on the same85,327events, without muons. Window yields27,979KF/32,457GSF
-(+16.00%); core sigma0.297+/-0.007/0.341+/-0.008GeV. The selected DSCB fits
-pass status0/cov3; two KF starts agree, one failed-Hessian start is rejected.
+**TRUTH FSR/eBREM PHOTONS WITH RESOLVED NEUTRAL CLUSTERS (2026-11-11).**
+A read-only1000-event survey (20sources, first50each;1979selected production
+tracks, no BP/GSF fit-success cut) now counts FSR and material eBrem using
+existing PFA truth snapshots. It is not the full99,600-event production or
+the85,327-pair recoil cohort. No simulation/PFA replay, implementation,
+installed library, run card or job-state change.
 
-All new curves use generated-input weight10000*7.04/99600=0.7068273092369478,
-never category/window or successful-fit renormalization. Recoil120--130GeV,
-0.1GeV bins. Matching removes the different KF/GSF-success pools as a shape
-comparison confound; these diagnostic KF curves use the common GSF-valid
-pool, while the original inclusive KF retains97,910 pairs.
+All birth energies:1800FSR/3465eBrem tagged;472/875have any positive truth
+contribution to a separate neutral cluster. Requiring one photon and saved
+shower descendants to dominate >50% of a neutral cluster's MC-labelled
+content gives240FSR/152eBrem;88/131have such a cluster in the existing
+10mrad theta/200mrad phi recovery window. At birthE>=1GeV:206FSR/150eBrem
+have dominated neutrals;86/130inside window. These are photon counts, not
+numbers of clusters or angular-isolation efficiencies.
 
-No+light expected window yields are11,586KF/11,487GSF; core DSCB sigma
-0.290+/-0.007/0.300+/-0.007GeV. Hard yields16,393KF/20,969GSF (+27.92%);
-core sigma0.317+/-0.016/0.422+/-0.026GeV. The gain is recovery into the
-window while the fitted core broadens:6,922 hard events move from KF>130GeV
-into the GSF120--130GeV window; net raw-window gain6,475. Sigma alone is
-not the full recoil performance or pure detector resolution. No+light GSF
-DSCB shape is imperfect (Poisson deviance75.49/38ndf); fit-range/model
-systematics are not evaluated. Same123.5--128GeV fit range; all12 trial
-starts have status0/covariance quality3 and no boundary parameter.
+131FSR and1007eBrem remain unclassified (eBrem746missing exact retainedMC
+roots plus261unresolved replay). They are not classified as having no neutral;
+confirmed counts are lower bounds.696missing eBrem roots are below10MeV,
+but50are above that cut, so retention geometry/matching limits also matter.
+FSR uses generator-origin status1. eBrem uses creator subtype3 and exact
+emitting-electron G4ID, then unique birth momentum/vertex and MC-parent match.
+No angular match defines truth ownership. MC descendants/PFA weights are
+followed for both, including conversions. All FSR counts reproduce the
+previous audit at0/10MeV/1GeV; accepted MC roots are unique across origins.
+Definitions, denominator limits, source gates and verification:
+[the photon-neutral record](agents_record/2026-11-11-fsr-ebrem-neutral-cluster-counts.md).
 
-Both new plots retain square canvas, large fonts, faint grid, AGORA bold
-outside the axes and10ab^-1 inside. Category and sigma/yield labels appear
-left of the peak. Gallery localhost8000 uses two sections:
-matched inclusive, then low/hard category plots first; preserved KF-only and
-KF+GSF inclusive plots remain in the second section. All eight preceding
-PNG/PDF artifacts remain byte-identical. Matched-inclusive diagnostics are
-in ebrem_inclusive_matched_summary.json in the same study directory.
-A new third plot in section2 adds neutral recovery ONLY to electron GSF;
-both KF baselines remain exactly unchanged, including97,910electron and
-48,636muon pairs. GSF+neutrals uses85,327valid pairs. Existing10/200mrad window,
-massless neutral four-vector union, same electron weight/gen99600. Expected
-window yields30,133bareKF/36,649GSF+neutrals/49,987muon; DSCB core
-sigma0.299/0.358/0.273GeV. Every raw/weighted bin of both KF baselines is
-verified identical to the original. There are29,335events with37,497neutral clusters.
-All9fit starts pass0/cov3; no boundary parameter. Blind GSF addition can
-double count material recovery; muon forced-invisible reference caveat
-remains. New diagnostics:neutral_recovery_fit_summary.json. Gallery now
-sixPNGs/twosections; all10priorPNG/PDF artifacts remain byte-identical.
-Source caches and four original inclusive PNG/PDFs are unchanged. No event
-ROOT read, tracking refit, card, library or job change. Definitions, exact
-matching, fit checks, transition counts and gallery verification:
-[the eBrem split record](agents_record/2026-11-11-ebrem-split-kf-gsf-recoil.md).
+All20original REC identities match the previous source gate:928events have
+exact pre-cluster energy/position/hit-multiset and PFO ownership agreement;
+72remain unresolved. Existing snapshots are reused, with no replacement of
+source reconstruction. Analysis artifacts are under
+TrackingPerformanceStudies/photon_neutral_truth_counts_20261111/.
 
-Previous32 plots/66 files remain archived with their hashes. Inclusive
-normalization and muon forced-invisible reference caveats remain in
-[the inclusive record](agents_record/2026-11-11-kf-only-recoil-gallery.md).
-No new recovery window, BH model, beam-spot FSR-loss or Hive development.
-Preserve runtime dependencies, breakpoint-delayed-neutral and workspaces.
-Full outgoing focus and global laws are preserved in
-[the snapshot](agents_record/2026-11-11-agents-before-ebrem-split-recoil.md).
+Gallery localhost8000 remains six plots/two sections, unchanged: matched
+inclusive/low/hard electron diagnostics first, then the preserved KF-only,
+KF+bareGSF and KF+GSF-neutral inclusive references. Both KF baselines in the
+neutral plot stay bare and unchanged; ONLY GSF receives neutral recovery.
+Prior normalization, truth-location caveats and fit diagnostics remain in
+[the recoil record](agents_record/2026-11-11-ebrem-split-kf-gsf-recoil.md).
+Previous32plots/66files remain archived and hash-valid. No new recovery
+window, BH model, beam-spot FSR-loss or Hive development. Preserve runtime
+dependencies, breakpoint-delayed-neutral and workspaces. Full outgoing focus:
+[the snapshot](agents_record/2026-11-11-agents-before-photon-neutral-counts.md).
