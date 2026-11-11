@@ -354,8 +354,15 @@ truth/KF/radiation fields. Source caches and all 56 preceding PNG/PDFs remain
 unchanged. No ROOT file, fitter, library, run card or batch state changed.
 Definitions, validity losses, metrics, QA and gallery verification:
 [the comparison record](agents_record/2026-11-11-bp110-gsf-no-fsr-ebrem.md).
-Gallery has 30 PNGs across 10 sections on localhost8000; the new recoil and
-pT figures come first. Previous truth photon maps and the muon/electron
+Two additional recovery figures retain BP110 as fitted and add nearby
+neutral four-vectors only to KF and GSF; dashed bare controls remain. Same
+10,804 events/21,608 tracks;2,325 events have2,734 unique neutral clusters.
+Inclusive pT central68 half-widths become1.479% KF+neutrals,0.690% BP110,
+0.718% GSF+neutrals. Blind GSF addition can double count material recovery;
+this does not equalize truth/location/ECAL information. All60 prior PNG/PDFs
+and source caches remain unchanged. Details/QA are in the comparison record.
+Gallery has 32 PNGs across 10 sections on localhost8000; recovery recoil and
+pT figures come first, then bare comparisons. Previous truth maps and muon/electron
 10 ab^-1 recoil study remain available and unchanged.
 
 Next physics discussion should distinguish hard-loss recovery from no+light

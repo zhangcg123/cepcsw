@@ -97,6 +97,45 @@ IP momentum would double count them. A later KF/GSF neutral-addition diagnostic
 must preserve BP110's existing observation and explain that GSF itself can
 already recover material loss. The provisional recovery.py execution failed
 before producing any plot (circular import); no recovery figure was added to
-the gallery. That comparison is paused during this clarification. All existing
+the gallery. That attempt was paused during this clarification. All existing
 plots and native fits remain unchanged; no numerical result is invalidated by
 this correction to the explanation.
+
+## Corrected neutral-recovery comparison
+
+Two additional figures retain BP110 exactly as fitted and add the same saved
+nearby neutral observations only to KF and GSF, with dashed bare KF/GSF
+controls. All10,804 events/21,608 tracks remain; no observations are missing.
+2,325 events have2,734 unique neutral clusters, none shared between legs.
+Collection is the existing pre-reclustering charge-zero trackless-PFO ECAL
+window10mrad theta/200mrad phi around original KF AtCalorimeter position.
+Each massless cluster uses(E,E*r/|r|) from nominal IP. Recoil adds the union
+once; pT adds each cluster to its owning electron. No truth cluster matching,
+new energy threshold or fit is introduced. Recovered pT is not track-only
+resolution. BP110 receives no additional neutral four-vector.
+
+Inclusive pT central68 half-widths: KF+neutrals1.479%, BP1100.690%,
+GSF+neutrals0.718%. Hard tracks:3.697%/1.919%/2.333%. Recoil120--130GeV
+counts:7,493/8,165/7,942; undefined22/2/132, retaining the full10,804-event
+denominator. GSF can already recover material loss; blind neutral addition
+can double count it. BP110 retains truth location and ECAL inputs. This
+diagnostic does not establish equal information or held-out validation.
+
+Exact provenance/event/leg identity, cluster uniqueness/masslessness,
+per-leg/pair vector closure, bare-recoil reproduction, zero-addition
+invariance and histogram counts pass. All60 preceding PNG/PDFs and source
+caches remain unchanged. Parent inspected both final layouts. Artifacts:
+recovery.py/log, summary_neutrals.json, PLOTS_NEUTRALS_READY and
+{pt,recoil}_bp110_gsf_no_fsr_ebrem_neutrals PNG/PDFs.
+
+A separate read-only job1 ROOT check verifies the saved sum flag on42/399
+selected tracks:41 mask3/result2 and one mask2/result2, excluded by the
+comparison gate. This check is inclusive in FSR, not a count of the selected
+no-FSR sample. The sum is conditional, not universal across BP110/null fits.
+The neutral plot construction reuses caches and does not read ROOT files.
+
+Dedicated plot-gallery agent and parent manifest review confirm32PNGs across
+10sections, exact-once coverage; recovery recoil/pT precede the two bare
+figures. All30 prior PNGs and other section descriptions/order are preserved.
+Existing ailogin002 PID2122174 serves localhost8000; homepage and both new
+PNGs return HTTP200 and image bytes match final summary hashes.
