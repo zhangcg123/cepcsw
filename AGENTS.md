@@ -348,6 +348,9 @@ Keep fixed55.75722694396976GeV cluster cap, no >50% dominance cut. Counts
 The two reco figures also show energy fractions46.5%FSR/88.4%eBrem below counts:
 use Ecluster times category MC fraction inside own window divided by its sum
 over all eligible neutral clusters, same cap; excludes charged-cluster energy.
+Same-line energy purity P_E is38.7%FSR/49.3%eBrem: category energy divided by
+total energy of the SAME tagged clusters inside own window. This conditional
+purity excludes zero-contribution clusters, not the full blind collection.
 Counts condition on tagged neutral clusters, not photon-finding efficiency;
 tiny contributions qualify and one cluster can enter both categories.
 

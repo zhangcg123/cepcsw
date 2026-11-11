@@ -125,3 +125,22 @@ before_energy_annotation/gallery/. Main rechecked hashes and category coverage;
 clarified that ownership means the unique chosen maximum-weight center, since
 small contributions from the other selected electron can coexist. Verification
 artifact: reco-study energy_annotation_gallery_verification.json.
+
+## Follow-up: energy purity after epsilon_E on the same line
+
+P_E = within-own-window category MC-attributed energy / total energy of the
+SAME category-tagged neutral clusters inside that window. FSR numerator
+6091.458104858079GeV,denominator15745.961820363998GeV,P_E38.68584323%.
+eBrem12851.551541174085/26075.907083965838GeV,P_E49.28515622%.
+Shown as epsilon_E46.5%,P_E38.7% and epsilon_E88.4%,P_E49.3% respectively,
+same line as requested. Purity conditions on the plotted positive-contribution
+neutral sample; neutrals with ZERO category contribution are excluded. This
+is not the purity of the whole blind collection. Same5000cached events/window/
+cap, no native rerun. Previous plots/code/notes outside served root under
+reco-study before_purity_annotation/. All pre-existing count/energy metrics
+unchanged; independent inside-window flag recomputation and plot hashes pass,
+both layouts viewed. Delegated gallery publication verified: same localhost8000,
+ailogin002 PID2122174, no restart.18PNGs/8sections/exact-once; page and2updated
+PNG URLs HTTP200, hashes match sources, other16images unchanged. Main reviewed
+copied hashes and manifest coverage/wording. Prior served images archived in
+before_purity_annotation/gallery/. Artifact: purity_annotation_gallery_verification.json.
