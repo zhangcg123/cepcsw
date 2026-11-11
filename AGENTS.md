@@ -331,33 +331,36 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PRE-ECAL TRUTH REC CAMPAIGN PREPARED (2026-11-12).**
-500 REC-only jobs x200 events reuse all current REC_TPCFIX inputs. Retain
-`ECALBarrel`, `ECALEndcaps` and their `*ParticleAssoCol` MC weights, and export
-`EcalClusterPreReclusteringParticleAssociation` from the native PFA map.
-The existing simulated-calorimeter-hit drop list remains. No generator,
-simulation, digitization, tracking, GSF or BP stage runs. External input REC
-files are retained. Output and frozen cards/local libraries live under
-`higgs_eeHX_ISRFSRON_REC_ECALTRUTH_500jobs_200evt_20261112/`.
+**DIRECT PRE-ECAL WINDOW ENERGY STUDY COMPLETE (2026-11-12).**
+All500 REC_ECALTRUTH jobs completed and passed output verification:100000events,
+171.96GiB. Digitized hits and native pre-cluster MC links persist together.
+The exporter is also the default installation; the campaign retains its pinned
+identical library. No further source, installation or job-state changes.
 
-The verified library is now also the default InstallArea library (user requested
-2026-11-12); build-library output and two installed headers are synchronized.
-Rollback copies and hashes are recorded in the campaign installation_backup/
-and default-installation.json. No tests or jobs run for this refresh.
-Campaign-local runtime remains pinned. Request4000MB, walltime short.
-Prepared and ready, NOT SUBMITTED. On the usual batch login node run:
+Read the new REC directly; no PFA replay, old-cluster remapping or old BP/GSF
+fit-success cut.198430production-electron tracks selected; independent native
+selector cross-check matches1988tracks across1000events. Neutral clusters are
+unioned once per event, positive finite E, nonempty hits, using the first KF
+AtCalorimeter reference. Compare half-windows theta10/50, phi200mrad.
 
-```bash
-bash higgs_eeHX_ISRFSRON_REC_ECALTRUTH_500jobs_200evt_20261112/submit.sh
-```
+10mrad:49887clusters,7.23830GeV/input event; MC-energy fractions FSR20.212%,
+eBrem39.539%,other selected-electron39.813%,unrelated0.436%.
+50mrad:63390clusters,7.73060GeV/input event; FSR22.706%,eBrem37.693%,
+other selected-electron38.276%,unrelated1.325%.
+The added13503clusters contribute0.49230GeV/input event:59.379%FSR and
+14.397%unrelated. FSR proxy energy increases19.98%. These are normalized native
+MC-weight response proxies, not deposited energies or validated FSR recovery.
+Missing soft eBrem MC roots can remain in other-electron ancestry. No energy
+threshold.24801683direct links pass checks; no empty neutral clusters found.
 
-18-event native A/B (including11,16,17) passes the ECAL/track-input and native
-truth-weight gates:4149 direct weighted links, raw digitized banks retained,
-all pre/final cluster physics and final PFO/PID physics equal after mapping
-collection order. One pre-PFO HCAL assignment differs; an independent old/old
-repeat also changes PFA output, so replay is not bitwise deterministic.
-Do not claim universal exact PFA reproduction. No original PFA algorithm fix.
-The500-job campaign has not run, and local htcondor imports are unavailable.
-Keep current plotting server and datasets unchanged.
-Details and scope: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
-Outgoing fresh1000-event study: [snapshot](agents_record/2026-11-12-agents-before-ecal-truth-rec.md).
+Artifacts: TrackingPerformanceStudies/pre_ecal_window_energy_20261112/.
+190/249nonfinite cluster energies in the10/50mrad windows are excluded, affecting
+185/244events; other usable clusters in those events remain in the analysis.
+Seven collected clusters exceed100GeV, six exceed240GeV; all seven energy/position
+values already match the original REC. Main totals retain finite outliers; a
+separate >240GeV exclusion sensitivity leaves the widening conclusion stable.
+Three new PNG/PDFs, summary, per-job CSVs and energy table; existing plot server,
+gallery and earlier datasets remain unchanged. Keep them intact.
+Details/limits: [window energy record](agents_record/2026-11-12-direct-pre-ecal-window-energy.md).
+Production/export/installation: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
+Outgoing focus preserved in [snapshot](agents_record/2026-11-12-agents-before-window-energy-results.md).
