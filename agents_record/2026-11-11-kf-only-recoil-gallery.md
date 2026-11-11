@@ -142,3 +142,34 @@ the same fitted means/sigmas/errors and histogram yields; input/fitter hashes
 and covariance/convergence gates remain unchanged.
 Final PNG`de183863491b20f27ddafce482edb5fed36c9317a67a81448b28c4ccf1db2d39`;
 PDF`0b4b7e3f873612c555eace28bf3c6842844c3ab3fc06f6b4436e3cf98cd4c96b`.
+
+## Add bare electron GSF BestBranch
+
+User requested adding GSF to the same plot. An orange bare GSF BestBranch
+histogram and DSCB fit are added, with GSF sigma/yield annotations and one
+extra physical-curve legend entry. No neutral recovery or fit legend entry.
+The original KF histograms, fitted parameters, normalization, source cohort
+and yields remain exactly unchanged. Same square layout/large typography.
+
+GSF cache contains85,327 valid two-leg endpoint pairs from496 matched files;
+all event keys match a subset of the97,910 original electron KF pairs.
+753 GSF recoil masses are undefined,45,919 inside120--130GeV. Normalization
+uses the SAME full electron generated denominator99,600, including the two
+parent-source jobs without successful GSF output. It does not use99,200
+successful-file inputs or an efficiency factor. The common electron weight
+is0.7068273092369478; GSF window yield32,456.8032, displayed32,457.
+There is no missing-fit KF substitution. Inputs are the existing native-state
+GSF bare-recoil CSV plus baseline event-key cache and the GSF provenance
+snapshot, hashed in dscb_fit_summary.json. No event ROOT read or native fit.
+
+GSF same-range123.5--128GeV DSCB: mean125.17055+/-0.00796GeV,
+sigma0.34136+/-0.00846GeV, deviance47.9034/38ndf. All3 GSF trial starts
+have status0/covariance quality3 and no fitted boundary parameter. These
+core widths are not full-spectrum RMS or pure tracking resolutions. No
+fit-range systematic variation or algorithm-validation claim is made.
+Original histogram.csv and pre-fit summary.json remain unchanged. The
+updated fit summary now records all3 channels, GSF sample/normalization and
+latest plot hashes; the curve CSV includes the GSF fit. Parent inspected
+the final layout.
+PNG`59810a598c9d16f5d34f4192f2164f95c244e96155c71061e822586ff8afd66d`;
+PDF`036ec87b456adc3d7b0e5c25b8c4fc008fec2c62946cc6849f67d03e0483719a`.

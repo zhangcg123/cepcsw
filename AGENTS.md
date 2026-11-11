@@ -328,20 +328,28 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**SINGLE MUON/ELECTRON BASELINE KF RECOIL AT 10 ab^-1 (2026-11-11).**
+**SINGLE MUON/ELECTRON RECOIL AT 10 ab^-1, WITH BARE GSF (2026-11-11).**
 The user requested clearing all displayed plots and showing one inclusive
 recoil figure,120--130GeV/0.1GeV bins, only bare muon and electron Baseline
 KF. The graph has axis labels, a short legend and10ab^-1 at the top-left;
-no title, long annotation, neutral addition, BP or GSF curve. Canvas is square
+no title, long annotation, neutral addition or BP curve. An orange bare
+electron GSF BestBranch curve has been added to the same plot. Canvas is square
 with faint grid lines(alpha0.2) and zero outer layout padding. Muon is solid
 black; electron is gray filled. Axis fonts are18pt,ticks16pt,legend14pt,
-luminosity16pt. The legend has only the two Baseline KF entries. Compact14pt
+luminosity16pt. The legend has the two Baseline KF entries plus electron GSF,
+without fit entries. Compact14pt
 notes show core sigma and expected120--130GeV yields (49,987muon/30,133electron).
 Dashed DSCB
 peak fits use the same123.5--128GeV range and raw-count bin-integrated
 likelihood, reusing the existing ROOT fitter. Both fits have status0/cov3,
 consistent three-start minima and no boundary parameters. Core sigma is
-0.27266+/-0.00361GeV muon and0.29941+/-0.00644GeV electron; this is not
+0.27266+/-0.00361GeV muon and0.29941+/-0.00644GeV electron KF. Bare GSF
+has sigma0.34136+/-0.00846GeV, fit status0/cov3 and no boundary parameters.
+GSF has85,327 valid cached pairs in496matched files,45,919 in the window,
+753 undefined masses. It uses the SAME99,600-generated electron denominator
+and weight0.7068273092369478; expected window yield32,456.803(display32,457),
+without successful-file/fit renormalization. All GSF event keys are a subset
+of the unchanged electron KF pool. These widths are not
 full-spectrum or pure tracking resolution. Fit details and latest plot
 hashes are in the study's dscb_fit_summary.json; source summary.json retains
 pre-fit provenance. No fit-range systematic study was performed.
@@ -359,7 +367,7 @@ curve is an inclusive-production tracking reference with Higgs factor1, not
 an inclusive-decay efficiency prediction or physical SM invisible rate.
 Original muon REC files remain missing. Reference cross sections and all
 sample details/QA are in
-[the KF-only record](agents_record/2026-11-11-kf-only-recoil-gallery.md).
+[the recoil gallery record](agents_record/2026-11-11-kf-only-recoil-gallery.md).
 
 The served gallery on localhost8000 now contains only this figure. Previous
 32 displayed PNGs and matching PDFs/manifest are archived outside the served
