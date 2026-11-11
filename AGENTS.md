@@ -357,8 +357,13 @@ transport qualitatively; intrinsic emission and transport are not decomposed.
 All 50 preceding PNG/PDFs and source caches remain unchanged; definitions and
 QA are in the centered map record above.
 
-Gallery now has 27 PNGs across 9 sections on localhost8000; geometry is first,
-with the charge-split maps before the pooled maps and distance/angle histograms. The
+An additional charge-split core map requires truth photon energy at first
+ECAL entry strictly >1GeV:35,293 FSR and104,473 eBrem pass before display
+cropping. Same +/-200mrad axes; all54 preceding PNG/PDFs are unchanged.
+The cut is on entry energy, not birth energy; details are in the same record.
+
+Gallery now has 28 PNGs across 9 sections on localhost8000; geometry is first,
+with the >1GeV map before the charge-split and pooled maps and angle histograms. The
 10 ab^-1 recoil plot remains bare muon KF, bare electron KF (filled), bare
 electron GSF, and electron GSF+neutrals. All three electron curves share
 85,327 keys and generated-input weight 0.709677 (Ngen=99,200); muon weight

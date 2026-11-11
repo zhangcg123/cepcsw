@@ -113,3 +113,22 @@ Skill validator and parent review confirm 27 PNGs across 9 sections, each
 covered exactly once. Existing ailogin002 server PID2122174 already served
 the correct directory and was retained. Homepage and both new PNG routes
 return HTTP200; served PNG SHA256s match disk at http://127.0.0.1:8000/.
+
+## Follow-up: photon ECAL-entry energy greater than 1 GeV
+
+One additional charge-separated 2D core figure retains the same +/-200 mrad
+axes and layout, requiring strictly `photon_ecal_entry_energy_GeV > 1.0`.
+The cut uses first original-photon truth ECAL-entry energy, not birth energy.
+Passing electron/positron counts: FSR17,752/17,541; eBrem52,182/52,291.
+Shown inside the square: FSR14,148/14,046; eBrem51,357/51,500. Total passing
+counts are35,293 FSR and104,473 eBrem. No charge folding, fit-success gate,
+electron marker, recovery-window change or new ROOT read is introduced.
+Original photons without entries remain excluded without daughter substitution.
+
+The uncommitted `ecal_gt1.py` reuses the same coordinate and truth-track
+caches and checks all441,443 pre-cut charge-owner populations against the
+prior result. All selected energies are finite and strictly above1GeV;
+source hashes and all54 preceding PNG/PDFs are unchanged. Layout inspected.
+New summary/hashes are `summary_ecal_gt1.json`; new PNG/PDF stem is
+`truth_photon_entries_angles_by_charge_ecal_gt1GeV`. Gallery adds this figure
+first in geometry, with28PNGs across9sections.
