@@ -328,38 +328,39 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**INCLUSIVE NEUTRAL-ADDED KF/BP110/GSF RECOIL PLOTTED (2026-11-11).**
-The latest first figure is one inclusive recoil panel comparing Baseline KF,
-BP110 and GSF BestBranch, all with the same nearby-neutral four-momentum
-addition. All three share 72,784 valid pairs and full normalization, including
-undefined/out-of-window masses. No FSR/eBrem cut; no BP100 success gate. An
-independent three-method intersection check exactly matches the cached cohort,
-so no new ROOT read or fit is needed. Recoil 120--130 GeV / 0.1 GeV bins.
-There are 22,750 events with neutral addition (27,680 unique clusters).
-The preceding four-method split figure keeps no-FSR left (11,750) and with-FSR
-right (61,034), with the same events and neutral sum within each panel.
+**MUON/ELECTRON INCLUSIVE RECOIL AT 10 ab^-1 (2026-11-11).**
+The first plot shows muon Baseline KF (red), electron GSF BestBranch+neutrals
+(orange), BP100+neutrals (blue), and electron Baseline KF+neutrals (gray filled).
+All are inclusive in FSR/eBrem, recoil 120--130 GeV / 0.1 GeV bins, expected
+counts per bin. Fixed weights use ALL GENERATED INPUTS BEFORE ANY CUT:
+muon 10000*6.77/50000=1.354; every electron curve
+10000*7.04/99200=0.7096774193548387. Selected, finite or in-window counts never
+set normalization. The formulas are printed on the plot; no window/area scaling.
 
-Use the recorded neutral collection: charge-zero trackless PFO ECAL clusters,
-|deltaTheta|<=10 mrad, |deltaPhi|<=200 mrad around the original KF AtCalorimeter
-position. Each contributes (E,E*r/|r|) from nominal IP; the union around both
-electrons is counted once per pair. There are 2,376 no-FSR / 20,374 with-FSR
-events with added neutrals (2,788 / 24,892 clusters). No unavailable collections
-or shared clusters occur. Truth only defines FSR categories, never recovery
-membership. The collection can include material eBrem and other activity;
-adding it can double count loss already recovered by a track fit. BP110's
-charged ECAL constraint remains unchanged. This is a diagnostic, not physics
-validation. Definitions, counts, QA and gallery status:
-[the neutral-addition record](agents_record/2026-11-11-nearby-neutral-recoil.md).
+Electron KF and GSF share 85,327 valid pairs; BP100 has its 77,817 successful
+subset in that pool, with no fallback or efficiency renormalization. Both
+KF/GSF use identical neutral sums. GSF selection has no BP-success gate.
+Neutral observations for 12,543 additional pairs extend the earlier 72,784;
+all are available, 29,335 GSF events have neutrals. BP100 remains truth-location,
+fitted-loss, tracker+beam, ECAL off. The same saved 10/200 mrad pre-ECAL neutral
+window and massless-cluster union are used; recovered material loss can be
+double counted. No native fit or muon recovery is rerun.
 
-The preceding FSR-split plots and all 42 earlier PNG/PDFs are unchanged;
-gallery now has 22 PNGs across 8 sections on localhost8000, with the inclusive
-three-method plot first. Original GSF/BP common-population definitions, source failures
-and QA remain in [the GSF plotting record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
-Truth ECAL geometry and FSR-to-cluster survey limits remain in
-[the geometry record](agents_record/2026-11-11-ecal-photon-electron-angles.md) and
-[the membership survey](agents_record/2026-11-10-fsr-cluster-membership.md).
+Muon uses 48,636 cached pairs from 50,000 generated inputs. All 250 original
+muon REC files are missing. Its Higgs decays were forced invisible, while
+current electrons are genuine inclusive eeHX (Pe1e1h_X). Muon rates are an
+inclusive-production tracking reference, with Higgs factor1, not a validated
+inclusive-decay efficiency prediction. Cross sections are published references,
+not exact production headers; no backgrounds or peak fits. Details, rates,
+selected-population differences, QA and gallery verification:
+[the 10ab record](agents_record/2026-11-11-muon-electron-recoil-10ab.md).
 
-No fitter/PFA source, runtime library, original card or job-state changes.
-Preserve normal/private libraries, breakpoint-delayed-neutral and workspaces.
-BH-model, floating beam-spot FSR loss and Hive development remain deferred.
-Outgoing focus is preserved in [the snapshot](agents_record/2026-11-11-agents-before-neutral-recoil.md).
+All 44 preceding PNG/PDFs remain unchanged. Gallery has 23 PNGs across 9
+sections on localhost8000, with the new four-curve figure first. Earlier
+neutral/FSR plots and definitions remain in
+[the neutral record](agents_record/2026-11-11-nearby-neutral-recoil.md) and
+[the GSF record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
+Preserve runtime dependencies, breakpoint-delayed-neutral and workspaces.
+No fitter/PFA source, original card, library or job-state changes. BH model,
+beam-spot FSR loss and Hive remain deferred. Outgoing focus:
+[the snapshot](agents_record/2026-11-11-agents-before-muon-gsf-10ab.md).
