@@ -331,37 +331,40 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ACTUAL NEUTRAL-WINDOW COLLECTION ACCEPTANCE COMPLETE (2026-11-12).**
-All500REC_ECALTRUTH files /100000events read at all angles. Direct cluster MC
-links belong to their own saved pre-reclustering clusters; no PFA replay,
-old-cluster remapping or BP/GSF fit-success cut.198430selected production-electron
-tracks. Exporter remains default-installed, and campaign runtime remains pinned;
-no further source/library/card/job-state changes.
+**MISSED RESOLVED FSR NEUTRALS DIAGNOSED (2026-11-12).**
+All500REC_ECALTRUTH files/100000events remain complete. Native cluster MC
+weights persist with clusters; exporter default-installed and campaign pinned.
+Existing50mrad/200mrad acceptance is60.186%FSRneutral proxy energy and49.264%
+FSR-dominated clusters against all-angle resolved neutrals, with shared user
+upper2% cap55.75723GeV. Charged/unreconstructed/tail contributions are excluded.
 
-User-requested shared upper2% cap remains55.75723GeV, derived once from63390
-original50mrad-pool clusters, applied identically to numerator/denominator.
-Reference is now ALL-ANGLE eligible resolved neutrals, NOT50mrad=100%.
-Energy efficiency uses MC-weighted category energy; cluster count requires
->50%category MC weight. Neutral means charge0/no track in pre-reclustering PFO;
-finite positive E, nonempty hits, valid position, union once/event. Phi half-window
-200mrad; theta10/50mrad around Baseline KF AtCalorimeter reference.
+Fullcached sample:99.02%of missed FSRproxy energy belongs to FSR-dominated
+clusters, not tiny contamination. Detailed truth geometry uses1000representative
+events (seeds1,22,43,63,84), plus20largest misses as separate biased stresscases.
+134representative FSR-dominated clusters missed:55theta-only,16phi-only,63both
+relative owning electron.123/134already fail these angular-component cuts at
+generator birth relative to FINAL electron direction, carrying88.8%missed energy.
 
-FSR:10/50mrad collects49.850%/60.186%of target neutral energy and35.888%/49.264%
-of FSR-dominated clusters. Denominators275248.113GeV and27714clusters.
-eBrem:88.368%/90.085%energy and82.325%/88.286%clusters; denominators299081.758GeV,
-23016clusters. Both window numerators exactly reproduce the prior trimmed study.
-These are angular acceptances WITHIN trimmed resolved neutral reconstruction:
-charged clusters, unreconstructed photons and removed energy tails are absent.
-MC response proxies are not exact deposited/generated photon energy or total
-photon detection efficiency. Soft eBrem MC-root omissions remain a limitation.
+120misses have photon and electron truth ECAL entries;115remain outside even
+with both truth positions. Median cluster/photon offsets1.29/1.21mrad(theta/phi),
+KF/electron truth0.041/0.404mrad.14original photons convert before ECAL. Main
+sample misses are not explained by poor reconstructed positions. Generator
+history examples have genuine wide photon/final-electron separation from
+virtual outgoing-electron copies; one38.2GeVphoton/14.3GeVe pair opens1.797rad.
+A separate55.3GeVphoton/5.3GeVe starts7.7mrad apart inphi but reaches304.5mrad
+atECAL through transport/bending. Resolved neutrals exclude merged charged FSR;
+do not claim that most generator FSR is wide or that these are global photon
+detection efficiencies. Mechanism fractions are1000-event diagnostics only.
 
-Artifacts: TrackingPerformanceStudies/pre_ecal_absolute_efficiency_20261112/.
-Full500window cross-checks, energy closure, monotonic ratios, identities and
-plot hashes pass. One new PNG/PDF plus summaries/CSV; earlier window-energy
-figures/data remain intact in pre_ecal_window_energy_20261112/.
-Actual-acceptance figure is now the first localhost8000 gallery section:
-12PNGs/5sections, ailogin002 PID2122174, no restart; prior11plots preserved.
-Details: [actual acceptance record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
+Artifacts: TrackingPerformanceStudies/fsr_neutral_misses_20261112/.
+Two full/zoom PNG/PDFs compare generator directions and ECAL offsets. Plot only
+258single-photon-dominated neutrals (124collected/134missed);10additional inside
+multi-FSR-root clusters excluded only from pair-direction plots. Direct truth
+links, source identities, native window flags and plot hashes checked. No
+native code/library/card/job change, simulation/PFA/fit rerun or cut change.
+New full/zoom figures are the first localhost8000 gallery section:14PNGs,
+6sections, ailogin002 PID2122174, no restart. All prior plots preserved.
+Details: [missed-FSR record](agents_record/2026-11-12-missed-fsr-neutral-diagnosis.md).
+Full acceptance: [all-angle record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
 Tail cut: [upper2% record](agents_record/2026-11-12-window-energy-upper2pct.md).
-Production/export/install: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
-Outgoing focus: [snapshot](agents_record/2026-11-12-agents-before-absolute-neutral-efficiency.md).
+Outgoing focus: [snapshot](agents_record/2026-11-12-agents-before-missed-fsr-diagnosis.md).
