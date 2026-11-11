@@ -345,6 +345,9 @@ relative to the owning electron Baseline KF first AtCalorimeter reference,
 from nominal IP. Owner is largest category MC weight; no angular truth matching.
 Keep fixed55.75722694396976GeV cluster cap, no >50% dominance cut. Counts
 2871FSR/3858eBrem; own-window geometric count fractions41.9%/50.7%.
+The two reco figures also show energy fractions46.5%FSR/88.4%eBrem below counts:
+use Ecluster times category MC fraction inside own window divided by its sum
+over all eligible neutral clusters, same cap; excludes charged-cluster energy.
 Counts condition on tagged neutral clusters, not photon-finding efficiency;
 tiny contributions qualify and one cluster can enter both categories.
 

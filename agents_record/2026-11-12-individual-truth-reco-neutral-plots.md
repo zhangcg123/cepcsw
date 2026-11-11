@@ -96,3 +96,32 @@ each source filename with direct_. Previous combined served image and old
 section JSON preserved outside served root under truth-study
 before_separate_truth_reco/gallery/. No uncategorized old panel remains.
 Evidence: reco-study gallery_verification.json and native validation.json.
+
+## Follow-up: neutral energy collection fraction on the two reco figures
+
+User confirmed count interpretation and requested energy efficiency below it.
+Reco annotations now explicitly show epsilon_N and epsilon_E. The count
+populations and fractions are unchanged. Energy weighting is reconstructed
+cluster energy times its normalized native FSR/eBrem MC category fraction,
+not the full cluster energy merely because it has a positive contribution.
+
+Sum this category energy within the owning-electron10/200mrad window, divide
+by its sum over all eligible neutral clusters, including out-of-view points,
+with the same fixed55.75722694396976GeV cap. Conditional neutral-cluster energy
+fraction; excludes charged-cluster energy and untagged/missing photons.
+
+FSR:6091.458104858079/13094.24627448688GeV =46.52011255%.
+eBrem:12851.551541174085/14532.83724659117GeV =88.43112548%.
+Displayed below count41.9%/50.7% as46.5%/88.4%. Same cached5000events, no native
+read, PFA or tracking rerun; truth figures unchanged. Independent recomputation
+from cached rows matches the earlier saved owner_window_energy_fraction to
+1e-12relative tolerance. Counts, keys and plot hashes checked; both layouts viewed.
+Previous reco plots/code/notes preserved outside served root in
+TrackingPerformanceStudies/reco_neutral_ecal_centered_5k_20261112/before_energy_annotation/.
+Gallery update verified by delegated plot-gallery workflow: samehost/PID2122174,
+no restart,18PNGs/8sections/exact-once. Page and both updated recoPNG URLs HTTP200,
+source hashes match, other16PNGs unchanged. Prior served reco images archived in
+before_energy_annotation/gallery/. Main rechecked hashes and category coverage;
+clarified that ownership means the unique chosen maximum-weight center, since
+small contributions from the other selected electron can coexist. Verification
+artifact: reco-study energy_annotation_gallery_verification.json.
