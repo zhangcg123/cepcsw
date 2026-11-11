@@ -198,3 +198,19 @@ KF+GSF PNG`7c615f5e02118fe927dfedbbc99761b8d20d4952e1481ea0daaeb0c7fb4cc44d`;
 PDF`625bf928b10d7f9ee35ca72e3f2767fafe33a41d33416119a537a4d609d8d173`.
 The earlier32-plot/66-file archive remains unchanged. Gallery displays the
 two current variants in one section, KF-only first, then KF+GSF.
+
+## Move AGORA label outside the axes
+
+User requested the simulation label outside the axes box. Both preserved
+variants now put bold16pt "AGORA full simulation" at axes(0,1.01), bottom
+aligned and unclipped, above the upper-left frame. The10ab^-1 label returns
+inside to(0.025,0.975). Tight layout reserves a small header allowance while
+retaining the1260-square canvas and zero layout padding elsewhere. A bounding
+box assertion verifies the header lies above the axes and within the canvas;
+parent inspected the final fully visible header. No histogram, fit, sigma,
+yield, sample or normalization change.
+
+KF-only PNG`b966ece20ebecdb0975da0b80c88bb8f282b97bec58843a8c54ee2c621875c36`;
+PDF`47369241de577570606abb7aa2cb4dd9fb5b2606379c92dc25a2df987b3e32c0`.
+KF+GSF PNG`ef3c498c7ca70014e355a89593cc9977a13aa009cb7d2c8fa14778d0775ab8f3`;
+PDF`f48fdf7b6418d660914382ccbec71ac48f1ea73cf4aa471a62f1484a7d183265`.

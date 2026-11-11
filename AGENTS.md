@@ -337,7 +337,8 @@ electron GSF BestBranch comparison is now a separate second plot: preserve
 both rather than replacing the first. The original
 recoil_muon_electron_baseline_kf_10ab filename/link is KF-only; the second
 is recoil_muon_electron_baseline_kf_gsf_10ab. Both have bold16pt
-"AGORA full simulation" at the top-left above10ab^-1. Canvas is square
+"AGORA full simulation" outside the axes above the upper-left frame;
+10ab^-1 stays inside at the top-left. Canvas is square
 with faint grid lines(alpha0.2) and zero outer layout padding. Muon is solid
 black; electron is gray filled. Axis fonts are18pt,ticks16pt,legend14pt,
 luminosity16pt. The legend has the two Baseline KF entries plus electron GSF,
