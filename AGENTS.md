@@ -331,44 +331,37 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**DIRECT PRE-ECAL WINDOW ENERGY STUDY COMPLETE (2026-11-12).**
-All500 REC_ECALTRUTH jobs completed and passed output verification:100000events,
-171.96GiB. Digitized hits and native pre-cluster MC links persist together.
-The exporter is also the default installation; the campaign retains its pinned
-identical library. No further source, installation or job-state changes.
+**ACTUAL NEUTRAL-WINDOW COLLECTION ACCEPTANCE COMPLETE (2026-11-12).**
+All500REC_ECALTRUTH files /100000events read at all angles. Direct cluster MC
+links belong to their own saved pre-reclustering clusters; no PFA replay,
+old-cluster remapping or BP/GSF fit-success cut.198430selected production-electron
+tracks. Exporter remains default-installed, and campaign runtime remains pinned;
+no further source/library/card/job-state changes.
 
-Read the new REC directly; no PFA replay, old-cluster remapping or old BP/GSF
-fit-success cut.198430production-electron tracks selected; independent native
-selector cross-check matches1988tracks across1000events. Neutral clusters are
-unioned once per event, positive finite E, nonempty hits, using the first KF
-AtCalorimeter reference. Compare half-windows theta10/50, phi200mrad.
+User-requested shared upper2% cap remains55.75723GeV, derived once from63390
+original50mrad-pool clusters, applied identically to numerator/denominator.
+Reference is now ALL-ANGLE eligible resolved neutrals, NOT50mrad=100%.
+Energy efficiency uses MC-weighted category energy; cluster count requires
+>50%category MC weight. Neutral means charge0/no track in pre-reclustering PFO;
+finite positive E, nonempty hits, valid position, union once/event. Phi half-window
+200mrad; theta10/50mrad around Baseline KF AtCalorimeter reference.
 
-User-requested upper2% energy-tail cut is now nominal: common98th percentile
-55.75723GeV from the original63390wide-window neutral clusters, applied to
-BOTH windows. Excludes1268wide and1253narrow clusters; no event deletion or
-normalization change. Physical high-energy clusters are also removed.
-10mrad:48634clusters,6.36248GeV/input event; MC-energy fractions FSR21.566%,
-eBrem41.539%,other selected-electron36.405%,unrelated0.490%.
-50mrad:62122clusters,6.84563GeV/input event; FSR24.200%,eBrem39.357%,
-other selected-electron34.959%,unrelated1.484%.
-The added13488clusters contribute0.48316GeV/input event:58.881%FSR and
-14.567%unrelated. FSR proxy energy increases20.73%. These are normalized native
-MC-weight response proxies, not deposited energies or validated FSR recovery.
-Missing soft eBrem MC roots can remain in other-electron ancestry. The common
-energy cap is an analysis trim, not a PFA fix.24801683direct links passed checks;
-no empty neutral clusters found.
+FSR:10/50mrad collects49.850%/60.186%of target neutral energy and35.888%/49.264%
+of FSR-dominated clusters. Denominators275248.113GeV and27714clusters.
+eBrem:88.368%/90.085%energy and82.325%/88.286%clusters; denominators299081.758GeV,
+23016clusters. Both window numerators exactly reproduce the prior trimmed study.
+These are angular acceptances WITHIN trimmed resolved neutral reconstruction:
+charged clusters, unreconstructed photons and removed energy tails are absent.
+MC response proxies are not exact deposited/generated photon energy or total
+photon detection efficiency. Soft eBrem MC-root omissions remain a limitation.
 
-Artifacts: TrackingPerformanceStudies/pre_ecal_window_energy_20261112/.
-190/249nonfinite cluster energies in the10/50mrad windows are excluded, affecting
-185/244events; other usable clusters in those events remain in the analysis.
-Seven collected clusters exceed100GeV, six exceed240GeV; all seven energy/position
-values already match the original REC. All seven are now excluded by the tail
-cut; original untrimmed figures/tables remain in before_energy_tail_cut/.
-Three new PNG/PDFs, summary, per-job CSVs and energy table are saved. The three
-PNGs are now the first section in the existing localhost8000 gallery:11PNGs,
-4sections, PID2122174 on ailogin002, no server restart. Previous plots and
-datasets remain intact. Gallery copies use the direct_pre_ecal_ prefix.
-Tail-cut definition/results: [upper2% record](agents_record/2026-11-12-window-energy-upper2pct.md).
-Original full-sample details/limits: [window energy record](agents_record/2026-11-12-direct-pre-ecal-window-energy.md).
-Production/export/installation: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
-Outgoing focus preserved in [snapshot](agents_record/2026-11-12-agents-before-window-energy-results.md).
+Artifacts: TrackingPerformanceStudies/pre_ecal_absolute_efficiency_20261112/.
+Full500window cross-checks, energy closure, monotonic ratios, identities and
+plot hashes pass. One new PNG/PDF plus summaries/CSV; earlier window-energy
+figures/data remain intact in pre_ecal_window_energy_20261112/.
+Actual-acceptance figure is now the first localhost8000 gallery section:
+12PNGs/5sections, ailogin002 PID2122174, no restart; prior11plots preserved.
+Details: [actual acceptance record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
+Tail cut: [upper2% record](agents_record/2026-11-12-window-energy-upper2pct.md).
+Production/export/install: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
+Outgoing focus: [snapshot](agents_record/2026-11-12-agents-before-absolute-neutral-efficiency.md).
