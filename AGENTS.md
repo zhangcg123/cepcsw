@@ -329,22 +329,26 @@ manifest as an uncommitted analysis artifact.
 ## 2. Current focus
 
 **MUON/ELECTRON INCLUSIVE RECOIL AT 10 ab^-1 (2026-11-11).**
-The first plot shows muon Baseline KF (red), electron GSF BestBranch+neutrals
-(orange), BP100+neutrals (blue), and electron Baseline KF+neutrals (gray filled).
+The first plot now shows bare muon Baseline KF (red), bare electron GSF
+BestBranch (blue), electron GSF BestBranch+neutrals (orange), and bare electron
+Baseline KF (gray filled). Neither KF baseline nor bare GSF adds photons/
+neutrals. BP100 remains removed; the prior versions are archived.
 All are inclusive in FSR/eBrem, recoil 120--130 GeV / 0.1 GeV bins, expected
 counts per bin. Fixed weights use ALL GENERATED INPUTS BEFORE ANY CUT:
 muon 10000*6.77/50000=1.354; every electron curve
 10000*7.04/99200=0.7096774193548387. Selected, finite or in-window counts never
 set normalization. The formulas are printed on the plot; no window/area scaling.
 
-Electron KF and GSF share 85,327 valid pairs; BP100 has its 77,817 successful
-subset in that pool, with no fallback or efficiency renormalization. Both
-KF/GSF use identical neutral sums. GSF selection has no BP-success gate.
-Neutral observations for 12,543 additional pairs extend the earlier 72,784;
-all are available, 29,335 GSF events have neutrals. BP100 remains truth-location,
-fitted-loss, tracker+beam, ECAL off. The same saved 10/200 mrad pre-ECAL neutral
-window and massless-cluster union are used; recovered material loss can be
-double counted. No native fit or muon recovery is rerun.
+All three electron curves share 85,327 valid pairs, with no BP-success gate.
+Bare KF and bare GSF use their own original AtIP states with zero recovery
+addition; all 85,327 checks for each method pass. The prior three histograms
+are unchanged. Bare GSF has 45,919 raw / 32,587.677 expected in-window events,
+with 753 undefined masses.
+Bare electron KF has 39,584 raw / 28,091.871 expected events in the window
+and 26 undefined masses. The recovered GSF curve alone uses the saved
+10/200 mrad pre-ECAL neutral
+window and massless-cluster union (29,335 events with neutrals); recovered
+material loss can be double counted. No ROOT read or native fit is rerun.
 
 Muon uses 48,636 cached pairs from 50,000 generated inputs. All 250 original
 muon REC files are missing. Its Higgs decays were forced invisible, while
@@ -356,7 +360,7 @@ selected-population differences, QA and gallery verification:
 [the 10ab record](agents_record/2026-11-11-muon-electron-recoil-10ab.md).
 
 All 44 preceding PNG/PDFs remain unchanged. Gallery has 23 PNGs across 9
-sections on localhost8000, with the new four-curve figure first. Earlier
+sections on localhost8000, with the corrected four-curve figure first. Earlier
 neutral/FSR plots and definitions remain in
 [the neutral record](agents_record/2026-11-11-nearby-neutral-recoil.md) and
 [the GSF record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).

@@ -119,3 +119,51 @@ batch state changes. Source tuples remain read-only. Outgoing project status
 is preserved in [the snapshot](2026-11-11-agents-before-muon-gsf-10ab.md).
 Previous neutral geometry/QA/plots remain in
 [the neutral-addition record](2026-11-11-nearby-neutral-recoil.md).
+
+## Latest correction: bare KF electron/muon baselines and recovered GSF
+
+The user explicitly requested bare KF for both electrons and muons, plus
+electron GSF+neutrals on the same named PNG. The figure now has only those
+three curves; gray electron KF has NO neutral/photon addition, red muon
+KF remains bare, orange GSF+neutrals is unchanged. BP100 is removed from the
+current plot. Previous four-curve PNG/PDF/scripts/summary/weighted bins and
+validation are preserved outside the gallery under the study's
+before-bare-kf-three-curves/ directory. Other cached analysis data is intact.
+
+Electron KF and GSF use identical85,327 event keys, with full original
+generated-input denominator99,200. Independent reconstruction of bare KF
+recoil from the native original AtIP four-vectors, with zero added photon
+four-vector, agrees with all85,327 cached values. Muon/GSF raw and weighted
+bins are unchanged. Bare KF now has39,584 displayed raw events,28,091.870968
+expected at10ab^-1,26 undefined masses. Muon remains36,918raw/49,986.972
+expected/11undefined; GSF51,850/36,796.774/2,039. Reference weights, inclusive
+FSR/eBrem scope,120--130GeV range and0.1GeV binning are unchanged. All44 other
+PNG/PDF artifacts and original sources are unchanged. No ROOT read or fit.
+
+Current source and cache renderer are synchronized; validation.json records
+bare-vector closure and unchanged muon/GSF histograms. New layout visually
+inspected. Personal gallery agent updates/verifies current3-curve semantics
+and23PNG/9sections. Muon forced-invisible/inclusive-eeHX decay distinction
+and reference-rate limitations remain as above.
+
+## Latest addition: bare GSF line
+
+The user added bare electron GSF. Current four curves: gray filled bare
+electron KF, red bare muon KF, blue bare electron GSF BestBranch, orange
+electron GSF BestBranch+neutrals. BP100 remains removed. All three electron
+curves share85,327 event keys, weight0.7096774193548387 and full generated
+normalization99,200; muon remains50,000gen/weight1.354. Bare GSF uses native
+AtIP four-vectors with zero photon/neutral addition. Its45,919 raw in-window
+pairs yield32,587.677419 expected at10ab^-1;753 masses are undefined.
+85,327 direct four-vector checks agree with original saved GSF recoil and
+the pre-recovery cache. The preceding three histograms are exactly unchanged.
+
+Prior three-curve PNG/PDF, summary and bins are retained in before-bare-gsf/;
+current scripts/metadata/README are synchronized. The new per-event cache is
+electron_gsf_bare_recoil.csv. Layout visually inspected. Range120--130GeV,
+0.1GeV bins and all-generated-input weights remain unchanged. No new ROOT
+read, simulation/tracking/fitting, library or batch changes. Gallery agent
+verified current four-curve bare/recovered meanings,23PNG/9sections each
+exactly once, live normalization text and final served PNG hash matching disk.
+Parent manifest and all44 prior/new plot hashes pass; same server on
+ailogin002 PID2122174, http://127.0.0.1:8000/. All44 other PNG/PDFs unchanged. Muon H-invisible reference caveat still applies.
