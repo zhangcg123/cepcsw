@@ -144,3 +144,23 @@ ailogin002 PID2122174, no restart.18PNGs/8sections/exact-once; page and2updated
 PNG URLs HTTP200, hashes match sources, other16images unchanged. Main reviewed
 copied hashes and manifest coverage/wording. Prior served images archived in
 before_purity_annotation/gallery/. Artifact: purity_annotation_gallery_verification.json.
+
+## Gallery cleanup requested after the purity annotation
+
+User requested removing the two sections "Where FSR-dominated neutral clusters
+fall outside the wide collection window" and "Truth-linked photon-dominated
+neutral clusters vs collection window", two images each. Delegate archive of
+the four served PNGs and removed-section metadata outside the gallery; preserve
+the source analyses and remaining plots. Target14PNGs/6sections, no uncategorized
+leftover previews or obsolete intro references. Publication checks recorded below.
+
+Cleanup complete. Four served PNGs and removed-section JSON preserved under
+TrackingPerformanceStudies/.analysis_archive/removed_photon_gallery_sections_20261112/.
+Removed files: direct_pre_ecal_fsr_neutral_misses_full.png,
+direct_pre_ecal_fsr_neutral_misses_zoom.png,
+photon_dominated_neutral_collection_window_full.png,
+photon_dominated_neutral_collection_window_zoom.png.
+Delegated gallery check:14PNGs/6sections/exact-once, other14image hashes unchanged;
+pageHTTP200, both removed titles/four preview filenames absent, remainingPNG200.
+Same ailogin002 PID2122174 localhost8000; no restart or analysis rerun. Main
+independently checked14/6coverage, archive presence and absent active previews.

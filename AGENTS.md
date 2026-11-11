@@ -357,13 +357,15 @@ tiny contributions qualify and one cluster can enter both categories.
 All plots x=deltaTheta,y=wrappedDeltaPhi,mrad; electron implicit at(0,0),
 zoom theta+/-150,phi+/-400. Actual tuple box theta+/-10mrad(20TOTAL),phi+/-200.
 Efficiencies include out-of-view points. Preserve **AGORA simulation** branding,
-no bottom captions. Earlier gallery plots/results remain intact.
+no bottom captions. Two historical photon/FSR-miss sections were removed from
+the page on request; their four served plots and metadata are archived.
 
 Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/
 and reco_neutral_ecal_centered_5k_20261112/. Native fractions/windows match cache;
 same source identities, keys, cap, axis/wrap and PNG/PDF hashes checked.
-Gallery verified:18PNGs/8sections, all4newimages HTTP200 and source hashes match;
-other14plots unchanged. Same localhost8000 directory, ailogin002 PID2122174,
+Gallery verified after cleanup:14PNGs/6sections, every PNG categorized once.
+Both removed titles and their four preview links are absent; remaining images
+are unchanged. Page and a remaining PNG HTTP200. Same localhost8000 directory, ailogin002 PID2122174,
 no restart. Main reviewed manifest coverage and source/copied hashes.
 Details: [individual plots record](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
 Actual window: [record](agents_record/2026-11-12-truth-window-plot-efficiency.md).
