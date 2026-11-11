@@ -189,3 +189,26 @@ middle served images and prior sectionJSON archived under before_single_collecti
 Same ailogin002 PID2122174 localhost8000; no restart. Main independently checked
 coverage, updated section patterns, removed active PNG and copied source hash.
 Artifact: single_collection_bar_gallery_verification.json in source-study directory.
+
+## Follow-up: unknown black; FSR-tagged, eBrem-tagged, inclusive bars
+
+User requested two extra bars before inclusive and unknown in black. Budget
+now shows three stacks in order FSR-tagged,eBrem-tagged,Inclusive, all for the
+current10/200mrad window and unchanged55.75722694396976GeV cap. Any positive
+category fraction tags a cluster; samples overlap, not an exclusive partition.
+All five energy components are shown in each bar; unknown black, zero content
+in this cache, others unchanged. Same100000INPUTevent denominator in each bar.
+
+Counts25036/40505/48634; total3.337582151598607/5.368811208709392/
+6.362477802742885GeVperinputevent. Exact component tables in source-study
+tagged_collection_bars.json. Cached collected_clusters.csv only; no REC/PFA/fit
+rerun. Inclusive matches previous single bar and theta10summary; tagged bars
+retain all their category energy. Fraction/energy/cap boundaries, unique keys,
+component closure, three stack positions, black unknown RGBA and plot hashes
+checked; layout viewed. Other source plots unchanged. Previous code/plots/notes
+under source-study before_tagged_collection_bars/. Gallery verified by delegated
+workflow:13PNGs/6sections/exact-once, page and replacementPNG200 with source
+hashmatch, other12PNGs unchanged. Same ailogin002 PID2122174 localhost8000,
+no restart. Main independently reviewed copied source hash, category coverage
+and manifest definitions. Prior served plot and sectionJSON archived under
+before_tagged_collection_bars/gallery/. Artifact: tagged_collection_bars_gallery_verification.json.
