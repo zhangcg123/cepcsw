@@ -173,3 +173,28 @@ latest plot hashes; the curve CSV includes the GSF fit. Parent inspected
 the final layout.
 PNG`59810a598c9d16f5d34f4192f2164f95c244e96155c71061e822586ff8afd66d`;
 PDF`036ec87b456adc3d7b0e5c25b8c4fc008fec2c62946cc6849f67d03e0483719a`.
+
+## Preserve the first plot and label both versions
+
+User requested bold "AGORA full simulation" above10ab^-1 at the top-left
+on both plots, then explicitly corrected the prior replacement of the
+first plot. The KF-only plot is restored at its ORIGINAL filename/link
+recoil_muon_electron_baseline_kf_10ab.png/.pdf. The added-GSF comparison
+is a SEPARATE recoil_muon_electron_baseline_kf_gsf_10ab.png/.pdf. Both must
+remain available rather than overwriting the first with added curves.
+
+Both labels are16pt at axes(0.025,0.975), fontweight bold; luminosity is
+below at(0.025,0.92). Typography, square canvas, zero padding, grid and
+existing histogram/fitted values/weights/yields are preserved. KF-only is
+derived by removing the GSF histogram, fit artist, legend entry and note
+from the exact same figure after saving the GSF version. Assertions verify
+two remaining histogram/fit artists and two legend entries. Parent inspected
+both layouts. No source input or native tracking fit changed.
+
+KF-only PNG SHA256
+`355f4a95409a6a1f92a3ae6af696759f3bc0e3ef588e5197726d3968563a0046`;
+PDF`f001fedf16bed735e258df65457602a5a4f8db7ed8969e2c52ed29e452627b60`.
+KF+GSF PNG`7c615f5e02118fe927dfedbbc99761b8d20d4952e1481ea0daaeb0c7fb4cc44d`;
+PDF`625bf928b10d7f9ee35ca72e3f2767fafe33a41d33416119a537a4d609d8d173`.
+The earlier32-plot/66-file archive remains unchanged. Gallery displays the
+two current variants in one section, KF-only first, then KF+GSF.
