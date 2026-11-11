@@ -259,3 +259,16 @@ Same ailogin002 PID2122174 localhost8000, no restart. Main checked copied source
 hash and manifest coverage. Prior servedPNG+sectionJSON archived under
 before_component_percentages/gallery/. Verification artifact:
 component_percentages_gallery_verification.json in source-study directory.
+
+## Cosmetic follow-up: hide black Others percentages
+
+Removed only the three Others percentage callouts; black stack/legend remain.
+Nine interior labels retained, still relative to FULL bar totals including
+Others. Re-rendered cache; exact report equality proves numerical results
+unchanged, nine-label assertion passes, layout viewed. Prior plot/code preserved
+in source-study before_hide_black_percentages/. No native rerun.
+
+Gallery verified13PNGs/6sections/exact-once; page and replacementPNG200, source
+hashmatch, other12images unchanged. Same localhost8000 ailogin002 PID2122174,
+no restart. Main checked copied hash and category coverage. Previous served
+plot+sectionJSON archived in before_hide_black_percentages/gallery/.
