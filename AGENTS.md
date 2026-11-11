@@ -359,8 +359,10 @@ Artifacts: TrackingPerformanceStudies/pre_ecal_window_energy_20261112/.
 Seven collected clusters exceed100GeV, six exceed240GeV; all seven energy/position
 values already match the original REC. Main totals retain finite outliers; a
 separate >240GeV exclusion sensitivity leaves the widening conclusion stable.
-Three new PNG/PDFs, summary, per-job CSVs and energy table; existing plot server,
-gallery and earlier datasets remain unchanged. Keep them intact.
+Three new PNG/PDFs, summary, per-job CSVs and energy table are saved. The three
+PNGs are now the first section in the existing localhost8000 gallery:11PNGs,
+4sections, PID2122174 on ailogin002, no server restart. Previous plots and
+datasets remain intact. Gallery copies use the direct_pre_ecal_ prefix.
 Details/limits: [window energy record](agents_record/2026-11-12-direct-pre-ecal-window-energy.md).
 Production/export/installation: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
 Outgoing focus preserved in [snapshot](agents_record/2026-11-12-agents-before-window-energy-results.md).

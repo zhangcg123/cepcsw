@@ -105,3 +105,20 @@ slow Python execution; the completed invalid-only pass used four processes.
 All our analysis processes are now finished. Existing gallery unchanged.
 The plot/code manifests, nominal and outlier sensitivity summaries and CSV
 are final. Scientific spectra are PNG/PDF artifacts, not generated-image output.
+
+## Subsequent gallery publication
+
+User reported the new plots absent from the webpage. The plot-gallery skill's
+complete update/validation workflow was delegated to one dedicated agent
+(gpt-6-luna/high), then reviewed by the main session. Existing managed gallery
+is on ailogin002.ihep.ac.cn, localhost8000, PID2122174, serving
+TrackingPerformanceStudies/bp_matched_recoil_pt_20261110. No restart needed.
+
+Copied three PNGs with direct_pre_ecal_ filename prefixes and verified SHA256
+identity to study originals. Added a new first manifest section labelled as
+the full100000-event direct-link study, preserving all previous plots/sections.
+Manifest validates11PNGs across4sections, exactly one category per PNG.
+Gallery homepage and all three new images returnHTTP200; main independently
+confirmed the live homepage contains all three image links. Manifest and plot
+copies remain uncommitted analysis artifacts. No analysis rerun or data/source,
+installation, job-state or generic-server-code change occurred.
