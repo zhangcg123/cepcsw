@@ -328,63 +328,45 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**TRUTH FSR/eBREM PHOTONS WITH RESOLVED NEUTRAL CLUSTERS (2026-11-11).**
-A read-only1000-event survey (20sources, first50each;1979selected production
-tracks, no BP/GSF fit-success cut) now counts FSR and material eBrem using
-existing PFA truth snapshots. It is not the full99,600-event production or
-the85,327-pair recoil cohort. No simulation/PFA replay, implementation,
-installed library, run card or job-state change.
+**FRESH CURRENT-REC PHOTON/ECAL STUDY, 1000EVENTS (2026-11-11).**
+The user requested redoing the FSR/eBrem cluster/window/purity studies from
+current REC and initially asked5000events, then explicitly reduced to1000.
+The active fixed sample is seeds1,22,43,63,84, all200events each, with no
+fit-success or truth-outcome selection. Current REC_TPCFIX inputs match the
+current BP_NOSCAN_PREECAL/GSF_MATCHBP production parents. Fresh PFA-only
+replays are RUNNING; no new purity result is claimed yet.
 
-All birth energies:1800FSR/3465eBrem tagged;472/875have any positive truth
-contribution to a separate neutral cluster. Requiring one photon and saved
-shower descendants to dominate >50% of a neutral cluster's MC-labelled
-content gives240FSR/152eBrem;88/131have such a cluster in the existing
-10mrad theta/200mrad phi recovery window. At birthE>=1GeV:206FSR/150eBrem
-have dominated neutrals;86/130inside window. These are photon counts, not
-numbers of clusters or angular-isolation efficiencies.
+Working study: TrackingPerformanceStudies/photon_ecal_fresh_5k_20261111/.
+The initial5k folder name is temporary while native writers are active.
+input_manifest.json now has exactly five sources/1000events; the original
+plan is archived. Extra PFA jobs105/126/147 were stopped and are excluded;
+the former queue controller is stopped to prevent additional launches.
+Resume/control details are in reduction_to_1k.json and the record below.
+Do not duplicate active replay processes. Complete the five retained native
+runs, validate/extract their CSVs, aggregate1000events, then render and update
+the current gallery's photon section. Rename the study to fresh_1k only after
+all native writers are finished. Native chain is reader->PFA through
+TrackClusterConnectingAlg->output; no simulation/digitization/tracking or
+BP/GSF fit. No original source/card/library/window change or installation.
 
-131FSR and1007eBrem remain unclassified (eBrem746missing exact retainedMC
-roots plus261unresolved replay). They are not classified as having no neutral;
-confirmed counts are lower bounds.696missing eBrem roots are below10MeV,
-but50are above that cut, so retention geometry/matching limits also matter.
-FSR uses generator-origin status1. eBrem uses creator subtype3 and exact
-emitting-electron G4ID, then unique birth momentum/vertex and MC-parent match.
-No angular match defines truth ownership. MC descendants/PFA weights are
-followed for both, including conversions. All FSR counts reproduce the
-previous audit at0/10MeV/1GeV; accepted MC roots are unique across origins.
-Definitions, denominator limits, source gates and verification:
-[the photon-neutral record](agents_record/2026-11-11-fsr-ebrem-neutral-cluster-counts.md).
+REC saves raw calorimeter-hit MC associations and reconstructed pre-clusters,
+but not cluster MC-weight maps or copied3D-point->raw-bar links. Fresh PFA
+WriteAna exports the missing map. Every event must match13ordered MC fields
+including G4endpoints; cluster attribution additionally requires exact energy,
+position, full hit multisets and PFO ownership. Failures stay unclassified.
+Compare theta half-width10/50mrad at fixed phi200mrad, no added energy cut;
+union clusters once per event. MC-weighted energy is a response proxy,
+not exact deposits; distinguish FSR purity from electron-origin purity and
+possible double counting of material loss already recovered by GSF.
 
-All20original REC identities match the previous source gate:928events have
-exact pre-cluster energy/position/hit-multiset and PFO ownership agreement;
-72remain unresolved. Existing snapshots are reused, with no replacement of
-source reconstruction. Analysis artifacts are under
-TrackingPerformanceStudies/photon_neutral_truth_counts_20261111/.
-
-Gallery localhost8000 has eight plots/three sections: matched
-inclusive/low/hard electron diagnostics first, then the preserved KF-only,
-KF+bareGSF and KF+GSF-neutral inclusive references, followed by full/zoom
-truth-dominated neutral-cluster locations versus the10/200mrad window.
-The new plots use birthE>=1GeV and reconstructed cluster minus original KF
-AtCalorimeter angles; all242FSR/189eBrem cluster associations are shown for
-206/150photons, with86/130photons collected. A photon can give several points.
-Every angular window decision agrees with saved native collection indices;
-all photon rows reproduce the preceding survey. Previous six PNGs/six PDFs
-are hash-checked unchanged. A subsequent theta-window purity estimate on
-928validated events keeps phi=200mrad and has no added energy threshold:
-theta10->50mrad collects487->627unique neutral clusters. Other-origin
-energy proxy rises0.85%->2.59%; the140added clusters have20.14%other-origin
-energy,49.15%FSR,9.22%tagged eBrem and21.48%other selected-electron ancestry.
-FSR-only energy purity is21.98%->24.42%, distinct from electron-origin purity.
-Hard FSR photons with dominated neutrals collected rise86->117of206.
-This uses reconstructed cluster energy times normalized PFA MC weights;
-electron-origin energy can still double count tracking recovery. Details
-and count/energy distinctions are in the photon-neutral record. No gallery
-or production-window change for this estimate. Both KF baselines in the
-neutral plot stay bare and unchanged; ONLY GSF receives neutral recovery.
-Prior normalization, truth-location caveats and fit diagnostics remain in
-[the recoil record](agents_record/2026-11-11-ebrem-split-kf-gsf-recoil.md).
-Previous32plots/66files remain archived and hash-valid. No new recovery
-window, BH model, beam-spot FSR-loss or Hive development. Preserve runtime
-dependencies, breakpoint-delayed-neutral and workspaces. Full outgoing focus:
-[the snapshot](agents_record/2026-11-11-agents-before-photon-neutral-counts.md).
+Gallery localhost8000 remains eight PNGs/three sections, currently still the
+previous1k results. Preserve all six recoil PNGs/six PDFs. Archive the previous
+two photon figures when replacing them with fresh results. No recoil rerun,
+new production window, fitter/PFA development, BH model or beam-spot FSR
+loss is authorized by this analysis request. Preserve existing workspaces.
+Run protocol, active-process controls and fresh-result status:
+[the fresh record](agents_record/2026-11-11-fresh-rec-photon-1k.md).
+Earlier1k counts, purity and event-content checks remain in
+[the earlier record](agents_record/2026-11-11-fsr-ebrem-neutral-cluster-counts.md).
+Every outgoing focus detail is preserved in
+[the snapshot](agents_record/2026-11-11-agents-before-fresh-photon-1k.md).
