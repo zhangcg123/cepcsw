@@ -337,7 +337,7 @@ Read25current REC_ECALTRUTH files x200events, evenly spread through completed
 500-job campaign.9916selected production tracks all have unique exact G4 IDs.
 No source/library/card/job change or native simulation/PFA/fit rerun.
 
-Two full/zoom PNG/PDFs show separate FSR/eBrem panels, electron implicitly(0,0),
+One zoom PNG/PDF shows separate FSR/eBrem panels, electron implicitly(0,0),
 only photon points. Position rays use the owning electron truth production
 vertex and both original G4firstECALentries. FSR uses saved generator history;
 eBrem uses the exact emitting G4trackID, resolved through complete silicon SimHit truth
@@ -345,8 +345,12 @@ links and cross-checked against FSR parent IDs. No angular matching.
 
 Valid pairs6246FSR/16169eBrem in5000events. FSR9067selected-owner records lose
 16electron entries and2805original photon entries; eBrem17686lose538/979.
-Fullrange+/-3200mrad; zoomtheta+/-150,phi+/-400mrad, with1590/242out-of-view
-points labelled. Referencebox|deltaTheta|<=50,|deltaPhi|<=200mrad.
+Zoom theta +/-150, phi +/-400mrad; full-range figure archived/removed from page.
+No bottom captions/legend/out-of-view text. Actual tuple box is theta +/-10mrad
+(20mradTOTALwidth), phi +/-200mrad, verified on500frozen cards and399actual
+selected-track collection lists. On-plot geometric photon-count efficiencies
+3069/6246=49.1%FSR and15728/16169=97.3%eBrem, using ALLvalid truth pairs,
+including out-of-view points. Not actual neutral-cluster energy recovery.
 
 This sample includes ALL valid original truth photons at all recorded energies,
 including photons merged into charged clusters. No neutral-only or fit-success
@@ -358,12 +362,13 @@ Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/.
 Source identities,22415unique pair keys, population closure, MC/G4 parent checks,
 independent axis/wrap tests, CSV readback and plot hashes pass; layouts viewed.
 Previous1kFSRmechanism and100kneutral-acceptance plots/results are preserved.
-Both new figures are the first localhost8000 gallery section: 16 PNGs across
+The updated zoom is the first localhost8000 gallery section: 15 PNGs across
 7 sections, ailogin002 PID2122174, no restart. Earlier plots are intact.
-All 16 current gallery plots now use **AGORA simulation**; preserve this label
+All current gallery plots use **AGORA simulation**; preserve this label
 in future rerenders. The cosmetic refresh reuses cached data and fit parameters;
 no refit or event processing. [Label record](agents_record/2026-11-12-agora-simulation-plot-label.md).
-Details: [5k truth geometry record](agents_record/2026-11-12-centered-truth-ecal-photons-5k.md).
+Window/layout/efficiency: [revision record](agents_record/2026-11-12-truth-window-plot-efficiency.md).
+Original definitions: [5k truth geometry record](agents_record/2026-11-12-centered-truth-ecal-photons-5k.md).
 FSRmissdiagnosis: [record](agents_record/2026-11-12-missed-fsr-neutral-diagnosis.md).
 Actualneutralacceptance: [record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
 Tailcut: [record](agents_record/2026-11-12-window-energy-upper2pct.md).
