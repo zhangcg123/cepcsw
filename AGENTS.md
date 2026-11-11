@@ -343,26 +343,32 @@ selector cross-check matches1988tracks across1000events. Neutral clusters are
 unioned once per event, positive finite E, nonempty hits, using the first KF
 AtCalorimeter reference. Compare half-windows theta10/50, phi200mrad.
 
-10mrad:49887clusters,7.23830GeV/input event; MC-energy fractions FSR20.212%,
-eBrem39.539%,other selected-electron39.813%,unrelated0.436%.
-50mrad:63390clusters,7.73060GeV/input event; FSR22.706%,eBrem37.693%,
-other selected-electron38.276%,unrelated1.325%.
-The added13503clusters contribute0.49230GeV/input event:59.379%FSR and
-14.397%unrelated. FSR proxy energy increases19.98%. These are normalized native
+User-requested upper2% energy-tail cut is now nominal: common98th percentile
+55.75723GeV from the original63390wide-window neutral clusters, applied to
+BOTH windows. Excludes1268wide and1253narrow clusters; no event deletion or
+normalization change. Physical high-energy clusters are also removed.
+10mrad:48634clusters,6.36248GeV/input event; MC-energy fractions FSR21.566%,
+eBrem41.539%,other selected-electron36.405%,unrelated0.490%.
+50mrad:62122clusters,6.84563GeV/input event; FSR24.200%,eBrem39.357%,
+other selected-electron34.959%,unrelated1.484%.
+The added13488clusters contribute0.48316GeV/input event:58.881%FSR and
+14.567%unrelated. FSR proxy energy increases20.73%. These are normalized native
 MC-weight response proxies, not deposited energies or validated FSR recovery.
-Missing soft eBrem MC roots can remain in other-electron ancestry. No energy
-threshold.24801683direct links pass checks; no empty neutral clusters found.
+Missing soft eBrem MC roots can remain in other-electron ancestry. The common
+energy cap is an analysis trim, not a PFA fix.24801683direct links passed checks;
+no empty neutral clusters found.
 
 Artifacts: TrackingPerformanceStudies/pre_ecal_window_energy_20261112/.
 190/249nonfinite cluster energies in the10/50mrad windows are excluded, affecting
 185/244events; other usable clusters in those events remain in the analysis.
 Seven collected clusters exceed100GeV, six exceed240GeV; all seven energy/position
-values already match the original REC. Main totals retain finite outliers; a
-separate >240GeV exclusion sensitivity leaves the widening conclusion stable.
+values already match the original REC. All seven are now excluded by the tail
+cut; original untrimmed figures/tables remain in before_energy_tail_cut/.
 Three new PNG/PDFs, summary, per-job CSVs and energy table are saved. The three
 PNGs are now the first section in the existing localhost8000 gallery:11PNGs,
 4sections, PID2122174 on ailogin002, no server restart. Previous plots and
 datasets remain intact. Gallery copies use the direct_pre_ecal_ prefix.
-Details/limits: [window energy record](agents_record/2026-11-12-direct-pre-ecal-window-energy.md).
+Tail-cut definition/results: [upper2% record](agents_record/2026-11-12-window-energy-upper2pct.md).
+Original full-sample details/limits: [window energy record](agents_record/2026-11-12-direct-pre-ecal-window-energy.md).
 Production/export/installation: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
 Outgoing focus preserved in [snapshot](agents_record/2026-11-12-agents-before-window-energy-results.md).
