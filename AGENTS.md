@@ -328,47 +328,37 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP110 / GSF ON FSR-FREE EVENTS WITH MATERIAL eBREM (2026-11-11).**
-Two new figures compare Baseline KF, BP110 and GSF BestBranch on identical
-10,804 both-leg-valid events (21,608 tracks): neither electron has tagged
-FSR, at least one has material eBrem. Unknown FSR is excluded, selection
-precedes endpoint validity, and there is no BP100 success gate. Both figures
-use the same event pool; pT retains both tracks without a recoil-window cut.
-Recoil is 120--130 GeV in 0.1 GeV bins, with own fitted directions and no
-photon addition. All histograms use full common panel denominators.
+**SINGLE MUON/ELECTRON BASELINE KF RECOIL AT 10 ab^-1 (2026-11-11).**
+The user requested clearing all displayed plots and showing one inclusive
+recoil figure,120--130GeV/0.1GeV bins, only bare muon and electron Baseline
+KF. The graph has axis labels, a two-curve legend and10ab^-1 at the top-left;
+no title, long annotation, neutral addition, BP or GSF curve. Canvas is square
+with faint grid lines(alpha0.2) and zero outer layout padding. Muon is solid
+black; electron is gray filled.
 
-BP110 uses truth-selected eligible location or valid null, fitted loss and
-tracker+beam+ECAL; its ElectronPhoton stage includes the charged+collected
-neutral energy sum when one breakpoint and usable neutrals exist, even with
-the separate neutral-measurement switch off. Do not add those neutrals again
-to that BP110 endpoint. GSF BestBranch has ECAL off. Panels show the full
-sample and no+light versus hard material loss (1% boundary). Hard-track pT
-central-68% half-widths are 1.919% BP110 versus 3.392% GSF; no+light is broader
-with BP110 (0.342% versus 0.265%). Inclusive recoil-window counts are
-6,703/8,165/7,758 for KF/BP110/GSF, with 1/2/78 undefined masses. These are
-cached selected-sample observations, not validation of a location scan or
-pure detector recoil resolution. Physical ISR remains in the recoil spectra.
+Electron now uses all498 completed source files/99,600 generated inputs,
+with97,910 valid opposite-charge Baseline KF pairs and no GSF/BPfit-success
+or FSR/eBrem gate. Weight10000*7.04/99600=0.7068273092369478. Muon retains
+48,636 cached pairs from50,000 generated inputs, weight1.354. Denominators
+are all generated inputs before any selection, never window counts. Raw
+window counts are42,631 electron and36,918 muon; expected30,132.755 and
+49,986.972. Undefined masses29/11 remain outside the plot but in denominators.
 
-The 496-file/99,200-event GSF cache matches BP REC identities and all joined
-truth/KF/radiation fields. Source caches and all 56 preceding PNG/PDFs remain
-unchanged. No ROOT file, fitter, library, run card or batch state changed.
-Definitions, validity losses, metrics, QA and gallery verification:
-[the comparison record](agents_record/2026-11-11-bp110-gsf-no-fsr-ebrem.md).
-Two additional recovery figures retain BP110 as fitted and add nearby
-neutral four-vectors only to KF and GSF. Recoil shows only the three main
-curves; dashed bare KF/GSF controls remain in the pT figure only. Same
-10,804 events/21,608 tracks;2,325 events have2,734 unique neutral clusters.
-Inclusive pT central68 half-widths become1.479% KF+neutrals,0.690% BP110,
-0.718% GSF+neutrals. Blind GSF addition can double count material recovery;
-this does not equalize truth/location/ECAL information. All60 prior PNG/PDFs
-and source caches remain unchanged. Details/QA are in the comparison record.
-Gallery has 32 PNGs across 10 sections on localhost8000; recovery recoil and
-pT figures come first, then bare comparisons. Previous truth maps and muon/electron
-10 ab^-1 recoil study remain available and unchanged.
+Muon has forced invisible Higgs decays; electron is inclusive eeHX. The muon
+curve is an inclusive-production tracking reference with Higgs factor1, not
+an inclusive-decay efficiency prediction or physical SM invisible rate.
+Original muon REC files remain missing. Reference cross sections and all
+sample details/QA are in
+[the KF-only record](agents_record/2026-11-11-kf-only-recoil-gallery.md).
 
-Next physics discussion should distinguish hard-loss recovery from no+light
-track degradation and BP110's additional truth/ECAL inputs. No FSR recovery
-window, BH model, beam-spot FSR-loss or Hive change is implemented. Preserve
-runtime dependencies, breakpoint-delayed-neutral and workspaces. Full outgoing
-focus and all global laws are preserved in
-[the snapshot](agents_record/2026-11-11-agents-before-bp110-gsf-no-fsr-ebrem.md).
+The served gallery on localhost8000 now contains only this figure. Previous
+32 displayed PNGs and matching PDFs/manifest are archived outside the served
+directory with hash verification; source study files and analysis caches
+remain preserved. No fit, ROOT read, library, card or job-state change.
+All preceding truth photon maps, BP110/GSF comparisons and neutral-recovery
+definitions remain in dated records. BP110 may include the charged+neutral
+sum already; do not blindly add those neutrals again to its fitted endpoint.
+No new recovery window, BH model, beam-spot FSR-loss or Hive development.
+Preserve runtime dependencies, breakpoint-delayed-neutral and workspaces.
+Full outgoing focus is preserved in
+[the snapshot](agents_record/2026-11-11-agents-before-kf-only-gallery.md).
