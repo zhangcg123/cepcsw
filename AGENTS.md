@@ -361,9 +361,16 @@ exact pre-cluster energy/position/hit-multiset and PFO ownership agreement;
 source reconstruction. Analysis artifacts are under
 TrackingPerformanceStudies/photon_neutral_truth_counts_20261111/.
 
-Gallery localhost8000 remains six plots/two sections, unchanged: matched
+Gallery localhost8000 has eight plots/three sections: matched
 inclusive/low/hard electron diagnostics first, then the preserved KF-only,
-KF+bareGSF and KF+GSF-neutral inclusive references. Both KF baselines in the
+KF+bareGSF and KF+GSF-neutral inclusive references, followed by full/zoom
+truth-dominated neutral-cluster locations versus the10/200mrad window.
+The new plots use birthE>=1GeV and reconstructed cluster minus original KF
+AtCalorimeter angles; all242FSR/189eBrem cluster associations are shown for
+206/150photons, with86/130photons collected. A photon can give several points.
+Every angular window decision agrees with saved native collection indices;
+all photon rows reproduce the preceding survey. Previous six PNGs/six PDFs
+are hash-checked unchanged. Both KF baselines in the
 neutral plot stay bare and unchanged; ONLY GSF receives neutral recovery.
 Prior normalization, truth-location caveats and fit diagnostics remain in
 [the recoil record](agents_record/2026-11-11-ebrem-split-kf-gsf-recoil.md).

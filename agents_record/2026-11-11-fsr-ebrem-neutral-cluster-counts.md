@@ -92,4 +92,44 @@ The outgoing AGENTS focus is preserved verbatim in
 [the snapshot](2026-11-11-agents-before-photon-neutral-counts.md).
 Global introduction, active laws/scope and compile/run instructions are
 byte-identical. No history directory is moved or renamed. No gallery files
-were changed for this analysis.
+were changed for the initial counting analysis.
+
+## Neutral-cluster position plots (subsequent user request)
+
+The user subsequently requested the locations relative to the collection
+window in a new section of the current gallery. Two PNG/PDF figures now
+compare FSR and material eBrem: a full-range view and a window zoom. The
+selection is birth energy >=1 GeV and >50% photon-plus-descendant MC-labelled
+content in a neutral pre-reclustering ECAL cluster. Every such association is
+shown, so one photon can contribute several points. A photon is collected if
+any of its dominated neutral clusters is in the window. The counts reproduce
+206/86 FSR and150/130 eBrem (total/collected);120FSR and20eBrem have no
+dominated neutral inside the window.
+
+Axes are reconstructed neutral-cluster minus the owning electron's ORIGINAL
+CompleteTracks first AtCalorimeter reference-point polar/azimuth angles,
+viewed from the nominal IP. Azimuth is wrapped to [-pi,pi]. These are not
+truth photon entry coordinates or directions from the fitted GSF endpoint.
+The dashed box is |deltaTheta|<=10mrad and |deltaPhi|<=200mrad. Every angular
+classification is asserted equal to the native saved cluster-index decision,
+after exact original/replayed cluster remapping. Every re-extracted photon
+row is asserted identical to the preceding survey CSV. No simulation, PFA,
+tracking, reconstruction source, installed library or job state changes.
+
+Uncommitted analysis artifacts: plot_window.py, location_window.log,
+survey/neutral_cluster_locations.csv, survey/location_window_summary.json,
+gallery_before_locations.json, and the gallery PNG/PDFs. Full views include
+all selected points; zooms label omitted points. The diagnostic remains the
+same1000-event survey, with unresolved ancestry/replay cases excluded.
+Existing six recoil PNGs and six PDFs are hash-checked unchanged.
+
+There are242FSR cluster associations (90inside) and189eBrem associations
+(153inside), distinct from the photon counts above. Outside cluster points
+split into theta-only/phi-only/both failures:83/3/66FSR and12/6/18eBrem.
+Thus most outside FSR cluster points fail the theta limit. This is a
+cluster-association diagnostic, not an independent photon efficiency. The
+zoom displays |deltaPhi|<=300mrad and |deltaTheta|<=30mrad, with120FSR and
+23eBrem cluster points outside the displayed view; the full plot includes
+all of them. Both layouts are visually inspected with separate legend and
+axis-label space. The new section is appended after the previous two;
+the gallery total is eight PNGs across three sections.
