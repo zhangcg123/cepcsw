@@ -1,6 +1,10 @@
 # Fresh photon/ECAL study from current REC: user reduced to1000events
 
-Status: RUNNING, no fresh aggregate purity result yet.
+Status: COMPLETE. Canonical study: TrackingPerformanceStudies/photon_ecal_fresh_1k_20261111/.
+
+The original running-state controls below are retained as history. All five
+retained native writers finished200events; excess jobs and the stopped queue
+controller have been terminated. No photon-study PFA process remains.
 
 The user requested fresh analyses on5000current REC events, questioned why
 PFA was needed, then explicitly reduced the sample to1000. Keep five already
@@ -9,7 +13,7 @@ precedes any fresh truth/purity result. Other initially started sources
 105/126/147 are stopped and excluded; the remaining original25-source plan
 must not run. The original plan is preserved, not used as an analysis input.
 
-Current working directory:
+Original working directory (now renamed after every native writer finished):
 TrackingPerformanceStudies/photon_ecal_fresh_5k_20261111/.
 Its name reflects the initial request; do not rename while native writers
 are active. input_manifest.json has five sources and input_events=1000;
@@ -36,7 +40,7 @@ ROOT outputs were produced; retain failed_environment_run.log. Corrected
 runs source setup.sh and set PYTHONNOUSERSITE=1; ROOT6.30/02 is the native
 environment. Offline readers remain separate single-threaded uproot readers.
 
-## Process controls at the reduction
+## Process controls at the reduction (historical, no active controls)
 
 Separate pilot controller3447526 runs seed1, native child3447571, and will
 validate/extract200events. Former queued controller3459026 was SIGSTOPped
@@ -87,3 +91,134 @@ Current localhost8000 page still shows the earlier1k sample, not fresh results.
 Global AGENTS introduction/laws/compile section is preserved byte-for-byte;
 the complete outgoing focus is snapshotted in the companion before-fresh record.
 Analysis code, native files, CSVs, logs and gallery manifests remain uncommitted.
+
+## Completed fresh results
+
+Canonical directory is now
+TrackingPerformanceStudies/photon_ecal_fresh_1k_20261111/.
+All1000retained events finished native PFA successfully; no study PFA process
+remains. The stopped25-source controller was killed only after its four
+retained writers finished, then canceled-source partial ROOT files were
+removed. Their logs and original plan remain as provenance. No source REC,
+existing tuple, production job, installed library or original card was changed.
+
+All1000full ordered MC events match current REC at debug precision across
+13fields, and all1000event fingerprints are unique. Independent checks also
+match all1895raw FSR payload roots/owners/momenta against CURRENT REC
+GsfGeneratorFsrLinks and MCParticle; all have generator-origin status1.
+Those raw records precede selected-production-track ownership cuts.
+
+| REC seed | Input events | Selected tracks | Exact cluster events | Excluded |
+| --- | ---: | ---: | ---: | ---: |
+|1|200|399|187|13|
+|22|200|398|188|12|
+|43|200|399|184|16|
+|63|200|393|184|16|
+|84|200|399|186|14|
+|Total|1000|1988|929|71|
+
+No fit-success, recoil, FSR/eBrem or purity cut chose these sources. The
+cluster gate compares energy, position, complete hit multisets and PFO
+charge/track ownership. The71failed events are not relabelled using the
+replay's changed clusters. Photon rows retain unresolved status; purity uses
+only929exactly matched events.
+
+### Truth-photon population and neutral association
+
+| Birth energy | Type | Tagged | Any neutral | Dominated neutral | Dominated in theta10 |
+| --- | --- | ---: | ---: | ---: | ---: |
+|All|FSR|1837|448|219|74|
+|All|eBrem|3710|843|143|119|
+|>=10MeV|FSR|913|408|219|74|
+|>=10MeV|eBrem|2866|843|143|119|
+|>=1GeV|FSR|409|291|194|73|
+|>=1GeV|eBrem|1153|450|137|119|
+
+Any own-charged contribution:790FSR/2423eBrem at all energies. Status totals:
+FSR1711resolved/126unresolved replay; eBrem2587resolved/779missing exact MC
+roots/344unresolved replay. At>=1GeV: FSR384resolved/25unresolved; eBrem
+1047resolved/92unresolved/14missingMC. These unresolved rows are not counted
+as confirmed absence. Photon-neutral counts are lower bounds, not overall
+photon detection efficiencies.
+
+For plotted birthE>=1GeV and>50%photon-plus-descendant dominance:
+
+| Type | Photons with dominated neutrals | theta10 accepted | theta50 accepted |
+| --- | ---: | ---: | ---: |
+|FSR|194|73|107|
+|eBrem|137|119|123|
+
+Phi remains200mrad in both. FSR acceptance in this conditional population
+is37.63%->55.15%,34additional photons(+46.58%); eBrem86.86%->89.78%.
+There are219FSR/164eBrem cluster associations in the plots,75/135inside
+the current window; one photon can create several points. Full view includes
+all points. Zoom is |deltaPhi|<=300 and|deltaTheta|<=75mrad, with85FSR and
+14eBrem points beyond the displayed view. Black dashed/current theta10 and
+gray dotted/proposed theta50 boxes share phi200. Blue/orange point colors
+refer to the CURRENT10mrad decision. No production-window change.
+
+### All-energy neutral-window purity
+
+This denominator includes ALL usable neutral clusters in the selected
+windows, not only photon-dominated objects or>=1GeV photons. Union each
+cluster once per event over both selected electrons. No extra energy cut.
+
+| Quantity | theta10 | theta50 | Added10--50 |
+| --- | ---: | ---: | ---: |
+|Unique neutral clusters|433|561|128|
+|Events with neutrals|328|378|99|
+|Summed cluster E[GeV]|6009.712|6430.695|420.983|
+|FSR energy fraction|18.876%|21.385%|57.204%|
+|Tagged eBrem fraction|38.327%|36.372%|8.451%|
+|Other selected-electron descendants|41.802%|40.186%|17.113%|
+|Other-origin contamination|0.994%|2.057%|17.231%|
+|Unknown fraction|0|0|0|
+|Other-origin dominated clusters|19|62|43|
+
+Other-origin dominated fractions by COUNT are4.39%,11.05%and33.59%, distinct
+from energy fractions. The added128clusters include40FSR-dominated,
+13eBrem-dominated,25other-electron-dominated,43other-origin-dominated and
+7mixed clusters. Energy proxies from other origins are59.752/132.293/
+72.541GeV; FSR proxies1134.413/1375.234/240.821GeV. FSR energy rises21.23%.
+These are reconstructed cluster energy times normalized native PFA MC weights,
+not exact deposited-energy fractions. Other selected-electron descendants
+include shower content without an individually retained brems root; broad
+electron-origin purity must not be described as FSR purity. Associated
+material/shower energy can double count recovery already present in GSF.
+This conditional929-event estimate has no held-out detector/recovery
+validation, and no recoil spectrum was recalculated.
+
+### Final verification and artifacts
+
+Every native window decision agrees with saved BP collection indices after
+exact current/replayed cluster remapping. All photon keys and accepted MC
+roots are unique. Unclassified photon flags are not interpreted as observed
+absence. The10mrad union is a subset of50mrad; cluster counts, total energy
+and every ancestry-category energy close between original+added and widened.
+Location-plot photon counts agree with purity photon acceptance for both
+windows/types. Native library hashes remain unchanged. Rendered files match
+their recorded hashes; both images are visually inspected and renderer
+assertions exclude legend/x-axis-title overlap. Analysis uses fresh data only;
+older code helpers supply constants/calculations, not cached records.
+
+Artifacts: input_manifest.json, archived input_manifest_planned_5k.json,
+runtime_libraries.json, analysis_code_hashes.json, truth_input_identity.json,
+fsr_origin_status_counts.json, per-source fresh native ROOT files/validation/
+fingerprint CSVs, survey/{summary.json,photons.csv,neutral_cluster_locations.csv,
+window_purity_candidates.csv,location_window_summary.json,
+window_purity_summary.json}, staged plots/ and gallery_before_fresh_1k.json.
+The full study occupies about0.565GiB; no REC file was copied.
+
+### Verified gallery publication
+
+The dedicated plot-gallery agent updated the existing third section after
+archiving the two old photon PNGs/two PDFs plus gallery.json/README.md
+(six files) to TrackingPerformanceStudies/.analysis_archive/
+photon_ecal_before_fresh_1k_20261111/. All six archived hashes match the
+pre-update manifest. All six recoil PNGs/six PDFs remain byte-identical;
+all four served fresh photon files match the staged final summary hashes.
+The gallery validates eight PNGs across three sections, each matched once.
+Homepage and both fresh PNG URLs return HTTP200, with PNG bytes verified.
+Existing managed server remains healthy on ailogin002.ihep.ac.cn,
+localhost8000, PID2122174; no restart was needed. Main-agent review confirms
+the manifest, preserved figures, archive and final plot hashes.
