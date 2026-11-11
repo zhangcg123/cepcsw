@@ -370,7 +370,17 @@ AtCalorimeter angles; all242FSR/189eBrem cluster associations are shown for
 206/150photons, with86/130photons collected. A photon can give several points.
 Every angular window decision agrees with saved native collection indices;
 all photon rows reproduce the preceding survey. Previous six PNGs/six PDFs
-are hash-checked unchanged. Both KF baselines in the
+are hash-checked unchanged. A subsequent theta-window purity estimate on
+928validated events keeps phi=200mrad and has no added energy threshold:
+theta10->50mrad collects487->627unique neutral clusters. Other-origin
+energy proxy rises0.85%->2.59%; the140added clusters have20.14%other-origin
+energy,49.15%FSR,9.22%tagged eBrem and21.48%other selected-electron ancestry.
+FSR-only energy purity is21.98%->24.42%, distinct from electron-origin purity.
+Hard FSR photons with dominated neutrals collected rise86->117of206.
+This uses reconstructed cluster energy times normalized PFA MC weights;
+electron-origin energy can still double count tracking recovery. Details
+and count/energy distinctions are in the photon-neutral record. No gallery
+or production-window change for this estimate. Both KF baselines in the
 neutral plot stay bare and unchanged; ONLY GSF receives neutral recovery.
 Prior normalization, truth-location caveats and fit diagnostics remain in
 [the recoil record](agents_record/2026-11-11-ebrem-split-kf-gsf-recoil.md).

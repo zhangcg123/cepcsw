@@ -133,3 +133,64 @@ zoom displays |deltaPhi|<=300mrad and |deltaTheta|<=30mrad, with120FSR and
 all of them. Both layouts are visually inspected with separate legend and
 axis-label space. The new section is appended after the previous two;
 the gallery total is eight PNGs across three sections.
+
+## Preliminary purity for theta half-width50mrad
+
+The user requested a contamination estimate before changing recovery. Reuse
+the same1000input events, keeping only928events passing the original
+pre-reclustering physical-object replay gate. No extra energy threshold,
+fit-success cut or luminosity normalization. Keep |deltaPhi|<=200mrad and
+compare |deltaTheta|<=10 versus50mrad. Count each neutral cluster once in
+the union over selected production-electron tracks in that event.
+
+All neutral candidates are considered, including clusters without any FSR
+contribution; the previous photon-only plots are not a purity denominator.
+Classify each debug MC label by ancestry: tagged FSR and descendants from
+either selected electron; tagged material eBrem and descendants; remaining
+descendants of selected final electrons; remaining labelled origins; unknown
+if MC fingerprints disagree on category or cluster truth is absent. No label
+is forced to an origin when fingerprints disagree. The remaining electron
+category includes shower content without an individually identified brems
+root; it is not all asserted to be tagged material eBrem. Unknown contributes
+zero in this sample, which does not remove the photon-root retention limits.
+
+Energy below is a response proxy: reconstructed cluster energy times the
+normalized PFA MC weight. It is not an exact deposited-energy partition.
+
+| Quantity | theta10 | theta50 | Added10--50 |
+| --- | ---: | ---: | ---: |
+| Unique neutral clusters |487|627|140|
+| Summed cluster energy [GeV] |6796.219|7467.177|670.957|
+| FSR energy fraction |21.98%|24.42%|49.15%|
+| Tagged eBrem energy fraction |38.01%|35.43%|9.22%|
+| Other selected-electron descendants |39.15%|37.57%|21.48%|
+| Other-origin energy fraction |0.854%|2.587%|20.144%|
+| Other-origin dominated clusters (>50%) |21|77|56|
+
+Other-origin dominated cluster fractions are4.31%of487,12.28%of627 and
+40.00%of140new clusters. Mixed clusters are21/24/3 respectively; no cluster
+is labelled dominated by two categories. Other-origin energy sums are
+58.017/193.172/135.155GeV. The extra FSR response proxy is329.762GeV,
+a22.08%increase over the original1493.772GeV. These numbers distinguish
+FSR-only purity from the broader selected-electron-origin purity; associated
+electron shower/material energy can still double count GSF recovery.
+
+In the separate plotted birthE>=1GeV photon-dominated-neutral subset,
+FSR photons collected rise86->117of206 (41.75%->56.80%,31additional),
+and eBrem rises130->133of150. These are photon-level acceptance counts,
+not the all-energy cluster-purity denominator above.
+
+Checks: every per-photon row reproduces the preceding CSV; every nominal
+angular decision matches the saved native collection indices; all categories
+sum to each cluster's complete normalized MC weight; repeated associations
+to the two electron windows have identical energy/composition and are
+deduplicated; the10mrad union is a subset of50mrad; category energies and
+total energy close exactly between original+added and widened selections.
+All928source-gated events are reused, with no simulation/PFA/native fit run.
+No reconstruction/source/library/run-card/window/gallery change.
+
+Uncommitted artifacts: window_purity.py, window_purity.log,
+survey/window_purity_candidates.csv, survey/window_purity_summary.json.
+This is a preliminary small-sample ancestry estimate, with no held-out
+validation or recovery/recoil optimization. It does not establish that
+97.4%of energy is useful FSR recovery: strict FSR purity is24.4%.
