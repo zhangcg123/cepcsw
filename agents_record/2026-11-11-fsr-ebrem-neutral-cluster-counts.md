@@ -194,3 +194,30 @@ survey/window_purity_candidates.csv, survey/window_purity_summary.json.
 This is a preliminary small-sample ancestry estimate, with no held-out
 validation or recovery/recoil optimization. It does not establish that
 97.4%of energy is useful FSR recovery: strict FSR purity is24.4%.
+
+## Fresh event-content identity check against current REC files
+
+The user questioned whether the reused1000-event PFA study might belong to
+different older REC events. Reopen all20CURRENT REC files and both cached
+PFA outputs, rather than relying on filenames or cached pass/fail records.
+All1000entries match the complete ordered MCParticle lists exactly at the
+debug's float32 precision across13fields: PDG, generator status, birth
+momentum xyz, G4endpoint xyz, birth vertex xyz, mass and charge. Full-event
+MC fingerprints are distinct for all1000entries. Diagnostic files do not
+store event-header IDs, so this is an event-content identity check.
+
+Recompute the full original/snapshot cluster-object gate from CURRENT REC
+contents: energies, positions, complete hit multisets and PFO charge/track
+ownership. Exactly928events pass, and the same72fail for cluster energy or
+position differences; every cached gate decision/reason is reproduced.
+Those72still have identical MC event contents, but are excluded from purity
+and classified photon-cluster results. Thus the cached study files are reused
+records of the same currently saved REC events, not a different old sample.
+Source sizes/mtimes also still match, and all20sources match both current
+BP_NOSCAN_PREECAL and GSF_MATCHBP production manifests.
+
+Artifacts: verify_current_events.py, current_rec_event_identity.log and
+survey/current_rec_event_identity.json (per-event MC content fingerprints,
+source paths and freshly computed cluster decisions). No PFA/simulation
+rerun or source/library/run-card/gallery change. This does not claim
+byte-identity of every unrelated REC collection or verify the full production.
