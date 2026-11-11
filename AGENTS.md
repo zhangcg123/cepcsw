@@ -369,6 +369,8 @@ Neutral trackless clusters ONLY. Common denominator198430selected electron
 tracks(including zero collection), independently checked from event rows.
 Tagged samples overlap. Inclusive3.20641GeV/track. Middle spectrum removed;
 separate per-event distribution kept.
+All4components of each bar have percentage energy shares of that bar's total
+(two decimals); small black Others labels above the stacks. Twelve labels.
 Gallery verified:13PNGs/6sections, every PNG categorized once. Energy-bar PNG
 and page HTTP200, source hash matches; remaining12images unchanged. Same localhost8000 directory, ailogin002 PID2122174,
 no restart. Main reviewed manifest coverage and source/copied hashes.

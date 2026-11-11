@@ -239,3 +239,23 @@ PID2122174 localhost8000, no restart. Main independently reviewed copied PNG
 hash, category coverage and section normalization/neutral-only definitions.
 Prior served bar and sectionJSON archived in before_per_track_others_bars/gallery/.
 Artifact: per_track_others_gallery_verification.json in source-study directory.
+
+## Follow-up: percentage of each component within each energy bar
+
+User requested percentages for each color. Added12labels: each component's
+neutral energy divided by its OWN bar total, two decimals. Main segments have
+centered labels; small black Others is annotated above each stack with a leader.
+DisplayedFSR/eBrem/other-electron/Others shares: FSR-tagged41.11/26.91/31.72/0.25%;
+eBrem-tagged16.49/49.23/33.96/0.32%;Inclusive21.57/41.54/36.40/0.49%. Shares sum1
+before rounding; display may sum99.99%. This is energy composition, not counts.
+All previous raw/component energy values, track denominator198430, counts,
+selection, window/cap and colors unchanged. Shares saved in source-study
+tagged_collection_bars.json. Twelve-label count, share formula and closure
+assertions pass; layout viewed; other source plot hashes unchanged. Cached CSV
+rerender only, no native REC/PFA/fit run. Previous files preserved in
+before_component_percentages/. Delegated gallery verified13PNGs/6sections/
+exact-once, page+replacementPNG200/sourcehashmatch; other12PNGs unchanged.
+Same ailogin002 PID2122174 localhost8000, no restart. Main checked copied source
+hash and manifest coverage. Prior servedPNG+sectionJSON archived under
+before_component_percentages/gallery/. Verification artifact:
+component_percentages_gallery_verification.json in source-study directory.
