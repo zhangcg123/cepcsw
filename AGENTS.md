@@ -355,7 +355,8 @@ unchanged. No ROOT file, fitter, library, run card or batch state changed.
 Definitions, validity losses, metrics, QA and gallery verification:
 [the comparison record](agents_record/2026-11-11-bp110-gsf-no-fsr-ebrem.md).
 Two additional recovery figures retain BP110 as fitted and add nearby
-neutral four-vectors only to KF and GSF; dashed bare controls remain. Same
+neutral four-vectors only to KF and GSF. Recoil shows only the three main
+curves; dashed bare KF/GSF controls remain in the pT figure only. Same
 10,804 events/21,608 tracks;2,325 events have2,734 unique neutral clusters.
 Inclusive pT central68 half-widths become1.479% KF+neutrals,0.690% BP110,
 0.718% GSF+neutrals. Blind GSF addition can double count material recovery;

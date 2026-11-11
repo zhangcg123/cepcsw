@@ -139,3 +139,15 @@ Dedicated plot-gallery agent and parent manifest review confirm32PNGs across
 figures. All30 prior PNGs and other section descriptions/order are preserved.
 Existing ailogin002 PID2122174 serves localhost8000; homepage and both new
 PNGs return HTTP200 and image bytes match final summary hashes.
+
+## Display-only follow-up: remove bare lines from recovered recoil
+
+At the user's request, recoil_bp110_gsf_no_fsr_ebrem_neutrals now displays
+only KF+neutrals, BP110 as fitted, and GSF+neutrals. Bare KF/GSF curves and
+their legend/footer text are removed from this recoil figure. All three
+remaining curves retain exactly the same counts and statistics in all
+panels. The pT PNG/PDF remain byte-identical and retain their bare controls.
+No event selection, neutral addition, normalization or fit changes. Parent
+visually inspected the updated recoil layout; gallery wording distinguishes
+the recoil and pT displays. remove_bare_recoil.log records the cached rerender
+and unchanged-statistics/pT-artifact assertions.
