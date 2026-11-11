@@ -334,6 +334,10 @@ below1%, includingzero) and hard eBrem (AT LEAST ONE electron>=1%). They
 share85,327 both-leg-valid KF/GSF event keys, split24,647/60,680. FSR is
 retained, no BP-success gate or neutral recovery. The original KF-only and
 KF+GSF inclusive plots remain byte-identical and available separately.
+A third electron-only diagnostic shows the inclusive union of both categories
+on the same85,327events, without muons. Window yields27,979KF/32,457GSF
+(+16.00%); core sigma0.297+/-0.007/0.341+/-0.008GeV. The selected DSCB fits
+pass status0/cov3; two KF starts agree, one failed-Hessian start is rejected.
 
 All new curves use generated-input weight10000*7.04/99600=0.7068273092369478,
 never category/window or successful-fit renormalization. Recoil120--130GeV,
@@ -353,8 +357,11 @@ starts have status0/covariance quality3 and no boundary parameter.
 
 Both new plots retain square canvas, large fonts, faint grid, AGORA bold
 outside the axes and10ab^-1 inside. Category and sigma/yield labels appear
-left of the peak. Gallery localhost8000 has four PNGs across two sections:
-the category plots first, then preserved KF-only and KF+GSF inclusive plots.
+left of the peak. Gallery localhost8000 has five PNGs across two sections:
+matched inclusive, then low/hard category plots first; preserved KF-only and
+KF+GSF inclusive plots remain in the second section. All eight preceding
+PNG/PDF artifacts remain byte-identical. Matched-inclusive diagnostics are
+in ebrem_inclusive_matched_summary.json in the same study directory.
 Source caches and four original inclusive PNG/PDFs are unchanged. No event
 ROOT read, tracking refit, card, library or job change. Definitions, exact
 matching, fit checks, transition counts and gallery verification:
