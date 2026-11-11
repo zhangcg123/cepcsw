@@ -123,3 +123,22 @@ the fit-window expected yields within1.3e-7relative (tolerance2e-5); both
 saved covariance matrices have positive eigenvalues. All input histogram,
 source-summary and maintained-fitter hashes remain unchanged; output PNG
 dimensions remain1260x1260. No fit-range or binning-variation claim is made.
+
+## Fit-summary labels and larger typography
+
+The user removed the two DSCB legend entries while retaining the dashed fit
+curves, and requested sigma and window yields printed on the graph. Legend
+now contains only electron/muon Baseline KF. Compact notes show muon core
+sigma0.273+/-0.004GeV andN(120--130GeV)=49,987; electron0.299+/-0.006GeV
+andN=30,133. These are rounded actual histogram expected yields at10ab^-1,
+not raw MC counts or fitted123.5--128GeV normalization yields.
+
+Latest steering enlarges axis titles to18pt,ticks16pt,legend14pt,luminosity
+16pt and fit notes14pt. Each channel note uses three short lines to avoid
+the peak. Square canvas, faint grid, zero outer padding, top-left luminosity,
+black solid muon reference and gray-filled electron remain. No title added.
+Parent inspected the final layout. Repeated rendering reproduces exactly
+the same fitted means/sigmas/errors and histogram yields; input/fitter hashes
+and covariance/convergence gates remain unchanged.
+Final PNG`de183863491b20f27ddafce482edb5fed36c9317a67a81448b28c4ccf1db2d39`;
+PDF`0b4b7e3f873612c555eace28bf3c6842844c3ab3fc06f6b4436e3cf98cd4c96b`.

@@ -334,7 +334,10 @@ recoil figure,120--130GeV/0.1GeV bins, only bare muon and electron Baseline
 KF. The graph has axis labels, a short legend and10ab^-1 at the top-left;
 no title, long annotation, neutral addition, BP or GSF curve. Canvas is square
 with faint grid lines(alpha0.2) and zero outer layout padding. Muon is solid
-black; electron is gray filled. Axis tick/label fonts are14pt. Dashed DSCB
+black; electron is gray filled. Axis fonts are18pt,ticks16pt,legend14pt,
+luminosity16pt. The legend has only the two Baseline KF entries. Compact14pt
+notes show core sigma and expected120--130GeV yields (49,987muon/30,133electron).
+Dashed DSCB
 peak fits use the same123.5--128GeV range and raw-count bin-integrated
 likelihood, reusing the existing ROOT fitter. Both fits have status0/cov3,
 consistent three-start minima and no boundary parameters. Core sigma is
