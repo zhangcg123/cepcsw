@@ -363,9 +363,11 @@ the page on request; their four served plots and metadata are archived.
 Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/
 and reco_neutral_ecal_centered_5k_20261112/. Native fractions/windows match cache;
 same source identities, keys, cap, axis/wrap and PNG/PDF hashes checked.
-Gallery verified after cleanup:14PNGs/6sections, every PNG categorized once.
-Both removed titles and their four preview links are absent; remaining images
-are unchanged. Page and a remaining PNG HTTP200. Same localhost8000 directory, ailogin002 PID2122174,
+100k-event neutral-energy section now has one stacked bar for the current
+10/200mrad collection (6.36248GeV/input event), replacing its3-bar comparison.
+Middle cluster-energy spectrum removed from page; per-event comparison kept.
+Gallery verified:13PNGs/6sections, every PNG categorized once. Single-bar PNG
+and page HTTP200, source hash matches; remaining12images unchanged. Same localhost8000 directory, ailogin002 PID2122174,
 no restart. Main reviewed manifest coverage and source/copied hashes.
 Details: [individual plots record](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
 Actual window: [record](agents_record/2026-11-12-truth-window-plot-efficiency.md).

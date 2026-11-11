@@ -164,3 +164,28 @@ Delegated gallery check:14PNGs/6sections/exact-once, other14image hashes unchang
 pageHTTP200, both removed titles/four preview filenames absent, remainingPNG200.
 Same ailogin002 PID2122174 localhost8000; no restart or analysis rerun. Main
 independently checked14/6coverage, archive presence and absent active previews.
+
+## Follow-up: one current-window stacked energy bar
+
+User updates "Direct saved-MC-link pre-ECAL neutral energy: common upper-2%
+trim": remove the middle cluster-energy-by-origin plot from the page and
+replace the first3-bar window comparison with ONE stacked bar showing energy
+components inside the current collection. Keep the third per-event plot.
+
+Cached100000event theta10 summary,48634neutral clusters; actual10mradtheta
+halfwidth(20total),200mradphi halfwidth, same55.75722694396976GeV cap. Components
+GeVperINPUTevent(includingzero-collection events): FSR1.37212320687654,eBrem
+2.642916295763257,other electron descendants2.3162551906595636,other origin
+0.03118310944350146,unknown0. Total6.362477802742885. Component sum closes
+within1e-12relative tolerance. MC-weight energy proxies, not exact deposits.
+Same native source/selection, no event/PFA/tracking rerun. Generated only new
+bar PNG/PDF; all unrelated source plot hashes unchanged. One stack position
+asserted, layout viewed. Summary/code/previous plots and notes preserved in
+TrackingPerformanceStudies/pre_ecal_window_energy_20261112/, with former bar
+under before_single_collection_bar/. Delegated gallery update verified:13PNG/
+6sections/exact-once, page200 and replacementPNG200/sourcehashmatch, other12
+PNGhashes unchanged; removed middle image absent from previews. Old first/
+middle served images and prior sectionJSON archived under before_single_collection_bar/gallery/.
+Same ailogin002 PID2122174 localhost8000; no restart. Main independently checked
+coverage, updated section patterns, removed active PNG and copied source hash.
+Artifact: single_collection_bar_gallery_verification.json in source-study directory.
