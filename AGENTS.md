@@ -349,8 +349,16 @@ the existing eBrem-style recovery and all fit/source/library/job states remain
 unchanged. Definitions, coverage, QA and gallery verification:
 [the centered map record](agents_record/2026-11-11-centered-truth-photon-entry-maps.md).
 
-Gallery now has 25 PNGs across 9 sections on localhost8000; geometry is first,
-with the two new maps before the earlier distance/angle histograms. The
+Two additional 2D core/wide maps split electron and positron by exact cached
+truth-owner identity, retaining all 441,443 pairs without charge folding.
+FSR median photon-minus-electron deltaPhi is -24.582/+24.465 mrad (e-/e+);
+eBrem is -4.785/+4.713 mrad. The opposite extensions support magnetic
+transport qualitatively; intrinsic emission and transport are not decomposed.
+All 50 preceding PNG/PDFs and source caches remain unchanged; definitions and
+QA are in the centered map record above.
+
+Gallery now has 27 PNGs across 9 sections on localhost8000; geometry is first,
+with the charge-split maps before the pooled maps and distance/angle histograms. The
 10 ab^-1 recoil plot remains bare muon KF, bare electron KF (filled), bare
 electron GSF, and electron GSF+neutrals. All three electron curves share
 85,327 keys and generated-input weight 0.709677 (Ngen=99,200); muon weight

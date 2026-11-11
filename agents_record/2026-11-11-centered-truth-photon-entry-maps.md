@@ -76,3 +76,40 @@ definitions/coverage:
 [the original geometry record](2026-11-11-ecal-photon-electron-angles.md).
 Complete outgoing focus is preserved in
 [the snapshot](2026-11-11-agents-before-centered-photon-maps.md).
+
+## Follow-up: separate electron and positron 2D maps
+
+The user requested the same 2D distributions separately for the two charges.
+Two additional figures show core +/-200 mrad and wide +/-pi*1000 mrad on both
+axes. Columns are electron (truth PDG +11) and positron (truth PDG -11); rows
+are FSR and material eBrem. The existing position-ray definition, original
+entry requirement and all photon energies are retained without charge folding,
+fit-success cuts, electron markers or window overlays.
+
+The coordinate cache lacks PDG. The new uncommitted `by_charge.py` joins to
+the existing `tracks_completed_bp.csv` on job/event/input-track, checking MC
+identity, G4 identity and truth energy for every valid pair. Both 498-file
+input snapshots are identical. Every valid photon has exactly one charge;
+the sum exactly reproduces 123,581 FSR plus 317,862 eBrem. Original missing
+entry counts remain 55,774 FSR and 28,317 eBrem. No ROOT reread is needed.
+
+| Category | Electron photons | Positron photons | Median dPhi e- [mrad] | Median dPhi e+ [mrad] |
+| --- | ---: | ---: | ---: | ---: |
+| FSR | 61,770 | 61,811 | -24.5815 | +24.4646 |
+| eBrem | 158,908 | 158,954 | -4.7854 | +4.7135 |
+
+Core shown counts are 44,314/44,282 FSR and 155,654/155,814 eBrem
+(electron/positron). Wide panels include all valid pairs. Both layouts were
+visually inspected. Source SHA256s and all 50 preceding gallery PNG/PDFs are
+unchanged. Summary, source and plot hashes are in `summary_by_charge.json`.
+New files are `truth_photon_entries_angles_by_charge_{core,wide}.png/.pdf`.
+Their opposite azimuthal extensions are consistent with magnetic transport;
+no quantitative intrinsic-emission/transport decomposition is established.
+No fit, library, source tuple, job or recovery window changes.
+
+The dedicated plot-gallery agent added both charge-split figures first in
+geometry, preserving the other 25 PNGs and other section descriptions/order.
+Skill validator and parent review confirm 27 PNGs across 9 sections, each
+covered exactly once. Existing ailogin002 server PID2122174 already served
+the correct directory and was retained. Homepage and both new PNG routes
+return HTTP200; served PNG SHA256s match disk at http://127.0.0.1:8000/.
