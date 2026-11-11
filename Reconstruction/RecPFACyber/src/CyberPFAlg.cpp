@@ -750,6 +750,7 @@ StatusCode CyberPFAlg::execute()
   auto* prePFOs = w_PrePFOs.createAndPut();
   auto* preEcal = w_PreEcal.createAndPut();
   auto* preEcalHits = w_PreEcalHits.createAndPut();
+  auto* preEcalTruth = w_PreEcalTruth.createAndPut();
   auto* preHcal = w_PreHcal.createAndPut();
   auto* preHcalHits = w_PreHcalHits.createAndPut();
   auto* preTruthTracks = w_PreTruthTracks.createAndPut();
@@ -758,7 +759,8 @@ StatusCode CyberPFAlg::execute()
       [&](const std::string& name, const CyberDataCol& data) -> StatusCode {
         if (name != "TrackClusterConnectingAlg") return StatusCode::SUCCESS;
         return m_pOutputCreator->CreatePFOSnapshot(data, *prePFOs,
-            *preEcal, *preEcalHits, *preHcal, *preHcalHits, *preTruthTracks);
+            *preEcal, *preEcalHits, *preHcal, *preHcalHits, *preTruthTracks,
+            *preEcalTruth);
       }).isFailure()) return StatusCode::FAILURE;
 
   // Preserve both upstream stages without changing the final PFO-associated output.

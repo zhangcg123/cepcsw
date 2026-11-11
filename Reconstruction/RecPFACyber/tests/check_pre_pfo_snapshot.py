@@ -60,8 +60,9 @@ bool checkPrePFOSnapshot() {
     edm4hep::ClusterCollection ecal, hcal;
     edm4hep::CalorimeterHitCollection ecalHits, hcalHits;
     edm4hep::TrackCollection truthTracks;
+    Cyber::ClusterTruthCollection ecalTruth;
     assert(exporter.CreatePFOSnapshot(data, pfos, ecal, ecalHits,
-                                      hcal, hcalHits, truthTracks).isSuccess());
+                                      hcal, hcalHits, truthTracks, ecalTruth).isSuccess());
     assert(pfos.size() == 3 && ecal.empty() && ecalHits.empty());
     assert(hcal.size() == 1 && hcalHits.size() == 1 && truthTracks.empty());
     assert(pfos[0].tracks_size() == 2 && pfos[1].tracks_size() == 0);
@@ -83,11 +84,49 @@ bool checkPrePFOSnapshot() {
     assert(pfos[1].getEnergy() == 8.);
     edm4hep::ReconstructedParticleCollection empty;
     assert(exporter.CreatePFOSnapshot(data, empty, ecal, ecalHits,
-                                      hcal, hcalHits, truthTracks).isSuccess());
+                                      hcal, hcalHits, truthTracks, ecalTruth).isSuccess());
     assert(empty.empty());
+    edm4hep::MCParticleCollection particles;
+    particles.setID(30);
+    auto photon = edm4hep::MCParticle(particles.create());
+    auto other = edm4hep::MCParticle(particles.create());
+    Cyber::CaloUnit bar;
+    bar.setQ(1., 2.);
+    Cyber::Calo1DCluster shower;
+    shower.setBars({&bar});
+    Cyber::CaloHalfCluster half;
+    half.addUnit(&shower);
+    Cyber::Calo2DCluster plane;
+    plane.addShowerU(&shower);
+    plane.setPos(2000., 0., 100.);
+    Cyber::Calo3DCluster ecalSource;
+    ecalSource.setClusters({&plane});
+    ecalSource.addHalfClusterU("LinkedLongiCluster", &half);
+    ecalSource.setLinkedMCP({{photon, .8f}, {other, .2f}});
+    auto one = std::make_shared<Cyber::PFObject>();
+    auto two = std::make_shared<Cyber::PFObject>();
+    one->addECALCluster(&ecalSource);
+    two->addECALCluster(&ecalSource);
+    data.map_PFObjects["outputPFO"] = {one, two};
+    ecal.setID(31);
+    assert(exporter.CreatePFOSnapshot(data, empty, ecal, ecalHits,
+                                      hcal, hcalHits, truthTracks, ecalTruth).isSuccess());
+    assert(ecal.size() == 1 && ecalTruth.size() == 2);
+    assert(ecalTruth[0].getWeight() == .8f && ecalTruth[1].getWeight() == .2f);
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+    assert(ecalTruth[0].getFrom() == ecal[0] && ecalTruth[0].getTo() == photon);
+    assert(ecalTruth[1].getFrom() == ecal[0] && ecalTruth[1].getTo() == other);
+#else
+    assert(ecalTruth[0].getRec() == ecal[0] && ecalTruth[0].getSim() == photon);
+    assert(ecalTruth[1].getRec() == ecal[0] && ecalTruth[1].getSim() == other);
+#endif
+    assert(ecalSource.getLinkedMCP().size() == 2);
+    ecalSource.setLinkedMCP({});
+    assert(ecalTruth[0].getWeight() == .8f);
     return true;
 }
 ''')
 assert ROOT.checkPrePFOSnapshot()
 print('PASS: original track links, shared cluster/hit identity, trackless/track-only '
-      'PFOs, independent energies after source mutation, and empty events.')
+      'PFOs, independent energies after source mutation, empty events, and '
+      'deduplicated ECAL truth links with direct MC references and immutable weights.')

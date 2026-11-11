@@ -176,3 +176,28 @@ build before installation. The test checks event-track release, empty events
 and repeated cleanup. Multi-cluster snapshot ordering is not an identity
 contract: compare cluster values with their linked hits, not only vector
 indices, when allocation order differs between builds.
+
+## Persisted pre-reclustering ECAL truth
+
+`EcalClusterPreReclusteringParticleAssociation` saves every entry of each
+exported ECAL cluster's native `getLinkedMCP()` map at the snapshot boundary.
+The standard weighted association points directly to
+`EcalClusterPreReclustering` and `MCParticle`; EDM4hep >=1 uses the corresponding
+`ClusterMCParticleLink` type. Shared clusters are exported once. Both charged
+and neutral cluster contributions are retained, without a new geometric match,
+weight cut, normalization, photon classification or fit steering. HCAL truth
+is not exported by this addition. `WriteAna` is not required.
+
+Keep the referenced MCParticle and cluster banks in output. These are native
+response weights, not exact deposited-energy fractions. Preserving raw
+`ECALBarrel`/`ECALEndcaps` and their `*ParticleAssoCol` banks separately retains
+the digitized inputs for a later PFA rerun. A `keep *` output retains all of them;
+removing simulated-hit banks does not remove these digitized banks.
+
+The snapshot unit fixture checks shared-cluster deduplication, direct MC links
+and copied weights after source mutation. The 2026-11-12 isolated native
+18-event test matches all4149 exported weights to PFA diagnostics. Existing
+PFA output ordering and some assignments can vary even between old-library
+replays; compare linked physical contents and record differences rather than
+assuming bitwise identity. See
+[the campaign gate](../../agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).

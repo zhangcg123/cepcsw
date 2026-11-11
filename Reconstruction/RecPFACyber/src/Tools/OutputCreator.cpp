@@ -13,7 +13,8 @@ namespace Cyber{
       const CyberDataCol& data, edm4hep::ReconstructedParticleCollection& pfos,
       edm4hep::ClusterCollection& ecal, edm4hep::CalorimeterHitCollection& ecalHits,
       edm4hep::ClusterCollection& hcal, edm4hep::CalorimeterHitCollection& hcalHits,
-      edm4hep::TrackCollection& truthTracks) {
+      edm4hep::TrackCollection& truthTracks,
+      ClusterTruthCollection& ecalTruth) {
     const auto source = data.map_PFObjects.find(settings.map_stringPars.at("OutputPFO"));
     if (source == data.map_PFObjects.end()) return StatusCode::FAILURE;
     std::map<const Calo3DCluster*, edm4hep::Cluster> savedEcal, savedHcal;
@@ -28,6 +29,20 @@ namespace Cyber{
       const auto position = isEcal ? cluster->getShowerCenter() : cluster->getHitCenter();
       output.setEnergy(isEcal ? cluster->getLongiE() : cluster->getHitsE());
       output.setPosition({float(position.X()), float(position.Y()), float(position.Z())});
+      if (isEcal) {
+        // Capture the native map on the same objects before reclustering mutates them.
+        for (const auto& contribution : cluster->getLinkedMCP()) {
+          auto link = ecalTruth.create();
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+          link.setFrom(output);
+          link.setTo(contribution.first);
+#else
+          link.setRec(output);
+          link.setSim(contribution.first);
+#endif
+          link.setWeight(contribution.second);
+        }
+      }
       auto view = cluster->Clone();
       // ECAL merges leave the cached hit list incomplete; do not mutate the source.
       if (isEcal) view->setCaloHitsFrom2DCluster();

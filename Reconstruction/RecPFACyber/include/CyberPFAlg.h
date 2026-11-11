@@ -192,6 +192,7 @@ protected:
   DataHandle<edm4hep::ReconstructedParticleCollection> w_PrePFOs{"CyberPFOPreReclustering", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection> w_PreEcal{"EcalClusterPreReclustering", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection> w_PreEcalHits{"EcalHitsPreReclustering", Gaudi::DataHandle::Writer, this};
+  DataHandle<Cyber::ClusterTruthCollection> w_PreEcalTruth{"EcalClusterPreReclusteringParticleAssociation", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::ClusterCollection> w_PreHcal{"HcalClusterPreReclustering", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::CalorimeterHitCollection> w_PreHcalHits{"HcalHitsPreReclustering", Gaudi::DataHandle::Writer, this};
   DataHandle<edm4hep::TrackCollection> w_PreTruthTracks{"TracksPreReclustering", Gaudi::DataHandle::Writer, this};

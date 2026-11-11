@@ -216,6 +216,9 @@ explicit provenance. Historical detail does not override this live status.
   Current additional user-authorized scope: fix only our August-added TPC
   truth-provenance bookkeeping in `Simulation/DetSimSD`, with new focused tests.
   Preserve all pre-existing simulation hit-building, tracking and PFA code.
+  Additional 2026-11-12 exception: persist native pre-reclustering ECAL
+  cluster MC weights through our passive `RecPFACyber` snapshot exporter and
+  output registration, with focused tests. Do not alter original PFA algorithms.
   Report any necessary change to those older parts before editing them.
 - Do not modify KalTest, TrackSystemSvc, MarlinTrk, DDKalTest, or other shared
   CEPCSW packages to compensate for a GSF-specific state-management problem
@@ -328,47 +331,29 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FRESH CURRENT-REC PHOTON/ECAL STUDY COMPLETE, 1000EVENTS (2026-11-11).**
-The user reduced the requested5000events to1000. Fresh PFA-only diagnostics
-were generated from CURRENT REC_TPCFIX seeds1,22,43,63,84, all200events each;
-no old native snapshot/debug ROOT or survey CSV is an input. There are1988
-selected production-electron tracks, no fit-success/recoil cut. All1000MC
-lists match13fields including G4endpoints, with1000unique event fingerprints.
-929events also exactly reproduce pre-cluster energy/position/full hit
-multisets and PFO ownership;71fail and are excluded from purity. All1895raw
-FSR payload identities/owners/momenta match current REC generator links.
+**PRE-ECAL TRUTH REC CAMPAIGN PREPARED (2026-11-12).**
+500 REC-only jobs x200 events reuse all current REC_TPCFIX inputs. Retain
+`ECALBarrel`, `ECALEndcaps` and their `*ParticleAssoCol` MC weights, and export
+`EcalClusterPreReclusteringParticleAssociation` from the native PFA map.
+The existing simulated-calorimeter-hit drop list remains. No generator,
+simulation, digitization, tracking, GSF or BP stage runs. External input REC
+files are retained. Output and frozen cards/local libraries live under
+`higgs_eeHX_ISRFSRON_REC_ECALTRUTH_500jobs_200evt_20261112/`.
 
-Canonical artifacts: TrackingPerformanceStudies/photon_ecal_fresh_1k_20261111/.
-All retained native runs are complete; excess initial5k jobs were stopped,
-their partial ROOT outputs removed, and the old queue controller terminated.
-No study PFA process remains. Only reader->PFA through
-TrackClusterConnectingAlg->output ran; no simulation/digi/tracking, BP/GSF
-fit, source/original-card/library installation or production-window change.
-REC has raw-hit MC links but no saved cluster MC map/copied3D-point->raw-bar
-links; PFA WriteAna supplies the missing weights.
+Campaign-local library only; no shared install. Request4000MB, walltime short.
+Prepared and ready, NOT SUBMITTED. On the usual batch login node run:
 
-All birth energies:1837FSR/3710eBrem tagged,448/843have any neutral
-contribution,219/143have >50%-dominated neutral clusters. At birthE>=1GeV:
-194FSR/137eBrem have dominated neutrals; current theta10/phi200mrad collects
-73/119photons, proposed theta50/phi200 collects107/123. One photon can give
-several cluster points. Counts are conditional, not detection efficiencies.
-126FSR and1123eBrem remain unclassified (eBrem779missingMCroot+344replay).
+```bash
+bash higgs_eeHX_ISRFSRON_REC_ECALTRUTH_500jobs_200evt_20261112/submit.sh
+```
 
-Purity uses ALL usable neutral clusters, no added energy cut, unioned once
-per event. theta10->50 collects433->561clusters; other-origin energy proxy
-rises0.994%->2.057%. The128added clusters have57.20%FSR,8.45%tagged eBrem,
-17.11%other selected-electron descendants and17.23%other-origin energy.
-FSR-only energy purity is18.88%->21.39%; broader electron-origin purity must
-not be presented as FSR purity. MC weights are response proxies, not exact
-deposits; electron-associated energy can double count GSF material recovery.
-
-The current localhost8000 gallery keeps eight PNGs/three sections: six
-unchanged recoil plots, then fresh full/zoom photon locations with current10
-and proposed50theta boxes (phi200). The previous photon plots/page metadata
-are archived. No recoil rerun or new recovery steering; preserve workspaces.
-Exact sources, validation, counts, purity, archive and gallery checks:
-[the fresh record](agents_record/2026-11-11-fresh-rec-photon-1k.md).
-The previous1k sample/results remain in
-[the earlier record](agents_record/2026-11-11-fsr-ebrem-neutral-cluster-counts.md).
-The outgoing running focus is preserved in
-[the snapshot](agents_record/2026-11-11-agents-before-fresh-photon-1k-results.md).
+18-event native A/B (including11,16,17) passes the ECAL/track-input and native
+truth-weight gates:4149 direct weighted links, raw digitized banks retained,
+all pre/final cluster physics and final PFO/PID physics equal after mapping
+collection order. One pre-PFO HCAL assignment differs; an independent old/old
+repeat also changes PFA output, so replay is not bitwise deterministic.
+Do not claim universal exact PFA reproduction. No original PFA algorithm fix.
+The500-job campaign has not run, and local htcondor imports are unavailable.
+Keep current plotting server, datasets and installed runtime unchanged.
+Details and scope: [campaign record](agents_record/2026-11-12-pre-ecal-truth-rec-campaign.md).
+Outgoing fresh1000-event study: [snapshot](agents_record/2026-11-12-agents-before-ecal-truth-rec.md).

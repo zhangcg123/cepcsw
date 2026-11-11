@@ -5,11 +5,22 @@
 #include "edm4hep/MutableCalorimeterHit.h"
 #include "edm4hep/Vector3f.h"
 #include "CyberDataCol.h"
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+#include "edm4hep/ClusterMCParticleLinkCollection.h"
+#else
+#include "edm4hep/MCRecoClusterParticleAssociationCollection.h"
+#endif
 #include "Tools/Algorithm.h"
 #include <string>
 //#include "Tools/HelixClassD.h"
 
 namespace Cyber{
+
+#if edm4hep_VERSION >= EDM4HEP_VERSION(1, 0, 0)
+  using ClusterTruthCollection = edm4hep::ClusterMCParticleLinkCollection;
+#else
+  using ClusterTruthCollection = edm4hep::MCRecoClusterParticleAssociationCollection;
+#endif
 
   class OutputCreator{
   public: 
@@ -28,7 +39,8 @@ namespace Cyber{
         edm4hep::ReconstructedParticleCollection& pfos,
         edm4hep::ClusterCollection& ecal, edm4hep::CalorimeterHitCollection& ecalHits,
         edm4hep::ClusterCollection& hcal, edm4hep::CalorimeterHitCollection& hcalHits,
-        edm4hep::TrackCollection& truthTracks);
+        edm4hep::TrackCollection& truthTracks,
+        ClusterTruthCollection& ecalTruth);
 
     StatusCode CreateOutputCollections( CyberDataCol& m_DataCol, 
                                         DataHandle<edm4hep::CalorimeterHitCollection>& m_outRecHitsHandler, 
