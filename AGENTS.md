@@ -357,11 +357,20 @@ starts have status0/covariance quality3 and no boundary parameter.
 
 Both new plots retain square canvas, large fonts, faint grid, AGORA bold
 outside the axes and10ab^-1 inside. Category and sigma/yield labels appear
-left of the peak. Gallery localhost8000 has five PNGs across two sections:
+left of the peak. Gallery localhost8000 uses two sections:
 matched inclusive, then low/hard category plots first; preserved KF-only and
 KF+GSF inclusive plots remain in the second section. All eight preceding
 PNG/PDF artifacts remain byte-identical. Matched-inclusive diagnostics are
 in ebrem_inclusive_matched_summary.json in the same study directory.
+A new third plot in section2 adds neutral recovery to BOTH electron KF and
+GSF on the same85,327events; muon KF stays bare. Existing10/200mrad window,
+massless neutral four-vector union, same electron weight/gen99600. Expected
+window yields34,517KF+neutrals/36,649GSF+neutrals/49,987muon; DSCB core
+sigma0.322/0.358/0.273GeV. There are29,335events with37,497neutral clusters.
+All9fit starts pass0/cov3; no boundary parameter. Blind GSF addition can
+double count material recovery; muon forced-invisible reference caveat
+remains. New diagnostics:neutral_recovery_fit_summary.json. Gallery now
+sixPNGs/twosections; all10priorPNG/PDF artifacts remain byte-identical.
 Source caches and four original inclusive PNG/PDFs are unchanged. No event
 ROOT read, tracking refit, card, library or job change. Definitions, exact
 matching, fit checks, transition counts and gallery verification:

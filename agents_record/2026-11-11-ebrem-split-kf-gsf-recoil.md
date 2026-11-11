@@ -101,3 +101,46 @@ The new plot precedes low/hard in section1; section2's original two inclusive
 muon/electron variants remain untouched. Gallery now5PNGs/2sections.
 PNG`e25f955e35a91677820bd5882e4c50ea61fb9f19603a6a5695a344b074c5089c`;
 PDF`abc4b2728e82536fa93f6af9094d4ec727910cb8b87422e27e63148ea31e6638`.
+
+## Add neutral-recovery plot to section2
+
+User requested one additional plot with neutral recovery in the second
+section. New recoil_muon_kf_electron_kf_gsf_neutral_recovery_10ab PNG/PDF
+has muon Baseline KF unchanged, electron Baseline KF+neutrals(gray fill)
+and GSF BestBranch+neutrals(orange). No BP curve or extra bare electron
+controls. Both electron curves use the same85,327 event keys and cached
+neutral observations, inclusive of FSR/eBrem. Muon has no neutral addition.
+
+Same saved pre-reclustering charge-zero trackless-PFO ECAL collection,
+10mrad theta/200mrad phi about original KF AtCalorimeter position. Unique
+cluster union converted to massless(E,E*r/|r|) from nominal IP, added once
+to the visible pair before recoil.29,335 events have37,497 neutral clusters.
+No new energy threshold, truth selection of clusters or native tracking fit.
+Blind material-radiation addition can double count GSF recovery.
+
+Current generated-input weights remain electron10000*7.04/99600 and
+muon10000*6.77/50000; no recovery/fit-success/window renormalization. The
+previous neutral masses are reused with current99600 denominator rather
+than the older99200 normalization. Electron KF now shares the GSF-valid
+pool; original all-valid-KF baseline97,910events remains preserved.
+
+| Curve | Raw window | Expected10ab^-1 | Core sigma [GeV] | Undefined |
+| --- | ---: | ---: | ---: | ---: |
+| Muon KF | 36,918 | 49,986.972 | 0.27266+/-0.00361 | 11 |
+| Electron KF+neutrals | 48,834 | 34,517.205 | 0.32179+/-0.00821 | 1,013 |
+| Electron GSF+neutrals | 51,850 | 36,648.996 | 0.35783+/-0.01080 | 2,039 |
+
+Same123.5--128GeV DSCB range; all9starts status0/covariance quality3 and
+no boundary parameter. Poisson deviance/38ndf47.47muon,49.37KF and41.14GSF.
+No fit-range/model systematics or full detector-resolution claim. Muon
+forced-invisible reference caveats remain in the prior inclusive record.
+
+New scriptneutral_recovery.py, logneutral_recovery.log,
+neutral_recovery_fit_summary.json, neutral_recovery_histogram.csv and
+NEUTRAL_RECOVERY_READY retain exact input hashes, sample counts and fits.
+Checks cover event uniqueness/matching, common neutral counts/energy,
+cached bare-mass closure, zero-addition invariance, raw histogram closure
+and prior plot/source hashes. All10priorPNG/PDFs unchanged; parent inspected
+the new square/large-font/outside-header layout. No event ROOT read.
+PNG`11f9d35b3fad26077b168bc9dc6aeb004fe9810b3f5ef8376e1fc428c9a0dc2a`;
+PDF`9fd2e75d825290a36b94fe54e24643ceea7fe209898e9bde2f16329158b7e19c`.
