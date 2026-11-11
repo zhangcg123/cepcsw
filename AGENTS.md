@@ -328,43 +328,35 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**MUON/ELECTRON INCLUSIVE RECOIL AT 10 ab^-1 (2026-11-11).**
-The first plot now shows bare muon Baseline KF (red), bare electron GSF
-BestBranch (blue), electron GSF BestBranch+neutrals (orange), and bare electron
-Baseline KF (gray filled). Neither KF baseline nor bare GSF adds photons/
-neutrals. BP100 remains removed; the prior versions are archived.
-All are inclusive in FSR/eBrem, recoil 120--130 GeV / 0.1 GeV bins, expected
-counts per bin. Fixed weights use ALL GENERATED INPUTS BEFORE ANY CUT:
-muon 10000*6.77/50000=1.354; every electron curve
-10000*7.04/99200=0.7096774193548387. Selected, finite or in-window counts never
-set normalization. The formulas are printed on the plot; no window/area scaling.
+**PHOTON-ONLY TRUTH ECAL ENTRY MAPS CENTERED ON EACH ELECTRON (2026-11-11).**
+The user is investigating an FSR-specific neutral collection window. Two new
+figures show FSR/eBrem truth photon entries relative to their own electron
+entry, with no electron markers or window overlays. The mm figure uses exact
+3D azimuthal/polar/radial Cartesian offsets; the angular figure uses wrapped
+deltaPhi/deltaTheta of truth impact-position rays. Core and wide views retain
+all photon energies, both charges, no subsampling or fit-success selection.
+Source is the frozen 498-file/99,600-event geometry cache: 123,581 FSR and
+317,862 eBrem usable original photon/electron entry pairs. Both wide views
+show all valid pairs. The electron is at coordinate zero but is not drawn.
 
-All three electron curves share 85,327 valid pairs, with no BP-success gate.
-Bare KF and bare GSF use their own original AtIP states with zero recovery
-addition; all 85,327 checks for each method pass. The prior three histograms
-are unchanged. Bare GSF has 45,919 raw / 32,587.677 expected in-window events,
-with 753 undefined masses.
-Bare electron KF has 39,584 raw / 28,091.871 expected events in the window
-and 26 undefined masses. The recovered GSF curve alone uses the saved
-10/200 mrad pre-ECAL neutral
-window and massless-cluster union (29,335 events with neutrals); recovered
-material loss can be double counted. No ROOT read or native fit is rerun.
+All 441,443 distance closures pass within 1.82e-12 mm. All 441 independent
+basis/inverse and angular checks pass; maximum inverse error is 9.10e-13 mm. Layouts inspected; original source cache
+and all 46 earlier PNG/PDFs are unchanged. Original photons without ECAL
+entries, including upstream conversions without original entry, are excluded
+without daughter substitution. These are truth-position maps, not measured
+cluster recovery efficiencies. No FSR collection window has been chosen;
+the existing eBrem-style recovery and all fit/source/library/job states remain
+unchanged. Definitions, coverage, QA and gallery verification:
+[the centered map record](agents_record/2026-11-11-centered-truth-photon-entry-maps.md).
 
-Muon uses 48,636 cached pairs from 50,000 generated inputs. All 250 original
-muon REC files are missing. Its Higgs decays were forced invisible, while
-current electrons are genuine inclusive eeHX (Pe1e1h_X). Muon rates are an
-inclusive-production tracking reference, with Higgs factor1, not a validated
-inclusive-decay efficiency prediction. Cross sections are published references,
-not exact production headers; no backgrounds or peak fits. Details, rates,
-selected-population differences, QA and gallery verification:
-[the 10ab record](agents_record/2026-11-11-muon-electron-recoil-10ab.md).
-
-All 44 preceding PNG/PDFs remain unchanged. Gallery has 23 PNGs across 9
-sections on localhost8000, with the corrected four-curve figure first. Earlier
-neutral/FSR plots and definitions remain in
-[the neutral record](agents_record/2026-11-11-nearby-neutral-recoil.md) and
-[the GSF record](agents_record/2026-11-11-completed-gsf-recoil-pt-plots.md).
+Gallery now has 25 PNGs across 9 sections on localhost8000; geometry is first,
+with the two new maps before the earlier distance/angle histograms. The
+10 ab^-1 recoil plot remains bare muon KF, bare electron KF (filled), bare
+electron GSF, and electron GSF+neutrals. All three electron curves share
+85,327 keys and generated-input weight 0.709677 (Ngen=99,200); muon weight
+1.354 (Ngen=50,000), never window/selected-count normalization. Its muon
+H-invisible reference/inclusive-eeHX distinction and all counts remain in
+[the recoil record](agents_record/2026-11-11-muon-electron-recoil-10ab.md).
 Preserve runtime dependencies, breakpoint-delayed-neutral and workspaces.
-No fitter/PFA source, original card, library or job-state changes. BH model,
-beam-spot FSR loss and Hive remain deferred. Outgoing focus:
-[the snapshot](agents_record/2026-11-11-agents-before-muon-gsf-10ab.md).
+BH model, beam-spot FSR loss and Hive remain deferred. Outgoing focus:
+[the snapshot](agents_record/2026-11-11-agents-before-centered-photon-maps.md).
