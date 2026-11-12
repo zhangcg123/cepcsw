@@ -331,61 +331,37 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**INDIVIDUAL TRUTH AND RECO NEUTRAL-CLUSTER FIGURES (2026-11-12).**
-Same5000current REC_ECALTRUTH events,25seeds,9916selected recoil Z->ee tracks.
-Four independent square figures: truth FSR/eBrem photon ECAL entries, then
-reconstructed pre-reclustering neutral clusters with ANY positive FSR/eBrem
-MC contribution. Previous combined truth figure archived. No native code,
-card, installation, job or event reconstruction changed.
+**NO-FSR RECOIL: BP110 VS GSF + NEUTRALS (2026-11-12).**
+New comparison uses11750identical common-valid events with known zero
+FSR on BOTH selected production electrons. All eBrem categories included,
+946events with no eBrem. No BP100 gate. Both methods use native fitted IP
+states. BP110 truth-selected location or valid null with fitted loss and
+tracker+beam+ECAL; no extra neutral4vectors. GSF BestBranch adds the existing
+unique neutral4vector union in10mradtheta/200mradphi halfwidth around Baseline
+KF ECAL references.2376events/2788neutral clusters; zero additions retained.
 
-Truth photons use their own and electron first G4 ECAL entries from the shared
-truth production vertex, all birth energies. Counts6246FSR/16169eBrem;
-current-window geometric fractions49.1%/97.3%. Reco uses cluster centroids
-relative to the owning electron Baseline KF first AtCalorimeter reference,
-from nominal IP. Owner is largest category MC weight; no angular truth matching.
-Keep fixed55.75722694396976GeV cluster cap, no >50% dominance cut. Counts
-2871FSR/3858eBrem; own-window geometric count fractions41.9%/50.7%.
-The two reco figures also show energy fractions46.5%FSR/88.4%eBrem below counts:
-use Ecluster times category MC fraction inside own window divided by its sum
-over all eligible neutral clusters, same cap; excludes charged-cluster energy.
-Same-line energy purity P_E is38.7%FSR/49.3%eBrem: category energy divided by
-total energy of the SAME tagged clusters inside own window. This conditional
-purity excludes zero-contribution clusters, not the full blind collection.
-Counts condition on tagged neutral clusters, not photon-finding efficiency;
-tiny contributions qualify and one cluster can enter both categories.
+Reused validated496GSF-source flat-result caches and matching BP/neutral
+observations, not the later PFA replay REC clusters. No native event read,
+reconstruction, source/card/installation/batch change. New histogram DSCB
+fits only. Fixed10ab^-1 weight10000*7.04/99600parent generated inputs before
+FSR/endpoints/window cuts; no selected-pair or window renormalization.
 
-All plots x=deltaTheta,y=wrappedDeltaPhi,mrad; electron implicit at(0,0),
-zoom theta+/-150,phi+/-400. Actual tuple box theta+/-10mrad(20TOTAL),phi+/-200.
-Efficiencies include out-of-view points. Preserve **AGORA simulation** branding,
-no bottom captions. Two historical photon/FSR-miss sections were removed from
-the page on request; their four served plots and metadata are archived.
+Display120--130GeV,0.1GeVbins. BP110sigma0.334+/-0.019GeV,
+GSF+neutral0.318+/-0.015GeV; fit123.5--128,status0/cov3,no boundary parameters.
+Rawwindowentries8970/8735(expected6340/6174); undefined2/139. Widths close;
+no significant-improvement claim. Truth-location/ECAL inputs differ and
+GSF material recovery plus blind neutral addition can double-count radiation.
+These are spectrum core widths, not detector-only resolutions.
 
-Artifacts: TrackingPerformanceStudies/truth_photon_ecal_centered_5k_20261112/
-and reco_neutral_ecal_centered_5k_20261112/. Native fractions/windows match cache;
-same source identities, keys, cap, axis/wrap and PNG/PDF hashes checked.
-100k-event neutral-energy section shows three current10/200mrad stacks in order
-FSR-tagged,eBrem-tagged,Inclusive; Other origin+Unknown merged as BLACK Others.
-Neutral trackless clusters ONLY. Common denominator198430selected electron
-tracks(including zero collection), independently checked from event rows.
-Tagged samples overlap. Inclusive3.20641GeV/track. Middle spectrum removed;
-separate per-event distribution kept.
-Percentages shown for FSR,eBrem,other electron descendants only(nine labels),
-relative to full bar totals including Others. Black Others has no percentage.
-Companion bar plot restricts green to exact selected final-electron MC indices,
-moving other descendants to Others. All500REC sources/100000events checked:
-99.974817%of oldgreen already main-MC-linked;58.3301GeV moved across sample.
-Same clusters/totals/track denominator; original figure retained. Direct MC
-labels may include shower attribution. New artifact directory:
-TrackingPerformanceStudies/pre_ecal_main_electron_bars_20261112/.
-Details: [main-electron split](agents_record/2026-11-12-main-electron-neutral-energy-split.md).
-Gallery verified:14PNGs/6sections, every PNG categorized once. Original and
-main-electron companion bars adjacent; page/both bar PNGs HTTP200, new source
-hash matches; all13original images unchanged. Same localhost8000 directory, ailogin002 PID2122174,
-no restart. Main reviewed manifest coverage and source/copied hashes.
-Details: [individual plots record](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
-Actual window: [record](agents_record/2026-11-12-truth-window-plot-efficiency.md).
-Truth definitions: [record](agents_record/2026-11-12-centered-truth-ecal-photons-5k.md).
-FSR misses: [record](agents_record/2026-11-12-missed-fsr-neutral-diagnosis.md).
-Neutral acceptance: [record](agents_record/2026-11-12-absolute-neutral-window-efficiency.md).
-Tail cut: [record](agents_record/2026-11-12-window-energy-upper2pct.md).
-Outgoing complete status: [snapshot](agents_record/2026-11-12-agents-before-individual-truth-reco-plots.md).
+Keep square figures, AGORA simulation bold above axes,10ab^-1upperleft,
+large text, transparent grid, no title/fit legend entries or long footer.
+New PNG is its own no-FSR recoil section; earlier photon/neutral energy,
+main-electron companion and other recoil plots retained. Gallery verified:
+15PNGs/7sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
+all14prior images unchanged. Same localhost8000, ailogin002 PID2122174, no restart.
+
+Artifacts: TrackingPerformanceStudies/recoil_no_fsr_bp110_gsf_neutrals_20261112/.
+[Full comparison record](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
+[Outgoing complete status](agents_record/2026-11-12-agents-before-no-fsr-recoil-comparison.md).
+[Main-electron split](agents_record/2026-11-12-main-electron-neutral-energy-split.md).
+[Other photon/neutral studies](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
