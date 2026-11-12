@@ -331,47 +331,46 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**SEPARATE GSF RADIATION-CATEGORY RECOIL SHAPES (2026-11-12).**
-User replaced the inclusive stack with four separate figures: Neither,
-eBrem-only, FSR-only, Both(AND). Each overlays GSF BestBranch + existing
-neutral recovery, Baseline KF + the SAME neutrals (green dashed), and the SAME
-inclusive muon Baseline KF reference.
-120--140 GeV, 0.1 GeV bins; EACH curve independently normalizes to its own
-finite count in that window. Legend N is raw finite 120--140 GeV entries
-per curve; no luminosity-weighted yields or new fits.
+**MATCHED KF/GSF/BP110 RADIATION-CATEGORY SHAPES (2026-11-12).**
+Four square figures: Neither, eBrem-only, FSR-only, Both(AND). Each overlays
+Baseline KF + neutrals(green dashed), GSF BestBranch + neutrals(category solid),
+BP110(red dash-dot), and the SAME inclusive muon Baseline KF(black solid).
+120--140 GeV, 0.1 GeV bins; each curve independently normalizes by its OWN
+finite window count. Legend N_120--140 is raw entries, not weighted yields.
+No new fits or luminosity scaling. AGORA simulation above axes, large text,
+transparent grid, no plot title/long footer.
 
-Reuse 85,327 valid selected production-electron pairs from 496 source caches,
-with unchanged exclusive >1 GeV flags: sum truth photon birth energies per
-type per selected electron; type present if EITHER leg sum strictly exceeds
-1 GeV. Soft radiation remains allowed. No no-FSR veto or BP validity gate.
-All-valid/window category counts: Neither 20,009/18,438; eBrem 36,623/28,752;
-FSR 10,659/7,811; Both 18,036/11,773. Undefined GSF recoil: 2,039.
-KF+neutral window counts in category order: 18,609/30,007/7,846/11,704.
-Exact joins and native cached p4+neutral closure checked for BOTH electron
-methods on all 85,327 events; pre-window keys and neutral sums identical.
-Muon reference: 48,636 inclusive pairs, 44,236 finite in window, 11 undefined;
-no FSR veto. Matrix prefit population remains 98,437, a different denominator.
+All THREE electron methods use 72,784 identical pre-window events from 496
+sources. Extra both-leg BP110 validity gate removes 12,543 from the prior
+85,327 KF/GSF pairs; no BP100 gate. KF/GSF curves therefore change too.
+Common category counts: Neither18,078/eBrem30,561/FSR9,458/Both14,687.
+Window KF/GSF/BP110: Neither17,197/17,097/17,288;
+eBrem26,234/25,323/26,494;FSR7,187/7,176/6,041;Both10,027/10,155/9,177.
+Muon unchanged:48,636inclusivepairs/44,236finitewindow/11undefined,noFSRveto.
+Category definitions unchanged: sum truth photon birth energies per type per
+selected production electron; event type present if EITHER leg sum strictly
+>1GeV. Neither/only groups may contain softer radiation; Both is AND.
 
-Original matched-flat neutral collection uses 10 mrad theta / 200 mrad phi
-halfwidth around Baseline KF ECAL references, massless p4 from IP, union once.
-No new collection/purity/tail cuts or PFA-replay cluster substitution.
-Category raw histograms partition inclusive in every bin. All 120--130 GeV
-raw bins exactly reproduce previous stack and muon baseline; all curves sum
-one, same muon curve in all four figures, source hashes unchanged.
-Cache-only calculation, no native read, reconstruction/refit/build/install/
-card/batch change. Spectra include physics radiation and ISR; GSF plus
-neutral addition may double-count radiation. No pure-resolution claim.
+BP110: truth-selected eligible location or valid null, fitted loss and
+tracker+beam+ECAL, native IP states; not a scan minimum. NO extra neutral p4
+addition to BP110. KF/GSF add the same original cached neutral union in
+10mradtheta/200mradphi halfwidth about KF ECAL references. No new purity/tail
+cuts or PFA replay. GSF material recovery plus neutrals can double-count.
+Spectra include radiation and ISR; no pure detector-resolution claim.
 
-Square figures, AGORA simulation above axes, large text, transparent grid.
-Gallery: 21 PNGs / 9 sections / exact-once; page and all four PNGs HTTP 200,
-source hashes match, all 17 other PNGs unchanged. Same localhost8000,
-ailogin002 PID2122174, no restart; details in linked record.
-Old stack source data/figure are preserved; active preview is removed.
-All other plots and both radiation matrices are retained unchanged.
+Matrix denominator remains98,437beforefits/windows. Exact audit subtracts
+786missing-sourceevents,134sameKFchargepairs,12,190unavailableGSFpairs and
+12,543unavailableBP110pairs to yield72,784;zero category disagreements.
+REC identity/truth cache/baseline joins match; native cached KF/GSF p4 closure
+on85,327parentpairs;BP110mass closure on11,750oldnoFSRreferencepairs.
+Every method's categories partition inclusive bins;all curves sumone;
+muon unchanged. Cache-only,no native read/refit/build/install/card/batchchange.
 
+Previous three-curve plots archived under study/before_bp110/.
+Gallery:21PNGs/9sections/exact-once,page+4PNGHTTP200/sourcehashmatch;
+all17otherimagesunchanged.Sameailogin002PID2122174,localhost8000,norestart.
 Artifacts: TrackingPerformanceStudies/gsf_recoil_category_muon_shapes_20261112/.
-[Current evidence](agents_record/2026-11-12-gsf-category-muon-recoil-shapes.md).
-[Exact outgoing status](agents_record/2026-11-12-agents-before-gsf-category-muon-shapes.md).
-[Previous stack](agents_record/2026-11-12-gsf-recoil-radiation-stack.md).
-[No-FSR comparison](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
+[Evidence and count audits](agents_record/2026-11-12-gsf-category-muon-recoil-shapes.md).
+[Exact outgoing status](agents_record/2026-11-12-agents-before-bp110-category-shapes.md).
+[No-FSR BP110 comparison](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
 [Radiation matrices](agents_record/2026-11-12-event-radiation-matrix.md).

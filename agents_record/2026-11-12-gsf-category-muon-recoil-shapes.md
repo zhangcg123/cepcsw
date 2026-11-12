@@ -63,3 +63,39 @@ User noticed matrix/legend numbers differ. Event-by-event audit in the study's `
 | Total | 98,437 | 85,327 | 68,166 | 66,774 |
 
 After the common pre-window sample, KF has 1,013 undefined recoil masses and 16,148 finite values outside the window; GSF has 2,039 undefined and 16,514 outside. Each method's three counts close exactly to 85,327. Matrix counts describe category populations; legend N_120–140 describes raw entries in the plotted window and is also each curve's own shape denominator. Shape normalization does not change these raw counts. No reconstruction, refit, plot or gallery change was made in this audit.
+
+## Update: BP110 on all four category plots
+
+
+Four separate square figures compare electron Baseline KF + neutrals (green dashed), GSF BestBranch + neutrals (category-colored solid), BP110 (red dash-dot), and the maintained inclusive bare muon Baseline KF reference (black solid). Display 120–140 GeV, 0.1 GeV bins. Each curve independently normalizes by its OWN finite entry count in this window; legend N is that raw count, not a luminosity-weighted yield. No fits or luminosity scaling.
+
+## Common sample and categories
+
+All THREE electron methods now use 72,784 IDENTICAL pre-window event keys, requiring both-leg endpoint validity. This adds a BP110 validity gate to the earlier 85,327-event KF/GSF comparison, removing 12,543 pairs; earlier KF/GSF curves therefore change. No BP100 gate. The muon reference remains inclusive (48,636 pairs, 44,236 finite in window, 11 undefined, no FSR veto).
+
+Use the unchanged exclusive >1 GeV truth categories: sum photon birth energy by type per selected production electron, then mark the type present if EITHER electron's sum strictly exceeds 1 GeV. Neither means neither type exceeds threshold; eBrem-only and FSR-only exclude the other type above threshold; Both is AND, possibly on different electrons. Softer radiation can still be present. No truth angular match.
+
+| Category | Common electron pairs | KF+neutral window N | GSF+neutral window N | BP110 window N |
+|---|---:|---:|---:|---:|
+| neither | 18,078 | 17,197 | 17,097 | 17,288 |
+| ebrem only | 30,561 | 26,234 | 25,323 | 26,494 |
+| fsr only | 9,458 | 7,187 | 7,176 | 6,041 |
+| both | 14,687 | 10,027 | 10,155 | 9,177 |
+
+## Observables and validation
+
+KF and GSF use their native fitted IP states plus the SAME unchanged cached neutral-four-vector union (charge-zero trackless pre-ECAL clusters, 10 mrad theta / 200 mrad phi halfwidth about Baseline KF ECAL references). No new purity/tail cuts or later PFA replay clusters.
+
+BP110 uses native fitted IP states at its truth-selected eligible location or valid null, fitted loss and tracker+beam+ECAL constraints. It is not a location-scan minimum. No EXTRA neutral four-vectors are added to BP110: its ECAL objective already uses the existing measurement sum where eligible.
+
+Cached REC identities, selected track indices, baseline states and truth-cache hashes match. Both prior KF/GSF reconstructed masses close algebraically on all 85,327 parent pairs. BP110 masses reproduce all 11,750 existing no-FSR comparison pairs. All methods' category histograms partition their inclusive spectrum bin-by-bin; each curve sums to one. The muon histogram is unchanged. All four figures were visually reviewed. No native event read, reconstruction/refit, build/install/card or batch change.
+
+The count audit is exact: 98,437 matrix events minus 786 absent-source events, 134 same-KF-charge pairs, 12,190 unavailable GSF pairs, and 12,543 unavailable BP110 pairs equals 72,784 common events. `count_bridge.json/csv` includes each stage by category, plus finite in-window, outside-window and undefined counts. The matrix itself remains unchanged; its denominator precedes fit/window cuts.
+
+These are recoil-spectrum shapes including physics radiation and ISR, not pure detector resolution. BP110 uses truth-location assistance. GSF plus neutral addition may double-count material radiation.
+
+## Files and history
+
+`analyze.py` writes four PNG/PDF pairs, `events_matched_bp110.csv`, `histogram.csv`, `summary.json`, hash manifests and assert-based checks. `count_bridge.py` audits matrix-to-plot counts. The previous three-curve study is preserved under `before_bp110/`; earlier two-curve outputs remain under `before_kf_neutrals_counts/`. Gallery publication preserves all unrelated plots.
+
+BP110 gallery publication: prior four served PNGs and section metadata archived under `before_bp110/gallery/`. New section title is “Matched KF, GSF and BP110 category shapes versus muon Baseline KF.” Gallery agent verified 21 PNGs / 9 sections / exact-once, 17 other image hashes unchanged, page and four updated PNGs HTTP 200 with source hash matches. Root independently verified coverage, four hashes and all count/observable semantics. Same ailogin002 server PID 2122174 at localhost:8000; no restart.
