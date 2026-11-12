@@ -364,10 +364,15 @@ figure archived; BP/GSF histograms and sigmas unchanged.
 Keep square figures, AGORA simulation bold above axes, large text, transparent
 grid, no title/fit legend entries or long footer. Current shape plot has sigma
 notes only; no luminosity/yield label.
+Added event-radiation2x2matrix BEFORE fit cuts across500sources/100000inputs:
+98437complete selected electron pairs,1556one-track+7no-track events excluded.
+Neither1.13%,eBrem only14.87%,FSR only6.04%,both77.96%. Either electron can
+supply either flag; no extra photon-energy threshold or neutral-cluster gate.
+[Matrix definitions](agents_record/2026-11-12-event-radiation-matrix.md).
 New PNG is its own no-FSR recoil section; earlier photon/neutral energy,
 main-electron companion and other recoil plots retained. Gallery verified:
-15PNGs/7sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
-remaining14images unchanged; current comparison has four histogram curves. Same localhost8000, ailogin002 PID2122174, no restart.
+16PNGs/8sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
+all15prior images unchanged after matrix addition; recoil comparison has four curves. Same localhost8000, ailogin002 PID2122174, no restart.
 
 Artifacts: TrackingPerformanceStudies/recoil_no_fsr_bp110_gsf_neutrals_20261112/.
 [Full comparison record](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
