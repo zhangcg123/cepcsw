@@ -331,29 +331,42 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FLOATING FSR DEFAULT PROMOTION (2026-11-12).**
-The user authorized promoting the private photon-output prototype into the
-maintained RecBreakpoint source and project installation. Compile/card/batch
-`ExperimentalBeamSpotFsrLoss=true` / `BP_BEAM_SPOT_FSR_LOSS=1`; explicit 0 opts out.
-110 fits total collected ECAL energy with nonnegative FSR excess; optional 111
-uses separate charged/neutral observations. 000/100 remain tracker-only with FSR
-undetermined. Save matching post-FSR electron + collinear photon p4 and full
-joint covariance in corresponding `*_free_loss_fsr_*` families; no artificial
-pre-FSR electron state. Ordinary control families and frozen campaigns remain.
+**FULL BP FLOATING-FSR RECOIL SHAPES (2026-11-13).**
+The user confirmed the new BP_FSRFLOAT500x200 tuples, rather than a new GSF
+campaign. All500completed BP files/100000inputs are read;98437truth-classifiable
+pairs agree with the existing >1GeV matrix. The common four-electron-method
+sample is67950pairs: Neither16768/eBrem28310/FSR9008/Both13864. Gates remove
+135sameKFcharge,12619unavailableGSF,12607unavailableordinary110 and5126
+unavailablefloating110 pairs in sequence;1563raw events have incomplete pairs.
 
-This is implementation promotion, not physics validation. Material/FSR sharing,
-cluster contamination, missing photons and low-mass tails remain open. Truth or
-Manual zero/one material breakpoint and nominal beam pivot only; HitScanAll
-requires FSR OFF. Extra location scans remain ordinary controls. Do not combine
-new photon p4 with ordinary-control electron p4 or add the same neutral twice.
+Five square120–140GeV/.1GeV figures: inclusive and all four categories, with
+same-event BaselineKF+neutrals(green),existing GSF BestBranch+neutrals(gold),
+same-run ordinaryBP110(red),floating110(blue),all solid; unchanged inclusive
+muon BaselineKF black dashed. Each curve independently unit-normalizes in the
+window; legendN is raw window entries. AGORA simulation above axes,large text,
+grid,no title/long footer,no fits/luminosity scaling/generator recoil.
 
-Package-only build/install completed. Both focused CTests (46 numerical cases
-plus ROOT schema/reset),65 batch tests and four native processes passed. Four
-unique Higgs events/eight selected tracks reproduce private outputs exactly
-(993 main/126 side branches); explicit OFF preserves917 ordinary branches.
-Installed default is confirmed True; unrelated changes and plots are preserved.
-Next: held-out clean/radiation-category performance and contamination checks.
-Historical particle-gun hard-loss inputs11,16,17 remain absent; no substitution.
-[Model, option and schema](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
-[Promotion evidence](agents_record/2026-11-12-floating-fsr-default-promotion.md).
-[Outgoing focus and exact plot evidence](agents_record/2026-11-12-agents-before-floating-fsr-promotion.md).
+FSR110 uses its OWN fitted post-FSR electron plus collinear photon p4, once;
+no extra neutral addition to either BP. KF/GSF use the SAME FRESH neutral union
+from currentBP pre-ECAL clusters,10/200mrad KF-reference window,native PFO
+links,zero charge/trackless/hit-supported;no truth/purity/tail cuts. Old neutral
+sums are not reused across PFA replay differences. Existing GSF reference has
+498sources (496identity-checked caches plus native40/429);55/421 failed.
+REC lineage,selected track/MC,KF pT,generator pT/energy and truth energy joins
+pass. Category histograms partition inclusive bins and shapes sumone.
+
+Default `BP_BEAM_SPOT_FSR_LOSS=1` remains installed for110/optional111;000/100
+FSR undetermined. Truth-selected eligible material interval/null;no scan;111off.
+This is research: FSR-only/Both gain peak population,but Neither's below120tail
+grows128→532 versus ordinary110. Inclusive peak120–130 grows42410→49742 while
+below120 grows1095→3189,conditional on common valid fits. Material/FSR sharing,
+contamination and clean-track safety remain open;no physics-validation claim.
+No refit,build,install or production submission in this study.
+
+Gallery adds five PNGs to the existing page:31PNGs/11sections/exact-once;
+all34priorPNG/PDF hashes unchanged,page+inclusivePNGHTTP200. Sameailogin002
+PID2122174,localhost8000,no restart. All five figures visually reviewed.
+Artifacts: TrackingPerformanceStudies/bp_fsrfloat_recoil_categories_20261113/.
+[Exact method, count bridge and limits](agents_record/2026-11-13-full-bp-floating-recoil-shapes.md).
+[Outgoing focus](agents_record/2026-11-13-agents-before-full-bp-floating-recoil.md).
+[Default option/schema](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
