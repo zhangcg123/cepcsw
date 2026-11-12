@@ -34,3 +34,27 @@ exact-once, all15prior images unchanged. New matrix section immediately before
 no-FSR recoil shape comparison. Page/newPNGHTTP200,sourcehashmatches; main
 reviewed copiedhash/categorycoverage. Same ailogin002 PID2122174 localhost8000,
 no restart. gallery_verification.json preserves checks.
+
+## Companion: per-electron radiation energy strictly >1GeV
+
+User requested a second matrix beside the original with FSR/eBrem loss>1GeV.
+Same98437event keys/denominator, no fit/endpoint/recoil/neutral gates added.
+For each selected electron sum saved photon BIRTH energies separately by type;
+event type present if EITHER per-electron sum>1GeV(maxlegsum>1). No cross-leg
+energy summing or individual-photon threshold. Exactly1GeV fails. Neither now
+permits radiation below/equal1GeV. Definition stated before computation.
+
+Counts Neither21602(21.9450003556%),eBrem only43739(44.4334955352%),
+FSR only11517(11.6998689517%),Both21579(21.9216351575%). Sum98437/100%.
+New source files threshold_1gev.py,events_gt1gev.csv,summary_gt1gev.json,
+run_gt1gev.log,code/plot hash manifests,event_fsr_ebrem_matrix_gt1gev.png/pdf
+in original event_radiation_matrix_20261112 study directory. Original matrix
+unchanged; shared renderer refactor independently reproduces original PNG hash
+exactly. Source code/metadata before refactor preserved in before_threshold_companion/.
+Allthreshold/finite-nonnegative-energy/key/subset/closure/hash gates pass; new
+layout viewed. Cache-only; no ROOTevent, reconstruction or fit run. Companion
+published immediately after original in same section:17PNGs/8sections/exact-once,
+all16prior images unchanged, page/bothmatrixPNGHTTP200/newsourcehashmatch. Main
+checked copiedhashes, category coverage and matrix adjacency. Same ailogin002
+PID2122174 localhost8000, no restart. gallery_verification_gt1gev.json records
+checks in source-study directory.
