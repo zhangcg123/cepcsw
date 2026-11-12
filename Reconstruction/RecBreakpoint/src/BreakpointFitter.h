@@ -11,6 +11,7 @@
 #include <variant>
 
 namespace breakpoint {
+struct BeamSpotFsrResult;
 struct FitSettings {
   std::vector<int> intervals; // i selects the outward transition hit[i] -> hit[i+1]
   double meanLogLoss = 0;
@@ -27,6 +28,8 @@ struct FitSettings {
   std::optional<BeamSpotSettings> beamSpot; // initial transverse KF measurement
   // Passive capture for the same normalized likelihood in each RTS family.
   bool captureGaussianModel = false;
+  bool beamSpotFsrLoss = false;
+  bool captureFsrTrajectory = false;
   bool delayedNeutral = false; // branch experiment; preserves the original path when off
 };
 
@@ -64,6 +67,9 @@ struct IntervalResult {
 };
 
 struct FitResult {
+  std::shared_ptr<BeamSpotFsrResult> beamFsr;
+  std::vector<TMatrixD> fsrMeans, fsrCovariances, fsrGains;
+  std::vector<int> fsrNodeHits;
   bool resolvedEcalSum = false; // actual total-energy update, not merely requested mode
   std::optional<BeamSpotMeasurement> beamSpot;
   edm4hep::TrackState ip{};
@@ -114,6 +120,7 @@ public:
   FitResult fitDiffuseRTS(const std::vector<edm4hep::TrackerHit>& hits,
                          const FitSettings& settings) const;
 private:
+  FitResult fitBeamSpotFsr(const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& settings) const;
   FitResult fitNoBreakpointRTS(const std::vector<edm4hep::TrackerHit>& hits,
                        const FitSettings& settings) const;
   FitResult fitPersistent(const std::vector<edm4hep::TrackerHit>& hits,

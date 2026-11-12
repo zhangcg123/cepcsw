@@ -15,6 +15,7 @@
 #include "podio/UserDataCollection.h"
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "FreeLossTuple.h"
+#include "BeamSpotFsrTuple.h"
 #include "FitPairTuple.h"
 #include "LikelihoodTuple.h"
 #include "CaloStateTuple.h"
@@ -108,6 +109,7 @@ private:
   Gaudi::Property<std::string> m_seedHitSelection{this, "SeedHitSelection", "FirstMiddleLast"};
   Gaudi::Property<std::string> m_lossStateMode{this, "LossStateMode", "Persistent6D"};
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", true};
+  Gaudi::Property<bool> m_beamFsrLoss{this, "ExperimentalBeamSpotFsrLoss", true};
   Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", true};
   Gaudi::Property<std::string> m_ecalConstraintInput{this, "EcalConstraintInput", "PreReclustering"};
   Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronPhoton"};
@@ -155,6 +157,7 @@ private:
   breakpoint::PreEcalTuple m_preEcalTuple;
   breakpoint::NeutralPfoTuple m_neutralPfoTuple, m_fsrPfoTuple;
   int m_fsrTruthAvailable=0;
+  breakpoint::BeamSpotFsrTuple m_beamFsrTuple;
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   std::array<int, 3> m_backwardRunFlags{};

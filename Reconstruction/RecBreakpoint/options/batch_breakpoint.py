@@ -59,7 +59,7 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_TRUTH_BACKWARD_FILTER',
-               'BP_FREE_LOSS_FIT', 'BP_CHARGED_ECAL_MEASUREMENT',
+               'BP_FREE_LOSS_FIT', 'BP_BEAM_SPOT_FSR_LOSS', 'BP_CHARGED_ECAL_MEASUREMENT',
                'BP_ECAL_CONSTRAINT_INPUT', 'BP_CHARGED_ECAL_INPUT_CLUSTERS', 'BP_CHARGED_ECAL_ENERGY_MODE',
                'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
                'BP_CHARGED_ECAL_STOCHASTIC', 'BP_CHARGED_ECAL_CONSTANT',
@@ -180,7 +180,7 @@ def prepare():
     # Freeze fit environment and card content now, not when a queued job starts.
     controls = {key: os.environ[key] for key in BP_CONTROLS if key in os.environ}
     for key, value in (('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS','1'),
-                       ('BP_FREE_LOSS_FIT','1'), ('BP_BEAM_SPOT_CONSTRAINT','1'),
+                       ('BP_FREE_LOSS_FIT','1'), ('BP_BEAM_SPOT_FSR_LOSS','1'), ('BP_BEAM_SPOT_CONSTRAINT','1'),
                        ('BP_CHARGED_ECAL_MEASUREMENT','1'), ('BP_NEUTRAL_ECAL_MEASUREMENT','0'),
                        ('BP_LOCATION_SCAN_SETUPS','')):
         controls.setdefault(key, value)
@@ -188,6 +188,7 @@ def prepare():
     controls.setdefault('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronPhoton')
     for key in ('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
                 'BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
+                'BP_BEAM_SPOT_FSR_LOSS',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
                 'BP_DIFFUSE_AUGMENTED_RTS',
@@ -213,6 +214,9 @@ def prepare():
                 if setup >= limit and controls.get(key, '0') != '1':
                     raise ValueError('BP_LOCATION_SCAN_SETUPS requires '+key+'=1')
         controls['BP_LOCATION_SCAN_SETUPS'] = ','.join(map(str, sorted(setups)))
+    if (controls.get('BP_INTERVAL_SELECTION_MODE', 'Truth') == 'HitScanAll' and
+            controls['BP_BEAM_SPOT_FSR_LOSS'] == '1'):
+        raise ValueError('HitScanAll requires BP_BEAM_SPOT_FSR_LOSS=0; FSR supports Truth or Manual')
     templates = {}
     paths = {'sim': repo/'DumpGsfTrks/sim.py.bk', 'trk': repo/'DumpGsfTrks/trk.py.bk',
              'calodigi': repo/'DumpGsfTrks/calodigi.py.bk',

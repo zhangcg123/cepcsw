@@ -331,49 +331,29 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FSR-ONLY RECOIL: RESOLVED NEUTRAL VS NONE (2026-11-12).**
-Break down the existing matched FSR-only recoil plot; preserve all original
-category plots. Add two figures with the SAME four methods: Baseline KF +
-neutrals(green solid), GSF BestBranch + neutrals(gold solid), BP110(red solid),
-and inclusive muon Baseline KF(black dashed). 120--140 GeV,0.1GeVbins;
-each curve independently normalizes to its own finite window count; legend
-N_120--140 raw entries. No new fit/luminosity scaling. Square,AGORA simulation
-above axes,large text,transparent grid,no title/long footer.
+**FLOATING FSR DEFAULT PROMOTION (2026-11-12).**
+The user authorized promoting the private photon-output prototype into the
+maintained RecBreakpoint source and project installation. Compile/card/batch
+`ExperimentalBeamSpotFsrLoss=true` / `BP_BEAM_SPOT_FSR_LOSS=1`; explicit 0 opts out.
+110 fits total collected ECAL energy with nonnegative FSR excess; optional 111
+uses separate charged/neutral observations. 000/100 remain tracker-only with FSR
+undetermined. Save matching post-FSR electron + collinear photon p4 and full
+joint covariance in corresponding `*_free_loss_fsr_*` families; no artificial
+pre-FSR electron state. Ordinary control families and frozen campaigns remain.
 
-Parent is9,458FSR-only events from72,784three-method-common pairs in496sources.
-Truth category unchanged: either selected production-electron leg has summed
-FSR birth energy>1GeV; neither has material-eBrem sum>1GeV. Softer radiation
-allowed. Resolved means>=1usable separate neutral trackless pre-ECAL cluster
-ANYWHERE with ANYpositive saved nativeMC contribution from generator-linked
-FSR of either selected electron. No purity/dominance/energy-cap cut. Does not
-require all or hardest photons resolved. Unresolved means no such identified
-neutral, including merged/missing/invalid cases; not proof all photons merged.
-Resolved outside the collector remains resolved; no angular truth matching.
+This is implementation promotion, not physics validation. Material/FSR sharing,
+cluster contamination, missing photons and low-mass tails remain open. Truth or
+Manual zero/one material breakpoint and nominal beam pivot only; HitScanAll
+requires FSR OFF. Extra location scans remain ordinary controls. Do not combine
+new photon p4 with ordinary-control electron p4 or add the same neutral twice.
 
-Fit/neutral observables belong original REC_TPCFIX; native cluster truth links
-belong rebuilt REC_ECALTRUTH. Require exact full-event clusterenergy/position,
-complete constituent-hitmultisets and PFOcharge/trackownership agreement,
-allowing ordering permutations. Verify source/card identities and selected
-track/MC maps. Exclude579mismatches(577energy/position,2hitcontent),notunresolved.
-Verified8,879events=6,899resolved+1,980unresolved. Ofresolved,3,851have a tagged
-FSRneutral inside the10/200mradcollector;3,048onlyoutside. AnypositiveMCtag is
-not a photon-count/energy recovery efficiency; this subset can be biased.
-
-Window KF/GSF/BP110:resolved5,077/5,069/3,932;unresolved1,656/1,652/1,724.
-Muon unchanged44,236windowentries from48,636inclusivepairs,noFSRveto.
-All electron methods share identical pre-window keys in each subgroup and
-reuse exact existing recoil masses. BP110truthlocation/null, fittedloss,
-tracker+beam+ECAL;NOextra neutral p4. KF/GSF use original neutral union;
-no new collector/PFA replay/refit/build/install/card/batch change.
-Seven provenance/numerical checks pass; subgroup histograms partition ONLY
-the verified inclusive subset, all curves sumone. Both layouts reviewed.
-OriginalFSRplot retains all9,458events; newsubgroups exclude579 and therefore
-do not reproduce its full histogram. Other plots/radiationmatrices retained.
-Gallery:23PNGs/9sections/exact-once;all21priorimagesunchanged;page+2PNG
-HTTP200/sourcehashmatch.Sameailogin002PID2122174,localhost8000,norestart.
-
-Artifacts: TrackingPerformanceStudies/fsr_resolved_recoil_20261112/.
-[Split evidence](agents_record/2026-11-12-fsr-resolved-neutral-recoil-split.md).
-[Exact outgoing status](agents_record/2026-11-12-agents-before-fsr-resolved-recoil-split.md).
-[Parent comparison and count audits](agents_record/2026-11-12-gsf-category-muon-recoil-shapes.md).
-[Radiation matrices](agents_record/2026-11-12-event-radiation-matrix.md).
+Package-only build/install completed. Both focused CTests (46 numerical cases
+plus ROOT schema/reset),65 batch tests and four native processes passed. Four
+unique Higgs events/eight selected tracks reproduce private outputs exactly
+(993 main/126 side branches); explicit OFF preserves917 ordinary branches.
+Installed default is confirmed True; unrelated changes and plots are preserved.
+Next: held-out clean/radiation-category performance and contamination checks.
+Historical particle-gun hard-loss inputs11,16,17 remain absent; no substitution.
+[Model, option and schema](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
+[Promotion evidence](agents_record/2026-11-12-floating-fsr-default-promotion.md).
+[Outgoing focus and exact plot evidence](agents_record/2026-11-12-agents-before-floating-fsr-promotion.md).

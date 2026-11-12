@@ -63,9 +63,11 @@ class BatchTest(unittest.TestCase):
     def test_fit_defaults_and_disabled_scans_in_card_and_both_wrappers(self):
         import ast
         properties = {'FreeLossFit': True, 'BeamSpotConstraint': True,
+                      'ExperimentalBeamSpotFsrLoss': True,
                       'ChargedEcalMeasurement': True, 'NeutralEcalMeasurement': False,
                       'LocationScanSetups': [], 'ChargedEcalEnergyMode': 'ElectronPhoton'}
         expected = {'BP_FREE_LOSS_FIT':'1', 'BP_BEAM_SPOT_CONSTRAINT':'1',
+                    'BP_BEAM_SPOT_FSR_LOSS':'1',
                     'BP_CHARGED_ECAL_MEASUREMENT':'1', 'BP_NEUTRAL_ECAL_MEASUREMENT':'0',
                     'BP_LOCATION_SCAN_SETUPS':'', 'BP_CHARGED_ECAL_ENERGY_MODE':'ElectronPhoton'}
         text=(REPO/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
@@ -108,6 +110,16 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             disabled=json.loads((self.repo/off_output/'runcards'/sample/'job.json').read_text())
             self.assertEqual({k:disabled['controls'][k] for k in off},off)
+
+    def test_floating_fsr_switch_is_validated_and_frozen(self):
+        self.prepare(OUTPUT_TUPLEPATH='fsr_on', BP_BEAM_SPOT_FSR_LOSS='true')
+        self.assertEqual(self.manifest('fsr_on')['controls']['BP_BEAM_SPOT_FSR_LOSS'], '1')
+        self.prepare(OUTPUT_TUPLEPATH='fsr_off', BP_BEAM_SPOT_FSR_LOSS='0')
+        self.assertEqual(self.manifest('fsr_off')['controls']['BP_BEAM_SPOT_FSR_LOSS'], '0')
+        with self.assertRaisesRegex(ValueError, 'Expected a boolean'):
+            self.prepare(OUTPUT_TUPLEPATH='fsr_bad', BP_BEAM_SPOT_FSR_LOSS='maybe')
+        with self.assertRaisesRegex(ValueError, 'HitScanAll requires BP_BEAM_SPOT_FSR_LOSS=0'):
+            self.prepare(OUTPUT_TUPLEPATH='fsr_scan', BP_INTERVAL_SELECTION_MODE='HitScanAll')
 
     def test_truth_endpoints_and_scan_setups_are_independently_frozen(self):
         self.prepare(BP_INTERVAL_SELECTION_MODE='Truth', BP_FREE_LOSS_FIT='1',
@@ -175,7 +187,7 @@ class BatchTest(unittest.TestCase):
 
     def test_scan_only_controls_are_frozen_without_retired_threshold(self):
         self.prepare(STAGES='breakpoint', BP_INTERVAL_SELECTION_MODE='HitScanAll',
-                     BP_TRUTH_OVERRIDE='0', BP_LOCATION_SCAN_SETUPS='')
+                     BP_TRUTH_OVERRIDE='0', BP_LOCATION_SCAN_SETUPS='', BP_BEAM_SPOT_FSR_LOSS='0')
         job = self.manifest()
         self.assertEqual(job['controls']['BP_INTERVAL_SELECTION_MODE'], 'HitScanAll')
         self.assertNotIn('BP_HIT_SCAN_MIN_NLL_GAIN', job['controls'])

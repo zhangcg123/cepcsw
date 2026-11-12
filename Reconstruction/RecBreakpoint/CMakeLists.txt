@@ -21,7 +21,7 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   gaudi_add_module(RecBreakpoint
     SOURCES src/RecBreakpoint.cpp src/TrackState.cpp src/KalmanAdapter.cpp
             src/RecBreakpointIdentification.cpp src/BaselineKFDiagnostics.cpp
-            src/BreakpointFitter.cpp src/DiffuseLossState.cpp
+            src/BreakpointFitter.cpp src/BeamSpotFsrFitter.cpp src/DiffuseLossState.cpp
             src/FreeLossFitter.cpp src/FreeLossTuple.cpp src/FitPairTuple.cpp src/LocationFitScan.cpp
             src/LocationScanTuple.cpp
             src/CaloStateTuple.cpp src/RecoAssociationTuple.cpp src/TruthElectronSelector.cpp
@@ -63,6 +63,20 @@ if(BUILD_TESTING)
   target_link_libraries(RecBreakpointTransportTest PRIVATE RecBreakpointHelpers)
   add_test(NAME RecBreakpointTransport COMMAND RecBreakpointTransportTest)
   if(TARGET RecBreakpointLikelihood)
+    foreach(fsr_test IN ITEMS FsrJoint FsrFamilyTuple)
+      add_executable(RecBreakpoint${fsr_test}Test tests/${fsr_test}Test.cpp)
+      target_compile_features(RecBreakpoint${fsr_test}Test PRIVATE cxx_std_17)
+      target_compile_options(RecBreakpoint${fsr_test}Test PRIVATE -UNDEBUG)
+      target_include_directories(RecBreakpoint${fsr_test}Test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
+      # Tests exercise the same compiled implementation as the Gaudi plugin.
+      target_link_libraries(RecBreakpoint${fsr_test}Test PRIVATE
+        $<TARGET_FILE:RecBreakpoint> RecBreakpointLikelihood EDM4HEP::edm4hep ROOT::Tree)
+      add_dependencies(RecBreakpoint${fsr_test}Test RecBreakpoint)
+    endforeach()
+    add_test(NAME RecBreakpointFsrJoint COMMAND RecBreakpointFsrJointTest)
+    add_test(NAME RecBreakpointFsrFamilyTuple COMMAND RecBreakpointFsrFamilyTupleTest
+      ${CMAKE_CURRENT_BINARY_DIR}/fsr-family-test.root)
     add_executable(RecBreakpointCompactTruthReaderTest tests/CompactTruthReaderTest.cpp
       ../RecGsfTracking/src/TruthBHLossEventData.cpp)
     target_compile_features(RecBreakpointCompactTruthReaderTest PRIVATE cxx_std_17)

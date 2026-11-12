@@ -56,7 +56,7 @@ FreeLossFitResult FreeLossFitter::fit(const std::vector<edm4hep::TrackerHit>& hi
         settings.meanLogLoss = priorMean;
         const auto pair = m_fitter.fit(hits, settings, false);
         const auto& rts = pair.rts;
-        if (rts.smoothedChi2Status != 1 || rts.breakpoints.size() != 1 ||
+        if ((rts.smoothedChi2Status != 1 && !rts.beamFsr) || rts.breakpoints.size() != 1 ||
             rts.breakpoints.front().priorLogLoss != priorMean ||
             !std::isfinite(rts.breakpoints.front().fittedLogLoss) ||
             !std::isfinite(rts.breakpoints.front().fittedVariance) ||

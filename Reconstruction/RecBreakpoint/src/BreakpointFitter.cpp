@@ -1,4 +1,5 @@
 #include "BreakpointFitter.h"
+#include "BeamSpotFsrFitter.h"
 #include "ScalarMeasurementSite.h"
 #include "DiffuseLossState.h"
 #include "DelayedNeutralConditioning.h"
@@ -87,6 +88,7 @@ State constrainChargedEnergy(FitResult& result, const State& live, Step ecalStep
 } // namespace
 
 TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
+  if (result.beamFsr) return result.beamFsr->likelihood;
   if (result.smoothedChi2Status != 1)
     throw std::runtime_error("Complete RTS score unavailable: " + result.smoothedChi2Error);
   if (!result.gaussianModel)
@@ -132,6 +134,10 @@ TrackLikelihoodResult evaluateFitLikelihood(const FitResult& result) {
 PairedFitResult BreakpointFitter::fit(const std::vector<edm4hep::TrackerHit>& hits,
                                      const FitSettings& input, bool runBackward) const {
   auto settings=input;
+  if (settings.beamSpotFsrLoss) {
+    if (runBackward) throw std::invalid_argument("Beam FSR experiment is RTS only");
+    return {fitBeamSpotFsr(hits, settings), std::nullopt};
+  }
   const bool resolvedSum=combineResolvedEcalMeasurements(settings);
   if (settings.delayedNeutral && (runBackward || !settings.neutralEcalEnergy || settings.intervals.size()!=1))
     throw std::runtime_error("Delayed experiment requires neutral, one breakpoint, RTS only");
@@ -217,6 +223,14 @@ FitResult BreakpointFitter::fitNoBreakpointRTS(const std::vector<edm4hep::Tracke
   }
   if (!settings.beamSpot) result.ip = m_adapter.propagateToIP(result.smoothed.front(), hits.front());
   result.endpoint = result.smoothed;
+  if (settings.captureFsrTrajectory) {
+    for (std::size_t i=0;i<hits.size();++i) {
+      result.fsrMeans.push_back(result.smoothed[i].mean);
+      result.fsrCovariances.push_back(result.smoothed[i].covariance);
+      result.fsrNodeHits.push_back(i);
+      if (i+1<hits.size()) result.fsrGains.push_back(result.filtered[i].covariance * transpose(transitions[i].transport) * inverseCovariance(transitions[i].predicted.covariance));
+    }
+  }
   std::vector<TMatrixD> predicted, covariances, smoothed, noises;
   for (std::size_t i=0;i<hits.size();++i) {
     predicted.push_back(result.predicted[i].mean);
@@ -472,7 +486,7 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
   for (int i = static_cast<int>(filteredMean.size()) - 2; i >= 0; --i) {
     const auto& f = transports[i];
     const TMatrixD gain = filteredCov[i] * transpose(f) * inverseCovariance(predictedCov[i + 1]);
-    if (settings.delayedNeutral) { delayedGains[i].ResizeTo(gain); delayedGains[i]=gain; }
+    if (settings.delayedNeutral || settings.captureFsrTrajectory) { delayedGains[i].ResizeTo(gain); delayedGains[i]=gain; }
     smoothedMean[i] = filteredMean[i] + gain * stateDifference(smoothedMean[i + 1], predictedMean[i + 1]);
     TMatrixD remaining(filteredCov[i].GetNrows(), filteredCov[i].GetNrows());
     remaining.UnitMatrix();
@@ -480,6 +494,10 @@ FitResult BreakpointFitter::fitPersistent(const std::vector<edm4hep::TrackerHit>
     smoothedCov[i] = remaining * filteredCov[i] * transpose(remaining)
         + gain * (noises[i] + smoothedCov[i + 1]) * transpose(gain);
     validateCovariance(smoothedCov[i]);
+  }
+  if (settings.captureFsrTrajectory) {
+    result.fsrMeans=smoothedMean; result.fsrCovariances=smoothedCov;
+    result.fsrGains=delayedGains; result.fsrNodeHits=nodeHits;
   }
   if (settings.delayedNeutral) {
     auto reference = *delayedNeutralReference;

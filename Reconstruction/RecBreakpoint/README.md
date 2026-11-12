@@ -927,6 +927,13 @@ extended KF; the separate terms make those differences auditable.
 
 ## Properties
 
+`ExperimentalBeamSpotFsrLoss` defaults to **true** in the compiled plugin,
+maintained card and batch helper (`BP_BEAM_SPOT_FSR_LOSS=1`). It adds separate
+110/111 electron + FSR-photon output families; ordinary control endpoints remain
+separate. 000/100 keep FSR undetermined. Set the variable to `0` to disable.
+See [floating FSR: equations, outputs and limits](docs/beamspot-fsr-loss.md).
+
+
 Optional normalized-likelihood free-loss fitting is now implemented in this
 package, not in an external prototype. Set `FreeLossFit=True` to add a separate
 FreeLoss RTS result with the shared Gaussian fitter at the optimized prior center. The ordinary

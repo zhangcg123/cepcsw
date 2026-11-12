@@ -16,6 +16,7 @@
 #include <cmath>
 #include <filesystem>
 #include <limits>
+#include <map>
 #include <set>
 #include <iomanip>
 #include <sstream>
@@ -166,6 +167,10 @@ StatusCode RecBreakpoint::initialize() {
     error() << "HitScanAll requires FreeLossFit and beam/charged switches ON, TruthOverride OFF; neutral is optional" << endmsg;
     return StatusCode::FAILURE;
   }
+  if (m_beamFsrLoss && m_intervalSelectionName=="HitScanAll") {
+    error()<<"ExperimentalBeamSpotFsrLoss supports Truth or Manual locations only"<<endmsg;
+    return StatusCode::FAILURE;
+  }
   try {
     m_locationScanSetups = breakpoint::checkedLocationScanSetups(m_locationScanSetups.value());
     if (!m_locationScanSetups.value().empty()) {
@@ -288,6 +293,7 @@ StatusCode RecBreakpoint::initialize() {
   m_photonCalo[0].book(*m_tree,"rts_photon_calo_");
   m_photonCalo[1].book(*m_tree,"free_loss_rts_photon_calo_");
   m_freeLossTuple.book(*m_tree);
+  if (m_beamFsrLoss) m_beamFsrTuple.book(*m_tree);
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
@@ -700,6 +706,7 @@ StatusCode RecBreakpoint::execute() {
     }
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
+    if (m_beamFsrLoss) m_beamFsrTuple.reset();
     for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
       m_constraintTracks[i].reset();
       m_constraintCalo[i].reset();
@@ -1296,6 +1303,73 @@ StatusCode RecBreakpoint::execute() {
               m_beamMeasurements[method] = *endpoint.rts.beamSpot;
               m_beamApplied[method] = true;
             }
+          }
+        }
+      }
+      if (m_beamFsrLoss) {
+        if (!freeKFFallback) m_beamFsrTuple.assignElectron(0,freeResult.rts.ip);
+        if (constrained[1]) {m_beamFsrTuple.assignElectron(1,constrained[1]->rts.ip);m_beamFsrTuple.families[1].mask=1;}
+        m_beamFsrTuple.families[0].error=m_beamFsrTuple.families[1].error="FSR undetermined without ECAL; tracker-only endpoint retained";
+        std::shared_ptr<breakpoint::BeamSpotFsrResult> previousFsr;
+        for(int stage=2;stage<4;++stage) {
+          try {
+            if(!m_chargedEcalMeasurement || m_chargedEcalMeasurementStatus!=2 || !m_beamSpotConstraint)
+              throw std::runtime_error("Beam/charged ECAL observation unavailable");
+            if(stage==3 && !m_neutralEcalMeasurement)
+              throw std::runtime_error("Separate neutral stage disabled");
+            if(stage==3 && m_collectedNeutralStatus!=2) {
+              if(!previousFsr)throw std::runtime_error("No neutral or previous FSR result");
+              m_beamFsrTuple.assign(stage,*previousFsr,3,3);
+              m_beamFsrTuple.families[stage].error="No neutral observation; retained110 without another update";continue;
+            }
+            auto variant=settings;variant.beamSpot=m_recordBeamSpotSettings;
+            variant.beamSpotFsrLoss=true;variant.resolvedEcalSum=false;variant.delayedNeutral=false;
+            variant.chargedEcalEnergy=std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
+            variant.neutralEcalEnergy.reset();
+            variant.chargedEcalEnergyMode=stage==2 && !settings.intervals.empty()
+                ? breakpoint::ChargedEnergyMode::ElectronPhoton : breakpoint::ChargedEnergyMode::ElectronOnly;
+            if(m_collectedNeutralStatus==2) {
+              if(stage==2) {
+                variant.chargedEcalEnergy->first+=m_collectedNeutral.energy;
+                variant.chargedEcalEnergy->second=std::hypot(variant.chargedEcalEnergy->second,m_collectedNeutral.sigmaEnergy);
+              } else variant.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
+            }
+            breakpoint::PairedFitResult experiment;
+            if(!m_freeLossFit || settings.intervals.empty()) experiment=fitter.fit(hits,variant,false);
+            else {
+              auto controls=freeLossControls;controls.beamSpot=variant.beamSpot;
+              controls.chargedEcalEnergy=variant.chargedEcalEnergy;controls.chargedEcalEnergyMode=variant.chargedEcalEnergyMode;
+              controls.neutralEcalEnergy=variant.neutralEcalEnergy;
+              auto fitted=breakpoint::FreeLossFitter(fitter).fit(hits,variant,controls,false);
+              if(!fitted.fitted) {
+                std::map<std::string,int> failures;
+                for(const auto& trial:fitted.diagnostics.trials)if(!trial.valid)++failures[trial.error];
+                std::ostringstream detail;detail<<fitted.diagnostics.error;
+                for(const auto& failure:failures)detail<<"; "<<failure.second<<" trials: "<<failure.first;
+                throw std::runtime_error(detail.str());
+              }
+              experiment=std::move(*fitted.fitted);
+            }
+            previousFsr=experiment.rts.beamFsr;
+            if(!previousFsr)throw std::runtime_error("Missing FSR diagnostics");
+            m_beamFsrTuple.assign(stage,*previousFsr,stage==2 ? 3 : 7);
+            if(m_verbose) {
+              info()<<std::setprecision(17)<<"BeamSpotFSR event="<<m_event<<" track="<<m_trackIndex
+                    <<" setup="<<(stage==2 ? 110 : 111)<<" energy="<<previousFsr->energy
+                    <<" variance="<<previousFsr->variance<<" primaryEcal="<<previousFsr->firstEcalPart
+                    <<" neutral="<<previousFsr->neutralPart<<" boundary="<<previousFsr->activeMask
+                    <<" materialClosure="<<previousFsr->materialClosure<<" closure="<<previousFsr->nonlinearClosure<<" nll2="<<previousFsr->likelihood.nll2<<endmsg;
+              for(std::size_t node=0;node<experiment.rts.smoothed.size();++node) {
+                const auto& state=experiment.rts.smoothed[node];std::ostringstream dump;
+                dump<<std::setprecision(17)<<"BeamSpotFSRState hit="<<node<<" mean=[";
+                for(int j=0;j<5;++j)dump<<state.mean(j,0)<<' ';
+                dump<<"] covariance=[";for(int i=0;i<5;++i)for(int j=0;j<5;++j)dump<<state.covariance(i,j)<<' ';
+                dump<<']';info()<<dump.str()<<endmsg;
+              }
+            }
+          } catch(const std::exception& failure) {
+            m_beamFsrTuple.families[stage].status=-2;m_beamFsrTuple.families[stage].error=failure.what();
+            warning()<<"BeamSpotFSR setup="<<(stage==2 ? 110 : 111)<<" failed: "<<failure.what()<<endmsg;
           }
         }
       }
