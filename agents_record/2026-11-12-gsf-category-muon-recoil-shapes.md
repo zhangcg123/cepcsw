@@ -49,3 +49,17 @@ User requested a KF + neutral overlay on each category figure and event numbers.
 The existing KF + neutral cache was joined exactly to all 85,327 category events. For EVERY event, both KF + neutrals and GSF + neutrals were recalculated algebraically from their cached native fitted four-vectors plus the SAME cached neutral four-vector sum, then checked against saved masses (including undefined values). Cluster counts and added energies also agree. No native ROOT event read, reconstruction/refit or neutral selection was rerun. GSF and muon histograms and normalization remain unchanged. Independently normalized curves still sum to one. Previous two-curve study outputs and source script are preserved under `before_kf_neutrals_counts/`.
 
 Gallery refresh verified: prior four served PNGs and section metadata archived under the study's `before_kf_neutrals_counts/gallery/`. Still 21 PNGs / 9 sections / exact-once coverage, all 17 unrelated PNG hashes unchanged. Page and four updated images HTTP 200, source/copy hashes match. Same ailogin002 server PID 2122174, localhost:8000, no restart. Root independently checked exact-once coverage, four hashes and description. Old GSF and muon histogram fields match all 200 prior bins exactly. No implementation, card or installed library changed.
+
+## Count audit against the radiation matrix
+
+User noticed matrix/legend numbers differ. Event-by-event audit in the study's `count_bridge.py`, `count_bridge.json`, `count_bridge.csv` confirms ZERO category disagreements on the 85,327 compared events. The >1 GeV matrix uses 98,437 classifiable events in 500 sources, before endpoint/charge/window selections. Four sources absent from the matched 496-source cache (40,55,421,429) account for 786 matrix events; within matched sources, 134 same-baseline-charge pairs and 12,190 pairs without both valid GSF endpoints are removed. Thus 98,437 - 786 - 134 - 12,190 = 85,327. Source availability is the cache's recorded state; no new batch-status inspection was done.
+
+| Category | Matrix | Common KF/GSF before mass window | KF+neutral 120–140 | GSF+neutral 120–140 |
+|---|---:|---:|---:|---:|
+| Neither | 21,602 | 20,009 | 18,609 | 18,438 |
+| eBrem only | 43,739 | 36,623 | 30,007 | 28,752 |
+| FSR only | 11,517 | 10,659 | 7,846 | 7,811 |
+| Both (AND) | 21,579 | 18,036 | 11,704 | 11,773 |
+| Total | 98,437 | 85,327 | 68,166 | 66,774 |
+
+After the common pre-window sample, KF has 1,013 undefined recoil masses and 16,148 finite values outside the window; GSF has 2,039 undefined and 16,514 outside. Each method's three counts close exactly to 85,327. Matrix counts describe category populations; legend N_120–140 describes raw entries in the plotted window and is also each curve's own shape denominator. Shape normalization does not change these raw counts. No reconstruction, refit, plot or gallery change was made in this audit.
