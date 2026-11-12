@@ -331,39 +331,42 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GSF RECOIL STACK BY RADIATION CATEGORY (2026-11-12).**
-Inclusive GSF BestBranch + existing neutral recovery,85327valid selected
-production-electron pairs from496normalISR/FSR source caches. No no-FSR veto
-or BP100/BP110 validity gate. Exact join to latest exclusive >1GeV matrix flags:
-per type, summed photon birth energy per selected electron; event flag if
-EITHER leg sumSTRICTLY>1GeV. Neither(!f&&!e),eBrem-only(e&&!f),FSR-only(f&&!e),
-Both(AND). Soft radiation allowed in neither/only groups; no angular truth match.
+**SEPARATE GSF RADIATION-CATEGORY RECOIL SHAPES (2026-11-12).**
+User replaced the inclusive stack with four separate figures: Neither,
+eBrem-only, FSR-only, Both(AND). Each overlays GSF BestBranch + existing
+neutral recovery with the SAME inclusive muon Baseline KF reference.
+120--140 GeV, 0.1 GeV bins; EACH curve independently normalizes to its own
+finite count in that window. No luminosity/yield text or new fits.
 
-Recoil120--130GeV in0.1bins;51850in-window events,2039undefined. ONE common
-window denominator for full stack, not individual category normalization.
-In-window contributions: Neither16338/31.51%,eBrem23552/45.42%,FSR4949/9.54%,
-Both7011/13.52%. Allvalid category counts20009/36623/10659/18036. Matrix pre-fit
-population98437 differs from post-GSF/window-selected stack; keep denominators
-explicit. Raw category sums reproduce inclusive spectrum in EVERY bin.
+Reuse 85,327 valid selected production-electron pairs from 496 source caches,
+with unchanged exclusive >1 GeV flags: sum truth photon birth energies per
+type per selected electron; type present if EITHER leg sum strictly exceeds
+1 GeV. Soft radiation remains allowed. No no-FSR veto or BP validity gate.
+All-valid/window category counts: Neither 20,009/18,438; eBrem 36,623/28,752;
+FSR 10,659/7,811; Both 18,036/11,773. Undefined GSF recoil: 2,039.
+Muon reference: 48,636 inclusive pairs, 44,236 finite in window, 11 undefined;
+no FSR veto. Matrix prefit population remains 98,437, a different denominator.
 
-Original matched-flat neutral collection10mradtheta/200mradphi halfwidth around
-Baseline KF ECAL references, massless p4 from IP, union once. No new purity,
-energy-tail or collection cut, and no later PFA-replay clusters substituted.
-Cache-only calculation, no native event read/reconstruction/refit/build/card/
-installation/batch change. No new DSCB fit for stack. GSF material recovery
-plus neutrals may double-count radiation; this is spectrum composition.
+Original matched-flat neutral collection uses 10 mrad theta / 200 mrad phi
+halfwidth around Baseline KF ECAL references, massless p4 from IP, union once.
+No new collection/purity/tail cuts or PFA-replay cluster substitution.
+Category raw histograms partition inclusive in every bin. All 120--130 GeV
+raw bins exactly reproduce previous stack and muon baseline; all curves sum
+one, same muon curve in all four figures, source hashes unchanged.
+Cache-only calculation, no native read, reconstruction/refit/build/install/
+card/batch change. Spectra include physics radiation and ISR; GSF plus
+neutral addition may double-count radiation. No pure-resolution claim.
 
-Square figure, AGORA simulation bold above axes, large text, transparent grid,
-no luminosity/yield text. GrayNeither,blueeBrem,goldFSR,purpleBoth; total black
-outline. Gallery18PNGs/9sections/exact-once, page/newPNGHTTP200/sourcehashmatch;
-all17prior images unchanged. Same localhost8000,ailogin002 PID2122174,no restart.
-Earlier no-FSR comparison remains SHAPE-only; both radiation matrices and all
-prior plots retained. Latest threshold matrix uses Both(AND), not OR.
+Square figures, AGORA simulation above axes, large text, transparent grid.
+Gallery: 21 PNGs / 9 sections / exact-once; page and all four PNGs HTTP 200,
+source hashes match, all 17 other PNGs unchanged. Same localhost8000,
+ailogin002 PID2122174, no restart; details in linked record.
+Old stack source data/figure are preserved; active preview is removed.
+All other plots and both radiation matrices are retained unchanged.
 
-Artifacts: TrackingPerformanceStudies/gsf_recoil_radiation_stack_20261112/.
-[Stack record](agents_record/2026-11-12-gsf-recoil-radiation-stack.md).
-[Outgoing complete status](agents_record/2026-11-12-agents-before-gsf-radiation-stack-focus.md).
-[No-FSR recoil](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
+Artifacts: TrackingPerformanceStudies/gsf_recoil_category_muon_shapes_20261112/.
+[Current evidence](agents_record/2026-11-12-gsf-category-muon-recoil-shapes.md).
+[Exact outgoing status](agents_record/2026-11-12-agents-before-gsf-category-muon-shapes.md).
+[Previous stack](agents_record/2026-11-12-gsf-recoil-radiation-stack.md).
+[No-FSR comparison](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
 [Radiation matrices](agents_record/2026-11-12-event-radiation-matrix.md).
-[Main-electron energy split](agents_record/2026-11-12-main-electron-neutral-energy-split.md).
-[Other photon/neutral studies](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
