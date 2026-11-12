@@ -334,9 +334,11 @@ manifest as an uncommitted analysis artifact.
 **SEPARATE GSF RADIATION-CATEGORY RECOIL SHAPES (2026-11-12).**
 User replaced the inclusive stack with four separate figures: Neither,
 eBrem-only, FSR-only, Both(AND). Each overlays GSF BestBranch + existing
-neutral recovery with the SAME inclusive muon Baseline KF reference.
+neutral recovery, Baseline KF + the SAME neutrals (green dashed), and the SAME
+inclusive muon Baseline KF reference.
 120--140 GeV, 0.1 GeV bins; EACH curve independently normalizes to its own
-finite count in that window. No luminosity/yield text or new fits.
+finite count in that window. Legend N is raw finite 120--140 GeV entries
+per curve; no luminosity-weighted yields or new fits.
 
 Reuse 85,327 valid selected production-electron pairs from 496 source caches,
 with unchanged exclusive >1 GeV flags: sum truth photon birth energies per
@@ -344,6 +346,9 @@ type per selected electron; type present if EITHER leg sum strictly exceeds
 1 GeV. Soft radiation remains allowed. No no-FSR veto or BP validity gate.
 All-valid/window category counts: Neither 20,009/18,438; eBrem 36,623/28,752;
 FSR 10,659/7,811; Both 18,036/11,773. Undefined GSF recoil: 2,039.
+KF+neutral window counts in category order: 18,609/30,007/7,846/11,704.
+Exact joins and native cached p4+neutral closure checked for BOTH electron
+methods on all 85,327 events; pre-window keys and neutral sums identical.
 Muon reference: 48,636 inclusive pairs, 44,236 finite in window, 11 undefined;
 no FSR veto. Matrix prefit population remains 98,437, a different denominator.
 
