@@ -107,3 +107,18 @@ User asks how to distinguish FSR/eBrem contributions. Recommend cumulative tail 
 Direct cached audit of the current 72,784 common endpoint-valid events at M_recoil >130 GeV gives conditional-on-finite tail fractions (KF+neutral / GSF+neutral / BP110): Neither13.7925/13.7868/14.9463%; eBrem-only35.9657/21.1713/26.3664%; FSR-only50.7150/50.1748/66.9345%; Both62.9723/50.6836/65.7880%. All finite masses count, with no upper mass cutoff; the methods exclude their own undefined masses (KF185,GSF786,BP11013) and therefore have slightly different finite denominators. No new reconstruction, fit, or held-out validation.
 
 GSF tail has20,924events: Neither2,483(11.8668%); eBrem-only6,366(30.4244%); FSR-only4,735(22.6295%); Both7,340(35.0793%). FSR-flagged categories thus contain57.7089% of its >130GeV tail, an association, not a fraction proven caused by FSR. Neither permits subthreshold radiation; its residual tail also means the two >1GeV flags do not account for all tail sources.
+
+## Paired bare-to-neutral recovery audit
+
+User says recovery looks ineffective. Direct event-key matched comparison of native bare GSF (`gsf_completed_recoil_pt_20261111/pairs_inclusive.csv`) and the current matched study's `events_matched_bp110.csv`, restricted within each category to events with finite GSF mass BOTH before and after addition:
+
+| Category | Common finite | >130 GeV before | >130 after | 120–130 before | 120–130 after |
+|---|---:|---:|---:|---:|---:|
+| Neither | 18,010 | 2,528 | 2,483 | 15,383 | 15,164 |
+| eBrem only | 30,069 | 9,742 | 6,366 | 19,695 | 20,840 |
+| FSR only | 9,437 | 6,937 | 4,735 | 2,490 | 4,545 |
+| Both | 14,482 | 11,460 | 7,340 | 2,889 | 6,079 |
+
+In the full 9,458 endpoint-valid FSR-only events, 5,152(54.47%) receive ZERO neutral addition. In the paired-finite subset, 5,150 have zero addition and retain3,306events above130GeV unchanged. Events with additions have3,631tailentries before and1,429after. Thus3,306/4,735(69.82%) of the remaining FSR-only GSF tail receives no neutral correction. Counts concern ANY collected neutral, not truth-confirmed FSR efficiency. Existing collector only adds separately resolved neutral clusters in its window; merged FSR in a charged cluster is absent from a track-only GSF recoil and photons outside the window are also omitted. Assigning those failure causes quantitatively requires further truth-linked matching on the same events; this audit does not do it.
+
+The published category plots compare already-corrected methods and normalize their shapes independently, so they do not directly show bare-to-recovered event migrations. Additional material eBrem in the neutral union can double-count GSF material recovery; merged-FSR tension in BP110 remains a separate hypothesis. No native reconstruction, fit, plot or gallery change was made.
