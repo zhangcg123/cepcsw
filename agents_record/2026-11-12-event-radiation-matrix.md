@@ -81,3 +81,23 @@ Prior servedANDPNG+sectionJSON archived in before_or_summary/gallery/. Main
 reviewed coverage, hashes, pattern order, absent old preview and nonexclusive
 definition. Same ailogin002 PID2122174 localhost8000,no restart. Verification:
 gallery_verification_gt1gev_or.json in source-study directory.
+
+## Latest user change: last block is Both[AND]
+
+User explicitly reversed combined operator to AND. Last block nowfANDe,
+21579/98437=21.92163516%,labelBoth(AND). Other three entries unchanged:
+Neither21602/21.95%,eBrem-only43739/44.43%,FSR-only11517/11.70%. These four
+categories are mutually exclusive and sum98437/100%. Removed OR overlap
+caption. Threshold flags/cuts/denominator unchanged; either leg can supply
+each type's per-electron-summed truth energy strictly>1GeV. No requirement
+that both types be on the same electron.
+
+New and_companion.py,summary_gt1gev_and.json,event_fsr_ebrem_summary_gt1gev_and
+PNG/PDF and run/code/plot manifests. Prior OR source retained for history.
+Cached flags/energies, unchanged only groups, original AND identity, population/
+percentage closure, hashes pass; layout viewed. No native run/refit. Gallery
+verified17PNGs/8sections/exact-once; other16images unchanged, prior ORpreview
+absent, page/bothactivePNGHTTP200/newsourcehashmatch. Main checked sourcehash,
+coverage and adjacency. Prior ORservedPNG+sectionJSON in before_and_summary/gallery/.
+Same ailogin002 PID2122174 localhost8000, no restart. Verification artifact:
+gallery_verification_gt1gev_and.json in source-study directory.
