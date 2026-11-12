@@ -331,57 +331,39 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NO-FSR RECOIL: BP110 VS GSF + NEUTRALS (2026-11-12).**
-Electron comparison uses11750identical common-valid events with known zero
-FSR on BOTH selected production electrons. All eBrem categories included,
-946events with no eBrem. No BP100 gate. Both methods use native fitted IP
-states. BP110 truth-selected location or valid null with fitted loss and
-tracker+beam+ECAL; no extra neutral4vectors. GSF BestBranch adds the existing
-unique neutral4vector union in10mradtheta/200mradphi halfwidth around Baseline
-KF ECAL references.2376events/2788neutral clusters; zero additions retained.
+**GSF RECOIL STACK BY RADIATION CATEGORY (2026-11-12).**
+Inclusive GSF BestBranch + existing neutral recovery,85327valid selected
+production-electron pairs from496normalISR/FSR source caches. No no-FSR veto
+or BP100/BP110 validity gate. Exact join to latest exclusive >1GeV matrix flags:
+per type, summed photon birth energy per selected electron; event flag if
+EITHER leg sumSTRICTLY>1GeV. Neither(!f&&!e),eBrem-only(e&&!f),FSR-only(f&&!e),
+Both(AND). Soft radiation allowed in neither/only groups; no angular truth match.
 
-Reused validated496GSF-source flat-result caches and matching BP/neutral
-observations, not the later PFA replay REC clusters. No native event read,
-reconstruction, source/card/installation/batch change. New histogram DSCB
-fits only. Original yield view used fixed10ab^-1generated-input weights. The newer
-shape-only request below overrides that normalization locally.
+Recoil120--130GeV in0.1bins;51850in-window events,2039undefined. ONE common
+window denominator for full stack, not individual category normalization.
+In-window contributions: Neither16338/31.51%,eBrem23552/45.42%,FSR4949/9.54%,
+Both7011/13.52%. Allvalid category counts20009/36623/10659/18036. Matrix pre-fit
+population98437 differs from post-GSF/window-selected stack; keep denominators
+explicit. Raw category sums reproduce inclusive spectrum in EVERY bin.
 
-Display120--130GeV,0.1GeVbins. BP110sigma0.334+/-0.019GeV,
-GSF+neutral0.318+/-0.015GeV; fit123.5--128,status0/cov3,no boundary parameters.
-Rawwindowentries8970/8735; undefined2/139. Widths close;
-no significant-improvement claim. Truth-location/ECAL inputs differ and
-GSF material recovery plus blind neutral addition can double-count radiation.
-These are spectrum core widths, not detector-only resolutions.
-Added bare Baseline KF electron on the SAME11750events and maintained inclusive
-muon Baseline KF48636pair reference(no extra muonFSRveto). User clarified SHAPES:
-all4curves now individually normalize by finite counts in120--130GeV, sums1.
-No10ab^-1or yield annotations on THISplot; other yield plots keep10ab weights.
-Source luminosity weights retained only as provenance. Sigma fits unchanged.
-KFsigmas electron0.281+/-0.011GeV,muon0.273+/-0.004GeV. Muon selection differs
-from no-FSR electrons, so its absolute yield is much larger. Original2-curve
-figure archived; BP/GSF histograms and sigmas unchanged.
+Original matched-flat neutral collection10mradtheta/200mradphi halfwidth around
+Baseline KF ECAL references, massless p4 from IP, union once. No new purity,
+energy-tail or collection cut, and no later PFA-replay clusters substituted.
+Cache-only calculation, no native event read/reconstruction/refit/build/card/
+installation/batch change. No new DSCB fit for stack. GSF material recovery
+plus neutrals may double-count radiation; this is spectrum composition.
 
-Keep square figures, AGORA simulation bold above axes, large text, transparent
-grid, no title/fit legend entries or long footer. Current shape plot has sigma
-notes only; no luminosity/yield label.
-Added event-radiation2x2matrix BEFORE fit cuts across500sources/100000inputs:
-98437complete selected electron pairs,1556one-track+7no-track events excluded.
-Neither1.13%,eBrem only14.87%,FSR only6.04%,both77.96%. Either electron can
-supply either flag; no extra photon-energy threshold or neutral-cluster gate.
-Companion matrix uses summed photon birth energy per electron, requiring
-EITHER electron's sumSTRICTLY>1GeV for each radiation type, same98437events.
-Neither21.95%,eBrem only44.43%,FSR only11.70%. Latest user request restores
-last block Both(AND)=21.92%(21579events). Four categories mutually exclusive,
-sum100%; OR overlap caption removed. Softer radiation allowed in neither.
-Original unthresholded matrix preserved beside it.
-[Matrix definitions](agents_record/2026-11-12-event-radiation-matrix.md).
-New PNG is its own no-FSR recoil section; earlier photon/neutral energy,
-main-electron companion and other recoil plots retained. Gallery verified:
-17PNGs/8sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
-other16images unchanged after Both(AND) replacement; recoil comparison has four curves. Same localhost8000, ailogin002 PID2122174, no restart.
+Square figure, AGORA simulation bold above axes, large text, transparent grid,
+no luminosity/yield text. GrayNeither,blueeBrem,goldFSR,purpleBoth; total black
+outline. Gallery18PNGs/9sections/exact-once, page/newPNGHTTP200/sourcehashmatch;
+all17prior images unchanged. Same localhost8000,ailogin002 PID2122174,no restart.
+Earlier no-FSR comparison remains SHAPE-only; both radiation matrices and all
+prior plots retained. Latest threshold matrix uses Both(AND), not OR.
 
-Artifacts: TrackingPerformanceStudies/recoil_no_fsr_bp110_gsf_neutrals_20261112/.
-[Full comparison record](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
-[Outgoing complete status](agents_record/2026-11-12-agents-before-no-fsr-recoil-comparison.md).
-[Main-electron split](agents_record/2026-11-12-main-electron-neutral-energy-split.md).
+Artifacts: TrackingPerformanceStudies/gsf_recoil_radiation_stack_20261112/.
+[Stack record](agents_record/2026-11-12-gsf-recoil-radiation-stack.md).
+[Outgoing complete status](agents_record/2026-11-12-agents-before-gsf-radiation-stack-focus.md).
+[No-FSR recoil](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
+[Radiation matrices](agents_record/2026-11-12-event-radiation-matrix.md).
+[Main-electron energy split](agents_record/2026-11-12-main-electron-neutral-energy-split.md).
 [Other photon/neutral studies](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
