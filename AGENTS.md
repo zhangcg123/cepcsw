@@ -331,46 +331,49 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**MATCHED KF/GSF/BP110 RADIATION-CATEGORY SHAPES (2026-11-12).**
-Four square figures: Neither, eBrem-only, FSR-only, Both(AND). Each overlays
-Baseline KF + neutrals(green solid), GSF BestBranch + neutrals(category solid),
-BP110(red solid), and the SAME inclusive muon Baseline KF(black dashed).
-120--140 GeV, 0.1 GeV bins; each curve independently normalizes by its OWN
-finite window count. Legend N_120--140 is raw entries, not weighted yields.
-No new fits or luminosity scaling. AGORA simulation above axes, large text,
-transparent grid, no plot title/long footer.
+**FSR-ONLY RECOIL: RESOLVED NEUTRAL VS NONE (2026-11-12).**
+Break down the existing matched FSR-only recoil plot; preserve all original
+category plots. Add two figures with the SAME four methods: Baseline KF +
+neutrals(green solid), GSF BestBranch + neutrals(gold solid), BP110(red solid),
+and inclusive muon Baseline KF(black dashed). 120--140 GeV,0.1GeVbins;
+each curve independently normalizes to its own finite window count; legend
+N_120--140 raw entries. No new fit/luminosity scaling. Square,AGORA simulation
+above axes,large text,transparent grid,no title/long footer.
 
-All THREE electron methods use 72,784 identical pre-window events from 496
-sources. Extra both-leg BP110 validity gate removes 12,543 from the prior
-85,327 KF/GSF pairs; no BP100 gate. KF/GSF curves therefore change too.
-Common category counts: Neither18,078/eBrem30,561/FSR9,458/Both14,687.
-Window KF/GSF/BP110: Neither17,197/17,097/17,288;
-eBrem26,234/25,323/26,494;FSR7,187/7,176/6,041;Both10,027/10,155/9,177.
-Muon unchanged:48,636inclusivepairs/44,236finitewindow/11undefined,noFSRveto.
-Category definitions unchanged: sum truth photon birth energies per type per
-selected production electron; event type present if EITHER leg sum strictly
->1GeV. Neither/only groups may contain softer radiation; Both is AND.
+Parent is9,458FSR-only events from72,784three-method-common pairs in496sources.
+Truth category unchanged: either selected production-electron leg has summed
+FSR birth energy>1GeV; neither has material-eBrem sum>1GeV. Softer radiation
+allowed. Resolved means>=1usable separate neutral trackless pre-ECAL cluster
+ANYWHERE with ANYpositive saved nativeMC contribution from generator-linked
+FSR of either selected electron. No purity/dominance/energy-cap cut. Does not
+require all or hardest photons resolved. Unresolved means no such identified
+neutral, including merged/missing/invalid cases; not proof all photons merged.
+Resolved outside the collector remains resolved; no angular truth matching.
 
-BP110: truth-selected eligible location or valid null, fitted loss and
-tracker+beam+ECAL, native IP states; not a scan minimum. NO extra neutral p4
-addition to BP110. KF/GSF add the same original cached neutral union in
-10mradtheta/200mradphi halfwidth about KF ECAL references. No new purity/tail
-cuts or PFA replay. GSF material recovery plus neutrals can double-count.
-Spectra include radiation and ISR; no pure detector-resolution claim.
+Fit/neutral observables belong original REC_TPCFIX; native cluster truth links
+belong rebuilt REC_ECALTRUTH. Require exact full-event clusterenergy/position,
+complete constituent-hitmultisets and PFOcharge/trackownership agreement,
+allowing ordering permutations. Verify source/card identities and selected
+track/MC maps. Exclude579mismatches(577energy/position,2hitcontent),notunresolved.
+Verified8,879events=6,899resolved+1,980unresolved. Ofresolved,3,851have a tagged
+FSRneutral inside the10/200mradcollector;3,048onlyoutside. AnypositiveMCtag is
+not a photon-count/energy recovery efficiency; this subset can be biased.
 
-Matrix denominator remains98,437beforefits/windows. Exact audit subtracts
-786missing-sourceevents,134sameKFchargepairs,12,190unavailableGSFpairs and
-12,543unavailableBP110pairs to yield72,784;zero category disagreements.
-REC identity/truth cache/baseline joins match; native cached KF/GSF p4 closure
-on85,327parentpairs;BP110mass closure on11,750oldnoFSRreferencepairs.
-Every method's categories partition inclusive bins;all curves sumone;
-muon unchanged. Cache-only,no native read/refit/build/install/card/batchchange.
+Window KF/GSF/BP110:resolved5,077/5,069/3,932;unresolved1,656/1,652/1,724.
+Muon unchanged44,236windowentries from48,636inclusivepairs,noFSRveto.
+All electron methods share identical pre-window keys in each subgroup and
+reuse exact existing recoil masses. BP110truthlocation/null, fittedloss,
+tracker+beam+ECAL;NOextra neutral p4. KF/GSF use original neutral union;
+no new collector/PFA replay/refit/build/install/card/batch change.
+Seven provenance/numerical checks pass; subgroup histograms partition ONLY
+the verified inclusive subset, all curves sumone. Both layouts reviewed.
+OriginalFSRplot retains all9,458events; newsubgroups exclude579 and therefore
+do not reproduce its full histogram. Other plots/radiationmatrices retained.
+Gallery:23PNGs/9sections/exact-once;all21priorimagesunchanged;page+2PNG
+HTTP200/sourcehashmatch.Sameailogin002PID2122174,localhost8000,norestart.
 
-Previous three-curve plots archived under study/before_bp110/.
-Gallery:21PNGs/9sections/exact-once,page+4PNGHTTP200/sourcehashmatch;
-all17otherimagesunchanged.Sameailogin002PID2122174,localhost8000,norestart.
-Artifacts: TrackingPerformanceStudies/gsf_recoil_category_muon_shapes_20261112/.
-[Evidence and count audits](agents_record/2026-11-12-gsf-category-muon-recoil-shapes.md).
-[Exact outgoing status](agents_record/2026-11-12-agents-before-bp110-category-shapes.md).
-[No-FSR BP110 comparison](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
+Artifacts: TrackingPerformanceStudies/fsr_resolved_recoil_20261112/.
+[Split evidence](agents_record/2026-11-12-fsr-resolved-neutral-recoil-split.md).
+[Exact outgoing status](agents_record/2026-11-12-agents-before-fsr-resolved-recoil-split.md).
+[Parent comparison and count audits](agents_record/2026-11-12-gsf-category-muon-recoil-shapes.md).
 [Radiation matrices](agents_record/2026-11-12-event-radiation-matrix.md).
