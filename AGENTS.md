@@ -331,20 +331,26 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FULL BP FLOATING-FSR RECOIL SHAPES (2026-11-13).**
+**BP RECOIL: ABSOLUTE INCLUSIVE + CATEGORY SHAPES (2026-11-13).**
 The user confirmed the new BP_FSRFLOAT500x200 tuples, rather than a new GSF
 campaign. All500completed BP files/100000inputs are read;98437truth-classifiable
 pairs agree with the existing >1GeV matrix. The common four-electron-method
-sample is67950pairs: Neither16768/eBrem28310/FSR9008/Both13864. Gates remove
+CATEGORY sample is67950pairs: Neither16768/eBrem28310/FSR9008/Both13864. Gates remove
 135sameKFcharge,12619unavailableGSF,12607unavailableordinary110 and5126
 unavailablefloating110 pairs in sequence;1563raw events have incomplete pairs.
 
-Five square120–140GeV/.1GeV figures: inclusive and all four categories, with
-same-event BaselineKF+neutrals(green),existing GSF BestBranch+neutrals(gold),
-same-run ordinaryBP110(red),floating110(blue),all solid; unchanged inclusive
-muon BaselineKF black dashed. Each curve independently unit-normalizes in the
-window; legendN is raw window entries. AGORA simulation above axes,large text,
-grid,no title/long footer,no fits/luminosity scaling/generator recoil.
+Four CATEGORY120–140GeV/.1GeV figures retain same-event KF+neutrals(green),
+existing GSF+neutrals(gold),ordinary110(red),floating110(blue),allsolid,plus
+muon blackdashed. Category curves independently unit-normalize;raw windowN.
+The INCLUSIVE plot instead has only bare muonKF(blacksolid),bare electronKF
+(grayfilled),floating110(blue). Absolute10ab^-1 weights use FULL generated
+inputs:100000electron→0.704/event,50000muon→1.354/event. No window/success
+renormalization or GSF/ordinary-BP gate:98302KF/75389floating/48636muon pairs.
+Expected120–140yields46318.272electronKF/45512.192floating/59895.544muon.
+Reference sigma7.04fb/6.77fb,not recovered generator-header rates;muon retains
+inclusive-tracking normalization convention despite forced-invisible H decays.
+All square,AGORA simulation above axes,large text,grid,no title/longfooter,
+no newfits/generatorrecoil.10ab^-1insideinclusive;legend givesexpectedyields.
 
 FSR110 uses its OWN fitted post-FSR electron plus collinear photon p4, once;
 no extra neutral addition to either BP. KF/GSF use the SAME FRESH neutral union
@@ -353,7 +359,7 @@ links,zero charge/trackless/hit-supported;no truth/purity/tail cuts. Old neutral
 sums are not reused across PFA replay differences. Existing GSF reference has
 498sources (496identity-checked caches plus native40/429);55/421 failed.
 REC lineage,selected track/MC,KF pT,generator pT/energy and truth energy joins
-pass. Category histograms partition inclusive bins and shapes sumone.
+pass. Category histograms partition their common reference union;category shapes sumone.
 
 Default `BP_BEAM_SPOT_FSR_LOSS=1` remains installed for110/optional111;000/100
 FSR undetermined. Truth-selected eligible material interval/null;no scan;111off.
@@ -364,9 +370,10 @@ contamination and clean-track safety remain open;no physics-validation claim.
 No refit,build,install or production submission in this study.
 
 Gallery adds five PNGs to the existing page:31PNGs/11sections/exact-once;
-all34priorPNG/PDF hashes unchanged,page+inclusivePNGHTTP200. Sameailogin002
-PID2122174,localhost8000,no restart. All five figures visually reviewed.
+allother30PNG/8PDF unchanged in inclusive update;page+newPNGHTTP200. Sameailogin002
+PID2122174,localhost8000,no restart. All five figures visually reviewed;only inclusive is subsequently updated.
 Artifacts: TrackingPerformanceStudies/bp_fsrfloat_recoil_categories_20261113/.
-[Exact method, count bridge and limits](agents_record/2026-11-13-full-bp-floating-recoil-shapes.md).
+[Inclusive absolute normalization](agents_record/2026-11-13-inclusive-bp-floating-recoil-10ab.md).
+[Category method, count bridge and limits](agents_record/2026-11-13-full-bp-floating-recoil-shapes.md).
 [Outgoing focus](agents_record/2026-11-13-agents-before-full-bp-floating-recoil.md).
 [Default option/schema](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
