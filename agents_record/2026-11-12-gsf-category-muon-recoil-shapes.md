@@ -99,3 +99,11 @@ These are recoil-spectrum shapes including physics radiation and ISR, not pure d
 `analyze.py` writes four PNG/PDF pairs, `events_matched_bp110.csv`, `histogram.csv`, `summary.json`, hash manifests and assert-based checks. `count_bridge.py` audits matrix-to-plot counts. The previous three-curve study is preserved under `before_bp110/`; earlier two-curve outputs remain under `before_kf_neutrals_counts/`. Gallery publication preserves all unrelated plots.
 
 BP110 gallery publication: prior four served PNGs and section metadata archived under `before_bp110/gallery/`. New section title is “Matched KF, GSF and BP110 category shapes versus muon Baseline KF.” Gallery agent verified 21 PNGs / 9 sections / exact-once, 17 other image hashes unchanged, page and four updated PNGs HTTP 200 with source hash matches. Root independently verified coverage, four hashes and all count/observable semantics. Same ailogin002 server PID 2122174 at localhost:8000; no restart.
+
+## Illustrating the high-mass tail
+
+User asks how to distinguish FSR/eBrem contributions. Recommend cumulative tail fraction versus recoil threshold, separately by the unchanged >1 GeV category, with the full finite category population as denominator (including masses above 140 GeV). This measures tail propensity; category shares of all tail events separately measure composition. Do not interpret either as causal photon attribution. No new plot or gallery change was requested/performed here.
+
+Direct cached audit of the current 72,784 common endpoint-valid events at M_recoil >130 GeV gives conditional-on-finite tail fractions (KF+neutral / GSF+neutral / BP110): Neither13.7925/13.7868/14.9463%; eBrem-only35.9657/21.1713/26.3664%; FSR-only50.7150/50.1748/66.9345%; Both62.9723/50.6836/65.7880%. All finite masses count, with no upper mass cutoff; the methods exclude their own undefined masses (KF185,GSF786,BP11013) and therefore have slightly different finite denominators. No new reconstruction, fit, or held-out validation.
+
+GSF tail has20,924events: Neither2,483(11.8668%); eBrem-only6,366(30.4244%); FSR-only4,735(22.6295%); Both7,340(35.0793%). FSR-flagged categories thus contain57.7089% of its >130GeV tail, an association, not a fraction proven caused by FSR. Neither permits subthreshold radiation; its residual tail also means the two >1GeV flags do not account for all tail sources.
