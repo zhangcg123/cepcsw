@@ -331,49 +331,52 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP RECOIL: ABSOLUTE INCLUSIVE + CATEGORY SHAPES (2026-11-13).**
-The user confirmed the new BP_FSRFLOAT500x200 tuples, rather than a new GSF
-campaign. All500completed BP files/100000inputs are read;98437truth-classifiable
-pairs agree with the existing >1GeV matrix. The common four-electron-method
-CATEGORY sample is67950pairs: Neither16768/eBrem28310/FSR9008/Both13864. Gates remove
-135sameKFcharge,12619unavailableGSF,12607unavailableordinary110 and5126
-unavailablefloating110 pairs in sequence;1563raw events have incomplete pairs.
+**CURRENT BP: RESOLVED/UNRESOLVED FSR-ONLY AND BOTH (2026-11-13).**
+User chose FSR-only and Both separately. Four new120–140GeV/.1GeV shape figures
+extend the current full500BP section, preserving all parents and the inclusive
+10ab^-1three-curve plot. Parent categories/common67950pair gate unchanged.
+FSR-only9008=7004resolved+2004unresolved;Both13864=11097resolved+2767unresolved.
+All electron curves share exact pre-window keys and unchanged parent masses.
+Muon blackdashed;KF+neutralsgreen,existingGSF+neutralsgold,ordinary110red,
+floating110blue solid. Own-window unit-area shapes,Nraw;no newfits/scaling.
+Square,AGORA simulation above axes,large text,grid,no title/longfooter.
 
-Four CATEGORY120–140GeV/.1GeV figures retain same-event KF+neutrals(green),
-existing GSF+neutrals(gold),ordinary110(red),floating110(blue),allsolid,plus
-muon blackdashed. Category curves independently unit-normalize;raw windowN.
-The INCLUSIVE plot instead has only bare muonKF(blacksolid),bare electronKF
-(grayfilled),floating110(blue). Absolute10ab^-1 weights use FULL generated
-inputs:100000electron→0.704/event,50000muon→1.354/event. No window/success
-renormalization or GSF/ordinary-BP gate:98302KF/75389floating/48636muon pairs.
-Expected120–140yields46318.272electronKF/45512.192floating/59895.544muon.
-Reference sigma7.04fb/6.77fb,not recovered generator-header rates;muon retains
-inclusive-tracking normalization convention despite forced-invisible H decays.
-All square,AGORA simulation above axes,large text,grid,no title/longfooter,
-no newfits/generatorrecoil.10ab^-1insideinclusive;legend givesexpectedyields.
+Resolved=>=1usable trackless neutral pre-ECAL cluster ANYWHERE with ANYpositive
+native MC-weight contribution from generator-linked FSR of either selected
+production electron. Nonemptyhits,positivefiniteenergy,validposition;no purity,
+dominance,energycap or angular truth match. Tiny soft shares can tag mixed
+clusters;not all/hardest photons need resolved. Unresolved=no such usable tag,
+not proof all FSR merged. The four parent categories retain summed birth-energy
+>1GeV per type on EITHERleg;BothAND may involve different legs.
 
-FSR110 uses its OWN fitted post-FSR electron plus collinear photon p4, once;
-no extra neutral addition to either BP. KF/GSF use the SAME FRESH neutral union
-from currentBP pre-ECAL clusters,10/200mrad KF-reference window,native PFO
-links,zero charge/trackless/hit-supported;no truth/purity/tail cuts. Old neutral
-sums are not reused across PFA replay differences. Existing GSF reference has
-498sources (496identity-checked caches plus native40/429);55/421 failed.
-REC lineage,selected track/MC,KF pT,generator pT/energy and truth energy joins
-pass. Category histograms partition their common reference union;category shapes sumone.
+All500native-weight cache source paths/sizes/mtimes and selected track-MC maps
+match the SAME REC_ECALTRUTH inputs used by currentBP. Fresh200event source1
+read reproduces5019cluster/399selectionrows BYTE-FOR-BYTE. No reconstruction.
+No old-PFA label transfer/579mismatch exclusion;all22872targets classify.8434
+oldverifiedoverlaplabelsagree. Raw resolution cache is UNTRIMMED;older energy
+study's55.757GeV cap is not applied. Group raw histograms partition each parent
+bin-by-bin;all shapes sumone;muon44236windowreferenceunchanged.
 
-Default `BP_BEAM_SPOT_FSR_LOSS=1` remains installed for110/optional111;000/100
-FSR undetermined. Truth-selected eligible material interval/null;no scan;111off.
-This is research: FSR-only/Both gain peak population,but Neither's below120tail
-grows128→532 versus ordinary110. Inclusive peak120–130 grows42410→49742 while
-below120 grows1095→3189,conditional on common valid fits. Material/FSR sharing,
-contamination and clean-track safety remain open;no physics-validation claim.
-No refit,build,install or production submission in this study.
+Floating110120–130fractions are54.4%resolved/80.4%unresolvedFSR-only and
+54.0%/77.0%Both on these valid-fit subgroups. Resolved groups retain larger
+high-mass tails;topology/energy differences,partial tagging,selection bias and
+low-mass tails prevent causal or physics-validation claims. FSR110 uses its
+OWN post-FSR electron+collinear photon p4 once;no extra neutrals to eitherBP.
 
-Gallery adds five PNGs to the existing page:31PNGs/11sections/exact-once;
-allother30PNG/8PDF unchanged in inclusive update;page+newPNGHTTP200. Sameailogin002
-PID2122174,localhost8000,no restart. All five figures visually reviewed;only inclusive is subsequently updated.
-Artifacts: TrackingPerformanceStudies/bp_fsrfloat_recoil_categories_20261113/.
-[Inclusive absolute normalization](agents_record/2026-11-13-inclusive-bp-floating-recoil-10ab.md).
-[Category method, count bridge and limits](agents_record/2026-11-13-full-bp-floating-recoil-shapes.md).
-[Outgoing focus](agents_record/2026-11-13-agents-before-full-bp-floating-recoil.md).
+Inclusive remains baremuonKF/bareelectronKF/floating110 with10ab^-1weights
+0.704electron/1.354muon from100000/50000FULL inputs, no window/success
+renorm or GSF/ordinaryBPgate.98302KF/75389floating/48636muonpairs;expected
+120–140yields46318.272/45512.192/59895.544. Published7.04/6.77fb reference,
+not generator-header rates;forced-invisiblemuon sample is trackingreference.
+DefaultFSRswitchON for110/optional111;000/100undetermined. Truthmaterial
+interval/null,no scan,111off. No refit,build,install/card or submission change.
+
+Gallery now36PNGs/11sections/exact-once,all40priorPNG/PDF unchanged;page+
+all4newPNGsHTTP200/sourcehashmatch. Sameailogin002PID443262,localhost8000,
+no restart. New pairs follow each FSR-only/Both parent;inclusive unchanged.
+Artifacts: TrackingPerformanceStudies/bp_fsrfloat_resolved_recoil_20261113/.
+[Definitions, exact joins, counts and limits](agents_record/2026-11-13-current-bp-resolved-unresolved-fsr.md).
+[Inclusive normalization](agents_record/2026-11-13-inclusive-bp-floating-recoil-10ab.md).
+[Parent category study](agents_record/2026-11-13-full-bp-floating-recoil-shapes.md).
+[Outgoing focus](agents_record/2026-11-13-agents-before-current-bp-resolved-study.md).
 [Default option/schema](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
