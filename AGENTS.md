@@ -374,6 +374,12 @@ interval/null,no scan,111off. No refit,build,install/card or submission change.
 Gallery now36PNGs/11sections/exact-once,all40priorPNG/PDF unchanged;page+
 all4newPNGsHTTP200/sourcehashmatch. Sameailogin002PID443262,localhost8000,
 no restart. New pairs follow each FSR-only/Both parent;inclusive unchanged.
+The user requested deletion of the WHOLE old REC_TPCFIX500x200_20261110
+campaign;it is now absent(~141.8GiB apparent data). NewREC_ECALTRUTH500files,
+500BPoutputs and500GSFoutputs retain exact size/mtime. Historical old-input
+reruns require new cards/cached provenance;parent supplementalGSF40/429 reader
+still stats removed paths. Current native-MC classification uses retainednewREC.
+[Removal evidence](agents_record/2026-11-13-remove-superseded-tpcfix-rec.md).
 Artifacts: TrackingPerformanceStudies/bp_fsrfloat_resolved_recoil_20261113/.
 [Definitions, exact joins, counts and limits](agents_record/2026-11-13-current-bp-resolved-unresolved-fsr.md).
 [Inclusive normalization](agents_record/2026-11-13-inclusive-bp-floating-recoil-10ab.md).
