@@ -371,8 +371,16 @@ Tagged samples overlap. Inclusive3.20641GeV/track. Middle spectrum removed;
 separate per-event distribution kept.
 Percentages shown for FSR,eBrem,other electron descendants only(nine labels),
 relative to full bar totals including Others. Black Others has no percentage.
-Gallery verified:13PNGs/6sections, every PNG categorized once. Energy-bar PNG
-and page HTTP200, source hash matches; remaining12images unchanged. Same localhost8000 directory, ailogin002 PID2122174,
+Companion bar plot restricts green to exact selected final-electron MC indices,
+moving other descendants to Others. All500REC sources/100000events checked:
+99.974817%of oldgreen already main-MC-linked;58.3301GeV moved across sample.
+Same clusters/totals/track denominator; original figure retained. Direct MC
+labels may include shower attribution. New artifact directory:
+TrackingPerformanceStudies/pre_ecal_main_electron_bars_20261112/.
+Details: [main-electron split](agents_record/2026-11-12-main-electron-neutral-energy-split.md).
+Gallery verified:14PNGs/6sections, every PNG categorized once. Original and
+main-electron companion bars adjacent; page/both bar PNGs HTTP200, new source
+hash matches; all13original images unchanged. Same localhost8000 directory, ailogin002 PID2122174,
 no restart. Main reviewed manifest coverage and source/copied hashes.
 Details: [individual plots record](agents_record/2026-11-12-individual-truth-reco-neutral-plots.md).
 Actual window: [record](agents_record/2026-11-12-truth-window-plot-efficiency.md).
