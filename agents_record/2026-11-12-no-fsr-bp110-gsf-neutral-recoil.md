@@ -69,3 +69,25 @@ images unchanged. Same ailogin002 PID2122174 localhost8000, no restart. Prior
 servedPNG+sectionJSON in before_baselines/gallery/. Main reviewed coverage,
 source/copiedhash and explicit selection/weight definitions. Verification:
 baseline_gallery_verification.json in source-study directory.
+
+## Shape-only clarification supersedes yield normalization for this plot
+
+User: "we just want to compare the shapes". All FOUR curves now normalize
+by their OWN finite count inside120--130GeV, with100bins each summing1 to
+1e-12tolerance. Denominators muon36918,eKF7526,BP8970,GSF8735. This locally
+overrides prior10ab^-1/yield normalization; all other yield plots unchanged.
+Removed luminosity and event-yield annotations; retain same sample selections,
+colors, sigma notes and DSCB fit range/parameters. This view compares conditional
+shapes, not efficiency or yields. Muon remains inclusive, three electron curves
+share the11750FSR-free events. Raw histograms and all4fit records unchanged.
+
+New PNG/PDF stem recoil_no_fsr_bp110_vs_gsf_neutrals_shapes. Shape columns saved
+in histogram.csv; source luminosity weights retained only for provenance in
+summary.json. Cached PDFs evaluated for redraw, no optimization/event read/
+reconstruction. Unit-sum/rawcount/fit-invariance/hash checks pass, layout viewed.
+Previous plot/code/metadata preserved in before_shape_normalization/. Gallery
+verified15PNGs/7sections/exact-once, page/newPNGHTTP200/sourcehashmatch; old
+10abfilename absent from active previews, remaining14images unchanged. Main
+reviewed copied hash and category coverage. Prior servedPNG+sectionJSON under
+before_shape_normalization/gallery/. Same ailogin002 PID2122174 localhost8000,
+no restart. Verification:shape_gallery_verification.json in source-study directory.

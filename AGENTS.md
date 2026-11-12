@@ -332,7 +332,7 @@ manifest as an uncommitted analysis artifact.
 ## 2. Current focus
 
 **NO-FSR RECOIL: BP110 VS GSF + NEUTRALS (2026-11-12).**
-New comparison uses11750identical common-valid events with known zero
+Electron comparison uses11750identical common-valid events with known zero
 FSR on BOTH selected production electrons. All eBrem categories included,
 946events with no eBrem. No BP100 gate. Both methods use native fitted IP
 states. BP110 truth-selected location or valid null with fitted loss and
@@ -343,24 +343,27 @@ KF ECAL references.2376events/2788neutral clusters; zero additions retained.
 Reused validated496GSF-source flat-result caches and matching BP/neutral
 observations, not the later PFA replay REC clusters. No native event read,
 reconstruction, source/card/installation/batch change. New histogram DSCB
-fits only. Fixed10ab^-1 weight10000*7.04/99600parent generated inputs before
-FSR/endpoints/window cuts; no selected-pair or window renormalization.
+fits only. Original yield view used fixed10ab^-1generated-input weights. The newer
+shape-only request below overrides that normalization locally.
 
 Display120--130GeV,0.1GeVbins. BP110sigma0.334+/-0.019GeV,
 GSF+neutral0.318+/-0.015GeV; fit123.5--128,status0/cov3,no boundary parameters.
-Rawwindowentries8970/8735(expected6340/6174); undefined2/139. Widths close;
+Rawwindowentries8970/8735; undefined2/139. Widths close;
 no significant-improvement claim. Truth-location/ECAL inputs differ and
 GSF material recovery plus blind neutral addition can double-count radiation.
 These are spectrum core widths, not detector-only resolutions.
 Added bare Baseline KF electron on the SAME11750events and maintained inclusive
-muon Baseline KF48636pair reference(no extra muonFSRveto). All4curves at10ab^-1:
-electronweight10000*7.04/99600,muon10000*6.77/50000; no common-area normalization.
+muon Baseline KF48636pair reference(no extra muonFSRveto). User clarified SHAPES:
+all4curves now individually normalize by finite counts in120--130GeV, sums1.
+No10ab^-1or yield annotations on THISplot; other yield plots keep10ab weights.
+Source luminosity weights retained only as provenance. Sigma fits unchanged.
 KFsigmas electron0.281+/-0.011GeV,muon0.273+/-0.004GeV. Muon selection differs
 from no-FSR electrons, so its absolute yield is much larger. Original2-curve
 figure archived; BP/GSF histograms and sigmas unchanged.
 
-Keep square figures, AGORA simulation bold above axes,10ab^-1upperleft,
-large text, transparent grid, no title/fit legend entries or long footer.
+Keep square figures, AGORA simulation bold above axes, large text, transparent
+grid, no title/fit legend entries or long footer. Current shape plot has sigma
+notes only; no luminosity/yield label.
 New PNG is its own no-FSR recoil section; earlier photon/neutral energy,
 main-electron companion and other recoil plots retained. Gallery verified:
 15PNGs/7sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
