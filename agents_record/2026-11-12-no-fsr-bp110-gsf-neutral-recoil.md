@@ -46,3 +46,26 @@ Outgoing AGENTS status preserved in full in
 2026-11-12-agents-before-no-fsr-recoil-comparison.md before replacing focus.
 Global introduction/laws/commands byte-identical. Prior photon/neutral figure
 status remains recoverable through snapshot and linked dated study records.
+
+## Follow-up: add bare electron and inclusive muon Baseline KF
+
+Added Baseline KF electron on the SAME11750no-FSR events, and the maintained
+INCLUSIVE bare muon Baseline KF48636pair reference, no new muonFSRveto. Same
+10ab^-1luminosity, distinct channel weights: electron10000*7.04/99600=0.7068273092,
+muon10000*6.77/50000=1.354. Not common-area/window normalization. Inclusive muon
+yield is therefore much taller than the FSR-vetoed/common-valid electron sample.
+Legend explicitly says inclusive; all3electron curves share their event pool.
+
+Rawwindowcounts muon36918,eKF7526,BP8970,GSF8735. Expected49986.972/5319.582329/
+6340.240964/6174.136546. NewKFcorewidths muon0.2726570511+/-0.0036108043GeV,
+electron0.2805035134+/-0.0106012144. BP/GSFhistograms and sigmas unchanged; muon
+histogram/sigma match the maintained inclusive baseline to1e-6GeV. Allfits0/cov3.
+Plot square120--130GeV,0.1bins,blacksolidmuon,grayeKF,greenBP,orangeGSF.
+Large legend/notes retained; final layout rerendered from cached fit PDFs,
+no extra fit optimization for cosmetic changes. No native reconstruction run.
+Prior2-curvePNG/PDF/code/data/notes in before_baselines/. Gallery verified
+15PNGs/7sections/exact-once; page+replacementPNG200/sourcehashmatch, other14
+images unchanged. Same ailogin002 PID2122174 localhost8000, no restart. Prior
+servedPNG+sectionJSON in before_baselines/gallery/. Main reviewed coverage,
+source/copiedhash and explicit selection/weight definitions. Verification:
+baseline_gallery_verification.json in source-study directory.

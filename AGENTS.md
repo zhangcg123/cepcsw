@@ -352,13 +352,19 @@ Rawwindowentries8970/8735(expected6340/6174); undefined2/139. Widths close;
 no significant-improvement claim. Truth-location/ECAL inputs differ and
 GSF material recovery plus blind neutral addition can double-count radiation.
 These are spectrum core widths, not detector-only resolutions.
+Added bare Baseline KF electron on the SAME11750events and maintained inclusive
+muon Baseline KF48636pair reference(no extra muonFSRveto). All4curves at10ab^-1:
+electronweight10000*7.04/99600,muon10000*6.77/50000; no common-area normalization.
+KFsigmas electron0.281+/-0.011GeV,muon0.273+/-0.004GeV. Muon selection differs
+from no-FSR electrons, so its absolute yield is much larger. Original2-curve
+figure archived; BP/GSF histograms and sigmas unchanged.
 
 Keep square figures, AGORA simulation bold above axes,10ab^-1upperleft,
 large text, transparent grid, no title/fit legend entries or long footer.
 New PNG is its own no-FSR recoil section; earlier photon/neutral energy,
 main-electron companion and other recoil plots retained. Gallery verified:
 15PNGs/7sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
-all14prior images unchanged. Same localhost8000, ailogin002 PID2122174, no restart.
+remaining14images unchanged; current comparison has four histogram curves. Same localhost8000, ailogin002 PID2122174, no restart.
 
 Artifacts: TrackingPerformanceStudies/recoil_no_fsr_bp110_gsf_neutrals_20261112/.
 [Full comparison record](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
