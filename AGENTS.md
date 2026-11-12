@@ -333,8 +333,8 @@ manifest as an uncommitted analysis artifact.
 
 **MATCHED KF/GSF/BP110 RADIATION-CATEGORY SHAPES (2026-11-12).**
 Four square figures: Neither, eBrem-only, FSR-only, Both(AND). Each overlays
-Baseline KF + neutrals(green dashed), GSF BestBranch + neutrals(category solid),
-BP110(red dash-dot), and the SAME inclusive muon Baseline KF(black solid).
+Baseline KF + neutrals(green solid), GSF BestBranch + neutrals(category solid),
+BP110(red solid), and the SAME inclusive muon Baseline KF(black dashed).
 120--140 GeV, 0.1 GeV bins; each curve independently normalizes by its OWN
 finite window count. Legend N_120--140 is raw entries, not weighted yields.
 No new fits or luminosity scaling. AGORA simulation above axes, large text,
