@@ -58,3 +58,26 @@ all16prior images unchanged, page/bothmatrixPNGHTTP200/newsourcehashmatch. Main
 checked copiedhashes, category coverage and matrix adjacency. Same ailogin002
 PID2122174 localhost8000, no restart. gallery_verification_gt1gev.json records
 checks in source-study directory.
+
+## User clarification: combined threshold entry is OR
+
+Combined=fOR e. FSR-only=fANDNOTe; eBrem-only=eANDNOTf, with unchanged per-leg
+truth-energy threshold event flags. Only counts remain11517/43739,Neither21602.
+InclusiveOR76835=78.0549996444%of98437. It contains11517+43739+21579(AND), so the
+four displayed entries are NON-EXCLUSIVE and must not sum to100%. Neither+OR
+sum100%. Both operators and display overlap are stated explicitly.
+
+New companion labelled Either(OR) with a note "Includes both only groups".
+Removed presence-axis labels because lower-right now cannot be interpreted as
+FSR-present AND eBrem-present; it is a2x2summary of requested quantities. Original
+unthresholded matrix unchanged; earlier ANDthreshold source/data preserved.
+New source or_companion.py,summary_gt1gev_or.json,PNG/PDF stem
+event_fsr_ebrem_summary_gt1gev_or,run/plot/code hash manifests. All input event
+keys/threshold flags checked; only groups unchanged, union/complement closure
+pass, layout viewed. Cache-only, no reconstruction or fit. ORsummary published beside original:
+17PNGs/8sections/exact-once, other16images unchanged; old threshold-AND PNG
+absent from active gallery. Page/bothactivePNGHTTP200,newsourcehashmatch.
+Prior servedANDPNG+sectionJSON archived in before_or_summary/gallery/. Main
+reviewed coverage, hashes, pattern order, absent old preview and nonexclusive
+definition. Same ailogin002 PID2122174 localhost8000,no restart. Verification:
+gallery_verification_gt1gev_or.json in source-study directory.

@@ -370,13 +370,15 @@ Neither1.13%,eBrem only14.87%,FSR only6.04%,both77.96%. Either electron can
 supply either flag; no extra photon-energy threshold or neutral-cluster gate.
 Companion matrix uses summed photon birth energy per electron, requiring
 EITHER electron's sumSTRICTLY>1GeV for each radiation type, same98437events.
-Neither21.95%,eBrem only44.43%,FSR only11.70%,both21.92%; softer radiation
-allowed in neither. Original matrix preserved beside it.
+Neither21.95%,eBrem only44.43%,FSR only11.70%. User clarified combined is OR:
+Either(OR)78.05%includes both only groups plus AND21.92%, so displayed entries
+overlap. Neither+OR sum100%. No presence axes on this2x2summary; softer
+radiation allowed in neither. Original matrix preserved beside it.
 [Matrix definitions](agents_record/2026-11-12-event-radiation-matrix.md).
 New PNG is its own no-FSR recoil section; earlier photon/neutral energy,
 main-electron companion and other recoil plots retained. Gallery verified:
 17PNGs/8sections/exact-once, page/newPNGHTTP200 with matching sourcehash;
-all16prior images unchanged after threshold companion addition; recoil comparison has four curves. Same localhost8000, ailogin002 PID2122174, no restart.
+other16images unchanged after OR-summary replacement; recoil comparison has four curves. Same localhost8000, ailogin002 PID2122174, no restart.
 
 Artifacts: TrackingPerformanceStudies/recoil_no_fsr_bp110_gsf_neutrals_20261112/.
 [Full comparison record](agents_record/2026-11-12-no-fsr-bp110-gsf-neutral-recoil.md).
