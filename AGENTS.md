@@ -339,59 +339,41 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP CARD/BATCH NEUTRAL WINDOW BASELINE (2026-11-13).** User selected theta
-half-window 25 mrad (50 mrad total), with phi half-window 200 mrad unchanged.
-The maintained card and shared shell/Python batch helpers now use/freeze these
-defaults; both Higgs wrappers inherit them. Explicit overrides remain supported.
-Independent GSF + neutrals analysis now uses the same baseline through
-`Reconstruction/RecGsfTracking/scripts/recover_neutral_photons.py`: select
-directly from GSF pre-ECAL clusters, REC supplying input-track ECAL references.
-No BP output/fit is required; cluster union counted once. The separate GSF
-ECAL fit prototype stays disabled. Old comparison plots retain their original
-BP-derived selection until regenerated. See
-[implementation and checks](agents_record/2026-11-13-independent-gsf-neutral-recovery.md).
-Compiled property default stays 10 mrad; no build/install or reconstruction rerun.
-Existing prepared cards/manifests and plots retain their original windows.
-All 66 batch tests pass, including card/direct-helper/all-wrapper defaults and
-override checks. [Change and verification](agents_record/2026-11-13-bp-theta25-baseline.md).
+**BP H0_F + THETA25 RERUN PREPARED; OLD FLATS REMOVED (2026-11-13).**
+User requested all BP flat products removed and rerun with theta half25mrad
+(total50), phi half200mrad and independent H0_F. Deleted1995files/383.948GiB
+from three full500-file BP campaigns and495targeted BP110FSRFLOAT products.
+Full campaigns all completed; targeted native runs all finished (326QAcomplete,
+169post-validation failures). Old cards/logs/runtime and cached analysis/plots
+preserved. All500currentREC and500GSF file sizes/mtimes unchanged. Native rereads
+of removed BP parents no longer work; cached gallery figures are still OLD.
 
-**ECAL COLLECTION PANELS AT THETA ABSOLUTE LIMITS5/25/50/100/200mrad (2026-11-13).**
-User requested updated first3 panels and then2 wider additions. Plots show ONLY
-|deltaTheta|<=5/25/50/100/200 and |deltaPhi|<=200mrad, no full-width annotation.
-Order: FSR-tagged neutral, eBrem-tagged neutral, Neutral inclusive, Electron
-charged, Total inclusive. Bold WHOLE-stack response above every bar; internal
-colour percentages retained, no internal black Others percentage. First generic
-budget URL giveshalf5; next2 width50/100 filenames givehalf25/50; new dtheta100/200
-filenames giveabsolute100/200. Previous3 panels preserved when adding2.
+Prepared `higgs_eeHX_ISRFSRON_BP_H0F_THETA25_NOSCAN_500jobs_200evt_20261113/`:
+500x200=100000events, REC_ECALTRUTH inputs, STAGES=breakpoint, selected production
+pair, truth material location/null, NO scans. FSR/free-loss/beam/ECAL ON,
+ElectronPhoton C+N,111/diffuse/truth override/backward OFF. H0 null_110_*,
+H0_F/H_F fsr_only_110_*, H_beta ordinary110 and H_betaF floating110 all included.
+No hypothesis selector.4000MB,cms,default walltime/no short cap. All500frozen
+cards/hashes/controls, prior verified input identities and500dry-run commands
+pass. Installed H_F plugin SHA ba82a23202fa11e75928a8e245a5396b03e8678ae1e5734b45831a6d260d2bcd
+unchanged; no source/build/install/template modification for this task.
 
-Same100000 current REC inputs/198081 truth-covered tracks, no fit gate. Same
-photon BIRTH denominators (conversions/losses included), electron first-ECAL
-TOTAL energy, neutral55.757GeV cap and frozen charged upper2%76.5978836GeV cut.
-Neutral-inclusive numerator FULL unweighted all eligible in-window neutral E,
-including green/black; denominator all associated FSR+eBrem truth BIRTH energy.
-All other bar denominators unchanged. Different bar D; full stacks include
-cross-origin energy and can exceed100%. Not a pure signal/purity percentage.
+NOT SUBMITTED: scheduler Python/queue client lacks htcondor in this session.
+Run from normal batch-login shell:
+`bash /aifs/user/data/zhangcg/gsfdev/CEPCSW/higgs_eeHX_ISRFSRON_BP_H0F_THETA25_NOSCAN_500jobs_200evt_20261113/submit.sh`
+No new output/started/submitted markers. Full batch/card/deletion evidence:
+[rerun record](agents_record/2026-11-13-bp-h0f-theta25-rerun.md).
+Artifacts: TrackingPerformanceStudies/bp_theta25_h0f_batch_20261113/.
 
-Neutral-inclusive responses36.65/39.88/41.15/42.53/44.36%; total-inclusive
-91.67/92.19/92.39/92.62/92.91%; charged102.25% identical. New5half count uses
-REC positions/frozen fractions,61965 old candidate masks reproduced. Newwide
-native reader checks all500 source identities, truth/photon counts, raw charged
-control and old10/20/50/100total controls at relative1e-12; previous3 retained
-exactly. Original reader helper only generalizes largest mask to max(WIDTHS),
-with its old defaults unchanged and pre-edit bytes archived. No reconstruction.
-All components add to energy, charged+neutral=total, nesting checked. All5renders
-visually reviewed. Generator-tagged FSR completeness/recoil validation not claimed.
+Independent GSF+neutral analysis helper defaults to the same25/200half-windows,
+using GSF snapshot+matchingREC track ECAL references, no BP dependency. Its
+200event mechanical check gives178usablepairs,21invalidGSFpairs,1missingleg;
+4focused tests pass. Existing plotting scripts/figures still use old BP-derived
+selection until regenerated. GSF fit/ECAL prototype/schema unchanged.
+[Independent recovery](agents_record/2026-11-13-independent-gsf-neutral-recovery.md).
 
-Gallery56PNGs/14sections/exact-once atlocalhost8000, sameailogin002PID443262.
-New2PNG/pageHTTP200 and source/local/served hashes match; all62 priorPNG/PDFs
-unchanged. Prior3 replacement images and earlier budgets remain archived.
-That plot update made no compiled code/build/install/card/batch changes; the
-subsequent card/batch baseline is half25/phi200 as recorded above. H_F remains
-installed1644ae8; oldH0 production lacks H_F
-until rerun. Automatic four-way selection/population validation outstanding.
-
-[Additional100/200absolute windows and checks](agents_record/2026-11-13-ecal-bars-extended-theta.md).
-[First3 layout/window update](agents_record/2026-11-13-ecal-bars-window10-order-labels.md).
-[Complete outgoing3-panel status](agents_record/2026-11-13-agents-before-extended-ecal-windows.md).
-[Original truth denominators and cuts](agents_record/2026-11-13-truth-normalized-ecal-collection.md).
-Artifacts: TrackingPerformanceStudies/ecal_truth_collection_extended_20261113/.
+Gallery remains56PNGs/14sections on localhost8000,sameailogin002PID443262.
+Its truth-normalized bar panels show absTheta5/25/50/100/200mrad,phi200,
+whole-stack labels,neutral-inclusive before charged. Same100k/198081truth cohort,
+photon birth denominators,neutral55.757GeV cap,charged upper2%76.598GeV cut.
+No gallery images changed in this task. [Complete outgoing focus and links](agents_record/2026-11-13-agents-before-bp-h0f-theta25-production.md).
