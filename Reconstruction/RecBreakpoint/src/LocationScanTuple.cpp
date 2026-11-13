@@ -3,9 +3,9 @@
 #include "TTree.h"
 
 namespace breakpoint {
-void LocationFitScan::book(TTree& tree) {
+void LocationFitScan::book(TTree& tree, const std::string& prefix) {
   auto branch=[&](const char* suffix, auto* value) {
-    tree.Branch((std::string("location_scan_")+suffix).c_str(),value);
+    tree.Branch((prefix+suffix).c_str(),value);
   };
   branch("status",&status); branch("point_count",&pointCount);
   branch("truth_status",&truthStatus); branch("truth_hit",&truthHit);

@@ -70,12 +70,12 @@ struct LocationFitScan {
   std::vector<std::string> error;
 
   void reset() { *this=LocationFitScan{}; }
-  void book(TTree& tree);
+  void book(TTree& tree, const std::string& prefix = "location_scan_");
   void appendIP(const edm4hep::TrackState* state);
   void run(const BreakpointFitter& fitter, const std::vector<edm4hep::TrackerHit>& hits,
            const FitSettings& observations, const FreeLossSettings& controls,
            double bz, std::optional<int> truthOwner, bool neutralEnabled,
-           const std::vector<int>& requestedSetups = {});
+           const std::vector<int>& requestedSetups = {}, bool referenceOnly = false);
 };
 } // namespace breakpoint
 #endif

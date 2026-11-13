@@ -331,58 +331,48 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CURRENT BP: RESOLVED/UNRESOLVED FSR-ONLY AND BOTH (2026-11-13).**
-User chose FSR-only and Both separately. Four new120–140GeV/.1GeV shape figures
-extend the current full500BP section, preserving all parents and the inclusive
-10ab^-1three-curve plot. Parent categories/common67950pair gate unchanged.
-FSR-only9008=7004resolved+2004unresolved;Both13864=11097resolved+2767unresolved.
-All electron curves share exact pre-window keys and unchanged parent masses.
-Muon blackdashed;KF+neutralsgreen,existingGSF+neutralsgold,ordinary110red,
-floating110blue solid. Own-window unit-area shapes,Nraw;no newfits/scaling.
-Square,AGORA simulation above axes,large text,grid,no title/longfooter.
+**BP: ALWAYS SAVE THE GENUINE 5D H0 REFERENCE (2026-11-13).**
+The user requires the no-breakpoint kind0/setup110 reference regardless of
+location-scan steering. It is now attempted before truth-location matching for
+all processed/selected tracks and persisted independently as null_110_*.
+It reuses the native scan-null fitter; no loss coordinate/prior/Minuit or FSR.
+ElectronPhoton with a collected neutral uses C+N and the same quadrature error;
+ElectronOnly/no-neutral uses C. No fitted posterior or truth hooks seed H0.
+Beam and charged ECAL observations are required; unavailable/failing references
+carry explicit failure/NaN diagnostics, never a lower-constraint fallback.
 
-Resolved=>=1usable trackless neutral pre-ECAL cluster ANYWHERE with ANYpositive
-native MC-weight contribution from generator-linked FSR of either selected
-production electron. Nonemptyhits,positivefiniteenergy,validposition;no purity,
-dominance,energycap or angular truth match. Tiny soft shares can tag mixed
-clusters;not all/hardest photons need resolved. Unresolved=no such usable tag,
-not proof all FSR merged. The four parent categories retain summed birth-energy
->1GeV per type on EITHERleg;BothAND may involve different legs.
+The34 new branches share the location_scan suffix/state-stride contract.
+A usable H0 has kind=[0],setup=[110],fit_status=[2],actual_constraint_mask=[3].
+Use null_110_nll2[0],pt[0] and its OWN native IP state/covariance (5/21 strides).
+status1 alone only means recorded. Unselected tracks stay status0/empty.
+Existing location_scan_* and all ordinary/floating endpoint outputs are
+preserved. No public option/default changes or online hypothesis selection.
+The maintained scan default remains []; FSR remains default-on for110/optional111.
 
-All500native-weight cache source paths/sizes/mtimes and selected track-MC maps
-match the SAME REC_ECALTRUTH inputs used by currentBP. Fresh200event source1
-read reproduces5019cluster/399selectionrows BYTE-FOR-BYTE. No reconstruction.
-No old-PFA label transfer/579mismatch exclusion;all22872targets classify.8434
-oldverifiedoverlaplabelsagree. Raw resolution cache is UNTRIMMED;older energy
-study's55.757GeV cap is not applied. Group raw histograms partition each parent
-bin-by-bin;all shapes sumone;muon44236windowreferenceunchanged.
+Final19 CTests and65 batch tests pass. Exact old/new checks cover197607main
+branch-row values/199track rows and882side values/7event rows. Native current
+Higgs coverage is source1 events3/15/112,source2 event135,source4 event1:
+ten unique selected tracks. Scan-null/reference and scan-on/off states/scores
+match; Manual with free-loss/FSR off also matches. Missing beam/ECAL cases are
+explicitly unavailable. H0 succeeds for the existing7.78976mm truth-hook failure.
+Historical gun events11/16/17 are unavailable; no substitute-name claim.
 
-Floating110120–130fractions are54.4%resolved/80.4%unresolvedFSR-only and
-54.0%/77.0%Both on these valid-fit subgroups. Resolved groups retain larger
-high-mass tails;topology/energy differences,partial tagging,selection bias and
-low-mass tails prevent causal or physics-validation claims. FSR110 uses its
-OWN post-FSR electron+collinear photon p4 once;no extra neutrals to eitherBP.
+Only RecBreakpoint was installed; binary matches the tested final plugin
+SHA256 a2f3eaf4a87209cc739cdd18f866416c361a993eb98cbba907f6b547af9e2272.
+Configurable definitions/defaults are unchanged apart from the generated timestamp.
+Local plugin-map and known500-job completion checks preceded installation;
+no global scheduler audit is claimed. No production submissions or ROOT-file
+rewrites. Existing tuples need BP reruns for H0; REC_ECALTRUTH remains usable
+and oldREC_TPCFIX remains deleted. Next: use matched H0/Hb/Hb+FSR observations
+for per-track selection studies; calibrate improvement requirements before
+selecting models. No physics-validation claim, threshold or policy is implemented.
 
-Inclusive remains baremuonKF/bareelectronKF/floating110 with10ab^-1weights
-0.704electron/1.354muon from100000/50000FULL inputs, no window/success
-renorm or GSF/ordinaryBPgate.98302KF/75389floating/48636muonpairs;expected
-120–140yields46318.272/45512.192/59895.544. Published7.04/6.77fb reference,
-not generator-header rates;forced-invisiblemuon sample is trackingreference.
-DefaultFSRswitchON for110/optional111;000/100undetermined. Truthmaterial
-interval/null,no scan,111off. No refit,build,install/card or submission change.
-
-Gallery now36PNGs/11sections/exact-once,all40priorPNG/PDF unchanged;page+
-all4newPNGsHTTP200/sourcehashmatch. Sameailogin002PID443262,localhost8000,
-no restart. New pairs follow each FSR-only/Both parent;inclusive unchanged.
-The user requested deletion of the WHOLE old REC_TPCFIX500x200_20261110
-campaign;it is now absent(~141.8GiB apparent data). NewREC_ECALTRUTH500files,
-500BPoutputs and500GSFoutputs retain exact size/mtime. Historical old-input
-reruns require new cards/cached provenance;parent supplementalGSF40/429 reader
-still stats removed paths. Current native-MC classification uses retainednewREC.
-[Removal evidence](agents_record/2026-11-13-remove-superseded-tpcfix-rec.md).
-Artifacts: TrackingPerformanceStudies/bp_fsrfloat_resolved_recoil_20261113/.
-[Definitions, exact joins, counts and limits](agents_record/2026-11-13-current-bp-resolved-unresolved-fsr.md).
+Per-track score plots remain on the unchanged localhost8000 gallery (last
+verified42PNGs/12sections,PID443262,ailogin002). They use126828comparable tracks
+and each track's OWN >1GeV radiation categories; they do not yet include H0.
+[Implementation, schema, checks and limits](agents_record/2026-11-13-always-null110-reference.md).
+[Full outgoing status, plotting evidence and protected laws](agents_record/2026-11-13-agents-before-always-null110.md).
+[Per-track score study](agents_record/2026-11-13-per-track-fit-score-distributions.md).
+[Resolved/unresolved recoil study](agents_record/2026-11-13-current-bp-resolved-unresolved-fsr.md).
 [Inclusive normalization](agents_record/2026-11-13-inclusive-bp-floating-recoil-10ab.md).
-[Parent category study](agents_record/2026-11-13-full-bp-floating-recoil-shapes.md).
-[Outgoing focus](agents_record/2026-11-13-agents-before-current-bp-resolved-study.md).
-[Default option/schema](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
+[Removed REC provenance](agents_record/2026-11-13-remove-superseded-tpcfix-rec.md).

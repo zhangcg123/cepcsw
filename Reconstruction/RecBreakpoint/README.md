@@ -417,6 +417,33 @@ of LossStateMode (how losses are fitted) and TruthOverride (extra truth-centered
 
 ### Preserve truth-location endpoints and choose additional scans
 
+Every processed/selected track now independently attempts a genuine no-breakpoint
+setup-110 reference, even with `LocationScanSetups=[]`, in Manual mode, with
+FreeLossFit/FSR floating off, or when later truth-location matching fails.
+It reuses the scan's native 5D KF/RTS null implementation, before selecting any
+material interval, and saves one `kind=0`, `hit=-1`, `setup=110` entry under
+`null_110_*`. No loss coordinate, loss-prior optimization or floating FSR is
+introduced. With configured ElectronPhoton and a collected neutral it observes
+the same C+N with `hypot(sigma_C,sigma_N)` as the scan null; ElectronOnly or no
+neutral uses C. No previous fitted posterior supplies its seed.
+
+The `null_110_*` suffixes and native state strides match `location_scan_*`
+below: score/chi2/log determinant/dimensions, pT/error, IP parameters/covariance,
+actual mask, fit/attempt status and error are saved. Read the entry with
+`fit_status=2` and `actual_constraint_mask=3` for a valid beam+ECAL reference;
+`status=1` alone only says reference data were recorded. Missing beam/charged
+ECAL inputs leave a failed entry with NaN score/state, not an inherited 100/000
+result. Unselected tracks remain status0 with empty vectors. Loss/prior fields
+stay NaN and Minuit status is -99. Truth-reference fields are inactive because
+this fit uses no truth hooks. Unexpected reference errors do not abort the
+ordinary endpoints. This is passive output, with no ranking or selector.
+
+The optional location scan and its existing `location_scan_*` fields retain
+their previous behavior. When enabled, its own setup-110 null can be compared
+directly with `null_110_*`. No scan is needed to produce the independent
+reference. Existing tuples do not gain these branches without rerunning BP;
+REC files remain valid.
+
 Use `IntervalSelectionMode="Truth"` for the normal endpoint families. Existing
 `FreeLossFit`, `BeamSpotConstraint`, `ChargedEcalMeasurement` and
 `NeutralEcalMeasurement` switches continue to control their truth-location

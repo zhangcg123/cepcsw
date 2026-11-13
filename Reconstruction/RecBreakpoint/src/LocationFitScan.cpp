@@ -25,6 +25,7 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
     TrackLikelihoodResult score;
     if (settings.intervals.empty()) {
       auto null=settings;
+      null.beamSpotFsrLoss=false;
       // Compare the same observed C+N, but predict electron energy with a 5D state.
       const bool sum=combineResolvedEcalMeasurements(null,true);
       null.resolvedEcalSum=false;
@@ -66,16 +67,16 @@ LocationScanResult fitLocation(const BreakpointFitter& fitter,
 void LocationFitScan::run(const BreakpointFitter& fitter,
     const std::vector<edm4hep::TrackerHit>& hits, const FitSettings& observations,
     const FreeLossSettings& controls, double bz, std::optional<int> truthOwner, bool neutralEnabled,
-    const std::vector<int>& requestedSetups) {
+    const std::vector<int>& requestedSetups, bool referenceOnly) {
   reset();
-  const auto configurations = requestedSetups.empty() ? locationScanSetups(neutralEnabled)
+  const auto configurations = referenceOnly ? std::vector<int>{110} : requestedSetups.empty() ? locationScanSetups(neutralEnabled)
       : checkedLocationScanSetups(requestedSetups);
   const auto requested = [&](int setup) {
     return std::find(configurations.begin(), configurations.end(), setup) != configurations.end();
   };
   std::vector<int> systems,layers;
   UTIL::BitField64 cell(lcio::ILDCellID0::encoder_string);
-  for (const auto& measurement : hits) {
+  if (!referenceOnly) for (const auto& measurement : hits) {
     cell.setValue(measurement.getCellID());
     systems.push_back(cell["subdet"]); layers.push_back(cell["layer"]);
   }
@@ -83,10 +84,11 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
       static_cast<std::size_t>(*truthOwner+1)>=hits.size()))) {
     truthError="Invalid truth owner index"; truthOwner.reset();
   }
-  truthStatus=truthOwner ? (*truthOwner<0 ? 1 : 2) : -1;
+  if (referenceOnly) truthOwner.reset();
+  truthStatus=referenceOnly ? 0 : truthOwner ? (*truthOwner<0 ? 1 : 2) : -1;
   truthHit=truthOwner.value_or(-1);
   const auto candidatePointCount=locationScanPoints(systems,layers).size();
-  const auto points=locationScanPoints(systems,layers,truthHit);
+  const auto points=referenceOnly ? std::vector<int>{-1} : locationScanPoints(systems,layers,truthHit);
   pointCount=points.size();
   for (std::size_t p=0;p<points.size();++p) {
     const int site=points[p];
@@ -112,7 +114,8 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
       std::string reason;
       if (configuration==100 && observations.beamSpot) {
         proposed.beamSpot=observations.beamSpot; available=true;
-      } else if (configuration==110 && observations.chargedEcalEnergy) {
+      } else if (configuration==110 && observations.chargedEcalEnergy &&
+                 (!referenceOnly || observations.beamSpot)) {
         proposed.chargedEcalEnergy=observations.chargedEcalEnergy; available=true;
         if (observations.chargedEcalEnergyMode==ChargedEnergyMode::ElectronPhoton &&
             observations.neutralEcalEnergy) {
@@ -137,12 +140,13 @@ void LocationFitScan::run(const BreakpointFitter& fitter,
           reason=trial.error;
           if (previous.status!=2) result=trial;
         }
-      } else reason=configuration==111 && site<0 ?
-          "No breakpoint: neutral observation is inapplicable" : "Observation unavailable";
+      } else reason=referenceOnly ? "110 reference requires beam and charged ECAL observations" :
+          configuration==111 && site<0 ? "No breakpoint: neutral observation is inapplicable" : "Observation unavailable";
       if (attempt!=2 && previous.status==2) {
         result=previous; result.status=1;
         result.error=reason+"; retain preceding accepted setup";
       }
+      if (referenceOnly && !available) result.error=reason;
       point.push_back(p); kind.push_back(type); hit.push_back(site);
       system.push_back(site<0 ? -1 : systems[site]); layer.push_back(site<0 ? -1 : layers[site]);
       setup.push_back(configuration); actualMask.push_back(result.mask);

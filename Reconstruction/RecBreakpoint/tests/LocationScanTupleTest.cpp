@@ -8,6 +8,8 @@ int main() {
   TTree tree("scan","scan");
   breakpoint::LocationFitScan tuple;
   tuple.book(tree);
+  breakpoint::LocationFitScan nullReference;
+  nullReference.book(tree,"null_110_");
   edm4hep::TrackState state{};
   state.location=edm4hep::TrackState::AtIP;
   state.D0=1; state.phi=2; state.omega=3; state.Z0=4; state.tanLambda=5; state.time=6;
@@ -20,10 +22,16 @@ int main() {
   tuple.appendIP(&inherited);
   tuple.appendIP(nullptr);
   tuple.resolvedEcalSum={0,0,1,0};
+  nullReference.status=1; nullReference.pointCount=1;
+  nullReference.kind={0}; nullReference.hit={-1}; nullReference.setup={110};
+  nullReference.actualMask={3}; nullReference.fitStatus={2}; nullReference.minuitStatus={-99};
+  nullReference.resolvedEcalSum={1}; nullReference.nll2={12.5};
+  nullReference.appendIP(&inherited);
   assert(tuple.ipParameters.size()==20 && tuple.ipCovariance.size()==84);
   assert(tuple.ipReferencePoint.size()==12 && tuple.ipTime.size()==4 && tuple.ipLocation.size()==4);
   tree.Fill();
   tuple.reset();
+  nullReference.reset();
   assert(tuple.ipParameters.empty() && tuple.ipCovariance.empty() && tuple.ipReferencePoint.empty());
   assert(tuple.ipTime.empty() && tuple.ipLocation.empty());
   assert(tuple.resolvedEcalSum.empty());
@@ -58,5 +66,19 @@ int main() {
   assert(parameters.size()==5 && covariance.size()==21 && reference.size()==3);
   assert(time.size()==1 && location.size()==1 && location[0]==-1);
   assert(std::all_of(parameters.begin(),parameters.end(),[](double x){return std::isnan(x);}));
+  tree.ResetBranchAddresses();
+  int status=0;
+  std::vector<int> kinds,setups;
+  std::vector<double> nullParameters;
+  auto* k=&kinds; auto* setupsAddress=&setups; auto* nullAddress=&nullParameters;
+  assert(tree.SetBranchAddress("null_110_status",&status)>=0);
+  assert(tree.SetBranchAddress("null_110_kind",&k)>=0);
+  assert(tree.SetBranchAddress("null_110_setup",&setupsAddress)>=0);
+  assert(tree.SetBranchAddress("null_110_ip_parameters",&nullAddress)>=0);
+  tree.GetEntry(0);
+  assert(status==1 && kinds==std::vector<int>{0} && setups==std::vector<int>{110});
+  assert((nullParameters==std::vector<double>{1,2,3,4,5}));
+  tree.GetEntry(1);
+  assert(status==0 && kinds.empty() && setups.empty() && nullParameters.empty());
   tree.ResetBranchAddresses();
 }

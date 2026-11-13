@@ -427,6 +427,7 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_truthOwnership.book(*m_tree);
   m_locationScan.book(*m_tree);
+  m_null110Reference.book(*m_tree, "null_110_");
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
   m_tree->Branch("selected_breakpoint_interval", &m_selectedIntervals);
@@ -762,6 +763,7 @@ StatusCode RecBreakpoint::execute() {
     settings.intervalMeanLogLoss.clear();
     m_truthOwnership.reset();
     m_locationScan.reset();
+    m_null110Reference.reset();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
     m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
@@ -868,6 +870,32 @@ StatusCode RecBreakpoint::execute() {
         observations.delayedNeutral=m_delayedNeutralExperiment;
         return observations;
       };
+      // This reference must survive truth-location and breakpoint-fit failures.
+      try {
+        m_null110Reference.run(fitter,hits,locationObservations(),freeLossControls,
+                              m_bz,std::nullopt,false,{},true);
+        if (m_verbose) {
+          std::ostringstream dump;
+          dump << std::setprecision(17) << "Null110 event=" << m_event << " track=" << m_trackIndex;
+          for (std::size_t i=0;i<m_null110Reference.setup.size();++i)
+            dump << " mask=" << m_null110Reference.actualMask[i]
+                 << " status=" << m_null110Reference.fitStatus[i]
+                 << " dimensions=" << m_null110Reference.measurementDimensions[i]
+                 << " nll2=" << m_null110Reference.nll2[i]
+                 << " pt=" << m_null110Reference.pt[i]
+                 << " error=" << m_null110Reference.error[i];
+          dump << " ip=[";
+          for (double value : m_null110Reference.ipParameters) dump << value << ' ';
+          dump << "] covariance=[";
+          for (double value : m_null110Reference.ipCovariance) dump << value << ' ';
+          dump << ']';
+          info() << dump.str() << endmsg;
+        }
+      } catch (const std::exception& failure) {
+        m_null110Reference.status=-1;
+        m_null110Reference.truthError=failure.what();
+        warning() << "Null110 reference failed; ordinary endpoints unchanged: " << failure.what() << endmsg;
+      }
       if (m_intervalSelectionName == "Truth") {
         if (!truthPrepared) {
           m_intervalSelectionStatus = -1;

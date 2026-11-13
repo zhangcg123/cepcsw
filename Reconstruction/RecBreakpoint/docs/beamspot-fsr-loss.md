@@ -18,6 +18,15 @@ The property `ExperimentalBeamSpotFsrLoss` and card/batch switch `BP_BEAM_SPOT_F
 
 The ordinary control families retain their original rts_* outputs. Use the electron_p4 in the FSR subfamily with the photon from that SAME subfamily. Adding the new photon to the ordinary control electron can double-count/misassign energy because those fits are different.
 
+A separate `null_110_*` reference is always attempted for each processed track,
+independently of scans and this FSR switch. It is the genuine 5D no-breakpoint
+beam+ECAL fit, reusing the scan-null C+N routing. Its scalar status and one-entry
+vectors distinguish success, missing observations and fit failure; use
+fit_status=2 and actual_constraint_mask=3. Its state/score is available even if
+later truth-location matching fails. See the README for the full suffix/stride
+contract. This adds the H0 reference alongside the ordinary and FSR-floating
+110 alternatives; it introduces no automatic hypothesis decision.
+
 For example, 110 fields are charged_ecal_free_loss_fsr_energy, _px, _py, _pz, _energy_variance, _status, _direction_mode, _constraint_mask, _active_boundary_mask, _primary_ecal_energy, _neutral_ecal_energy, _electron_ip_parameters, _electron_p4, _joint_ip_energy_covariance, _joint_p4_covariance, _nonlinear_closure, _material_closure, _nll2 and _error.
 
 energy/px/py/pz are GeV and define one effective massless recovered photon. electron_p4 has order [E,px,py,pz] in GeV and the electron mass .00051099895GeV. electron_ip_parameters retains ONLY the fitted post-FSR electron AtIP parameters in EDM order [D0,phi,omega,Z0,tanLambda]. There is no corrected/pre-FSR electron state.
