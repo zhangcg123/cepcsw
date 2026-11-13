@@ -198,6 +198,14 @@ algorithm. Broad performance claims and mainline integration require clean
 track preservation, reproducible tail control, and independent held-out
 validation.
 
+RecBreakpoint now independently attempts a genuine 5D no-breakpoint110
+reference for each processed track, before truth-location matching and
+regardless of scans or floating FSR. It persists as null_110_* with the same
+configured beam/ECAL observations as the scan null, no loss/FSR coordinate,
+and explicit failed/NaN results when unavailable. Existing endpoint families
+are unchanged; no online hypothesis selector is installed. The schema and
+mechanical gate are in agents_record/2026-11-13-always-null110-reference.md.
+
 Historical evidence, resolved incidents, exact experiment tables, runbooks,
 and superseded decisions live under `agents_record/`. Load historical records
 only for regression evidence, design rationale, experiment comparison, or
@@ -331,51 +339,46 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP: ALWAYS SAVE THE GENUINE 5D H0 REFERENCE (2026-11-13).**
-The user requires the no-breakpoint kind0/setup110 reference regardless of
-location-scan steering. It is now attempted before truth-location matching for
-all processed/selected tracks and persisted independently as null_110_*.
-It reuses the native scan-null fitter; no loss coordinate/prior/Minuit or FSR.
-ElectronPhoton with a collected neutral uses C+N and the same quadrature error;
-ElectronOnly/no-neutral uses C. No fitted posterior or truth hooks seed H0.
-Beam and charged ECAL observations are required; unavailable/failing references
-carry explicit failure/NaN diagnostics, never a lower-constraint fallback.
+**EXPLORATORY Q-CUT RECOIL COMPARISON (2026-11-13).**
+User requested a threshold and new inclusive/category recoil plots for the two
+existing110 hypotheses. Analysis-only per-track rule: choose the OWN fitted
+H_betaF electron+photon p4 when comparable Q>126.17379302276795, otherwise OWN
+H_beta p4. No extra BP neutral p4; recompute mixed-leg recoil, never mix masses.
+Missing/incomparable Q keeps H_beta. Both hypotheses must be valid on both legs
+for the shared recoil cohort. No production default or selector was changed.
 
-The34 new branches share the location_scan suffix/state-stride contract.
-A usable H0 has kind=[0],setup=[110],fit_status=[2],actual_constraint_mask=[3].
-Use null_110_nll2[0],pt[0] and its OWN native IP state/covariance (5/21 strides).
-status1 alone only means recorded. Unselected tracks stay status0/empty.
-Existing location_scan_* and all ordinary/floating endpoint outputs are
-preserved. No public option/default changes or online hypothesis selection.
-The maintained scan default remains []; FSR remains default-on for110/optional111.
+Odd jobs set the cut at the higher95th percentile of67347 eligible tracks with
+OWN truth FSR birth sum<=1GeV. Control selection3367/67347=4.99948%; even-job
+check3355/67362=4.98055%. No recoil plots retune the cut. Evaluation retains
+37485 common event pairs: Neither9013/eBrem15802/FSR4782/Both7888. Event labels
+use either leg's >1GeV truth sums; BothAND may involve different legs.
+No GSF-success gate: all500BP files/196604tracks from98302KF-valid truth pairs
+are read.5202evaluation pairs contain a Q-unavailable leg, kept on H_beta.
 
-Final19 CTests and65 batch tests pass. Exact old/new checks cover197607main
-branch-row values/199track rows and882side values/7event rows. Native current
-Higgs coverage is source1 events3/15/112,source2 event135,source4 event1:
-ten unique selected tracks. Scan-null/reference and scan-on/off states/scores
-match; Manual with free-loss/FSR off also matches. Missing beam/ECAL cases are
-explicitly unavailable. H0 succeeds for the existing7.78976mm truth-hook failure.
-Historical gun events11/16/17 are unavailable; no substitute-name claim.
+120–130 counts: H_beta22831,always-floating27035,Q-selected24325; below120:
+605/1748/1372. Thus the cut gains6.54% peak population over H_beta but less
+than always floating, and does not restore the low-mass tail. Neither worsens:
+peak7694->7566,below12067->211. Large Q is not sufficient clean-track safety.
+Internal job split on an already studied, truth-location-assisted sample;
+no untouched external validation, fitted resolution or significance claim.
 
-Only RecBreakpoint was installed; binary matches the tested final plugin
-SHA256 a2f3eaf4a87209cc739cdd18f866416c361a993eb98cbba907f6b547af9e2272.
-Configurable definitions/defaults are unchanged apart from the generated timestamp.
-Local plugin-map and known500-job completion checks preceded installation;
-no global scheduler audit is claimed. No production submissions or ROOT-file
-rewrites. Existing tuples need BP reruns for H0; REC_ECALTRUTH remains usable
-and oldREC_TPCFIX remains deleted. Next: use matched H0/Hb/Hb+FSR observations
-for per-track selection studies; calibrate improvement requirements before
-selecting models. No physics-validation claim, threshold or policy is implemented.
+Five new plots preserve all54priorPNG/PDFs. Categories: own-window unit-area
+120–140/.1GeV, threeBPcurves plusKF+neutrals andmuonblackdashed. Inclusive:
+bareKF/muonblacksolid plus3BPcurves, absolute10ab^-1 with1.408electron/
+1.354muon weights fromFULL50000even-job/50000muon inputs. Electron yields
+refer to the common valid-fit selection, not full standalone acceptance.
+All p4/mass joins, full-input weights, category histogram partitions and hashes
+pass. Gallery51PNGs/13sections/exact-once,all5newHTTP200/sourcehashmatch;
+sameailogin002PID443262,localhost8000,no restart. All5plots visually reviewed.
 
-Per-track score plots remain on the unchanged localhost8000 gallery (last
-verified46PNGs/12sections,PID443262,ailogin002). They use126828comparable tracks
-and each track's OWN >1GeV radiation categories; they do not yet include H0.
-Four individual Q distributions and their overlay now show S_beta-S_betaF,
-with full finite tails retained and no significance calibration or score cut.
-[Per-track Q plots](agents_record/2026-11-13-per-track-q-category-plots.md).
-[Implementation, schema, checks and limits](agents_record/2026-11-13-always-null110-reference.md).
-[Full outgoing status, plotting evidence and protected laws](agents_record/2026-11-13-agents-before-always-null110.md).
-[Per-track score study](agents_record/2026-11-13-per-track-fit-score-distributions.md).
-[Resolved/unresolved recoil study](agents_record/2026-11-13-current-bp-resolved-unresolved-fsr.md).
-[Inclusive normalization](agents_record/2026-11-13-inclusive-bp-floating-recoil-10ab.md).
-[Removed REC provenance](agents_record/2026-11-13-remove-superseded-tpcfix-rec.md).
+Artifacts: TrackingPerformanceStudies/bp_q_selected_recoil_20261113/.
+No refit, build, install or submission in this study; H0 is not used here.
+The separately prepared normal BP campaign includes all usual outputs+H0:
+higgs_eeHX_ISRFSRON_BP_H0_FSRFLOAT_NOSCAN_500jobs_200evt_20261113.
+Next: review this operating point with the user; do not promote or retune on
+these evaluation plots. New H0 tuples enable later matched three-hypothesis
+studies. Old REC_TPCFIX remains deleted; use retained REC_ECALTRUTH inputs.
+[Threshold, normalization, checks and limits](agents_record/2026-11-13-q-cut-recoil-study.md).
+[Complete outgoing H0/Q status](agents_record/2026-11-13-agents-before-q-cut-recoil.md).
+[Always-available H0 schema/install](agents_record/2026-11-13-always-null110-reference.md).
+[Q category plots](agents_record/2026-11-13-per-track-q-category-plots.md).
