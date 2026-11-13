@@ -475,6 +475,16 @@ mixture.
 
 ### Experimental ECAL component constraint
 
+For the maintained recoil comparison, **GSF + neutrals** adds the same
+deduplicated pre-reclustering neutral-cluster four-momenta selected by BP's
+collector around the input `CompleteTracks` ECAL references. Its new card/batch
+baseline is `|deltaTheta| <= 25 mrad`, `|deltaPhi| <= 200 mrad` (theta total
+width 50 mrad). Use the frozen BP manifest and saved collector IDs for each
+sample; existing tuples/plots keep their previous window until regenerated.
+The GSF flat tuple saves the full pre-ECAL snapshot rather than a windowed
+subset. This recovery is performed in analysis and does not enable the separate
+ECAL component constraint described below or change the fitted GSF endpoint.
+
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
 | `EcalComponentConstraint` | `false` | `false` | Enable a default-off, two-sided ECAL likelihood that can re-rank the already fitted final reverse components. It requires reverse filtering and starts from the BestBranch publication. |
