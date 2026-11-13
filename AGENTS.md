@@ -357,9 +357,10 @@ electron; explicit PDG23 ancestry is absent for selected tracks, so a Z-parent
 requirement cannot close physical completeness. Unique history is not a proof
 of a uniquely observable QED emitter. No physics-completeness claim.
 
-No source/build/install, reconstruction, batch or gallery change. H_F remains
+No source/build/install, reconstruction or batch change. H_F remains
 installed1644ae8; existing H0 tuples lack H_F until rerun. The current collection
-gallery retains54PNGs/13sections on localhost8000; window200 remains an analysis
+gallery now has55PNGs/14sections on localhost8000, with the QED FSR diagram
+as its first section. Window200 remains an analysis
 alternative, default theta±10/phi±200 unchanged. Four-way fit selection and
 population validation remain outstanding.
 

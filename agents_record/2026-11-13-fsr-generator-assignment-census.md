@@ -62,3 +62,14 @@ all production tuples/cards/installations are unchanged.
 
 Current production H_F remains1644ae8; latest window200 study remains analysis-only.
 The complete outgoing status is preserved in2026-11-13-agents-before-fsr-assignment-audit.md.
+
+Subsequent user-requested illustration: tree-level electron-line and positron-line
+Z→eeγ diagrams plus their coherent interference term. Interference is not a third
+Feynman diagram; unique/ambiguous/unidentified parents are record categories.
+Artifacts: TrackingPerformanceStudies/fsr_qed_diagrams_20261113/ (uncommitted).
+The PNG is now FIRST in the localhost8000 gallery:55PNGs/14sections, exact-once;
+all62 earlier PNG/PDF hashes unchanged. Same ailogin002 PID443262, no restart.
+Page/direct PNG HTTP200; source/local/served SHA256 all
+94c6fb9feae0c9ab8a6bf36a16b905da904977bef95d8e8d3a78e4d42c795c70.
+Direct URL: http://127.0.0.1:8000/z_ee_gamma_amplitudes.png .
+This schematic does not validate the actual generator's interference model.
