@@ -277,3 +277,17 @@ No codebase, installation, run card, fit or production job changed. H_F remains
 installed1644ae8. Existing H0 production lacks H_F until another BP rerun; no
 automatic four-way selection or physics validation. Complete outgoing status
 is preserved in2026-11-13-agents-before-truth-normalized-ecal.md.
+
+Follow-up definition confirmation: independently recounting FULL unweighted
+energy of EVERY eligible in-window neutral cluster reproduces Neutral-inclusive.
+No MC-origin tag or contribution weight filters that inclusive numerator; green
+and black remain included. Numerators634130.5539021508/661187.0435199661/
+682357.2100818031GeV divided by the SAME FSR+eBrem truth BIRTH denominator
+1658145.6766533772GeV yield38.2433559868/39.8750877459/41.1518251797% for theta
+TOTAL widths20/50/100. No numerical/cohort/cut change. Added bold whole-stack
+percent above Neutral inclusive in all3 panels; existing colour labels remain.
+Previous6 source PNG/PDFs preserved in before_neutral_total_label/; new source,
+local and served hashes agree, all3PNG/pageHTTP200, same PID443262. Gallery
+54PNGs/14sections/exact-once; all59 unrelated images and4 earlier archived
+budgets unchanged. Separate evidence: neutral_inclusive_definition_check.json
+and neutral_total_gallery_verification.json in the analysis artifact directory.
