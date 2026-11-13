@@ -339,41 +339,43 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**BP H0_F + THETA25 RERUN PREPARED; OLD FLATS REMOVED (2026-11-13).**
-User requested all BP flat products removed and rerun with theta half25mrad
-(total50), phi half200mrad and independent H0_F. Deleted1995files/383.948GiB
-from three full500-file BP campaigns and495targeted BP110FSRFLOAT products.
-Full campaigns all completed; targeted native runs all finished (326QAcomplete,
-169post-validation failures). Old cards/logs/runtime and cached analysis/plots
-preserved. All500currentREC and500GSF file sizes/mtimes unchanged. Native rereads
-of removed BP parents no longer work; cached gallery figures are still OLD.
+**NEUTRAL ENERGY PURITY VS RECONSTRUCTED METRICS (2026-11-14).**
+Completed on all 100,000 current REC_ECALTRUTH inputs, using the same 198,081
+truth-covered selected production-electron tracks and fixed neutral 55.757 GeV
+cap as the energy bars. Baseline half-windows theta25/phi200 mrad:55,391 unique
+neutral clusters in38,749events. Wide200/200 diagnostic:91,482clusters/48,721events.
+No fit-validity/recoil gate, PFA rerun or truth-angle matching. Native MC weights
+label FSR/eBrem/main/Others; metric values/assignment use reconstruction only.
+Purity is SUM E*(FSR+eBrem fraction)/SUM full neutral E, not mean cluster purity.
 
-Prepared `higgs_eeHX_ISRFSRON_BP_H0F_THETA25_NOSCAN_500jobs_200evt_20261113/`:
-500x200=100000events, REC_ECALTRUTH inputs, STAGES=breakpoint, selected production
-pair, truth material location/null, NO scans. FSR/free-loss/beam/ECAL ON,
-ElectronPhoton C+N,111/diffuse/truth override/backward OFF. H0 null_110_*,
-H0_F/H_F fsr_only_110_*, H_beta ordinary110 and H_betaF floating110 all included.
-No hypothesis selector.4000MB,cms,default walltime/no short cap. All500frozen
-cards/hashes/controls, prior verified input identities and500dry-run commands
-pass. Installed H_F plugin SHA ba82a23202fa11e75928a8e245a5396b03e8678ae1e5734b45831a6d260d2bcd
-unchanged; no source/build/install/template modification for this task.
+Main result: bad photon purity is concentrated near the reconstructed electron.
+Charged-cluster distance <50/50–150/>=150 mm gives47.45/71.01/87.54% purity;
+main-electron fractions52.29/28.43/9.08%. Track-ECAL distance <50 mm gives32.77%
+purity. Charged reference available48,321clusters:69.23%; missing7,070:41.66%
+and58.16%main energy. Inclusive purity63.31%, main35.84%, Others0.85%.
+Isolation=Eneutral/(Eneutral+other ECAL E in100mrad opening cone), excluding
+candidate and both main charged clusters. It is much weaker than distance:
+isolation>=0.9 gives63.51% inclusive purity. Cut tradeoffs use the SAME
+charged-reference-available cohort: distance>=25mm gives71.02%/98.86% retained
+collected photon E; >=50 gives75.04%/85.57%; >=100 gives82.01%/44.41%.
+Isolation>=0.5 gives70.28%/89.56%. No threshold adopted; retention is relative
+already-collected FSR+eBrem energy, not generator birth-energy efficiency.
 
-NOT SUBMITTED: scheduler Python/queue client lacks htcondor in this session.
-Run from normal batch-login shell:
-`bash /aifs/user/data/zhangcg/gsfdev/CEPCSW/higgs_eeHX_ISRFSRON_BP_H0F_THETA25_NOSCAN_500jobs_200evt_20261113/submit.sh`
-No new output/started/submitted markers. Full batch/card/deletion evidence:
-[rerun record](agents_record/2026-11-13-bp-h0f-theta25-rerun.md).
-Artifacts: TrackingPerformanceStudies/bp_theta25_h0f_batch_20261113/.
+All500 source identities/energies and six cached window masks checked natively.
+Baseline energy/four origins reproduce old bar numerators at1e-12. Fresh source1
+MC reclassification reproduces200neutral rows/fractions EXACTLY. Components
+close, unique candidate/bin counts checked;300source-block resamplings supply
+pointwise16/84 errorbars, >=30clusters per shown bin. Distance profiles display
+0–500mm; complete tails saved. Euclidean positions include shower-depth effects.
+No calibrated purity/causal inference or recoil-improvement claim. Main-electron
+neutral energy may legitimately restore BP's total calorimeter sum; photon
+purity alone does not justify removing it or adding eBrem again to corrected GSF.
 
-Independent GSF+neutral analysis helper defaults to the same25/200half-windows,
-using GSF snapshot+matchingREC track ECAL references, no BP dependency. Its
-200event mechanical check gives178usablepairs,21invalidGSFpairs,1missingleg;
-4focused tests pass. Existing plotting scripts/figures still use old BP-derived
-selection until regenerated. GSF fit/ECAL prototype/schema unchanged.
-[Independent recovery](agents_record/2026-11-13-independent-gsf-neutral-recovery.md).
-
-Gallery remains56PNGs/14sections on localhost8000,sameailogin002PID443262.
-Its truth-normalized bar panels show absTheta5/25/50/100/200mrad,phi200,
-whole-stack labels,neutral-inclusive before charged. Same100k/198081truth cohort,
-photon birth denominators,neutral55.757GeV cap,charged upper2%76.598GeV cut.
-No gallery images changed in this task. [Complete outgoing focus and links](agents_record/2026-11-13-agents-before-bp-h0f-theta25-production.md).
+Eight new plots are live in the final gallery section, localhost8000,
+ailogin002 PID443262:64PNGs/15sections/exact-once,16PDFs. Page/all8newPNGsHTTP200,
+source/local/served hashes match. All64previous PNG/PDFs preserved unchanged.
+No algorithm/card/build/install/production submission changes. H0_F/theta25
+batch was recreated earlier; its later queue state was not checked here.
+Artifacts: TrackingPerformanceStudies/neutral_purity_metrics_20261113/.
+[Definitions, results, validation and limits](agents_record/2026-11-14-neutral-purity-reconstructed-metrics.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-neutral-purity-metrics.md).
