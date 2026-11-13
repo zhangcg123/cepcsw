@@ -475,15 +475,33 @@ mixture.
 
 ### Experimental ECAL component constraint
 
-For the maintained recoil comparison, **GSF + neutrals** adds the same
-deduplicated pre-reclustering neutral-cluster four-momenta selected by BP's
-collector around the input `CompleteTracks` ECAL references. Its new card/batch
-baseline is `|deltaTheta| <= 25 mrad`, `|deltaPhi| <= 200 mrad` (theta total
-width 50 mrad). Use the frozen BP manifest and saved collector IDs for each
-sample; existing tuples/plots keep their previous window until regenerated.
-The GSF flat tuple saves the full pre-ECAL snapshot rather than a windowed
-subset. This recovery is performed in analysis and does not enable the separate
-ECAL component constraint described below or change the fitted GSF endpoint.
+**GSF + neutrals** recovery has an independent analysis entry point,
+`scripts/recover_neutral_photons.py`. Its defaults are `|deltaTheta| <= 25 mrad`,
+`|deltaPhi| <= 200 mrad` (theta total width 50 mrad), around the input
+`CompleteTracks` ECAL reference points. It selects charge-zero, trackless,
+hit-supported pre-reclustering clusters directly from the GSF flat snapshot,
+forms massless four-momenta from their measured energies/positions, and adds
+each cluster once to the GSF BestBranch pair. It needs no BP output or fit.
+The matching REC supplies only input-track ECAL reference points, which older
+GSF flat tuples do not save. Event counts/numbering and the first Baseline KF
+track's five parameters are checked before use; supply the corresponding REC.
+REC replays that preserve tracking can supply these references: their cluster
+measurements are not substituted for the GSF snapshot.
+
+```bash
+python3 Reconstruction/RecGsfTracking/scripts/recover_neutral_photons.py \
+  --gsf /path/to/gsf_flat.root --rec /path/to/matching_rec.root \
+  --output /path/to/new_recovery.json
+```
+
+`--theta-mrad` and `--phi-mrad` override half-windows; `--events` limits a focused
+check. JSON records the windows, input identities, selected IDs per track,
+deduplicated photon p4 and bare/recovered recoil masses at sqrt(s)=240 GeV.
+Missing electron pairs, ECAL references or GSF endpoints have explicit statuses.
+Existing output files are refused. Existing plotting scripts/caches still use
+their original BP-derived selection; figures must be regenerated to use this
+independent collector. No GSF fit, ECAL component constraint or tuple schema is
+changed by this analysis.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|

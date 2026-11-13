@@ -255,13 +255,14 @@ cards remain artifacts rather than source configuration.
 
 ### `gsf.py.bk`
 
-The GSF + neutrals recoil comparison shares BP's neutral collector: the new
-baseline is a 25 mrad theta half-window (50 mrad total) and a 200 mrad phi
-half-window around the input `CompleteTracks` ECAL reference. Analysis uses
-the actual frozen BP collector IDs and adds their deduplicated massless
-four-momenta to the GSF pair. The GSF flat writer retains the full pre-ECAL
-snapshot; no window is applied to that export. This does not enable the
-default-off ECAL fit prototype or change old campaign cards/plots.
+Independent GSF + neutrals analysis is available through
+`Reconstruction/RecGsfTracking/scripts/recover_neutral_photons.py`, defaulting
+to theta half-window 25 mrad (50 mrad total) and phi half-window 200 mrad.
+It reads the GSF flat snapshot and matching REC input-track ECAL references;
+no BP tuple or selected-cluster IDs are needed. The GSF flat writer retains
+the full pre-ECAL snapshot. The analysis collector does not enable the
+default-off ECAL fit prototype or change old campaign cards/plots; existing
+figures retain their previous BP-derived collection until regenerated.
 
 The current `gsf.py.bk` contains the comparison card previously named
 `gsf_reverse_new.py.bk`. It keeps the established smoother and reverse
