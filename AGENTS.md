@@ -339,45 +339,42 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**TRUTH-NORMALIZED ECAL COLLECTION BARS (2026-11-13).**
-User requested fraction/efficiency stacks, adding charged and total-inclusive
-bars, for theta TOTAL widths20/50/100mrad (half10/25/50), phi half200. Read all
-100000 current REC_ECALTRUTH events; common198081/198430 selected tracks have
-unique G4 identity and saved main-electron first ECAL entry.349 missing-entry
-tracks excluded from ALL bars/truth;99988 events retain>=1 track. No fit gate.
+**ECAL COLLECTION PANELS AT THETA ABSOLUTE LIMITS5/25/50/100/200mrad (2026-11-13).**
+User requested updated first3 panels and then2 wider additions. Plots show ONLY
+|deltaTheta|<=5/25/50/100/200 and |deltaPhi|<=200mrad, no full-width annotation.
+Order: FSR-tagged neutral, eBrem-tagged neutral, Neutral inclusive, Electron
+charged, Total inclusive. Bold WHOLE-stack response above every bar; internal
+colour percentages retained, no internal black Others percentage. First generic
+budget URL giveshalf5; next2 width50/100 filenames givehalf25/50; new dtheta100/200
+filenames giveabsolute100/200. Previous3 panels preserved when adding2.
 
-Five bars and denominators: FSR-tagged neutral/E_F; eBrem-tagged neutral/E_B;
-track-matched electron charged/E_e; neutral-inclusive/(E_F+E_B); disjoint
-charged+neutral total-inclusive/(E_e+E_F+E_B). Photon truth=BIRTH energy including
-converted/absorbed/uncollected photons; electron truth=first ECAL TOTAL energy.
-Ratio of sums. Each coloured percent is reco attributed E/bar truth D, NOT
-purity/composition. Different bar D means heights cannot be summed; stacks
-include other origins and may exceed100%. Green exact main-electron MC; Others
-black without percent; tagged neutral sets overlap. No truth angular matching.
+Same100000 current REC inputs/198081 truth-covered tracks, no fit gate. Same
+photon BIRTH denominators (conversions/losses included), electron first-ECAL
+TOTAL energy, neutral55.757GeV cap and frozen charged upper2%76.5978836GeV cut.
+Neutral-inclusive numerator FULL unweighted all eligible in-window neutral E,
+including green/black; denominator all associated FSR+eBrem truth BIRTH energy.
+All other bar denominators unchanged. Different bar D; full stacks include
+cross-origin energy and can exceed100%. Not a pure signal/purity percentage.
 
-USER-CHOSEN upper2% charged-energy trim: one global76.59788360595702GeV threshold,
-removing3855/192711 charged clusters; neutral cut stays55.75722694396976GeV.
-Truth denominators/cohort unchanged by cuts. Raw charged max5701.73GeV, raw result
-retained. Charged cut also removes genuine high-energy responses. Neutral union
-counts each cluster once; charged uses pre-PFO track links, no angular gate.
-22 after-ECAL brems records excluded from upstream truth; soft photons lacking
-unique MC birth still enter truth D but cannot gain a dedicated MC contribution.
+Neutral-inclusive responses36.65/39.88/41.15/42.53/44.36%; total-inclusive
+91.67/92.19/92.39/92.62/92.91%; charged102.25% identical. New5half count uses
+REC positions/frozen fractions,61965 old candidate masks reproduced. Newwide
+native reader checks all500 source identities, truth/photon counts, raw charged
+control and old10/20/50/100total controls at relative1e-12; previous3 retained
+exactly. Original reader helper only generalizes largest mask to max(WIDTHS),
+with its old defaults unchanged and pre-edit bytes archived. No reconstruction.
+All components add to energy, charged+neutral=total, nesting checked. All5renders
+visually reviewed. Generator-tagged FSR completeness/recoil validation not claimed.
 
-FSR target recovery in neutrals32.23/35.74/38.91%; eBrem21.28/21.63/21.70%.
-Charged stack102.25% (main92.7% + radiation/others); neutral stack38.24/39.88/41.15%;
-total stack91.93/92.19/92.39%. Not old resolved-neutral-denominator percentages.
-Origin-specific charged/neutral recovery also saved to avoid denominator confusion.
-All500 source identities,61253 legacy neutral checks, truth sums, unique keys,
-component sums, nested windows and charged+neutral=total checked; all3plots reviewed.
+Gallery56PNGs/14sections/exact-once atlocalhost8000, sameailogin002PID443262.
+New2PNG/pageHTTP200 and source/local/served hashes match; all62 priorPNG/PDFs
+unchanged. Prior3 replacement images and earlier budgets remain archived.
+No compiled code/build/install/card/batch changes; default reconstruction window
+still half10/phi200. H_F remains installed1644ae8; oldH0 production lacks H_F
+until rerun. Automatic four-way selection/population validation outstanding.
 
-Three new panels replace four superseded absolute-energy budget copies (archived
-unchanged);20mrad keeps direct_pre_ecal_neutral_window_energy_budget.png URL.
-Other source images and earlier per-event control preserved; gallery details in
-record. No reconstruction/build/install/card/batch change. H_F remains1644ae8;
-H0 production lacks H_F until rerun. Four-way selection/population validation
-remain outstanding; default neutral theta remains half10mrad.
-
-[Definitions, full checks, results and gallery](agents_record/2026-11-13-truth-normalized-ecal-collection.md).
-[Complete outgoing status](agents_record/2026-11-13-agents-before-truth-normalized-ecal.md).
-[FSR ancestry census](agents_record/2026-11-13-fsr-generator-assignment-census.md).
-Artifacts: TrackingPerformanceStudies/ecal_truth_collection_widths_20261113/.
+[Additional100/200absolute windows and checks](agents_record/2026-11-13-ecal-bars-extended-theta.md).
+[First3 layout/window update](agents_record/2026-11-13-ecal-bars-window10-order-labels.md).
+[Complete outgoing3-panel status](agents_record/2026-11-13-agents-before-extended-ecal-windows.md).
+[Original truth denominators and cuts](agents_record/2026-11-13-truth-normalized-ecal-collection.md).
+Artifacts: TrackingPerformanceStudies/ecal_truth_collection_extended_20261113/.
