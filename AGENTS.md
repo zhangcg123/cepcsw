@@ -339,46 +339,33 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**EXPLORATORY Q-CUT RECOIL COMPARISON (2026-11-13).**
-User requested a threshold and new inclusive/category recoil plots for the two
-existing110 hypotheses. Analysis-only per-track rule: choose the OWN fitted
-H_betaF electron+photon p4 when comparable Q>126.17379302276795, otherwise OWN
-H_beta p4. No extra BP neutral p4; recompute mixed-leg recoil, never mix masses.
-Missing/incomparable Q keeps H_beta. Both hypotheses must be valid on both legs
-for the shared recoil cohort. No production default or selector was changed.
+**FOURTH BP HYPOTHESIS H_F IMPLEMENTED (2026-11-13).**
+User requested an independent FSR-only model without a material breakpoint.
+The existing default-ON FSR switch now also writes `fsr_only_110_*` for every
+processed/selected track before truth matching. Native5D tracker/beam plus one
+nonnegative FSR excess; no material interval, prior-center optimization or scan.
+It exports its OWN electron/photon p4, joint covariance and normalized score.
+Same configured observations as H0: C+N for ElectronPhoton with neutrals, else C.
+The existing material-FSR110 always sums N even in ElectronOnly; avoid comparing
+that nondefault configuration as common-observation hypotheses.
 
-Odd jobs set the cut at the higher95th percentile of67347 eligible tracks with
-OWN truth FSR birth sum<=1GeV. Control selection3367/67347=4.99948%; even-job
-check3355/67362=4.98055%. No recoil plots retune the cut. Evaluation retains
-37485 common event pairs: Neither9013/eBrem15802/FSR4782/Both7888. Event labels
-use either leg's >1GeV truth sums; BothAND may involve different legs.
-No GSF-success gate: all500BP files/196604tracks from98302KF-valid truth pairs
-are read.5202evaluation pairs contain a Q-unavailable leg, kept on H_beta.
+H0/H_F/H_beta/H_betaF now supply the four model alternatives. No automatic
+choice, penalty or new threshold is promoted. The prior two-model Q-cut study
+remains exploratory; no physics-validation claim from these focused checks.
+Old500 H0 tuples are complete but lack H_F; a BP rerun is required to add it.
+No new batch or gallery changes were made. Retained REC_ECALTRUTH remains input;
+old REC_TPCFIX remains deleted.
 
-120–130 counts: H_beta22831,always-floating27035,Q-selected24325; below120:
-605/1748/1372. Thus the cut gains6.54% peak population over H_beta but less
-than always floating, and does not restore the low-mass tail. Neither worsens:
-peak7694->7566,below12067->211. Large Q is not sufficient clean-track safety.
-Internal job split on an already studied, truth-location-assisted sample;
-no untouched external validation, fitted resolution or significance claim.
+19 compiled and65 batch tests pass; five unique Higgs events/ten selected tracks
+have same-input native A/B checks, boundary/neutral/failure/OFF coverage and
+verbose states/covariances. Every existing field agrees exactly. H_F matches
+all19 existing zero-material FSR fields on two tracks and survives the known
+truth-hook failure. Package-only default installation and native replay checked.
+Historical gun hard-loss11/16/17 fixtures remain unavailable; population and
+four-way selection validation remain outstanding.
 
-Five new plots preserve all54priorPNG/PDFs. Categories: own-window unit-area
-120–140/.1GeV, threeBPcurves plusKF+neutrals andmuonblackdashed. Inclusive:
-bareKF/muonblacksolid plus3BPcurves, absolute10ab^-1 with1.408electron/
-1.354muon weights fromFULL50000even-job/50000muon inputs. Electron yields
-refer to the common valid-fit selection, not full standalone acceptance.
-All p4/mass joins, full-input weights, category histogram partitions and hashes
-pass. Gallery51PNGs/13sections/exact-once,all5newHTTP200/sourcehashmatch;
-sameailogin002PID443262,localhost8000,no restart. All5plots visually reviewed.
-
-Artifacts: TrackingPerformanceStudies/bp_q_selected_recoil_20261113/.
-No refit, build, install or submission in this study; H0 is not used here.
-The separately prepared normal BP campaign includes all usual outputs+H0:
-higgs_eeHX_ISRFSRON_BP_H0_FSRFLOAT_NOSCAN_500jobs_200evt_20261113.
-Next: review this operating point with the user; do not promote or retune on
-these evaluation plots. New H0 tuples enable later matched three-hypothesis
-studies. Old REC_TPCFIX remains deleted; use retained REC_ECALTRUTH inputs.
-[Threshold, normalization, checks and limits](agents_record/2026-11-13-q-cut-recoil-study.md).
-[Complete outgoing H0/Q status](agents_record/2026-11-13-agents-before-q-cut-recoil.md).
-[Always-available H0 schema/install](agents_record/2026-11-13-always-null110-reference.md).
-[Q category plots](agents_record/2026-11-13-per-track-q-category-plots.md).
+[Schema, evidence, install hash and limitations](agents_record/2026-11-13-independent-fsr-only-hypothesis.md).
+[Complete outgoing Q-cut status](agents_record/2026-11-13-agents-before-independent-fsr-only.md).
+[Previous Q-cut study](agents_record/2026-11-13-q-cut-recoil-study.md).
+[H0 contract](agents_record/2026-11-13-always-null110-reference.md).
+[All FSR models and tuple use](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).

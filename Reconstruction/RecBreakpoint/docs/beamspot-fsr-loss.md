@@ -27,6 +27,37 @@ later truth-location matching fails. See the README for the full suffix/stride
 contract. This adds the H0 reference alongside the ordinary and FSR-floating
 110 alternatives; it introduces no automatic hypothesis decision.
 
+### Independent FSR-only hypothesis H_F
+
+With the same FSR switch ON, every processed/selected track also attempts
+`fsr_only_110_*`, before truth-hook matching. This is a fresh native 5D
+tracker/beam fit with one nonnegative additive FSR energy, **no material
+breakpoint**, no loss prior or prior-center optimization, and no location scan.
+It runs even when Truth selects a material interval for the other families.
+It uses the existing zero-material FSR fitter and the same local conditioning,
+closure gates and collinear photon convention; no pre-FSR state is introduced.
+
+Its 19 suffixes are the same as the 110 FSR family listed below. Status2 and
+constraint_mask3 mean a fitted H_F; status-2 has an explicit error and no
+fallback endpoint. Status0 means not attempted. The four additional fields
+`ecal_observed_energy`, `ecal_observed_error`, `resolved_ecal_sum_applied` and
+`measurement_dimensions` record the actual scalar observation and score size.
+Missing beam/charged observations fail explicitly. With the switch OFF these
+branches are absent, just like the other FSR families. H0 stays independent of
+the switch. Existing files need a BP rerun to acquire H_F.
+
+H_F follows H0's configured observations: ElectronPhoton with a collected neutral
+uses C+N and the quadrature uncertainty; ElectronOnly uses C. There is one
+total-energy observation, no separate neutral update and no extra neutral p4
+to add to the fitted electron+photon. Existing material-FSR110 always includes
+collected N, even in explicit ElectronOnly mode, so that nondefault setting
+does not give comparable four-model observations when N exists.
+
+The four hypotheses are H0=no material/no FSR, H_F=no material/floating FSR,
+H_beta=material/no FSR and H_betaF=material/floating FSR. No automatic selection
+or penalty is added here. Compare scores only for successful fits with matching
+observations; raw likelihood preference alone is not a calibrated decision rule.
+
 For example, 110 fields are charged_ecal_free_loss_fsr_energy, _px, _py, _pz, _energy_variance, _status, _direction_mode, _constraint_mask, _active_boundary_mask, _primary_ecal_energy, _neutral_ecal_energy, _electron_ip_parameters, _electron_p4, _joint_ip_energy_covariance, _joint_p4_covariance, _nonlinear_closure, _material_closure, _nll2 and _error.
 
 energy/px/py/pz are GeV and define one effective massless recovered photon. electron_p4 has order [E,px,py,pz] in GeV and the electron mass .00051099895GeV. electron_ip_parameters retains ONLY the fitted post-FSR electron AtIP parameters in EDM order [D0,phi,omega,Z0,tanLambda]. There is no corrected/pre-FSR electron state.

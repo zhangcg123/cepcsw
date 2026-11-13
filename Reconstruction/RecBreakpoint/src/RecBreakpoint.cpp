@@ -293,7 +293,14 @@ StatusCode RecBreakpoint::initialize() {
   m_photonCalo[0].book(*m_tree,"rts_photon_calo_");
   m_photonCalo[1].book(*m_tree,"free_loss_rts_photon_calo_");
   m_freeLossTuple.book(*m_tree);
-  if (m_beamFsrLoss) m_beamFsrTuple.book(*m_tree);
+  if (m_beamFsrLoss) {
+    m_beamFsrTuple.book(*m_tree);
+    m_fsrOnly110.book(*m_tree,"fsr_only_110_");
+    m_tree->Branch("fsr_only_110_ecal_observed_energy",&m_fsrOnlyEcalEnergy);
+    m_tree->Branch("fsr_only_110_ecal_observed_error",&m_fsrOnlyEcalError);
+    m_tree->Branch("fsr_only_110_resolved_ecal_sum_applied",&m_fsrOnlyResolvedSum);
+    m_tree->Branch("fsr_only_110_measurement_dimensions",&m_fsrOnlyDimensions);
+  }
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
@@ -708,6 +715,9 @@ StatusCode RecBreakpoint::execute() {
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
     if (m_beamFsrLoss) m_beamFsrTuple.reset();
+    m_fsrOnly110=breakpoint::FsrFamilyTuple{};
+    m_fsrOnlyEcalEnergy=m_fsrOnlyEcalError=breakpoint::FsrFamilyTuple::missing;
+    m_fsrOnlyResolvedSum=m_fsrOnlyDimensions=0;
     for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
       m_constraintTracks[i].reset();
       m_constraintCalo[i].reset();
@@ -895,6 +905,47 @@ StatusCode RecBreakpoint::execute() {
         m_null110Reference.status=-1;
         m_null110Reference.truthError=failure.what();
         warning() << "Null110 reference failed; ordinary endpoints unchanged: " << failure.what() << endmsg;
+      }
+      // H_F must not inherit a material candidate or depend on truth-hook success.
+      if (m_beamFsrLoss) {
+        try {
+          auto variant=locationObservations();
+          if (!variant.beamSpot || !variant.chargedEcalEnergy)
+            throw std::runtime_error("FSR-only110 requires beam and charged ECAL observations");
+          variant.intervals.clear();variant.intervalMeanLogLoss.clear();
+          variant.beamSpotFsrLoss=true;variant.delayedNeutral=false;
+          variant.resolvedEcalSum=variant.chargedEcalEnergyMode==breakpoint::ChargedEnergyMode::ElectronPhoton
+              && variant.neutralEcalEnergy.has_value();
+          m_fsrOnlyResolvedSum=breakpoint::combineResolvedEcalMeasurements(variant,true);
+          variant.resolvedEcalSum=false;variant.neutralEcalEnergy.reset();
+          variant.chargedEcalEnergyMode=breakpoint::ChargedEnergyMode::ElectronOnly;
+          m_fsrOnlyEcalEnergy=variant.chargedEcalEnergy->first;
+          m_fsrOnlyEcalError=variant.chargedEcalEnergy->second;
+          auto experiment=fitter.fit(hits,variant,false);
+          const auto& fit=experiment.rts;
+          if (!fit.beamFsr || !fit.breakpoints.empty() || !fit.persistentHits.empty())
+            throw std::runtime_error("FSR-only110 requires a 5D fit without material breakpoints");
+          m_fsrOnly110.assign(*fit.beamFsr,3);
+          m_fsrOnlyDimensions=fit.beamFsr->likelihood.measurementDimensions;
+          if (m_verbose) {
+            info()<<std::setprecision(17)<<"FsrOnly110 event="<<m_event<<" track="<<m_trackIndex
+                  <<" energy="<<m_fsrOnly110.energy<<" variance="<<m_fsrOnly110.variance
+                  <<" observed="<<m_fsrOnlyEcalEnergy<<" error="<<m_fsrOnlyEcalError
+                  <<" resolvedSum="<<m_fsrOnlyResolvedSum<<" boundary="<<m_fsrOnly110.active
+                  <<" closure="<<m_fsrOnly110.closure<<" nll2="<<m_fsrOnly110.nll2<<endmsg;
+            for (std::size_t node=0;node<fit.smoothed.size();++node) {
+              const auto& state=fit.smoothed[node];std::ostringstream dump;
+              dump<<std::setprecision(17)<<"FsrOnly110State hit="<<node<<" mean=[";
+              for (int j=0;j<5;++j) dump<<state.mean(j,0)<<' ';
+              dump<<"] covariance=[";
+              for (int i=0;i<5;++i) for (int j=0;j<5;++j) dump<<state.covariance(i,j)<<' ';
+              dump<<']';info()<<dump.str()<<endmsg;
+            }
+          }
+        } catch (const std::exception& failure) {
+          m_fsrOnly110.status=-2;m_fsrOnly110.error=failure.what();
+          warning()<<"FSR-only110 failed; ordinary endpoints unchanged: "<<failure.what()<<endmsg;
+        }
       }
       if (m_intervalSelectionName == "Truth") {
         if (!truthPrepared) {

@@ -958,6 +958,10 @@ extended KF; the separate terms make those differences auditable.
 maintained card and batch helper (`BP_BEAM_SPOT_FSR_LOSS=1`). It adds separate
 110/111 electron + FSR-photon output families; ordinary control endpoints remain
 separate. 000/100 keep FSR undetermined. Set the variable to `0` to disable.
+The same switch now also writes the independent `fsr_only_110_*` H_F fit for
+every processed track: genuine 5D trajectory plus floating FSR, with no material
+interval, before truth matching. It shares H0's configured ECAL observation and
+does not replace any existing endpoint or choose a hypothesis automatically.
 See [floating FSR: equations, outputs and limits](docs/beamspot-fsr-loss.md).
 
 

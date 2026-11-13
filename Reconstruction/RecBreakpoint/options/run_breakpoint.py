@@ -201,7 +201,8 @@ fit.NeutralLossConstantError = float(os.environ.get("BP_NEUTRAL_CONSTANT", "0.00
 # per-hit refit diagnostics remain empty/NaN. Ordinary/truth pairs stay separate.
 # Maintained standalone/batch card default is ON; set BP_FREE_LOSS_FIT=0 to disable.
 fit.FreeLossFit = os.environ.get("BP_FREE_LOSS_FIT", "1") == "1"
-# Separate FSR photon families for 110/111; 000/100 keep FSR undetermined.
+# FSR families for 110/111 plus independent no-material fsr_only_110_* (H_F).
+# 000/100 keep FSR undetermined; this switch controls H_F too.
 fit.ExperimentalBeamSpotFsrLoss = os.environ.get("BP_BEAM_SPOT_FSR_LOSS", "1") == "1"
 # Cumulative constraint stages for ordinary augmented KF/RTS and free-loss.
 # The original rts_* and free_loss_rts_* remain unconstrained. Each ON switch

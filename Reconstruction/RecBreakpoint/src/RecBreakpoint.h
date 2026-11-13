@@ -159,6 +159,9 @@ private:
   breakpoint::NeutralPfoTuple m_neutralPfoTuple, m_fsrPfoTuple;
   int m_fsrTruthAvailable=0;
   breakpoint::BeamSpotFsrTuple m_beamFsrTuple;
+  breakpoint::FsrFamilyTuple m_fsrOnly110;
+  double m_fsrOnlyEcalEnergy=0, m_fsrOnlyEcalError=0;
+  int m_fsrOnlyResolvedSum=0, m_fsrOnlyDimensions=0;
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   std::array<int, 3> m_backwardRunFlags{};

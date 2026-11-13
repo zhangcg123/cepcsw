@@ -24,6 +24,21 @@ struct FsrFamilyTuple {
     branch("joint_ip_energy_covariance",&jointIpEnergy);branch("joint_p4_covariance",&jointP4);
     branch("error",&error);
   }
+  void assignElectron(const edm4hep::TrackState& ip,int state=1) {
+    auto& f=*this;f.status=state;
+    f.electronIp={ip.D0,ip.phi,ip.omega,ip.Z0,ip.tanLambda};
+  }
+  void assign(const BeamSpotFsrResult& result,int actualMask,int state=2) {
+    assignElectron(result.post,state);auto& f=*this;
+    f.mask=actualMask;f.active=result.activeMask;f.direction=1;
+    f.energy=result.energy;f.variance=result.variance;
+    f.px=result.p4.photon[1];f.py=result.p4.photon[2];f.pz=result.p4.photon[3];
+    f.primary=result.firstEcalPart;f.neutral=result.neutralPart;
+    f.closure=result.nonlinearClosure;f.materialClosure=result.materialClosure;f.nll2=result.likelihood.nll2;
+    f.electronP4.assign(result.p4.electron.begin(),result.p4.electron.end());
+    f.jointIpEnergy=result.jointIpEnergyCovariance;
+    f.jointP4.assign(result.p4.covariance.begin(),result.p4.covariance.end());
+  }
 };
 struct BeamSpotFsrTuple {
   std::array<FsrFamilyTuple,4> families;
@@ -34,19 +49,10 @@ struct BeamSpotFsrTuple {
   }
   void reset() {for(auto& family:families)family=FsrFamilyTuple{};}
   void assignElectron(int i,const edm4hep::TrackState& ip,int state=1) {
-    auto& f=families.at(i);f.status=state;
-    f.electronIp={ip.D0,ip.phi,ip.omega,ip.Z0,ip.tanLambda};
+    families.at(i).assignElectron(ip,state);
   }
   void assign(int i,const BeamSpotFsrResult& result,int actualMask,int state=2) {
-    assignElectron(i,result.post,state);auto& f=families.at(i);
-    f.mask=actualMask;f.active=result.activeMask;f.direction=1;
-    f.energy=result.energy;f.variance=result.variance;
-    f.px=result.p4.photon[1];f.py=result.p4.photon[2];f.pz=result.p4.photon[3];
-    f.primary=result.firstEcalPart;f.neutral=result.neutralPart;
-    f.closure=result.nonlinearClosure;f.materialClosure=result.materialClosure;f.nll2=result.likelihood.nll2;
-    f.electronP4.assign(result.p4.electron.begin(),result.p4.electron.end());
-    f.jointIpEnergy=result.jointIpEnergyCovariance;
-    f.jointP4.assign(result.p4.covariance.begin(),result.p4.covariance.end());
+    families.at(i).assign(result,actualMask,state);
   }
 };
 }
