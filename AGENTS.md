@@ -339,33 +339,45 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FSR GENERATOR-PARENT ASSIGNMENT CENSUS (2026-11-13).**
-User asked fractions of unique/ambiguous/no-electron-parent FSR cases. All500
-current REC_ECALTRUTH files/100000events audited, without energy/ECAL/fit cuts.
-Saved FSR origin records: 184935 unique100%, 0 ambiguous0%; no
-missing emitter/final-electron indices. SAME198430 selected electron tracks:
-180123 unique selected-FSR records, 0 ambiguous; matches old native-link
-selected-root count exactly. Every saved link/status/index matches replay of the
-generator-copy-chain rule; all500 source identities checked.
+**TRUTH-NORMALIZED ECAL COLLECTION BARS (2026-11-13).**
+User requested fraction/efficiency stacks, adding charged and total-inclusive
+bars, for theta TOTAL widths20/50/100mrad (half10/25/50), phi half200. Read all
+100000 current REC_ECALTRUTH events; common198081/198430 selected tracks have
+unique G4 identity and saved main-electron first ECAL entry.349 missing-entry
+tracks excluded from ALL bars/truth;99988 events retain>=1 track. No fit gate.
 
-IMPORTANT CORRECTION: the third case is untagged GENERATOR PHOTONS, not an
-independently identified FSR population. Its physical-FSR fraction is unknown,
-not a measured0%. There are 2695732 untagged among2880667
-stable generator photon records, mostly decay/other origins; do not equate
-these with missing FSR. No untagged photon-only copy chain reaches a selected
-electron; explicit PDG23 ancestry is absent for selected tracks, so a Z-parent
-requirement cannot close physical completeness. Unique history is not a proof
-of a uniquely observable QED emitter. No physics-completeness claim.
+Five bars and denominators: FSR-tagged neutral/E_F; eBrem-tagged neutral/E_B;
+track-matched electron charged/E_e; neutral-inclusive/(E_F+E_B); disjoint
+charged+neutral total-inclusive/(E_e+E_F+E_B). Photon truth=BIRTH energy including
+converted/absorbed/uncollected photons; electron truth=first ECAL TOTAL energy.
+Ratio of sums. Each coloured percent is reco attributed E/bar truth D, NOT
+purity/composition. Different bar D means heights cannot be summed; stacks
+include other origins and may exceed100%. Green exact main-electron MC; Others
+black without percent; tagged neutral sets overlap. No truth angular matching.
 
-No source/build/install, reconstruction or batch change. H_F remains
-installed1644ae8; existing H0 tuples lack H_F until rerun. The current collection
-gallery now has55PNGs/14sections on localhost8000, with the QED FSR diagram
-as its first section. Window200 remains an analysis
-alternative, default theta±10/phi±200 unchanged. Four-way fit selection and
-population validation remain outstanding.
+USER-CHOSEN upper2% charged-energy trim: one global76.59788360595702GeV threshold,
+removing3855/192711 charged clusters; neutral cut stays55.75722694396976GeV.
+Truth denominators/cohort unchanged by cuts. Raw charged max5701.73GeV, raw result
+retained. Charged cut also removes genuine high-energy responses. Neutral union
+counts each cluster once; charged uses pre-PFO track links, no angular gate.
+22 after-ECAL brems records excluded from upstream truth; soft photons lacking
+unique MC birth still enter truth D but cannot gain a dedicated MC contribution.
 
-[Definitions, counts, checks and limits](agents_record/2026-11-13-fsr-generator-assignment-census.md).
-[Complete outgoing window200 status](agents_record/2026-11-13-agents-before-fsr-assignment-audit.md).
-[Window200 collection study](agents_record/2026-11-13-neutral-window200-collection.md).
-[H_F implementation/install](agents_record/2026-11-13-independent-fsr-only-hypothesis.md).
-Artifacts: TrackingPerformanceStudies/fsr_generator_assignment_audit_20261113/.
+FSR target recovery in neutrals32.23/35.74/38.91%; eBrem21.28/21.63/21.70%.
+Charged stack102.25% (main92.7% + radiation/others); neutral stack38.24/39.88/41.15%;
+total stack91.93/92.19/92.39%. Not old resolved-neutral-denominator percentages.
+Origin-specific charged/neutral recovery also saved to avoid denominator confusion.
+All500 source identities,61253 legacy neutral checks, truth sums, unique keys,
+component sums, nested windows and charged+neutral=total checked; all3plots reviewed.
+
+Three new panels replace four superseded absolute-energy budget copies (archived
+unchanged);20mrad keeps direct_pre_ecal_neutral_window_energy_budget.png URL.
+Other source images and earlier per-event control preserved; gallery details in
+record. No reconstruction/build/install/card/batch change. H_F remains1644ae8;
+H0 production lacks H_F until rerun. Four-way selection/population validation
+remain outstanding; default neutral theta remains half10mrad.
+
+[Definitions, full checks, results and gallery](agents_record/2026-11-13-truth-normalized-ecal-collection.md).
+[Complete outgoing status](agents_record/2026-11-13-agents-before-truth-normalized-ecal.md).
+[FSR ancestry census](agents_record/2026-11-13-fsr-generator-assignment-census.md).
+Artifacts: TrackingPerformanceStudies/ecal_truth_collection_widths_20261113/.
