@@ -339,35 +339,32 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEUTRAL COLLECTION ±200/±200 mrad STUDY (2026-11-13).**
-User requested efficiencies, purity and energy components for a wider window.
-Analysis only: all100000 current REC_ECALTRUTH events/198430 selected tracks;
-phi half-width200mrad, theta10/50/200. Union over selected electrons counts each
-neutral once; no BP/GSF-success gate. Same fixed55.757GeV energy cap as prior
-upper2%-trim study; no re-percentile, reconstruction, refit or default change.
+**FSR GENERATOR-PARENT ASSIGNMENT CENSUS (2026-11-13).**
+User asked fractions of unique/ambiguous/no-electron-parent FSR cases. All500
+current REC_ECALTRUTH files/100000events audited, without energy/ECAL/fit cuts.
+Saved FSR origin records: 184935 unique100%, 0 ambiguous0%; no
+missing emitter/final-electron indices. SAME198430 selected electron tracks:
+180123 unique selected-FSR records, 0 ambiguous; matches old native-link
+selected-root count exactly. Every saved link/status/index matches replay of the
+generator-copy-chain rule; all500 source identities checked.
 
-FSR resolved-neutral energy acceptance49.85/60.19/67.46%; FSR dominated-cluster
-count acceptance35.89/49.26/61.47%. eBrem energy88.37/90.08/90.27%. Combined
-FSR+eBrem energy purity63.10/63.56/61.76%; Others share0.50/1.49/5.53%.
-Mean neutral GeV/track3.2064/3.4499/3.7181. Wider theta gains FSR but also Others;
-no recoil-performance inference. Efficiency denominators include only eligible
-resolved neutrals at all angles, not merged charged clusters or missing photons.
+IMPORTANT CORRECTION: the third case is untagged GENERATOR PHOTONS, not an
+independently identified FSR population. Its physical-FSR fraction is unknown,
+not a measured0%. There are 2695732 untagged among2880667
+stable generator photon records, mostly decay/other origins; do not equate
+these with missing FSR. No untagged photon-only copy chain reaches a selected
+electron; explicit PDG23 ancestry is absent for selected tracks, so a Z-parent
+requirement cannot close physical completeness. Unique history is not a proof
+of a uniquely observable QED emitter. No physics-completeness claim.
 
-Every bar divides by all selected tracks. Green=exact selected main-electron MC
-index; all other electron descendants/origins/unknown join black Others. Tagged
-FSR/eBrem bars use any positive native category weight and overlap. Count-efficiency
-bars instead require>50% category weight. Native MC links label origins; only
-reconstructed angles select the collection window. All500 source identities,
-original10/50 masks/aggregates and exact-main10 component reproduce. New200
-cluster keys unique; components and normalization checked; all3plots reviewed.
+No source/build/install, reconstruction, batch or gallery change. H_F remains
+installed1644ae8; existing H0 tuples lack H_F until rerun. The current collection
+gallery retains54PNGs/13sections on localhost8000; window200 remains an analysis
+alternative, default theta±10/phi±200 unchanged. Four-way fit selection and
+population validation remain outstanding.
 
-Three new PNGs extend existing collection sections, preserving all59 earlier
-PNG/PDFs. Gallery verification is in the durable record. Current H_F installation
-remains1644ae8; existing H0 tuples lack H_F until a BP rerun. Automatic four-way
-selection and population validation remain outstanding. Default theta remains
-±10mrad; do not silently promote the wider window.
-
-[Definitions, results, checks and gallery](agents_record/2026-11-13-neutral-window200-collection.md).
-[Complete outgoing H_F status](agents_record/2026-11-13-agents-before-neutral-window200.md).
+[Definitions, counts, checks and limits](agents_record/2026-11-13-fsr-generator-assignment-census.md).
+[Complete outgoing window200 status](agents_record/2026-11-13-agents-before-fsr-assignment-audit.md).
+[Window200 collection study](agents_record/2026-11-13-neutral-window200-collection.md).
 [H_F implementation/install](agents_record/2026-11-13-independent-fsr-only-hypothesis.md).
-Artifacts: TrackingPerformanceStudies/pre_ecal_window_200mrad_20261113/.
+Artifacts: TrackingPerformanceStudies/fsr_generator_assignment_audit_20261113/.
