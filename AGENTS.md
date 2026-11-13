@@ -339,6 +339,15 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
+**BP CARD/BATCH NEUTRAL WINDOW BASELINE (2026-11-13).** User selected theta
+half-window 25 mrad (50 mrad total), with phi half-window 200 mrad unchanged.
+The maintained card and shared shell/Python batch helpers now use/freeze these
+defaults; both Higgs wrappers inherit them. Explicit overrides remain supported.
+Compiled property default stays 10 mrad; no build/install or reconstruction rerun.
+Existing prepared cards/manifests and plots retain their original windows.
+All 66 batch tests pass, including card/direct-helper/all-wrapper defaults and
+override checks. [Change and verification](agents_record/2026-11-13-bp-theta25-baseline.md).
+
 **ECAL COLLECTION PANELS AT THETA ABSOLUTE LIMITS5/25/50/100/200mrad (2026-11-13).**
 User requested updated first3 panels and then2 wider additions. Plots show ONLY
 |deltaTheta|<=5/25/50/100/200 and |deltaPhi|<=200mrad, no full-width annotation.
@@ -369,8 +378,9 @@ visually reviewed. Generator-tagged FSR completeness/recoil validation not claim
 Gallery56PNGs/14sections/exact-once atlocalhost8000, sameailogin002PID443262.
 New2PNG/pageHTTP200 and source/local/served hashes match; all62 priorPNG/PDFs
 unchanged. Prior3 replacement images and earlier budgets remain archived.
-No compiled code/build/install/card/batch changes; default reconstruction window
-still half10/phi200. H_F remains installed1644ae8; oldH0 production lacks H_F
+That plot update made no compiled code/build/install/card/batch changes; the
+subsequent card/batch baseline is half25/phi200 as recorded above. H_F remains
+installed1644ae8; oldH0 production lacks H_F
 until rerun. Automatic four-way selection/population validation outstanding.
 
 [Additional100/200absolute windows and checks](agents_record/2026-11-13-ecal-bars-extended-theta.md).

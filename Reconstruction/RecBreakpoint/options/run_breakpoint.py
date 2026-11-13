@@ -174,8 +174,8 @@ fit.LossStateMode = "Persistent6D"
 # Its finite innovation chi2 excludes the diffuse-consuming coordinate; it is
 # NOT an absolute likelihood comparable with Gaussian-prior fits.
 fit.DiffuseAugmentedRTS = os.environ.get("BP_DIFFUSE_AUGMENTED_RTS", "1") == "1"
-# Reconstructed hit-supported neutral collection, also used by the optional KF measurement.
-fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "10"))
+# Angular half-windows: theta +/-25 mrad (50 mrad total), phi +/-200 mrad.
+fit.NeutralLossThetaWindowMrad = float(os.environ.get("BP_NEUTRAL_THETA_MRAD", "25"))
 fit.NeutralLossPhiWindowMrad = float(os.environ.get("BP_NEUTRAL_PHI_MRAD", "200"))
 # Per-cluster sigma_E [GeV] = a*sqrt(E [GeV]) + c*E [GeV]; independent cluster
 # variances are added. These are provisional resolution assumptions.

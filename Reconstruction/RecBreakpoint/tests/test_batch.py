@@ -37,6 +37,8 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(job['nevt'], 200)
             self.assertEqual(job['controls']['BP_SELECT_TRUTH_PRODUCTION_ELECTRONS'], '1')
             self.assertEqual(job['controls']['BP_LOCATION_SCAN_SETUPS'], '')
+            self.assertEqual(job['controls']['BP_NEUTRAL_THETA_MRAD'], '25')
+            self.assertEqual(job['controls']['BP_NEUTRAL_PHI_MRAD'], '200')
             self.assertIn('genalg.GenTools = ["StdHepRdr"]', (carddir/'sim.py').read_text())
             self.assertIn("'BP_SELECT_TRUTH_PRODUCTION_ELECTRONS': '1'", (carddir/'breakpoint.py').read_text())
             self.assertFalse((carddir/'submitted.json').exists())
@@ -110,6 +112,37 @@ class BatchTest(unittest.TestCase):
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             disabled=json.loads((self.repo/off_output/'runcards'/sample/'job.json').read_text())
             self.assertEqual({k:disabled['controls'][k] for k in off},off)
+
+    def test_neutral_window_defaults_and_override_in_card_and_wrappers(self):
+        import ast
+        (self.repo/'inputs/rec-higgs-1.root').write_bytes(b'planning fixture')
+        text = (REPO/'Reconstruction/RecBreakpoint/options/run_breakpoint.py').read_text()
+        nodes = [node for node in ast.parse(text).body if isinstance(node, ast.Assign)
+                 and any(isinstance(t, ast.Attribute) and isinstance(t.value, ast.Name)
+                         and t.value.id == 'fit' and t.attr in
+                         ('NeutralLossThetaWindowMrad', 'NeutralLossPhiWindowMrad')
+                         for t in node.targets)]
+        for override, theta in [({}, '25'), ({'BP_NEUTRAL_THETA_MRAD': '50'}, '50')]:
+            fit = types.SimpleNamespace()
+            with patch.dict(os.environ, override, clear=True):
+                exec(compile(ast.Module(body=nodes, type_ignores=[]), '<neutral-window>', 'exec'),
+                     {'fit': fit, 'os': os})
+            self.assertEqual(fit.NeutralLossThetaWindowMrad, float(theta))
+            self.assertEqual(fit.NeutralLossPhiWindowMrad, 200.)
+            output = 'window_direct_' + theta
+            self.prepare(OUTPUT_TUPLEPATH=output, **override)
+            self.assertEqual(self.manifest(output)['controls']['BP_NEUTRAL_THETA_MRAD'], theta)
+            for script, sample in [('subbreakpointjobs.sh', 'barrel-12'),
+                                   ('subbreakpointhiggsscanjobs.sh', 'higgs-1')]:
+                output = script + '_window_' + theta
+                env = dict(self.env, STAGES='breakpoint', SAMPLE_REGION='barrel',
+                           OUTPUT_TUPLEPATH=output, **override)
+                result = batch.subprocess.run(['bash', str(self.repo/script)], env=env,
+                                              capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                job = json.loads((self.repo/output/'runcards'/sample/'job.json').read_text())
+                self.assertEqual(job['controls']['BP_NEUTRAL_THETA_MRAD'], theta)
+                self.assertEqual(job['controls']['BP_NEUTRAL_PHI_MRAD'], '200')
 
     def test_floating_fsr_switch_is_validated_and_frozen(self):
         self.prepare(OUTPUT_TUPLEPATH='fsr_on', BP_BEAM_SPOT_FSR_LOSS='true')

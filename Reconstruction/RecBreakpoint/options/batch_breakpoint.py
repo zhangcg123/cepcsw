@@ -186,6 +186,8 @@ def prepare():
         controls.setdefault(key, value)
     controls.setdefault('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering')
     controls.setdefault('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronPhoton')
+    controls.setdefault('BP_NEUTRAL_THETA_MRAD', '25')
+    controls.setdefault('BP_NEUTRAL_PHI_MRAD', '200')
     for key in ('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
                 'BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
                 'BP_BEAM_SPOT_FSR_LOSS',

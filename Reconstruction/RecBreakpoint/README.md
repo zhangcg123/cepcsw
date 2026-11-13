@@ -1223,7 +1223,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | SigmaLogLoss | 0.001 | Positive finite Gaussian-prior sigma shared by ordinary, free-loss and truth-prior fits; retained in every optimizer trial and final refit |
 | LossStateMode | Persistent6D | Compatibility property for prepared cards; only Persistent6D is accepted. TruthOverride is a separate bool |
 | DiffuseAugmentedRTS | true | Independent one-interval, flat-prior 6D KF/RTS fit; ignores SigmaLogLoss |
-| NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | 10, 200 | Positive angular half-windows about input `AtCalorimeter` direction for reconstructed neutral-cluster selection |
+| NeutralLossThetaWindowMrad, NeutralLossPhiWindowMrad | Compiled: 10, 200; maintained card/batch: 25, 200 | Positive angular half-windows [mrad] about input `AtCalorimeter` direction for reconstructed neutral-cluster selection; card/batch theta total width is 50 mrad |
 | NeutralLossStochasticError, NeutralLossConstantError | 0.011, 0.004 | Provisional per-cluster `sigma_E = a sqrt(E/GeV) GeV + c E`; selected cluster variances add independently |
 | FreeLossFit | true | Normalized-likelihood optimization of the Gaussian loss-prior center for one Persistent6D interval; input KF fallback on failure/unsupported interval |
 | ChargedEcalMeasurement | true | Two cumulative charged-stage RTS families; ChargedEcalEnergyMode chooses electron-only or total-energy treatment |
@@ -1634,6 +1634,7 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 | MEMORY_MB | 5000 | Scheduler memory request |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
+| BP_NEUTRAL_THETA_MRAD / BP_NEUTRAL_PHI_MRAD | 25 / 200 | Neutral-collection angular half-windows [mrad]; theta total width is 50 mrad; frozen into every newly prepared manifest/card, with explicit overrides preserved |
 | CEPCSW_BREAKPOINT_DIR | script directory | Project worktree |
 
 For the default full barrel chain, simulation produces `sim-barrel-SEED.root`;
