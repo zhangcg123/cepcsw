@@ -368,8 +368,11 @@ for per-track selection studies; calibrate improvement requirements before
 selecting models. No physics-validation claim, threshold or policy is implemented.
 
 Per-track score plots remain on the unchanged localhost8000 gallery (last
-verified42PNGs/12sections,PID443262,ailogin002). They use126828comparable tracks
+verified46PNGs/12sections,PID443262,ailogin002). They use126828comparable tracks
 and each track's OWN >1GeV radiation categories; they do not yet include H0.
+Four individual Q distributions and their overlay now show S_beta-S_betaF,
+with full finite tails retained and no significance calibration or score cut.
+[Per-track Q plots](agents_record/2026-11-13-per-track-q-category-plots.md).
 [Implementation, schema, checks and limits](agents_record/2026-11-13-always-null110-reference.md).
 [Full outgoing status, plotting evidence and protected laws](agents_record/2026-11-13-agents-before-always-null110.md).
 [Per-track score study](agents_record/2026-11-13-per-track-fit-score-distributions.md).
