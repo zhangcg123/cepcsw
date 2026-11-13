@@ -339,43 +339,43 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEUTRAL ENERGY PURITY VS RECONSTRUCTED METRICS (2026-11-14).**
-Completed on all 100,000 current REC_ECALTRUTH inputs, using the same 198,081
-truth-covered selected production-electron tracks and fixed neutral 55.757 GeV
-cap as the energy bars. Baseline half-windows theta25/phi200 mrad:55,391 unique
-neutral clusters in38,749events. Wide200/200 diagnostic:91,482clusters/48,721events.
-No fit-validity/recoil gate, PFA rerun or truth-angle matching. Native MC weights
-label FSR/eBrem/main/Others; metric values/assignment use reconstruction only.
-Purity is SUM E*(FSR+eBrem fraction)/SUM full neutral E, not mean cluster purity.
+**NEUTRAL PURITY: FSR AND EBREM SEPARATELY (2026-11-14).**
+User requested separate origins for the same reconstructed-metric study. Added
+11plot pairs from the EXACT SAME validated parent metric cache:100000inputs,
+198081truth-covered tracks,55391baseline/91482wide unique neutral candidates.
+Baseline theta/phi half-windows25/200mrad, neutral55.757GeV cap. No new ROOT read,
+fit-validity gate, event/category split or truth-species cluster preselection.
+For BOTH components D=full neutral energy; numerators E*FSR fraction and
+E*eBrem fraction. Mixed clusters stay; fractions add to prior combined purity.
+These are energy composition fractions, not photon collection efficiencies.
 
-Main result: bad photon purity is concentrated near the reconstructed electron.
-Charged-cluster distance <50/50–150/>=150 mm gives47.45/71.01/87.54% purity;
-main-electron fractions52.29/28.43/9.08%. Track-ECAL distance <50 mm gives32.77%
-purity. Charged reference available48,321clusters:69.23%; missing7,070:41.66%
-and58.16%main energy. Inclusive purity63.31%, main35.84%, Others0.85%.
-Isolation=Eneutral/(Eneutral+other ECAL E in100mrad opening cone), excluding
-candidate and both main charged clusters. It is much weaker than distance:
-isolation>=0.9 gives63.51% inclusive purity. Cut tradeoffs use the SAME
-charged-reference-available cohort: distance>=25mm gives71.02%/98.86% retained
-collected photon E; >=50 gives75.04%/85.57%; >=100 gives82.01%/44.41%.
-Isolation>=0.5 gives70.28%/89.56%. No threshold adopted; retention is relative
-already-collected FSR+eBrem energy, not generator birth-energy efficiency.
+FSR/eBrem shares: inclusive22.97/40.34%; charged distance<50mm14.16/33.29%,
+50–150mm29.93/41.09%,>=150mm37.24/50.30%. Isolation<0.5 gives10.46/47.67%;
+>=0.9 gives29.35/34.16%: combined purity hid opposite composition trends.
+Missing charged-reference group7070clusters has4.53/37.13% vs available48321
+with28.01/41.22%. Same100mrad local ECAL cone/candidate+main-cluster exclusions,
+3Dmetric distances including depth, nearest angular leg in overlapping windows.
 
-All500 source identities/energies and six cached window masks checked natively.
-Baseline energy/four origins reproduce old bar numerators at1e-12. Fresh source1
-MC reclassification reproduces200neutral rows/fractions EXACTLY. Components
-close, unique candidate/bin counts checked;300source-block resamplings supply
-pointwise16/84 errorbars, >=30clusters per shown bin. Distance profiles display
-0–500mm; complete tails saved. Euclidean positions include shower-depth effects.
-No calibrated purity/causal inference or recoil-improvement claim. Main-electron
-neutral energy may legitimately restore BP's total calorimeter sum; photon
-purity alone does not justify removing it or adding eBrem again to corrected GSF.
+Target-specific cut tradeoffs use the common charged-reference-available cohort:
+distance>=50mm retains89.36%FSR/82.99%eBrem with31.71/43.33%composition;
+isolation>=0.9 retains84.65/65.13% with32.89/37.23%composition. Retention D is
+baseline already-collected TARGET energy, not photon birth energy. No cut or
+hypothesis selector adopted; no recoil/physics improvement claim. Parent caveat
+remains: main-electron neutral energy may restore BP's total C+N measurement;
+eBrem addition may double-count energy already recovered by GSF.
 
-Eight new plots are live in the final gallery section, localhost8000,
-ailogin002 PID443262:64PNGs/15sections/exact-once,16PDFs. Page/all8newPNGsHTTP200,
-source/local/served hashes match. All64previous PNG/PDFs preserved unchanged.
-No algorithm/card/build/install/production submission changes. H0_F/theta25
-batch was recreated earlier; its later queue state was not checked here.
-Artifacts: TrackingPerformanceStudies/neutral_purity_metrics_20261113/.
-[Definitions, results, validation and limits](agents_record/2026-11-14-neutral-purity-reconstructed-metrics.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-neutral-purity-metrics.md).
+Four shared-axis profiles, individual angular/joint-distance-isolation maps
+and retention curves per species, grouped charged-reference control. Common
+0–100%map scales, profiles0–500mm,>=30clusters per shown bin/cell. Per-component uncertainties from same300source-block resamplings. Every profile/map
+mean adds back to parent at1e-12; all counts match and target retentions agree at1e-12.
+All8parent plot-pair hashes unchanged. Parent native500-source/geometry and
+fresh source1MC-fraction checks remain applicable; this is pure post-processing.
+
+Gallery now75PNGs/16sections/exact-once,27PDFs, localhost8000/ailogin002PID443262.
+All80previous PNG/PDFs preserved; page/all11newPNGsHTTP200 and source/local/served
+hashes match. No source/card/library/install/production changes. BP tuple files
+are not required. The recreated H0_F/theta25 campaign's queue state was not
+checked in this study. Artifacts:TrackingPerformanceStudies/neutral_purity_species_20261114/.
+[Definitions, figures, results, validation](agents_record/2026-11-14-neutral-purity-species.md).
+[Combined parent study](agents_record/2026-11-14-neutral-purity-reconstructed-metrics.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-neutral-purity-species.md).
