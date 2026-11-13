@@ -339,33 +339,35 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FOURTH BP HYPOTHESIS H_F IMPLEMENTED (2026-11-13).**
-User requested an independent FSR-only model without a material breakpoint.
-The existing default-ON FSR switch now also writes `fsr_only_110_*` for every
-processed/selected track before truth matching. Native5D tracker/beam plus one
-nonnegative FSR excess; no material interval, prior-center optimization or scan.
-It exports its OWN electron/photon p4, joint covariance and normalized score.
-Same configured observations as H0: C+N for ElectronPhoton with neutrals, else C.
-The existing material-FSR110 always sums N even in ElectronOnly; avoid comparing
-that nondefault configuration as common-observation hypotheses.
+**NEUTRAL COLLECTION ±200/±200 mrad STUDY (2026-11-13).**
+User requested efficiencies, purity and energy components for a wider window.
+Analysis only: all100000 current REC_ECALTRUTH events/198430 selected tracks;
+phi half-width200mrad, theta10/50/200. Union over selected electrons counts each
+neutral once; no BP/GSF-success gate. Same fixed55.757GeV energy cap as prior
+upper2%-trim study; no re-percentile, reconstruction, refit or default change.
 
-H0/H_F/H_beta/H_betaF now supply the four model alternatives. No automatic
-choice, penalty or new threshold is promoted. The prior two-model Q-cut study
-remains exploratory; no physics-validation claim from these focused checks.
-Old500 H0 tuples are complete but lack H_F; a BP rerun is required to add it.
-No new batch or gallery changes were made. Retained REC_ECALTRUTH remains input;
-old REC_TPCFIX remains deleted.
+FSR resolved-neutral energy acceptance49.85/60.19/67.46%; FSR dominated-cluster
+count acceptance35.89/49.26/61.47%. eBrem energy88.37/90.08/90.27%. Combined
+FSR+eBrem energy purity63.10/63.56/61.76%; Others share0.50/1.49/5.53%.
+Mean neutral GeV/track3.2064/3.4499/3.7181. Wider theta gains FSR but also Others;
+no recoil-performance inference. Efficiency denominators include only eligible
+resolved neutrals at all angles, not merged charged clusters or missing photons.
 
-19 compiled and65 batch tests pass; five unique Higgs events/ten selected tracks
-have same-input native A/B checks, boundary/neutral/failure/OFF coverage and
-verbose states/covariances. Every existing field agrees exactly. H_F matches
-all19 existing zero-material FSR fields on two tracks and survives the known
-truth-hook failure. Package-only default installation and native replay checked.
-Historical gun hard-loss11/16/17 fixtures remain unavailable; population and
-four-way selection validation remain outstanding.
+Every bar divides by all selected tracks. Green=exact selected main-electron MC
+index; all other electron descendants/origins/unknown join black Others. Tagged
+FSR/eBrem bars use any positive native category weight and overlap. Count-efficiency
+bars instead require>50% category weight. Native MC links label origins; only
+reconstructed angles select the collection window. All500 source identities,
+original10/50 masks/aggregates and exact-main10 component reproduce. New200
+cluster keys unique; components and normalization checked; all3plots reviewed.
 
-[Schema, evidence, install hash and limitations](agents_record/2026-11-13-independent-fsr-only-hypothesis.md).
-[Complete outgoing Q-cut status](agents_record/2026-11-13-agents-before-independent-fsr-only.md).
-[Previous Q-cut study](agents_record/2026-11-13-q-cut-recoil-study.md).
-[H0 contract](agents_record/2026-11-13-always-null110-reference.md).
-[All FSR models and tuple use](Reconstruction/RecBreakpoint/docs/beamspot-fsr-loss.md).
+Three new PNGs extend existing collection sections, preserving all59 earlier
+PNG/PDFs. Gallery verification is in the durable record. Current H_F installation
+remains1644ae8; existing H0 tuples lack H_F until a BP rerun. Automatic four-way
+selection and population validation remain outstanding. Default theta remains
+±10mrad; do not silently promote the wider window.
+
+[Definitions, results, checks and gallery](agents_record/2026-11-13-neutral-window200-collection.md).
+[Complete outgoing H_F status](agents_record/2026-11-13-agents-before-neutral-window200.md).
+[H_F implementation/install](agents_record/2026-11-13-independent-fsr-only-hypothesis.md).
+Artifacts: TrackingPerformanceStudies/pre_ecal_window_200mrad_20261113/.
