@@ -206,6 +206,13 @@ and explicit failed/NaN results when unavailable. Existing endpoint families
 are unchanged; no online hypothesis selector is installed. The schema and
 mechanical gate are in agents_record/2026-11-13-always-null110-reference.md.
 
+Native ECAL cluster MC weights inherit 1D crystal-bar/U–V projection fractions
+through energy splitting. They are not independently validated spatial 3D
+photon-energy purity. The reported 6.6% single-photon threshold fraction and
+isolation/identification results describe this native map; physical purity
+claims remain provisional. See
+`agents_record/2026-11-15-ecal-truth-weight-audit.md` for evidence and limits.
+
 Historical evidence, resolved incidents, exact experiment tables, runbooks,
 and superseded decisions live under `agents_record/`. Load historical records
 only for regression evidence, design rationale, experiment comparison, or
@@ -342,32 +349,32 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ISOLATION R500/R1000 AND ANGULAR DEFINITION (2026-11-15).**
-User requests largercones andclarifiesangle. Alpha is3Dgeometricopeningangle
-atnominalIP(0,0,0):acos(rC·rj/(normrC*normrj)),r=IP->reconstructedECALcluster
-CENTRE. UsesECALpositions,NOTfitted/PFO4momenta,localincidencedirection orsurface
-arclength. Coneaxis is candidateIPpointingray; R ishalf-openingangle.
-500mrad=.5rad28.65deg,1000mrad=1rad57.30deg. Charged electronalwaysincluded.
+**ECAL TRUTH-WEIGHT INTERPRETATION AUDIT (2026-11-15).**
+The user questions the low photon purity. Read-only source inspection confirms
+that U/V half-cluster splitting rescales energies while copying parent MC
+fractions, then 3D cluster truth energy-averages those projected maps. This can
+assign mixed labels to spatially separate clusters. Our exporter preserves the
+native map; successful persistence checks do not validate physical 3D purity.
 
-FreshRECread ONLYclusterenergy/position/hitcount,all500currentfiles100000events.
-Same55391candidatekeys/3631individual-photon>95%labels;25/200mradcandidate
-collectionwindow/55.757GeVupper2%cap fixed. OnlyISOLATIONneighbourconeexpanded;
-allvalidECALneighbours includedwithoutnewtrim. No simulation/reconstruction/
-refit. EveryoldR300/R400value exact,allI1000<=I500<=I400. Sourceidentitiesfixed.
+Fresh focused checks: 8 clusters/7 events/4 current REC files reproduce cached
+individual-photon fractions with no bad indices, normalization or ambiguous
+root attribution found. 39,740 raw end hits/19,870 paired cells have identical
+MC vectors at both ends; weight sums within [0.99,1.01]. These diagnostic events
+are not representative population fractions. Controlled Python formula examples
+show 75%/55% assigned A for a constructed spatially pure A cluster; no native
+simulation or C++ execution was used to establish this example.
 
-Pearsonr/Spearmanrho: R300 .274913/.397462,R500 .279248/.399666,R1000 .276576/
-.393122. Correlationremainsabout.28/.40,notstrong. No newselection/threshold,
-recoilimprovement orphysicsvalidation claim. All8oldradiusstats unchangedexact.
-Nativeacos/neighbourEsums/counts on2examplesbothradii,scalarPearson,exactkeys,
-oldprofiles/fullhistcounts/source/hashchecks pass;3scriptscompile,4rendersreviewed.
+The four examined files lack original ECAL simulation-hit/contribution truth
+and synthetic pre-ECAL 3D hits have no independent per-hit MC links. Actual bias
+is unquantified. The earlier 3631/55391=6.6% and isolation correlations remain
+native-map results; physical clean-cluster/photon-ID conclusions are provisional.
+Generator FSR/G4 birth truth is distinct from this spatial attribution problem.
 
-Two newdirectpuritymapsR500/R1000; correlation-vs-R extendedto1000 and
-cleanfraction-vs-I nowincludes25/50/100/300/500/1000. Formula/IPangle andcharged
-inclusionprinted. Profileordinatefractionindividually>95%,NOTmeanpurity;
-showbinsN>=30/allrawcountsretained. Gallery75PNGs/17sections/27PDFs,94oldimages
-fixed,4filesreplaced,4added. Latestcorrelationsection7plots;earlier15sections
-unchanged;removedvariantsstayabsent. No source/card/build/install/default/
-production change. Artifacts:TrackingPerformanceStudies/neutral_iso_large_radius_20261115/.
-[Geometry definition, results and checks](agents_record/2026-11-15-isolation-large-radii.md).
-[Charged-electron inclusion rule](agents_record/2026-11-15-isolation-include-electron.md).
-[Complete outgoing focus](agents_record/2026-11-15-agents-before-isolation-large-radii.md).
+Next validation requires independent spatial simulation-contribution truth,
+then comparison on controlled and representative events. No source/PFA,
+card/build/install/default/production change or new simulation is authorized by
+this audit. Latest two gallery sections receive interpretation warnings only;
+all 102 image files and other sections/removals are preserved. Artifacts:
+TrackingPerformanceStudies/ecal_truth_weight_audit_20261115/.
+[Evidence, focused checks and limits](agents_record/2026-11-15-ecal-truth-weight-audit.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-ecal-truth-weight-audit.md).
