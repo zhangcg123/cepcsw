@@ -339,35 +339,38 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ALL >95%-SINGLE-PHOTON NEUTRALS: ISOLATION/DISTANCE (2026-11-14).**
-User asks to truth-select ALL clean neutrals and inspect reconstructed isolation
-and distance to electron. ONE tagged Z->ee photon and its descendants must
-contribute >95%of full cluster response; never sum different photons/origins.
-Use verified currentREC-derived55391candidate cache/all500sources/100000events.
-No new REC read/reconstruction. All500sizes/mtimes still match. Scope unchanged:
-25/200mrad half-windows,55.757GeVupper2%cap. No rec-cut,eventcategory,fit/recoil
-or development/evaluation split. 3631selected (1640FSR/1991eBrem),3306events/
-3327associatedtracks; exact previoustruthlist,noneexactly95%. IDs/fullrows saved.
-NativeMCweights are response proxies; identifiable-root/matching limits remain.
+**CLEAN NEUTRAL PHOTON IDENTIFICATION; GALLERY CLEANUP (2026-11-14).**
+User requests remove four purity-study gallery sections and explain the intended
+objective. Remove conditional-origin11plots,eventcategory-distance6plots,
+single-photon selection4plots and truth-selected geometry4plots. Preserve all
+analysis/source originals and archive25servedPNGs/matchingPDFs outside gallery.
+Retain other15sections/62PNGs/14PDFs unchanged; all olderremovedsections stay absent.
+Archive/manifest/hash/HTTPchecks:TrackingPerformanceStudies/neutral_purity_gallery_cleanup_20261114/.
+No newanalysis/source/card/fit/build/install/default/production change.
 
-I300 includes ALLother validpreECALclusters, including mainchargedclusters;
-exclude only candidate. Distance is3Dclusterposition-to-associatedBaselineKF
-trackECALentrance, inmm; includes showerdepth, not common-surfaceprojection.
-MedianI300/distance: FSR .3651/207.09mm,eBrem .5022/195.93mm;51760remaining
-neutrals .1507/101.30mm. Allclean distance30.82–466.13mm. Cleanphotons need not
-haveInear1 because nearbyelectronenergy contributes to denominator. Bothold
-cuts(d>=300mm,I>=.7)retain238/3631=6.555%; descriptiveall-samplecheck, NOT new
-cutoptimization/held-outresult. Previous held-out48/61=78.69%passing and96.12%
-meanpurity describe DIFFERENT statistics; no95%-passing classifier established.
+Objective: a reconstructed-level way to identify clean neutral photon clusters
+associated with selected Z->ee electrons, then assess safe photon recovery.
+Truth defines each cluster's target: >95%of FULL cluster response from ONE
+original photon and its descendants. Different photon identities remain
+separate even within one origin; FSR+eBrem sums cannot certify clean photons.
+Main-electron-dominated neutral showers are background. Native MC weights are
+response-attribution proxies, not exact deposited-energy truth.
 
-Four plots: normalizedisolation andtrackdistance shapes(cleanFSR,cleaneBrem,
-remaining), separatecleanFSR/eBrem2Dmaps withcommonbinning/colourscale. Oldcut
-lines are guidesonly. Full0–600mm/0–1displays includeallcandidates. Independent
-selectedrow/sourceidentity/median/histclosure/shape/hashchecks pass;4renders
-reviewed. Gallery19sections/87PNGs/39PDFs after publication;118priorimages and
-18priorsections preserved. Alluser-removedsections(includingradius)stayabsent.
-No source,card,fit,build,install,default,production orrecoiltest/change.
-Artifacts:TrackingPerformanceStudies/pure_photon_neutral_geometry_20261114/.
-[Definitions, distributions, limitations and checks](agents_record/2026-11-14-pure-neutral-geometry.md).
+Use truth to diagnose/evaluate purity; eventual selection must use reconstructed
+measurements. Isolation and distance are proposed discriminants, not definitions
+of purity. First compare clean and contaminated clusters, then evaluate purity
+AND clean-photon retention. A high mean purity is not the fraction of candidates
+individually passing95%. A cut rejecting mostcleanphotons does not settle the
+identification objective. No new cuts/classifier or proposed implementation is
+approved by this cleanup request. Highisolation alone does not guarantee
+internalcleanliness; nearbyelectronenergy can lower inclusiveisolation for a
+cleanphoton. Distance definitions must distinguish 3Ddepth from surfaceprojection.
+
+Prior full-sample evidence remains archived:55391eligible currentREC candidates,
+3631individual-photon>95%(1640FSR/1991eBrem); same25/200mradwindow/55.757GeVcap.
+All500sourceidentities checked; no rec-cut/split in cleangeometry. Detailed
+results/limitations remain in linkedrecords; their plots are no longer served.
+[Cleanup and clarified objective](agents_record/2026-11-14-purity-gallery-cleanup.md).
+[Prior pure-neutral distributions](agents_record/2026-11-14-pure-neutral-geometry.md).
 [Prior individual-photon truth and reconstructed search](agents_record/2026-11-14-single-photon-purity.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-pure-neutral-geometry.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-purity-gallery-cleanup.md).
