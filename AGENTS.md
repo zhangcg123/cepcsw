@@ -350,34 +350,41 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEUTRAL COMPONENTS BY R1000 ISOLATION (2026-11-15).**
-User requests component bars at different isolation values. Two new plots use
-all 55,391 fixed eligible neutral candidates from 500 current REC files/100,000
-inputs. Existing native photon/MC and R1000 caches reused; all source file
-sizes/mtimes checked. No new REC processing, reconstruction or refit.
+**FULL-ANGLE ECAL PHOTON-RESPONSE ACCOUNTING (2026-11-15).**
+User asks where the apparent missing FSR/eBrem energy is. Fresh read all500
+CURRENT REC_ECALTRUTH files/100000inputs; exact same198081truth-covered tracks,
+99988covered events/birth-energy denominators as prior tables. All4280406pre-ECAL
+clusters inspected, including all charged/neutral owners. No reconstruction,
+refit or simulation. Source sizes/mtimes stable; old25/200neutral and raw matched
+charged sums reproduce on EVERY job. No deleted BP files used.
 
-I1000=E_C/(E_C+sum other E_j), 1000mrad half-angle between nominal-IP rays to
-ECAL centres. All other valid charged/neutral clusters included, electron never
-excluded. Eight disjoint bins [0,.1,.25,.5,.75,.9,.95,.99,1] partition all rows;
-counts 24523/13436/11674/4357/868/142/193/198. Each bar ARITHMETIC MEAN of
-PER-CLUSTER component fractions (not summed-energy ratio). One plot separates
-FSR/eBrem/selected electrons/Others; another photon#1/#2/other tagged photons/
-selected electrons/Others. Individual roots remain separate. Black Others,
-percentages for large coloured components, mean photon#1 fraction above, Nbelow.
+Disjoint response percentages (FSR/eBrem): currentneutral35.7364/21.6285;
+matchedcharged kept23.3200/58.1048; extraeligible neutrals theta25→200phi200
+7.8773/.1143; theta<=200fullphi beyond20010.4219/1.9820; outside theta200fullphi
+9.9495/.1762; othercharged4.3655/10.7491; charged studycap rejected.8635/4.6167;
+neutral studycap rejected5.6358/3.4136. Othertrack/invalid tagged response0.
+ALLrawECALresponse98.1700/100.7853%; signed residual+1.8300/-.7853points.
+No physical loss/energy-conservation/calibration claim from reconstructed response.
 
-For I>=.99, N198: native mean selected-electron fraction89.2511%, FSR.8749%,
-eBrem9.8381%, Others.03584%; largest single tagged photon9.2983%, only3/198>95%.
-High isolation primarily selects electron-attributed neutral candidates in this
-pool, not tagged-photon-dominated ones. No physical misclustering-rate claim.
-User correctly notes simultaneous shared detector responses may be inseparable;
-previous audit established a map-resolution limitation, not erroneous labels.
-Spatial-purity validation remains open; do not assert copied maps are wrong.
+Current25/200 + matchedcharged kept59.0565/79.7333%;1000mrad electron-centred
+collectioncone82.7757/81.9566%; fullangle87.3052/82.0058%. Including othercharged
+originresponse under same frozen charged cap givesfullangle91.6671/92.6808%.
+Neutralcap55.757GeV/chargedcap76.598GeV unchanged. Otherchargedcap extension
+is diagnostic, not production steering. BIRTHenergy denominators include
+conversions/absorptions; numeratorONLYnative photon-attributed measured energy.
+Not purity/per-cluster means, operational recovery or true photon flight angles.
 
-Assertions cover keys, source identities, Iclosure, photon-table max/second/sum,
-component sums/nonnegativity, bin partition and inclusive-mean recovery. Scalar
-profile/count checks pass; renders reviewed. Expected gallery77PNGs/18sections/
-29PDFs: add only2plots/newsection, preserve102oldimages/17sectionobjects andall
-prior removals. No source/card/build/install/default/production changes.
-Artifacts:TrackingPerformanceStudies/neutral_iso_components_20261115/.
-[Definitions, numbers and checks](agents_record/2026-11-15-neutral-components-by-isolation.md).
-[Outgoing status preserved](agents_record/2026-11-15-agents-before-neutral-components-by-isolation.md).
+Independent scalar group/window sums on347175savedrows and4fresh native cases
+pass; all3scripts compile, geometric boundary/wrap checks and2renders pass.
+Othercharged examples include photon-descended positron and alternative track
+of the production electron (not necessarily conversions). eBrem unmatchedbirth
+energy21082.1793GeV/1.7096% is attribution limit, not additional disjoint deficit.
+No original spatial simulation-deposit or HCAL closure; native-map caveat remains.
+
+Two new galleryplots: disjoint fullanglebudget (raw cut tails shown separately)
+and extended-window responses (caps retained). Preserve106oldimages/18sections/
+removals; verified79PNGs19sections31PDFs, same localhost8000 server. No source,
+card/build/install/default/production change. Artifacts:
+TrackingPerformanceStudies/ecal_full_angle_accounting_20261115/.
+[Full definitions, results and checks](agents_record/2026-11-15-full-angle-ecal-photon-accounting.md).
+[Outgoing status preserved](agents_record/2026-11-15-agents-before-full-angle-ecal-photon-accounting.md).
