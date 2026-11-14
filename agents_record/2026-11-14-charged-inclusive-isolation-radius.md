@@ -114,3 +114,24 @@ study/gallery_verification.json. Main independentlychecked110oldimagehashes,
 17unchangedsections and8newcopies, and reviewed allfourfinalrenders. Fulloutgoing
 focus preserved;globalAGENTS prefix unchanged. Only durable docs/status/history
 committed; analysiscode/generatedoutputs remain uncommitted; ROOTinputs untouched.
+
+## Direct native explanation of I=1 low-purity cases
+
+User asked why100%isolation can coexist with lowphotonpurity. In the held-out
+sample, all404I300=1clusters lack a usable mainchargedECALreference;319have
+main-electronfraction>=90%,227>=99%. Meanmain fraction88.897%,photon11.062%.
+NativeRECchecks on(job1,event179,cluster24,track6) and(job3,event4,cluster15,
+track9) confirm chargedPFO carrying the selected electrontrack but zero ECAL
+clusters, plus a separate charge-zero tracklessPFO carrying the candidate ECAL
+cluster. Specifically job3/event4:chargedPFO0tracks[9],ECAL[];neutralPFO25tracks[],
+ECAL[15]. Cluster15E=44.479984GeV,mainfraction99.986684%,FSR0,eBrem0; no other
+validECALcluster within300mrad, so I=1. Its position direction is only0.5626mrad
+in theta/1.5979mrad in phi from the trackECALentrance, despite122.11mm3Ddistance
+(which includes depth). The electron shower itself is the candidate, excluded
+from the cone denominator's neighbor sum. Including charged clusters cannot
+supply an absent separate charged shower. Trackless/neutral-PFO classification
+therefore does not ensure photon origin. Exact upstream clustering/association
+cause is NOT established, and no old PFA/tracking/source was changed. Native
+link evidence/counts saved in study/isolated_main_electron_native_checks.json.
+This supports checking reconstructed track-cluster association quality before
+interpreting veryhighI as a photon tag; no new veto is adopted.

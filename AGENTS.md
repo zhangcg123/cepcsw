@@ -364,7 +364,12 @@ Paired300source-block16/84%intervalsgainvsenergyonly:+3.21–4.01pphighfraction,
 Importanttail:atI>=.9,662held-outclusters haveonly14.06%meanphotonpurity and
 85.88%main-electronfraction; strongerIisNOTmonotonic. No uppercut/veto tuned
 onheld-outtail. Main-electron-dominated neutralcandidates maythemselvesbeisolated;
-exactclustering/associationcause uninvestigated. NewI100saturation4.65%,newI300
+NativeI=1checks nowshow all404held-outcases lack usablechargedECALreference;
+319main>=90%,227>=99%. Two directRECexamples havechargedPFOtrackpresent/ECAL[],
+whileelectron-dominatedshower is in charge-zero tracklessPFO. Job3/event4/
+cluster15 is44.48GeV,99.9867%main,0FSR/eBrem,nootherECALneighbor,thusI=1.
+Candidate's own showerenergy is excluded; exact upstream associationcause
+remainsuninvestigated. EvidenceJSON in study; no PFA/sourcechange. NewI100saturation4.65%,newI300
 1.45%heldout. NineconeE>240GeVoutliercontrols leave selectedsampleunchanged.
 
 All500sourceidentities checkedbefore/after; oldI100reproducesall55391candidates,
