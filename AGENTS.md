@@ -339,56 +339,39 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CONDITIONAL FSR/EBREM NEUTRAL PURITY (2026-11-14).**
-Corrected the separate-species study at the user's request: previous curves
-were composition fractions in one common neutral sample. New species s sample
-requires positive saved MC fraction f_s>0. In each reconstructed-metric bin,
-purity=sum(E*f_s)/sum(E) over that SAME associated-cluster subset. Full energy
-retains contamination; mixed clusters enter both samples. These conditional
-purities do NOT add to combined photon purity. This is truth-conditioned,
-not a reconstruction tag, collection efficiency or calibrated posterior.
+**NEUTRAL ISOLATION AS A RECONSTRUCTED SELECTOR (2026-11-14).**
+User clarified goal:find high-purity neutral clusters using reconstructed
+isolation. Added per-cluster purity-vs-I countdensity (FSR/eBrem/combined) and
+isolation-threshold purity/energy-retention curves. ALL55391eligible baseline
+neutral candidates included, including zero-target clusters; no truth-origin,
+fit-success,event-radiation or charged-reference gate. The previous conditional
+truth-associated purity diagnostics remain available but do not evaluate a
+reconstruction-only selector's contamination. Both definitions are explicit.
 
-Same validated current-REC metric cache:100000inputs,198081truth-covered
-tracks,55391baseline/91482wide neutral candidates; no ROOT reread/BP dependency.
-Baseline theta/phi half-windows25/200mrad, fixed55.757GeV neutral cap and
-reconstructed geometry/isolation unchanged. Distances are3D including depth;
-local100mrad cone excludes candidate/both main charged-cluster sets. Angular
-maps alone use wide200/200. No new metric, fit-validity or event-category cut.
+Same100000currentRECinputs/198081truth-covered selected tracks, theta/phi
+half-windows25/200mrad,fixed55.757GeVcap. Reusedvalidatedmetriccache,noROOTread.
+I=E_N/(E_N+othervalidECALenergy) in100mradcone, excluding candidate and BOTH
+main charged-cluster sets. This exclusion remains a limitation; no silently
+changed isolation definition. Density color is cluster count; white means use
+energy weights. At each cut, purity D=fullenergy of ALL surviving neutrals;
+FSR/eBrem numerators add to combined. Retention D=baseline already-collected
+targetenergy, never photon birthenergy. No truth classifier/cut adopted.
 
-Baseline FSR28501/eBrem45050associated clusters;21359mixed. Inclusive purities
-42.95/48.13%; charged distance<50mm28.67/39.00%,50–150mm49.43/49.11%,
->=150mm62.43/62.10%. Far counts4791/6590. Missing charged-reference associated
-counts2614/6322, purities12.29/43.70%; reference-available25887/38728,
-48.28/49.36%. Do not confuse these with previous common-sample energy shares.
+MinimumI0/0.5/0.9/1:combinedpurity63.31/64.41/63.51/62.45%,photonenergyretention
+100/83.90/63.86/53.06%,counts55391/37143/30264/27352. I>=0.9FSR/eBremshares
+29.35/34.16%;target-energyretentions81.34/53.90%. CurrentIalone is weak for
+combined photonpurity; opposite species-composition trends mask each other.
+No recoil improvement/physics-validation claim or reconstruction changes.
 
-Association sensitivity saved: >1e-6 changes far purities only to62.53/62.20%,
-but >1% raises them to74.45/74.46% while retaining99.955/99.939%far target E.
-That change is truth-selection bias, not improved reconstruction; plots retain
-strictly>0. Four profiles/maps/cuts/control updated (11PNG/PDFpairs). Same300
-source-block resamplings, pointwise16/84%errors;>=30associated clusters per
-shown bin/cell/curvepoint. All profile bins match direct conditional sums;
-all profile/map numerators unchanged, denominators subsets; all34cut target
-retentions match parent. Synthetic purity/composition selfcheck passes. All
-11renders reviewed. No reconstruction source/card/build/install/input change,
-new fits, online selector or physics-performance claim.
-
-The two distance profiles now include bottom100%composition stacks per
-upper point: F/B pairs use the exact corresponding FSR/eBrem-associated
-cohorts and denominators. FSRorange/eBremblue/main-electrongreen/Othersblack;
-orange in F and blue in B equal the upper purities. Top values/errors unchanged;
-all stack/count/denominator checks pass. Original point400mm represents300–500mm.
-[Distance composition panels and checks](agents_record/2026-11-14-neutral-purity-distance-composition.md).
-
-Publication:11separate-species pairs now show conditional purity. The user
-subsequently removed the8combined-purity figures from the webpage; their16
-PNG/PDFgallery copies are preserved outside the servedtree in parent study
-neutral_purity_metrics_20261113/gallery_removed_20261114/. Combined study
-sourceplots remain. Current gallery73PNGs/16sections/exact-once,25PDFs; all
-conditional-purity/recoil figures retained. Same localhost8000/ailogin002
-PID443262. Earlier publication hashes/counts are preserved in the dated record.
-Artifacts:
-TrackingPerformanceStudies/neutral_purity_conditional_20261114/.
-[Corrected definition, results, sensitivity and checks](agents_record/2026-11-14-conditional-neutral-purity.md).
-[Prior composition definition](agents_record/2026-11-14-neutral-purity-species.md).
-[New BP recoil study](agents_record/2026-11-14-new-bp-theta25-recoil.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-conditional-neutral-purity.md).
+All3densitypanels cover55391clusters; means/counts/denominators reproduce prior
+common-sample profiles; synthetic zero-target-denominator check passes, cut
+counts monotonic and retention bounded. Both renders reviewed. Prior conditional
+11plots/distancecompositionbars/recoilfigures preserved; removedcombined8plots
+stay offpage. Gallery75PNGs/17sections/exact-once,27PDFs;98priorimages and
+16priorsections unchanged. Page/bothnewPNGsHTTP200;source/local/servedhashes
+match. Same ailogin002PID443262/localhost8000, no restart. Artifacts:
+TrackingPerformanceStudies/neutral_isolation_selection_20261114/.
+[Definitions, figures, results and limits](agents_record/2026-11-14-neutral-isolation-selection.md).
+[Conditional purity diagnostic](agents_record/2026-11-14-conditional-neutral-purity.md).
+[Distance composition panels](agents_record/2026-11-14-neutral-purity-distance-composition.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-neutral-isolation-selection.md).
