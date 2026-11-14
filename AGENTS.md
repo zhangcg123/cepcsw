@@ -372,6 +372,13 @@ retentions match parent. Synthetic purity/composition selfcheck passes. All
 11renders reviewed. No reconstruction source/card/build/install/input change,
 new fits, online selector or physics-performance claim.
 
+The two distance profiles now include bottom100%composition stacks per
+upper point: F/B pairs use the exact corresponding FSR/eBrem-associated
+cohorts and denominators. FSRorange/eBremblue/main-electrongreen/Othersblack;
+orange in F and blue in B equal the upper purities. Top values/errors unchanged;
+all stack/count/denominator checks pass. Original point400mm represents300–500mm.
+[Distance composition panels and checks](agents_record/2026-11-14-neutral-purity-distance-composition.md).
+
 Publication:11separate-species pairs now show conditional purity. The user
 subsequently removed the8combined-purity figures from the webpage; their16
 PNG/PDFgallery copies are preserved outside the servedtree in parent study
