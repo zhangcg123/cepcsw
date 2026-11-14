@@ -216,6 +216,9 @@ explicit provenance. Historical detail does not override this live status.
 - In plots, call the `CompleteTracks` result **Baseline KF**. Do not draw
   generator recoil mass unless the user explicitly requests it. Generator
   momentum remains the reference for pT-resolution residuals.
+- For neutral-cluster isolation, always include charged electron ECAL clusters
+  when they lie inside the cone. Exclude only the candidate itself; do not use
+  or display electron-excluded isolation variants.
 - Keep implementation changes inside `Reconstruction/RecGsfTracking` unless
   the user explicitly authorizes broader scope for a concrete reason.
   Current explicit exception: develop `Reconstruction/RecBreakpoint` and its
@@ -339,37 +342,26 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ISOLATION DEFINITION AND DIRECT PURITY CORRELATION (2026-11-14).**
-User asks printisodefinition onplots andtest equality/strongcorrelation with
-per-clusterpurity. CurrentI_R=E_C/(E_C+sumOTHERvalidpreECALclusterEwithinangularR),
-usingnominalIP->clusterCENTREdirections; excludesC,includescharged/neutraland
-main electron unlesslabelledexcluded. This is EXTERNALclusterisolation, not
-hit-levelcone orintraclusterbackgroundsubtraction. Purityp=maxONEtaggedphoton
-responseinC/fullE_C; descendantsgroupedperphoton,neverFSR+eBrem sums. Native
-MCweights are responseproxies. Internalcontamination entersI's numerator.
+**CHARGED ELECTRON ALWAYS INCLUDED IN ISOLATION (2026-11-15).**
+User rejects electron-excluded isolation. New active law above: keep all valid
+charged electron ECALclusters inside cone energy; exclude only candidate.
+Remove the dedicated excluded-electron correlation plot and all excludedcurves
+from recent plots. Both recent sections retain their electron-inclusive plots.
 
-Same55391currentREC-derivedcandidates/all500sources100000events,25/200mrad
-window/55.757GeVcap,no rec/purity/fit/recoil/category/splitgate. Cacheunchanged,
-all500RECidentitiesstillmatch. Pearsonr/Spearmanrho: inclusiveR50 .059/.175,
-R300 .275/.397;electron-excludedR50 .006/-.028. Broadscatter,intermediate
-positivetrend butdirtyhighIendpoint: I300>=.99 N909,meanp.0819. Actual10/30/36
-E37.907GeV,I50=1,p=.5124(FSR.5124+eBrem.4726);internalmixtureunpenalized.
-Actual27/48/29 E1.1697GeV,I50=.0333,p=1. Equality/strongmonotoniccorrelation
-notestablishedforthisdefinition; doesNOTruleoutadifferenthit-levelobservable.
+Dedicatediso_purity_without_electron_R50pair archived. Threepairs regenerated:
+correlations-vs-radius,cleanfraction-vs-isolation,selectiontradeoff. No excluded
+curves/legend/captiontext remain; formulas explicitlyincludecharged electron.
+Latestcorrelationsection5plots,photon-IDsection6. Updateonlylatest2section
+objects; other15unchanged. Gallery73PNGs/17sections/25PDFs;92otherimagehashes
+preserved,6filesreplaced,2removedtoarchive. Allolderremovedsectionsstayabsent.
 
-Sixnewplots: directallR50/allR300,largesttaggedphotonFSR/eBremR50,electron-
-excludedR50,correlationvsR25–400. AllshowI/pformulas;2Dcountmaps,redp=Idiagonal,
-medianper-clusterprofile,r/rho. FSR/eBcohorts18395/33797arenotcleanorevent
-categories; allinclusivesretain3199noidentifiedphotoncases. Directordinatep
-isNOTfractionpassing95%. Existing2photon-IDpairsgetonlyformulaannotations;
-4otherpairsbytefixed. Old4imageversionsarchived. No classifier/cutchange.
-
-Independentcovariance/tiedrank/Spearman/MAE/exampleweights/bin/hash/sourcechecks
-pass;6new+2annotatedrendersreviewed,3scriptscompile. Gallery74PNGs/17sections/
-26PDFs,84untouchedoldimages/all16oldsections preserved;4oldfilesexplicitly
-replacedbyformulaannotatedversions. Removedsectionsstayabsent. No source/card/
-fit/build/install/default/production/recoilchange. No newRECreadorreconstruction.
-Artifacts:TrackingPerformanceStudies/neutral_iso_purity_correlation_20261114/.
-[Definitions, statistics, counterexamples and checks](agents_record/2026-11-14-isolation-purity-correlation.md).
-[Prior reconstructed photon-ID selection study](agents_record/2026-11-14-reconstructed-photon-id.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-isolation-purity-correlation.md).
+Inclusivecorrelations/statistics unchangedexact:55391samecandidates,R50r.059/
+rho.175,R300r.275/rho.397. Selectedrulesalreadyinclusive,so no physicsendpoint
+orcutchanges. Historicalexcludedrawcolumns/frozensearches/records keptfor
+provenanceonly; neverreuseascurrentsteering. No RECread/reconstruction/source/
+card/build/install/default/productionchange. Threecurrentrendersreviewed;
+activeplot/profile-variable,cacheSHA,inclusivestats/22hashchecks pass.
+Archive:TrackingPerformanceStudies/neutral_iso_include_electron_20261115/.
+[Cleanup, active rule and verification](agents_record/2026-11-15-isolation-include-electron.md).
+[Prior direct isolation-purity study](agents_record/2026-11-14-isolation-purity-correlation.md).
+[Complete outgoing focus](agents_record/2026-11-15-agents-before-isolation-include-electron.md).
