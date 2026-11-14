@@ -231,6 +231,9 @@ explicit provenance. Historical detail does not override this live status.
 - In plots, call the `CompleteTracks` result **Baseline KF**. Do not draw
   generator recoil mass unless the user explicitly requests it. Generator
   momentum remains the reference for pT-resolution residuals.
+- The user has difficulty distinguishing red and blue. Use high-contrast
+  palettes with distinct markers, line styles or hatches and direct labels;
+  never make plot interpretation depend on colour alone.
 - For neutral-cluster isolation, always include charged electron ECAL clusters
   when they lie inside the cone. Exclude only the candidate itself; do not use
   or display electron-excluded isolation variants.
@@ -377,6 +380,12 @@ individual photon identity. Native U/V-based cluster MC attribution remains
 unvalidated as spatial3D deposit purity. No per-hit photon labels exist for the
 saved reconstructed3D hits. These truth-selected examples illustrate geometry
 and native attribution, not a reconstructed selector or physical mixing proof.
+
+Both event-display PNG/PDF pairs now use charcoal/gold/grey, circles versus
+triangles for hits, stars versus diamonds for photon entries, and individual
+photon bar hatches. Black labels stay readable on light fills. Source event
+payloads and all non-style metadata are unchanged.
+[Accessible presentation](agents_record/2026-11-15-neutral-event-display-accessibility.md).
 
 Artifacts: TrackingPerformanceStudies/neutral_event_displays_20261115/.
 Fresh source identities, individual photon fractions, owners, hit links,
