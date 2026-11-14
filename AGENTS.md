@@ -342,26 +342,32 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CHARGED ELECTRON ALWAYS INCLUDED IN ISOLATION (2026-11-15).**
-User rejects electron-excluded isolation. New active law above: keep all valid
-charged electron ECALclusters inside cone energy; exclude only candidate.
-Remove the dedicated excluded-electron correlation plot and all excludedcurves
-from recent plots. Both recent sections retain their electron-inclusive plots.
+**ISOLATION R500/R1000 AND ANGULAR DEFINITION (2026-11-15).**
+User requests largercones andclarifiesangle. Alpha is3Dgeometricopeningangle
+atnominalIP(0,0,0):acos(rC·rj/(normrC*normrj)),r=IP->reconstructedECALcluster
+CENTRE. UsesECALpositions,NOTfitted/PFO4momenta,localincidencedirection orsurface
+arclength. Coneaxis is candidateIPpointingray; R ishalf-openingangle.
+500mrad=.5rad28.65deg,1000mrad=1rad57.30deg. Charged electronalwaysincluded.
 
-Dedicatediso_purity_without_electron_R50pair archived. Threepairs regenerated:
-correlations-vs-radius,cleanfraction-vs-isolation,selectiontradeoff. No excluded
-curves/legend/captiontext remain; formulas explicitlyincludecharged electron.
-Latestcorrelationsection5plots,photon-IDsection6. Updateonlylatest2section
-objects; other15unchanged. Gallery73PNGs/17sections/25PDFs;92otherimagehashes
-preserved,6filesreplaced,2removedtoarchive. Allolderremovedsectionsstayabsent.
+FreshRECread ONLYclusterenergy/position/hitcount,all500currentfiles100000events.
+Same55391candidatekeys/3631individual-photon>95%labels;25/200mradcandidate
+collectionwindow/55.757GeVupper2%cap fixed. OnlyISOLATIONneighbourconeexpanded;
+allvalidECALneighbours includedwithoutnewtrim. No simulation/reconstruction/
+refit. EveryoldR300/R400value exact,allI1000<=I500<=I400. Sourceidentitiesfixed.
 
-Inclusivecorrelations/statistics unchangedexact:55391samecandidates,R50r.059/
-rho.175,R300r.275/rho.397. Selectedrulesalreadyinclusive,so no physicsendpoint
-orcutchanges. Historicalexcludedrawcolumns/frozensearches/records keptfor
-provenanceonly; neverreuseascurrentsteering. No RECread/reconstruction/source/
-card/build/install/default/productionchange. Threecurrentrendersreviewed;
-activeplot/profile-variable,cacheSHA,inclusivestats/22hashchecks pass.
-Archive:TrackingPerformanceStudies/neutral_iso_include_electron_20261115/.
-[Cleanup, active rule and verification](agents_record/2026-11-15-isolation-include-electron.md).
-[Prior direct isolation-purity study](agents_record/2026-11-14-isolation-purity-correlation.md).
-[Complete outgoing focus](agents_record/2026-11-15-agents-before-isolation-include-electron.md).
+Pearsonr/Spearmanrho: R300 .274913/.397462,R500 .279248/.399666,R1000 .276576/
+.393122. Correlationremainsabout.28/.40,notstrong. No newselection/threshold,
+recoilimprovement orphysicsvalidation claim. All8oldradiusstats unchangedexact.
+Nativeacos/neighbourEsums/counts on2examplesbothradii,scalarPearson,exactkeys,
+oldprofiles/fullhistcounts/source/hashchecks pass;3scriptscompile,4rendersreviewed.
+
+Two newdirectpuritymapsR500/R1000; correlation-vs-R extendedto1000 and
+cleanfraction-vs-I nowincludes25/50/100/300/500/1000. Formula/IPangle andcharged
+inclusionprinted. Profileordinatefractionindividually>95%,NOTmeanpurity;
+showbinsN>=30/allrawcountsretained. Gallery75PNGs/17sections/27PDFs,94oldimages
+fixed,4filesreplaced,4added. Latestcorrelationsection7plots;earlier15sections
+unchanged;removedvariantsstayabsent. No source/card/build/install/default/
+production change. Artifacts:TrackingPerformanceStudies/neutral_iso_large_radius_20261115/.
+[Geometry definition, results and checks](agents_record/2026-11-15-isolation-large-radii.md).
+[Charged-electron inclusion rule](agents_record/2026-11-15-isolation-include-electron.md).
+[Complete outgoing focus](agents_record/2026-11-15-agents-before-isolation-large-radii.md).
