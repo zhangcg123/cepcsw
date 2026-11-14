@@ -162,3 +162,36 @@ and18sectionobjects unchanged; both newPNGHTTP200 andsource/local/servedhashes
 match. Sameailogin002localhost8000PID443262, no restart. Main independently
 rechecked old/new local hashes and manifest preservation. Existing removed
 sections/variants remain absent.
+
+## Table as separate component bars — 2026-11-15
+
+The user requests a new section immediately below “Truth-normalized charged
+and neutral ECAL energy collection (6)” showing the latest table as a bar plot.
+New photon_energy_location_table_bars.png/.pdf uses six horizontal paired
+FSR/eBrem rows: current neutrals, MATCHED CHARGED as its own row, additional
+full-angle neutrals, other charged, combined charged+neutral study-cut rejects,
+and total raw ECAL response. Every value has two decimals and matches the
+printed table exactly (12 values); component sums reproduce total without
+including the total as a component. Main-electron energy is not included.
+
+No input read, denominator, cohort, cuts or attribution changes. Reuses the
+verified100000-event summary.json. table_plot.py checks exact rounded values,
+row sums, source hash, old110image baseline and19section snapshot; output hashes
+and render/script checks are in table_bar_verification.json. AGORA simulation,
+100000events, transparent grid, percentage axis, separate FSR/eBrem legend and
+100%reference are displayed. The over100%eBrem response remains visible.
+
+Gallery insertion adds ONLY this new PNG/PDF pair at index5 immediately after
+the named existing six-plot section. All19oldsectionobjects retain their relative
+order and all110oldimages remain byte-identical; the older full-angle section
+remains at the end. Expected final80PNGs/20sections/32PDFs/112images. Source
+artifacts stay uncommitted; table_gallery_verification.json records final
+placement/HTTP/hash/server checks. No physics code/card/build/install/default
+or production change. Full outgoing AGENTS.md snapshot retained in
+2026-11-15-agents-before-full-angle-table-bars.md; global prefix unchanged.
+
+Table gallery verified:80PNGs20sections32PDFs112images. Newsectionindex5
+directly follows requested title; removing just that section reproduces the
+complete prior19sectionlist exactly. All110oldimagehashes and both new source/
+local/servedPNGhashes match, page/newPNGHTTP200. Sameailogin002PID443262.
+Main independently rechecked placement, alloldsectionobjects/order and hashes.

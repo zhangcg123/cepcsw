@@ -381,10 +381,14 @@ of the production electron (not necessarily conversions). eBrem unmatchedbirth
 energy21082.1793GeV/1.7096% is attribution limit, not additional disjoint deficit.
 No original spatial simulation-deposit or HCAL closure; native-map caveat remains.
 
-Two new galleryplots: disjoint fullanglebudget (raw cut tails shown separately)
-and extended-window responses (caps retained). Preserve106oldimages/18sections/
-removals; verified79PNGs19sections31PDFs, same localhost8000 server. No source,
-card/build/install/default/production change. Artifacts:
+Gallery shows fullanglebudget (raw cut tails separate), extended-window
+responses (caps retained), and NEW exacttablebar with matchedcharged OWNrow
+and combinedstudycutrow. Twelve displayed values/row sums/hashes/render verified.
+Newsection directly after “Truth-normalized charged and neutral ECAL energy
+collection”;110oldimages/19sectionobjects/order/removals preserved. Verified
+80PNGs20sections32PDFs, same localhost8000 server. No source/card/build/install/
+default/production change. Full outgoing status additionally preserved in
+agents_record/2026-11-15-agents-before-full-angle-table-bars.md. Artifacts:
 TrackingPerformanceStudies/ecal_full_angle_accounting_20261115/.
 [Full definitions, results and checks](agents_record/2026-11-15-full-angle-ecal-photon-accounting.md).
 [Outgoing status preserved](agents_record/2026-11-15-agents-before-full-angle-ecal-photon-accounting.md).
