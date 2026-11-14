@@ -135,3 +135,22 @@ cause is NOT established, and no old PFA/tracking/source was changed. Native
 link evidence/counts saved in study/isolated_main_electron_native_checks.json.
 This supports checking reconstructed track-cluster association quality before
 interpreting veryhighI as a photon tag; no new veto is adopted.
+
+## Broader contamination beyond the I=1 endpoint
+
+User correctly noted I=1 is a minority endpoint. Of4929selectedheld-out
+candidates,3254havephotonpurity<90%;2075(63.8%ofthose)ALREADYhave usablecharged
+ECALreferences. DroppingI=1 leaves4525clusters,73.54%meanphotonpurity,36.71%
+high-purityfraction. Restricting.46<=I<.9 leaves4267,76.86%mean,38.15%high;
+these are explanatory post-hoc slices, NOT newly adopted/tuned selections.
+
+Nativejob11/event195/track22:chargedPFO1 links ECALcluster1 (5.774415GeV,
+99.7362%main-electron attribution);neutralPFO63trackless links ECALcluster46
+(27.805578GeV,99.7682%main,0FSR/0eBrem). Their3Dseparation21.791mm; only one
+other validcluster lies inR300cone, thechargedcluster. ThusI=27.805578/
+(27.805578+5.774415)=.82804 despitephotonpurity0. This demonstrates the broader
+limitation: an energy-dominance ratio can score a large main-electron shower
+piece highly even when its charged-associated neighbour IS counted. It is not
+an empty-cone or missing-reference-only effect. Exact upstream segmentation/
+association cause remains unestablished; no oldPFA/tracking/source changed.
+Proof:study/isolation_internal_contamination_native_check.json.

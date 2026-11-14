@@ -369,7 +369,12 @@ NativeI=1checks nowshow all404held-outcases lack usablechargedECALreference;
 whileelectron-dominatedshower is in charge-zero tracklessPFO. Job3/event4/
 cluster15 is44.48GeV,99.9867%main,0FSR/eBrem,nootherECALneighbor,thusI=1.
 Candidate's own showerenergy is excluded; exact upstream associationcause
-remainsuninvestigated. EvidenceJSON in study; no PFA/sourcechange. NewI100saturation4.65%,newI300
+remainsuninvestigated. EvidenceJSON in study; no PFA/sourcechange.
+Broadercase:2075/3254selectedlow-purityclusters ALREADYhavechargedECALreference.
+Nativejob11/event195:charged5.77GeV+neutral27.81GeV, both>99.7%main-electron;
+onlychargedneighbor counted, yetI=.828. Ratio measuresenergydominance, not
+internalcleanliness. Post-hocdropI=1mean73.54%stillnotpure; no newcut adopted.
+ProofJSONin study; upstreamsegmentationcause remainsunestablished. NewI100saturation4.65%,newI300
 1.45%heldout. NineconeE>240GeVoutliercontrols leave selectedsampleunchanged.
 
 All500sourceidentities checkedbefore/after; oldI100reproducesall55391candidates,
