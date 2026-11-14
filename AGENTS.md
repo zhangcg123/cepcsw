@@ -339,38 +339,37 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**RECONSTRUCTED CLEAN-PHOTON ID STUDY (2026-11-14).**
-User authorized analysis after clarifying per-neutral ONEphoton>95%fullresponse
-truthtarget. No sum of different photons/origins; nativeMCweights are proxies.
-Freshread500currentREC_ECALTRUTHsources/100000events,same55391eligiblecandidates
-andfixed25/200mradwindow/55.757GeVupper2%cap. Alloldfields/labels exact:
-3631clean(1640FSR/1991eBrem). Derive newreconstructedmoments from41921911linked
-preECALhits; savedshapevectors allempty. No simulation/reconstruction rerun.
+**ISOLATION DEFINITION AND DIRECT PURITY CORRELATION (2026-11-14).**
+User asks printisodefinition onplots andtest equality/strongcorrelation with
+per-clusterpurity. CurrentI_R=E_C/(E_C+sumOTHERvalidpreECALclusterEwithinangularR),
+usingnominalIP->clusterCENTREdirections; excludesC,includescharged/neutraland
+main electron unlesslabelledexcluded. This is EXTERNALclusterisolation, not
+hit-levelcone orintraclusterbackgroundsubtraction. Purityp=maxONEtaggedphoton
+responseinC/fullE_C; descendantsgroupedperphoton,neverFSR+eBrem sums. Native
+MCweights are responseproxies. Internalcontamination entersI's numerator.
 
-Newfeatures: electronopeningangle(depthfree),nearestclusterangles,inclusive
-versusmain-electron-excludedisolation,transverse/longitudinalRMS,core10/core20,
-hitcount/effectivehits/maxhitfraction. Core20=hitEwithin20mmtransverseofhitcentroid
-aboutIP->clusteraxis. Allsourceidentities/oldinclusiveI(R) reproduce. Clean/dirty
-medians: opening62.60/22.47mrad,RMS22.64/24.22mm,core20.799/.769. Excluding
-mainclusters makesbothsamplesfrequentlyisolated; width/coreoverlapstrongly.
+Same55391currentREC-derivedcandidates/all500sources100000events,25/200mrad
+window/55.757GeVcap,no rec/purity/fit/recoil/category/splitgate. Cacheunchanged,
+all500RECidentitiesstillmatch. Pearsonr/Spearmanrho: inclusiveR50 .059/.175,
+R300 .275/.397;electron-excludedR50 .006/-.028. Broadscatter,intermediate
+positivetrend butdirtyhighIendpoint: I300>=.99 N909,meanp.0819. Actual10/30/36
+E37.907GeV,I50=1,p=.5124(FSR.5124+eBrem.4726);internalmixtureunpenalized.
+Actual27/48/29 E1.1697GeV,I50=.0333,p=1. Equality/strongmonotoniccorrelation
+notestablishedforthisdefinition; doesNOTruleoutadifferenthit-levelobservable.
 
-Finite20recofeaturesearch,up-to3cuts,beamFbeta+precision-at-retention. Sourcejob
-mod5dev0/1/2,cal3,eval4; eventsnevercross. Productionalreadyseenearlier, NOTfresh
-independentvalidation. Freeze calibrationchoices BEFOREevaluation. No tested
-calrule>=95%clean. Bothchosenrules opening>=39.604mrad/core20>=.7;20%retention
-floor addsI300>=.7,50%floor addsI100>=.3. Evaluation:171/313clean=54.63%,retains
-22.74%clean-count/44.05%cleanE;384/1109=34.63%,retains51.06%count/72.04%E.
-Previousdistance/Icontrol48/61=78.69%,retains6.38%count/11.79%E EXACTLYreproduced.
-Cleanfraction means selectedclusters INDIVIDUALLY>95%, nevermeanenergy-purity.
-No satisfactory95%selector established; do not present rules as newdefault.
+Sixnewplots: directallR50/allR300,largesttaggedphotonFSR/eBremR50,electron-
+excludedR50,correlationvsR25–400. AllshowI/pformulas;2Dcountmaps,redp=Idiagonal,
+medianper-clusterprofile,r/rho. FSR/eBcohorts18395/33797arenotcleanorevent
+categories; allinclusivesretain3199noidentifiedphotoncases. Directordinatep
+isNOTfractionpassing95%. Existing2photon-IDpairsgetonlyformulaannotations;
+4otherpairsbytefixed. Old4imageversionsarchived. No classifier/cutchange.
 
-Sixnewfigures: opening,width,core,cleanfraction-vs-isolation,tradeoff,selected
-COUNTcomposition. Allcandidatefeaturediagnostics; selectionpanels use reserved
-evaluationevents. Independentoldfield/projection/isolation/scalar-native-hit/
-frozenrule/histogram/hashchecks pass;4scriptscompile,6rendersreviewed. Gallery
-68PNGs/16sections/20PDFs,all76priorimages/15sections unchanged,removedsections
-stayabsent. Same ailogin002PID443262/localhost8000;6PNGHTTP200/hashmatch.
-No source/card/fit/build/install/default/production orrecoiltest/change.
-Artifacts:TrackingPerformanceStudies/neutral_photon_id_20261114/.
-[Definitions, rules, results and limitations](agents_record/2026-11-14-reconstructed-photon-id.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-reconstructed-photon-id.md).
+Independentcovariance/tiedrank/Spearman/MAE/exampleweights/bin/hash/sourcechecks
+pass;6new+2annotatedrendersreviewed,3scriptscompile. Gallery74PNGs/17sections/
+26PDFs,84untouchedoldimages/all16oldsections preserved;4oldfilesexplicitly
+replacedbyformulaannotatedversions. Removedsectionsstayabsent. No source/card/
+fit/build/install/default/production/recoilchange. No newRECreadorreconstruction.
+Artifacts:TrackingPerformanceStudies/neutral_iso_purity_correlation_20261114/.
+[Definitions, statistics, counterexamples and checks](agents_record/2026-11-14-isolation-purity-correlation.md).
+[Prior reconstructed photon-ID selection study](agents_record/2026-11-14-reconstructed-photon-id.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-isolation-purity-correlation.md).
