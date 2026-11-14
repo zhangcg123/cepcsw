@@ -339,38 +339,38 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CLEAN NEUTRAL PHOTON IDENTIFICATION; GALLERY CLEANUP (2026-11-14).**
-User requests remove four purity-study gallery sections and explain the intended
-objective. Remove conditional-origin11plots,eventcategory-distance6plots,
-single-photon selection4plots and truth-selected geometry4plots. Preserve all
-analysis/source originals and archive25servedPNGs/matchingPDFs outside gallery.
-Retain other15sections/62PNGs/14PDFs unchanged; all olderremovedsections stay absent.
-Archive/manifest/hash/HTTPchecks:TrackingPerformanceStudies/neutral_purity_gallery_cleanup_20261114/.
-No newanalysis/source/card/fit/build/install/default/production change.
+**RECONSTRUCTED CLEAN-PHOTON ID STUDY (2026-11-14).**
+User authorized analysis after clarifying per-neutral ONEphoton>95%fullresponse
+truthtarget. No sum of different photons/origins; nativeMCweights are proxies.
+Freshread500currentREC_ECALTRUTHsources/100000events,same55391eligiblecandidates
+andfixed25/200mradwindow/55.757GeVupper2%cap. Alloldfields/labels exact:
+3631clean(1640FSR/1991eBrem). Derive newreconstructedmoments from41921911linked
+preECALhits; savedshapevectors allempty. No simulation/reconstruction rerun.
 
-Objective: a reconstructed-level way to identify clean neutral photon clusters
-associated with selected Z->ee electrons, then assess safe photon recovery.
-Truth defines each cluster's target: >95%of FULL cluster response from ONE
-original photon and its descendants. Different photon identities remain
-separate even within one origin; FSR+eBrem sums cannot certify clean photons.
-Main-electron-dominated neutral showers are background. Native MC weights are
-response-attribution proxies, not exact deposited-energy truth.
+Newfeatures: electronopeningangle(depthfree),nearestclusterangles,inclusive
+versusmain-electron-excludedisolation,transverse/longitudinalRMS,core10/core20,
+hitcount/effectivehits/maxhitfraction. Core20=hitEwithin20mmtransverseofhitcentroid
+aboutIP->clusteraxis. Allsourceidentities/oldinclusiveI(R) reproduce. Clean/dirty
+medians: opening62.60/22.47mrad,RMS22.64/24.22mm,core20.799/.769. Excluding
+mainclusters makesbothsamplesfrequentlyisolated; width/coreoverlapstrongly.
 
-Use truth to diagnose/evaluate purity; eventual selection must use reconstructed
-measurements. Isolation and distance are proposed discriminants, not definitions
-of purity. First compare clean and contaminated clusters, then evaluate purity
-AND clean-photon retention. A high mean purity is not the fraction of candidates
-individually passing95%. A cut rejecting mostcleanphotons does not settle the
-identification objective. No new cuts/classifier or proposed implementation is
-approved by this cleanup request. Highisolation alone does not guarantee
-internalcleanliness; nearbyelectronenergy can lower inclusiveisolation for a
-cleanphoton. Distance definitions must distinguish 3Ddepth from surfaceprojection.
+Finite20recofeaturesearch,up-to3cuts,beamFbeta+precision-at-retention. Sourcejob
+mod5dev0/1/2,cal3,eval4; eventsnevercross. Productionalreadyseenearlier, NOTfresh
+independentvalidation. Freeze calibrationchoices BEFOREevaluation. No tested
+calrule>=95%clean. Bothchosenrules opening>=39.604mrad/core20>=.7;20%retention
+floor addsI300>=.7,50%floor addsI100>=.3. Evaluation:171/313clean=54.63%,retains
+22.74%clean-count/44.05%cleanE;384/1109=34.63%,retains51.06%count/72.04%E.
+Previousdistance/Icontrol48/61=78.69%,retains6.38%count/11.79%E EXACTLYreproduced.
+Cleanfraction means selectedclusters INDIVIDUALLY>95%, nevermeanenergy-purity.
+No satisfactory95%selector established; do not present rules as newdefault.
 
-Prior full-sample evidence remains archived:55391eligible currentREC candidates,
-3631individual-photon>95%(1640FSR/1991eBrem); same25/200mradwindow/55.757GeVcap.
-All500sourceidentities checked; no rec-cut/split in cleangeometry. Detailed
-results/limitations remain in linkedrecords; their plots are no longer served.
-[Cleanup and clarified objective](agents_record/2026-11-14-purity-gallery-cleanup.md).
-[Prior pure-neutral distributions](agents_record/2026-11-14-pure-neutral-geometry.md).
-[Prior individual-photon truth and reconstructed search](agents_record/2026-11-14-single-photon-purity.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-purity-gallery-cleanup.md).
+Sixnewfigures: opening,width,core,cleanfraction-vs-isolation,tradeoff,selected
+COUNTcomposition. Allcandidatefeaturediagnostics; selectionpanels use reserved
+evaluationevents. Independentoldfield/projection/isolation/scalar-native-hit/
+frozenrule/histogram/hashchecks pass;4scriptscompile,6rendersreviewed. Gallery
+68PNGs/16sections/20PDFs,all76priorimages/15sections unchanged,removedsections
+stayabsent. Same ailogin002PID443262/localhost8000;6PNGHTTP200/hashmatch.
+No source/card/fit/build/install/default/production orrecoiltest/change.
+Artifacts:TrackingPerformanceStudies/neutral_photon_id_20261114/.
+[Definitions, rules, results and limitations](agents_record/2026-11-14-reconstructed-photon-id.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-reconstructed-photon-id.md).
