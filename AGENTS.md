@@ -363,7 +363,7 @@ manifest as an uncommitted analysis artifact.
 **NEUTRAL EVENT DISPLAYS BY DISTANCE (2026-11-15).**
 Retain the user's accepted accessible style and inspect distinct current-REC
 neutral examples near/middle/far from the matched electron charged cluster.
-Six new events are prepared, plus unchanged copies of the earlier369/82/6 and
+Six new events are prepared, plus current copies of the earlier369/82/6 and
 34/52/8 examples, in a dedicated gallery subdirectory.
 
 Distance is the minimum3D reconstructed pre-ECAL cluster-centre separation to
@@ -388,8 +388,8 @@ reconstructed3D hits have no individual-photon truth association.
 
 Eight current-REC events were freshly inspected, six selected; source identities,
 16 individual photon fractions,6 distances, owners, conversion daughters,
-window/projection/stack checks pass. All six new renders reviewed, three label
-layouts corrected and re-reviewed; scripts compile. No CEPC reconstruction or simulation implementation,
+window/projection/stack checks pass. All eight current layouts reviewed;
+foreground layer/energy-label/geometry-preservation checks pass; scripts compile. No CEPC reconstruction or simulation implementation,
 card/build/install/default changes or simulation/refit. Analysis artifacts stay
 uncommitted: TrackingPerformanceStudies/neutral_event_distance_examples_20261115/.
 
@@ -397,7 +397,17 @@ Verified gallery: localhost8000/neutral_event_displays/ on ailogin002,
 PID3994352, under the existing
 bp_matched_recoil_pt_20261110 gallery, with Near/Middle/Far/Earlier reference
 sections:8PNGs/8PDFs,4sections. Recursive root:84PNGs/36PDFs,21sections.
-The original104 root images and20 section objects are preserved;
-old original-event URLs remain valid. Publication checks are in gallery_verification.json.
+The latest annotation update refreshes20 event image files (8PNG/PDF pairs
+in the child plus2 root reference pairs);100 unrelated images are preserved.
+Old original-event URLs remain valid. Root/child section membership is unchanged.
+Publication checks: truth_labels_gallery_verification.json in the distance study.
+The electron-truth x and Baseline KF + now have foreground layers above all
+other axes objects and white outlines. All18 visible photon labels append
+saved first-ECAL-entry energies; all8 electron-truth labels show entry total
+energy (postKineticEnergy + mass). Birth energies stay explicitly identified in
+component legends and converted-original notes. Data, selections, distances,
+fractions and physics results are unchanged; no REC read, simulation or refit.
+[Foreground markers and truth energies](agents_record/2026-11-15-neutral-event-truth-label-energies.md).
+
 [Exact selections, definitions and evidence](agents_record/2026-11-15-neutral-event-distance-examples.md).
 [Complete outgoing status](agents_record/2026-11-15-agents-before-distance-event-examples.md).
