@@ -360,42 +360,30 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**MORE EVENT DISPLAYS, INCLUDING TWO >95% SINGLE-PHOTON NEUTRALS (2026-11-15).**
-Four distinct current-REC events extend the dedicated gallery from8 to12 events,
-retaining the accepted accessible palette, markers/hatches, foreground white-
-outlined x/+ and saved ECAL-entry truth-energy labels. Previous8 plots are kept.
+**ORIGINAL-PHOTON e-/e+ CONVERSION BEFORE ECAL (2026-11-15).**
+User asks counts/fractions for selected Z→ee FSR/eBrem. Full500 current REC files,
+100000 events,198081 truth-covered selected electron tracks;349 other selected
+tracks lack main-electron ECAL-entry truth and are excluded consistently with
+the prior ECAL study. Counts are photons, not event/track fractions.
 
-Highlighted clear focus clusters, checked with a strict individual-photon >95%
-native-weight cut:70/140/track7 N44,7.252GeV,335.0mm from C0,100%FSRgamma16;
-92/84/track26 N20,25.150GeV,381.6mm from C9,99.7397%eBremgamma248.
-Both have actual original-photon ECAL entrances and belong to their indicated
-selected Z electron. In92/84, N46 is a second fragment of the SAME gamma248,
-not a second independent photon. The selected focus is the larger N20 shower.
-Purity is maxONE photon-root weight/full cluster MC weight, not FSR+eBrem summed.
+FSR:7549/179732 convert before ECAL (4.20%); birth E>=1GeV:3820/39267 (9.73%).
+eBrem:17106/338509 (5.05%); birth E>=1GeV:8394/113328 (7.41%). Generator-linked
+FSR status1/selected owner; eBrem direct selected-electron G4 births, creator3,
+pre-parent-ECAL only (22 post-entry births excluded). No cluster purity/MC weights.
+Conversion is saved Geant4 subtype14 and killed status2 before original entry;
+installed headers and six direct MC e-/e+ daughter checks confirm the definition.
 
-Two additional mixed examples:21/3/track17 N55,1.670GeV,63.4mm from C1,
-58.2%maximum single-photon fraction;287/20/track24 N25,18.007GeV,373.3mm,
-56.3%maximum single-photon fraction. All focus photon roots have the same owner.
-Distances are reconstructed3D cluster-centre separations, not angles or the
-left-panel IP-ray-to-cylinder projection. These are selected illustrations,
-not population validation or a reconstructed photon identifier. Native U/V MC
-weights remain unvalidated as physical3D spatial energy-deposit purity.
+All518241 eligible photons have classified endpoints: zero missing, unfinished
+or boundary-ambiguous histories. State partitions and previous photon/track counts
+and birth-energy sums close; sources checked before/after, code cached byhash,
+assert fate checks/compile pass. >=1GeV photons have only conversion or entry fates.
+Original-photon records STOP at first ECAL entry; conversions inside ECAL or the
+whole calorimeter are not measured by this record. No simulation/reconstruction/
+refit, implementation/card/build/install/default or gallery changes.
 
-Current source campaign remains REC_ECALTRUTH_500jobs_200evt_20261112. Six new
-full event entries were inspected, four retained; two endcap views were omitted
-from this common barrel-reference display. One additional geometry-only entry
-was inspected. Independent checks pass7 per-photon fractions,4 measured energies,
-3D distances, same-electron ownership, source identities, strict95% cases and
-actual entrances. Projection, stack, foreground and energy-label assertions pass;
-scripts compile, all4 new renders reviewed and3 label layouts corrected/reviewed.
-No CEPC reconstruction/simulation implementation, cards, build/install/default,
-simulation or refit changes. Analysis artifacts remain uncommitted under
-TrackingPerformanceStudies/neutral_event_more_20261115/.
-
-Gallery: localhost8000/neutral_event_displays/ on ailogin002, PID3994352.
-Clear >95% examples have a dedicated section; the mixed additions join Near/Far.
-Verified counts:12PNG/12PDF/5 child sections; root88PNG/40PDF/21sections.
-All120 existing image files are preserved; only8 new files are added. Publication
-checks are in the new study's gallery_verification.json.
-[New cases, purity definition and checks](agents_record/2026-11-15-more-clear-neutral-event-displays.md).
-[Complete outgoing focus](agents_record/2026-11-15-agents-before-more-clear-neutrals.md).
+Artifacts: TrackingPerformanceStudies/photon_conversion_fractions_20261115/.
+Full summary.json/results.csv,500 per-job source/count records and six independent
+pair checks persist there; analysis scripts/data are uncommitted. Existing12 event
+displays remain unchanged at localhost8000/neutral_event_displays/, PID3994352.
+[Counts, definitions, scope and validation](agents_record/2026-11-15-photon-conversion-fractions.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-photon-conversion-fractions.md).
