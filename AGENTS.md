@@ -350,45 +350,31 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**FULL-ANGLE ECAL PHOTON-RESPONSE ACCOUNTING (2026-11-15).**
-User asks where the apparent missing FSR/eBrem energy is. Fresh read all500
-CURRENT REC_ECALTRUTH files/100000inputs; exact same198081truth-covered tracks,
-99988covered events/birth-energy denominators as prior tables. All4280406pre-ECAL
-clusters inspected, including all charged/neutral owners. No reconstruction,
-refit or simulation. Source sizes/mtimes stable; old25/200neutral and raw matched
-charged sums reproduce on EVERY job. No deleted BP files used.
+**PHOTON-ID OPENING PLOT: COUNTS / LOG Y (2026-11-15).**
+User identifies the “Reconstructed photon identification: shower shape, local
+activity and efficiency (6)” section: retain FIRST plot only, remove otherfive
+from webpage, no separate histogram normalization, logarithmic y. The retained
+photon_id_track_opening.png uses raw neutral-cluster counts/commonunitweight,
+40unchanged5mrad bins0–200. Same55391candidates:51760other neutrals,1640FSR and
+1991eBrem with ONE tagged photon fraction>95%; no origin/photon summation.
+Every120rawbin counts and bothbinedges reproduce oldhistogramcache EXACTLY.
+Zero bins omitted only from log rendering; stored as0. Yfloor.7preservesonecount.
+All3curves/legendcounts retained; grayfilledOther,orangeFSR,blueeBrem; AGORA
+simulation/squareaxes/transparentgrid/originalrange. Finalrender/hashes/compile
+checks pass. No newphysics input, classification, cut, native-file read orrefit.
 
-Disjoint response percentages (FSR/eBrem): currentneutral35.7364/21.6285;
-matchedcharged kept23.3200/58.1048; extraeligible neutrals theta25→200phi200
-7.8773/.1143; theta<=200fullphi beyond20010.4219/1.9820; outside theta200fullphi
-9.9495/.1762; othercharged4.3655/10.7491; charged studycap rejected.8635/4.6167;
-neutral studycap rejected5.6358/3.4136. Othertrack/invalid tagged response0.
-ALLrawECALresponse98.1700/100.7853%; signed residual+1.8300/-.7853points.
-No physical loss/energy-conservation/calibration claim from reconstructed response.
+Newpresentation override is TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/plot.py,
+reusing neutral_photon_id_20261114/features.csv. Original6sourceplotpairs and
+historical percentageplotter stay untouched. Candidate25/200half-window and
+55.757GeVcap unchanged. Native-map spatialpurity caveat remains; no wronglink
+or physical95%-clean claim established. Electron-excludedisolation not used.
 
-Current25/200 + matchedcharged kept59.0565/79.7333%;1000mrad electron-centred
-collectioncone82.7757/81.9566%; fullangle87.3052/82.0058%. Including othercharged
-originresponse under same frozen charged cap givesfullangle91.6671/92.6808%.
-Neutralcap55.757GeV/chargedcap76.598GeV unchanged. Otherchargedcap extension
-is diagnostic, not production steering. BIRTHenergy denominators include
-conversions/absorptions; numeratorONLYnative photon-attributed measured energy.
-Not purity/per-cluster means, operational recovery or true photon flight angles.
-
-Independent scalar group/window sums on347175savedrows and4fresh native cases
-pass; all3scripts compile, geometric boundary/wrap checks and2renders pass.
-Othercharged examples include photon-descended positron and alternative track
-of the production electron (not necessarily conversions). eBrem unmatchedbirth
-energy21082.1793GeV/1.7096% is attribution limit, not additional disjoint deficit.
-No original spatial simulation-deposit or HCAL closure; native-map caveat remains.
-
-Gallery shows fullanglebudget (raw cut tails separate), extended-window
-responses (caps retained), and NEW exacttablebar with matchedcharged OWNrow
-and combinedstudycutrow. Twelve displayed values/row sums/hashes/render verified.
-Newsection directly after “Truth-normalized charged and neutral ECAL energy
-collection”;110oldimages/19sectionobjects/order/removals preserved. Verified
-80PNGs20sections32PDFs, same localhost8000 server. No source/card/build/install/
-default/production change. Full outgoing status additionally preserved in
-agents_record/2026-11-15-agents-before-full-angle-table-bars.md. Artifacts:
-TrackingPerformanceStudies/ecal_full_angle_accounting_20261115/.
-[Full definitions, results and checks](agents_record/2026-11-15-full-angle-ecal-photon-accounting.md).
-[Outgoing status preserved](agents_record/2026-11-15-agents-before-full-angle-ecal-photon-accounting.md).
+Gallery retains targettitle/order but patternONLYphoton_id_track_opening.png;
+fiveotherPNG/PDFpairs removedfromservedtree/archivedwitholdfirstpair outside
+servedtree. All100unrelatedimagehashes/19othersectionobjects/order/removals fixed.
+Verified75PNGs20sections27PDFs102images; same localhost8000server. No source,
+card/build/install/default/production changes. Artifacts:
+TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/.
+[Definitions and preservation checks](agents_record/2026-11-15-photon-opening-counts-log.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-photon-opening-counts-log.md).
+[Previous full-angle accounting](agents_record/2026-11-15-full-angle-ecal-photon-accounting.md).
