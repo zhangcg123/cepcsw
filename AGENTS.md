@@ -339,51 +339,41 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CHARGED-INCLUSIVE ISOLATION RADIUS STUDY (2026-11-14).**
-User authorized new isolation including mainchargedclusters and choosing R.
-Freshread-onlygeometry from all500currentREC_ECALTRUTHfiles/100000events;
-55391sameeligiblebaseline neutrals,25/200mradhalf-windows,55.757GeVcandidatecap.
-NewI(R)=E_candidate/(E_candidate+ALLothervalidpreECALclusterEwithinangularradiusR),
-excludeonlycandidate. No truthspecies/fit/radiationcategory/mass gate. Purity
-is perclusterfractionTHENarithmeticmean. All oldcandidatefields/MCweights fixed.
-No simulation/tracking/PFA/BP/GSF rerun or runcard/install/default change.
+**INDIVIDUAL-PHOTON >=95% PURITY (2026-11-14).**
+User clarified that a photon-only cluster mixed between FSR/eBrem is NOT a
+clean photon candidate. Target is >=95% of full cluster response from ONE
+identifiable tagged Z->ee photon and its descendants. Distinct photons remain
+separate even within the same origin. Main-electron showers are background.
+Native cluster-MC weights are response-attribution proxies, not exact deposits.
 
-Predeclared objective:maximize N(pFSR+pB>=.9)/Nselected, retain>=50% EACH of
-collectedFSR/eBremenergy and>=500devcandidates. Radii25/50/75/100/150/200/300/400
-mrad,lowerIcuts0..1step.01. Develop250EVENsourcejobs(27559candidates); freeze
-R/cut BEFORE evaluating250ODDjobs(27832candidates). No event crosses split.
-Frozenchoice R300mrad,I>=0.46. R200–400broadplateau, not sharplyuniqueoptimum.
-Fairdevelopment-tuned oldI100controlchoosesnocut; energy-onlyE>=23.693GeV.
+Fresh read all500 current REC_ECALTRUTH sources/100000events, same55391eligible
+unique neutral candidates (25/200mrad half-windows, fixed55.757GeVupper2%cap).
+Generator FSR roots and uniquely birth-matched G4eBrem roots retain individual
+MC IDs; unique-descendant ancestry is grouped per photon, ambiguity never
+credited to one. 3631clusters pass (1640FSR/1991eBrem). Summed-origin95% accepts
+6339; all2708extra candidates contain multiple photon identities and fail.
+Individual contributions and exact3631keys saved in study CSVs. All original
+candidate/geometry/isolation fields and grouped-origin weights reproduce.
+eBrem matching covers98.82%birthE in traversed candidate-bearing events;
+unmatched births are not identified. Not complete detector-wide photon truth.
 
-Held-out4929selected;>=90%photon-purity1675/4929=33.98%(baseline16.50%). Mean
-clusterphotonpurity68.42%(baseline55.20%); collectedFSR/eBremEretained50.61/51.07%,
-combined50.91%. Energy-onlycontrol:4762clusters,30.37%highpurity,65.81%mean.
-Paired300source-block16/84%intervalsgainvsenergyonly:+3.21–4.01pphighfraction,
-+2.36–2.88ppmean. No recoil-improvement/calibratedclassifier/physicsvalidationclaim.
+Reconstructed-cut search splits source jobs mod5:0/1/2development33029,
+3calibration11018,4evaluation11344clusters. Beam40/up-to4cuts,>=100dev and
+>=50cal candidates. No truth feature. No tested calibration rule reaches95%
+passing fraction. Frozen rule distance-to-track-ECAL>=300mm AND inclusive
+I300>=.7: evaluation48/61=78.69%individually>=95%,meanpurity96.12%,true95recall
+6.383%,dominant-photonEretention2.771%. Mean purity is NOT passing fraction.
+No reliable95%-passing reconstructed classifier established. EarlierR300/I.46
+and legacy per-origin plots measure grouped radiation, NOT one-photon purity.
+Source-block evaluation is held out from this search, not fresh production.
 
-Importanttail:atI>=.9,662held-outclusters haveonly14.06%meanphotonpurity and
-85.88%main-electronfraction; strongerIisNOTmonotonic. No uppercut/veto tuned
-onheld-outtail. Main-electron-dominated neutralcandidates maythemselvesbeisolated;
-NativeI=1checks nowshow all404held-outcases lack usablechargedECALreference;
-319main>=90%,227>=99%. Two directRECexamples havechargedPFOtrackpresent/ECAL[],
-whileelectron-dominatedshower is in charge-zero tracklessPFO. Job3/event4/
-cluster15 is44.48GeV,99.9867%main,0FSR/eBrem,nootherECALneighbor,thusI=1.
-Candidate's own showerenergy is excluded; exact upstream associationcause
-remainsuninvestigated. EvidenceJSON in study; no PFA/sourcechange.
-Broadercase:2075/3254selectedlow-purityclusters ALREADYhavechargedECALreference.
-Nativejob11/event195:charged5.77GeV+neutral27.81GeV, both>99.7%main-electron;
-onlychargedneighbor counted, yetI=.828. Ratio measuresenergydominance, not
-internalcleanliness. Post-hocdropI=1mean73.54%stillnotpure; no newcut adopted.
-ProofJSONin study; upstreamsegmentationcause remainsunestablished. NewI100saturation4.65%,newI300
-1.45%heldout. NineconeE>240GeVoutliercontrols leave selectedsampleunchanged.
-
-All500sourceidentities checkedbefore/after; oldI100reproducesall55391candidates,
-newextraE=oldextraE+mainconeE at100; monotonicradius/synthetictests pass;80
-independentscalar nativechecks andindependentheldoutsumchecks pass. Four scripts
-compile,fourfinalrendersreviewed. Newgallerysection83PNGs/18sections/exact-once,35PDFs;110priorimages/17sections
-unchanged,bothremovedsectionsstayoffpage. Page/all4newPNGsHTTP200;source/local/
-servedhashesmatch. Same ailogin002PID443262/localhost8000, no restart. Artifacts:
-TrackingPerformanceStudies/neutral_isolation_radius_20261114/.
-[Definition, frozen choice, results, limitations and checks](agents_record/2026-11-14-charged-inclusive-isolation-radius.md).
-[Prior distance category study](agents_record/2026-11-14-neutral-purity-distance-categories.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-charged-inclusive-isolation-radius.md).
+Four new plot pairs: single-vs-summed fraction, isolation, reconstructed-cut
+tradeoff, native mixing examples. Gallery19sections/87PNGs/39PDFs after
+publication,118oldimages preserved; warnings added to3legacysections only.
+Both user-removed sections remain absent. No source,REC,fit,card,installation,
+production submission or recoil test/change. Next question: reconstructed
+shower information capable of distinguishing one photon from overlapping
+showers; current scalar isolation cuts have not solved it.
+Artifacts:TrackingPerformanceStudies/single_photon_purity_20261114/.
+[Definitions, counts, frozen selection and limitations](agents_record/2026-11-14-single-photon-purity.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-single-photon-purity.md).
