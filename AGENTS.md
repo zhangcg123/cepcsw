@@ -339,42 +339,35 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**INDIVIDUAL-PHOTON >=95% PURITY (2026-11-14).**
-User clarified that a photon-only cluster mixed between FSR/eBrem is NOT a
-clean photon candidate. Target is >=95% of full cluster response from ONE
-identifiable tagged Z->ee photon and its descendants. Distinct photons remain
-separate even within the same origin. Main-electron showers are background.
-Native cluster-MC weights are response-attribution proxies, not exact deposits.
+**ALL >95%-SINGLE-PHOTON NEUTRALS: ISOLATION/DISTANCE (2026-11-14).**
+User asks to truth-select ALL clean neutrals and inspect reconstructed isolation
+and distance to electron. ONE tagged Z->ee photon and its descendants must
+contribute >95%of full cluster response; never sum different photons/origins.
+Use verified currentREC-derived55391candidate cache/all500sources/100000events.
+No new REC read/reconstruction. All500sizes/mtimes still match. Scope unchanged:
+25/200mrad half-windows,55.757GeVupper2%cap. No rec-cut,eventcategory,fit/recoil
+or development/evaluation split. 3631selected (1640FSR/1991eBrem),3306events/
+3327associatedtracks; exact previoustruthlist,noneexactly95%. IDs/fullrows saved.
+NativeMCweights are response proxies; identifiable-root/matching limits remain.
 
-Fresh read all500 current REC_ECALTRUTH sources/100000events, same55391eligible
-unique neutral candidates (25/200mrad half-windows, fixed55.757GeVupper2%cap).
-Generator FSR roots and uniquely birth-matched G4eBrem roots retain individual
-MC IDs; unique-descendant ancestry is grouped per photon, ambiguity never
-credited to one. 3631clusters pass (1640FSR/1991eBrem). Summed-origin95% accepts
-6339; all2708extra candidates contain multiple photon identities and fail.
-Individual contributions and exact3631keys saved in study CSVs. All original
-candidate/geometry/isolation fields and grouped-origin weights reproduce.
-eBrem matching covers98.82%birthE in traversed candidate-bearing events;
-unmatched births are not identified. Not complete detector-wide photon truth.
+I300 includes ALLother validpreECALclusters, including mainchargedclusters;
+exclude only candidate. Distance is3Dclusterposition-to-associatedBaselineKF
+trackECALentrance, inmm; includes showerdepth, not common-surfaceprojection.
+MedianI300/distance: FSR .3651/207.09mm,eBrem .5022/195.93mm;51760remaining
+neutrals .1507/101.30mm. Allclean distance30.82–466.13mm. Cleanphotons need not
+haveInear1 because nearbyelectronenergy contributes to denominator. Bothold
+cuts(d>=300mm,I>=.7)retain238/3631=6.555%; descriptiveall-samplecheck, NOT new
+cutoptimization/held-outresult. Previous held-out48/61=78.69%passing and96.12%
+meanpurity describe DIFFERENT statistics; no95%-passing classifier established.
 
-Reconstructed-cut search splits source jobs mod5:0/1/2development33029,
-3calibration11018,4evaluation11344clusters. Beam40/up-to4cuts,>=100dev and
->=50cal candidates. No truth feature. No tested calibration rule reaches95%
-passing fraction. Frozen rule distance-to-track-ECAL>=300mm AND inclusive
-I300>=.7: evaluation48/61=78.69%individually>=95%,meanpurity96.12%,true95recall
-6.383%,dominant-photonEretention2.771%. Mean purity is NOT passing fraction.
-No reliable95%-passing reconstructed classifier established. EarlierR300/I.46
-and legacy per-origin plots measure grouped radiation, NOT one-photon purity.
-Source-block evaluation is held out from this search, not fresh production.
-
-Four new plot pairs: single-vs-summed fraction, isolation, reconstructed-cut
-tradeoff, native mixing examples. Gallery18sections/83PNGs/35PDFs after user
-removed the charged-inclusive radius section; its4PNG/PDFpairs archived outside
-the gallery,118retainedimages unchanged. Other removed sections remain absent.
-No source,REC,fit,card,installation,
-production submission or recoil test/change. Next question: reconstructed
-shower information capable of distinguishing one photon from overlapping
-showers; current scalar isolation cuts have not solved it.
-Artifacts:TrackingPerformanceStudies/single_photon_purity_20261114/.
-[Definitions, counts, frozen selection and limitations](agents_record/2026-11-14-single-photon-purity.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-single-photon-purity.md).
+Four plots: normalizedisolation andtrackdistance shapes(cleanFSR,cleaneBrem,
+remaining), separatecleanFSR/eBrem2Dmaps withcommonbinning/colourscale. Oldcut
+lines are guidesonly. Full0–600mm/0–1displays includeallcandidates. Independent
+selectedrow/sourceidentity/median/histclosure/shape/hashchecks pass;4renders
+reviewed. Gallery19sections/87PNGs/39PDFs after publication;118priorimages and
+18priorsections preserved. Alluser-removedsections(includingradius)stayabsent.
+No source,card,fit,build,install,default,production orrecoiltest/change.
+Artifacts:TrackingPerformanceStudies/pure_photon_neutral_geometry_20261114/.
+[Definitions, distributions, limitations and checks](agents_record/2026-11-14-pure-neutral-geometry.md).
+[Prior individual-photon truth and reconstructed search](agents_record/2026-11-14-single-photon-purity.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-pure-neutral-geometry.md).
