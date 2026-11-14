@@ -214,6 +214,13 @@ claims remain provisional. Shared detector response can be genuinely mixed;
 inheritance alone does not demonstrate erroneous weights. See
 `agents_record/2026-11-15-ecal-truth-weight-audit.md` for evidence and limits.
 
+The near-unity full-angle ECAL photon response uses energy-corrected
+pre-reclustering clusters. “Raw” there means before study energy caps, not
+uncalibrated deposits. It is not photon-count efficiency or proof that soft
+radiation was retained; corrections/response tails can mask losses in aggregate.
+Soft-response filtering exists upstream of the snapshot. See
+`agents_record/2026-11-15-calibrated-response-vs-soft-loss.md`.
+
 Historical evidence, resolved incidents, exact experiment tables, runbooks,
 and superseded decisions live under `agents_record/`. Load historical records
 only for regression evidence, design rationale, experiment comparison, or
@@ -350,31 +357,34 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PHOTON-ID DISTANCE IN MM: COUNTS / LOG Y (2026-11-15).**
-User requests millimetres on the retained photon-IDplot. X is saved3DEuclidean
-norm(neutral-clustercentre - associatedBaselineKF ECALentry), INCLUDING shower
-DEPTHoffset, not surfacearc or fixedradius angular conversion. Nativefeature
-reader had checked the norm directly. All55391distance²=perp²+depth² closures
-pass. Observed3.2296–584.0138mm;60common10mmbins0–600mm. Same rawunitweight
-counts/logyfloor.7; no separate histogramnormalization. Exactly51760Other,
-1640FSR/1991eBrem one-tagged-photon>95%labels unchanged; all180bins independently
-recounted and totalsclose. Zero bins kept0inCSV/omittedonlyfromlogrender.
-Finalrender/hashes/compilechecks pass. No newnativefile read/reconstruction/refit.
+**GALLERY MERGE / CORRECTED RESPONSE CLARIFICATION (2026-11-15).**
+User requests merging the sole photon-distance diagnostic with immediately
+precedingsection, and asks why photonenergyresponse can be near100%despite
+PFAsoft-response removal. Precedingsection is “New BP recoil: theta25mradwindow
+andH0+FSR”: appenddistanceplot as7th and itsdescription, removeonlystandalone
+photon-IDheading. All102imagehashes fixed; other18sectionobjects/order intact;
+verified75PNGs19sections27PDFs. Fivepreviousremovedplots remainabsent.
 
-Currentpresentation override:
-TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/plot.py.
-Legacyphoton_id_track_opening filename stays forURL; axis/currentdescription
-explicit3Ddistancemm. Before_distance/ preserves priormradcode/render/data/
-checks withhashes. Candidate25/200halfwindow/55.757GeVcap, nativeMC labels and
-charged-inclusive isolation laws unchanged; no spatial-purity validation claim.
+Read-only code confirms EnergyTimeMatching filters smallhalfclusters in towers
+<1GeV(before snapshot). TrackClusterConnecting applies energyCorrection(E,phi,
+theta)/E asEscale; getLongiE includes thisscale, and exporter savesgetLongiE.
+Snapshotcallback runs AFTERthat algorithm and BEFOREPFOReclustering. Service
+includesMPV/crack/angularresponse corrections. Therefore old“rawfullangle” means
+uncapped CORRECTEDresponse, not rawdeposits or physicalphotonretention.
 
-The named “Reconstructed photon identification: shower shape, local activity
-and efficiency” section still hasONLYthisfirstplot. ReplaceonlyPNG/PDFpair,
-archiveformerpairoutside servedtree, updateonlytargetdescription; preserve
-100otherimagehashes/19othersectionobjects/order/patterns andfivepriorremovals.
-Verified75PNGs20sections27PDFs102images; same localhost8000server. No source,
-card/build/install/default/production change. Artifacts:
-TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/.
-[Definitions and current metric](agents_record/2026-11-15-photon-opening-counts-log.md).
-[Complete outgoing status](agents_record/2026-11-15-agents-before-photon-distance-mm.md).
-[Previous full-angle accounting](agents_record/2026-11-15-full-angle-ecal-photon-accounting.md).
+98.17%FSR/100.79%eBrem are native-weighted correctedE / photonBIRTHsum, including
+allangle/othercharged/studycut-rejected response. CurrentBPwindowretainedresponse
+59.06/79.73%; fullangle withselected+othercharged/caps91.67/92.68%. Softcount
+loss neednot meanlargeEloss; calibration/tails/attribution CANcompensate losses,
+but their actual contributions were NOTquantified here. Photoncount efficiency,
+softbirth-E dependent response and physicaldepositclosure remain unmeasured.
+Do not claim every softphoton survives or fullPFAefficiency from these totals.
+No PFA/tracking/source/card/build/install/default/production changes.
+
+Distanceplot unchanged:55391candidates,51760Other/1640FSR/1991eBrem individual
+>95%labels,60common10mmbins0–600,rawcounts/logy,3Dclustercentre-to-trackECALentry
+includesdepth. Native-map spatialpurity caveat andchargedinclusive isolation
+law remain. Artifacts:TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/.
+[Source evidence and interpretation limits](agents_record/2026-11-15-calibrated-response-vs-soft-loss.md).
+[Distance/count plot definitions](agents_record/2026-11-15-photon-opening-counts-log.md).
+[Full outgoing status](agents_record/2026-11-15-agents-before-section-merge-response-clarification.md).
