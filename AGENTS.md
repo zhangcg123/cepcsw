@@ -360,54 +360,42 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEUTRAL EVENT DISPLAYS BY DISTANCE (2026-11-15).**
-Retain the user's accepted accessible style and inspect distinct current-REC
-neutral examples near/middle/far from the matched electron charged cluster.
-Six new events are prepared, plus current copies of the earlier369/82/6 and
-34/52/8 examples, in a dedicated gallery subdirectory.
+**MORE EVENT DISPLAYS, INCLUDING TWO >95% SINGLE-PHOTON NEUTRALS (2026-11-15).**
+Four distinct current-REC events extend the dedicated gallery from8 to12 events,
+retaining the accepted accessible palette, markers/hatches, foreground white-
+outlined x/+ and saved ECAL-entry truth-energy labels. Previous8 plots are kept.
 
-Distance is the minimum3D reconstructed pre-ECAL cluster-centre separation to
-a valid cluster on the PFO matched to the same selected Z electron: Near<100mm,
-Middle100–250mm, Far>=250mm. It is not an angle, shower-edge gap, track-entry
-or surface-projected distance. The selected neutral is ringed, with cluster IDs
-and distance printed on each new plot. Two examples per band contrast mixed
-and FSR-dominated attribution:181/115/11(63.1mm),141/7/9(64.2mm);
-258/153/27(179.2mm),377/149/19(176.4mm);472/121/20(389.8mm),202/89/15(380.8mm).
-All focus photon roots belong to the corresponding same selected Z electron;
-each chosen owner has both FSR/eBrem birth sums>1GeV. These are selected
-illustrations, not an unbiased population or reconstructed identification cut.
+Highlighted clear focus clusters, checked with a strict individual-photon >95%
+native-weight cut:70/140/track7 N44,7.252GeV,335.0mm from C0,100%FSRgamma16;
+92/84/track26 N20,25.150GeV,381.6mm from C9,99.7397%eBremgamma248.
+Both have actual original-photon ECAL entrances and belong to their indicated
+selected Z electron. In92/84, N46 is a second fragment of the SAME gamma248,
+not a second independent photon. The selected focus is the larger N20 shower.
+Purity is maxONE photon-root weight/full cluster MC weight, not FSR+eBrem summed.
 
-Charcoal circles/gold triangles show charged/neutral reconstructed hit ownership;
-stars/diamonds show actual original FSR/eBrem entrances. Bars retain individual
-photon roots with distinct hatches and black labels. In202/89, FSR gamma14
-converted before ECAL; it has no invented original-photon entry. Left panels
-retain the barrel-reference IP-ray projection inmm, which differs from the3D
-distance defining categories. View ranges vary; use the numerical axes.
-Native U/V-based MC weights remain unvalidated spatial3D deposit purity, and
-reconstructed3D hits have no individual-photon truth association.
+Two additional mixed examples:21/3/track17 N55,1.670GeV,63.4mm from C1,
+58.2%maximum single-photon fraction;287/20/track24 N25,18.007GeV,373.3mm,
+56.3%maximum single-photon fraction. All focus photon roots have the same owner.
+Distances are reconstructed3D cluster-centre separations, not angles or the
+left-panel IP-ray-to-cylinder projection. These are selected illustrations,
+not population validation or a reconstructed photon identifier. Native U/V MC
+weights remain unvalidated as physical3D spatial energy-deposit purity.
 
-Eight current-REC events were freshly inspected, six selected; source identities,
-16 individual photon fractions,6 distances, owners, conversion daughters,
-window/projection/stack checks pass. All eight current layouts reviewed;
-foreground layer/energy-label/geometry-preservation checks pass; scripts compile. No CEPC reconstruction or simulation implementation,
-card/build/install/default changes or simulation/refit. Analysis artifacts stay
-uncommitted: TrackingPerformanceStudies/neutral_event_distance_examples_20261115/.
+Current source campaign remains REC_ECALTRUTH_500jobs_200evt_20261112. Six new
+full event entries were inspected, four retained; two endcap views were omitted
+from this common barrel-reference display. One additional geometry-only entry
+was inspected. Independent checks pass7 per-photon fractions,4 measured energies,
+3D distances, same-electron ownership, source identities, strict95% cases and
+actual entrances. Projection, stack, foreground and energy-label assertions pass;
+scripts compile, all4 new renders reviewed and3 label layouts corrected/reviewed.
+No CEPC reconstruction/simulation implementation, cards, build/install/default,
+simulation or refit changes. Analysis artifacts remain uncommitted under
+TrackingPerformanceStudies/neutral_event_more_20261115/.
 
-Verified gallery: localhost8000/neutral_event_displays/ on ailogin002,
-PID3994352, under the existing
-bp_matched_recoil_pt_20261110 gallery, with Near/Middle/Far/Earlier reference
-sections:8PNGs/8PDFs,4sections. Recursive root:84PNGs/36PDFs,21sections.
-The latest annotation update refreshes20 event image files (8PNG/PDF pairs
-in the child plus2 root reference pairs);100 unrelated images are preserved.
-Old original-event URLs remain valid. Root/child section membership is unchanged.
-Publication checks: truth_labels_gallery_verification.json in the distance study.
-The electron-truth x and Baseline KF + now have foreground layers above all
-other axes objects and white outlines. All18 visible photon labels append
-saved first-ECAL-entry energies; all8 electron-truth labels show entry total
-energy (postKineticEnergy + mass). Birth energies stay explicitly identified in
-component legends and converted-original notes. Data, selections, distances,
-fractions and physics results are unchanged; no REC read, simulation or refit.
-[Foreground markers and truth energies](agents_record/2026-11-15-neutral-event-truth-label-energies.md).
-
-[Exact selections, definitions and evidence](agents_record/2026-11-15-neutral-event-distance-examples.md).
-[Complete outgoing status](agents_record/2026-11-15-agents-before-distance-event-examples.md).
+Gallery: localhost8000/neutral_event_displays/ on ailogin002, PID3994352.
+Clear >95% examples have a dedicated section; the mixed additions join Near/Far.
+Verified counts:12PNG/12PDF/5 child sections; root88PNG/40PDF/21sections.
+All120 existing image files are preserved; only8 new files are added. Publication
+checks are in the new study's gallery_verification.json.
+[New cases, purity definition and checks](agents_record/2026-11-15-more-clear-neutral-event-displays.md).
+[Complete outgoing focus](agents_record/2026-11-15-agents-before-more-clear-neutrals.md).
