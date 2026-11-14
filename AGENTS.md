@@ -357,35 +357,28 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**GALLERY MERGE / CORRECTED RESPONSE CLARIFICATION (2026-11-15).**
-The distance diagnostic belongs in “Photon-energy locations: matched charged
-clusters and full-angle accounting”, AFTER its existing tablebar, giving2plots.
-Restore “New BP recoil: theta25mradwindow andH0+FSR” to its original6plots/text.
-Keep no standalone photon-IDheading. All102imagehashes unchanged; other17section
-objects/order fixed;75PNGs19sections27PDFs. Fivepreviousremovedplots remainabsent.
-Full outgoing placementstatus preserved in
-agents_record/2026-11-15-agents-before-distance-correct-section.md.
+**ISOLATION/PURITY COLZ MAPS: CLEAN DISPLAY (2026-11-15).**
+User names “Does reconstructed isolation measure single-photon purity? (7)”:
+onlyAGORAsimulation aboveaxes, noformulas/statistics/annotationboxes, showCOLZ
+andwhiteprofiles. Keep6maps(inclusiveR50/300/500/1000,FSR-leadingR50,eBrem-leading
+R50); remove coefficient-vs-radius seventhfigure fromservedsection. Allprior
+images/statistics archived; no coefficients recalculated, no datapopulation or
+selection change. Radius nowinx-axislabel. No legends/red equalitydiagonals.
 
-Read-only code confirms EnergyTimeMatching filters smallhalfclusters in towers
-<1GeV(before snapshot). TrackClusterConnecting applies energyCorrection(E,phi,
-theta)/E asEscale; getLongiE includes thisscale, and exporter savesgetLongiE.
-Snapshotcallback runs AFTERthat algorithm and BEFOREPFOReclustering. Service
-includesMPV/crack/angularresponse corrections. Therefore old“rawfullangle” means
-uncapped CORRECTEDresponse, not rawdeposits or physicalphotonretention.
+Same55391candidates fromcurrentREC-derivedfeatures and inclusiveisolationcache;
+charged electronalwaysincluded. Every9600original40x40densitybins EXACT, original
+logcolourlimits/cmap/ranges preserved. Whitecurve is unchanged percluster MEDIAN
+in isolationbinsN>=30; allmedians checked byindependent sortedvalues andold4
+profiles/hashidentities verified. All6assertoneAGORAtext/onewhiteline/nolegend/
+emptytitle; two representativerenders reviewed, scriptcompiles/hashchecks pass.
+Axislabels/ticks/colourbar retained. No nativefile read, simulation orrefit.
+Native-MC spatialpurity limitation remains; no physics or selector validation.
 
-98.17%FSR/100.79%eBrem are native-weighted correctedE / photonBIRTHsum, including
-allangle/othercharged/studycut-rejected response. CurrentBPwindowretainedresponse
-59.06/79.73%; fullangle withselected+othercharged/caps91.67/92.68%. Softcount
-loss neednot meanlargeEloss; calibration/tails/attribution CANcompensate losses,
-but their actual contributions were NOTquantified here. Photoncount efficiency,
-softbirth-E dependent response and physicaldepositclosure remain unmeasured.
-Do not claim every softphoton survives or fullPFAefficiency from these totals.
-No PFA/tracking/source/card/build/install/default/production changes.
-
-Distanceplot unchanged:55391candidates,51760Other/1640FSR/1991eBrem individual
->95%labels,60common10mmbins0–600,rawcounts/logy,3Dclustercentre-to-trackECALentry
-includesdepth. Native-map spatialpurity caveat andchargedinclusive isolation
-law remain. Artifacts:TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/.
-[Source evidence and interpretation limits](agents_record/2026-11-15-calibrated-response-vs-soft-loss.md).
-[Distance/count plot definitions](agents_record/2026-11-15-photon-opening-counts-log.md).
-[Full outgoing status](agents_record/2026-11-15-agents-before-section-merge-response-clarification.md).
+Presentationoverride:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/plot.py.
+Galleryarchives14oldtargetPNG/PDFfiles outside servedtree, replaces6pairs/removes
+summarypair, keeps88unrelatedimagehashes/18othersectionobjects/order/removals.
+Verified74PNGs19sections26PDFs100images; same localhost8000server. Prior five
+photon-IDremovals and coefficient-plotURL stayabsent. No source/card/build/install/
+default/production changes. Artifacts:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/.
+[Definitions, presentation and checks](agents_record/2026-11-15-isolation-colz-clean.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-isolation-colz-clean.md).
