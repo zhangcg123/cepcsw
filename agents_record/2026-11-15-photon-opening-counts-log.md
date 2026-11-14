@@ -1,5 +1,8 @@
 # Retained photon-ID opening angle: counts and logarithmic y — 2026-11-15
 
+Current presentation uses **3D distance in mm, 10 mm bins and log-y raw counts**.
+The former mrad presentation below is preserved history; see the distance update.
+
 User names the “Reconstructed photon identification: shower shape, local activity
 and efficiency (6)” section. Keep its FIRST plot photon_id_track_opening.png,
 remove its other FIVE figures from the webpage, and change the remaining three
@@ -62,3 +65,36 @@ targetsection keeps ONLYphoton_id_track_opening.png. All100unrelatedPNG/PDF
 hashes and19othersectionobjects/order remain unchanged; both newsource/gallery
 hashes match. The12oldservedtargetfiles are archived outside servedtree.
 HostHTTP/archivehashverification is recorded in gallery_verification.json.
+
+## Distance in millimetres — 2026-11-15
+
+User requests x-axis inmm. Current maintainedplot.py now uses the saved
+track_distance_mm = norm(reconstructed neutral-cluster centre - associated
+BaselineKF AtCalorimeter referencePoint). This is a3D Euclidean distance,
+including the shower-depth offset, not a surface arc or angular relabelling.
+The original feature reader directly checked this norm against native REC.
+For all55391rows, distance²=perpendicular²+depthoffset² closes to tolerance.
+All3populations, strict one-photon>95%labels and counts remain identical.
+
+Current plot uses60common10mm bins0–600mm (observed3.2296–584.0138mm), raw
+unitweight counts and logarithmic yfloor.7. Each bin reproduces an independent
+integer-bin count; totalall55391 and51760/1640/1991subgroups close. Zero bins
+remain0in histogram.csv but are omitted from log rendering. Labels explicitly
+state3Ddistance[mm] and Neutralclusters/10mm. Finalrender/hash/compile checks
+pass. Prior mradsource/render/data/checks are preserved in before_distance/
+with hashes; before_distance_gallery*.json snapshots the102servedimages and
+20sections. Filenamephoton_id_track_opening stays as a legacy URL, while its
+axis and currentdescription explicitly use distance. No new REC read/refit.
+
+The gallery agent replaces only the retained PNG/PDF pair, archives the former
+served mradpair outside servedtree, and updates only this sectiondescription.
+All100otherimagehashes/19othersectionobjects/patterns/order and the five prior
+removals stay unchanged. Expectedcounts75PNGs20sections27PDFs102images.
+Checks go to distance_gallery_verification.json. Full outgoing AGENTS snapshot:
+2026-11-15-agents-before-photon-distance-mm.md. Globalprefix unchanged.
+
+Millimetre local publication verified by main: only retainedPNG/PDFpair changed,
+all100otherimagehashes and19othersectionobjects/order/patterns fixed; target
+title/pattern unchanged.75PNGs20sections27PDFs102images. Newsource/gallery
+hashes match. Native inputdata and all five prior removals remain unchanged.
+Final host HTTP/source-local-servedhashproof is in distance_gallery_verification.json.

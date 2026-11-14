@@ -350,31 +350,31 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PHOTON-ID OPENING PLOT: COUNTS / LOG Y (2026-11-15).**
-User identifies the “Reconstructed photon identification: shower shape, local
-activity and efficiency (6)” section: retain FIRST plot only, remove otherfive
-from webpage, no separate histogram normalization, logarithmic y. The retained
-photon_id_track_opening.png uses raw neutral-cluster counts/commonunitweight,
-40unchanged5mrad bins0–200. Same55391candidates:51760other neutrals,1640FSR and
-1991eBrem with ONE tagged photon fraction>95%; no origin/photon summation.
-Every120rawbin counts and bothbinedges reproduce oldhistogramcache EXACTLY.
-Zero bins omitted only from log rendering; stored as0. Yfloor.7preservesonecount.
-All3curves/legendcounts retained; grayfilledOther,orangeFSR,blueeBrem; AGORA
-simulation/squareaxes/transparentgrid/originalrange. Finalrender/hashes/compile
-checks pass. No newphysics input, classification, cut, native-file read orrefit.
+**PHOTON-ID DISTANCE IN MM: COUNTS / LOG Y (2026-11-15).**
+User requests millimetres on the retained photon-IDplot. X is saved3DEuclidean
+norm(neutral-clustercentre - associatedBaselineKF ECALentry), INCLUDING shower
+DEPTHoffset, not surfacearc or fixedradius angular conversion. Nativefeature
+reader had checked the norm directly. All55391distance²=perp²+depth² closures
+pass. Observed3.2296–584.0138mm;60common10mmbins0–600mm. Same rawunitweight
+counts/logyfloor.7; no separate histogramnormalization. Exactly51760Other,
+1640FSR/1991eBrem one-tagged-photon>95%labels unchanged; all180bins independently
+recounted and totalsclose. Zero bins kept0inCSV/omittedonlyfromlogrender.
+Finalrender/hashes/compilechecks pass. No newnativefile read/reconstruction/refit.
 
-Newpresentation override is TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/plot.py,
-reusing neutral_photon_id_20261114/features.csv. Original6sourceplotpairs and
-historical percentageplotter stay untouched. Candidate25/200half-window and
-55.757GeVcap unchanged. Native-map spatialpurity caveat remains; no wronglink
-or physical95%-clean claim established. Electron-excludedisolation not used.
+Currentpresentation override:
+TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/plot.py.
+Legacyphoton_id_track_opening filename stays forURL; axis/currentdescription
+explicit3Ddistancemm. Before_distance/ preserves priormradcode/render/data/
+checks withhashes. Candidate25/200halfwindow/55.757GeVcap, nativeMC labels and
+charged-inclusive isolation laws unchanged; no spatial-purity validation claim.
 
-Gallery retains targettitle/order but patternONLYphoton_id_track_opening.png;
-fiveotherPNG/PDFpairs removedfromservedtree/archivedwitholdfirstpair outside
-servedtree. All100unrelatedimagehashes/19othersectionobjects/order/removals fixed.
+The named “Reconstructed photon identification: shower shape, local activity
+and efficiency” section still hasONLYthisfirstplot. ReplaceonlyPNG/PDFpair,
+archiveformerpairoutside servedtree, updateonlytargetdescription; preserve
+100otherimagehashes/19othersectionobjects/order/patterns andfivepriorremovals.
 Verified75PNGs20sections27PDFs102images; same localhost8000server. No source,
-card/build/install/default/production changes. Artifacts:
+card/build/install/default/production change. Artifacts:
 TrackingPerformanceStudies/neutral_photon_opening_counts_20261115/.
-[Definitions and preservation checks](agents_record/2026-11-15-photon-opening-counts-log.md).
-[Complete outgoing status](agents_record/2026-11-15-agents-before-photon-opening-counts-log.md).
+[Definitions and current metric](agents_record/2026-11-15-photon-opening-counts-log.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-photon-distance-mm.md).
 [Previous full-angle accounting](agents_record/2026-11-15-full-angle-ecal-photon-accounting.md).
