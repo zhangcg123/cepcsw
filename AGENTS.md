@@ -339,48 +339,47 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEW BP H0_F / THETA25 RECOIL PLOTS (2026-11-14).**
-All500 H0F_THETA25_NOSCAN_500jobs_200evt_20261113 jobs have completed markers,
-no failed markers, and200side-tree events each. Fresh new BP-flat/REC read covers
-100000inputs,198430selected track rows,98437complete classified pairs;
-98302valid opposite-charge BaselineKF pairs. Native pre-ECAL energies/positions
-match currentREC; reconstructed25/200mrad half-window IDs match196874complete-
-pair track rows. No deleted old BP ROOT/endpoint is used. H0 null_110_*, H0F
-fsr_only_110_*, ordinaryBP110/H_beta and floatingBP110/H_betaF read natively.
-Truth locations/null, NO scans; no hypothesis selection. Current REC files,
-tracking/fitting source/cards/default installation unchanged.
+**CONDITIONAL FSR/EBREM NEUTRAL PURITY (2026-11-14).**
+Corrected the separate-species study at the user's request: previous curves
+were composition fractions in one common neutral sample. New species s sample
+requires positive saved MC fraction f_s>0. In each reconstructed-metric bin,
+purity=sum(E*f_s)/sum(E) over that SAME associated-cluster subset. Full energy
+retains contamination; mixed clusters enter both samples. These conditional
+purities do NOT add to combined photon purity. This is truth-conditioned,
+not a reconstruction tag, collection efficiency or calibrated posterior.
 
-Six new plots,120–140GeV/0.1GeVbins. Inclusive10ab^-1 shows bare muonKF black
-solid, bare electronKF grey fill and BP110+floatingFSR blue. Fixed full-input
-weights0.704electron/1.354muon from100000/50000inputs; never success/window
-renormalized. Own valid floating pairs75511, window65003, expected45762.112;
-electronKF65793window/46318.272expected, muon44236/59895.544expected. Failed/
-undefined recoil remains inefficiency in full input normalization.
+Same validated current-REC metric cache:100000inputs,198081truth-covered
+tracks,55391baseline/91482wide neutral candidates; no ROOT reread/BP dependency.
+Baseline theta/phi half-windows25/200mrad, fixed55.757GeV neutral cap and
+reconstructed geometry/isolation unchanged. Distances are3D including depth;
+local100mrad cone excludes candidate/both main charged-cluster sets. Angular
+maps alone use wide200/200. No new metric, fit-validity or event-category cut.
 
-Five SHAPE panels (inclusive+4categories) use75068identical pre-window keys for
-BaselineKF+neutrals and ALL4BP hypotheses, with cached inclusive muon reference
-black dashed. Neither17948,eBrem-only31798,FSR-only9673,BothAND15649. Raw truth
-counts21602/43739/11517/21579 unchanged. A type means per-leg SUM photon birthE
->1GeV on EITHER leg; soft other type allowed; BothAND can involve different legs.
-Each curve divides by its OWN finite120–140count; legendNwindow and leftNcommon
-explicit. No GSF curve/gate in these BP hypothesis panels. Each category's raw
-histograms partition common inclusive bin-by-bin. H0/H0F/H_beta/H_betaF own
-valid baseline-pair counts89645/84459/81822/75511. Failed fits never replaced.
+Baseline FSR28501/eBrem45050associated clusters;21359mixed. Inclusive purities
+42.95/48.13%; charged distance<50mm28.67/39.00%,50–150mm49.43/49.11%,
+>=150mm62.43/62.10%. Far counts4791/6590. Missing charged-reference associated
+counts2614/6322, purities12.29/43.70%; reference-available25887/38728,
+48.28/49.36%. Do not confuse these with previous common-sample energy shares.
 
-H0/H_beta use own fitted electron IP state. H0F/H_betaF add their OWN matching
-fitted photon once. No extra neutral p4 to BP. KF+neutrals uses deduplicated raw
-pre-ECAL photons, nominalIP directions and new25/200window; NO purity/isolation
-or upper2%energy trim. Earlier55.757GeVtrim was for the energy-purity study.
-Ordinary null-family ECAL routing remains native, so this is not a calibrated
-four-way likelihood comparison. No old-window A/B, intrinsic-resolution fit
-or physics-validation claim. Fresh REC BaselineKF reproduces all98302old bare
-masses EXACTLY/NaN-aware, maximum0GeV difference. All500source/card identities,
-state/photon closures, native window masks and full normalization pass.
+Association sensitivity saved: >1e-6 changes far purities only to62.53/62.20%,
+but >1% raises them to74.45/74.46% while retaining99.955/99.939%far target E.
+That change is truth-selection bias, not improved reconstruction; plots retain
+strictly>0. Four profiles/maps/cuts/control updated (11PNG/PDFpairs). Same300
+source-block resamplings, pointwise16/84%errors;>=30associated clusters per
+shown bin/cell/curvepoint. All profile bins match direct conditional sums;
+all profile/map numerators unchanged, denominators subsets; all34cut target
+retentions match parent. Synthetic purity/composition selfcheck passes. All
+11renders reviewed. No reconstruction source/card/build/install/input change,
+new fits, online selector or physics-performance claim.
 
-Gallery81PNGs/17sections/exact-once,33PDFs, localhost8000/ailogin002PID443262.
-All102prior images preserved. Page/all6newPNGsHTTP200, source/local/served hashes
-match; all6renders reviewed. No source/build/install or production submission.
-Artifacts:TrackingPerformanceStudies/bp_h0f_theta25_recoil_20261114/.
-[New recoil study, definitions/counts/normalization/limits](agents_record/2026-11-14-new-bp-theta25-recoil.md).
-[Prior separate-purity study](agents_record/2026-11-14-neutral-purity-species.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-new-bp-theta25-recoil.md).
+Publication: replace11separate-species pairs in current gallery; retain prior
+composition sources/archive and all combined-purity/recoil figures. Gallery
+verification:81PNGs/17sections/exact-once,33PDFs;22replacements archived,
+92unrelated images/16other sections unchanged. Page/all11PNGsHTTP200; source/
+local/served hashes match. Same localhost8000/ailogin002PID443262, no restart.
+Artifacts:
+TrackingPerformanceStudies/neutral_purity_conditional_20261114/.
+[Corrected definition, results, sensitivity and checks](agents_record/2026-11-14-conditional-neutral-purity.md).
+[Prior composition definition](agents_record/2026-11-14-neutral-purity-species.md).
+[New BP recoil study](agents_record/2026-11-14-new-bp-theta25-recoil.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-conditional-neutral-purity.md).
