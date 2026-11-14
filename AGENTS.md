@@ -339,42 +339,40 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PER-CLUSTER PURITY, THEN ARITHMETIC MEAN (2026-11-14).**
-User corrected the estimator: p_s(i)=E_s(i)/E_neutral(i) for each cluster,
-then mean=sum(p_s)/N with EQUAL cluster weights. Previous ratio-of-energy-sums
-purities weighted energetic clusters more and were corrected in13
-neutral-purity figures; the2all-candidate isolation plots are now offpage. Energy retention still uses sum(E*p_s) and is unchanged.
-Profiles/maps/control/cut-purity ordinates and distancecompositionstacks now
-all use per-cluster arithmeticmeans. Stacks sum100%; targetmean equals upper
-point. Profile errors recomputed with300Poisson source-block resamplings of
-fraction sums/cluster counts. Densityplots already percluster; only meanlines
-changed. Energycollection-efficiency/budgetfigures retain energy normalization.
+**PER-CLUSTER DISTANCE PURITY BY EVENTCATEGORY (2026-11-14).**
+User requested FSR-only/eBrem-only/Both distance purity separately. Added6plots:
+3eventcategories x3Ddistance to mainchargedcluster/trackECALentrance; inclusive
+figures retained. Equalclustermeans=sum(E_s/E_cluster)/N, never energyweighted.
+Within each eventcategory keep separate conditional FSR/eBrem-associated cluster
+samples(f_s>0); mixedclusters can enterboth, curvesnonadditive. F/Bbottomstacks
+mean perclusteroriginfractions, sum100%, targetcomponent equals upperpoint.
 
-Samples unchanged:conditional FSR/eBrem diagnostics require respective saved
-fraction>0 (28501/45050baselineclusters,21359mixed; nonadditive means). Actual
-reconstructed-isolation selection keeps all55391eligible candidates,including
-zero-targetclusters (samepopulation,additive FSR/eBrem means). No silent
-truth/cohort/isolation/window/energycut change. Same100000currentRECinputs,
-198081truth-coveredtracks,25/200mradhalf-windows,55.757GeVcap; noROOTreread.
-Isolation100mradcone still excludes candidate/bothmainchargedclusters.
+Categories use perselectedZelectron SUMphotonBIRTHenergy>1GeV on EITHERleg.
+Only means other type<=1GeV on bothlegs; softradiationallowed. Both=AND,can
+involveoppositelegs. Joined freshnative20261114BPeventexport by(job,event),
+recomputedtruthflags andcheckedassignedtrackidentities; no endpoint/fit/chi2/
+baselinecharge/recoilgate. No deletedBP ROOT dependency or newROOTread.
 
-All-candidate combinedmeans at minimumI0/0.5/0.9/1 are55.22/56.87/55.99/54.92%.
-I>=0.9 FSR/eBremmeans25.90/30.09%,energyretentions81.34/53.90%,combined63.86%.
-Inclusive conditionalmeansFSR39.81/eBrem42.71%; charged distance>=150mm
-54.07/46.32% with4791/6590clusters. Earlier energyweightednumbers are historical.
-No isolationcut adopted/recoil improvement/physics-validation claim.
+Same100000RECinputs,198081truth-coveredtracks,55391baselineneutrals; requested
+52654clusters:FSRonly7282/eBremonly23451/Both21921. Explicitly excluded2246Neither
+and491clusters/383events withoutcompletepaircategoryrecord. Globalclassified
+98437eventrecordspreserved; requestedrawevents11517/43739/21579. Neutral-bearing
+events5881/16574/14025; FSR-associatedcounts6589/4810/16422,eBrem2985/22115/18757.
+Missingchargedreferencecounts357/3927/2371 retained in trackdistanceonly.
 
-Independent math.fsum/N checks allprofilebins; allprofile/map/cut/control
-counts match prior, all44retentionrows unchanged, stackidentity/synthetic
-averaging tests pass; four scripts compile, all13renders reviewed. Original
-analysisoutputs remain, priorgalleryimages archived. User removed “Neutral
-isolation as a reconstructed selection (2)” from webpage; its4PNG/PDFcopies
-are archived outside servedtree under newstudy/gallery_removed_isolation_selection_20261114/.
-All11conditional-purity figures/distancebars remain. Removedcombined8plots
-stay absent. Currentgallery73PNGs/16sections,25PDFs; other98images/16sections
-unchanged. Same ailogin002PID443262/localhost8000. Verification in removalarchive.
-No reconstruction source/card/build/install/production change.
-Artifacts:TrackingPerformanceStudies/neutral_purity_cluster_mean_20261114/.
-[Estimator, cohort definitions, results and checks](agents_record/2026-11-14-neutral-purity-cluster-mean.md).
-[Prior isolation study](agents_record/2026-11-14-neutral-isolation-selection.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-cluster-mean-purity.md).
+Window25/200mradhalf-widths,55.757GeVcap, bins0–500mm,>=30clusters/point,
+300Poissonsource-blockerrors unchanged. Point400mmmeans300–500mmbin. NativeMC
+weights remain attributionproxies. All bins match directmeans; categorycounts
+partition parentwithexplicit exclusions; stackunity/pointidentitypass. Script
+compiles, all6rendersreviewed. No isolationcut adopted/physicsvalidationclaim.
+Current100mradisolation still excludes mainchargedclusters; no radiusstudy run.
+
+Artifacts:TrackingPerformanceStudies/neutral_purity_distance_categories_20261114/.
+Added6newpairs, preservepriorinclusive/conditional/recoilfigures; both removed
+combined-purity8/isolationsel2sectionsstayoffpage. No reconstruction source/card/
+build/install/input or production change. Gallery79PNGs/17sections/exact-once,
+31PDFs;98priorimages/16priorsections unchanged. Page/all6newPNGsHTTP200;source/
+local/servedhashesmatch. Same ailogin002PID443262/localhost8000, no restart.
+[Definitions, populations and checks](agents_record/2026-11-14-neutral-purity-distance-categories.md).
+[Arithmetic cluster-mean definition](agents_record/2026-11-14-neutral-purity-cluster-mean.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-distance-purity-categories.md).
