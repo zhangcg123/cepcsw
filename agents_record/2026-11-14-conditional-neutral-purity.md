@@ -92,3 +92,15 @@ ailogin002.ihep.ac.cn PID443262 at http://127.0.0.1:8000/ without restart.
 Delegated plot-gallery proof: study/gallery_verification.json. Main separately
 checked all92unrelated hashes,22archives and replacements,exact-once coverage
 and other16section records. Global AGENTS prefix is preserved byte-for-byte.
+
+## Subsequent requested gallery removal
+
+The user explicitly requested removal of “Neutral energy purity versus
+reconstructed distance and isolation (8)” from the webpage. Removed only that
+manifest section and moved its8PNG/8PDFgallery copies outside the servedtree
+to TrackingPerformanceStudies/neutral_purity_metrics_20261113/gallery_removed_20261114/.
+Original sourceplots remain. Final gallery73PNGs/16sections,25PDFs; retained
+conditional-purity figures, recoil figures and all other98images unchanged.
+This supersedes the above81PNG/17section/33PDFcurrent-gallery counts without
+changing either analysis or deleting historical evidence. Delegated gallery
+verification is saved in that archive directory; no source/card/install change.

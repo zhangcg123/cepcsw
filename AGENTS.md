@@ -372,11 +372,13 @@ retentions match parent. Synthetic purity/composition selfcheck passes. All
 11renders reviewed. No reconstruction source/card/build/install/input change,
 new fits, online selector or physics-performance claim.
 
-Publication: replace11separate-species pairs in current gallery; retain prior
-composition sources/archive and all combined-purity/recoil figures. Gallery
-verification:81PNGs/17sections/exact-once,33PDFs;22replacements archived,
-92unrelated images/16other sections unchanged. Page/all11PNGsHTTP200; source/
-local/served hashes match. Same localhost8000/ailogin002PID443262, no restart.
+Publication:11separate-species pairs now show conditional purity. The user
+subsequently removed the8combined-purity figures from the webpage; their16
+PNG/PDFgallery copies are preserved outside the servedtree in parent study
+neutral_purity_metrics_20261113/gallery_removed_20261114/. Combined study
+sourceplots remain. Current gallery73PNGs/16sections/exact-once,25PDFs; all
+conditional-purity/recoil figures retained. Same localhost8000/ailogin002
+PID443262. Earlier publication hashes/counts are preserved in the dated record.
 Artifacts:
 TrackingPerformanceStudies/neutral_purity_conditional_20261114/.
 [Corrected definition, results, sensitivity and checks](agents_record/2026-11-14-conditional-neutral-purity.md).
