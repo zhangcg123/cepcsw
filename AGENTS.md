@@ -339,39 +339,40 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**NEUTRAL ISOLATION AS A RECONSTRUCTED SELECTOR (2026-11-14).**
-User clarified goal:find high-purity neutral clusters using reconstructed
-isolation. Added per-cluster purity-vs-I countdensity (FSR/eBrem/combined) and
-isolation-threshold purity/energy-retention curves. ALL55391eligible baseline
-neutral candidates included, including zero-target clusters; no truth-origin,
-fit-success,event-radiation or charged-reference gate. The previous conditional
-truth-associated purity diagnostics remain available but do not evaluate a
-reconstruction-only selector's contamination. Both definitions are explicit.
+**PER-CLUSTER PURITY, THEN ARITHMETIC MEAN (2026-11-14).**
+User corrected the estimator: p_s(i)=E_s(i)/E_neutral(i) for each cluster,
+then mean=sum(p_s)/N with EQUAL cluster weights. Previous ratio-of-energy-sums
+purities weighted energetic clusters more and are superseded in current13
+neutral-purity figures. Energy retention still uses sum(E*p_s) and is unchanged.
+Profiles/maps/control/cut-purity ordinates and distancecompositionstacks now
+all use per-cluster arithmeticmeans. Stacks sum100%; targetmean equals upper
+point. Profile errors recomputed with300Poisson source-block resamplings of
+fraction sums/cluster counts. Densityplots already percluster; only meanlines
+changed. Energycollection-efficiency/budgetfigures retain energy normalization.
 
-Same100000currentRECinputs/198081truth-covered selected tracks, theta/phi
-half-windows25/200mrad,fixed55.757GeVcap. Reusedvalidatedmetriccache,noROOTread.
-I=E_N/(E_N+othervalidECALenergy) in100mradcone, excluding candidate and BOTH
-main charged-cluster sets. This exclusion remains a limitation; no silently
-changed isolation definition. Density color is cluster count; white means use
-energy weights. At each cut, purity D=fullenergy of ALL surviving neutrals;
-FSR/eBrem numerators add to combined. Retention D=baseline already-collected
-targetenergy, never photon birthenergy. No truth classifier/cut adopted.
+Samples unchanged:conditional FSR/eBrem diagnostics require respective saved
+fraction>0 (28501/45050baselineclusters,21359mixed; nonadditive means). Actual
+reconstructed-isolation selection keeps all55391eligible candidates,including
+zero-targetclusters (samepopulation,additive FSR/eBrem means). No silent
+truth/cohort/isolation/window/energycut change. Same100000currentRECinputs,
+198081truth-coveredtracks,25/200mradhalf-windows,55.757GeVcap; noROOTreread.
+Isolation100mradcone still excludes candidate/bothmainchargedclusters.
 
-MinimumI0/0.5/0.9/1:combinedpurity63.31/64.41/63.51/62.45%,photonenergyretention
-100/83.90/63.86/53.06%,counts55391/37143/30264/27352. I>=0.9FSR/eBremshares
-29.35/34.16%;target-energyretentions81.34/53.90%. CurrentIalone is weak for
-combined photonpurity; opposite species-composition trends mask each other.
-No recoil improvement/physics-validation claim or reconstruction changes.
+All-candidate combinedmeans at minimumI0/0.5/0.9/1 are55.22/56.87/55.99/54.92%.
+I>=0.9 FSR/eBremmeans25.90/30.09%,energyretentions81.34/53.90%,combined63.86%.
+Inclusive conditionalmeansFSR39.81/eBrem42.71%; charged distance>=150mm
+54.07/46.32% with4791/6590clusters. Earlier energyweightednumbers are historical.
+No isolationcut adopted/recoil improvement/physics-validation claim.
 
-All3densitypanels cover55391clusters; means/counts/denominators reproduce prior
-common-sample profiles; synthetic zero-target-denominator check passes, cut
-counts monotonic and retention bounded. Both renders reviewed. Prior conditional
-11plots/distancecompositionbars/recoilfigures preserved; removedcombined8plots
-stay offpage. Gallery75PNGs/17sections/exact-once,27PDFs;98priorimages and
-16priorsections unchanged. Page/bothnewPNGsHTTP200;source/local/servedhashes
-match. Same ailogin002PID443262/localhost8000, no restart. Artifacts:
-TrackingPerformanceStudies/neutral_isolation_selection_20261114/.
-[Definitions, figures, results and limits](agents_record/2026-11-14-neutral-isolation-selection.md).
-[Conditional purity diagnostic](agents_record/2026-11-14-conditional-neutral-purity.md).
-[Distance composition panels](agents_record/2026-11-14-neutral-purity-distance-composition.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-neutral-isolation-selection.md).
+Independent math.fsum/N checks allprofilebins; allprofile/map/cut/control
+counts match prior, all44retentionrows unchanged, stackidentity/synthetic
+averaging tests pass; four scripts compile, all13renders reviewed. Original
+analysisoutputs remain, priorgalleryimages archived. Removedcombined8plots
+stay absent. Gallery75PNGs/17sections/exact-once,27PDFs;26oldversions archived,
+76otherimages/15othersections unchanged. Page/all13newPNGsHTTP200;source/local/
+servedhashesmatch. Same ailogin002PID443262/localhost8000, no restart.
+No reconstruction source/card/build/install/production change.
+Artifacts:TrackingPerformanceStudies/neutral_purity_cluster_mean_20261114/.
+[Estimator, cohort definitions, results and checks](agents_record/2026-11-14-neutral-purity-cluster-mean.md).
+[Prior isolation study](agents_record/2026-11-14-neutral-isolation-selection.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-cluster-mean-purity.md).
