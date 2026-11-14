@@ -142,3 +142,29 @@ The complete outgoing AGENTS focus is preserved in
 valid for their original aggregate target only. Next physics question is how
 to distinguish one compact photon shower from overlapping showers using more
 reconstructed information; the present scalar isolation cuts have not solved it.
+
+## User follow-up: remove radius section; clarify evaluation and selection
+
+The user requested removal of the entire gallery section
+`Charged-inclusive isolation: radius scan and held-out check (4)`.
+Its four served PNG/PDF pairs are archived outside the gallery under
+`neutral_isolation_radius_20261114/gallery_removed_radius_20261114/`;
+original study plots and results remain. Gallery changes from
+87 PNGs / 19 sections / 39 PDFs to 83 PNGs / 18 sections / 35 PDFs.
+Other sections and retained images are unchanged, including the new
+single-photon section. The pre-removal manifest/hashes and verification are
+saved with the archive.
+
+“Held-out” describes the event split, not a reconstructed or truth selection.
+Source job numbers modulo 5 equal to 4 (100 REC files / 20000 input events)
+were reserved for evaluation; they contain 11344 eligible neutral candidates.
+The two frozen RECONSTRUCTED cuts select 61 of them: straight-line 3D distance
+between cluster position and reconstructed track ECAL entrance >=300 mm,
+and I300>=0.7. The 300-mrad cone is an opening angle from nominal-IP cluster
+directions, not a 300-mm radius; its neighbour sum includes charged clusters.
+Truth then checks the single-photon criterion, giving 48/61 passes.
+Thus the cuts can select candidates using reconstruction, but cannot recover
+all 3631 truth-identified clean clusters or guarantee >=95% individual purity.
+Their evaluation recall is only 48/752=6.383%. The initial study context still
+uses the selected truth-linked production Z->ee pair; this is not a validated
+general photon identifier on arbitrary reconstructed tracks.

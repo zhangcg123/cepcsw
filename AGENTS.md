@@ -368,9 +368,10 @@ and legacy per-origin plots measure grouped radiation, NOT one-photon purity.
 Source-block evaluation is held out from this search, not fresh production.
 
 Four new plot pairs: single-vs-summed fraction, isolation, reconstructed-cut
-tradeoff, native mixing examples. Gallery19sections/87PNGs/39PDFs after
-publication,118oldimages preserved; warnings added to3legacysections only.
-Both user-removed sections remain absent. No source,REC,fit,card,installation,
+tradeoff, native mixing examples. Gallery18sections/83PNGs/35PDFs after user
+removed the charged-inclusive radius section; its4PNG/PDFpairs archived outside
+the gallery,118retainedimages unchanged. Other removed sections remain absent.
+No source,REC,fit,card,installation,
 production submission or recoil test/change. Next question: reconstructed
 shower information capable of distinguishing one photon from overlapping
 showers; current scalar isolation cuts have not solved it.
