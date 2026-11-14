@@ -339,40 +339,41 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**PER-CLUSTER DISTANCE PURITY BY EVENTCATEGORY (2026-11-14).**
-User requested FSR-only/eBrem-only/Both distance purity separately. Added6plots:
-3eventcategories x3Ddistance to mainchargedcluster/trackECALentrance; inclusive
-figures retained. Equalclustermeans=sum(E_s/E_cluster)/N, never energyweighted.
-Within each eventcategory keep separate conditional FSR/eBrem-associated cluster
-samples(f_s>0); mixedclusters can enterboth, curvesnonadditive. F/Bbottomstacks
-mean perclusteroriginfractions, sum100%, targetcomponent equals upperpoint.
+**CHARGED-INCLUSIVE ISOLATION RADIUS STUDY (2026-11-14).**
+User authorized new isolation including mainchargedclusters and choosing R.
+Freshread-onlygeometry from all500currentREC_ECALTRUTHfiles/100000events;
+55391sameeligiblebaseline neutrals,25/200mradhalf-windows,55.757GeVcandidatecap.
+NewI(R)=E_candidate/(E_candidate+ALLothervalidpreECALclusterEwithinangularradiusR),
+excludeonlycandidate. No truthspecies/fit/radiationcategory/mass gate. Purity
+is perclusterfractionTHENarithmeticmean. All oldcandidatefields/MCweights fixed.
+No simulation/tracking/PFA/BP/GSF rerun or runcard/install/default change.
 
-Categories use perselectedZelectron SUMphotonBIRTHenergy>1GeV on EITHERleg.
-Only means other type<=1GeV on bothlegs; softradiationallowed. Both=AND,can
-involveoppositelegs. Joined freshnative20261114BPeventexport by(job,event),
-recomputedtruthflags andcheckedassignedtrackidentities; no endpoint/fit/chi2/
-baselinecharge/recoilgate. No deletedBP ROOT dependency or newROOTread.
+Predeclared objective:maximize N(pFSR+pB>=.9)/Nselected, retain>=50% EACH of
+collectedFSR/eBremenergy and>=500devcandidates. Radii25/50/75/100/150/200/300/400
+mrad,lowerIcuts0..1step.01. Develop250EVENsourcejobs(27559candidates); freeze
+R/cut BEFORE evaluating250ODDjobs(27832candidates). No event crosses split.
+Frozenchoice R300mrad,I>=0.46. R200–400broadplateau, not sharplyuniqueoptimum.
+Fairdevelopment-tuned oldI100controlchoosesnocut; energy-onlyE>=23.693GeV.
 
-Same100000RECinputs,198081truth-coveredtracks,55391baselineneutrals; requested
-52654clusters:FSRonly7282/eBremonly23451/Both21921. Explicitly excluded2246Neither
-and491clusters/383events withoutcompletepaircategoryrecord. Globalclassified
-98437eventrecordspreserved; requestedrawevents11517/43739/21579. Neutral-bearing
-events5881/16574/14025; FSR-associatedcounts6589/4810/16422,eBrem2985/22115/18757.
-Missingchargedreferencecounts357/3927/2371 retained in trackdistanceonly.
+Held-out4929selected;>=90%photon-purity1675/4929=33.98%(baseline16.50%). Mean
+clusterphotonpurity68.42%(baseline55.20%); collectedFSR/eBremEretained50.61/51.07%,
+combined50.91%. Energy-onlycontrol:4762clusters,30.37%highpurity,65.81%mean.
+Paired300source-block16/84%intervalsgainvsenergyonly:+3.21–4.01pphighfraction,
++2.36–2.88ppmean. No recoil-improvement/calibratedclassifier/physicsvalidationclaim.
 
-Window25/200mradhalf-widths,55.757GeVcap, bins0–500mm,>=30clusters/point,
-300Poissonsource-blockerrors unchanged. Point400mmmeans300–500mmbin. NativeMC
-weights remain attributionproxies. All bins match directmeans; categorycounts
-partition parentwithexplicit exclusions; stackunity/pointidentitypass. Script
-compiles, all6rendersreviewed. No isolationcut adopted/physicsvalidationclaim.
-Current100mradisolation still excludes mainchargedclusters; no radiusstudy run.
+Importanttail:atI>=.9,662held-outclusters haveonly14.06%meanphotonpurity and
+85.88%main-electronfraction; strongerIisNOTmonotonic. No uppercut/veto tuned
+onheld-outtail. Main-electron-dominated neutralcandidates maythemselvesbeisolated;
+exactclustering/associationcause uninvestigated. NewI100saturation4.65%,newI300
+1.45%heldout. NineconeE>240GeVoutliercontrols leave selectedsampleunchanged.
 
-Artifacts:TrackingPerformanceStudies/neutral_purity_distance_categories_20261114/.
-Added6newpairs, preservepriorinclusive/conditional/recoilfigures; both removed
-combined-purity8/isolationsel2sectionsstayoffpage. No reconstruction source/card/
-build/install/input or production change. Gallery79PNGs/17sections/exact-once,
-31PDFs;98priorimages/16priorsections unchanged. Page/all6newPNGsHTTP200;source/
-local/servedhashesmatch. Same ailogin002PID443262/localhost8000, no restart.
-[Definitions, populations and checks](agents_record/2026-11-14-neutral-purity-distance-categories.md).
-[Arithmetic cluster-mean definition](agents_record/2026-11-14-neutral-purity-cluster-mean.md).
-[Complete outgoing focus](agents_record/2026-11-14-agents-before-distance-purity-categories.md).
+All500sourceidentities checkedbefore/after; oldI100reproducesall55391candidates,
+newextraE=oldextraE+mainconeE at100; monotonicradius/synthetictests pass;80
+independentscalar nativechecks andindependentheldoutsumchecks pass. Four scripts
+compile,fourfinalrendersreviewed. Newgallerysection83PNGs/18sections/exact-once,35PDFs;110priorimages/17sections
+unchanged,bothremovedsectionsstayoffpage. Page/all4newPNGsHTTP200;source/local/
+servedhashesmatch. Same ailogin002PID443262/localhost8000, no restart. Artifacts:
+TrackingPerformanceStudies/neutral_isolation_radius_20261114/.
+[Definition, frozen choice, results, limitations and checks](agents_record/2026-11-14-charged-inclusive-isolation-radius.md).
+[Prior distance category study](agents_record/2026-11-14-neutral-purity-distance-categories.md).
+[Complete outgoing focus](agents_record/2026-11-14-agents-before-charged-inclusive-isolation-radius.md).
