@@ -360,38 +360,44 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**CURRENT REC NEUTRAL EVENT DISPLAYS (2026-11-15).**
-Inspect separated neutral clusters containing FSR/eBrem from the selected Z
-electrons. Two current-REC event entries were freshly read and verified; no
-simulation, reconstruction, refit, source/card/default/build/install changes.
+**NEUTRAL EVENT DISPLAYS BY DISTANCE (2026-11-15).**
+Retain the user's accepted accessible style and inspect distinct current-REC
+neutral examples near/middle/far from the matched electron charged cluster.
+Six new events are prepared, plus unchanged copies of the earlier369/82/6 and
+34/52/8 examples, in a dedicated gallery subdirectory.
 
-Job369/event index82/track6 has separate N24 (10.77GeV,99.2% individual eBrem
-root149) and N26 (2.01GeV,95.5% FSR root20), plus N16 (0.72GeV,48.5%FSR/
-51.5%eBrem). All belong to MC19/G4track6 and lie in the current25/200mrad
-half-window. Charged C5 also contains eBrem root150. A separate48.82GeV FSR
-photon enters the endcap outside this local barrel view; this is not full
-photon-energy accounting. Job34/event52/track8 has a spatially separated mixed
-N11 (5.68GeV,42.1%FSR/57.9%eBrem), I50=1 but I100=0.1833; original eBrem129
-converted before ECAL and has no original-photon entry marker.
+Distance is the minimum3D reconstructed pre-ECAL cluster-centre separation to
+a valid cluster on the PFO matched to the same selected Z electron: Near<100mm,
+Middle100–250mm, Far>=250mm. It is not an angle, shower-edge gap, track-entry
+or surface-projected distance. The selected neutral is ringed, with cluster IDs
+and distance printed on each new plot. Two examples per band contrast mixed
+and FSR-dominated attribution:181/115/11(63.1mm),141/7/9(64.2mm);
+258/153/27(179.2mm),377/149/19(176.4mm);472/121/20(389.8mm),202/89/15(380.8mm).
+All focus photon roots belong to the corresponding same selected Z electron;
+each chosen owner has both FSR/eBrem birth sums>1GeV. These are selected
+illustrations, not an unbiased population or reconstructed identification cut.
 
-Displays show reconstructed cluster-owned hits and independent saved truth
-entrances on a reference-cylinder projection in mm; adjacent bars retain each
-individual photon identity. Native U/V-based cluster MC attribution remains
-unvalidated as spatial3D deposit purity. No per-hit photon labels exist for the
-saved reconstructed3D hits. These truth-selected examples illustrate geometry
-and native attribution, not a reconstructed selector or physical mixing proof.
+Charcoal circles/gold triangles show charged/neutral reconstructed hit ownership;
+stars/diamonds show actual original FSR/eBrem entrances. Bars retain individual
+photon roots with distinct hatches and black labels. In202/89, FSR gamma14
+converted before ECAL; it has no invented original-photon entry. Left panels
+retain the barrel-reference IP-ray projection inmm, which differs from the3D
+distance defining categories. View ranges vary; use the numerical axes.
+Native U/V-based MC weights remain unvalidated spatial3D deposit purity, and
+reconstructed3D hits have no individual-photon truth association.
 
-Both event-display PNG/PDF pairs now use charcoal/gold/grey, circles versus
-triangles for hits, stars versus diamonds for photon entries, and individual
-photon bar hatches. Black labels stay readable on light fills. Source event
-payloads and all non-style metadata are unchanged.
-[Accessible presentation](agents_record/2026-11-15-neutral-event-display-accessibility.md).
+Eight current-REC events were freshly inspected, six selected; source identities,
+16 individual photon fractions,6 distances, owners, conversion daughters,
+window/projection/stack checks pass. All six new renders reviewed, three label
+layouts corrected and re-reviewed; scripts compile. No CEPC reconstruction or simulation implementation,
+card/build/install/default changes or simulation/refit. Analysis artifacts stay
+uncommitted: TrackingPerformanceStudies/neutral_event_distance_examples_20261115/.
 
-Artifacts: TrackingPerformanceStudies/neutral_event_displays_20261115/.
-Fresh source identities, individual photon fractions, owners, hit links,
-conversion, isolation and projection checks pass; both renders inspected.
-Published as the final gallery section at localhost:8000 on ailogin002,
-PID3994352. Verified76PNGs/20sections/28PDFs; all100 old image hashes and
-all19 prior section objects/order are unchanged. Both new PNG HTTP/hash checks pass.
-[Exact events, definitions and evidence](agents_record/2026-11-15-current-rec-neutral-event-displays.md).
-[Complete outgoing focus](agents_record/2026-11-15-agents-before-neutral-event-displays.md).
+Verified gallery: localhost8000/neutral_event_displays/ on ailogin002,
+PID3994352, under the existing
+bp_matched_recoil_pt_20261110 gallery, with Near/Middle/Far/Earlier reference
+sections:8PNGs/8PDFs,4sections. Recursive root:84PNGs/36PDFs,21sections.
+The original104 root images and20 section objects are preserved;
+old original-event URLs remain valid. Publication checks are in gallery_verification.json.
+[Exact selections, definitions and evidence](agents_record/2026-11-15-neutral-event-distance-examples.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-distance-event-examples.md).
