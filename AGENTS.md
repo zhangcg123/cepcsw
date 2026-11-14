@@ -358,12 +358,13 @@ manifest as an uncommitted analysis artifact.
 ## 2. Current focus
 
 **GALLERY MERGE / CORRECTED RESPONSE CLARIFICATION (2026-11-15).**
-User requests merging the sole photon-distance diagnostic with immediately
-precedingsection, and asks why photonenergyresponse can be near100%despite
-PFAsoft-response removal. Precedingsection is “New BP recoil: theta25mradwindow
-andH0+FSR”: appenddistanceplot as7th and itsdescription, removeonlystandalone
-photon-IDheading. All102imagehashes fixed; other18sectionobjects/order intact;
-verified75PNGs19sections27PDFs. Fivepreviousremovedplots remainabsent.
+The distance diagnostic belongs in “Photon-energy locations: matched charged
+clusters and full-angle accounting”, AFTER its existing tablebar, giving2plots.
+Restore “New BP recoil: theta25mradwindow andH0+FSR” to its original6plots/text.
+Keep no standalone photon-IDheading. All102imagehashes unchanged; other17section
+objects/order fixed;75PNGs19sections27PDFs. Fivepreviousremovedplots remainabsent.
+Full outgoing placementstatus preserved in
+agents_record/2026-11-15-agents-before-distance-correct-section.md.
 
 Read-only code confirms EnergyTimeMatching filters smallhalfclusters in towers
 <1GeV(before snapshot). TrackClusterConnecting applies energyCorrection(E,phi,

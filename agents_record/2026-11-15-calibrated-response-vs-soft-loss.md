@@ -75,3 +75,26 @@ description and EXACToriginaldistanceparagraph (includingwindow/cap) remain.
 All102imagehashes unchanged; other18sectionobjects/order fixed. Page andPNG
 HTTP200/source-local-servedhashmatch; fivepriorremovedURLs404. Sameailogin002
 localhost8000PID443262, no restart. Finalverificationfile is referenced above.
+
+## Corrected distance-plot destination — 2026-11-15
+
+User explicitly names “Photon-energy locations: matched charged clusters and
+full-angle accounting (1)” as the destination. The previous placement in the
+BP recoil section was incorrect. Move photon_id_track_opening.png into that
+energy-accounting section as its SECOND pattern, after
+photon_energy_location_table_bars.png. Restore the BP section's exact original
+six patterns/title/description from the premerge snapshot. Preserve both full
+energy-section and distance descriptions, including window/cap/metric caveats.
+No standalone photon-ID section is recreated. No image, curve, value, label,
+normalization or dataset change. All102imagehashes remain fixed; other17section
+objects/order intact,75PNGs19sections27PDFs. FiveoldremovedplotURLsstay404.
+Snapshots before_distance_migration_gallery*.json and final
+distance_migration_gallery_verification.json live in the distance-study folder.
+The source-backed corrected-response/soft-loss interpretation above is unchanged.
+Full outgoing AGENTS.md retained in
+2026-11-15-agents-before-distance-correct-section.md; global prefix unchanged.
+
+Main local review confirms the corrected destination has exactly two patterns
+in the requested order, the BPsection is byte-equivalent to its original
+six-plot manifest object, other17sectionobjects/order andall102imagehashes are
+unchanged. No plots/data regenerated; same75PNGs19sections27PDFs.
