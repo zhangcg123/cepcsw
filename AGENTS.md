@@ -342,8 +342,8 @@ manifest as an uncommitted analysis artifact.
 **PER-CLUSTER PURITY, THEN ARITHMETIC MEAN (2026-11-14).**
 User corrected the estimator: p_s(i)=E_s(i)/E_neutral(i) for each cluster,
 then mean=sum(p_s)/N with EQUAL cluster weights. Previous ratio-of-energy-sums
-purities weighted energetic clusters more and are superseded in current13
-neutral-purity figures. Energy retention still uses sum(E*p_s) and is unchanged.
+purities weighted energetic clusters more and were corrected in13
+neutral-purity figures; the2all-candidate isolation plots are now offpage. Energy retention still uses sum(E*p_s) and is unchanged.
 Profiles/maps/control/cut-purity ordinates and distancecompositionstacks now
 all use per-cluster arithmeticmeans. Stacks sum100%; targetmean equals upper
 point. Profile errors recomputed with300Poisson source-block resamplings of
@@ -367,10 +367,12 @@ No isolationcut adopted/recoil improvement/physics-validation claim.
 Independent math.fsum/N checks allprofilebins; allprofile/map/cut/control
 counts match prior, all44retentionrows unchanged, stackidentity/synthetic
 averaging tests pass; four scripts compile, all13renders reviewed. Original
-analysisoutputs remain, priorgalleryimages archived. Removedcombined8plots
-stay absent. Gallery75PNGs/17sections/exact-once,27PDFs;26oldversions archived,
-76otherimages/15othersections unchanged. Page/all13newPNGsHTTP200;source/local/
-servedhashesmatch. Same ailogin002PID443262/localhost8000, no restart.
+analysisoutputs remain, priorgalleryimages archived. User removed “Neutral
+isolation as a reconstructed selection (2)” from webpage; its4PNG/PDFcopies
+are archived outside servedtree under newstudy/gallery_removed_isolation_selection_20261114/.
+All11conditional-purity figures/distancebars remain. Removedcombined8plots
+stay absent. Currentgallery73PNGs/16sections,25PDFs; other98images/16sections
+unchanged. Same ailogin002PID443262/localhost8000. Verification in removalarchive.
 No reconstruction source/card/build/install/production change.
 Artifacts:TrackingPerformanceStudies/neutral_purity_cluster_mean_20261114/.
 [Estimator, cohort definitions, results and checks](agents_record/2026-11-14-neutral-purity-cluster-mean.md).

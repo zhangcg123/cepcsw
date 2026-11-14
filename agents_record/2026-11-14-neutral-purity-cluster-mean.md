@@ -96,3 +96,15 @@ Same ailogin002PID443262/localhost8000, no restart. Delegatedproof saved in
 study/gallery_verification.json. Main independently checked all76untouched
 imagehashes,26archives/replacements and15unchangedsections; all13renders
 reviewed. GlobalAGENTS prefix unchanged; full outgoing focus preserved.
+
+## Subsequent user-requested isolation-section removal
+
+User requested removal of “Neutral isolation as a reconstructed selection (2)”
+from the webpage. Removed only that section and preserved its2PNG/2PDFgallery
+copies outside servedtree under study/gallery_removed_isolation_selection_20261114/.
+Sourceoutputs/data remain. The11conditional-purity figures and both distance
+composition panels remain. Finalgallery73PNGs/16sections,25PDFs; theother98
+images and16sections unchanged. This supersedes above75/17/27livegallerycounts;
+all averaging/analysisdefinitions/results are unchanged. Removalarchive contains
+beforemanifest/imagehashes and gallery_verification.json. No reconstruction or
+analysis rerun, no source/card/install change.
