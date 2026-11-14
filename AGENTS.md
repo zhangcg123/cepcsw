@@ -379,13 +379,17 @@ axis/allvalidcharged+neutralneighbours(includingelectron),onlycandidateomitted;
 neighboursnotrestricted/trimmed bycandidatewindow. Centralbarrelentrance1830mm,
 theta~90deg:50mrad~91.5mmradius/183mmdiameter,100mrad~183mmradius/366mmdiameter.
 Small-angle surfaceapproximation depends onposition/incidence/endcap; R ishalf-
-angle,notfullwidth. Onlydescriptionchanged; all100imagehashes fixed.
+angle,notfullwidth. Definitioncontent onlychangesdescription; all100imagehashes fixed. Both
+clarificationparagraphs nowBOLD via existing safeMarkdownrenderer in personal
+gallery.py(two statements, noCEPCsource). Exactwords/figures unchanged; safe
+HTML/links/fullpage tested. Serverrestarted:localhost8000/ailogin002PID3994352;
+live<strong>blocks verified; source/backups/proof inbold_descriptions/.
 
 Presentationoverride:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/plot.py.
 Galleryarchives14oldtargetPNG/PDFfiles outside servedtree, replaces6pairs/removes
 summarypair, keeps88unrelatedimagehashes/18othersectionobjects/order/removals.
-Verified74PNGs19sections26PDFs100images; same localhost8000server. Prior five
-photon-IDremovals and coefficient-plotURL stayabsent. No source/card/build/install/
+Verified74PNGs19sections26PDFs100images; localhost8000serverPID3994352. Prior five
+photon-IDremovals and coefficient-plotURL stayabsent. No CEPCsource/card/build/install/
 default/production changes. Artifacts:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/.
 [Definitions, presentation and checks](agents_record/2026-11-15-isolation-colz-clean.md).
 [Complete outgoing status](agents_record/2026-11-15-agents-before-isolation-colz-clean.md).

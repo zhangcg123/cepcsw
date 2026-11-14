@@ -105,3 +105,28 @@ Description publication verified by main: exactoldtext+exactrequestedtwo
 paragraphs, other18sectionobjects/title/patterns/order fixed, all100imagehashes
 unchanged. Livepage/PNGHTTP200, formulaand50/100mradgeometry/caveats visible.
 74PNGs19sections26PDFs; sameailogin002localhost8000PID443262, no restart.
+
+## Bold clarification paragraphs — 2026-11-15
+
+User requests BOTH clarification paragraphs bold. Existing description text
+was escaped by the personal gallery renderer. Reuse its EXISTING safe Markdown
+renderer in the two description-rendering sites (flat/nested galleries), a
+two-statement change in ~/.agents/skills/plot-gallery/scripts/gallery.py. No
+CEPCSW/PFA/reconstruction implementation changes. Wrap complete isolation and
+ECALsurface paragraphs in Markdownbold; firstdescriptionparagraph remainsplain.
+All original words/numbers remainexact after strippingformatmarkers.
+
+Beforeinstall, tests verified actualstrongtags/fullpage, all19visibletexts
+unchanged, rawHTMLescaped/unsafeURLschemesrejected, and arithmetic * preserved.
+Before/afterpersonalrendererbackups/hashes live in the analysisbold_descriptions/
+subdirectory. SourcebeforeSHA43190d71570d3f666f8d4676fbec0b00cbbb3a96ad00e7c6eb52507f16c9d690
+matched; installedSHA00f1a892c902958269103427cb86a4a40576a9ea6cc8c9f53b2b3034554576af
+verified. Guardedplotweb stop/start replacedPID443262 withPID3994352 on
+ailogin002, same localhost8000/gallery. No CEPCjobs/build/install affected.
+
+LiveHTML contains two actual<p><strong>paragraphs, firstparagraphplain, no
+literalMarkdownmarkers. Counts74PNGs19sections26PDFs; all100imagehashes and
+18othersectionobjects fixed. RetainedPNGHTTP200/hashmatch; priorremovedURLs404.
+Main independently checked installedsourceSHA, allimages, metadata andtext
+preservation. Proof inbold_descriptions/gallery_verification.json; prepared
+source/backups/manifest/preview/self-checks are uncommitted analysisartifacts.
