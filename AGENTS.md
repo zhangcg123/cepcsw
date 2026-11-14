@@ -210,7 +210,8 @@ Native ECAL cluster MC weights inherit 1D crystal-bar/U–V projection fractions
 through energy splitting. They are not independently validated spatial 3D
 photon-energy purity. The reported 6.6% single-photon threshold fraction and
 isolation/identification results describe this native map; physical purity
-claims remain provisional. See
+claims remain provisional. Shared detector response can be genuinely mixed;
+inheritance alone does not demonstrate erroneous weights. See
 `agents_record/2026-11-15-ecal-truth-weight-audit.md` for evidence and limits.
 
 Historical evidence, resolved incidents, exact experiment tables, runbooks,
@@ -349,32 +350,34 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ECAL TRUTH-WEIGHT INTERPRETATION AUDIT (2026-11-15).**
-The user questions the low photon purity. Read-only source inspection confirms
-that U/V half-cluster splitting rescales energies while copying parent MC
-fractions, then 3D cluster truth energy-averages those projected maps. This can
-assign mixed labels to spatially separate clusters. Our exporter preserves the
-native map; successful persistence checks do not validate physical 3D purity.
+**NEUTRAL COMPONENTS BY R1000 ISOLATION (2026-11-15).**
+User requests component bars at different isolation values. Two new plots use
+all 55,391 fixed eligible neutral candidates from 500 current REC files/100,000
+inputs. Existing native photon/MC and R1000 caches reused; all source file
+sizes/mtimes checked. No new REC processing, reconstruction or refit.
 
-Fresh focused checks: 8 clusters/7 events/4 current REC files reproduce cached
-individual-photon fractions with no bad indices, normalization or ambiguous
-root attribution found. 39,740 raw end hits/19,870 paired cells have identical
-MC vectors at both ends; weight sums within [0.99,1.01]. These diagnostic events
-are not representative population fractions. Controlled Python formula examples
-show 75%/55% assigned A for a constructed spatially pure A cluster; no native
-simulation or C++ execution was used to establish this example.
+I1000=E_C/(E_C+sum other E_j), 1000mrad half-angle between nominal-IP rays to
+ECAL centres. All other valid charged/neutral clusters included, electron never
+excluded. Eight disjoint bins [0,.1,.25,.5,.75,.9,.95,.99,1] partition all rows;
+counts 24523/13436/11674/4357/868/142/193/198. Each bar ARITHMETIC MEAN of
+PER-CLUSTER component fractions (not summed-energy ratio). One plot separates
+FSR/eBrem/selected electrons/Others; another photon#1/#2/other tagged photons/
+selected electrons/Others. Individual roots remain separate. Black Others,
+percentages for large coloured components, mean photon#1 fraction above, Nbelow.
 
-The four examined files lack original ECAL simulation-hit/contribution truth
-and synthetic pre-ECAL 3D hits have no independent per-hit MC links. Actual bias
-is unquantified. The earlier 3631/55391=6.6% and isolation correlations remain
-native-map results; physical clean-cluster/photon-ID conclusions are provisional.
-Generator FSR/G4 birth truth is distinct from this spatial attribution problem.
+For I>=.99, N198: native mean selected-electron fraction89.2511%, FSR.8749%,
+eBrem9.8381%, Others.03584%; largest single tagged photon9.2983%, only3/198>95%.
+High isolation primarily selects electron-attributed neutral candidates in this
+pool, not tagged-photon-dominated ones. No physical misclustering-rate claim.
+User correctly notes simultaneous shared detector responses may be inseparable;
+previous audit established a map-resolution limitation, not erroneous labels.
+Spatial-purity validation remains open; do not assert copied maps are wrong.
 
-Next validation requires independent spatial simulation-contribution truth,
-then comparison on controlled and representative events. No source/PFA,
-card/build/install/default/production change or new simulation is authorized by
-this audit. Latest two gallery sections receive interpretation warnings only;
-all 102 image files and other sections/removals are preserved. Artifacts:
-TrackingPerformanceStudies/ecal_truth_weight_audit_20261115/.
-[Evidence, focused checks and limits](agents_record/2026-11-15-ecal-truth-weight-audit.md).
-[Complete outgoing status](agents_record/2026-11-15-agents-before-ecal-truth-weight-audit.md).
+Assertions cover keys, source identities, Iclosure, photon-table max/second/sum,
+component sums/nonnegativity, bin partition and inclusive-mean recovery. Scalar
+profile/count checks pass; renders reviewed. Expected gallery77PNGs/18sections/
+29PDFs: add only2plots/newsection, preserve102oldimages/17sectionobjects andall
+prior removals. No source/card/build/install/default/production changes.
+Artifacts:TrackingPerformanceStudies/neutral_iso_components_20261115/.
+[Definitions, numbers and checks](agents_record/2026-11-15-neutral-components-by-isolation.md).
+[Outgoing status preserved](agents_record/2026-11-15-agents-before-neutral-components-by-isolation.md).
