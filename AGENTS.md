@@ -357,39 +357,32 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ISOLATION/PURITY COLZ MAPS: CLEAN DISPLAY (2026-11-15).**
-User names “Does reconstructed isolation measure single-photon purity? (7)”:
-onlyAGORAsimulation aboveaxes, noformulas/statistics/annotationboxes, showCOLZ
-andwhiteprofiles. Keep6maps(inclusiveR50/300/500/1000,FSR-leadingR50,eBrem-leading
-R50); remove coefficient-vs-radius seventhfigure fromservedsection. Allprior
-images/statistics archived; no coefficients recalculated, no datapopulation or
-selection change. Radius nowinx-axislabel. No legends/red equalitydiagonals.
+**CURRENT REC NEUTRAL EVENT DISPLAYS (2026-11-15).**
+Inspect separated neutral clusters containing FSR/eBrem from the selected Z
+electrons. Two current-REC event entries were freshly read and verified; no
+simulation, reconstruction, refit, source/card/default/build/install changes.
 
-Same55391candidates fromcurrentREC-derivedfeatures and inclusiveisolationcache;
-charged electronalwaysincluded. Every9600original40x40densitybins EXACT, original
-logcolourlimits/cmap/ranges preserved. Whitecurve is unchanged percluster MEDIAN
-in isolationbinsN>=30; allmedians checked byindependent sortedvalues andold4
-profiles/hashidentities verified. All6assertoneAGORAtext/onewhiteline/nolegend/
-emptytitle; two representativerenders reviewed, scriptcompiles/hashchecks pass.
-Axislabels/ticks/colourbar retained. No nativefile read, simulation orrefit.
-Native-MC spatialpurity limitation remains; no physics or selector validation.
+Job369/event index82/track6 has separate N24 (10.77GeV,99.2% individual eBrem
+root149) and N26 (2.01GeV,95.5% FSR root20), plus N16 (0.72GeV,48.5%FSR/
+51.5%eBrem). All belong to MC19/G4track6 and lie in the current25/200mrad
+half-window. Charged C5 also contains eBrem root150. A separate48.82GeV FSR
+photon enters the endcap outside this local barrel view; this is not full
+photon-energy accounting. Job34/event52/track8 has a spatially separated mixed
+N11 (5.68GeV,42.1%FSR/57.9%eBrem), I50=1 but I100=0.1833; original eBrem129
+converted before ECAL and has no original-photon entry marker.
 
-Sectiondescription definesI_R=E_C/(E_C+sum otherE)foralpha<=R, candidate-IP-ray
-axis/allvalidcharged+neutralneighbours(includingelectron),onlycandidateomitted;
-neighboursnotrestricted/trimmed bycandidatewindow. Centralbarrelentrance1830mm,
-theta~90deg:50mrad~91.5mmradius/183mmdiameter,100mrad~183mmradius/366mmdiameter.
-Small-angle surfaceapproximation depends onposition/incidence/endcap; R ishalf-
-angle,notfullwidth. Definitioncontent onlychangesdescription; all100imagehashes fixed. Both
-clarificationparagraphs nowBOLD via existing safeMarkdownrenderer in personal
-gallery.py(two statements, noCEPCsource). Exactwords/figures unchanged; safe
-HTML/links/fullpage tested. Serverrestarted:localhost8000/ailogin002PID3994352;
-live<strong>blocks verified; source/backups/proof inbold_descriptions/.
+Displays show reconstructed cluster-owned hits and independent saved truth
+entrances on a reference-cylinder projection in mm; adjacent bars retain each
+individual photon identity. Native U/V-based cluster MC attribution remains
+unvalidated as spatial3D deposit purity. No per-hit photon labels exist for the
+saved reconstructed3D hits. These truth-selected examples illustrate geometry
+and native attribution, not a reconstructed selector or physical mixing proof.
 
-Presentationoverride:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/plot.py.
-Galleryarchives14oldtargetPNG/PDFfiles outside servedtree, replaces6pairs/removes
-summarypair, keeps88unrelatedimagehashes/18othersectionobjects/order/removals.
-Verified74PNGs19sections26PDFs100images; localhost8000serverPID3994352. Prior five
-photon-IDremovals and coefficient-plotURL stayabsent. No CEPCsource/card/build/install/
-default/production changes. Artifacts:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/.
-[Definitions, presentation and checks](agents_record/2026-11-15-isolation-colz-clean.md).
-[Complete outgoing status](agents_record/2026-11-15-agents-before-isolation-colz-clean.md).
+Artifacts: TrackingPerformanceStudies/neutral_event_displays_20261115/.
+Fresh source identities, individual photon fractions, owners, hit links,
+conversion, isolation and projection checks pass; both renders inspected.
+Published as the final gallery section at localhost:8000 on ailogin002,
+PID3994352. Verified76PNGs/20sections/28PDFs; all100 old image hashes and
+all19 prior section objects/order are unchanged. Both new PNG HTTP/hash checks pass.
+[Exact events, definitions and evidence](agents_record/2026-11-15-current-rec-neutral-event-displays.md).
+[Complete outgoing focus](agents_record/2026-11-15-agents-before-neutral-event-displays.md).
