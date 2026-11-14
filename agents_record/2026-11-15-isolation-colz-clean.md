@@ -66,3 +66,42 @@ matching pre-updatehashes. All6newPNGHTTP200/source-local-servedhashmatch;
 coefficient-summaryURL404. Sameailogin002localhost8000PID443262, no restart.
 Main independently rechecked metadata/patterns andallsource/new/unrelatedhashes.
 No coefficient names/numbers remain in the targetdescription.
+
+## Description: isolation definition and surface scale — 2026-11-15
+
+User asks for the iso definition and ECALsurface equivalents of50/100mrad
+in the SECTIONdescription, not on plot panels. No graphics are regenerated.
+The exact appended description is in description_definition_addition.txt.
+
+I_R(C)=E_C/[E_C+sum_{j!=C,alpha_Cj<=R}E_j]. Energies are measured pre-reclustering
+ECALcluster energies; alpha is the3Dopening angle between nominal-IP rays to
+clustercentres. Coneaxis is candidateC's ray; R is half-openingangle. Include
+every valid other charged/neutralcluster, including the electronchargedcluster.
+OnlyC omitted. Neighbours needfinitepositiveE,nonemptyhits,finite/nonzero
+positions, no newenergytrim and no candidate-window restriction. LargerI means
+moreisolated;I=1meansnoother validneighbourenergy in the cone. Sourcechecked:
+neutral_photon_id_20261114/read.py usesangles<=radius; large-radius read.py
+usescosine>=cos(R/1000), equivalentlyalpha<=R. No electron-excludedvariant.
+
+TDR_o1_v01geometry constant Ecal_barrel_inner_radius=1830mm (dimensionsXML177).
+Nearbarrelcentre theta~90deg, small-angle footprint radiusd~1830R/1000mm for
+Rmrad. R50=>91.5mmradius/183mmdiameter;R100=>183mmradius/366mmdiameter. These
+are entrance-surface approximations, not universal distances: incidence/position
+and endcaps change the footprint. Conehalfangle differs from fullwidth and the
+BPrectangularwindow. Exact numerical arithmetic/chord/axial comparisons are
+saved in isolation_definition_geometry.json. This does not define a fixed-mm
+selection, change isolation, or use fitted/PFOmomenta.
+
+The originaltargetdescription is retained verbatim then these two paragraphs
+appended. Allsixpatterns/title/order andother18sectionobjects remainfixed.
+All100PNG/PDFhashes unchanged;74PNGs19sections26PDFs. Snapshots
+before_definition_gallery*.json and definition_gallery_verification.json
+record metadata-only publication. Plotheaders remain ONLYAGORA; no metrics
+or removed coefficient figure is restored. No newdata/fit/source/installchange.
+This adds current description detail to the SAMEfocus; no prior AGENTS text
+or historical evidence is removed.
+
+Description publication verified by main: exactoldtext+exactrequestedtwo
+paragraphs, other18sectionobjects/title/patterns/order fixed, all100imagehashes
+unchanged. Livepage/PNGHTTP200, formulaand50/100mradgeometry/caveats visible.
+74PNGs19sections26PDFs; sameailogin002localhost8000PID443262, no restart.

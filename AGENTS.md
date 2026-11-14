@@ -374,6 +374,13 @@ emptytitle; two representativerenders reviewed, scriptcompiles/hashchecks pass.
 Axislabels/ticks/colourbar retained. No nativefile read, simulation orrefit.
 Native-MC spatialpurity limitation remains; no physics or selector validation.
 
+Sectiondescription definesI_R=E_C/(E_C+sum otherE)foralpha<=R, candidate-IP-ray
+axis/allvalidcharged+neutralneighbours(includingelectron),onlycandidateomitted;
+neighboursnotrestricted/trimmed bycandidatewindow. Centralbarrelentrance1830mm,
+theta~90deg:50mrad~91.5mmradius/183mmdiameter,100mrad~183mmradius/366mmdiameter.
+Small-angle surfaceapproximation depends onposition/incidence/endcap; R ishalf-
+angle,notfullwidth. Onlydescriptionchanged; all100imagehashes fixed.
+
 Presentationoverride:TrackingPerformanceStudies/neutral_iso_colz_clean_20261115/plot.py.
 Galleryarchives14oldtargetPNG/PDFfiles outside servedtree, replaces6pairs/removes
 summarypair, keeps88unrelatedimagehashes/18othersectionobjects/order/removals.
