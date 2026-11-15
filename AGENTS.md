@@ -376,39 +376,37 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**DAILY PLOT REVIEW (updated2026-11-16).**
-User wants plots+descriptions generated on the same study day in one webpage,
-without opening study/asset subdirectories. The35recent study roots plus the
-Nov12population matrix explicitly added toNov15give36review sections,
-122current previews and7historical study notes. Recorded study dates define
-default grouping; requested review placements retain original-date provenance.
-Day pages:
+**FINAL BP RECOIL WITH UPSTREAM FALLBACK (2026-11-16).**
+User requests a new section first onNov15, ahead of the unchanged H0F/theta25
+comparison and population matrices. Six120–140GeV/.1GeV-bin plots show only
+finalBP+FSRwithfallback, BARE electronBaselineKF and synthetic muon reference.
+No all4hypothesis-valid gate. Retain98302baseline-valid pairs from100000inputs;
+135baseline charge/state failures and1563incomplete selected pairs still excluded.
 
-- localhost8000/daily/2026-11-15/:12studies,41previews,1historical.
-- localhost8000/daily/2026-11-14/:12studies,38previews,5historical.
-- localhost8000/daily/2026-11-13/:12studies,43previews,1historical.
+User-confirmed per-leg chain:110+FSR→ordinary110→beam100→tracker000→inputKF.
+Use native statuses/applied masks/p4, never recoil mass/window or truth radiation
+type to select a route. OnlysuccessfulFSR addsitsOWNelectron+photononce;
+otherstagesuseelectronalone. H0/H0F are parallel, not upstream. Native000KF
+copies are counted asKF. No new installed online fallback policy.
 
-Root is http://127.0.0.1:8000/, serving TrackingPerformanceStudies on
-ailogin002.ihep.ac.cn, PID1404151. Day links appear newest-first before the
-individual-study index. Study descriptions and current figures appear together;
-long README notes expand inline. Original study pages and PNG URLs remain valid.
-Nov15starts with BP_H0F/theta25 recoil, then the population matrices (uncut first,
-strict>1GeV second), as requested;
-their original source datesNov14/Nov12remain explicit in the captions/catalog.
-Retired studies keep notes without previews; inherited/per-image suppression
-also applies to daily pages. Corrected photon-ID/correlation views remain visible.
+All500BP/RECfiles read, nativebaseline massesexact and75511both-HbetaF pairs
+reproduce oldmasses.22791pairs usefallback (21268oneleg,1523both). Selectedlegs:
+FSR172290;1107503;1007349;0001016;KF8446. Final79120in120–140,64633in120–130;
+bareKF65793/42808. Final95undefined,4173below120 remain recorded, not retuned.
 
-Root gallery.json daily_review_manifest points to
-TrackingPerformanceStudies/gallery_daily_review_20261115/daily_review.json.
-All36review entries and122canonical imagepaths reviewed; all3daypages and
-all122PNGlinks HTTP200, unknown day404, existingroutes preserved. Rootvalidation
-2465PNGs/11sections unchanged. All304scoped PNGhashes rechecked unchanged.
-No image copies/moves/regeneration, physics analysis/refit, card/build/install
-change. Catalog/inventory/live checks stay uncommitted in that artifactdir.
-[Daily presentation, controls and verification](agents_record/2026-11-15-daily-plot-review.md).
-[Nov12matrix placed onNov15byrequest](agents_record/2026-11-16-matrix-on-nov15-review.md).
-[Population-to-recoil count bridge](agents_record/2026-11-16-population-recoil-count-bridge.md):
-98437raw>1GeVmatrix events match recoil event keys/categories exactly; shape
-panels retain75068common-fit pairs, then each curve's own120–140window count.
-[Complete outgoing status](agents_record/2026-11-15-agents-before-daily-plot-review.md).
-[Converted-photon recoil selection/results](agents_record/2026-11-15-converted-photon-recoil.md).
+Muon user requests randomGaussian MASSsmearing to25%larger fittedDSCBcore.
+Seed20261116; fitcore0.272624→0.340369GeV, ratio1.248492,target1.25within0.25%
+relative tolerance, addedGaussianσ0.159741GeV. Allfinite masses smeared before
+windowcuts. This is a synthetic reference, not a muon detector/momentum rerun.
+Inclusiveyield usesfull100000/50000inputweights.704/1.354at10ab^-1;other5plots
+are own-window unit-area shapes. Native truth-assisted material locations remain.
+
+Study artifacts uncommitted: TrackingPerformanceStudies/bp_final_fallback_recoil_20261116/.
+Newsource_date16/review_date15 byrequest. Dailyroot localhost8000 PID1404151 on
+ailogin002.ihep.ac.cn: Nov15=13studies/47previews,Nov14=12/38,Nov13=12/43;
+37catalogentries/128previews;2471rootPNGs/11sections. Sixrenders/data/source
+checks reviewed;all128PNGURLsHTTP200,new6hashesmatch;old122paths/entries and
+otherdays unchanged. No imagecopies/newBPfits/source/card/build/installchange.
+[Fallback, calibration, counts and limits](agents_record/2026-11-16-final-fallback-recoil.md).
+[Complete outgoing status](agents_record/2026-11-16-agents-before-final-fallback-recoil.md).
+[Matrix/recoil selection bridge](agents_record/2026-11-16-population-recoil-count-bridge.md).
