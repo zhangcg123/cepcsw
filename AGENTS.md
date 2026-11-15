@@ -360,30 +360,32 @@ manifest as an uncommitted analysis artifact.
 
 ## 2. Current focus
 
-**ORIGINAL-PHOTON e-/e+ CONVERSION BEFORE ECAL (2026-11-15).**
-User asks counts/fractions for selected Z→ee FSR/eBrem. Full500 current REC files,
-100000 events,198081 truth-covered selected electron tracks;349 other selected
-tracks lack main-electron ECAL-entry truth and are excluded consistently with
-the prior ECAL study. Counts are photons, not event/track fractions.
+**RECOIL MASS FOR PHOTON CONVERSIONS BEFORE ECAL (2026-11-15).**
+Current100000REC events; saved original-photon Geant4 subtype14/status2,
+pre-first-ECAL entry, selected Z→ee FSR/eBrem only; no photon-energy cut or
+cluster weights. Exact previous7549FSR/17106eBrem converted-photon counts
+reproduced for all500files. Complete membership/owners saved, not examples.
+Conversions inside ECAL remain outside the saved record.
 
-FSR:7549/179732 convert before ECAL (4.20%); birth E>=1GeV:3820/39267 (9.73%).
-eBrem:17106/338509 (5.05%); birth E>=1GeV:8394/113328 (7.41%). Generator-linked
-FSR status1/selected owner; eBrem direct selected-electron G4 births, creator3,
-pre-parent-ECAL only (22 post-entry births excluded). No cluster purity/MC weights.
-Conversion is saved Geant4 subtype14 and killed status2 before original entry;
-installed headers and six direct MC e-/e+ daughter checks confirm the definition.
+Current theta25 BP recoil cache matches the same REC sources/track identities.
+98093complete truth-covered pairs (344incomplete pairs excluded);75071pass
+common BaselineKF/neutral-reference/ordinary+floatingBP110 validity. No H0/H0F
+or GSF gate. Three120–140GeV shape plots use12874any-conversion,4965FSR and
+8710eBrem matched events; latter two overlap801. Electron curves: Baseline KF
++neutrals, BP110, BP110+floatingFSR; inclusive muon KF is a separate reference.
+25/200mrad half-window; no extra BP neutral p4. Independent unit-window
+normalization, raw N in legends; failed fits excluded from all electron curves.
+BP110→floatingFSR shifts120–130fraction52.24%→64.15%, above140fraction
+23.44%→12.67%, but below120grows3.10%→7.53% on the full12874matched set.
+Conditional truth-assisted comparison, not isolated resolution/physics validation.
 
-All518241 eligible photons have classified endpoints: zero missing, unfinished
-or boundary-ambiguous histories. State partitions and previous photon/track counts
-and birth-energy sums close; sources checked before/after, code cached byhash,
-assert fate checks/compile pass. >=1GeV photons have only conversion or entry fates.
-Original-photon records STOP at first ECAL entry; conversions inside ECAL or the
-whole calorimeter are not measured by this record. No simulation/reconstruction/
-refit, implementation/card/build/install/default or gallery changes.
-
-Artifacts: TrackingPerformanceStudies/photon_conversion_fractions_20261115/.
-Full summary.json/results.csv,500 per-job source/count records and six independent
-pair checks persist there; analysis scripts/data are uncommitted. Existing12 event
-displays remain unchanged at localhost8000/neutral_event_displays/, PID3994352.
-[Counts, definitions, scope and validation](agents_record/2026-11-15-photon-conversion-fractions.md).
-[Complete outgoing status](agents_record/2026-11-15-agents-before-photon-conversion-fractions.md).
+All per-job counts, joins, source identities/hashes, photon/event partitions,
+normalization and three renders checked. No refit/simulation/reconstruction,
+implementation/card/build/install/default change. Artifacts are uncommitted in
+TrackingPerformanceStudies/converted_photon_recoil_20261115/. Existing gallery
+and12event displays preserved;3new figures form a dedicated gallery section.
+Verified gallery: localhost8000/bp_matched_recoil_pt_20261110/, PID640260 on
+ailogin002; actual server root is TrackingPerformanceStudies. All88prior PNG
+hashes/21prior sections and child manifest unchanged;91PNGs/22sections validate.
+[Selection, counts, limits and artifacts](agents_record/2026-11-15-converted-photon-recoil.md).
+[Outgoing complete status](agents_record/2026-11-15-agents-before-converted-photon-recoil.md).
