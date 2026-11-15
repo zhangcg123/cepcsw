@@ -72,3 +72,11 @@ Complete outgoing AGENTS is preserved in
 one; global laws/commands remain intact, with only the requested daily-review
 maintenance preference added. Previous converted-photon/recoil evidence remains
 in its original dated records and outgoing snapshot.
+
+## Default for subsequent studies
+
+User confirms that each next study belongs as a new section on its corresponding
+day page, with its description and plots together. At publication, update the
+daily catalog, append the section without replacing existing sections, and
+create a day entry if needed. This is the maintained publication workflow;
+no background auto-discovery or new server/plot changes are required now.

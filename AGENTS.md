@@ -365,6 +365,9 @@ For daily review, offer newest-first day links; each day page must contain all
 current plots and their study descriptions together, with full notes available
 on that page. Keep the daily catalog updated when adding plots or studies; use
 recorded study dates, not metadata-edit or file modification times.
+Publish each new study as a new section on its corresponding day page, with
+its description and plots together. Create a day entry when that date is new;
+preserve existing study sections and their order.
 For retired study pages, boolean `show_previews: false` in `gallery.json`
 suppresses automatic previews on that page and descendants while preserving
 notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
