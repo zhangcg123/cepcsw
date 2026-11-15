@@ -367,7 +367,7 @@ on that page. Keep the daily catalog updated when adding plots or studies; use
 recorded study dates, not metadata-edit or file modification times.
 Publish each new study as a new section on its corresponding day page, with
 its description and plots together. Create a day entry when that date is new;
-preserve existing study sections and their order.
+preserve existing study sections and their order unless the user requests a change.
 An explicit user-requested review placement may override the original study
 date; retain that original date in the caption/catalog provenance.
 For retired study pages, boolean `show_previews: false` in `gallery.json`
@@ -384,14 +384,16 @@ Nov12population matrix explicitly added toNov15give36review sections,
 default grouping; requested review placements retain original-date provenance.
 Day pages:
 
-- localhost8000/daily/2026-11-15/:11studies,34previews,1historical.
-- localhost8000/daily/2026-11-14/:13studies,44previews,5historical.
+- localhost8000/daily/2026-11-15/:12studies,40previews,1historical.
+- localhost8000/daily/2026-11-14/:12studies,38previews,5historical.
 - localhost8000/daily/2026-11-13/:12studies,43previews,1historical.
 
 Root is http://127.0.0.1:8000/, serving TrackingPerformanceStudies on
 ailogin002.ihep.ac.cn, PID1404151. Day links appear newest-first before the
 individual-study index. Study descriptions and current figures appear together;
 long README notes expand inline. Original study pages and PNG URLs remain valid.
+Nov15starts with BP_H0F/theta25 recoil, then the population matrix, as requested;
+their original source datesNov14/Nov12remain explicit in the captions/catalog.
 Retired studies keep notes without previews; inherited/per-image suppression
 also applies to daily pages. Corrected photon-ID/correlation views remain visible.
 

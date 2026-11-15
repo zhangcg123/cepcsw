@@ -35,3 +35,31 @@ uncommitted daily-review artifact directory. Pre-edit snapshots are at
 `/tmp/gallery_daily_review_matrix_nov15_before/`. Original aggregate matrix
 section is preserved. This is presentation of an existing result, not a new
 population calculation or1%threshold study.
+
+## Follow-up: recoil first, population matrix second
+
+User next requests moving "Recoil mass from the completed BP H0_F/theta25
+production" from November14toNovember15, with that study first and the
+population matrix second. Move the existing BP row and its6images (do not
+duplicate); retain original source_date2026-11-14, review_date2026-11-15 and
+all original description/notes. Keep matrix source12/review15 provenance.
+All other Nov15entries retain their relative order; remaining Nov14entries
+and all Nov13entries are identical to their pre-edit objects.
+
+New day counts: Nov15=12studies/40previews; Nov14=12/38; Nov13=12/43.
+Overall36studies/121image paths and7historical notes are unchanged. Main
+compares against the valid snapshot
+`/tmp/gallery_daily_review_move_bp_h0f_before/daily_review.json`: requested top2
+order, one BP move, all121image paths, BP title/6images/README/full old
+description and all non-target rows/orders pass. Independent result is saved
+as `main_review_top2.json` in the uncommitted daily-review artifact directory.
+The main session's own initial snapshot raced the edit and captured the new
+state; it is not used as the before-state comparison.
+
+Final live checks confirm the requested two top-level study headings in order,
+all3daypages and their121preview links HTTP200, and the6moved BP downloads
+hash-match their local source files. The matrix and aggregate copy still match.
+The original standalone BP study and aggregate page remain accessible. Root
+validation stays2465PNGs/11sections and catalog36studies/121refs; server
+PID1404151 is unchanged without restart. No image writes or fit/analysis runs.
+README, inventory and live_verification.json reflect the new layout.
