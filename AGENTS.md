@@ -361,6 +361,9 @@ Within each study subdirectory, show its descriptions and plot previews on
 the same page. Inline its exact `plots/` child without a redundant folder
 click, preserving image URLs and genuine study/category subdirectories.
 Keep the server root as a directory index of studies.
+For retired study pages, boolean `show_previews: false` in `gallery.json`
+suppresses automatic previews on that page and descendants while preserving
+notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
@@ -388,11 +391,14 @@ normalization and three renders checked. No refit/simulation/reconstruction,
 implementation/card/build/install/default change. Artifacts are uncommitted in
 TrackingPerformanceStudies/converted_photon_recoil_20261115/. Existing gallery
 and12event displays preserved;3new figures form a dedicated gallery section.
-Verified gallery: localhost8000/bp_matched_recoil_pt_20261110/, PID1193516 on
+Verified gallery: localhost8000/bp_matched_recoil_pt_20261110/, PID1332798 on
 ailogin002; actual server root is TrackingPerformanceStudies. All88prior PNG
 hashes/21prior sections and child manifest unchanged;91PNGs/22sections validate.
 Study descriptions and nested plots now share one page; direct converted study:
 localhost8000/converted_photon_recoil_20261115/.
 [Inline gallery behavior and verification](agents_record/2026-11-15-inline-study-plots.md).
+All35plot-bearing studies datedNov13–15 checked:28current pages pair descriptions
+and plots;7retired pages keep notes without previews. All304PNGhashes unchanged.
+[Recent-study gallery audit](agents_record/2026-11-15-gallery-studies-since-1113.md).
 [Selection, counts, limits and artifacts](agents_record/2026-11-15-converted-photon-recoil.md).
 [Outgoing complete status](agents_record/2026-11-15-agents-before-converted-photon-recoil.md).
