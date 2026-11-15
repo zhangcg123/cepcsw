@@ -368,19 +368,23 @@ recorded study dates, not metadata-edit or file modification times.
 Publish each new study as a new section on its corresponding day page, with
 its description and plots together. Create a day entry when that date is new;
 preserve existing study sections and their order.
+An explicit user-requested review placement may override the original study
+date; retain that original date in the caption/catalog provenance.
 For retired study pages, boolean `show_previews: false` in `gallery.json`
 suppresses automatic previews on that page and descendants while preserving
 notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**DAILY PLOT REVIEW (2026-11-15).**
+**DAILY PLOT REVIEW (updated2026-11-16).**
 User wants plots+descriptions generated on the same study day in one webpage,
-without opening study/asset subdirectories. Current since-Nov13scope:35study
-roots,120current previews and7historical study notes. Recorded study dates,
-not mtimes, define grouping. Day pages:
+without opening study/asset subdirectories. The35recent study roots plus the
+Nov12population matrix explicitly added toNov15give36review sections,
+121current previews and7historical study notes. Recorded study dates define
+default grouping; requested review placements retain original-date provenance.
+Day pages:
 
-- localhost8000/daily/2026-11-15/:10studies,33previews,1historical.
+- localhost8000/daily/2026-11-15/:11studies,34previews,1historical.
 - localhost8000/daily/2026-11-14/:13studies,44previews,5historical.
 - localhost8000/daily/2026-11-13/:12studies,43previews,1historical.
 
@@ -393,11 +397,12 @@ also applies to daily pages. Corrected photon-ID/correlation views remain visibl
 
 Root gallery.json daily_review_manifest points to
 TrackingPerformanceStudies/gallery_daily_review_20261115/daily_review.json.
-All35study/date mappings and120canonical imagepaths reviewed; all3daypages and
-all120PNGlinks HTTP200, unknown day404, existingroutes preserved. Rootvalidation
+All36review entries and121canonical imagepaths reviewed; all3daypages and
+all121PNGlinks HTTP200, unknown day404, existingroutes preserved. Rootvalidation
 2465PNGs/11sections unchanged. All304scoped PNGhashes rechecked unchanged.
 No image copies/moves/regeneration, physics analysis/refit, card/build/install
 change. Catalog/inventory/live checks stay uncommitted in that artifactdir.
 [Daily presentation, controls and verification](agents_record/2026-11-15-daily-plot-review.md).
+[Nov12matrix placed onNov15byrequest](agents_record/2026-11-16-matrix-on-nov15-review.md).
 [Complete outgoing status](agents_record/2026-11-15-agents-before-daily-plot-review.md).
 [Converted-photon recoil selection/results](agents_record/2026-11-15-converted-photon-recoil.md).
