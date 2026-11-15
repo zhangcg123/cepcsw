@@ -361,44 +361,40 @@ Within each study subdirectory, show its descriptions and plot previews on
 the same page. Inline its exact `plots/` child without a redundant folder
 click, preserving image URLs and genuine study/category subdirectories.
 Keep the server root as a directory index of studies.
+For daily review, offer newest-first day links; each day page must contain all
+current plots and their study descriptions together, with full notes available
+on that page. Keep the daily catalog updated when adding plots or studies; use
+recorded study dates, not metadata-edit or file modification times.
 For retired study pages, boolean `show_previews: false` in `gallery.json`
 suppresses automatic previews on that page and descendants while preserving
 notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**RECOIL MASS FOR PHOTON CONVERSIONS BEFORE ECAL (2026-11-15).**
-Current100000REC events; saved original-photon Geant4 subtype14/status2,
-pre-first-ECAL entry, selected Z→ee FSR/eBrem only; no photon-energy cut or
-cluster weights. Exact previous7549FSR/17106eBrem converted-photon counts
-reproduced for all500files. Complete membership/owners saved, not examples.
-Conversions inside ECAL remain outside the saved record.
+**DAILY PLOT REVIEW (2026-11-15).**
+User wants plots+descriptions generated on the same study day in one webpage,
+without opening study/asset subdirectories. Current since-Nov13scope:35study
+roots,120current previews and7historical study notes. Recorded study dates,
+not mtimes, define grouping. Day pages:
 
-Current theta25 BP recoil cache matches the same REC sources/track identities.
-98093complete truth-covered pairs (344incomplete pairs excluded);75071pass
-common BaselineKF/neutral-reference/ordinary+floatingBP110 validity. No H0/H0F
-or GSF gate. Three120–140GeV shape plots use12874any-conversion,4965FSR and
-8710eBrem matched events; latter two overlap801. Electron curves: Baseline KF
-+neutrals, BP110, BP110+floatingFSR; inclusive muon KF is a separate reference.
-25/200mrad half-window; no extra BP neutral p4. Independent unit-window
-normalization, raw N in legends; failed fits excluded from all electron curves.
-BP110→floatingFSR shifts120–130fraction52.24%→64.15%, above140fraction
-23.44%→12.67%, but below120grows3.10%→7.53% on the full12874matched set.
-Conditional truth-assisted comparison, not isolated resolution/physics validation.
+- localhost8000/daily/2026-11-15/:10studies,33previews,1historical.
+- localhost8000/daily/2026-11-14/:13studies,44previews,5historical.
+- localhost8000/daily/2026-11-13/:12studies,43previews,1historical.
 
-All per-job counts, joins, source identities/hashes, photon/event partitions,
-normalization and three renders checked. No refit/simulation/reconstruction,
-implementation/card/build/install/default change. Artifacts are uncommitted in
-TrackingPerformanceStudies/converted_photon_recoil_20261115/. Existing gallery
-and12event displays preserved;3new figures form a dedicated gallery section.
-Verified gallery: localhost8000/bp_matched_recoil_pt_20261110/, PID1332798 on
-ailogin002; actual server root is TrackingPerformanceStudies. All88prior PNG
-hashes/21prior sections and child manifest unchanged;91PNGs/22sections validate.
-Study descriptions and nested plots now share one page; direct converted study:
-localhost8000/converted_photon_recoil_20261115/.
-[Inline gallery behavior and verification](agents_record/2026-11-15-inline-study-plots.md).
-All35plot-bearing studies datedNov13–15 checked:28current pages pair descriptions
-and plots;7retired pages keep notes without previews. All304PNGhashes unchanged.
-[Recent-study gallery audit](agents_record/2026-11-15-gallery-studies-since-1113.md).
-[Selection, counts, limits and artifacts](agents_record/2026-11-15-converted-photon-recoil.md).
-[Outgoing complete status](agents_record/2026-11-15-agents-before-converted-photon-recoil.md).
+Root is http://127.0.0.1:8000/, serving TrackingPerformanceStudies on
+ailogin002.ihep.ac.cn, PID1404151. Day links appear newest-first before the
+individual-study index. Study descriptions and current figures appear together;
+long README notes expand inline. Original study pages and PNG URLs remain valid.
+Retired studies keep notes without previews; inherited/per-image suppression
+also applies to daily pages. Corrected photon-ID/correlation views remain visible.
+
+Root gallery.json daily_review_manifest points to
+TrackingPerformanceStudies/gallery_daily_review_20261115/daily_review.json.
+All35study/date mappings and120canonical imagepaths reviewed; all3daypages and
+all120PNGlinks HTTP200, unknown day404, existingroutes preserved. Rootvalidation
+2465PNGs/11sections unchanged. All304scoped PNGhashes rechecked unchanged.
+No image copies/moves/regeneration, physics analysis/refit, card/build/install
+change. Catalog/inventory/live checks stay uncommitted in that artifactdir.
+[Daily presentation, controls and verification](agents_record/2026-11-15-daily-plot-review.md).
+[Complete outgoing status](agents_record/2026-11-15-agents-before-daily-plot-review.md).
+[Converted-photon recoil selection/results](agents_record/2026-11-15-converted-photon-recoil.md).
