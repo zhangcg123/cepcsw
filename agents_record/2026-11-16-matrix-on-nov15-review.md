@@ -63,3 +63,28 @@ The original standalone BP study and aggregate page remain accessible. Root
 validation stays2465PNGs/11sections and catalog36studies/121refs; server
 PID1404151 is unchanged without restart. No image writes or fit/analysis runs.
 README, inventory and live_verification.json reflect the new layout.
+
+## Follow-up: unthresholded matrix beside the threshold version
+
+User requests the population matrix without the>1GeV requirement as well.
+Keep the population study second onNov15, now titled "Event-level FSR/eBrem
+population matrices", with two ordered subpanels: all recorded radiation
+(no additional energy threshold), then the unchanged strict>1GeV AND version.
+Reference the existing `event_radiation_matrix_20261112/event_fsr_ebrem_matrix.png`;
+no new calculation or image generation. Its counts over the same98437events
+are Neither1113(1.13067241%),FSR-only5946(6.04041163%),eBrem-only14635
+(14.86737710%),Both76743(77.96153885%). Saved generatorFSRpresence and positive
+G4material-photon energy define the unthresholded event flags; either leg may
+supply them. Both matrices exclude1556one-track and7no-track inputs; the
+uncut figure does not relabel missing pairs as neither.
+
+Nov15nowhas12studies/41previews; other days remain12/38and12/43. Overall
+36study entries/122image references. Main compares against
+`/tmp/daily_before_population_uncut_20261116.json`: only the requested source
+PNG is added; all121old paths and every non-population row/day are unchanged.
+The two original-date fields and outer/inner ordering pass. Review is saved
+as `main_review_population_uncut.json`. Live all3pages/all122preview URLs
+return200; both matrix downloads hash-match originals and aggregate copies.
+Rootvalidation2465PNGs/11sections unchanged. No code/image/data/reconstruction
+change or server restart; PID1404151 retained. Metadata artifacts are updated
+uncommitted in the existing daily-review directory.

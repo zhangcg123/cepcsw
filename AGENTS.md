@@ -380,11 +380,11 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 User wants plots+descriptions generated on the same study day in one webpage,
 without opening study/asset subdirectories. The35recent study roots plus the
 Nov12population matrix explicitly added toNov15give36review sections,
-121current previews and7historical study notes. Recorded study dates define
+122current previews and7historical study notes. Recorded study dates define
 default grouping; requested review placements retain original-date provenance.
 Day pages:
 
-- localhost8000/daily/2026-11-15/:12studies,40previews,1historical.
+- localhost8000/daily/2026-11-15/:12studies,41previews,1historical.
 - localhost8000/daily/2026-11-14/:12studies,38previews,5historical.
 - localhost8000/daily/2026-11-13/:12studies,43previews,1historical.
 
@@ -392,15 +392,16 @@ Root is http://127.0.0.1:8000/, serving TrackingPerformanceStudies on
 ailogin002.ihep.ac.cn, PID1404151. Day links appear newest-first before the
 individual-study index. Study descriptions and current figures appear together;
 long README notes expand inline. Original study pages and PNG URLs remain valid.
-Nov15starts with BP_H0F/theta25 recoil, then the population matrix, as requested;
+Nov15starts with BP_H0F/theta25 recoil, then the population matrices (uncut first,
+strict>1GeV second), as requested;
 their original source datesNov14/Nov12remain explicit in the captions/catalog.
 Retired studies keep notes without previews; inherited/per-image suppression
 also applies to daily pages. Corrected photon-ID/correlation views remain visible.
 
 Root gallery.json daily_review_manifest points to
 TrackingPerformanceStudies/gallery_daily_review_20261115/daily_review.json.
-All36review entries and121canonical imagepaths reviewed; all3daypages and
-all121PNGlinks HTTP200, unknown day404, existingroutes preserved. Rootvalidation
+All36review entries and122canonical imagepaths reviewed; all3daypages and
+all122PNGlinks HTTP200, unknown day404, existingroutes preserved. Rootvalidation
 2465PNGs/11sections unchanged. All304scoped PNGhashes rechecked unchanged.
 No image copies/moves/regeneration, physics analysis/refit, card/build/install
 change. Catalog/inventory/live checks stay uncommitted in that artifactdir.
