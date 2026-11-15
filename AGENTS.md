@@ -407,5 +407,8 @@ No image copies/moves/regeneration, physics analysis/refit, card/build/install
 change. Catalog/inventory/live checks stay uncommitted in that artifactdir.
 [Daily presentation, controls and verification](agents_record/2026-11-15-daily-plot-review.md).
 [Nov12matrix placed onNov15byrequest](agents_record/2026-11-16-matrix-on-nov15-review.md).
+[Population-to-recoil count bridge](agents_record/2026-11-16-population-recoil-count-bridge.md):
+98437raw>1GeVmatrix events match recoil event keys/categories exactly; shape
+panels retain75068common-fit pairs, then each curve's own120–140window count.
 [Complete outgoing status](agents_record/2026-11-15-agents-before-daily-plot-review.md).
 [Converted-photon recoil selection/results](agents_record/2026-11-15-converted-photon-recoil.md).
