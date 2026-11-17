@@ -23,6 +23,7 @@
 #include "RecoAssociationTuple.h"
 #include "NeutralLossCandidate.h"
 #include "ChargedEnergyCandidate.h"
+#include "HcalEnergyCandidate.h"
 #include "TruthBreakpointTuple.h"
 #include "LocationFitScan.h"
 #include "TruthElectronSelector.h"
@@ -80,6 +81,7 @@ private:
   DataHandle<edm4hep::ClusterCollection> m_ecalClusters{"EcalCluster", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ReconstructedParticleCollection> m_prePfos{"CyberPFOPreReclustering", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ClusterCollection> m_preEcalClusters{"EcalClusterPreReclustering", Gaudi::DataHandle::Reader, this};
+  DataHandle<edm4hep::ClusterCollection> m_preHcalClusters{"HcalClusterPreReclustering", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::ClusterCollection> m_chargedEcalClusters{"", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4BremsPhotonCollection> m_fsrPhotons{"GsfG4FsrPhotons", Gaudi::DataHandle::Reader, this};
   DataHandle<gsftruth::G4BremsPhotonStepCollection> m_fsrSteps{"GsfG4FsrPhotonSteps", Gaudi::DataHandle::Reader, this};
@@ -111,6 +113,10 @@ private:
   Gaudi::Property<bool> m_freeLossFit{this, "FreeLossFit", true};
   Gaudi::Property<bool> m_beamFsrLoss{this, "ExperimentalBeamSpotFsrLoss", true};
   Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", true};
+  Gaudi::Property<bool> m_includeHcal{this, "IncludeHcalEnergy", false};
+  Gaudi::Property<double> m_hcalScale{this, "HcalEnergyScale", 4.0};
+  Gaudi::Property<double> m_hcalStochastic{this, "HcalStochasticError", 0.30};
+  Gaudi::Property<double> m_hcalConstant{this, "HcalConstantError", 0.07};
   Gaudi::Property<std::string> m_ecalConstraintInput{this, "EcalConstraintInput", "PreReclustering"};
   Gaudi::Property<std::string> m_chargedEcalEnergyMode{this, "ChargedEcalEnergyMode", "ElectronPhoton"};
   Gaudi::Property<bool> m_neutralEcalMeasurement{this, "NeutralEcalMeasurement", false};
@@ -192,6 +198,12 @@ private:
   std::string m_collectedNeutralError;
   int m_chargedEcalMeasurementStatus = 0, m_chargedEcalMeasurementClusterCount = 0;
   double m_chargedEcalMeasurementEnergy = 0, m_chargedEcalMeasurementError = 0;
+  breakpoint::HcalEnergyCandidate m_chargedHcal, m_neutralHcal;
+  std::vector<int> m_chargedPfoIndices;
+  bool m_recordIncludeHcal = false;
+  double m_recordHcalScale = 4, m_recordHcalStochastic = .30, m_recordHcalConstant = .07;
+  double m_chargedCaloEnergy = 0, m_chargedCaloError = 0;
+  double m_neutralCaloEnergy = 0, m_neutralCaloError = 0;
   std::string m_recordChargedEcalInput, m_recordChargedEcalEnergyMode;
   std::string m_recordChargedEcalEffectiveMode;
   std::string m_recordEcalConstraintInput, m_recordEcalConstraintPfos, m_recordEcalConstraintClusters;

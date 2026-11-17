@@ -1,4 +1,5 @@
 #include "ChargedEnergyCandidate.h"
+#include "HcalEnergyCandidate.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/TrackCollection.h"
 #include <cmath>
@@ -43,6 +44,17 @@ int main() {
   pre.addToClusters(hc); // HCAL is not part of the ECAL energy measurement.
   const auto direct = collectChargedEnergy(track, prePfos, merged, merged, .011, .004);
   require(direct.status == 2 && direct.energy == 13 && direct.clusterIndices == std::vector<int>{0});
+  require(direct.pfoIndices == std::vector<int>{pre.id().index});
+  pre.addToClusters(hc);
+  const auto h = collectHcalEnergy(prePfos, direct.pfoIndices, hcal, 4, .30, .07);
+  require(h.clusterIndices.size() == 1 && h.rawEnergies[0] == 50 && h.energy == 200);
+  require(std::abs(h.sigma - (.30*std::sqrt(200.)+.07*200.)) < 1.e-12);
+  require(collectHcalEnergy(prePfos, direct.pfoIndices, hcal, 4, .30, .07, h.clusterIndices).energy == 0);
+  require(collectHcalEnergy(prePfos, {}, hcal, 4, .30, .07).energy == 0);
+  bool invalid = false;
+  try { collectHcalEnergy(prePfos, direct.pfoIndices, hcal, 0, .30, .07); }
+  catch (const std::invalid_argument&) { invalid = true; }
+  require(invalid);
   edm4hep::ClusterCollection missing;
   require(collectChargedEnergy(track, pfos, final, missing, .011, .004).status == 1);
   auto secondPfo = pfos.create(); secondPfo.setCharge(-1); secondPfo.addToTracks(track);

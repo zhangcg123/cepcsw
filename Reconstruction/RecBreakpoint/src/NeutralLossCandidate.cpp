@@ -50,9 +50,9 @@ NeutralLossCandidate collectNeutralLoss(const edm4hep::Track& track,
   double variance = 0;
   for (const auto& pfo : pfos) {
     if (pfo.getCharge() != 0 || !pfo.getTracks().empty()) continue;
+    bool selectedPfo = false;
     for (const auto& cluster : pfo.getClusters()) {
-      if (!ecal.count(cluster) || cluster.hits_size() == 0 ||
-          selected.count(cluster)) continue;
+      if (!ecal.count(cluster) || cluster.hits_size() == 0) continue;
       const double energy = cluster.getEnergy();
       if (!std::isfinite(energy) || energy <= 0) continue;
       const auto& point = cluster.getPosition();
@@ -62,6 +62,8 @@ NeutralLossCandidate collectNeutralLoss(const edm4hep::Track& track,
       const double dphi = std::remainder(candidate.phi - reference.phi, 2 * pi);
       if (std::abs(candidate.theta - reference.theta) > thetaWindow ||
           std::abs(dphi) > phiWindow) continue;
+      selectedPfo = true;
+      if (selected.count(cluster)) continue;
       selected.insert(cluster);
       result.clusterIndices.push_back(cluster.id().index);
       result.clusterEnergies.push_back(energy);
@@ -70,6 +72,7 @@ NeutralLossCandidate collectNeutralLoss(const edm4hep::Track& track,
       result.clusterEnergyErrors.push_back(sigma);
       variance += sigma * sigma;
     }
+    if (selectedPfo) result.pfoIndices.push_back(pfo.id().index);
   }
   result.sigmaEnergy = std::sqrt(variance);
   return result;

@@ -40,6 +40,7 @@ ChargedEnergyCandidate collectChargedEnergy(const edm4hep::Track& track,
       if (linked == track) { ownsTrack = true; break; }
     if (!ownsTrack) continue;
     if (++linkedPfos > 1) return {3, 0, 0, {}};
+    result.pfoIndices.push_back(pfo.id().index);
     for (const auto& cluster : pfo.getClusters()) {
       if (!final.count(cluster) || cluster.hits_size() == 0 ||
           !std::isfinite(cluster.getEnergy()) || cluster.getEnergy() <= 0) continue;

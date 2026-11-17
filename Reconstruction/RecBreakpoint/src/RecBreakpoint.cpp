@@ -141,10 +141,27 @@ StatusCode RecBreakpoint::initialize() {
     return StatusCode::FAILURE;
   }
   const bool preReclustering = m_recordEcalConstraintInput == "PreReclustering";
+  if (m_includeHcal && !preReclustering) {
+    error() << "IncludeHcalEnergy requires EcalConstraintInput=PreReclustering" << endmsg;
+    return StatusCode::FAILURE;
+  }
+  try {
+    const edm4hep::ReconstructedParticleCollection emptyPfos;
+    const edm4hep::ClusterCollection emptyHcal;
+    breakpoint::collectHcalEnergy(emptyPfos, {}, emptyHcal,
+        m_hcalScale, m_hcalStochastic, m_hcalConstant);
+  } catch (const std::exception& e) {
+    error() << e.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
   m_recordEcalConstraintPfos = preReclustering ? m_prePfos.objKey() : m_pidPfos.objKey();
   m_recordEcalConstraintClusters = preReclustering ? m_preEcalClusters.objKey() : m_ecalClusters.objKey();
   m_recordChargedEcalInput = m_chargedEcalClusters.objKey().empty()
       ? m_recordEcalConstraintClusters : m_chargedEcalClusters.objKey();
+  if (m_includeHcal && m_recordChargedEcalInput != m_preEcalClusters.objKey()) {
+    error() << "IncludeHcalEnergy requires charged pre-ECAL clusters from the same snapshot" << endmsg;
+    return StatusCode::FAILURE;
+  }
   m_recordChargedEcalEnergyMode = m_chargedEcalEnergyMode.value();
   if (m_chargedEcalMeasurement && (m_recordChargedEcalInput.empty() ||
       (m_recordChargedEcalEnergyMode == "ElectronPhoton" && m_eloss))) {
@@ -381,6 +398,30 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("free_loss_charged_ecal_cluster_count", &m_chargedEcalMeasurementClusterCount);
   m_tree->Branch("free_loss_charged_ecal_energy", &m_chargedEcalMeasurementEnergy);
   m_tree->Branch("free_loss_charged_ecal_energy_error", &m_chargedEcalMeasurementError);
+  m_recordIncludeHcal = m_includeHcal;
+  m_recordHcalScale = m_hcalScale;
+  m_recordHcalStochastic = m_hcalStochastic;
+  m_recordHcalConstant = m_hcalConstant;
+  m_tree->Branch("include_hcal_energy", &m_recordIncludeHcal);
+  m_tree->Branch("hcal_energy_scale", &m_recordHcalScale);
+  m_tree->Branch("hcal_stochastic_error", &m_recordHcalStochastic);
+  m_tree->Branch("hcal_constant_error", &m_recordHcalConstant);
+  m_tree->Branch("charged_calo_pfo_indices", &m_chargedPfoIndices);
+  m_tree->Branch("collected_neutral_calo_pfo_indices", &m_collectedNeutral.pfoIndices);
+  m_tree->Branch("charged_calo_energy", &m_chargedCaloEnergy);
+  m_tree->Branch("charged_calo_energy_error", &m_chargedCaloError);
+  m_tree->Branch("collected_neutral_calo_energy", &m_neutralCaloEnergy);
+  m_tree->Branch("collected_neutral_calo_energy_error", &m_neutralCaloError);
+  auto bookHcal = [&](const std::string& prefix, breakpoint::HcalEnergyCandidate& h) {
+    m_tree->Branch((prefix+"energy").c_str(), &h.energy);
+    m_tree->Branch((prefix+"energy_error").c_str(), &h.sigma);
+    m_tree->Branch((prefix+"cluster_indices").c_str(), &h.clusterIndices);
+    m_tree->Branch((prefix+"cluster_raw_energy").c_str(), &h.rawEnergies);
+    m_tree->Branch((prefix+"cluster_energy").c_str(), &h.energies);
+    m_tree->Branch((prefix+"cluster_energy_error").c_str(), &h.errors);
+  };
+  bookHcal("charged_hcal_", m_chargedHcal);
+  bookHcal("collected_neutral_hcal_", m_neutralHcal);
   m_tree->Branch("charged_ecal_input_clusters", &m_recordChargedEcalInput);
   m_tree->Branch("ecal_constraint_input", &m_recordEcalConstraintInput);
   m_tree->Branch("charged_ecal_effective_energy_mode", &m_recordChargedEcalEffectiveMode);
@@ -576,6 +617,14 @@ StatusCode RecBreakpoint::execute() {
   const auto* constraintClusters = ecalClusters;
   const edm4hep::ReconstructedParticleCollection* prePfos = nullptr;
   const edm4hep::ClusterCollection* preClusters = nullptr;
+  const edm4hep::ClusterCollection* preHcal = nullptr;
+  if (selected && m_includeHcal) {
+    try { preHcal = m_preHcalClusters.get(); } catch (const std::exception&) {}
+    if (!preHcal) {
+      error() << "IncludeHcalEnergy requires HcalClusterPreReclustering" << endmsg;
+      return StatusCode::FAILURE;
+    }
+  }
   if (selected) {
     try { prePfos = m_prePfos.get(); } catch (const std::exception&) {}
     try { preClusters = m_preEcalClusters.get(); } catch (const std::exception&) {}
@@ -674,6 +723,9 @@ StatusCode RecBreakpoint::execute() {
     m_chargedEcalMeasurementStatus = 0;
     m_chargedEcalMeasurementClusterCount = 0;
     m_chargedEcalMeasurementEnergy = m_chargedEcalMeasurementError = nan;
+    m_chargedPfoIndices.clear();
+    m_chargedHcal = {};
+    m_neutralHcal = {};
     m_chargedEcalClusterIndices.clear();
     m_chargedEcalSelectionError.clear();
     m_recordChargedEcalEffectiveMode.clear();
@@ -688,6 +740,7 @@ StatusCode RecBreakpoint::execute() {
           m_chargedEcalMeasurementClusterCount = measurement.clusterIndices.size();
           m_chargedEcalMeasurementEnergy = measurement.energy;
           m_chargedEcalMeasurementError = measurement.sigma;
+          m_chargedPfoIndices = measurement.pfoIndices;
         }
       } catch (const std::exception& error) {
         m_chargedEcalMeasurementStatus = -1;
@@ -712,6 +765,33 @@ StatusCode RecBreakpoint::execute() {
       m_collectedNeutralError = error.what();
       m_collectedNeutral.energy = m_collectedNeutral.sigmaEnergy = nan;
     }
+    m_chargedCaloEnergy = m_chargedEcalMeasurementEnergy;
+    m_chargedCaloError = m_chargedEcalMeasurementError;
+    m_neutralCaloEnergy = m_collectedNeutral.energy;
+    m_neutralCaloError = m_collectedNeutral.sigmaEnergy;
+    if (m_includeHcal) {
+      try {
+        m_chargedHcal = breakpoint::collectHcalEnergy(*constraintPfos,
+            m_chargedPfoIndices, *preHcal, m_hcalScale, m_hcalStochastic, m_hcalConstant);
+        m_neutralHcal = breakpoint::collectHcalEnergy(*constraintPfos,
+            m_collectedNeutral.pfoIndices, *preHcal, m_hcalScale, m_hcalStochastic,
+            m_hcalConstant, m_chargedHcal.clusterIndices);
+        m_chargedCaloEnergy += m_chargedHcal.energy;
+        m_neutralCaloEnergy += m_neutralHcal.energy;
+        // Preserve exact ECAL-only arithmetic when the associated HCAL is empty.
+        if (m_chargedHcal.energy > 0) m_chargedCaloError = std::hypot(m_chargedCaloError, m_chargedHcal.sigma);
+        if (m_neutralHcal.energy > 0) m_neutralCaloError = std::hypot(m_neutralCaloError, m_neutralHcal.sigma);
+      } catch (const std::exception& e) {
+        error() << "HCAL observation: " << e.what() << endmsg;
+        return StatusCode::FAILURE;
+      }
+    }
+    if (m_verbose) info() << "Calorimeter observation track=" << m_trackIndex
+        << " HCALenabled=" << m_includeHcal << " chargedECAL=" << m_chargedEcalMeasurementEnergy
+        << " chargedHCAL=" << m_chargedHcal.energy << " chargedTotal=" << m_chargedCaloEnergy
+        << " chargedSigma=" << m_chargedCaloError << " neutralECAL=" << m_collectedNeutral.energy
+        << " neutralHCAL=" << m_neutralHcal.energy << " neutralTotal=" << m_neutralCaloEnergy
+        << " neutralSigma=" << m_neutralCaloError << endmsg;
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
     if (m_beamFsrLoss) m_beamFsrTuple.reset();
@@ -874,9 +954,9 @@ StatusCode RecBreakpoint::execute() {
         auto observations=settings;
         if (m_beamSpotConstraint) observations.beamSpot=m_recordBeamSpotSettings;
         if (m_chargedEcalMeasurement && m_chargedEcalMeasurementStatus==2)
-          observations.chargedEcalEnergy=std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
+          observations.chargedEcalEnergy=std::make_pair(m_chargedCaloEnergy,m_chargedCaloError);
         if (m_collectedNeutralStatus==2)
-          observations.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
+          observations.neutralEcalEnergy=std::make_pair(m_neutralCaloEnergy,m_neutralCaloError);
         observations.delayedNeutral=m_delayedNeutralExperiment;
         return observations;
       };
@@ -1315,12 +1395,12 @@ StatusCode RecBreakpoint::execute() {
           } else {
             if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
               variant.chargedEcalEnergy = std::make_pair(
-                  m_chargedEcalMeasurementEnergy, m_chargedEcalMeasurementError);
+                  m_chargedCaloEnergy, m_chargedCaloError);
               // Raw parts enter the shared sum projection, even with the neutral switch off.
               if (resolvedSum) {
                 variant.resolvedEcalSum = true;
                 variant.neutralEcalEnergy = std::make_pair(
-                    m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+                    m_neutralCaloEnergy, m_neutralCaloError);
               }
               available = true;
             } else if (kind == 2 && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2) {
@@ -1328,7 +1408,7 @@ StatusCode RecBreakpoint::execute() {
               variant.resolvedEcalSum = false;
               variant.chargedEcalEnergyMode = breakpoint::ChargedEnergyMode::ElectronOnly;
               variant.neutralEcalEnergy = std::make_pair(
-                  m_collectedNeutral.energy, m_collectedNeutral.sigmaEnergy);
+                  m_neutralCaloEnergy, m_neutralCaloError);
               if (method == 1) variant.delayedNeutral = m_delayedNeutralExperiment;
               available = true;
             }
@@ -1403,15 +1483,15 @@ StatusCode RecBreakpoint::execute() {
             }
             auto variant=settings;variant.beamSpot=m_recordBeamSpotSettings;
             variant.beamSpotFsrLoss=true;variant.resolvedEcalSum=false;variant.delayedNeutral=false;
-            variant.chargedEcalEnergy=std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError);
+            variant.chargedEcalEnergy=std::make_pair(m_chargedCaloEnergy,m_chargedCaloError);
             variant.neutralEcalEnergy.reset();
             variant.chargedEcalEnergyMode=stage==2 && !settings.intervals.empty()
                 ? breakpoint::ChargedEnergyMode::ElectronPhoton : breakpoint::ChargedEnergyMode::ElectronOnly;
             if(m_collectedNeutralStatus==2) {
               if(stage==2) {
-                variant.chargedEcalEnergy->first+=m_collectedNeutral.energy;
-                variant.chargedEcalEnergy->second=std::hypot(variant.chargedEcalEnergy->second,m_collectedNeutral.sigmaEnergy);
-              } else variant.neutralEcalEnergy=std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy);
+                variant.chargedEcalEnergy->first+=m_neutralCaloEnergy;
+                variant.chargedEcalEnergy->second=std::hypot(variant.chargedEcalEnergy->second,m_neutralCaloError);
+              } else variant.neutralEcalEnergy=std::make_pair(m_neutralCaloEnergy,m_neutralCaloError);
             }
             breakpoint::PairedFitResult experiment;
             if(!m_freeLossFit || settings.intervals.empty()) experiment=fitter.fit(hits,variant,false);

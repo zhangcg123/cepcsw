@@ -5,6 +5,7 @@ Prepare uses only the Python standard library; ROOT is loaded only by workers.
 """
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -56,6 +57,7 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_DIFFUSE_AUGMENTED_RTS',
                'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
                'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
+               'BP_INCLUDE_HCAL', 'BP_HCAL_SCALE', 'BP_HCAL_STOCHASTIC', 'BP_HCAL_CONSTANT',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_TRUTH_BACKWARD_FILTER',
@@ -188,9 +190,13 @@ def prepare():
     controls.setdefault('BP_CHARGED_ECAL_ENERGY_MODE', 'ElectronPhoton')
     controls.setdefault('BP_NEUTRAL_THETA_MRAD', '25')
     controls.setdefault('BP_NEUTRAL_PHI_MRAD', '200')
+    controls.setdefault('BP_INCLUDE_HCAL', '1')
+    controls.setdefault('BP_HCAL_SCALE', '4.0')
+    controls.setdefault('BP_HCAL_STOCHASTIC', '0.30')
+    controls.setdefault('BP_HCAL_CONSTANT', '0.07')
     for key in ('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
                 'BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
-                'BP_BEAM_SPOT_FSR_LOSS',
+                'BP_BEAM_SPOT_FSR_LOSS', 'BP_INCLUDE_HCAL',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
                 'BP_DIFFUSE_AUGMENTED_RTS',
@@ -200,6 +206,11 @@ def prepare():
         if key in controls: controls[key] = str(int(boolean(controls[key])))
     if controls.get('BP_ECAL_CONSTRAINT_INPUT', 'PreReclustering') not in ('PreReclustering', 'FinalPFO'):
         raise ValueError('BP_ECAL_CONSTRAINT_INPUT must be PreReclustering or FinalPFO')
+    if controls['BP_INCLUDE_HCAL'] == '1' and controls['BP_ECAL_CONSTRAINT_INPUT'] != 'PreReclustering':
+        raise ValueError('BP_INCLUDE_HCAL requires PreReclustering')
+    hcal = [float(controls[k]) for k in ('BP_HCAL_SCALE', 'BP_HCAL_STOCHASTIC', 'BP_HCAL_CONSTANT')]
+    if any(not math.isfinite(v) for v in hcal) or hcal[0] <= 0 or min(hcal[1:]) < 0 or sum(hcal[1:]) <= 0:
+        raise ValueError('Invalid HCAL calibration/resolution')
     charged_mode = controls['BP_CHARGED_ECAL_ENERGY_MODE']
     if charged_mode not in ('ElectronOnly', 'ElectronPhoton'):
         raise ValueError('BP_CHARGED_ECAL_ENERGY_MODE must be ElectronOnly or ElectronPhoton')

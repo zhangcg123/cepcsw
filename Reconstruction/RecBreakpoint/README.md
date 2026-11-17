@@ -14,6 +14,52 @@ The retired LocalMarginal comparison is preserved in the
 [historical walkthrough](../../agents_record/2026-10-19-retired-local-marginal-walkthrough.md).
 Only Persistent6D remains executable for a selected breakpoint.
 
+## Associated pre-HCAL in the calorimeter constraint (2026-11-17)
+
+New maintained cards and batch manifests enable `BP_INCLUDE_HCAL=1`. This requires
+`EcalConstraintInput=PreReclustering` and charged clusters from the same snapshot.
+Compiled `IncludeHcalEnergy=false` preserves the behavior of already frozen cards
+that do not set the new property. Existing flat files are unchanged.
+
+The selected charged PFO contributes its linked pre-HCAL clusters. A trackless,
+zero-charge neutral PFO contributes its linked pre-HCAL only if at least one of
+its eligible pre-ECAL clusters passes the existing ECAL window. HCAL-only neutrals
+are not newly selected, and HCAL positions do not redefine the ECAL window.
+ECAL collection, hit-support requirements, statuses and energies stay unchanged.
+No final-PFO kinematics or reclustering energy remainders are read.
+
+Each selected pre-HCAL cluster contributes `E_H = HcalEnergyScale * raw_energy`,
+not the saved PFO energy. Duplicate links/PFO owners are unioned by cluster
+identity; HCAL already used in the charged observation is excluded from its
+neutral observation. Different tracks can share an observation, as with the
+existing ECAL windows; this per-track fitter does not implement a correlated
+joint two-track likelihood or an event-level photon ownership policy.
+
+For each HCAL cluster, `sigma_H = 0.30 sqrt(E_H/GeV) GeV + 0.07 E_H` by the
+user's specification. Terms add linearly; distinct cluster variances and the
+ECAL/HCAL variances add in quadrature. No ECAL/HCAL covariance is modeled.
+Zero HCAL retains the original observation/error arithmetic exactly. Missing
+required collections and invalid associated HCAL energies fail explicitly.
+The HCAL resolution is an assumed model, not a fitted response validation.
+
+H0, HF, material110 and material110+FSR, optional scans and111 all consume the
+same constructed charged/neutral observations through the existing fit paths.
+000/100 remain tracker/beam-only. Existing neutral-delay and sum-projection
+machinery is unchanged. Historical internal fitted-observation names containing
+`ecal` now denote the combined observation when the switch is enabled;
+raw source branches `free_loss_charged_ecal_energy{,_error}` and
+`collected_neutral_ecal_energy{,_error}` remain strictly ECAL-only.
+
+New per-track diagnostics: `include_hcal_energy`, `hcal_energy_scale`,
+`hcal_stochastic_error`, `hcal_constant_error`; `charged_calo_pfo_indices` and
+`collected_neutral_calo_pfo_indices`; `charged_calo_energy{,_error}` and
+`collected_neutral_calo_energy{,_error}`. Prefixes `charged_hcal_` and
+`collected_neutral_hcal_` each provide `energy`, `energy_error`,
+`cluster_indices`, `cluster_raw_energy`, `cluster_energy`,
+`cluster_energy_error`. Energies/errors are GeV; raw energies precede the
+additional HCAL scale. HCAL diagnostics are empty/zero when disabled. No raw
+calorimeter hits are duplicated in the flat tuple.
+
 ## Build and run
 
 From the CEPCSW repository root:
@@ -1233,6 +1279,9 @@ the native source/predicted/filtered states, `F` and `Q`.
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
+| IncludeHcalEnergy | false compiled; true maintained card/batch | Add associated pre-HCAL to the shared calorimeter observations; `BP_INCLUDE_HCAL=0` reproduces ECAL-only steering |
+| HcalEnergyScale | 4.0 | Multiply pre-HCAL cluster energies once; `BP_HCAL_SCALE` |
+| HcalStochasticError, HcalConstantError | 0.30, 0.07 | Per-cluster sigma in GeV = `0.30 sqrt(E_H/GeV) GeV + 0.07 E_H`, with calibrated E_H; `BP_HCAL_STOCHASTIC`, `BP_HCAL_CONSTANT` |
 | BeamSpotConstraint | true | Two separate beam-only ordinary/free-loss RTS families, using an initial transverse beam measurement and usable without a breakpoint |
 | BeamSpotX, BeamSpotY | 0 mm, 0 mm | Transverse beam mean for the initial scalar KF measurement |
 | BeamSpotSigmaX, BeamSpotSigmaY | 0.0145 mm, 0.000036 mm | Positive beam widths; projected into local drho for one Gaussian likelihood term |

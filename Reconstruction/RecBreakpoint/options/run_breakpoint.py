@@ -232,6 +232,12 @@ fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "1") 
 # Missing pre collections are an error, never a silent switch to final PFOs.
 # Final-PFO diagnostic branches/neutral_pfos tree remain final-PFO information.
 fit.EcalConstraintInput = os.environ.get("BP_ECAL_CONSTRAINT_INPUT", "PreReclustering")
+fit.IncludeHcalEnergy = os.environ.get("BP_INCLUDE_HCAL", "1") == "1"
+fit.HcalEnergyScale = float(os.environ.get("BP_HCAL_SCALE", "4.0"))
+fit.HcalStochasticError = float(os.environ.get("BP_HCAL_STOCHASTIC", "0.30"))
+fit.HcalConstantError = float(os.environ.get("BP_HCAL_CONSTANT", "0.07"))
+if fit.IncludeHcalEnergy and fit.EcalConstraintInput != "PreReclustering":
+    raise ValueError("BP_INCLUDE_HCAL requires PreReclustering; set BP_INCLUDE_HCAL=0 for FinalPFO")
 # Empty: use the charged shower directly linked by the selected PFO.
 # Optional alternate energy collection (e.g. TrkMergedECAL): unique hit-provenance
 # matching is retained. Legacy campaign: FinalPFO plus TrkMergedECAL.

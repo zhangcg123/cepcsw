@@ -376,37 +376,38 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**FINAL BP RECOIL WITH UPSTREAM FALLBACK (2026-11-16).**
-User requests a new section first onNov15, ahead of the unchanged H0F/theta25
-comparison and population matrices. Six120–140GeV/.1GeV-bin plots show only
-finalBP+FSRwithfallback, BARE electronBaselineKF and synthetic muon reference.
-No all4hypothesis-valid gate. Retain98302baseline-valid pairs from100000inputs;
-135baseline charge/state failures and1563incomplete selected pairs still excluded.
+**ASSOCIATED PRE-HCAL IN BP CONSTRAINTS (2026-11-17).**
+The user requests pre-ECAL plus pre-HCAL from the same selected charged/neutral
+PFOs. New maintained BP cards and batch manifests enable `BP_INCLUDE_HCAL=1`;
+`BP_INCLUDE_HCAL=0` retains the ECAL-only control. Compiled default stays false
+so already frozen cards preserve their steering. Only pre-reclustering inputs
+are supported when enabled. HCAL-only neutrals are not newly selected.
 
-User-confirmed per-leg chain:110+FSR→ordinary110→beam100→tracker000→inputKF.
-Use native statuses/applied masks/p4, never recoil mass/window or truth radiation
-type to select a route. OnlysuccessfulFSR addsitsOWNelectron+photononce;
-otherstagesuseelectronalone. H0/H0F are parallel, not upstream. Native000KF
-copies are counted asKF. No new installed online fallback policy.
+Pre-HCAL cluster energy is multiplied once by4. The user specifies per-cluster
+sigma_H[GeV]=0.30sqrt(E_H[GeV])+0.07E_H[GeV], with calibrated E_H. Terms add
+linearly, cluster and ECAL/HCAL variances independently in quadrature. This is
+an assumed resolution, with no fitted covariance or photon-purity guarantee.
+Deduplicate HCAL IDs within each observation and exclude charged-used HCAL from
+its neutral observation. Independent track fits retain existing shared-window
+correlations; no joint two-track fit/ownership policy is introduced.
 
-All500BP/RECfiles read, nativebaseline massesexact and75511both-HbetaF pairs
-reproduce oldmasses.22791pairs usefallback (21268oneleg,1523both). Selectedlegs:
-FSR172290;1107503;1007349;0001016;KF8446. Final79120in120–140,64633in120–130;
-bareKF65793/42808. Final95undefined,4173below120 remain recorded, not retuned.
+H0/HF/110/110+FSR and optional111/scans share the observations.000/100 remain
+tracker/beam-only. Existing raw ECAL source branches stay ECAL-only; new HCAL,
+PFO-ID, calibration and combined-energy branches document the measurement.
+No original PFA/tracking/simulation algorithm or GSF source/card changes.
+Existing REC and flat files are unchanged; new HCAL fits require a BP rerun.
 
-Muon user requests randomGaussian MASSsmearing to25%larger fittedDSCBcore.
-Seed20261116; fitcore0.272624→0.340369GeV, ratio1.248492,target1.25within0.25%
-relative tolerance, addedGaussianσ0.159741GeV. Allfinite masses smeared before
-windowcuts. This is a synthetic reference, not a muon detector/momentum rerun.
-Inclusiveyield usesfull100000/50000inputweights.704/1.354at10ab^-1;other5plots
-are own-window unit-area shapes. Native truth-assisted material locations remain.
+Build and all19BP CTests pass;67batch tests pass. Same-code off/on checks on
+current REC source1 events3/11/16/17 cover8selected tracks: HCAL-off matches
+all99204old branch-row values exactly;26414tracker/beam/raw-ECAL values are
+unchanged on/off. HCAL calibration/error/sum/identity and HF observations close.
+Existing invalid HF/material-FSR cases remain invalid. Full verbose dumps are
+under `/tmp/bp-hcal-20261117/`. The historical particle-gun hard-loss benchmark
+is unavailable; these are explicitly current Higgs events, not population
+physics validation. Installation refreshed only for RecBreakpoint; checksum
+matches tested build. Optional111 installed-path check passes on event3: two
+selected legs, track25validmask7andfloatingFSRstatus2;5920measurement/H0/HF/110
+values agree with its110-only run. Existing production tuples are not rerun.
 
-Study artifacts uncommitted: TrackingPerformanceStudies/bp_final_fallback_recoil_20261116/.
-Newsource_date16/review_date15 byrequest. Dailyroot localhost8000 PID1404151 on
-ailogin002.ihep.ac.cn: Nov15=13studies/47previews,Nov14=12/38,Nov13=12/43;
-37catalogentries/128previews;2471rootPNGs/11sections. Sixrenders/data/source
-checks reviewed;all128PNGURLsHTTP200,new6hashesmatch;old122paths/entries and
-otherdays unchanged. No imagecopies/newBPfits/source/card/build/installchange.
-[Fallback, calibration, counts and limits](agents_record/2026-11-16-final-fallback-recoil.md).
-[Complete outgoing status](agents_record/2026-11-16-agents-before-final-fallback-recoil.md).
-[Matrix/recoil selection bridge](agents_record/2026-11-16-population-recoil-count-bridge.md).
+[Implementation, verification and limits](agents_record/2026-11-17-bp-associated-hcal-energy.md).
+[Complete outgoing status](agents_record/2026-11-17-agents-before-bp-hcal.md).

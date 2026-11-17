@@ -19,6 +19,21 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
+    def test_hcal_observation_is_frozen_and_validated(self):
+        self.prepare(OUTPUT_TUPLEPATH='hcal_default')
+        c = self.manifest('hcal_default')['controls']
+        for key, value in {'BP_INCLUDE_HCAL':'1', 'BP_HCAL_SCALE':'4.0',
+                           'BP_HCAL_STOCHASTIC':'0.30', 'BP_HCAL_CONSTANT':'0.07'}.items():
+            self.assertEqual(c[key], value)
+        self.prepare(OUTPUT_TUPLEPATH='hcal_off', BP_INCLUDE_HCAL='0')
+        self.assertEqual(self.manifest('hcal_off')['controls']['BP_INCLUDE_HCAL'], '0')
+        for key, value in [('BP_HCAL_SCALE','0'), ('BP_HCAL_STOCHASTIC','nan'),
+                           ('BP_HCAL_CONSTANT','-0.1')]:
+            with self.assertRaisesRegex(ValueError, 'Invalid HCAL'):
+                self.prepare(OUTPUT_TUPLEPATH='hcal_bad', **{key:value})
+        with self.assertRaisesRegex(ValueError, 'requires PreReclustering'):
+            self.prepare(OUTPUT_TUPLEPATH='hcal_final', BP_ECAL_CONSTRAINT_INPUT='FinalPFO')
+
     def test_eehx_wrapper_full_chain_with_truth_electron_selection(self):
         launcher = self.repo/'subbreakpointhiggsjobs.sh'
         shutil.copy2(REPO/launcher.name, launcher)
@@ -328,7 +343,7 @@ class BatchTest(unittest.TestCase):
             exec(assignments, {'fit': fit, 'os': os})
         self.assertEqual(fit.EcalConstraintInput, 'PreReclustering')
         self.assertEqual(fit.ChargedEcalInputClusters, '')
-        self.prepare(OUTPUT_TUPLEPATH='legacy', BP_ECAL_CONSTRAINT_INPUT='FinalPFO',
+        self.prepare(OUTPUT_TUPLEPATH='legacy', BP_ECAL_CONSTRAINT_INPUT='FinalPFO', BP_INCLUDE_HCAL='0',
                      BP_CHARGED_ECAL_INPUT_CLUSTERS='TrkMergedECAL')
         legacy = self.manifest('legacy')
         self.assertEqual(legacy['controls']['BP_ECAL_CONSTRAINT_INPUT'], 'FinalPFO')

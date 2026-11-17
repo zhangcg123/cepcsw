@@ -14,6 +14,7 @@ struct NeutralLossCandidate {
   double energy = 0;       // GeV, sum of selected hit-supported ECAL clusters
   double sigmaEnergy = 0;  // GeV, independent-cluster uncertainty approximation
   std::vector<int> clusterIndices;
+  std::vector<int> pfoIndices;
   std::vector<double> clusterEnergies, clusterEnergyErrors;
 };
 

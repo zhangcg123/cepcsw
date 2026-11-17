@@ -1,4 +1,5 @@
 #include "NeutralLossCandidate.h"
+#include "HcalEnergyCandidate.h"
 #include "edm4hep/CalorimeterHitCollection.h"
 #include "edm4hep/TrackCollection.h"
 
@@ -68,6 +69,18 @@ int main() {
   near(a.clusterEnergyErrors[0], .011 * 2 + .004 * 4);
   near(a.clusterEnergyErrors[1], .011 * 3 + .004 * 9);
   near(a.sigmaEnergy, std::hypot(a.clusterEnergyErrors[0], a.clusterEnergyErrors[1]));
+  auto h = breakpoint::collectHcalEnergy(pfos, a.pfoIndices, hcal, 4, .30, .07);
+  near(h.energy, 400);
+  near(h.sigma, .30*20 + .07*400);
+  require(h.clusterIndices.size() == 1, "HCAL duplicate energy");
+  // Several selected ECAL clusters and owners can share one HCAL measurement.
+  shared.addToClusters(clusters[1]);
+  duplicate.addToClusters(hc);
+  h = breakpoint::collectHcalEnergy(pfos, collect(first).pfoIndices, hcal, 4, .30, .07);
+  near(h.energy, 400);
+  near(h.sigma, 34);
+  require(breakpoint::collectHcalEnergy(pfos, b.pfoIndices, hcal, 4, .30, .07).energy == 0,
+          "Other electron received HCAL from the first electron");
   require(empty.clusterIndices.empty() && empty.clusterEnergies.empty() &&
           empty.clusterEnergyErrors.empty(), "No-reference row retained earlier clusters");
   near(empty.energy, 0);
