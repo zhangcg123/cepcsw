@@ -80,6 +80,14 @@ RecGsfFlatTuple::RecGsfFlatTuple(const std::string& name, ISvcLocator* svc)
 
 StatusCode RecGsfFlatTuple::initialize() {
   m_iev = 0;
+  m_collectedNeutrals.settings = {m_neutralTheta.value(), m_neutralPhi.value(),
+      m_neutralStochastic.value(), m_neutralConstant.value(), m_hcalScale.value(),
+      m_hcalStochastic.value(), m_hcalConstant.value()};
+  try { m_collectedNeutrals.settings.validate(); }
+  catch (const std::exception& failure) {
+    error() << "Invalid neutral collection settings: " << failure.what() << endmsg;
+    return StatusCode::FAILURE;
+  }
 
   // ── open output ROOT file ──
   m_file = TFile::Open(m_outFileName.value().c_str(), "RECREATE");
@@ -91,6 +99,7 @@ StatusCode RecGsfFlatTuple::initialize() {
   // ── create tree ──
   m_tree = new TTree("gsf_tuple", "GSF Tracking Flat Tuple");
   m_tree->SetDirectory(m_file);
+  m_collectedNeutrals.book(*m_tree);
 
   m_tree->Branch("iev",        &m_iev);
   m_tree->Branch("production_electron_selection_status", &m_production_electron_selection_status);
@@ -570,6 +579,26 @@ StatusCode RecGsfFlatTuple::execute() {
         m_pre_ecal_pfo_cluster_index.push_back(cluster.id().index);
       }
     }
+  }
+  SmartDataPtr<DataWrapper<edm4hep::ClusterCollection>> preHcal(
+      eventSvc(), "HcalClusterPreReclustering");
+  try {
+    if (!lcioCol) throw std::runtime_error("CompleteTracks unavailable for neutral collection");
+    std::vector<int> collectionInputs;
+    if (m_production_electron_selection_status == 0) {
+      for (std::size_t index = 0; index < lcioCol->size(); ++index)
+        collectionInputs.push_back(index);
+    } else {
+      // The published GSF input map omits failed fits; selected input tracks must survive.
+      for (int index : m_production_electron_track_indices)
+        if (index >= 0) collectionInputs.push_back(index);
+      std::sort(collectionInputs.begin(), collectionInputs.end());
+    }
+    m_collectedNeutrals.assign(*lcioCol, collectionInputs, pfos, clusters,
+                              preHcal ? preHcal->getData() : nullptr);
+  } catch (const std::exception& failure) {
+    error() << "Neutral collection failed: " << failure.what() << endmsg;
+    return StatusCode::FAILURE;
   }
   SmartDataPtr<DataWrapper<edm4hep::TrackCollection>> genericGsfWrapper(
       eventSvc(), "GSFTracks");

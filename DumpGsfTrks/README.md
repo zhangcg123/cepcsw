@@ -255,12 +255,33 @@ cards remain artifacts rather than source configuration.
 
 ### `gsf.py.bk`
 
+The maintained card explicitly configures the passive `RecGsfFlatTuple`
+neutral collector with theta/phi half-windows25/200mrad,
+ECAL sigma=`0.011sqrt(E)+0.004E`, HCAL scale4 and
+HCAL sigma=`0.30sqrt(E_H)+0.07E_H` after calibration. The seven `flat.*`
+collection properties are separate from the 43 `gsf.*` tracking properties.
+They persist BP-matched collected neutral IDs, energies/errors and the
+Baseline KF ECAL entrance reference, using pre-reclustering PFO/ECAL/HCAL
+objects. Collection remains passive and does not enable an ECAL constraint or
+change GSF fitting. The complete flat-writer option reference is in
+`Reconstruction/RecGsfTracking/README.md`.
+
+Frozen Nov11 GSF production cards intentionally lack these seven explicit
+assignments and their old flat schema has no native collected-neutral result.
+Those jobs read the older Nov10 REC snapshot, whereas current BP uses the
+Nov12 ECALTRUTH replay. Leave frozen cards and old tuples unchanged; regenerate
+from the same current REC as BP for new paired collection comparisons. These
+flat-writer settings do not alter the independent default-off
+`EcalComponentConstraint` prototype or its radian-valued windows.
+
 Independent GSF + neutrals analysis is available through
 `Reconstruction/RecGsfTracking/scripts/recover_neutral_photons.py`, defaulting
 to theta half-window 25 mrad (50 mrad total) and phi half-window 200 mrad.
 It reads the GSF flat snapshot and matching REC input-track ECAL references;
 no BP tuple or selected-cluster IDs are needed. The GSF flat writer retains
-the full pre-ECAL snapshot. The analysis collector does not enable the
+the full pre-ECAL snapshot beside the new passive collection. This legacy
+analysis entry point remains ECAL-only and still requests a matching REC.
+The analysis collector does not enable the
 default-off ECAL fit prototype or change old campaign cards/plots; existing
 figures retain their previous BP-derived collection until regenerated.
 

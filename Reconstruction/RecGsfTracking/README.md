@@ -91,12 +91,15 @@ comparisons remain under `agents_record/`.
 
 ## Complete configuration reference
 
-Reference date: 2026-11-10. `RecGsfTracking` exposes 43 Gaudi properties in
+Reference date: 2026-11-18. `RecGsfTracking` exposes 43 Gaudi properties in
 `src/GsfAlgorithm.h`. “Compiled” below means constructing the algorithm
 without a run card. “Active reverse” means the effective no-environment-
 override configuration in `options/run_gsf_reverse_template.py`. The
 distinction matters because that template enables `ElossOn` and
 `ReverseFiltering`, whose compiled defaults are false.
+The separate `RecGsfFlatTuple` writer has ten properties, documented in the
+passive-observation section below; those do not belong to this 43-property
+tracking interface.
 
 ### Physics and material model
 
@@ -502,6 +505,14 @@ Existing output files are refused. Existing plotting scripts/caches still use
 their original BP-derived selection; figures must be regenerated to use this
 independent collector. No GSF fit, ECAL component constraint or tuple schema is
 changed by this analysis.
+
+This analysis helper remains an ECAL-only reader with a matching-REC argument.
+The native passive collection described below additionally persists the
+Baseline KF ECAL reference, selected neutrals and their linked HCAL component
+in new flat tuples. Its seven settings are properties of `RecGsfFlatTuple`,
+not of the default-off `EcalComponentConstraint` prototype. In particular,
+the prototype's radian-valued `EcalConstraintThetaWindow` and
+`EcalConstraintPhiWindow` do not set the passive neutral-collection windows.
 
 | Property | Compiled | Active reverse | Meaning |
 |---|---|---|---|
@@ -940,8 +951,9 @@ and hits together so all saved PFO relations resolve.
 | `pre_ecal_pfo_cluster_pfo_index`, `pre_ecal_pfo_cluster_index` | Parallel PFO-to-ECAL-cluster relation vectors |
 
 All pre-reclustering ECAL clusters are retained, including track-unassociated
-ones. A missing charged-cluster association remains missing. No geometric
-association or neutral-window collection is inferred. Charged-PFO energy is
+ones. A missing charged-cluster association remains missing. This full snapshot
+does not invent charged-track associations; the separate passive collection
+below records the explicitly selected neutral window. Charged-PFO energy is
 not substituted for measured cluster energy. One missing snapshot collection,
 an unavailable cluster relation, or a track relation outside `CompleteTracks`
 fails the tuple job rather than writing a misleading association. Original
@@ -952,6 +964,95 @@ The existing `ecal_gsf_*` fields continue to describe optional refitted tracks.
 `tests/check_pre_ecal_tuple.py REC TUPLE [--baseline OLD_TUPLE]` compares every
 new value and association to REC, and optionally checks all existing fields
 against a same-event baseline. It uses the existing uproot analysis environment.
+
+### Passive BP-matched neutral collection
+
+`RecGsfFlatTuple` also collects neutrals for every nonnegative production-
+electron track index, independently of whether its GSF fit succeeded. Targets
+are sorted by original `CompleteTracks` ordinal and keyed by
+`neutral_collection_track_input_index`; these records are not aligned to the
+successful-output-only `gsf_input_track_indices` vector. A partial one-leg
+selection retains that leg. With the production selector disabled (status0),
+collection targets all `CompleteTracks`. It uses the same
+reconstructed inputs and collection functions as BP: `CyberPFOPreReclustering`,
+`EcalClusterPreReclustering` and linked `HcalClusterPreReclustering` objects.
+The full `pre_ecal_*` snapshot remains available beside the collected subset.
+Missing full ECAL/PFO snapshots give availability0, per-target status0 and NaN
+energies. A partial ECAL/PFO snapshot fails the writer, as before. Missing HCAL
+gives availability0 and NaN HCAL/combined energies while retaining the ECAL
+observation. These cases must not be interpreted as successful zero-energy
+measurements. A neutral-collector exception records status-1, its error and
+NaN ECAL values; invalid selected HCAL energies fail the writer, matching BP.
+
+The window centre is the first `CompleteTracks` `AtCalorimeter` state's
+reference position. Both that point and each ECAL cluster position are viewed
+from the nominal IP to obtain theta and phi; the cut uses their polar-angle
+difference and wrapped azimuth difference. It does not use the GSF endpoint,
+the local track momentum direction, a charged-cluster centre or truth.
+Only charge-zero, trackless PFOs with finite positive, nonempty-hit ECAL
+clusters inside the window qualify. ECAL cluster identities are counted once
+per track. HCAL collection follows those selected PFO links, excluding HCAL
+already assigned to that track's charged observation; no independent HCAL
+angular cut or HCAL-only PFO selection is introduced.
+
+The writer saves the per-track reference and selected identities, ECAL and
+HCAL energy components, individual uncertainties and combined energy/error.
+HCAL energies are retained both before and after the configured scale, together
+with selected HCAL positions and PFO-to-HCAL relation edges so downstream
+recovery can follow their original ownership. The
+ECAL component uses saved, already response-corrected pre-ECAL energies with
+no additional `EcalChargedCalib` multiplier. The combined observation is
+`E_ECAL + HcalEnergyScale * E_preHCAL`. Per-cluster sigma terms add linearly
+within the stated resolution model; independent-cluster variances are summed.
+These are passive measurements. No neutral four-vector is added to a GSF
+track, and no GSF propagation, branch ranking, fit or endpoint is changed.
+If a neutral lies in both electron windows, its identity may occur in both
+track records; downstream event-level recovery must deduplicate their union.
+
+The per-track fields below have one outer entry for each
+`neutral_collection_track_input_index`. Nested cluster vectors retain all
+selected identities for that entry, including empty selections. Settings and
+availability flags are event-level scalars.
+
+| Flat fields | Meaning |
+|---|---|
+| `neutral_collection_available`, `neutral_collection_hcal_available` | Availability of the complete pre-ECAL/PFO snapshot and of its HCAL extension, respectively |
+| `neutral_collection_track_input_index` | Original `CompleteTracks` indices of collection targets, independent of successful GSF endpoint publication |
+| `neutral_collection_kf_calo_status`, `neutral_collection_kf_calo_reference_point_mm` | First Baseline KF `AtCalorimeter` reference: status1 valid,0 absent,-1 invalid; three-position vector in mm |
+| `collected_neutral_ecal_status`, `collected_neutral_ecal_error` | Status0 missing snapshot/reference,1 valid empty selection,2 nonempty selection,-1 collection exception, plus its error text |
+| `collected_neutral_ecal_cluster_count`, `collected_neutral_ecal_pfo_indices`, `collected_neutral_ecal_cluster_indices` | Selected count and original neutral-PFO/ECAL-cluster identities |
+| `collected_neutral_ecal_cluster_energy`, `collected_neutral_ecal_cluster_energy_error`, `collected_neutral_ecal_energy`, `collected_neutral_ecal_energy_error` | Individual ECAL energies/errors and their aggregate; energies and absolute errors in GeV |
+| `neutral_collection_charged_ecal_status`, `neutral_collection_charged_ecal_error` | BP charged-association result used only to determine which HCAL clusters must be excluded from this track's neutral observation |
+| `collected_neutral_hcal_cluster_indices`, `collected_neutral_hcal_cluster_raw_energy`, `collected_neutral_hcal_cluster_energy`, `collected_neutral_hcal_cluster_energy_error` | Original HCAL identities, saved pre-HCAL energies, scaled energies and per-cluster absolute errors |
+| `collected_neutral_hcal_cluster_x/y/z` | Selected HCAL positions in mm, aligned with the HCAL cluster-index vector |
+| `collected_neutral_hcal_link_pfo_index`, `collected_neutral_hcal_link_cluster_index` | Parallel original-PFO/original-HCAL relation edges for selected HCAL clusters |
+| `collected_neutral_hcal_energy`, `collected_neutral_hcal_energy_error` | Aggregate calibrated HCAL energy and absolute error in GeV |
+| `collected_neutral_calo_energy`, `collected_neutral_calo_energy_error` | Combined ECAL+HCAL observation and independent-error combination in GeV; NaN when the HCAL extension is unavailable |
+| `neutral_loss_theta_window_mrad`, `neutral_loss_phi_window_mrad`, `neutral_loss_stochastic_error`, `neutral_loss_constant_error`, `hcal_energy_scale`, `hcal_stochastic_error`, `hcal_constant_error` | Effective collection/calibration/error settings saved with each event |
+
+This is the complete `RecGsfFlatTuple` property surface (ten properties).
+The maintained `DumpGsfTrks/gsf.py.bk` explicitly steers all ten; the seven
+collection settings have the same compiled and maintained-card defaults.
+
+| Property | Compiled default | Meaning and allowed values |
+|---|---|---|
+| `OutputFile` | `gsf_tuple.root` | Flat ROOT output path; the maintained card constructs its campaign-specific filename. Failure to create the file fails initialization. |
+| `BField` | `3.0` | Magnetic field in tesla for helix-derived kinematics; the maintained card explicitly uses 3.0. The neutral angular window uses saved positions. |
+| `HitCollectionNames` | `[]` | Optional reconstructed tracker-hit collections for auxiliary collection dumps. The maintained card explicitly names the six standard tracker collections. |
+| `NeutralLossThetaWindowMrad` | `25.0` | Passive-collection theta half-window in mrad, finite with `0 < window < 3141`, matching BP steering; the default full width is 50mrad. |
+| `NeutralLossPhiWindowMrad` | `200.0` | Passive-collection wrapped-phi half-window in mrad, finite with `0 < window < 3141`, matching BP steering. |
+| `NeutralLossStochasticError` | `0.011` | Nonnegative finite ECAL coefficient in `sigma_E = a sqrt(E) + b E`, with E in GeV. At least one ECAL error coefficient must be positive. |
+| `NeutralLossConstantError` | `0.004` | Nonnegative finite ECAL coefficient b in the same per-cluster model. |
+| `HcalEnergyScale` | `4.0` | Finite positive multiplier of saved pre-HCAL cluster energy, applied once. It reproduces the configured PFA convention; it is not an independently validated electromagnetic calibration. |
+| `HcalStochasticError` | `0.30` | Nonnegative finite HCAL coefficient in `sigma_H = a sqrt(E_H) + b E_H`, evaluated after calibration. At least one HCAL error coefficient must be positive. |
+| `HcalConstantError` | `0.07` | Nonnegative finite HCAL coefficient b in the same per-cluster model. |
+
+For BP/GSF comparisons, use the same REC files, window settings and cluster
+identities. The old Nov11 GSF campaign read the earlier Nov10 REC production;
+current BP reads the Nov12 ECALTRUTH replay. Matching generator event numbers
+does not establish identical calorimeter snapshots between those productions.
+Older frozen GSF cards and flat files remain historical and have no native
+collected-neutral branches; changing a new card does not retrofit those files.
 
 ## Historical Geant4 transition dataset
 

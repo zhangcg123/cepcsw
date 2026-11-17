@@ -10,6 +10,7 @@
 #include "podio/UserDataCollection.h"
 #include "TruthBHLossScopeStatus.h"
 #include "FullMixtureModeStatus.h"
+#include "CollectedNeutralTuple.h"
 
 #include <cstdint>
 #include <vector>
@@ -197,12 +198,20 @@ private:
   Gaudi::Property<std::string> m_outFileName{this, "OutputFile",
       "gsf_tuple.root", "Output ROOT file name"};
   Gaudi::Property<double> m_bField{this, "BField", 3.0, "Magnetic field [T]"};
+  Gaudi::Property<double> m_neutralTheta{this, "NeutralLossThetaWindowMrad", 25.0};
+  Gaudi::Property<double> m_neutralPhi{this, "NeutralLossPhiWindowMrad", 200.0};
+  Gaudi::Property<double> m_neutralStochastic{this, "NeutralLossStochasticError", .011};
+  Gaudi::Property<double> m_neutralConstant{this, "NeutralLossConstantError", .004};
+  Gaudi::Property<double> m_hcalScale{this, "HcalEnergyScale", 4.0};
+  Gaudi::Property<double> m_hcalStochastic{this, "HcalStochasticError", .30};
+  Gaudi::Property<double> m_hcalConstant{this, "HcalConstantError", .07};
   Gaudi::Property<std::vector<std::string>> m_hitCollectionNames{
       this, "HitCollectionNames", {}, "Tracker hit collections to dump (all hits)"};
 
   // ── output file & tree ──
   TFile* m_file = nullptr;
   TTree* m_tree = nullptr;
+  gsf::CollectedNeutralTuple m_collectedNeutrals;
 
   int m_pre_ecal_available = 0;
   std::vector<int> m_pre_ecal_cluster_index, m_pre_ecal_cluster_hit_count;

@@ -260,6 +260,14 @@ flat.OutputFile = os.path.join(
     "gsf_flat_{}_{}_{}.root".format(particle, outputmethod, inputseed),
 )
 flat.BField = 3.0
+# Passive BP-matched neutral observations; these do not constrain the GSF fit.
+flat.NeutralLossThetaWindowMrad = 25.0
+flat.NeutralLossPhiWindowMrad = 200.0
+flat.NeutralLossStochasticError = 0.011
+flat.NeutralLossConstantError = 0.004
+flat.HcalEnergyScale = 4.0
+flat.HcalStochasticError = 0.30
+flat.HcalConstantError = 0.07
 flat.HitCollectionNames = [
     "VXDTrackerHits",
     "ITKBarrelTrackerHits",

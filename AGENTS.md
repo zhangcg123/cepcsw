@@ -376,37 +376,38 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**RUNNING SHARED-PASS BP PRODUCTION: FIRST ECAL/HCAL RECOILS (2026-11-18).**
-The500×200campaign is submitted/running. Freeze375verified completions at
-2026-11-17T16:56:43Z:75000inputevents,73741baseline-valid matched pairs;
-1156incomplete pairs and103KFcharge/state failures excluded. Both modes share
-allprewindowkeys, with per-leg110+FSR→110→100→000→KFfallback. No all-H gate,
-extra neutralp4, generatorrecoil or mass-based route choice. ECAL-only flat states
-require no EDM index. All73741nativeREC KF recoils reproduce the prior cache
-exactly;new photontruth verifies allcategories. All BP fits are from NEW tuples.
+**GSF FLAT TUPLES WITH BP-MATCHED NEUTRAL OBSERVATIONS (2026-11-18).**
+RecGsfFlatTuple passively reuses BP's exact reconstructed neutral/charged/HCAL
+collectors. Save selected-track KF ECAL reference positions, neutral PFO/ECAL/HCAL
+IDs, component energies/errors, HCAL raw/scaled energies, positions/owner links,
+and ECAL+HCAL totals. Window half-widths25/200mrad; ECAL sigma=.011sqrt(E)+.004E;
+HCAL scale4,sigma=.30sqrt(E_H)+.07E_H. Collection targets original selected input
+tracks, including failed GSF fits and one-leg selections; selector-off targets
+all CompleteTracks. It never constrains GSF or changes an endpoint. Per-track
+records can overlap; downstream event-level recovery must deduplicate the union.
+Missing snapshots/references and missing HCAL have explicit availability/status/
+NaN semantics. Legacy ECAL-only Python recovery remains a separate old path.
 
-Six120–140GeV/.1GeV-bin plots compare bare electronBaselineKF, ECAL-only and
-ECAL+HCAL BP110+FSRwithfallback, and prior synthetic muon(core×1.25)reference.
-Inclusive10ab^-1usesall75000/50000inputweights0.9386666667/1.354;other5panels
-are own-window shapes. Categories>1GeVperlegphotonbirths:Neither16188,
-eBrem32798,FSR8592,Both(AND)16163. Window120–140counts:KF49351,
-ECALonly59312,ECALHCAL56933,muon44243. HCAL shows larger low-side response;
-no core-width/improvement claim. Completion-selected sample remains provisional.
-On56106both-mode/both-legsuccessfulFSRevents,medianΔEvis=+.538921GeV and
-finitepairedΔM=−.677938GeV:shift persists withidenticalroutes. Thisdoesnot
-isolateHCALscale;ECALcorrections/jointresponse stillneedcalibrationcheck.
+Focused exact A/B uses the previous private writer and the new default writer
+with identical current REC source1, five fitted events0/3/11/16/17 and18flat rows:
+all309old branches/5562branch-row comparisons exact;160BP observation-field
+comparisons exact on10selected tracks. Event0/track13 has no GSF endpoint but
+retains its neutral observations. New36branches persist correctly. Focused C++
+serialization/identity/missing-input tests pass; dedicated option audit confirms
+43unchanged GSF fitter properties and10explicit flat-writer properties. The
+GSF fitter,BP and truth libraries are hash-unchanged; only the flat writer and
+its configuration/registration were refreshed. This is a mechanical gate,
+not a photon calibration or physics-resolution validation.
 
-Native one-instance/one-file code and installation remain unchanged (36c494f;
-validated library7e833d9868c72638f3b591e1c73be16f17064f7000d98ae0b40f40196c727fe6).
-No native rerun, code/card/default/build/install change or extra batch submission.
-Maintain active-job runtime protection. No location scans;truthlocations and
-±25/±200mradwindow,HCAL×4/σ=.30√E+.07E unchanged.
+Prepared/unsubmitted replacement:
+`higgs_eeHX_ISRFSRON_GSF_BPNEUTRALS_500jobs_200evt_20261118/`,500x200current BP
+REC_ECALTRUTH inputs,4000MB,mid,cms. Preserve previous GSF fit steering; workers
+freeze runtime/card/input identities and validate native neutral observations.
+User authorized deleting the old816GB GSF directory; provenance retained in
+new campaign. Old directory contained498complete jobs and2historical partial
+failures(55:72entries,421:145),not500verified completions. Disk now~1.5TB free.
+User confirmed no other jobs active before implementation/install and explicitly
+authorized committing this change's required GSF CMake registration.
 
-Artifacts(uncommitted):TrackingPerformanceStudies/bp_ecal_hcal_recoil_20261118/.
-New Nov18daily section uses personal plot-gallery delegation;allold39studies/
-135previews and otherdays preserved. LivegalleryPID715687 onailogin002 retained;
-root,Nov18page and all6PNGsHTTP200. Finalcatalog40studies/141entries/5days.
-LauncherPIDrecordstale;hostps/ss and HTTP confirmactualserver. Fullproof inrecord.
-[Data,plots,normalization,limits and verification](agents_record/2026-11-18-bp-calo-completed-recoil.md).
-[Outgoing status](agents_record/2026-11-18-agents-before-completed-calo-recoil.md).
-[Native shared-pass implementation](agents_record/2026-11-17-bp-shared-calo-comparison.md).
+[Schema,installation,validation and command](agents_record/2026-11-18-gsf-bp-neutral-collection.md).
+[Complete outgoing focus](agents_record/2026-11-18-agents-before-gsf-neutral-collection.md).

@@ -36,6 +36,9 @@ install(TARGETS RecGsfTracking
 gaudi_add_module(RecGsfFlatTuple
                  SOURCES
                         src/GsfFlatTuple.cpp
+                        src/CollectedNeutralTuple.cpp
+                        ../RecBreakpoint/src/NeutralLossCandidate.cpp
+                        ../RecBreakpoint/src/ChargedEnergyCandidate.cpp
                  LINK Gaudi::GaudiKernel
                       k4FWCore::k4FWCore
                       EDM4HEP::edm4hep EDM4HEP::edm4hepDict
@@ -46,6 +49,7 @@ gaudi_add_module(RecGsfFlatTuple
 target_include_directories(RecGsfFlatTuple PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/src
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+target_include_directories(RecGsfFlatTuple PRIVATE ../RecBreakpoint/src)
 
 install(TARGETS RecGsfFlatTuple
   EXPORT CEPCSWTargets
@@ -74,6 +78,13 @@ install(TARGETS RecGsfSimHitTuple
   COMPONENT dev)
 
 if(BUILD_TESTING)
+  add_executable(RecGsfCollectedNeutralTupleTest tests/CollectedNeutralTupleTest.cpp
+    src/CollectedNeutralTuple.cpp ../RecBreakpoint/src/NeutralLossCandidate.cpp
+    ../RecBreakpoint/src/ChargedEnergyCandidate.cpp)
+  target_compile_options(RecGsfCollectedNeutralTupleTest PRIVATE -UNDEBUG)
+  target_include_directories(RecGsfCollectedNeutralTupleTest PRIVATE src ../RecBreakpoint/src)
+  target_link_libraries(RecGsfCollectedNeutralTupleTest PRIVATE EDM4HEP::edm4hep ROOT::Tree ROOT::TreePlayer ROOT::RIO)
+  add_test(NAME RecGsfCollectedNeutralTuple COMMAND RecGsfCollectedNeutralTupleTest)
   add_executable(RecGsfTruthElectronSelectorTest
     ../RecBreakpoint/tests/TruthElectronSelectorTest.cpp
     ../RecBreakpoint/src/TruthElectronSelector.cpp)
