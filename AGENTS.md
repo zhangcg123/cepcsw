@@ -376,33 +376,37 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**ONE BP PASS, SHARED UPSTREAM, TWO CALORIMETER RESULTS (2026-11-17).**
-User corrects the two-instance design: one algorithm and one flat file.
-`BP_RUN_BOTH_CALO=1` sets nativeRunBothCalo. Inputs,truth,clusters,BaselineKF,
-tracker000 and beam100 are computed/saved once. Onlycalorimeter-dependent
-H0/HF/110/111/FSR fits repeat. Existing names=ECAL+HCAL;ecal_only_* names=ECAL-only.
-Independent failure/mask/score/covariance fields;shared fallback uses unprefixed
-000/100. Secondary is flat-only,no extra EDM or rts_index. No online selector.
-RunBothCalo defaults off,requiresHCALprimary and scansoff;111 supported.
+**RUNNING SHARED-PASS BP PRODUCTION: FIRST ECAL/HCAL RECOILS (2026-11-18).**
+The500×200campaign is submitted/running. Freeze375verified completions at
+2026-11-17T16:56:43Z:75000inputevents,73741baseline-valid matched pairs;
+1156incomplete pairs and103KFcharge/state failures excluded. Both modes share
+allprewindowkeys, with per-leg110+FSR→110→100→000→KFfallback. No all-H gate,
+extra neutralp4, generatorrecoil or mass-based route choice. ECAL-only flat states
+require no EDM index. All73741nativeREC KF recoils reproduce the prior cache
+exactly;new photontruth verifies allcategories. All BP fits are from NEW tuples.
 
-Native events3/11/16/17(eightselectedlegs): primary101272existing branch-row
-values and all365controlbranches/34310values exactly reproduce same-code
-standalones;new single modes also reproduce preceding tested outputsexactly.
-111event3 additionally matchesboth modes(34430/11680values),including resolved
-neutral and no-neutral retention. Four-event storage10210941→6779610bytes
-(−33.6%);peakRSS1330796KiB. No physics-resolution gain implied.
-Build,19C++tests,71batchtests,5chain tests,2configuration tests passed.
-Package-only install refreshed;testedlibrary7e833d9868c72638f3b591e1c73be16f17064f7000d98ae0b40f40196c727fe6.
+Six120–140GeV/.1GeV-bin plots compare bare electronBaselineKF, ECAL-only and
+ECAL+HCAL BP110+FSRwithfallback, and prior synthetic muon(core×1.25)reference.
+Inclusive10ab^-1usesall75000/50000inputweights0.9386666667/1.354;other5panels
+are own-window shapes. Categories>1GeVperlegphotonbirths:Neither16188,
+eBrem32798,FSR8592,Both(AND)16163. Window120–140counts:KF49351,
+ECALonly59312,ECALHCAL56933,muon44243. HCAL shows larger low-side response;
+no core-width/improvement claim. Completion-selected sample remains provisional.
+On56106both-mode/both-legsuccessfulFSRevents,medianΔEvis=+.538921GeV and
+finitepairedΔM=−.677938GeV:shift persists withidenticalroutes. Thisdoesnot
+isolateHCALscale;ECALcorrections/jointresponse stillneedcalibrationcheck.
 
-Regenerated/unsubmitted campaign:
-`higgs_eeHX_ISRFSRON_BP_ECAL_HCAL_PAIRED_500jobs_200evt_20261117/`.
-500×200currentRECevents=100000inputs,500flatfiles containingboth results.
-4000MB,mid,cms;sameREC_ECALTRUTH Nov12 inputs;allpriorH0F/theta25 controls retained;
-truthlocations,noscans,oracleoff,FSRon,window±25/±200mrad,HCAL×4/σ=.30√E+.07E.
-Worker rejects retiredtwo-file manifests and verifies both schemas/flags/event
-coverage in one output. `bash CAMPAIGN/submit.sh` submits frozen cards.
-Actual installed worker passed(1event/32rows/onefile),with46142exact comparisons
-to the tested build output. All500submission commands passed dry-run;no jobsstarted.
-[Implementation, gates, schema and command](agents_record/2026-11-17-bp-shared-calo-comparison.md).
-[Complete outgoing status](agents_record/2026-11-17-agents-before-shared-calo-comparison.md).
-No production submitted;avoid runtime installs while campaign jobs run.
+Native one-instance/one-file code and installation remain unchanged (36c494f;
+validated library7e833d9868c72638f3b591e1c73be16f17064f7000d98ae0b40f40196c727fe6).
+No native rerun, code/card/default/build/install change or extra batch submission.
+Maintain active-job runtime protection. No location scans;truthlocations and
+±25/±200mradwindow,HCAL×4/σ=.30√E+.07E unchanged.
+
+Artifacts(uncommitted):TrackingPerformanceStudies/bp_ecal_hcal_recoil_20261118/.
+New Nov18daily section uses personal plot-gallery delegation;allold39studies/
+135previews and otherdays preserved. LivegalleryPID715687 onailogin002 retained;
+root,Nov18page and all6PNGsHTTP200. Finalcatalog40studies/141entries/5days.
+LauncherPIDrecordstale;hostps/ss and HTTP confirmactualserver. Fullproof inrecord.
+[Data,plots,normalization,limits and verification](agents_record/2026-11-18-bp-calo-completed-recoil.md).
+[Outgoing status](agents_record/2026-11-18-agents-before-completed-calo-recoil.md).
+[Native shared-pass implementation](agents_record/2026-11-17-bp-shared-calo-comparison.md).
