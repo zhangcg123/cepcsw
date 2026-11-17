@@ -376,38 +376,37 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**ASSOCIATED PRE-HCAL IN BP CONSTRAINTS (2026-11-17).**
-The user requests pre-ECAL plus pre-HCAL from the same selected charged/neutral
-PFOs. New maintained BP cards and batch manifests enable `BP_INCLUDE_HCAL=1`;
-`BP_INCLUDE_HCAL=0` retains the ECAL-only control. Compiled default stays false
-so already frozen cards preserve their steering. Only pre-reclustering inputs
-are supported when enabled. HCAL-only neutrals are not newly selected.
+**MATCHED HCAL RECOIL COMPARISON COMPLETE (2026-11-17).**
+400currentRECinputs(source1–4,events100–199),396baseline-valid matched pairs;
+32local native tasks rerun both ECAL-only and ECAL+HCAL with the same installed
+code, no scans, fixed per-leg110+FSR→110→100→000→KFfallback. Four incomplete
+pairs excluded; no all-hypothesis-valid gate. No production submitted.
 
-Pre-HCAL cluster energy is multiplied once by4. The user specifies per-cluster
-sigma_H[GeV]=0.30sqrt(E_H[GeV])+0.07E_H[GeV], with calibrated E_H. Terms add
-linearly, cluster and ECAL/HCAL variances independently in quadrature. This is
-an assumed resolution, with no fitted covariance or photon-purity guarantee.
-Deduplicate HCAL IDs within each observation and exclude charged-used HCAL from
-its neutral observation. Independent track fits retain existing shared-window
-correlations; no joint two-track fit/ownership policy is introduced.
+Current recipe does not demonstrate core-resolution improvement.120–130counts
+260→260;below120tails18→28(+2.53percentage points,paired95%CI1.01–4.04);
+above140tails62→57. Core-regionRMS(123.5–128)1.015→1.081GeV,ratio1.065,
+95%CI0.957–1.179. Common-both-FSR-valid305pairs retain all10newlow-tail events.
+Masses shift downward in392/396pairs(median−0.734GeV). Track/beam upstream
+outputs and rawECALsource observations agree exactly on/off.
 
-H0/HF/110/110+FSR and optional111/scans share the observations.000/100 remain
-tracker/beam-only. Existing raw ECAL source branches stay ECAL-only; new HCAL,
-PFO-ID, calibration and combined-energy branches document the measurement.
-No original PFA/tracking/simulation algorithm or GSF source/card changes.
-Existing REC and flat files are unchanged; new HCAL fits require a BP rerun.
+DSCBGaussian sigma is poorly identified:0.550→0.132GeVnominal, but on-mode
+Gaussian span0.0467GeV<0.1GeVbin;300pairedrefits/280successful give sigma-ratio
+95%CI0.046–7.414. Do not claim this as a resolution gain. Full-densityFWHM
+1.305→1.417GeVis descriptive;plots use it instead of misleading sigma labels.
+Four radiation categories and exploratoryHCALfraction groups remain diagnostics.
 
-Build and all19BP CTests pass;67batch tests pass. Same-code off/on checks on
-current REC source1 events3/11/16/17 cover8selected tracks: HCAL-off matches
-all99204old branch-row values exactly;26414tracker/beam/raw-ECAL values are
-unchanged on/off. HCAL calibration/error/sum/identity and HF observations close.
-Existing invalid HF/material-FSR cases remain invalid. Full verbose dumps are
-under `/tmp/bp-hcal-20261117/`. The historical particle-gun hard-loss benchmark
-is unavailable; these are explicitly current Higgs events, not population
-physics validation. Installation refreshed only for RecBreakpoint; checksum
-matches tested build. Optional111 installed-path check passes on event3: two
-selected legs, track25validmask7andfloatingFSRstatus2;5920measurement/H0/HF/110
-values agree with its110-only run. Existing production tuples are not rerun.
+Recommendation:do not start a full HCAL-enabled production on this evidence;
+validate joint calorimeter response/associations first. The implemented card/
+batch default remains HCALenabled;explicit BP_INCLUDE_HCAL=0 selectsECAL-only.
+No source/card/default/build/installchange in this comparison. Installedplugin
+685501046a02cb1c1f72ddd9c4fca3e3bc1471f71902b736a571fb549e550163 from3e04301.
+ECALalreadyhasresponse corrections;an unbiased jointECAL+HCALcalibration and
+HCALtruth origin are not established. No onlinehypothesisselector is added.
 
-[Implementation, verification and limits](agents_record/2026-11-17-bp-associated-hcal-energy.md).
-[Complete outgoing status](agents_record/2026-11-17-agents-before-bp-hcal.md).
+Artifacts:TrackingPerformanceStudies/bp_hcal_ab_20261117/(uncommitted), including
+all800event-fit evaluations,matchedCSVdata,10000pairedRMS/ratebootstraps,
+300DSCBbootstraprefits,5PNG/PDFpairs andfullnotes. Published onlocalhost8000
+Nov17daily page;old37studyentries/128previews unchanged,new5previews added.
+ServerPID1404151 onailogin002 unchanged. Main reviewed final images/data hashes.
+[Results,methods andlimits](agents_record/2026-11-17-bp-hcal-matched-recoil-comparison.md).
+[Complete outgoing status](agents_record/2026-11-17-agents-before-hcal-comparison.md).
