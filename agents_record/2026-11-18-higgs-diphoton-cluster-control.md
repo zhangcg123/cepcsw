@@ -27,7 +27,9 @@ native code, original tracking/PFA, default cards and other running jobs remain
 unchanged. There was no build or installation.
 
 The local hep_q/hep_sub client cannot import htcondor. SSH fallback to
-lxlogin.ihep.ac.cn fails hostname resolution. **The 25 production jobs have not
+lxlogin.ihep.ac.cn fails hostname resolution inside the sandbox; the approved
+outside-sandbox check resolves the host but reports network unreachable.
+**The 25 production jobs have not
 been submitted**, and no 5,000-event reconstruction/physics result exists yet.
 Do not substitute the two-event pilot for population validation.
 
