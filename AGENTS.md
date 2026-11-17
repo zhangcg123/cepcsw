@@ -376,32 +376,33 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**PAIRED ECAL-ONLY / ECAL+HCAL BP BATCH PREPARED (2026-11-17).**
-User explicitly requests both methods for a new matched production. The prior
-400-event HCAL comparison did not establish core-resolution improvement; this
-production retains the control without claiming a gain or retuning response.
+**ONE BP PASS, SHARED UPSTREAM, TWO CALORIMETER RESULTS (2026-11-17).**
+User corrects the two-instance design: one algorithm and one flat file.
+`BP_RUN_BOTH_CALO=1` sets nativeRunBothCalo. Inputs,truth,clusters,BaselineKF,
+tracker000 and beam100 are computed/saved once. Onlycalorimeter-dependent
+H0/HF/110/111/FSR fits repeat. Existing names=ECAL+HCAL;ecal_only_* names=ECAL-only.
+Independent failure/mask/score/covariance fields;shared fallback uses unprefixed
+000/100. Secondary is flat-only,no extra EDM or rts_index. No online selector.
+RunBothCalo defaults off,requiresHCALprimary and scansoff;111 supported.
 
-`BP_RUN_BOTH_CALO=1 BP_INCLUDE_HCAL=1` runs two independent BP instances on each
-shared REC event (ECAL-only first, ECAL+HCAL second, sequentially within a job).
-Primary flat file is HCAL-on; `_ecal_only.root` companion retains the complete
-ECAL-only hypothesis families. All24 EDM writer keys are isolated. No fit logic
-changes. Paired mode remains opt-in for older workflows; this campaign enables it.
+Native events3/11/16/17(eightselectedlegs): primary101272existing branch-row
+values and all365controlbranches/34310values exactly reproduce same-code
+standalones;new single modes also reproduce preceding tested outputsexactly.
+111event3 additionally matchesboth modes(34430/11680values),including resolved
+neutral and no-neutral retention. Four-event storage10210941→6779610bytes
+(−33.6%);peakRSS1330796KiB. No physics-resolution gain implied.
+Build,19C++tests,71batchtests,5chain tests,2configuration tests passed.
+Package-only install refreshed;testedlibrary7e833d9868c72638f3b591e1c73be16f17064f7000d98ae0b40f40196c727fe6.
 
-Prepared (not submitted):
+Regenerated/unsubmitted campaign:
 `higgs_eeHX_ISRFSRON_BP_ECAL_HCAL_PAIRED_500jobs_200evt_20261117/`.
-500 jobs ×200 current REC events =100000 inputs per method,1000 output files;
-4000MB,mid walltime,cms. Same REC_ECALTRUTH Nov12 source files. No scans;
-truth material locations;H0/HF and BP110+floating FSR retained;window±25/±200mrad;
-HCAL×4,σ=0.30√E+0.07E per cluster. `bash CAMPAIGN/submit.sh` submits frozen cards.
-Worker requires both complete row-aligned files and correct mode flags.
-
-Build,19C++tests,71batchtests,5chain tests,3configuration tests passed.
-Four current Higgs events(3,11,16,17),8selectedlegs: both paired outputs match
-standalone results exactly across all branches (101272branch-row comparisons
-per file),including existing failed fits. PeakRSS1.37GB,paired wall220.59s.
-Package-only installation refreshed; actual frozen-card installed worker verified
-both files (1event/32rows),34430exact comparisons per file,and wrote completion. All500submission commands passed
-dryrun; no production started. Details in
-[complete implementation,validation and command](agents_record/2026-11-17-bp-paired-calo-production.md).
-[Outgoing status](agents_record/2026-11-17-agents-before-paired-calo-production.md).
-No production submission; avoid runtime installs while this campaign runs.
+500×200currentRECevents=100000inputs,500flatfiles containingboth results.
+4000MB,mid,cms;sameREC_ECALTRUTH Nov12 inputs;allpriorH0F/theta25 controls retained;
+truthlocations,noscans,oracleoff,FSRon,window±25/±200mrad,HCAL×4/σ=.30√E+.07E.
+Worker rejects retiredtwo-file manifests and verifies both schemas/flags/event
+coverage in one output. `bash CAMPAIGN/submit.sh` submits frozen cards.
+Actual installed worker passed(1event/32rows/onefile),with46142exact comparisons
+to the tested build output. All500submission commands passed dry-run;no jobsstarted.
+[Implementation, gates, schema and command](agents_record/2026-11-17-bp-shared-calo-comparison.md).
+[Complete outgoing status](agents_record/2026-11-17-agents-before-shared-calo-comparison.md).
+No production submitted;avoid runtime installs while campaign jobs run.

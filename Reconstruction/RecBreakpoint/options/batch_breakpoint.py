@@ -131,13 +131,6 @@ def create(path, text):
     with path.open('x') as stream: stream.write(text)
 
 
-def output_paths(files, stages):
-    paths = [Path(files[s]) for s in stages]
-    if 'breakpoint' in stages and 'breakpoint_ecal_only' in files:
-        paths.append(Path(files['breakpoint_ecal_only']))
-    return paths
-
-
 def prepare():
     repo = Path(os.environ['CEPCSW_BREAKPOINT_DIR']).resolve()
     source = directory(repo, os.environ['INPUT_TUPLEPATH'])
@@ -221,6 +214,8 @@ def prepare():
         raise ValueError('BP_INCLUDE_HCAL requires PreReclustering')
     if controls['BP_RUN_BOTH_CALO'] == '1' and controls['BP_INCLUDE_HCAL'] != '1':
         raise ValueError('BP_RUN_BOTH_CALO requires BP_INCLUDE_HCAL=1')
+    if controls['BP_RUN_BOTH_CALO'] == '1' and (controls.get('BP_LOCATION_SCAN_SETUPS') or controls.get('BP_INTERVAL_SELECTION_MODE') == 'HitScanAll'):
+        raise ValueError('BP_RUN_BOTH_CALO requires location scans disabled')
     hcal = [float(controls[k]) for k in ('BP_HCAL_SCALE', 'BP_HCAL_STOCHASTIC', 'BP_HCAL_CONSTANT')]
     if any(not math.isfinite(v) for v in hcal) or hcal[0] <= 0 or min(hcal[1:]) < 0 or sum(hcal[1:]) <= 0:
         raise ValueError('Invalid HCAL calibration/resolution')
@@ -265,8 +260,6 @@ def prepare():
                     files = {s: str((output if s in stages else source)/f'{s}-{sample}.root')
                              for s in ('sim', 'trk', 'calodigi', 'rec')}
                     files['breakpoint'] = str(output/f'breakpoint_flat-{sample}.root')
-                    if 'breakpoint' in stages and controls['BP_RUN_BOTH_CALO'] == '1':
-                        files['breakpoint_ecal_only'] = str(output/f'breakpoint_flat-{sample}_ecal_only.root')
                     missing_inputs = []
                     for stage, predecessor in [('trk','sim'), ('calodigi','trk'),
                                                ('rec','calodigi'), ('breakpoint','rec')]:
@@ -279,7 +272,7 @@ def prepare():
                         print(f'Skipping {sample}: missing or empty external input: '
                               + ', '.join(missing_inputs), flush=True)
                         continue
-                    for path in [carddir, output/'outlog'/f'{sample}.out', output/'outlog'/f'{sample}.err'] + output_paths(files, stages):
+                    for path in [carddir, output/'outlog'/f'{sample}.out', output/'outlog'/f'{sample}.err'] + [Path(files[s]) for s in stages]:
                         if path.exists(): raise ValueError('Refusing to overwrite ' + str(path))
                     job = dict(repo=str(repo), sample=sample, sample_region=sample_region,
                                seed=seed, nevt=nevt,
@@ -404,9 +397,10 @@ def submit_prepared(value):
         # Select only the campaign naming mode requested by this invocation.
         if job.get('sample_region', '') != sample_region: continue
         if Path(job['repo']) != repo: raise ValueError('Manifest belongs to another worktree')
+        if 'breakpoint_ecal_only' in job['files']: raise ValueError('Retired two-file calorimeter manifest; regenerate this campaign')
         if (manifest.parent/'submitted.json').exists(): raise ValueError('Job already submitted: ' + str(manifest))
         if (manifest.parent/'started.json').exists(): raise ValueError('Job already started: ' + str(manifest))
-        for path in output_paths(job['files'], job['stages']):
+        for path in [Path(job['files'][stage]) for stage in job['stages']]:
             if path.exists(): raise ValueError('Output already exists: ' + str(path))
         for stage, card in job['cards'].items():
             if hashlib.sha256(Path(card).read_bytes()).hexdigest() != job['checksums'][stage]:
@@ -537,37 +531,39 @@ def verify_job_output(job, stage):
                   else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
                   if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') == 'HitScanAll' else False,
                   forbidden_collections=job.get('rec_drop_collections', ()) if stage == 'rec' else ())
-    if stage == 'breakpoint' and 'breakpoint_ecal_only' in job['files']:
-        ready = verify(Path(job['files']['breakpoint_ecal_only']), stage,
-                       job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
-                       hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
-                       else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
-                       if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') == 'HitScanAll' else False) and ready
-        verify_calo_pair(job)
+    if stage == 'breakpoint' and job.get('controls',{}).get('BP_RUN_BOTH_CALO') == '1':
+        verify_calo_comparison(job)
     return ready
 
 
-def verify_calo_pair(job):
+def verify_calo_comparison(job):
     import ROOT
-    fields = ['event_index', 'input_track_index', 'production_electron_track_selected', 'truth_mc_index', 'include_hcal_energy']
-    primary = ROOT.RDataFrame('breakpoint', job['files']['breakpoint']).AsNumpy(fields)
-    control = ROOT.RDataFrame('breakpoint', job['files']['breakpoint_ecal_only']).AsNumpy(fields)
-    for key in fields[:-1]:
-        if not (primary[key].shape == control[key].shape and (primary[key] == control[key]).all()):
-            raise RuntimeError('Paired calorimeter outputs are not row-aligned: ' + key)
-    if not primary['include_hcal_energy'].all() or control['include_hcal_energy'].any():
-        raise RuntimeError('Paired calorimeter outputs have incorrect HCAL mode flags')
-    selected = {int(v) for v in job.get('controls', {}).get('BP_SELECTED', '').split(',') if v.strip()}
-    expected = [i for i in range(job['nevt']) if not selected or i in selected]
-    for key in ('breakpoint', 'breakpoint_ecal_only'):
-        events = ROOT.RDataFrame('neutral_pfos', job['files'][key]).AsNumpy(['event_index'])['event_index'].tolist()
-        if events != expected:
-            raise RuntimeError('Incomplete paired calorimeter output: ' + key)
-    print(f'Paired calorimeter output verified: {len(expected)} events, {len(primary["event_index"])} aligned track rows', flush=True)
+    path=job['files']['breakpoint']
+    frame=ROOT.RDataFrame('breakpoint',path)
+    required={'run_both_calo','include_hcal_energy'}
+    for prefix in ('','ecal_only_'):
+        required.update(prefix+'null_110_'+suffix for suffix in ('fit_status','nll2','ip_parameters'))
+        for family in ('charged_ecal_ordinary_','charged_ecal_free_loss_',
+                       'neutral_ecal_ordinary_','neutral_ecal_free_loss_'):
+            required.update(prefix+family+suffix for suffix in ('result_status','rts_ip_parameters','constraint_mask'))
+        if job.get('controls',{}).get('BP_BEAM_SPOT_FSR_LOSS','1') == '1':
+            for family in ('fsr_only_110_','charged_ecal_free_loss_fsr_','neutral_ecal_free_loss_fsr_'):
+                required.update(prefix+family+suffix for suffix in ('status','energy','electron_p4'))
+    missing=required-set(map(str,frame.GetColumnNames()))
+    if missing: raise RuntimeError('Missing same-file calorimeter results: '+', '.join(sorted(missing)))
+    flags=frame.AsNumpy(['run_both_calo','include_hcal_energy'])
+    if not flags['run_both_calo'].all() or not flags['include_hcal_energy'].all():
+        raise RuntimeError('Incorrect same-file calorimeter mode flags')
+    selected={int(v) for v in job.get('controls',{}).get('BP_SELECTED','').split(',') if v.strip()}
+    expected=[i for i in range(job['nevt']) if not selected or i in selected]
+    events=ROOT.RDataFrame('neutral_pfos',path).AsNumpy(['event_index'])['event_index'].tolist()
+    if events != expected: raise RuntimeError('Incomplete same-file calorimeter output')
+    print(f'Same-file calorimeter results verified: {len(expected)} events, {len(flags["run_both_calo"])} shared track rows',flush=True)
 
 
 def run(manifest):
     job = json.loads(manifest.read_text())
+    if 'breakpoint_ecal_only' in job['files']: raise ValueError('Retired two-file calorimeter manifest; regenerate this campaign')
     repo = Path(job['repo'])
     if Path.cwd().resolve() != repo: raise ValueError('Manifest belongs to a different worktree')
     # dump_breakpoint.sh sources the project's installed runtime via setup.sh.
@@ -577,7 +573,7 @@ def run(manifest):
         card = Path(path)
         if hashlib.sha256(card.read_bytes()).hexdigest() != job['checksums'][stage]:
             raise ValueError('Frozen card changed: ' + str(card))
-    for path in output_paths(job['files'], job['stages']):
+    for path in [Path(job['files'][stage]) for stage in job['stages']]:
         if path.exists(): raise ValueError('Output already exists: ' + str(path))
     # Exclusive marker prevents two workers using the same outputs concurrently.
     create(manifest.parent/'started.json', json.dumps({'pid':os.getpid(), 'host':os.uname().nodename})+'\n')
@@ -592,7 +588,6 @@ def run(manifest):
                 raise RuntimeError('Full-chain output verification failed: ' + stage)
         cleanup = {stage: {'status': 'not_written_in_memory'} for stage in ('sim', 'trk', 'calodigi')}
         final_outputs = {stage: job['files'][stage] for stage in ('rec', 'breakpoint') if stage in job['stages']}
-        if 'breakpoint_ecal_only' in job['files']: final_outputs['breakpoint_ecal_only'] = job['files']['breakpoint_ecal_only']
         create(manifest.parent/'completed.json', json.dumps({
             'outputs': final_outputs,
             'stages': job['stages'], 'intermediate_cleanup': cleanup}, indent=2)+'\n')

@@ -16,6 +16,7 @@
 #include "TrackSystemSvc/IMarlinTrkSystem.h"
 #include "FreeLossTuple.h"
 #include "BeamSpotFsrTuple.h"
+#include "CalorimeterFitTuple.h"
 #include "FitPairTuple.h"
 #include "LikelihoodTuple.h"
 #include "CaloStateTuple.h"
@@ -114,6 +115,7 @@ private:
   Gaudi::Property<bool> m_beamFsrLoss{this, "ExperimentalBeamSpotFsrLoss", true};
   Gaudi::Property<bool> m_chargedEcalMeasurement{this, "ChargedEcalMeasurement", true};
   Gaudi::Property<bool> m_includeHcal{this, "IncludeHcalEnergy", false};
+  Gaudi::Property<bool> m_runBothCalo{this, "RunBothCalo", false};
   Gaudi::Property<double> m_hcalScale{this, "HcalEnergyScale", 4.0};
   Gaudi::Property<double> m_hcalStochastic{this, "HcalStochasticError", 0.30};
   Gaudi::Property<double> m_hcalConstant{this, "HcalConstantError", 0.07};
@@ -151,7 +153,8 @@ private:
   std::unique_ptr<TGeoNavigator> m_truthNavigator;
   breakpoint::TruthBreakpointTuple m_truthOwnership;
   breakpoint::LocationFitScan m_locationScan;
-  breakpoint::LocationFitScan m_null110Reference;
+  breakpoint::CalorimeterFitTuple m_calo, m_ecalOnly;
+  bool m_recordRunBothCalo=false;
   double m_bz = 0;
   std::unique_ptr<TFile> m_file;
   TTree* m_tree = nullptr; // file owned
@@ -164,10 +167,6 @@ private:
   breakpoint::PreEcalTuple m_preEcalTuple;
   breakpoint::NeutralPfoTuple m_neutralPfoTuple, m_fsrPfoTuple;
   int m_fsrTruthAvailable=0;
-  breakpoint::BeamSpotFsrTuple m_beamFsrTuple;
-  breakpoint::FsrFamilyTuple m_fsrOnly110;
-  double m_fsrOnlyEcalEnergy=0, m_fsrOnlyEcalError=0;
-  int m_fsrOnlyResolvedSum=0, m_fsrOnlyDimensions=0;
   double m_referencePt = 0, m_referencePtError = 0;
   double m_recordBackwardSeedScale = 100;
   std::array<int, 3> m_backwardRunFlags{};
@@ -181,14 +180,6 @@ private:
   std::string m_ordinaryEcalError;
   breakpoint::LikelihoodTuple m_ordinaryLikelihood, m_freeLikelihood, m_truthLikelihood;
   breakpoint::FitPairTuple m_freeLossTracks;
-  std::array<breakpoint::FitPairTuple, 6> m_constraintTracks;
-  std::array<breakpoint::CaloStateTuple, 6> m_constraintCalo;
-  std::array<breakpoint::LikelihoodTuple, 3> m_constraintOrdinaryLikelihood;
-  std::array<breakpoint::FreeLossTuple, 3> m_constraintOptimization;
-  // 0 off, 1 unavailable (previous-stage copy), 2 applied, -1 failed (previous-stage copy).
-  std::array<int, 6> m_constraintStatus{};
-  std::array<int, 6> m_constraintMask{}, m_constraintRequestedMask{}; // beam=1, charged=2, neutral=4
-  std::array<std::string, 6> m_constraintError;
   // KF input plus seven parallel published breakpoint endpoint families.
   std::array<breakpoint::CaloStateTuple, 8> m_caloStates;
   std::array<breakpoint::PhotonCaloTuple, 2> m_photonCalo;

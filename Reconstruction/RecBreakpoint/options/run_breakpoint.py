@@ -243,6 +243,7 @@ fit.ChargedEcalMeasurement = os.environ.get("BP_CHARGED_ECAL_MEASUREMENT", "1") 
 # Missing pre collections are an error, never a silent switch to final PFOs.
 # Final-PFO diagnostic branches/neutral_pfos tree remain final-PFO information.
 fit.EcalConstraintInput = os.environ.get("BP_ECAL_CONSTRAINT_INPUT", "PreReclustering")
+fit.RunBothCalo = os.environ.get("BP_RUN_BOTH_CALO", "0") == "1"
 fit.IncludeHcalEnergy = os.environ.get("BP_INCLUDE_HCAL", "1") == "1"
 fit.HcalEnergyScale = float(os.environ.get("BP_HCAL_SCALE", "4.0"))
 fit.HcalStochasticError = float(os.environ.get("BP_HCAL_STOCHASTIC", "0.30"))
@@ -371,28 +372,6 @@ if fit.IntervalSelectionMode in ("Truth", "HitScanAll") or (fit.TruthOverride an
 # writer = PodioOutput("PodioWriter", filename="breakpoint_edm.root",
 #                      outputCommands=["keep *"])
 # Append writer to TopAlg below when wanted.
-def configure_calo_pair(primary):
-    """Give the ECAL-only control its own state, EDM keys and flat file."""
-    from pathlib import Path
-    if not primary.IncludeHcalEnergy:
-        raise ValueError("BP_RUN_BOTH_CALO=1 requires BP_INCLUDE_HCAL=1")
-    if "OutputStatus" not in primary.getDefaultProperties():
-        raise ValueError("Paired mode requires the updated RecBreakpoint installation")
-    path = Path(str(primary.OutputFile))
-    companion = path.with_name(path.stem + "_ecal_only" + path.suffix)
-    for output in (path, companion):
-        if output.exists() or output.is_symlink(): raise ValueError("Refusing to overwrite " + str(output))
-    control = primary.clone(primary.getName() + "EcalOnly")
-    control.IncludeHcalEnergy = False
-    control.OutputFile = str(companion)
-    for key, value in primary.getDefaultProperties().items():
-        if key.startswith("Output") and hasattr(value, "mode") and value.mode() == "W":
-            setattr(control, key, str(getattr(primary, key)) + "_EcalOnly")
-    return [control, primary]
-
-
-# Paired mode runs two isolated fits on each shared REC event, sequentially.
-# Single-mode diagnostics retain BP_INCLUDE_HCAL steering without a companion.
-_fits = configure_calo_pair(fit) if os.environ.get("BP_RUN_BOTH_CALO", "0") == "1" else [fit]
-ApplicationMgr(TopAlg=[reader] + _fits, EvtSel="NONE", EvtMax=event_count,
+# Both calorimeter branches share one algorithm, input record and upstream fits.
+ApplicationMgr(TopAlg=[reader, fit], EvtSel="NONE", EvtMax=event_count,
                ExtSvc=[dsvc, geometry, gear, track_system], OutputLevel=INFO)

@@ -45,10 +45,10 @@ void FitPairTuple::States::assign(const std::vector<TrackState>& states) {
   }
 }
 
-void FitPairTuple::book(TTree& tree, const std::string& prefix, bool includeBackward) {
+void FitPairTuple::book(TTree& tree, const std::string& prefix, bool includeBackward, bool includeIndices) {
   tree.Branch((prefix + "result_status").c_str(), &m_status);
-  tree.Branch((prefix + "rts_index").c_str(), &m_rtsIndex);
-  if (includeBackward) tree.Branch((prefix + "backward_index").c_str(), &m_backwardIndex);
+  if (includeIndices) tree.Branch((prefix + "rts_index").c_str(), &m_rtsIndex);
+  if (includeIndices && includeBackward) tree.Branch((prefix + "backward_index").c_str(), &m_backwardIndex);
   tree.Branch((prefix + "kf_chi2").c_str(), &m_kfChi2);
   m_rts.book(tree, prefix + "rts_");
   if (includeBackward) m_backward.book(tree, prefix + "backward_");

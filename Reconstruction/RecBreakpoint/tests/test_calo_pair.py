@@ -1,45 +1,30 @@
-"""Configuration isolation and complete output-key registration without Gaudi."""
-import ast,copy,re,tempfile,unittest
+"""Single-instance calorimeter comparison steering and writer registration."""
+import ast,re,unittest
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[3]
 
-class Handle:
-    def __init__(self,path):self.path=path
-    def mode(self):return 'W'
-    def __str__(self):return self.path
-
-class Fit:
-    IncludeHcalEnergy=True
-    def __init__(self,path):
-        self.OutputFile=str(path);self.OutputTracks=Handle('Tracks');self.OutputStatus=Handle('Status')
-        self.Selection=[3,11];self.OutputLevel=3
-    def getName(self):return 'BP'
-    def clone(self,name):return copy.deepcopy(self)
-    def getDefaultProperties(self):return dict(OutputTracks=Handle('Tracks'),OutputStatus=Handle('Status'),OutputFile='x.root',OutputLevel=3)
-
 class PairTest(unittest.TestCase):
-    def function(self):
+    def test_card_uses_one_algorithm_and_explicit_comparison_switch(self):
+        import os,types
+        from unittest.mock import patch
         path=ROOT/'Reconstruction/RecBreakpoint/options/run_breakpoint.py'
-        node=next(n for n in ast.parse(path.read_text()).body if isinstance(n,ast.FunctionDef) and n.name=='configure_calo_pair')
-        namespace={};exec(compile(ast.Module(body=[node],type_ignores=[]),str(path),'exec'),namespace)
-        return namespace['configure_calo_pair']
-    def test_clone_preserves_primary_and_isolates_writers(self):
-        with tempfile.TemporaryDirectory() as d:
-            primary=Fit(Path(d)/'flat.root');control,main=self.function()(primary)
-            self.assertIs(main,primary);self.assertTrue(main.IncludeHcalEnergy);self.assertFalse(control.IncludeHcalEnergy)
-            self.assertEqual(str(main.OutputTracks),'Tracks');self.assertEqual(control.OutputTracks,'Tracks_EcalOnly')
-            self.assertEqual(str(main.OutputStatus),'Status');self.assertEqual(control.OutputStatus,'Status_EcalOnly')
-            self.assertEqual(control.OutputFile,str(Path(d)/'flat_ecal_only.root'))
-            self.assertEqual(control.Selection,main.Selection);self.assertIsNot(control.Selection,main.Selection)
-            self.assertEqual(control.OutputLevel,3)
-            Path(control.OutputFile).touch()
-            with self.assertRaisesRegex(ValueError,'overwrite'):self.function()(primary)
-    def test_disabled_primary_and_old_install_fail_explicitly(self):
-        primary=Fit('not-written.root');primary.IncludeHcalEnergy=False
-        with self.assertRaisesRegex(ValueError,'BP_INCLUDE_HCAL'):self.function()(primary)
-        primary.IncludeHcalEnergy=True;primary.getDefaultProperties=lambda:{}
-        with self.assertRaisesRegex(ValueError,'installation'):self.function()(primary)
+        tree=ast.parse(path.read_text())
+        nodes=[n for n in tree.body if isinstance(n,ast.Assign) and any(
+            isinstance(t,ast.Attribute) and isinstance(t.value,ast.Name) and
+            t.value.id=='fit' and t.attr in ('RunBothCalo','IncludeHcalEnergy') for t in n.targets)]
+        self.assertEqual(len(nodes),2)
+        for flag in ('0','1'):
+            fit=types.SimpleNamespace()
+            with patch.dict(os.environ,{'BP_RUN_BOTH_CALO':flag},clear=True):
+                exec(compile(ast.Module(body=nodes,type_ignores=[]),str(path),'exec'),{'fit':fit,'os':os})
+            self.assertEqual(fit.RunBothCalo,flag=='1');self.assertTrue(fit.IncludeHcalEnergy)
+        apps=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='ApplicationMgr']
+        self.assertEqual(len(apps),1)
+        top=next(k.value for k in apps[0].keywords if k.arg=='TopAlg')
+        self.assertEqual(ast.unparse(top),'[reader, fit]')
+        self.assertNotIn('.clone(',path.read_text())
+
     def test_all_24_writers_have_configurable_names(self):
         base=ROOT/'Reconstruction/RecBreakpoint/src'
         header=(base/'RecBreakpoint.h').read_text();source=(base/'RecBreakpoint.cpp').read_text()

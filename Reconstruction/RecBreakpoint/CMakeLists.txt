@@ -68,7 +68,8 @@ if(BUILD_TESTING)
       target_compile_features(RecBreakpoint${fsr_test}Test PRIVATE cxx_std_17)
       target_compile_options(RecBreakpoint${fsr_test}Test PRIVATE -UNDEBUG)
       target_include_directories(RecBreakpoint${fsr_test}Test PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/Service/TrackSystemSvc/include)
       # Tests exercise the same compiled implementation as the Gaudi plugin.
       target_link_libraries(RecBreakpoint${fsr_test}Test PRIVATE
         $<TARGET_FILE:RecBreakpoint> RecBreakpointLikelihood EDM4HEP::edm4hep ROOT::Tree)

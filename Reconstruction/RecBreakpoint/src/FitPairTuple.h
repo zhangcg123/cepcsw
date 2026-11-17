@@ -11,7 +11,8 @@ namespace breakpoint {
 /// Status: 0 absent, 1 copied endpoint, 2 fitted result, 3 input KF fallback.
 class FitPairTuple {
 public:
-  void book(TTree& tree, const std::string& prefix, bool includeBackward = true);
+  void book(TTree& tree, const std::string& prefix, bool includeBackward = true,
+            bool includeIndices = true);
   void reset();
   void assign(const PairedFitResult& pair, double bz, int status, int rtsIndex, int backwardIndex);
   void assignKF(const edm4hep::Track& track, double bz, int rtsIndex, int backwardIndex);

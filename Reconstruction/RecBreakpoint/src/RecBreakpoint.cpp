@@ -34,11 +34,7 @@ constexpr const char* caloPrefixes[] = {
   "kf_", "rts_", "backward_", "free_loss_rts_", "free_loss_backward_",
   "truth_override_rts_", "truth_override_backward_", "diffuse_augmented_rts_"
 };
-constexpr const char* constraintPrefixes[] = {
-  "beam_spot_ordinary_", "beam_spot_free_loss_",
-  "charged_ecal_ordinary_", "charged_ecal_free_loss_",
-  "neutral_ecal_ordinary_", "neutral_ecal_free_loss_"
-};
+constexpr const auto& constraintPrefixes=breakpoint::CalorimeterFitTuple::prefixes;
 constexpr const char* constraintOutputProperties[] = {
   "OutputTracksBeamSpotRTS", "OutputTracksBeamSpotFreeLossRTS",
   "OutputTracksChargedEcalRTS", "OutputTracksChargedEcalFreeLossRTS",
@@ -70,16 +66,9 @@ std::pair<double, double> diffuseMomentumLoss(const breakpoint::LossTrackState& 
     return {loss, nan};
   return {loss, std::sqrt(std::max(0.0, variance))};
 }
-// Every endpoint family uses identical EDM representation and hit references.
-int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& fit,
-                 const std::vector<edm4hep::TrackerHit>& hits, double bz, double chi2,
-                 const breakpoint::KalmanAdapter& adapter,
-                 breakpoint::CaloStateTuple& caloTuple) {
-  const int index = output.size();
-  auto track = output.create();
-  track.addToTrackStates(fit.ip);
-  track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
-  track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
+std::optional<edm4hep::TrackState> recordCalorimeterState(const breakpoint::FitResult& fit,
+    const std::vector<edm4hep::TrackerHit>& hits,double bz,
+    const breakpoint::KalmanAdapter& adapter,breakpoint::CaloStateTuple& caloTuple) {
   // Publish the fitted ECAL node when present; other endpoints use passive
   // extrapolation, whose failure must not alter the fitted IP and hit states.
   try {
@@ -91,10 +80,23 @@ int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& 
           }, *fit.chargedEcalStep)
         : adapter.propagateToCalorimeter(fit.endpoint.back(), hits.back());
     caloTuple.assign(calo, bz, 1);
-    track.addToTrackStates(calo);
+    return calo;
   } catch (const std::exception& error) {
     caloTuple.fail(error.what());
   }
+  return std::nullopt;
+}
+// Every endpoint family uses identical EDM representation and hit references.
+int publishTrack(edm4hep::TrackCollection& output, const breakpoint::FitResult& fit,
+                 const std::vector<edm4hep::TrackerHit>& hits, double bz, double chi2,
+                 const breakpoint::KalmanAdapter& adapter,
+                 breakpoint::CaloStateTuple& caloTuple) {
+  const int index = output.size();
+  auto track = output.create();
+  track.addToTrackStates(fit.ip);
+  track.addToTrackStates(breakpoint::toEDM(fit.endpoint.front(), bz, 2));
+  track.addToTrackStates(breakpoint::toEDM(fit.endpoint.back(), bz, 3));
+  if (auto calo=recordCalorimeterState(fit,hits,bz,adapter,caloTuple)) track.addToTrackStates(*calo);
   track.setChi2(chi2);
   track.setNdf(fit.measurementDimensions - 5 - fit.freeLossParameterCount); // bookkeeping, not calibrated
   for (auto hit : hits) track.addToTrackerHits(hit);
@@ -197,6 +199,11 @@ StatusCode RecBreakpoint::initialize() {
   }
   if (m_beamFsrLoss && m_intervalSelectionName=="HitScanAll") {
     error()<<"ExperimentalBeamSpotFsrLoss supports Truth or Manual locations only"<<endmsg;
+    return StatusCode::FAILURE;
+  }
+  if (m_runBothCalo && (!m_includeHcal || m_intervalSelectionName=="HitScanAll" ||
+      !m_locationScanSetups.value().empty())) {
+    error()<<"RunBothCalo requires IncludeHcalEnergy=True and location scans disabled"<<endmsg;
     return StatusCode::FAILURE;
   }
   try {
@@ -321,29 +328,14 @@ StatusCode RecBreakpoint::initialize() {
   m_photonCalo[0].book(*m_tree,"rts_photon_calo_");
   m_photonCalo[1].book(*m_tree,"free_loss_rts_photon_calo_");
   m_freeLossTuple.book(*m_tree);
-  if (m_beamFsrLoss) {
-    m_beamFsrTuple.book(*m_tree);
-    m_fsrOnly110.book(*m_tree,"fsr_only_110_");
-    m_tree->Branch("fsr_only_110_ecal_observed_energy",&m_fsrOnlyEcalEnergy);
-    m_tree->Branch("fsr_only_110_ecal_observed_error",&m_fsrOnlyEcalError);
-    m_tree->Branch("fsr_only_110_resolved_ecal_sum_applied",&m_fsrOnlyResolvedSum);
-    m_tree->Branch("fsr_only_110_measurement_dimensions",&m_fsrOnlyDimensions);
-  }
+  m_calo.book(*m_tree,"",m_beamFsrLoss,true);
+  if (m_runBothCalo) m_ecalOnly.book(*m_tree,"ecal_only_",m_beamFsrLoss,false);
+  m_recordRunBothCalo=m_runBothCalo;
+  m_tree->Branch("run_both_calo",&m_recordRunBothCalo);
   m_ordinaryLikelihood.book(*m_tree, "ordinary_likelihood_");
   m_freeLikelihood.book(*m_tree, "free_loss_likelihood_");
   m_truthLikelihood.book(*m_tree, "truth_override_likelihood_");
   m_freeLossTracks.book(*m_tree, "free_loss_");
-  for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
-    const std::string prefix = constraintPrefixes[i];
-    m_constraintTracks[i].book(*m_tree, prefix, false);
-    m_constraintCalo[i].book(*m_tree, prefix + "rts_");
-    if (i%2 == 0) m_constraintOrdinaryLikelihood[i/2].book(*m_tree, prefix + "likelihood_");
-    m_tree->Branch((prefix + "constraint_status").c_str(), &m_constraintStatus[i]);
-    m_tree->Branch((prefix + "constraint_mask").c_str(), &m_constraintMask[i]);
-    m_tree->Branch((prefix + "constraint_requested_mask").c_str(), &m_constraintRequestedMask[i]);
-    m_tree->Branch((prefix + "constraint_error").c_str(), &m_constraintError[i]);
-    if (i%2) m_constraintOptimization[i/2].book(*m_tree, prefix + "optimizer_");
-  }
   m_tree->Branch("free_loss_neutral_ecal_measurement_status", &m_neutralMeasurementStatus);
   m_tree->Branch("ordinary_charged_ecal_measurement_status", &m_ordinaryChargedStatus);
   m_tree->Branch("ordinary_neutral_ecal_measurement_status", &m_ordinaryNeutralStatus);
@@ -486,7 +478,6 @@ StatusCode RecBreakpoint::initialize() {
   m_tree->Branch("interval_selection_mode", &m_intervalSelectionName);
   m_truthOwnership.book(*m_tree);
   m_locationScan.book(*m_tree);
-  m_null110Reference.book(*m_tree, "null_110_");
   m_tree->Branch("interval_selection_status", &m_intervalSelectionStatus);
   m_tree->Branch("interval_selection_error", &m_intervalSelectionError);
   m_tree->Branch("selected_breakpoint_interval", &m_selectedIntervals);
@@ -805,20 +796,8 @@ StatusCode RecBreakpoint::execute() {
         << " neutralSigma=" << m_neutralCaloError << endmsg;
     int truthRTSIndex = -1, truthBackwardIndex = -1;
     m_freeLossTuple.reset(m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
-    if (m_beamFsrLoss) m_beamFsrTuple.reset();
-    m_fsrOnly110=breakpoint::FsrFamilyTuple{};
-    m_fsrOnlyEcalEnergy=m_fsrOnlyEcalError=breakpoint::FsrFamilyTuple::missing;
-    m_fsrOnlyResolvedSum=m_fsrOnlyDimensions=0;
-    for (std::size_t i=0; i<m_constraintTracks.size(); ++i) {
-      m_constraintTracks[i].reset();
-      m_constraintCalo[i].reset();
-      if (i%2 == 0) m_constraintOrdinaryLikelihood[i/2].reset();
-      m_constraintStatus[i] = 0;
-      m_constraintMask[i] = m_constraintRequestedMask[i] = 0;
-      m_constraintError[i].clear();
-      if (i%2) m_constraintOptimization[i/2].reset(
-          constraintEnabled[i/2] && m_freeLossFit, freeLossControls, settings.sigmaLogLoss);
-    }
+    m_calo.reset(constraintEnabled,m_freeLossFit,freeLossControls,settings.sigmaLogLoss);
+    if (m_runBothCalo) m_ecalOnly.reset(constraintEnabled,m_freeLossFit,freeLossControls,settings.sigmaLogLoss);
     m_ordinaryLikelihood.reset();
     m_freeLikelihood.reset();
     m_truthLikelihood.reset();
@@ -864,7 +843,6 @@ StatusCode RecBreakpoint::execute() {
     settings.intervalMeanLogLoss.clear();
     m_truthOwnership.reset();
     m_locationScan.reset();
-    m_null110Reference.reset();
     m_truthOverrideStatus = 0; m_truthG4Track = -1; m_truthMaxDistance = nan;
     m_truthOverrideError.clear(); m_truthIntervals.clear(); m_truthZ.clear(); m_truthB.clear();
     m_truthMomentumBefore.clear(); m_truthEbremLoss.clear(); m_truthTX0.clear();
@@ -961,69 +939,74 @@ StatusCode RecBreakpoint::execute() {
           if (loss.ebremLoss>0 && (!largest || loss.ebremLoss>largest->ebremLoss)) largest=&loss;
         return largest;
       };
-      auto locationObservations = [&]() {
+      auto locationObservations = [&](bool ecalOnly=false) {
         auto observations=settings;
         if (m_beamSpotConstraint) observations.beamSpot=m_recordBeamSpotSettings;
         if (m_chargedEcalMeasurement && m_chargedEcalMeasurementStatus==2)
-          observations.chargedEcalEnergy=std::make_pair(m_chargedCaloEnergy,m_chargedCaloError);
+          observations.chargedEcalEnergy=ecalOnly
+              ? std::make_pair(m_chargedEcalMeasurementEnergy,m_chargedEcalMeasurementError)
+              : std::make_pair(m_chargedCaloEnergy,m_chargedCaloError);
         if (m_collectedNeutralStatus==2)
-          observations.neutralEcalEnergy=std::make_pair(m_neutralCaloEnergy,m_neutralCaloError);
+          observations.neutralEcalEnergy=ecalOnly
+              ? std::make_pair(m_collectedNeutral.energy,m_collectedNeutral.sigmaEnergy)
+              : std::make_pair(m_neutralCaloEnergy,m_neutralCaloError);
         observations.delayedNeutral=m_delayedNeutralExperiment;
         return observations;
       };
+      auto runCaloReferences = [&](breakpoint::CalorimeterFitTuple& calo,bool ecalOnly) {
       // This reference must survive truth-location and breakpoint-fit failures.
       try {
-        m_null110Reference.run(fitter,hits,locationObservations(),freeLossControls,
+        calo.null110.run(fitter,hits,locationObservations(ecalOnly),freeLossControls,
                               m_bz,std::nullopt,false,{},true);
         if (m_verbose) {
           std::ostringstream dump;
-          dump << std::setprecision(17) << "Null110 event=" << m_event << " track=" << m_trackIndex;
-          for (std::size_t i=0;i<m_null110Reference.setup.size();++i)
-            dump << " mask=" << m_null110Reference.actualMask[i]
-                 << " status=" << m_null110Reference.fitStatus[i]
-                 << " dimensions=" << m_null110Reference.measurementDimensions[i]
-                 << " nll2=" << m_null110Reference.nll2[i]
-                 << " pt=" << m_null110Reference.pt[i]
-                 << " error=" << m_null110Reference.error[i];
+          dump << std::setprecision(17) << "Null110 mode="<<(ecalOnly ? "ECAL" : "primary")<<" event=" << m_event << " track=" << m_trackIndex;
+          for (std::size_t i=0;i<calo.null110.setup.size();++i)
+            dump << " mask=" << calo.null110.actualMask[i]
+                 << " status=" << calo.null110.fitStatus[i]
+                 << " dimensions=" << calo.null110.measurementDimensions[i]
+                 << " nll2=" << calo.null110.nll2[i]
+                 << " pt=" << calo.null110.pt[i]
+                 << " error=" << calo.null110.error[i];
           dump << " ip=[";
-          for (double value : m_null110Reference.ipParameters) dump << value << ' ';
+          for (double value : calo.null110.ipParameters) dump << value << ' ';
           dump << "] covariance=[";
-          for (double value : m_null110Reference.ipCovariance) dump << value << ' ';
+          for (double value : calo.null110.ipCovariance) dump << value << ' ';
           dump << ']';
           info() << dump.str() << endmsg;
         }
       } catch (const std::exception& failure) {
-        m_null110Reference.status=-1;
-        m_null110Reference.truthError=failure.what();
+        calo.null110.status=-1;
+        calo.null110.truthError=failure.what();
         warning() << "Null110 reference failed; ordinary endpoints unchanged: " << failure.what() << endmsg;
       }
       // H_F must not inherit a material candidate or depend on truth-hook success.
       if (m_beamFsrLoss) {
         try {
-          auto variant=locationObservations();
+          auto variant=locationObservations(ecalOnly);
           if (!variant.beamSpot || !variant.chargedEcalEnergy)
             throw std::runtime_error("FSR-only110 requires beam and charged ECAL observations");
           variant.intervals.clear();variant.intervalMeanLogLoss.clear();
           variant.beamSpotFsrLoss=true;variant.delayedNeutral=false;
           variant.resolvedEcalSum=variant.chargedEcalEnergyMode==breakpoint::ChargedEnergyMode::ElectronPhoton
               && variant.neutralEcalEnergy.has_value();
-          m_fsrOnlyResolvedSum=breakpoint::combineResolvedEcalMeasurements(variant,true);
+          calo.fsrOnlyResolvedSum=breakpoint::combineResolvedEcalMeasurements(variant,true);
           variant.resolvedEcalSum=false;variant.neutralEcalEnergy.reset();
           variant.chargedEcalEnergyMode=breakpoint::ChargedEnergyMode::ElectronOnly;
-          m_fsrOnlyEcalEnergy=variant.chargedEcalEnergy->first;
-          m_fsrOnlyEcalError=variant.chargedEcalEnergy->second;
+          calo.fsrOnlyEnergy=variant.chargedEcalEnergy->first;
+          calo.fsrOnlyError=variant.chargedEcalEnergy->second;
           auto experiment=fitter.fit(hits,variant,false);
           const auto& fit=experiment.rts;
           if (!fit.beamFsr || !fit.breakpoints.empty() || !fit.persistentHits.empty())
             throw std::runtime_error("FSR-only110 requires a 5D fit without material breakpoints");
-          m_fsrOnly110.assign(*fit.beamFsr,3);
-          m_fsrOnlyDimensions=fit.beamFsr->likelihood.measurementDimensions;
+          calo.fsrOnly110.assign(*fit.beamFsr,3);
+          calo.fsrOnlyDimensions=fit.beamFsr->likelihood.measurementDimensions;
           if (m_verbose) {
-            info()<<std::setprecision(17)<<"FsrOnly110 event="<<m_event<<" track="<<m_trackIndex
-                  <<" energy="<<m_fsrOnly110.energy<<" variance="<<m_fsrOnly110.variance
-                  <<" observed="<<m_fsrOnlyEcalEnergy<<" error="<<m_fsrOnlyEcalError
-                  <<" resolvedSum="<<m_fsrOnlyResolvedSum<<" boundary="<<m_fsrOnly110.active
-                  <<" closure="<<m_fsrOnly110.closure<<" nll2="<<m_fsrOnly110.nll2<<endmsg;
+            info()<<std::setprecision(17)<<"FsrOnly110 mode="<<(ecalOnly ? "ECAL" : "primary")<<" event="<<m_event<<" track="<<m_trackIndex
+                  <<" energy="<<calo.fsrOnly110.energy<<" variance="<<calo.fsrOnly110.variance
+                  <<" observed="<<calo.fsrOnlyEnergy<<" error="<<calo.fsrOnlyError
+                  <<" resolvedSum="<<calo.fsrOnlyResolvedSum<<" boundary="<<calo.fsrOnly110.active
+                  <<" closure="<<calo.fsrOnly110.closure<<" nll2="<<calo.fsrOnly110.nll2<<endmsg;
             for (std::size_t node=0;node<fit.smoothed.size();++node) {
               const auto& state=fit.smoothed[node];std::ostringstream dump;
               dump<<std::setprecision(17)<<"FsrOnly110State hit="<<node<<" mean=[";
@@ -1034,10 +1017,13 @@ StatusCode RecBreakpoint::execute() {
             }
           }
         } catch (const std::exception& failure) {
-          m_fsrOnly110.status=-2;m_fsrOnly110.error=failure.what();
+          calo.fsrOnly110.status=-2;calo.fsrOnly110.error=failure.what();
           warning()<<"FSR-only110 failed; ordinary endpoints unchanged: "<<failure.what()<<endmsg;
         }
       }
+      };
+      if (m_runBothCalo) runCaloReferences(m_ecalOnly,true);
+      runCaloReferences(m_calo,false);
       if (m_intervalSelectionName == "Truth") {
         if (!truthPrepared) {
           m_intervalSelectionStatus = -1;
@@ -1381,7 +1367,14 @@ StatusCode RecBreakpoint::execute() {
         m_freeLossTracks.assign(freeResult, m_bz, freePair ? 2 : 1, freeRTSIndex, freeBackwardIndex);
         m_photonCalo[1].assign(freeResult.rts,adapter);
       }
-      std::array<std::optional<breakpoint::PairedFitResult>, 6> constrained;
+      using Constrained=std::array<std::optional<breakpoint::PairedFitResult>,6>;
+      auto runCaloConstraints = [&](breakpoint::CalorimeterFitTuple& calo,bool ecalOnly,
+                                    const Constrained* sharedBeam) {
+      Constrained constrained;
+      const double chargedEnergy=ecalOnly ? m_chargedEcalMeasurementEnergy : m_chargedCaloEnergy;
+      const double chargedError=ecalOnly ? m_chargedEcalMeasurementError : m_chargedCaloError;
+      const double neutralEnergy=ecalOnly ? m_collectedNeutral.energy : m_neutralCaloEnergy;
+      const double neutralError=ecalOnly ? m_collectedNeutral.sigmaEnergy : m_neutralCaloError;
       std::array<breakpoint::FitSettings, 2> cumulative{{settings, settings}};
       const auto chargedMode = settings.intervals.empty() ? breakpoint::ChargedEnergyMode::ElectronOnly
           : settings.chargedEcalEnergyMode;
@@ -1392,8 +1385,15 @@ StatusCode RecBreakpoint::execute() {
       for (auto& variant : cumulative) variant.chargedEcalEnergyMode = chargedMode;
       std::array<const breakpoint::PairedFitResult*, 2> previous{{
           &paired, freeKFFallback ? nullptr : &freeResult}};
-      int requestedMask = 0;
-      for (std::size_t kind=0; kind<constraintEnabled.size(); ++kind) {
+      int requestedMask = sharedBeam && constraintEnabled[0] ? 1 : 0;
+      if (sharedBeam) for (std::size_t method=0;method<2;++method) {
+        if ((*sharedBeam)[method]) {
+          previous[method]=&*(*sharedBeam)[method];
+          cumulative[method].beamSpot=(*sharedBeam)[method]->rts.beamSpot ?
+              std::optional<breakpoint::BeamSpotSettings>(m_recordBeamSpotSettings) : std::nullopt;
+        }
+      }
+      for (std::size_t kind=sharedBeam ? 1 : 0; kind<constraintEnabled.size(); ++kind) {
         if (!constraintEnabled[kind]) continue;
         requestedMask |= 1 << kind;
         for (std::size_t method=0; method<2; ++method) {
@@ -1406,12 +1406,12 @@ StatusCode RecBreakpoint::execute() {
           } else {
             if (kind == 1 && m_chargedEcalMeasurementStatus == 2) {
               variant.chargedEcalEnergy = std::make_pair(
-                  m_chargedCaloEnergy, m_chargedCaloError);
+                  chargedEnergy, chargedError);
               // Raw parts enter the shared sum projection, even with the neutral switch off.
               if (resolvedSum) {
                 variant.resolvedEcalSum = true;
                 variant.neutralEcalEnergy = std::make_pair(
-                    m_neutralCaloEnergy, m_neutralCaloError);
+                    neutralEnergy, neutralError);
               }
               available = true;
             } else if (kind == 2 && settings.intervals.size() == 1 && m_collectedNeutralStatus == 2) {
@@ -1419,13 +1419,13 @@ StatusCode RecBreakpoint::execute() {
               variant.resolvedEcalSum = false;
               variant.chargedEcalEnergyMode = breakpoint::ChargedEnergyMode::ElectronOnly;
               variant.neutralEcalEnergy = std::make_pair(
-                  m_neutralCaloEnergy, m_neutralCaloError);
+                  neutralEnergy, neutralError);
               if (method == 1) variant.delayedNeutral = m_delayedNeutralExperiment;
               available = true;
             }
           }
-          m_constraintStatus[i] = available ? 2 : 1;
-          m_constraintRequestedMask[i] = requestedMask;
+          calo.status[i] = available ? 2 : 1;
+          calo.requestedMask[i] = requestedMask;
           bool optimized = false;
           try {
             if (available) {
@@ -1441,7 +1441,7 @@ StatusCode RecBreakpoint::execute() {
                 controls.chargedEcalEnergyMode = variant.chargedEcalEnergyMode;
                 controls.neutralEcalEnergy = variant.neutralEcalEnergy;
                 auto optimizedFit = breakpoint::FreeLossFitter(fitter).fit(hits, variant, controls, false);
-                m_constraintOptimization[kind].assign(optimizedFit.diagnostics);
+                calo.optimization[kind].assign(optimizedFit.diagnostics);
                 if (!optimizedFit.fitted) throw std::runtime_error(optimizedFit.diagnostics.error);
                 constrained[i] = std::move(optimizedFit.fitted);
                 optimized = true;
@@ -1450,25 +1450,27 @@ StatusCode RecBreakpoint::execute() {
               previous[method] = &*constrained[i];
             }
           } catch (const std::exception& error) {
-            m_constraintStatus[i] = -1;
-            m_constraintError[i] = error.what();
+            calo.status[i] = -1;
+            calo.error[i] = error.what();
             warning() << constraintPrefixes[i] << error.what() << "; retain previous constraint stage" << endmsg;
           }
           // Missing/failed new measurements preserve earlier accepted constraints.
           if (!previous[method]) {
-            const int index = constraintOutputs[i]->size();
-            m_constraintTracks[i].assignKF(track, m_bz, index, -1);
-            constraintOutputs[i]->push_back(track.clone());
-            m_constraintCalo[i].assignFromTrack(track, m_bz, 2);
+            const int index = ecalOnly ? -1 : constraintOutputs[i]->size();
+            calo.tracks[i].assignKF(track, m_bz, index, -1);
+            if (!ecalOnly) constraintOutputs[i]->push_back(track.clone());
+            calo.calo[i].assignFromTrack(track, m_bz, 2);
           } else {
             const auto& endpoint = *previous[method];
-            m_constraintMask[i] = (endpoint.rts.beamSpot ? 1 : 0)
+            calo.mask[i] = (endpoint.rts.beamSpot ? 1 : 0)
                 | (endpoint.rts.chargedEcalStep ? 2 : 0) | (endpoint.rts.neutralEcal ? 4 : 0);
-            const int index = publishTrack(*constraintOutputs[i], endpoint.rts, hits, m_bz,
-                endpoint.rts.smoothedTotalChi2, adapter, m_constraintCalo[i]);
-            m_constraintTracks[i].assign(endpoint, m_bz,
+            int index=-1;
+            if (ecalOnly) recordCalorimeterState(endpoint.rts,hits,m_bz,adapter,calo.calo[i]);
+            else index=publishTrack(*constraintOutputs[i],endpoint.rts,hits,m_bz,
+                endpoint.rts.smoothedTotalChi2,adapter,calo.calo[i]);
+            calo.tracks[i].assign(endpoint, m_bz,
                 constrained[i] && (method == 0 || optimized) ? 2 : 1, index, -1);
-            if (method == 0) m_constraintOrdinaryLikelihood[kind].assign(endpoint.rts);
+            if (method == 0) calo.likelihood[kind].assign(endpoint.rts);
             if (kind == 0 && endpoint.rts.beamSpot) {
               m_beamMeasurements[method] = *endpoint.rts.beamSpot;
               m_beamApplied[method] = true;
@@ -1477,9 +1479,11 @@ StatusCode RecBreakpoint::execute() {
         }
       }
       if (m_beamFsrLoss) {
-        if (!freeKFFallback) m_beamFsrTuple.assignElectron(0,freeResult.rts.ip);
-        if (constrained[1]) {m_beamFsrTuple.assignElectron(1,constrained[1]->rts.ip);m_beamFsrTuple.families[1].mask=1;}
-        m_beamFsrTuple.families[0].error=m_beamFsrTuple.families[1].error="FSR undetermined without ECAL; tracker-only endpoint retained";
+        if (!sharedBeam) {
+        if (!freeKFFallback) calo.fsr.assignElectron(0,freeResult.rts.ip);
+        if (constrained[1]) {calo.fsr.assignElectron(1,constrained[1]->rts.ip);calo.fsr.families[1].mask=1;}
+        calo.fsr.families[0].error=calo.fsr.families[1].error="FSR undetermined without ECAL; tracker-only endpoint retained";
+        }
         std::shared_ptr<breakpoint::BeamSpotFsrResult> previousFsr;
         for(int stage=2;stage<4;++stage) {
           try {
@@ -1489,20 +1493,20 @@ StatusCode RecBreakpoint::execute() {
               throw std::runtime_error("Separate neutral stage disabled");
             if(stage==3 && m_collectedNeutralStatus!=2) {
               if(!previousFsr)throw std::runtime_error("No neutral or previous FSR result");
-              m_beamFsrTuple.assign(stage,*previousFsr,3,3);
-              m_beamFsrTuple.families[stage].error="No neutral observation; retained110 without another update";continue;
+              calo.fsr.assign(stage,*previousFsr,3,3);
+              calo.fsr.families[stage].error="No neutral observation; retained110 without another update";continue;
             }
             auto variant=settings;variant.beamSpot=m_recordBeamSpotSettings;
             variant.beamSpotFsrLoss=true;variant.resolvedEcalSum=false;variant.delayedNeutral=false;
-            variant.chargedEcalEnergy=std::make_pair(m_chargedCaloEnergy,m_chargedCaloError);
+            variant.chargedEcalEnergy=std::make_pair(chargedEnergy,chargedError);
             variant.neutralEcalEnergy.reset();
             variant.chargedEcalEnergyMode=stage==2 && !settings.intervals.empty()
                 ? breakpoint::ChargedEnergyMode::ElectronPhoton : breakpoint::ChargedEnergyMode::ElectronOnly;
             if(m_collectedNeutralStatus==2) {
               if(stage==2) {
-                variant.chargedEcalEnergy->first+=m_neutralCaloEnergy;
-                variant.chargedEcalEnergy->second=std::hypot(variant.chargedEcalEnergy->second,m_neutralCaloError);
-              } else variant.neutralEcalEnergy=std::make_pair(m_neutralCaloEnergy,m_neutralCaloError);
+                variant.chargedEcalEnergy->first+=neutralEnergy;
+                variant.chargedEcalEnergy->second=std::hypot(variant.chargedEcalEnergy->second,neutralError);
+              } else variant.neutralEcalEnergy=std::make_pair(neutralEnergy,neutralError);
             }
             breakpoint::PairedFitResult experiment;
             if(!m_freeLossFit || settings.intervals.empty()) experiment=fitter.fit(hits,variant,false);
@@ -1522,9 +1526,9 @@ StatusCode RecBreakpoint::execute() {
             }
             previousFsr=experiment.rts.beamFsr;
             if(!previousFsr)throw std::runtime_error("Missing FSR diagnostics");
-            m_beamFsrTuple.assign(stage,*previousFsr,stage==2 ? 3 : 7);
+            calo.fsr.assign(stage,*previousFsr,stage==2 ? 3 : 7);
             if(m_verbose) {
-              info()<<std::setprecision(17)<<"BeamSpotFSR event="<<m_event<<" track="<<m_trackIndex
+              info()<<std::setprecision(17)<<"BeamSpotFSR mode="<<(ecalOnly ? "ECAL" : "primary")<<" event="<<m_event<<" track="<<m_trackIndex
                     <<" setup="<<(stage==2 ? 110 : 111)<<" energy="<<previousFsr->energy
                     <<" variance="<<previousFsr->variance<<" primaryEcal="<<previousFsr->firstEcalPart
                     <<" neutral="<<previousFsr->neutralPart<<" boundary="<<previousFsr->activeMask
@@ -1538,15 +1542,22 @@ StatusCode RecBreakpoint::execute() {
               }
             }
           } catch(const std::exception& failure) {
-            m_beamFsrTuple.families[stage].status=-2;m_beamFsrTuple.families[stage].error=failure.what();
+            calo.fsr.families[stage].status=-2;calo.fsr.families[stage].error=failure.what();
             warning()<<"BeamSpotFSR setup="<<(stage==2 ? 110 : 111)<<" failed: "<<failure.what()<<endmsg;
           }
         }
       }
-      std::vector<std::pair<const char*, const breakpoint::FitResult*>> diagnosticFits{
+      return constrained;
+      };
+      const auto constrained=runCaloConstraints(m_calo,false,nullptr);
+      Constrained ecalOnlyConstrained;
+      if (m_runBothCalo) ecalOnlyConstrained=runCaloConstraints(m_ecalOnly,true,&constrained);
+      std::vector<std::pair<std::string, const breakpoint::FitResult*>> diagnosticFits{
           {"ordinary", &fit}, {"free_loss", freeKFFallback ? nullptr : &freeResult.rts}};
       for (std::size_t i=0; i<constrained.size(); ++i)
         if (constrained[i]) diagnosticFits.emplace_back(constraintPrefixes[i], &constrained[i]->rts);
+      for (std::size_t i=2;i<ecalOnlyConstrained.size();++i)
+        if (ecalOnlyConstrained[i]) diagnosticFits.emplace_back(std::string("ecal_only_")+constraintPrefixes[i],&ecalOnlyConstrained[i]->rts);
       for (const auto& named : diagnosticFits) {
         if (!named.second) continue;
         const auto& neutral = *named.second;

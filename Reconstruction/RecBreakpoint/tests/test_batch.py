@@ -19,63 +19,59 @@ spec.loader.exec_module(batch)
 
 
 class BatchTest(unittest.TestCase):
-    def test_paired_calo_plan_freezes_companion_and_walltime(self):
+    def test_same_file_calo_plan_freezes_controls_and_walltime(self):
         (self.repo/'inputs/rec-higgs-12.root').write_bytes(b'planning fixture')
         self.prepare(OUTPUT_TUPLEPATH='paired', STAGES='breakpoint', SAMPLE_REGION='higgs', BP_RUN_BOTH_CALO='1', WALLTIME_FLAVOUR='mid')
         job=json.loads((self.repo/'paired/runcards/higgs-12/job.json').read_text())
-        self.assertEqual(job['controls']['BP_RUN_BOTH_CALO'],'1')
-        self.assertEqual(job['walltime_flavour'],'mid')
-        self.assertEqual(Path(job['files']['breakpoint_ecal_only']).name,'breakpoint_flat-higgs-12_ecal_only.root')
-        card=Path(job['cards']['breakpoint']).read_text();self.assertIn("'BP_RUN_BOTH_CALO': '1'",card)
-        self.assertIn('configure_calo_pair',card)
+        self.assertEqual(job['controls']['BP_RUN_BOTH_CALO'],'1');self.assertEqual(job['walltime_flavour'],'mid')
+        self.assertNotIn('breakpoint_ecal_only',job['files'])
+        card=Path(job['cards']['breakpoint']).read_text()
+        self.assertIn("'BP_RUN_BOTH_CALO': '1'",card);self.assertIn('fit.RunBothCalo =',card)
+        self.assertNotIn('.clone(',card)
         with self.assertRaisesRegex(ValueError,'BP_INCLUDE_HCAL'):
-            self.prepare(OUTPUT_TUPLEPATH='pair_conflict', BP_RUN_BOTH_CALO='1', BP_INCLUDE_HCAL='0')
+            self.prepare(OUTPUT_TUPLEPATH='pair_conflict',BP_RUN_BOTH_CALO='1',BP_INCLUDE_HCAL='0')
+        with self.assertRaisesRegex(ValueError,'scans disabled'):
+            self.prepare(OUTPUT_TUPLEPATH='pair_scans',BP_RUN_BOTH_CALO='1',BP_LOCATION_SCAN_SETUPS='110')
         with self.assertRaisesRegex(ValueError,'WALLTIME_FLAVOUR'):
-            self.prepare(OUTPUT_TUPLEPATH='pair_bad_time', WALLTIME_FLAVOUR='invalid')
+            self.prepare(OUTPUT_TUPLEPATH='pair_time',WALLTIME_FLAVOUR='invalid')
 
-    def test_paired_companion_prevents_submission_and_worker_overwrite(self):
-        self.prepare(OUTPUT_TUPLEPATH='paired', BP_RUN_BOTH_CALO='1')
-        job=self.manifest('paired');Path(job['files']['breakpoint_ecal_only']).touch()
-        env=dict(self.env,OUTPUT_TUPLEPATH='paired')
-        with patch.dict(os.environ,env,clear=True), self.assertRaisesRegex(ValueError,'Output already exists'):
+    def test_retired_two_file_manifest_rejected_before_submission_or_start(self):
+        self.prepare(OUTPUT_TUPLEPATH='paired',BP_RUN_BOTH_CALO='1')
+        job=self.manifest('paired');job['files']['breakpoint_ecal_only']='old-control.root'
+        manifest=Path(job['cards']['breakpoint']).parent/'job.json';manifest.write_text(json.dumps(job))
+        with patch.dict(os.environ,dict(self.env,OUTPUT_TUPLEPATH='paired'),clear=True),self.assertRaisesRegex(ValueError,'Retired two-file'):
             batch.submit_prepared('paired')
-        manifest=Path(job['cards']['breakpoint']).parent/'job.json'
-        with patch.object(Path,'cwd',return_value=self.repo), patch.object(batch.shutil,'which',return_value='/runtime/gaudirun.py'), self.assertRaisesRegex(ValueError,'Output already exists'):
+        with patch.object(Path,'cwd',return_value=self.repo),self.assertRaisesRegex(ValueError,'Retired two-file'):
             batch.run(manifest)
         self.assertFalse((manifest.parent/'started.json').exists())
 
-    def test_paired_worker_verifies_both_files_and_alignment(self):
-        self.prepare(OUTPUT_TUPLEPATH='paired', BP_RUN_BOTH_CALO='1')
-        job=self.manifest('paired')
-        with patch.object(batch,'verify',return_value=True) as verify, patch.object(batch,'verify_calo_pair') as align:
+    def test_same_file_worker_verifies_control_families(self):
+        self.prepare(OUTPUT_TUPLEPATH='paired',BP_RUN_BOTH_CALO='1');job=self.manifest('paired')
+        with patch.object(batch,'verify',return_value=True) as verify,patch.object(batch,'verify_calo_comparison') as comparison:
             self.assertTrue(batch.verify_job_output(job,'breakpoint'))
-        self.assertEqual([str(call.args[0]) for call in verify.call_args_list],
-                         [job['files']['breakpoint'],job['files']['breakpoint_ecal_only']])
-        align.assert_called_once_with(job)
+        self.assertEqual(verify.call_count,1);comparison.assert_called_once_with(job)
 
-    def test_paired_alignment_rejects_wrong_rows_modes_and_event_coverage(self):
+    def test_same_file_verification_rejects_flags_missing_families_and_event_coverage(self):
         import numpy as np
-        self.prepare(OUTPUT_TUPLEPATH='paired', BP_RUN_BOTH_CALO='1', NEVT='2')
-        job=self.manifest('paired')
-        fields=dict(event_index=np.array([0,1]), input_track_index=np.array([3,5]),
-                    production_electron_track_selected=np.array([1,1]), truth_mc_index=np.array([2,4]))
-        for failure in ('none','rows','mode','events'):
+        self.prepare(OUTPUT_TUPLEPATH='paired',BP_RUN_BOTH_CALO='1',NEVT='2');job=self.manifest('paired')
+        required={'run_both_calo','include_hcal_energy'}
+        for prefix in ('','ecal_only_'):
+            required.update(prefix+'null_110_'+suffix for suffix in ('fit_status','nll2','ip_parameters'))
+            for family in ('charged_ecal_ordinary_','charged_ecal_free_loss_','neutral_ecal_ordinary_','neutral_ecal_free_loss_'):
+                required.update(prefix+family+suffix for suffix in ('result_status','rts_ip_parameters','constraint_mask'))
+            for family in ('fsr_only_110_','charged_ecal_free_loss_fsr_','neutral_ecal_free_loss_fsr_'):
+                required.update(prefix+family+suffix for suffix in ('status','energy','electron_p4'))
+        for failure in ('none','missing','mode','events'):
             with self.subTest(failure=failure):
-                primary=dict(fields, include_hcal_energy=np.array([1,1]))
-                control=dict(fields, include_hcal_energy=np.array([0,0]))
-                if failure=='rows': control['input_track_index']=np.array([3,6])
-                if failure=='mode': control['include_hcal_energy']=np.array([0,1])
-                events=np.array([0] if failure=='events' else [0,1])
-                root=MagicMock()
-                def frame(tree,path):
-                    values=({'event_index':events} if tree=='neutral_pfos' else
-                            primary if path==job['files']['breakpoint'] else control)
-                    result=MagicMock();result.AsNumpy.return_value=values;return result
-                root.RDataFrame.side_effect=frame
-                with patch.dict('sys.modules',ROOT=root), contextlib.redirect_stdout(io.StringIO()):
-                    if failure=='none': batch.verify_calo_pair(job)
+                root=MagicMock();frame=MagicMock();event=MagicMock()
+                frame.GetColumnNames.return_value=required-{'ecal_only_null_110_nll2'} if failure=='missing' else required
+                frame.AsNumpy.return_value={'run_both_calo':np.array([1,1]),'include_hcal_energy':np.array([1,0] if failure=='mode' else [1,1])}
+                event.AsNumpy.return_value={'event_index':np.array([0] if failure=='events' else [0,1])}
+                root.RDataFrame.side_effect=lambda tree,path: frame if tree=='breakpoint' else event
+                with patch.dict('sys.modules',ROOT=root),contextlib.redirect_stdout(io.StringIO()):
+                    if failure=='none':batch.verify_calo_comparison(job)
                     else:
-                        with self.assertRaises(RuntimeError):batch.verify_calo_pair(job)
+                        with self.assertRaises(RuntimeError):batch.verify_calo_comparison(job)
 
     def test_hcal_observation_is_frozen_and_validated(self):
         self.prepare(OUTPUT_TUPLEPATH='hcal_default')

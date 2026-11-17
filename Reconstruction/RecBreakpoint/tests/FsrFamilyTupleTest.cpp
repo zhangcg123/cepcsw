@@ -1,11 +1,45 @@
 #include "BeamSpotFsrTuple.h"
+#include "CalorimeterFitTuple.h"
 #include "TFile.h"
 #include "TLeaf.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <set>
+void checkSharedCalorimeterTuple() {
+  TTree tree("shared","shared");
+  breakpoint::CalorimeterFitTuple primary,ecal;
+  primary.book(tree,"",true,true);ecal.book(tree,"ecal_only_",true,false);
+  assert(tree.GetBranch("beam_spot_free_loss_rts_index"));
+  assert(tree.GetBranch("ecal_only_charged_ecal_free_loss_rts_ip_parameters"));
+  assert(tree.GetBranch("ecal_only_null_110_nll2"));
+  assert(tree.GetBranch("ecal_only_fsr_only_110_energy"));
+  assert(tree.GetBranch("ecal_only_neutral_ecal_free_loss_fsr_electron_p4"));
+  assert(!tree.GetBranch("ecal_only_charged_ecal_free_loss_rts_index"));
+  assert(!tree.GetBranch("ecal_only_beam_spot_free_loss_rts_pt"));
+  assert(!tree.GetBranch("ecal_only_free_loss_fsr_status"));
+  std::set<std::string> names;
+  for (int i=0;i<tree.GetListOfBranches()->GetEntries();++i)
+    assert(names.insert(tree.GetListOfBranches()->At(i)->GetName()).second);
+  breakpoint::FreeLossSettings controls;
+  primary.reset({true,true,true},true,controls,.001);
+  ecal.reset({true,true,true},true,controls,.001);
+  primary.fsrOnly110.status=2;primary.fsrOnly110.energy=3.;
+  ecal.fsrOnly110.status=-2;ecal.fsrOnly110.error="missing ECAL";
+  primary.status[3]=2;ecal.status[3]=-1;tree.Fill();
+  ecal.reset({true,true,true},true,controls,.001);tree.Fill();
+  tree.GetEntry(0);
+  assert(tree.GetLeaf("ecal_only_fsr_only_110_status")->GetValue()==-2);
+  assert(tree.GetLeaf("charged_ecal_free_loss_constraint_status")->GetValue()==2);
+  tree.GetEntry(1);
+  assert(tree.GetLeaf("ecal_only_fsr_only_110_status")->GetValue()==0);
+  assert(std::isnan(tree.GetLeaf("ecal_only_fsr_only_110_energy")->GetValue()));
+  assert(tree.GetLeaf("fsr_only_110_energy")->GetValue()==3.);
+  assert(tree.GetLeaf("ecal_only_charged_ecal_free_loss_constraint_status")->GetValue()==0);
+}
 int main(int argc,char** argv) {
   assert(argc==2);
+  checkSharedCalorimeterTuple();
   {
     TFile file(argv[1],"RECREATE");TTree tree("test","test");
     breakpoint::BeamSpotFsrTuple tuple;tuple.book(tree);tuple.reset();

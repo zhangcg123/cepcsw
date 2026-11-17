@@ -62,34 +62,43 @@ calorimeter hits are duplicated in the flat tuple.
 
 ## Build and run
 
-### Paired ECAL-only and ECAL+HCAL production
+### Same-file ECAL-only and ECAL+HCAL comparison
 
-Set `BP_RUN_BOTH_CALO=1 BP_INCLUDE_HCAL=1` to run both measurements on each
-REC event. The card creates two isolated `RecBreakpoint` instances: ECAL-only
-first, then ECAL+HCAL, sequentially in the same process. Each has its own fitter,
-24 output collections, and complete flat-tuple hypothesis families. No fitted
-result is passed between the instances. The REC event is read once.
+Set `BP_RUN_BOTH_CALO=1 BP_INCLUDE_HCAL=1` (`RunBothCalo=true`) to save both
+measurements in **one flat file from one RecBreakpoint instance**. Track/hit
+ordering, truth matching, clusters, Baseline KF, tracker000 and beam100 fits
+are computed and saved once. Only the calorimeter-dependent fits are repeated:
+H0, HF, ordinary/free-loss110 and111, and their floating-FSR extensions.
 
-The primary `BP_OUTPUT` file remains ECAL+HCAL. The control inserts
-`_ecal_only` before the file extension, for example
-`breakpoint_flat-higgs-1_ecal_only.root`. Tree names and schemas are identical;
-`include_hcal_energy` identifies the measurement. Read each file set separately
-when counting events. Do not glob the primary and companion into one sample.
+Existing unprefixed result names retain the primary ECAL+HCAL measurement.
+The ECAL-only result names add `ecal_only_`, for example
+`ecal_only_null_110_nll2`, `ecal_only_fsr_only_110_energy`,
+`ecal_only_charged_ecal_free_loss_rts_ip_parameters` and
+`ecal_only_charged_ecal_free_loss_fsr_electron_p4`. Statuses, applied/requested
+masks, optimizer diagnostics, minimized likelihoods, covariances and fitted
+losses remain separate. Both branches independently fall back to the shared
+accepted beam/tracker result. H0 and HF are attempted before truth-location
+matching in both branches, so a truth-hook failure does not discard them.
 
-Both the local card and batch helper default `BP_RUN_BOTH_CALO=0` for older
-single-mode workflows. Paired mode requires HCAL enabled on the primary and
-the updated installation; conflicting settings fail before execution. Existing
-primary or companion outputs block preparation, submission and execution.
-The worker verifies both files, exact track-row identities, measurement flags,
-and complete event coverage before writing `completed.json`. Both outputs are
-listed in the manifest and completion marker. Fit CPU and output storage are
-approximately doubled; the two fits do not execute concurrently within a job.
+The ECAL-only family is flat-only: it publishes no extra EDM collection and
+omits `*_rts_index` fields. Use its saved parameters directly. Its shared 000/100
+fallbacks are the unprefixed fields. `run_both_calo` identifies the new layout;
+`include_hcal_energy` still describes the primary. Raw ECAL measurements and
+calibrated HCAL components are saved once and identify both observations.
+There is no `_ecal_only.root` companion, second event tree or repeated input row.
+
+The switch defaults off in the card/helper for single-mode workflows. It
+requires primary HCAL enabled and location scans disabled; ordinary111 remains
+supported when separately enabled. Existing outputs block overwrites. The worker
+requires both result families, mode flags and complete event coverage before
+completion. Retired two-file manifests are rejected before submission/start;
+regenerate the unsubmitted campaign rather than editing frozen cards.
 
 For REC-only production use `SAMPLE_REGION=higgs STAGES=breakpoint` with
 `subbreakpointjobs.sh`. `WALLTIME_FLAVOUR=mid` is frozen in each manifest and
-submitted with `hep_sub -wt mid`; the default `default` leaves the scheduler's
-walltime selection unchanged. This mode retains scans-off, truth-assisted
-material locations, H0/HF and floating-FSR steering from the ordinary card.
+submitted with `hep_sub -wt mid`; `default` leaves scheduler selection unchanged.
+Truth-assisted locations, H0/HF, floating FSR, neutral-delay handling and the
+±25/±200 mrad neutral window retain their ordinary steering.
 
 From the CEPCSW repository root:
 
@@ -1308,6 +1317,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | NeutralEcalMeasurement | false | Two cumulative neutral-stage RTS families; inherit enabled beam/charged, add a post-loss scalar KF update retaining track/loss correlations |
 | ExperimentalDelayedNeutral | false | Branch experiment: delay neutral free-loss RTS measurement until after initial smoothing; BP_EXPERIMENTAL_DELAYED_NEUTRAL; ordinary and other families unchanged |
 | ChargedEcalStochasticError, ChargedEcalConstantError | 0.011, 0.004 | Provisional positive per-cluster sigma_E coefficients; `BP_CHARGED_ECAL_STOCHASTIC` and `BP_CHARGED_ECAL_CONSTANT` |
+| RunBothCalo | false | Same-file ECAL-only control for the HCAL-enabled primary, sharing tracker/beam fits; requires scans off; `BP_RUN_BOTH_CALO` |
 | IncludeHcalEnergy | false compiled; true maintained card/batch | Add associated pre-HCAL to the shared calorimeter observations; `BP_INCLUDE_HCAL=0` reproduces ECAL-only steering |
 | HcalEnergyScale | 4.0 | Multiply pre-HCAL cluster energies once; `BP_HCAL_SCALE` |
 | HcalStochasticError, HcalConstantError | 0.30, 0.07 | Per-cluster sigma in GeV = `0.30 sqrt(E_H/GeV) GeV + 0.07 E_H`, with calibrated E_H; `BP_HCAL_STOCHASTIC`, `BP_HCAL_CONSTANT` |
@@ -1329,7 +1339,7 @@ the native source/predicted/filtered states, `F` and `Q`.
 | SelectedEventIndices | [] | Zero-based selected entries; empty means all |
 | OutputFile | breakpoint_flat.root | New flat output file |
 
-All EDM writer names are configurable for independent instances. The track
+All existing EDM writer names remain configurable. The track
 properties retain their existing names. Status/index properties are
 `OutputStatus`, `OutputIndex`, `OutputBackwardIndex`, `OutputFreeLossStatus`,
 `OutputFreeLossRTSIndex`, `OutputFreeLossBackwardIndex`,
@@ -1337,8 +1347,8 @@ properties retain their existing names. Status/index properties are
 `OutputTruthOverrideBackwardIndex`, `OutputDiffuseAugmentedStatus`, and
 `OutputDiffuseAugmentedIndex`. Their defaults are the corresponding existing
 `Breakpoint*` collection names, explicitly assigned in the maintained card.
-The paired control appends `_EcalOnly` to every writable output key, including
-all six constrained track collections. Input collection names remain shared.
+The same-file ECAL-only comparison uses flat result branches and adds no EDM
+writers.
 
 `truth_pt` now means the pT of the MC particle matched to **this row's**
 `CompleteTracks` track by `CompleteTracksParticleAssociation`; it no longer
@@ -1722,7 +1732,7 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 | PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Particle remains active; theta and pT are filename labels only when SAMPLE_REGION is empty |
 | MEMORY_MB | 5000 | Scheduler memory request |
 | WALLTIME_FLAVOUR | default | Frozen scheduler walltime; default omits `-wt`; test/short/mid/long/special pass through |
-| BP_RUN_BOTH_CALO | 0 | Save independent ECAL-only companion plus primary ECAL+HCAL; requires BP_INCLUDE_HCAL=1 |
+| BP_RUN_BOTH_CALO | 0 | Save ECAL-only result branches beside ECAL+HCAL in one flat file; requires BP_INCLUDE_HCAL=1 and scans off |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
 | BP_NEUTRAL_THETA_MRAD / BP_NEUTRAL_PHI_MRAD | 25 / 200 | Neutral-collection angular half-windows [mrad]; theta total width is 50 mrad; frozen into every newly prepared manifest/card, with explicit overrides preserved |
