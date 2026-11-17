@@ -62,6 +62,35 @@ calorimeter hits are duplicated in the flat tuple.
 
 ## Build and run
 
+### Paired ECAL-only and ECAL+HCAL production
+
+Set `BP_RUN_BOTH_CALO=1 BP_INCLUDE_HCAL=1` to run both measurements on each
+REC event. The card creates two isolated `RecBreakpoint` instances: ECAL-only
+first, then ECAL+HCAL, sequentially in the same process. Each has its own fitter,
+24 output collections, and complete flat-tuple hypothesis families. No fitted
+result is passed between the instances. The REC event is read once.
+
+The primary `BP_OUTPUT` file remains ECAL+HCAL. The control inserts
+`_ecal_only` before the file extension, for example
+`breakpoint_flat-higgs-1_ecal_only.root`. Tree names and schemas are identical;
+`include_hcal_energy` identifies the measurement. Read each file set separately
+when counting events. Do not glob the primary and companion into one sample.
+
+Both the local card and batch helper default `BP_RUN_BOTH_CALO=0` for older
+single-mode workflows. Paired mode requires HCAL enabled on the primary and
+the updated installation; conflicting settings fail before execution. Existing
+primary or companion outputs block preparation, submission and execution.
+The worker verifies both files, exact track-row identities, measurement flags,
+and complete event coverage before writing `completed.json`. Both outputs are
+listed in the manifest and completion marker. Fit CPU and output storage are
+approximately doubled; the two fits do not execute concurrently within a job.
+
+For REC-only production use `SAMPLE_REGION=higgs STAGES=breakpoint` with
+`subbreakpointjobs.sh`. `WALLTIME_FLAVOUR=mid` is frozen in each manifest and
+submitted with `hep_sub -wt mid`; the default `default` leaves the scheduler's
+walltime selection unchanged. This mode retains scans-off, truth-assisted
+material locations, H0/HF and floating-FSR steering from the ordinary card.
+
 From the CEPCSW repository root:
 
 ```bash
@@ -1300,6 +1329,17 @@ the native source/predicted/filtered states, `F` and `Q`.
 | SelectedEventIndices | [] | Zero-based selected entries; empty means all |
 | OutputFile | breakpoint_flat.root | New flat output file |
 
+All EDM writer names are configurable for independent instances. The track
+properties retain their existing names. Status/index properties are
+`OutputStatus`, `OutputIndex`, `OutputBackwardIndex`, `OutputFreeLossStatus`,
+`OutputFreeLossRTSIndex`, `OutputFreeLossBackwardIndex`,
+`OutputTruthOverrideStatus`, `OutputTruthOverrideRTSIndex`,
+`OutputTruthOverrideBackwardIndex`, `OutputDiffuseAugmentedStatus`, and
+`OutputDiffuseAugmentedIndex`. Their defaults are the corresponding existing
+`Breakpoint*` collection names, explicitly assigned in the maintained card.
+The paired control appends `_EcalOnly` to every writable output key, including
+all six constrained track collections. Input collection names remain shared.
+
 `truth_pt` now means the pT of the MC particle matched to **this row's**
 `CompleteTracks` track by `CompleteTracksParticleAssociation`; it no longer
 repeats the event's generator-electron pT on unrelated track rows. The
@@ -1678,9 +1718,11 @@ Do not rebuild/install shared runtime libraries while campaign jobs are active.
 | OUTPUT_TUPLEPATH | sim_large_barrel_20261026 | Results/cards/logs; existing files or run-card directories block preparation rather than being overwritten |
 | NEVT | 200 | Maximum events per job |
 | SEED_FIRST / SEED_LAST | 1 / 500 | Inclusive seed/file indices; generated sim/trk cards use that RNG seed |
-| SAMPLE_REGION | barrel | `barrel` or `endcap`: use region-and-seed filenames; empty restores legacy naming |
+| SAMPLE_REGION | barrel | `barrel`, `endcap` or `higgs`: use region-and-seed filenames; empty restores legacy naming |
 | PARTICLES / THETAS / TRANSVERSE_MOMENTA | e- / 85 / 2.0 | Particle remains active; theta and pT are filename labels only when SAMPLE_REGION is empty |
 | MEMORY_MB | 5000 | Scheduler memory request |
+| WALLTIME_FLAVOUR | default | Frozen scheduler walltime; default omits `-wt`; test/short/mid/long/special pass through |
+| BP_RUN_BOTH_CALO | 0 | Save independent ECAL-only companion plus primary ECAL+HCAL; requires BP_INCLUDE_HCAL=1 |
 | DRY_RUN | 0 | 1 prepares/prints without calling scheduler |
 | BP_SIGMA_LOG_LOSS | 0.001 | Finite positive prior sigma of b=-log(z), shared by ordinary, free-loss and truth-assisted fits |
 | BP_NEUTRAL_THETA_MRAD / BP_NEUTRAL_PHI_MRAD | 25 / 200 | Neutral-collection angular half-windows [mrad]; theta total width is 50 mrad; frozen into every newly prepared manifest/card, with explicit overrides preserved |

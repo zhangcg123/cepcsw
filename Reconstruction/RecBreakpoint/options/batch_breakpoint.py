@@ -57,7 +57,7 @@ BP_CONTROLS = ('BP_INTERVALS', 'BP_INTERVAL_SELECTION_MODE', 'BP_LOSS_STATE_MODE
                'BP_DIFFUSE_AUGMENTED_RTS',
                'BP_NEUTRAL_THETA_MRAD', 'BP_NEUTRAL_PHI_MRAD',
                'BP_NEUTRAL_STOCHASTIC', 'BP_NEUTRAL_CONSTANT',
-               'BP_INCLUDE_HCAL', 'BP_HCAL_SCALE', 'BP_HCAL_STOCHASTIC', 'BP_HCAL_CONSTANT',
+               'BP_INCLUDE_HCAL', 'BP_HCAL_SCALE', 'BP_HCAL_STOCHASTIC', 'BP_HCAL_CONSTANT', 'BP_RUN_BOTH_CALO',
                'BP_MEAN_LOG_LOSS', 'BP_SIGMA_LOG_LOSS', 'BP_BACKWARD_SEED_SCALE',
                'BP_ORDINARY_BACKWARD_FILTER', 'BP_FREE_LOSS_BACKWARD_FILTER',
                'BP_TRUTH_BACKWARD_FILTER',
@@ -131,6 +131,13 @@ def create(path, text):
     with path.open('x') as stream: stream.write(text)
 
 
+def output_paths(files, stages):
+    paths = [Path(files[s]) for s in stages]
+    if 'breakpoint' in stages and 'breakpoint_ecal_only' in files:
+        paths.append(Path(files['breakpoint_ecal_only']))
+    return paths
+
+
 def prepare():
     repo = Path(os.environ['CEPCSW_BREAKPOINT_DIR']).resolve()
     source = directory(repo, os.environ['INPUT_TUPLEPATH'])
@@ -142,11 +149,14 @@ def prepare():
     stages = [s for s in ORDER if s in requested]
     nevt, first, last = integer('NEVT', 1), integer('SEED_FIRST', 0), integer('SEED_LAST', 0)
     memory = integer('MEMORY_MB', 1)
+    walltime = os.environ.get('WALLTIME_FLAVOUR', 'default')
+    if walltime not in ('default', 'test', 'short', 'mid', 'long', 'special'):
+        raise ValueError('Invalid WALLTIME_FLAVOUR')
     if first > last: raise ValueError('SEED_FIRST exceeds SEED_LAST')
     dry = boolean(os.environ['DRY_RUN'])
     sample_region = os.environ.get('SAMPLE_REGION', '').strip()
-    if sample_region and sample_region not in ('barrel', 'endcap'):
-        raise ValueError('SAMPLE_REGION must be barrel, endcap, or empty for legacy names')
+    if sample_region and sample_region not in ('barrel', 'endcap', 'higgs'):
+        raise ValueError('SAMPLE_REGION must be barrel, endcap, higgs, or empty for legacy names')
     if sample_region and any(len(os.environ[key].split(',')) != 1
                              for key in ('PARTICLES', 'THETAS', 'TRANSVERSE_MOMENTA')):
         raise ValueError('Region-and-seed filenames require one particle and one legacy scan label per campaign')
@@ -194,9 +204,10 @@ def prepare():
     controls.setdefault('BP_HCAL_SCALE', '4.0')
     controls.setdefault('BP_HCAL_STOCHASTIC', '0.30')
     controls.setdefault('BP_HCAL_CONSTANT', '0.07')
+    controls.setdefault('BP_RUN_BOTH_CALO', '0')
     for key in ('BP_SELECT_TRUTH_PRODUCTION_ELECTRONS',
                 'BP_TRUTH_OVERRIDE', 'BP_VERBOSE', 'BP_VERIFY_KF', 'BP_FREE_LOSS_FIT',
-                'BP_BEAM_SPOT_FSR_LOSS', 'BP_INCLUDE_HCAL',
+                'BP_BEAM_SPOT_FSR_LOSS', 'BP_INCLUDE_HCAL', 'BP_RUN_BOTH_CALO',
                 'BP_CHARGED_ECAL_MEASUREMENT',
                 'BP_NEUTRAL_ECAL_MEASUREMENT', 'BP_EXPERIMENTAL_DELAYED_NEUTRAL',
                 'BP_DIFFUSE_AUGMENTED_RTS',
@@ -208,6 +219,8 @@ def prepare():
         raise ValueError('BP_ECAL_CONSTRAINT_INPUT must be PreReclustering or FinalPFO')
     if controls['BP_INCLUDE_HCAL'] == '1' and controls['BP_ECAL_CONSTRAINT_INPUT'] != 'PreReclustering':
         raise ValueError('BP_INCLUDE_HCAL requires PreReclustering')
+    if controls['BP_RUN_BOTH_CALO'] == '1' and controls['BP_INCLUDE_HCAL'] != '1':
+        raise ValueError('BP_RUN_BOTH_CALO requires BP_INCLUDE_HCAL=1')
     hcal = [float(controls[k]) for k in ('BP_HCAL_SCALE', 'BP_HCAL_STOCHASTIC', 'BP_HCAL_CONSTANT')]
     if any(not math.isfinite(v) for v in hcal) or hcal[0] <= 0 or min(hcal[1:]) < 0 or sum(hcal[1:]) <= 0:
         raise ValueError('Invalid HCAL calibration/resolution')
@@ -252,6 +265,8 @@ def prepare():
                     files = {s: str((output if s in stages else source)/f'{s}-{sample}.root')
                              for s in ('sim', 'trk', 'calodigi', 'rec')}
                     files['breakpoint'] = str(output/f'breakpoint_flat-{sample}.root')
+                    if 'breakpoint' in stages and controls['BP_RUN_BOTH_CALO'] == '1':
+                        files['breakpoint_ecal_only'] = str(output/f'breakpoint_flat-{sample}_ecal_only.root')
                     missing_inputs = []
                     for stage, predecessor in [('trk','sim'), ('calodigi','trk'),
                                                ('rec','calodigi'), ('breakpoint','rec')]:
@@ -264,11 +279,11 @@ def prepare():
                         print(f'Skipping {sample}: missing or empty external input: '
                               + ', '.join(missing_inputs), flush=True)
                         continue
-                    for path in [carddir, output/'outlog'/f'{sample}.out', output/'outlog'/f'{sample}.err'] + [Path(files[s]) for s in stages]:
+                    for path in [carddir, output/'outlog'/f'{sample}.out', output/'outlog'/f'{sample}.err'] + output_paths(files, stages):
                         if path.exists(): raise ValueError('Refusing to overwrite ' + str(path))
                     job = dict(repo=str(repo), sample=sample, sample_region=sample_region,
                                seed=seed, nevt=nevt,
-                               stages=stages, files=files, cards={}, checksums={}, controls=controls, memory_mb=memory)
+                               stages=stages, files=files, cards={}, checksums={}, controls=controls, memory_mb=memory, walltime_flavour=walltime)
                     if 'rec' in stages: job['rec_drop_collections'] = list(REC_DROP_COLLECTIONS)
                     cards = {}
                     for stage in stages:
@@ -360,6 +375,8 @@ def submit_jobs(jobs, dry):
         command = ['hep_sub', str(worker), '-g', group, '-mem', str(memory),
                    '-o', str(output/'outlog'/f'{job["sample"]}.out'),
                    '-e', str(output/'outlog'/f'{job["sample"]}.err'), '-argu', str(carddir/'job.json')]
+        if job.get('walltime_flavour', 'default') != 'default':
+            command += ['-wt', job['walltime_flavour']]
         print(shlex.join(command), flush=True)
         if not dry:
             result = subprocess.run(command, cwd=repo, capture_output=True, text=True)
@@ -377,8 +394,8 @@ def submit_prepared(value):
     output = directory(repo, value)
     dry = boolean(os.environ['DRY_RUN'])
     sample_region = os.environ.get('SAMPLE_REGION', '').strip()
-    if sample_region and sample_region not in ('barrel', 'endcap'):
-        raise ValueError('SAMPLE_REGION must be barrel, endcap, or empty for legacy names')
+    if sample_region and sample_region not in ('barrel', 'endcap', 'higgs'):
+        raise ValueError('SAMPLE_REGION must be barrel, endcap, higgs, or empty for legacy names')
     if not dry and not shutil.which('hep_sub'): raise ValueError('hep_sub is unavailable')
     jobs = []
     for manifest in sorted((output/'runcards').glob('*/job.json')):
@@ -389,8 +406,8 @@ def submit_prepared(value):
         if Path(job['repo']) != repo: raise ValueError('Manifest belongs to another worktree')
         if (manifest.parent/'submitted.json').exists(): raise ValueError('Job already submitted: ' + str(manifest))
         if (manifest.parent/'started.json').exists(): raise ValueError('Job already started: ' + str(manifest))
-        for stage in job['stages']:
-            if Path(job['files'][stage]).exists(): raise ValueError('Output already exists: ' + job['files'][stage])
+        for path in output_paths(job['files'], job['stages']):
+            if path.exists(): raise ValueError('Output already exists: ' + str(path))
         for stage, card in job['cards'].items():
             if hashlib.sha256(Path(card).read_bytes()).hexdigest() != job['checksums'][stage]:
                 raise ValueError('Frozen card changed: ' + card)
@@ -514,12 +531,39 @@ def cleanup_intermediate(job, manifest, stage, produced_identity, cleanup_ready)
 
 
 def verify_job_output(job, stage):
-    return verify(Path(job['files'][stage]), stage,
+    ready = verify(Path(job['files'][stage]), stage,
                   job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
                   hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
                   else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
                   if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') == 'HitScanAll' else False,
                   forbidden_collections=job.get('rec_drop_collections', ()) if stage == 'rec' else ())
+    if stage == 'breakpoint' and 'breakpoint_ecal_only' in job['files']:
+        ready = verify(Path(job['files']['breakpoint_ecal_only']), stage,
+                       job.get('controls', {}).get('BP_ECAL_CONSTRAINT_INPUT'),
+                       hit_scan='TruthWithLocationScan' if job.get('controls', {}).get('BP_LOCATION_SCAN_SETUPS')
+                       else job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE')
+                       if job.get('controls', {}).get('BP_INTERVAL_SELECTION_MODE') == 'HitScanAll' else False) and ready
+        verify_calo_pair(job)
+    return ready
+
+
+def verify_calo_pair(job):
+    import ROOT
+    fields = ['event_index', 'input_track_index', 'production_electron_track_selected', 'truth_mc_index', 'include_hcal_energy']
+    primary = ROOT.RDataFrame('breakpoint', job['files']['breakpoint']).AsNumpy(fields)
+    control = ROOT.RDataFrame('breakpoint', job['files']['breakpoint_ecal_only']).AsNumpy(fields)
+    for key in fields[:-1]:
+        if not (primary[key].shape == control[key].shape and (primary[key] == control[key]).all()):
+            raise RuntimeError('Paired calorimeter outputs are not row-aligned: ' + key)
+    if not primary['include_hcal_energy'].all() or control['include_hcal_energy'].any():
+        raise RuntimeError('Paired calorimeter outputs have incorrect HCAL mode flags')
+    selected = {int(v) for v in job.get('controls', {}).get('BP_SELECTED', '').split(',') if v.strip()}
+    expected = [i for i in range(job['nevt']) if not selected or i in selected]
+    for key in ('breakpoint', 'breakpoint_ecal_only'):
+        events = ROOT.RDataFrame('neutral_pfos', job['files'][key]).AsNumpy(['event_index'])['event_index'].tolist()
+        if events != expected:
+            raise RuntimeError('Incomplete paired calorimeter output: ' + key)
+    print(f'Paired calorimeter output verified: {len(expected)} events, {len(primary["event_index"])} aligned track rows', flush=True)
 
 
 def run(manifest):
@@ -533,8 +577,8 @@ def run(manifest):
         card = Path(path)
         if hashlib.sha256(card.read_bytes()).hexdigest() != job['checksums'][stage]:
             raise ValueError('Frozen card changed: ' + str(card))
-    for stage in job['stages']:
-        if Path(job['files'][stage]).exists(): raise ValueError('Output already exists: ' + job['files'][stage])
+    for path in output_paths(job['files'], job['stages']):
+        if path.exists(): raise ValueError('Output already exists: ' + str(path))
     # Exclusive marker prevents two workers using the same outputs concurrently.
     create(manifest.parent/'started.json', json.dumps({'pid':os.getpid(), 'host':os.uname().nodename})+'\n')
     produced = {}
@@ -547,8 +591,10 @@ def run(manifest):
             if stage in job['stages'] and not verify_job_output(job, stage):
                 raise RuntimeError('Full-chain output verification failed: ' + stage)
         cleanup = {stage: {'status': 'not_written_in_memory'} for stage in ('sim', 'trk', 'calodigi')}
+        final_outputs = {stage: job['files'][stage] for stage in ('rec', 'breakpoint') if stage in job['stages']}
+        if 'breakpoint_ecal_only' in job['files']: final_outputs['breakpoint_ecal_only'] = job['files']['breakpoint_ecal_only']
         create(manifest.parent/'completed.json', json.dumps({
-            'outputs': {stage: job['files'][stage] for stage in ('rec', 'breakpoint') if stage in job['stages']},
+            'outputs': final_outputs,
             'stages': job['stages'], 'intermediate_cleanup': cleanup}, indent=2)+'\n')
         print('Completed. REC/flat outputs retained; no intermediate files were written.', flush=True)
         return

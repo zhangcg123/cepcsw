@@ -87,6 +87,17 @@ fit.OutputTracksChargedEcalRTS = "BreakpointTracksChargedEcalRTS"
 fit.OutputTracksChargedEcalFreeLossRTS = "BreakpointTracksChargedEcalFreeLossRTS"
 fit.OutputTracksNeutralEcalRTS = "BreakpointTracksNeutralEcalRTS"
 fit.OutputTracksNeutralEcalFreeLossRTS = "BreakpointTracksNeutralEcalFreeLossRTS"
+fit.OutputStatus = "BreakpointStatus"
+fit.OutputIndex = "BreakpointOutputIndex"
+fit.OutputBackwardIndex = "BreakpointBackwardOutputIndex"
+fit.OutputFreeLossStatus = "BreakpointFreeLossStatus"
+fit.OutputFreeLossRTSIndex = "BreakpointFreeLossRTSIndex"
+fit.OutputFreeLossBackwardIndex = "BreakpointFreeLossBackwardIndex"
+fit.OutputTruthOverrideStatus = "BreakpointTruthOverrideStatus"
+fit.OutputTruthOverrideRTSIndex = "BreakpointTruthOverrideRTSIndex"
+fit.OutputTruthOverrideBackwardIndex = "BreakpointTruthOverrideBackwardIndex"
+fit.OutputDiffuseAugmentedStatus = "BreakpointDiffuseAugmentedStatus"
+fit.OutputDiffuseAugmentedIndex = "BreakpointDiffuseAugmentedIndex"
 fit.BreakpointIntervals = breakpoint_intervals
 # WHERE: choose the breakpoint intervals shared by ordinary and truth-override fits.
 # Truth (default): select ONLY the eligible layer-owned breakpoint with the
@@ -360,5 +371,28 @@ if fit.IntervalSelectionMode in ("Truth", "HitScanAll") or (fit.TruthOverride an
 # writer = PodioOutput("PodioWriter", filename="breakpoint_edm.root",
 #                      outputCommands=["keep *"])
 # Append writer to TopAlg below when wanted.
-ApplicationMgr(TopAlg=[reader, fit], EvtSel="NONE", EvtMax=event_count,
+def configure_calo_pair(primary):
+    """Give the ECAL-only control its own state, EDM keys and flat file."""
+    from pathlib import Path
+    if not primary.IncludeHcalEnergy:
+        raise ValueError("BP_RUN_BOTH_CALO=1 requires BP_INCLUDE_HCAL=1")
+    if "OutputStatus" not in primary.getDefaultProperties():
+        raise ValueError("Paired mode requires the updated RecBreakpoint installation")
+    path = Path(str(primary.OutputFile))
+    companion = path.with_name(path.stem + "_ecal_only" + path.suffix)
+    for output in (path, companion):
+        if output.exists() or output.is_symlink(): raise ValueError("Refusing to overwrite " + str(output))
+    control = primary.clone(primary.getName() + "EcalOnly")
+    control.IncludeHcalEnergy = False
+    control.OutputFile = str(companion)
+    for key, value in primary.getDefaultProperties().items():
+        if key.startswith("Output") and hasattr(value, "mode") and value.mode() == "W":
+            setattr(control, key, str(getattr(primary, key)) + "_EcalOnly")
+    return [control, primary]
+
+
+# Paired mode runs two isolated fits on each shared REC event, sequentially.
+# Single-mode diagnostics retain BP_INCLUDE_HCAL steering without a companion.
+_fits = configure_calo_pair(fit) if os.environ.get("BP_RUN_BOTH_CALO", "0") == "1" else [fit]
+ApplicationMgr(TopAlg=[reader] + _fits, EvtSel="NONE", EvtMax=event_count,
                ExtSvc=[dsvc, geometry, gear, track_system], OutputLevel=INFO)

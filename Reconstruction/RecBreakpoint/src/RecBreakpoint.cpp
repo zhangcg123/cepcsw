@@ -120,6 +120,17 @@ RecBreakpoint::RecBreakpoint(const std::string& name, ISvcLocator* locator)
   declareProperty("OutputTracksDiffuseAugmentedRTS", m_diffuseRTSOutput,
                   "Exact-diffuse augmented RTS; ordinary copy when disabled or no interval");
   declareProperty("OutputTracksTruthOverrideBackwardFilter", m_truthBackwardOutput, "Oracle backward filter, or ordinary copy when disabled");
+  declareProperty("OutputStatus", m_status, "Per-input fit status");
+  declareProperty("OutputIndex", m_outputIndex, "Per-input RTS index");
+  declareProperty("OutputBackwardIndex", m_backwardOutputIndex, "Per-input backward index");
+  declareProperty("OutputFreeLossStatus", m_freeResultStatus, "Per-input free-loss status");
+  declareProperty("OutputFreeLossRTSIndex", m_freeRTSIndex, "Per-input free-loss RTS index");
+  declareProperty("OutputFreeLossBackwardIndex", m_freeBackwardIndex, "Per-input free-loss backward index");
+  declareProperty("OutputTruthOverrideStatus", m_truthResultStatus, "Per-input truth override status");
+  declareProperty("OutputTruthOverrideRTSIndex", m_truthRTSIndex, "Per-input truth override RTS index");
+  declareProperty("OutputTruthOverrideBackwardIndex", m_truthBackwardIndex, "Per-input truth override backward index");
+  declareProperty("OutputDiffuseAugmentedStatus", m_diffuseStatusOutput, "Per-input diffuse status");
+  declareProperty("OutputDiffuseAugmentedIndex", m_diffuseIndexOutput, "Per-input diffuse RTS index");
 }
 RecBreakpoint::~RecBreakpoint() = default;
 

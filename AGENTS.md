@@ -376,37 +376,32 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 ## 2. Current focus
 
-**MATCHED HCAL RECOIL COMPARISON COMPLETE (2026-11-17).**
-400currentRECinputs(source1–4,events100–199),396baseline-valid matched pairs;
-32local native tasks rerun both ECAL-only and ECAL+HCAL with the same installed
-code, no scans, fixed per-leg110+FSR→110→100→000→KFfallback. Four incomplete
-pairs excluded; no all-hypothesis-valid gate. No production submitted.
+**PAIRED ECAL-ONLY / ECAL+HCAL BP BATCH PREPARED (2026-11-17).**
+User explicitly requests both methods for a new matched production. The prior
+400-event HCAL comparison did not establish core-resolution improvement; this
+production retains the control without claiming a gain or retuning response.
 
-Current recipe does not demonstrate core-resolution improvement.120–130counts
-260→260;below120tails18→28(+2.53percentage points,paired95%CI1.01–4.04);
-above140tails62→57. Core-regionRMS(123.5–128)1.015→1.081GeV,ratio1.065,
-95%CI0.957–1.179. Common-both-FSR-valid305pairs retain all10newlow-tail events.
-Masses shift downward in392/396pairs(median−0.734GeV). Track/beam upstream
-outputs and rawECALsource observations agree exactly on/off.
+`BP_RUN_BOTH_CALO=1 BP_INCLUDE_HCAL=1` runs two independent BP instances on each
+shared REC event (ECAL-only first, ECAL+HCAL second, sequentially within a job).
+Primary flat file is HCAL-on; `_ecal_only.root` companion retains the complete
+ECAL-only hypothesis families. All24 EDM writer keys are isolated. No fit logic
+changes. Paired mode remains opt-in for older workflows; this campaign enables it.
 
-DSCBGaussian sigma is poorly identified:0.550→0.132GeVnominal, but on-mode
-Gaussian span0.0467GeV<0.1GeVbin;300pairedrefits/280successful give sigma-ratio
-95%CI0.046–7.414. Do not claim this as a resolution gain. Full-densityFWHM
-1.305→1.417GeVis descriptive;plots use it instead of misleading sigma labels.
-Four radiation categories and exploratoryHCALfraction groups remain diagnostics.
+Prepared (not submitted):
+`higgs_eeHX_ISRFSRON_BP_ECAL_HCAL_PAIRED_500jobs_200evt_20261117/`.
+500 jobs ×200 current REC events =100000 inputs per method,1000 output files;
+4000MB,mid walltime,cms. Same REC_ECALTRUTH Nov12 source files. No scans;
+truth material locations;H0/HF and BP110+floating FSR retained;window±25/±200mrad;
+HCAL×4,σ=0.30√E+0.07E per cluster. `bash CAMPAIGN/submit.sh` submits frozen cards.
+Worker requires both complete row-aligned files and correct mode flags.
 
-Recommendation:do not start a full HCAL-enabled production on this evidence;
-validate joint calorimeter response/associations first. The implemented card/
-batch default remains HCALenabled;explicit BP_INCLUDE_HCAL=0 selectsECAL-only.
-No source/card/default/build/installchange in this comparison. Installedplugin
-685501046a02cb1c1f72ddd9c4fca3e3bc1471f71902b736a571fb549e550163 from3e04301.
-ECALalreadyhasresponse corrections;an unbiased jointECAL+HCALcalibration and
-HCALtruth origin are not established. No onlinehypothesisselector is added.
-
-Artifacts:TrackingPerformanceStudies/bp_hcal_ab_20261117/(uncommitted), including
-all800event-fit evaluations,matchedCSVdata,10000pairedRMS/ratebootstraps,
-300DSCBbootstraprefits,5PNG/PDFpairs andfullnotes. Published onlocalhost8000
-Nov17daily page;old37studyentries/128previews unchanged,new5previews added.
-ServerPID1404151 onailogin002 unchanged. Main reviewed final images/data hashes.
-[Results,methods andlimits](agents_record/2026-11-17-bp-hcal-matched-recoil-comparison.md).
-[Complete outgoing status](agents_record/2026-11-17-agents-before-hcal-comparison.md).
+Build,19C++tests,71batchtests,5chain tests,3configuration tests passed.
+Four current Higgs events(3,11,16,17),8selectedlegs: both paired outputs match
+standalone results exactly across all branches (101272branch-row comparisons
+per file),including existing failed fits. PeakRSS1.37GB,paired wall220.59s.
+Package-only installation refreshed; actual frozen-card installed worker verified
+both files (1event/32rows),34430exact comparisons per file,and wrote completion. All500submission commands passed
+dryrun; no production started. Details in
+[complete implementation,validation and command](agents_record/2026-11-17-bp-paired-calo-production.md).
+[Outgoing status](agents_record/2026-11-17-agents-before-paired-calo-production.md).
+No production submission; avoid runtime installs while this campaign runs.
