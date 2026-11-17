@@ -264,6 +264,10 @@ explicit provenance. Historical detail does not override this live status.
 - Preserve unrelated working-tree changes. Keep source/documentation changes
   separate from generated ROOT files, logs, plots, tables, notebooks, and
   batch cards.
+- Every production campaign must use the current default installation selected
+  by this workspace's setup.sh and InstallArea. Do not override it with a private
+  development installation. Any production exception requires explicit user
+  authorization; isolated regression controls are not production campaigns.
 - Use `dev` as the active development branch. Do not switch, create, rename,
   delete, merge, or rebase branches unless the user explicitly requests the
   specific branch operation.
@@ -378,7 +382,10 @@ notes, files and direct PNG URLs. Preserve this flag during gallery upkeep.
 
 **GSF FLAT TUPLES WITH BP-MATCHED NEUTRAL OBSERVATIONS (2026-11-18).**
 RecGsfFlatTuple passively reuses BP's exact reconstructed neutral/charged/HCAL
-collectors. Save selected-track KF ECAL reference positions, neutral PFO/ECAL/HCAL
+collectors, executing them independently on its own REC inputs; it never reads
+BP flat files or copies BP's saved measurements. The prepared campaign uses the
+current default InstallArea, without a private runtime override.
+Save selected-track KF ECAL reference positions, neutral PFO/ECAL/HCAL
 IDs, component energies/errors, HCAL raw/scaled energies, positions/owner links,
 and ECAL+HCAL totals. Window half-widths25/200mrad; ECAL sigma=.011sqrt(E)+.004E;
 HCAL scale4,sigma=.30sqrt(E_H)+.07E_H. Collection targets original selected input

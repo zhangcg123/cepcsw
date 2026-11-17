@@ -976,6 +976,9 @@ selection retains that leg. With the production selector disabled (status0),
 collection targets all `CompleteTracks`. It uses the same
 reconstructed inputs and collection functions as BP: `CyberPFOPreReclustering`,
 `EcalClusterPreReclustering` and linked `HcalClusterPreReclustering` objects.
+The functions execute independently inside the GSF flat writer using its own
+REC event; no BP flat file, saved selection, fitted result or BP algorithm is
+an input. BP outputs are used only for regression comparisons.
 The full `pre_ecal_*` snapshot remains available beside the collected subset.
 Missing full ECAL/PFO snapshots give availability0, per-target status0 and NaN
 energies. A partial ECAL/PFO snapshot fails the writer, as before. Missing HCAL
